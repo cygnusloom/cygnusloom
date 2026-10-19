@@ -443,20 +443,35 @@ class ToolRan(GameEvent):
 @dataclass(frozen=True)
 class SpeechWritten(GameEvent):
     """An NPC's line, written by a speech step during a tool run. The narration reads the lines
-    in order. An empty `dialogue` is kept in the context only."""
+    in order. An empty `dialogue` is kept in the context only. A `replace` line takes the place of
+    the speaker's queued line, if there is one."""
 
     kind: ClassVar[str] = "speech.written"
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     speaker: str
     dialogue: str
+    replace: bool
     context: list[dict[str, str]]
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         turn = _open_turn(state)
         turn.context.extend(_parts(self.context))
-        if self.dialogue:
-            turn.speech.append({"speaker": self.speaker, "dialogue": self.dialogue})
+        if not self.dialogue:
+            return
+        line = {"speaker": self.speaker, "dialogue": self.dialogue}
+        index = next(
+            (
+                i
+                for i, queued in enumerate(turn.speech)
+                if queued["speaker"].casefold() == self.speaker.casefold()
+            ),
+            None,
+        )
+        if self.replace and index is not None:
+            turn.speech[index] = line
+        else:
+            turn.speech.append(line)
 
 
 @dataclass(frozen=True)

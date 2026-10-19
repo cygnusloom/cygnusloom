@@ -22,7 +22,7 @@ from cygnusforge.services.campaigns import (
     Saved,
     Status,
     TurnEvent,
-    campaign_log,
+    campaign_transcript,
     campaign_world,
     context_usage,
     create_campaign,
@@ -320,6 +320,7 @@ def _campaign_page(
     campaign = get_campaign(engine, user.id, campaign_id)
     rule_set = library.rule_sets.get(campaign.rule_set)
     messages = list_messages(engine, campaign.id)
+    transcript = campaign_transcript(engine, user.id, campaign.id)
     world = campaign_world(engine, user.id, campaign.id)
     context = context_usage(
         campaign,
@@ -336,8 +337,7 @@ def _campaign_page(
         world=library.world_templates.get(campaign.world_template),
         world_view=world.view,
         rule_set=rule_set,
-        messages=messages,
-        log=campaign_log(engine, user.id, campaign.id),
+        transcript=transcript,
         context=context,
         error=error,
         draft=draft,

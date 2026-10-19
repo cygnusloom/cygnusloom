@@ -80,7 +80,7 @@ def search_notes(query: str, ctx: ToolContext) -> dict[str, list[dict[str, Any]]
     return ctx.world.search_notes(query)
 
 
-async def speak(npc: str, intent: str, ctx: ToolContext) -> dict[str, str]:
+async def speak(npc: str, intent: str, ctx: ToolContext, replace: bool = False) -> dict[str, str]:
     profile = ctx.world.speaker_profile(npc)
-    await ctx.speak(npc, profile, intent)
+    await ctx.speak(npc, profile, intent, replace)
     return {"speaker": npc, "status": "dialogue queued for the narration"}

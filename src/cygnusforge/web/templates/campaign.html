@@ -22,7 +22,10 @@
           <h1 class="chat-title">{{ campaign.name }}</h1>
           <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
           <div class="transcript" data-transcript>
-            {% for message in messages %}
+            {% for message in transcript %}
+              {% if message.role == "log" %}
+              <div class="log-line">{{ message.content }}</div>
+              {% else %}
               <div class="message {{ message.role }}">
                 <div class="message-header">
                   <span class="role">{% if message.role == "assistant" %}Cygnus{% else %}{{ message.role }}{% endif %}{% if message.model %} · <span class="muted">{{ message.model }}</span>{% endif %}</span>
@@ -38,6 +41,7 @@
                 </div>
                 <div class="content">{{ message.content | markdown }}</div>
               </div>
+              {% endif %}
             {% endfor %}
             {% if pending %}
               <div class="message assistant" data-pending>
@@ -103,7 +107,6 @@
             <div class="tab-list" role="tablist" aria-label="Panels">
               <button type="button" class="tab" role="tab" id="tab-characters" aria-controls="panel-characters" aria-selected="true">Characters</button>
               <button type="button" class="tab" role="tab" id="tab-notes" aria-controls="panel-notes" aria-selected="false" tabindex="-1">Notes</button>
-              <button type="button" class="tab" role="tab" id="tab-log" aria-controls="panel-log" aria-selected="false" tabindex="-1">Log</button>
             </div>
             <div class="tab-panel" role="tabpanel" id="panel-characters" aria-labelledby="tab-characters">
               {% if world_view.pc %}
@@ -117,12 +120,6 @@
             </div>
             <div class="tab-panel" role="tabpanel" id="panel-notes" aria-labelledby="tab-notes" hidden>
               {{ notes_list(world_view.notes) }}
-            </div>
-            <div class="tab-panel" role="tabpanel" id="panel-log" aria-labelledby="tab-log" hidden>
-              <ul class="log-list" data-log>
-                {% for entry in log %}<li>{{ entry }}</li>{% endfor %}
-              </ul>
-              {% if not log %}<p class="muted" data-log-empty>Nothing has happened yet.</p>{% endif %}
             </div>
           </section>
         </aside>

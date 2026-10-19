@@ -155,6 +155,10 @@
         "intent": {
           "type": "string",
           "description": "What the NPC wants to say or achieve in this moment, such as \"warns the player off the bridge\"."
+        },
+        "replace": {
+          "type": "boolean",
+          "description": "Set true to rewrite the line already queued for this NPC in this reply, for example to amend it before the next line. Without it, a second call for the same NPC is refused."
         }
       },
       "required": [

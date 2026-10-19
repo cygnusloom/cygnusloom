@@ -19,6 +19,7 @@ from cygnusforge.services.campaigns import (
     ChatMessage,
     Logged,
     campaign_log,
+    campaign_transcript,
     list_messages,
     resume_turn,
 )
@@ -110,9 +111,28 @@ def test_a_roll_is_logged_and_the_reply_is_saved(
     log = campaign_log(app.state.engine, _owner_id(app, campaign_id), campaign_id)
     assert log[-1] == activity
     assert _pending(app, campaign_id) is None
+
     page = client.get(f"/campaigns/{campaign_id}").text
     assert activity in page
     assert "Roll 1d20" not in page
+
+
+def test_the_log_is_shown_in_the_chat_before_the_reply(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    app.state.providers = lambda model_id: (_recording_provider(), model_id)
+    client, campaign_id = _campaign_id(client_factory)
+    _send(client, campaign_id, _script({"rounds": [[ROLL]], "text": "Well rolled."}))
+    _answer(client, campaign_id, "roll")
+
+    transcript = campaign_transcript(app.state.engine, _owner_id(app, campaign_id), campaign_id)
+
+    roles = [item.role for item in transcript]
+    assert roles[-3:] == ["user", "log", "assistant"]
+    assert transcript[-2].content.startswith("You rolled ")
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert f'<div class="log-line">{transcript[-2].content}</div>' in page
+    assert 'id="panel-log"' not in page
 
 
 def test_a_text_answer_reaches_the_gm_instead_of_a_roll(

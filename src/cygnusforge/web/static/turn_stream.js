@@ -11,7 +11,6 @@
   if (!composer || !composer.dataset.streamAction || !window.ReadableStream) return;
 
   const transcript = document.querySelector("[data-transcript]");
-  const logList = document.querySelector("[data-log]");
   const errorBox = document.querySelector(".turn-error");
   const textarea = composer.querySelector("textarea");
   const submit = composer.querySelector('button[type="submit"]');
@@ -58,11 +57,12 @@
     transcript.scrollTop = transcript.scrollHeight;
   };
 
-  const appendLog = (text) => {
-    document.querySelector("[data-log-empty]")?.remove();
-    const entry = document.createElement("li");
-    entry.textContent = text;
-    logList.append(entry);
+  // Log entries sit in the chat just before the reply they belong to.
+  const appendLog = (text, before) => {
+    const line = document.createElement("div");
+    line.className = "log-line";
+    line.textContent = text;
+    transcript.insertBefore(line, before);
   };
 
   const setBusy = (busy) => {
@@ -120,7 +120,7 @@
           scrollDown();
           break;
         case "log":
-          appendLog(item.text);
+          appendLog(item.text, reply.bubble);
           break;
         case "delta":
           reply.status.hidden = true;

@@ -53,5 +53,6 @@ class World(Protocol):
 @dataclass(frozen=True)
 class ToolContext:
     world: World
-    # Writes an NPC's dialogue and queues it for the narration. Takes the speaker, profile, intent.
-    speak: Callable[[str, str, str], Awaitable[None]]
+    # Writes an NPC's dialogue and queues it for the narration. Takes the speaker, profile, intent,
+    # and whether to replace the line already queued for that speaker.
+    speak: Callable[[str, str, str, bool], Awaitable[None]]

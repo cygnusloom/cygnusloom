@@ -91,8 +91,7 @@ button, .button {
 .message-gear:hover, .message-gear:focus-visible, .message-rollback:hover, .message-rollback:focus-visible { color: var(--text); }
 .message-gear svg, .message-rollback svg { width: 1rem; height: 1rem; }
 .rollback-form { margin: 0; }
-.log-list { margin: 0; padding: 0; list-style: none; font-size: 0.9rem; }
-.log-list li { margin: 0.4rem 0; }
+.log-line { font-size: 0.8rem; color: var(--muted); overflow-wrap: anywhere; }
 .message.streaming .content { white-space: pre-wrap; }
 .turn-status { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; font-size: 0.85rem; color: var(--muted); }
 .turn-status[hidden] { display: none; }

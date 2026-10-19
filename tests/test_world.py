@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from cygnusforge.content.library import ContentLibrary
-from cygnusforge.llm.base import ToolRequest
+from cygnusforge.llm.base import ChatReply, ToolRequest
 from cygnusforge.rules.context import ToolContext
 from cygnusforge.services import world
 from cygnusforge.services.common import InvalidInput
@@ -35,9 +35,9 @@ BUNDLED_NPCS = {
 def _ctx(
     app: FastAPI,
     campaign_id: int,
-    speak: Callable[[str, str, str], Any] | None = None,
+    speak: Callable[[str, str, str, bool], Any] | None = None,
 ) -> ToolContext:
-    async def quiet_speak(speaker: str, profile: str, intent: str) -> None:
+    async def quiet_speak(speaker: str, profile: str, intent: str, replace: bool) -> None:
         return None
 
     return ToolContext(
@@ -428,7 +428,7 @@ def test_speak_tool_queues_dialogue_and_returns_only_an_acknowledgment(
     _, campaign_id = _campaign_id(client_factory)
     asked: list[tuple[str, str, str]] = []
 
-    async def speak(speaker: str, profile: str, intent: str) -> None:
+    async def speak(speaker: str, profile: str, intent: str, replace: bool) -> None:
         asked.append((speaker, profile, intent))
 
     result = _tool(
@@ -452,7 +452,7 @@ def test_speak_tool_refuses_an_npc_away_from_the_player(
     _, campaign_id = _campaign_id(client_factory)
     asked: list[str] = []
 
-    async def speak(speaker: str, profile: str, intent: str) -> None:
+    async def speak(speaker: str, profile: str, intent: str, replace: bool) -> None:
         asked.append(profile)
 
     result = _tool(
@@ -527,6 +527,145 @@ def test_speech_is_a_separate_call_and_only_the_narration_is_saved(
     ]
     narration = recorder.calls[-1]["messages"]
     assert "Mind the bog, dearie." in json.dumps(narration)
+
+
+def _non_user(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The messages the model wrote or was given by the GM, without the player's transcript."""
+    return [m for m in messages if m["role"] != "user"]
+
+
+def _contents(messages: list[dict[str, Any]]) -> str:
+    return "\n".join(str(m.get("content")) for m in _non_user(messages))
+
+
+def test_an_npc_gets_one_line_per_reply(client_factory: Callable[[], TestClient], app: FastAPI):
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    client, campaign_id = _campaign_id(client_factory)
+    speak_call = {
+        "name": "speak",
+        "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
+    }
+    script = _script(
+        {
+            "rounds": [[speak_call], [speak_call]],
+            "text": "Mara looks up from her kettle.",
+            "speech": {"Mara Thistledown": "Mind the bog, dearie."},
+        }
+    )
+
+    _send(client, campaign_id, script)
+
+    speech_calls = [
+        call
+        for call in recorder.calls
+        if call["messages"] and "Speech step." in str(call["messages"][0]["content"])
+    ]
+    assert len(speech_calls) == 1
+    assert any(
+        "already has dialogue for this reply" in json.dumps(call["messages"])
+        and "replace: true" in json.dumps(call["messages"])
+        for call in recorder.calls
+    )
+    narration = json.dumps(_non_user(recorder.calls[-1]["messages"]))
+    assert narration.count("Mind the bog, dearie.") == 1
+
+
+def test_replace_amends_the_queued_line(client_factory: Callable[[], TestClient], app: FastAPI):
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    client, campaign_id = _campaign_id(client_factory)
+    first = {
+        "name": "speak",
+        "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
+    }
+    amend = {
+        "name": "speak",
+        "arguments": {
+            "npc": "Mara Thistledown",
+            "intent": "Warn Ada about the bog and the lantern-moths.",
+            "replace": True,
+        },
+    }
+    script = _script({"rounds": [[first], [amend]], "text": "Mara looks up from her kettle."})
+
+    _send(client, campaign_id, script)
+
+    assert any(
+        "which this intent replaces: Warn Ada about the bog." in json.dumps(call["messages"])
+        for call in recorder.calls
+    )
+    narration = _contents(recorder.calls[-1]["messages"])
+    assert 'Mara Thistledown: "Warn Ada about the bog and the lantern-moths."' in narration
+    assert 'Mara Thistledown: "Warn Ada about the bog."' not in narration
+
+
+def test_a_failed_replace_keeps_the_queued_line(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    recorder = _recording_provider()
+    speech_steps = 0
+    inner_chat = recorder.chat
+
+    async def chat(model, messages, tools=None):
+        nonlocal speech_steps
+        if messages and "Speech step." in str(messages[0]["content"]):
+            speech_steps += 1
+            if speech_steps == 2:
+                markup = '<tool_call>{"name": "create_note", "arguments": {}}</tool_call>'
+                return ChatReply(text=markup)
+        return await inner_chat(model, messages, tools)
+
+    recorder.chat = chat
+    app.state.providers = lambda model_id: (recorder, model_id)
+    client, campaign_id = _campaign_id(client_factory)
+    first = {
+        "name": "speak",
+        "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
+    }
+    amend = {
+        "name": "speak",
+        "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada twice.", "replace": True},
+    }
+    script = _script({"rounds": [[first], [amend]], "text": "Mara looks up from her kettle."})
+
+    _send(client, campaign_id, script)
+
+    narration = _contents(recorder.calls[-1]["messages"])
+    assert 'Mara Thistledown: "Warn Ada about the bog."' in narration
+    assert "<tool_call" not in narration
+
+
+def test_speech_with_tool_call_markup_is_not_spoken(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    client, campaign_id = _campaign_id(client_factory)
+    speak_call = {
+        "name": "speak",
+        "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
+    }
+    markup = '<tool_call>{"name": "create_note", "arguments": {"text": "x"}}</tool_call>'
+    script = _script(
+        {
+            "rounds": [[speak_call]],
+            "text": "Mara turns back to her kettle.",
+            "speech": {"Mara Thistledown": markup},
+        }
+    )
+
+    _send(client, campaign_id, script)
+
+    assert any(
+        "wrote a tool call instead" in json.dumps(call["messages"]) for call in recorder.calls
+    )
+    narration = json.dumps(_non_user(recorder.calls[-1]["messages"]))
+    assert "<tool_call" not in narration
+    assert _saved(app, campaign_id) == [
+        ("user", script),
+        ("assistant", "Mara turns back to her kettle."),
+    ]
 
 
 def test_speech_shows_a_writing_dialogue_status(

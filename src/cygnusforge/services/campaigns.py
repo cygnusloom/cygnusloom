@@ -73,13 +73,16 @@ SYSTEM_PROMPT = (
     "the story consistent with what has already happened. You are not a general assistant; stay in "
     "the GM role for the whole campaign."
 )
+TOOL_CALL_MARKUP = "<tool_call"
 STATE_INSTRUCTION = (
     "State management step. Decide what this action changes and what needs to be said or done, "
     "then make it so with tool calls: create, update, or delete locations, characters, and notes as "
-    "the story needs; move characters; record facts in notes so you stay consistent; ask for a roll "
-    "when the outcome is uncertain; and call speak for each NPC who says something, without writing "
-    "their words yourself. Do not narrate here; the narration comes in the next step. When nothing "
-    "else needs to change, reply with one short sentence saying so."
+    "the story needs; move characters; ask for a roll when the outcome is uncertain; and call speak "
+    "once for each NPC who says something, with everything they say in one intent, without writing "
+    "their words yourself. Before adding a note, check the existing notes: update one rather than "
+    "repeating a fact. Record only settled facts, not actions still in progress. Do not narrate "
+    "here; the narration comes in the next step. When nothing else needs to change, reply with one "
+    "short sentence saying so."
 )
 NARRATE_INSTRUCTION = (
     "Narration step. Write the next beat as a good editor would: concise, specific, and free of "
@@ -253,6 +256,22 @@ def list_messages(engine: Engine, campaign_id: int) -> list[ChatMessage]:
         return [_chat_message(row) for row in rows]
 
 
+def campaign_transcript(
+    engine: Engine, owner_id: int, campaign_id: int
+) -> list[ChatMessage | LogLine]:
+    """The chat as shown: the messages with the Log's entries among them, in the order they
+    happened."""
+    get_campaign(engine, owner_id, campaign_id)
+    with session_scope(engine) as db:
+        items: list[ChatMessage | LogLine] = [
+            _chat_message(row) for row in events_since(db, campaign_id, channel=Channel.TRANSCRIPT)
+        ]
+        for row in events_since(db, campaign_id, channel=Channel.LOG):
+            if (text := decode(row).render()) is not None:
+                items.append(LogLine(id=row.id or 0, content=text))
+    return sorted(items, key=lambda item: item.id)
+
+
 def _chat_message(row: Event) -> ChatMessage:
     event = decode(row)
     if isinstance(event, ChatPlayer):
@@ -415,6 +434,16 @@ class Delta:
 
 
 @dataclass(frozen=True)
+class LogLine:
+    """An entry of the Log, shown in the chat between the messages. `id` is the id of the event
+    that recorded it."""
+
+    id: int
+    content: str
+    role: str = "log"
+
+
+@dataclass(frozen=True)
 class Logged:
     """Something that happened during the reply and is shown in the Log, such as a roll."""
 
@@ -459,6 +488,18 @@ def _add_speech(
         "Queued dialogue",
         f"Dialogue spoken this turn, in the order it was said:\n{lines}",
     )
+
+
+def _queued_dialogue_note(speech: list[dict[str, str]]) -> dict[str, str]:
+    """A note for the state step about the dialogue already queued this reply. It is not recorded,
+    so the state step can see what it has done and amend a line rather than repeat it."""
+    lines = "\n".join(f'{line["speaker"]}: "{line["dialogue"]}"' for line in speech)
+    return {
+        "role": "system",
+        "content": "Dialogue already queued this reply, in the order it was said:\n"
+        f"{lines}\nDo not speak these NPCs again. To amend a queued line, call speak with "
+        "replace: true.",
+    }
 
 
 def _dicts(parts: Sequence[ContextPart]) -> list[dict[str, str]]:
@@ -549,8 +590,8 @@ def _tool_context(
     model_name: str,
     campaign_id: int,
 ) -> ToolContext:
-    async def speak(speaker: str, profile: str, intent: str) -> None:
-        await _speak(engine, provider, model_name, campaign_id, speaker, profile, intent)
+    async def speak(speaker: str, profile: str, intent: str, replace: bool) -> None:
+        await _speak(engine, provider, model_name, campaign_id, speaker, profile, intent, replace)
 
     return ToolContext(
         world=WorldTools(engine, campaign_id, library.core.tables, rng),
@@ -605,28 +646,44 @@ async def _speak(
     speaker: str,
     profile: str,
     intent: str,
+    replace: bool,
 ) -> None:
     """Ask the speech step for an NPC's words and record them for the narration. The speech step
     sees the conversation as text, without the tool calls, so it writes dialogue rather than
-    narration."""
+    narration. Each NPC gets one queued line per reply, so the narration never repeats a speaker.
+    With `replace`, the new line takes the queued line's place; a failed attempt keeps the old one."""
     turn = _turn(_state(engine, campaign_id))
-    system = "\n\n".join(
-        [SPEECH_INSTRUCTION, turn.messages[0]["content"], profile, f"Intent: {intent}"]
+    queued = next(
+        (line for line in turn.speech if line["speaker"].casefold() == speaker.casefold()), None
     )
+    if queued and not replace:
+        raise InvalidInput(
+            f"{speaker} already has dialogue for this reply; put everything they say in one intent, "
+            "or pass replace: true to rewrite that line"
+        )
+    system_parts = [SPEECH_INSTRUCTION, turn.messages[0]["content"], profile]
+    if queued:
+        system_parts.append(
+            f"The line already queued for {speaker}, which this intent replaces: "
+            f"{queued['dialogue']}"
+        )
+    system_parts.append(f"Intent: {intent}")
+    system = "\n\n".join(system_parts)
     conversation = [
         m for m in turn.messages[1:] if m["role"] in ("user", "assistant") and "tool_calls" not in m
     ]
     label = f"Speech step (round {turn.rounds})"
-    reply = await complete(
-        provider, model_name, [{"role": "system", "content": system}, *conversation]
-    )
-    reply = reply.strip()
+    reply = (
+        await complete(provider, model_name, [{"role": "system", "content": system}, *conversation])
+    ).strip()
+    malformed = TOOL_CALL_MARKUP in reply
     _record(
         engine,
         campaign_id,
         SpeechWritten(
             speaker=speaker,
-            dialogue=reply,
+            dialogue="" if malformed else reply,
+            replace=replace,
             context=_dicts(
                 [
                     ContextPart("system", label, system),
@@ -635,6 +692,8 @@ async def _speak(
             ),
         ),
     )
+    if malformed:
+        raise InvalidInput(f"the speech step wrote a tool call instead of {speaker}'s words")
     if not reply:
         raise LLMError("the speech step returned no dialogue")
 
@@ -724,7 +783,10 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             break
         yield Status("Managing state...")
         round_no = turn.rounds + 1
-        step = await run.provider.chat(run.model_name, [*turn.messages, state], tools)
+        view = [*turn.messages, state]
+        if turn.speech:
+            view.append(_queued_dialogue_note(turn.speech))
+        step = await run.provider.chat(run.model_name, view, tools)
         if not step.tool_requests:
             messages: list[dict[str, Any]] = []
             context: list[ContextPart] = []
