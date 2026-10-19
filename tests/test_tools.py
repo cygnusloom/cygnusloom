@@ -158,12 +158,12 @@ def test_model_rolls_then_narrates_and_only_the_narration_is_saved(
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
-    script = _script({"text": "Checking the dice.", "tool_calls": [ROLL]}, {"text": "Well rolled."})
+    script = _script({"rounds": [[ROLL]], "text": "Well rolled."})
 
     response = _send(client, campaign_id, script)
 
     assert response.status_code == 303
-    assert len(recorder.calls) == 2
+    assert len(recorder.calls) == 3
     assert [spec["function"]["name"] for spec in recorder.calls[0]["tools"]] == ["social_roll"]
     tool_messages = [m for m in recorder.calls[1]["messages"] if m["role"] == "tool"]
     assert len(tool_messages) == 1
@@ -179,7 +179,7 @@ def test_bad_tool_arguments_go_back_to_the_model(
     app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
     bad = {"name": "social_roll", "arguments": {"relationship": "high", "circumstance": 0}}
-    script = _script({"tool_calls": [bad]}, {"text": "Let me try again."})
+    script = _script({"rounds": [[bad]], "text": "Let me try again."})
 
     response = _send(client, campaign_id, script)
 
@@ -193,12 +193,12 @@ def test_three_tool_rounds_are_allowed(client_factory: Callable[[], TestClient],
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
-    script = _script(*([{"tool_calls": [ROLL]}] * 3), {"text": "Done."})
+    script = _script({"rounds": [[ROLL]] * 3, "text": "Done."})
 
     response = _send(client, campaign_id, script)
 
     assert response.status_code == 303
-    assert len(recorder.calls) == 4
+    assert len(recorder.calls) == 5
 
 
 def test_runaway_tool_calls_stop_and_save_nothing(
@@ -207,7 +207,7 @@ def test_runaway_tool_calls_stop_and_save_nothing(
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
-    script = _script(*([{"tool_calls": [ROLL]}] * 4), {"text": "Never reached."})
+    script = _script({"rounds": [[ROLL]] * 4, "text": "Never reached."})
 
     response = _send(client, campaign_id, script)
 

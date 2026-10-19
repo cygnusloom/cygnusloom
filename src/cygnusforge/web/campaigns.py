@@ -16,7 +16,6 @@ from cygnusforge.db.models import User
 from cygnusforge.llm.base import LLMError
 from cygnusforge.services.campaigns import (
     Delta,
-    Reset,
     Saved,
     Status,
     TurnEvent,
@@ -181,8 +180,6 @@ def _line(event: TurnEvent | TurnError) -> str:
             payload: dict[str, object] = {"type": "status", "text": text}
         case Delta(text):
             payload = {"type": "delta", "text": text}
-        case Reset():
-            payload = {"type": "reset"}
         case Saved(message_id):
             payload = {"type": "saved", "message_id": message_id}
         case TurnError(status, message):

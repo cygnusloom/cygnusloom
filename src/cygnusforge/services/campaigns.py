@@ -20,6 +20,15 @@ MAX_NAME = 120
 MAX_MESSAGE = 8000
 MAX_TOOL_ROUNDS = 3
 SYSTEM_PROMPT = "You are a helpful assistant."
+DECIDE_INSTRUCTION = (
+    "Decision step. Decide whether this action needs a roll or another tool, and call the tool "
+    "if it does. Do not narrate here; the narration comes in the next step. If no tool is "
+    "needed, reply with one short sentence saying so."
+)
+NARRATE_INSTRUCTION = (
+    "Narration step. Write what the player sees next, in a few sentences (guidance, not a hard "
+    "limit). Base the outcome on the decision and any tool results above. Do not call tools."
+)
 SUMMARY_PROMPT = (
     "You keep the memory of a roleplaying campaign. Given the summary so far and new events, "
     "write an updated summary. Keep names, places, facts the players established, open threads, "
@@ -251,23 +260,25 @@ class Delta:
 
 
 @dataclass(frozen=True)
-class Reset:
-    """Text streamed so far was narration before a tool call. The client should clear it."""
-
-
-@dataclass(frozen=True)
 class Saved:
     """The turn is stored. `message_id` is the GM's reply."""
 
     message_id: int
 
 
-TurnEvent = Status | Delta | Reset | Saved
+TurnEvent = Status | Delta | Saved
 
 
 @dataclass(frozen=True)
 class _Final:
     text: str
+
+
+def _add_instruction(
+    messages: list[dict[str, Any]], context: list[ContextPart], source: str, text: str
+) -> None:
+    messages.append({"role": "system", "content": text})
+    context.append(ContextPart("system", source, text))
 
 
 async def _reply_with_tools(
@@ -277,48 +288,44 @@ async def _reply_with_tools(
     context: list[ContextPart],
     tool_calls: Mapping[str, ToolCall],
 ) -> AsyncIterator[TurnEvent | _Final]:
-    """Let the GM call tools until it gives a reply. Tool calls and results stay in this turn.
+    """Reply in two phases. First the GM decides, calling tools until it needs none, and its text
+    is not streamed. Then it narrates the outcome, and only that text is streamed.
 
-    Each round's messages are also appended to `context`, so the turn's record includes them.
-    The last item is always the `_Final` reply."""
+    Every message kept for the model is appended to `messages` and recorded in `context`. The
+    decide instruction is sent with each decision call but not kept. The last item is always the
+    `_Final` reply."""
     specs = tool_specs(tool_calls)
+    decide = {"role": "system", "content": DECIDE_INSTRUCTION}
+    context.append(ContextPart("system", "Decide instruction", DECIDE_INSTRUCTION))
     for round_number in range(1, MAX_TOOL_ROUNDS + 2):
-        yield Status("Thinking...")
-        streamed = False
-        result: ChatReply | None = None
-        async for item in provider.stream(model_name, messages, specs):
-            if isinstance(item, TextDelta):
-                streamed = True
-                yield Delta(item.text)
-            else:
-                result = item
-        if result is None:
-            raise LLMError("the model returned no reply")
-        if not result.tool_requests:
-            reply = result.text.strip()
-            if not reply:
-                raise LLMError("the model returned an empty reply")
-            yield _Final(reply)
-            return
+        yield Status("Deciding...")
+        decision = await provider.chat(model_name, [*messages, decide], specs)
+        if not decision.tool_requests:
+            if decision.text.strip():
+                messages.append({"role": "assistant", "content": decision.text})
+                context.append(
+                    ContextPart("assistant", f"GM decision (round {round_number})", decision.text)
+                )
+            break
         messages.append(
             {
                 "role": "assistant",
-                "content": result.text or None,
+                "content": decision.text or None,
                 "tool_calls": [
                     {
                         "id": request.id,
                         "type": "function",
                         "function": {"name": request.name, "arguments": request.arguments},
                     }
-                    for request in result.tool_requests
+                    for request in decision.tool_requests
                 ],
             }
         )
-        if result.text:
-            context.append(ContextPart("assistant", f"GM text (round {round_number})", result.text))
-        if streamed:
-            yield Reset()
-        for request in result.tool_requests:
+        if decision.text:
+            context.append(
+                ContextPart("assistant", f"GM text (round {round_number})", decision.text)
+            )
+        for request in decision.tool_requests:
             yield Status(f"Running {request.name}...")
             output = run_tool(tool_calls, request)
             messages.append({"role": "tool", "tool_call_id": request.id, "content": output})
@@ -332,7 +339,23 @@ async def _reply_with_tools(
             context.append(
                 ContextPart("tool", f"Result of '{request.name}' (round {round_number})", output)
             )
-    raise LLMError("the model kept calling tools without answering")
+    else:
+        raise LLMError("the model kept calling tools without answering")
+
+    _add_instruction(messages, context, "Narrate instruction", NARRATE_INSTRUCTION)
+    yield Status("Narrating...")
+    narration: ChatReply | None = None
+    async for item in provider.stream(model_name, messages, None):
+        if isinstance(item, TextDelta):
+            yield Delta(item.text)
+        else:
+            narration = item
+    if narration is None:
+        raise LLMError("the model returned no reply")
+    reply = narration.text.strip()
+    if not reply:
+        raise LLMError("the model returned an empty reply")
+    yield _Final(reply)
 
 
 async def stream_message(
@@ -348,8 +371,8 @@ async def stream_message(
 ) -> AsyncIterator[TurnEvent]:
     """Send a user message to `model` and yield what happens while the GM replies.
 
-    Yields Status and Delta events while the model works, Reset when streamed narration is
-    superseded by a tool call, and Saved once the reply is stored.
+    Yields Status events for each phase and Delta events for the narration only, then Saved once
+    the reply is stored.
 
     When the prompt reaches half of `context_tokens`, older history is folded into the
     campaign's summary first. Everything is saved only after the model answers, so a failed

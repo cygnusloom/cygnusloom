@@ -74,7 +74,7 @@ Settings are fixed when a campaign is created. Campaigns created before these se
 
 Token counts are estimates (about four characters per token). The campaign page shows the estimated prompt size next to the settings button. The full transcript is always kept; only the prompt sent to the model is summarized. A summary is asked to stay within about 25% of the window, and if it still runs longer, its oldest text is dropped.
 
-Replies stream as they are written. A status line shows what the server is doing (for example "Thinking..." or "Running social_roll..."). Text written before a tool call is cleared when the tool runs, so only the reply that follows stays on screen. A reply is saved only after the model finishes; if the model fails, nothing is saved and your message stays in the box to resend.
+A reply has two phases. In the decision phase the GM decides whether a roll or other tool is needed and makes the tool calls; its text is not shown. In the narration phase the GM writes the reply the player reads, and only that text streams in. A status line shows the current phase (for example "Deciding...", "Running social_roll...", or "Narrating..."). A reply is saved only after the model finishes; if the model fails, nothing is saved and your message stays in the box to resend.
 
 Each AI reply has a gear button. It opens a "Reply details" dialog with two tabs. The Context tab shows exactly what the model received for that reply (the system prompt, rules, tool definitions, the summary, the kept messages, and any tool rounds), with each part labelled by its source. The Transcript tab shows everything that happened in that round: your message, tool calls and their results, and the reply. Each reply stores its own copy of that context and transcript, so long chats use more database space. Replies from before these features show "No context was recorded" or no transcript.
 
@@ -82,20 +82,20 @@ Model ids take the form `provider/model`, for example `ollama/gemma4:e2b` or `op
 
 ## Scripted fake model (for tests)
 
-`fake/scripted` reads a directive from your message: `__FAKE__:` followed by a strict JSON object (quoted keys). Each assistant turn after it consumes the next entry in `turns`:
+`fake/scripted` reads a directive from your message: `__FAKE__:` followed by a strict JSON object (quoted keys). Each user message after the directive uses the next entry in `turns`:
 
 ```text
 __FAKE__:{"turns": [
   {"text": "Hello."},
-  {"text": "Rolling.", "tool_calls": [{"name": "social_roll", "arguments": {"relationship": 1, "circumstance": 0}}]},
-  {"text": "You rolled well."},
+  {"rounds": [[{"name": "social_roll", "arguments": {"relationship": 1, "circumstance": 0}}]],
+   "text": "You rolled well."},
   {"error": "upstream exploded"}
 ]}
 ```
 
-- `text` is the reply text.
-- `tool_calls` are requests the engine runs for real, so each name must be a tool in the rule set. Each entry is one model call, so a tool round uses a turn and the narration is the next turn.
-- `error` makes the turn fail and saves nothing. The same entry is retried until you send a new directive.
+- `rounds` lists the tool calls the GM makes, one list per round. The engine runs them for real, so each name must be a tool in the rule set. Decision calls get these rounds; the narration does not.
+- `text` is the narration the player reads.
+- `error` makes the turn fail and saves nothing. The failed message is not kept, so resending it retries the same entry until you send a new directive.
 - A newer directive replaces the older one. When the script runs out, the model echoes your last message.
 
 ## Operations

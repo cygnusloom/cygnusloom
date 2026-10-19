@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from cygnusforge.llm.base import ChatReply, LLMError
 from cygnusforge.llm.fake import FakeProvider
+from cygnusforge.services.campaigns import NARRATE_INSTRUCTION
 from tests.conftest import csrf_token, register
 
 
@@ -85,7 +86,7 @@ def test_each_message_can_use_a_different_model(
     _send(client, campaign_id, "one", model="fake/scripted")
     _send(client, campaign_id, "two", model="ollama/test-model")
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert used == ["fake/scripted", "ollama/test-model"]
+    assert used == ["fake/scripted"] * 2 + ["ollama/test-model"] * 2
     assert "from fake/scripted" in page
     assert "from ollama/test-model" in page
 
@@ -192,9 +193,10 @@ def test_history_is_sent_to_the_model(client_factory: Callable[[], TestClient], 
     _send(client, campaign_id, "first")
     _send(client, campaign_id, "second")
     last = fake.calls[-1]
-    assert [m["role"] for m in last] == ["system", "user", "assistant", "user"]
+    assert [m["role"] for m in last] == ["system", "user", "assistant", "user", "system"]
     assert last[1]["content"] == "first"
-    assert last[-1]["content"] == "second"
+    assert last[3]["content"] == "second"
+    assert last[-1]["content"] == NARRATE_INSTRUCTION
 
 
 def test_scripted_directive_drives_later_turns(client_factory: Callable[[], TestClient]):

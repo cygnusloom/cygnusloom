@@ -51,26 +51,36 @@ def test_stream_sends_status_then_deltas_then_saved(
 
     events = _stream(client, campaign_id, _script({"text": "Hello there, friend."}))
 
-    assert events[0] == {"type": "status", "text": "Thinking..."}
+    assert events[0] == {"type": "status", "text": "Deciding..."}
     assert _deltas(events) == "Hello there, friend."
-    assert not any(e["type"] == "reset" for e in events)
     assert events[-1] == {"type": "saved", "message_id": _assistant_ids(app, campaign_id)[-1]}
 
 
-def test_narration_before_a_tool_call_is_reset_and_the_tool_is_announced(
+def test_each_phase_shows_a_status_and_only_the_narration_is_streamed(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
-    script = _script({"text": "Checking the room.", "tool_calls": [ROLL]}, {"text": "Done."})
 
-    events = _stream(client, campaign_id, script)
+    events = _stream(client, campaign_id, _script({"rounds": [[ROLL]], "text": "Done."}))
 
-    types = [e["type"] for e in events]
-    reset_at = types.index("reset")
-    assert "delta" in types[:reset_at]
-    assert {"type": "status", "text": "Running social_roll..."} in events[reset_at:]
-    assert _deltas(events[reset_at:]) == "Done."
+    statuses = [e["text"] for e in events if e["type"] == "status"]
+    assert statuses == ["Deciding...", "Running social_roll...", "Deciding...", "Narrating..."]
+    narrating_at = events.index({"type": "status", "text": "Narrating..."})
+    assert _deltas(events[:narrating_at]) == ""
+    assert _deltas(events) == "Done."
     assert events[-1]["type"] == "saved"
+
+
+def test_decisions_offer_tools_and_the_narration_does_not(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    client, campaign_id = _campaign_id(client_factory)
+
+    _stream(client, campaign_id, _script({"rounds": [[ROLL]], "text": "Done."}))
+
+    assert [call["tools"] is not None for call in recorder.calls] == [True, True, False]
 
 
 def test_compression_is_announced_as_a_status(settings: Settings):
@@ -117,7 +127,7 @@ def test_provider_failure_is_reported_and_saves_nothing(
 
     events = _stream(client, campaign_id, "are you there?")
 
-    assert events[0] == {"type": "status", "text": "Thinking..."}
+    assert events[0] == {"type": "status", "text": "Deciding..."}
     assert events[-1] == {
         "type": "error",
         "status": 502,

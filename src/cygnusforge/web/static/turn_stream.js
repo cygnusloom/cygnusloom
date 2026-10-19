@@ -109,9 +109,6 @@
           reply.content.textContent += item.text;
           scrollDown();
           break;
-        case "reset":
-          reply.content.textContent = "";
-          break;
         case "saved":
           saved = true;
           break;

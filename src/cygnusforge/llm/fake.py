@@ -4,16 +4,18 @@ A user message may carry a directive, `__FAKE__:` followed by a JSON object:
 
     __FAKE__:{"turns": [
         {"text": "Hello."},
-        {"text": "Rolling.", "tool_calls": [{"name": "social_roll", "arguments": {"relationship": 1, "circumstance": 0}}]},
-        {"text": "You rolled well."},
+        {"rounds": [[{"name": "social_roll", "arguments": {"relationship": 1}}]],
+         "text": "You rolled well."},
         {"error": "upstream exploded"}
     ]}
 
-Each model call after the directive consumes the next entry. A turn may set `text`,
-`tool_calls` (requests the engine then runs for real, so the name must be a tool in the rule
-set), or `error` (raises LLMError, so nothing is saved). A newer directive replaces the older
-one. When the script runs out, the provider echoes the last user message. The script lives in
-the transcript, so it needs no server-side state.
+Each user message after the directive uses the next turn. A turn's `rounds` are the tool calls
+the model makes, one list per round. The engine runs them for real, so each name must be a tool
+in the rule set. Its `text` is the narration. Its `error` raises LLMError, so nothing is saved.
+Within a turn, `chat` calls (the GM's decisions) get the rounds and return no text, and `stream`
+calls (the narration) get `text`. A newer directive replaces the older one. When the script runs
+out, the provider echoes the last user message. The script lives in the transcript, so it needs
+no server-side state.
 """
 
 from __future__ import annotations
@@ -43,7 +45,7 @@ class FakeProvider:
         tools: list[dict[str, Any]] | None = None,
     ) -> ChatReply:
         self.calls.append(messages)
-        return _respond(messages)
+        return _respond(messages, decision=True)
 
     async def stream(
         self,
@@ -52,21 +54,35 @@ class FakeProvider:
         tools: list[dict[str, Any]] | None = None,
     ) -> AsyncIterator[TextDelta | ChatReply]:
         self.calls.append(messages)
-        reply = _respond(messages)  # errors surface before anything is yielded
+        reply = _respond(messages, decision=False)  # errors surface before anything is yielded
         for piece in _WORDS.findall(reply.text):
             yield TextDelta(piece)
         yield reply
 
 
-def _respond(messages: list[dict[str, Any]]) -> ChatReply:
+def _respond(messages: list[dict[str, Any]], decision: bool) -> ChatReply:
     start = _latest_directive(messages)
     if start is None:
-        return ChatReply(text=_echo(messages))
+        return ChatReply(text="" if decision else _echo(messages))
     turns = _parse_directive(messages[start]["content"])
-    index = sum(1 for m in messages[start + 1 :] if m["role"] == "assistant")
-    if index >= len(turns):
-        return ChatReply(text=_echo(messages))
-    return _render(turns[index], index)
+    turn_index = sum(1 for m in messages[start:] if m["role"] == "user") - 1
+    if turn_index >= len(turns):
+        # Decisions stay silent so the narration is the only text the model produces.
+        return ChatReply(text="" if decision else _echo(messages))
+    turn = _turn(turns[turn_index])
+    if "error" in turn:
+        raise LLMError(str(turn["error"]))
+    if not decision:
+        return ChatReply(text=str(turn.get("text", "")))
+    rounds = _rounds(turn)
+    # Tool rounds already taken this turn are the assistant messages with tool calls since
+    # the latest user message.
+    last_user = max(i for i, m in enumerate(messages) if m["role"] == "user")
+    done = sum(1 for m in messages[last_user + 1 :] if "tool_calls" in m)
+    if done >= len(rounds):
+        return ChatReply(text="")
+    prefix = f"fake_{turn_index}_{done}"
+    return ChatReply(text="", tool_requests=_tool_requests(rounds[done], prefix))
 
 
 def _echo(messages: list[dict[str, Any]]) -> str:
@@ -93,17 +109,28 @@ def _parse_directive(content: str) -> list[Any]:
     return obj.get("turns", [])
 
 
-def _render(turn: Any, index: int) -> ChatReply:
+def _turn(turn: Any) -> dict[str, Any]:
     if not isinstance(turn, dict):
         raise LLMError("each scripted turn must be a JSON object")
-    if "error" in turn:
-        raise LLMError(str(turn["error"]))
+    return turn
+
+
+def _rounds(turn: dict[str, Any]) -> list[Any]:
+    rounds = turn.get("rounds", [])
+    if not isinstance(rounds, list):
+        raise LLMError('"rounds" must be a list of tool-call lists')
+    return rounds
+
+
+def _tool_requests(calls: Any, prefix: str) -> tuple[ToolRequest, ...]:
+    if not isinstance(calls, list):
+        raise LLMError("each scripted round must be a list of tool calls")
     requests = []
-    for position, call in enumerate(turn.get("tool_calls", [])):
+    for position, call in enumerate(calls):
         if not isinstance(call, dict) or not isinstance(call.get("name"), str):
             raise LLMError("each scripted tool call needs a name")
         arguments = json.dumps(call.get("arguments", {}), sort_keys=True)
         requests.append(
-            ToolRequest(id=f"fake_{index}_{position}", name=call["name"], arguments=arguments)
+            ToolRequest(id=f"{prefix}_{position}", name=call["name"], arguments=arguments)
         )
-    return ChatReply(text=str(turn.get("text", "")), tool_requests=tuple(requests))
+    return tuple(requests)

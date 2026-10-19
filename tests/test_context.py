@@ -116,7 +116,7 @@ def test_no_summary_when_the_chat_is_well_inside_the_window(settings: Settings):
     client, campaign_id = _campaign_id(lambda: TestClient(app))
     for _ in range(3):
         assert _send(client, campaign_id, "x" * 400).status_code == 303
-    assert len(provider.calls) == 3
+    assert len(provider.calls) == 6
     assert provider.summarizer_calls() == []
     campaign = _stored(app, campaign_id)
     assert campaign.context_summary == ""

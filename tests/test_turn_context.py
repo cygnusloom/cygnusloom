@@ -11,7 +11,12 @@ from sqlmodel import Session, select
 
 from cygnusforge.config import Settings
 from cygnusforge.db.models import Message
-from cygnusforge.services.campaigns import get_turn_context, get_turn_transcript
+from cygnusforge.services.campaigns import (
+    DECIDE_INSTRUCTION,
+    NARRATE_INSTRUCTION,
+    get_turn_context,
+    get_turn_transcript,
+)
 from tests.test_campaigns import _campaign_id, _send, _signed_in
 from tests.test_context import RecordingProvider, _send_until_summarized, _small_window_app, _stored
 from tests.test_tools import ROLL, _recording_provider, _script
@@ -49,8 +54,8 @@ def test_reply_context_lists_the_system_prompt_tools_and_the_message(
     assert sources[0] == "Base prompt"
     assert any(source.startswith("Rules from rule set 'freeform'") for source in sources)
     assert "Tool 'social_roll' from rule set 'freeform'" in sources
-    assert sources[-1] == "This message (player)"
-    assert parts[-1].content == "hello"
+    assert sources[-3:] == ["This message (player)", "Decide instruction", "Narrate instruction"]
+    assert parts[-3].content == "hello"
     page = client.get(f"/campaigns/{campaign_id}/messages/{reply_id}/context")
     assert page.status_code == 200
     assert "Base prompt" in page.text and "This message (player)" in page.text
@@ -64,15 +69,20 @@ def test_recorded_system_text_is_exactly_what_the_model_received(
     app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
     _send(client, campaign_id, _script({"text": "Hello back."}))
-    script = _script({"text": "Checking.", "tool_calls": [ROLL]}, {"text": "Well rolled."})
+    script = _script({"rounds": [[ROLL]], "text": "Well rolled."})
     _send(client, campaign_id, script)
     reply_id = _message_ids(app, campaign_id, "assistant")[-1]
 
     parts = _context(app, campaign_id, reply_id)
 
+    sources = [part.source for part in parts]
+    base = [
+        part for part in parts[: sources.index("This message (player)")] if part.role == "system"
+    ]
     final_call = recorder.calls[-1]["messages"]
-    system_text = "\n\n".join(part.content for part in parts if part.role == "system")
-    assert final_call[0] == {"role": "system", "content": system_text}
+    assert final_call[0] == {"role": "system", "content": "\n\n".join(p.content for p in base)}
+    assert final_call[-1] == {"role": "system", "content": NARRATE_INSTRUCTION}
+    assert all(message["content"] != DECIDE_INSTRUCTION for message in final_call)
 
 
 def test_context_shows_history_and_this_turns_tool_rounds(
@@ -85,7 +95,7 @@ def test_context_shows_history_and_this_turns_tool_rounds(
     _send(client, campaign_id, "second")
     first_user, second_user = _message_ids(app, campaign_id, "user")
     first_reply = _message_ids(app, campaign_id, "assistant")[0]
-    script = _script({"text": "Checking.", "tool_calls": [ROLL]}, {"text": "Well rolled."})
+    script = _script({"rounds": [[ROLL]], "text": "Well rolled."})
     _send(client, campaign_id, script)
     reply_id = _message_ids(app, campaign_id, "assistant")[-1]
 
@@ -95,14 +105,15 @@ def test_context_shows_history_and_this_turns_tool_rounds(
     assert f"Message #{first_user} (player)" in sources
     assert f"Message #{first_reply} (GM, fake/scripted)" in sources
     assert f"Message #{second_user} (player)" in sources
-    assert sources[-4:] == [
+    assert sources[-5:] == [
         "This message (player)",
-        "GM text (round 1)",
+        "Decide instruction",
         "GM tool call (round 1)",
         "Result of 'social_roll' (round 1)",
+        "Narrate instruction",
     ]
-    assert parts[-2].content.startswith("social_roll(")
-    result = json.loads(parts[-1].content)
+    assert parts[-3].content.startswith("social_roll(")
+    result = json.loads(parts[-2].content)
     assert result["total"] == result["die"] + result["relationship"] + result["circumstance"]
 
 
@@ -202,7 +213,7 @@ def test_transcript_covers_only_this_round(client_factory: Callable[[], TestClie
     _send(client, campaign_id, _script({"text": "Hello back."}))
     _send(client, campaign_id, "second")
     first_user = _message_ids(app, campaign_id, "user")[0]
-    script = _script({"text": "Checking.", "tool_calls": [ROLL]}, {"text": "Well rolled."})
+    script = _script({"rounds": [[ROLL]], "text": "Well rolled."})
     _send(client, campaign_id, script)
     reply_id = _message_ids(app, campaign_id, "assistant")[-1]
 
@@ -210,12 +221,12 @@ def test_transcript_covers_only_this_round(client_factory: Callable[[], TestClie
 
     assert [entry.source for entry in entries] == [
         "This message (player)",
-        "GM text (round 1)",
+        "Decide instruction",
         "GM tool call (round 1)",
         "Result of 'social_roll' (round 1)",
+        "Narrate instruction",
         "Reply",
     ]
-    assert all(entry.role != "system" for entry in entries)
     assert f"Message #{first_user} (player)" not in [entry.source for entry in entries]
     assert entries[-1].content == "Well rolled."
     assert entries[0].content == script
