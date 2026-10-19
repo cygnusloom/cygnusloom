@@ -92,7 +92,7 @@ def test_send_keeps_the_chosen_model_selected(
     assert response.status_code == 303
     assert response.headers["location"] == (f"/campaigns/{campaign_id}?model=ollama%2Ftest-model")
     page = client.get(response.headers["location"]).text
-    assert '<option value="ollama/test-model" selected>' in page
+    assert 'value="ollama/test-model" checked' in page
 
 
 def test_create_rejects_blank_name(client_factory: Callable[[], TestClient]):

@@ -73,6 +73,23 @@
   document.querySelectorAll("[data-drawer-close]").forEach((button) => {
     button.addEventListener("click", () => setDrawer(button.closest(".drawer").id, false));
   });
+  const composerInput = document.querySelector(".composer textarea");
+  if (composerInput) {
+    composerInput.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+      event.preventDefault();
+      composerInput.form.requestSubmit();
+    });
+  }
+
+  document.addEventListener("click", (event) => {
+    for (const drawer of document.querySelectorAll(".drawer.open")) {
+      if (drawer.contains(event.target)) continue;
+      if (event.target.closest(`[data-drawer-target="${drawer.id}"]`)) continue;
+      setDrawer(drawer.id, false);
+    }
+  });
+
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
     document.querySelectorAll(".drawer.open").forEach((drawer) => setDrawer(drawer.id, false));

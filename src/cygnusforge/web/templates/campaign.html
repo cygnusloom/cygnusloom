@@ -23,15 +23,13 @@
               <p class="muted">Say something to start the conversation.</p>
             {% endfor %}
           </div>
-          <form method="post" action="/campaigns/{{ campaign.id }}/messages" class="composer">
+          <form method="post" action="/campaigns/{{ campaign.id }}/messages" class="composer" id="composer">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <select name="model" aria-label="Model">
-              {% for model in models %}
-                <option value="{{ model }}"{% if model == selected_model %} selected{% endif %}>{{ model }}</option>
-              {% endfor %}
-            </select>
             <textarea name="content" rows="3" required maxlength="8000" placeholder="Message">{{ draft }}</textarea>
-            <button type="submit">Send</button>
+            <div class="composer-actions">
+              <button type="button" class="composer-settings" data-dialog-target="dialog-model" aria-haspopup="dialog" aria-label="Model settings" title="Model settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
+              <button type="submit">Send</button>
+            </div>
           </form>
         </section>
 
@@ -61,15 +59,15 @@
     <section class="view" data-view="lore" aria-label="Lore" hidden>
       <p class="muted">Placeholder: lore will appear here.</p>
     </section>
-  </div>
 
-  <aside class="drawer" id="drawer-notes" aria-label="Notes">
-    <div class="panel-header">
-      <h2>Notes</h2>
-      <button type="button" class="close" data-drawer-close aria-label="Close">&times;</button>
-    </div>
-    <p class="muted">Placeholder: notes will appear here.</p>
-  </aside>
+    <aside class="drawer" id="drawer-notes" aria-label="Notes">
+      <div class="panel-header">
+        <h2>Notes</h2>
+        <button type="button" class="close" data-drawer-close aria-label="Close">&times;</button>
+      </div>
+      <p class="muted">Placeholder: notes will appear here.</p>
+    </aside>
+  </div>
 </div>
 
 <dialog id="dialog-characters" class="app-dialog" aria-labelledby="dialog-characters-title">
@@ -77,6 +75,18 @@
     <h2 id="dialog-characters-title">Characters</h2>
     <p class="muted">Placeholder: character details will appear here.</p>
     <button type="submit">Close</button>
+  </form>
+</dialog>
+<dialog id="dialog-model" class="app-dialog" aria-labelledby="dialog-model-title">
+  <form method="dialog">
+    <h2 id="dialog-model-title">Model</h2>
+    <fieldset class="model-options">
+      <legend class="muted">Used for the next message</legend>
+      {% for model in models %}
+        <label><input type="radio" name="model" value="{{ model }}"{% if model == selected_model %} checked{% endif %} form="composer"> {{ model }}</label>
+      {% endfor %}
+    </fieldset>
+    <button type="submit">Done</button>
   </form>
 </dialog>
 {% endblock %}
