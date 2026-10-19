@@ -16,6 +16,14 @@ class SocialRoll:
     def total(self) -> int:
         return self.die + self.relationship + self.circumstance
 
+    def to_dict(self) -> dict[str, int]:
+        return {
+            "die": self.die,
+            "relationship": self.relationship,
+            "circumstance": self.circumstance,
+            "total": self.total,
+        }
+
 
 def social_roll(
     relationship: int, circumstance: int, rng: random.Random | None = None

@@ -1,20 +1,23 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from typing import Any
 
 from sqlalchemy import Engine
 from sqlmodel import select
 
-from cygnusforge.content.library import ContentLibrary
+from cygnusforge.content.library import ContentLibrary, ToolCall
 from cygnusforge.db.models import Campaign, Message
 from cygnusforge.llm.base import LLMError, Provider, complete
 from cygnusforge.llm.registry import ProviderFactory
 from cygnusforge.services.common import InvalidInput, NotFound, session_scope
+from cygnusforge.services.tools import run_tool, tool_specs
 
 MAX_NAME = 120
 MAX_MESSAGE = 8000
+MAX_TOOL_ROUNDS = 3
 SYSTEM_PROMPT = "You are a helpful assistant."
 SUMMARY_PROMPT = (
     "You keep the memory of a roleplaying campaign. Given the summary so far and new events, "
@@ -169,6 +172,46 @@ async def _summarize(
     return _keep_newest(summary, budget_tokens)
 
 
+async def _reply_with_tools(
+    provider: Provider,
+    model_name: str,
+    messages: list[dict[str, Any]],
+    tool_calls: Mapping[str, ToolCall],
+) -> str:
+    """Let the GM call tools until it gives a reply. Tool calls and results stay in this turn."""
+    specs = tool_specs(tool_calls)
+    for _ in range(MAX_TOOL_ROUNDS + 1):
+        result = await provider.chat(model_name, messages, specs)
+        if not result.tool_requests:
+            reply = result.text.strip()
+            if not reply:
+                raise LLMError("the model returned an empty reply")
+            return reply
+        messages.append(
+            {
+                "role": "assistant",
+                "content": result.text or None,
+                "tool_calls": [
+                    {
+                        "id": request.id,
+                        "type": "function",
+                        "function": {"name": request.name, "arguments": request.arguments},
+                    }
+                    for request in result.tool_requests
+                ],
+            }
+        )
+        for request in result.tool_requests:
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": request.id,
+                    "content": run_tool(tool_calls, request),
+                }
+            )
+    raise LLMError("the model kept calling tools without answering")
+
+
 async def send_message(
     engine: Engine,
     providers: ProviderFactory,
@@ -219,9 +262,7 @@ async def send_message(
         *({"role": m.role, "content": m.content} for m in history),
         {"role": "user", "content": text},
     ]
-    reply = await complete(provider, model_name, messages)
-    if not reply:
-        raise LLMError("the model returned an empty reply")
+    reply = await _reply_with_tools(provider, model_name, messages, rule_set.tool_calls)
     with session_scope(engine) as db:
         stored = db.get(Campaign, campaign.id)
         if stored is None:

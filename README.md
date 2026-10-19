@@ -54,6 +54,8 @@ Bundled content:
 - `freeform` rule set: no fixed rules beyond keeping the world consistent unless the player asks otherwise. Its `social_roll` tool call rolls one d20 plus a relationship modifier and a circumstance modifier, which the AI GM decides. The Python side is [rules/freeform.py](src/cygnusforge/rules/freeform.py).
 - `gnomeforest` world: a magical mushroom gnome forest.
 
+Tool calls: each message offers the rule set's `tool_call` entries to the model as function tools. When the model calls one, the engine runs the Python function with the model's arguments and returns the result to the model, which then writes its reply. A message may run up to three rounds of tool calls; a fourth request fails the turn. Bad calls (unknown name, invalid JSON, wrong or missing or unexpected arguments, or a function that raises) return an `error` object to the model instead of failing the turn, so it can recover. Tool calls and their results are not saved in the transcript; only the final reply is.
+
 Settings are fixed when a campaign is created. Campaigns created before these settings existed need a new database, because the schema gained two columns. Delete `cygnusforge.db` or point `CYGNUSFORGE_DATABASE_URL` somewhere new.
 
 ## Configuration
@@ -80,13 +82,14 @@ Model ids take the form `provider/model`, for example `ollama/gemma4:e2b` or `op
 ```text
 __FAKE__:{"turns": [
   {"text": "Hello."},
-  {"text": "Rolling.", "tool_calls": [{"name": "roll", "arguments": {"sides": 20}, "output": "14"}]},
+  {"text": "Rolling.", "tool_calls": [{"name": "social_roll", "arguments": {"relationship": 1, "circumstance": 0}}]},
+  {"text": "You rolled well."},
   {"error": "upstream exploded"}
 ]}
 ```
 
 - `text` is the reply text.
-- `tool_calls` render as `<tool_call>` and `<tool_output>` tags in the reply.
+- `tool_calls` are requests the engine runs for real, so each name must be a tool in the rule set. Each entry is one model call, so a tool round uses a turn and the narration is the next turn.
 - `error` makes the turn fail and saves nothing. The same entry is retried until you send a new directive.
 - A newer directive replaces the older one. When the script runs out, the model echoes your last message.
 

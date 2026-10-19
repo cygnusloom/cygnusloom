@@ -5,7 +5,7 @@ from collections.abc import Callable
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusforge.llm.base import LLMError
+from cygnusforge.llm.base import ChatReply, LLMError
 from cygnusforge.llm.fake import FakeProvider
 from tests.conftest import csrf_token, register
 
@@ -73,9 +73,9 @@ def test_each_message_can_use_a_different_model(
     class Echo:
         name = "echo"
 
-        async def stream_text(self, model, messages):
+        async def chat(self, model, messages, tools=None):
             used.append(model)
-            yield f"from {model}"
+            return ChatReply(text=f"from {model}")
 
     app.state.providers = lambda model_id: (Echo(), model_id)
     client, campaign_id = _campaign_id(client_factory)
@@ -93,8 +93,8 @@ def test_send_keeps_the_chosen_model_selected(
     class Echo:
         name = "echo"
 
-        async def stream_text(self, model, messages):
-            yield "ok"
+        async def chat(self, model, messages, tools=None):
+            return ChatReply(text="ok")
 
     app.state.providers = lambda model_id: (Echo(), model_id)
     client, campaign_id = _campaign_id(client_factory)
@@ -218,9 +218,8 @@ def test_failed_reply_saves_nothing_and_keeps_draft(
     class Broken:
         name = "broken"
 
-        async def stream_text(self, model, messages):
+        async def chat(self, model, messages, tools=None):
             raise LLMError("provider broken is unreachable")
-            yield ""  # pragma: no cover
 
     app.state.providers = lambda model_id: (Broken(), "model")
     client, campaign_id = _campaign_id(client_factory)

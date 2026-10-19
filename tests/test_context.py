@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import re
-from collections.abc import AsyncIterator, Callable
+from collections.abc import Callable
 from typing import Any
 
 from fastapi import FastAPI
@@ -11,7 +11,7 @@ from sqlmodel import Session, func, select
 
 from cygnusforge.config import Settings
 from cygnusforge.db.models import Campaign, Message
-from cygnusforge.llm.base import LLMError
+from cygnusforge.llm.base import ChatReply, LLMError
 from cygnusforge.services.campaigns import SUMMARY_PROMPT, system_prompt
 from cygnusforge.web.app import create_app
 from tests.test_campaigns import _campaign_id, _send
@@ -30,15 +30,19 @@ class RecordingProvider:
         self.summary_reply = "SUMMARY"
         self.fail_after_summary = False
 
-    async def stream_text(self, model: str, messages: list[dict[str, Any]]) -> AsyncIterator[str]:
+    async def chat(
+        self,
+        model: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+    ) -> ChatReply:
         self.calls.append(messages)
         if messages[0]["content"].startswith(SUMMARY_PROMPT):
             self.summaries += 1
-            yield self.summary_reply
-            return
+            return ChatReply(text=self.summary_reply)
         if self.fail_after_summary and self.summaries:
             raise LLMError("the model is down")
-        yield "reply"
+        return ChatReply(text="reply")
 
     def summarizer_calls(self) -> list[list[dict[str, Any]]]:
         return [call for call in self.calls if call[0]["content"].startswith(SUMMARY_PROMPT)]

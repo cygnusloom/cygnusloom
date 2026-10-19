@@ -1,16 +1,21 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from typing import Any
 
 import pytest
 
-from cygnusforge.llm.base import LLMError, complete
+from cygnusforge.llm.base import ChatReply, LLMError
 from cygnusforge.llm.fake import FakeProvider
 
 
+def _chat(messages: list[dict[str, Any]]) -> ChatReply:
+    return asyncio.run(FakeProvider().chat("scripted", messages))
+
+
 def _run(messages: list[dict[str, Any]]) -> str:
-    return asyncio.run(complete(FakeProvider(), "scripted", messages))
+    return _chat(messages).text
 
 
 def _user(content: str) -> dict[str, Any]:
@@ -35,15 +40,41 @@ def test_directive_turns_are_consumed_in_order():
     assert _run(history) == "You said: again"
 
 
-def test_tool_calls_and_outputs_are_rendered():
+def test_tool_calls_are_returned_as_structured_requests():
     script = (
         '__FAKE__:{"turns": [{"text": "Rolling.", "tool_calls": '
-        '[{"name": "roll", "arguments": {"sides": 20}, "output": "14"}]}]}'
+        '[{"name": "social_roll", "arguments": {"relationship": 1, "circumstance": 0}}]}]}'
     )
-    reply = _run([_user(script)])
-    assert reply == (
-        'Rolling.\n<tool_call name="roll">{"sides": 20}</tool_call>\n<tool_output>14</tool_output>'
+    reply = _chat([_user(script)])
+    assert reply.text == "Rolling."
+    assert len(reply.tool_requests) == 1
+    request = reply.tool_requests[0]
+    assert request.name == "social_roll"
+    assert json.loads(request.arguments) == {"relationship": 1, "circumstance": 0}
+
+
+def test_tool_request_ids_are_unique_within_a_turn():
+    script = (
+        '__FAKE__:{"turns": [{"tool_calls": ['
+        '{"name": "social_roll", "arguments": {}}, {"name": "social_roll", "arguments": {}}]}]}'
     )
+    ids = [request.id for request in _chat([_user(script)]).tool_requests]
+    assert len(set(ids)) == 2
+
+
+def test_each_model_call_consumes_one_turn_including_tool_rounds():
+    script = (
+        '__FAKE__:{"turns": [{"tool_calls": [{"name": "social_roll", "arguments": {}}]},'
+        ' {"text": "You rolled well."}]}'
+    )
+    history = [_user(script)]
+    first = _chat(history)
+    assert first.tool_requests and first.text == ""
+    history += [
+        {"role": "assistant", "content": ""},
+        {"role": "tool", "tool_call_id": first.tool_requests[0].id, "content": "{}"},
+    ]
+    assert _run(history) == "You rolled well."
 
 
 def test_directive_may_be_followed_by_text():

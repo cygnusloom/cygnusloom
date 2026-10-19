@@ -1,19 +1,17 @@
 from __future__ import annotations
 
-import json
 import logging
-from collections.abc import AsyncIterator
 from typing import Any
 
 import httpx
 
-from cygnusforge.llm.base import LLMError
+from cygnusforge.llm.base import ChatReply, LLMError, ToolRequest
 
 logger = logging.getLogger(__name__)
 
 
 class OpenAICompatProvider:
-    """Adapter for any server that speaks the OpenAI chat completions streaming API, such as Ollama at /v1."""
+    """Adapter for any server that speaks the OpenAI chat completions API, such as Ollama at /v1."""
 
     def __init__(
         self,
@@ -27,16 +25,23 @@ class OpenAICompatProvider:
         self._api_key = api_key
         self._client = client or httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=5.0))
 
-    async def stream_text(self, model: str, messages: list[dict[str, Any]]) -> AsyncIterator[str]:
-        body = {"model": model, "messages": messages, "stream": True}
-        headers = {"Accept": "text/event-stream"}
+    async def chat(
+        self,
+        model: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+    ) -> ChatReply:
+        body: dict[str, Any] = {"model": model, "messages": messages}
+        if tools:
+            body["tools"] = tools
+        headers = {"Accept": "application/json"}
         if self._api_key:
             headers["Authorization"] = f"Bearer {self._api_key}"
         request = self._client.build_request(
             "POST", f"{self._base_url}/chat/completions", json=body, headers=headers
         )
         try:
-            response = await self._client.send(request, stream=True)
+            response = await self._client.send(request)
         except httpx.HTTPError as exc:
             logger.warning("provider %s unreachable: %r", self.name, exc)
             raise LLMError(f"provider {self.name} is unreachable") from exc
@@ -44,21 +49,26 @@ class OpenAICompatProvider:
             if response.status_code >= 400:
                 logger.warning("provider %s returned HTTP %d", self.name, response.status_code)
                 raise LLMError(f"provider {self.name} returned HTTP {response.status_code}")
-            async for line in response.aiter_lines():
-                if not line.startswith("data:"):
-                    continue
-                data = line[5:].strip()
-                if data == "[DONE]":
-                    break
-                try:
-                    chunk = json.loads(data)
-                except ValueError as exc:
-                    raise LLMError("malformed stream chunk") from exc
-                for choice in chunk.get("choices", []):
-                    content = (choice.get("delta") or {}).get("content")
-                    if content:
-                        yield content
-        except httpx.HTTPError as exc:
-            raise LLMError(f"provider {self.name} stream failed") from exc
+            data = response.json()
+        except ValueError as exc:
+            raise LLMError(f"provider {self.name} sent a malformed reply") from exc
         finally:
             await response.aclose()
+        return _parse_reply(self.name, data)
+
+
+def _parse_reply(name: str, data: Any) -> ChatReply:
+    try:
+        message = data["choices"][0]["message"]
+        text = message.get("content") or ""
+        requests = tuple(
+            ToolRequest(
+                id=str(call["id"]),
+                name=str(call["function"]["name"]),
+                arguments=str(call["function"].get("arguments") or "{}"),
+            )
+            for call in message.get("tool_calls") or []
+        )
+    except (KeyError, IndexError, TypeError, AttributeError) as exc:
+        raise LLMError(f"provider {name} sent a reply without a message") from exc
+    return ChatReply(text=text, tool_requests=requests)
