@@ -213,8 +213,8 @@ def _line(event: TurnEvent | TurnError) -> str:
             payload = {"type": "delta", "text": text}
         case Activity(text):
             payload = {"type": "activity", "text": text}
-        case Prompt(text, dice):
-            payload = {"type": "prompt", "text": text, "dice": dice}
+        case Prompt(text, dice, details):
+            payload = {"type": "prompt", "text": text, "dice": dice, "details": details}
         case Saved(message_id):
             payload = {"type": "saved", "message_id": message_id}
         case TurnError(status, message):

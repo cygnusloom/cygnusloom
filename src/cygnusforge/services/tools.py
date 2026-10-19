@@ -22,6 +22,7 @@ class Ask:
 
     text: str
     dice: str
+    details: str | None = None
 
 
 @dataclass(frozen=True)
@@ -84,7 +85,11 @@ def run_tool(
     if tool.player_input is None:
         return _call(tool, arguments)
     if answer is None:
-        return Ask(text=arguments[PROMPT_ARGUMENT], dice=tool.player_input.dice)
+        return Ask(
+            text=arguments[PROMPT_ARGUMENT],
+            dice=tool.player_input.dice,
+            details=_details(tool, arguments),
+        )
     arguments.pop(PROMPT_ARGUMENT, None)
     if isinstance(answer, TextAnswer):
         return ToolRun(json.dumps({"player_text": answer.text}), None)
@@ -107,10 +112,21 @@ def _activity(tool: ToolCall, arguments: Mapping[str, Any], result: Any) -> str 
     """The player-facing line for a tool run, or None when the tool has none."""
     if tool.activity is None or not isinstance(result, Mapping):
         return None
+    return _fill(tool, tool.activity, {**arguments, **result}, "an activity template")
+
+
+def _details(tool: ToolCall, arguments: Mapping[str, Any]) -> str | None:
+    """The line shown with a tool's prompt, such as its modifiers, or None."""
+    if tool.player_input is None or tool.player_input.details is None:
+        return None
+    return _fill(tool, tool.player_input.details, arguments, "a details template")
+
+
+def _fill(tool: ToolCall, template: str, values: Mapping[str, Any], what: str) -> str | None:
     try:
-        return tool.activity.format_map({**arguments, **result})
+        return template.format_map(values)
     except (KeyError, IndexError, ValueError, TypeError):
-        logger.exception("tool %s has an activity template that does not fit its result", tool.name)
+        logger.exception("tool %s has %s that does not fit its values", tool.name, what)
         return None
 
 

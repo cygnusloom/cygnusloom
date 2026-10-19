@@ -38,6 +38,7 @@
                 {% if pending.prompt %}
                   <div class="pending-prompt">
                     <div class="content">{{ pending.prompt.text | markdown }}</div>
+                    {% if pending.prompt.details %}<p class="pending-details muted">{{ pending.prompt.details }}</p>{% endif %}
                     <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action>
                       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                       <input type="hidden" name="kind" value="roll">

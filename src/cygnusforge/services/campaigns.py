@@ -284,10 +284,13 @@ class Activity:
 
 @dataclass(frozen=True)
 class Prompt:
-    """The reply is paused until the player rolls `dice` or types a reply to `text`."""
+    """The reply is paused until the player rolls `dice` or types a reply to `text`.
+
+    `details`, if set, is shown with the prompt, such as the modifiers for a roll."""
 
     text: str
     dice: str
+    details: str | None = None
 
 
 @dataclass(frozen=True)
@@ -392,7 +395,7 @@ async def _advance(
             run = run_tool(tool_calls, request)
             if isinstance(run, Ask):
                 state.prompt = run
-                yield Prompt(run.text, run.dice)
+                yield Prompt(run.text, run.dice, run.details)
                 return
             state.queue.pop(0)
             _record_tool(state, request, run)

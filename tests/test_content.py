@@ -85,7 +85,9 @@ def test_bundled_social_roll_is_a_tool_call_backed_by_python():
     assert tool.function is social_roll
     assert set(tool.parameters["properties"]) == {"prompt", "relationship", "circumstance"}
     assert tool.parameters["required"] == ["prompt", "relationship", "circumstance"]
-    assert tool.player_input == PlayerInput(dice="1d20", param="roll")
+    assert tool.player_input is not None
+    assert (tool.player_input.dice, tool.player_input.param) == ("1d20", "roll")
+    assert "{relationship:+d}" in (tool.player_input.details or "")
     assert tool.activity is not None
 
 
@@ -146,7 +148,11 @@ ROLLED_PARAMETERS: dict[str, Any] = {
 }
 ROLLED: dict[str, Any] = {
     "parameters": ROLLED_PARAMETERS,
-    "player_input": {"dice": "1d20", "param": "roll"},
+    "player_input": {
+        "dice": "1d20",
+        "param": "roll",
+        "details": "Modifiers: {relationship:+d} for {circumstance:+d}.",
+    },
     "activity": "You rolled {die} for {total}.",
 }
 
@@ -158,7 +164,9 @@ def _load_tool(tree: Path, **overrides: Any):
 
 def test_player_input_and_activity_are_read(tree: Path):
     tool = _load_tool(tree)
-    assert tool.player_input == PlayerInput(dice="1d20", param="roll")
+    assert tool.player_input == PlayerInput(
+        dice="1d20", param="roll", details="Modifiers: {relationship:+d} for {circumstance:+d}."
+    )
     assert tool.activity == "You rolled {die} for {total}."
 
 
@@ -177,6 +185,18 @@ def test_player_input_and_activity_are_read(tree: Path):
         ),
         ({"player_input": "1d20"}, "'player_input' must be an object"),
         ({"activity": "You rolled {total"}, "not a valid template"),
+        (
+            {"player_input": {"dice": "1d20", "param": "roll", "details": "Mod {relationship"}},
+            "'player_input.details' is not a valid template",
+        ),
+        (
+            {"player_input": {"dice": "1d20", "param": "roll", "details": "  "}},
+            "'player_input.details' must be a non-empty text template",
+        ),
+        (
+            {"player_input": {"dice": "1d20", "param": "roll", "details": "{nope}"}},
+            "names unknown argument 'nope'",
+        ),
         ({"activity": "   "}, "non-empty text template"),
         (
             {

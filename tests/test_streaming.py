@@ -63,6 +63,7 @@ def test_each_phase_shows_a_status_and_only_the_narration_is_streamed(
 
     paused = _stream(client, campaign_id, _script({"rounds": [[ROLL]], "text": "Done."}))
     assert paused[-1]["type"] == "prompt"
+    assert paused[-1]["details"] == "Modifiers: +1 relationship, +0 circumstance."
     assert [e["text"] for e in paused if e["type"] == "status"] == [
         "Deciding...",
         "Running social_roll...",

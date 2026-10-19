@@ -65,6 +65,7 @@ def test_a_pause_saves_nothing_and_shows_the_prompt(
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "Roll to persuade." in page
     assert "Roll 1d20" in page
+    assert "Modifiers: +1 relationship, +0 circumstance." in page
     assert 'name="content" rows="3" required maxlength="8000"' in page
     assert 'placeholder="Answer the GM above first" disabled>' in page
 

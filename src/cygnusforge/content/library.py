@@ -37,10 +37,12 @@ class PlayerInput:
     """The player supplies a value for a tool before it runs.
 
     The player rolls `dice` (a formula such as "1d20") or types free-form text. A roll's
-    total is passed to the function as keyword argument `param`."""
+    total is passed to the function as keyword argument `param`. `details`, if set, is a
+    template filled from the arguments and shown with the prompt, such as the modifiers."""
 
     dice: str
     param: str
+    details: str | None = None
 
 
 @dataclass(frozen=True)
@@ -210,19 +212,33 @@ def _check_player_input(
     accepted = inspect.signature(function).parameters
     if param not in accepted:
         raise ContentError(f"{label}: function does not accept parameter {param!r}")
-    return PlayerInput(dice=dice, param=param)
+    details = _check_template(data.get("details"), "player_input.details", label)
+    if details is not None:
+        _check_fields(details, parameters["properties"], "player_input.details", label)
+    return PlayerInput(dice=dice, param=param, details=details)
 
 
 def _check_activity(template: object, label: str) -> str | None:
+    return _check_template(template, "activity", label)
+
+
+def _check_template(template: object, key: str, label: str) -> str | None:
     if template is None:
         return None
     if not isinstance(template, str) or not template.strip():
-        raise ContentError(f"{label}: 'activity' must be a non-empty text template")
+        raise ContentError(f"{label}: '{key}' must be a non-empty text template")
     try:
         list(string.Formatter().parse(template))
     except ValueError as exc:
-        raise ContentError(f"{label}: 'activity' is not a valid template: {exc}") from exc
+        raise ContentError(f"{label}: '{key}' is not a valid template: {exc}") from exc
     return template
+
+
+def _check_fields(template: str, arguments: Mapping[str, Any], key: str, label: str) -> None:
+    """A details template may only name schema arguments, so a typo fails at load."""
+    for _, field, _, _ in string.Formatter().parse(template):
+        if field and field not in arguments:
+            raise ContentError(f"{label}: '{key}' names unknown argument {field!r}")
 
 
 def _check_parameters(schema: object, label: str) -> dict[str, Any]:

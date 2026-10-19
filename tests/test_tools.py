@@ -76,7 +76,11 @@ SOCIAL_ARGUMENTS = '{"prompt": "Roll to persuade.", "relationship": 2, "circumst
 
 def test_social_roll_asks_the_player_before_it_runs():
     ask = run_tool(_freeform_tools(), _request("social_roll", SOCIAL_ARGUMENTS))
-    assert ask == Ask(text="Roll to persuade.", dice="1d20")
+    assert ask == Ask(
+        text="Roll to persuade.",
+        dice="1d20",
+        details="Modifiers: +2 relationship, -1 circumstance.",
+    )
 
 
 def test_social_roll_runs_with_the_players_roll():
@@ -208,7 +212,11 @@ def test_model_rolls_then_narrates_and_only_the_narration_is_saved(
     assert response.status_code == 303
     assert [spec["function"]["name"] for spec in recorder.calls[0]["tools"]] == ["social_roll"]
     assert _saved(app, campaign_id) == []
-    assert _pending(app, campaign_id)["prompt"] == {"text": "Roll to persuade.", "dice": "1d20"}
+    assert _pending(app, campaign_id)["prompt"] == {
+        "text": "Roll to persuade.",
+        "dice": "1d20",
+        "details": "Modifiers: +1 relationship, +0 circumstance.",
+    }
 
     events = _answer(client, campaign_id, "roll")
 

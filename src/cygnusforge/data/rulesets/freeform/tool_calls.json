@@ -30,7 +30,8 @@
     },
     "player_input": {
       "dice": "1d20",
-      "param": "roll"
+      "param": "roll",
+      "details": "Modifiers: {relationship:+d} relationship, {circumstance:+d} circumstance."
     },
     "activity": "You rolled {die} on the d20, with {relationship:+d} relationship and {circumstance:+d} circumstance, for {total}."
   }
