@@ -1,8 +1,17 @@
 (() => {
+  // Forms marked data-confirm (rollback) ask before submitting. This runs even without streaming.
+  document.addEventListener("submit", (event) => {
+    const form = event.target;
+    if (form instanceof HTMLFormElement && form.dataset.confirm && !window.confirm(form.dataset.confirm)) {
+      event.preventDefault();
+    }
+  });
+
   const composer = document.getElementById("composer");
   if (!composer || !composer.dataset.streamAction || !window.ReadableStream) return;
 
   const transcript = document.querySelector("[data-transcript]");
+  const logList = document.querySelector("[data-log]");
   const errorBox = document.querySelector(".turn-error");
   const textarea = composer.querySelector("textarea");
   const submit = composer.querySelector('button[type="submit"]');
@@ -46,6 +55,13 @@
 
   const scrollDown = () => {
     transcript.scrollTop = transcript.scrollHeight;
+  };
+
+  const appendLog = (text) => {
+    document.querySelector("[data-log-empty]")?.remove();
+    const entry = document.createElement("li");
+    entry.textContent = text;
+    logList.append(entry);
   };
 
   const setBusy = (busy) => {
@@ -99,14 +115,9 @@
           reply.status.hidden = false;
           scrollDown();
           break;
-        case "activity": {
-          const line = document.createElement("p");
-          line.className = "turn-activity";
-          line.textContent = item.text;
-          reply.content.before(line);
-          scrollDown();
+        case "log":
+          appendLog(item.text);
           break;
-        }
         case "delta":
           reply.status.hidden = true;
           reply.content.textContent += item.text;

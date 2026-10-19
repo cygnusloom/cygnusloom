@@ -22,8 +22,9 @@ class Campaign(SQLModel, table=True):
     """A chat owned by one account. The model is chosen per message.
 
     `world_template` and `rule_set` name directories under the bundled content.
-    `context_summary` stands in for every message up to and including `summary_through`
-    when the chat is too long to send whole; the transcript itself is never deleted."""
+    `context_summary` stands in for every chat event up to and including the event id
+    `summary_through` when the chat is too long to send whole. Both are projections of the
+    campaign's event log, so rolling back restores them too."""
 
     __tablename__ = "campaign"
 
@@ -37,31 +38,31 @@ class Campaign(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utcnow)
 
 
-class Message(SQLModel, table=True):
-    __tablename__ = "message"
+class Event(SQLModel, table=True):
+    """One entry in a campaign's log of what happened. Events are only appended, or removed
+    from the end by a rollback. See `cygnusforge.services.events`.
+
+    Ids are never reused, so a rolled-back event cannot be mistaken for a later one."""
+
+    __tablename__ = "event"
+    __table_args__ = {"sqlite_autoincrement": True}
 
     id: int | None = Field(default=None, primary_key=True)
     campaign_id: int = Field(foreign_key="campaign.id", index=True)
-    role: str = Field(max_length=16)
-    content: str = Field(sa_column=Column(Text, nullable=False))
-    model: str | None = Field(default=None, max_length=120)
-    # A JSON list of player-facing lines about what happened during the reply.
-    activity: str = Field(default="[]", sa_column=Column(Text, nullable=False))
+    channel: str = Field(max_length=16)
+    kind: str = Field(max_length=64)
+    payload: str = Field(sa_column=Column(Text, nullable=False))
     created_at: datetime = Field(default_factory=utcnow)
-
-    @property
-    def activity_lines(self) -> list[str]:
-        return json.loads(self.activity)
 
 
 class TurnContext(SQLModel, table=True):
-    """The prompt behind one assistant message, as a JSON list of context parts.
+    """The prompt behind one GM reply event, as a JSON list of context parts.
 
-    Kept apart from `message` so transcript pages do not load every prompt."""
+    Kept apart from `event` so transcript pages do not load every prompt."""
 
     __tablename__ = "turn_context"
 
-    message_id: int = Field(foreign_key="message.id", primary_key=True)
+    event_id: int = Field(foreign_key="event.id", primary_key=True)
     parts: str = Field(sa_column=Column(Text, nullable=False))
     # Null for replies sent before transcripts were recorded.
     transcript: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
@@ -70,8 +71,9 @@ class TurnContext(SQLModel, table=True):
 class PendingTurn(SQLModel, table=True):
     """A reply paused until the player answers a prompt, as a JSON turn state.
 
-    Nothing from the turn is saved as messages until it finishes, so this row is the only
-    record of a paused turn. A campaign has at most one."""
+    Its player messages are already events, but the GM's reply is not recorded until it
+    finishes, so this row is the only record of the rest of a paused turn. A campaign has at
+    most one."""
 
     __tablename__ = "pending_turn"
 

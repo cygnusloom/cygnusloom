@@ -6,11 +6,10 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
 
 from cygnusforge.config import Settings
-from cygnusforge.db.models import Message
 from cygnusforge.llm.base import LLMError
+from cygnusforge.services.campaigns import list_messages
 from tests.conftest import csrf_token
 from tests.test_campaigns import _answer, _campaign_id
 from tests.test_context import RecordingProvider, _saved_message_count, _small_window_app, _stored
@@ -35,13 +34,7 @@ def _deltas(events: list[dict[str, Any]]) -> str:
 
 
 def _assistant_ids(app: FastAPI, campaign_id: int) -> list[int]:
-    with Session(app.state.engine) as db:
-        rows = db.exec(
-            select(Message)
-            .where(Message.campaign_id == campaign_id, Message.role == "assistant")
-            .order_by(Message.id)
-        ).all()
-        return [m.id for m in rows if m.id is not None]
+    return [m.id for m in list_messages(app.state.engine, campaign_id) if m.role == "assistant"]
 
 
 def test_stream_sends_status_then_deltas_then_saved(
@@ -53,7 +46,7 @@ def test_stream_sends_status_then_deltas_then_saved(
 
     assert events[0] == {"type": "status", "text": "Deciding..."}
     assert _deltas(events) == "Hello there, friend."
-    assert events[-1] == {"type": "saved", "message_id": _assistant_ids(app, campaign_id)[-1]}
+    assert events[-1] == {"type": "saved", "event_id": _assistant_ids(app, campaign_id)[-1]}
 
 
 def test_each_phase_shows_a_status_and_only_the_narration_is_streamed(

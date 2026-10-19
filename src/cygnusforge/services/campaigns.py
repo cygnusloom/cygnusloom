@@ -11,7 +11,7 @@ from sqlalchemy import Engine
 from sqlmodel import select
 
 from cygnusforge.content.library import ContentLibrary, RuleSet, ToolCall
-from cygnusforge.db.models import Campaign, Message, PendingTurn, TurnContext
+from cygnusforge.db.models import Campaign, Event, PendingTurn, TurnContext
 from cygnusforge.llm.base import (
     ChatReply,
     LLMError,
@@ -24,6 +24,19 @@ from cygnusforge.llm.registry import ProviderFactory
 from cygnusforge.rules.context import ToolContext
 from cygnusforge.rules.dice import roll_total
 from cygnusforge.services.common import InvalidInput, NotFound, session_scope
+from cygnusforge.services.events import (
+    Channel,
+    ChatGM,
+    ChatPlayer,
+    GameEvent,
+    SummaryUpdated,
+    ToolActivity,
+    decode,
+    events_since,
+    last_event_id,
+    record,
+    truncate,
+)
 from cygnusforge.services.tools import (
     Ask,
     RollAnswer,
@@ -147,10 +160,32 @@ def campaign_world(engine: Engine, owner_id: int, campaign_id: int) -> CampaignW
         return CampaignWorld(view=snapshot(db, campaign_id), text=world_state_text(db, campaign_id))
 
 
-def list_messages(engine: Engine, campaign_id: int) -> list[Message]:
+@dataclass(frozen=True)
+class ChatMessage:
+    """A line of the chat: the player's, or the GM's reply with the model that wrote it. `id` is
+    the id of the event that recorded it."""
+
+    id: int
+    role: str
+    content: str
+    model: str | None = None
+
+
+def list_messages(engine: Engine, campaign_id: int) -> list[ChatMessage]:
     with session_scope(engine) as db:
-        query = select(Message).where(Message.campaign_id == campaign_id).order_by(Message.id)
-        return list(db.exec(query).all())
+        rows = events_since(db, campaign_id, channel=Channel.TRANSCRIPT)
+        return [_chat_message(row) for row in rows]
+
+
+def _chat_message(row: Event) -> ChatMessage:
+    event = decode(row)
+    if isinstance(event, ChatPlayer):
+        return ChatMessage(id=row.id or 0, role="user", content=event.content)
+    if isinstance(event, ChatGM):
+        return ChatMessage(
+            id=row.id or 0, role="assistant", content=event.content, model=event.model
+        )
+    raise TypeError(f"{row.kind} is not a chat event")
 
 
 def estimate_tokens(text: str) -> int:
@@ -218,7 +253,7 @@ def tool_definition_parts(rule_set: RuleSet) -> list[ContextPart]:
     ]
 
 
-def _message_source(message: Message) -> str:
+def _message_source(message: ChatMessage) -> str:
     if message.role == "user":
         return f"Message #{message.id} (player)"
     return f"Message #{message.id} (GM, {message.model or 'unknown model'})"
@@ -238,7 +273,7 @@ class ContextUsage:
 
 def context_usage(
     campaign: Campaign,
-    history: Sequence[Message],
+    history: Sequence[ChatMessage],
     rules: Mapping[str, str],
     limit: int,
     world_text: str = "",
@@ -258,7 +293,7 @@ def context_usage(
     return ContextUsage(used=used, limit=limit)
 
 
-def _verbatim_start(history: Sequence[Message], budget: int) -> int:
+def _verbatim_start(history: Sequence[ChatMessage], budget: int) -> int:
     """Index of the first message in the newest run that fits within `budget` tokens."""
     used = 0
     start = len(history)
@@ -285,7 +320,7 @@ async def _summarize(
     provider: Provider,
     model_name: str,
     previous: str,
-    messages: Sequence[Message],
+    messages: Sequence[ChatMessage],
     budget_tokens: int,
     record: list[ContextPart],
 ) -> str:
@@ -328,8 +363,8 @@ class Delta:
 
 
 @dataclass(frozen=True)
-class Activity:
-    """A player-facing line about something that happened during the reply, such as a roll."""
+class Logged:
+    """Something that happened during the reply and is shown in the Log, such as a roll."""
 
     text: str
 
@@ -347,12 +382,12 @@ class Prompt:
 
 @dataclass(frozen=True)
 class Saved:
-    """The turn is stored. `message_id` is the GM's reply."""
+    """The turn is stored. `event_id` is the GM's reply."""
 
-    message_id: int
+    event_id: int
 
 
-TurnEvent = Status | Delta | Activity | Prompt | Saved
+TurnEvent = Status | Delta | Logged | Prompt | Saved
 
 
 @dataclass(frozen=True)
@@ -366,15 +401,11 @@ class _Turn:
     can continue later from the same point."""
 
     model: str
-    player: list[str]
-    summary: str
-    watermark: int
     # Parts recorded ahead of this turn's own context: the summary request, and the player's message.
     head: list[ContextPart]
     context: list[ContextPart]
     messages: list[dict[str, Any]]
     round_start: int
-    activity: list[str] = field(default_factory=list)
     rounds: int = 0
     queue: list[ToolRequest] = field(default_factory=list)
     narrating: bool = False
@@ -389,14 +420,10 @@ class _Turn:
         prompt = data["prompt"]
         return cls(
             model=data["model"],
-            player=data["player"],
-            summary=data["summary"],
-            watermark=data["watermark"],
             head=[ContextPart(**part) for part in data["head"]],
             context=[ContextPart(**part) for part in data["context"]],
             messages=data["messages"],
             round_start=data["round_start"],
-            activity=data["activity"],
             rounds=data["rounds"],
             queue=[ToolRequest(**request) for request in data["queue"]],
             narrating=data["narrating"],
@@ -411,7 +438,7 @@ def _add_instruction(
     context.append(ContextPart("system", source, text))
 
 
-def _record_tool(state: _Turn, request: ToolRequest, run: ToolRun) -> None:
+def _record_tool(ctx: ToolContext, state: _Turn, request: ToolRequest, run: ToolRun) -> None:
     state.messages.append({"role": "tool", "tool_call_id": request.id, "content": run.output})
     state.context.append(
         ContextPart(
@@ -424,7 +451,7 @@ def _record_tool(state: _Turn, request: ToolRequest, run: ToolRun) -> None:
         ContextPart("tool", f"Result of '{request.name}' (round {state.rounds})", run.output)
     )
     if run.activity is not None:
-        state.activity.append(run.activity)
+        _record(ctx.engine, ctx.campaign_id, ToolActivity(run.activity))
 
 
 async def _advance(
@@ -454,9 +481,7 @@ async def _advance(
                 yield Prompt(run.text, run.dice, run.details)
                 return
             state.queue.pop(0)
-            _record_tool(state, request, run)
-            if run.activity is not None:
-                yield Activity(run.activity)
+            _record_tool(ctx, state, request, run)
             continue
         if state.narrating:
             break
@@ -572,6 +597,26 @@ def _store_pending(engine: Engine, campaign_id: int, state: _Turn) -> None:
         db.commit()
 
 
+def _record(engine: Engine, campaign_id: int, event: GameEvent) -> int:
+    with session_scope(engine) as db:
+        event_id = record(db, campaign_id, event)
+        db.commit()
+    return event_id
+
+
+def _last_event(engine: Engine, campaign_id: int) -> int:
+    with session_scope(engine) as db:
+        return last_event_id(db, campaign_id)
+
+
+def _new_log(engine: Engine, campaign_id: int, after: int) -> tuple[list[Logged], int]:
+    """The Log entries recorded after event `after`, and the id to pass next time."""
+    with session_scope(engine) as db:
+        newest = last_event_id(db, campaign_id)
+        rows = events_since(db, campaign_id, after, Channel.LOG)
+    return [Logged(decode(row).render()) for row in rows], newest
+
+
 async def _drive(
     engine: Engine,
     provider: Provider,
@@ -580,12 +625,19 @@ async def _drive(
     state: _Turn,
     campaign_id: int,
     ctx: ToolContext,
+    cursor: int,
 ) -> AsyncIterator[TurnEvent]:
-    """Run the reply until it is saved or paused. A pause is stored before the player hears of it."""
+    """Run the reply until it is saved or paused. Log entries recorded along the way are yielded
+    before the event that follows them. A pause is stored before the player hears of it."""
     async for event in _advance(provider, model_name, state, tool_calls, ctx):
+        if isinstance(event, Delta):
+            yield event
+            continue
+        logged, cursor = _new_log(engine, campaign_id, cursor)
+        for entry in logged:
+            yield entry
         if isinstance(event, _Final):
-            message_id = _save_turn(engine, campaign_id, state, event.text)
-            yield Saved(message_id)
+            yield Saved(_save_turn(engine, campaign_id, state, event.text))
             return
         if isinstance(event, Prompt):
             _store_pending(engine, campaign_id, state)
@@ -593,31 +645,16 @@ async def _drive(
 
 
 def _save_turn(engine: Engine, campaign_id: int, state: _Turn, reply: str) -> int:
-    """Store the player's messages, the GM's reply and its record, and clear the pending turn."""
+    """Record the GM's reply with the context it was written from, and clear the pending turn."""
     context = [*state.head, *state.context[state.round_start :]]
     with session_scope(engine) as db:
-        stored = db.get(Campaign, campaign_id)
-        if stored is None:
-            raise NotFound("campaign not found")
-        stored.context_summary = state.summary
-        stored.summary_through = state.watermark
-        for text in state.player:
-            db.add(Message(campaign_id=campaign_id, role="user", content=text))
-        assistant = Message(
-            campaign_id=campaign_id,
-            role="assistant",
-            content=reply,
-            model=state.model,
-            activity=json.dumps(state.activity),
-        )
-        db.add(assistant)
-        db.flush()
+        event_id = record(db, campaign_id, ChatGM(content=reply, model=state.model))
         pending = db.get(PendingTurn, campaign_id)
         if pending is not None:
             db.delete(pending)
         db.add(
             TurnContext(
-                message_id=assistant.id,
+                event_id=event_id,
                 parts=json.dumps([part.to_dict() for part in state.context]),
                 transcript=json.dumps(
                     [
@@ -628,7 +665,26 @@ def _save_turn(engine: Engine, campaign_id: int, state: _Turn, reply: str) -> in
             )
         )
         db.commit()
-        return assistant.id
+    return event_id
+
+
+def _discard_unfinished(engine: Engine, campaign_id: int, anchor: int) -> None:
+    """Remove a turn that failed before it paused or finished, so it leaves no trace and can be
+    sent again. A paused turn keeps its events so that "continue" can finish it."""
+    with session_scope(engine) as db:
+        if db.get(PendingTurn, campaign_id) is not None:
+            return
+        finished = db.exec(
+            select(Event.id).where(
+                Event.campaign_id == campaign_id,
+                Event.id > anchor,
+                Event.kind == ChatGM.kind,
+            )
+        ).first()
+        if finished is not None:
+            return
+        truncate(db, campaign_id, anchor)
+        db.commit()
 
 
 async def stream_message(
@@ -645,13 +701,13 @@ async def stream_message(
 ) -> AsyncIterator[TurnEvent]:
     """Send a user message to `model` and yield what happens while the GM replies.
 
-    Yields Status and Activity events while the GM works, Delta events for the narration only,
-    and Prompt when the reply needs the player to roll or type something. The reply then
-    continues through `resume_turn`. Saved comes once the reply is stored.
+    Yields Status while the GM works, Logged for each Log entry the turn adds, Delta for the
+    narration only, and Prompt when the reply needs the player to roll or type something. The
+    reply then continues through `resume_turn`. Saved comes once the reply is recorded.
 
     When the prompt reaches half of `context_tokens`, older history is folded into the
-    campaign's summary first. Nothing is saved until the reply finishes, so a failed turn leaves
-    no trace and the user can retry."""
+    campaign's summary first. If the turn fails before it pauses or finishes, every event it
+    recorded is removed, so the user can send the message again."""
     text = (text or "").strip()
     if not text:
         raise InvalidInput("message cannot be empty")
@@ -666,11 +722,43 @@ async def stream_message(
     if rule_set is None:
         raise InvalidInput("that campaign's rule set is no longer available")
     provider, model_name = providers(model)
+    anchor = _last_event(engine, campaign.id)
+    try:
+        async for event in _start_turn(
+            engine,
+            provider,
+            model_name,
+            library,
+            rule_set,
+            campaign,
+            text,
+            model,
+            context_tokens,
+            rng,
+        ):
+            yield event
+    except BaseException:
+        _discard_unfinished(engine, campaign.id, anchor)
+        raise
+
+
+async def _start_turn(
+    engine: Engine,
+    provider: Provider,
+    model_name: str,
+    library: ContentLibrary,
+    rule_set: RuleSet,
+    campaign: Campaign,
+    text: str,
+    model: str,
+    context_tokens: int,
+    rng: random.Random | None,
+) -> AsyncIterator[TurnEvent]:
+    summary = campaign.context_summary
+    watermark = campaign.summary_through
     with session_scope(engine) as db:
         world_text = world_state_text(db, campaign.id)
 
-    summary = campaign.context_summary
-    watermark = campaign.summary_through
     history = [m for m in list_messages(engine, campaign.id) if m.id > watermark]
     prompt_tokens = sum(
         p.tokens for p in system_parts(rule_set.id, rule_set.rules, summary, watermark, world_text)
@@ -690,9 +778,11 @@ async def stream_message(
                 int(context_tokens * SUMMARY_SHARE),
                 summary_record,
             )
-            watermark = folded[-1].id or watermark
+            watermark = folded[-1].id
             history = history[start:]
+            _record(engine, campaign.id, SummaryUpdated(summary=summary, through=watermark))
 
+    _record(engine, campaign.id, ChatPlayer(content=text))
     system = system_parts(rule_set.id, rule_set.rules, summary, watermark, world_text)
     player = ContextPart("user", "This message (player)", text)
     conversation = [
@@ -708,9 +798,6 @@ async def stream_message(
     context.append(ContextPart("system", "Decide instruction", DECIDE_INSTRUCTION))
     state = _Turn(
         model=model,
-        player=[text],
-        summary=summary,
-        watermark=watermark,
         head=[*summary_record, player],
         context=context,
         messages=messages,
@@ -726,7 +813,14 @@ async def stream_message(
         campaign.id,
     )
     async for event in _drive(
-        engine, provider, model_name, rule_set.tool_calls, state, campaign.id, ctx
+        engine,
+        provider,
+        model_name,
+        rule_set.tool_calls,
+        state,
+        campaign.id,
+        ctx,
+        _last_event(engine, campaign.id),
     ):
         yield event
 
@@ -767,6 +861,7 @@ async def resume_turn(
         state,
         campaign.id,
     )
+    cursor = _last_event(engine, campaign.id)
 
     if action == "continue":
         if state.prompt is not None:
@@ -778,10 +873,8 @@ async def resume_turn(
         request = state.queue.pop(0)
         run = await run_tool(rule_set.tool_calls, request, answer, ctx=ctx)
         assert isinstance(run, ToolRun)
-        _record_tool(state, request, run)
+        _record_tool(ctx, state, request, run)
         state.prompt = None
-        if run.activity is not None:
-            yield Activity(run.activity)
         _store_pending(engine, campaign.id, state)
     elif action == "text":
         clean = (text or "").strip()
@@ -792,14 +885,25 @@ async def resume_turn(
         request = state.queue.pop(0)
         run = await run_tool(rule_set.tool_calls, request, TextAnswer(clean), ctx=ctx)
         assert isinstance(run, ToolRun)
-        _record_tool(state, request, run)
+        _record_tool(ctx, state, request, run)
         state.prompt = None
-        state.player.append(clean)
         _store_pending(engine, campaign.id, state)
+        _record(engine, campaign.id, ChatPlayer(content=clean))
     else:
         raise InvalidInput("that action is not available")
+
+    logged, cursor = _new_log(engine, campaign.id, cursor)
+    for entry in logged:
+        yield entry
     async for event in _drive(
-        engine, provider, model_name, rule_set.tool_calls, state, campaign.id, ctx
+        engine,
+        provider,
+        model_name,
+        rule_set.tool_calls,
+        state,
+        campaign.id,
+        ctx,
+        cursor,
     ):
         yield event
 
@@ -811,10 +915,9 @@ def _load_pending(engine: Engine, campaign_id: int) -> PendingTurn | None:
 
 @dataclass(frozen=True)
 class PendingView:
-    """A paused reply as the player sees it: their messages, what happened so far, and any prompt."""
+    """A paused reply's prompt. The player's words and the rest of the turn are already in the
+    transcript and the Log."""
 
-    player: list[str]
-    activity: list[str]
     prompt: Ask | None
 
 
@@ -823,8 +926,7 @@ def pending_turn(engine: Engine, owner_id: int, campaign_id: int) -> PendingView
     row = _load_pending(engine, campaign_id)
     if row is None:
         return None
-    state = _Turn.from_json(row.state)
-    return PendingView(player=state.player, activity=state.activity, prompt=state.prompt)
+    return PendingView(prompt=_Turn.from_json(row.state).prompt)
 
 
 async def send_message(
@@ -853,38 +955,61 @@ async def send_message(
         pass
 
 
+def rollback_to(engine: Engine, owner_id: int, campaign_id: int, event_id: int) -> None:
+    """Return the campaign to the moment just after its GM reply `event_id`. Later events, their
+    context records, and any paused turn are removed."""
+    get_campaign(engine, owner_id, campaign_id)
+    with session_scope(engine) as db:
+        event = db.get(Event, event_id)
+        if event is None or event.campaign_id != campaign_id or event.kind != ChatGM.kind:
+            raise NotFound("message not found")
+        pending = db.get(PendingTurn, campaign_id)
+        if pending is not None:
+            db.delete(pending)
+        truncate(db, campaign_id, event_id)
+        db.commit()
+
+
+def campaign_log(engine: Engine, owner_id: int, campaign_id: int) -> list[str]:
+    """The Log's entries, oldest first."""
+    get_campaign(engine, owner_id, campaign_id)
+    with session_scope(engine) as db:
+        rows = events_since(db, campaign_id, channel=Channel.LOG)
+        return [decode(row).render() for row in rows]
+
+
 def get_turn_context(
-    engine: Engine, owner_id: int, campaign_id: int, message_id: int
+    engine: Engine, owner_id: int, campaign_id: int, event_id: int
 ) -> list[ContextPart] | None:
-    """The context the model was given for an assistant message.
+    """The context the model was given for a GM reply.
 
     None means the turn was sent before contexts were recorded."""
-    return _recorded_parts(engine, owner_id, campaign_id, message_id, lambda row: row.parts)
+    return _recorded_parts(engine, owner_id, campaign_id, event_id, lambda row: row.parts)
 
 
 def get_turn_transcript(
-    engine: Engine, owner_id: int, campaign_id: int, message_id: int
+    engine: Engine, owner_id: int, campaign_id: int, event_id: int
 ) -> list[ContextPart] | None:
-    """What happened in the round that produced an assistant message, from the player's message
-    to the reply.
+    """What happened in the round that produced a GM reply, from the player's message to the
+    reply.
 
     None means the turn was sent before transcripts were recorded."""
-    return _recorded_parts(engine, owner_id, campaign_id, message_id, lambda row: row.transcript)
+    return _recorded_parts(engine, owner_id, campaign_id, event_id, lambda row: row.transcript)
 
 
 def _recorded_parts(
     engine: Engine,
     owner_id: int,
     campaign_id: int,
-    message_id: int,
+    event_id: int,
     pick: Callable[[TurnContext], str | None],
 ) -> list[ContextPart] | None:
     get_campaign(engine, owner_id, campaign_id)
     with session_scope(engine) as db:
-        message = db.get(Message, message_id)
-        if message is None or message.campaign_id != campaign_id or message.role != "assistant":
+        event = db.get(Event, event_id)
+        if event is None or event.campaign_id != campaign_id or event.kind != ChatGM.kind:
             raise NotFound("message not found")
-        row = db.get(TurnContext, message_id)
+        row = db.get(TurnContext, event_id)
         raw = pick(row) if row is not None else None
         if raw is None:
             return None

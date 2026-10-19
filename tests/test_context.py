@@ -10,9 +10,10 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, func, select
 
 from cygnusforge.config import Settings
-from cygnusforge.db.models import Campaign, Message
+from cygnusforge.db.models import Campaign, Event
 from cygnusforge.llm.base import ChatReply, LLMError
 from cygnusforge.services.campaigns import SUMMARY_PROMPT, system_parts
+from cygnusforge.services.events import Channel
 from cygnusforge.web.app import create_app
 from tests.test_campaigns import _campaign_id, _send
 
@@ -73,7 +74,9 @@ def _stored(app: FastAPI, campaign_id: int) -> Campaign:
 
 def _saved_message_count(app: FastAPI) -> int:
     with Session(app.state.engine) as db:
-        return db.exec(select(func.count()).select_from(Message)).one()
+        return db.exec(
+            select(func.count()).select_from(Event).where(Event.channel == Channel.TRANSCRIPT)
+        ).one()
 
 
 def _send_until_summarized(client: TestClient, app: FastAPI, campaign_id: int, sends: int) -> None:

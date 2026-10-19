@@ -27,21 +27,21 @@
                 <div class="message-header">
                   <span class="role">{% if message.role == "assistant" %}Cygnus{% else %}{{ message.role }}{% endif %}{% if message.model %} · <span class="muted">{{ message.model }}</span>{% endif %}</span>
                   {% if message.role == "assistant" %}
+                  <div class="message-tools">
                   <button type="button" class="message-gear" data-turn-context-url="/campaigns/{{ campaign.id }}/messages/{{ message.id }}/context" data-turn-transcript-url="/campaigns/{{ campaign.id }}/messages/{{ message.id }}/transcript" aria-label="Show details for this reply" title="Show details for this reply"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+                  <form method="post" action="/campaigns/{{ campaign.id }}/messages/{{ message.id }}/rollback" class="rollback-form" data-confirm="Roll back to right after this reply? Later messages, Log entries, and any pending prompt will be deleted.">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="message-rollback" aria-label="Roll back to this reply" title="Roll back to this reply"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>
+                  </form>
+                  </div>
                   {% endif %}
                 </div>
-                {% for line in message.activity_lines %}<p class="turn-activity">{{ line }}</p>{% endfor %}
                 <div class="content">{{ message.content | markdown }}</div>
               </div>
             {% endfor %}
             {% if pending %}
-              <div class="message user">
-                <div class="message-header"><span class="role">user</span></div>
-                {% for line in pending.player %}<div class="content">{{ line | markdown }}</div>{% endfor %}
-              </div>
               <div class="message assistant" data-pending>
                 <div class="message-header"><span class="role">Cygnus</span></div>
-                {% for line in pending.activity %}<p class="turn-activity">{{ line }}</p>{% endfor %}
                 {% if pending.prompt %}
                   <div class="pending-prompt">
                     <div class="content">{{ pending.prompt.text | markdown }}</div>
@@ -115,7 +115,10 @@
               {{ notes_list(world_view.notes) }}
             </div>
             <div class="tab-panel" role="tabpanel" id="panel-log" aria-labelledby="tab-log" hidden>
-              <p class="muted">Placeholder: log entries will appear here.</p>
+              <ul class="log-list" data-log>
+                {% for entry in log %}<li>{{ entry }}</li>{% endfor %}
+              </ul>
+              {% if not log %}<p class="muted" data-log-empty>Nothing has happened yet.</p>{% endif %}
             </div>
           </section>
         </aside>

@@ -7,12 +7,11 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
 
 from cygnusforge.content.library import ContentLibrary, ToolCall
-from cygnusforge.db.models import Message
 from cygnusforge.llm.base import ChatReply, ToolRequest
 from cygnusforge.llm.fake import FakeProvider
+from cygnusforge.services.campaigns import list_messages
 from cygnusforge.services.tools import Ask, RollAnswer, TextAnswer, ToolRun, run_tool, tool_specs
 from tests.test_campaigns import _answer, _campaign_id, _pending, _send
 
@@ -202,18 +201,11 @@ def _script(*turns: dict[str, Any]) -> str:
 
 
 def _saved_ids(app: FastAPI, campaign_id: int) -> list[int]:
-    with Session(app.state.engine) as db:
-        return [
-            m.id for m in db.exec(select(Message).where(Message.campaign_id == campaign_id)).all()
-        ]
+    return [m.id for m in list_messages(app.state.engine, campaign_id)]
 
 
 def _saved(app: FastAPI, campaign_id: int) -> list[tuple[str, str]]:
-    with Session(app.state.engine) as db:
-        rows = db.exec(
-            select(Message).where(Message.campaign_id == campaign_id).order_by(Message.id)
-        ).all()
-        return [(m.role, m.content) for m in rows]
+    return [(m.role, m.content) for m in list_messages(app.state.engine, campaign_id)]
 
 
 def test_model_rolls_then_narrates_and_only_the_narration_is_saved(
@@ -229,7 +221,7 @@ def test_model_rolls_then_narrates_and_only_the_narration_is_saved(
     assert response.status_code == 303
     offered = [spec["function"]["name"] for spec in recorder.calls[0]["tools"]]
     assert set(offered) == {"social_roll", *CORE_TOOL_NAMES}
-    assert _saved(app, campaign_id) == []
+    assert _saved(app, campaign_id) == [("user", script)]
     assert _pending(app, campaign_id)["prompt"] == {
         "text": "Roll to persuade.",
         "dice": "1d20",
@@ -238,7 +230,7 @@ def test_model_rolls_then_narrates_and_only_the_narration_is_saved(
 
     events = _answer(client, campaign_id, "roll")
 
-    assert events[-1] == {"type": "saved", "message_id": _saved_ids(app, campaign_id)[-1]}
+    assert events[-1] == {"type": "saved", "event_id": _saved_ids(app, campaign_id)[-1]}
     assert len(recorder.calls) == 3
     tool_messages = [m for m in recorder.calls[1]["messages"] if m["role"] == "tool"]
     assert len(tool_messages) == 1
@@ -283,7 +275,7 @@ def test_three_tool_rounds_are_allowed(client_factory: Callable[[], TestClient],
     assert _saved(app, campaign_id)[-1] == ("assistant", "Done.")
 
 
-def test_runaway_tool_calls_stop_and_save_nothing(
+def test_runaway_tool_calls_stop_and_save_no_reply(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     recorder = _recording_provider()
@@ -298,4 +290,5 @@ def test_runaway_tool_calls_stop_and_save_nothing(
 
     assert events[-1]["type"] == "error" and events[-1]["status"] == 502
     assert len(recorder.calls) == 4
-    assert _saved(app, campaign_id) == []
+    assert _saved(app, campaign_id) == [("user", script)]
+    assert _pending(app, campaign_id) is not None

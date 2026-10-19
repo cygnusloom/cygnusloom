@@ -7,16 +7,17 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from cygnusforge.config import Settings
-from cygnusforge.db.models import Message
 from cygnusforge.services.campaigns import (
     DECIDE_INSTRUCTION,
     NARRATE_INSTRUCTION,
     get_turn_context,
     get_turn_transcript,
+    list_messages,
 )
+from cygnusforge.services.events import ChatGM, record
 from tests.test_campaigns import _answer, _campaign_id, _send, _signed_in
 from tests.test_context import RecordingProvider, _send_until_summarized, _small_window_app, _stored
 from tests.test_tools import ROLL, _recording_provider, _script
@@ -25,13 +26,15 @@ SOURCE_ID_RE = re.compile(r"^Message #(\d+) ")
 
 
 def _message_ids(app: FastAPI, campaign_id: int, role: str) -> list[int]:
+    return [m.id for m in list_messages(app.state.engine, campaign_id) if m.role == role]
+
+
+def _record_legacy_reply(app: FastAPI, campaign_id: int) -> int:
+    """A GM reply saved before contexts were recorded: it has no TurnContext row."""
     with Session(app.state.engine) as db:
-        rows = db.exec(
-            select(Message)
-            .where(Message.campaign_id == campaign_id, Message.role == role)
-            .order_by(Message.id)
-        ).all()
-        return [m.id for m in rows if m.id is not None]
+        legacy_id = record(db, campaign_id, ChatGM(content="old", model="m"))
+        db.commit()
+    return legacy_id
 
 
 def _context(app: FastAPI, campaign_id: int, message_id: int) -> list[Any]:
@@ -147,12 +150,7 @@ def test_legacy_reply_without_a_recorded_context_says_so(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
-    with Session(app.state.engine) as db:
-        legacy = Message(campaign_id=campaign_id, role="assistant", content="old", model="m")
-        db.add(legacy)
-        db.commit()
-        db.refresh(legacy)
-        legacy_id = legacy.id
+    legacy_id = _record_legacy_reply(app, campaign_id)
 
     response = client.get(f"/campaigns/{campaign_id}/messages/{legacy_id}/context")
 
@@ -282,12 +280,7 @@ def test_legacy_reply_without_a_transcript_says_so(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
-    with Session(app.state.engine) as db:
-        legacy = Message(campaign_id=campaign_id, role="assistant", content="old", model="m")
-        db.add(legacy)
-        db.commit()
-        db.refresh(legacy)
-        legacy_id = legacy.id
+    legacy_id = _record_legacy_reply(app, campaign_id)
 
     response = client.get(f"/campaigns/{campaign_id}/messages/{legacy_id}/transcript")
 

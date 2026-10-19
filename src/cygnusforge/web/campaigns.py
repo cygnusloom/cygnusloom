@@ -15,12 +15,13 @@ from cygnusforge.auth.deps import page_user, verify_csrf
 from cygnusforge.db.models import User
 from cygnusforge.llm.base import LLMError
 from cygnusforge.services.campaigns import (
-    Activity,
     Delta,
+    Logged,
     Prompt,
     Saved,
     Status,
     TurnEvent,
+    campaign_log,
     campaign_world,
     context_usage,
     create_campaign,
@@ -31,6 +32,7 @@ from cygnusforge.services.campaigns import (
     list_messages,
     pending_turn,
     resume_turn,
+    rollback_to,
     send_message,
     stream_message,
 )
@@ -93,18 +95,26 @@ def campaign_page(request: Request, campaign_id: int) -> Response:
     return _campaign_page(request, user, campaign_id, model=model)
 
 
-@router.get("/{campaign_id}/messages/{message_id}/context")
-def turn_context_fragment(request: Request, campaign_id: int, message_id: int) -> Response:
+@router.get("/{campaign_id}/messages/{event_id}/context")
+def turn_context_fragment(request: Request, campaign_id: int, event_id: int) -> Response:
     user = page_user(request)
-    parts = get_turn_context(request.app.state.engine, user.id, campaign_id, message_id)
+    parts = get_turn_context(request.app.state.engine, user.id, campaign_id, event_id)
     return render(request, "turn_context.html", parts=parts)
 
 
-@router.get("/{campaign_id}/messages/{message_id}/transcript")
-def turn_transcript_fragment(request: Request, campaign_id: int, message_id: int) -> Response:
+@router.get("/{campaign_id}/messages/{event_id}/transcript")
+def turn_transcript_fragment(request: Request, campaign_id: int, event_id: int) -> Response:
     user = page_user(request)
-    entries = get_turn_transcript(request.app.state.engine, user.id, campaign_id, message_id)
+    entries = get_turn_transcript(request.app.state.engine, user.id, campaign_id, event_id)
     return render(request, "turn_transcript.html", entries=entries)
+
+
+@router.post("/{campaign_id}/messages/{event_id}/rollback")
+async def rollback(request: Request, campaign_id: int, event_id: int) -> Response:
+    user = page_user(request)
+    await verify_csrf(request)
+    rollback_to(request.app.state.engine, user.id, campaign_id, event_id)
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
 @router.post("/{campaign_id}/messages")
@@ -215,12 +225,12 @@ def _line(event: TurnEvent | TurnError) -> str:
             payload: dict[str, object] = {"type": "status", "text": text}
         case Delta(text):
             payload = {"type": "delta", "text": text}
-        case Activity(text):
-            payload = {"type": "activity", "text": text}
+        case Logged(text):
+            payload = {"type": "log", "text": text}
         case Prompt(text, dice, details):
             payload = {"type": "prompt", "text": text, "dice": dice, "details": details}
-        case Saved(message_id):
-            payload = {"type": "saved", "message_id": message_id}
+        case Saved(event_id):
+            payload = {"type": "saved", "event_id": event_id}
         case TurnError(status, message):
             payload = {"type": "error", "status": status, "message": message}
     return json.dumps(payload)
@@ -282,6 +292,7 @@ def _campaign_page(
         world_view=world.view,
         rule_set=rule_set,
         messages=messages,
+        log=campaign_log(engine, user.id, campaign.id),
         context=context,
         error=error,
         draft=draft,

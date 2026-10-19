@@ -5,7 +5,6 @@ raised as `InvalidInput`, and their messages are returned to the model as they a
 
 from __future__ import annotations
 
-import json
 import random
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -16,15 +15,24 @@ from sqlmodel import Session, select
 from cygnusforge.content.library import WorldTemplate
 from cygnusforge.db.models import Actor, Location, Note
 from cygnusforge.services.common import InvalidInput
+from cygnusforge.services.events import (
+    CAMPAIGN_WIDE,
+    NPC_KIND,
+    PC_KIND,
+    ActorMoved,
+    LocationAdded,
+    NoteAdded,
+    NpcAdded,
+    PcAdded,
+    named_entry,
+    record,
+)
 
 MAX_NAME = 120
 MAX_TEXT = 2000
 MAX_QUIRKS = 10
 NOTE_RESULTS = 10
 QUIRKS_PER_NPC = 2
-PC_KIND = "pc"
-NPC_KIND = "npc"
-CAMPAIGN_WIDE = "campaign-wide"
 
 
 @dataclass(frozen=True)
@@ -50,43 +58,35 @@ def seed_campaign(
     rng: random.Random,
     character_name: str,
 ) -> None:
-    """Create a campaign's locations, the world's NPCs, and the player character."""
-    by_id: dict[str, Location] = {}
+    """Record a campaign's locations, the world's NPCs, and the player character as events."""
+    names: dict[str, str] = {}
     for spot in world.locations:
-        location = Location(campaign_id=campaign_id, name=spot.name, description=spot.description)
-        db.add(location)
-        db.flush()
-        by_id[spot.id] = location
+        record(db, campaign_id, LocationAdded(name=spot.name, description=spot.description))
+        names[spot.id] = spot.name
     for npc in world.npcs:
-        _add_npc(
-            db,
-            campaign_id,
+        event = _npc_event(
             tables,
             rng,
             name=npc.name,
-            location=by_id[npc.location],
+            location=names[npc.location],
             description=npc.description,
             personality=npc.personality,
             accent=npc.accent,
             quirks=npc.quirks,
         )
-    start = by_id[world.start_location]
+        record(db, campaign_id, event)
     _ensure_free_name(db, campaign_id, character_name)
-    _add_actor(db, campaign_id, PC_KIND, character_name, start, description="")
+    record(db, campaign_id, PcAdded(name=character_name, location=names[world.start_location]))
     db.commit()
 
 
 def create_location(db: Session, campaign_id: int, name: str, description: str) -> dict[str, Any]:
     name = _text(name, "name", MAX_NAME)
     _ensure_free_name(db, campaign_id, name)
-    location = Location(
-        campaign_id=campaign_id,
-        name=name,
-        description=_text(description, "description", MAX_TEXT),
-    )
-    db.add(location)
+    text = _text(description, "description", MAX_TEXT)
+    record(db, campaign_id, LocationAdded(name=name, description=text))
     db.commit()
-    return {"created": "location", "name": location.name}
+    return {"created": "location", "name": name}
 
 
 def create_npc(
@@ -104,34 +104,32 @@ def create_npc(
     name = _text(name, "name", MAX_NAME)
     _ensure_free_name(db, campaign_id, name)
     where = _location_named(db, campaign_id, location)
-    actor = _add_npc(
-        db,
-        campaign_id,
+    event = _npc_event(
         tables,
         rng,
         name=name,
-        location=where,
+        location=where.name,
         description=_text(description, "description", MAX_TEXT),
         personality=_optional_text(personality, "personality"),
         accent=_optional_text(accent, "accent"),
         quirks=_quirks(quirks),
     )
+    record(db, campaign_id, event)
     db.commit()
     return {
         "created": "npc",
-        "name": actor.name,
-        "location": where.name,
-        "personality": actor.personality,
-        "accent": actor.accent,
-        "quirks": actor.quirk_list,
+        "name": event.name,
+        "location": event.location,
+        "personality": event.personality,
+        "accent": event.accent,
+        "quirks": list(event.quirks),
     }
 
 
 def move_actor(db: Session, campaign_id: int, name: str, location: str) -> dict[str, str]:
     actor = _actor_named(db, campaign_id, name)
     where = _location_named(db, campaign_id, location)
-    actor.location_id = where.id
-    db.add(actor)
+    record(db, campaign_id, ActorMoved(name=actor.name, location=where.name))
     db.commit()
     return {"moved": actor.name, "location": where.name}
 
@@ -140,20 +138,16 @@ def add_note(
     db: Session, campaign_id: int, text: str, subject: str | None = None
 ) -> dict[str, str]:
     text = _text(text, "text", MAX_TEXT)
-    note = Note(campaign_id=campaign_id, text=text)
-    subject_name = CAMPAIGN_WIDE
-    if _optional_text(subject, "subject") is not None:
-        entry = _named(db, campaign_id, subject)
-        if isinstance(entry, Location):
-            note.location_id = entry.id
-        elif isinstance(entry, Actor):
-            note.actor_id = entry.id
-        else:
-            raise InvalidInput(f"there is no location or character named {subject!r}")
+    subject_name: str | None = None
+    label = _optional_text(subject, "subject")
+    if label is not None:
+        entry = named_entry(db, campaign_id, label)
+        if entry is None:
+            raise InvalidInput(f"there is no location or character named {label!r}")
         subject_name = entry.name
-    db.add(note)
+    record(db, campaign_id, NoteAdded(text=text, subject=subject_name))
     db.commit()
-    return {"noted": True, "subject": subject_name}
+    return {"noted": True, "subject": subject_name if subject_name is not None else CAMPAIGN_WIDE}
 
 
 def search_notes(db: Session, campaign_id: int, query: str) -> dict[str, list[dict[str, str]]]:
@@ -237,20 +231,19 @@ def world_state_text(db: Session, campaign_id: int) -> str:
     return "\n".join(lines)
 
 
-def _add_npc(
-    db: Session,
-    campaign_id: int,
+def _npc_event(
     tables: Mapping[str, Sequence[str]],
     rng: random.Random,
     *,
     name: str,
-    location: Location,
+    location: str,
     description: str,
     personality: str | None,
     accent: str | None,
     quirks: Sequence[str] | None,
-) -> Actor:
-    """Add an NPC. A trait that is not given is picked at random from its table."""
+) -> NpcAdded:
+    """The event that adds an NPC. A trait that is not given is picked at random from its table,
+    so the picked value is stored in the event and replays do not roll again."""
     trait_personality = personality or rng.choice(tables["personality"])
     trait_accent = accent or rng.choice(tables["accent"])
     if quirks is None:
@@ -258,48 +251,14 @@ def _add_npc(
         trait_quirks = rng.sample(list(pool), min(QUIRKS_PER_NPC, len(pool)))
     else:
         trait_quirks = list(quirks)
-    return _add_actor(
-        db,
-        campaign_id,
-        NPC_KIND,
-        name,
-        location,
+    return NpcAdded(
+        name=name,
+        location=location,
         description=description,
         personality=trait_personality,
         accent=trait_accent,
         quirks=trait_quirks,
     )
-
-
-def _add_actor(
-    db: Session,
-    campaign_id: int,
-    kind: str,
-    name: str,
-    location: Location,
-    *,
-    description: str = "",
-    personality: str = "",
-    accent: str = "",
-    quirks: Sequence[str] = (),
-) -> Actor:
-    actor = Actor(
-        campaign_id=campaign_id,
-        kind=kind,
-        name=name,
-        location_id=location.id,
-        description=description,
-        personality=personality,
-        accent=accent,
-        quirks=_dump_quirks(quirks),
-    )
-    db.add(actor)
-    db.flush()
-    return actor
-
-
-def _dump_quirks(quirks: Sequence[str]) -> str:
-    return json.dumps(list(quirks))
 
 
 def _subject(note: Note, location_names: Mapping[int, str], actor_names: Mapping[int, str]) -> str:
@@ -316,31 +275,20 @@ def _pc(db: Session, campaign_id: int) -> Actor | None:
     ).first()
 
 
-def _named(db: Session, campaign_id: int, name: str) -> Location | Actor | None:
-    """The location or character with this name, ignoring case. Both share one namespace."""
-    key = name.strip().casefold()
-    locations = db.exec(select(Location).where(Location.campaign_id == campaign_id)).all()
-    actors = db.exec(select(Actor).where(Actor.campaign_id == campaign_id)).all()
-    for entry in [*locations, *actors]:
-        if entry.name.casefold() == key:
-            return entry
-    return None
-
-
 def _ensure_free_name(db: Session, campaign_id: int, name: str) -> None:
-    if _named(db, campaign_id, name) is not None:
+    if named_entry(db, campaign_id, name) is not None:
         raise InvalidInput(f"the name {name!r} is already used by a location or character")
 
 
 def _location_named(db: Session, campaign_id: int, name: str) -> Location:
-    entry = _named(db, campaign_id, name)
+    entry = named_entry(db, campaign_id, name)
     if not isinstance(entry, Location):
         raise InvalidInput(f"there is no location named {name!r}")
     return entry
 
 
 def _actor_named(db: Session, campaign_id: int, name: str) -> Actor:
-    entry = _named(db, campaign_id, name)
+    entry = named_entry(db, campaign_id, name)
     if not isinstance(entry, Actor):
         raise InvalidInput(f"there is no character named {name!r}")
     return entry

@@ -9,13 +9,19 @@ from typing import Any
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+from sqlmodel import Session
 
-from cygnusforge.db.models import Campaign, Message
+from cygnusforge.db.models import Campaign
 from cygnusforge.llm.base import LLMError
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.rules.dice import is_formula, roll_total
-from cygnusforge.services.campaigns import Activity, resume_turn
+from cygnusforge.services.campaigns import (
+    ChatMessage,
+    Logged,
+    campaign_log,
+    list_messages,
+    resume_turn,
+)
 from tests.test_campaigns import _answer, _campaign_id, _pending, _send
 from tests.test_tools import ROLL, _recording_provider, _script
 
@@ -44,13 +50,13 @@ class FlakyNarration:
             yield item
 
 
-def _saved_messages(app: FastAPI, campaign_id: int) -> list[Message]:
+def _saved_messages(app: FastAPI, campaign_id: int) -> list[ChatMessage]:
+    return list_messages(app.state.engine, campaign_id)
+
+
+def _owner_id(app: FastAPI, campaign_id: int) -> int:
     with Session(app.state.engine) as db:
-        return list(
-            db.exec(
-                select(Message).where(Message.campaign_id == campaign_id).order_by(Message.id)
-            ).all()
-        )
+        return db.get(Campaign, campaign_id).owner_id
 
 
 def test_a_pause_saves_nothing_and_shows_the_prompt(
@@ -60,7 +66,7 @@ def test_a_pause_saves_nothing_and_shows_the_prompt(
     client, campaign_id = _campaign_id(client_factory)
     _send(client, campaign_id, _script({"rounds": [[ROLL]], "text": "Well rolled."}))
 
-    assert _saved_messages(app, campaign_id) == []
+    assert [m.role for m in _saved_messages(app, campaign_id)] == ["user"]
     assert _pending(app, campaign_id) is not None
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "Roll to persuade." in page
@@ -81,11 +87,11 @@ def test_a_new_message_is_refused_while_a_prompt_is_pending(
 
     assert response.status_code == 400
     assert "answer" in response.text
-    assert _saved_messages(app, campaign_id) == []
+    assert [m.role for m in _saved_messages(app, campaign_id)] == ["user"]
     assert _pending(app, campaign_id) is not None
 
 
-def test_a_roll_saves_the_reply_with_its_activity(
+def test_a_roll_is_logged_and_the_reply_is_saved(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     app.state.providers = lambda model_id: (_recording_provider(), model_id)
@@ -96,12 +102,13 @@ def test_a_roll_saves_the_reply_with_its_activity(
     events = _answer(client, campaign_id, "roll")
 
     kinds = [event["type"] for event in events]
-    assert kinds[0] == "activity" and kinds[-1] == "saved"
-    activity = next(event["text"] for event in events if event["type"] == "activity")
+    assert "log" in kinds and kinds[-1] == "saved"
+    activity = next(event["text"] for event in events if event["type"] == "log")
     assert activity.startswith("You rolled ") and " on the d20" in activity
     saved = _saved_messages(app, campaign_id)
     assert [(m.role, m.content) for m in saved] == [("user", script), ("assistant", "Well rolled.")]
-    assert json.loads(saved[-1].activity) == [activity]
+    log = campaign_log(app.state.engine, _owner_id(app, campaign_id), campaign_id)
+    assert log[-1] == activity
     assert _pending(app, campaign_id) is None
     page = client.get(f"/campaigns/{campaign_id}").text
     assert activity in page
@@ -121,7 +128,7 @@ def test_a_text_answer_reaches_the_gm_instead_of_a_roll(
     assert events[-1]["type"] == "saved"
     tool_message = next(m for m in recorder.calls[-1]["messages"] if m["role"] == "tool")
     assert json.loads(tool_message["content"]) == {"player_text": "I show him the letter"}
-    assert not any(event["type"] == "activity" for event in events)
+    assert not any(event["type"] == "log" for event in events)
     assert _pending(app, campaign_id) is None
 
 
@@ -136,14 +143,15 @@ def test_continue_after_a_failed_narration_does_not_roll_again(
     failed = _answer(client, campaign_id, "roll")
     assert failed[-1]["type"] == "error" and "narration broke" in failed[-1]["message"]
     assert _pending(app, campaign_id) is not None
-    assert _saved_messages(app, campaign_id) == []
+    assert [m.role for m in _saved_messages(app, campaign_id)] == ["user"]
 
     events = _answer(client, campaign_id, "continue")
 
     assert events[-1]["type"] == "saved"
     final = provider.streamed[-1]
     assert [m["role"] for m in final].count("tool") == 1
-    assert len(json.loads(_saved_messages(app, campaign_id)[-1].activity)) == 1
+    log = campaign_log(app.state.engine, _owner_id(app, campaign_id), campaign_id)
+    assert len([entry for entry in log if entry.startswith("You rolled ")]) == 1
     assert _pending(app, campaign_id) is None
 
 
@@ -191,7 +199,7 @@ def test_the_player_roll_uses_the_given_generator(
     events = asyncio.run(roll_with_seed())
 
     expected = roll_total("1d20", random.Random(0))
-    activity = next(event.text for event in events if isinstance(event, Activity))
+    activity = next(event.text for event in events if isinstance(event, Logged))
     assert activity.startswith(f"You rolled {expected} ")
 
 
