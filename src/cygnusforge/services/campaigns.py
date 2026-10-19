@@ -444,7 +444,10 @@ async def _advance(
     while True:
         if state.queue:
             request = state.queue[0]
-            yield Status(f"Running {request.name}...")
+            if request.name == "speak":
+                yield Status("Writing dialogue...")
+            else:
+                yield Status(f"Running {request.name}...")
             run = await run_tool(tool_calls, request, ctx=ctx)
             if isinstance(run, Ask):
                 state.prompt = run

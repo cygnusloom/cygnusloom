@@ -88,7 +88,7 @@
     "name": "add_note",
     "python_module": "core",
     "function": "add_note",
-    "description": "Record a note for later recall. Attach it to a location or NPC by giving its name as the subject; leave the subject out for a note about the campaign as a whole.",
+    "description": "Record a note for yourself as the GM, to track events, updates, and situations so you stay consistent. It is not written for the player. Attach it to a location or NPC by giving its name as the subject; leave the subject out for a note about the campaign as a whole.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -110,7 +110,7 @@
     "name": "search_notes",
     "python_module": "core",
     "function": "search_notes",
-    "description": "Search the campaign's notes. Every word in the query must appear in the note's text or in its subject's name. Use it before answering questions about what has happened before.",
+    "description": "Search your GM notes on events, updates, and situations, to stay consistent. Every word in the query must appear in the note's text or in its subject's name. Use it before continuing a thread or answering questions about what has happened before.",
     "parameters": {
       "type": "object",
       "properties": {

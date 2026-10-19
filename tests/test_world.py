@@ -18,6 +18,7 @@ from cygnusforge.rules.context import ToolContext
 from cygnusforge.services import world
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.tools import ToolRun, run_tool
+from tests.conftest import csrf_token
 from tests.test_campaigns import _campaign_id, _new_campaign, _send, _signed_in
 from tests.test_tools import _recording_provider, _saved, _script
 
@@ -431,3 +432,39 @@ def test_speech_is_a_separate_call_and_only_the_narration_is_saved(
     ]
     narration = recorder.calls[-1]["messages"]
     assert "Mind the bog, dearie." in json.dumps(narration)
+
+
+def test_speech_shows_a_writing_dialogue_status(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    client, campaign_id = _campaign_id(client_factory)
+    script = _script(
+        {
+            "rounds": [
+                [
+                    {
+                        "name": "speak",
+                        "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada."},
+                    }
+                ]
+            ],
+            "text": "Mara looks up.",
+            "speech": {"Mara Thistledown": "Mind the bog."},
+        }
+    )
+    token = csrf_token(client, "/campaigns")
+
+    response = client.post(
+        f"/campaigns/{campaign_id}/messages/stream",
+        data={"csrf_token": token, "content": script, "model": "fake/scripted"},
+    )
+
+    statuses = [
+        json.loads(line)["text"]
+        for line in response.text.splitlines()
+        if line.strip() and json.loads(line)["type"] == "status"
+    ]
+    assert "Writing dialogue..." in statuses
+    assert "Running speak..." not in statuses
