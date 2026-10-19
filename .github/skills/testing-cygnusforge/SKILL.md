@@ -3,6 +3,8 @@ name: testing-cygnusforge
 description: Test a web app in two layers. Automated tests run with the project's test runner and use a fake or scripted LLM provider. UI tests start a live server and drive it with the browser tools. Use when asked to test, verify, or validate the app, or after changing routes, templates, services, or providers.
 ---
 
+Generally you should test both the automated and UI aspects of the web app to ensure comprehensive coverage. Test using a real LLM if possible, using deepseek.
+
 # Testing a web app
 
 ## Automated tests
