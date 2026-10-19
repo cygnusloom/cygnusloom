@@ -68,7 +68,12 @@ from cygnusforge.services.world import (
 MAX_NAME = 120
 MAX_MESSAGE = 8000
 MAX_TOOL_ROUNDS = 3
-SYSTEM_PROMPT = "You are a helpful assistant."
+SYSTEM_PROMPT = (
+    "You are Cygnus, an AI game master (GM). You run the world of a roleplaying campaign: you "
+    "describe the scene, voice its characters, decide the outcome of the player's actions, and keep "
+    "the story consistent with what has already happened. You are not a general assistant; stay in "
+    "the GM role for the whole campaign."
+)
 DECIDE_INSTRUCTION = (
     "Decision step. Decide whether this action needs a roll, another tool, or an NPC to speak, "
     "and call the tool if it does. To have an NPC say something, call speak; do not write their "
@@ -88,8 +93,9 @@ SPEECH_INSTRUCTION = (
     "narrate. Reply with the spoken words only."
 )
 SUMMARY_PROMPT = (
-    "You keep the memory of a roleplaying campaign. Given the summary so far and new events, "
-    "write an updated summary. Keep names, places, facts the players established, open threads, "
+    "You are Cygnus, the AI game master of a roleplaying campaign, and you keep its memory. Given "
+    "the summary so far and new events, write an updated summary. Keep names, places, facts the "
+    "players established, open threads, "
     "and anything the players asked to remember. Reply with the summary only."
 )
 # Once the prompt reaches this share of the context window, older history is summarized.

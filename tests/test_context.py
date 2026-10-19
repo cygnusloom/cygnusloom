@@ -12,7 +12,7 @@ from sqlmodel import Session, func, select
 from cygnusforge.config import Settings
 from cygnusforge.db.models import Campaign, Event
 from cygnusforge.llm.base import ChatReply, LLMError
-from cygnusforge.services.campaigns import SUMMARY_PROMPT, system_parts
+from cygnusforge.services.campaigns import SUMMARY_PROMPT, SYSTEM_PROMPT, system_parts
 from cygnusforge.services.events import CampaignState, Channel, load_state
 from cygnusforge.web.app import create_app
 from tests.test_campaigns import _campaign_id, _send
@@ -97,9 +97,14 @@ def _system_text(rules: dict[str, str], summary: str, through: int = 0) -> str:
 
 def test_rules_are_added_to_the_system_prompt():
     prompt = _system_text({"consistency": "be consistent", "fourth": "no fourth wall"}, "")
-    assert prompt.startswith("You are a helpful assistant.")
+    assert prompt.startswith("You are Cygnus, an AI game master (GM).")
     assert "Rules for this campaign:\n- be consistent\n- no fourth wall" in prompt
     assert "Summary of earlier events" not in prompt
+
+
+def test_base_prompts_make_cygnus_the_ai_gm():
+    assert SYSTEM_PROMPT.startswith("You are Cygnus, an AI game master (GM).")
+    assert SUMMARY_PROMPT.startswith("You are Cygnus, the AI game master")
 
 
 def test_summary_is_added_to_the_system_prompt_only_when_present():
