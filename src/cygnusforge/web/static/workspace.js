@@ -41,6 +41,14 @@
     const dialog = document.getElementById(button.dataset.dialogTarget);
     button.addEventListener("click", () => dialog.showModal());
     dialog.addEventListener("close", () => button.focus());
+    dialog.addEventListener("click", (event) => {
+      if (event.target !== dialog) return;
+      const rect = dialog.getBoundingClientRect();
+      const outside =
+        event.clientX < rect.left || event.clientX > rect.right ||
+        event.clientY < rect.top || event.clientY > rect.bottom;
+      if (outside) dialog.close();
+    });
   });
 
   const drawerButtons = Array.from(document.querySelectorAll("[data-drawer-target]"));
