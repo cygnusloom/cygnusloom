@@ -4,26 +4,39 @@
     transcript.scrollTop = transcript.scrollHeight;
   }
 
-  const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
-  const select = (tab) => {
-    for (const other of tabs) {
-      const selected = other === tab;
-      other.setAttribute("aria-selected", String(selected));
-      other.tabIndex = selected ? 0 : -1;
-      document.getElementById(other.getAttribute("aria-controls")).hidden = !selected;
-    }
-    tab.focus();
-  };
+  document.querySelectorAll('[role="tablist"]').forEach((list) => {
+    const tabs = Array.from(list.querySelectorAll('[role="tab"]'));
+    const select = (tab) => {
+      for (const other of tabs) {
+        const selected = other === tab;
+        other.setAttribute("aria-selected", String(selected));
+        other.tabIndex = selected ? 0 : -1;
+        document.getElementById(other.getAttribute("aria-controls")).hidden = !selected;
+      }
+      tab.focus();
+    };
 
-  tabs.forEach((tab, index) => {
-    tab.addEventListener("click", () => select(tab));
-    tab.addEventListener("keydown", (event) => {
-      const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
-      if (step === undefined) return;
-      event.preventDefault();
-      select(tabs[(index + step + tabs.length) % tabs.length]);
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => select(tab));
+      tab.addEventListener("keydown", (event) => {
+        const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+        if (step === undefined) return;
+        event.preventDefault();
+        select(tabs[(index + step + tabs.length) % tabs.length]);
+      });
     });
   });
+
+  const closeOnBackdropClick = (dialog) => {
+    dialog.addEventListener("click", (event) => {
+      if (event.target !== dialog) return;
+      const rect = dialog.getBoundingClientRect();
+      const outside =
+        event.clientX < rect.left || event.clientX > rect.right ||
+        event.clientY < rect.top || event.clientY > rect.bottom;
+      if (outside) dialog.close();
+    });
+  };
 
   const showView = (name) => {
     for (const view of document.querySelectorAll("[data-view]")) {
@@ -41,15 +54,36 @@
     const dialog = document.getElementById(button.dataset.dialogTarget);
     button.addEventListener("click", () => dialog.showModal());
     dialog.addEventListener("close", () => button.focus());
-    dialog.addEventListener("click", (event) => {
-      if (event.target !== dialog) return;
-      const rect = dialog.getBoundingClientRect();
-      const outside =
-        event.clientX < rect.left || event.clientX > rect.right ||
-        event.clientY < rect.top || event.clientY > rect.bottom;
-      if (outside) dialog.close();
-    });
+    closeOnBackdropClick(dialog);
   });
+
+  const turnDialog = document.getElementById("dialog-turn-context");
+  if (turnDialog) {
+    const body = turnDialog.querySelector("[data-turn-context-body]");
+    let opener = null;
+    document.querySelectorAll("[data-turn-context-url]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        opener = button;
+        body.textContent = "Loading…";
+        turnDialog.showModal();
+        let html = null;
+        try {
+          const response = await fetch(button.dataset.turnContextUrl, {
+            headers: { Accept: "text/html" },
+            credentials: "same-origin",
+          });
+          if (response.ok && !response.redirected) html = await response.text();
+        } catch (error) {
+          html = null;
+        }
+        // Ignore a reply for a gear that has since been replaced by another click.
+        if (opener !== button) return;
+        body.innerHTML = html ?? "<p class=\"muted\">Could not load this reply's details.</p>";
+      });
+    });
+    turnDialog.addEventListener("close", () => opener?.focus());
+    closeOnBackdropClick(turnDialog);
+  }
 
   const drawerButtons = Array.from(document.querySelectorAll("[data-drawer-target]"));
   const setDrawer = (id, open) => {

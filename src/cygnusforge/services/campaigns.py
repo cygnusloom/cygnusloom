@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import math
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -8,8 +9,8 @@ from typing import Any
 from sqlalchemy import Engine
 from sqlmodel import select
 
-from cygnusforge.content.library import ContentLibrary, ToolCall
-from cygnusforge.db.models import Campaign, Message
+from cygnusforge.content.library import ContentLibrary, RuleSet, ToolCall
+from cygnusforge.db.models import Campaign, Message, TurnContext
 from cygnusforge.llm.base import LLMError, Provider, complete
 from cygnusforge.llm.registry import ProviderFactory
 from cygnusforge.services.common import InvalidInput, NotFound, session_scope
@@ -89,18 +90,69 @@ def list_messages(engine: Engine, campaign_id: int) -> list[Message]:
         return list(db.exec(query).all())
 
 
-def system_prompt(rules: Iterable[str], summary: str) -> str:
-    parts = [SYSTEM_PROMPT]
-    rule_lines = [f"- {rule}" for rule in rules]
-    if rule_lines:
-        parts.append("Rules for this campaign:\n" + "\n".join(rule_lines))
-    if summary:
-        parts.append("Summary of earlier events in this campaign:\n" + summary)
-    return "\n\n".join(parts)
-
-
 def estimate_tokens(text: str) -> int:
     return math.ceil(len(text) / CHARS_PER_TOKEN)
+
+
+@dataclass(frozen=True)
+class ContextPart:
+    """One piece of what the model was given: its role, where it came from, and its text."""
+
+    role: str
+    source: str
+    content: str
+
+    @property
+    def tokens(self) -> int:
+        return estimate_tokens(self.content)
+
+    def to_dict(self) -> dict[str, str]:
+        return {"role": self.role, "source": self.source, "content": self.content}
+
+
+def system_parts(
+    rule_set_id: str, rules: Mapping[str, str], summary: str, summary_through: int
+) -> list[ContextPart]:
+    """The system prompt in sections. Joined with blank lines, they are the system message."""
+    parts = [ContextPart("system", "Base prompt", SYSTEM_PROMPT)]
+    if rules:
+        rule_lines = "\n".join(f"- {rule}" for rule in rules.values())
+        ids = ", ".join(rules)
+        parts.append(
+            ContextPart(
+                "system",
+                f"Rules from rule set '{rule_set_id}': {ids}",
+                "Rules for this campaign:\n" + rule_lines,
+            )
+        )
+    if summary:
+        parts.append(
+            ContextPart(
+                "system",
+                f"Summary of messages up to #{summary_through}",
+                "Summary of earlier events in this campaign:\n" + summary,
+            )
+        )
+    return parts
+
+
+def tool_definition_parts(rule_set: RuleSet) -> list[ContextPart]:
+    """Tool definitions are sent beside the messages, so they are recorded as their own parts."""
+    specs = tool_specs(rule_set.tool_calls) or []
+    return [
+        ContextPart(
+            "tool definition",
+            f"Tool '{spec['function']['name']}' from rule set '{rule_set.id}'",
+            json.dumps(spec["function"], indent=2),
+        )
+        for spec in specs
+    ]
+
+
+def _message_source(message: Message) -> str:
+    if message.role == "user":
+        return f"Message #{message.id} (player)"
+    return f"Message #{message.id} (GM, {message.model or 'unknown model'})"
 
 
 @dataclass(frozen=True)
@@ -116,10 +168,15 @@ class ContextUsage:
 
 
 def context_usage(
-    campaign: Campaign, history: Sequence[Message], rules: Iterable[str], limit: int
+    campaign: Campaign, history: Sequence[Message], rules: Mapping[str, str], limit: int
 ) -> ContextUsage:
     unsummarized = [m for m in history if m.id > campaign.summary_through]
-    used = estimate_tokens(system_prompt(rules, campaign.context_summary))
+    used = sum(
+        part.tokens
+        for part in system_parts(
+            campaign.rule_set, rules, campaign.context_summary, campaign.summary_through
+        )
+    )
     used += sum(estimate_tokens(m.content) for m in unsummarized)
     return ContextUsage(used=used, limit=limit)
 
@@ -176,11 +233,14 @@ async def _reply_with_tools(
     provider: Provider,
     model_name: str,
     messages: list[dict[str, Any]],
+    context: list[ContextPart],
     tool_calls: Mapping[str, ToolCall],
 ) -> str:
-    """Let the GM call tools until it gives a reply. Tool calls and results stay in this turn."""
+    """Let the GM call tools until it gives a reply. Tool calls and results stay in this turn.
+
+    Each round's messages are also appended to `context`, so the turn's record includes them."""
     specs = tool_specs(tool_calls)
-    for _ in range(MAX_TOOL_ROUNDS + 1):
+    for round_number in range(1, MAX_TOOL_ROUNDS + 2):
         result = await provider.chat(model_name, messages, specs)
         if not result.tool_requests:
             reply = result.text.strip()
@@ -201,13 +261,20 @@ async def _reply_with_tools(
                 ],
             }
         )
+        if result.text:
+            context.append(ContextPart("assistant", f"GM text (round {round_number})", result.text))
         for request in result.tool_requests:
-            messages.append(
-                {
-                    "role": "tool",
-                    "tool_call_id": request.id,
-                    "content": run_tool(tool_calls, request),
-                }
+            output = run_tool(tool_calls, request)
+            messages.append({"role": "tool", "tool_call_id": request.id, "content": output})
+            context.append(
+                ContextPart(
+                    "assistant",
+                    f"GM tool call (round {round_number})",
+                    f"{request.name}({request.arguments})",
+                )
+            )
+            context.append(
+                ContextPart("tool", f"Result of '{request.name}' (round {round_number})", output)
             )
     raise LLMError("the model kept calling tools without answering")
 
@@ -239,14 +306,15 @@ async def send_message(
     rule_set = library.rule_sets.get(campaign.rule_set)
     if rule_set is None:
         raise InvalidInput("that campaign's rule set is no longer available")
-    rules = list(rule_set.rules.values())
     provider, model_name = providers(model)
 
     summary = campaign.context_summary
     watermark = campaign.summary_through
     history = [m for m in list_messages(engine, campaign.id) if m.id > watermark]
-    prompt_tokens = estimate_tokens(system_prompt(rules, summary)) + estimate_tokens(text)
-    prompt_tokens += sum(estimate_tokens(m.content) for m in history)
+    prompt_tokens = sum(
+        p.tokens for p in system_parts(rule_set.id, rule_set.rules, summary, watermark)
+    )
+    prompt_tokens += estimate_tokens(text) + sum(estimate_tokens(m.content) for m in history)
     if prompt_tokens >= context_tokens * COMPRESS_AT:
         start = _verbatim_start(history, int(context_tokens * KEEP_RECENT))
         if start > 0:
@@ -257,12 +325,17 @@ async def send_message(
             watermark = folded[-1].id or watermark
             history = history[start:]
 
-    messages = [
-        {"role": "system", "content": system_prompt(rules, summary)},
-        *({"role": m.role, "content": m.content} for m in history),
-        {"role": "user", "content": text},
+    system = system_parts(rule_set.id, rule_set.rules, summary, watermark)
+    conversation = [
+        *(ContextPart(m.role, _message_source(m), m.content) for m in history),
+        ContextPart("user", "This message (player)", text),
     ]
-    reply = await _reply_with_tools(provider, model_name, messages, rule_set.tool_calls)
+    context = [*system, *tool_definition_parts(rule_set), *conversation]
+    messages = [
+        {"role": "system", "content": "\n\n".join(p.content for p in system)},
+        *({"role": p.role, "content": p.content} for p in conversation),
+    ]
+    reply = await _reply_with_tools(provider, model_name, messages, context, rule_set.tool_calls)
     with session_scope(engine) as db:
         stored = db.get(Campaign, campaign.id)
         if stored is None:
@@ -270,6 +343,31 @@ async def send_message(
         stored.context_summary = summary
         stored.summary_through = watermark
         db.add(Message(campaign_id=campaign.id, role="user", content=text))
-        db.add(Message(campaign_id=campaign.id, role="assistant", content=reply, model=model))
+        assistant = Message(campaign_id=campaign.id, role="assistant", content=reply, model=model)
+        db.add(assistant)
+        db.flush()
+        db.add(
+            TurnContext(
+                message_id=assistant.id,
+                parts=json.dumps([part.to_dict() for part in context]),
+            )
+        )
         db.commit()
     return reply
+
+
+def get_turn_context(
+    engine: Engine, owner_id: int, campaign_id: int, message_id: int
+) -> list[ContextPart] | None:
+    """The context the model was given for an assistant message.
+
+    None means the turn was sent before contexts were recorded."""
+    get_campaign(engine, owner_id, campaign_id)
+    with session_scope(engine) as db:
+        message = db.get(Message, message_id)
+        if message is None or message.campaign_id != campaign_id or message.role != "assistant":
+            raise NotFound("message not found")
+        row = db.get(TurnContext, message_id)
+        if row is None:
+            return None
+        return [ContextPart(**part) for part in json.loads(row.parts)]

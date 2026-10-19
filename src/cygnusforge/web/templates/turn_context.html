@@ -1,0 +1,11 @@
+{% if parts is none %}
+<p class="muted">No context was recorded for this reply. It was sent before contexts were saved.</p>
+{% else %}
+<p class="muted">{{ parts | length }} parts, about {{ '{:,}'.format(parts | sum(attribute="tokens")) }} tokens. Token counts are estimates at four characters per token.</p>
+{% for part in parts %}
+<section class="context-part">
+  <header><span class="role">{{ part.role }}</span> <span>{{ part.source }}</span> <span class="muted">~{{ part.tokens }} tokens</span></header>
+  <pre>{{ part.content }}</pre>
+</section>
+{% endfor %}
+{% endif %}

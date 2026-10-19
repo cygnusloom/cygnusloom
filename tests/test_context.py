@@ -12,7 +12,7 @@ from sqlmodel import Session, func, select
 from cygnusforge.config import Settings
 from cygnusforge.db.models import Campaign, Message
 from cygnusforge.llm.base import ChatReply, LLMError
-from cygnusforge.services.campaigns import SUMMARY_PROMPT, system_prompt
+from cygnusforge.services.campaigns import SUMMARY_PROMPT, system_parts
 from cygnusforge.web.app import create_app
 from tests.test_campaigns import _campaign_id, _send
 
@@ -75,15 +75,19 @@ def _send_until_summarized(client: TestClient, app: FastAPI, campaign_id: int, s
             return
 
 
+def _system_text(rules: dict[str, str], summary: str, through: int = 0) -> str:
+    return "\n\n".join(part.content for part in system_parts("freeform", rules, summary, through))
+
+
 def test_rules_are_added_to_the_system_prompt():
-    prompt = system_prompt(["be consistent", "no fourth wall"], "")
+    prompt = _system_text({"consistency": "be consistent", "fourth": "no fourth wall"}, "")
     assert prompt.startswith("You are a helpful assistant.")
     assert "Rules for this campaign:\n- be consistent\n- no fourth wall" in prompt
     assert "Summary of earlier events" not in prompt
 
 
 def test_summary_is_added_to_the_system_prompt_only_when_present():
-    prompt = system_prompt([], "The party met a mushroom sage.")
+    prompt = _system_text({}, "The party met a mushroom sage.")
     assert "Summary of earlier events in this campaign:\nThe party met a mushroom sage." in prompt
     assert "Rules for this campaign" not in prompt
 

@@ -15,6 +15,7 @@ from cygnusforge.services.campaigns import (
     context_usage,
     create_campaign,
     get_campaign,
+    get_turn_context,
     list_campaigns,
     list_messages,
     send_message,
@@ -73,6 +74,13 @@ def campaign_page(request: Request, campaign_id: int) -> Response:
     user = page_user(request)
     model = request.query_params.get("model", "")
     return _campaign_page(request, user, campaign_id, model=model)
+
+
+@router.get("/{campaign_id}/messages/{message_id}/context")
+def turn_context_fragment(request: Request, campaign_id: int, message_id: int) -> Response:
+    user = page_user(request)
+    parts = get_turn_context(request.app.state.engine, user.id, campaign_id, message_id)
+    return render(request, "turn_context.html", parts=parts)
 
 
 @router.post("/{campaign_id}/messages")
@@ -144,7 +152,7 @@ def _campaign_page(
     context = context_usage(
         campaign,
         messages,
-        rule_set.rules.values() if rule_set else (),
+        rule_set.rules if rule_set else {},
         settings.llm_context_tokens,
     )
     return render(

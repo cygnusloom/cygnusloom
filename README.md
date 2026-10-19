@@ -73,6 +73,8 @@ Settings are fixed when a campaign is created. Campaigns created before these se
 
 Token counts are estimates (about four characters per token). The campaign page shows the estimated prompt size next to the settings button. The full transcript is always kept; only the prompt sent to the model is summarized. A summary is asked to stay within about 25% of the window, and if it still runs longer, its oldest text is dropped.
 
+Each AI reply has a gear button. It opens a Context dialog that shows exactly what the model received for that reply (the system prompt, rules, tool definitions, the summary, the kept messages, and any tool rounds), with each part labelled by its source. Each reply stores its own copy of that context, so long chats use more database space. Replies from before this feature show "No context was recorded".
+
 Model ids take the form `provider/model`, for example `ollama/gemma4:e2b` or `openai/gpt-4o-mini` with `CYGNUSFORGE_LLM_OPENAI_BASE_URL` set.
 
 ## Scripted fake model (for tests)

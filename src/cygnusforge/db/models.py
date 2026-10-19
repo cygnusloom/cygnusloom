@@ -45,3 +45,14 @@ class Message(SQLModel, table=True):
     content: str = Field(sa_column=Column(Text, nullable=False))
     model: str | None = Field(default=None, max_length=120)
     created_at: datetime = Field(default_factory=utcnow)
+
+
+class TurnContext(SQLModel, table=True):
+    """The prompt behind one assistant message, as a JSON list of context parts.
+
+    Kept apart from `message` so transcript pages do not load every prompt."""
+
+    __tablename__ = "turn_context"
+
+    message_id: int = Field(foreign_key="message.id", primary_key=True)
+    parts: str = Field(sa_column=Column(Text, nullable=False))
