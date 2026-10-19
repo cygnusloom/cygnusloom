@@ -70,6 +70,7 @@ Settings are fixed when a campaign is created. Campaigns created before these se
 | `CYGNUSFORGE_LLM_<NAME>_BASE_URL` | `ollama` has a default | OpenAI-compatible base URL for provider `<name>` |
 | `CYGNUSFORGE_LLM_<NAME>_API_KEY` | none | API key for provider `<name>` |
 | `CYGNUSFORGE_LOG_LEVEL` | `INFO` | Log level |
+| `CYGNUSFORGE_TEST_LOGIN` | off | Set to `1`, `true`, `yes`, or `on` to show a "Log in as test user" button on the login page. It signs in a fixed `test-user@example.com` account with a random password. For local testing only; do not enable on a shared server |
 
 Token counts are estimates (about four characters per token). The campaign page shows the estimated prompt size next to the settings button. The full transcript is always kept; only the prompt sent to the model is summarized. A summary is asked to stay within about 25% of the window, and if it still runs longer, its oldest text is dropped.
 

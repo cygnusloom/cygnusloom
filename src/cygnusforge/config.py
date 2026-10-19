@@ -9,6 +9,7 @@ DEFAULT_MODEL = "ollama/gemma4:e2b"
 _PREFIX = "CYGNUSFORGE_LLM_"
 _LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
 DEFAULT_CONTEXT_TOKENS = 32768
+_TRUE_VALUES = ("1", "true", "yes", "on")
 
 
 @dataclass(frozen=True)
@@ -21,6 +22,7 @@ class Settings:
     provider_api_keys: dict[str, str] = field(default_factory=dict)
     log_level: str = "INFO"
     llm_context_tokens: int = DEFAULT_CONTEXT_TOKENS
+    test_login: bool = False
 
 
 def _csv(value: str) -> tuple[str, ...]:
@@ -67,4 +69,5 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         provider_api_keys=_per_provider(env, "_API_KEY"),
         log_level=log_level,
         llm_context_tokens=context_tokens,
+        test_login=env.get("CYGNUSFORGE_TEST_LOGIN", "").strip().lower() in _TRUE_VALUES,
     )

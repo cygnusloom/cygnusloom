@@ -19,6 +19,12 @@
       <p>Already registered? <a href="/login">Log in</a></p>
     {% else %}
       <p>No account? <a href="/register">Register</a></p>
+      {% if test_login %}
+        <form method="post" action="/login/test-user">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit">Log in as test user</button>
+        </form>
+      {% endif %}
     {% endif %}
   </section>
 {% endblock %}

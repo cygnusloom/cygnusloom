@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import secrets
+
 from sqlalchemy import Engine
 from sqlmodel import select
 
@@ -9,6 +11,7 @@ from cygnusforge.services.common import Conflict, InvalidInput, NotFound, sessio
 
 MIN_PASSWORD = 10
 MAX_PASSWORD = 256
+TEST_USER_EMAIL = "test-user@example.com"
 
 
 def normalize_email(email: str) -> str:
@@ -45,6 +48,23 @@ def authenticate(engine: Engine, email: str, password: str) -> User | None:
         user = db.exec(select(User).where(User.email == email)).first()
         if user is None or not verify_password(user.password_hash, password):
             return None
+        return user
+
+
+def get_or_create_test_user(engine: Engine) -> User:
+    """Account behind the test-login button.
+
+    The password is random and never shown, so only that button can sign in.
+    """
+    with session_scope(engine) as db:
+        user = db.exec(select(User).where(User.email == TEST_USER_EMAIL)).first()
+        if user is None:
+            user = User(
+                email=TEST_USER_EMAIL, password_hash=hash_password(secrets.token_urlsafe(32))
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
         return user
 
 

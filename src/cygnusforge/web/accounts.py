@@ -7,8 +7,8 @@ from fastapi.responses import RedirectResponse
 from starlette.responses import Response
 
 from cygnusforge.auth.deps import USER_KEY, current_user, verify_csrf
-from cygnusforge.services.accounts import authenticate, register_user
-from cygnusforge.services.common import Conflict, InvalidInput
+from cygnusforge.services.accounts import authenticate, get_or_create_test_user, register_user
+from cygnusforge.services.common import Conflict, InvalidInput, NotFound
 from cygnusforge.web.forms import form_text
 from cygnusforge.web.rendering import render
 
@@ -57,7 +57,14 @@ async def register(request: Request) -> Response:
 def login_page(request: Request) -> Response:
     if current_user(request) is not None:
         return RedirectResponse("/campaigns", status_code=303)
-    return render(request, "auth_form.html", mode="login", heading="Log in", action="/login")
+    return render(
+        request,
+        "auth_form.html",
+        mode="login",
+        heading="Log in",
+        action="/login",
+        test_login=request.app.state.settings.test_login,
+    )
 
 
 @router.post("/login")
@@ -70,6 +77,16 @@ async def login(request: Request) -> Response:
     user = authenticate(request.app.state.engine, email, form_text(form, "password"))
     if user is None:
         return _form_error(request, "login", 401, "Email or password is incorrect.", email)
+    _sign_in(request, user.id)
+    return RedirectResponse("/campaigns", status_code=303)
+
+
+@router.post("/login/test-user")
+async def login_as_test_user(request: Request) -> Response:
+    if not request.app.state.settings.test_login:
+        raise NotFound("not found")
+    await verify_csrf(request)
+    user = get_or_create_test_user(request.app.state.engine)
     _sign_in(request, user.id)
     return RedirectResponse("/campaigns", status_code=303)
 
@@ -100,4 +117,5 @@ def _form_error(
         action=action,
         error=message,
         email=email,
+        test_login=request.app.state.settings.test_login,
     )

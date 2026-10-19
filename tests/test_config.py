@@ -43,3 +43,17 @@ def test_context_window_can_be_set():
 def test_context_window_must_be_a_positive_whole_number(value: str):
     with pytest.raises(RuntimeError, match="CYGNUSFORGE_LLM_CONTEXT_TOKENS"):
         load_settings({**BASE, "CYGNUSFORGE_LLM_CONTEXT_TOKENS": value})
+
+
+def test_test_login_is_off_by_default():
+    assert load_settings(BASE).test_login is False
+
+
+@pytest.mark.parametrize("value", ["1", " TRUE ", "yes", "on"])
+def test_test_login_can_be_enabled(value: str):
+    assert load_settings({**BASE, "CYGNUSFORGE_TEST_LOGIN": value}).test_login is True
+
+
+@pytest.mark.parametrize("value", ["0", "false", "no", "off", ""])
+def test_test_login_stays_off_for_other_values(value: str):
+    assert load_settings({**BASE, "CYGNUSFORGE_TEST_LOGIN": value}).test_login is False
