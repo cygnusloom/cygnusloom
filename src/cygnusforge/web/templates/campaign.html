@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ campaign.name }}{% endblock %}
+{% block content %}
+  <section class="card wide chat">
+    <div class="heading">
+      <h1>{{ campaign.name }}</h1>
+      <span class="muted">{{ campaign.model }}</span>
+    </div>
+    {% if error %}
+      <p role="alert">{{ error }}</p>
+    {% endif %}
+    <div class="transcript">
+      {% for message in messages %}
+        <div class="message {{ message.role }}">
+          <span class="role">{{ message.role }}</span>
+          <p>{{ message.content }}</p>
+        </div>
+      {% else %}
+        <p class="muted">Say something to start the conversation.</p>
+      {% endfor %}
+    </div>
+    <form method="post" action="/campaigns/{{ campaign.id }}/messages" class="composer">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <textarea name="content" rows="3" required maxlength="8000" placeholder="Message">{{ draft }}</textarea>
+      <button type="submit">Send</button>
+    </form>
+  </section>
+{% endblock %}

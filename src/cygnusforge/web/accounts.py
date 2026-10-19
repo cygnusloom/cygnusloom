@@ -1,0 +1,109 @@
+"""Account pages: register, log in, and log out."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Request
+from fastapi.responses import RedirectResponse
+from starlette.datastructures import FormData
+from starlette.responses import Response
+
+from cygnusforge.auth.deps import USER_KEY, current_user, verify_csrf
+from cygnusforge.services.accounts import authenticate, register_user
+from cygnusforge.services.common import Conflict, InvalidInput
+from cygnusforge.web.rendering import render
+
+router = APIRouter()
+
+
+def _client_key(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
+
+
+def _too_many(request: Request) -> bool:
+    return not request.app.state.limiter.allow(_client_key(request))
+
+
+def _form_text(form: FormData, name: str) -> str:
+    value = form.get(name, "")
+    return value if isinstance(value, str) else ""
+
+
+@router.get("/")
+def home() -> Response:
+    return RedirectResponse("/campaigns", status_code=303)
+
+
+@router.get("/register")
+def register_page(request: Request) -> Response:
+    if current_user(request) is not None:
+        return RedirectResponse("/campaigns", status_code=303)
+    return render(
+        request, "auth_form.html", mode="register", heading="Register", action="/register"
+    )
+
+
+@router.post("/register")
+async def register(request: Request) -> Response:
+    if _too_many(request):
+        return _form_error(request, "register", 429, "Too many attempts. Try again later.")
+    await verify_csrf(request)
+    form = await request.form()
+    email = _form_text(form, "email")
+    try:
+        user = register_user(request.app.state.engine, email, _form_text(form, "password"))
+    except InvalidInput as exc:
+        return _form_error(request, "register", 400, str(exc), email)
+    except Conflict as exc:
+        return _form_error(request, "register", 409, str(exc), email)
+    _sign_in(request, user.id)
+    return RedirectResponse("/campaigns", status_code=303)
+
+
+@router.get("/login")
+def login_page(request: Request) -> Response:
+    if current_user(request) is not None:
+        return RedirectResponse("/campaigns", status_code=303)
+    return render(request, "auth_form.html", mode="login", heading="Log in", action="/login")
+
+
+@router.post("/login")
+async def login(request: Request) -> Response:
+    if _too_many(request):
+        return _form_error(request, "login", 429, "Too many attempts. Try again later.")
+    await verify_csrf(request)
+    form = await request.form()
+    email = _form_text(form, "email")
+    user = authenticate(request.app.state.engine, email, _form_text(form, "password"))
+    if user is None:
+        return _form_error(request, "login", 401, "Email or password is incorrect.", email)
+    _sign_in(request, user.id)
+    return RedirectResponse("/campaigns", status_code=303)
+
+
+@router.post("/logout")
+async def logout(request: Request) -> Response:
+    await verify_csrf(request)
+    request.session.clear()
+    return RedirectResponse("/login", status_code=303)
+
+
+def _sign_in(request: Request, user_id: int | None) -> None:
+    # Clearing first drops any pre-login state; the CSRF token is issued again on the next page.
+    request.session.clear()
+    request.session[USER_KEY] = user_id
+
+
+def _form_error(
+    request: Request, mode: str, status: int, message: str, email: str = ""
+) -> Response:
+    heading = "Register" if mode == "register" else "Log in"
+    return render(
+        request,
+        "auth_form.html",
+        status_code=status,
+        mode=mode,
+        heading=heading,
+        action=f"/{mode}",
+        error=message,
+        email=email,
+    )
