@@ -12,14 +12,6 @@
         Name
         <input type="text" name="name" value="{{ campaign_name }}" required maxlength="120">
       </label>
-      <label>
-        Model
-        <select name="model">
-          {% for model in models %}
-            <option value="{{ model }}" {% if model == default_model %}selected{% endif %}>{{ model }}</option>
-          {% endfor %}
-        </select>
-      </label>
       <button type="submit">Create</button>
     </form>
   </section>

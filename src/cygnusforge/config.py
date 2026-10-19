@@ -41,10 +41,11 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     secret = env.get("CYGNUSFORGE_SECRET_KEY", "")
     if not secret:
         raise RuntimeError("CYGNUSFORGE_SECRET_KEY is required")
+    default_model = env.get("CYGNUSFORGE_LLM_DEFAULT_MODEL", DEFAULT_MODEL).strip()
     models = _csv(env.get("CYGNUSFORGE_LLM_PROVIDERS", ",".join(DEFAULT_MODELS)))
-    default_model = env.get("CYGNUSFORGE_LLM_DEFAULT_MODEL", DEFAULT_MODEL)
+    # The default is always offered, so it never has to be listed twice.
     if default_model not in models:
-        raise RuntimeError("CYGNUSFORGE_LLM_DEFAULT_MODEL must be one of CYGNUSFORGE_LLM_PROVIDERS")
+        models = (default_model, *models)
     log_level = env.get("CYGNUSFORGE_LOG_LEVEL", "INFO").strip().upper()
     if log_level not in _LOG_LEVELS:
         raise RuntimeError(f"CYGNUSFORGE_LOG_LEVEL must be one of {', '.join(_LOG_LEVELS)}")

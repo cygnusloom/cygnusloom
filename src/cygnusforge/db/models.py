@@ -18,14 +18,13 @@ class User(SQLModel, table=True):
 
 
 class Campaign(SQLModel, table=True):
-    """A chat. Each campaign talks to one model and belongs to one account."""
+    """A chat owned by one account. The model is chosen per message."""
 
     __tablename__ = "campaign"
 
     id: int | None = Field(default=None, primary_key=True)
     owner_id: int = Field(foreign_key="user.id", index=True)
     name: str = Field(max_length=120)
-    model: str = Field(max_length=120)
     created_at: datetime = Field(default_factory=utcnow)
 
 
@@ -36,4 +35,5 @@ class Message(SQLModel, table=True):
     campaign_id: int = Field(foreign_key="campaign.id", index=True)
     role: str = Field(max_length=16)
     content: str = Field(sa_column=Column(Text, nullable=False))
+    model: str | None = Field(default=None, max_length=120)
     created_at: datetime = Field(default_factory=utcnow)

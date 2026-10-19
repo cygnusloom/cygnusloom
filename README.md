@@ -1,6 +1,6 @@
 # Cygnus Forge
 
-A minimal web chat over an LLM. It has accounts (email and password), campaigns (a named chat bound to one model), and nothing else.
+A minimal web chat over an LLM. It has accounts (email and password), campaigns (named chats), and nothing else. Each message picks its model, so you can switch models mid-campaign.
 
 ## Run
 
@@ -10,7 +10,7 @@ uv sync
 uv run --env-file .env uvicorn --factory cygnusforge.web.app:app_from_env --reload
 ```
 
-Open http://127.0.0.1:8000, register, and create a campaign. `CYGNUSFORGE_SECRET_KEY` is required, so set it in `.env` or your shell. The default model is `ollama/gemma4:e2b`, so Ollama should be serving at `http://localhost:11434`. To try the app without a model, pick `fake/scripted`.
+Open http://127.0.0.1:8000, register, and create a campaign, then pick a model in the composer before sending. `CYGNUSFORGE_SECRET_KEY` is required, so set it in `.env` or your shell. The default model is `ollama/gemma4:e2b`, so Ollama should be serving at `http://localhost:11434`. To try the app without a model, pick `fake/scripted`.
 
 ## Configuration
 
@@ -19,7 +19,7 @@ Open http://127.0.0.1:8000, register, and create a campaign. `CYGNUSFORGE_SECRET
 | `CYGNUSFORGE_SECRET_KEY` | (required) | Signs session cookies |
 | `CYGNUSFORGE_DATABASE_URL` | `sqlite:///./cygnusforge.db` | SQLAlchemy URL |
 | `CYGNUSFORGE_LLM_PROVIDERS` | `ollama/gemma4:e2b,fake/scripted` | Comma-separated `provider/model` ids offered to users |
-| `CYGNUSFORGE_LLM_DEFAULT_MODEL` | `ollama/gemma4:e2b` | Pre-selected model; must be in the list above |
+| `CYGNUSFORGE_LLM_DEFAULT_MODEL` | `ollama/gemma4:e2b` | Pre-selected model; always offered, even if not in the list above |
 | `CYGNUSFORGE_LLM_<NAME>_BASE_URL` | `ollama` has a default | OpenAI-compatible base URL for provider `<name>` |
 | `CYGNUSFORGE_LLM_<NAME>_API_KEY` | none | API key for provider `<name>` |
 | `CYGNUSFORGE_LOG_LEVEL` | `INFO` | Log level |

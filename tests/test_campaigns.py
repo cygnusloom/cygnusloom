@@ -16,11 +16,11 @@ def _signed_in(client_factory: Callable[[], TestClient], email: str = "ada@examp
     return client
 
 
-def _new_campaign(client: TestClient, name: str = "Test chat", model: str = "fake/scripted"):
+def _new_campaign(client: TestClient, name: str = "Test chat"):
     token = csrf_token(client, "/campaigns/new")
     return client.post(
         "/campaigns/new",
-        data={"csrf_token": token, "name": name, "model": model},
+        data={"csrf_token": token, "name": name},
         follow_redirects=False,
     )
 
@@ -32,11 +32,11 @@ def _campaign_id(client_factory: Callable[[], TestClient]) -> tuple[TestClient, 
     return client, int(response.headers["location"].rsplit("/", 1)[1])
 
 
-def _send(client: TestClient, campaign_id: int, text: str):
+def _send(client: TestClient, campaign_id: int, text: str, model: str = "fake/scripted"):
     token = csrf_token(client, "/campaigns")
     return client.post(
         f"/campaigns/{campaign_id}/messages",
-        data={"csrf_token": token, "content": text},
+        data={"csrf_token": token, "content": text, "model": model},
         follow_redirects=False,
     )
 
@@ -47,11 +47,52 @@ def test_create_campaign_and_list_it(client_factory: Callable[[], TestClient]):
     assert "Sandbox" in client.get("/campaigns").text
 
 
-def test_create_rejects_unknown_model(client_factory: Callable[[], TestClient]):
-    client = _signed_in(client_factory)
-    response = _new_campaign(client, model="openai/gpt-x")
+def test_send_rejects_unknown_model(client_factory: Callable[[], TestClient]):
+    client, campaign_id = _campaign_id(client_factory)
+    response = _send(client, campaign_id, "hi", model="openai/gpt-x")
     assert response.status_code == 400
     assert "not available" in response.text
+    assert 'class="message ' not in client.get(f"/campaigns/{campaign_id}").text
+
+
+def test_each_message_can_use_a_different_model(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    used: list[str] = []
+
+    class Echo:
+        name = "echo"
+
+        async def stream_text(self, model, messages):
+            used.append(model)
+            yield f"from {model}"
+
+    app.state.providers = lambda model_id: (Echo(), model_id)
+    client, campaign_id = _campaign_id(client_factory)
+    _send(client, campaign_id, "one", model="fake/scripted")
+    _send(client, campaign_id, "two", model="ollama/test-model")
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert used == ["fake/scripted", "ollama/test-model"]
+    assert "from fake/scripted" in page
+    assert "from ollama/test-model" in page
+
+
+def test_send_keeps_the_chosen_model_selected(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    class Echo:
+        name = "echo"
+
+        async def stream_text(self, model, messages):
+            yield "ok"
+
+    app.state.providers = lambda model_id: (Echo(), model_id)
+    client, campaign_id = _campaign_id(client_factory)
+    response = _send(client, campaign_id, "hi", model="ollama/test-model")
+    assert response.status_code == 303
+    assert response.headers["location"] == (f"/campaigns/{campaign_id}?model=ollama%2Ftest-model")
+    page = client.get(response.headers["location"]).text
+    assert '<option value="ollama/test-model" selected>' in page
 
 
 def test_create_rejects_blank_name(client_factory: Callable[[], TestClient]):

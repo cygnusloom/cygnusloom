@@ -9,7 +9,7 @@
     {% if campaigns %}
       <ul class="campaigns">
         {% for campaign in campaigns %}
-          <li><a href="/campaigns/{{ campaign.id }}">{{ campaign.name }}</a> <span class="muted">{{ campaign.model }}</span></li>
+          <li><a href="/campaigns/{{ campaign.id }}">{{ campaign.name }}</a></li>
         {% endfor %}
       </ul>
     {% else %}
