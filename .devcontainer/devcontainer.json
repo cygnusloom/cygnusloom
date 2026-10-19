@@ -1,0 +1,69 @@
+// Created from the "uv" template of Bare Dev Container Templates.
+// Usage, options, security defaults, and tips: https://github.com/bare-devcontainer/templates/tree/main/src/uv
+// What is installed in the image, and available tags: https://github.com/bare-devcontainer/images
+{
+  "name": "Python (uv)",
+  // Recommended: pin to a digest (e.g. "ghcr.io/bare-devcontainer/uv:trixie@sha256:<digest>").
+  // See https://github.com/bare-devcontainer/templates#pinning-images-to-a-digest
+  "image": "ghcr.io/bare-devcontainer/uv:trixie",
+  "remoteUser": "dev",
+  "containerEnv": {
+    "CYGNUSFORGE_LLM_OLLAMA_BASE_URL": "http://host.docker.internal:11434/v1"
+  },
+  "forwardPorts": [
+    8000
+  ],
+  "runArgs": [
+    "--cap-drop=ALL",
+    "--add-host=host.docker.internal:host-gateway",
+    "--env-file",
+    ".devcontainer/devcontainer.env"
+  ],
+  // Remove "no-new-privileges" if users need to gain elevated privileges inside the container (e.g., su, sudo).
+  "securityOpt": [
+    "no-new-privileges"
+  ],
+  "init": true,
+  // If you use VS Code, uncomment the following to open $EDITOR/$VISUAL/$GIT_EDITOR (e.g. `git commit`) in a VS Code tab:
+  // "remoteEnv": {
+  //   "VISUAL": "code --wait",
+  //   "EDITOR": "code --wait",
+  //   "GIT_EDITOR": "code --wait"
+  // },
+  "mounts": [
+    // Persist uv's cache (downloaded Python interpreters and packages) across rebuilds.
+    {
+      "source": "${devcontainerId}-uv-cache",
+      "target": "/home/dev/.cache/uv",
+      "type": "volume"
+    },
+    // Persist the shell history the image keeps in this directory.
+    {
+      "source": "${devcontainerId}-bash-history",
+      "target": "/home/dev/.local/state/bash",
+      "type": "volume"
+    }
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "charliermarsh.ruff"
+      ],
+      "settings": {
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+          }
+        }
+      }
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {},
+    "ghcr.io/devcontainers/features/git:1": {}
+  }
+}
