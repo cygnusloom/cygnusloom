@@ -1,0 +1,43 @@
+[
+  {
+    "type": "rule_set",
+    "id": "cairn2e",
+    "name": "Cairn 2e",
+    "description": "Character creation for Cairn, a second edition fantasy roleplaying game of wild lands and dark forests."
+  },
+  {
+    "type": "rule",
+    "id": "attribute-swap",
+    "text": "Roll 3d6 for Strength, Dexterity, and Willpower. You may swap the scores of two of the three attributes."
+  },
+  {
+    "type": "rule",
+    "id": "hit-protection",
+    "text": "Hit Protection is rolled as 1d6."
+  },
+  {
+    "type": "rule",
+    "id": "inventory-slots",
+    "text": "You have ten inventory slots. Carrying a backpack adds six more."
+  },
+  {
+    "type": "rule",
+    "id": "bulky-items",
+    "text": "Bulky items take two inventory slots."
+  },
+  {
+    "type": "rule",
+    "id": "petty-items",
+    "text": "Petty items take no inventory slots."
+  },
+  {
+    "type": "rule",
+    "id": "age",
+    "text": "Character age is 2d20+10."
+  },
+  {
+    "type": "rule",
+    "id": "omens",
+    "text": "The youngest character reads the Omens table aloud to the group."
+  }
+]

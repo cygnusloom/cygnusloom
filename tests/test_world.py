@@ -19,12 +19,19 @@ from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import NPC_KIND, CampaignState, Character, load_state
 from cygnusforge.services.tools import ToolRun, run_tool
 from tests.conftest import csrf_token
-from tests.test_campaigns import _campaign_id, _new_campaign, _send, _signed_in
+from tests.test_campaigns import (
+    _campaign_id,
+    _create_character,
+    _new_campaign,
+    _send,
+    _signed_in,
+)
 from tests.test_tools import _recording_provider, _saved, _script
 
 LIBRARY = ContentLibrary.load()
 TOOLS = LIBRARY.core.tool_calls
 TABLES = LIBRARY.core.tables
+SPEC = LIBRARY.rule_sets["freeform"].character
 BUNDLED_NPCS = {
     "Mara Thistledown": "Mossbell Hollow",
     "Brin Gallowcap": "Glowcap Ring",
@@ -46,6 +53,7 @@ def _ctx(
             campaign_id=campaign_id,
             tables=TABLES,
             rng=random.Random(0),
+            character=SPEC,
         ),
         speak=speak or quiet_speak,
     )
@@ -117,14 +125,18 @@ def test_listed_npc_traits_are_kept(client_factory: Callable[[], TestClient], ap
 
 def test_character_name_cannot_match_an_npc(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, character_name="old hob")
-    assert response.status_code == 400
-    assert "already used" in response.text
+    response = _new_campaign(client)
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    rejected = _create_character(client, campaign_id, name="old hob")
+    assert rejected.status_code == 400
+    assert "already used" in rejected.text
 
 
 def test_blank_character_name_is_rejected(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
-    assert _new_campaign(client, character_name="   ").status_code == 400
+    response = _new_campaign(client)
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    assert _create_character(client, campaign_id, name="   ").status_code == 400
 
 
 def test_random_traits_come_from_the_given_tables(
@@ -142,6 +154,7 @@ def test_random_traits_come_from_the_given_tables(
             campaign_id,
             tables,
             random.Random(3),
+            SPEC,
             name="Pip",
             location="Mossbell Hollow",
             description="A tinker.",
@@ -161,6 +174,7 @@ def test_too_many_quirks_are_rejected(client_factory: Callable[[], TestClient], 
             campaign_id,
             TABLES,
             random.Random(0),
+            SPEC,
             name="Pip",
             location="Mossbell Hollow",
             description="",
@@ -220,7 +234,7 @@ def test_moving_the_player_changes_the_world_state(client_factory: Callable[[], 
     _, campaign_id = _campaign_id(client_factory)
     moved = _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
     assert moved == {"moved": "Ada", "location": "Glowcap Ring"}
-    text = world.world_state_text(_state(app, campaign_id))
+    text = world.world_state_text(_state(app, campaign_id), SPEC)
     assert "Player character: Ada, at Glowcap Ring." in text
     assert "- Brin Gallowcap, at Glowcap Ring:" in text
 
@@ -407,7 +421,7 @@ def test_speaker_profile_describes_an_npc_at_the_players_location(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _campaign_id(client_factory)
-    profile = world.speaker_profile(_state(app, campaign_id), "Mara Thistledown")
+    profile = world.speaker_profile(_state(app, campaign_id), "Mara Thistledown", SPEC)
     assert profile.splitlines()[0] == "Speaker: Mara Thistledown"
     assert "Personality: warm and protective" in profile
     assert "Location: Mossbell Hollow" in profile
@@ -417,9 +431,9 @@ def test_npcs_away_from_the_player_cannot_speak(client_factory: Callable[[], Tes
     _, campaign_id = _campaign_id(client_factory)
     state = _state(app, campaign_id)
     with pytest.raises(InvalidInput, match="not at the player character's location"):
-        world.speaker_profile(state, "Brin Gallowcap")
+        world.speaker_profile(state, "Brin Gallowcap", SPEC)
     with pytest.raises(InvalidInput, match="does not need speaking for"):
-        world.speaker_profile(state, "Ada")
+        world.speaker_profile(state, "Ada", SPEC)
 
 
 def test_speak_tool_queues_dialogue_and_returns_only_an_acknowledgment(
@@ -485,9 +499,9 @@ def test_campaign_page_lists_places_characters_and_notes(
 
 def test_campaign_page_escapes_character_names(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, character_name="<b>Zed</b>")
-    assert response.status_code == 303
+    response = _new_campaign(client)
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    assert _create_character(client, campaign_id, name="<b>Zed</b>").status_code == 303
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "&lt;b&gt;Zed&lt;/b&gt;" in page
     assert "<b>Zed</b>" not in page

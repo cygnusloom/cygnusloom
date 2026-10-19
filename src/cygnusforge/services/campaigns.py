@@ -11,6 +11,7 @@ from typing import Any
 from sqlalchemy import Engine
 from sqlmodel import select
 
+from cygnusforge.content.character import CharacterSpec, roll_stats
 from cygnusforge.content.library import ContentLibrary, RuleSet, ToolCall
 from cygnusforge.db.models import Campaign, Event
 from cygnusforge.llm.base import (
@@ -60,8 +61,10 @@ from cygnusforge.services.tools import (
 from cygnusforge.services.world import (
     WorldTools,
     WorldView,
+    create_player_character,
     seed_campaign,
     snapshot,
+    start_location_name,
     world_state_text,
 )
 
@@ -123,16 +126,12 @@ def create_campaign(
     name: str,
     world_template: str,
     rule_set: str,
-    character_name: str,
     model: str,
     rng: random.Random | None = None,
 ) -> Campaign:
     name = (name or "").strip()
     if not name or len(name) > MAX_NAME:
         raise InvalidInput(f"name must be 1 to {MAX_NAME} characters")
-    character_name = (character_name or "").strip()
-    if not character_name or len(character_name) > MAX_NAME:
-        raise InvalidInput(f"character name must be 1 to {MAX_NAME} characters")
     if world_template not in library.world_templates:
         raise InvalidInput("that world template is not available")
     if rule_set not in library.rule_sets:
@@ -157,10 +156,58 @@ def create_campaign(
             template,
             library.core.tables,
             rng if rng is not None else random.Random(),
-            character_name,
+            library.rule_sets[rule_set].character,
         )
         db.refresh(campaign)
         return campaign
+
+
+def roll_player_stats(
+    engine: Engine,
+    library: ContentLibrary,
+    owner_id: int,
+    campaign_id: int,
+    rng: random.Random | None = None,
+) -> dict[str, int]:
+    """Roll the stats a new player character starts from. The page keeps the roll until the
+    player submits; the roll is not stored in the campaign."""
+    campaign = get_campaign(engine, owner_id, campaign_id)
+    spec = character_spec(library, campaign)
+    return roll_stats(spec, rng if rng is not None else random.Random())
+
+
+def create_character(
+    engine: Engine,
+    library: ContentLibrary,
+    owner_id: int,
+    campaign_id: int,
+    name: str,
+    rolled: Mapping[str, int],
+    submitted: Mapping[str, Any],
+    rng: random.Random | None = None,
+) -> dict[str, Any]:
+    """Make the campaign's player character. Until it exists, the campaign cannot be played."""
+    campaign = get_campaign(engine, owner_id, campaign_id)
+    spec = character_spec(library, campaign)
+    template = library.world_templates[campaign.world_template]
+    with _exclusive(campaign_id), session_scope(engine) as db:
+        return create_player_character(
+            db,
+            campaign_id,
+            spec,
+            start_location_name(template),
+            name,
+            rolled,
+            submitted,
+            rng if rng is not None else random.Random(),
+        )
+
+
+def character_spec(library: ContentLibrary, campaign: Campaign) -> CharacterSpec:
+    rule_set = library.rule_sets.get(campaign.rule_set)
+    if rule_set is None:
+        raise InvalidInput("that campaign's rule set is no longer available")
+    return rule_set.character
 
 
 def list_campaigns(engine: Engine, owner_id: int) -> list[Campaign]:
@@ -351,13 +398,18 @@ def context_usage(
     state: CampaignState,
     history: Sequence[ChatMessage],
     rules: Mapping[str, str],
+    character: CharacterSpec,
     limit: int,
 ) -> ContextUsage:
     unsummarized = [m for m in history if m.id > state.through]
     used = sum(
         part.tokens
         for part in system_parts(
-            campaign.rule_set, rules, state.summary, state.through, world_state_text(state)
+            campaign.rule_set,
+            rules,
+            state.summary,
+            state.through,
+            world_state_text(state, character),
         )
     )
     used += sum(estimate_tokens(m.content) for m in unsummarized)
@@ -589,12 +641,13 @@ def _tool_context(
     provider: Provider,
     model_name: str,
     campaign_id: int,
+    character: CharacterSpec,
 ) -> ToolContext:
     async def speak(speaker: str, profile: str, intent: str, replace: bool) -> None:
         await _speak(engine, provider, model_name, campaign_id, speaker, profile, intent, replace)
 
     return ToolContext(
-        world=WorldTools(engine, campaign_id, library.core.tables, rng),
+        world=WorldTools(engine, campaign_id, library.core.tables, rng, character),
         speak=speak,
     )
 
@@ -624,6 +677,7 @@ def _start_run(
             provider,
             model_name,
             campaign.id,
+            rule_set.character,
         ),
         cursor=_newest(engine, campaign.id),
     )
@@ -704,7 +758,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     state = _state(run.engine, run.campaign_id)
     rule_set = run.rule_set
     summary, watermark = state.summary, state.through
-    world_text = world_state_text(state)
+    world_text = world_state_text(state, rule_set.character)
     history = [
         m for m in list_messages(run.engine, run.campaign_id) if watermark < m.id < turn.opener
     ]
@@ -923,6 +977,8 @@ async def stream_message(
         rule_set = library.rule_sets.get(campaign.rule_set)
         if rule_set is None:
             raise InvalidInput("that campaign's rule set is no longer available")
+        if _state(engine, campaign.id).pc() is None:
+            raise InvalidInput("create your character before playing")
         run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
         _record(engine, campaign.id, ChatPlayer(content=text))
         async for event in _guarded(run, _carry_on(run)):

@@ -83,7 +83,7 @@ async def run_tool(
         arguments = json.loads(request.arguments)
     except ValueError:
         return ToolRun(_error("the arguments were not valid JSON"), None)
-    problem = _check_arguments(tool.parameters, arguments)
+    problem = check_arguments(tool.parameters, arguments)
     if problem:
         return ToolRun(_error(problem), None)
     if tool.player_input is None:
@@ -145,21 +145,59 @@ def _fill(tool: ToolCall, template: str, values: Mapping[str, Any], what: str) -
         return None
 
 
-def _check_arguments(schema: Mapping[str, Any], arguments: object) -> str | None:
+def check_arguments(schema: Mapping[str, Any], arguments: object) -> str | None:
     if not isinstance(arguments, dict):
         return "the arguments must be a JSON object"
-    properties = schema["properties"]
+    return _check_object(schema, arguments, "")
+
+
+def _check_object(schema: Mapping[str, Any], value: Mapping[str, Any], path: str) -> str | None:
+    properties = schema.get("properties", {})
     for name in schema.get("required", []):
-        if name not in arguments:
-            return f"missing required argument {name!r}"
-    for name, value in arguments.items():
+        if name not in value:
+            return f"missing required argument {_child(path, name)!r}"
+    for name, item in value.items():
+        child = _child(path, name)
         if name not in properties:
-            return f"unknown argument {name!r}"
+            return f"unknown argument {child!r}"
         spec = properties[name]
-        expected = spec.get("type") if isinstance(spec, dict) else None
-        if isinstance(expected, str) and not _has_type(value, expected):
-            return f"argument {name!r} must be {expected}"
+        if isinstance(spec, dict):
+            problem = _check_value(spec, item, child)
+            if problem:
+                return problem
     return None
+
+
+def _check_value(schema: Mapping[str, Any], value: Any, path: str) -> str | None:
+    """Check a value against the JSON schema subset tools use: types, enums, integer bounds,
+    objects, and arrays with unique items."""
+    expected = schema.get("type")
+    if isinstance(expected, str) and not _has_type(value, expected):
+        return f"argument {path!r} must be {expected}"
+    if "enum" in schema and value not in schema["enum"]:
+        options = ", ".join(str(option) for option in schema["enum"])
+        return f"argument {path!r} must be one of: {options}"
+    if isinstance(value, int) and not isinstance(value, bool):
+        if "minimum" in schema and value < schema["minimum"]:
+            return f"argument {path!r} must be at least {schema['minimum']}"
+        if "maximum" in schema and value > schema["maximum"]:
+            return f"argument {path!r} must be at most {schema['maximum']}"
+    if isinstance(value, dict):
+        return _check_object(schema, value, path)
+    if isinstance(value, list):
+        if schema.get("uniqueItems") and len({repr(item) for item in value}) != len(value):
+            return f"argument {path!r} must not repeat an item"
+        items = schema.get("items")
+        if isinstance(items, dict):
+            for index, item in enumerate(value):
+                problem = _check_value(items, item, f"{path}[{index}]")
+                if problem:
+                    return problem
+    return None
+
+
+def _child(path: str, name: str) -> str:
+    return f"{path}.{name}" if path else name
 
 
 def _has_type(value: Any, json_type: str) -> bool:

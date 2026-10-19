@@ -12,6 +12,7 @@ from fastapi.responses import RedirectResponse, StreamingResponse
 from starlette.responses import Response
 
 from cygnusforge.auth.deps import page_user, verify_csrf
+from cygnusforge.content.character import NO_CHARACTER, character_schema
 from cygnusforge.db.models import User
 from cygnusforge.llm.base import LLMError
 from cygnusforge.services.accounts import is_test_user
@@ -24,8 +25,10 @@ from cygnusforge.services.campaigns import (
     TurnEvent,
     campaign_transcript,
     campaign_world,
+    character_spec,
     context_usage,
     create_campaign,
+    create_character,
     get_campaign,
     get_turn_context,
     get_turn_transcript,
@@ -33,6 +36,7 @@ from cygnusforge.services.campaigns import (
     list_messages,
     pending_turn,
     resume_turn,
+    roll_player_stats,
     rollback_to,
     send_message,
     set_campaign_model,
@@ -42,7 +46,9 @@ from cygnusforge.services.campaigns import (
     discard_pending as discard_pending_turn,
 )
 from cygnusforge.services.common import Conflict, InvalidInput, NotFound
-from cygnusforge.services.names import random_campaign_name, random_character_name
+from cygnusforge.services.names import random_campaign_name
+from cygnusforge.services.tools import check_arguments
+from cygnusforge.web.character_form import creation_view, submission_from_form
 from cygnusforge.web.forms import form_text
 from cygnusforge.web.rendering import render
 
@@ -60,12 +66,7 @@ def campaigns_page(request: Request) -> Response:
 def new_campaign_page(request: Request) -> Response:
     user = page_user(request)
     if is_test_user(user):
-        rng = random.Random()
-        return _new_form(
-            request,
-            name=random_campaign_name(rng),
-            character_name=random_character_name(rng),
-        )
+        return _new_form(request, name=random_campaign_name(random.Random()))
     return _new_form(request)
 
 
@@ -77,7 +78,6 @@ async def create(request: Request) -> Response:
     name = form_text(form, "name")
     world_template = form_text(form, "world_template")
     rule_set = form_text(form, "rule_set")
-    character_name = form_text(form, "character_name")
     settings = request.app.state.settings
     try:
         campaign = create_campaign(
@@ -88,7 +88,6 @@ async def create(request: Request) -> Response:
             name,
             world_template,
             rule_set,
-            character_name,
             settings.llm_default_model,
         )
     except InvalidInput as exc:
@@ -99,9 +98,53 @@ async def create(request: Request) -> Response:
             name=name,
             world_template=world_template,
             rule_set=rule_set,
-            character_name=character_name,
         )
     return RedirectResponse(f"/campaigns/{campaign.id}", status_code=303)
+
+
+@router.post("/{campaign_id}/character/reroll")
+async def reroll_character_stats(request: Request, campaign_id: int) -> Response:
+    user = page_user(request)
+    await verify_csrf(request)
+    try:
+        _roll_stats(request, user, campaign_id)
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
+@router.post("/{campaign_id}/character")
+async def create_player_character(request: Request, campaign_id: int) -> Response:
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    name = form_text(form, "name")
+    key = _roll_key(campaign_id)
+    rolled = request.session.get(key)
+    if not isinstance(rolled, dict):
+        _roll_stats(request, user, campaign_id)
+        return _campaign_page(
+            request,
+            user,
+            campaign_id,
+            400,
+            "Your stats were rolled again. Review them and create your character.",
+        )
+    engine = request.app.state.engine
+    library = request.app.state.content
+    try:
+        spec = character_spec(library, get_campaign(engine, user.id, campaign_id))
+        submitted = submission_from_form(spec, form)
+        problem = check_arguments(character_schema(spec), submitted)
+        if problem:
+            raise InvalidInput(problem)
+        create_character(engine, library, user.id, campaign_id, name, rolled, submitted)
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
+    request.session.pop(key, None)
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
 @router.get("/{campaign_id}")
@@ -289,7 +332,6 @@ def _new_form(
     name: str = "",
     world_template: str = "",
     rule_set: str = "",
-    character_name: str = "",
 ) -> Response:
     library = request.app.state.content
     return render(
@@ -298,7 +340,6 @@ def _new_form(
         status_code=status_code,
         error=error,
         campaign_name=name,
-        character_name=character_name,
         world_templates=library.world_templates.values(),
         rule_sets=library.rule_sets.values(),
         selected_world=world_template,
@@ -319,14 +360,22 @@ def _campaign_page(
     library = request.app.state.content
     campaign = get_campaign(engine, user.id, campaign_id)
     rule_set = library.rule_sets.get(campaign.rule_set)
+    spec = rule_set.character if rule_set else NO_CHARACTER
     messages = list_messages(engine, campaign.id)
     transcript = campaign_transcript(engine, user.id, campaign.id)
     world = campaign_world(engine, user.id, campaign.id)
+    character = None
+    if world.state.pc() is None and rule_set is not None:
+        rolled = request.session.get(_roll_key(campaign.id))
+        if not isinstance(rolled, dict) or set(rolled) != set(spec.stats):
+            rolled = _roll_stats(request, user, campaign.id)
+        character = creation_view(spec, rolled)
     context = context_usage(
         campaign,
         world.state,
         messages,
         rule_set.rules if rule_set else {},
+        spec,
         settings.llm_context_tokens,
     )
     return render(
@@ -340,8 +389,23 @@ def _campaign_page(
         messages=messages,
         transcript=transcript,
         context=context,
+        character=character,
         error=error,
         draft=draft,
         pending=pending_turn(engine, user.id, campaign.id),
         models=settings.llm_models,
     )
+
+
+def _roll_key(campaign_id: int) -> str:
+    """The session key for the stats a player is choosing between, until they create the
+    character. The roll is kept on the server-signed session so the client cannot pick it."""
+    return f"character-roll-{campaign_id}"
+
+
+def _roll_stats(request: Request, user: User, campaign_id: int) -> dict[str, int]:
+    rolled = roll_player_stats(
+        request.app.state.engine, request.app.state.content, user.id, campaign_id
+    )
+    request.session[_roll_key(campaign_id)] = rolled
+    return rolled

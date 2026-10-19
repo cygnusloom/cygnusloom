@@ -25,7 +25,6 @@ def _new_campaign(
     name: str = "Test chat",
     world_template: str = "gnomeforest",
     rule_set: str = "freeform",
-    character_name: str = "Ada",
 ):
     token = csrf_token(client, "/campaigns/new")
     return client.post(
@@ -35,8 +34,21 @@ def _new_campaign(
             "name": name,
             "world_template": world_template,
             "rule_set": rule_set,
-            "character_name": character_name,
         },
+        follow_redirects=False,
+    )
+
+
+def _create_character(
+    client: TestClient,
+    campaign_id: int,
+    name: str = "Ada",
+    fields: dict[str, str] | None = None,
+):
+    token = csrf_token(client, f"/campaigns/{campaign_id}")
+    return client.post(
+        f"/campaigns/{campaign_id}/character",
+        data={"csrf_token": token, "name": name, **(fields or {})},
         follow_redirects=False,
     )
 
@@ -45,7 +57,10 @@ def _campaign_id(client_factory: Callable[[], TestClient]) -> tuple[TestClient, 
     client = _signed_in(client_factory)
     response = _new_campaign(client)
     assert response.status_code == 303
-    return client, int(response.headers["location"].rsplit("/", 1)[1])
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    created = _create_character(client, campaign_id)
+    assert created.status_code == 303
+    return client, campaign_id
 
 
 def _send(client: TestClient, campaign_id: int, text: str):

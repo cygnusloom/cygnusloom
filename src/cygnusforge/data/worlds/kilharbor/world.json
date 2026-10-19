@@ -1,0 +1,63 @@
+[
+  {
+    "type": "world",
+    "id": "kilharbor",
+    "name": "Kilharbor",
+    "description": "A cold, ancient harbor on the edge of the Wood in Vald. Its people are old, hard, and savage, and they have lived beside the forest so long that they keep its customs as closely as their own. Ships come to Kilharbor to seek the treasure and knowledge hidden in the Wood and under the Roots beneath it.",
+    "start_location": "gullwater-quay"
+  },
+  {
+    "type": "location",
+    "id": "gullwater-quay",
+    "name": "Gullwater Quay",
+    "description": "The stone quay of Kilharbor, built on black pilings driven into the tidal flats. Ships tie up here under the eyes of the harbor watch, and the air smells of tar, wet timber, and smoked fish. Beyond the last warehouse the trees begin, dark and close."
+  },
+  {
+    "type": "location",
+    "id": "lantern-and-oar",
+    "name": "The Lantern and Oar",
+    "description": "A tavern of tarred timber, low and warm, with a fire that is never let go out. Its walls are hung with the oars of drowned crews, each one carved with a name and a year, some of them very old."
+  },
+  {
+    "type": "location",
+    "id": "heart-road",
+    "name": "The Heart Road",
+    "description": "A track of crushed shell and moss that runs inland from the harbor toward the Heart Trees. Stones along its edge are painted with spirals, and the old ones say that a traveler who stops counting them will not be let back out."
+  },
+  {
+    "type": "location",
+    "id": "rootgate",
+    "name": "Rootgate",
+    "description": "A ring of standing stones at the forest's edge, with a stair of roots cut down into the earth between them. The Gate below is older than Kilharbor, and cold air breathes up from it even in summer."
+  },
+  {
+    "type": "npc",
+    "id": "tessa-varrow",
+    "name": "Tessa Varrow",
+    "location": "gullwater-quay",
+    "description": "The harbor-mistress, a broad, grey-haired woman with a tally board of every ship that has tied up in forty years. She speaks little and expects payment in advance.",
+    "personality": "shrewd and unhurried",
+    "accent": "clipped and flat",
+    "quirks": ["taps the tally board before answering", "never gives her full name"]
+  },
+  {
+    "type": "npc",
+    "id": "old-gerrit-boll",
+    "name": "Old Gerrit Boll",
+    "location": "lantern-and-oar",
+    "description": "The tavern's keeper, a man so old his skin looks like driftwood. He has run the Lantern and Oar since before the harbor walls were built, and he remembers the crews of the drowned ships by name.",
+    "personality": "gruff and nostalgic",
+    "accent": "slow and rasping",
+    "quirks": ["keeps a hand on his knife while talking", "remembers every debt"]
+  },
+  {
+    "type": "npc",
+    "id": "grandmother-ysolde",
+    "name": "Grandmother Ysolde",
+    "location": "heart-road",
+    "description": "A witch of the Wood who sits beside the road with a basket of mushrooms and bone charms. Her people have lived in the trees longer than any harbor, and she is not sure she likes the ships.",
+    "personality": "cool, watchful, and amused",
+    "accent": "soft, with old words",
+    "quirks": ["answers questions with questions", "smells of smoke and moss"]
+  }
+]

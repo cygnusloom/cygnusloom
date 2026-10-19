@@ -14,6 +14,14 @@ from typing import Any
 from sqlalchemy import Engine
 from sqlmodel import Session
 
+from cygnusforge.content.character import (
+    CharacterError,
+    CharacterSpec,
+    Sheet,
+    check_swaps,
+    describe,
+    resolve,
+)
 from cygnusforge.content.library import WorldTemplate
 from cygnusforge.services.common import InvalidInput, session_scope
 from cygnusforge.services.events import (
@@ -60,6 +68,7 @@ class WorldTools:
     campaign_id: int
     tables: Mapping[str, Sequence[str]]
     rng: random.Random
+    character: CharacterSpec
 
     def create_location(self, name: str, description: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -73,6 +82,7 @@ class WorldTools:
         personality: str | None = None,
         accent: str | None = None,
         quirks: Sequence[str] | None = None,
+        character: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return create_npc(
@@ -80,12 +90,14 @@ class WorldTools:
                 self.campaign_id,
                 self.tables,
                 self.rng,
+                self.character,
                 name,
                 location,
                 description,
                 personality,
                 accent,
                 quirks,
+                character,
             )
 
     def move_actor(self, name: str, location: str) -> dict[str, str]:
@@ -133,7 +145,7 @@ class WorldTools:
 
     def speaker_profile(self, name: str) -> str:
         with session_scope(self.engine) as db:
-            return speaker_profile(load_state(db, self.campaign_id), name)
+            return speaker_profile(load_state(db, self.campaign_id), name, self.character)
 
 
 def seed_campaign(
@@ -142,9 +154,10 @@ def seed_campaign(
     world: WorldTemplate,
     tables: Mapping[str, Sequence[str]],
     rng: random.Random,
-    character_name: str,
+    spec: CharacterSpec,
 ) -> None:
-    """Record a campaign's places, the world's NPCs, and the player character as events."""
+    """Record a campaign's places and the world's NPCs as events. The player character is made
+    later, by `create_player_character`."""
     names: dict[str, str] = {}
     for spot in world.locations:
         record(db, campaign_id, LocationAdded(name=spot.name, description=spot.description))
@@ -153,6 +166,7 @@ def seed_campaign(
         event = _npc_event(
             tables,
             rng,
+            spec,
             name=npc.name,
             location=names[npc.location],
             description=npc.description,
@@ -161,9 +175,42 @@ def seed_campaign(
             quirks=npc.quirks,
         )
         record(db, campaign_id, event)
-    _ensure_free_name(load_state(db, campaign_id), character_name)
-    record(db, campaign_id, PcAdded(name=character_name, location=names[world.start_location]))
     db.commit()
+
+
+def start_location_name(world: WorldTemplate) -> str:
+    return next(spot.name for spot in world.locations if spot.id == world.start_location)
+
+
+def create_player_character(
+    db: Session,
+    campaign_id: int,
+    spec: CharacterSpec,
+    start_location: str,
+    name: str,
+    rolled: Mapping[str, int],
+    submitted: Mapping[str, Any],
+    rng: random.Random,
+) -> dict[str, Any]:
+    """Make the player character from the player's choices. `rolled` are the stats rolled for
+    this character; the player may only keep them or swap within a swap group."""
+    state = load_state(db, campaign_id)
+    if state.pc() is not None:
+        raise InvalidInput("the player character already exists")
+    name = _text(name, "name", MAX_NAME)
+    _ensure_free_name(state, name)
+    chosen = submitted.get("stats", {})
+    if set(chosen) != set(spec.stats):
+        raise InvalidInput("every stat needs a value")
+    try:
+        check_swaps(spec, rolled, chosen)
+    except CharacterError as error:
+        raise InvalidInput(str(error)) from error
+    sheet = resolve(spec, submitted, rng)
+    _check_sheet_text(sheet)
+    record(db, campaign_id, PcAdded(name=name, location=start_location, **_sheet_fields(sheet)))
+    db.commit()
+    return {"created": "pc", "name": name, "location": start_location}
 
 
 def create_location(db: Session, campaign_id: int, name: str, description: str) -> dict[str, Any]:
@@ -181,12 +228,14 @@ def create_npc(
     campaign_id: int,
     tables: Mapping[str, Sequence[str]],
     rng: random.Random,
+    spec: CharacterSpec,
     name: str,
     location: str,
     description: str,
     personality: str | None = None,
     accent: str | None = None,
     quirks: Sequence[str] | None = None,
+    character: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     name = _text(name, "name", MAX_NAME)
@@ -195,12 +244,14 @@ def create_npc(
     event = _npc_event(
         tables,
         rng,
+        spec,
         name=name,
         location=where.name,
         description=_text(description, "description", MAX_TEXT),
         personality=_optional_text(personality, "personality"),
         accent=_optional_text(accent, "accent"),
         quirks=_quirks(quirks),
+        character=character,
     )
     record(db, campaign_id, event)
     db.commit()
@@ -331,7 +382,7 @@ def search_notes(state: CampaignState, query: str) -> dict[str, list[dict[str, A
     return {"notes": matches}
 
 
-def speaker_profile(state: CampaignState, name: str) -> str:
+def speaker_profile(state: CampaignState, name: str, spec: CharacterSpec) -> str:
     """The NPC details a speech step needs. The NPC must be at the player character's location."""
     npc = _character_named(state, name)
     if npc.kind != NPC_KIND:
@@ -340,16 +391,18 @@ def speaker_profile(state: CampaignState, name: str) -> str:
     if pc is None or npc.location != pc.location:
         raise InvalidInput(f"{npc.name} is not at the player character's location")
     quirks = "; ".join(npc.quirks) or "none"
-    return "\n".join(
-        [
-            f"Speaker: {npc.name}",
-            f"Who they are: {npc.description}",
-            f"Personality: {npc.personality}",
-            f"Accent: {npc.accent}",
-            f"Quirks: {quirks}",
-            f"Location: {npc.location}",
-        ]
-    )
+    lines = [
+        f"Speaker: {npc.name}",
+        f"Who they are: {npc.description}",
+        f"Personality: {npc.personality}",
+        f"Accent: {npc.accent}",
+        f"Quirks: {quirks}",
+        f"Location: {npc.location}",
+    ]
+    sheet = describe(spec, _sheet_of(npc))
+    if sheet:
+        lines.append(sheet)
+    return "\n".join(lines)
 
 
 def snapshot(state: CampaignState) -> WorldView:
@@ -361,27 +414,32 @@ def snapshot(state: CampaignState) -> WorldView:
     )
 
 
-def world_state_text(state: CampaignState) -> str:
+def world_state_text(state: CampaignState, spec: CharacterSpec) -> str:
     """The current places and characters, for the GM's system prompt. Notes are searched, not sent."""
     view = snapshot(state)
     if view.pc is None:
         return ""
-    lines = [
-        f"Player character: {view.pc.name}, at {view.pc.location}.",
-        "Locations:",
-    ]
+    lines = [f"Player character: {view.pc.name}, at {view.pc.location}."]
+    pc_sheet = describe(spec, _sheet_of(view.pc)).replace("\n", "; ")
+    if pc_sheet:
+        lines.append(f"  {pc_sheet}")
+    lines.append("Locations:")
     lines += [f"- {place.name}: {place.description}" for place in view.locations]
     lines.append("NPCs:")
     if not view.npcs:
         lines.append("- none yet")
     for npc in view.npcs:
         lines.append(f"- {npc.name}, at {npc.location}: {npc.description}")
+        npc_sheet = describe(spec, _sheet_of(npc)).replace("\n", "; ")
+        if npc_sheet:
+            lines.append(f"  {npc_sheet}")
     return "\n".join(lines)
 
 
 def _npc_event(
     tables: Mapping[str, Sequence[str]],
     rng: random.Random,
+    spec: CharacterSpec,
     *,
     name: str,
     location: str,
@@ -389,9 +447,10 @@ def _npc_event(
     personality: str | None,
     accent: str | None,
     quirks: Sequence[str] | None,
+    character: Mapping[str, Any] | None = None,
 ) -> NpcAdded:
-    """The event that adds an NPC. A trait that is not given is picked at random from its table,
-    so the picked value is stored in the event and replays do not roll again."""
+    """The event that adds an NPC. A trait or character option that is not given is picked at
+    random, so the picked values are stored in the event and replays do not roll again."""
     trait_personality = personality or rng.choice(tables["personality"])
     trait_accent = accent or rng.choice(tables["accent"])
     if quirks is None:
@@ -399,6 +458,8 @@ def _npc_event(
         trait_quirks = rng.sample(list(pool), min(QUIRKS_PER_NPC, len(pool)))
     else:
         trait_quirks = list(quirks)
+    sheet = resolve(spec, character or {}, rng)
+    _check_sheet_text(sheet)
     return NpcAdded(
         name=name,
         location=location,
@@ -406,7 +467,32 @@ def _npc_event(
         personality=trait_personality,
         accent=trait_accent,
         quirks=trait_quirks,
+        **_sheet_fields(sheet),
     )
+
+
+def _sheet_fields(sheet: Sheet) -> dict[str, Any]:
+    return {
+        "stats": dict(sheet.stats),
+        "templates": dict(sheet.templates),
+        "features": dict(sheet.features),
+        "fields": dict(sheet.fields),
+    }
+
+
+def _sheet_of(character: Character) -> Sheet:
+    return Sheet(
+        stats=character.stats,
+        templates=character.templates,
+        features=character.features,
+        fields=character.fields,
+    )
+
+
+def _check_sheet_text(sheet: Sheet) -> None:
+    for value in sheet.fields.values():
+        if len(value) > MAX_TEXT:
+            raise InvalidInput(f"character text must be at most {MAX_TEXT} characters")
 
 
 def _ensure_free_name(state: CampaignState, name: str) -> None:

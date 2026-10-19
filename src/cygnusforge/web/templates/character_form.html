@@ -1,0 +1,82 @@
+<section class="chat character-create" aria-label="Create your character">
+  <h1 class="chat-title">{{ campaign.name }}</h1>
+  <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
+  <h2>Create your character</h2>
+  <p class="muted">Your stats are rolled. Where a stat can be swapped, choose the rolled values you want, with one swap per group. Random picks are made when you create the character.</p>
+  <form method="post" action="/campaigns/{{ campaign.id }}/character/reroll" class="character-reroll">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit" class="secondary">Reroll stats</button>
+  </form>
+  <form method="post" action="/campaigns/{{ campaign.id }}/character" class="character-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>
+      Name
+      <input type="text" name="name" required maxlength="120">
+    </label>
+    {% if character.stats %}
+      <fieldset>
+        <legend>Stats</legend>
+        {% for stat in character.stats %}
+          <label>
+            {{ stat.name }}
+            {% if stat.options|length > 1 %}
+              <select name="stat-{{ stat.id }}">
+                {% for value in stat.options %}
+                  <option value="{{ value }}"{% if value == stat.value %} selected{% endif %}>{{ value }}</option>
+                {% endfor %}
+              </select>
+            {% else %}
+              <output>{{ stat.value }}</output>
+              <input type="hidden" name="stat-{{ stat.id }}" value="{{ stat.value }}">
+            {% endif %}
+          </label>
+        {% endfor %}
+      </fieldset>
+    {% endif %}
+    {% for group in character.kinds %}
+      <label>
+        {{ group.label }}
+        <select name="template-{{ group.kind }}" data-template-select="{{ group.kind }}">
+          <option value="">Random</option>
+          {% for template in group.templates %}
+            <option value="{{ template.id }}">{{ template.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% for template in group.templates %}
+        <div data-template-group="{{ group.kind }}" data-template="{{ template.id }}" hidden>
+          <p class="muted">{{ template.description }}</p>
+          {% for table in template.tables %}
+            <label>
+              {{ table.label }}
+              <select name="field-{{ table.id }}">
+                <option value="">Random</option>
+                {% for option in table.options %}
+                  <option value="{{ option }}">{{ option }}</option>
+                {% endfor %}
+              </select>
+            </label>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    {% endfor %}
+    {% for field in character.choice_fields %}
+      <label>
+        {{ field.name }}
+        <select name="field-{{ field.id }}" title="{{ field.description }}">
+          <option value="">Random</option>
+          {% for option in field.options %}
+            <option value="{{ option }}">{{ option }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    {% endfor %}
+    {% for field in character.text_fields %}
+      <label>
+        {{ field.name }}
+        <textarea name="field-{{ field.id }}" rows="2" maxlength="2000" placeholder="{{ field.description }}"></textarea>
+      </label>
+    {% endfor %}
+    <button type="submit">Create character</button>
+  </form>
+</section>

@@ -73,6 +73,11 @@ class Character:
     personality: str
     accent: str
     quirks: list[str]
+    # The character options, resolved when the character was created. See content/character.py.
+    stats: dict[str, int] = field(default_factory=dict)
+    templates: dict[str, str] = field(default_factory=dict)
+    features: dict[str, int] = field(default_factory=dict)
+    fields: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -244,6 +249,10 @@ class PcAdded(GameEvent):
 
     name: str
     location: str
+    stats: dict[str, int] = field(default_factory=dict)
+    templates: dict[str, str] = field(default_factory=dict)
+    features: dict[str, int] = field(default_factory=dict)
+    fields: dict[str, str] = field(default_factory=dict)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.characters[name_key(self.name)] = Character(
@@ -254,6 +263,10 @@ class PcAdded(GameEvent):
             personality="",
             accent="",
             quirks=[],
+            stats=dict(self.stats),
+            templates=dict(self.templates),
+            features=dict(self.features),
+            fields=dict(self.fields),
         )
 
     def render(self) -> str:
@@ -270,6 +283,10 @@ class NpcAdded(GameEvent):
     personality: str
     accent: str
     quirks: list[str]
+    stats: dict[str, int] = field(default_factory=dict)
+    templates: dict[str, str] = field(default_factory=dict)
+    features: dict[str, int] = field(default_factory=dict)
+    fields: dict[str, str] = field(default_factory=dict)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.characters[name_key(self.name)] = Character(
@@ -280,6 +297,10 @@ class NpcAdded(GameEvent):
             personality=self.personality,
             accent=self.accent,
             quirks=list(self.quirks),
+            stats=dict(self.stats),
+            templates=dict(self.templates),
+            features=dict(self.features),
+            fields=dict(self.fields),
         )
 
     def render(self) -> str:

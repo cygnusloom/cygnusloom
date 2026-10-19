@@ -105,8 +105,9 @@ def tree(tmp_path: Path) -> Path:
 
 def test_bundled_content_loads():
     library = ContentLibrary.load()
-    assert set(library.world_templates) == {"gnomeforest"}
+    assert set(library.world_templates) == {"gnomeforest", "kilharbor"}
     assert library.world_templates["gnomeforest"].name == "Gnome Forest"
+    assert library.world_templates["kilharbor"].name == "Kilharbor"
     freeform = library.rule_sets["freeform"]
     assert freeform.name == "Freeform"
     assert "consistency" in freeform.rules

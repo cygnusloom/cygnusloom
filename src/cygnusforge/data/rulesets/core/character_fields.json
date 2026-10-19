@@ -1,0 +1,14 @@
+[
+  {
+    "type": "character_field",
+    "id": "appearance",
+    "name": "Appearance",
+    "description": "How the character looks: build, face, clothing, and anything that stands out to someone who sees them."
+  },
+  {
+    "type": "character_field",
+    "id": "biography",
+    "name": "Biography",
+    "description": "Where the character comes from, what they have done, and what they want. Keep it to a few sentences."
+  }
+]

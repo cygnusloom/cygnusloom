@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -20,6 +20,7 @@ class World(Protocol):
         personality: str | None = None,
         accent: str | None = None,
         quirks: Sequence[str] | None = None,
+        character: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]: ...
 
     def update_location(self, name: str, description: str) -> dict[str, Any]: ...

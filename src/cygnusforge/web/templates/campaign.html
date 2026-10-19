@@ -18,7 +18,8 @@
   </nav>
   <div class="views">
     <div class="workspace" data-view="play">
-        <section class="chat" aria-label="Chat">
+      {% if world_view.pc %}
+      <section class="chat" aria-label="Chat">
           <h1 class="chat-title">{{ campaign.name }}</h1>
           <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
           <div class="transcript" data-transcript>
@@ -97,6 +98,9 @@
             </div>
           </form>
         </section>
+        {% else %}
+          {% include "character_form.html" %}
+        {% endif %}
 
         <aside class="side">
           <section class="map-panel" aria-label="Map">

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from cygnusforge.rules.context import ToolContext
@@ -20,6 +20,7 @@ def create_npc(
     personality: str | None = None,
     accent: str | None = None,
     quirks: Sequence[str] | None = None,
+    character: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     return ctx.world.create_npc(
         name=name,
@@ -28,6 +29,7 @@ def create_npc(
         personality=personality,
         accent=accent,
         quirks=quirks,
+        character=character,
     )
 
 

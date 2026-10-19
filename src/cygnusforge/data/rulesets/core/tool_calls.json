@@ -30,7 +30,8 @@
     "name": "create_npc",
     "python_module": "core",
     "function": "create_npc",
-    "description": "Add an NPC to the campaign and place them at an existing location. Leave personality, accent, or quirks out to have them generated at random; give them only when the story calls for a specific trait. Names must be unique among locations and NPCs.",
+    "character_options": true,
+    "description": "Add an NPC to the campaign and place them at an existing location. Leave personality, accent, or quirks out to have them generated at random; give them only when the story calls for a specific trait. Give character options, such as appearance or biography, only when the story calls for them; anything left out is rolled or left blank. Names must be unique among locations and NPCs.",
     "parameters": {
       "type": "object",
       "properties": {

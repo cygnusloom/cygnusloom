@@ -12,6 +12,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
+from cygnusforge.content.character import CharacterSpec, build_character, character_schema
 from cygnusforge.content.definitions import (
     ContentError,
     Definition,
@@ -23,6 +24,8 @@ from cygnusforge.rules.dice import is_formula
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 TOOL_NAME = re.compile(r"[A-Za-z0-9_-]{1,64}")
 PROMPT_ARGUMENT = "prompt"
+# A tool flagged `character_options` gets this argument, built from the rule set's character spec.
+CHARACTER_ARGUMENT = "character"
 # The engine passes its ToolContext to a function that declares this parameter. The model
 # never sees it, so it must not appear in a tool's schema.
 CONTEXT_ARGUMENT = "ctx"
@@ -96,6 +99,7 @@ class RuleSet:
     description: str
     rules: Mapping[str, str]
     tool_calls: Mapping[str, ToolCall]
+    character: CharacterSpec
     # Named option lists, such as "personality", used to generate NPC traits.
     tables: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
 
@@ -247,12 +251,14 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     for name in REQUIRED_TABLES:
         if name not in tables:
             raise ContentError(f"{template}: missing table {name!r}")
+    table_names = {d.id: _table_label(d, template) for d in definitions if d.type == "table"}
+    character = build_character(definitions, tables, table_names, template)
     tool_calls: dict[str, ToolCall] = {}
     tool_names: set[str] = set()
     for d in definitions:
         if d.type != "tool_call":
             continue
-        call = _load_tool_call(d, modules, template)
+        call = _load_tool_call(d, modules, character, template)
         if call.name in tool_names:
             raise ContentError(f"{template}: duplicate tool name {call.name!r}")
         tool_names.add(call.name)
@@ -263,6 +269,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         description=required_text(head.data, "description", label),
         rules=rules,
         tool_calls=tool_calls,
+        character=character,
         tables=tables,
     )
 
@@ -277,6 +284,14 @@ def _load_table(definition: Definition, template: str) -> tuple[str, ...]:
     return tuple(options)
 
 
+def _table_label(definition: Definition, template: str) -> str:
+    """The name a player or the GM sees for a table. It defaults to the table id."""
+    name = definition.data.get("name", definition.id)
+    if not isinstance(name, str) or not name.strip():
+        raise ContentError(f"{template}: table {definition.id}: 'name' must be non-empty text")
+    return name
+
+
 def _import_module(definition: Definition, template: str) -> ModuleType:
     label = f"{template}: python_module {definition.id}"
     name = required_text(definition.data, "module", label)
@@ -287,7 +302,10 @@ def _import_module(definition: Definition, template: str) -> ModuleType:
 
 
 def _load_tool_call(
-    definition: Definition, modules: Mapping[str, ModuleType], template: str
+    definition: Definition,
+    modules: Mapping[str, ModuleType],
+    character: CharacterSpec,
+    template: str,
 ) -> ToolCall:
     label = f"{template}: tool_call {definition.id}"
     data = definition.data
@@ -302,6 +320,8 @@ def _load_tool_call(
     if not TOOL_NAME.fullmatch(name):
         raise ContentError(f"{label}: 'name' must be 1 to 64 letters, digits, '_' or '-'")
     parameters = _check_parameters(data.get("parameters"), label)
+    if _character_flag(data, label):
+        parameters = _with_character(parameters, character, label)
     if CONTEXT_ARGUMENT in parameters["properties"]:
         raise ContentError(f"{label}: {CONTEXT_ARGUMENT!r} is reserved and not a parameter")
     player_input = _check_player_input(data.get("player_input"), parameters, function, label)
@@ -317,6 +337,24 @@ def _load_tool_call(
         activity=activity,
         takes_context=CONTEXT_ARGUMENT in inspect.signature(function).parameters,
     )
+
+
+def _character_flag(data: Mapping[str, Any], label: str) -> bool:
+    flag = data.get("character_options", False)
+    if not isinstance(flag, bool):
+        raise ContentError(f"{label}: 'character_options' must be true or false")
+    return flag
+
+
+def _with_character(
+    parameters: dict[str, Any], character: CharacterSpec, label: str
+) -> dict[str, Any]:
+    """Add the rule set's character options as a `character` argument. It is optional, so the
+    GM may create an NPC with no options and the rest are rolled or left blank."""
+    if CHARACTER_ARGUMENT in parameters["properties"]:
+        raise ContentError(f"{label}: {CHARACTER_ARGUMENT!r} is generated and must not be declared")
+    properties = {**parameters["properties"], CHARACTER_ARGUMENT: character_schema(character)}
+    return {**parameters, "properties": properties}
 
 
 def _consumed(player_input: PlayerInput | None) -> frozenset[str]:

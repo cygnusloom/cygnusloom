@@ -1,0 +1,12 @@
+[
+  {"type": "character_field", "id": "physique", "name": "Physique", "table": "physique"},
+  {"type": "character_field", "id": "skin", "name": "Skin", "table": "skin"},
+  {"type": "character_field", "id": "hair", "name": "Hair", "table": "hair"},
+  {"type": "character_field", "id": "face", "name": "Face", "table": "face"},
+  {"type": "character_field", "id": "speech", "name": "Speech", "table": "speech"},
+  {"type": "character_field", "id": "clothing", "name": "Clothing", "table": "clothing"},
+  {"type": "character_field", "id": "virtue", "name": "Virtue", "table": "virtue"},
+  {"type": "character_field", "id": "vice", "name": "Vice", "table": "vice"},
+  {"type": "character_field", "id": "bond", "name": "Bond", "table": "bond"},
+  {"type": "character_field", "id": "omen", "name": "Omen", "table": "omen"}
+]
