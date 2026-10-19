@@ -12,10 +12,13 @@ from cygnusforge.content.library import ContentLibrary, ToolCall
 from cygnusforge.db.models import Message
 from cygnusforge.llm.base import ChatReply, ToolRequest
 from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.services.tools import run_tool, tool_specs
-from tests.test_campaigns import _campaign_id, _send
+from cygnusforge.services.tools import Ask, RollAnswer, TextAnswer, ToolRun, run_tool, tool_specs
+from tests.test_campaigns import _answer, _campaign_id, _pending, _send
 
-ROLL = {"name": "social_roll", "arguments": {"relationship": 1, "circumstance": 0}}
+ROLL = {
+    "name": "social_roll",
+    "arguments": {"prompt": "Roll to persuade.", "relationship": 1, "circumstance": 0},
+}
 
 
 def _freeform_tools() -> dict[str, ToolCall]:
@@ -38,6 +41,12 @@ def _request(name: str, arguments: str) -> ToolRequest:
     return ToolRequest(id="call_1", name=name, arguments=arguments)
 
 
+def _run(tools: dict[str, ToolCall], request: ToolRequest) -> str:
+    run = run_tool(tools, request)
+    assert isinstance(run, ToolRun)
+    return run.output
+
+
 def _error_of(result: str) -> str:
     data = json.loads(result)
     assert set(data) == {"error"}
@@ -55,38 +64,65 @@ def test_specs_describe_the_social_roll_tool():
     assert spec["type"] == "function"
     assert spec["function"]["name"] == "social_roll"
     assert "d20" in spec["function"]["description"]
-    assert set(spec["function"]["parameters"]["properties"]) == {"relationship", "circumstance"}
+    assert set(spec["function"]["parameters"]["properties"]) == {
+        "prompt",
+        "relationship",
+        "circumstance",
+    }
 
 
-def test_social_roll_runs_and_returns_its_parts():
-    result = json.loads(
-        run_tool(
-            _freeform_tools(),
-            _request("social_roll", '{"relationship": 2, "circumstance": -1}'),
-        )
+SOCIAL_ARGUMENTS = '{"prompt": "Roll to persuade.", "relationship": 2, "circumstance": -1}'
+
+
+def test_social_roll_asks_the_player_before_it_runs():
+    ask = run_tool(_freeform_tools(), _request("social_roll", SOCIAL_ARGUMENTS))
+    assert ask == Ask(text="Roll to persuade.", dice="1d20")
+
+
+def test_social_roll_runs_with_the_players_roll():
+    run = run_tool(_freeform_tools(), _request("social_roll", SOCIAL_ARGUMENTS), RollAnswer(14))
+    assert isinstance(run, ToolRun)
+    assert json.loads(run.output) == {"die": 14, "relationship": 2, "circumstance": -1, "total": 15}
+    assert (
+        run.activity
+        == "You rolled 14 on the d20, with +2 relationship and -1 circumstance, for 15."
     )
-    assert set(result) == {"die", "relationship", "circumstance", "total"}
-    assert (result["relationship"], result["circumstance"]) == (2, -1)
-    assert 1 <= result["die"] <= 20
-    assert result["total"] == result["die"] + 1
+
+
+def test_social_roll_takes_a_free_form_reply_instead_of_a_roll():
+    run = run_tool(
+        _freeform_tools(),
+        _request("social_roll", SOCIAL_ARGUMENTS),
+        TextAnswer("I show him the letter"),
+    )
+    assert isinstance(run, ToolRun)
+    assert json.loads(run.output) == {"player_text": "I show him the letter"}
+    assert run.activity is None
+
+
+def test_social_roll_needs_a_prompt_for_the_player():
+    error = _error_of(
+        _run(_freeform_tools(), _request("social_roll", '{"relationship": 2, "circumstance": 0}'))
+    )
+    assert error == "missing required argument 'prompt'"
 
 
 def test_plain_dict_results_are_serialized():
     tools = _tool(lambda n: {"doubled": n * 2})
-    assert json.loads(run_tool(tools, _request("t", '{"n": 4}'))) == {"doubled": 8}
+    assert json.loads(_run(tools, _request("t", '{"n": 4}'))) == {"doubled": 8}
 
 
 def test_raising_tool_returns_a_generic_error():
     def boom(n: int) -> None:
         raise RuntimeError("secret internal detail")
 
-    result = run_tool(_tool(boom), _request("t", '{"n": 1}'))
+    result = _run(_tool(boom), _request("t", '{"n": 1}'))
     assert _error_of(result) == "the tool failed"
     assert "secret" not in result
 
 
 def test_unknown_tool_is_reported():
-    error = _error_of(run_tool(_freeform_tools(), _request("nope", "{}")))
+    error = _error_of(_run(_freeform_tools(), _request("nope", "{}")))
     assert "no tool named 'nope'" in error
 
 
@@ -106,7 +142,7 @@ def test_arguments_are_checked_before_the_tool_runs():
         '{"n": true}': "argument 'n' must be integer",
     }
     for arguments, expected in cases.items():
-        assert expected in _error_of(run_tool(tools, _request("t", arguments)))
+        assert expected in _error_of(_run(tools, _request("t", arguments)))
     assert calls == []
 
 
@@ -144,6 +180,13 @@ def _script(*turns: dict[str, Any]) -> str:
     return "__FAKE__:" + json.dumps({"turns": list(turns)})
 
 
+def _saved_ids(app: FastAPI, campaign_id: int) -> list[int]:
+    with Session(app.state.engine) as db:
+        return [
+            m.id for m in db.exec(select(Message).where(Message.campaign_id == campaign_id)).all()
+        ]
+
+
 def _saved(app: FastAPI, campaign_id: int) -> list[tuple[str, str]]:
     with Session(app.state.engine) as db:
         rows = db.exec(
@@ -163,13 +206,20 @@ def test_model_rolls_then_narrates_and_only_the_narration_is_saved(
     response = _send(client, campaign_id, script)
 
     assert response.status_code == 303
-    assert len(recorder.calls) == 3
     assert [spec["function"]["name"] for spec in recorder.calls[0]["tools"]] == ["social_roll"]
+    assert _saved(app, campaign_id) == []
+    assert _pending(app, campaign_id)["prompt"] == {"text": "Roll to persuade.", "dice": "1d20"}
+
+    events = _answer(client, campaign_id, "roll")
+
+    assert events[-1] == {"type": "saved", "message_id": _saved_ids(app, campaign_id)[-1]}
+    assert len(recorder.calls) == 3
     tool_messages = [m for m in recorder.calls[1]["messages"] if m["role"] == "tool"]
     assert len(tool_messages) == 1
     result = json.loads(tool_messages[0]["content"])
     assert result["relationship"] == 1 and result["total"] == result["die"] + 1
     assert _saved(app, campaign_id) == [("user", script), ("assistant", "Well rolled.")]
+    assert _pending(app, campaign_id) is None
 
 
 def test_bad_tool_arguments_go_back_to_the_model(
@@ -178,7 +228,10 @@ def test_bad_tool_arguments_go_back_to_the_model(
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
-    bad = {"name": "social_roll", "arguments": {"relationship": "high", "circumstance": 0}}
+    bad = {
+        "name": "social_roll",
+        "arguments": {"prompt": "Roll.", "relationship": "high", "circumstance": 0},
+    }
     script = _script({"rounds": [[bad]], "text": "Let me try again."})
 
     response = _send(client, campaign_id, script)
@@ -187,6 +240,7 @@ def test_bad_tool_arguments_go_back_to_the_model(
     tool_message = next(m for m in recorder.calls[1]["messages"] if m["role"] == "tool")
     assert "must be integer" in _error_of(tool_message["content"])
     assert _saved(app, campaign_id)[-1] == ("assistant", "Let me try again.")
+    assert _pending(app, campaign_id) is None
 
 
 def test_three_tool_rounds_are_allowed(client_factory: Callable[[], TestClient], app: FastAPI):
@@ -195,10 +249,12 @@ def test_three_tool_rounds_are_allowed(client_factory: Callable[[], TestClient],
     client, campaign_id = _campaign_id(client_factory)
     script = _script({"rounds": [[ROLL]] * 3, "text": "Done."})
 
-    response = _send(client, campaign_id, script)
+    _send(client, campaign_id, script)
+    for _ in range(3):
+        _answer(client, campaign_id, "roll")
 
-    assert response.status_code == 303
     assert len(recorder.calls) == 5
+    assert _saved(app, campaign_id)[-1] == ("assistant", "Done.")
 
 
 def test_runaway_tool_calls_stop_and_save_nothing(
@@ -209,8 +265,11 @@ def test_runaway_tool_calls_stop_and_save_nothing(
     client, campaign_id = _campaign_id(client_factory)
     script = _script({"rounds": [[ROLL]] * 4, "text": "Never reached."})
 
-    response = _send(client, campaign_id, script)
+    _send(client, campaign_id, script)
+    for _ in range(2):
+        _answer(client, campaign_id, "roll")
+    events = _answer(client, campaign_id, "roll")
 
-    assert response.status_code == 502
+    assert events[-1]["type"] == "error" and events[-1]["status"] == 502
     assert len(recorder.calls) == 4
     assert _saved(app, campaign_id) == []

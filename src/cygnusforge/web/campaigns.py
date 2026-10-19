@@ -15,7 +15,9 @@ from cygnusforge.auth.deps import page_user, verify_csrf
 from cygnusforge.db.models import User
 from cygnusforge.llm.base import LLMError
 from cygnusforge.services.campaigns import (
+    Activity,
     Delta,
+    Prompt,
     Saved,
     Status,
     TurnEvent,
@@ -26,6 +28,8 @@ from cygnusforge.services.campaigns import (
     get_turn_transcript,
     list_campaigns,
     list_messages,
+    pending_turn,
+    resume_turn,
     send_message,
     stream_message,
 )
@@ -156,6 +160,33 @@ async def post_message_stream(request: Request, campaign_id: int) -> Response:
     )
 
 
+@router.post("/{campaign_id}/pending/stream")
+async def post_pending_stream(request: Request, campaign_id: int) -> Response:
+    """Answer the GM's prompt: `kind` is "roll", "text", or "continue", and `content` is the
+    player's free-form reply for "text". Streams events the same way as a new message."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    action = form_text(form, "kind")
+    text = form_text(form, "content")
+    settings = request.app.state.settings
+    events = resume_turn(
+        request.app.state.engine,
+        request.app.state.providers,
+        settings.llm_models,
+        request.app.state.content,
+        user.id,
+        campaign_id,
+        action,
+        text,
+    )
+    return StreamingResponse(
+        _turn_lines(events),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
 async def _turn_lines(events: AsyncIterator[TurnEvent]) -> AsyncIterator[str]:
     try:
         async for event in events:
@@ -180,6 +211,10 @@ def _line(event: TurnEvent | TurnError) -> str:
             payload: dict[str, object] = {"type": "status", "text": text}
         case Delta(text):
             payload = {"type": "delta", "text": text}
+        case Activity(text):
+            payload = {"type": "activity", "text": text}
+        case Prompt(text, dice):
+            payload = {"type": "prompt", "text": text, "dice": dice}
         case Saved(message_id):
             payload = {"type": "saved", "message_id": message_id}
         case TurnError(status, message):
@@ -241,6 +276,7 @@ def _campaign_page(
         context=context,
         error=error,
         draft=draft,
+        pending=pending_turn(engine, user.id, campaign.id),
         models=settings.llm_models,
         selected_model=model if model in settings.llm_models else settings.llm_default_model,
     )

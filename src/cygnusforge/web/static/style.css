@@ -93,6 +93,10 @@ button, .button {
 .turn-status { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; font-size: 0.85rem; color: var(--muted); }
 .turn-status[hidden] { display: none; }
 .spinner { width: 0.8rem; height: 0.8rem; flex: none; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+.turn-activity { margin: 0.25rem 0; font-size: 0.85rem; color: var(--muted); }
+.pending-prompt { margin-top: 0.5rem; padding: 0.75rem; border: 1px solid var(--accent); border-radius: 6px; }
+.pending-prompt form { display: flex; gap: 0.5rem; align-items: flex-start; margin-top: 0.5rem; }
+.pending-prompt textarea { flex: 1; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
 

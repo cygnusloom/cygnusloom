@@ -23,16 +23,52 @@
                   <button type="button" class="message-gear" data-turn-context-url="/campaigns/{{ campaign.id }}/messages/{{ message.id }}/context" data-turn-transcript-url="/campaigns/{{ campaign.id }}/messages/{{ message.id }}/transcript" aria-label="Show details for this reply" title="Show details for this reply"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
                   {% endif %}
                 </div>
+                {% for line in message.activity_lines %}<p class="turn-activity">{{ line }}</p>{% endfor %}
                 <div class="content">{{ message.content | markdown }}</div>
               </div>
-            {% else %}
-              <p class="muted">Say something to start the conversation.</p>
             {% endfor %}
+            {% if pending %}
+              <div class="message user">
+                <div class="message-header"><span class="role">user</span></div>
+                {% for line in pending.player %}<div class="content">{{ line | markdown }}</div>{% endfor %}
+              </div>
+              <div class="message assistant" data-pending>
+                <div class="message-header"><span class="role">Cygnus</span></div>
+                {% for line in pending.activity %}<p class="turn-activity">{{ line }}</p>{% endfor %}
+                {% if pending.prompt %}
+                  <div class="pending-prompt">
+                    <div class="content">{{ pending.prompt.text | markdown }}</div>
+                    <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action>
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                      <input type="hidden" name="kind" value="roll">
+                      <button type="submit">Roll {{ pending.prompt.dice }}</button>
+                    </form>
+                    <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action>
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                      <input type="hidden" name="kind" value="text">
+                      <textarea name="content" rows="2" required maxlength="8000" placeholder="Or describe what you do instead"></textarea>
+                      <button type="submit">Send</button>
+                    </form>
+                  </div>
+                {% else %}
+                  <div class="pending-prompt">
+                    <p class="muted">The reply did not finish.</p>
+                    <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action>
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                      <input type="hidden" name="kind" value="continue">
+                      <button type="submit">Continue</button>
+                    </form>
+                  </div>
+                {% endif %}
+              </div>
+            {% elif not messages %}
+              <p class="muted">Say something to start the conversation.</p>
+            {% endif %}
           </div>
           <p class="turn-error" role="alert" hidden></p>
           <form method="post" action="/campaigns/{{ campaign.id }}/messages" data-stream-action="/campaigns/{{ campaign.id }}/messages/stream" class="composer" id="composer">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <textarea name="content" rows="3" required maxlength="8000" placeholder="Message">{{ draft }}</textarea>
+            <textarea name="content" rows="3" required maxlength="8000" placeholder="{{ 'Answer the GM above first' if pending else 'Message' }}"{% if pending %} disabled{% endif %}>{{ draft }}</textarea>
             <div class="composer-actions">
               <div class="composer-tools">
                 <span class="context-meter" aria-label="Context usage" title="Estimated prompt size against the context window. At {{ '{:,}'.format(context.summary_at) }} tokens, older messages are summarized and the newest ones stay verbatim.">
@@ -41,7 +77,7 @@
                 </span>
                 <button type="button" class="composer-settings" data-dialog-target="dialog-model" aria-haspopup="dialog" aria-label="Model settings" title="Model settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
               </div>
-              <button type="submit">Send</button>
+              <button type="submit"{% if pending %} disabled{% endif %}>Send</button>
             </div>
           </form>
         </section>

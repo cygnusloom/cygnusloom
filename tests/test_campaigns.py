@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlmodel import Session
 
+from cygnusforge.db.models import PendingTurn
 from cygnusforge.llm.base import ChatReply, LLMError
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.services.campaigns import NARRATE_INSTRUCTION
@@ -50,6 +54,21 @@ def _send(client: TestClient, campaign_id: int, text: str, model: str = "fake/sc
         data={"csrf_token": token, "content": text, "model": model},
         follow_redirects=False,
     )
+
+
+def _answer(client: TestClient, campaign_id: int, kind: str, content: str = "") -> list[dict]:
+    token = csrf_token(client, "/campaigns")
+    response = client.post(
+        f"/campaigns/{campaign_id}/pending/stream",
+        data={"csrf_token": token, "kind": kind, "content": content},
+    )
+    return [json.loads(line) for line in response.text.splitlines() if line.strip()]
+
+
+def _pending(app: FastAPI, campaign_id: int) -> dict[str, Any] | None:
+    with Session(app.state.engine) as db:
+        row = db.get(PendingTurn, campaign_id)
+        return None if row is None else json.loads(row.state)
 
 
 def test_create_campaign_and_list_it(client_factory: Callable[[], TestClient]):

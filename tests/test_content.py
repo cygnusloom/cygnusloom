@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 from cygnusforge.content.definitions import ContentError, read_definitions
-from cygnusforge.content.library import ContentLibrary
+from cygnusforge.content.library import ContentLibrary, PlayerInput
 from cygnusforge.rules.freeform import SocialRoll, social_roll
 
 
@@ -83,8 +83,10 @@ def test_bundled_social_roll_is_a_tool_call_backed_by_python():
     tool = ContentLibrary.load().rule_sets["freeform"].tool_calls["social_roll"]
     assert tool.name == "social_roll"
     assert tool.function is social_roll
-    assert set(tool.parameters["properties"]) == {"relationship", "circumstance"}
-    assert tool.parameters["required"] == ["relationship", "circumstance"]
+    assert set(tool.parameters["properties"]) == {"prompt", "relationship", "circumstance"}
+    assert tool.parameters["required"] == ["prompt", "relationship", "circumstance"]
+    assert tool.player_input == PlayerInput(dice="1d20", param="roll")
+    assert tool.activity is not None
 
 
 def test_social_roll_is_one_d20_plus_modifiers():
@@ -131,6 +133,77 @@ def test_rules_and_tool_calls_are_read_from_their_definitions(tree: Path):
     assert tool.name == "social"
     assert tool.description == "Talk it out."
     assert tool.function is social_roll
+
+
+ROLLED_PARAMETERS: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "prompt": {"type": "string"},
+        "relationship": {"type": "integer"},
+        "circumstance": {"type": "integer"},
+    },
+    "required": ["prompt", "relationship", "circumstance"],
+}
+ROLLED: dict[str, Any] = {
+    "parameters": ROLLED_PARAMETERS,
+    "player_input": {"dice": "1d20", "param": "roll"},
+    "activity": "You rolled {die} for {total}.",
+}
+
+
+def _load_tool(tree: Path, **overrides: Any):
+    _write(tree, {"rulesets/testset/module.json": _module(**{**ROLLED, **overrides})})
+    return ContentLibrary.load(tree).rule_sets["testset"].tool_calls["social"]
+
+
+def test_player_input_and_activity_are_read(tree: Path):
+    tool = _load_tool(tree)
+    assert tool.player_input == PlayerInput(dice="1d20", param="roll")
+    assert tool.activity == "You rolled {die} for {total}."
+
+
+@pytest.mark.parametrize(
+    "overrides, message",
+    [
+        (
+            {"player_input": {"dice": "d20", "param": "roll"}},
+            "'player_input.dice' must be a formula",
+        ),
+        ({"player_input": {"dice": "1d20", "param": ""}}, "'player_input.param' must name"),
+        ({"player_input": {"dice": "1d20", "param": "nope"}}, "does not accept parameter 'nope'"),
+        (
+            {"player_input": {"dice": "1d20", "param": "relationship"}},
+            "must not be a schema parameter",
+        ),
+        ({"player_input": "1d20"}, "'player_input' must be an object"),
+        ({"activity": "You rolled {total"}, "not a valid template"),
+        ({"activity": "   "}, "non-empty text template"),
+        (
+            {
+                "parameters": {
+                    **ROLLED_PARAMETERS,
+                    "required": ["relationship", "circumstance"],
+                }
+            },
+            "'prompt' must be required",
+        ),
+        (
+            {
+                "parameters": {
+                    "type": "object",
+                    "properties": {"relationship": {"type": "integer"}},
+                    "required": ["relationship"],
+                }
+            },
+            "needs a string 'prompt' parameter",
+        ),
+    ],
+)
+def test_bad_player_input_or_activity_is_rejected(
+    tree: Path, overrides: dict[str, Any], message: str
+):
+    with pytest.raises(ContentError, match=message):
+        _load_tool(tree, **overrides)
 
 
 @pytest.mark.parametrize(

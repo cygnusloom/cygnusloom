@@ -2,19 +2,35 @@ from __future__ import annotations
 
 import json
 import math
+import random
 from collections.abc import AsyncIterator, Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from sqlalchemy import Engine
 from sqlmodel import select
 
 from cygnusforge.content.library import ContentLibrary, RuleSet, ToolCall
-from cygnusforge.db.models import Campaign, Message, TurnContext
-from cygnusforge.llm.base import ChatReply, LLMError, Provider, TextDelta, complete
+from cygnusforge.db.models import Campaign, Message, PendingTurn, TurnContext
+from cygnusforge.llm.base import (
+    ChatReply,
+    LLMError,
+    Provider,
+    TextDelta,
+    ToolRequest,
+    complete,
+)
 from cygnusforge.llm.registry import ProviderFactory
+from cygnusforge.rules.dice import roll_total
 from cygnusforge.services.common import InvalidInput, NotFound, session_scope
-from cygnusforge.services.tools import run_tool, tool_specs
+from cygnusforge.services.tools import (
+    Ask,
+    RollAnswer,
+    TextAnswer,
+    ToolRun,
+    run_tool,
+    tool_specs,
+)
 
 MAX_NAME = 120
 MAX_MESSAGE = 8000
@@ -260,18 +276,77 @@ class Delta:
 
 
 @dataclass(frozen=True)
+class Activity:
+    """A player-facing line about something that happened during the reply, such as a roll."""
+
+    text: str
+
+
+@dataclass(frozen=True)
+class Prompt:
+    """The reply is paused until the player rolls `dice` or types a reply to `text`."""
+
+    text: str
+    dice: str
+
+
+@dataclass(frozen=True)
 class Saved:
     """The turn is stored. `message_id` is the GM's reply."""
 
     message_id: int
 
 
-TurnEvent = Status | Delta | Saved
+TurnEvent = Status | Delta | Activity | Prompt | Saved
 
 
 @dataclass(frozen=True)
 class _Final:
     text: str
+
+
+@dataclass
+class _Turn:
+    """A reply in progress. It is stored whenever the reply pauses for the player, so the reply
+    can continue later from the same point."""
+
+    model: str
+    player: list[str]
+    summary: str
+    watermark: int
+    # Parts recorded ahead of this turn's own context: the summary request, and the player's message.
+    head: list[ContextPart]
+    context: list[ContextPart]
+    messages: list[dict[str, Any]]
+    round_start: int
+    activity: list[str] = field(default_factory=list)
+    rounds: int = 0
+    queue: list[ToolRequest] = field(default_factory=list)
+    narrating: bool = False
+    prompt: Ask | None = None
+
+    def to_json(self) -> str:
+        return json.dumps(asdict(self))
+
+    @classmethod
+    def from_json(cls, raw: str) -> _Turn:
+        data = json.loads(raw)
+        prompt = data["prompt"]
+        return cls(
+            model=data["model"],
+            player=data["player"],
+            summary=data["summary"],
+            watermark=data["watermark"],
+            head=[ContextPart(**part) for part in data["head"]],
+            context=[ContextPart(**part) for part in data["context"]],
+            messages=data["messages"],
+            round_start=data["round_start"],
+            activity=data["activity"],
+            rounds=data["rounds"],
+            queue=[ToolRequest(**request) for request in data["queue"]],
+            narrating=data["narrating"],
+            prompt=Ask(**prompt) if prompt else None,
+        )
 
 
 def _add_instruction(
@@ -281,33 +356,68 @@ def _add_instruction(
     context.append(ContextPart("system", source, text))
 
 
-async def _reply_with_tools(
+def _record_tool(state: _Turn, request: ToolRequest, run: ToolRun) -> None:
+    state.messages.append({"role": "tool", "tool_call_id": request.id, "content": run.output})
+    state.context.append(
+        ContextPart(
+            "assistant",
+            f"GM tool call (round {state.rounds})",
+            f"{request.name}({request.arguments})",
+        )
+    )
+    state.context.append(
+        ContextPart("tool", f"Result of '{request.name}' (round {state.rounds})", run.output)
+    )
+    if run.activity is not None:
+        state.activity.append(run.activity)
+
+
+async def _advance(
     provider: Provider,
     model_name: str,
-    messages: list[dict[str, Any]],
-    context: list[ContextPart],
+    state: _Turn,
     tool_calls: Mapping[str, ToolCall],
 ) -> AsyncIterator[TurnEvent | _Final]:
-    """Reply in two phases. First the GM decides, calling tools until it needs none, and its text
-    is not streamed. Then it narrates the outcome, and only that text is streamed.
+    """Carry the reply forward until it needs the player (yielding Prompt and returning) or the
+    narration is complete (yielding _Final).
 
-    Every message kept for the model is appended to `messages` and recorded in `context`. The
-    decide instruction is sent with each decision call but not kept. The last item is always the
-    `_Final` reply."""
+    Tools run in the order the model asked. Then the GM decides again, until it needs no tools.
+    Its text from the decision is kept, but only the narration is streamed."""
     specs = tool_specs(tool_calls)
     decide = {"role": "system", "content": DECIDE_INSTRUCTION}
-    context.append(ContextPart("system", "Decide instruction", DECIDE_INSTRUCTION))
-    for round_number in range(1, MAX_TOOL_ROUNDS + 2):
+    while True:
+        if state.queue:
+            request = state.queue[0]
+            yield Status(f"Running {request.name}...")
+            run = run_tool(tool_calls, request)
+            if isinstance(run, Ask):
+                state.prompt = run
+                yield Prompt(run.text, run.dice)
+                return
+            state.queue.pop(0)
+            _record_tool(state, request, run)
+            if run.activity is not None:
+                yield Activity(run.activity)
+            continue
+        if state.narrating:
+            break
         yield Status("Deciding...")
-        decision = await provider.chat(model_name, [*messages, decide], specs)
+        state.rounds += 1
+        decision = await provider.chat(model_name, [*state.messages, decide], specs)
         if not decision.tool_requests:
             if decision.text.strip():
-                messages.append({"role": "assistant", "content": decision.text})
-                context.append(
-                    ContextPart("assistant", f"GM decision (round {round_number})", decision.text)
+                state.messages.append({"role": "assistant", "content": decision.text})
+                state.context.append(
+                    ContextPart("assistant", f"GM decision (round {state.rounds})", decision.text)
                 )
-            break
-        messages.append(
+            _add_instruction(
+                state.messages, state.context, "Narrate instruction", NARRATE_INSTRUCTION
+            )
+            state.narrating = True
+            continue
+        if state.rounds > MAX_TOOL_ROUNDS:
+            raise LLMError("the model kept calling tools without answering")
+        state.messages.append(
             {
                 "role": "assistant",
                 "content": decision.text or None,
@@ -322,30 +432,14 @@ async def _reply_with_tools(
             }
         )
         if decision.text:
-            context.append(
-                ContextPart("assistant", f"GM text (round {round_number})", decision.text)
+            state.context.append(
+                ContextPart("assistant", f"GM text (round {state.rounds})", decision.text)
             )
-        for request in decision.tool_requests:
-            yield Status(f"Running {request.name}...")
-            output = run_tool(tool_calls, request)
-            messages.append({"role": "tool", "tool_call_id": request.id, "content": output})
-            context.append(
-                ContextPart(
-                    "assistant",
-                    f"GM tool call (round {round_number})",
-                    f"{request.name}({request.arguments})",
-                )
-            )
-            context.append(
-                ContextPart("tool", f"Result of '{request.name}' (round {round_number})", output)
-            )
-    else:
-        raise LLMError("the model kept calling tools without answering")
+        state.queue = list(decision.tool_requests)
 
-    _add_instruction(messages, context, "Narrate instruction", NARRATE_INSTRUCTION)
     yield Status("Narrating...")
     narration: ChatReply | None = None
-    async for item in provider.stream(model_name, messages, None):
+    async for item in provider.stream(model_name, state.messages, None):
         if isinstance(item, TextDelta):
             yield Delta(item.text)
         else:
@@ -356,6 +450,74 @@ async def _reply_with_tools(
     if not reply:
         raise LLMError("the model returned an empty reply")
     yield _Final(reply)
+
+
+def _store_pending(engine: Engine, campaign_id: int, state: _Turn) -> None:
+    with session_scope(engine) as db:
+        row = db.get(PendingTurn, campaign_id)
+        if row is None:
+            db.add(PendingTurn(campaign_id=campaign_id, state=state.to_json()))
+        else:
+            row.state = state.to_json()
+        db.commit()
+
+
+async def _drive(
+    engine: Engine,
+    provider: Provider,
+    model_name: str,
+    tool_calls: Mapping[str, ToolCall],
+    state: _Turn,
+    campaign_id: int,
+) -> AsyncIterator[TurnEvent]:
+    """Run the reply until it is saved or paused. A pause is stored before the player hears of it."""
+    async for event in _advance(provider, model_name, state, tool_calls):
+        if isinstance(event, _Final):
+            message_id = _save_turn(engine, campaign_id, state, event.text)
+            yield Saved(message_id)
+            return
+        if isinstance(event, Prompt):
+            _store_pending(engine, campaign_id, state)
+        yield event
+
+
+def _save_turn(engine: Engine, campaign_id: int, state: _Turn, reply: str) -> int:
+    """Store the player's messages, the GM's reply and its record, and clear the pending turn."""
+    context = [*state.head, *state.context[state.round_start :]]
+    with session_scope(engine) as db:
+        stored = db.get(Campaign, campaign_id)
+        if stored is None:
+            raise NotFound("campaign not found")
+        stored.context_summary = state.summary
+        stored.summary_through = state.watermark
+        for text in state.player:
+            db.add(Message(campaign_id=campaign_id, role="user", content=text))
+        assistant = Message(
+            campaign_id=campaign_id,
+            role="assistant",
+            content=reply,
+            model=state.model,
+            activity=json.dumps(state.activity),
+        )
+        db.add(assistant)
+        db.flush()
+        pending = db.get(PendingTurn, campaign_id)
+        if pending is not None:
+            db.delete(pending)
+        db.add(
+            TurnContext(
+                message_id=assistant.id,
+                parts=json.dumps([part.to_dict() for part in state.context]),
+                transcript=json.dumps(
+                    [
+                        *(part.to_dict() for part in context),
+                        ContextPart("assistant", "Reply", reply).to_dict(),
+                    ]
+                ),
+            )
+        )
+        db.commit()
+        return assistant.id
 
 
 async def stream_message(
@@ -371,12 +533,13 @@ async def stream_message(
 ) -> AsyncIterator[TurnEvent]:
     """Send a user message to `model` and yield what happens while the GM replies.
 
-    Yields Status events for each phase and Delta events for the narration only, then Saved once
-    the reply is stored.
+    Yields Status and Activity events while the GM works, Delta events for the narration only,
+    and Prompt when the reply needs the player to roll or type something. The reply then
+    continues through `resume_turn`. Saved comes once the reply is stored.
 
     When the prompt reaches half of `context_tokens`, older history is folded into the
-    campaign's summary first. Everything is saved only after the model answers, so a failed
-    turn leaves no trace and the user can retry."""
+    campaign's summary first. Nothing is saved until the reply finishes, so a failed turn leaves
+    no trace and the user can retry."""
     text = (text or "").strip()
     if not text:
         raise InvalidInput("message cannot be empty")
@@ -385,6 +548,8 @@ async def stream_message(
     if model not in allowed_models:
         raise InvalidInput("that model is not available")
     campaign = get_campaign(engine, owner_id, campaign_id)
+    if _load_pending(engine, campaign.id) is not None:
+        raise InvalidInput("answer the GM's prompt before sending another message")
     rule_set = library.rule_sets.get(campaign.rule_set)
     if rule_set is None:
         raise InvalidInput("that campaign's rule set is no longer available")
@@ -426,42 +591,108 @@ async def stream_message(
         *({"role": p.role, "content": p.content} for p in conversation),
     ]
     round_start = len(context)
-    reply: str | None = None
-    async for event in _reply_with_tools(
-        provider, model_name, messages, context, rule_set.tool_calls
+    context.append(ContextPart("system", "Decide instruction", DECIDE_INSTRUCTION))
+    state = _Turn(
+        model=model,
+        player=[text],
+        summary=summary,
+        watermark=watermark,
+        head=[*summary_record, player],
+        context=context,
+        messages=messages,
+        round_start=round_start,
+    )
+    async for event in _drive(
+        engine, provider, model_name, rule_set.tool_calls, state, campaign.id
     ):
-        if isinstance(event, _Final):
-            reply = event.text
-        else:
-            yield event
-    if reply is None:
-        raise LLMError("the model returned no reply")
-    transcript = [
-        *summary_record,
-        player,
-        *context[round_start:],
-        ContextPart("assistant", "Reply", reply),
-    ]
+        yield event
+
+
+async def resume_turn(
+    engine: Engine,
+    providers: ProviderFactory,
+    allowed_models: Iterable[str],
+    library: ContentLibrary,
+    owner_id: int,
+    campaign_id: int,
+    action: str,
+    text: str = "",
+    rng: random.Random | None = None,
+) -> AsyncIterator[TurnEvent]:
+    """Continue a paused reply with the player's answer.
+
+    `action` is "roll" to roll the prompt's dice, "text" to answer with free-form `text`, or
+    "continue" to retry a reply that failed after its answer was stored. The answer is stored
+    before the reply continues, so a failure later does not roll again."""
+    campaign = get_campaign(engine, owner_id, campaign_id)
+    pending = _load_pending(engine, campaign.id)
+    if pending is None:
+        raise InvalidInput("there is no reply waiting for an answer")
+    state = _Turn.from_json(pending.state)
+    if state.model not in allowed_models:
+        raise InvalidInput("that model is not available")
+    rule_set = library.rule_sets.get(campaign.rule_set)
+    if rule_set is None:
+        raise InvalidInput("that campaign's rule set is no longer available")
+    provider, model_name = providers(state.model)
+
+    if action == "continue":
+        if state.prompt is not None:
+            raise InvalidInput("answer the GM's prompt first")
+    elif state.prompt is None:
+        raise InvalidInput("there is nothing to answer")
+    elif action == "roll":
+        answer: RollAnswer | TextAnswer = RollAnswer(roll_total(state.prompt.dice, rng))
+        request = state.queue.pop(0)
+        run = run_tool(rule_set.tool_calls, request, answer)
+        assert isinstance(run, ToolRun)
+        _record_tool(state, request, run)
+        state.prompt = None
+        if run.activity is not None:
+            yield Activity(run.activity)
+        _store_pending(engine, campaign.id, state)
+    elif action == "text":
+        clean = (text or "").strip()
+        if not clean:
+            raise InvalidInput("the reply cannot be empty")
+        if len(clean) > MAX_MESSAGE:
+            raise InvalidInput(f"the reply must be at most {MAX_MESSAGE} characters")
+        request = state.queue.pop(0)
+        run = run_tool(rule_set.tool_calls, request, TextAnswer(clean))
+        assert isinstance(run, ToolRun)
+        _record_tool(state, request, run)
+        state.prompt = None
+        state.player.append(clean)
+        _store_pending(engine, campaign.id, state)
+    else:
+        raise InvalidInput("that action is not available")
+    async for event in _drive(
+        engine, provider, model_name, rule_set.tool_calls, state, campaign.id
+    ):
+        yield event
+
+
+def _load_pending(engine: Engine, campaign_id: int) -> PendingTurn | None:
     with session_scope(engine) as db:
-        stored = db.get(Campaign, campaign.id)
-        if stored is None:
-            raise NotFound("campaign not found")
-        stored.context_summary = summary
-        stored.summary_through = watermark
-        db.add(Message(campaign_id=campaign.id, role="user", content=text))
-        assistant = Message(campaign_id=campaign.id, role="assistant", content=reply, model=model)
-        db.add(assistant)
-        db.flush()
-        db.add(
-            TurnContext(
-                message_id=assistant.id,
-                parts=json.dumps([part.to_dict() for part in context]),
-                transcript=json.dumps([part.to_dict() for part in transcript]),
-            )
-        )
-        db.commit()
-        message_id = assistant.id
-    yield Saved(message_id)
+        return db.get(PendingTurn, campaign_id)
+
+
+@dataclass(frozen=True)
+class PendingView:
+    """A paused reply as the player sees it: their messages, what happened so far, and any prompt."""
+
+    player: list[str]
+    activity: list[str]
+    prompt: Ask | None
+
+
+def pending_turn(engine: Engine, owner_id: int, campaign_id: int) -> PendingView | None:
+    get_campaign(engine, owner_id, campaign_id)
+    row = _load_pending(engine, campaign_id)
+    if row is None:
+        return None
+    state = _Turn.from_json(row.state)
+    return PendingView(player=state.player, activity=state.activity, prompt=state.prompt)
 
 
 async def send_message(

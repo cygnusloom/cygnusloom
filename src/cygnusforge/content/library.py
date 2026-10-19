@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import inspect
 import re
+import string
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,9 +18,11 @@ from cygnusforge.content.definitions import (
     read_definitions,
     required_text,
 )
+from cygnusforge.rules.dice import is_formula
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 TOOL_NAME = re.compile(r"[A-Za-z0-9_-]{1,64}")
+PROMPT_ARGUMENT = "prompt"
 
 
 @dataclass(frozen=True)
@@ -30,12 +33,27 @@ class WorldTemplate:
 
 
 @dataclass(frozen=True)
+class PlayerInput:
+    """The player supplies a value for a tool before it runs.
+
+    The player rolls `dice` (a formula such as "1d20") or types free-form text. A roll's
+    total is passed to the function as keyword argument `param`."""
+
+    dice: str
+    param: str
+
+
+@dataclass(frozen=True)
 class ToolCall:
     id: str
     name: str
     description: str
     parameters: Mapping[str, Any]
     function: Callable[..., Any]
+    player_input: PlayerInput | None = None
+    # A str.format template shown to the player after the tool runs. Fields come from the
+    # arguments and the result.
+    activity: str | None = None
 
 
 @dataclass(frozen=True)
@@ -148,14 +166,63 @@ def _load_tool_call(
     if not TOOL_NAME.fullmatch(name):
         raise ContentError(f"{label}: 'name' must be 1 to 64 letters, digits, '_' or '-'")
     parameters = _check_parameters(data.get("parameters"), label)
-    _check_signature(function, parameters, label)
+    player_input = _check_player_input(data.get("player_input"), parameters, function, label)
+    activity = _check_activity(data.get("activity"), label)
+    _check_signature(function, parameters, label, consumed=_consumed(player_input))
     return ToolCall(
         id=definition.id,
         name=name,
         description=required_text(data, "description", label),
         parameters=parameters,
         function=function,
+        player_input=player_input,
+        activity=activity,
     )
+
+
+def _consumed(player_input: PlayerInput | None) -> frozenset[str]:
+    """Schema arguments the engine uses itself rather than passing to the function."""
+    return frozenset({PROMPT_ARGUMENT}) if player_input else frozenset()
+
+
+def _check_player_input(
+    data: object, parameters: Mapping[str, Any], function: Callable[..., Any], label: str
+) -> PlayerInput | None:
+    if data is None:
+        return None
+    if not isinstance(data, dict):
+        raise ContentError(f"{label}: 'player_input' must be an object")
+    dice = data.get("dice")
+    if not is_formula(dice):
+        raise ContentError(f"{label}: 'player_input.dice' must be a formula such as '1d20'")
+    param = data.get("param")
+    if not isinstance(param, str) or not param:
+        raise ContentError(f"{label}: 'player_input.param' must name a function parameter")
+    prompt = parameters["properties"].get(PROMPT_ARGUMENT)
+    if not isinstance(prompt, dict) or prompt.get("type") != "string":
+        raise ContentError(
+            f"{label}: a tool with 'player_input' needs a string '{PROMPT_ARGUMENT}' parameter"
+        )
+    if PROMPT_ARGUMENT not in parameters.get("required", []):
+        raise ContentError(f"{label}: '{PROMPT_ARGUMENT}' must be required")
+    if param in parameters["properties"]:
+        raise ContentError(f"{label}: 'player_input.param' must not be a schema parameter")
+    accepted = inspect.signature(function).parameters
+    if param not in accepted:
+        raise ContentError(f"{label}: function does not accept parameter {param!r}")
+    return PlayerInput(dice=dice, param=param)
+
+
+def _check_activity(template: object, label: str) -> str | None:
+    if template is None:
+        return None
+    if not isinstance(template, str) or not template.strip():
+        raise ContentError(f"{label}: 'activity' must be a non-empty text template")
+    try:
+        list(string.Formatter().parse(template))
+    except ValueError as exc:
+        raise ContentError(f"{label}: 'activity' is not a valid template: {exc}") from exc
+    return template
 
 
 def _check_parameters(schema: object, label: str) -> dict[str, Any]:
@@ -173,14 +240,17 @@ def _check_parameters(schema: object, label: str) -> dict[str, Any]:
 
 
 def _check_signature(
-    function: Callable[..., Any], parameters: Mapping[str, Any], label: str
+    function: Callable[..., Any],
+    parameters: Mapping[str, Any],
+    label: str,
+    consumed: frozenset[str] = frozenset(),
 ) -> None:
     """The GM calls the function with keyword arguments taken from the schema, so both must agree."""
     accepted = inspect.signature(function).parameters
     takes_any_keyword = any(p.kind is p.VAR_KEYWORD for p in accepted.values())
     if not takes_any_keyword:
         for name in parameters["properties"]:
-            if name not in accepted:
+            if name not in accepted and name not in consumed:
                 raise ContentError(f"{label}: function does not accept parameter {name!r}")
     required = set(parameters.get("required", []))
     for name, param in accepted.items():

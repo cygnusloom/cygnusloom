@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, datetime
 
 from sqlalchemy import Column, Text
@@ -44,7 +45,13 @@ class Message(SQLModel, table=True):
     role: str = Field(max_length=16)
     content: str = Field(sa_column=Column(Text, nullable=False))
     model: str | None = Field(default=None, max_length=120)
+    # A JSON list of player-facing lines about what happened during the reply.
+    activity: str = Field(default="[]", sa_column=Column(Text, nullable=False))
     created_at: datetime = Field(default_factory=utcnow)
+
+    @property
+    def activity_lines(self) -> list[str]:
+        return json.loads(self.activity)
 
 
 class TurnContext(SQLModel, table=True):
@@ -58,3 +65,15 @@ class TurnContext(SQLModel, table=True):
     parts: str = Field(sa_column=Column(Text, nullable=False))
     # Null for replies sent before transcripts were recorded.
     transcript: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
+
+
+class PendingTurn(SQLModel, table=True):
+    """A reply paused until the player answers a prompt, as a JSON turn state.
+
+    Nothing from the turn is saved as messages until it finishes, so this row is the only
+    record of a paused turn. A campaign has at most one."""
+
+    __tablename__ = "pending_turn"
+
+    campaign_id: int = Field(foreign_key="campaign.id", primary_key=True)
+    state: str = Field(sa_column=Column(Text, nullable=False))

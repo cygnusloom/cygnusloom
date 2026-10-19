@@ -7,6 +7,7 @@
   const textarea = composer.querySelector("textarea");
   const submit = composer.querySelector('button[type="submit"]');
   const NOT_SAVED = "The reply was not saved. Your message is still in the box.";
+  const FLASH_KEY = "cygnus-turn-error";
 
   class TurnFailure extends Error {}
 
@@ -77,6 +78,57 @@
     if (pending.trim()) onLine(JSON.parse(pending.trim()));
   };
 
+  // Streams one turn into `reply`. Resolves once the server has saved the reply or paused for
+  // the player; the page then reloads so it shows the server's state.
+  const playTurn = async (url, data, reply) => {
+    const response = await fetch(url, {
+      method: "POST",
+      body: data,
+      credentials: "same-origin",
+      headers: { Accept: "application/x-ndjson" },
+    });
+    const isStream = (response.headers.get("content-type") || "").includes("ndjson");
+    if (!response.ok || !isStream) {
+      throw new TurnFailure("Could not send your message. Reload the page and try again.");
+    }
+    let finished = false;
+    await readLines(response.body, (item) => {
+      switch (item.type) {
+        case "status":
+          reply.statusText.textContent = item.text;
+          reply.status.hidden = false;
+          scrollDown();
+          break;
+        case "activity": {
+          const line = document.createElement("p");
+          line.className = "turn-activity";
+          line.textContent = item.text;
+          reply.content.before(line);
+          scrollDown();
+          break;
+        }
+        case "delta":
+          reply.status.hidden = true;
+          reply.content.textContent += item.text;
+          scrollDown();
+          break;
+        case "saved":
+        case "prompt":
+          finished = true;
+          break;
+        case "error":
+          throw new TurnFailure(item.message);
+        default:
+          break;
+      }
+    });
+    if (!finished) throw new Error("connection ended early");
+  };
+
+  const reload = (model) => {
+    window.location.assign(`${window.location.pathname}?${new URLSearchParams({ model })}`);
+  };
+
   composer.addEventListener("submit", async (event) => {
     event.preventDefault();
     const text = textarea.value.trim();
@@ -92,47 +144,10 @@
     const player = addBubble("user", "user");
     player.content.textContent = text;
     const reply = addBubble("assistant", "Cygnus");
-    const showStatus = (message) => {
-      reply.statusText.textContent = message;
-      reply.status.hidden = false;
-      scrollDown();
-    };
-
-    let saved = false;
-    const handle = (item) => {
-      switch (item.type) {
-        case "status":
-          showStatus(item.text);
-          break;
-        case "delta":
-          reply.status.hidden = true;
-          reply.content.textContent += item.text;
-          scrollDown();
-          break;
-        case "saved":
-          saved = true;
-          break;
-        case "error":
-          throw new TurnFailure(item.message);
-        default:
-          break;
-      }
-    };
 
     try {
-      const response = await fetch(composer.dataset.streamAction, {
-        method: "POST",
-        body: data,
-        credentials: "same-origin",
-        headers: { Accept: "application/x-ndjson" },
-      });
-      const isStream = (response.headers.get("content-type") || "").includes("ndjson");
-      if (!response.ok || !isStream) {
-        throw new TurnFailure("Could not send your message. Reload the page and try again.");
-      }
-      await readLines(response.body, handle);
-      if (!saved) throw new Error("connection ended early");
-      window.location.assign(`${window.location.pathname}?${new URLSearchParams({ model })}`);
+      await playTurn(composer.dataset.streamAction, data, reply);
+      reload(model);
     } catch (error) {
       player.bubble.remove();
       reply.bubble.remove();
@@ -142,4 +157,37 @@
       textarea.focus();
     }
   });
+
+  // Answers to the GM's prompt. The answer is stored before the reply continues, so a failure
+  // leaves the server's state correct; reloading shows that state with a Continue button.
+  document.addEventListener("submit", async (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || !form.hasAttribute("data-pending-action")) return;
+    event.preventDefault();
+    const data = new FormData(form);
+    const kind = data.get("kind");
+    const answer = String(data.get("content") || "").trim();
+    if (kind === "text" && !answer) return;
+
+    for (const control of form.closest("[data-pending]")?.querySelectorAll("button, textarea") ?? []) {
+      control.disabled = true;
+    }
+    const reply = addBubble("assistant", "Cygnus");
+    try {
+      await playTurn(form.action, data, reply);
+      reload(new FormData(composer).get("model") || "");
+    } catch (error) {
+      sessionStorage.setItem(
+        FLASH_KEY,
+        error instanceof TurnFailure ? error.message : "The GM's reply did not finish. Try again.",
+      );
+      reload(new FormData(composer).get("model") || "");
+    }
+  });
+
+  const flashed = sessionStorage.getItem(FLASH_KEY);
+  if (flashed) {
+    sessionStorage.removeItem(FLASH_KEY);
+    showError(flashed);
+  }
 })();

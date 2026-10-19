@@ -5,14 +5,39 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any
 
-from cygnusforge.content.library import ToolCall
+from cygnusforge.content.library import PROMPT_ARGUMENT, ToolCall
 from cygnusforge.llm.base import ToolRequest
 
 logger = logging.getLogger(__name__)
 
 _PYTHON_TYPES: dict[str, type] = {"string": str, "array": list, "object": dict}
+
+
+@dataclass(frozen=True)
+class Ask:
+    """The tool needs the player to roll `dice` or type a reply to `text` first."""
+
+    text: str
+    dice: str
+
+
+@dataclass(frozen=True)
+class RollAnswer:
+    total: int
+
+
+@dataclass(frozen=True)
+class TextAnswer:
+    text: str
+
+
+@dataclass(frozen=True)
+class ToolRun:
+    output: str
+    activity: str | None
 
 
 def tool_specs(tool_calls: Mapping[str, ToolCall]) -> list[dict[str, Any]] | None:
@@ -32,28 +57,61 @@ def tool_specs(tool_calls: Mapping[str, ToolCall]) -> list[dict[str, Any]] | Non
     ]
 
 
-def run_tool(tool_calls: Mapping[str, ToolCall], request: ToolRequest) -> str:
-    """Run one requested tool and return its JSON result.
+def find_tool(tool_calls: Mapping[str, ToolCall], name: str) -> ToolCall | None:
+    return next((t for t in tool_calls.values() if t.name == name), None)
 
-    Problems are returned as an `error` object rather than raised, so the model can recover."""
-    tool = next((t for t in tool_calls.values() if t.name == request.name), None)
+
+def run_tool(
+    tool_calls: Mapping[str, ToolCall],
+    request: ToolRequest,
+    answer: RollAnswer | TextAnswer | None = None,
+) -> ToolRun | Ask:
+    """Run one requested tool.
+
+    A tool with `player_input` needs an answer first. Without one this returns an `Ask`
+    for the player. Problems are returned as an `error` object rather than raised, so the
+    model can recover."""
+    tool = find_tool(tool_calls, request.name)
     if tool is None:
-        return _error(f"there is no tool named {request.name!r}")
+        return ToolRun(_error(f"there is no tool named {request.name!r}"), None)
     try:
         arguments = json.loads(request.arguments)
     except ValueError:
-        return _error("the arguments were not valid JSON")
+        return ToolRun(_error("the arguments were not valid JSON"), None)
     problem = _check_arguments(tool.parameters, arguments)
     if problem:
-        return _error(problem)
+        return ToolRun(_error(problem), None)
+    if tool.player_input is None:
+        return _call(tool, arguments)
+    if answer is None:
+        return Ask(text=arguments[PROMPT_ARGUMENT], dice=tool.player_input.dice)
+    arguments.pop(PROMPT_ARGUMENT, None)
+    if isinstance(answer, TextAnswer):
+        return ToolRun(json.dumps({"player_text": answer.text}), None)
+    arguments[tool.player_input.param] = answer.total
+    return _call(tool, arguments)
+
+
+def _call(tool: ToolCall, arguments: dict[str, Any]) -> ToolRun:
     try:
         result = tool.function(**arguments)
         if hasattr(result, "to_dict"):
             result = result.to_dict()
-        return json.dumps(result)
     except Exception:
         logger.exception("tool %s failed", tool.name)
-        return _error("the tool failed")
+        return ToolRun(_error("the tool failed"), None)
+    return ToolRun(json.dumps(result), _activity(tool, arguments, result))
+
+
+def _activity(tool: ToolCall, arguments: Mapping[str, Any], result: Any) -> str | None:
+    """The player-facing line for a tool run, or None when the tool has none."""
+    if tool.activity is None or not isinstance(result, Mapping):
+        return None
+    try:
+        return tool.activity.format_map({**arguments, **result})
+    except (KeyError, IndexError, ValueError, TypeError):
+        logger.exception("tool %s has an activity template that does not fit its result", tool.name)
+        return None
 
 
 def _check_arguments(schema: Mapping[str, Any], arguments: object) -> str | None:

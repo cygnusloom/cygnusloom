@@ -17,7 +17,7 @@ from cygnusforge.services.campaigns import (
     get_turn_context,
     get_turn_transcript,
 )
-from tests.test_campaigns import _campaign_id, _send, _signed_in
+from tests.test_campaigns import _answer, _campaign_id, _send, _signed_in
 from tests.test_context import RecordingProvider, _send_until_summarized, _small_window_app, _stored
 from tests.test_tools import ROLL, _recording_provider, _script
 
@@ -71,6 +71,7 @@ def test_recorded_system_text_is_exactly_what_the_model_received(
     _send(client, campaign_id, _script({"text": "Hello back."}))
     script = _script({"rounds": [[ROLL]], "text": "Well rolled."})
     _send(client, campaign_id, script)
+    _answer(client, campaign_id, "roll")
     reply_id = _message_ids(app, campaign_id, "assistant")[-1]
 
     parts = _context(app, campaign_id, reply_id)
@@ -97,6 +98,7 @@ def test_context_shows_history_and_this_turns_tool_rounds(
     first_reply = _message_ids(app, campaign_id, "assistant")[0]
     script = _script({"rounds": [[ROLL]], "text": "Well rolled."})
     _send(client, campaign_id, script)
+    _answer(client, campaign_id, "roll")
     reply_id = _message_ids(app, campaign_id, "assistant")[-1]
 
     parts = _context(app, campaign_id, reply_id)
@@ -215,6 +217,7 @@ def test_transcript_covers_only_this_round(client_factory: Callable[[], TestClie
     first_user = _message_ids(app, campaign_id, "user")[0]
     script = _script({"rounds": [[ROLL]], "text": "Well rolled."})
     _send(client, campaign_id, script)
+    _answer(client, campaign_id, "roll")
     reply_id = _message_ids(app, campaign_id, "assistant")[-1]
 
     entries = _transcript(app, campaign_id, reply_id)

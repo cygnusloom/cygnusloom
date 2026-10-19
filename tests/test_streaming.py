@@ -12,7 +12,7 @@ from cygnusforge.config import Settings
 from cygnusforge.db.models import Message
 from cygnusforge.llm.base import LLMError
 from tests.conftest import csrf_token
-from tests.test_campaigns import _campaign_id
+from tests.test_campaigns import _answer, _campaign_id
 from tests.test_context import RecordingProvider, _saved_message_count, _small_window_app, _stored
 from tests.test_tools import ROLL, _recording_provider, _script
 
@@ -61,10 +61,17 @@ def test_each_phase_shows_a_status_and_only_the_narration_is_streamed(
 ):
     client, campaign_id = _campaign_id(client_factory)
 
-    events = _stream(client, campaign_id, _script({"rounds": [[ROLL]], "text": "Done."}))
+    paused = _stream(client, campaign_id, _script({"rounds": [[ROLL]], "text": "Done."}))
+    assert paused[-1]["type"] == "prompt"
+    assert [e["text"] for e in paused if e["type"] == "status"] == [
+        "Deciding...",
+        "Running social_roll...",
+    ]
+
+    events = _answer(client, campaign_id, "roll")
 
     statuses = [e["text"] for e in events if e["type"] == "status"]
-    assert statuses == ["Deciding...", "Running social_roll...", "Deciding...", "Narrating..."]
+    assert statuses == ["Deciding...", "Narrating..."]
     narrating_at = events.index({"type": "status", "text": "Narrating..."})
     assert _deltas(events[:narrating_at]) == ""
     assert _deltas(events) == "Done."
@@ -79,6 +86,7 @@ def test_decisions_offer_tools_and_the_narration_does_not(
     client, campaign_id = _campaign_id(client_factory)
 
     _stream(client, campaign_id, _script({"rounds": [[ROLL]], "text": "Done."}))
+    _answer(client, campaign_id, "roll")
 
     assert [call["tools"] is not None for call in recorder.calls] == [True, True, False]
 

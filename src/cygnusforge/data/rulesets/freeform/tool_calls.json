@@ -5,10 +5,14 @@
     "name": "social_roll",
     "python_module": "freeform",
     "function": "social_roll",
-    "description": "Roll a d20 for a social action where the outcome is uncertain and matters to the story, such as persuading, deceiving, intimidating, or charming an NPC. Do not call it for actions that obviously succeed or fail. Choose the modifiers from the NPC's current attitude and the situation, call the tool, and use the returned total for the outcome. The result has the die, both modifiers, and their total.",
+    "description": "Ask the player to roll a d20 for a social action where the outcome is uncertain and matters to the story, such as persuading, deceiving, intimidating, or charming an NPC. Do not call it for actions that obviously succeed or fail. Choose the modifiers from the NPC's current attitude and the situation, and write the prompt the player sees, in the GM's voice, asking them to roll or describe what they do instead. The player's roll (or their typed reply) comes back as the result; use the total for the outcome. The result has the die, both modifiers, and their total, or the player's reply in place of a roll.",
     "parameters": {
       "type": "object",
       "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "What the GM says to the player to invite the roll, for example: \"Roll to see if Mara believes you.\" The player sees this text."
+        },
         "relationship": {
           "type": "integer",
           "description": "How well the NPC already regards the character, typically -5 (hostile) to +5 (devoted). Use 0 for a stranger or neutral NPC. Base it on what has happened so far in the campaign."
@@ -18,7 +22,16 @@
           "description": "The situation's effect on this action, typically -5 to +5. Use a positive value for good leverage, favorable timing, or convincing evidence. Use a negative value for distractions, bad timing, or a weak argument. Use 0 for ordinary conditions."
         }
       },
-      "required": ["relationship", "circumstance"]
-    }
+      "required": [
+        "prompt",
+        "relationship",
+        "circumstance"
+      ]
+    },
+    "player_input": {
+      "dice": "1d20",
+      "param": "roll"
+    },
+    "activity": "You rolled {die} on the d20, with {relationship:+d} relationship and {circumstance:+d} circumstance, for {total}."
   }
 ]

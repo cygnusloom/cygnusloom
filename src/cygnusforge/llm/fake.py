@@ -4,14 +4,16 @@ A user message may carry a directive, `__FAKE__:` followed by a JSON object:
 
     __FAKE__:{"turns": [
         {"text": "Hello."},
-        {"rounds": [[{"name": "social_roll", "arguments": {"relationship": 1}}]],
+        {"rounds": [[{"name": "social_roll",
+                      "arguments": {"prompt": "Roll.", "relationship": 1, "circumstance": 0}}]],
          "text": "You rolled well."},
         {"error": "upstream exploded"}
     ]}
 
 Each user message after the directive uses the next turn. A turn's `rounds` are the tool calls
 the model makes, one list per round. The engine runs them for real, so each name must be a tool
-in the rule set. Its `text` is the narration. Its `error` raises LLMError, so nothing is saved.
+in the rule set. A `player_input` tool pauses the turn until the test answers it, so the test
+posts the answer next. Its `text` is the narration. Its `error` raises LLMError, so nothing is saved.
 Within a turn, `chat` calls (the GM's decisions) get the rounds and return no text, and `stream`
 calls (the narration) get `text`. A newer directive replaces the older one. When the script runs
 out, the provider echoes the last user message. The script lives in the transcript, so it needs
