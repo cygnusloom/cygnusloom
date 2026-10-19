@@ -2,54 +2,83 @@
 {% block title %}{{ campaign.name }}{% endblock %}
 {% block body_class %}workspace-page{% endblock %}
 {% block content %}
-  <div class="workspace">
-    <section class="chat" aria-label="Chat">
-      <h1 class="chat-title">{{ campaign.name }}</h1>
-      <div class="transcript" data-transcript>
-        {% for message in messages %}
-          <div class="message {{ message.role }}">
-            <span class="role">{{ message.role }}{% if message.model %} · <span class="muted">{{ message.model }}</span>{% endif %}</span>
-            <p>{{ message.content }}</p>
+<div class="shell">
+  <nav class="sidebar" aria-label="Sidebar">
+    <button type="button" class="sidebar-item" data-view-target="play" aria-pressed="true" aria-label="Play" title="Play"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 5v14l12-7z"/></svg></button>
+    <button type="button" class="sidebar-item" data-view-target="lore" aria-pressed="false" aria-label="Lore" title="Lore"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z"/></svg></button>
+    <button type="button" class="sidebar-item" data-dialog-target="dialog-characters" aria-haspopup="dialog" aria-label="Characters" title="Characters"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
+    <button type="button" class="sidebar-item" data-drawer-target="drawer-notes" aria-expanded="false" aria-controls="drawer-notes" aria-label="Notes" title="Notes"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 3h10l4 4v14H5z"/><path d="M9 12h6M9 16h6"/></svg></button>
+  </nav>
+  <div class="views">
+    <div class="workspace" data-view="play">
+        <section class="chat" aria-label="Chat">
+          <h1 class="chat-title">{{ campaign.name }}</h1>
+          <div class="transcript" data-transcript>
+            {% for message in messages %}
+              <div class="message {{ message.role }}">
+                <span class="role">{% if message.role == "assistant" %}Cygnus{% else %}{{ message.role }}{% endif %}{% if message.model %} · <span class="muted">{{ message.model }}</span>{% endif %}</span>
+                <p>{{ message.content }}</p>
+              </div>
+            {% else %}
+              <p class="muted">Say something to start the conversation.</p>
+            {% endfor %}
           </div>
-        {% else %}
-          <p class="muted">Say something to start the conversation.</p>
-        {% endfor %}
-      </div>
-      <form method="post" action="/campaigns/{{ campaign.id }}/messages" class="composer">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <select name="model" aria-label="Model">
-          {% for model in models %}
-            <option value="{{ model }}"{% if model == selected_model %} selected{% endif %}>{{ model }}</option>
-          {% endfor %}
-        </select>
-        <textarea name="content" rows="3" required maxlength="8000" placeholder="Message">{{ draft }}</textarea>
-        <button type="submit">Send</button>
-      </form>
+          <form method="post" action="/campaigns/{{ campaign.id }}/messages" class="composer">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <select name="model" aria-label="Model">
+              {% for model in models %}
+                <option value="{{ model }}"{% if model == selected_model %} selected{% endif %}>{{ model }}</option>
+              {% endfor %}
+            </select>
+            <textarea name="content" rows="3" required maxlength="8000" placeholder="Message">{{ draft }}</textarea>
+            <button type="submit">Send</button>
+          </form>
+        </section>
+
+        <aside class="side">
+          <section class="map-panel" aria-label="Map">
+            <p class="muted">Map placeholder</p>
+          </section>
+
+          <section class="tabs-panel">
+            <div class="tab-list" role="tablist" aria-label="Panels">
+              <button type="button" class="tab" role="tab" id="tab-characters" aria-controls="panel-characters" aria-selected="true">Characters</button>
+              <button type="button" class="tab" role="tab" id="tab-notes" aria-controls="panel-notes" aria-selected="false" tabindex="-1">Notes</button>
+              <button type="button" class="tab" role="tab" id="tab-log" aria-controls="panel-log" aria-selected="false" tabindex="-1">Log</button>
+            </div>
+            <div class="tab-panel" role="tabpanel" id="panel-characters" aria-labelledby="tab-characters">
+              <p class="muted">Placeholder: characters will appear here.</p>
+            </div>
+            <div class="tab-panel" role="tabpanel" id="panel-notes" aria-labelledby="tab-notes" hidden>
+              <p class="muted">Placeholder: notes will appear here.</p>
+            </div>
+            <div class="tab-panel" role="tabpanel" id="panel-log" aria-labelledby="tab-log" hidden>
+              <p class="muted">Placeholder: log entries will appear here.</p>
+            </div>
+          </section>
+        </aside>
+    </div>
+    <section class="view" data-view="lore" aria-label="Lore" hidden>
+      <p class="muted">Placeholder: lore will appear here.</p>
     </section>
-
-    <aside class="side">
-      <section class="map-panel" aria-label="Map">
-        <p class="muted">Map placeholder</p>
-      </section>
-
-      <section class="tabs-panel">
-        <div class="tab-list" role="tablist" aria-label="Panels">
-          <button type="button" class="tab" role="tab" id="tab-characters" aria-controls="panel-characters" aria-selected="true">Characters</button>
-          <button type="button" class="tab" role="tab" id="tab-notes" aria-controls="panel-notes" aria-selected="false" tabindex="-1">Notes</button>
-          <button type="button" class="tab" role="tab" id="tab-log" aria-controls="panel-log" aria-selected="false" tabindex="-1">Log</button>
-        </div>
-        <div class="tab-panel" role="tabpanel" id="panel-characters" aria-labelledby="tab-characters">
-          <p class="muted">Placeholder: characters will appear here.</p>
-        </div>
-        <div class="tab-panel" role="tabpanel" id="panel-notes" aria-labelledby="tab-notes" hidden>
-          <p class="muted">Placeholder: notes will appear here.</p>
-        </div>
-        <div class="tab-panel" role="tabpanel" id="panel-log" aria-labelledby="tab-log" hidden>
-          <p class="muted">Placeholder: log entries will appear here.</p>
-        </div>
-      </section>
-    </aside>
   </div>
+
+  <aside class="drawer" id="drawer-notes" aria-label="Notes">
+    <div class="panel-header">
+      <h2>Notes</h2>
+      <button type="button" class="close" data-drawer-close aria-label="Close">&times;</button>
+    </div>
+    <p class="muted">Placeholder: notes will appear here.</p>
+  </aside>
+</div>
+
+<dialog id="dialog-characters" class="app-dialog" aria-labelledby="dialog-characters-title">
+  <form method="dialog">
+    <h2 id="dialog-characters-title">Characters</h2>
+    <p class="muted">Placeholder: character details will appear here.</p>
+    <button type="submit">Close</button>
+  </form>
+</dialog>
 {% endblock %}
 {% block scripts %}
   <script src="/static/workspace.js"></script>

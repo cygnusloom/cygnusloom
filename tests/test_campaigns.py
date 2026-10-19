@@ -108,6 +108,9 @@ def test_chat_round_trip_saves_both_messages(client_factory: Callable[[], TestCl
     assert "Hi there." in page.text
     assert "hello" in page.text
     assert page.text.count('class="message ') == 2
+    assert '<span class="role">user</span>' in page.text
+    assert '<span class="role">Cygnus' in page.text
+    assert '<span class="role">assistant' not in page.text
 
 
 def test_default_fake_reply_echoes_last_message(client_factory: Callable[[], TestClient]):
@@ -178,3 +181,14 @@ def test_other_accounts_cannot_see_or_post(client_factory: Callable[[], TestClie
     assert _send(intruder, campaign_id, "hi").status_code == 404
     assert "Test chat" not in intruder.get("/campaigns").text
     assert "Test chat" in owner.get("/campaigns").text
+
+
+def test_campaign_page_has_sidebar_controls(client_factory: Callable[[], TestClient]):
+    client, campaign_id = _campaign_id(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert 'data-view-target="lore"' in page
+    assert 'data-view="lore" aria-label="Lore" hidden' in page
+    assert 'data-dialog-target="dialog-characters"' in page
+    assert '<dialog id="dialog-characters"' in page
+    assert 'data-drawer-target="drawer-notes"' in page
+    assert '<aside class="drawer" id="drawer-notes"' in page
