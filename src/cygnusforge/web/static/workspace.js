@@ -59,26 +59,38 @@
 
   const turnDialog = document.getElementById("dialog-turn-context");
   if (turnDialog) {
-    const body = turnDialog.querySelector("[data-turn-context-body]");
+    const bodies = {
+      context: turnDialog.querySelector("[data-turn-context-body]"),
+      transcript: turnDialog.querySelector("[data-turn-transcript-body]"),
+    };
+    const loadFragment = async (url) => {
+      try {
+        const response = await fetch(url, {
+          headers: { Accept: "text/html" },
+          credentials: "same-origin",
+        });
+        if (response.ok && !response.redirected) return await response.text();
+      } catch (error) {
+        return null;
+      }
+      return null;
+    };
+    const unavailable = "<p class=\"muted\">Could not load this reply's details.</p>";
     let opener = null;
     document.querySelectorAll("[data-turn-context-url]").forEach((button) => {
       button.addEventListener("click", async () => {
         opener = button;
-        body.textContent = "Loading…";
+        bodies.context.textContent = "Loading…";
+        bodies.transcript.textContent = "Loading…";
         turnDialog.showModal();
-        let html = null;
-        try {
-          const response = await fetch(button.dataset.turnContextUrl, {
-            headers: { Accept: "text/html" },
-            credentials: "same-origin",
-          });
-          if (response.ok && !response.redirected) html = await response.text();
-        } catch (error) {
-          html = null;
-        }
-        // Ignore a reply for a gear that has since been replaced by another click.
+        const [context, transcript] = await Promise.all([
+          loadFragment(button.dataset.turnContextUrl),
+          loadFragment(button.dataset.turnTranscriptUrl),
+        ]);
+        // Ignore replies for a gear that has since been replaced by another click.
         if (opener !== button) return;
-        body.innerHTML = html ?? "<p class=\"muted\">Could not load this reply's details.</p>";
+        bodies.context.innerHTML = context ?? unavailable;
+        bodies.transcript.innerHTML = transcript ?? unavailable;
       });
     });
     turnDialog.addEventListener("close", () => opener?.focus());

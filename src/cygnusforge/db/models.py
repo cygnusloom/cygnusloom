@@ -56,3 +56,5 @@ class TurnContext(SQLModel, table=True):
 
     message_id: int = Field(foreign_key="message.id", primary_key=True)
     parts: str = Field(sa_column=Column(Text, nullable=False))
+    # Null for replies sent before transcripts were recorded.
+    transcript: str | None = Field(default=None, sa_column=Column(Text, nullable=True))

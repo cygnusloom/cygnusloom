@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import math
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -210,6 +210,7 @@ async def _summarize(
     previous: str,
     messages: Sequence[Message],
     budget_tokens: int,
+    record: list[ContextPart],
 ) -> str:
     transcript = "\n".join(f"{m.role}: {m.content}" for m in messages)
     words = int(budget_tokens * WORDS_PER_TOKEN)
@@ -221,6 +222,12 @@ async def _summarize(
         },
     ]
     summary = (await complete(provider, model_name, prompt)).strip()
+    record.extend(
+        [
+            ContextPart("user", "Summary request", "\n\n".join(m["content"] for m in prompt)),
+            ContextPart("assistant", "Summary reply", summary),
+        ]
+    )
     # Models often repeat the heading they were given. It is not part of the summary.
     if summary.startswith(SUMMARY_HEADING):
         summary = summary[len(SUMMARY_HEADING) :].strip()
@@ -315,27 +322,41 @@ async def send_message(
         p.tokens for p in system_parts(rule_set.id, rule_set.rules, summary, watermark)
     )
     prompt_tokens += estimate_tokens(text) + sum(estimate_tokens(m.content) for m in history)
+    summary_record: list[ContextPart] = []
     if prompt_tokens >= context_tokens * COMPRESS_AT:
         start = _verbatim_start(history, int(context_tokens * KEEP_RECENT))
         if start > 0:
             folded = history[:start]
             summary = await _summarize(
-                provider, model_name, summary, folded, int(context_tokens * SUMMARY_SHARE)
+                provider,
+                model_name,
+                summary,
+                folded,
+                int(context_tokens * SUMMARY_SHARE),
+                summary_record,
             )
             watermark = folded[-1].id or watermark
             history = history[start:]
 
     system = system_parts(rule_set.id, rule_set.rules, summary, watermark)
+    player = ContextPart("user", "This message (player)", text)
     conversation = [
         *(ContextPart(m.role, _message_source(m), m.content) for m in history),
-        ContextPart("user", "This message (player)", text),
+        player,
     ]
     context = [*system, *tool_definition_parts(rule_set), *conversation]
     messages = [
         {"role": "system", "content": "\n\n".join(p.content for p in system)},
         *({"role": p.role, "content": p.content} for p in conversation),
     ]
+    round_start = len(context)
     reply = await _reply_with_tools(provider, model_name, messages, context, rule_set.tool_calls)
+    transcript = [
+        *summary_record,
+        player,
+        *context[round_start:],
+        ContextPart("assistant", "Reply", reply),
+    ]
     with session_scope(engine) as db:
         stored = db.get(Campaign, campaign.id)
         if stored is None:
@@ -350,6 +371,7 @@ async def send_message(
             TurnContext(
                 message_id=assistant.id,
                 parts=json.dumps([part.to_dict() for part in context]),
+                transcript=json.dumps([part.to_dict() for part in transcript]),
             )
         )
         db.commit()
@@ -362,12 +384,33 @@ def get_turn_context(
     """The context the model was given for an assistant message.
 
     None means the turn was sent before contexts were recorded."""
+    return _recorded_parts(engine, owner_id, campaign_id, message_id, lambda row: row.parts)
+
+
+def get_turn_transcript(
+    engine: Engine, owner_id: int, campaign_id: int, message_id: int
+) -> list[ContextPart] | None:
+    """What happened in the round that produced an assistant message, from the player's message
+    to the reply.
+
+    None means the turn was sent before transcripts were recorded."""
+    return _recorded_parts(engine, owner_id, campaign_id, message_id, lambda row: row.transcript)
+
+
+def _recorded_parts(
+    engine: Engine,
+    owner_id: int,
+    campaign_id: int,
+    message_id: int,
+    pick: Callable[[TurnContext], str | None],
+) -> list[ContextPart] | None:
     get_campaign(engine, owner_id, campaign_id)
     with session_scope(engine) as db:
         message = db.get(Message, message_id)
         if message is None or message.campaign_id != campaign_id or message.role != "assistant":
             raise NotFound("message not found")
         row = db.get(TurnContext, message_id)
-        if row is None:
+        raw = pick(row) if row is not None else None
+        if raw is None:
             return None
-        return [ContextPart(**part) for part in json.loads(row.parts)]
+        return [ContextPart(**part) for part in json.loads(raw)]

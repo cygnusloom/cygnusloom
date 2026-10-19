@@ -11,7 +11,7 @@ from sqlmodel import Session, select
 
 from cygnusforge.config import Settings
 from cygnusforge.db.models import Message
-from cygnusforge.services.campaigns import get_turn_context
+from cygnusforge.services.campaigns import get_turn_context, get_turn_transcript
 from tests.test_campaigns import _campaign_id, _send, _signed_in
 from tests.test_context import RecordingProvider, _send_until_summarized, _small_window_app, _stored
 from tests.test_tools import ROLL, _recording_provider, _script
@@ -186,3 +186,96 @@ def test_each_reply_has_a_gear_but_user_messages_do_not(
     assert f'data-turn-context-url="/campaigns/{campaign_id}/messages/{reply_id}/context"' in page
     assert f"/messages/{user_id}/context" not in page
     assert 'id="dialog-turn-context"' in page
+
+
+def _transcript(app: FastAPI, campaign_id: int, message_id: int) -> list[Any]:
+    owner_id = _stored(app, campaign_id).owner_id
+    entries = get_turn_transcript(app.state.engine, owner_id, campaign_id, message_id)
+    assert entries is not None
+    return entries
+
+
+def test_transcript_covers_only_this_round(client_factory: Callable[[], TestClient], app: FastAPI):
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    client, campaign_id = _campaign_id(client_factory)
+    _send(client, campaign_id, _script({"text": "Hello back."}))
+    _send(client, campaign_id, "second")
+    first_user = _message_ids(app, campaign_id, "user")[0]
+    script = _script({"text": "Checking.", "tool_calls": [ROLL]}, {"text": "Well rolled."})
+    _send(client, campaign_id, script)
+    reply_id = _message_ids(app, campaign_id, "assistant")[-1]
+
+    entries = _transcript(app, campaign_id, reply_id)
+
+    assert [entry.source for entry in entries] == [
+        "This message (player)",
+        "GM text (round 1)",
+        "GM tool call (round 1)",
+        "Result of 'social_roll' (round 1)",
+        "Reply",
+    ]
+    assert all(entry.role != "system" for entry in entries)
+    assert f"Message #{first_user} (player)" not in [entry.source for entry in entries]
+    assert entries[-1].content == "Well rolled."
+    assert entries[0].content == script
+    page = client.get(f"/campaigns/{campaign_id}/messages/{reply_id}/transcript")
+    assert page.status_code == 200
+    assert "GM tool call (round 1)" in page.text and "Well rolled." in page.text
+
+
+def test_transcript_records_the_summary_exchange_when_compressing(
+    settings: Settings,
+):
+    provider = RecordingProvider()
+    app = _small_window_app(settings, provider)
+    client, campaign_id = _campaign_id(lambda: TestClient(app))
+    _send_until_summarized(client, app, campaign_id, sends=10)
+    for reply_id in _message_ids(app, campaign_id, "assistant"):
+        sources = [entry.source for entry in _transcript(app, campaign_id, reply_id)]
+        if "Summary request" in sources:
+            assert "Summary reply" in sources
+            assert sources.index("Summary request") < sources.index("Summary reply")
+            return
+    raise AssertionError("no reply transcript recorded the summary")
+
+
+def test_transcript_fragment_escapes_html(client_factory: Callable[[], TestClient], app: FastAPI):
+    client, campaign_id = _campaign_id(client_factory)
+    _send(client, campaign_id, "<img src=x onerror=alert(1)>")
+    reply_id = _message_ids(app, campaign_id, "assistant")[0]
+
+    text = client.get(f"/campaigns/{campaign_id}/messages/{reply_id}/transcript").text
+
+    assert "<img src=x" not in text
+    assert "&lt;img src=x onerror=alert(1)&gt;" in text
+
+
+def test_transcript_is_only_for_the_owner(client_factory: Callable[[], TestClient], app: FastAPI):
+    owner, campaign_id = _campaign_id(client_factory)
+    _send(owner, campaign_id, "hi")
+    reply_id = _message_ids(app, campaign_id, "assistant")[0]
+    intruder = _signed_in(client_factory, "intruder@example.com")
+
+    assert (
+        intruder.get(f"/campaigns/{campaign_id}/messages/{reply_id}/transcript").status_code == 404
+    )
+    assert owner.get(f"/campaigns/{campaign_id}/messages/999999/transcript").status_code == 404
+    assert owner.get(f"/campaigns/{campaign_id}/messages/{reply_id}/transcript").status_code == 200
+
+
+def test_legacy_reply_without_a_transcript_says_so(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    with Session(app.state.engine) as db:
+        legacy = Message(campaign_id=campaign_id, role="assistant", content="old", model="m")
+        db.add(legacy)
+        db.commit()
+        db.refresh(legacy)
+        legacy_id = legacy.id
+
+    response = client.get(f"/campaigns/{campaign_id}/messages/{legacy_id}/transcript")
+
+    assert response.status_code == 200
+    assert "No transcript was recorded" in response.text

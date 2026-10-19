@@ -20,7 +20,7 @@
                 <div class="message-header">
                   <span class="role">{% if message.role == "assistant" %}Cygnus{% else %}{{ message.role }}{% endif %}{% if message.model %} · <span class="muted">{{ message.model }}</span>{% endif %}</span>
                   {% if message.role == "assistant" %}
-                  <button type="button" class="message-gear" data-turn-context-url="/campaigns/{{ campaign.id }}/messages/{{ message.id }}/context" aria-label="Show details for this reply" title="Show details for this reply"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+                  <button type="button" class="message-gear" data-turn-context-url="/campaigns/{{ campaign.id }}/messages/{{ message.id }}/context" data-turn-transcript-url="/campaigns/{{ campaign.id }}/messages/{{ message.id }}/transcript" aria-label="Show details for this reply" title="Show details for this reply"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
                   {% endif %}
                 </div>
                 <div class="content">{{ message.content | markdown }}</div>
@@ -94,8 +94,10 @@
     <h2 id="dialog-turn-context-title">Reply details</h2>
     <div class="tab-list" role="tablist" aria-label="Reply details">
       <button type="button" class="tab" role="tab" id="turn-tab-context" aria-controls="turn-panel-context" aria-selected="true">Context</button>
+      <button type="button" class="tab" role="tab" id="turn-tab-transcript" aria-controls="turn-panel-transcript" aria-selected="false" tabindex="-1">Transcript</button>
     </div>
     <div class="tab-panel turn-context-panel" role="tabpanel" id="turn-panel-context" aria-labelledby="turn-tab-context" data-turn-context-body></div>
+    <div class="tab-panel turn-context-panel" role="tabpanel" id="turn-panel-transcript" aria-labelledby="turn-tab-transcript" data-turn-transcript-body hidden></div>
     <button type="submit">Close</button>
   </form>
 </dialog>
