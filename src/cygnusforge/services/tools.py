@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 import logging
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from cygnusforge.content.library import PROMPT_ARGUMENT, ToolCall
-from cygnusforge.llm.base import ToolRequest
+from cygnusforge.content.library import CONTEXT_ARGUMENT, PROMPT_ARGUMENT, ToolCall
+from cygnusforge.llm.base import LLMError, ToolRequest
+from cygnusforge.rules.context import ToolContext
+from cygnusforge.services.common import InvalidInput, NotFound
 
 logger = logging.getLogger(__name__)
 
@@ -62,16 +65,17 @@ def find_tool(tool_calls: Mapping[str, ToolCall], name: str) -> ToolCall | None:
     return next((t for t in tool_calls.values() if t.name == name), None)
 
 
-def run_tool(
+async def run_tool(
     tool_calls: Mapping[str, ToolCall],
     request: ToolRequest,
     answer: RollAnswer | TextAnswer | None = None,
+    ctx: ToolContext | None = None,
 ) -> ToolRun | Ask:
     """Run one requested tool.
 
     A tool with `player_input` needs an answer first. Without one this returns an `Ask`
     for the player. Problems are returned as an `error` object rather than raised, so the
-    model can recover."""
+    model can recover. Provider failures (`LLMError`) are raised, because the turn cannot go on."""
     tool = find_tool(tool_calls, request.name)
     if tool is None:
         return ToolRun(_error(f"there is no tool named {request.name!r}"), None)
@@ -83,7 +87,7 @@ def run_tool(
     if problem:
         return ToolRun(_error(problem), None)
     if tool.player_input is None:
-        return _call(tool, arguments)
+        return await _call(tool, arguments, ctx)
     if answer is None:
         return Ask(
             text=arguments[PROMPT_ARGUMENT],
@@ -94,14 +98,25 @@ def run_tool(
     if isinstance(answer, TextAnswer):
         return ToolRun(json.dumps({"player_text": answer.text}), None)
     arguments[tool.player_input.param] = answer.total
-    return _call(tool, arguments)
+    return await _call(tool, arguments, ctx)
 
 
-def _call(tool: ToolCall, arguments: dict[str, Any]) -> ToolRun:
+async def _call(tool: ToolCall, arguments: dict[str, Any], ctx: ToolContext | None) -> ToolRun:
+    call_arguments = dict(arguments)
+    if tool.takes_context:
+        if ctx is None:
+            return ToolRun(_error("this tool cannot run without a campaign"), None)
+        call_arguments[CONTEXT_ARGUMENT] = ctx
     try:
-        result = tool.function(**arguments)
+        result = tool.function(**call_arguments)
+        if inspect.isawaitable(result):
+            result = await result
         if hasattr(result, "to_dict"):
             result = result.to_dict()
+    except LLMError:
+        raise
+    except (InvalidInput, NotFound) as exc:
+        return ToolRun(_error(str(exc)), None)
     except Exception:
         logger.exception("tool %s failed", tool.name)
         return ToolRun(_error("the tool failed"), None)

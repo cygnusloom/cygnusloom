@@ -1,0 +1,147 @@
+[
+  {
+    "type": "tool_call",
+    "id": "create_location",
+    "name": "create_location",
+    "python_module": "core",
+    "function": "create_location",
+    "description": "Add a new location to the campaign, such as a village, a clearing, or a building. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The location's name, such as \"Mossbell Hollow\"."
+        },
+        "description": {
+          "type": "string",
+          "description": "What the place looks, sounds, and smells like, in a sentence or two."
+        }
+      },
+      "required": ["name", "description"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "create_npc",
+    "name": "create_npc",
+    "python_module": "core",
+    "function": "create_npc",
+    "description": "Add an NPC to the campaign and place them at an existing location. Leave personality, accent, or quirks out to have them generated at random; give them only when the story calls for a specific trait. Names must be unique among locations and NPCs.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The NPC's name."
+        },
+        "location": {
+          "type": "string",
+          "description": "The name of the location the NPC is at. It must already exist."
+        },
+        "description": {
+          "type": "string",
+          "description": "Who the NPC is: appearance, role, and what they are doing."
+        },
+        "personality": {
+          "type": "string",
+          "description": "Optional. How the NPC carries themselves, such as \"gruff and suspicious\"."
+        },
+        "accent": {
+          "type": "string",
+          "description": "Optional. How the NPC sounds when they speak."
+        },
+        "quirks": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional. Habits or mannerisms the NPC shows."
+        }
+      },
+      "required": ["name", "location", "description"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "move_actor",
+    "name": "move_actor",
+    "python_module": "core",
+    "function": "move_actor",
+    "description": "Move the player character or an NPC to another existing location. Use it when someone travels or is sent somewhere.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the player character or of the NPC who moves."
+        },
+        "location": {
+          "type": "string",
+          "description": "The name of the location to move them to. It must already exist."
+        }
+      },
+      "required": ["name", "location"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "add_note",
+    "name": "add_note",
+    "python_module": "core",
+    "function": "add_note",
+    "description": "Record a note for later recall. Attach it to a location or NPC by giving its name as the subject; leave the subject out for a note about the campaign as a whole.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "The fact to remember, written as a complete sentence."
+        },
+        "subject": {
+          "type": "string",
+          "description": "Optional. The name of the location or NPC the note is about."
+        }
+      },
+      "required": ["text"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "search_notes",
+    "name": "search_notes",
+    "python_module": "core",
+    "function": "search_notes",
+    "description": "Search the campaign's notes. Every word in the query must appear in the note's text or in its subject's name. Use it before answering questions about what has happened before.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Words to look for, such as \"bridge\" or \"Mara oath\"."
+        }
+      },
+      "required": ["query"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "speak",
+    "name": "speak",
+    "python_module": "core",
+    "function": "speak",
+    "description": "Get the exact words an NPC says. A separate step writes the dialogue from the NPC's personality, accent, and quirks, so give the intent, not the words. The NPC must be at the player character's location. Quote the returned dialogue as it is.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "npc": {
+          "type": "string",
+          "description": "The NPC's name."
+        },
+        "intent": {
+          "type": "string",
+          "description": "What the NPC wants to say or achieve in this moment, such as \"warns the player off the bridge\"."
+        }
+      },
+      "required": ["npc", "intent"]
+    }
+  }
+]

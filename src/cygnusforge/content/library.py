@@ -7,7 +7,7 @@ import inspect
 import re
 import string
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -23,6 +23,32 @@ from cygnusforge.rules.dice import is_formula
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 TOOL_NAME = re.compile(r"[A-Za-z0-9_-]{1,64}")
 PROMPT_ARGUMENT = "prompt"
+# The engine passes its ToolContext to a function that declares this parameter. The model
+# never sees it, so it must not appear in a tool's schema.
+CONTEXT_ARGUMENT = "ctx"
+CORE_RULE_SET = "core"
+# Every rule set must define these tables. NPCs get a random entry from each one by default.
+REQUIRED_TABLES = ("personality", "accent", "quirk")
+
+
+@dataclass(frozen=True)
+class LocationTemplate:
+    id: str
+    name: str
+    description: str
+
+
+@dataclass(frozen=True)
+class NpcTemplate:
+    """An NPC from the world definition. Traits left as None are generated when the campaign starts."""
+
+    id: str
+    name: str
+    location: str
+    description: str
+    personality: str | None
+    accent: str | None
+    quirks: tuple[str, ...] | None
 
 
 @dataclass(frozen=True)
@@ -30,6 +56,9 @@ class WorldTemplate:
     id: str
     name: str
     description: str
+    start_location: str
+    locations: tuple[LocationTemplate, ...]
+    npcs: tuple[NpcTemplate, ...]
 
 
 @dataclass(frozen=True)
@@ -56,6 +85,8 @@ class ToolCall:
     # A str.format template shown to the player after the tool runs. Fields come from the
     # arguments and the result.
     activity: str | None = None
+    # True when the function declares CONTEXT_ARGUMENT and the engine must pass it.
+    takes_context: bool = False
 
 
 @dataclass(frozen=True)
@@ -65,19 +96,36 @@ class RuleSet:
     description: str
     rules: Mapping[str, str]
     tool_calls: Mapping[str, ToolCall]
+    # Named option lists, such as "personality", used to generate NPC traits.
+    tables: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
 class ContentLibrary:
     world_templates: Mapping[str, WorldTemplate]
+    # Selectable rule sets. The core rule set is not listed here: it is merged into each of these.
     rule_sets: Mapping[str, RuleSet]
+    core: RuleSet
 
     @classmethod
     def load(cls, data_dir: Path = DATA_DIR) -> ContentLibrary:
-        """Load every world template and rule set. Each subdirectory is one of either."""
+        """Load every world template and rule set. Each subdirectory is one of either.
+
+        The `core` rule set is loaded on its own first, then merged under every other rule
+        set. A definition in a rule set replaces the core definition with the same type and id."""
         worlds = {d.name: _load_world(d) for d in _subdirectories(data_dir / "worlds")}
-        rule_sets = {d.name: _load_rule_set(d) for d in _subdirectories(data_dir / "rulesets")}
-        return cls(world_templates=worlds, rule_sets=rule_sets)
+        rule_set_dirs = _subdirectories(data_dir / "rulesets")
+        core_dir = next((d for d in rule_set_dirs if d.name == CORE_RULE_SET), None)
+        if core_dir is None:
+            raise ContentError(f"missing the {CORE_RULE_SET!r} rule set")
+        core_definitions = read_definitions(core_dir)
+        core = _build_rule_set(core_definitions, CORE_RULE_SET)
+        rule_sets = {
+            d.name: _load_rule_set(d, core_definitions)
+            for d in rule_set_dirs
+            if d.name != CORE_RULE_SET
+        }
+        return cls(world_templates=worlds, rule_sets=rule_sets, core=core)
 
 
 def _subdirectories(path: Path) -> list[Path]:
@@ -102,19 +150,90 @@ def _check_directory_id(template: str, ident: str) -> None:
 
 def _load_world(directory: Path) -> WorldTemplate:
     template = directory.name
-    world = _single(read_definitions(directory), "world", template)
+    definitions = read_definitions(directory)
+    world = _single(definitions, "world", template)
     _check_directory_id(template, world.id)
     label = f"{template}: world"
+    locations = tuple(_load_location(d, template) for d in definitions if d.type == "location")
+    npcs = tuple(_load_npc(d, template) for d in definitions if d.type == "npc")
+    location_ids = {location.id for location in locations}
+    start = required_text(world.data, "start_location", label)
+    if start not in location_ids:
+        raise ContentError(f"{label}: start_location {start!r} is not a location")
+    for npc in npcs:
+        if npc.location not in location_ids:
+            raise ContentError(
+                f"{template}: npc {npc.id!r} is in unknown location {npc.location!r}"
+            )
+    _check_unique_names([*locations, *npcs], template)
     return WorldTemplate(
         id=world.id,
         name=required_text(world.data, "name", label),
         description=required_text(world.data, "description", label),
+        start_location=start,
+        locations=locations,
+        npcs=npcs,
     )
 
 
-def _load_rule_set(directory: Path) -> RuleSet:
+def _load_location(definition: Definition, template: str) -> LocationTemplate:
+    label = f"{template}: location {definition.id}"
+    return LocationTemplate(
+        id=definition.id,
+        name=required_text(definition.data, "name", label),
+        description=required_text(definition.data, "description", label),
+    )
+
+
+def _load_npc(definition: Definition, template: str) -> NpcTemplate:
+    label = f"{template}: npc {definition.id}"
+    data = definition.data
+    quirks = data.get("quirks")
+    if quirks is not None:
+        if not isinstance(quirks, list) or not all(
+            isinstance(q, str) and q.strip() for q in quirks
+        ):
+            raise ContentError(f"{label}: 'quirks' must be a list of non-empty text")
+        quirks = tuple(quirks)
+    return NpcTemplate(
+        id=definition.id,
+        name=required_text(data, "name", label),
+        location=required_text(data, "location", label),
+        description=required_text(data, "description", label),
+        personality=_optional_text(data, "personality", label),
+        accent=_optional_text(data, "accent", label),
+        quirks=quirks,
+    )
+
+
+def _optional_text(data: Mapping[str, Any], key: str, label: str) -> str | None:
+    if data.get(key) is None:
+        return None
+    return required_text(data, key, label)
+
+
+def _check_unique_names(entries: list[LocationTemplate | NpcTemplate], template: str) -> None:
+    """Locations and NPCs share one namespace, so the GM can refer to either by name."""
+    seen: set[str] = set()
+    for entry in entries:
+        key = entry.name.casefold()
+        if key in seen:
+            raise ContentError(f"{template}: duplicate name {entry.name!r}")
+        seen.add(key)
+
+
+def _load_rule_set(directory: Path, core_definitions: list[Definition]) -> RuleSet:
+    """A rule set is its own definitions plus every core definition it does not replace."""
     template = directory.name
-    definitions = read_definitions(directory)
+    own = read_definitions(directory)
+    own_keys = {(d.type, d.id) for d in own}
+    inherited = [
+        d for d in core_definitions if d.type != "rule_set" and (d.type, d.id) not in own_keys
+    ]
+    return _build_rule_set([*own, *inherited], template)
+
+
+def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     head = _single(definitions, "rule_set", template)
     _check_directory_id(template, head.id)
     label = f"{template}: rule_set"
@@ -124,6 +243,10 @@ def _load_rule_set(directory: Path) -> RuleSet:
         for d in definitions
         if d.type == "rule"
     }
+    tables = {d.id: _load_table(d, template) for d in definitions if d.type == "table"}
+    for name in REQUIRED_TABLES:
+        if name not in tables:
+            raise ContentError(f"{template}: missing table {name!r}")
     tool_calls: dict[str, ToolCall] = {}
     tool_names: set[str] = set()
     for d in definitions:
@@ -140,7 +263,18 @@ def _load_rule_set(directory: Path) -> RuleSet:
         description=required_text(head.data, "description", label),
         rules=rules,
         tool_calls=tool_calls,
+        tables=tables,
     )
+
+
+def _load_table(definition: Definition, template: str) -> tuple[str, ...]:
+    label = f"{template}: table {definition.id}"
+    options = definition.data.get("options")
+    if not isinstance(options, list) or not options:
+        raise ContentError(f"{label}: 'options' must be a non-empty list")
+    if not all(isinstance(option, str) and option.strip() for option in options):
+        raise ContentError(f"{label}: every option must be non-empty text")
+    return tuple(options)
 
 
 def _import_module(definition: Definition, template: str) -> ModuleType:
@@ -168,6 +302,8 @@ def _load_tool_call(
     if not TOOL_NAME.fullmatch(name):
         raise ContentError(f"{label}: 'name' must be 1 to 64 letters, digits, '_' or '-'")
     parameters = _check_parameters(data.get("parameters"), label)
+    if CONTEXT_ARGUMENT in parameters["properties"]:
+        raise ContentError(f"{label}: {CONTEXT_ARGUMENT!r} is reserved and not a parameter")
     player_input = _check_player_input(data.get("player_input"), parameters, function, label)
     activity = _check_activity(data.get("activity"), label)
     _check_signature(function, parameters, label, consumed=_consumed(player_input))
@@ -179,6 +315,7 @@ def _load_tool_call(
         function=function,
         player_input=player_input,
         activity=activity,
+        takes_context=CONTEXT_ARGUMENT in inspect.signature(function).parameters,
     )
 
 
@@ -236,9 +373,9 @@ def _check_template(template: object, key: str, label: str) -> str | None:
 
 def _check_fields(template: str, arguments: Mapping[str, Any], key: str, label: str) -> None:
     """A details template may only name schema arguments, so a typo fails at load."""
-    for _, field, _, _ in string.Formatter().parse(template):
-        if field and field not in arguments:
-            raise ContentError(f"{label}: '{key}' names unknown argument {field!r}")
+    for _, name, _, _ in string.Formatter().parse(template):
+        if name and name not in arguments:
+            raise ContentError(f"{label}: '{key}' names unknown argument {name!r}")
 
 
 def _check_parameters(schema: object, label: str) -> dict[str, Any]:
@@ -270,7 +407,7 @@ def _check_signature(
                 raise ContentError(f"{label}: function does not accept parameter {name!r}")
     required = set(parameters.get("required", []))
     for name, param in accepted.items():
-        if param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD):
+        if param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD) or name == CONTEXT_ARGUMENT:
             continue
         if param.default is param.empty and name not in required:
             raise ContentError(

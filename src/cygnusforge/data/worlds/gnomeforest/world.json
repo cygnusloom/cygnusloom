@@ -3,6 +3,49 @@
     "type": "world",
     "id": "gnomeforest",
     "name": "Gnome Forest",
-    "description": "A magical forest of mushroom gnomes. Caps glow along the paths, spores carry spells and gossip between the fungal rings, and the gnome villages tend the mushrooms that give the forest its magic."
+    "description": "A magical forest of mushroom gnomes. Caps glow along the paths, spores carry spells and gossip between the fungal rings, and the gnome villages tend the mushrooms that give the forest its magic.",
+    "start_location": "mossbell-hollow"
+  },
+  {
+    "type": "location",
+    "id": "mossbell-hollow",
+    "name": "Mossbell Hollow",
+    "description": "A gnome village built into the roots of a hollow oak. Bell-shaped mushrooms hang from the eaves and chime softly when the spores drift past."
+  },
+  {
+    "type": "location",
+    "id": "glowcap-ring",
+    "name": "Glowcap Ring",
+    "description": "A circle of enormous luminous mushrooms, half a mile from the village. The caps shine blue at dusk and the air tastes faintly of pepper."
+  },
+  {
+    "type": "location",
+    "id": "spore-bridge",
+    "name": "Spore Bridge",
+    "description": "A bridge of woven fungus strung between two giant toadstools over a deep, misty ravine. It sways when the wind picks up."
+  },
+  {
+    "type": "npc",
+    "id": "mara-thistledown",
+    "name": "Mara Thistledown",
+    "location": "mossbell-hollow",
+    "description": "The village elder who keeps the bell mushrooms tuned. She is short and stout, with a silver braid and a satchel of spores.",
+    "personality": "warm and protective",
+    "accent": "soft and lilting",
+    "quirks": ["refers to everyone as 'friend'", "speaks in proverbs"]
+  },
+  {
+    "type": "npc",
+    "id": "brin-gallowcap",
+    "name": "Brin Gallowcap",
+    "location": "glowcap-ring",
+    "description": "A wiry gnome ranger who guards the Glowcap Ring and keeps watch on the bridge road."
+  },
+  {
+    "type": "npc",
+    "id": "old-hob",
+    "name": "Old Hob",
+    "location": "spore-bridge",
+    "description": "A toll-keeper with a lantern and a long memory. He claims the bridge has always belonged to him."
   }
 ]

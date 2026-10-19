@@ -2,6 +2,13 @@
 {% block title %}{{ campaign.name }}{% endblock %}
 {% block body_class %}workspace-page{% endblock %}
 {% block content %}
+{% macro notes_list(notes) -%}
+  {% for note in notes %}
+    <div class="note"><span class="muted">{{ note.subject }}</span><p>{{ note.text }}</p></div>
+  {% else %}
+    <p class="muted">No notes yet.</p>
+  {% endfor %}
+{%- endmacro %}
 <div class="shell">
   <nav class="sidebar" aria-label="Sidebar">
     <button type="button" class="sidebar-item" data-view-target="play" aria-pressed="true" aria-label="Play" title="Play"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 5v14l12-7z"/></svg></button>
@@ -95,10 +102,17 @@
               <button type="button" class="tab" role="tab" id="tab-log" aria-controls="panel-log" aria-selected="false" tabindex="-1">Log</button>
             </div>
             <div class="tab-panel" role="tabpanel" id="panel-characters" aria-labelledby="tab-characters">
-              <p class="muted">Placeholder: characters will appear here.</p>
+              {% if world_view.pc %}
+              <ul>
+                <li><strong>{{ world_view.pc.name }}</strong> <span class="muted">(you), {{ world_view.location_names[world_view.pc.location_id] }}</span></li>
+                {% for npc in world_view.npcs %}
+                <li><strong>{{ npc.name }}</strong> <span class="muted">, {{ world_view.location_names[npc.location_id] }}</span></li>
+                {% endfor %}
+              </ul>
+              {% endif %}
             </div>
             <div class="tab-panel" role="tabpanel" id="panel-notes" aria-labelledby="tab-notes" hidden>
-              <p class="muted">Placeholder: notes will appear here.</p>
+              {{ notes_list(world_view.notes) }}
             </div>
             <div class="tab-panel" role="tabpanel" id="panel-log" aria-labelledby="tab-log" hidden>
               <p class="muted">Placeholder: log entries will appear here.</p>
@@ -115,7 +129,7 @@
         <h2>Notes</h2>
         <button type="button" class="close" data-drawer-close aria-label="Close">&times;</button>
       </div>
-      <p class="muted">Placeholder: notes will appear here.</p>
+      {{ notes_list(world_view.notes) }}
     </aside>
   </div>
 </div>
@@ -123,7 +137,26 @@
 <dialog id="dialog-characters" class="app-dialog" aria-labelledby="dialog-characters-title">
   <form method="dialog">
     <h2 id="dialog-characters-title">Characters</h2>
-    <p class="muted">Placeholder: character details will appear here.</p>
+    {% if world_view.pc %}
+    <h3>You</h3>
+    <p><strong>{{ world_view.pc.name }}</strong>, at {{ world_view.location_names[world_view.pc.location_id] }}</p>
+    {% endif %}
+    <h3>Locations</h3>
+    {% for location in world_view.locations %}
+      <p><strong>{{ location.name }}</strong>: {{ location.description }}</p>
+    {% else %}
+      <p class="muted">No locations yet.</p>
+    {% endfor %}
+    <h3>NPCs</h3>
+    {% for npc in world_view.npcs %}
+      <div class="npc">
+        <p><strong>{{ npc.name }}</strong>, at {{ world_view.location_names[npc.location_id] }}</p>
+        <p>{{ npc.description }}</p>
+        <p class="muted">Personality: {{ npc.personality }}. Accent: {{ npc.accent }}. Quirks: {{ npc.quirk_list | join("; ") or "none" }}.</p>
+      </div>
+    {% else %}
+      <p class="muted">No NPCs yet.</p>
+    {% endfor %}
     <button type="submit">Close</button>
   </form>
 </dialog>

@@ -21,6 +21,7 @@ from cygnusforge.services.campaigns import (
     Saved,
     Status,
     TurnEvent,
+    campaign_world,
     context_usage,
     create_campaign,
     get_campaign,
@@ -61,6 +62,7 @@ async def create(request: Request) -> Response:
     name = form_text(form, "name")
     world_template = form_text(form, "world_template")
     rule_set = form_text(form, "rule_set")
+    character_name = form_text(form, "character_name")
     try:
         campaign = create_campaign(
             request.app.state.engine,
@@ -69,6 +71,7 @@ async def create(request: Request) -> Response:
             name,
             world_template,
             rule_set,
+            character_name,
         )
     except InvalidInput as exc:
         return _new_form(
@@ -78,6 +81,7 @@ async def create(request: Request) -> Response:
             name=name,
             world_template=world_template,
             rule_set=rule_set,
+            character_name=character_name,
         )
     return RedirectResponse(f"/campaigns/{campaign.id}", status_code=303)
 
@@ -229,6 +233,7 @@ def _new_form(
     name: str = "",
     world_template: str = "",
     rule_set: str = "",
+    character_name: str = "",
 ) -> Response:
     library = request.app.state.content
     return render(
@@ -237,6 +242,7 @@ def _new_form(
         status_code=status_code,
         error=error,
         campaign_name=name,
+        character_name=character_name,
         world_templates=library.world_templates.values(),
         rule_sets=library.rule_sets.values(),
         selected_world=world_template,
@@ -259,11 +265,13 @@ def _campaign_page(
     campaign = get_campaign(engine, user.id, campaign_id)
     rule_set = library.rule_sets.get(campaign.rule_set)
     messages = list_messages(engine, campaign.id)
+    world = campaign_world(engine, user.id, campaign.id)
     context = context_usage(
         campaign,
         messages,
         rule_set.rules if rule_set else {},
         settings.llm_context_tokens,
+        world.text,
     )
     return render(
         request,
@@ -271,6 +279,7 @@ def _campaign_page(
         status_code=status_code,
         campaign=campaign,
         world=library.world_templates.get(campaign.world_template),
+        world_view=world.view,
         rule_set=rule_set,
         messages=messages,
         context=context,

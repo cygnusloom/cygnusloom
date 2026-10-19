@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import Callable
 from typing import Any
@@ -41,8 +42,16 @@ def _request(name: str, arguments: str) -> ToolRequest:
     return ToolRequest(id="call_1", name=name, arguments=arguments)
 
 
+def _call(
+    tools: dict[str, ToolCall],
+    request: ToolRequest,
+    answer: RollAnswer | TextAnswer | None = None,
+) -> ToolRun | Ask:
+    return asyncio.run(run_tool(tools, request, answer))
+
+
 def _run(tools: dict[str, ToolCall], request: ToolRequest) -> str:
-    run = run_tool(tools, request)
+    run = _call(tools, request)
     assert isinstance(run, ToolRun)
     return run.output
 
@@ -58,11 +67,10 @@ def test_no_tools_means_no_tool_list():
 
 
 def test_specs_describe_the_social_roll_tool():
-    specs = tool_specs(_freeform_tools())
-    assert specs is not None and len(specs) == 1
-    spec = specs[0]
+    specs = {spec["function"]["name"]: spec for spec in tool_specs(_freeform_tools()) or []}
+    assert set(specs) == {"social_roll", *CORE_TOOL_NAMES}
+    spec = specs["social_roll"]
     assert spec["type"] == "function"
-    assert spec["function"]["name"] == "social_roll"
     assert "d20" in spec["function"]["description"]
     assert set(spec["function"]["parameters"]["properties"]) == {
         "prompt",
@@ -71,11 +79,20 @@ def test_specs_describe_the_social_roll_tool():
     }
 
 
+CORE_TOOL_NAMES = {
+    "create_location",
+    "create_npc",
+    "move_actor",
+    "add_note",
+    "search_notes",
+    "speak",
+}
+
 SOCIAL_ARGUMENTS = '{"prompt": "Roll to persuade.", "relationship": 2, "circumstance": -1}'
 
 
 def test_social_roll_asks_the_player_before_it_runs():
-    ask = run_tool(_freeform_tools(), _request("social_roll", SOCIAL_ARGUMENTS))
+    ask = _call(_freeform_tools(), _request("social_roll", SOCIAL_ARGUMENTS))
     assert ask == Ask(
         text="Roll to persuade.",
         dice="1d20",
@@ -84,7 +101,7 @@ def test_social_roll_asks_the_player_before_it_runs():
 
 
 def test_social_roll_runs_with_the_players_roll():
-    run = run_tool(_freeform_tools(), _request("social_roll", SOCIAL_ARGUMENTS), RollAnswer(14))
+    run = _call(_freeform_tools(), _request("social_roll", SOCIAL_ARGUMENTS), RollAnswer(14))
     assert isinstance(run, ToolRun)
     assert json.loads(run.output) == {"die": 14, "relationship": 2, "circumstance": -1, "total": 15}
     assert (
@@ -94,7 +111,7 @@ def test_social_roll_runs_with_the_players_roll():
 
 
 def test_social_roll_takes_a_free_form_reply_instead_of_a_roll():
-    run = run_tool(
+    run = _call(
         _freeform_tools(),
         _request("social_roll", SOCIAL_ARGUMENTS),
         TextAnswer("I show him the letter"),
@@ -210,7 +227,8 @@ def test_model_rolls_then_narrates_and_only_the_narration_is_saved(
     response = _send(client, campaign_id, script)
 
     assert response.status_code == 303
-    assert [spec["function"]["name"] for spec in recorder.calls[0]["tools"]] == ["social_roll"]
+    offered = [spec["function"]["name"] for spec in recorder.calls[0]["tools"]]
+    assert set(offered) == {"social_roll", *CORE_TOOL_NAMES}
     assert _saved(app, campaign_id) == []
     assert _pending(app, campaign_id)["prompt"] == {
         "text": "Roll to persuade.",

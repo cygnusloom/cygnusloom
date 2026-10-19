@@ -77,3 +77,50 @@ class PendingTurn(SQLModel, table=True):
 
     campaign_id: int = Field(foreign_key="campaign.id", primary_key=True)
     state: str = Field(sa_column=Column(Text, nullable=False))
+
+
+class Location(SQLModel, table=True):
+    """A place in a campaign. Created from the world definition or by the GM."""
+
+    __tablename__ = "location"
+
+    id: int | None = Field(default=None, primary_key=True)
+    campaign_id: int = Field(foreign_key="campaign.id", index=True)
+    name: str = Field(max_length=120)
+    description: str = Field(sa_column=Column(Text, nullable=False))
+
+
+class Actor(SQLModel, table=True):
+    """A character in a campaign: the player character (`kind` "pc") or an NPC.
+
+    The PC has no personality, accent, or quirks. Every actor is at exactly one location."""
+
+    __tablename__ = "actor"
+
+    id: int | None = Field(default=None, primary_key=True)
+    campaign_id: int = Field(foreign_key="campaign.id", index=True)
+    kind: str = Field(max_length=8)
+    name: str = Field(max_length=120)
+    location_id: int = Field(foreign_key="location.id")
+    description: str = Field(default="", sa_column=Column(Text, nullable=False))
+    personality: str = Field(default="", max_length=255)
+    accent: str = Field(default="", max_length=255)
+    # A JSON list of short strings.
+    quirks: str = Field(default="[]", sa_column=Column(Text, nullable=False))
+
+    @property
+    def quirk_list(self) -> list[str]:
+        return json.loads(self.quirks)
+
+
+class Note(SQLModel, table=True):
+    """A fact the GM recorded. Campaign-wide when both subject ids are null."""
+
+    __tablename__ = "note"
+
+    id: int | None = Field(default=None, primary_key=True)
+    campaign_id: int = Field(foreign_key="campaign.id", index=True)
+    text: str = Field(sa_column=Column(Text, nullable=False))
+    location_id: int | None = Field(default=None, foreign_key="location.id")
+    actor_id: int | None = Field(default=None, foreign_key="actor.id")
+    created_at: datetime = Field(default_factory=utcnow)

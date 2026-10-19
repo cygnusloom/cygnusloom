@@ -1,6 +1,6 @@
 # Cygnus Forge
 
-A web chat over an LLM, growing into an RPG. It has accounts (email and password) and campaigns (named chats). Each campaign has a world template and a rule set, both picked when it is created. Each message picks its model, so you can switch models mid-campaign.
+A web chat over an LLM, growing into an RPG. It has accounts (email and password) and campaigns (named chats). Each campaign has a world template and a rule set, both picked when it is created. Each message picks its model, so you can switch models mid-campaign. Campaigns also have structured role-play: locations, characters (the player character and NPCs), and notes.
 
 ## Run
 
@@ -39,7 +39,10 @@ The types the engine understands today:
 
 | Type | Where | Fields |
 | --- | --- | --- |
-| `world` | `worlds/<world>/` | `name`, `description`. Exactly one per world; `id` must equal the directory name. |
+| `world` | `worlds/<world>/` | `name`, `description`, `start_location` (the id of the location where the player character begins). Exactly one per world; `id` must equal the directory name. |
+| `location` | `worlds/<world>/` | `name`, `description`. A place in the world. Locations and characters share one namespace, so no two may have the same name (ignoring case). |
+| `npc` | `worlds/<world>/` | `name`, `location` (a location id), `description`. Optional `personality`, `accent`, and `quirks` (a list). Any trait left out is picked at random from the core tables. |
+| `table` | `rulesets/<rule_set>/` | `options`: a list of strings to pick from. The `core` rule set must declare the tables `personality`, `accent`, and `quirk`; any rule set may replace them. |
 | `rule_set` | `rulesets/<rule_set>/` | `name`, `description`. Exactly one per rule set; `id` must equal the directory name. |
 | `rule` | `rulesets/<rule_set>/` | `text`. A plain-text rule the AI GM follows. |
 | `python_module` | `rulesets/<rule_set>/` | `module`: a dotted import path, imported when the content loads. |
@@ -51,14 +54,23 @@ Content is trusted code. A `python_module` imports a Python module, which runs i
 
 Bundled content:
 
+Every campaign uses the `core` rule set, whatever its rule set. It is merged under the selected one: a definition in a rule set replaces the core definition with the same type and id, and a rule set can add its own. The core rule set defines the role-play rules, the role-play tools, and the NPC trait tables.
+
+- `core` rule set (loaded for every campaign): the role-play rules, the tools `create_location`, `create_npc`, `move_actor`, `add_note`, `search_notes`, and `speak`, and the tables `personality`, `accent`, and `quirk`. It is not selectable on its own.
 - `freeform` rule set: no fixed rules beyond keeping the world consistent unless the player asks otherwise. Its `social_roll` tool call asks the player to roll one d20 (the GM writes the prompt), then adds a relationship modifier and a circumstance modifier, which the AI GM decides. The player may type a free-form reply instead. The Python side is [rules/freeform.py](src/cygnusforge/rules/freeform.py) and the dice are in [rules/dice.py](src/cygnusforge/rules/dice.py).
-- `gnomeforest` world: a magical mushroom gnome forest.
+- `gnomeforest` world: a magical mushroom gnome forest. It starts the player character in Mossbell Hollow, with the locations Glowcap Ring and Spore Bridge, and the NPCs Mara Thistledown (with a fixed personality, accent, and quirks), Brin Gallowcap, and Old Hob (both with random traits).
 
 Tool calls: each message offers the rule set's `tool_call` entries to the model as function tools. When the model calls one, the engine runs the Python function with the model's arguments and returns the result to the model, which then writes its reply. A message may run up to three rounds of tool calls; a fourth request fails the turn. Bad calls (unknown name, invalid JSON, wrong or missing or unexpected arguments, or a function that raises) return an `error` object to the model instead of failing the turn, so it can recover. The transcript keeps the reply and the turn's activity lines (for example "You rolled 14 on the d20..."), but not the raw tool results; those are in the Transcript tab.
 
 Player input: a tool call with `player_input` pauses the turn. The page shows the GM's prompt, its `details` line (such as the modifiers), and a Roll button (or a text box for a free-form reply). The server rolls the dice when you click, so the turn cannot be rerolled. Nothing from a paused turn is saved, and the composer stays disabled until you answer. Continue retries a reply whose narration failed after your answer was stored, without rolling again. The dice use a random generator by default; tests seed it.
 
-Settings are fixed when a campaign is created. Databases from before the player-input change need a new database, because messages gained an `activity` column and there is a new `pending_turn` table. Delete `cygnusforge.db` or point `CYGNUSFORGE_DATABASE_URL` somewhere new.
+Structured role-play: every campaign has a player character (the PC), created with the character name on the new-campaign form, and starts at the world's start location. The PC is an actor like an NPC, and every actor is at exactly one location. The world's locations and NPCs are created with the campaign. The GM can add locations and NPCs (`create_location`, `create_npc`), move an actor (`move_actor`), and write notes (`add_note`). A note is campaign-wide, or attached to a location or an actor. The GM finds notes with `search_notes`, which matches every word of the query against the note's text and subject, newest first. The campaign page shows the characters, locations, and notes live. Names must be unique across locations and characters, and a character name cannot match an NPC already in the campaign.
+
+NPC traits (personality, accent, and quirks) are picked at random from the core tables when the NPC does not have them. They are not part of the GM's prompt; they reach the model only through speech.
+
+Speech: the GM does not write dialogue in its narration. To have an NPC speak, it calls `speak` with the NPC's name and the intent. The engine then makes a separate speech step with the same model as the turn. That step gets the NPC's details (who they are, personality, accent, quirks, and location) and the intent, and returns the dialogue. The GM's narration then uses the dialogue. Only the narration is saved. An NPC can only speak when it is at the PC's location; otherwise the tool returns an error and the GM can recover.
+
+Settings are fixed when a campaign is created. Databases from before the player-input or structured role-play changes need a new database: messages gained an `activity` column, there is a `pending_turn` table, and the schema gained `location`, `actor`, and `note` tables. Delete `cygnusforge.db` or point `CYGNUSFORGE_DATABASE_URL` somewhere new.
 
 ## Configuration
 
@@ -97,6 +109,7 @@ __FAKE__:{"turns": [
 
 - `rounds` lists the tool calls the GM makes, one list per round. The engine runs them for real, so each name must be a tool in the rule set. Decision calls get these rounds; the narration does not. A `social_roll` call needs a `prompt` argument, and it pauses the turn until the roll (or a text reply) is posted.
 - `text` is the narration the player reads.
+- `speech` maps an NPC's name to the dialogue its speech step returns. An NPC not listed there gets the intent back as its dialogue.
 - `error` makes the turn fail and saves nothing. The failed message is not kept, so resending it retries the same entry until you send a new directive.
 - A newer directive replaces the older one. When the script runs out, the model echoes your last message.
 

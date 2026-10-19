@@ -26,6 +26,7 @@ def _new_campaign(
     name: str = "Test chat",
     world_template: str = "gnomeforest",
     rule_set: str = "freeform",
+    character_name: str = "Ada",
 ):
     token = csrf_token(client, "/campaigns/new")
     return client.post(
@@ -35,6 +36,7 @@ def _new_campaign(
             "name": name,
             "world_template": world_template,
             "rule_set": rule_set,
+            "character_name": character_name,
         },
         follow_redirects=False,
     )

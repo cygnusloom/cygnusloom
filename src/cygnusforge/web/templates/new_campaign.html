@@ -10,6 +10,10 @@
         <input type="text" name="name" value="{{ campaign_name }}" required maxlength="120">
       </label>
       <label>
+        Character name
+        <input type="text" name="character_name" value="{{ character_name }}" required maxlength="120">
+      </label>
+      <label>
         World
         <select name="world_template" required>
           {% for world in world_templates %}

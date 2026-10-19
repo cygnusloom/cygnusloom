@@ -21,7 +21,16 @@ def _write(root: Path, files: dict[str, Any]) -> None:
 
 
 def _world(name: str = "Testland", ident: str = "testland") -> list[dict[str, str]]:
-    return [{"type": "world", "id": ident, "name": name, "description": "A test world."}]
+    return [
+        {
+            "type": "world",
+            "id": ident,
+            "name": name,
+            "description": "A test world.",
+            "start_location": "town",
+        },
+        {"type": "location", "id": "town", "name": "Town", "description": "A small town."},
+    ]
 
 
 def _social_tool(**overrides: Any) -> dict[str, Any]:
@@ -56,6 +65,17 @@ def _rule_set(ident: str = "testset") -> list[dict[str, str]]:
     return [{"type": "rule_set", "id": ident, "name": "Test set", "description": "For tests."}]
 
 
+CORE_TOOLS = {"create_location", "create_npc", "move_actor", "add_note", "search_notes", "speak"}
+
+
+def _core() -> list[dict[str, Any]]:
+    tables = [{"type": "table", "id": name, "options": ["one"]} for name in NPC_TABLES]
+    return [*_rule_set("core"), *tables]
+
+
+NPC_TABLES = ("personality", "accent", "quirk")
+
+
 @pytest.fixture
 def tree(tmp_path: Path) -> Path:
     """A minimal valid content tree. Tests break one piece at a time."""
@@ -63,6 +83,7 @@ def tree(tmp_path: Path) -> Path:
         tmp_path,
         {
             "worlds/testland/world.json": _world(),
+            "rulesets/core/rule_set.json": _core(),
             "rulesets/testset/rule_set.json": _rule_set(),
         },
     )
@@ -76,7 +97,7 @@ def test_bundled_content_loads():
     freeform = library.rule_sets["freeform"]
     assert freeform.name == "Freeform"
     assert "consistency" in freeform.rules
-    assert set(freeform.tool_calls) == {"social_roll"}
+    assert set(freeform.tool_calls) == CORE_TOOLS | {"social_roll"}
 
 
 def test_bundled_social_roll_is_a_tool_call_backed_by_python():
@@ -283,7 +304,15 @@ def test_world_needs_exactly_one_world_object(tree: Path):
 
 
 def test_world_needs_a_name(tree: Path):
-    _write(tree, {"worlds/testland/world.json": [{"type": "world", "id": "testland"}]})
+    _write(
+        tree,
+        {
+            "worlds/testland/world.json": [
+                {"type": "world", "id": "testland", "start_location": "town"},
+                {"type": "location", "id": "town", "name": "Town", "description": "Here."},
+            ]
+        },
+    )
     with pytest.raises(ContentError, match="'name' must be a non-empty string"):
         ContentLibrary.load(tree)
 
@@ -406,3 +435,57 @@ def test_roll_type_is_no_longer_read(tree: Path):
         },
     )
     assert ContentLibrary.load(tree).rule_sets["testset"].tool_calls == {}
+
+
+def test_core_rules_and_tables_reach_every_rule_set(tree: Path):
+    _write(tree, {"rulesets/core/rules.json": [{"type": "rule", "id": "speech", "text": "Core."}]})
+    library = ContentLibrary.load(tree)
+    rule_set = library.rule_sets["testset"]
+    assert "testset" in library.rule_sets and "core" not in library.rule_sets
+    assert rule_set.rules == {"speech": "Core."}
+    assert set(rule_set.tables) == set(NPC_TABLES)
+
+
+def test_rule_set_overrides_core_rules_and_tables(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/core/rules.json": [{"type": "rule", "id": "speech", "text": "Core."}],
+            "rulesets/testset/rules.json": [
+                {"type": "rule", "id": "speech", "text": "Test set."},
+                {"type": "table", "id": "accent", "options": ["burr", "lilt"]},
+            ],
+        },
+    )
+    library = ContentLibrary.load(tree)
+    rule_set = library.rule_sets["testset"]
+    assert rule_set.rules == {"speech": "Test set."}
+    assert rule_set.tables["accent"] == ("burr", "lilt")
+    assert rule_set.tables["quirk"] == ("one",)
+    assert library.core.rules == {"speech": "Core."}
+
+
+@pytest.mark.parametrize("missing", NPC_TABLES)
+def test_core_must_declare_every_npc_table(tree: Path, missing: str):
+    core = [d for d in _core() if d.get("id") != missing]
+    _write(tree, {"rulesets/core/rule_set.json": core})
+    with pytest.raises(ContentError, match=f"missing table {missing!r}"):
+        ContentLibrary.load(tree)
+
+
+def test_start_location_must_be_a_declared_location(tree: Path):
+    world = _world()
+    world[0]["start_location"] = "nowhere"
+    _write(tree, {"worlds/testland/world.json": world})
+    with pytest.raises(ContentError, match="start_location 'nowhere' is not a location"):
+        ContentLibrary.load(tree)
+
+
+def test_npc_must_be_in_a_declared_location(tree: Path):
+    world = [
+        *_world(),
+        {"type": "npc", "id": "bo", "name": "Bo", "location": "nowhere", "description": "A bo."},
+    ]
+    _write(tree, {"worlds/testland/world.json": world})
+    with pytest.raises(ContentError, match="npc 'bo' is in unknown location 'nowhere'"):
+        ContentLibrary.load(tree)

@@ -1,0 +1,85 @@
+[
+  {
+    "type": "rule_set",
+    "id": "core",
+    "name": "Core",
+    "description": "Rules every campaign uses: locations, NPCs, notes, and speech. A campaign's own rule set can replace any of these by using the same id."
+  },
+  {
+    "type": "python_module",
+    "id": "core",
+    "module": "cygnusforge.rules.core"
+  },
+  {
+    "type": "rule",
+    "id": "locations",
+    "text": "Locations are places the characters can be in. Create a location when the story reaches a new place, and give it a name and a description the players can picture. The player character and every NPC are at exactly one location. Move the player character when they travel."
+  },
+  {
+    "type": "rule",
+    "id": "npcs",
+    "text": "NPCs are people (or other creatures) the player character can meet. Create an NPC when the story needs one, place it at a location, and describe who they are. NPCs have a personality, an accent, and quirks. Keep them consistent with what has happened. Only an NPC who is at the player character's location can speak to them."
+  },
+  {
+    "type": "rule",
+    "id": "notes",
+    "text": "Keep notes for facts the players should be able to recall later: promises, secrets, clues, and anything established about a place or an NPC. Attach a note to a location or NPC when it is about that subject, and leave it campaign-wide otherwise. Search notes before answering questions about past events."
+  },
+  {
+    "type": "rule",
+    "id": "speech",
+    "text": "NPC dialogue is written separately. Never write an NPC's words in the narration yourself. To make an NPC speak, call speak with the NPC's name and what they want to say. Then quote the dialogue exactly as the tool returns it."
+  },
+  {
+    "type": "table",
+    "id": "personality",
+    "options": [
+      "cheerful and talkative",
+      "gruff and suspicious",
+      "patient and gentle",
+      "anxious and easily startled",
+      "proud and quick to take offense",
+      "curious and full of questions",
+      "dry and sarcastic",
+      "warm and protective",
+      "greedy but honest",
+      "solemn and careful with words",
+      "boisterous and generous",
+      "shy and eager to please"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "accent",
+    "options": [
+      "soft and lilting",
+      "clipped and blunt",
+      "drawling and slow",
+      "rolling with long vowels",
+      "sing-song",
+      "rough and rural",
+      "precise and formal",
+      "whispery",
+      "heavy with a hill-country burr",
+      "quick and slurred"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "quirk",
+    "options": [
+      "taps a finger against their lips when thinking",
+      "hums under their breath",
+      "always eats something while talking",
+      "refers to everyone as 'friend'",
+      "counts things under their breath",
+      "never makes eye contact",
+      "speaks in proverbs",
+      "adjusts their clothes constantly",
+      "ends sentences with a question",
+      "keeps glancing at the sky",
+      "collects small bits of mushroom",
+      "tells the same joke twice"
+    ]
+  }
+]

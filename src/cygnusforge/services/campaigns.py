@@ -21,6 +21,7 @@ from cygnusforge.llm.base import (
     complete,
 )
 from cygnusforge.llm.registry import ProviderFactory
+from cygnusforge.rules.context import ToolContext
 from cygnusforge.rules.dice import roll_total
 from cygnusforge.services.common import InvalidInput, NotFound, session_scope
 from cygnusforge.services.tools import (
@@ -31,19 +32,27 @@ from cygnusforge.services.tools import (
     run_tool,
     tool_specs,
 )
+from cygnusforge.services.world import WorldView, seed_campaign, snapshot, world_state_text
 
 MAX_NAME = 120
 MAX_MESSAGE = 8000
 MAX_TOOL_ROUNDS = 3
 SYSTEM_PROMPT = "You are a helpful assistant."
 DECIDE_INSTRUCTION = (
-    "Decision step. Decide whether this action needs a roll or another tool, and call the tool "
-    "if it does. Do not narrate here; the narration comes in the next step. If no tool is "
+    "Decision step. Decide whether this action needs a roll, another tool, or an NPC to speak, "
+    "and call the tool if it does. To have an NPC say something, call speak; do not write their "
+    "words yourself. Do not narrate here; the narration comes in the next step. If no tool is "
     "needed, reply with one short sentence saying so."
 )
 NARRATE_INSTRUCTION = (
     "Narration step. Write what the player sees next, in a few sentences (guidance, not a hard "
-    "limit). Base the outcome on the decision and any tool results above. Do not call tools."
+    "limit). Base the outcome on the decision and any tool results above. Copy every NPC line "
+    "exactly from a speak result, and do not write any other words for an NPC. Do not call tools."
+)
+SPEECH_INSTRUCTION = (
+    "Speech step. Write only the words the speaker says aloud to the player, in character, "
+    "following the speaker's personality, accent, and quirks, and the intent given. Do not "
+    "describe actions and do not narrate. Reply with the spoken words only."
 )
 SUMMARY_PROMPT = (
     "You keep the memory of a roleplaying campaign. Given the summary so far and new events, "
@@ -69,14 +78,20 @@ def create_campaign(
     name: str,
     world_template: str,
     rule_set: str,
+    character_name: str,
+    rng: random.Random | None = None,
 ) -> Campaign:
     name = (name or "").strip()
     if not name or len(name) > MAX_NAME:
         raise InvalidInput(f"name must be 1 to {MAX_NAME} characters")
+    character_name = (character_name or "").strip()
+    if not character_name or len(character_name) > MAX_NAME:
+        raise InvalidInput(f"character name must be 1 to {MAX_NAME} characters")
     if world_template not in library.world_templates:
         raise InvalidInput("that world template is not available")
     if rule_set not in library.rule_sets:
         raise InvalidInput("that rule set is not available")
+    template = library.world_templates[world_template]
     with session_scope(engine) as db:
         campaign = Campaign(
             owner_id=owner_id,
@@ -85,7 +100,16 @@ def create_campaign(
             rule_set=rule_set,
         )
         db.add(campaign)
-        db.commit()
+        db.flush()
+        # Seeding commits the campaign's world with it. If it fails, nothing is kept.
+        seed_campaign(
+            db,
+            campaign.id,
+            template,
+            library.core.tables,
+            rng if rng is not None else random.Random(),
+            character_name,
+        )
         db.refresh(campaign)
         return campaign
 
@@ -107,6 +131,20 @@ def get_campaign(engine: Engine, owner_id: int, campaign_id: int) -> Campaign:
         if campaign is None or campaign.owner_id != owner_id:
             raise NotFound("campaign not found")
         return campaign
+
+
+@dataclass(frozen=True)
+class CampaignWorld:
+    """The structured world as the page shows it, and as the GM's prompt describes it."""
+
+    view: WorldView
+    text: str
+
+
+def campaign_world(engine: Engine, owner_id: int, campaign_id: int) -> CampaignWorld:
+    get_campaign(engine, owner_id, campaign_id)
+    with session_scope(engine) as db:
+        return CampaignWorld(view=snapshot(db, campaign_id), text=world_state_text(db, campaign_id))
 
 
 def list_messages(engine: Engine, campaign_id: int) -> list[Message]:
@@ -136,7 +174,11 @@ class ContextPart:
 
 
 def system_parts(
-    rule_set_id: str, rules: Mapping[str, str], summary: str, summary_through: int
+    rule_set_id: str,
+    rules: Mapping[str, str],
+    summary: str,
+    summary_through: int,
+    world_text: str = "",
 ) -> list[ContextPart]:
     """The system prompt in sections. Joined with blank lines, they are the system message."""
     parts = [ContextPart("system", "Base prompt", SYSTEM_PROMPT)]
@@ -150,6 +192,8 @@ def system_parts(
                 "Rules for this campaign:\n" + rule_lines,
             )
         )
+    if world_text:
+        parts.append(ContextPart("system", "World state", world_text))
     if summary:
         parts.append(
             ContextPart(
@@ -193,13 +237,21 @@ class ContextUsage:
 
 
 def context_usage(
-    campaign: Campaign, history: Sequence[Message], rules: Mapping[str, str], limit: int
+    campaign: Campaign,
+    history: Sequence[Message],
+    rules: Mapping[str, str],
+    limit: int,
+    world_text: str = "",
 ) -> ContextUsage:
     unsummarized = [m for m in history if m.id > campaign.summary_through]
     used = sum(
         part.tokens
         for part in system_parts(
-            campaign.rule_set, rules, campaign.context_summary, campaign.summary_through
+            campaign.rule_set,
+            rules,
+            campaign.context_summary,
+            campaign.summary_through,
+            world_text,
         )
     )
     used += sum(estimate_tokens(m.content) for m in unsummarized)
@@ -380,6 +432,7 @@ async def _advance(
     model_name: str,
     state: _Turn,
     tool_calls: Mapping[str, ToolCall],
+    ctx: ToolContext,
 ) -> AsyncIterator[TurnEvent | _Final]:
     """Carry the reply forward until it needs the player (yielding Prompt and returning) or the
     narration is complete (yielding _Final).
@@ -392,7 +445,7 @@ async def _advance(
         if state.queue:
             request = state.queue[0]
             yield Status(f"Running {request.name}...")
-            run = run_tool(tool_calls, request)
+            run = await run_tool(tool_calls, request, ctx=ctx)
             if isinstance(run, Ask):
                 state.prompt = run
                 yield Prompt(run.text, run.dice, run.details)
@@ -455,6 +508,57 @@ async def _advance(
     yield _Final(reply)
 
 
+async def _speak(
+    provider: Provider,
+    model_name: str,
+    state: _Turn,
+    profile: str,
+    intent: str,
+) -> str:
+    """Ask the speech step for an NPC's words. It sees the conversation as text, without the
+    tool calls, so it writes dialogue rather than narration."""
+    system = "\n\n".join(
+        [SPEECH_INSTRUCTION, state.messages[0]["content"], profile, f"Intent: {intent}"]
+    )
+    conversation = [
+        m
+        for m in state.messages[1:]
+        if m["role"] in ("user", "assistant") and "tool_calls" not in m
+    ]
+    label = f"Speech step (round {state.rounds})"
+    state.context.append(ContextPart("system", label, system))
+    reply = (
+        await provider.chat(
+            model_name, [{"role": "system", "content": system}, *conversation], None
+        )
+    ).text.strip()
+    state.context.append(ContextPart("assistant", f"{label} reply", reply))
+    if not reply:
+        raise LLMError("the speech step returned no dialogue")
+    return reply
+
+
+def _tool_context(
+    engine: Engine,
+    library: ContentLibrary,
+    rng: random.Random,
+    provider: Provider,
+    model_name: str,
+    state: _Turn,
+    campaign_id: int,
+) -> ToolContext:
+    async def speak(profile: str, intent: str) -> str:
+        return await _speak(provider, model_name, state, profile, intent)
+
+    return ToolContext(
+        engine=engine,
+        campaign_id=campaign_id,
+        rng=rng,
+        tables=library.core.tables,
+        speak=speak,
+    )
+
+
 def _store_pending(engine: Engine, campaign_id: int, state: _Turn) -> None:
     with session_scope(engine) as db:
         row = db.get(PendingTurn, campaign_id)
@@ -472,9 +576,10 @@ async def _drive(
     tool_calls: Mapping[str, ToolCall],
     state: _Turn,
     campaign_id: int,
+    ctx: ToolContext,
 ) -> AsyncIterator[TurnEvent]:
     """Run the reply until it is saved or paused. A pause is stored before the player hears of it."""
-    async for event in _advance(provider, model_name, state, tool_calls):
+    async for event in _advance(provider, model_name, state, tool_calls, ctx):
         if isinstance(event, _Final):
             message_id = _save_turn(engine, campaign_id, state, event.text)
             yield Saved(message_id)
@@ -533,6 +638,7 @@ async def stream_message(
     campaign_id: int,
     text: str,
     model: str,
+    rng: random.Random | None = None,
 ) -> AsyncIterator[TurnEvent]:
     """Send a user message to `model` and yield what happens while the GM replies.
 
@@ -557,12 +663,14 @@ async def stream_message(
     if rule_set is None:
         raise InvalidInput("that campaign's rule set is no longer available")
     provider, model_name = providers(model)
+    with session_scope(engine) as db:
+        world_text = world_state_text(db, campaign.id)
 
     summary = campaign.context_summary
     watermark = campaign.summary_through
     history = [m for m in list_messages(engine, campaign.id) if m.id > watermark]
     prompt_tokens = sum(
-        p.tokens for p in system_parts(rule_set.id, rule_set.rules, summary, watermark)
+        p.tokens for p in system_parts(rule_set.id, rule_set.rules, summary, watermark, world_text)
     )
     prompt_tokens += estimate_tokens(text) + sum(estimate_tokens(m.content) for m in history)
     summary_record: list[ContextPart] = []
@@ -582,7 +690,7 @@ async def stream_message(
             watermark = folded[-1].id or watermark
             history = history[start:]
 
-    system = system_parts(rule_set.id, rule_set.rules, summary, watermark)
+    system = system_parts(rule_set.id, rule_set.rules, summary, watermark, world_text)
     player = ContextPart("user", "This message (player)", text)
     conversation = [
         *(ContextPart(m.role, _message_source(m), m.content) for m in history),
@@ -605,8 +713,17 @@ async def stream_message(
         messages=messages,
         round_start=round_start,
     )
+    ctx = _tool_context(
+        engine,
+        library,
+        rng if rng is not None else random.Random(),
+        provider,
+        model_name,
+        state,
+        campaign.id,
+    )
     async for event in _drive(
-        engine, provider, model_name, rule_set.tool_calls, state, campaign.id
+        engine, provider, model_name, rule_set.tool_calls, state, campaign.id, ctx
     ):
         yield event
 
@@ -638,6 +755,15 @@ async def resume_turn(
     if rule_set is None:
         raise InvalidInput("that campaign's rule set is no longer available")
     provider, model_name = providers(state.model)
+    ctx = _tool_context(
+        engine,
+        library,
+        rng if rng is not None else random.Random(),
+        provider,
+        model_name,
+        state,
+        campaign.id,
+    )
 
     if action == "continue":
         if state.prompt is not None:
@@ -647,7 +773,7 @@ async def resume_turn(
     elif action == "roll":
         answer: RollAnswer | TextAnswer = RollAnswer(roll_total(state.prompt.dice, rng))
         request = state.queue.pop(0)
-        run = run_tool(rule_set.tool_calls, request, answer)
+        run = await run_tool(rule_set.tool_calls, request, answer, ctx=ctx)
         assert isinstance(run, ToolRun)
         _record_tool(state, request, run)
         state.prompt = None
@@ -661,7 +787,7 @@ async def resume_turn(
         if len(clean) > MAX_MESSAGE:
             raise InvalidInput(f"the reply must be at most {MAX_MESSAGE} characters")
         request = state.queue.pop(0)
-        run = run_tool(rule_set.tool_calls, request, TextAnswer(clean))
+        run = await run_tool(rule_set.tool_calls, request, TextAnswer(clean), ctx=ctx)
         assert isinstance(run, ToolRun)
         _record_tool(state, request, run)
         state.prompt = None
@@ -670,7 +796,7 @@ async def resume_turn(
     else:
         raise InvalidInput("that action is not available")
     async for event in _drive(
-        engine, provider, model_name, rule_set.tool_calls, state, campaign.id
+        engine, provider, model_name, rule_set.tool_calls, state, campaign.id, ctx
     ):
         yield event
 
