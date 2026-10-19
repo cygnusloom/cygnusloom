@@ -163,7 +163,22 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .views > .workspace, .views > .view { flex: 1; min-height: 0; }
 [data-view][hidden] { display: none; }
 .view { padding: 1rem 1.25rem; overflow-y: auto; }
-.creation { padding-inline: max(1.25rem, calc((100% - 40rem) / 2)); }
+.creation { --creation-width: 72rem; padding-inline: max(1.25rem, calc((100% - var(--creation-width)) / 2)); }
+.creation-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: 1rem; align-items: start; }
+.template-tables { display: contents; }
+.template-tables[hidden] { display: none; }
+.creation-panel { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; margin: 0; padding: 0.9rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
+.creation-panel h3 { margin: 0; font-size: 1rem; }
+.creation-panel label { margin: 0; }
+.creation-panel-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.dice { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; padding: 0; }
+.dice svg { width: 1.25rem; height: 1.25rem; }
+.choice { position: relative; display: block; margin: 0; padding: 0.45rem 0.6rem; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; line-height: 1.35; }
+.choice:hover { border-color: var(--accent); }
+.choice input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+.choice:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.choice:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.choice-detail { display: block; margin-top: 0.2rem; font-size: 0.9em; }
 .drawer { position: absolute; top: 0; bottom: 0; left: 0; z-index: 1; width: 50%; box-sizing: border-box; display: flex; flex-direction: column; padding: 1rem 1.25rem; overflow-y: auto; background: var(--panel); border-right: 1px solid var(--border); transform: translateX(-100%); visibility: hidden; transition: transform 0.2s ease, visibility 0.2s; }
 .drawer.open { transform: none; visibility: visible; }
 .panel-header { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }

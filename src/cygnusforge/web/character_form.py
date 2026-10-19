@@ -76,9 +76,10 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
 
 
 def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
-    """The arguments a player's form stands for. Parts left blank are left out, so the engine
-    rolls or blanks them. Groups the rule set does not define are left out too, since the
-    schema does not allow them. Values are checked against the schema by the caller."""
+    """The arguments a player's form stands for. Every template, table, and choice must be
+    given: the player picks each one or rolls it with a dice button. Text fields may be blank.
+    Groups the rule set does not define are left out, since the schema does not allow them.
+    Values are checked against the schema by the caller."""
     stats: dict[str, Any] = {}
     for stat in spec.stats.values():
         raw = form_text(form, STAT_PREFIX + stat.id)
@@ -89,21 +90,25 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
     templates = {}
     for kind in spec.kinds():
         template_id = form_text(form, TEMPLATE_PREFIX + kind)
-        if template_id:
-            templates[kind] = template_id
+        if not template_id:
+            raise InvalidInput(f"Choose a {kind} for your character")
+        templates[kind] = template_id
     fields = {}
     for field in spec.fields.values():
         value = form_text(form, FIELD_PREFIX + field.id)
         if value:
             fields[field.id] = value
+        elif field.table is not None:
+            raise InvalidInput(f"Choose {field.name}")
     for template_id in templates.values():
         template = spec.templates.get(template_id)
         if template is None:
             continue
         for table in template.tables:
             value = form_text(form, FIELD_PREFIX + table)
-            if value:
-                fields[table] = value
+            if not value:
+                raise InvalidInput(f"Choose {spec.table_names.get(table, table)}")
+            fields[table] = value
     submitted: dict[str, Any] = {"fields": fields}
     if spec.stats:
         submitted["stats"] = stats

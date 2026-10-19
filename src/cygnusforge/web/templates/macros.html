@@ -5,3 +5,24 @@
     <p class="muted">No notes yet.</p>
   {% endfor %}
 {%- endmacro %}
+
+{% macro choice(name, value, title, detail=None, required=False, data_select=None) -%}
+  <label class="choice">
+    <input type="radio" name="{{ name }}" value="{{ value }}"{% if required %} required{% endif %}{% if data_select %} data-template-select="{{ data_select }}"{% endif %}>
+    <span>{{ title }}</span>
+    {% if detail %}<span class="muted choice-detail">{{ detail }}</span>{% endif %}
+  </label>
+{%- endmacro %}
+
+{% macro dice_button(name, label) -%}
+  <button type="button" class="secondary dice" data-dice-for="{{ name }}" title="Pick a random {{ label }}" aria-label="Pick a random {{ label }}">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <rect x="3" y="3" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="8" cy="8" r="1.6" fill="currentColor"/>
+      <circle cx="16" cy="8" r="1.6" fill="currentColor"/>
+      <circle cx="12" cy="12" r="1.6" fill="currentColor"/>
+      <circle cx="8" cy="16" r="1.6" fill="currentColor"/>
+      <circle cx="16" cy="16" r="1.6" fill="currentColor"/>
+    </svg>
+  </button>
+{%- endmacro %}
