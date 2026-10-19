@@ -28,3 +28,18 @@ def test_default_model_alone_is_enough():
 def test_secret_key_is_required():
     with pytest.raises(RuntimeError, match="CYGNUSFORGE_SECRET_KEY"):
         load_settings({})
+
+
+def test_context_window_defaults_to_32k_tokens():
+    assert load_settings(BASE).llm_context_tokens == 32768
+
+
+def test_context_window_can_be_set():
+    settings = load_settings({**BASE, "CYGNUSFORGE_LLM_CONTEXT_TOKENS": " 8192 "})
+    assert settings.llm_context_tokens == 8192
+
+
+@pytest.mark.parametrize("value", ["0", "-5", "lots", "1.5", ""])
+def test_context_window_must_be_a_positive_whole_number(value: str):
+    with pytest.raises(RuntimeError, match="CYGNUSFORGE_LLM_CONTEXT_TOKENS"):
+        load_settings({**BASE, "CYGNUSFORGE_LLM_CONTEXT_TOKENS": value})

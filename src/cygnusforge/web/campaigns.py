@@ -12,6 +12,7 @@ from cygnusforge.auth.deps import page_user, verify_csrf
 from cygnusforge.db.models import User
 from cygnusforge.llm.base import LLMError
 from cygnusforge.services.campaigns import (
+    context_usage,
     create_campaign,
     get_campaign,
     list_campaigns,
@@ -87,6 +88,8 @@ async def post_message(request: Request, campaign_id: int) -> Response:
             request.app.state.engine,
             request.app.state.providers,
             settings.llm_models,
+            request.app.state.content,
+            settings.llm_context_tokens,
             user.id,
             campaign_id,
             text,
@@ -136,14 +139,23 @@ def _campaign_page(
     settings = request.app.state.settings
     library = request.app.state.content
     campaign = get_campaign(engine, user.id, campaign_id)
+    rule_set = library.rule_sets.get(campaign.rule_set)
+    messages = list_messages(engine, campaign.id)
+    context = context_usage(
+        campaign,
+        messages,
+        rule_set.rules.values() if rule_set else (),
+        settings.llm_context_tokens,
+    )
     return render(
         request,
         "campaign.html",
         status_code=status_code,
         campaign=campaign,
         world=library.world_templates.get(campaign.world_template),
-        rule_set=library.rule_sets.get(campaign.rule_set),
-        messages=list_messages(engine, campaign.id),
+        rule_set=rule_set,
+        messages=messages,
+        context=context,
         error=error,
         draft=draft,
         models=settings.llm_models,

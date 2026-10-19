@@ -8,6 +8,7 @@ DEFAULT_MODELS = ("ollama/gemma4:e2b", "fake/scripted")
 DEFAULT_MODEL = "ollama/gemma4:e2b"
 _PREFIX = "CYGNUSFORGE_LLM_"
 _LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
+DEFAULT_CONTEXT_TOKENS = 32768
 
 
 @dataclass(frozen=True)
@@ -19,6 +20,7 @@ class Settings:
     provider_base_urls: dict[str, str] = field(default_factory=dict)
     provider_api_keys: dict[str, str] = field(default_factory=dict)
     log_level: str = "INFO"
+    llm_context_tokens: int = DEFAULT_CONTEXT_TOKENS
 
 
 def _csv(value: str) -> tuple[str, ...]:
@@ -49,6 +51,13 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     log_level = env.get("CYGNUSFORGE_LOG_LEVEL", "INFO").strip().upper()
     if log_level not in _LOG_LEVELS:
         raise RuntimeError(f"CYGNUSFORGE_LOG_LEVEL must be one of {', '.join(_LOG_LEVELS)}")
+    raw_context = env.get("CYGNUSFORGE_LLM_CONTEXT_TOKENS", str(DEFAULT_CONTEXT_TOKENS)).strip()
+    try:
+        context_tokens = int(raw_context)
+    except ValueError:
+        context_tokens = 0
+    if context_tokens < 1:
+        raise RuntimeError("CYGNUSFORGE_LLM_CONTEXT_TOKENS must be a positive whole number")
     return Settings(
         database_url=env.get("CYGNUSFORGE_DATABASE_URL", "sqlite:///./cygnusforge.db"),
         secret_key=secret,
@@ -57,4 +66,5 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         provider_base_urls=_per_provider(env, "_BASE_URL"),
         provider_api_keys=_per_provider(env, "_API_KEY"),
         log_level=log_level,
+        llm_context_tokens=context_tokens,
     )
