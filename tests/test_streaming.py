@@ -14,7 +14,12 @@ from cygnusforge.llm.base import LLMError
 from cygnusforge.services.campaigns import list_messages
 from tests.conftest import csrf_token
 from tests.test_campaigns import _answer, _campaign_id
-from tests.test_context import RecordingProvider, _saved_message_count, _small_window_app, _stored
+from tests.test_context import (
+    RecordingProvider,
+    _saved_message_count,
+    _small_window_app,
+    _state,
+)
 from tests.test_tools import ROLL, _recording_provider, _script
 
 
@@ -93,10 +98,10 @@ def test_compression_is_announced_as_a_status(settings: Settings):
     events: list[dict[str, Any]] = []
     for index in range(10):
         events = _stream(client, campaign_id, f"m{index} " + "x" * 600)
-        if _stored(app, campaign_id).context_summary:
+        if _state(app, campaign_id).summary:
             break
 
-    assert _stored(app, campaign_id).context_summary
+    assert _state(app, campaign_id).summary
     assert {"type": "status", "text": "Summarizing older messages..."} in events
 
 
@@ -117,7 +122,7 @@ def test_retired_campaign_model_is_reported_in_band_and_saves_nothing(
     assert _saved_message_count(app) == 0
 
 
-def test_provider_failure_is_reported_and_saves_nothing(
+def test_provider_failure_is_reported_and_keeps_the_message(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     class Broken:
@@ -142,7 +147,9 @@ def test_provider_failure_is_reported_and_saves_nothing(
         "message": "provider broken is unreachable",
     }
     assert not any(e["type"] == "saved" for e in events)
-    assert _saved_message_count(app) == 0
+    assert _saved_message_count(app) == 1
+    turn = _state(app, campaign_id).turn
+    assert turn is not None and turn.failed
 
 
 def test_a_recording_provider_sees_the_streamed_turn(

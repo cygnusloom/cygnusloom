@@ -2,16 +2,15 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
-from typing import Any
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.db.models import PendingTurn
 from cygnusforge.llm.base import ChatReply, LLMError
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.services.campaigns import NARRATE_INSTRUCTION
+from cygnusforge.services.events import Turn, load_state
 from tests.conftest import csrf_token, register
 
 
@@ -76,10 +75,9 @@ def _answer(client: TestClient, campaign_id: int, kind: str, content: str = "") 
     return [json.loads(line) for line in response.text.splitlines() if line.strip()]
 
 
-def _pending(app: FastAPI, campaign_id: int) -> dict[str, Any] | None:
+def _pending(app: FastAPI, campaign_id: int) -> Turn | None:
     with Session(app.state.engine) as db:
-        row = db.get(PendingTurn, campaign_id)
-        return None if row is None else json.loads(row.state)
+        return load_state(db, campaign_id).turn
 
 
 def test_create_campaign_and_list_it(client_factory: Callable[[], TestClient]):
@@ -233,16 +231,21 @@ def test_scripted_directive_drives_later_turns(client_factory: Callable[[], Test
     assert ">two<" in page and ">one<" in page
 
 
-def test_scripted_error_turn_saves_nothing(client_factory: Callable[[], TestClient]):
+def test_scripted_error_turn_keeps_the_message_and_the_open_turn(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
     client, campaign_id = _campaign_id(client_factory)
     script = '__FAKE__:{"turns": [{"error": "upstream exploded"}]}'
     response = _send(client, campaign_id, f"boom {script}")
     assert response.status_code == 502
     assert "upstream exploded" in response.text
-    assert 'class="message ' not in client.get(f"/campaigns/{campaign_id}").text
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert page.count('class="message user"') == 1
+    assert "upstream exploded" in page
+    assert _pending(app, campaign_id) is not None
 
 
-def test_failed_reply_saves_nothing_and_keeps_draft(
+def test_failed_reply_keeps_the_message_and_offers_continue(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     class Broken:
@@ -258,8 +261,13 @@ def test_failed_reply_saves_nothing_and_keeps_draft(
     client, campaign_id = _campaign_id(client_factory)
     response = _send(client, campaign_id, "are you there?")
     assert response.status_code == 502
-    assert "are you there?" in response.text
-    assert 'class="message ' not in client.get(f"/campaigns/{campaign_id}").text
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert page.count('class="message user"') == 1
+    assert "are you there?" in page
+    assert "provider broken is unreachable" in page
+    assert 'name="kind" value="continue"' in page
+    turn = _pending(app, campaign_id)
+    assert turn is not None and turn.prompt is None and turn.failed
 
 
 def test_empty_message_is_rejected(client_factory: Callable[[], TestClient]):

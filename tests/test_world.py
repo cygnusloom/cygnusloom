@@ -9,14 +9,14 @@ from typing import Any
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from cygnusforge.content.library import ContentLibrary
-from cygnusforge.db.models import Actor, Location
 from cygnusforge.llm.base import ToolRequest
 from cygnusforge.rules.context import ToolContext
 from cygnusforge.services import world
 from cygnusforge.services.common import InvalidInput
+from cygnusforge.services.events import NPC_KIND, CampaignState, Character, load_state
 from cygnusforge.services.tools import ToolRun, run_tool
 from tests.conftest import csrf_token
 from tests.test_campaigns import _campaign_id, _new_campaign, _send, _signed_in
@@ -35,16 +35,18 @@ BUNDLED_NPCS = {
 def _ctx(
     app: FastAPI,
     campaign_id: int,
-    speak: Callable[[str, str], Any] | None = None,
+    speak: Callable[[str, str, str], Any] | None = None,
 ) -> ToolContext:
-    async def quiet_speak(profile: str, intent: str) -> str:
-        return "..."
+    async def quiet_speak(speaker: str, profile: str, intent: str) -> None:
+        return None
 
     return ToolContext(
-        engine=app.state.engine,
-        campaign_id=campaign_id,
-        rng=random.Random(0),
-        tables=TABLES,
+        world=world.WorldTools(
+            engine=app.state.engine,
+            campaign_id=campaign_id,
+            tables=TABLES,
+            rng=random.Random(0),
+        ),
         speak=speak or quiet_speak,
     )
 
@@ -60,37 +62,34 @@ def _db(app: FastAPI) -> Session:
     return Session(app.state.engine, expire_on_commit=False)
 
 
-def _location_of(db: Session, actor: Actor) -> str:
-    return db.get(Location, actor.location_id).name
+def _state(app: FastAPI, campaign_id: int) -> CampaignState:
+    with _db(app) as db:
+        return load_state(db, campaign_id)
 
 
-def _actors(db: Session, campaign_id: int) -> dict[str, Actor]:
-    rows = db.exec(select(Actor).where(Actor.campaign_id == campaign_id)).all()
-    return {actor.name: actor for actor in rows}
+def _actors(app: FastAPI, campaign_id: int) -> dict[str, Character]:
+    return {c.name: c for c in _state(app, campaign_id).characters.values()}
 
 
 def test_player_character_starts_at_the_world_start_location(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     _, campaign_id = _campaign_id(client_factory)
-    with _db(app) as db:
-        pc = db.exec(
-            select(Actor).where(Actor.campaign_id == campaign_id, Actor.kind == "pc")
-        ).one()
-        assert pc.name == "Ada"
-        assert _location_of(db, pc) == "Mossbell Hollow"
+    pc = _state(app, campaign_id).pc()
+    assert pc is not None
+    assert pc.name == "Ada"
+    assert pc.location == "Mossbell Hollow"
 
 
 def test_bundled_npcs_are_placed_at_their_locations(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     _, campaign_id = _campaign_id(client_factory)
-    with _db(app) as db:
-        npcs = {
-            name: _location_of(db, actor)
-            for name, actor in _actors(db, campaign_id).items()
-            if actor.kind == "npc"
-        }
+    npcs = {
+        c.name: c.location
+        for c in _state(app, campaign_id).characters.values()
+        if c.kind == NPC_KIND
+    }
     assert npcs == BUNDLED_NPCS
 
 
@@ -98,24 +97,22 @@ def test_npcs_without_listed_traits_get_random_ones(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     _, campaign_id = _campaign_id(client_factory)
-    with _db(app) as db:
-        actors = _actors(db, campaign_id)
+    actors = _actors(app, campaign_id)
     for name in ("Brin Gallowcap", "Old Hob"):
         npc = actors[name]
         assert npc.personality in TABLES["personality"]
         assert npc.accent in TABLES["accent"]
-        assert len(npc.quirk_list) == world.QUIRKS_PER_NPC
-        assert set(npc.quirk_list) <= set(TABLES["quirk"])
-        assert len(set(npc.quirk_list)) == world.QUIRKS_PER_NPC
+        assert len(npc.quirks) == world.QUIRKS_PER_NPC
+        assert set(npc.quirks) <= set(TABLES["quirk"])
+        assert len(set(npc.quirks)) == world.QUIRKS_PER_NPC
 
 
 def test_listed_npc_traits_are_kept(client_factory: Callable[[], TestClient], app: FastAPI):
     _, campaign_id = _campaign_id(client_factory)
-    with _db(app) as db:
-        mara = _actors(db, campaign_id)["Mara Thistledown"]
+    mara = _actors(app, campaign_id)["Mara Thistledown"]
     assert mara.personality == "warm and protective"
     assert mara.accent == "soft and lilting"
-    assert mara.quirk_list == ["refers to everyone as 'friend'", "speaks in proverbs"]
+    assert mara.quirks == ["refers to everyone as 'friend'", "speaks in proverbs"]
 
 
 def test_character_name_cannot_match_an_npc(client_factory: Callable[[], TestClient]):
@@ -223,8 +220,7 @@ def test_moving_the_player_changes_the_world_state(client_factory: Callable[[], 
     _, campaign_id = _campaign_id(client_factory)
     moved = _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
     assert moved == {"moved": "Ada", "location": "Glowcap Ring"}
-    with _db(app) as db:
-        text = world.world_state_text(db, campaign_id)
+    text = world.world_state_text(_state(app, campaign_id))
     assert "Player character: Ada, at Glowcap Ring." in text
     assert "- Brin Gallowcap, at Glowcap Ring:" in text
 
@@ -251,7 +247,8 @@ def test_notes_attach_to_the_campaign_a_location_or_a_character(
         world.add_note(db, campaign_id, "Find the lost key.")
         world.add_note(db, campaign_id, "The bridge sways.", subject="Spore Bridge")
         world.add_note(db, campaign_id, "Hob owes Mara a favour.", subject="Old Hob")
-        view = world.snapshot(db, campaign_id)
+        db.commit()
+    view = world.snapshot(_state(app, campaign_id))
     assert [(note.subject, note.text) for note in view.notes] == [
         ("Old Hob", "Hob owes Mara a favour."),
         ("Spore Bridge", "The bridge sways."),
@@ -292,9 +289,11 @@ def test_search_needs_every_word_and_returns_newest_first(
         world.add_note(db, campaign_id, "The bridge is unsafe.", subject="Spore Bridge")
         world.add_note(db, campaign_id, "Hob hides the key.", subject="Old Hob")
         world.add_note(db, campaign_id, "Find the key.")
-        keys = world.search_notes(db, campaign_id, "key")["notes"]
-        both = world.search_notes(db, campaign_id, "hob key")["notes"]
-        none = world.search_notes(db, campaign_id, "dragon")["notes"]
+        db.commit()
+    state = _state(app, campaign_id)
+    keys = world.search_notes(state, "key")["notes"]
+    both = world.search_notes(state, "hob key")["notes"]
+    none = world.search_notes(state, "dragon")["notes"]
     assert [note["text"] for note in keys] == ["Find the key.", "Hob hides the key."]
     assert [note["subject"] for note in both] == ["Old Hob"]
     assert none == []
@@ -305,7 +304,8 @@ def test_search_results_are_capped(client_factory: Callable[[], TestClient], app
     with _db(app) as db:
         for index in range(world.NOTE_RESULTS + 3):
             world.add_note(db, campaign_id, f"Clue {index}.")
-        found = world.search_notes(db, campaign_id, "clue")["notes"]
+        db.commit()
+        found = world.search_notes(load_state(db, campaign_id), "clue")["notes"]
     assert len(found) == world.NOTE_RESULTS
 
 
@@ -313,8 +313,7 @@ def test_speaker_profile_describes_an_npc_at_the_players_location(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _campaign_id(client_factory)
-    with _db(app) as db:
-        profile = world.speaker_profile(db, campaign_id, "Mara Thistledown")
+    profile = world.speaker_profile(_state(app, campaign_id), "Mara Thistledown")
     assert profile.splitlines()[0] == "Speaker: Mara Thistledown"
     assert "Personality: warm and protective" in profile
     assert "Location: Mossbell Hollow" in profile
@@ -322,20 +321,21 @@ def test_speaker_profile_describes_an_npc_at_the_players_location(
 
 def test_npcs_away_from_the_player_cannot_speak(client_factory: Callable[[], TestClient], app):
     _, campaign_id = _campaign_id(client_factory)
-    with _db(app) as db:
-        with pytest.raises(InvalidInput, match="not at the player character's location"):
-            world.speaker_profile(db, campaign_id, "Brin Gallowcap")
-        with pytest.raises(InvalidInput, match="does not need speaking for"):
-            world.speaker_profile(db, campaign_id, "Ada")
+    state = _state(app, campaign_id)
+    with pytest.raises(InvalidInput, match="not at the player character's location"):
+        world.speaker_profile(state, "Brin Gallowcap")
+    with pytest.raises(InvalidInput, match="does not need speaking for"):
+        world.speaker_profile(state, "Ada")
 
 
-def test_speak_tool_asks_for_dialogue_and_returns_it(client_factory: Callable[[], TestClient], app):
+def test_speak_tool_queues_dialogue_and_returns_only_an_acknowledgment(
+    client_factory: Callable[[], TestClient], app
+):
     _, campaign_id = _campaign_id(client_factory)
-    asked: list[tuple[str, str]] = []
+    asked: list[tuple[str, str, str]] = []
 
-    async def speak(profile: str, intent: str) -> str:
-        asked.append((profile, intent))
-        return "Mind the bog, dearie."
+    async def speak(speaker: str, profile: str, intent: str) -> None:
+        asked.append((speaker, profile, intent))
 
     result = _tool(
         app,
@@ -344,9 +344,10 @@ def test_speak_tool_asks_for_dialogue_and_returns_it(client_factory: Callable[[]
         {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
         speak=speak,
     )
-    assert result == {"speaker": "Mara Thistledown", "dialogue": "Mind the bog, dearie."}
+    assert result == {"speaker": "Mara Thistledown", "status": "dialogue queued for the narration"}
     assert len(asked) == 1
-    profile, intent = asked[0]
+    speaker, profile, intent = asked[0]
+    assert speaker == "Mara Thistledown"
     assert profile.startswith("Speaker: Mara Thistledown")
     assert intent == "Warn Ada about the bog."
 
@@ -357,9 +358,8 @@ def test_speak_tool_refuses_an_npc_away_from_the_player(
     _, campaign_id = _campaign_id(client_factory)
     asked: list[str] = []
 
-    async def speak(profile: str, intent: str) -> str:
+    async def speak(speaker: str, profile: str, intent: str) -> None:
         asked.append(profile)
-        return "..."
 
     result = _tool(
         app, campaign_id, "speak", {"npc": "Old Hob", "intent": "Greet Ada."}, speak=speak
@@ -374,6 +374,7 @@ def test_campaign_page_lists_places_characters_and_notes(
     client, campaign_id = _campaign_id(client_factory)
     with _db(app) as db:
         world.add_note(db, campaign_id, "The bridge is unsafe.", subject="Spore Bridge")
+        db.commit()
     page = client.get(f"/campaigns/{campaign_id}").text
     for text in (
         "Ada",
@@ -466,5 +467,5 @@ def test_speech_shows_a_writing_dialogue_status(
         for line in response.text.splitlines()
         if line.strip() and json.loads(line)["type"] == "status"
     ]
-    assert "Writing dialogue..." in statuses
+    assert "Writing dialogue for Mara Thistledown..." in statuses
     assert "Running speak..." not in statuses

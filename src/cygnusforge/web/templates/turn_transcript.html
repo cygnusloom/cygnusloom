@@ -1,11 +1,9 @@
-{% if entries is none %}
-<p class="muted">No transcript was recorded for this reply. It was sent before transcripts were saved.</p>
-{% else %}
 <p class="muted">{{ entries | length }} steps from your message to the reply, in the order they happened.</p>
 {% for entry in entries %}
 <section class="context-part">
   <header><span class="role">{{ entry.role }}</span> <span>{{ entry.source }}</span></header>
   <pre>{{ entry.content }}</pre>
 </section>
+{% else %}
+<p class="muted">No transcript was recorded for this reply.</p>
 {% endfor %}
-{% endif %}

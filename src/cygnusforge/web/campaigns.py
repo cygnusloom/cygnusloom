@@ -38,6 +38,9 @@ from cygnusforge.services.campaigns import (
     set_campaign_model,
     stream_message,
 )
+from cygnusforge.services.campaigns import (
+    discard_pending as discard_pending_turn,
+)
 from cygnusforge.services.common import Conflict, InvalidInput, NotFound
 from cygnusforge.services.names import random_campaign_name, random_character_name
 from cygnusforge.web.forms import form_text
@@ -203,6 +206,17 @@ async def post_message_stream(request: Request, campaign_id: int) -> Response:
     )
 
 
+@router.post("/{campaign_id}/pending/discard")
+async def discard_pending(request: Request, campaign_id: int) -> Response:
+    user = page_user(request)
+    await verify_csrf(request)
+    try:
+        discard_pending_turn(request.app.state.engine, user.id, campaign_id)
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
 @router.post("/{campaign_id}/pending/stream")
 async def post_pending_stream(request: Request, campaign_id: int) -> Response:
     """Answer the GM's prompt: `kind` is "roll", "text", or "continue", and `content` is the
@@ -218,6 +232,7 @@ async def post_pending_stream(request: Request, campaign_id: int) -> Response:
         request.app.state.providers,
         settings.llm_models,
         request.app.state.content,
+        settings.llm_context_tokens,
         user.id,
         campaign_id,
         action,
@@ -308,10 +323,10 @@ def _campaign_page(
     world = campaign_world(engine, user.id, campaign.id)
     context = context_usage(
         campaign,
+        world.state,
         messages,
         rule_set.rules if rule_set else {},
         settings.llm_context_tokens,
-        world.text,
     )
     return render(
         request,

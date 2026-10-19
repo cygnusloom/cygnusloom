@@ -5,9 +5,9 @@ from collections.abc import Callable
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+from sqlmodel import Session
 
-from cygnusforge.db.models import Campaign, Event, Location, Note
+from cygnusforge.db.models import Campaign, Event
 from cygnusforge.services.campaigns import campaign_log, list_messages
 from cygnusforge.services.events import (
     EVENT_TYPES,
@@ -16,10 +16,10 @@ from cygnusforge.services.events import (
     LocationAdded,
     NoteAdded,
     NpcAdded,
+    Place,
     decode,
     last_event_id,
-    named_entry,
-    rebuild,
+    load_state,
     record,
     truncate,
 )
@@ -65,7 +65,7 @@ def test_recorded_events_decode_to_what_was_recorded(
     assert row.channel == Channel.LOG
 
 
-def test_truncate_removes_later_events_and_rebuilds_the_projections(
+def test_truncate_removes_later_events_and_the_state_follows(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     _, campaign_id = _campaign_id(client_factory)
@@ -81,40 +81,31 @@ def test_truncate_removes_later_events_and_rebuilds_the_projections(
         db.commit()
 
     with Session(app.state.engine) as db:
-        names = {
-            row.name for row in db.exec(select(Location).where(Location.campaign_id == campaign_id))
-        }
-        notes = db.exec(select(Note).where(Note.campaign_id == campaign_id)).all()
-        assert "Test Ledge" in names
-        assert "Far Ledge" not in names
-        assert notes == []
+        state = load_state(db, campaign_id)
+        assert state.named("Test Ledge") is not None
+        assert state.named("Far Ledge") is None
+        assert state.notes == []
         assert last_event_id(db, campaign_id) == mark
 
 
-def test_rebuild_replays_the_log_to_the_same_projections(
+def test_state_before_an_event_folds_only_the_events_before_it(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     _, campaign_id = _campaign_id(client_factory)
     with Session(app.state.engine) as db:
         record(db, campaign_id, LocationAdded(name="Test Ledge", description="A ledge."))
         record(db, campaign_id, NoteAdded(text="A bird nests here.", subject="Test Ledge"))
+        later = record(db, campaign_id, LocationAdded(name="Far Ledge", description="Further."))
         db.commit()
-    with Session(app.state.engine) as db:
-        before = {
-            (row.name, row.description)
-            for row in db.exec(select(Location).where(Location.campaign_id == campaign_id))
-        }
-        rebuild(db, campaign_id)
-        db.commit()
-    with Session(app.state.engine) as db:
-        after = {
-            (row.name, row.description)
-            for row in db.exec(select(Location).where(Location.campaign_id == campaign_id))
-        }
-        notes = db.exec(select(Note).where(Note.campaign_id == campaign_id)).all()
 
-    assert after == before
-    assert [note.text for note in notes] == ["A bird nests here."]
+    with Session(app.state.engine) as db:
+        before = load_state(db, campaign_id, before=later)
+        now = load_state(db, campaign_id)
+
+    assert before.named("Far Ledge") is None
+    assert [note.text for note in before.notes] == ["A bird nests here."]
+    assert now.named("Far Ledge") is not None
+    assert [note.text for note in now.notes] == ["A bird nests here."]
 
 
 def test_named_entries_are_found_regardless_of_case(
@@ -125,10 +116,11 @@ def test_named_entries_are_found_regardless_of_case(
         record(db, campaign_id, LocationAdded(name="Test Ledge", description="A ledge."))
         db.commit()
     with Session(app.state.engine) as db:
-        entry = named_entry(db, campaign_id, "  test LEDGE ")
-        assert isinstance(entry, Location)
-        assert entry.name == "Test Ledge"
-        assert named_entry(db, campaign_id, "Nowhere") is None
+        state = load_state(db, campaign_id)
+    entry = state.named("  test LEDGE ")
+    assert isinstance(entry, Place)
+    assert entry.name == "Test Ledge"
+    assert state.named("Nowhere") is None
 
 
 def test_chat_is_in_the_transcript_and_not_in_the_log(

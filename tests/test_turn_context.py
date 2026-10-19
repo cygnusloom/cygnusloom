@@ -19,7 +19,13 @@ from cygnusforge.services.campaigns import (
 )
 from cygnusforge.services.events import ChatGM, record
 from tests.test_campaigns import _answer, _campaign_id, _send, _signed_in
-from tests.test_context import RecordingProvider, _send_until_summarized, _small_window_app, _stored
+from tests.test_context import (
+    RecordingProvider,
+    _send_until_summarized,
+    _small_window_app,
+    _state,
+    _stored,
+)
 from tests.test_tools import ROLL, _recording_provider, _script
 
 SOURCE_ID_RE = re.compile(r"^Message #(\d+) ")
@@ -129,7 +135,7 @@ def test_summary_part_appears_and_folded_messages_do_not(
     app = _small_window_app(settings, provider)
     client, campaign_id = _campaign_id(lambda: TestClient(app))
     _send_until_summarized(client, app, campaign_id, sends=10)
-    assert _stored(app, campaign_id).context_summary
+    assert _state(app, campaign_id).summary
     _send(client, campaign_id, "final")
     reply_id = _message_ids(app, campaign_id, "assistant")[-1]
     first_user = _message_ids(app, campaign_id, "user")[0]

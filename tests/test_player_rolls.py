@@ -59,7 +59,7 @@ def _owner_id(app: FastAPI, campaign_id: int) -> int:
         return db.get(Campaign, campaign_id).owner_id
 
 
-def test_a_pause_saves_nothing_and_shows_the_prompt(
+def test_a_pause_saves_the_prompt_but_no_reply(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     app.state.providers = lambda model_id: (_recording_provider(), model_id)
@@ -189,6 +189,7 @@ def test_the_player_roll_uses_the_given_generator(
             app.state.providers,
             app.state.settings.llm_models,
             app.state.content,
+            app.state.settings.llm_context_tokens,
             owner_id,
             campaign_id,
             "roll",

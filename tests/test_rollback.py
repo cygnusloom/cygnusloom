@@ -4,11 +4,11 @@ from collections.abc import Callable
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+from sqlmodel import Session
 
-from cygnusforge.db.models import Campaign, Location
+from cygnusforge.db.models import Campaign
 from cygnusforge.services.campaigns import campaign_log, list_messages
-from cygnusforge.services.events import LocationAdded, record
+from cygnusforge.services.events import LocationAdded, load_state, record
 from tests.conftest import csrf_token
 from tests.test_campaigns import _campaign_id, _pending, _send, _signed_in
 from tests.test_tools import ROLL, _recording_provider, _script
@@ -35,10 +35,7 @@ def _rollback(
 
 def _location_exists(app: FastAPI, campaign_id: int, name: str) -> bool:
     with Session(app.state.engine) as db:
-        rows = db.exec(
-            select(Location).where(Location.campaign_id == campaign_id, Location.name == name)
-        ).all()
-        return bool(rows)
+        return load_state(db, campaign_id).named(name) is not None
 
 
 def test_rollback_restores_the_chat_and_the_world_to_just_after_the_reply(
@@ -140,3 +137,41 @@ def _log(app: FastAPI, campaign_id: int) -> list[str]:
     with Session(app.state.engine) as db:
         owner_id = db.get(Campaign, campaign_id).owner_id
     return campaign_log(app.state.engine, owner_id, campaign_id)
+
+
+def test_discard_removes_a_failed_first_reply_and_its_message(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    app.state.providers = lambda model_id: (_recording_provider(), model_id)
+    client, campaign_id = _campaign_id(client_factory)
+    _send(client, campaign_id, _script({"error": "upstream exploded"}))
+    assert _pending(app, campaign_id) is not None
+
+    token = csrf_token(client, f"/campaigns/{campaign_id}")
+    response = client.post(
+        f"/campaigns/{campaign_id}/pending/discard",
+        data={"csrf_token": token},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert _pending(app, campaign_id) is None
+    assert list_messages(app.state.engine, campaign_id) == []
+    assert (
+        "Say something to start the conversation." in client.get(f"/campaigns/{campaign_id}").text
+    )
+
+
+def test_discard_keeps_the_earlier_exchange(client_factory: Callable[[], TestClient], app: FastAPI):
+    app.state.providers = lambda model_id: (_recording_provider(), model_id)
+    client, campaign_id = _campaign_id(client_factory)
+    _send(client, campaign_id, "First question.")
+    _send(client, campaign_id, _script({"error": "upstream exploded"}))
+    before = [m.role for m in list_messages(app.state.engine, campaign_id)]
+
+    token = csrf_token(client, f"/campaigns/{campaign_id}")
+    client.post(f"/campaigns/{campaign_id}/pending/discard", data={"csrf_token": token})
+
+    assert _pending(app, campaign_id) is None
+    assert before == ["user", "assistant", "user"]
+    assert [m.role for m in list_messages(app.state.engine, campaign_id)] == ["user", "assistant"]

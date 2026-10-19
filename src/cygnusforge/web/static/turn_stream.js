@@ -95,8 +95,10 @@
   };
 
   // Streams one turn into `reply`. Resolves once the server has saved the reply or paused for
-  // the player; the page then reloads so it shows the server's state.
-  const playTurn = async (url, data, reply) => {
+  // the player; the page then reloads so it shows the server's state. `attempt.started` is set
+  // once the server accepts the message, after which a failure must reload rather than restore
+  // the draft, because the message is already saved.
+  const playTurn = async (url, data, reply, attempt) => {
     const response = await fetch(url, {
       method: "POST",
       body: data,
@@ -107,6 +109,7 @@
     if (!response.ok || !isStream) {
       throw new TurnFailure("Could not send your message. Reload the page and try again.");
     }
+    attempt.started = true;
     let finished = false;
     await readLines(response.body, (item) => {
       switch (item.type) {
@@ -154,11 +157,16 @@
     const player = addBubble("user", "user");
     player.content.textContent = text;
     const reply = addBubble("assistant", "Cygnus");
+    const attempt = { started: false };
 
     try {
-      await playTurn(composer.dataset.streamAction, data, reply);
+      await playTurn(composer.dataset.streamAction, data, reply, attempt);
       reload();
     } catch (error) {
+      if (attempt.started) {
+        reload();
+        return;
+      }
       player.bubble.remove();
       reply.bubble.remove();
       textarea.value = draft;
@@ -183,14 +191,19 @@
       control.disabled = true;
     }
     const reply = addBubble("assistant", "Cygnus");
+    const attempt = { started: false };
     try {
-      await playTurn(form.action, data, reply);
+      await playTurn(form.action, data, reply, attempt);
       reload();
     } catch (error) {
-      sessionStorage.setItem(
-        FLASH_KEY,
-        error instanceof TurnFailure ? error.message : "The GM's reply did not finish. Try again.",
-      );
+      // Once the stream started, the server has recorded the failure and the reloaded page shows
+      // it, so only a failure before the stream needs a flash message.
+      if (!attempt.started) {
+        sessionStorage.setItem(
+          FLASH_KEY,
+          error instanceof TurnFailure ? error.message : "The GM's reply did not finish. Try again.",
+        );
+      }
       reload();
     }
   });

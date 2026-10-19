@@ -222,11 +222,12 @@ def test_model_rolls_then_narrates_and_only_the_narration_is_saved(
     offered = [spec["function"]["name"] for spec in recorder.calls[0]["tools"]]
     assert set(offered) == {"social_roll", *CORE_TOOL_NAMES}
     assert _saved(app, campaign_id) == [("user", script)]
-    assert _pending(app, campaign_id)["prompt"] == {
-        "text": "Roll to persuade.",
-        "dice": "1d20",
-        "details": "Modifiers: +1 relationship, +0 circumstance.",
-    }
+    prompt = _pending(app, campaign_id).prompt
+    assert (prompt.text, prompt.dice, prompt.details) == (
+        "Roll to persuade.",
+        "1d20",
+        "Modifiers: +1 relationship, +0 circumstance.",
+    )
 
     events = _answer(client, campaign_id, "roll")
 
@@ -292,3 +293,45 @@ def test_runaway_tool_calls_stop_and_save_no_reply(
     assert len(recorder.calls) == 4
     assert _saved(app, campaign_id) == [("user", script)]
     assert _pending(app, campaign_id) is not None
+
+    retried = _answer(client, campaign_id, "continue")
+    assert retried[-1]["type"] == "error" and retried[-1]["status"] == 502
+    assert _saved(app, campaign_id) == [("user", script)]
+
+
+SPEAK = {
+    "name": "speak",
+    "arguments": {"npc": "Mara Thistledown", "intent": "Greet Ada and ask for help."},
+}
+
+
+def test_npc_dialogue_is_queued_for_the_narration_not_sent_as_a_tool_result(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    client, campaign_id = _campaign_id(client_factory)
+    script = _script(
+        {
+            "rounds": [[SPEAK]],
+            "speech": {"Mara Thistledown": "Mind the bog, dearie."},
+            "text": "Mara looks up from the ladder and smiles.",
+        }
+    )
+
+    _send(client, campaign_id, script)
+
+    messages = recorder.calls[-1]["messages"]
+    tool_results = [m["content"] for m in messages if m["role"] == "tool"]
+    assert tool_results
+    assert all("Mind the bog" not in content for content in tool_results)
+    queued = [
+        m
+        for m in messages
+        if m["role"] == "system" and 'Mara Thistledown: "Mind the bog, dearie."' in m["content"]
+    ]
+    assert len(queued) == 1
+    assert _saved(app, campaign_id)[-1] == (
+        "assistant",
+        "Mara looks up from the ladder and smiles.",
+    )

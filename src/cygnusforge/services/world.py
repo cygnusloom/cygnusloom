@@ -1,30 +1,34 @@
-"""Locations, characters, and notes: the structured world that a campaign's GM edits.
+"""Places, characters, and notes: the world that a campaign's GM edits.
 
-Functions take an open session and commit their own changes. Problems the model can fix are
-raised as `InvalidInput`, and their messages are returned to the model as they are."""
+Writes check the campaign's current state, record events, and commit. Reads work on a state that
+is already folded from the log. Problems the model can fix are raised as `InvalidInput`, and their
+messages are returned to the model as they are."""
 
 from __future__ import annotations
 
 import random
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
-from sqlmodel import Session, select
+from sqlalchemy import Engine
+from sqlmodel import Session
 
 from cygnusforge.content.library import WorldTemplate
-from cygnusforge.db.models import Actor, Location, Note
-from cygnusforge.services.common import InvalidInput
+from cygnusforge.services.common import InvalidInput, session_scope
 from cygnusforge.services.events import (
     CAMPAIGN_WIDE,
     NPC_KIND,
-    PC_KIND,
     ActorMoved,
+    CampaignState,
+    Character,
     LocationAdded,
+    Note,
     NoteAdded,
     NpcAdded,
     PcAdded,
-    named_entry,
+    Place,
+    load_state,
     record,
 )
 
@@ -36,18 +40,64 @@ QUIRKS_PER_NPC = 2
 
 
 @dataclass(frozen=True)
-class NoteView:
-    subject: str
-    text: str
+class WorldView:
+    pc: Character | None
+    locations: list[Place]
+    npcs: list[Character]
+    notes: list[Note]
 
 
 @dataclass(frozen=True)
-class WorldView:
-    pc: Actor | None
-    locations: list[Location]
-    npcs: list[Actor]
-    notes: list[NoteView]
-    location_names: dict[int, str] = field(default_factory=dict)
+class WorldTools:
+    """The world as the rule set's tools use it. Each call runs in its own session and commits."""
+
+    engine: Engine
+    campaign_id: int
+    tables: Mapping[str, Sequence[str]]
+    rng: random.Random
+
+    def create_location(self, name: str, description: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return create_location(db, self.campaign_id, name, description)
+
+    def create_npc(
+        self,
+        name: str,
+        location: str,
+        description: str,
+        personality: str | None = None,
+        accent: str | None = None,
+        quirks: Sequence[str] | None = None,
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return create_npc(
+                db,
+                self.campaign_id,
+                self.tables,
+                self.rng,
+                name,
+                location,
+                description,
+                personality,
+                accent,
+                quirks,
+            )
+
+    def move_actor(self, name: str, location: str) -> dict[str, str]:
+        with session_scope(self.engine) as db:
+            return move_actor(db, self.campaign_id, name, location)
+
+    def add_note(self, text: str, subject: str | None = None) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return add_note(db, self.campaign_id, text, subject)
+
+    def search_notes(self, query: str) -> dict[str, list[dict[str, str]]]:
+        with session_scope(self.engine) as db:
+            return search_notes(load_state(db, self.campaign_id), query)
+
+    def speaker_profile(self, name: str) -> str:
+        with session_scope(self.engine) as db:
+            return speaker_profile(load_state(db, self.campaign_id), name)
 
 
 def seed_campaign(
@@ -58,7 +108,7 @@ def seed_campaign(
     rng: random.Random,
     character_name: str,
 ) -> None:
-    """Record a campaign's locations, the world's NPCs, and the player character as events."""
+    """Record a campaign's places, the world's NPCs, and the player character as events."""
     names: dict[str, str] = {}
     for spot in world.locations:
         record(db, campaign_id, LocationAdded(name=spot.name, description=spot.description))
@@ -75,14 +125,15 @@ def seed_campaign(
             quirks=npc.quirks,
         )
         record(db, campaign_id, event)
-    _ensure_free_name(db, campaign_id, character_name)
+    _ensure_free_name(load_state(db, campaign_id), character_name)
     record(db, campaign_id, PcAdded(name=character_name, location=names[world.start_location]))
     db.commit()
 
 
 def create_location(db: Session, campaign_id: int, name: str, description: str) -> dict[str, Any]:
+    state = load_state(db, campaign_id)
     name = _text(name, "name", MAX_NAME)
-    _ensure_free_name(db, campaign_id, name)
+    _ensure_free_name(state, name)
     text = _text(description, "description", MAX_TEXT)
     record(db, campaign_id, LocationAdded(name=name, description=text))
     db.commit()
@@ -101,9 +152,10 @@ def create_npc(
     accent: str | None = None,
     quirks: Sequence[str] | None = None,
 ) -> dict[str, Any]:
+    state = load_state(db, campaign_id)
     name = _text(name, "name", MAX_NAME)
-    _ensure_free_name(db, campaign_id, name)
-    where = _location_named(db, campaign_id, location)
+    _ensure_free_name(state, name)
+    where = _place_named(state, location)
     event = _npc_event(
         tables,
         rng,
@@ -127,8 +179,9 @@ def create_npc(
 
 
 def move_actor(db: Session, campaign_id: int, name: str, location: str) -> dict[str, str]:
-    actor = _actor_named(db, campaign_id, name)
-    where = _location_named(db, campaign_id, location)
+    state = load_state(db, campaign_id)
+    actor = _character_named(state, name)
+    where = _place_named(state, location)
     record(db, campaign_id, ActorMoved(name=actor.name, location=where.name))
     db.commit()
     return {"moved": actor.name, "location": where.name}
@@ -136,12 +189,13 @@ def move_actor(db: Session, campaign_id: int, name: str, location: str) -> dict[
 
 def add_note(
     db: Session, campaign_id: int, text: str, subject: str | None = None
-) -> dict[str, str]:
+) -> dict[str, Any]:
+    state = load_state(db, campaign_id)
     text = _text(text, "text", MAX_TEXT)
     subject_name: str | None = None
     label = _optional_text(subject, "subject")
     if label is not None:
-        entry = named_entry(db, campaign_id, label)
+        entry = state.named(label)
         if entry is None:
             raise InvalidInput(f"there is no location or character named {label!r}")
         subject_name = entry.name
@@ -150,12 +204,11 @@ def add_note(
     return {"noted": True, "subject": subject_name if subject_name is not None else CAMPAIGN_WIDE}
 
 
-def search_notes(db: Session, campaign_id: int, query: str) -> dict[str, list[dict[str, str]]]:
+def search_notes(state: CampaignState, query: str) -> dict[str, list[dict[str, str]]]:
     """Notes whose text or subject name contains every word of `query`, newest first."""
     words = _text(query, "query", MAX_TEXT).casefold().split()
-    view = snapshot(db, campaign_id)
     matches: list[dict[str, str]] = []
-    for note in view.notes:
+    for note in reversed(state.notes):
         haystack = f"{note.subject} {note.text}".casefold()
         if all(word in haystack for word in words):
             matches.append({"subject": note.subject, "text": note.text})
@@ -164,70 +217,51 @@ def search_notes(db: Session, campaign_id: int, query: str) -> dict[str, list[di
     return {"notes": matches}
 
 
-def speaker_profile(db: Session, campaign_id: int, name: str) -> str:
+def speaker_profile(state: CampaignState, name: str) -> str:
     """The NPC details a speech step needs. The NPC must be at the player character's location."""
-    actor = _actor_named(db, campaign_id, name)
-    if actor.kind != NPC_KIND:
-        raise InvalidInput(f"{actor.name} is the player character and does not need speaking for")
-    pc = _pc(db, campaign_id)
-    if pc is None or actor.location_id != pc.location_id:
-        raise InvalidInput(f"{actor.name} is not at the player character's location")
-    view = snapshot(db, campaign_id)
-    quirks = "; ".join(actor.quirk_list) or "none"
+    npc = _character_named(state, name)
+    if npc.kind != NPC_KIND:
+        raise InvalidInput(f"{npc.name} is the player character and does not need speaking for")
+    pc = state.pc()
+    if pc is None or npc.location != pc.location:
+        raise InvalidInput(f"{npc.name} is not at the player character's location")
+    quirks = "; ".join(npc.quirks) or "none"
     return "\n".join(
         [
-            f"Speaker: {actor.name}",
-            f"Who they are: {actor.description}",
-            f"Personality: {actor.personality}",
-            f"Accent: {actor.accent}",
+            f"Speaker: {npc.name}",
+            f"Who they are: {npc.description}",
+            f"Personality: {npc.personality}",
+            f"Accent: {npc.accent}",
             f"Quirks: {quirks}",
-            f"Location: {view.location_names[actor.location_id]}",
+            f"Location: {npc.location}",
         ]
     )
 
 
-def snapshot(db: Session, campaign_id: int) -> WorldView:
-    locations = list(
-        db.exec(select(Location).where(Location.campaign_id == campaign_id).order_by(Location.id))
-    )
-    actors = list(db.exec(select(Actor).where(Actor.campaign_id == campaign_id).order_by(Actor.id)))
-    notes = list(
-        db.exec(select(Note).where(Note.campaign_id == campaign_id).order_by(Note.id.desc()))
-    )
-    location_names = {loc.id: loc.name for loc in locations if loc.id is not None}
-    actor_names = {actor.id: actor.name for actor in actors if actor.id is not None}
-    note_views = [
-        NoteView(
-            subject=_subject(note, location_names, actor_names),
-            text=note.text,
-        )
-        for note in notes
-    ]
+def snapshot(state: CampaignState) -> WorldView:
     return WorldView(
-        pc=next((a for a in actors if a.kind == PC_KIND), None),
-        locations=locations,
-        npcs=[a for a in actors if a.kind == NPC_KIND],
-        notes=note_views,
-        location_names=location_names,
+        pc=state.pc(),
+        locations=list(state.places.values()),
+        npcs=[c for c in state.characters.values() if c.kind == NPC_KIND],
+        notes=list(reversed(state.notes)),
     )
 
 
-def world_state_text(db: Session, campaign_id: int) -> str:
+def world_state_text(state: CampaignState) -> str:
     """The current places and characters, for the GM's system prompt. Notes are searched, not sent."""
-    view = snapshot(db, campaign_id)
+    view = snapshot(state)
     if view.pc is None:
         return ""
     lines = [
-        f"Player character: {view.pc.name}, at {view.location_names[view.pc.location_id]}.",
+        f"Player character: {view.pc.name}, at {view.pc.location}.",
         "Locations:",
     ]
-    lines += [f"- {loc.name}: {loc.description}" for loc in view.locations]
+    lines += [f"- {place.name}: {place.description}" for place in view.locations]
     lines.append("NPCs:")
     if not view.npcs:
         lines.append("- none yet")
     for npc in view.npcs:
-        where = view.location_names[npc.location_id]
-        lines.append(f"- {npc.name}, at {where}: {npc.description}")
+        lines.append(f"- {npc.name}, at {npc.location}: {npc.description}")
     return "\n".join(lines)
 
 
@@ -261,35 +295,21 @@ def _npc_event(
     )
 
 
-def _subject(note: Note, location_names: Mapping[int, str], actor_names: Mapping[int, str]) -> str:
-    if note.location_id is not None:
-        return location_names.get(note.location_id, CAMPAIGN_WIDE)
-    if note.actor_id is not None:
-        return actor_names.get(note.actor_id, CAMPAIGN_WIDE)
-    return CAMPAIGN_WIDE
-
-
-def _pc(db: Session, campaign_id: int) -> Actor | None:
-    return db.exec(
-        select(Actor).where(Actor.campaign_id == campaign_id, Actor.kind == PC_KIND)
-    ).first()
-
-
-def _ensure_free_name(db: Session, campaign_id: int, name: str) -> None:
-    if named_entry(db, campaign_id, name) is not None:
+def _ensure_free_name(state: CampaignState, name: str) -> None:
+    if state.named(name) is not None:
         raise InvalidInput(f"the name {name!r} is already used by a location or character")
 
 
-def _location_named(db: Session, campaign_id: int, name: str) -> Location:
-    entry = named_entry(db, campaign_id, name)
-    if not isinstance(entry, Location):
+def _place_named(state: CampaignState, name: str) -> Place:
+    entry = state.named(name)
+    if not isinstance(entry, Place):
         raise InvalidInput(f"there is no location named {name!r}")
     return entry
 
 
-def _actor_named(db: Session, campaign_id: int, name: str) -> Actor:
-    entry = named_entry(db, campaign_id, name)
-    if not isinstance(entry, Actor):
+def _character_named(state: CampaignState, name: str) -> Character:
+    entry = state.named(name)
+    if not isinstance(entry, Character):
         raise InvalidInput(f"there is no character named {name!r}")
     return entry
 

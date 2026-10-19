@@ -13,7 +13,7 @@ from cygnusforge.config import Settings
 from cygnusforge.db.models import Campaign, Event
 from cygnusforge.llm.base import ChatReply, LLMError
 from cygnusforge.services.campaigns import SUMMARY_PROMPT, system_parts
-from cygnusforge.services.events import Channel
+from cygnusforge.services.events import CampaignState, Channel, load_state
 from cygnusforge.web.app import create_app
 from tests.test_campaigns import _campaign_id, _send
 
@@ -72,6 +72,11 @@ def _stored(app: FastAPI, campaign_id: int) -> Campaign:
         return campaign
 
 
+def _state(app: FastAPI, campaign_id: int) -> CampaignState:
+    with Session(app.state.engine) as db:
+        return load_state(db, campaign_id)
+
+
 def _saved_message_count(app: FastAPI) -> int:
     with Session(app.state.engine) as db:
         return db.exec(
@@ -82,7 +87,7 @@ def _saved_message_count(app: FastAPI) -> int:
 def _send_until_summarized(client: TestClient, app: FastAPI, campaign_id: int, sends: int) -> None:
     for index in range(sends):
         _send(client, campaign_id, f"m{index} " + "x" * 600)
-        if _stored(app, campaign_id).context_summary:
+        if _state(app, campaign_id).summary:
             return
 
 
@@ -121,9 +126,9 @@ def test_no_summary_when_the_chat_is_well_inside_the_window(settings: Settings):
         assert _send(client, campaign_id, "x" * 400).status_code == 303
     assert len(provider.calls) == 6
     assert provider.summarizer_calls() == []
-    campaign = _stored(app, campaign_id)
-    assert campaign.context_summary == ""
-    assert campaign.summary_through == 0
+    state = _state(app, campaign_id)
+    assert state.summary == ""
+    assert state.through == 0
 
 
 def test_history_is_summarized_at_half_the_window_and_the_tail_is_kept(settings: Settings):
@@ -132,9 +137,9 @@ def test_history_is_summarized_at_half_the_window_and_the_tail_is_kept(settings:
     client, campaign_id = _campaign_id(lambda: TestClient(app))
     _send_until_summarized(client, app, campaign_id, sends=8)
 
-    campaign = _stored(app, campaign_id)
-    assert campaign.context_summary == "SUMMARY"
-    assert campaign.summary_through > 0
+    state = _state(app, campaign_id)
+    assert state.summary == "SUMMARY"
+    assert state.through > 0
 
     [summarizer] = provider.summarizer_calls()
     assert "m0 " in summarizer[1]["content"]
@@ -157,7 +162,7 @@ def test_long_summary_is_capped_to_a_quarter_of_the_window_keeping_the_newest_te
     client, campaign_id = _campaign_id(lambda: TestClient(app))
     _send_until_summarized(client, app, campaign_id, sends=8)
 
-    summary = _stored(app, campaign_id).context_summary
+    summary = _state(app, campaign_id).summary
     # 25% of a 1000-token window at about four characters per token.
     assert len(summary) <= 1000
     assert summary.endswith("NEWEST")
@@ -170,10 +175,10 @@ def test_summary_drops_the_heading_the_model_repeats(settings: Settings):
     app = _small_window_app(settings, provider)
     client, campaign_id = _campaign_id(lambda: TestClient(app))
     _send_until_summarized(client, app, campaign_id, sends=8)
-    assert _stored(app, campaign_id).context_summary == "The party met a mushroom sage."
+    assert _state(app, campaign_id).summary == "The party met a mushroom sage."
 
 
-def test_failed_reply_after_summarizing_saves_nothing(settings: Settings):
+def test_failed_reply_after_summarizing_keeps_the_summary_and_the_open_turn(settings: Settings):
     provider = RecordingProvider()
     provider.fail_after_summary = True
     app = _small_window_app(settings, provider)
@@ -186,10 +191,11 @@ def test_failed_reply_after_summarizing_saves_nothing(settings: Settings):
 
     assert statuses[-1] == 502, "the summarizing turn should fail"
     assert statuses[:-1] == [303] * (len(statuses) - 1)
-    campaign = _stored(app, campaign_id)
-    assert campaign.context_summary == ""
-    assert campaign.summary_through == 0
-    assert _saved_message_count(app) == 2 * (len(statuses) - 1)
+    state = _state(app, campaign_id)
+    assert state.summary == "SUMMARY"
+    assert state.through > 0
+    assert state.turn is not None and state.turn.failed
+    assert _saved_message_count(app) == 2 * (len(statuses) - 1) + 1
 
 
 def test_transcript_keeps_every_message_after_summarizing(settings: Settings):
@@ -200,9 +206,9 @@ def test_transcript_keeps_every_message_after_summarizing(settings: Settings):
     for index in range(8):
         _send(client, campaign_id, f"m{index} " + "x" * 600)
         sends += 1
-        if _stored(app, campaign_id).context_summary:
+        if _state(app, campaign_id).summary:
             break
-    assert _stored(app, campaign_id).context_summary == "SUMMARY"
+    assert _state(app, campaign_id).summary == "SUMMARY"
     assert _saved_message_count(app) == 2 * sends
     assert "m0 " in client.get(f"/campaigns/{campaign_id}").text
 

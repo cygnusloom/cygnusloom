@@ -11,7 +11,7 @@ from cygnusforge.config import Settings
 from cygnusforge.db.models import Campaign
 from cygnusforge.services import campaigns as service
 from tests.conftest import csrf_token
-from tests.test_campaigns import _answer, _campaign_id, _send, _set_model
+from tests.test_campaigns import _answer, _campaign_id, _pending, _send, _set_model
 from tests.test_context import _saved_message_count
 from tests.test_streaming import _stream
 
@@ -81,4 +81,7 @@ def test_closing_an_unfinished_turn_releases_the_campaign(
     asyncio.run(start_then_abandon())
 
     assert campaign_id not in service._busy_campaigns
-    assert _send(client, campaign_id, "hi").status_code == 303
+    assert _pending(app, campaign_id) is not None
+    refused = _send(client, campaign_id, "hi")
+    assert refused.status_code == 400
+    assert "reply" in refused.text

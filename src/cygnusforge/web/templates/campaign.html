@@ -60,7 +60,7 @@
                   </div>
                 {% else %}
                   <div class="pending-prompt">
-                    <p class="muted">The reply did not finish.</p>
+                    <p class="muted">{{ pending.error }}</p>
                     <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action>
                       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                       <input type="hidden" name="kind" value="continue">
@@ -68,6 +68,10 @@
                     </form>
                   </div>
                 {% endif %}
+                <form method="post" action="/campaigns/{{ campaign.id }}/pending/discard" data-confirm="Discard this reply and your message? It cannot be undone.">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <button type="submit">Discard reply</button>
+                </form>
               </div>
             {% elif not messages %}
               <p class="muted">Say something to start the conversation.</p>
@@ -76,7 +80,7 @@
           <p class="turn-error" role="alert" hidden></p>
           <form method="post" action="/campaigns/{{ campaign.id }}/messages" data-stream-action="/campaigns/{{ campaign.id }}/messages/stream" class="composer" id="composer">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <textarea name="content" rows="3" required maxlength="8000" placeholder="{{ 'Answer the GM above first' if pending else 'Message' }}"{% if pending %} disabled{% endif %}>{{ draft }}</textarea>
+            <textarea name="content" rows="3" required maxlength="8000" placeholder="{{ ('Answer the GM above first' if pending.prompt else 'Continue the reply first') if pending else 'Message' }}"{% if pending %} disabled{% endif %}>{{ draft }}</textarea>
             <div class="composer-actions">
               <div class="composer-tools">
                 <span class="context-meter" aria-label="Context usage" title="Estimated prompt size against the context window. At {{ '{:,}'.format(context.summary_at) }} tokens, older messages are summarized and the newest ones stay verbatim.">
@@ -104,9 +108,9 @@
             <div class="tab-panel" role="tabpanel" id="panel-characters" aria-labelledby="tab-characters">
               {% if world_view.pc %}
               <ul>
-                <li><strong>{{ world_view.pc.name }}</strong> <span class="muted">(you), {{ world_view.location_names[world_view.pc.location_id] }}</span></li>
+                <li><strong>{{ world_view.pc.name }}</strong> <span class="muted">(you), {{ world_view.pc.location }}</span></li>
                 {% for npc in world_view.npcs %}
-                <li><strong>{{ npc.name }}</strong> <span class="muted">, {{ world_view.location_names[npc.location_id] }}</span></li>
+                <li><strong>{{ npc.name }}</strong> <span class="muted">, {{ npc.location }}</span></li>
                 {% endfor %}
               </ul>
               {% endif %}
@@ -142,7 +146,7 @@
     <h2 id="dialog-characters-title">Characters</h2>
     {% if world_view.pc %}
     <h3>You</h3>
-    <p><strong>{{ world_view.pc.name }}</strong>, at {{ world_view.location_names[world_view.pc.location_id] }}</p>
+    <p><strong>{{ world_view.pc.name }}</strong>, at {{ world_view.pc.location }}</p>
     {% endif %}
     <h3>Locations</h3>
     {% for location in world_view.locations %}
@@ -153,9 +157,9 @@
     <h3>NPCs</h3>
     {% for npc in world_view.npcs %}
       <div class="npc">
-        <p><strong>{{ npc.name }}</strong>, at {{ world_view.location_names[npc.location_id] }}</p>
+        <p><strong>{{ npc.name }}</strong>, at {{ npc.location }}</p>
         <p>{{ npc.description }}</p>
-        <p class="muted">Personality: {{ npc.personality }}. Accent: {{ npc.accent }}. Quirks: {{ npc.quirk_list | join("; ") or "none" }}.</p>
+        <p class="muted">Personality: {{ npc.personality }}. Accent: {{ npc.accent }}. Quirks: {{ npc.quirks | join("; ") or "none" }}.</p>
       </div>
     {% else %}
       <p class="muted">No NPCs yet.</p>
