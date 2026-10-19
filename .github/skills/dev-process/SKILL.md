@@ -10,3 +10,4 @@ description: Development workflow for any change. Use when starting, planning, o
 3. Implement, then test the change.
 4. Review the change to ensure it meets the design and quality standards, test after making any improvements.
 5. Commit once the change is tested.
+6. If you changed anything affecting the database, remove the existing cygnusforge.db file to ensure a fresh state for manual testing.
