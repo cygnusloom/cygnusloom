@@ -13,6 +13,7 @@
     <div class="workspace" data-view="play">
         <section class="chat" aria-label="Chat">
           <h1 class="chat-title">{{ campaign.name }}</h1>
+          <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }}</p>
           <div class="transcript" data-transcript>
             {% for message in messages %}
               <div class="message {{ message.role }}">

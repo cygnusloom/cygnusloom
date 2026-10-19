@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from sqlalchemy import Engine
 from sqlmodel import select
 
+from cygnusforge.content.library import ContentLibrary
 from cygnusforge.db.models import Campaign, Message
 from cygnusforge.llm.base import LLMError, complete
 from cygnusforge.llm.registry import ProviderFactory
@@ -15,12 +16,28 @@ MAX_MESSAGE = 8000
 SYSTEM_PROMPT = "You are a helpful assistant."
 
 
-def create_campaign(engine: Engine, owner_id: int, name: str) -> Campaign:
+def create_campaign(
+    engine: Engine,
+    library: ContentLibrary,
+    owner_id: int,
+    name: str,
+    world_template: str,
+    rule_set: str,
+) -> Campaign:
     name = (name or "").strip()
     if not name or len(name) > MAX_NAME:
         raise InvalidInput(f"name must be 1 to {MAX_NAME} characters")
+    if world_template not in library.world_templates:
+        raise InvalidInput("that world template is not available")
+    if rule_set not in library.rule_sets:
+        raise InvalidInput("that rule set is not available")
     with session_scope(engine) as db:
-        campaign = Campaign(owner_id=owner_id, name=name)
+        campaign = Campaign(
+            owner_id=owner_id,
+            name=name,
+            world_template=world_template,
+            rule_set=rule_set,
+        )
         db.add(campaign)
         db.commit()
         db.refresh(campaign)

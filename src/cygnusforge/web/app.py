@@ -13,6 +13,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from cygnusforge.auth.deps import LoginRequired
 from cygnusforge.auth.ratelimit import RateLimiter
 from cygnusforge.config import Settings, load_settings
+from cygnusforge.content.library import ContentLibrary
 from cygnusforge.db.session import create_schema, make_engine
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.llm.registry import ProviderFactory
@@ -33,6 +34,7 @@ def create_app(settings: Settings, fake_provider: FakeProvider | None = None) ->
     app.state.settings = settings
     app.state.engine = make_engine(settings.database_url)
     create_schema(app.state.engine)
+    app.state.content = ContentLibrary.load()
     app.state.limiter = RateLimiter()
     app.state.providers = ProviderFactory(settings, fake=fake_provider)
     app.add_middleware(

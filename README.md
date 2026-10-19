@@ -1,6 +1,6 @@
 # Cygnus Forge
 
-A minimal web chat over an LLM. It has accounts (email and password), campaigns (named chats), and nothing else. Each message picks its model, so you can switch models mid-campaign.
+A web chat over an LLM, growing into an RPG. It has accounts (email and password) and campaigns (named chats). Each campaign has a world template and a rule set, both picked when it is created. Each message picks its model, so you can switch models mid-campaign.
 
 ## Run
 
@@ -13,6 +13,48 @@ uv run --env-file .env uvicorn --factory cygnusforge.web.app:app_from_env --relo
 The dev container (`.devcontainer/`) uses the uv image and reads `.devcontainer/devcontainer.env` as its env file. That file is gitignored, so keep your own copy of it.
 
 Open http://127.0.0.1:8000, register, and create a campaign, then pick a model from the settings button beside Send before sending. `CYGNUSFORGE_SECRET_KEY` is required, so set it in `.env` or your shell. The default model is `ollama/gemma4:e2b`, so Ollama should be serving at `http://localhost:11434`. To try the app without a model, pick `fake/scripted`.
+
+## Content: world templates and rule sets
+
+Content lives under `src/cygnusforge/data/`. Each campaign refers to a world template and a rule set by directory name.
+
+```text
+data/
+  worlds/<world>/           one directory per world template
+    world.json
+  rulesets/<rule_set>/      one directory per rule set
+    rule_set.json           the rule set's metadata and rules
+    rolls.json              any other files you like; all *.json files are read
+```
+
+Every JSON file is a list of objects. Each object has a `type` and an `id`, in the style of Cataclysm-DDA:
+
+```json
+[
+  {"type": "world", "id": "gnomeforest", "name": "Gnome Forest", "description": "..."}
+]
+```
+
+The types the engine understands today:
+
+| Type | Where | Fields |
+| --- | --- | --- |
+| `world` | `worlds/<world>/` | `name`, `description`. Exactly one per world; `id` must equal the directory name. |
+| `rule_set` | `rulesets/<rule_set>/` | `name`, `description`. Exactly one per rule set; `id` must equal the directory name. |
+| `rule` | `rulesets/<rule_set>/` | `description`. Plain-text rules the AI GM follows. |
+| `python_module` | `rulesets/<rule_set>/` | `module`: a dotted import path, imported when the content loads. |
+| `roll` | `rulesets/<rule_set>/` | `python_module`: the id of a `python_module` entry; `function`: the name of a callable in that module; `description`. |
+
+Other types are read but not used yet. Within one directory, each `(type, id)` pair must be unique. Content loads at startup, so a bad file stops the app with an error that names the file.
+
+Content is trusted code. A `python_module` imports a Python module, which runs its top-level code. Only add rule sets you would run as Python.
+
+Bundled content:
+
+- `freeform` rule set: no fixed rules beyond keeping the world consistent unless the player asks otherwise. Its `social` roll is one d20 plus a relationship modifier and a circumstance modifier, which the AI GM decides. The Python side is [rules/freeform.py](src/cygnusforge/rules/freeform.py).
+- `gnomeforest` world: a magical mushroom gnome forest.
+
+Settings are fixed when a campaign is created. Campaigns created before these settings existed need a new database, because the schema gained two columns. Delete `cygnusforge.db` or point `CYGNUSFORGE_DATABASE_URL` somewhere new.
 
 ## Configuration
 

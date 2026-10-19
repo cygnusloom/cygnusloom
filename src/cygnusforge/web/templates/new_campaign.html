@@ -9,6 +9,22 @@
         Name
         <input type="text" name="name" value="{{ campaign_name }}" required maxlength="120">
       </label>
+      <label>
+        World
+        <select name="world_template" required>
+          {% for world in world_templates %}
+            <option value="{{ world.id }}"{% if world.id == selected_world %} selected{% endif %}>{{ world.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        Rule set
+        <select name="rule_set" required>
+          {% for rule_set in rule_sets %}
+            <option value="{{ rule_set.id }}"{% if rule_set.id == selected_rule_set %} selected{% endif %}>{{ rule_set.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
       <button type="submit">Create</button>
     </form>
   </section>

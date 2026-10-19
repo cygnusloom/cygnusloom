@@ -44,10 +44,26 @@ async def create(request: Request) -> Response:
     await verify_csrf(request)
     form = await request.form()
     name = form_text(form, "name")
+    world_template = form_text(form, "world_template")
+    rule_set = form_text(form, "rule_set")
     try:
-        campaign = create_campaign(request.app.state.engine, user.id, name)
+        campaign = create_campaign(
+            request.app.state.engine,
+            request.app.state.content,
+            user.id,
+            name,
+            world_template,
+            rule_set,
+        )
     except InvalidInput as exc:
-        return _new_form(request, status_code=400, error=str(exc), name=name)
+        return _new_form(
+            request,
+            status_code=400,
+            error=str(exc),
+            name=name,
+            world_template=world_template,
+            rule_set=rule_set,
+        )
     return RedirectResponse(f"/campaigns/{campaign.id}", status_code=303)
 
 
@@ -86,14 +102,24 @@ async def post_message(request: Request, campaign_id: int) -> Response:
 
 
 def _new_form(
-    request: Request, status_code: int = 200, error: str = "", name: str = ""
+    request: Request,
+    status_code: int = 200,
+    error: str = "",
+    name: str = "",
+    world_template: str = "",
+    rule_set: str = "",
 ) -> Response:
+    library = request.app.state.content
     return render(
         request,
         "new_campaign.html",
         status_code=status_code,
         error=error,
         campaign_name=name,
+        world_templates=library.world_templates.values(),
+        rule_sets=library.rule_sets.values(),
+        selected_world=world_template,
+        selected_rule_set=rule_set,
     )
 
 
@@ -108,12 +134,15 @@ def _campaign_page(
 ) -> Response:
     engine = request.app.state.engine
     settings = request.app.state.settings
+    library = request.app.state.content
     campaign = get_campaign(engine, user.id, campaign_id)
     return render(
         request,
         "campaign.html",
         status_code=status_code,
         campaign=campaign,
+        world=library.world_templates.get(campaign.world_template),
+        rule_set=library.rule_sets.get(campaign.rule_set),
         messages=list_messages(engine, campaign.id),
         error=error,
         draft=draft,

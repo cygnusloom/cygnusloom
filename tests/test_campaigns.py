@@ -16,11 +16,21 @@ def _signed_in(client_factory: Callable[[], TestClient], email: str = "ada@examp
     return client
 
 
-def _new_campaign(client: TestClient, name: str = "Test chat"):
+def _new_campaign(
+    client: TestClient,
+    name: str = "Test chat",
+    world_template: str = "gnomeforest",
+    rule_set: str = "freeform",
+):
     token = csrf_token(client, "/campaigns/new")
     return client.post(
         "/campaigns/new",
-        data={"csrf_token": token, "name": name},
+        data={
+            "csrf_token": token,
+            "name": name,
+            "world_template": world_template,
+            "rule_set": rule_set,
+        },
         follow_redirects=False,
     )
 
@@ -98,6 +108,47 @@ def test_send_keeps_the_chosen_model_selected(
 def test_create_rejects_blank_name(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
     assert _new_campaign(client, name="   ").status_code == 400
+
+
+def test_new_campaign_form_offers_world_and_rule_set(client_factory: Callable[[], TestClient]):
+    client = _signed_in(client_factory)
+    page = client.get("/campaigns/new").text
+    assert '<select name="world_template" required>' in page
+    assert '<option value="gnomeforest">Gnome Forest</option>' in page
+    assert '<select name="rule_set" required>' in page
+    assert '<option value="freeform">Freeform</option>' in page
+
+
+def test_campaign_shows_the_world_and_rule_set_it_was_created_with(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _campaign_id(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "Gnome Forest · Freeform" in page
+
+
+def test_create_rejects_unknown_world_template(client_factory: Callable[[], TestClient]):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, world_template="mars")
+    assert response.status_code == 400
+    assert "world template is not available" in response.text
+
+
+def test_create_rejects_unknown_rule_set(client_factory: Callable[[], TestClient]):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, rule_set="d20-everything")
+    assert response.status_code == 400
+    assert "rule set is not available" in response.text
+
+
+def test_create_stores_the_chosen_settings(client_factory: Callable[[], TestClient]):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, name="Mushroom court")
+    assert response.status_code == 303
+    campaign_id = response.headers["location"].rsplit("/", 1)[1]
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "Mushroom court" in page
+    assert "Gnome Forest · Freeform" in page
 
 
 def test_chat_round_trip_saves_both_messages(client_factory: Callable[[], TestClient]):
