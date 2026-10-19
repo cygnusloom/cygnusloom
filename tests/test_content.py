@@ -24,6 +24,34 @@ def _world(name: str = "Testland", ident: str = "testland") -> list[dict[str, st
     return [{"type": "world", "id": ident, "name": name, "description": "A test world."}]
 
 
+def _social_tool(**overrides: Any) -> dict[str, Any]:
+    tool: dict[str, Any] = {
+        "type": "tool_call",
+        "id": "social",
+        "name": "social",
+        "python_module": "m",
+        "function": "social_roll",
+        "description": "Talk it out.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "relationship": {"type": "integer"},
+                "circumstance": {"type": "integer"},
+            },
+            "required": ["relationship", "circumstance"],
+        },
+    }
+    tool.update(overrides)
+    return tool
+
+
+def _module(**tool_overrides: Any) -> list[dict[str, Any]]:
+    return [
+        {"type": "python_module", "id": "m", "module": "cygnusforge.rules.freeform"},
+        _social_tool(**tool_overrides),
+    ]
+
+
 def _rule_set(ident: str = "testset") -> list[dict[str, str]]:
     return [{"type": "rule_set", "id": ident, "name": "Test set", "description": "For tests."}]
 
@@ -48,12 +76,15 @@ def test_bundled_content_loads():
     freeform = library.rule_sets["freeform"]
     assert freeform.name == "Freeform"
     assert "consistency" in freeform.rules
-    assert set(freeform.rolls) == {"social"}
+    assert set(freeform.tool_calls) == {"social_roll"}
 
 
-def test_bundled_social_roll_is_resolved_from_python():
-    roll = ContentLibrary.load().rule_sets["freeform"].rolls["social"]
-    assert roll.function is social_roll
+def test_bundled_social_roll_is_a_tool_call_backed_by_python():
+    tool = ContentLibrary.load().rule_sets["freeform"].tool_calls["social_roll"]
+    assert tool.name == "social_roll"
+    assert tool.function is social_roll
+    assert set(tool.parameters["properties"]) == {"relationship", "circumstance"}
+    assert tool.parameters["required"] == ["relationship", "circumstance"]
 
 
 def test_social_roll_is_one_d20_plus_modifiers():
@@ -83,30 +114,23 @@ def test_library_loads_from_a_custom_directory(tree: Path):
     library = ContentLibrary.load(tree)
     assert library.world_templates["testland"].description == "A test world."
     assert library.rule_sets["testset"].rules == {}
-    assert library.rule_sets["testset"].rolls == {}
+    assert library.rule_sets["testset"].tool_calls == {}
 
 
-def test_rules_and_rolls_are_read_from_their_definitions(tree: Path):
+def test_rules_and_tool_calls_are_read_from_their_definitions(tree: Path):
     _write(
         tree,
         {
             "rulesets/testset/rules.json": [{"type": "rule", "id": "r1", "text": "No magic."}],
-            "rulesets/testset/module.json": [
-                {"type": "python_module", "id": "m", "module": "cygnusforge.rules.freeform"},
-                {
-                    "type": "roll",
-                    "id": "social",
-                    "python_module": "m",
-                    "function": "social_roll",
-                    "description": "Talk it out.",
-                },
-            ],
+            "rulesets/testset/module.json": _module(),
         },
     )
     rule_set = ContentLibrary.load(tree).rule_sets["testset"]
     assert rule_set.rules == {"r1": "No magic."}
-    assert rule_set.rolls["social"].description == "Talk it out."
-    assert rule_set.rolls["social"].function is social_roll
+    tool = rule_set.tool_calls["social"]
+    assert tool.name == "social"
+    assert tool.description == "Talk it out."
+    assert tool.function is social_roll
 
 
 @pytest.mark.parametrize(
@@ -196,40 +220,96 @@ def test_python_module_must_import(tree: Path):
         ContentLibrary.load(tree)
 
 
-def test_roll_must_name_a_declared_python_module(tree: Path):
-    _write(
-        tree,
-        {
-            "rulesets/testset/roll.json": [
-                {
-                    "type": "roll",
-                    "id": "social",
-                    "python_module": "missing",
-                    "function": "social_roll",
-                    "description": "x",
-                }
-            ]
-        },
-    )
+def test_tool_call_must_name_a_declared_python_module(tree: Path):
+    _write(tree, {"rulesets/testset/module.json": [_social_tool(python_module="missing")]})
     with pytest.raises(ContentError, match="unknown python_module 'missing'"):
         ContentLibrary.load(tree)
 
 
-def test_roll_function_must_exist_in_its_module(tree: Path):
+def test_tool_call_function_must_exist_in_its_module(tree: Path):
+    _write(tree, {"rulesets/testset/module.json": _module(function="no_such_function")})
+    with pytest.raises(ContentError, match="'no_such_function' is not a function"):
+        ContentLibrary.load(tree)
+
+
+@pytest.mark.parametrize(
+    "overrides, message",
+    [
+        ({"name": "has spaces"}, "'name' must be 1 to 64"),
+        ({"name": "x" * 65}, "'name' must be 1 to 64"),
+        ({"description": ""}, "'description' must be a non-empty string"),
+        ({"parameters": None}, "must be an object schema"),
+        ({"parameters": {"type": "array"}}, "must be an object schema"),
+        ({"parameters": {"type": "object"}}, "needs a 'properties' object"),
+        (
+            {"parameters": {"type": "object", "properties": {}, "required": ["ghost"]}},
+            "'required' must list names from 'properties'",
+        ),
+    ],
+)
+def test_tool_call_definition_is_checked(tree: Path, overrides: dict[str, Any], message: str):
+    _write(tree, {"rulesets/testset/module.json": _module(**overrides)})
+    with pytest.raises(ContentError, match=message):
+        ContentLibrary.load(tree)
+
+
+def test_tool_names_must_be_unique_within_a_rule_set(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/module.json": [
+                *_module(),
+                _social_tool(id="social_again"),
+            ]
+        },
+    )
+    with pytest.raises(ContentError, match="duplicate tool name 'social'"):
+        ContentLibrary.load(tree)
+
+
+def test_schema_property_must_be_accepted_by_the_function(tree: Path):
+    schema = {
+        "type": "object",
+        "properties": {"relationship": {"type": "integer"}, "mood": {"type": "integer"}},
+        "required": ["relationship"],
+    }
+    _write(tree, {"rulesets/testset/module.json": _module(parameters=schema)})
+    with pytest.raises(ContentError, match="does not accept parameter 'mood'"):
+        ContentLibrary.load(tree)
+
+
+def test_function_parameter_without_default_must_be_in_the_schema(tree: Path):
+    schema = {
+        "type": "object",
+        "properties": {"relationship": {"type": "integer"}},
+        "required": ["relationship"],
+    }
+    _write(tree, {"rulesets/testset/module.json": _module(parameters=schema)})
+    with pytest.raises(ContentError, match="'circumstance' has no default"):
+        ContentLibrary.load(tree)
+
+
+def test_function_parameter_with_default_may_be_left_out_of_the_schema(tree: Path):
+    schema = {
+        "type": "object",
+        "properties": {
+            "relationship": {"type": "integer"},
+            "circumstance": {"type": "integer"},
+        },
+        "required": ["relationship", "circumstance"],
+    }
+    _write(tree, {"rulesets/testset/module.json": _module(parameters=schema)})
+    assert "social" in ContentLibrary.load(tree).rule_sets["testset"].tool_calls
+
+
+def test_roll_type_is_no_longer_read(tree: Path):
     _write(
         tree,
         {
             "rulesets/testset/module.json": [
                 {"type": "python_module", "id": "m", "module": "cygnusforge.rules.freeform"},
-                {
-                    "type": "roll",
-                    "id": "social",
-                    "python_module": "m",
-                    "function": "no_such_function",
-                    "description": "x",
-                },
+                {"type": "roll", "id": "social", "python_module": "m", "function": "social_roll"},
             ]
         },
     )
-    with pytest.raises(ContentError, match="'no_such_function' is not a function"):
-        ContentLibrary.load(tree)
+    assert ContentLibrary.load(tree).rule_sets["testset"].tool_calls == {}

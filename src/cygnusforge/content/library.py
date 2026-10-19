@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib
+import inspect
+import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,6 +19,7 @@ from cygnusforge.content.definitions import (
 )
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+TOOL_NAME = re.compile(r"[A-Za-z0-9_-]{1,64}")
 
 
 @dataclass(frozen=True)
@@ -27,9 +30,11 @@ class WorldTemplate:
 
 
 @dataclass(frozen=True)
-class Roll:
+class ToolCall:
     id: str
+    name: str
     description: str
+    parameters: Mapping[str, Any]
     function: Callable[..., Any]
 
 
@@ -39,7 +44,7 @@ class RuleSet:
     name: str
     description: str
     rules: Mapping[str, str]
-    rolls: Mapping[str, Roll]
+    tool_calls: Mapping[str, ToolCall]
 
 
 @dataclass(frozen=True)
@@ -99,31 +104,22 @@ def _load_rule_set(directory: Path) -> RuleSet:
         for d in definitions
         if d.type == "rule"
     }
-    rolls = {}
+    tool_calls: dict[str, ToolCall] = {}
+    tool_names: set[str] = set()
     for d in definitions:
-        if d.type != "roll":
+        if d.type != "tool_call":
             continue
-        roll_label = f"{template}: roll {d.id}"
-        module_id = required_text(d.data, "python_module", roll_label)
-        if module_id not in modules:
-            raise ContentError(f"{roll_label}: unknown python_module {module_id!r}")
-        function_name = required_text(d.data, "function", roll_label)
-        function = getattr(modules[module_id], function_name, None)
-        if not callable(function):
-            raise ContentError(
-                f"{roll_label}: {function_name!r} is not a function in {module_id!r}"
-            )
-        rolls[d.id] = Roll(
-            id=d.id,
-            description=required_text(d.data, "description", roll_label),
-            function=function,
-        )
+        call = _load_tool_call(d, modules, template)
+        if call.name in tool_names:
+            raise ContentError(f"{template}: duplicate tool name {call.name!r}")
+        tool_names.add(call.name)
+        tool_calls[call.id] = call
     return RuleSet(
         id=head.id,
         name=required_text(head.data, "name", label),
         description=required_text(head.data, "description", label),
         rules=rules,
-        rolls=rolls,
+        tool_calls=tool_calls,
     )
 
 
@@ -134,3 +130,63 @@ def _import_module(definition: Definition, template: str) -> ModuleType:
         return importlib.import_module(name)
     except ImportError as exc:
         raise ContentError(f"{label}: cannot import {name!r}: {exc}") from exc
+
+
+def _load_tool_call(
+    definition: Definition, modules: Mapping[str, ModuleType], template: str
+) -> ToolCall:
+    label = f"{template}: tool_call {definition.id}"
+    data = definition.data
+    module_id = required_text(data, "python_module", label)
+    if module_id not in modules:
+        raise ContentError(f"{label}: unknown python_module {module_id!r}")
+    function_name = required_text(data, "function", label)
+    function = getattr(modules[module_id], function_name, None)
+    if not callable(function):
+        raise ContentError(f"{label}: {function_name!r} is not a function in {module_id!r}")
+    name = required_text(data, "name", label)
+    if not TOOL_NAME.fullmatch(name):
+        raise ContentError(f"{label}: 'name' must be 1 to 64 letters, digits, '_' or '-'")
+    parameters = _check_parameters(data.get("parameters"), label)
+    _check_signature(function, parameters, label)
+    return ToolCall(
+        id=definition.id,
+        name=name,
+        description=required_text(data, "description", label),
+        parameters=parameters,
+        function=function,
+    )
+
+
+def _check_parameters(schema: object, label: str) -> dict[str, Any]:
+    if not isinstance(schema, dict) or schema.get("type") != "object":
+        raise ContentError(f"{label}: 'parameters' must be an object schema with type 'object'")
+    properties = schema.get("properties")
+    if not isinstance(properties, dict):
+        raise ContentError(f"{label}: 'parameters' needs a 'properties' object")
+    required = schema.get("required", [])
+    if not isinstance(required, list) or not all(
+        isinstance(item, str) and item in properties for item in required
+    ):
+        raise ContentError(f"{label}: 'required' must list names from 'properties'")
+    return schema
+
+
+def _check_signature(
+    function: Callable[..., Any], parameters: Mapping[str, Any], label: str
+) -> None:
+    """The GM calls the function with keyword arguments taken from the schema, so both must agree."""
+    accepted = inspect.signature(function).parameters
+    takes_any_keyword = any(p.kind is p.VAR_KEYWORD for p in accepted.values())
+    if not takes_any_keyword:
+        for name in parameters["properties"]:
+            if name not in accepted:
+                raise ContentError(f"{label}: function does not accept parameter {name!r}")
+    required = set(parameters.get("required", []))
+    for name, param in accepted.items():
+        if param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD):
+            continue
+        if param.default is param.empty and name not in required:
+            raise ContentError(
+                f"{label}: parameter {name!r} has no default, so it must be required"
+            )

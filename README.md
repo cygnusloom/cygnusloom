@@ -24,7 +24,7 @@ data/
     world.json
   rulesets/<rule_set>/      one directory per rule set
     rule_set.json           the rule set's metadata and rules
-    rolls.json              any other files you like; all *.json files are read
+    tool_calls.json         any other files you like; all *.json files are read
 ```
 
 Every JSON file is a list of objects. Each object has a `type` and an `id`, in the style of Cataclysm-DDA:
@@ -41,17 +41,17 @@ The types the engine understands today:
 | --- | --- | --- |
 | `world` | `worlds/<world>/` | `name`, `description`. Exactly one per world; `id` must equal the directory name. |
 | `rule_set` | `rulesets/<rule_set>/` | `name`, `description`. Exactly one per rule set; `id` must equal the directory name. |
-| `rule` | `rulesets/<rule_set>/` | `description`. Plain-text rules the AI GM follows. |
+| `rule` | `rulesets/<rule_set>/` | `text`. A plain-text rule the AI GM follows. |
 | `python_module` | `rulesets/<rule_set>/` | `module`: a dotted import path, imported when the content loads. |
-| `roll` | `rulesets/<rule_set>/` | `python_module`: the id of a `python_module` entry; `function`: the name of a callable in that module; `description`. |
+| `tool_call` | `rulesets/<rule_set>/` | `name`: the tool name the GM sees (letters, digits, `_`, `-`; unique in the rule set); `description`: when and how to use it, including each parameter; `parameters`: a JSON schema object (`type` `object`, with `properties` and optional `required`); `python_module`: the id of a `python_module` entry; `function`: the name of a callable in that module. |
 
-Other types are read but not used yet. Within one directory, each `(type, id)` pair must be unique. Content loads at startup, so a bad file stops the app with an error that names the file.
+A `tool_call`'s parameters must match its function. Every schema property must be a keyword argument of the function, and every argument without a default must be a required property. Load fails otherwise. Other types are read but not used yet. Within one directory, each `(type, id)` pair must be unique. Content loads at startup, so a bad file stops the app with an error that names the file.
 
 Content is trusted code. A `python_module` imports a Python module, which runs its top-level code. Only add rule sets you would run as Python.
 
 Bundled content:
 
-- `freeform` rule set: no fixed rules beyond keeping the world consistent unless the player asks otherwise. Its `social` roll is one d20 plus a relationship modifier and a circumstance modifier, which the AI GM decides. The Python side is [rules/freeform.py](src/cygnusforge/rules/freeform.py).
+- `freeform` rule set: no fixed rules beyond keeping the world consistent unless the player asks otherwise. Its `social_roll` tool call rolls one d20 plus a relationship modifier and a circumstance modifier, which the AI GM decides. The Python side is [rules/freeform.py](src/cygnusforge/rules/freeform.py).
 - `gnomeforest` world: a magical mushroom gnome forest.
 
 Settings are fixed when a campaign is created. Campaigns created before these settings existed need a new database, because the schema gained two columns. Delete `cygnusforge.db` or point `CYGNUSFORGE_DATABASE_URL` somewhere new.

@@ -1,9 +1,0 @@
-[
-  {
-    "type": "roll",
-    "id": "social",
-    "python_module": "freeform",
-    "function": "social_roll",
-    "description": "A single d20 for a social action, plus the relationship and circumstance modifiers the GM decides."
-  }
-]
