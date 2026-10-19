@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import replace
 
@@ -145,3 +146,19 @@ def test_test_user_login_requires_csrf(settings: Settings, fake: FakeProvider):
     response = client.post("/login/test-user", data={"csrf_token": "forged"})
     assert response.status_code == 403
     assert client.get("/campaigns", follow_redirects=False).headers["location"] == "/login"
+
+
+def test_test_user_new_campaign_form_gets_random_names(settings: Settings, fake: FakeProvider):
+    client = _test_login_factory(settings, fake)()
+    token = csrf_token(client, "/login")
+    client.post("/login/test-user", data={"csrf_token": token})
+    page = client.get("/campaigns/new").text
+    assert re.search(r'name="name" value="The [A-Za-z]+ [A-Za-z]+"', page)
+    assert re.search(r'name="character_name" value="[A-Za-z]+ [A-Za-z]+"', page)
+
+
+def test_other_users_get_a_blank_new_campaign_form(client: TestClient):
+    register(client)
+    page = client.get("/campaigns/new").text
+    assert 'name="name" value=""' in page
+    assert 'name="character_name" value=""' in page

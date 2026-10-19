@@ -136,8 +136,8 @@
     if (!finished) throw new Error("connection ended early");
   };
 
-  const reload = (model) => {
-    window.location.assign(`${window.location.pathname}?${new URLSearchParams({ model })}`);
+  const reload = () => {
+    window.location.assign(window.location.pathname);
   };
 
   composer.addEventListener("submit", async (event) => {
@@ -147,7 +147,6 @@
 
     const draft = textarea.value;
     const data = new FormData(composer);
-    const model = data.get("model") || "";
     errorBox.hidden = true;
     textarea.value = "";
     setBusy(true);
@@ -158,7 +157,7 @@
 
     try {
       await playTurn(composer.dataset.streamAction, data, reply);
-      reload(model);
+      reload();
     } catch (error) {
       player.bubble.remove();
       reply.bubble.remove();
@@ -186,13 +185,13 @@
     const reply = addBubble("assistant", "Cygnus");
     try {
       await playTurn(form.action, data, reply);
-      reload(new FormData(composer).get("model") || "");
+      reload();
     } catch (error) {
       sessionStorage.setItem(
         FLASH_KEY,
         error instanceof TurnFailure ? error.message : "The GM's reply did not finish. Try again.",
       );
-      reload(new FormData(composer).get("model") || "");
+      reload();
     }
   });
 

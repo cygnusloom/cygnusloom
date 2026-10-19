@@ -20,7 +20,7 @@
     <div class="workspace" data-view="play">
         <section class="chat" aria-label="Chat">
           <h1 class="chat-title">{{ campaign.name }}</h1>
-          <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }}</p>
+          <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
           <div class="transcript" data-transcript>
             {% for message in messages %}
               <div class="message {{ message.role }}">
@@ -176,15 +176,19 @@
   </form>
 </dialog>
 <dialog id="dialog-model" class="app-dialog" aria-labelledby="dialog-model-title">
-  <form method="dialog">
+  <form method="post" action="/campaigns/{{ campaign.id }}/model">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <h2 id="dialog-model-title">Model</h2>
     <fieldset class="model-options">
-      <legend class="muted">Used for the next message</legend>
+      <legend class="muted">Used for every reply in this campaign, starting with the next one</legend>
       {% for model in models %}
-        <label><input type="radio" name="model" value="{{ model }}"{% if model == selected_model %} checked{% endif %} form="composer"> {{ model }}</label>
+        <label><input type="radio" name="model" value="{{ model }}"{% if model == campaign.model %} checked{% endif %}> {{ model }}</label>
       {% endfor %}
     </fieldset>
-    <button type="submit">Done</button>
+    <div class="dialog-actions">
+      <button type="submit" formmethod="dialog" formnovalidate>Cancel</button>
+      <button type="submit">Save</button>
+    </div>
   </form>
 </dialog>
 {% endblock %}

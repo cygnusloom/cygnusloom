@@ -1,6 +1,6 @@
 # Cygnus Forge
 
-A web chat over an LLM, growing into an RPG. It has accounts (email and password) and campaigns (named chats). Each campaign has a world template and a rule set, both picked when it is created. Each message picks its model, so you can switch models mid-campaign. Campaigns also have structured role-play: locations, characters (the player character and NPCs), and notes.
+A web chat over an LLM, growing into an RPG. It has accounts (email and password) and campaigns (named chats). Each campaign has a world template, a rule set, and a model, all picked when it is created. The model can be changed later from the campaign's settings, and the next message uses the new model. Campaigns also have structured role-play: locations, characters (the player character and NPCs), and notes.
 
 ## Run
 
@@ -12,7 +12,7 @@ uv run --env-file .env uvicorn --factory cygnusforge.web.app:app_from_env --relo
 
 The dev container (`.devcontainer/`) uses the uv image and reads `.devcontainer/devcontainer.env` as its env file. That file is gitignored, so keep your own copy of it.
 
-Open http://127.0.0.1:8000, register, and create a campaign, then pick a model from the settings button beside Send before sending. `CYGNUSFORGE_SECRET_KEY` is required, so set it in `.env` or your shell. The default model is `ollama/gemma4:e2b`, so Ollama should be serving at `http://localhost:11434`. To try the app without a model, pick `fake/scripted`.
+Open http://127.0.0.1:8000, register, and create a campaign. To change its model, use the Model settings button beside Send; the campaign header shows the current model. `CYGNUSFORGE_SECRET_KEY` is required, so set it in `.env` or your shell. The default model is `ollama/gemma4:e2b`, so Ollama should be serving at `http://localhost:11434`. To try the app without a model, pick `fake/scripted`.
 
 ## Content: world templates and rule sets
 

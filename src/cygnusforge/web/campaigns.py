@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
+import random
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from urllib.parse import urlencode
 
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse, StreamingResponse
@@ -14,6 +14,7 @@ from starlette.responses import Response
 from cygnusforge.auth.deps import page_user, verify_csrf
 from cygnusforge.db.models import User
 from cygnusforge.llm.base import LLMError
+from cygnusforge.services.accounts import is_test_user
 from cygnusforge.services.campaigns import (
     Delta,
     Logged,
@@ -34,9 +35,11 @@ from cygnusforge.services.campaigns import (
     resume_turn,
     rollback_to,
     send_message,
+    set_campaign_model,
     stream_message,
 )
-from cygnusforge.services.common import InvalidInput, NotFound
+from cygnusforge.services.common import Conflict, InvalidInput, NotFound
+from cygnusforge.services.names import random_campaign_name, random_character_name
 from cygnusforge.web.forms import form_text
 from cygnusforge.web.rendering import render
 
@@ -52,7 +55,14 @@ def campaigns_page(request: Request) -> Response:
 
 @router.get("/new")
 def new_campaign_page(request: Request) -> Response:
-    page_user(request)
+    user = page_user(request)
+    if is_test_user(user):
+        rng = random.Random()
+        return _new_form(
+            request,
+            name=random_campaign_name(rng),
+            character_name=random_character_name(rng),
+        )
     return _new_form(request)
 
 
@@ -65,15 +75,18 @@ async def create(request: Request) -> Response:
     world_template = form_text(form, "world_template")
     rule_set = form_text(form, "rule_set")
     character_name = form_text(form, "character_name")
+    settings = request.app.state.settings
     try:
         campaign = create_campaign(
             request.app.state.engine,
             request.app.state.content,
+            settings.llm_models,
             user.id,
             name,
             world_template,
             rule_set,
             character_name,
+            settings.llm_default_model,
         )
     except InvalidInput as exc:
         return _new_form(
@@ -91,8 +104,25 @@ async def create(request: Request) -> Response:
 @router.get("/{campaign_id}")
 def campaign_page(request: Request, campaign_id: int) -> Response:
     user = page_user(request)
-    model = request.query_params.get("model", "")
-    return _campaign_page(request, user, campaign_id, model=model)
+    return _campaign_page(request, user, campaign_id)
+
+
+@router.post("/{campaign_id}/model")
+async def change_model(request: Request, campaign_id: int) -> Response:
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    model = form_text(form, "model")
+    settings = request.app.state.settings
+    try:
+        set_campaign_model(
+            request.app.state.engine, settings.llm_models, user.id, campaign_id, model
+        )
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
 @router.get("/{campaign_id}/messages/{event_id}/context")
@@ -113,7 +143,10 @@ def turn_transcript_fragment(request: Request, campaign_id: int, event_id: int) 
 async def rollback(request: Request, campaign_id: int, event_id: int) -> Response:
     user = page_user(request)
     await verify_csrf(request)
-    rollback_to(request.app.state.engine, user.id, campaign_id, event_id)
+    try:
+        rollback_to(request.app.state.engine, user.id, campaign_id, event_id)
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
@@ -123,7 +156,6 @@ async def post_message(request: Request, campaign_id: int) -> Response:
     await verify_csrf(request)
     form = await request.form()
     text = form_text(form, "content")
-    model = form_text(form, "model")
     settings = request.app.state.settings
     try:
         await send_message(
@@ -135,15 +167,14 @@ async def post_message(request: Request, campaign_id: int) -> Response:
             user.id,
             campaign_id,
             text,
-            model,
         )
     except InvalidInput as exc:
-        return _campaign_page(request, user, campaign_id, 400, str(exc), text, model)
+        return _campaign_page(request, user, campaign_id, 400, str(exc), text)
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc), text)
     except LLMError as exc:
-        return _campaign_page(request, user, campaign_id, 502, str(exc), text, model)
-    return RedirectResponse(
-        f"/campaigns/{campaign_id}?{urlencode({'model': model})}", status_code=303
-    )
+        return _campaign_page(request, user, campaign_id, 502, str(exc), text)
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
 @router.post("/{campaign_id}/messages/stream")
@@ -154,7 +185,6 @@ async def post_message_stream(request: Request, campaign_id: int) -> Response:
     await verify_csrf(request)
     form = await request.form()
     text = form_text(form, "content")
-    model = form_text(form, "model")
     settings = request.app.state.settings
     events = stream_message(
         request.app.state.engine,
@@ -165,7 +195,6 @@ async def post_message_stream(request: Request, campaign_id: int) -> Response:
         user.id,
         campaign_id,
         text,
-        model,
     )
     return StreamingResponse(
         _turn_lines(events),
@@ -209,6 +238,8 @@ async def _turn_lines(events: AsyncIterator[TurnEvent]) -> AsyncIterator[str]:
         yield _line(TurnError(400, str(exc))) + "\n"
     except NotFound as exc:
         yield _line(TurnError(404, str(exc))) + "\n"
+    except Conflict as exc:
+        yield _line(TurnError(409, str(exc))) + "\n"
     except LLMError as exc:
         yield _line(TurnError(502, str(exc))) + "\n"
 
@@ -267,7 +298,6 @@ def _campaign_page(
     status_code: int = 200,
     error: str = "",
     draft: str = "",
-    model: str = "",
 ) -> Response:
     engine = request.app.state.engine
     settings = request.app.state.settings
@@ -298,5 +328,4 @@ def _campaign_page(
         draft=draft,
         pending=pending_turn(engine, user.id, campaign.id),
         models=settings.llm_models,
-        selected_model=model if model in settings.llm_models else settings.llm_default_model,
     )

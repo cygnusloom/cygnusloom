@@ -458,7 +458,7 @@ def test_speech_shows_a_writing_dialogue_status(
 
     response = client.post(
         f"/campaigns/{campaign_id}/messages/stream",
-        data={"csrf_token": token, "content": script, "model": "fake/scripted"},
+        data={"csrf_token": token, "content": script},
     )
 
     statuses = [

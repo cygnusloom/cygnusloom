@@ -21,6 +21,10 @@ def normalize_email(email: str) -> str:
     return cleaned
 
 
+def is_test_user(user: User) -> bool:
+    return user.email == TEST_USER_EMAIL
+
+
 def _check_password(password: str) -> None:
     if not MIN_PASSWORD <= len(password) <= MAX_PASSWORD:
         raise InvalidInput(f"password must be {MIN_PASSWORD} to {MAX_PASSWORD} characters")

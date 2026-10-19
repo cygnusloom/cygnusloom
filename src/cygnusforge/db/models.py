@@ -19,7 +19,8 @@ class User(SQLModel, table=True):
 
 
 class Campaign(SQLModel, table=True):
-    """A chat owned by one account. The model is chosen per message.
+    """A chat owned by one account. `model` is the LLM every reply in the chat uses, and it can
+    be switched at any time.
 
     `world_template` and `rule_set` name directories under the bundled content.
     `context_summary` stands in for every chat event up to and including the event id
@@ -33,6 +34,7 @@ class Campaign(SQLModel, table=True):
     name: str = Field(max_length=120)
     world_template: str = Field(max_length=64)
     rule_set: str = Field(max_length=64)
+    model: str = Field(max_length=120)
     context_summary: str = Field(default="", sa_column=Column(Text, nullable=False))
     summary_through: int = Field(default=0)
     created_at: datetime = Field(default_factory=utcnow)

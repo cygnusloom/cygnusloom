@@ -49,11 +49,20 @@ def _campaign_id(client_factory: Callable[[], TestClient]) -> tuple[TestClient, 
     return client, int(response.headers["location"].rsplit("/", 1)[1])
 
 
-def _send(client: TestClient, campaign_id: int, text: str, model: str = "fake/scripted"):
+def _send(client: TestClient, campaign_id: int, text: str):
     token = csrf_token(client, "/campaigns")
     return client.post(
         f"/campaigns/{campaign_id}/messages",
-        data={"csrf_token": token, "content": text, "model": model},
+        data={"csrf_token": token, "content": text},
+        follow_redirects=False,
+    )
+
+
+def _set_model(client: TestClient, campaign_id: int, model: str):
+    token = csrf_token(client, "/campaigns")
+    return client.post(
+        f"/campaigns/{campaign_id}/model",
+        data={"csrf_token": token, "model": model},
         follow_redirects=False,
     )
 
@@ -79,15 +88,15 @@ def test_create_campaign_and_list_it(client_factory: Callable[[], TestClient]):
     assert "Sandbox" in client.get("/campaigns").text
 
 
-def test_send_rejects_unknown_model(client_factory: Callable[[], TestClient]):
+def test_model_change_rejects_unknown_model(client_factory: Callable[[], TestClient]):
     client, campaign_id = _campaign_id(client_factory)
-    response = _send(client, campaign_id, "hi", model="openai/gpt-x")
+    response = _set_model(client, campaign_id, "openai/gpt-x")
     assert response.status_code == 400
     assert "not available" in response.text
-    assert 'class="message ' not in client.get(f"/campaigns/{campaign_id}").text
+    assert 'value="fake/scripted" checked' in client.get(f"/campaigns/{campaign_id}").text
 
 
-def test_each_message_can_use_a_different_model(
+def test_model_change_applies_to_the_next_message(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     used: list[str] = []
@@ -104,33 +113,25 @@ def test_each_message_can_use_a_different_model(
 
     app.state.providers = lambda model_id: (Echo(), model_id)
     client, campaign_id = _campaign_id(client_factory)
-    _send(client, campaign_id, "one", model="fake/scripted")
-    _send(client, campaign_id, "two", model="ollama/test-model")
+    _send(client, campaign_id, "one")
+    assert _set_model(client, campaign_id, "ollama/test-model").status_code == 303
+    _send(client, campaign_id, "two")
     page = client.get(f"/campaigns/{campaign_id}").text
     assert used == ["fake/scripted"] * 2 + ["ollama/test-model"] * 2
     assert "from fake/scripted" in page
     assert "from ollama/test-model" in page
 
 
-def test_send_keeps_the_chosen_model_selected(
-    client_factory: Callable[[], TestClient], app: FastAPI
+def test_model_change_is_saved_on_the_campaign(
+    client_factory: Callable[[], TestClient],
 ):
-    class Echo:
-        name = "echo"
-
-        async def chat(self, model, messages, tools=None):
-            return ChatReply(text="ok")
-
-        async def stream(self, model, messages, tools=None):
-            yield await self.chat(model, messages, tools)
-
-    app.state.providers = lambda model_id: (Echo(), model_id)
     client, campaign_id = _campaign_id(client_factory)
-    response = _send(client, campaign_id, "hi", model="ollama/test-model")
+    response = _set_model(client, campaign_id, "ollama/test-model")
     assert response.status_code == 303
-    assert response.headers["location"] == (f"/campaigns/{campaign_id}?model=ollama%2Ftest-model")
+    assert response.headers["location"] == f"/campaigns/{campaign_id}"
     page = client.get(response.headers["location"]).text
     assert 'value="ollama/test-model" checked' in page
+    assert "· ollama/test-model" in page
 
 
 def test_create_rejects_blank_name(client_factory: Callable[[], TestClient]):

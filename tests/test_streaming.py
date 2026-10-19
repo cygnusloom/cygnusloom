@@ -6,8 +6,10 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlmodel import Session
 
 from cygnusforge.config import Settings
+from cygnusforge.db.models import Campaign
 from cygnusforge.llm.base import LLMError
 from cygnusforge.services.campaigns import list_messages
 from tests.conftest import csrf_token
@@ -16,13 +18,11 @@ from tests.test_context import RecordingProvider, _saved_message_count, _small_w
 from tests.test_tools import ROLL, _recording_provider, _script
 
 
-def _stream(
-    client: TestClient, campaign_id: int, text: str, model: str = "fake/scripted"
-) -> list[dict[str, Any]]:
+def _stream(client: TestClient, campaign_id: int, text: str) -> list[dict[str, Any]]:
     token = csrf_token(client, "/campaigns")
     response = client.post(
         f"/campaigns/{campaign_id}/messages/stream",
-        data={"csrf_token": token, "content": text, "model": model},
+        data={"csrf_token": token, "content": text},
     )
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/x-ndjson")
@@ -100,12 +100,18 @@ def test_compression_is_announced_as_a_status(settings: Settings):
     assert {"type": "status", "text": "Summarizing older messages..."} in events
 
 
-def test_unknown_model_is_reported_in_band_and_saves_nothing(
+def test_retired_campaign_model_is_reported_in_band_and_saves_nothing(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
+    with Session(app.state.engine) as db:
+        campaign = db.get(Campaign, campaign_id)
+        assert campaign is not None
+        campaign.model = "retired/model"
+        db.add(campaign)
+        db.commit()
 
-    events = _stream(client, campaign_id, "hello", model="nope/none")
+    events = _stream(client, campaign_id, "hello")
 
     assert events == [{"type": "error", "status": 400, "message": "that model is not available"}]
     assert _saved_message_count(app) == 0

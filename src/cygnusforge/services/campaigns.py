@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 import math
 import random
-from collections.abc import AsyncIterator, Callable, Iterable, Mapping, Sequence
+import threading
+from collections.abc import AsyncIterator, Callable, Iterable, Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
@@ -23,7 +25,7 @@ from cygnusforge.llm.base import (
 from cygnusforge.llm.registry import ProviderFactory
 from cygnusforge.rules.context import ToolContext
 from cygnusforge.rules.dice import roll_total
-from cygnusforge.services.common import InvalidInput, NotFound, session_scope
+from cygnusforge.services.common import Conflict, InvalidInput, NotFound, session_scope
 from cygnusforge.services.events import (
     Channel,
     ChatGM,
@@ -87,11 +89,13 @@ SUMMARY_HEADING = "Summary so far:"
 def create_campaign(
     engine: Engine,
     library: ContentLibrary,
+    allowed_models: Iterable[str],
     owner_id: int,
     name: str,
     world_template: str,
     rule_set: str,
     character_name: str,
+    model: str,
     rng: random.Random | None = None,
 ) -> Campaign:
     name = (name or "").strip()
@@ -104,6 +108,8 @@ def create_campaign(
         raise InvalidInput("that world template is not available")
     if rule_set not in library.rule_sets:
         raise InvalidInput("that rule set is not available")
+    if model not in allowed_models:
+        raise InvalidInput("that model is not available")
     template = library.world_templates[world_template]
     with session_scope(engine) as db:
         campaign = Campaign(
@@ -111,6 +117,7 @@ def create_campaign(
             name=name,
             world_template=world_template,
             rule_set=rule_set,
+            model=model,
         )
         db.add(campaign)
         db.flush()
@@ -143,6 +150,49 @@ def get_campaign(engine: Engine, owner_id: int, campaign_id: int) -> Campaign:
         campaign = db.get(Campaign, campaign_id)
         if campaign is None or campaign.owner_id != owner_id:
             raise NotFound("campaign not found")
+        return campaign
+
+
+# Campaigns with a turn, answer, rollback, or model change in progress. Only one of those may run
+# per campaign at a time, so a second request is refused with Conflict instead of interleaving
+# its writes. The set is guarded by a lock only for the moment it is read or changed, so a turn
+# can span many awaits without holding the lock. This covers one server process.
+_busy_lock = threading.Lock()
+_busy_campaigns: set[int] = set()
+
+
+@contextmanager
+def _exclusive(campaign_id: int) -> Iterator[None]:
+    with _busy_lock:
+        if campaign_id in _busy_campaigns:
+            raise Conflict("the GM is still working on this campaign; try again when it finishes")
+        _busy_campaigns.add(campaign_id)
+    try:
+        yield
+    finally:
+        with _busy_lock:
+            _busy_campaigns.discard(campaign_id)
+
+
+def set_campaign_model(
+    engine: Engine,
+    allowed_models: Iterable[str],
+    owner_id: int,
+    campaign_id: int,
+    model: str,
+) -> Campaign:
+    """Switch the model every later reply in the campaign uses, including a reply that is
+    paused waiting for the player."""
+    if model not in allowed_models:
+        raise InvalidInput("that model is not available")
+    get_campaign(engine, owner_id, campaign_id)
+    with _exclusive(campaign_id), session_scope(engine) as db:
+        campaign = db.get(Campaign, campaign_id)
+        assert campaign is not None
+        campaign.model = model
+        db.add(campaign)
+        db.commit()
+        db.refresh(campaign)
         return campaign
 
 
@@ -696,10 +746,9 @@ async def stream_message(
     owner_id: int,
     campaign_id: int,
     text: str,
-    model: str,
     rng: random.Random | None = None,
 ) -> AsyncIterator[TurnEvent]:
-    """Send a user message to `model` and yield what happens while the GM replies.
+    """Send a user message, to the campaign's model, and yield what happens while the GM replies.
 
     Yields Status while the GM works, Logged for each Log entry the turn adds, Delta for the
     narration only, and Prompt when the reply needs the player to roll or type something. The
@@ -713,33 +762,34 @@ async def stream_message(
         raise InvalidInput("message cannot be empty")
     if len(text) > MAX_MESSAGE:
         raise InvalidInput(f"message must be at most {MAX_MESSAGE} characters")
-    if model not in allowed_models:
-        raise InvalidInput("that model is not available")
     campaign = get_campaign(engine, owner_id, campaign_id)
-    if _load_pending(engine, campaign.id) is not None:
-        raise InvalidInput("answer the GM's prompt before sending another message")
-    rule_set = library.rule_sets.get(campaign.rule_set)
-    if rule_set is None:
-        raise InvalidInput("that campaign's rule set is no longer available")
-    provider, model_name = providers(model)
-    anchor = _last_event(engine, campaign.id)
-    try:
-        async for event in _start_turn(
-            engine,
-            provider,
-            model_name,
-            library,
-            rule_set,
-            campaign,
-            text,
-            model,
-            context_tokens,
-            rng,
-        ):
-            yield event
-    except BaseException:
-        _discard_unfinished(engine, campaign.id, anchor)
-        raise
+    if campaign.model not in allowed_models:
+        raise InvalidInput("that model is not available")
+    with _exclusive(campaign.id):
+        if _load_pending(engine, campaign.id) is not None:
+            raise InvalidInput("answer the GM's prompt before sending another message")
+        rule_set = library.rule_sets.get(campaign.rule_set)
+        if rule_set is None:
+            raise InvalidInput("that campaign's rule set is no longer available")
+        provider, model_name = providers(campaign.model)
+        anchor = _last_event(engine, campaign.id)
+        try:
+            async for event in _start_turn(
+                engine,
+                provider,
+                model_name,
+                library,
+                rule_set,
+                campaign,
+                text,
+                campaign.model,
+                context_tokens,
+                rng,
+            ):
+                yield event
+        except BaseException:
+            _discard_unfinished(engine, campaign.id, anchor)
+            raise
 
 
 async def _start_turn(
@@ -836,76 +886,78 @@ async def resume_turn(
     text: str = "",
     rng: random.Random | None = None,
 ) -> AsyncIterator[TurnEvent]:
-    """Continue a paused reply with the player's answer.
+    """Continue a paused reply with the player's answer, using the campaign's current model.
 
     `action` is "roll" to roll the prompt's dice, "text" to answer with free-form `text`, or
     "continue" to retry a reply that failed after its answer was stored. The answer is stored
     before the reply continues, so a failure later does not roll again."""
     campaign = get_campaign(engine, owner_id, campaign_id)
-    pending = _load_pending(engine, campaign.id)
-    if pending is None:
-        raise InvalidInput("there is no reply waiting for an answer")
-    state = _Turn.from_json(pending.state)
-    if state.model not in allowed_models:
+    if campaign.model not in allowed_models:
         raise InvalidInput("that model is not available")
-    rule_set = library.rule_sets.get(campaign.rule_set)
-    if rule_set is None:
-        raise InvalidInput("that campaign's rule set is no longer available")
-    provider, model_name = providers(state.model)
-    ctx = _tool_context(
-        engine,
-        library,
-        rng if rng is not None else random.Random(),
-        provider,
-        model_name,
-        state,
-        campaign.id,
-    )
-    cursor = _last_event(engine, campaign.id)
+    with _exclusive(campaign.id):
+        pending = _load_pending(engine, campaign.id)
+        if pending is None:
+            raise InvalidInput("there is no reply waiting for an answer")
+        state = _Turn.from_json(pending.state)
+        state.model = campaign.model
+        rule_set = library.rule_sets.get(campaign.rule_set)
+        if rule_set is None:
+            raise InvalidInput("that campaign's rule set is no longer available")
+        provider, model_name = providers(campaign.model)
+        ctx = _tool_context(
+            engine,
+            library,
+            rng if rng is not None else random.Random(),
+            provider,
+            model_name,
+            state,
+            campaign.id,
+        )
+        cursor = _last_event(engine, campaign.id)
 
-    if action == "continue":
-        if state.prompt is not None:
-            raise InvalidInput("answer the GM's prompt first")
-    elif state.prompt is None:
-        raise InvalidInput("there is nothing to answer")
-    elif action == "roll":
-        answer: RollAnswer | TextAnswer = RollAnswer(roll_total(state.prompt.dice, rng))
-        request = state.queue.pop(0)
-        run = await run_tool(rule_set.tool_calls, request, answer, ctx=ctx)
-        assert isinstance(run, ToolRun)
-        _record_tool(ctx, state, request, run)
-        state.prompt = None
-        _store_pending(engine, campaign.id, state)
-    elif action == "text":
-        clean = (text or "").strip()
-        if not clean:
-            raise InvalidInput("the reply cannot be empty")
-        if len(clean) > MAX_MESSAGE:
-            raise InvalidInput(f"the reply must be at most {MAX_MESSAGE} characters")
-        request = state.queue.pop(0)
-        run = await run_tool(rule_set.tool_calls, request, TextAnswer(clean), ctx=ctx)
-        assert isinstance(run, ToolRun)
-        _record_tool(ctx, state, request, run)
-        state.prompt = None
-        _store_pending(engine, campaign.id, state)
-        _record(engine, campaign.id, ChatPlayer(content=clean))
-    else:
-        raise InvalidInput("that action is not available")
+        if action == "continue":
+            if state.prompt is not None:
+                raise InvalidInput("answer the GM's prompt first")
+        elif state.prompt is None:
+            raise InvalidInput("there is nothing to answer")
+        elif action == "roll":
+            answer: RollAnswer | TextAnswer = RollAnswer(roll_total(state.prompt.dice, rng))
+            request = state.queue.pop(0)
+            run = await run_tool(rule_set.tool_calls, request, answer, ctx=ctx)
+            assert isinstance(run, ToolRun)
+            _record_tool(ctx, state, request, run)
+            state.prompt = None
+            _store_pending(engine, campaign.id, state)
+        elif action == "text":
+            clean = (text or "").strip()
+            if not clean:
+                raise InvalidInput("the reply cannot be empty")
+            if len(clean) > MAX_MESSAGE:
+                raise InvalidInput(f"the reply must be at most {MAX_MESSAGE} characters")
+            request = state.queue.pop(0)
+            run = await run_tool(rule_set.tool_calls, request, TextAnswer(clean), ctx=ctx)
+            assert isinstance(run, ToolRun)
+            _record_tool(ctx, state, request, run)
+            state.prompt = None
+            _store_pending(engine, campaign.id, state)
+            _record(engine, campaign.id, ChatPlayer(content=clean))
+        else:
+            raise InvalidInput("that action is not available")
 
-    logged, cursor = _new_log(engine, campaign.id, cursor)
-    for entry in logged:
-        yield entry
-    async for event in _drive(
-        engine,
-        provider,
-        model_name,
-        rule_set.tool_calls,
-        state,
-        campaign.id,
-        ctx,
-        cursor,
-    ):
-        yield event
+        logged, cursor = _new_log(engine, campaign.id, cursor)
+        for entry in logged:
+            yield entry
+        async for event in _drive(
+            engine,
+            provider,
+            model_name,
+            rule_set.tool_calls,
+            state,
+            campaign.id,
+            ctx,
+            cursor,
+        ):
+            yield event
 
 
 def _load_pending(engine: Engine, campaign_id: int) -> PendingTurn | None:
@@ -938,7 +990,6 @@ async def send_message(
     owner_id: int,
     campaign_id: int,
     text: str,
-    model: str,
 ) -> None:
     """Send a user message and wait for the GM's reply to be stored."""
     async for _ in stream_message(
@@ -950,7 +1001,6 @@ async def send_message(
         owner_id,
         campaign_id,
         text,
-        model,
     ):
         pass
 
@@ -959,7 +1009,7 @@ def rollback_to(engine: Engine, owner_id: int, campaign_id: int, event_id: int) 
     """Return the campaign to the moment just after its GM reply `event_id`. Later events, their
     context records, and any paused turn are removed."""
     get_campaign(engine, owner_id, campaign_id)
-    with session_scope(engine) as db:
+    with _exclusive(campaign_id), session_scope(engine) as db:
         event = db.get(Event, event_id)
         if event is None or event.campaign_id != campaign_id or event.kind != ChatGM.kind:
             raise NotFound("message not found")
