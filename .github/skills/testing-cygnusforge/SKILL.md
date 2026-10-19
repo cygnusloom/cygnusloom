@@ -1,28 +1,25 @@
 ---
 name: testing-cygnusforge
-description: Run Cygnus Forge tests two ways. Scripted tests use pytest with the fake model's __FAKE__ directive. UI tests start a live server and drive it with the browser tools. Use when asked to test, verify, or validate the app, or after changing routes, templates, services, or LLM providers.
+description: Test a web app in two layers. Automated tests run with the project's test runner and use a fake or scripted LLM provider. UI tests start a live server and drive it with the browser tools. Use when asked to test, verify, or validate the app, or after changing routes, templates, services, or providers.
 ---
 
-# Testing Cygnus Forge
+# Testing a web app
 
-## Automated (pytest)
+## Automated tests
 
-- Setup: `uv sync`.
-- Run: `uv run pytest`, plus `uv run ruff format --check` and `uv run ruff check`.
-- Tests use the in-process app with the fake provider. Real network calls are blocked, so use `fake/scripted`.
-- Script a conversation with a `__FAKE__:` directive in a message. It is strict JSON with quoted keys, and each assistant turn consumes the next entry in `turns`:
+- Use the project's own test runner and linter. Find them in the project config (`pyproject.toml`, `package.json`, `Makefile`) rather than assuming.
+- Never call a real LLM from automated tests. Use the fake or scripted provider, and block real network calls if the test setup supports it.
+- For multi-turn behavior, script the replies with the fake provider's input format instead of mocking inside the code.
 
-  ```text
-  __FAKE__:{"turns": [{"text": "Hello."}, {"error": "upstream exploded"}]}
-  ```
+## UI tests
 
-  Supported entries are `text`, `tool_calls`, and `error`. A newer directive replaces the older one.
+- Start the app locally on a fresh, throwaway database. Don't reuse an older one, since the schema may have changed.
+- Bind the server to `0.0.0.0` and use the container's address (`hostname -I`). The browser cannot reach `localhost` or `127.0.0.1` here.
+- Load the browser tools with `tool_search_tool` before using them. Open the page with `openBrowserPage` and `forceNew: true`, drive it with `runPlaywrightCode`, and check layout with `screenshotPage`.
+- Scope selectors to the form or region under test, so generic buttons elsewhere on the page are not matched.
+- Load config from the project's gitignored env file, and never print its values.
 
-## UI (live server + browser tools)
+## Done
 
-- Setup: the live model config lives in `.env` (gitignored). Use `--env-file .env`. Never print it.
-- Start the server on a fresh `/tmp` database, bound to `0.0.0.0`, because the browser cannot reach `127.0.0.1` or `localhost`. Use the container IP from `hostname -I`, not localhost.
-- Use a fresh database each run. An old `cygnusforge.db` can break inserts.
-- Browser tools are deferred. Load them with `tool_search_tool` before calling them. Open the server URL with `openBrowserPage` (`forceNew: true`), then drive it with `runPlaywrightCode`, and check layout with `screenshotPage`.
-- Scope selectors to the form, because the header has its own logout button.
-- Stop the server when you're done, and remove the `/tmp` files.
+- Stop any server you started. Identify it by its numeric PID, since `kill` accepts only numeric PIDs.
+- Remove the temporary database and log files.
