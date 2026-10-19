@@ -17,6 +17,7 @@
   const submit = composer.querySelector('button[type="submit"]');
   const NOT_SAVED = "The reply was not saved. Your message is still in the box.";
   const FLASH_KEY = "cygnus-turn-error";
+  const FOCUS_KEY = "cygnus-focus-composer";
 
   class TurnFailure extends Error {}
 
@@ -143,6 +144,12 @@
     window.location.assign(window.location.pathname);
   };
 
+  // Reloading drops focus, so the reloaded page focuses the message box again.
+  const reloadKeepingComposerFocus = () => {
+    sessionStorage.setItem(FOCUS_KEY, "1");
+    reload();
+  };
+
   composer.addEventListener("submit", async (event) => {
     event.preventDefault();
     const text = textarea.value.trim();
@@ -153,6 +160,8 @@
     errorBox.hidden = true;
     textarea.value = "";
     setBusy(true);
+    // Disabling the Send button drops focus, so move it back to the message box.
+    textarea.focus();
 
     const player = addBubble("user", "user");
     player.content.textContent = text;
@@ -161,10 +170,10 @@
 
     try {
       await playTurn(composer.dataset.streamAction, data, reply, attempt);
-      reload();
+      reloadKeepingComposerFocus();
     } catch (error) {
       if (attempt.started) {
-        reload();
+        reloadKeepingComposerFocus();
         return;
       }
       player.bubble.remove();
@@ -207,6 +216,12 @@
       reload();
     }
   });
+
+  if (sessionStorage.getItem(FOCUS_KEY)) {
+    sessionStorage.removeItem(FOCUS_KEY);
+    // A pending prompt disables the message box, so there is nothing to focus.
+    if (!textarea.disabled) textarea.focus();
+  }
 
   const flashed = sessionStorage.getItem(FLASH_KEY);
   if (flashed) {
