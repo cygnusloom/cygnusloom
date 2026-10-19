@@ -6,7 +6,7 @@
   <title>{% block title %}{% endblock %} · Cygnus Forge</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
   <header class="topbar">
     <a class="brand" href="/">Cygnus Forge</a>
     <nav>
@@ -26,5 +26,6 @@
     {% if error %}<p role="alert">{{ error }}</p>{% endif %}
     {% block content %}{% endblock %}
   </main>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

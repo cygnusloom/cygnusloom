@@ -1,27 +1,56 @@
 {% extends "base.html" %}
 {% block title %}{{ campaign.name }}{% endblock %}
+{% block body_class %}workspace-page{% endblock %}
 {% block content %}
-  <section class="card">
-    <h1>{{ campaign.name }}</h1>
-    <div class="transcript">
-      {% for message in messages %}
-        <div class="message {{ message.role }}">
-          <span class="role">{{ message.role }}{% if message.model %} · <span class="muted">{{ message.model }}</span>{% endif %}</span>
-          <p>{{ message.content }}</p>
-        </div>
-      {% else %}
-        <p class="muted">Say something to start the conversation.</p>
-      {% endfor %}
-    </div>
-    <form method="post" action="/campaigns/{{ campaign.id }}/messages" class="composer">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <select name="model" aria-label="Model">
-        {% for model in models %}
-          <option value="{{ model }}"{% if model == selected_model %} selected{% endif %}>{{ model }}</option>
+  <div class="workspace">
+    <section class="chat" aria-label="Chat">
+      <h1 class="chat-title">{{ campaign.name }}</h1>
+      <div class="transcript" data-transcript>
+        {% for message in messages %}
+          <div class="message {{ message.role }}">
+            <span class="role">{{ message.role }}{% if message.model %} · <span class="muted">{{ message.model }}</span>{% endif %}</span>
+            <p>{{ message.content }}</p>
+          </div>
+        {% else %}
+          <p class="muted">Say something to start the conversation.</p>
         {% endfor %}
-      </select>
-      <textarea name="content" rows="3" required maxlength="8000" placeholder="Message">{{ draft }}</textarea>
-      <button type="submit">Send</button>
-    </form>
-  </section>
+      </div>
+      <form method="post" action="/campaigns/{{ campaign.id }}/messages" class="composer">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <select name="model" aria-label="Model">
+          {% for model in models %}
+            <option value="{{ model }}"{% if model == selected_model %} selected{% endif %}>{{ model }}</option>
+          {% endfor %}
+        </select>
+        <textarea name="content" rows="3" required maxlength="8000" placeholder="Message">{{ draft }}</textarea>
+        <button type="submit">Send</button>
+      </form>
+    </section>
+
+    <aside class="side">
+      <section class="map-panel" aria-label="Map">
+        <p class="muted">Map placeholder</p>
+      </section>
+
+      <section class="tabs-panel">
+        <div class="tab-list" role="tablist" aria-label="Panels">
+          <button type="button" class="tab" role="tab" id="tab-characters" aria-controls="panel-characters" aria-selected="true">Characters</button>
+          <button type="button" class="tab" role="tab" id="tab-notes" aria-controls="panel-notes" aria-selected="false" tabindex="-1">Notes</button>
+          <button type="button" class="tab" role="tab" id="tab-log" aria-controls="panel-log" aria-selected="false" tabindex="-1">Log</button>
+        </div>
+        <div class="tab-panel" role="tabpanel" id="panel-characters" aria-labelledby="tab-characters">
+          <p class="muted">Placeholder: characters will appear here.</p>
+        </div>
+        <div class="tab-panel" role="tabpanel" id="panel-notes" aria-labelledby="tab-notes" hidden>
+          <p class="muted">Placeholder: notes will appear here.</p>
+        </div>
+        <div class="tab-panel" role="tabpanel" id="panel-log" aria-labelledby="tab-log" hidden>
+          <p class="muted">Placeholder: log entries will appear here.</p>
+        </div>
+      </section>
+    </aside>
+  </div>
+{% endblock %}
+{% block scripts %}
+  <script src="/static/workspace.js"></script>
 {% endblock %}
