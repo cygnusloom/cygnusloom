@@ -3,41 +3,46 @@
     "type": "rule_set",
     "id": "cairn2e",
     "name": "Cairn 2e",
-    "description": "Character creation for Cairn, a second edition fantasy roleplaying game of wild lands and dark forests."
+    "description": "Character creation for Cairn, a second edition fantasy roleplaying game of wild lands and dark forests, written by Yochai Gal. Text adapted from cairnrpg.com and licensed under CC BY-SA 4.0."
   },
   {
     "type": "rule",
     "id": "attribute-swap",
-    "text": "Roll 3d6 for Strength, Dexterity, and Willpower. You may swap the scores of two of the three attributes."
+    "text": "Roll 3d6 for each of your character's Attributes, in order. You may then swap any two of the results."
   },
   {
     "type": "rule",
     "id": "hit-protection",
-    "text": "Hit Protection is rolled as 1d6."
+    "text": "Roll 1d6 to determine your PC's starting Hit Protection (HP), which reflects their ability to avoid damage in combat. It does not indicate a character's health or fortitude, nor do they lose it for very long."
   },
   {
     "type": "rule",
     "id": "inventory-slots",
-    "text": "You have ten inventory slots. Carrying a backpack adds six more."
+    "text": "Characters have a total of ten inventory slots but can only carry four or five items comfortably without the help of bags, backpacks, horses, carts, etc. Anyone carrying a full inventory (i.e. filling all 10 slots) is reduced to 0 HP."
+  },
+  {
+    "type": "rule",
+    "id": "backpack",
+    "text": "Each PC starts with a Backpack that can hold up to six slots of items or Fatigue."
   },
   {
     "type": "rule",
     "id": "bulky-items",
-    "text": "Bulky items take two inventory slots."
+    "text": "Most items take up one slot unless otherwise indicated. Bulky items take up two slots."
   },
   {
     "type": "rule",
     "id": "petty-items",
-    "text": "Petty items take no inventory slots."
+    "text": "Petty items do not take up any slots. A bag of coins worth less than 100gp is petty and does not occupy a slot."
   },
   {
     "type": "rule",
     "id": "age",
-    "text": "Character age is 2d20+10."
+    "text": "Roll 2d20+10 for your character's age."
   },
   {
     "type": "rule",
     "id": "omens",
-    "text": "The youngest character reads the Omens table aloud to the group."
+    "text": "If you are the youngest character, roll on the Omens table. The result should be read aloud to the other players."
   }
 ]

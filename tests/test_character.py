@@ -148,3 +148,34 @@ def test_describe_skips_blank_fields():
     field = next(f for f in SPEC.fields.values() if f.table is None)
     sheet = Sheet(stats={}, templates={}, features={}, fields={field.id: ""})
     assert field.name not in describe(SPEC, sheet)
+
+
+def _backgrounds():
+    return [t for t in SPEC.templates.values() if t.kind == "background"]
+
+
+def test_every_background_grants_one_backpack():
+    backgrounds = _backgrounds()
+    assert len(backgrounds) == 20
+    for template in backgrounds:
+        grants = [g.quantity for g in template.features if g.feature == "backpack"]
+        assert grants == ["1"], template.id
+
+
+def test_backpack_is_described_as_in_the_source():
+    assert SPEC.features["backpack"].description == (
+        "Can hold up to six slots of items or Fatigue."
+    )
+
+
+def test_petty_and_bulky_items_are_flagged():
+    assert SPEC.features["badge"].petty
+    assert not SPEC.features["badge"].bulky
+    assert SPEC.features["bow"].bulky
+    assert not SPEC.features["bow"].petty
+
+
+def test_each_background_has_its_names_table():
+    for template in _backgrounds():
+        assert f"{template.id}-names" in template.tables, template.id
+        assert SPEC.tables[f"{template.id}-names"], template.id

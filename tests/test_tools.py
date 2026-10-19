@@ -13,7 +13,7 @@ from cygnusforge.llm.base import ChatReply, ToolRequest
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.services.campaigns import list_messages
 from cygnusforge.services.tools import Ask, RollAnswer, TextAnswer, ToolRun, run_tool, tool_specs
-from tests.test_campaigns import _answer, _campaign_id, _pending, _send
+from tests.test_campaigns import _answer, _campaign_id, _pending, _place_pc, _send
 
 ROLL = {
     "name": "social_roll",
@@ -296,6 +296,7 @@ def test_npc_dialogue_is_queued_for_the_narration_not_sent_as_a_tool_result(
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id)
     script = _script(
         {
             "rounds": [[SPEAK]],

@@ -23,6 +23,7 @@ from tests.test_campaigns import (
     _campaign_id,
     _create_character,
     _new_campaign,
+    _place_pc,
     _send,
     _signed_in,
 )
@@ -79,14 +80,16 @@ def _actors(app: FastAPI, campaign_id: int) -> dict[str, Character]:
     return {c.name: c for c in _state(app, campaign_id).characters.values()}
 
 
-def test_player_character_starts_at_the_world_start_location(
-    client_factory: Callable[[], TestClient], app: FastAPI
-):
+def test_player_character_starts_unplaced(client_factory: Callable[[], TestClient], app: FastAPI):
     _, campaign_id = _campaign_id(client_factory)
-    pc = _state(app, campaign_id).pc()
+    state = _state(app, campaign_id)
+    pc = state.pc()
     assert pc is not None
     assert pc.name == "Ada"
-    assert pc.location == "Mossbell Hollow"
+    assert pc.location is None
+    assert "Player character: Ada, not yet placed; place them with move_actor" in (
+        world.world_state_text(state, SPEC)
+    )
 
 
 def test_bundled_npcs_are_placed_at_their_locations(
@@ -420,7 +423,8 @@ def test_search_returns_every_matching_note(client_factory: Callable[[], TestCli
 def test_speaker_profile_describes_an_npc_at_the_players_location(
     client_factory: Callable[[], TestClient], app
 ):
-    _, campaign_id = _campaign_id(client_factory)
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id)
     profile = world.speaker_profile(_state(app, campaign_id), "Mara Thistledown", SPEC)
     assert profile.splitlines()[0] == "Speaker: Mara Thistledown"
     assert "Personality: warm and protective" in profile
@@ -439,7 +443,8 @@ def test_npcs_away_from_the_player_cannot_speak(client_factory: Callable[[], Tes
 def test_speak_tool_queues_dialogue_and_returns_only_an_acknowledgment(
     client_factory: Callable[[], TestClient], app
 ):
-    _, campaign_id = _campaign_id(client_factory)
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id)
     asked: list[tuple[str, str, str]] = []
 
     async def speak(speaker: str, profile: str, intent: str, replace: bool) -> None:
@@ -513,6 +518,7 @@ def test_speech_is_a_separate_call_and_only_the_narration_is_saved(
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id)
     speak_call = {
         "name": "speak",
         "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
@@ -556,6 +562,7 @@ def test_an_npc_gets_one_line_per_reply(client_factory: Callable[[], TestClient]
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id)
     speak_call = {
         "name": "speak",
         "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
@@ -589,6 +596,7 @@ def test_replace_amends_the_queued_line(client_factory: Callable[[], TestClient]
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id)
     first = {
         "name": "speak",
         "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
@@ -633,6 +641,7 @@ def test_a_failed_replace_keeps_the_queued_line(
     recorder.chat = chat
     app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id)
     first = {
         "name": "speak",
         "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
@@ -656,6 +665,7 @@ def test_speech_with_tool_call_markup_is_not_spoken(
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id)
     speak_call = {
         "name": "speak",
         "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
@@ -688,6 +698,7 @@ def test_speech_shows_a_writing_dialogue_status(
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id)
     script = _script(
         {
             "rounds": [

@@ -9,6 +9,7 @@ from sqlmodel import Session
 
 from cygnusforge.llm.base import ChatReply, LLMError
 from cygnusforge.llm.fake import FakeProvider
+from cygnusforge.services import world
 from cygnusforge.services.campaigns import NARRATE_INSTRUCTION
 from cygnusforge.services.events import Turn, load_state
 from tests.conftest import csrf_token, register
@@ -61,6 +62,12 @@ def _campaign_id(client_factory: Callable[[], TestClient]) -> tuple[TestClient, 
     created = _create_character(client, campaign_id)
     assert created.status_code == 303
     return client, campaign_id
+
+
+def _place_pc(client: TestClient, campaign_id: int, location: str = "Mossbell Hollow") -> None:
+    """Place the player character, as the GM does with move_actor on its first turn."""
+    with Session(client.app.state.engine, expire_on_commit=False) as db:
+        world.move_actor(db, campaign_id, "Ada", location)
 
 
 def _send(client: TestClient, campaign_id: int, text: str):

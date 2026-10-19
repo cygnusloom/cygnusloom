@@ -76,7 +76,7 @@
     "name": "move_actor",
     "python_module": "core",
     "function": "move_actor",
-    "description": "Move the player character or an NPC to another existing location. Use it when someone travels or is sent somewhere.",
+    "description": "Move the player character or an NPC to another existing location. Use it when someone travels or is sent somewhere. The player character starts unplaced, so on the first turn create the place where the story begins and move the player character there.",
     "parameters": {
       "type": "object",
       "properties": {

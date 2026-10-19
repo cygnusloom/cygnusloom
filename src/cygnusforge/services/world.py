@@ -178,15 +178,10 @@ def seed_campaign(
     db.commit()
 
 
-def start_location_name(world: WorldTemplate) -> str:
-    return next(spot.name for spot in world.locations if spot.id == world.start_location)
-
-
 def create_player_character(
     db: Session,
     campaign_id: int,
     spec: CharacterSpec,
-    start_location: str,
     name: str,
     rolled: Mapping[str, int],
     submitted: Mapping[str, Any],
@@ -208,9 +203,9 @@ def create_player_character(
         raise InvalidInput(str(error)) from error
     sheet = resolve(spec, submitted, rng)
     _check_sheet_text(sheet)
-    record(db, campaign_id, PcAdded(name=name, location=start_location, **_sheet_fields(sheet)))
+    record(db, campaign_id, PcAdded(name=name, **_sheet_fields(sheet)))
     db.commit()
-    return {"created": "pc", "name": name, "location": start_location}
+    return {"created": "pc", "name": name, "location": None}
 
 
 def create_location(db: Session, campaign_id: int, name: str, description: str) -> dict[str, Any]:
@@ -419,7 +414,11 @@ def world_state_text(state: CampaignState, spec: CharacterSpec) -> str:
     view = snapshot(state)
     if view.pc is None:
         return ""
-    lines = [f"Player character: {view.pc.name}, at {view.pc.location}."]
+    if view.pc.location is None:
+        where = "not yet placed; place them with move_actor on your first turn"
+    else:
+        where = f"at {view.pc.location}"
+    lines = [f"Player character: {view.pc.name}, {where}."]
     pc_sheet = describe(spec, _sheet_of(view.pc)).replace("\n", "; ")
     if pc_sheet:
         lines.append(f"  {pc_sheet}")

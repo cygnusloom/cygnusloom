@@ -1,562 +1,641 @@
 [
   {
     "type": "feature",
-    "id": "gold",
-    "name": "Gold",
-    "feature_type": "item",
-    "description": "Coins carried at the start. Quantity comes from the background.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "rations",
-    "name": "Rations",
-    "feature_type": "item",
-    "description": "Trail food. Three uses.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "torch",
-    "name": "Torch",
-    "feature_type": "item",
-    "description": "Light source. Three uses.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "lantern",
-    "name": "Lantern",
-    "feature_type": "item",
-    "description": "A steady light source that can be refilled with oil.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "oil-can",
-    "name": "Oil Can",
-    "feature_type": "item",
-    "description": "Oil for a lantern. Six uses.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "rope",
-    "name": "Rope",
-    "feature_type": "item",
-    "description": "A coil of rope, 25 feet long.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "chains",
-    "name": "Chains",
-    "feature_type": "item",
-    "description": "Iron chains, 10 feet long.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "sling",
-    "name": "Sling",
-    "feature_type": "item",
-    "description": "A ranged weapon that hurls stones. Damage d6.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "dagger",
-    "name": "Dagger",
-    "feature_type": "item",
-    "description": "A small blade. Damage d6.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "short-sword",
-    "name": "Short Sword",
-    "feature_type": "item",
-    "description": "A short blade. Damage d6.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "long-sword",
-    "name": "Long Sword",
-    "feature_type": "item",
-    "description": "A heavy blade. Damage d10. Bulky.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "cane-sword",
-    "name": "Cane Sword",
-    "feature_type": "item",
-    "description": "A sword concealed in a walking cane. Damage d6.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "hand-axe",
-    "name": "Hand Axe",
-    "feature_type": "item",
-    "description": "A small axe. Damage d6.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "hammer",
-    "name": "Hammer",
-    "feature_type": "item",
-    "description": "A heavy hammer. Damage d6.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "stake",
-    "name": "Stake",
-    "feature_type": "item",
-    "description": "A wooden stake for dealing with the undead. Damage d6.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "bonesaw",
-    "name": "Bonesaw",
-    "feature_type": "item",
-    "description": "A surgical saw. Damage d6.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "needle-knife",
-    "name": "Needle-knife",
-    "feature_type": "item",
-    "description": "A thin, slender blade. Damage d6.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "serrated-knife",
-    "name": "Serrated Knife",
-    "feature_type": "item",
-    "description": "A knife with a jagged edge. Damage d6.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "root-knife",
-    "name": "Root Knife",
-    "feature_type": "item",
-    "description": "A knife for digging and cutting roots. Damage d6.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "silver-knife",
-    "name": "Silver Knife",
-    "feature_type": "item",
-    "description": "A silver blade effective against creatures harmed by silver. Damage d6.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "iron-dagger",
-    "name": "Iron Dagger",
-    "feature_type": "item",
-    "description": "An iron blade. Damage d6.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
     "id": "awl",
     "name": "Awl",
     "feature_type": "item",
-    "description": "A pointed tool used as a weak stabbing weapon. Damage d6.",
-    "bulky": false
+    "description": "d6",
+    "bulky": false,
+    "petty": false
   },
   {
     "type": "feature",
-    "id": "leather-whip",
-    "name": "Leather Whip",
+    "id": "backpack",
+    "name": "Backpack",
     "feature_type": "item",
-    "description": "A whip. Damage d6.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "twin-daggers",
-    "name": "Twin Daggers",
-    "feature_type": "item",
-    "description": "A matched pair of daggers. Damage d6 each. Bulky.",
-    "bulky": true
-  },
-  {
-    "type": "feature",
-    "id": "short-bow",
-    "name": "Bow",
-    "feature_type": "item",
-    "description": "A simple bow. Its wood type is set by a roll.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "crossbow",
-    "name": "Crossbow",
-    "feature_type": "item",
-    "description": "A mechanical ranged weapon. Damage d8. Bulky.",
-    "bulky": true
-  },
-  {
-    "type": "feature",
-    "id": "sharpened-trowel",
-    "name": "Sharpened Trowel",
-    "feature_type": "item",
-    "description": "A digging tool that can be used as a weapon. Damage d6.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "spring-loaded-trap",
-    "name": "Spring-Loaded Trap",
-    "feature_type": "item",
-    "description": "A trap that deals 4 STR damage when triggered.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "padded-leather",
-    "name": "Padded Leather",
-    "feature_type": "item",
-    "description": "Light armor. Gives 1 Armor.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "boiled-leather",
-    "name": "Boiled Leather",
-    "feature_type": "item",
-    "description": "Hardened leather armor. Gives 1 Armor.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "leather-jerkin",
-    "name": "Leather Jerkin",
-    "feature_type": "item",
-    "description": "A leather torso covering. Gives 1 Armor.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "lucky-jerkin",
-    "name": "Lucky Jerkin",
-    "feature_type": "item",
-    "description": "A leather jerkin said to bring luck. Gives 1 Armor.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "brigandine",
-    "name": "Brigandine",
-    "feature_type": "item",
-    "description": "Armor of overlapping plates in a fabric covering. Gives 1 Armor. Bulky.",
-    "bulky": true
-  },
-  {
-    "type": "feature",
-    "id": "candle-helmet",
-    "name": "Candle Helmet",
-    "feature_type": "item",
-    "description": "A helmet with a candle set into it. Gives 1 Armor and dim light. Six uses.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "protective-gloves",
-    "name": "Protective Gloves",
-    "feature_type": "item",
-    "description": "Thick gloves that protect the hands. Petty.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "gloves",
-    "name": "Gloves",
-    "feature_type": "item",
-    "description": "A pair of gloves. Petty.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "black-outfit",
-    "name": "Black Outfit",
-    "feature_type": "item",
-    "description": "A dark outfit for moving unseen. Petty.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "stained-medical-finery",
-    "name": "Stained Medical Finery",
-    "feature_type": "item",
-    "description": "A surgeon's coat, stained with use. Petty.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "vestments-of-the-order",
-    "name": "Vestments of the Order",
-    "feature_type": "item",
-    "description": "Ceremonial garments of a holy order. Petty.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "fancy-hat",
-    "name": "Fancy Hat",
-    "feature_type": "item",
-    "description": "An ostentatious hat. Petty.",
-    "bulky": false
+    "description": "Can hold up to six slots of items or Fatigue.",
+    "bulky": false,
+    "petty": false
   },
   {
     "type": "feature",
     "id": "badge",
     "name": "Badge",
     "feature_type": "item",
-    "description": "A badge of office or a guild. Petty.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "heirloom-amulet",
-    "name": "Heirloom Amulet",
-    "feature_type": "item",
-    "description": "An old amulet that glows in the presence of magic. Petty.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "twine-bauble",
-    "name": "Twine Bauble",
-    "feature_type": "item",
-    "description": "A woven charm that can cast a Ward once per day. Petty.",
-    "bulky": false
+    "description": "",
+    "bulky": false,
+    "petty": true
   },
   {
     "type": "feature",
     "id": "bandages",
     "name": "Bandages",
     "feature_type": "item",
-    "description": "Cloth for dressing wounds. Three uses.",
-    "bulky": false
+    "description": "3 uses",
+    "bulky": false,
+    "petty": false
   },
   {
     "type": "feature",
-    "id": "leech",
-    "name": "Leech",
+    "id": "black-outfit",
+    "name": "Black Outfit",
     "feature_type": "item",
-    "description": "A bloodsucking leech used in treatment. Restores 1 STR. Three uses.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "healing-salve",
-    "name": "Healing Salve",
-    "feature_type": "item",
-    "description": "A salve that restores 1d4 STR. One use.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "heartroot-salve",
-    "name": "Heartroot Salve",
-    "feature_type": "item",
-    "description": "A salve made from heartroot. Restores 1d4 STR. One use.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "herbs-pouch",
-    "name": "Herbs Pouch",
-    "feature_type": "item",
-    "description": "Dried herbs for remedies. Restores 1 STR. Three uses.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "soporific-darts",
-    "name": "Soporific Darts",
-    "feature_type": "item",
-    "description": "Darts that make a target fall asleep on a failed STR save. Six uses.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "lure",
-    "name": "Lure",
-    "feature_type": "item",
-    "description": "A bait used to attract animals.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "salt-pouch",
-    "name": "Salt Pouch",
-    "feature_type": "item",
-    "description": "A pouch of salt, used against certain creatures.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "blessed-tinctures",
-    "name": "Blessed Tinctures",
-    "feature_type": "item",
-    "description": "Holy tinctures used against the unholy.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "repellent",
-    "name": "Repellent",
-    "feature_type": "item",
-    "description": "A scent or substance that drives off creatures. Three uses.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "spellbook-thicket",
-    "name": "Spellbook (Thicket)",
-    "feature_type": "item",
-    "description": "A spellbook containing the Thicket spell. A thicket of trees and brush sprouts up. Each use must be destroyed again.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "iron-pot",
-    "name": "Iron Pot",
-    "feature_type": "item",
-    "description": "A heavy iron cooking pot.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "metal-pail",
-    "name": "Metal Pail",
-    "feature_type": "item",
-    "description": "A metal bucket.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "ghillie-suit",
-    "name": "Ghillie Suit",
-    "feature_type": "item",
-    "description": "Camouflage clothing for concealment in the wild.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "water-shoes",
-    "name": "Water Shoes",
-    "feature_type": "item",
-    "description": "Footwear that helps you walk on wet ground.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "tarp",
-    "name": "Tarp",
-    "feature_type": "item",
-    "description": "A waterproof sheet for shelter.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "compass",
-    "name": "Compass",
-    "feature_type": "item",
-    "description": "A magnetic compass for finding direction.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "spyglass",
-    "name": "Spyglass",
-    "feature_type": "item",
-    "description": "A small telescope for viewing things at a distance.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "cart",
-    "name": "Cart",
-    "feature_type": "item",
-    "description": "A small wheeled cart. Adds 4 slots. Bulky when pulled.",
-    "bulky": true
-  },
-  {
-    "type": "feature",
-    "id": "trick-playing-cards",
-    "name": "Trick Playing Cards",
-    "feature_type": "item",
-    "description": "A deck of cards used for sleight of hand.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "costume",
-    "name": "Costume",
-    "feature_type": "item",
-    "description": "A performer's costume.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "simple-instrument",
-    "name": "Simple Instrument",
-    "feature_type": "item",
-    "description": "A simple instrument such as pipes or a lute.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "lockpicks",
-    "name": "Lockpicks",
-    "feature_type": "item",
-    "description": "Tools for opening locks.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "pincers",
-    "name": "Pincers",
-    "feature_type": "item",
-    "description": "A pair of pincers for gripping and pulling.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "roll-of-tin",
-    "name": "Roll of Tin",
-    "feature_type": "item",
-    "description": "A roll of thin tin sheet for repairs and tools.",
-    "bulky": false
-  },
-  {
-    "type": "feature",
-    "id": "quill-and-ink",
-    "name": "Quill & Ink",
-    "feature_type": "item",
-    "description": "Writing tools for documents and notes.",
-    "bulky": false
+    "description": "",
+    "bulky": false,
+    "petty": true
   },
   {
     "type": "feature",
     "id": "blank-book",
     "name": "Blank Book",
     "feature_type": "item",
-    "description": "An empty book for notes and records.",
-    "bulky": false
+    "description": "",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "blessed-tinctures",
+    "name": "Blessed Tinctures",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "boiled-leather",
+    "name": "Boiled Leather",
+    "feature_type": "item",
+    "description": "1 Armor",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "bonesaw",
+    "name": "Bonesaw",
+    "feature_type": "item",
+    "description": "d6",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "bow",
+    "name": "Bow",
+    "feature_type": "item",
+    "description": "d6 damage",
+    "bulky": true,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "brigandine",
+    "name": "Brigandine",
+    "feature_type": "item",
+    "description": "1 Armor",
+    "bulky": true,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "candle-helmet",
+    "name": "Candle Helmet",
+    "feature_type": "item",
+    "description": "+1 Armor, dim, 6 uses",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "cane-sword",
+    "name": "Cane Sword",
+    "feature_type": "item",
+    "description": "d6",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "cart",
+    "name": "Cart",
+    "feature_type": "item",
+    "description": "+4 slots",
+    "bulky": true,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "chains",
+    "name": "Chains",
+    "feature_type": "item",
+    "description": "10ft",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "compass",
+    "name": "Compass",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "costume",
+    "name": "Costume",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "crossbow",
+    "name": "Crossbow",
+    "feature_type": "item",
+    "description": "d8 damage",
+    "bulky": true,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "dagger",
+    "name": "Dagger",
+    "feature_type": "item",
+    "description": "d6",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "fancy-hat",
+    "name": "Fancy Hat",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": true
+  },
+  {
+    "type": "feature",
+    "id": "ghillie-suit",
+    "name": "Ghillie Suit",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "gloves",
+    "name": "Gloves",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": true
+  },
+  {
+    "type": "feature",
+    "id": "gold",
+    "name": "Gold Pieces",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "hammer",
+    "name": "Hammer",
+    "feature_type": "item",
+    "description": "d6",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "hand-axe",
+    "name": "Hand Axe",
+    "feature_type": "item",
+    "description": "d6",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "healing-salve",
+    "name": "Healing Salve",
+    "feature_type": "item",
+    "description": "restore 1d4 STR, 1 use",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "heartroot-salve",
+    "name": "Heartroot Salve",
+    "feature_type": "item",
+    "description": "restores 1d4 STR, 1 use",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "heirloom-amulet",
+    "name": "Heirloom Amulet",
+    "feature_type": "item",
+    "description": "glows in the presence of magic",
+    "bulky": false,
+    "petty": true
+  },
+  {
+    "type": "feature",
+    "id": "herbs-pouch",
+    "name": "Herbs Pouch",
+    "feature_type": "item",
+    "description": "restore 1 STR, 3 uses",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "iron-dagger",
+    "name": "Iron Dagger",
+    "feature_type": "item",
+    "description": "d6",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "iron-pot",
+    "name": "Iron Pot",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "lantern",
+    "name": "Lantern",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "leather-jerkin",
+    "name": "Leather Jerkin",
+    "feature_type": "item",
+    "description": "1 Armor",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "leather-whip",
+    "name": "Leather Whip",
+    "feature_type": "item",
+    "description": "d6",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "leech",
+    "name": "Leech",
+    "feature_type": "item",
+    "description": "restores 1 STR, 3 uses",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "lockpicks",
+    "name": "Lockpicks",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "long-sword",
+    "name": "Long Sword",
+    "feature_type": "item",
+    "description": "d10",
+    "bulky": true,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "lucky-jerkin",
+    "name": "Lucky Jerkin",
+    "feature_type": "item",
+    "description": "+1 Armor",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "lure",
+    "name": "Lure",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "metal-pail",
+    "name": "Metal Pail",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "needle-knife",
+    "name": "Needle-knife",
+    "feature_type": "item",
+    "description": "d6",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "oil-can",
+    "name": "Oil Can",
+    "feature_type": "item",
+    "description": "6 uses",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "padded-leather",
+    "name": "Padded Leather",
+    "feature_type": "item",
+    "description": "1 Armor",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "pincers",
+    "name": "Pincers",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "protective-gloves",
+    "name": "Protective Gloves",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": true
+  },
+  {
+    "type": "feature",
+    "id": "quill-ink",
+    "name": "Quill & Ink",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "rations",
+    "name": "Rations",
+    "feature_type": "item",
+    "description": "3 uses",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "repellent",
+    "name": "Repellent",
+    "feature_type": "item",
+    "description": "Wolfsbane, Mugwort, etc.",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "roll-of-tin",
+    "name": "Roll of Tin",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "root-knife",
+    "name": "Root Knife",
+    "feature_type": "item",
+    "description": "d6",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "rope",
+    "name": "Rope",
+    "feature_type": "item",
+    "description": "25ft",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "salt-pouch",
+    "name": "Salt Pouch",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "serrated-knife",
+    "name": "Serrated Knife",
+    "feature_type": "item",
+    "description": "d6",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "sharpened-trowel",
+    "name": "Sharpened Trowel",
+    "feature_type": "item",
+    "description": "d6",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "short-sword",
+    "name": "Short Sword",
+    "feature_type": "item",
+    "description": "d6",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "silver-knife",
+    "name": "Silver Knife",
+    "feature_type": "item",
+    "description": "d6",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "simple-instrument",
+    "name": "Simple Instrument",
+    "feature_type": "item",
+    "description": "Pipes, Lute, etc.",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "sling",
+    "name": "Sling",
+    "feature_type": "item",
+    "description": "d6 damage",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "soporific-darts",
+    "name": "Soporific Darts",
+    "feature_type": "item",
+    "description": "STR save or fall asleep, 6 uses",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "spellbook-thicket",
+    "name": "Spellbook (Thicket)",
+    "feature_type": "spell",
+    "description": "A thicket of trees and dense brush up to 50ft wide suddenly sprouts up. Wrapped in vines that must be destroyed again with each use.",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "spring-loaded-trap",
+    "name": "Spring-Loaded trap",
+    "feature_type": "item",
+    "description": "4 STR damage",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "spyglass",
+    "name": "Spyglass",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "stained-medical-finery",
+    "name": "Stained Medical Finery",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": true
+  },
+  {
+    "type": "feature",
+    "id": "stake",
+    "name": "Stake",
+    "feature_type": "item",
+    "description": "d6",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "tarp",
+    "name": "Tarp",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "torch",
+    "name": "Torch",
+    "feature_type": "item",
+    "description": "3 uses",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "trick-playing-cards",
+    "name": "Trick Playing Cards",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "twin-daggers",
+    "name": "Twin Daggers",
+    "feature_type": "item",
+    "description": "d6+d6",
+    "bulky": true,
+    "petty": false
+  },
+  {
+    "type": "feature",
+    "id": "twine-bauble",
+    "name": "Twine Bauble",
+    "feature_type": "item",
+    "description": "Ward once per day. Ward : A silver circle 50ft across appears on the ground. Choose one species that cannot cross it.",
+    "bulky": false,
+    "petty": true
+  },
+  {
+    "type": "feature",
+    "id": "vestments-of-the-order",
+    "name": "Vestments of the Order",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": true
+  },
+  {
+    "type": "feature",
+    "id": "water-shoes",
+    "name": "Water Shoes",
+    "feature_type": "item",
+    "description": "",
+    "bulky": false,
+    "petty": false
   }
 ]

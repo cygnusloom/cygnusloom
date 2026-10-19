@@ -72,6 +72,21 @@ def test_cairn_character_is_created_from_the_rolled_stats(
     assert f"/campaigns/{campaign_id}/messages" in client.get(f"/campaigns/{campaign_id}").text
 
 
+def test_cairn_character_starts_unplaced_until_the_gm_places_it(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _cairn_campaign(client_factory)
+    rolled = _rolled_stats(client.get(f"/campaigns/{campaign_id}").text)
+    fields = {f"stat-{stat}": str(value) for stat, value in rolled.items()}
+    assert _create_character(client, campaign_id, name="Mara", fields=fields).status_code == 303
+
+    with Session(client.app.state.engine) as db:
+        pc = load_state(db, campaign_id).pc()
+    assert pc is not None
+    assert pc.location is None
+    assert "not yet placed" in client.get(f"/campaigns/{campaign_id}").text
+
+
 def test_stat_outside_its_range_is_rejected(client_factory: Callable[[], TestClient]):
     client, campaign_id = _cairn_campaign(client_factory)
     rolled = _rolled_stats(client.get(f"/campaigns/{campaign_id}").text)

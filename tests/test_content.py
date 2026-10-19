@@ -27,7 +27,6 @@ def _world(name: str = "Testland", ident: str = "testland") -> list[dict[str, st
             "id": ident,
             "name": name,
             "description": "A test world.",
-            "start_location": "town",
         },
         {"type": "location", "id": "town", "name": "Town", "description": "A small town."},
     ]
@@ -108,6 +107,9 @@ def test_bundled_content_loads():
     assert set(library.world_templates) == {"gnomeforest", "kilharbor"}
     assert library.world_templates["gnomeforest"].name == "Gnome Forest"
     assert library.world_templates["kilharbor"].name == "Kilharbor"
+    kilharbor = library.world_templates["kilharbor"]
+    assert kilharbor.locations == ()
+    assert kilharbor.npcs == ()
     freeform = library.rule_sets["freeform"]
     assert freeform.name == "Freeform"
     assert "consistency" in freeform.rules
@@ -322,7 +324,7 @@ def test_world_needs_a_name(tree: Path):
         tree,
         {
             "worlds/testland/world.json": [
-                {"type": "world", "id": "testland", "start_location": "town"},
+                {"type": "world", "id": "testland"},
                 {"type": "location", "id": "town", "name": "Town", "description": "Here."},
             ]
         },
@@ -487,12 +489,11 @@ def test_core_must_declare_every_npc_table(tree: Path, missing: str):
         ContentLibrary.load(tree)
 
 
-def test_start_location_must_be_a_declared_location(tree: Path):
-    world = _world()
-    world[0]["start_location"] = "nowhere"
-    _write(tree, {"worlds/testland/world.json": world})
-    with pytest.raises(ContentError, match="start_location 'nowhere' is not a location"):
-        ContentLibrary.load(tree)
+def test_world_needs_no_locations_or_npcs(tree: Path):
+    _write(tree, {"worlds/testland/world.json": [_world()[0]]})
+    world = ContentLibrary.load(tree).world_templates["testland"]
+    assert world.locations == ()
+    assert world.npcs == ()
 
 
 def test_npc_must_be_in_a_declared_location(tree: Path):

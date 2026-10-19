@@ -115,7 +115,7 @@
             <div class="tab-panel" role="tabpanel" id="panel-characters" aria-labelledby="tab-characters">
               {% if world_view.pc %}
               <ul>
-                <li><strong>{{ world_view.pc.name }}</strong> <span class="muted">(you), {{ world_view.pc.location }}</span></li>
+                <li><strong>{{ world_view.pc.name }}</strong> <span class="muted">(you), {{ world_view.pc.location or "not yet placed" }}</span></li>
                 {% for npc in world_view.npcs %}
                 <li><strong>{{ npc.name }}</strong> <span class="muted">, {{ npc.location }}</span></li>
                 {% endfor %}
@@ -147,7 +147,7 @@
     <h2 id="dialog-characters-title">Characters</h2>
     {% if world_view.pc %}
     <h3>You</h3>
-    <p><strong>{{ world_view.pc.name }}</strong>, at {{ world_view.pc.location }}</p>
+    <p><strong>{{ world_view.pc.name }}</strong>{% if world_view.pc.location %}, at {{ world_view.pc.location }}{% else %}, not yet placed{% endif %}</p>
     {% endif %}
     <h3>Locations</h3>
     {% for location in world_view.locations %}

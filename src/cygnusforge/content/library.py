@@ -59,7 +59,6 @@ class WorldTemplate:
     id: str
     name: str
     description: str
-    start_location: str
     locations: tuple[LocationTemplate, ...]
     npcs: tuple[NpcTemplate, ...]
 
@@ -161,9 +160,6 @@ def _load_world(directory: Path) -> WorldTemplate:
     locations = tuple(_load_location(d, template) for d in definitions if d.type == "location")
     npcs = tuple(_load_npc(d, template) for d in definitions if d.type == "npc")
     location_ids = {location.id for location in locations}
-    start = required_text(world.data, "start_location", label)
-    if start not in location_ids:
-        raise ContentError(f"{label}: start_location {start!r} is not a location")
     for npc in npcs:
         if npc.location not in location_ids:
             raise ContentError(
@@ -174,7 +170,6 @@ def _load_world(directory: Path) -> WorldTemplate:
         id=world.id,
         name=required_text(world.data, "name", label),
         description=required_text(world.data, "description", label),
-        start_location=start,
         locations=locations,
         npcs=npcs,
     )

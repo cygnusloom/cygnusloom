@@ -3,8 +3,7 @@
     "type": "world",
     "id": "gnomeforest",
     "name": "Gnome Forest",
-    "description": "A magical forest of mushroom gnomes. Caps glow along the paths, spores carry spells and gossip between the fungal rings, and the gnome villages tend the mushrooms that give the forest its magic.",
-    "start_location": "mossbell-hollow"
+    "description": "A magical forest of mushroom gnomes. Caps glow along the paths, spores carry spells and gossip between the fungal rings, and the gnome villages tend the mushrooms that give the forest its magic."
   },
   {
     "type": "location",

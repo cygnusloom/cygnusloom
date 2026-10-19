@@ -68,7 +68,7 @@ class Place:
 class Character:
     kind: str
     name: str
-    location: str
+    location: str | None
     description: str
     personality: str
     accent: str
@@ -248,7 +248,7 @@ class PcAdded(GameEvent):
     kind: ClassVar[str] = "pc.added"
 
     name: str
-    location: str
+    location: str | None = None
     stats: dict[str, int] = field(default_factory=dict)
     templates: dict[str, str] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
@@ -270,6 +270,8 @@ class PcAdded(GameEvent):
         )
 
     def render(self) -> str:
+        if self.location is None:
+            return f"{self.name} is ready to begin, not yet placed at a location."
         return f"{self.name} begins at {self.location}."
 
 

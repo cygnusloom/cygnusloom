@@ -4,8 +4,16 @@
     "id": "aurifex",
     "kind": "background",
     "name": "Aurifex",
-    "description": "An alchemist who pursues strange transformations and works with volatile materials.",
+    "description": "You are an artisan of the arcane, a smith of subtle forces. In the crucible of your workshop, the laws that govern this world are warped to suit your needs.",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -25,25 +33,29 @@
       {
         "feature": "protective-gloves",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "aurifex-went-horribly-wrong",
-      "aurifex-alchemical-marvel-product"
-    ],
-    "quote": "You are an artisan of the arcane, a smith of subtle forces. In the crucible of your workshop, the laws that govern this world are warped to suit your needs."
+      "aurifex-names",
+      "aurifex-what-went-horribly-wrong",
+      "aurifex-what-alchemical-marvel-is-the-product-of-your-latest-ingenuity"
+    ]
   },
   {
     "type": "template",
     "id": "barber-surgeon",
     "kind": "background",
     "name": "Barber-Surgeon",
-    "description": "A barber and field surgeon who patches up the wounded and the desperate.",
+    "description": "You walk the line between healer and harrower, knowing the frailty of the flesh but also the secrets that lie within. With the right tools, life and death are merely words.",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -67,25 +79,29 @@
       {
         "feature": "stained-medical-finery",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "barber-surgeon-improved-yourself",
-      "barber-surgeon-rare-tool-essential"
-    ],
-    "quote": "You walk the line between healer and harrower, knowing the frailty of the flesh but also the secrets that lie within. With the right tools, life and death are merely words."
+      "barber-surgeon-names",
+      "barber-surgeon-how-have-you-improved-yourself",
+      "barber-surgeon-what-rare-tool-is-essential-to-your-work"
+    ]
   },
   {
     "type": "template",
     "id": "beast-handler",
     "kind": "background",
     "name": "Beast Handler",
-    "description": "A trainer and keeper of animals, at ease with wild creatures.",
+    "description": "You alone can walk among the creatures of the wild, fearless and in control. You share a connection with animals that others can only dream of… so long as you don’t become their snack.",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -109,25 +125,29 @@
       {
         "feature": "rope",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "beast-handler-creature-specialty",
-      "beast-handler-learned-creatures-wild"
-    ],
-    "quote": "You alone can walk among the creatures of the wild, fearless and in control. You share a connection with animals that others can only dream of\u2026 so long as you don\u2019t become their snack."
+      "beast-handler-names",
+      "beast-handler-what-creature-is-your-specialty",
+      "beast-handler-what-have-you-learned-from-the-creatures-of-the-wild"
+    ]
   },
   {
     "type": "template",
     "id": "bonekeeper",
     "kind": "background",
     "name": "Bonekeeper",
-    "description": "A keeper of the dead who guards bones and tombs against restless things.",
+    "description": "You are a shepherd to the departed. You listen to the final whispers of the dead as they descend into the cold, unyielding earth. You know that to fully celebrate the gift of life, we must honor its finale as well.",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -147,25 +167,29 @@
       {
         "feature": "chains",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "bonekeeper-take-dead",
-      "bonekeeper-tool-invaluable-work"
-    ],
-    "quote": "You are a shepherd to the departed. You listen to the final whispers of the dead as they descend into the cold, unyielding earth. You know that to fully celebrate the gift of life, we must honor its finale as well."
+      "bonekeeper-names",
+      "bonekeeper-what-did-you-take-from-the-dead",
+      "bonekeeper-what-tool-was-invaluable-in-your-work"
+    ]
   },
   {
     "type": "template",
     "id": "cutpurse",
     "kind": "background",
     "name": "Cutpurse",
-    "description": "A thief and pickpocket who lives by quick hands and quicker escapes.",
+    "description": "You live in the grey space between those who have power and those who don’t. You find opportunity where others see only chaos. With nimble fingers, you unburden both the richest merchant and the lowliest guard.",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -189,25 +213,29 @@
       {
         "feature": "black-outfit",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "cutpurse-last-big-job",
-      "cutpurse-helps-steal"
-    ],
-    "quote": "You live in the grey space between those who have power and those who don\u2019t. You find opportunity where others see only chaos. With nimble fingers, you unburden both the richest merchant and the lowliest guard."
+      "cutpurse-names",
+      "cutpurse-what-was-your-last-big-job",
+      "cutpurse-what-helps-you-steal"
+    ]
   },
   {
     "type": "template",
     "id": "fieldwarden",
     "kind": "background",
     "name": "Fieldwarden",
-    "description": "A guardian of the wilds who patrols the borderlands and keeps travelers safe.",
+    "description": "Protectors of the harvest, defense against pests, thieves, and beasts. A position of great honor, while it lasts: many guardians do not live out their natural lives. Roll a second time on the Bonds table.",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -231,25 +259,29 @@
       {
         "feature": "repellent",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "fieldwarden-got-better",
-      "fieldwarden-tool-saved-life"
-    ],
-    "quote": "Protectors of the harvest, defense against pests, thieves, and beasts. A position of great honor, while it lasts: many guardians do not live out their natural lives. Roll a second time on the Bonds table."
+      "fieldwarden-names",
+      "fieldwarden-what-got-the-better-of-you",
+      "fieldwarden-what-tool-saved-your-life"
+    ]
   },
   {
     "type": "template",
     "id": "fletchwind",
     "kind": "background",
     "name": "Fletchwind",
-    "description": "A bowyer and fletcher who knows woods, bows, and the craft of arrows.",
+    "description": "You strike from afar, but that does not make you a coward. You are a musician, the song of your bowstring naught but a warning, singing the silent promise of a quick death.",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -259,7 +291,7 @@
         "quantity": "1"
       },
       {
-        "feature": "short-bow",
+        "feature": "bow",
         "quantity": "1"
       },
       {
@@ -273,25 +305,29 @@
       {
         "feature": "heartroot-salve",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "fletchwind-earn-bow",
-      "fletchwind-kind-wood-bow"
-    ],
-    "quote": "You strike from afar, but that does not make you a coward. You are a musician, the song of your bowstring naught but a warning, singing the silent promise of a quick death."
+      "fletchwind-names",
+      "fletchwind-how-did-you-earn-your-bow",
+      "fletchwind-what-kind-of-wood-is-your-bow-made-from"
+    ]
   },
   {
     "type": "template",
     "id": "foundling",
     "kind": "background",
     "name": "Foundling",
-    "description": "A child raised in the wild by a druid, who was left to find their own way.",
+    "description": "An odd birthmark, a strange smell: somehow, the touch of elsewhere still lingers. Wherever you are, you have trouble fitting in. Roll on the Omens table (even if you’re not the youngest player), but keep the results private for now.",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -315,25 +351,29 @@
       {
         "feature": "dagger",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "foundling-took",
-      "foundling-keeps-bad-tidings"
-    ],
-    "quote": "An odd birthmark, a strange smell: somehow, the touch of elsewhere still lingers. Wherever you are, you have trouble fitting in. Roll on the Omens table (even if you\u2019re not the youngest player), but keep the results private for now."
+      "foundling-names",
+      "foundling-who-took-you-in",
+      "foundling-what-keeps-bad-tidings-at-bay"
+    ]
   },
   {
     "type": "template",
     "id": "fungal-forager",
     "kind": "background",
     "name": "Fungal Forager",
-    "description": "A gatherer who knows mushrooms, roots, and the hidden food of the deep woods.",
+    "description": "You follow the whisperings of the deep earth, the rhythmic pulse of the mycelium forest that grows beneath the surface. The dark holds no terror for you. Also, you really love mushrooms.",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -353,25 +393,29 @@
       {
         "feature": "metal-pail",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "fungal-forager-strange-fungus-discover",
-      "fungal-forager-keeps-sane-even"
-    ],
-    "quote": "You follow the whisperings of the deep earth, the rhythmic pulse of the mycelium forest that grows beneath the surface. The dark holds no terror for you. Also, you really love mushrooms."
+      "fungal-forager-names",
+      "fungal-forager-what-strange-fungus-did-you-discover",
+      "fungal-forager-what-keeps-you-sane-even-in-utter-darkness"
+    ]
   },
   {
     "type": "template",
     "id": "greenwise",
     "kind": "background",
     "name": "Greenwise",
-    "description": "A herbalist and healer who draws remedies and small charms from the land.",
+    "description": "You delve deep into the Wood , prying its secrets from between rough boughs and whispering leaves. To this verdant kingdom, you are no mere scholar but its confidant as well.",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -395,25 +439,29 @@
       {
         "feature": "twine-bauble",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "greenwise-wood-failed",
-      "greenwise-keeps-safe-while"
-    ],
-    "quote": "You delve deep into the Wood, prying its secrets from between rough boughs and whispering leaves. To this verdant kingdom, you are no mere scholar but its confidant as well."
+      "greenwise-names",
+      "greenwise-how-has-the-wood-failed-you",
+      "greenwise-what-keeps-you-safe-while-in-the-wood"
+    ]
   },
   {
     "type": "template",
     "id": "half-witch",
     "kind": "background",
     "name": "Half Witch",
-    "description": "A practitioner of folk magic who works spells through the forest and its plants.",
+    "description": "Born of both the mortal world and the unseen, you are an enigma to some and feared by many. Yours is the tale of what happens when two worlds collide.",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -437,25 +485,29 @@
       {
         "feature": "ghillie-suit",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "half-witch-bring-back-unseelie",
-      "half-witch-concoction-carry-rare"
-    ],
-    "quote": "Born of both the mortal world and the unseen, you are an enigma to some and feared by many. Yours is the tale of what happens when two worlds collide."
+      "half-witch-names",
+      "half-witch-what-did-you-bring-back-from-the-unseelie-court",
+      "half-witch-what-concoction-do-you-carry-and-what-rare-ingredients-did-you-gather-to-make-it"
+    ]
   },
   {
     "type": "template",
     "id": "hexenbane",
     "kind": "background",
     "name": "Hexenbane",
-    "description": "A witch hunter sworn to destroy the unholy and the cursed.",
+    "description": "You are a mere digit on the unerring hand of justice. You go where others fear to tread, unyielding and unbroken.",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -479,25 +531,29 @@
       {
         "feature": "crossbow",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "hexenbane-order-belong",
-      "hexenbane-vow"
-    ],
-    "quote": "You are a mere digit on the unerring hand of justice. You go where others fear to tread, unyielding and unbroken."
+      "hexenbane-names",
+      "hexenbane-to-which-order-do-you-belong",
+      "hexenbane-what-was-your-vow"
+    ]
   },
   {
     "type": "template",
     "id": "jongleur",
     "kind": "background",
     "name": "Jongleur",
-    "description": "A traveling performer whose songs, tricks, and music carry news across the land.",
+    "description": "What inspires the soul more than song, words, and spectacle? Why practice for years to master the arcane when you’ve already got real magic inside?",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -521,25 +577,29 @@
       {
         "feature": "sling",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "jongleur-happened-final-performance",
-      "jongleur-trinket-unable-leave"
-    ],
-    "quote": "What inspires the soul more than song, words, and spectacle? Why practice for years to master the arcane when you\u2019ve already got real magic inside?"
+      "jongleur-names",
+      "jongleur-what-happened-at-your-final-performance",
+      "jongleur-what-trinket-were-you-unable-to-leave-behind"
+    ]
   },
   {
     "type": "template",
     "id": "kettlewright",
     "kind": "background",
     "name": "Kettlewright",
-    "description": "A tinker and metalworker who mends pots, tools, and other goods.",
+    "description": "You are known by the smell of molten metal and the jingle of tin. You are no mere merchant but an artisan of fire and metal.",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -563,25 +623,29 @@
       {
         "feature": "hammer",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "kettlewright-trade",
-      "kettlewright-never-fails-get"
-    ],
-    "quote": "You are known by the smell of molten metal and the jingle of tin. You are no mere merchant but an artisan of fire and metal."
+      "kettlewright-names",
+      "kettlewright-what-is-your-trade",
+      "kettlewright-what-never-fails-to-get-you-out-of-trouble"
+    ]
   },
   {
     "type": "template",
     "id": "marchguard",
     "kind": "background",
     "name": "Marchguard",
-    "description": "A soldier of the frontier marches who holds the border against threats.",
+    "description": "Bound by blood Oath to patrol the border and protect the realm. Once sworn, the Oath cannot be broken. The Guard always finds their own.",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -601,25 +665,29 @@
       {
         "feature": "boiled-leather",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "marchguard-why-take-oath",
-      "marchguard-carry-as-proof"
-    ],
-    "quote": "Bound by blood Oath to patrol the border and protect the realm. Once sworn, the Oath cannot be broken. The Guard always finds their own."
+      "marchguard-names",
+      "marchguard-why-did-you-take-the-oath",
+      "marchguard-what-do-you-carry-as-proof-of-your-oath"
+    ]
   },
   {
     "type": "template",
     "id": "mountebank",
     "kind": "background",
     "name": "Mountebank",
-    "description": "A quack salesman and showman who sells cure-alls from a traveling cart.",
+    "description": "Wits are your sharpest weapon, a facade your strongest shield. But when you do lose, you lose badly.",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -643,25 +711,29 @@
       {
         "feature": "cane-sword",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "mountebank-fraud-exposed",
-      "mountebank-keepsake-could-always"
-    ],
-    "quote": "Wits are your sharpest weapon, a facade your strongest shield. But when you do lose, you lose badly."
+      "mountebank-names",
+      "mountebank-how-was-your-fraud-exposed",
+      "mountebank-what-keepsake-could-always-identify-you"
+    ]
   },
   {
     "type": "template",
     "id": "outrider",
     "kind": "background",
     "name": "Outrider",
-    "description": "A rider and scout who travels ahead of caravans and armies to watch the road.",
+    "description": "Your coin comes from escorting caravans, tracking fugitives, or lending your blade to a cause. You’ve been a savior, an executioner, a hero, and even a villain. Yours is not a solitary path, however: you’ll always have your horse.",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -685,25 +757,29 @@
       {
         "feature": "spyglass",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "outrider-personal-code-principle",
-      "outrider-breed-horse"
-    ],
-    "quote": "Your coin comes from escorting caravans, tracking fugitives, or lending your blade to a cause. You\u2019ve been a savior, an executioner, a hero, and even a villain. Yours is not a solitary path, however: you\u2019ll always have your horse."
+      "outrider-names",
+      "outrider-what-personal-code-or-principle-do-you-uphold",
+      "outrider-what-breed-is-your-horse"
+    ]
   },
   {
     "type": "template",
     "id": "prowler",
     "kind": "background",
     "name": "Prowler",
-    "description": "A hunter and stalker who moves quietly through dangerous country.",
+    "description": "You are a specter in the night, a fleeting shadow that slips by its prey, unseen. Each kill is a test of cunning and animal determination, a contest between life and death. You know that one day you will lose. You look forward to it.",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -727,25 +803,29 @@
       {
         "feature": "spring-loaded-trap",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "prowler-last-hunt",
-      "prowler-tool-always-pack"
-    ],
-    "quote": "You are a specter in the night, a fleeting shadow that slips by its prey, unseen. Each kill is a test of cunning and animal determination, a contest between life and death. You know that one day you will lose. You look forward to it."
+      "prowler-names",
+      "prowler-what-did-you-last-hunt",
+      "prowler-what-tool-is-always-in-your-pack"
+    ]
   },
   {
     "type": "template",
     "id": "rill-runner",
     "kind": "background",
     "name": "Rill Runner",
-    "description": "A courier and river guide who knows the waterways and the paths along them.",
+    "description": "You sing the stories of rivers and lakes, your talents soothing friends and the elements alike. You’ve seen more than most, but somehow it never seems to be enough.",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -769,25 +849,29 @@
       {
         "feature": "dagger",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "rill-runner-songs-best-known",
-      "rill-runner-pays-way-across"
-    ],
-    "quote": "You sing the stories of rivers and lakes, your talents soothing friends and the elements alike. You\u2019ve seen more than most, but somehow it never seems to be enough."
+      "rill-runner-names",
+      "rill-runner-what-songs-are-you-best-known-for",
+      "rill-runner-what-pays-your-way-across-the-land"
+    ]
   },
   {
     "type": "template",
     "id": "scrivener",
     "kind": "background",
     "name": "Scrivener",
-    "description": "A scribe and record keeper who copies, writes, and reads documents for others.",
+    "description": "You copy ancient texts and illuminate manuscripts, recording the voices of the clever, the great, and the powerful. You will prove that the pen truly is mightier than the sword.",
     "features": [
+      {
+        "feature": "backpack",
+        "quantity": "1"
+      },
+      {
+        "feature": "gold",
+        "quantity": "3d6"
+      },
       {
         "feature": "rations",
         "quantity": "1"
@@ -797,7 +881,7 @@
         "quantity": "1"
       },
       {
-        "feature": "quill-and-ink",
+        "feature": "quill-ink",
         "quantity": "1"
       },
       {
@@ -811,16 +895,12 @@
       {
         "feature": "badge",
         "quantity": "1"
-      },
-      {
-        "feature": "gold",
-        "quantity": "3d6"
       }
     ],
     "tables": [
-      "scrivener-work-keep-yourself",
-      "scrivener-transcribe-sensitive-information"
-    ],
-    "quote": "You copy ancient texts and illuminate manuscripts, recording the voices of the clever, the great, and the powerful. You will prove that the pen truly is mightier than the sword."
+      "scrivener-names",
+      "scrivener-what-work-did-you-keep-for-yourself",
+      "scrivener-how-do-you-transcribe-sensitive-information"
+    ]
   }
 ]

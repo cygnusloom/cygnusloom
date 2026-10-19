@@ -64,7 +64,6 @@ from cygnusforge.services.world import (
     create_player_character,
     seed_campaign,
     snapshot,
-    start_location_name,
     world_state_text,
 )
 
@@ -189,13 +188,11 @@ def create_character(
     """Make the campaign's player character. Until it exists, the campaign cannot be played."""
     campaign = get_campaign(engine, owner_id, campaign_id)
     spec = character_spec(library, campaign)
-    template = library.world_templates[campaign.world_template]
     with _exclusive(campaign_id), session_scope(engine) as db:
         return create_player_character(
             db,
             campaign_id,
             spec,
-            start_location_name(template),
             name,
             rolled,
             submitted,

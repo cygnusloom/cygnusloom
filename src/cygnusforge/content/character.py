@@ -36,6 +36,7 @@ class Feature:
     feature_type: str
     description: str
     bulky: bool
+    petty: bool
 
 
 @dataclass(frozen=True)
@@ -52,7 +53,6 @@ class Template:
     kind: str
     name: str
     description: str
-    quote: str | None
     features: tuple[Granted, ...]
     tables: tuple[str, ...]
 
@@ -144,12 +144,16 @@ def _feature(definition: Definition, template: str) -> Feature:
     bulky = data.get("bulky", False)
     if not isinstance(bulky, bool):
         raise ContentError(f"{label}: 'bulky' must be true or false")
+    petty = data.get("petty", False)
+    if not isinstance(petty, bool):
+        raise ContentError(f"{label}: 'petty' must be true or false")
     return Feature(
         id=definition.id,
         name=required_text(data, "name", label),
         feature_type=kind,
         description=description,
         bulky=bulky,
+        petty=petty,
     )
 
 
@@ -189,15 +193,11 @@ def _template(
     for table in table_ids:
         if table not in tables:
             raise ContentError(f"{label}: unknown table {table!r}")
-    quote = data.get("quote")
-    if quote is not None and (not isinstance(quote, str) or not quote.strip()):
-        raise ContentError(f"{label}: 'quote' must be non-empty text")
     return Template(
         id=definition.id,
         kind=required_text(data, "kind", label),
         name=required_text(data, "name", label),
         description=required_text(data, "description", label),
-        quote=quote,
         features=grants,
         tables=tuple(table_ids),
     )
