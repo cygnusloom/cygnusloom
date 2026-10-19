@@ -337,6 +337,7 @@ def _campaign_page(
         world=library.world_templates.get(campaign.world_template),
         world_view=world.view,
         rule_set=rule_set,
+        messages=messages,
         transcript=transcript,
         context=context,
         error=error,

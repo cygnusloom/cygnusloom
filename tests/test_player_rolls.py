@@ -133,6 +133,7 @@ def test_the_log_is_shown_in_the_chat_before_the_reply(
     page = client.get(f"/campaigns/{campaign_id}").text
     assert f'<div class="log-line">{transcript[-2].content}</div>' in page
     assert 'id="panel-log"' not in page
+    assert "Say something to start the conversation." not in page
 
 
 def test_a_text_answer_reaches_the_gm_instead_of_a_roll(
