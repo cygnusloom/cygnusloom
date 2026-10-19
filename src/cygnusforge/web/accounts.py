@@ -4,28 +4,22 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
-from starlette.datastructures import FormData
 from starlette.responses import Response
 
 from cygnusforge.auth.deps import USER_KEY, current_user, verify_csrf
 from cygnusforge.services.accounts import authenticate, register_user
 from cygnusforge.services.common import Conflict, InvalidInput
+from cygnusforge.web.forms import form_text
 from cygnusforge.web.rendering import render
 
 router = APIRouter()
 
-
-def _client_key(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
+AUTH_PAGES = {"register": ("Register", "/register"), "login": ("Log in", "/login")}
 
 
 def _too_many(request: Request) -> bool:
-    return not request.app.state.limiter.allow(_client_key(request))
-
-
-def _form_text(form: FormData, name: str) -> str:
-    value = form.get(name, "")
-    return value if isinstance(value, str) else ""
+    key = request.client.host if request.client else "unknown"
+    return not request.app.state.limiter.allow(key)
 
 
 @router.get("/")
@@ -48,9 +42,9 @@ async def register(request: Request) -> Response:
         return _form_error(request, "register", 429, "Too many attempts. Try again later.")
     await verify_csrf(request)
     form = await request.form()
-    email = _form_text(form, "email")
+    email = form_text(form, "email")
     try:
-        user = register_user(request.app.state.engine, email, _form_text(form, "password"))
+        user = register_user(request.app.state.engine, email, form_text(form, "password"))
     except InvalidInput as exc:
         return _form_error(request, "register", 400, str(exc), email)
     except Conflict as exc:
@@ -72,8 +66,8 @@ async def login(request: Request) -> Response:
         return _form_error(request, "login", 429, "Too many attempts. Try again later.")
     await verify_csrf(request)
     form = await request.form()
-    email = _form_text(form, "email")
-    user = authenticate(request.app.state.engine, email, _form_text(form, "password"))
+    email = form_text(form, "email")
+    user = authenticate(request.app.state.engine, email, form_text(form, "password"))
     if user is None:
         return _form_error(request, "login", 401, "Email or password is incorrect.", email)
     _sign_in(request, user.id)
@@ -96,14 +90,14 @@ def _sign_in(request: Request, user_id: int | None) -> None:
 def _form_error(
     request: Request, mode: str, status: int, message: str, email: str = ""
 ) -> Response:
-    heading = "Register" if mode == "register" else "Log in"
+    heading, action = AUTH_PAGES[mode]
     return render(
         request,
         "auth_form.html",
         status_code=status,
         mode=mode,
         heading=heading,
-        action=f"/{mode}",
+        action=action,
         error=message,
         email=email,
     )

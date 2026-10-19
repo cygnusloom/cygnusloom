@@ -6,7 +6,6 @@ from urllib.parse import urlencode
 
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
-from starlette.datastructures import FormData
 from starlette.responses import Response
 
 from cygnusforge.auth.deps import page_user, verify_csrf
@@ -20,14 +19,10 @@ from cygnusforge.services.campaigns import (
     send_message,
 )
 from cygnusforge.services.common import InvalidInput
+from cygnusforge.web.forms import form_text
 from cygnusforge.web.rendering import render
 
 router = APIRouter(prefix="/campaigns")
-
-
-def _form_text(form: FormData, name: str) -> str:
-    value = form.get(name, "")
-    return value if isinstance(value, str) else ""
 
 
 @router.get("")
@@ -48,7 +43,7 @@ async def create(request: Request) -> Response:
     user = page_user(request)
     await verify_csrf(request)
     form = await request.form()
-    name = _form_text(form, "name")
+    name = form_text(form, "name")
     try:
         campaign = create_campaign(request.app.state.engine, user.id, name)
     except InvalidInput as exc:
@@ -68,8 +63,8 @@ async def post_message(request: Request, campaign_id: int) -> Response:
     user = page_user(request)
     await verify_csrf(request)
     form = await request.form()
-    text = _form_text(form, "content")
-    model = _form_text(form, "model")
+    text = form_text(form, "content")
+    model = form_text(form, "model")
     settings = request.app.state.settings
     try:
         await send_message(

@@ -23,6 +23,7 @@
     </nav>
   </header>
   <main>
+    {% if error %}<p role="alert">{{ error }}</p>{% endif %}
     {% block content %}{% endblock %}
   </main>
 </body>

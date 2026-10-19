@@ -1,13 +1,8 @@
 {% extends "base.html" %}
 {% block title %}{{ campaign.name }}{% endblock %}
 {% block content %}
-  <section class="card wide chat">
-    <div class="heading">
-      <h1>{{ campaign.name }}</h1>
-    </div>
-    {% if error %}
-      <p role="alert">{{ error }}</p>
-    {% endif %}
+  <section class="card">
+    <h1>{{ campaign.name }}</h1>
     <div class="transcript">
       {% for message in messages %}
         <div class="message {{ message.role }}">
@@ -22,7 +17,7 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <select name="model" aria-label="Model">
         {% for model in models %}
-          <option value="{{ model }}" {% if model == selected_model %}selected{% endif %}>{{ model }}</option>
+          <option value="{{ model }}"{% if model == selected_model %} selected{% endif %}>{{ model }}</option>
         {% endfor %}
       </select>
       <textarea name="content" rows="3" required maxlength="8000" placeholder="Message">{{ draft }}</textarea>
