@@ -18,6 +18,7 @@ description: Test a web app in two layers. Automated tests run with the project'
 - Load the browser tools with `tool_search_tool` before using them. Open the page with `openBrowserPage` and `forceNew: true`, drive it with `runPlaywrightCode`, and check layout with `screenshotPage`.
 - Scope selectors to the form or region under test, so generic buttons elsewhere on the page are not matched.
 - Load config from the project's gitignored env file, and never print its values.
+- If multiple chats are working simultaneously, ensure each chat is isolated and does not interfere with the others. Use unique identifiers or separate browser contexts for each chat session. You may need to run the server on different ports for each session. Coordinate by writing to the .gitignored file .copilot_testing to record your current sessions; be sure to clean this file up afterwards.
 
 ## Done
 
