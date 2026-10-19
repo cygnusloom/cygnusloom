@@ -127,6 +127,16 @@ def _recording_provider() -> Any:
             self.calls.append({"messages": list(messages), "tools": tools})
             return await self.inner.chat(model, messages, tools)
 
+        async def stream(
+            self,
+            model: str,
+            messages: list[dict[str, Any]],
+            tools: list[dict[str, Any]] | None = None,
+        ) -> Any:
+            self.calls.append({"messages": list(messages), "tools": tools})
+            async for item in self.inner.stream(model, messages, tools):
+                yield item
+
     return Recorder()
 
 

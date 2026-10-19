@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import math
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import AsyncIterator, Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -11,7 +11,7 @@ from sqlmodel import select
 
 from cygnusforge.content.library import ContentLibrary, RuleSet, ToolCall
 from cygnusforge.db.models import Campaign, Message, TurnContext
-from cygnusforge.llm.base import LLMError, Provider, complete
+from cygnusforge.llm.base import ChatReply, LLMError, Provider, TextDelta, complete
 from cygnusforge.llm.registry import ProviderFactory
 from cygnusforge.services.common import InvalidInput, NotFound, session_scope
 from cygnusforge.services.tools import run_tool, tool_specs
@@ -236,24 +236,70 @@ async def _summarize(
     return _keep_newest(summary, budget_tokens)
 
 
+@dataclass(frozen=True)
+class Status:
+    """What the GM is doing now, shown while the reply is pending."""
+
+    text: str
+
+
+@dataclass(frozen=True)
+class Delta:
+    """A piece of the GM's reply text, as it arrives."""
+
+    text: str
+
+
+@dataclass(frozen=True)
+class Reset:
+    """Text streamed so far was narration before a tool call. The client should clear it."""
+
+
+@dataclass(frozen=True)
+class Saved:
+    """The turn is stored. `message_id` is the GM's reply."""
+
+    message_id: int
+
+
+TurnEvent = Status | Delta | Reset | Saved
+
+
+@dataclass(frozen=True)
+class _Final:
+    text: str
+
+
 async def _reply_with_tools(
     provider: Provider,
     model_name: str,
     messages: list[dict[str, Any]],
     context: list[ContextPart],
     tool_calls: Mapping[str, ToolCall],
-) -> str:
+) -> AsyncIterator[TurnEvent | _Final]:
     """Let the GM call tools until it gives a reply. Tool calls and results stay in this turn.
 
-    Each round's messages are also appended to `context`, so the turn's record includes them."""
+    Each round's messages are also appended to `context`, so the turn's record includes them.
+    The last item is always the `_Final` reply."""
     specs = tool_specs(tool_calls)
     for round_number in range(1, MAX_TOOL_ROUNDS + 2):
-        result = await provider.chat(model_name, messages, specs)
+        yield Status("Thinking...")
+        streamed = False
+        result: ChatReply | None = None
+        async for item in provider.stream(model_name, messages, specs):
+            if isinstance(item, TextDelta):
+                streamed = True
+                yield Delta(item.text)
+            else:
+                result = item
+        if result is None:
+            raise LLMError("the model returned no reply")
         if not result.tool_requests:
             reply = result.text.strip()
             if not reply:
                 raise LLMError("the model returned an empty reply")
-            return reply
+            yield _Final(reply)
+            return
         messages.append(
             {
                 "role": "assistant",
@@ -270,7 +316,10 @@ async def _reply_with_tools(
         )
         if result.text:
             context.append(ContextPart("assistant", f"GM text (round {round_number})", result.text))
+        if streamed:
+            yield Reset()
         for request in result.tool_requests:
+            yield Status(f"Running {request.name}...")
             output = run_tool(tool_calls, request)
             messages.append({"role": "tool", "tool_call_id": request.id, "content": output})
             context.append(
@@ -286,7 +335,7 @@ async def _reply_with_tools(
     raise LLMError("the model kept calling tools without answering")
 
 
-async def send_message(
+async def stream_message(
     engine: Engine,
     providers: ProviderFactory,
     allowed_models: Iterable[str],
@@ -296,8 +345,11 @@ async def send_message(
     campaign_id: int,
     text: str,
     model: str,
-) -> str:
-    """Send a user message to `model` and return its reply.
+) -> AsyncIterator[TurnEvent]:
+    """Send a user message to `model` and yield what happens while the GM replies.
+
+    Yields Status and Delta events while the model works, Reset when streamed narration is
+    superseded by a tool call, and Saved once the reply is stored.
 
     When the prompt reaches half of `context_tokens`, older history is folded into the
     campaign's summary first. Everything is saved only after the model answers, so a failed
@@ -327,6 +379,7 @@ async def send_message(
         start = _verbatim_start(history, int(context_tokens * KEEP_RECENT))
         if start > 0:
             folded = history[:start]
+            yield Status("Summarizing older messages...")
             summary = await _summarize(
                 provider,
                 model_name,
@@ -350,7 +403,16 @@ async def send_message(
         *({"role": p.role, "content": p.content} for p in conversation),
     ]
     round_start = len(context)
-    reply = await _reply_with_tools(provider, model_name, messages, context, rule_set.tool_calls)
+    reply: str | None = None
+    async for event in _reply_with_tools(
+        provider, model_name, messages, context, rule_set.tool_calls
+    ):
+        if isinstance(event, _Final):
+            reply = event.text
+        else:
+            yield event
+    if reply is None:
+        raise LLMError("the model returned no reply")
     transcript = [
         *summary_record,
         player,
@@ -375,7 +437,34 @@ async def send_message(
             )
         )
         db.commit()
-    return reply
+        message_id = assistant.id
+    yield Saved(message_id)
+
+
+async def send_message(
+    engine: Engine,
+    providers: ProviderFactory,
+    allowed_models: Iterable[str],
+    library: ContentLibrary,
+    context_tokens: int,
+    owner_id: int,
+    campaign_id: int,
+    text: str,
+    model: str,
+) -> None:
+    """Send a user message and wait for the GM's reply to be stored."""
+    async for _ in stream_message(
+        engine,
+        providers,
+        allowed_models,
+        library,
+        context_tokens,
+        owner_id,
+        campaign_id,
+        text,
+        model,
+    ):
+        pass
 
 
 def get_turn_context(

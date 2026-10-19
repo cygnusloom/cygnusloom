@@ -107,3 +107,16 @@ def test_error_turn_raises_llm_error():
 def test_malformed_directive_raises_llm_error(content: str):
     with pytest.raises(LLMError):
         _run([_user(content)])
+
+
+def test_stream_deltas_join_to_the_reply_text():
+    script = '__FAKE__:{"turns": [{"text": "Hello  there, friend."}]}'
+
+    async def collect() -> list:
+        return [item async for item in FakeProvider().stream("scripted", [_user(script)])]
+
+    items = asyncio.run(collect())
+
+    deltas = "".join(item.text for item in items[:-1])
+    assert deltas == "Hello  there, friend."
+    assert items[-1].text == "Hello  there, friend."

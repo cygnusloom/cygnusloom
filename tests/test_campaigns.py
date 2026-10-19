@@ -77,6 +77,9 @@ def test_each_message_can_use_a_different_model(
             used.append(model)
             return ChatReply(text=f"from {model}")
 
+        async def stream(self, model, messages, tools=None):
+            yield await self.chat(model, messages, tools)
+
     app.state.providers = lambda model_id: (Echo(), model_id)
     client, campaign_id = _campaign_id(client_factory)
     _send(client, campaign_id, "one", model="fake/scripted")
@@ -95,6 +98,9 @@ def test_send_keeps_the_chosen_model_selected(
 
         async def chat(self, model, messages, tools=None):
             return ChatReply(text="ok")
+
+        async def stream(self, model, messages, tools=None):
+            yield await self.chat(model, messages, tools)
 
     app.state.providers = lambda model_id: (Echo(), model_id)
     client, campaign_id = _campaign_id(client_factory)
@@ -220,6 +226,9 @@ def test_failed_reply_saves_nothing_and_keeps_draft(
 
         async def chat(self, model, messages, tools=None):
             raise LLMError("provider broken is unreachable")
+
+        async def stream(self, model, messages, tools=None):
+            yield await self.chat(model, messages, tools)
 
     app.state.providers = lambda model_id: (Broken(), "model")
     client, campaign_id = _campaign_id(client_factory)

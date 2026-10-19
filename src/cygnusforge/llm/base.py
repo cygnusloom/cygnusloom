@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -24,6 +24,13 @@ class ChatReply:
     tool_requests: Sequence[ToolRequest] = field(default_factory=tuple)
 
 
+@dataclass(frozen=True)
+class TextDelta:
+    """A piece of reply text as it arrives. The joined deltas equal the final reply's text."""
+
+    text: str
+
+
 class Provider(Protocol):
     name: str
 
@@ -33,6 +40,15 @@ class Provider(Protocol):
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]] | None = None,
     ) -> ChatReply: ...
+
+    def stream(
+        self,
+        model: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+    ) -> AsyncIterator[TextDelta | ChatReply]:
+        """Yields text deltas as they arrive, then the complete ChatReply as the last item."""
+        ...
 
 
 async def complete(provider: Provider, model: str, messages: list[dict[str, Any]]) -> str:

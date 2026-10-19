@@ -44,6 +44,14 @@ class RecordingProvider:
             raise LLMError("the model is down")
         return ChatReply(text="reply")
 
+    async def stream(
+        self,
+        model: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+    ) -> Any:
+        yield await self.chat(model, messages, tools)
+
     def summarizer_calls(self) -> list[list[dict[str, Any]]]:
         return [call for call in self.calls if call[0]["content"].startswith(SUMMARY_PROMPT)]
 

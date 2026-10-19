@@ -2,16 +2,24 @@
 
 from __future__ import annotations
 
+import json
+from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from starlette.responses import Response
 
 from cygnusforge.auth.deps import page_user, verify_csrf
 from cygnusforge.db.models import User
 from cygnusforge.llm.base import LLMError
 from cygnusforge.services.campaigns import (
+    Delta,
+    Reset,
+    Saved,
+    Status,
+    TurnEvent,
     context_usage,
     create_campaign,
     get_campaign,
@@ -20,8 +28,9 @@ from cygnusforge.services.campaigns import (
     list_campaigns,
     list_messages,
     send_message,
+    stream_message,
 )
-from cygnusforge.services.common import InvalidInput
+from cygnusforge.services.common import InvalidInput, NotFound
 from cygnusforge.web.forms import form_text
 from cygnusforge.web.rendering import render
 
@@ -118,6 +127,67 @@ async def post_message(request: Request, campaign_id: int) -> Response:
     return RedirectResponse(
         f"/campaigns/{campaign_id}?{urlencode({'model': model})}", status_code=303
     )
+
+
+@router.post("/{campaign_id}/messages/stream")
+async def post_message_stream(request: Request, campaign_id: int) -> Response:
+    """Newline-delimited JSON events for one turn. Errors are reported as an event, because the
+    response has already started by the time they happen."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    text = form_text(form, "content")
+    model = form_text(form, "model")
+    settings = request.app.state.settings
+    events = stream_message(
+        request.app.state.engine,
+        request.app.state.providers,
+        settings.llm_models,
+        request.app.state.content,
+        settings.llm_context_tokens,
+        user.id,
+        campaign_id,
+        text,
+        model,
+    )
+    return StreamingResponse(
+        _turn_lines(events),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+async def _turn_lines(events: AsyncIterator[TurnEvent]) -> AsyncIterator[str]:
+    try:
+        async for event in events:
+            yield _line(event) + "\n"
+    except InvalidInput as exc:
+        yield _line(TurnError(400, str(exc))) + "\n"
+    except NotFound as exc:
+        yield _line(TurnError(404, str(exc))) + "\n"
+    except LLMError as exc:
+        yield _line(TurnError(502, str(exc))) + "\n"
+
+
+@dataclass(frozen=True)
+class TurnError:
+    status: int
+    message: str
+
+
+def _line(event: TurnEvent | TurnError) -> str:
+    match event:
+        case Status(text):
+            payload: dict[str, object] = {"type": "status", "text": text}
+        case Delta(text):
+            payload = {"type": "delta", "text": text}
+        case Reset():
+            payload = {"type": "reset"}
+        case Saved(message_id):
+            payload = {"type": "saved", "message_id": message_id}
+        case TurnError(status, message):
+            payload = {"type": "error", "status": status, "message": message}
+    return json.dumps(payload)
 
 
 def _new_form(

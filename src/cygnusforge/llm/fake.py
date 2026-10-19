@@ -19,12 +19,15 @@ the transcript, so it needs no server-side state.
 from __future__ import annotations
 
 import json
+import re
+from collections.abc import AsyncIterator
 from typing import Any
 
-from cygnusforge.llm.base import ChatReply, LLMError, ToolRequest
+from cygnusforge.llm.base import ChatReply, LLMError, TextDelta, ToolRequest
 
 DIRECTIVE = "__FAKE__:"
 _decoder = json.JSONDecoder()
+_WORDS = re.compile(r"\s*\S+|\s+")
 
 
 class FakeProvider:
@@ -41,6 +44,18 @@ class FakeProvider:
     ) -> ChatReply:
         self.calls.append(messages)
         return _respond(messages)
+
+    async def stream(
+        self,
+        model: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+    ) -> AsyncIterator[TextDelta | ChatReply]:
+        self.calls.append(messages)
+        reply = _respond(messages)  # errors surface before anything is yielded
+        for piece in _WORDS.findall(reply.text):
+            yield TextDelta(piece)
+        yield reply
 
 
 def _respond(messages: list[dict[str, Any]]) -> ChatReply:

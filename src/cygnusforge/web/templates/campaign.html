@@ -29,7 +29,8 @@
               <p class="muted">Say something to start the conversation.</p>
             {% endfor %}
           </div>
-          <form method="post" action="/campaigns/{{ campaign.id }}/messages" class="composer" id="composer">
+          <p class="turn-error" role="alert" hidden></p>
+          <form method="post" action="/campaigns/{{ campaign.id }}/messages" data-stream-action="/campaigns/{{ campaign.id }}/messages/stream" class="composer" id="composer">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <textarea name="content" rows="3" required maxlength="8000" placeholder="Message">{{ draft }}</textarea>
             <div class="composer-actions">
@@ -116,4 +117,5 @@
 {% endblock %}
 {% block scripts %}
   <script src="/static/workspace.js"></script>
+  <script src="/static/turn_stream.js"></script>
 {% endblock %}
