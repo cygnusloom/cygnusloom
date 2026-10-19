@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import Request
+from markdown_it import MarkdownIt
+from markupsafe import Markup
 from starlette.responses import Response
 from starlette.templating import Jinja2Templates
 
@@ -11,6 +13,17 @@ from cygnusforge.auth.deps import current_user, get_csrf
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
+
+# Raw HTML in messages stays escaped; single newlines become line breaks for chat text.
+_markdown = MarkdownIt("commonmark", {"html": False, "breaks": True})
+
+
+def render_markdown(text: str) -> Markup:
+    """Render chat text as markdown. Raw HTML is escaped, so the result is safe to inline."""
+    return Markup(_markdown.render(text))
+
+
+templates.env.filters["markdown"] = render_markdown
 
 
 def render(request: Request, name: str, status_code: int = 200, **context: Any) -> Response:

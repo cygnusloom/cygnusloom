@@ -78,7 +78,13 @@ button, .button {
 .message { padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--field); }
 .message.user { border-color: var(--accent); }
 .message .role { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; }
-.message p { margin: 0.25rem 0 0; white-space: pre-wrap; }
+.message .content { margin-top: 0.25rem; overflow-wrap: anywhere; }
+.message .content > :first-child { margin-top: 0; }
+.message .content > :last-child { margin-bottom: 0; }
+.message .content p, .message .content ul, .message .content ol, .message .content blockquote, .message .content pre { margin: 0.5rem 0; }
+.message .content pre { padding: 0.5rem 0.75rem; overflow-x: auto; background: var(--panel); border-radius: 4px; }
+.message .content code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; }
+.message .content blockquote { margin-left: 0; padding-left: 0.75rem; border-left: 3px solid var(--border); color: var(--muted); }
 
 .composer { display: flex; gap: 0.5rem; align-items: stretch; }
 .composer textarea { flex: 1 1 0; min-width: 0; font-family: ui-monospace, Menlo, monospace; font-size: 0.9rem; }

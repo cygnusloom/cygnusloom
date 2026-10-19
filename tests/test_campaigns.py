@@ -119,6 +119,17 @@ def test_default_fake_reply_echoes_last_message(client_factory: Callable[[], Tes
     assert "You said: ping" in client.get(f"/campaigns/{campaign_id}").text
 
 
+def test_messages_render_markdown_and_escape_html(client_factory: Callable[[], TestClient]):
+    client, campaign_id = _campaign_id(client_factory)
+    _send(client, campaign_id, "**bold** `code` <script>alert(1)</script> [x](javascript:alert(1))")
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "<strong>bold</strong>" in page
+    assert "<code>code</code>" in page
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in page
+    assert "<script>alert(1)</script>" not in page
+    assert 'href="javascript' not in page
+
+
 def test_history_is_sent_to_the_model(client_factory: Callable[[], TestClient], fake: FakeProvider):
     client, campaign_id = _campaign_id(client_factory)
     _send(client, campaign_id, "first")

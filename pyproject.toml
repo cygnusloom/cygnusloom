@@ -12,6 +12,7 @@ dependencies = [
     "argon2-cffi>=25.1.0",
     "itsdangerous>=2.2.0",
     "httpx>=0.27",
+    "markdown-it-py>=4.2.0",
 ]
 
 [dependency-groups]
