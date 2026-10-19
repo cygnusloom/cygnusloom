@@ -361,15 +361,27 @@ def _campaign_page(
     campaign = get_campaign(engine, user.id, campaign_id)
     rule_set = library.rule_sets.get(campaign.rule_set)
     spec = rule_set.character if rule_set else NO_CHARACTER
+    world = campaign_world(engine, user.id, campaign.id)
+    if world.state.pc() is None:
+        character = None
+        if rule_set is not None:
+            rolled = request.session.get(_roll_key(campaign.id))
+            if not isinstance(rolled, dict) or set(rolled) != set(spec.stats):
+                rolled = _roll_stats(request, user, campaign.id)
+            character = creation_view(spec, rolled)
+        return render(
+            request,
+            "character_create.html",
+            status_code=status_code,
+            campaign=campaign,
+            world=library.world_templates.get(campaign.world_template),
+            world_view=world.view,
+            rule_set=rule_set,
+            character=character,
+            error=error,
+        )
     messages = list_messages(engine, campaign.id)
     transcript = campaign_transcript(engine, user.id, campaign.id)
-    world = campaign_world(engine, user.id, campaign.id)
-    character = None
-    if world.state.pc() is None and rule_set is not None:
-        rolled = request.session.get(_roll_key(campaign.id))
-        if not isinstance(rolled, dict) or set(rolled) != set(spec.stats):
-            rolled = _roll_stats(request, user, campaign.id)
-        character = creation_view(spec, rolled)
     context = context_usage(
         campaign,
         world.state,
@@ -389,7 +401,6 @@ def _campaign_page(
         messages=messages,
         transcript=transcript,
         context=context,
-        character=character,
         error=error,
         draft=draft,
         pending=pending_turn(engine, user.id, campaign.id),

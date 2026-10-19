@@ -1,0 +1,7 @@
+{% macro notes_list(notes) -%}
+  {% for note in notes %}
+    <div class="note"><span class="muted">{{ note.subject }}</span><p>{{ note.text }}</p></div>
+  {% else %}
+    <p class="muted">No notes yet.</p>
+  {% endfor %}
+{%- endmacro %}

@@ -1,5 +1,8 @@
-<section class="chat character-create" aria-label="Create your character">
-  <h1 class="chat-title">{{ campaign.name }}</h1>
+{% extends "campaign_base.html" %}
+{% block title %}Create your character · {{ campaign.name }}{% endblock %}
+{% block play %}
+<section class="view creation" data-view="play" aria-labelledby="creation-title">
+  <h1 id="creation-title">{{ campaign.name }}</h1>
   <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
   <h2>Create your character</h2>
   <p class="muted">Your stats are rolled. Where a stat can be swapped, choose the rolled values you want, with one swap per group. Random picks are made when you create the character.</p>
@@ -80,3 +83,8 @@
     <button type="submit">Create character</button>
   </form>
 </section>
+{% endblock %}
+{% block scripts %}
+  {{ super() }}
+  <script src="/static/character_create.js"></script>
+{% endblock %}

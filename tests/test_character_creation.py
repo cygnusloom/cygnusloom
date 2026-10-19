@@ -43,6 +43,20 @@ def test_cairn_campaign_shows_the_creation_form_and_no_chat(
     assert f"/campaigns/{campaign_id}/messages" not in page
 
 
+def test_character_creation_keeps_the_sidebar_but_not_the_chat(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _cairn_campaign(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert 'class="view creation"' in page
+    assert 'class="sidebar"' in page
+    assert 'data-view-target="lore"' in page
+    assert 'class="workspace"' not in page
+    assert 'class="chat"' not in page
+    assert 'class="side"' not in page
+    assert "/static/character_create.js" in page
+
+
 def test_chat_is_refused_until_the_character_exists(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
     campaign_id = int(_new_campaign(client).headers["location"].rsplit("/", 1)[1])

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "macros.html" import notes_list %}
+{% block body_class %}workspace-page{% endblock %}
+{% block content %}
+<div class="shell">
+  <nav class="sidebar" aria-label="Sidebar">
+    <button type="button" class="sidebar-item" data-view-target="play" aria-pressed="true" aria-label="Play" title="Play"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 5v14l12-7z"/></svg></button>
+    <button type="button" class="sidebar-item" data-view-target="lore" aria-pressed="false" aria-label="Lore" title="Lore"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z"/></svg></button>
+    <button type="button" class="sidebar-item" data-dialog-target="dialog-characters" aria-haspopup="dialog" aria-label="Characters" title="Characters"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
+    <button type="button" class="sidebar-item" data-drawer-target="drawer-notes" aria-expanded="false" aria-controls="drawer-notes" aria-label="Notes" title="Notes"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 3h10l4 4v14H5z"/><path d="M9 12h6M9 16h6"/></svg></button>
+  </nav>
+  <div class="views">
+{% block play %}{% endblock %}
+    <section class="view" data-view="lore" aria-label="Lore" hidden>
+      <p class="muted">Placeholder: lore will appear here.</p>
+    </section>
+
+    <aside class="drawer" id="drawer-notes" aria-label="Notes">
+      <div class="panel-header">
+        <h2>Notes</h2>
+        <button type="button" class="close" data-drawer-close aria-label="Close">&times;</button>
+      </div>
+      {{ notes_list(world_view.notes) }}
+    </aside>
+  </div>
+</div>
+<dialog id="dialog-characters" class="app-dialog" aria-labelledby="dialog-characters-title">
+  <form method="dialog">
+    <h2 id="dialog-characters-title">Characters</h2>
+    {% if world_view.pc %}
+    <h3>You</h3>
+    <p><strong>{{ world_view.pc.name }}</strong>{% if world_view.pc.location %}, at {{ world_view.pc.location }}{% else %}, not yet placed{% endif %}</p>
+    {% endif %}
+    <h3>Locations</h3>
+    {% for location in world_view.locations %}
+      <p><strong>{{ location.name }}</strong>: {{ location.description }}</p>
+    {% else %}
+      <p class="muted">No locations yet.</p>
+    {% endfor %}
+    <h3>NPCs</h3>
+    {% for npc in world_view.npcs %}
+      <div class="npc">
+        <p><strong>{{ npc.name }}</strong>, at {{ npc.location }}</p>
+        <p>{{ npc.description }}</p>
+        <p class="muted">Personality: {{ npc.personality }}. Accent: {{ npc.accent }}. Quirks: {{ npc.quirks | join("; ") or "none" }}.</p>
+      </div>
+    {% else %}
+      <p class="muted">No NPCs yet.</p>
+    {% endfor %}
+    <button type="submit">Close</button>
+  </form>
+</dialog>
+{% block dialogs %}{% endblock %}
+{% endblock %}
+{% block scripts %}
+  <script src="/static/workspace.js"></script>
+{% endblock %}
