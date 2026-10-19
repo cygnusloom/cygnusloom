@@ -18,7 +18,10 @@
           "description": "What the place looks, sounds, and smells like, in a sentence or two."
         }
       },
-      "required": ["name", "description"]
+      "required": [
+        "name",
+        "description"
+      ]
     }
   },
   {
@@ -53,11 +56,17 @@
         },
         "quirks": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Optional. Habits or mannerisms the NPC shows."
         }
       },
-      "required": ["name", "location", "description"]
+      "required": [
+        "name",
+        "location",
+        "description"
+      ]
     }
   },
   {
@@ -79,7 +88,10 @@
           "description": "The name of the location to move them to. It must already exist."
         }
       },
-      "required": ["name", "location"]
+      "required": [
+        "name",
+        "location"
+      ]
     }
   },
   {
@@ -88,7 +100,7 @@
     "name": "add_note",
     "python_module": "core",
     "function": "add_note",
-    "description": "Record a note for yourself as the GM, to track events, updates, and situations so you stay consistent. It is not written for the player. Attach it to a location or NPC by giving its name as the subject; leave the subject out for a note about the campaign as a whole.",
+    "description": "Record a note for yourself as the GM, to track events, updates, and situations so you stay consistent. It is not written for the player. Attach it to a location or NPC by giving its name as the subject; leave the subject out for a note about the campaign as a whole. The result includes the note's id, for later update_note or delete_note calls.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -101,7 +113,9 @@
           "description": "Optional. The name of the location or NPC the note is about."
         }
       },
-      "required": ["text"]
+      "required": [
+        "text"
+      ]
     }
   },
   {
@@ -110,7 +124,7 @@
     "name": "search_notes",
     "python_module": "core",
     "function": "search_notes",
-    "description": "Search your GM notes on events, updates, and situations, to stay consistent. Every word in the query must appear in the note's text or in its subject's name. Use it before continuing a thread or answering questions about what has happened before.",
+    "description": "Search your GM notes on events, updates, and situations, to stay consistent. Every word in the query must appear in the note's text or in its subject's name. Each result includes the note's id. Use it before continuing a thread or answering questions about what has happened before.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -119,7 +133,9 @@
           "description": "Words to look for, such as \"bridge\" or \"Mara oath\"."
         }
       },
-      "required": ["query"]
+      "required": [
+        "query"
+      ]
     }
   },
   {
@@ -141,7 +157,159 @@
           "description": "What the NPC wants to say or achieve in this moment, such as \"warns the player off the bridge\"."
         }
       },
-      "required": ["npc", "intent"]
+      "required": [
+        "npc",
+        "intent"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "update_location",
+    "name": "update_location",
+    "python_module": "core",
+    "function": "update_location",
+    "description": "Change a location's description, for example after the place changes. Its name stays the same.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the location."
+        },
+        "description": {
+          "type": "string",
+          "description": "The new description of the place, in a sentence or two."
+        }
+      },
+      "required": [
+        "name",
+        "description"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "delete_location",
+    "name": "delete_location",
+    "python_module": "core",
+    "function": "delete_location",
+    "description": "Remove a location from the campaign. It is refused while any character is still there; move them first. Notes about the location are kept.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the location."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "update_npc",
+    "name": "update_npc",
+    "python_module": "core",
+    "function": "update_npc",
+    "description": "Change an NPC's details. Only the fields you give change; the rest stay as they are. Giving quirks replaces the whole list. Use it when an NPC changes, for example after a shift in attitude or appearance. The player character cannot be changed this way.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The NPC's name."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional. Who the NPC is now: appearance, role, and what they are doing."
+        },
+        "personality": {
+          "type": "string",
+          "description": "Optional. How the NPC carries themselves now."
+        },
+        "accent": {
+          "type": "string",
+          "description": "Optional. How the NPC sounds when they speak."
+        },
+        "quirks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional. The NPC's full list of habits or mannerisms, replacing the old list."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "delete_npc",
+    "name": "delete_npc",
+    "python_module": "core",
+    "function": "delete_npc",
+    "description": "Remove an NPC from the campaign, for example when they leave the story or die. Notes about them are kept. The player character cannot be removed.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The NPC's name."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "update_note",
+    "name": "update_note",
+    "python_module": "core",
+    "function": "update_note",
+    "description": "Change the text of one of your GM notes, identified by its id. Use it when something you recorded has changed.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "note_id": {
+          "type": "integer",
+          "description": "The id of the note, as given by add_note or search_notes."
+        },
+        "text": {
+          "type": "string",
+          "description": "The corrected fact, written as a complete sentence."
+        }
+      },
+      "required": [
+        "note_id",
+        "text"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "delete_note",
+    "name": "delete_note",
+    "python_module": "core",
+    "function": "delete_note",
+    "description": "Remove one of your GM notes, identified by its id, once it no longer holds true or matters.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "note_id": {
+          "type": "integer",
+          "description": "The id of the note, as given by add_note or search_notes."
+        }
+      },
+      "required": [
+        "note_id"
+      ]
     }
   }
 ]

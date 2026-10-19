@@ -49,7 +49,7 @@ def test_stream_sends_status_then_deltas_then_saved(
 
     events = _stream(client, campaign_id, _script({"text": "Hello there, friend."}))
 
-    assert events[0] == {"type": "status", "text": "Deciding..."}
+    assert events[0] == {"type": "status", "text": "Managing state..."}
     assert _deltas(events) == "Hello there, friend."
     assert events[-1] == {"type": "saved", "event_id": _assistant_ids(app, campaign_id)[-1]}
 
@@ -63,21 +63,21 @@ def test_each_phase_shows_a_status_and_only_the_narration_is_streamed(
     assert paused[-1]["type"] == "prompt"
     assert paused[-1]["details"] == "Modifiers: +1 relationship, +0 circumstance."
     assert [e["text"] for e in paused if e["type"] == "status"] == [
-        "Deciding...",
+        "Managing state...",
         "Running social_roll...",
     ]
 
     events = _answer(client, campaign_id, "roll")
 
     statuses = [e["text"] for e in events if e["type"] == "status"]
-    assert statuses == ["Deciding...", "Narrating..."]
+    assert statuses == ["Managing state...", "Narrating..."]
     narrating_at = events.index({"type": "status", "text": "Narrating..."})
     assert _deltas(events[:narrating_at]) == ""
     assert _deltas(events) == "Done."
     assert events[-1]["type"] == "saved"
 
 
-def test_decisions_offer_tools_and_the_narration_does_not(
+def test_state_steps_offer_tools_and_the_narration_does_not(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     recorder = _recording_provider()
@@ -140,7 +140,7 @@ def test_provider_failure_is_reported_and_keeps_the_message(
 
     events = _stream(client, campaign_id, "are you there?")
 
-    assert events[0] == {"type": "status", "text": "Deciding..."}
+    assert events[0] == {"type": "status", "text": "Managing state..."}
     assert events[-1] == {
         "type": "error",
         "status": 502,

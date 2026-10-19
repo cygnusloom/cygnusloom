@@ -14,7 +14,7 @@ Each user message after the directive uses the next turn. A turn's `rounds` are 
 the model makes, one list per round. The engine runs them for real, so each name must be a tool
 in the rule set. A `player_input` tool pauses the turn until the test answers it, so the test
 posts the answer next. Its `text` is the narration. Its `error` raises LLMError; the player's message stays and the reply stays open.
-Within a turn, `chat` calls (the GM's decisions) get the rounds and return no text, and `stream`
+Within a turn, `chat` calls (the GM's state steps) get the rounds and return no text, and `stream`
 calls (the narration) get `text`. A speech step (its system message starts "Speech step.") gets
 the dialogue from the turn's `speech` object, keyed by the speaker's name. A speaker not listed
 there gets the intent back as its dialogue. A newer directive replaces the older one. When the

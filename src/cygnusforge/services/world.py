@@ -23,9 +23,15 @@ from cygnusforge.services.events import (
     CampaignState,
     Character,
     LocationAdded,
+    LocationRemoved,
+    LocationUpdated,
     Note,
     NoteAdded,
+    NoteRemoved,
+    NoteUpdated,
     NpcAdded,
+    NpcRemoved,
+    NpcUpdated,
     PcAdded,
     Place,
     load_state,
@@ -35,7 +41,6 @@ from cygnusforge.services.events import (
 MAX_NAME = 120
 MAX_TEXT = 2000
 MAX_QUIRKS = 10
-NOTE_RESULTS = 10
 QUIRKS_PER_NPC = 2
 
 
@@ -87,11 +92,42 @@ class WorldTools:
         with session_scope(self.engine) as db:
             return move_actor(db, self.campaign_id, name, location)
 
+    def update_location(self, name: str, description: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return update_location(db, self.campaign_id, name, description)
+
+    def delete_location(self, name: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return delete_location(db, self.campaign_id, name)
+
+    def update_npc(
+        self,
+        name: str,
+        description: str | None = None,
+        personality: str | None = None,
+        accent: str | None = None,
+        quirks: Sequence[str] | None = None,
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return update_npc(db, self.campaign_id, name, description, personality, accent, quirks)
+
+    def delete_npc(self, name: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return delete_npc(db, self.campaign_id, name)
+
     def add_note(self, text: str, subject: str | None = None) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return add_note(db, self.campaign_id, text, subject)
 
-    def search_notes(self, query: str) -> dict[str, list[dict[str, str]]]:
+    def update_note(self, note_id: int, text: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return update_note(db, self.campaign_id, note_id, text)
+
+    def delete_note(self, note_id: int) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return delete_note(db, self.campaign_id, note_id)
+
+    def search_notes(self, query: str) -> dict[str, list[dict[str, Any]]]:
         with session_scope(self.engine) as db:
             return search_notes(load_state(db, self.campaign_id), query)
 
@@ -178,6 +214,66 @@ def create_npc(
     }
 
 
+def update_location(db: Session, campaign_id: int, name: str, description: str) -> dict[str, Any]:
+    state = load_state(db, campaign_id)
+    where = _place_named(state, name)
+    text = _text(description, "description", MAX_TEXT)
+    record(db, campaign_id, LocationUpdated(name=where.name, description=text))
+    db.commit()
+    return {"updated": "location", "name": where.name}
+
+
+def delete_location(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
+    state = load_state(db, campaign_id)
+    where = _place_named(state, name)
+    occupants = [c.name for c in state.characters.values() if c.location == where.name]
+    if occupants:
+        raise InvalidInput(
+            f"{where.name} still has {', '.join(occupants)} there; move them elsewhere first"
+        )
+    record(db, campaign_id, LocationRemoved(name=where.name))
+    db.commit()
+    return {"deleted": "location", "name": where.name}
+
+
+def update_npc(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    description: str | None = None,
+    personality: str | None = None,
+    accent: str | None = None,
+    quirks: Sequence[str] | None = None,
+) -> dict[str, Any]:
+    """Change the NPC's details. Only the given fields change; quirks, if given, replace the list."""
+    state = load_state(db, campaign_id)
+    npc = _npc_named(state, name)
+    if all(value is None for value in (description, personality, accent, quirks)):
+        raise InvalidInput("give at least one of description, personality, accent, or quirks")
+    event = NpcUpdated(
+        name=npc.name,
+        description=npc.description
+        if description is None
+        else _text(description, "description", MAX_TEXT),
+        personality=npc.personality
+        if personality is None
+        else _text(personality, "personality", MAX_NAME),
+        accent=npc.accent if accent is None else _text(accent, "accent", MAX_NAME),
+        quirks=list(npc.quirks) if quirks is None else _quirks(quirks) or [],
+    )
+    record(db, campaign_id, event)
+    db.commit()
+    return {"updated": "npc", "name": npc.name}
+
+
+def delete_npc(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
+    state = load_state(db, campaign_id)
+    npc = _npc_named(state, name)
+    record(db, campaign_id, NpcRemoved(name=npc.name))
+    db.commit()
+    return {"deleted": "npc", "name": npc.name}
+
+
 def move_actor(db: Session, campaign_id: int, name: str, location: str) -> dict[str, str]:
     state = load_state(db, campaign_id)
     actor = _character_named(state, name)
@@ -199,21 +295,39 @@ def add_note(
         if entry is None:
             raise InvalidInput(f"there is no location or character named {label!r}")
         subject_name = entry.name
-    record(db, campaign_id, NoteAdded(text=text, subject=subject_name))
+    note_id = record(db, campaign_id, NoteAdded(text=text, subject=subject_name))
     db.commit()
-    return {"noted": True, "subject": subject_name if subject_name is not None else CAMPAIGN_WIDE}
+    return {
+        "noted": True,
+        "id": note_id,
+        "subject": subject_name if subject_name is not None else CAMPAIGN_WIDE,
+    }
 
 
-def search_notes(state: CampaignState, query: str) -> dict[str, list[dict[str, str]]]:
+def update_note(db: Session, campaign_id: int, note_id: int, text: str) -> dict[str, Any]:
+    state = load_state(db, campaign_id)
+    _note_with_id(state, note_id)
+    record(db, campaign_id, NoteUpdated(note_id=note_id, text=_text(text, "text", MAX_TEXT)))
+    db.commit()
+    return {"updated": "note", "id": note_id}
+
+
+def delete_note(db: Session, campaign_id: int, note_id: int) -> dict[str, Any]:
+    state = load_state(db, campaign_id)
+    note = _note_with_id(state, note_id)
+    record(db, campaign_id, NoteRemoved(note_id=note_id, text=note.text))
+    db.commit()
+    return {"deleted": "note", "id": note_id}
+
+
+def search_notes(state: CampaignState, query: str) -> dict[str, list[dict[str, Any]]]:
     """Notes whose text or subject name contains every word of `query`, newest first."""
     words = _text(query, "query", MAX_TEXT).casefold().split()
-    matches: list[dict[str, str]] = []
+    matches: list[dict[str, Any]] = []
     for note in reversed(state.notes):
         haystack = f"{note.subject} {note.text}".casefold()
         if all(word in haystack for word in words):
-            matches.append({"subject": note.subject, "text": note.text})
-        if len(matches) == NOTE_RESULTS:
-            break
+            matches.append({"id": note.id, "subject": note.subject, "text": note.text})
     return {"notes": matches}
 
 
@@ -312,6 +426,20 @@ def _character_named(state: CampaignState, name: str) -> Character:
     if not isinstance(entry, Character):
         raise InvalidInput(f"there is no character named {name!r}")
     return entry
+
+
+def _npc_named(state: CampaignState, name: str) -> Character:
+    npc = _character_named(state, name)
+    if npc.kind != NPC_KIND:
+        raise InvalidInput(f"{npc.name} is the player character, not an NPC")
+    return npc
+
+
+def _note_with_id(state: CampaignState, note_id: int) -> Note:
+    note = next((n for n in state.notes if n.id == note_id), None)
+    if note is None:
+        raise InvalidInput(f"there is no note with id {note_id}")
+    return note
 
 
 def _text(value: object, label: str, limit: int) -> str:

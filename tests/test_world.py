@@ -275,10 +275,104 @@ def test_gm_adds_and_searches_notes_through_tools(client_factory: Callable[[], T
         "add_note",
         {"text": "The bridge is unsafe.", "subject": "Spore Bridge"},
     )
-    assert added == {"noted": True, "subject": "Spore Bridge"}
+    assert added == {"noted": True, "id": added["id"], "subject": "Spore Bridge"}
     _tool(app, campaign_id, "add_note", {"text": "Hob hides the key."})
     found = _tool(app, campaign_id, "search_notes", {"query": "bridge"})
-    assert found == {"notes": [{"subject": "Spore Bridge", "text": "The bridge is unsafe."}]}
+    assert found == {
+        "notes": [{"id": added["id"], "subject": "Spore Bridge", "text": "The bridge is unsafe."}]
+    }
+
+
+def test_gm_updates_and_deletes_a_location(client_factory: Callable[[], TestClient], app):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "create_location", {"name": "Test Ledge", "description": "A ledge."})
+    updated = _tool(
+        app,
+        campaign_id,
+        "update_location",
+        {"name": "Test Ledge", "description": "A ledge, now crumbling."},
+    )
+    assert updated == {"updated": "location", "name": "Test Ledge"}
+    assert _state(app, campaign_id).named("Test Ledge").description == "A ledge, now crumbling."
+    deleted = _tool(app, campaign_id, "delete_location", {"name": "Test Ledge"})
+    assert deleted == {"deleted": "location", "name": "Test Ledge"}
+    assert _state(app, campaign_id).named("Test Ledge") is None
+
+
+def test_a_location_with_someone_in_it_cannot_be_deleted(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "create_location", {"name": "Test Ledge", "description": "A ledge."})
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Test Ledge"})
+    refused = _tool(app, campaign_id, "delete_location", {"name": "Test Ledge"})
+    assert "still has Ada there" in refused["error"]
+    assert _state(app, campaign_id).named("Test Ledge") is not None
+
+
+def test_gm_updates_an_npc_and_keeps_the_fields_not_given(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    before = _actors(app, campaign_id)["Mara Thistledown"]
+    _tool(
+        app,
+        campaign_id,
+        "update_npc",
+        {"name": "Mara Thistledown", "description": "Now guards the bridge."},
+    )
+    after = _actors(app, campaign_id)["Mara Thistledown"]
+    assert after.description == "Now guards the bridge."
+    assert (after.personality, after.accent, after.quirks) == (
+        before.personality,
+        before.accent,
+        before.quirks,
+    )
+
+    _tool(app, campaign_id, "update_npc", {"name": "Mara Thistledown", "quirks": ["hums"]})
+    assert _actors(app, campaign_id)["Mara Thistledown"].quirks == ["hums"]
+
+    refused = _tool(app, campaign_id, "update_npc", {"name": "Mara Thistledown"})
+    assert "at least one" in refused["error"]
+
+
+def test_the_player_character_cannot_be_updated_as_an_npc_or_deleted(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    updated = _tool(app, campaign_id, "update_npc", {"name": "Ada", "description": "Changed."})
+    deleted = _tool(app, campaign_id, "delete_npc", {"name": "Ada"})
+    assert "not an NPC" in updated["error"]
+    assert "not an NPC" in deleted["error"]
+    assert _actors(app, campaign_id)["Ada"].kind != NPC_KIND
+
+
+def test_gm_deletes_an_npc_and_keeps_notes_about_them(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "add_note", {"text": "Brin owes a debt.", "subject": "Brin Gallowcap"})
+    deleted = _tool(app, campaign_id, "delete_npc", {"name": "Brin Gallowcap"})
+    assert deleted == {"deleted": "npc", "name": "Brin Gallowcap"}
+    state = _state(app, campaign_id)
+    assert state.named("Brin Gallowcap") is None
+    assert [note.subject for note in state.notes] == ["Brin Gallowcap"]
+
+
+def test_gm_updates_and_deletes_notes_by_id(client_factory: Callable[[], TestClient], app):
+    _, campaign_id = _campaign_id(client_factory)
+    added = _tool(app, campaign_id, "add_note", {"text": "The bridge sways."})
+    note_id = added["id"]
+    updated = _tool(app, campaign_id, "update_note", {"note_id": note_id, "text": "It collapsed."})
+    assert updated == {"updated": "note", "id": note_id}
+    notes = _state(app, campaign_id).notes
+    assert [(note.id, note.text) for note in notes] == [(note_id, "It collapsed.")]
+
+    deleted = _tool(app, campaign_id, "delete_note", {"note_id": note_id})
+    assert deleted == {"deleted": "note", "id": note_id}
+    assert _state(app, campaign_id).notes == []
+    missing = _tool(app, campaign_id, "delete_note", {"note_id": note_id})
+    assert "no note with id" in missing["error"]
 
 
 def test_search_needs_every_word_and_returns_newest_first(
@@ -299,14 +393,14 @@ def test_search_needs_every_word_and_returns_newest_first(
     assert none == []
 
 
-def test_search_results_are_capped(client_factory: Callable[[], TestClient], app):
+def test_search_returns_every_matching_note(client_factory: Callable[[], TestClient], app):
     _, campaign_id = _campaign_id(client_factory)
     with _db(app) as db:
-        for index in range(world.NOTE_RESULTS + 3):
+        for index in range(15):
             world.add_note(db, campaign_id, f"Clue {index}.")
         db.commit()
         found = world.search_notes(load_state(db, campaign_id), "clue")["notes"]
-    assert len(found) == world.NOTE_RESULTS
+    assert len(found) == 15
 
 
 def test_speaker_profile_describes_an_npc_at_the_players_location(

@@ -32,10 +32,10 @@ from cygnusforge.services.events import (
     ChatGM,
     ChatPlayer,
     ContextPart,
-    DecisionMade,
     GameEvent,
     PromptShown,
     SpeechWritten,
+    StateStepMade,
     SummaryUpdated,
     ToolRan,
     Turn,
@@ -67,24 +67,28 @@ from cygnusforge.services.world import (
 
 MAX_NAME = 120
 MAX_MESSAGE = 8000
-MAX_TOOL_ROUNDS = 3
 SYSTEM_PROMPT = (
     "You are Cygnus, an AI game master (GM). You run the world of a roleplaying campaign: you "
     "describe the scene, voice its characters, decide the outcome of the player's actions, and keep "
     "the story consistent with what has already happened. You are not a general assistant; stay in "
     "the GM role for the whole campaign."
 )
-DECIDE_INSTRUCTION = (
-    "Decision step. Decide whether this action needs a roll, another tool, or an NPC to speak, "
-    "and call the tool if it does. To have an NPC say something, call speak; do not write their "
-    "words yourself. Do not narrate here; the narration comes in the next step. If no tool is "
-    "needed, reply with one short sentence saying so."
+STATE_INSTRUCTION = (
+    "State management step. Decide what this action changes and what needs to be said or done, "
+    "then make it so with tool calls: create, update, or delete locations, characters, and notes as "
+    "the story needs; move characters; record facts in notes so you stay consistent; ask for a roll "
+    "when the outcome is uncertain; and call speak for each NPC who says something, without writing "
+    "their words yourself. Do not narrate here; the narration comes in the next step. When nothing "
+    "else needs to change, reply with one short sentence saying so."
 )
 NARRATE_INSTRUCTION = (
     "Narration step. Write the next beat as a good editor would: concise, specific, and free of "
     "filler. Aim for three to five sentences. Cut repetition and restated detail. Base the outcome "
-    "on the decision and tool results above. Work the queued NPC dialogue into the narration where "
-    "it fits, copied exactly, and do not write any other words for an NPC. Do not call tools."
+    "on the state changes and tool results above. Narrate what the player can perceive: arrivals "
+    "and departures, new or changed places, NPC speech, and roll outcomes. Work the queued NPC "
+    "dialogue into the narration where it fits, copied exactly, and do not write any other words for "
+    "an NPC. Do not narrate notes or other GM-only records, and do not mention tool names or ids. "
+    "Do not call tools."
 )
 SPEECH_INSTRUCTION = (
     "Speech step. Write only the words the speaker says aloud to the player, in character, "
@@ -679,7 +683,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
         *({"role": p.role, "content": p.content} for p in conversation),
     ]
     round_start = len(context)
-    context.append(ContextPart("system", "Decide instruction", DECIDE_INSTRUCTION))
+    context.append(ContextPart("system", "State instruction", STATE_INSTRUCTION))
     events.append(
         TurnBegun(
             head=_dicts([*summary_record, player]),
@@ -695,7 +699,7 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
     """Run the reply until it is recorded or paused. Log entries are yielded as the steps that
     recorded them finish. A pause is recorded before the player hears of it."""
     tools = tool_specs(run.tool_calls)
-    decide = {"role": "system", "content": DECIDE_INSTRUCTION}
+    state = {"role": "system", "content": STATE_INSTRUCTION}
     while True:
         turn = _turn(_state(run.engine, run.campaign_id))
         if turn.queue:
@@ -718,16 +722,16 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             continue
         if turn.narrating:
             break
-        yield Status("Deciding...")
+        yield Status("Managing state...")
         round_no = turn.rounds + 1
-        decision = await run.provider.chat(run.model_name, [*turn.messages, decide], tools)
-        if not decision.tool_requests:
+        step = await run.provider.chat(run.model_name, [*turn.messages, state], tools)
+        if not step.tool_requests:
             messages: list[dict[str, Any]] = []
             context: list[ContextPart] = []
-            if decision.text.strip():
-                messages.append({"role": "assistant", "content": decision.text})
+            if step.text.strip():
+                messages.append({"role": "assistant", "content": step.text})
                 context.append(
-                    ContextPart("assistant", f"GM decision (round {round_no})", decision.text)
+                    ContextPart("assistant", f"GM state step (round {round_no})", step.text)
                 )
             if turn.speech:
                 _add_speech(messages, context, turn.speech)
@@ -735,33 +739,31 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             _record(
                 run.engine,
                 run.campaign_id,
-                DecisionMade(requests=[], messages=messages, context=_dicts(context)),
+                StateStepMade(requests=[], messages=messages, context=_dicts(context)),
             )
             continue
-        if round_no > MAX_TOOL_ROUNDS:
-            raise LLMError("the model kept calling tools without answering")
         context = []
-        if decision.text:
-            context.append(ContextPart("assistant", f"GM text (round {round_no})", decision.text))
+        if step.text:
+            context.append(ContextPart("assistant", f"GM text (round {round_no})", step.text))
         messages = [
             {
                 "role": "assistant",
-                "content": decision.text or None,
+                "content": step.text or None,
                 "tool_calls": [
                     {
                         "id": request.id,
                         "type": "function",
                         "function": {"name": request.name, "arguments": request.arguments},
                     }
-                    for request in decision.tool_requests
+                    for request in step.tool_requests
                 ],
             }
         ]
         _record(
             run.engine,
             run.campaign_id,
-            DecisionMade(
-                requests=[asdict(request) for request in decision.tool_requests],
+            StateStepMade(
+                requests=[asdict(request) for request in step.tool_requests],
                 messages=messages,
                 context=_dicts(context),
             ),

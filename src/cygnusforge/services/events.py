@@ -77,6 +77,8 @@ class Character:
 
 @dataclass(frozen=True)
 class Note:
+    # The id of the note.added event that wrote it, so it stays the same across replays.
+    id: int
     subject: str
     text: str
 
@@ -308,12 +310,109 @@ class NoteAdded(GameEvent):
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         subject = CAMPAIGN_WIDE if self.subject is None else self.subject
-        state.notes.append(Note(subject=subject, text=self.text))
+        state.notes.append(Note(id=event_id, subject=subject, text=self.text))
 
     def render(self) -> str:
         if self.subject is None:
             return f"Note: {self.text}"
         return f"Note about {self.subject}: {self.text}"
+
+
+@dataclass(frozen=True)
+class LocationUpdated(GameEvent):
+    kind: ClassVar[str] = "location.updated"
+
+    name: str
+    description: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.places[name_key(self.name)] = Place(self.name, self.description)
+
+    def render(self) -> str:
+        return f"Location updated: {self.name}."
+
+
+@dataclass(frozen=True)
+class LocationRemoved(GameEvent):
+    kind: ClassVar[str] = "location.removed"
+
+    name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        del state.places[name_key(self.name)]
+
+    def render(self) -> str:
+        return f"Location removed: {self.name}."
+
+
+@dataclass(frozen=True)
+class NpcUpdated(GameEvent):
+    """An NPC's details after an update. The values are the resolved ones, not the changes."""
+
+    kind: ClassVar[str] = "npc.updated"
+
+    name: str
+    description: str
+    personality: str
+    accent: str
+    quirks: list[str]
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        npc = state.characters[name_key(self.name)]
+        npc.description = self.description
+        npc.personality = self.personality
+        npc.accent = self.accent
+        npc.quirks = list(self.quirks)
+
+    def render(self) -> str:
+        return f"Character updated: {self.name}."
+
+
+@dataclass(frozen=True)
+class NpcRemoved(GameEvent):
+    kind: ClassVar[str] = "npc.removed"
+
+    name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        del state.characters[name_key(self.name)]
+
+    def render(self) -> str:
+        return f"Character removed: {self.name}."
+
+
+@dataclass(frozen=True)
+class NoteUpdated(GameEvent):
+    kind: ClassVar[str] = "note.updated"
+
+    note_id: int
+    text: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.notes = [
+            Note(id=note.id, subject=note.subject, text=self.text)
+            if note.id == self.note_id
+            else note
+            for note in state.notes
+        ]
+
+    def render(self) -> str:
+        return f"Note updated: {self.text}"
+
+
+@dataclass(frozen=True)
+class NoteRemoved(GameEvent):
+    kind: ClassVar[str] = "note.removed"
+
+    note_id: int
+    # Kept for the Log, which shows the note that was removed.
+    text: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.notes = [note for note in state.notes if note.id != self.note_id]
+
+    def render(self) -> str:
+        return f"Note removed: {self.text}"
 
 
 @dataclass(frozen=True)
@@ -449,11 +548,11 @@ class TurnBegun(GameEvent):
 
 
 @dataclass(frozen=True)
-class DecisionMade(GameEvent):
-    """One decision step of the open turn. With `requests`, they are queued to run. Without, the
-    turn moves on to the narration, and any NPC dialogue is passed to it."""
+class StateStepMade(GameEvent):
+    """One state-management step of the open turn. With `requests`, they are queued to run.
+    Without, the turn moves on to the narration, and any NPC dialogue is passed to it."""
 
-    kind: ClassVar[str] = "turn.decided"
+    kind: ClassVar[str] = "turn.state_step"
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     requests: list[dict[str, str]]

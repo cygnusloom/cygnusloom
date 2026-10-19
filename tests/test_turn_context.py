@@ -11,8 +11,8 @@ from sqlmodel import Session
 
 from cygnusforge.config import Settings
 from cygnusforge.services.campaigns import (
-    DECIDE_INSTRUCTION,
     NARRATE_INSTRUCTION,
+    STATE_INSTRUCTION,
     get_turn_context,
     get_turn_transcript,
     list_messages,
@@ -63,7 +63,7 @@ def test_reply_context_lists_the_system_prompt_tools_and_the_message(
     assert sources[0] == "Base prompt"
     assert any(source.startswith("Rules from rule set 'freeform'") for source in sources)
     assert "Tool 'social_roll' from rule set 'freeform'" in sources
-    assert sources[-3:] == ["This message (player)", "Decide instruction", "Narrate instruction"]
+    assert sources[-3:] == ["This message (player)", "State instruction", "Narrate instruction"]
     assert parts[-3].content == "hello"
     page = client.get(f"/campaigns/{campaign_id}/messages/{reply_id}/context")
     assert page.status_code == 200
@@ -92,7 +92,7 @@ def test_recorded_system_text_is_exactly_what_the_model_received(
     final_call = recorder.calls[-1]["messages"]
     assert final_call[0] == {"role": "system", "content": "\n\n".join(p.content for p in base)}
     assert final_call[-1] == {"role": "system", "content": NARRATE_INSTRUCTION}
-    assert all(message["content"] != DECIDE_INSTRUCTION for message in final_call)
+    assert all(message["content"] != STATE_INSTRUCTION for message in final_call)
 
 
 def test_context_shows_history_and_this_turns_tool_rounds(
@@ -118,7 +118,7 @@ def test_context_shows_history_and_this_turns_tool_rounds(
     assert f"Message #{second_user} (player)" in sources
     assert sources[-5:] == [
         "This message (player)",
-        "Decide instruction",
+        "State instruction",
         "GM tool call (round 1)",
         "Result of 'social_roll' (round 1)",
         "Narrate instruction",
@@ -228,7 +228,7 @@ def test_transcript_covers_only_this_round(client_factory: Callable[[], TestClie
 
     assert [entry.source for entry in entries] == [
         "This message (player)",
-        "Decide instruction",
+        "State instruction",
         "GM tool call (round 1)",
         "Result of 'social_roll' (round 1)",
         "Narrate instruction",

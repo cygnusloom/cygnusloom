@@ -81,8 +81,14 @@ def test_specs_describe_the_social_roll_tool():
 CORE_TOOL_NAMES = {
     "create_location",
     "create_npc",
+    "update_location",
+    "delete_location",
+    "update_npc",
+    "delete_npc",
     "move_actor",
     "add_note",
+    "update_note",
+    "delete_note",
     "search_notes",
     "speak",
 }
@@ -262,41 +268,20 @@ def test_bad_tool_arguments_go_back_to_the_model(
     assert _pending(app, campaign_id) is None
 
 
-def test_three_tool_rounds_are_allowed(client_factory: Callable[[], TestClient], app: FastAPI):
-    recorder = _recording_provider()
-    app.state.providers = lambda model_id: (recorder, model_id)
-    client, campaign_id = _campaign_id(client_factory)
-    script = _script({"rounds": [[ROLL]] * 3, "text": "Done."})
-
-    _send(client, campaign_id, script)
-    for _ in range(3):
-        _answer(client, campaign_id, "roll")
-
-    assert len(recorder.calls) == 5
-    assert _saved(app, campaign_id)[-1] == ("assistant", "Done.")
-
-
-def test_runaway_tool_calls_stop_and_save_no_reply(
+def test_state_steps_are_not_capped_at_a_number_of_rounds(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
-    script = _script({"rounds": [[ROLL]] * 4, "text": "Never reached."})
+    script = _script({"rounds": [[ROLL]] * 6, "text": "Done."})
 
     _send(client, campaign_id, script)
-    for _ in range(2):
+    for _ in range(6):
         _answer(client, campaign_id, "roll")
-    events = _answer(client, campaign_id, "roll")
 
-    assert events[-1]["type"] == "error" and events[-1]["status"] == 502
-    assert len(recorder.calls) == 4
-    assert _saved(app, campaign_id) == [("user", script)]
-    assert _pending(app, campaign_id) is not None
-
-    retried = _answer(client, campaign_id, "continue")
-    assert retried[-1]["type"] == "error" and retried[-1]["status"] == 502
-    assert _saved(app, campaign_id) == [("user", script)]
+    assert len(recorder.calls) == 8
+    assert _saved(app, campaign_id)[-1] == ("assistant", "Done.")
 
 
 SPEAK = {

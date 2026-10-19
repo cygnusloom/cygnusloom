@@ -65,7 +65,20 @@ def _rule_set(ident: str = "testset") -> list[dict[str, str]]:
     return [{"type": "rule_set", "id": ident, "name": "Test set", "description": "For tests."}]
 
 
-CORE_TOOLS = {"create_location", "create_npc", "move_actor", "add_note", "search_notes", "speak"}
+CORE_TOOLS = {
+    "create_location",
+    "create_npc",
+    "update_location",
+    "delete_location",
+    "update_npc",
+    "delete_npc",
+    "move_actor",
+    "add_note",
+    "update_note",
+    "delete_note",
+    "search_notes",
+    "speak",
+}
 
 
 def _core() -> list[dict[str, Any]]:
