@@ -81,6 +81,15 @@
     }
   };
 
+  // The name is rolled last, so it draws on the background that the choices just rolled. In the
+  // unchosen mode a name already typed counts as chosen and is kept.
+  const randomizeAll = (onlyUnchosen) => {
+    randomizeChoices(onlyUnchosen);
+    const input = form.querySelector('input[name="name"]');
+    if (onlyUnchosen && input?.value.trim()) return;
+    rollName();
+  };
+
   document.addEventListener("click", (event) => {
     const target = event.target;
 
@@ -124,7 +133,7 @@
 
     const randomize = target.closest("[data-randomize]");
     if (randomize) {
-      randomizeChoices(randomize.dataset.randomize === "unchosen");
+      randomizeAll(randomize.dataset.randomize === "unchosen");
     }
   });
 
