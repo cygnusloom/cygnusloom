@@ -6,12 +6,29 @@
   {% endfor %}
 {%- endmacro %}
 
-{% macro choice(name, value, title, detail=None, required=False, data_select=None) -%}
+{% macro choice(name, value, title, detail=None, data_select=None) -%}
   <label class="choice">
-    <input type="radio" name="{{ name }}" value="{{ value }}"{% if required %} required{% endif %}{% if data_select %} data-template-select="{{ data_select }}"{% endif %}>
+    <input type="radio" name="{{ name }}" value="{{ value }}" data-title="{{ title }}"{% if data_select %} data-template-select="{{ data_select }}"{% endif %}>
     <span>{{ title }}</span>
     {% if detail %}<span class="muted choice-detail">{{ detail }}</span>{% endif %}
   </label>
+{%- endmacro %}
+
+{# The chosen value stays on one line; the full list of options opens in a dialog. #}
+{% macro choice_picker(name, label, description=None) -%}
+  <div class="choice-picker">
+    <output class="choice-summary" data-summary-for="{{ name }}">Not chosen</output>
+    {{ dice_button(name, label|lower) }}
+    <button type="button" class="secondary" data-open-choice="choice-dialog-{{ name }}" aria-haspopup="dialog">Choose</button>
+  </div>
+  <dialog id="choice-dialog-{{ name }}" class="app-dialog choice-dialog" aria-labelledby="choice-dialog-{{ name }}-title">
+    <h2 id="choice-dialog-{{ name }}-title">{{ label }}</h2>
+    {% if description %}<p class="muted">{{ description }}</p>{% endif %}
+    <div class="choice-list">{{ caller() }}</div>
+    <div class="dialog-actions">
+      <button type="button" class="secondary" data-close-choice>Done</button>
+    </div>
+  </dialog>
 {%- endmacro %}
 
 {% macro dice_button(name, label) -%}

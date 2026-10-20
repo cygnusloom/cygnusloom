@@ -130,6 +130,22 @@ def test_creation_page_offers_radio_cards_with_dice_and_no_random(
     assert '<option value="">' not in page
 
 
+def test_every_choice_opens_a_dialog_and_radios_are_not_required(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _cairn_campaign(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    groups = {name for name, _ in RADIO_RE.findall(page)}
+    dialog_ids = re.findall(r'<dialog id="(choice-dialog-[\w-]+)"', page)
+    opened = re.findall(r'data-open-choice="(choice-dialog-[\w-]+)"', page)
+    assert {f"choice-dialog-{name}" for name in groups} == set(dialog_ids)
+    assert sorted(dialog_ids) == sorted(opened)
+    assert len(dialog_ids) == len(set(dialog_ids))
+    for tag in re.findall(r'<input type="radio"[^>]*>', page):
+        attributes = re.sub(r'"[^"]*"', '""', tag)
+        assert " required" not in attributes
+
+
 def test_every_template_and_choice_must_be_set(client_factory: Callable[[], TestClient]):
     client, campaign_id = _cairn_campaign(client_factory)
     spec = client.app.state.content.rule_sets["cairn2e"].character

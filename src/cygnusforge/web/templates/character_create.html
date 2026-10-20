@@ -1,5 +1,5 @@
 {% extends "campaign_base.html" %}
-{% from "macros.html" import choice, dice_button %}
+{% from "macros.html" import choice, choice_picker %}
 {% block title %}Create your character · {{ campaign.name }}{% endblock %}
 {% block play %}
 <section class="view creation" data-view="play" aria-labelledby="creation-title">
@@ -41,40 +41,37 @@
         </section>
       {% endif %}
       {% for group in character.kinds %}
-        <fieldset class="creation-panel" aria-labelledby="panel-kind-{{ group.kind }}">
-          <div class="creation-panel-head">
-            <h3 id="panel-kind-{{ group.kind }}">{{ group.label }}</h3>
-            {{ dice_button("template-" ~ group.kind, group.label|lower) }}
-          </div>
-          {% for template in group.templates %}
-            {{ choice("template-" ~ group.kind, template.id, template.name, template.description, required=True, data_select=group.kind) }}
-          {% endfor %}
+        <fieldset class="creation-panel" data-choice-panel="template-{{ group.kind }}" data-choice-label="{{ group.label }}" aria-labelledby="panel-kind-{{ group.kind }}">
+          <h3 id="panel-kind-{{ group.kind }}">{{ group.label }}</h3>
+          {% call choice_picker("template-" ~ group.kind, group.label) %}
+            {% for template in group.templates %}
+              {{ choice("template-" ~ group.kind, template.id, template.name, template.description, data_select=group.kind) }}
+            {% endfor %}
+          {% endcall %}
         </fieldset>
         {% for template in group.templates %}
           <div class="template-tables" data-template-group="{{ group.kind }}" data-template="{{ template.id }}" hidden>
             {% for table in template.tables %}
-              <fieldset class="creation-panel" aria-labelledby="panel-table-{{ table.id }}">
-                <div class="creation-panel-head">
-                  <h3 id="panel-table-{{ table.id }}">{{ table.label }}</h3>
-                  {{ dice_button("field-" ~ table.id, table.label|lower) }}
-                </div>
-                {% for option in table.options %}
-                  {{ choice("field-" ~ table.id, option, option) }}
-                {% endfor %}
+              <fieldset class="creation-panel" data-choice-panel="field-{{ table.id }}" data-choice-label="{{ table.label }}" aria-labelledby="panel-table-{{ table.id }}">
+                <h3 id="panel-table-{{ table.id }}">{{ table.label }}</h3>
+                {% call choice_picker("field-" ~ table.id, table.label) %}
+                  {% for option in table.options %}
+                    {{ choice("field-" ~ table.id, option, option) }}
+                  {% endfor %}
+                {% endcall %}
               </fieldset>
             {% endfor %}
           </div>
         {% endfor %}
       {% endfor %}
       {% for field in character.choice_fields %}
-        <fieldset class="creation-panel" aria-labelledby="panel-field-{{ field.id }}" title="{{ field.description }}">
-          <div class="creation-panel-head">
-            <h3 id="panel-field-{{ field.id }}">{{ field.name }}</h3>
-            {{ dice_button("field-" ~ field.id, field.name|lower) }}
-          </div>
-          {% for option in field.options %}
-            {{ choice("field-" ~ field.id, option, option, required=True) }}
-          {% endfor %}
+        <fieldset class="creation-panel" data-choice-panel="field-{{ field.id }}" data-choice-label="{{ field.name }}" aria-labelledby="panel-field-{{ field.id }}">
+          <h3 id="panel-field-{{ field.id }}">{{ field.name }}</h3>
+          {% call choice_picker("field-" ~ field.id, field.name, field.description) %}
+            {% for option in field.options %}
+              {{ choice("field-" ~ field.id, option, option) }}
+            {% endfor %}
+          {% endcall %}
         </fieldset>
       {% endfor %}
       {% for field in character.text_fields %}
@@ -86,6 +83,7 @@
         </section>
       {% endfor %}
     </div>
+    <p class="form-error" role="alert" hidden></p>
     <button type="submit">Create character</button>
   </form>
 </section>
