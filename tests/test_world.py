@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from cygnusforge.content.character import TableOption
 from cygnusforge.content.library import ContentLibrary
 from cygnusforge.llm.base import ChatReply, ToolRequest
 from cygnusforge.rules.context import ToolContext
@@ -32,6 +33,12 @@ from tests.test_tools import _recording_provider, _saved, _script
 LIBRARY = ContentLibrary.load()
 TOOLS = LIBRARY.core.tool_calls
 TABLES = LIBRARY.core.tables
+
+
+def _values(table: str) -> list[str]:
+    return [option.value for option in TABLES[table]]
+
+
 SPEC = LIBRARY.rule_sets["freeform"].character
 BUNDLED_NPCS = {
     "Mara Thistledown": "Mossbell Hollow",
@@ -111,10 +118,10 @@ def test_npcs_without_listed_traits_get_random_ones(
     actors = _actors(app, campaign_id)
     for name in ("Brin Gallowcap", "Old Hob"):
         npc = actors[name]
-        assert npc.personality in TABLES["personality"]
-        assert npc.accent in TABLES["accent"]
+        assert npc.personality in _values("personality")
+        assert npc.accent in _values("accent")
         assert len(npc.quirks) == world.QUIRKS_PER_NPC
-        assert set(npc.quirks) <= set(TABLES["quirk"])
+        assert set(npc.quirks) <= set(_values("quirk"))
         assert len(set(npc.quirks)) == world.QUIRKS_PER_NPC
 
 
@@ -147,9 +154,11 @@ def test_random_traits_come_from_the_given_tables(
 ):
     _, campaign_id = _campaign_id(client_factory)
     tables = {
-        "personality": ("gruff",),
-        "accent": ("burr",),
-        "quirk": ("hums", "sniffs", "winks"),
+        "personality": (TableOption(name=None, description="gruff"),),
+        "accent": (TableOption(name=None, description="burr"),),
+        "quirk": tuple(
+            TableOption(name=None, description=quirk) for quirk in ("hums", "sniffs", "winks")
+        ),
     }
     with _db(app) as db:
         result = world.create_npc(

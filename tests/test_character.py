@@ -8,7 +8,9 @@ from cygnusforge.content.character import (
     NO_CHARACTER,
     CharacterError,
     CharacterSpec,
+    Field,
     Sheet,
+    TableOption,
     character_schema,
     check_swaps,
     describe,
@@ -84,7 +86,7 @@ def test_resolve_rolls_template_tables_and_blanks_text_fields():
     template = _template_with(SPEC, "tables")
     sheet = resolve(SPEC, {"templates": {template.kind: template.id}}, random.Random(0))
     for table in template.tables:
-        assert sheet.fields[table] in SPEC.tables[table]
+        assert sheet.fields[table] in [option.value for option in SPEC.tables[table]]
     for field in SPEC.fields.values():
         if field.table is None:
             assert sheet.fields[field.id] == ""
@@ -92,7 +94,7 @@ def test_resolve_rolls_template_tables_and_blanks_text_fields():
 
 def test_resolve_keeps_a_chosen_table_value():
     field = next(f for f in SPEC.fields.values() if f.table)
-    choice = SPEC.tables[field.table][-1]
+    choice = SPEC.tables[field.table][-1].value
     sheet = resolve(SPEC, {"fields": {field.id: choice}}, random.Random(0))
     assert sheet.fields[field.id] == choice
 
@@ -179,3 +181,37 @@ def test_each_background_has_its_names_table():
     for template in _backgrounds():
         assert f"{template.id}-names" in template.tables, template.id
         assert SPEC.tables[f"{template.id}-names"], template.id
+
+
+def _named_work_spec(options: tuple[TableOption, ...]) -> CharacterSpec:
+    return CharacterSpec(
+        stats={},
+        templates={},
+        features={},
+        fields={"work": Field(id="work", name="Work", description="What you did", table="work")},
+        tables={"work": options},
+        table_names={"work": "Work"},
+    )
+
+
+def test_schema_lists_named_options_with_their_descriptions():
+    named = TableOption(name="The Wild Tongue", description="A bundle of scrolls.")
+    plain = TableOption(name=None, description="Lilt")
+    spec = _named_work_spec((named, plain))
+    field = character_schema(spec)["properties"]["fields"]["properties"]["work"]
+    assert field["enum"] == ["The Wild Tongue", "Lilt"]
+    assert field["description"] == ("What you did\n- The Wild Tongue: A bundle of scrolls.\n- Lilt")
+
+
+def test_schema_leaves_description_only_tables_as_they_are():
+    spec = _named_work_spec((TableOption(name=None, description="Lilt"),))
+    field = character_schema(spec)["properties"]["fields"]["properties"]["work"]
+    assert field == {"type": "string", "enum": ["Lilt"], "description": "What you did"}
+
+
+def test_resolve_stores_the_name_of_a_named_option():
+    named = TableOption(name="The Wild Tongue", description="A bundle of scrolls.")
+    spec = _named_work_spec((named,))
+    sheet = resolve(spec, {"fields": {"work": "The Wild Tongue"}}, random.Random(0))
+    assert sheet.fields["work"] == "The Wild Tongue"
+    assert resolve(spec, {}, random.Random(0)).fields["work"] == "The Wild Tongue"

@@ -126,8 +126,10 @@ def test_creation_page_offers_radio_cards_with_dice_and_no_random(
     assert 'type="radio" name="field-physique"' in page
     assert 'data-dice-for="template-background"' in page
     assert 'data-dice-for="field-physique"' in page
-    assert "Random" not in page
+    assert not re.search(r'value="random"', page, re.IGNORECASE)
     assert '<option value="">' not in page
+    assert 'data-randomize="all"' in page
+    assert 'data-randomize="unchosen"' in page
 
 
 def test_every_choice_opens_a_dialog_and_radios_are_not_required(
@@ -199,3 +201,36 @@ def test_a_second_player_character_is_refused(client_factory: Callable[[], TestC
     with Session(client.app.state.engine) as db:
         state = load_state(db, campaign_id)
     assert [c.name for c in state.characters.values() if c.kind == "pc"] == ["Ada"]
+
+
+SCRIVENER_WORK = "scrivener-what-work-did-you-keep-for-yourself"
+WILD_TONGUE = "The Wild Tongue"
+WILD_TONGUE_DETAIL = (
+    "A bundle of leather-bound scrolls. A seminal work, cataloging the hidden languages "
+    "of beasts and how to understand them."
+)
+
+
+def test_named_options_show_their_name_as_a_title_and_description(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _cairn_campaign(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert f'data-title="{WILD_TONGUE}"' in page
+    assert f"<span>{WILD_TONGUE}</span>" in page
+    assert f'<span class="muted choice-detail">{WILD_TONGUE_DETAIL}</span>' in page
+
+
+def test_a_named_option_is_stored_by_its_name(client_factory: Callable[[], TestClient]):
+    client, campaign_id = _cairn_campaign(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
+    fields.update(_choices(page))
+    fields["template-background"] = "scrivener"
+    fields[f"field-{SCRIVENER_WORK}"] = WILD_TONGUE
+    assert _create_character(client, campaign_id, name="Mara", fields=fields).status_code == 303
+
+    with Session(client.app.state.engine) as db:
+        pc = load_state(db, campaign_id).pc()
+    assert pc is not None
+    assert pc.fields[SCRIVENER_WORK] == WILD_TONGUE

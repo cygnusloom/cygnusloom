@@ -18,6 +18,7 @@ from cygnusforge.content.character import (
     CharacterError,
     CharacterSpec,
     Sheet,
+    TableOption,
     check_swaps,
     describe,
     resolve,
@@ -66,7 +67,7 @@ class WorldTools:
 
     engine: Engine
     campaign_id: int
-    tables: Mapping[str, Sequence[str]]
+    tables: Mapping[str, Sequence[TableOption]]
     rng: random.Random
     character: CharacterSpec
 
@@ -152,7 +153,7 @@ def seed_campaign(
     db: Session,
     campaign_id: int,
     world: WorldTemplate,
-    tables: Mapping[str, Sequence[str]],
+    tables: Mapping[str, Sequence[TableOption]],
     rng: random.Random,
     spec: CharacterSpec,
 ) -> None:
@@ -221,7 +222,7 @@ def create_location(db: Session, campaign_id: int, name: str, description: str) 
 def create_npc(
     db: Session,
     campaign_id: int,
-    tables: Mapping[str, Sequence[str]],
+    tables: Mapping[str, Sequence[TableOption]],
     rng: random.Random,
     spec: CharacterSpec,
     name: str,
@@ -436,7 +437,7 @@ def world_state_text(state: CampaignState, spec: CharacterSpec) -> str:
 
 
 def _npc_event(
-    tables: Mapping[str, Sequence[str]],
+    tables: Mapping[str, Sequence[TableOption]],
     rng: random.Random,
     spec: CharacterSpec,
     *,
@@ -450,11 +451,11 @@ def _npc_event(
 ) -> NpcAdded:
     """The event that adds an NPC. A trait or character option that is not given is picked at
     random, so the picked values are stored in the event and replays do not roll again."""
-    trait_personality = personality or rng.choice(tables["personality"])
-    trait_accent = accent or rng.choice(tables["accent"])
+    trait_personality = personality or rng.choice(tables["personality"]).value
+    trait_accent = accent or rng.choice(tables["accent"]).value
     if quirks is None:
-        pool = tables["quirk"]
-        trait_quirks = rng.sample(list(pool), min(QUIRKS_PER_NPC, len(pool)))
+        pool = [option.value for option in tables["quirk"]]
+        trait_quirks = rng.sample(pool, min(QUIRKS_PER_NPC, len(pool)))
     else:
         trait_quirks = list(quirks)
     sheet = resolve(spec, character or {}, rng)

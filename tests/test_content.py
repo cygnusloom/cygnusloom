@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+from cygnusforge.content.character import TableOption
 from cygnusforge.content.definitions import ContentError, read_definitions
 from cygnusforge.content.library import ContentLibrary, PlayerInput
 from cygnusforge.rules.freeform import SocialRoll, social_roll
@@ -476,8 +477,11 @@ def test_rule_set_overrides_core_rules_and_tables(tree: Path):
     library = ContentLibrary.load(tree)
     rule_set = library.rule_sets["testset"]
     assert rule_set.rules == {"speech": "Test set."}
-    assert rule_set.tables["accent"] == ("burr", "lilt")
-    assert rule_set.tables["quirk"] == ("one",)
+    assert rule_set.tables["accent"] == (
+        TableOption(name=None, description="burr"),
+        TableOption(name=None, description="lilt"),
+    )
+    assert rule_set.tables["quirk"] == (TableOption(name=None, description="one"),)
     assert library.core.rules == {"speech": "Core."}
 
 
@@ -503,4 +507,45 @@ def test_npc_must_be_in_a_declared_location(tree: Path):
     ]
     _write(tree, {"worlds/testland/world.json": world})
     with pytest.raises(ContentError, match="npc 'bo' is in unknown location 'nowhere'"):
+        ContentLibrary.load(tree)
+
+
+def test_named_table_options_keep_their_name_and_description(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/rules.json": [
+                {
+                    "type": "table",
+                    "id": "accent",
+                    "options": [{"name": "Burr", "description": "A rough accent."}, "Lilt"],
+                },
+            ],
+        },
+    )
+    accent = ContentLibrary.load(tree).rule_sets["testset"].tables["accent"]
+    assert accent == (
+        TableOption(name="Burr", description="A rough accent."),
+        TableOption(name=None, description="Lilt"),
+    )
+    assert [option.value for option in accent] == ["Burr", "Lilt"]
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        [{"name": "Burr"}],
+        [{"name": "", "description": "A rough accent."}],
+        [{"name": "Burr", "description": "A rough accent.", "extra": "x"}],
+        [""],
+        [3],
+        ["Burr", {"name": "Burr", "description": "Another."}],
+    ],
+)
+def test_table_options_must_be_text_or_named_text(tree: Path, options: list[Any]):
+    _write(
+        tree,
+        {"rulesets/testset/rules.json": [{"type": "table", "id": "accent", "options": options}]},
+    )
+    with pytest.raises(ContentError, match="table accent"):
         ContentLibrary.load(tree)

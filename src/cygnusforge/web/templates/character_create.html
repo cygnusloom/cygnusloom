@@ -6,11 +6,15 @@
   <h1 id="creation-title">{{ campaign.name }}</h1>
   <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
   <h2>Create your character</h2>
-  <p class="muted">Your stats are rolled. Where a stat can be swapped, choose the rolled values you want, with one swap per group. Pick each option, or roll it with the dice button, before you create the character.</p>
-  <form method="post" action="/campaigns/{{ campaign.id }}/character/reroll" class="character-reroll">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <button type="submit" class="secondary">Reroll stats</button>
-  </form>
+  <p class="muted">Your stats are rolled. Where a stat can be swapped, choose the rolled values you want, with one swap per group. Pick each option, roll it with the dice button, or use the randomize buttons, before you create the character.</p>
+  <div class="creation-toolbar">
+    <form method="post" action="/campaigns/{{ campaign.id }}/character/reroll" class="character-reroll">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="secondary">Reroll stats</button>
+    </form>
+    <button type="button" class="secondary" data-randomize="all">Randomize all</button>
+    <button type="button" class="secondary" data-randomize="unchosen">Randomize all not chosen</button>
+  </div>
   <form method="post" action="/campaigns/{{ campaign.id }}/character" class="character-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="creation-grid">
@@ -56,7 +60,7 @@
                 <h3 id="panel-table-{{ table.id }}">{{ table.label }}</h3>
                 {% call choice_picker("field-" ~ table.id, table.label) %}
                   {% for option in table.options %}
-                    {{ choice("field-" ~ table.id, option, option) }}
+                    {{ choice("field-" ~ table.id, option.value, option.title, option.detail) }}
                   {% endfor %}
                 {% endcall %}
               </fieldset>
@@ -69,7 +73,7 @@
           <h3 id="panel-field-{{ field.id }}">{{ field.name }}</h3>
           {% call choice_picker("field-" ~ field.id, field.name, field.description) %}
             {% for option in field.options %}
-              {{ choice("field-" ~ field.id, option, option) }}
+              {{ choice("field-" ~ field.id, option.value, option.title, option.detail) }}
             {% endfor %}
           {% endcall %}
         </fieldset>

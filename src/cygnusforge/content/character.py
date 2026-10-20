@@ -19,6 +19,20 @@ FEATURE_TYPES = ("item", "trait", "spell", "feat")
 
 
 @dataclass(frozen=True)
+class TableOption:
+    """An entry in a table. A named entry has a `name` the player reads as a title, above its
+    `description`. Other entries are a description only. A character stores the `value`: the
+    name when there is one, otherwise the description."""
+
+    name: str | None
+    description: str
+
+    @property
+    def value(self) -> str:
+        return self.name or self.description
+
+
+@dataclass(frozen=True)
 class Stat:
     id: str
     name: str
@@ -73,7 +87,7 @@ class CharacterSpec:
     templates: Mapping[str, Template]
     features: Mapping[str, Feature]
     fields: Mapping[str, Field]
-    tables: Mapping[str, tuple[str, ...]]
+    tables: Mapping[str, tuple[TableOption, ...]]
     table_names: Mapping[str, str]
 
     def kinds(self) -> list[str]:
@@ -82,7 +96,7 @@ class CharacterSpec:
 
 def build_character(
     definitions: list[Definition],
-    tables: Mapping[str, tuple[str, ...]],
+    tables: Mapping[str, tuple[TableOption, ...]],
     table_names: Mapping[str, str],
     template: str,
 ) -> CharacterSpec:
@@ -258,11 +272,7 @@ def character_schema(spec: CharacterSpec) -> dict[str, Any]:
     fields = {f.id: _field_schema(f, spec.tables) for f in spec.fields.values()}
     for template in spec.templates.values():
         for table in template.tables:
-            fields[table] = {
-                "type": "string",
-                "enum": list(spec.tables[table]),
-                "description": spec.table_names.get(table, table),
-            }
+            fields[table] = _choice_schema(spec.table_names.get(table, table), spec.tables[table])
     properties["fields"] = _object(fields)
     return {
         "type": "object",
@@ -272,11 +282,30 @@ def character_schema(spec: CharacterSpec) -> dict[str, Any]:
     }
 
 
-def _field_schema(field: Field, tables: Mapping[str, Sequence[str]]) -> dict[str, Any]:
+def _field_schema(field: Field, tables: Mapping[str, Sequence[TableOption]]) -> dict[str, Any]:
     description = field.description or field.name
     if field.table is None:
         return {"type": "string", "description": description}
-    return {"type": "string", "enum": list(tables[field.table]), "description": description}
+    return _choice_schema(description, tables[field.table])
+
+
+def _choice_schema(description: str, options: Sequence[TableOption]) -> dict[str, Any]:
+    """A choice from a table. When some options are named, each is listed with its description,
+    so the GM can choose by what the option does."""
+    schema: dict[str, Any] = {
+        "type": "string",
+        "enum": [option.value for option in options],
+        "description": description,
+    }
+    if any(option.name is not None for option in options):
+        lines = [
+            f"- {option.name}: {option.description}"
+            if option.name is not None
+            else f"- {option.description}"
+            for option in options
+        ]
+        schema["description"] = description + "\n" + "\n".join(lines)
+    return schema
 
 
 def _object(properties: dict[str, Any]) -> dict[str, Any]:
@@ -352,14 +381,14 @@ def resolve(spec: CharacterSpec, submitted: Mapping[str, Any], rng: random.Rando
             )
             features[granted.feature] = features.get(granted.feature, 0) + count
         for table in template.tables:
-            fields[table] = given_fields.get(table) or rng.choice(spec.tables[table])
+            fields[table] = given_fields.get(table) or rng.choice(spec.tables[table]).value
     for field_spec in spec.fields.values():
         if field_spec.table is None:
             fields[field_spec.id] = given_fields.get(field_spec.id, "")
         elif field_spec.id in given_fields:
             fields[field_spec.id] = given_fields[field_spec.id]
         else:
-            fields[field_spec.id] = rng.choice(spec.tables[field_spec.table])
+            fields[field_spec.id] = rng.choice(spec.tables[field_spec.table]).value
     return Sheet(stats=stats, templates=templates, features=features, fields=fields)
 
 

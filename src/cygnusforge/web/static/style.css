@@ -165,6 +165,8 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .view { padding: 1rem 1.25rem; overflow-y: auto; }
 .creation { --creation-width: 72rem; padding-inline: max(1.25rem, calc((100% - var(--creation-width)) / 2)); }
 .creation-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: 1rem; align-items: start; }
+.creation-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
+.creation-toolbar form { margin: 0; }
 .template-tables { display: contents; }
 .template-tables[hidden] { display: none; }
 .creation-panel { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; margin: 0; padding: 0.9rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }

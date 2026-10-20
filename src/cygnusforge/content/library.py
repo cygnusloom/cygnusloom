@@ -12,7 +12,12 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-from cygnusforge.content.character import CharacterSpec, build_character, character_schema
+from cygnusforge.content.character import (
+    CharacterSpec,
+    TableOption,
+    build_character,
+    character_schema,
+)
 from cygnusforge.content.definitions import (
     ContentError,
     Definition,
@@ -100,7 +105,7 @@ class RuleSet:
     tool_calls: Mapping[str, ToolCall]
     character: CharacterSpec
     # Named option lists, such as "personality", used to generate NPC traits.
-    tables: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+    tables: Mapping[str, tuple[TableOption, ...]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -269,14 +274,31 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     )
 
 
-def _load_table(definition: Definition, template: str) -> tuple[str, ...]:
+def _load_table(definition: Definition, template: str) -> tuple[TableOption, ...]:
     label = f"{template}: table {definition.id}"
     options = definition.data.get("options")
     if not isinstance(options, list) or not options:
         raise ContentError(f"{label}: 'options' must be a non-empty list")
-    if not all(isinstance(option, str) and option.strip() for option in options):
-        raise ContentError(f"{label}: every option must be non-empty text")
-    return tuple(options)
+    loaded = tuple(_load_option(option, label) for option in options)
+    if len({option.value for option in loaded}) != len(loaded):
+        raise ContentError(f"{label}: every option must be unique")
+    return loaded
+
+
+def _load_option(option: object, label: str) -> TableOption:
+    """An option is text, or an object with a `name` and a `description`."""
+    if isinstance(option, str) and option.strip():
+        return TableOption(name=None, description=option)
+    if (
+        isinstance(option, dict)
+        and set(option) == {"name", "description"}
+        and all(isinstance(option[key], str) and option[key].strip() for key in option)
+    ):
+        return TableOption(name=option["name"], description=option["description"])
+    raise ContentError(
+        f"{label}: every option must be non-empty text or an object with "
+        "non-empty 'name' and 'description' text"
+    )
 
 
 def _table_label(definition: Definition, template: str) -> str:

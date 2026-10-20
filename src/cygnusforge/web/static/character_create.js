@@ -39,6 +39,32 @@
     if (dialog && !dialog.open) dialog.showModal();
   };
 
+  const rollChoice = (name) => {
+    const options = [...document.querySelectorAll(`input[type="radio"][name="${name}"]`)].filter(
+      (radio) => !radio.closest("[hidden]"),
+    );
+    if (options.length === 0) return;
+    const pick = options[Math.floor(Math.random() * options.length)];
+    pick.checked = true;
+    pick.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+
+  // Rolls the visible choices in page order. A template comes before its tables, so rolling it
+  // first reveals the tables it needs, and those are rolled in the same pass.
+  const randomizeChoices = (onlyUnchosen) => {
+    const rolled = new Set();
+    for (;;) {
+      const next = [...document.querySelectorAll("[data-dice-for]")].find((dice) => {
+        if (rolled.has(dice) || dice.closest("[hidden]")) return false;
+        const name = dice.dataset.diceFor;
+        return !onlyUnchosen || document.querySelector(`input[type="radio"][name="${name}"]:checked`) === null;
+      });
+      if (!next) return;
+      rolled.add(next);
+      rollChoice(next.dataset.diceFor);
+    }
+  };
+
   document.addEventListener("click", (event) => {
     const target = event.target;
 
@@ -62,14 +88,13 @@
 
     const dice = target.closest("[data-dice-for]");
     if (dice) {
-      const name = dice.dataset.diceFor;
-      const options = [...document.querySelectorAll(`input[type="radio"][name="${name}"]`)].filter(
-        (radio) => !radio.closest("[hidden]"),
-      );
-      if (options.length === 0) return;
-      const pick = options[Math.floor(Math.random() * options.length)];
-      pick.checked = true;
-      pick.dispatchEvent(new Event("change", { bubbles: true }));
+      rollChoice(dice.dataset.diceFor);
+      return;
+    }
+
+    const randomize = target.closest("[data-randomize]");
+    if (randomize) {
+      randomizeChoices(randomize.dataset.randomize === "unchosen");
     }
   });
 

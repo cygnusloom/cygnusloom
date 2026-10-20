@@ -7,7 +7,7 @@ from typing import Any
 
 from starlette.datastructures import FormData
 
-from cygnusforge.content.character import CharacterSpec
+from cygnusforge.content.character import CharacterSpec, TableOption
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.web.forms import form_text
 
@@ -57,7 +57,7 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
             "id": field.id,
             "name": field.name,
             "description": field.description,
-            "options": list(spec.tables[field.table]),
+            "options": _option_views(spec.tables[field.table]),
         }
         for field in spec.fields.values()
         if field.table is not None
@@ -121,5 +121,18 @@ def _table_view(spec: CharacterSpec, table: str) -> dict[str, Any]:
     return {
         "id": table,
         "label": spec.table_names.get(table, table),
-        "options": list(spec.tables[table]),
+        "options": _option_views(spec.tables[table]),
     }
+
+
+def _option_views(options: tuple[TableOption, ...]) -> list[dict[str, Any]]:
+    """A named option shows its name as the title and its description beneath, as a background
+    does. Other options show their description as the title."""
+    return [
+        {
+            "value": option.value,
+            "title": option.value,
+            "detail": option.description if option.name is not None else None,
+        }
+        for option in options
+    ]
