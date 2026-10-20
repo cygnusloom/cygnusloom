@@ -34,9 +34,13 @@
     if (radio.dataset.templateSelect) revealTables(radio.dataset.templateSelect);
   });
 
+  // The list scrolls, so a chosen option is brought into view when the dialog opens.
   const openDialog = (id) => {
     const dialog = document.getElementById(id);
-    if (dialog && !dialog.open) dialog.showModal();
+    if (!dialog || dialog.open) return;
+    dialog.showModal();
+    const chosen = dialog.querySelector('input[type="radio"]:checked');
+    chosen?.closest(".choice")?.scrollIntoView({ block: "nearest" });
   };
 
   const rollChoice = (name) => {
