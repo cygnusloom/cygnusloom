@@ -41,6 +41,7 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
             "name": template.name,
             "description": template.description,
             "tables": [_table_view(spec, table) for table in template.tables],
+            "names": list(template.names),
         }
         for template in spec.templates.values()
     ]
@@ -72,6 +73,7 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
         "kinds": kinds,
         "choice_fields": choice_fields,
         "text_fields": text_fields,
+        "name_suggestions": any(template.names for template in spec.templates.values()),
     }
 
 

@@ -132,6 +132,17 @@ def test_creation_page_offers_radio_cards_with_dice_and_no_random(
     assert 'data-randomize="unchosen"' in page
 
 
+def test_name_dice_draws_on_the_suggested_names_of_the_backgrounds(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _cairn_campaign(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert 'data-name-dice="name"' in page
+    assert 'data-name-source="scrivener"' in page
+    assert 'data-choice-panel="field-scrivener-names"' not in page
+    assert 'data-dice-for="field-scrivener-names"' not in page
+
+
 def test_every_choice_opens_a_dialog_and_radios_are_not_required(
     client_factory: Callable[[], TestClient],
 ):

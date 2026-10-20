@@ -177,10 +177,17 @@ def test_petty_and_bulky_items_are_flagged():
     assert not SPEC.features["bow"].petty
 
 
-def test_each_background_has_its_names_table():
+def test_each_background_suggests_names_that_are_not_a_choice():
     for template in _backgrounds():
-        assert f"{template.id}-names" in template.tables, template.id
-        assert SPEC.tables[f"{template.id}-names"], template.id
+        names_table = f"{template.id}-names"
+        assert template.names == tuple(option.value for option in SPEC.tables[names_table])
+        assert names_table not in template.tables, template.id
+        assert template.names, template.id
+
+
+def test_suggested_names_are_not_in_the_character_schema():
+    fields = character_schema(SPEC)["properties"]["fields"]["properties"]
+    assert not any(field.endswith("-names") for field in fields)
 
 
 def _named_work_spec(options: tuple[TableOption, ...]) -> CharacterSpec:

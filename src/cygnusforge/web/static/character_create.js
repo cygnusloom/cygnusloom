@@ -49,6 +49,22 @@
     pick.dispatchEvent(new Event("change", { bubbles: true }));
   };
 
+  // Suggests a name from the chosen templates' names, or from every template's names when no
+  // chosen template suggests any. The name typed by the player is replaced.
+  const rollName = () => {
+    const input = form.querySelector('input[name="name"]');
+    const lists = [...document.querySelectorAll("[data-name-source]")];
+    const chosen = new Set(
+      [...document.querySelectorAll('input[type="radio"][name^="template-"]:checked')].map((radio) => radio.value),
+    );
+    const namesOf = (sources) =>
+      sources.flatMap((list) => [...list.querySelectorAll("li")].map((item) => item.textContent));
+    let names = namesOf(lists.filter((list) => chosen.has(list.dataset.nameSource)));
+    if (names.length === 0) names = namesOf(lists);
+    if (!input || names.length === 0) return;
+    input.value = names[Math.floor(Math.random() * names.length)];
+  };
+
   // Rolls the visible choices in page order. A template comes before its tables, so rolling it
   // first reveals the tables it needs, and those are rolled in the same pass.
   const randomizeChoices = (onlyUnchosen) => {
@@ -98,6 +114,11 @@
     const dice = target.closest("[data-dice-for]");
     if (dice) {
       rollChoice(dice.dataset.diceFor);
+      return;
+    }
+
+    if (target.closest("[data-name-dice]")) {
+      rollName();
       return;
     }
 

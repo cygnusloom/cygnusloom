@@ -69,6 +69,8 @@ class Template:
     description: str
     features: tuple[Granted, ...]
     tables: tuple[str, ...]
+    # Suggested character names for this template. They feed the name dice, not the schema.
+    names: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -192,7 +194,7 @@ def _field(definition: Definition, tables: Mapping[str, object], template: str) 
 def _template(
     definition: Definition,
     features: Mapping[str, Feature],
-    tables: Mapping[str, object],
+    tables: Mapping[str, Sequence[TableOption]],
     template: str,
 ) -> Template:
     label = f"{template}: template {definition.id}"
@@ -207,6 +209,7 @@ def _template(
     for table in table_ids:
         if table not in tables:
             raise ContentError(f"{label}: unknown table {table!r}")
+    names = _names(data.get("names"), tables, label)
     return Template(
         id=definition.id,
         kind=required_text(data, "kind", label),
@@ -214,7 +217,19 @@ def _template(
         description=required_text(data, "description", label),
         features=grants,
         tables=tuple(table_ids),
+        names=names,
     )
+
+
+def _names(
+    table: object, tables: Mapping[str, Sequence[TableOption]], label: str
+) -> tuple[str, ...]:
+    """The names a template suggests, from a table of plain names. The table is not a choice."""
+    if table is None:
+        return ()
+    if not isinstance(table, str) or table not in tables:
+        raise ContentError(f"{label}: 'names' must be the id of a table")
+    return tuple(option.value for option in tables[table])
 
 
 def _granted(item: object, features: Mapping[str, Feature], label: str) -> Granted:

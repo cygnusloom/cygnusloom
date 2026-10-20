@@ -36,10 +36,10 @@
       }
     ],
     "tables": [
-      "aurifex-names",
       "aurifex-what-went-horribly-wrong",
       "aurifex-what-alchemical-marvel-is-the-product-of-your-latest-ingenuity"
-    ]
+    ],
+    "names": "aurifex-names"
   },
   {
     "type": "template",
@@ -82,10 +82,10 @@
       }
     ],
     "tables": [
-      "barber-surgeon-names",
       "barber-surgeon-how-have-you-improved-yourself",
       "barber-surgeon-what-rare-tool-is-essential-to-your-work"
-    ]
+    ],
+    "names": "barber-surgeon-names"
   },
   {
     "type": "template",
@@ -128,10 +128,10 @@
       }
     ],
     "tables": [
-      "beast-handler-names",
       "beast-handler-what-creature-is-your-specialty",
       "beast-handler-what-have-you-learned-from-the-creatures-of-the-wild"
-    ]
+    ],
+    "names": "beast-handler-names"
   },
   {
     "type": "template",
@@ -170,10 +170,10 @@
       }
     ],
     "tables": [
-      "bonekeeper-names",
       "bonekeeper-what-did-you-take-from-the-dead",
       "bonekeeper-what-tool-was-invaluable-in-your-work"
-    ]
+    ],
+    "names": "bonekeeper-names"
   },
   {
     "type": "template",
@@ -216,10 +216,10 @@
       }
     ],
     "tables": [
-      "cutpurse-names",
       "cutpurse-what-was-your-last-big-job",
       "cutpurse-what-helps-you-steal"
-    ]
+    ],
+    "names": "cutpurse-names"
   },
   {
     "type": "template",
@@ -262,10 +262,10 @@
       }
     ],
     "tables": [
-      "fieldwarden-names",
       "fieldwarden-what-got-the-better-of-you",
       "fieldwarden-what-tool-saved-your-life"
-    ]
+    ],
+    "names": "fieldwarden-names"
   },
   {
     "type": "template",
@@ -308,10 +308,10 @@
       }
     ],
     "tables": [
-      "fletchwind-names",
       "fletchwind-how-did-you-earn-your-bow",
       "fletchwind-what-kind-of-wood-is-your-bow-made-from"
-    ]
+    ],
+    "names": "fletchwind-names"
   },
   {
     "type": "template",
@@ -354,10 +354,10 @@
       }
     ],
     "tables": [
-      "foundling-names",
       "foundling-who-took-you-in",
       "foundling-what-keeps-bad-tidings-at-bay"
-    ]
+    ],
+    "names": "foundling-names"
   },
   {
     "type": "template",
@@ -396,10 +396,10 @@
       }
     ],
     "tables": [
-      "fungal-forager-names",
       "fungal-forager-what-strange-fungus-did-you-discover",
       "fungal-forager-what-keeps-you-sane-even-in-utter-darkness"
-    ]
+    ],
+    "names": "fungal-forager-names"
   },
   {
     "type": "template",
@@ -442,10 +442,10 @@
       }
     ],
     "tables": [
-      "greenwise-names",
       "greenwise-how-has-the-wood-failed-you",
       "greenwise-what-keeps-you-safe-while-in-the-wood"
-    ]
+    ],
+    "names": "greenwise-names"
   },
   {
     "type": "template",
@@ -488,10 +488,10 @@
       }
     ],
     "tables": [
-      "half-witch-names",
       "half-witch-what-did-you-bring-back-from-the-unseelie-court",
       "half-witch-what-concoction-do-you-carry-and-what-rare-ingredients-did-you-gather-to-make-it"
-    ]
+    ],
+    "names": "half-witch-names"
   },
   {
     "type": "template",
@@ -534,10 +534,10 @@
       }
     ],
     "tables": [
-      "hexenbane-names",
       "hexenbane-to-which-order-do-you-belong",
       "hexenbane-what-was-your-vow"
-    ]
+    ],
+    "names": "hexenbane-names"
   },
   {
     "type": "template",
@@ -580,10 +580,10 @@
       }
     ],
     "tables": [
-      "jongleur-names",
       "jongleur-what-happened-at-your-final-performance",
       "jongleur-what-trinket-were-you-unable-to-leave-behind"
-    ]
+    ],
+    "names": "jongleur-names"
   },
   {
     "type": "template",
@@ -626,10 +626,10 @@
       }
     ],
     "tables": [
-      "kettlewright-names",
       "kettlewright-what-is-your-trade",
       "kettlewright-what-never-fails-to-get-you-out-of-trouble"
-    ]
+    ],
+    "names": "kettlewright-names"
   },
   {
     "type": "template",
@@ -668,10 +668,10 @@
       }
     ],
     "tables": [
-      "marchguard-names",
       "marchguard-why-did-you-take-the-oath",
       "marchguard-what-do-you-carry-as-proof-of-your-oath"
-    ]
+    ],
+    "names": "marchguard-names"
   },
   {
     "type": "template",
@@ -714,10 +714,10 @@
       }
     ],
     "tables": [
-      "mountebank-names",
       "mountebank-how-was-your-fraud-exposed",
       "mountebank-what-keepsake-could-always-identify-you"
-    ]
+    ],
+    "names": "mountebank-names"
   },
   {
     "type": "template",
@@ -760,10 +760,10 @@
       }
     ],
     "tables": [
-      "outrider-names",
       "outrider-what-personal-code-or-principle-do-you-uphold",
       "outrider-what-breed-is-your-horse"
-    ]
+    ],
+    "names": "outrider-names"
   },
   {
     "type": "template",
@@ -806,10 +806,10 @@
       }
     ],
     "tables": [
-      "prowler-names",
       "prowler-what-did-you-last-hunt",
       "prowler-what-tool-is-always-in-your-pack"
-    ]
+    ],
+    "names": "prowler-names"
   },
   {
     "type": "template",
@@ -852,10 +852,10 @@
       }
     ],
     "tables": [
-      "rill-runner-names",
       "rill-runner-what-songs-are-you-best-known-for",
       "rill-runner-what-pays-your-way-across-the-land"
-    ]
+    ],
+    "names": "rill-runner-names"
   },
   {
     "type": "template",
@@ -898,9 +898,9 @@
       }
     ],
     "tables": [
-      "scrivener-names",
       "scrivener-what-work-did-you-keep-for-yourself",
       "scrivener-how-do-you-transcribe-sensitive-information"
-    ]
+    ],
+    "names": "scrivener-names"
   }
 ]

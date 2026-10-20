@@ -45,7 +45,7 @@ The types the engine understands today:
 | `table` | `rulesets/<rule_set>/` | `options`: a list of strings to pick from. The `core` rule set must declare the tables `personality`, `accent`, and `quirk`; any rule set may replace them. |
 | `stat` | `rulesets/<rule_set>/` | `name`, `formula` (dice such as `3d6`). Optional `swap_group`: stats in one group may swap one pair of rolled values at creation. |
 | `feature` | `rulesets/<rule_set>/` | `name`, `feature_type` (`item`, `trait`, `spell`, or `feat`). Optional `description` and `bulky` (true or false). |
-| `template` | `rulesets/<rule_set>/` | `kind` (a group such as `class` or `background`; the player picks one per kind), `name`, `description`. Optional `features` (a list of `{"feature": id, "quantity": "1" or a dice formula}`), `tables` (table ids rolled for the character), and `quote`. |
+| `template` | `rulesets/<rule_set>/` | `kind` (a group such as `class` or `background`; the player picks one per kind), `name`, `description`. Optional `features` (a list of `{"feature": id, "quantity": "1" or a dice formula}`), `tables` (table ids rolled for the character), `names` (the id of a table of suggested character names; the player's name dice draws from the chosen templates' names, or every template's when none has any; these are not choices), and `quote`. |
 | `character_field` | `rulesets/<rule_set>/` | `name`, `description`. A text field when it has no `table`; otherwise a choice from that table. |
 | `rule_set` | `rulesets/<rule_set>/` | `name`, `description`. Exactly one per rule set; `id` must equal the directory name. |
 | `rule` | `rulesets/<rule_set>/` | `text`. A plain-text rule the AI GM follows. |
