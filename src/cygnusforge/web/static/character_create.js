@@ -68,6 +68,15 @@
   document.addEventListener("click", (event) => {
     const target = event.target;
 
+    // A click on the dialog element is either its backdrop or its padding. Only a click outside the box closes it.
+    if (target instanceof HTMLDialogElement && target.classList.contains("choice-dialog")) {
+      const rect = target.getBoundingClientRect();
+      const outside =
+        event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;
+      if (outside) target.close();
+      return;
+    }
+
     const opener = target.closest("[data-open-choice]");
     if (opener) {
       openDialog(opener.dataset.openChoice);
