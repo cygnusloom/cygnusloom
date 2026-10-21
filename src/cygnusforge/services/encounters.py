@@ -174,6 +174,7 @@ def start_encounter(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
     entry = _map_named(state, name)
     record(db, campaign_id, EncounterStarted(map=entry.name, location=entry.location))
     db.commit()
+    _open_player_turn(db, campaign_id)
     return {"started": "encounter", "map": entry.name, "location": entry.location}
 
 
@@ -195,6 +196,7 @@ def add_participant(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
         raise InvalidInput(f"{character.name} is already in the encounter")
     record(db, campaign_id, ParticipantJoined(name=character.name))
     db.commit()
+    _open_player_turn(db, campaign_id)
     result: dict[str, Any] = {"added": character.name}
     if character.location != encounter.location:
         where = character.location or "nowhere in particular"
@@ -212,6 +214,7 @@ def remove_participant(db: Session, campaign_id: int, name: str) -> dict[str, An
         raise InvalidInput(f"{character.name} is taking their turn; wait until it ends")
     record(db, campaign_id, ParticipantLeft(name=character.name))
     db.commit()
+    _open_player_turn(db, campaign_id)
     return {"removed": character.name}
 
 
@@ -267,8 +270,8 @@ def place_participant(
 
 
 def begin_turn(db: Session, campaign_id: int, name: str) -> Character:
-    """Start the turn of the participant who is next in order. The NPC's turn is played out by the
-    GM afterwards; a player character's turn is played out in chat."""
+    """Start the turn of the NPC who is next in order. The GM plays it out afterwards. A player
+    character's turn starts on its own, see `_open_player_turn`."""
     state = load_state(db, campaign_id)
     encounter = _encounter(state)
     if state.turn is not None:
@@ -280,12 +283,25 @@ def begin_turn(db: Session, campaign_id: int, name: str) -> Character:
     character = state.characters[name_key(encounter.order[encounter.up])]
     if name_key(name) != name_key(character.name):
         raise InvalidInput(f"it is {character.name}'s turn next, not {name}'s")
-    instruction = ""
-    if character.kind == NPC_KIND:
-        instruction = f"It is {character.name}'s turn in the encounter. Play out their turn."
+    if character.kind != NPC_KIND:
+        raise InvalidInput(f"{character.name}'s turn starts on its own; send a message to act")
+    instruction = f"It is {character.name}'s turn in the encounter. Play out their turn."
     record(db, campaign_id, EncounterTurnBegun(name=character.name, instruction=instruction))
     db.commit()
     return character
+
+
+def _open_player_turn(db: Session, campaign_id: int) -> None:
+    """A player character whose turn is next starts it at once. The player acts by sending a
+    message, so nothing has to be pressed first."""
+    state = load_state(db, campaign_id)
+    encounter = state.encounter
+    if encounter is None or encounter.acting is not None or not encounter.order:
+        return
+    character = state.characters[name_key(encounter.order[encounter.up])]
+    if character.kind == PC_KIND:
+        record(db, campaign_id, EncounterTurnBegun(name=character.name))
+        db.commit()
 
 
 def end_turn(db: Session, campaign_id: int, name: str, by_player: bool) -> dict[str, Any]:
@@ -300,6 +316,7 @@ def end_turn(db: Session, campaign_id: int, name: str, by_player: bool) -> dict[
         raise InvalidInput(f"{owner} ends {character.name}'s turn")
     record(db, campaign_id, EncounterTurnEnded(name=character.name))
     db.commit()
+    _open_player_turn(db, campaign_id)
     return {"ended_turn": character.name}
 
 

@@ -157,6 +157,9 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 }
 .encounter-cell.occupied { background: var(--panel); }
 .encounter-cell.acting { border: 2px solid var(--accent); }
+.encounter-turn { flex-shrink: 0; padding: 0.25rem 0; }
+.encounter-turn p { margin: 0 0 0.25rem; }
+.encounter-turn form { margin: 0.25rem 0; }
 .encounter-status { padding: 0.5rem; border-bottom: 1px solid var(--border); overflow-y: auto; }
 .encounter-status p { margin: 0.25rem 0; }
 .encounter-status form { margin: 0.25rem 0; }

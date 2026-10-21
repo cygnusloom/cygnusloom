@@ -30,13 +30,11 @@ from cygnusforge.services import encounters
 from cygnusforge.services.common import Conflict, InvalidInput, NotFound, session_scope
 from cygnusforge.services.events import (
     CHARS_PER_TOKEN,
-    NPC_KIND,
     CampaignState,
     Channel,
     ChatGM,
     ChatPlayer,
     ContextPart,
-    EncounterTurnEnded,
     GameEvent,
     OocStarted,
     PromptShown,
@@ -1214,7 +1212,8 @@ def _close_npc_turn(engine: Engine, campaign_id: int, name: str) -> None:
     if state.turn is not None or encounter is None or encounter.acting is None:
         return
     if name_key(encounter.acting) == name_key(name):
-        _record(engine, campaign_id, EncounterTurnEnded(name=encounter.acting))
+        with session_scope(engine) as db:
+            encounters.end_turn(db, campaign_id, name, by_player=False)
 
 
 async def start_encounter_turn(
@@ -1228,9 +1227,9 @@ async def start_encounter_turn(
     name: str,
     rng: random.Random | None = None,
 ) -> AsyncIterator[TurnEvent]:
-    """Start the turn of the participant who is next in the encounter order. An NPC's turn is
-    played out by the GM and streamed like a reply. A player character's turn opens nothing: the
-    player acts in chat and ends the turn with `end_player_turn`."""
+    """Start the NPC whose turn is next in the encounter order. The GM plays it out and it is
+    streamed like a reply. A player character's turn starts on its own and ends with
+    `end_player_turn`."""
     campaign = get_campaign(engine, owner_id, campaign_id)
     if campaign.model not in allowed_models:
         raise InvalidInput("that model is not available")
@@ -1240,8 +1239,6 @@ async def start_encounter_turn(
             raise InvalidInput("that campaign's rule set is no longer available")
         with session_scope(engine) as db:
             character = encounters.begin_turn(db, campaign.id, name)
-        if character.kind != NPC_KIND:
-            return
         run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
         async for event in _guarded(run, _carry_on(run)):
             yield event

@@ -78,6 +78,30 @@
             {% endif %}
           </div>
           <p class="turn-error" role="alert" hidden></p>
+          {% if encounter %}
+          {% set actor = encounter.participants | selectattr("acting") | first %}
+          {% set next = encounter.participants | selectattr("next") | first %}
+          {% if actor or (next and not next.is_pc) %}
+          <div class="encounter-turn">
+            {% if actor and actor.is_pc %}
+              <p>It is your turn. Send a message to act, then end your turn.{% if encounter.moves_left is not none %} {{ encounter.moves_left }} of {{ encounter.move_cells }} cells of movement left.{% endif %}</p>
+              <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/end">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="name" value="{{ actor.name }}">
+                <button type="submit"{% if pending %} disabled{% endif %}>End your turn</button>
+              </form>
+            {% elif actor %}
+              <p class="muted">{{ actor.name }} is taking their turn.</p>
+            {% else %}
+              <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/stream" data-encounter-turn>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="name" value="{{ next.name }}">
+                <button type="submit"{% if pending %} disabled{% endif %}>Start {{ next.name }}'s turn</button>
+              </form>
+            {% endif %}
+          </div>
+          {% endif %}
+          {% endif %}
           <form method="post" action="/campaigns/{{ campaign.id }}/messages" data-stream-action="/campaigns/{{ campaign.id }}/messages/stream" data-player-name="{{ player_name }}" class="composer" id="composer">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <textarea name="content" rows="3" required maxlength="8000" placeholder="{{ ('Answer the GM above first' if pending.prompt else 'Continue the reply first') if pending else 'Message' }}"{% if pending %} disabled{% endif %}>{{ draft }}</textarea>
@@ -107,30 +131,6 @@
             {% if encounter %}
             <section class="encounter-status" aria-label="Encounter">
               <p><strong>{{ encounter.map }}</strong> <span class="muted">{{ encounter.location }}, round {{ encounter.round }}</span></p>
-              {% set actor = encounter.participants | selectattr("acting") | first %}
-              {% set next = encounter.participants | selectattr("next") | first %}
-              {% if actor and actor.is_pc %}
-                <p>It is your turn. Act in chat, then end your turn.{% if encounter.moves_left is not none %} {{ encounter.moves_left }} of {{ encounter.move_cells }} cells of movement left.{% endif %}</p>
-                <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/end">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                  <input type="hidden" name="name" value="{{ actor.name }}">
-                  <button type="submit"{% if pending %} disabled{% endif %}>End your turn</button>
-                </form>
-              {% elif actor %}
-                <p class="muted">{{ actor.name }} is taking their turn.</p>
-              {% elif next and next.is_pc %}
-                <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/start">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                  <input type="hidden" name="name" value="{{ next.name }}">
-                  <button type="submit"{% if pending %} disabled{% endif %}>Start your turn</button>
-                </form>
-              {% elif next %}
-                <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/stream" data-encounter-turn>
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                  <input type="hidden" name="name" value="{{ next.name }}">
-                  <button type="submit"{% if pending %} disabled{% endif %}>Start {{ next.name }}'s turn</button>
-                </form>
-              {% endif %}
               <ul class="encounter-list">
                 {% for participant in encounter.participants %}
                 <li{% if participant.acting %} class="acting"{% endif %}>

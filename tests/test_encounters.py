@@ -215,7 +215,7 @@ def test_turns_follow_join_order_and_wrap_into_a_new_round(
     assert _call(app, campaign_id, "end_turn", {"name": "Pip"}) == {"ended_turn": "Pip"}
     _finish_gm_reply(app, campaign_id)
 
-    _begin(app, campaign_id, "Ada")
+    assert _encounter(app, campaign_id).encounter.acting == "Ada"
     with pytest.raises(InvalidInput, match="the player ends Ada's turn"):
         _end(app, campaign_id, "Ada", by_player=False)
     assert _end(app, campaign_id, "Ada", by_player=True) == {"ended_turn": "Ada"}
@@ -229,6 +229,8 @@ def test_encounter_cannot_end_mid_turn(client_factory: Callable[[], TestClient])
     assert "still taking their turn" in _call(app, campaign_id, "end_encounter", {})["error"]
     _end(app, campaign_id, "Pip", by_player=False)
     _finish_gm_reply(app, campaign_id)
+    assert "Ada is still taking their turn" in _call(app, campaign_id, "end_encounter", {})["error"]
+    _end(app, campaign_id, "Ada", by_player=True)
     assert _call(app, campaign_id, "end_encounter", {})["ended"] == "encounter"
     assert _encounter(app, campaign_id).encounter is None
 
@@ -266,8 +268,9 @@ def test_guards_protect_participants_maps_and_locations(client_factory: Callable
 
 
 def _spy_on_fallback_close(monkeypatch: pytest.MonkeyPatch, app: FastAPI, campaign_id: int):
-    """Record who was still acting when the fallback that closes NPC turns ran. None means the
-    GM ended the turn itself with end_turn."""
+    """Record who was acting when the fallback that closes NPC turns ran. The name of the NPC means
+    the fallback had to close it; the next participant means the GM had already ended it with
+    end_turn, so the fallback did nothing."""
     seen: list[str | None] = []
     original = campaigns._close_npc_turn
 
@@ -319,9 +322,9 @@ def test_npc_turn_is_played_out_and_the_gm_ends_it(
     assert lines[-1]["type"] == "saved"
     state = _state(app, campaign_id)
     assert state.turn is None
-    assert state.encounter.acting is None
+    assert state.encounter.acting == "Ada"
     assert state.encounter.up == 1
-    assert fallback == [None]
+    assert fallback == ["Ada"]
 
 
 def test_npc_turn_closes_even_when_the_gm_forgets_end_turn(
@@ -338,20 +341,20 @@ def test_npc_turn_closes_even_when_the_gm_forgets_end_turn(
     assert lines[-1]["type"] == "saved"
     state = _state(app, campaign_id)
     assert state.turn is None
-    assert state.encounter.acting is None
+    assert state.encounter.acting == "Ada"
     assert state.encounter.up == 1
     assert fallback == ["Pip"]
 
 
-def test_player_turn_starts_and_ends_by_button(client_factory: Callable[[], TestClient]):
+def test_player_turn_starts_on_its_own_and_ends_by_button(
+    client_factory: Callable[[], TestClient],
+):
     client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
     app = client.app
     _begin(app, campaign_id, "Pip")
     _finish_gm_reply(app, campaign_id)
     _end(app, campaign_id, "Pip", by_player=False)
     _finish_gm_reply(app, campaign_id)
-
-    assert _encounter_post(client, campaign_id, "start", "Ada").status_code == 303
     assert _state(app, campaign_id).encounter.acting == "Ada"
 
     assert _encounter_post(client, campaign_id, "end", "Ada").status_code == 303
@@ -360,12 +363,20 @@ def test_player_turn_starts_and_ends_by_button(client_factory: Callable[[], Test
     assert state.encounter.round == 2
 
 
+def test_player_turn_starts_as_soon_as_it_is_next(client_factory: Callable[[], TestClient]):
+    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
+    app = client.app
+    _call(app, campaign_id, "remove_participant", {"name": "Pip"})
+    assert _encounter(app, campaign_id).encounter.acting == "Ada"
+    assert _end(app, campaign_id, "Ada", by_player=True) == {"ended_turn": "Ada"}
+    assert _encounter(app, campaign_id).encounter.acting == "Ada"
+
+
 def test_turn_buttons_refuse_the_wrong_participant(client_factory: Callable[[], TestClient]):
     client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
     app = client.app
 
-    early = _encounter_post(client, campaign_id, "start", "Ada")
-    assert early.status_code == 400
+    early = _encounter_post(client, campaign_id, "stream", "Ada")
     assert "it is Pip" in early.text
 
     _begin(app, campaign_id, "Pip")
@@ -388,14 +399,16 @@ def test_campaign_page_shows_the_encounter_board_and_turn_controls(
     assert MAP in page
     assert "Start Pip" in page
     assert "column 3, row 4" in page
+    assert "Start your turn" not in page
 
     _begin(app, campaign_id, "Pip")
     _finish_gm_reply(app, campaign_id)
     _end(app, campaign_id, "Pip", by_player=False)
     _finish_gm_reply(app, campaign_id)
-    _begin(app, campaign_id, "Ada")
     acting = client.get(f"/campaigns/{campaign_id}").text
     assert "End your turn" in acting
+    assert "Start your turn" not in acting
+    assert acting.index("End your turn") < acting.index('id="composer"')
 
 
 def test_campaign_page_has_no_board_without_an_encounter(client_factory: Callable[[], TestClient]):

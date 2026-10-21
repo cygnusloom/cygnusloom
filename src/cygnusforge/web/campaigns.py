@@ -346,34 +346,6 @@ async def post_encounter_turn_stream(request: Request, campaign_id: int) -> Resp
     )
 
 
-@router.post("/{campaign_id}/encounter/turn/start")
-async def start_player_encounter_turn(request: Request, campaign_id: int) -> Response:
-    """Start a player character's encounter turn. Nothing is played for the player: they act in
-    chat, then end the turn."""
-    user = page_user(request)
-    await verify_csrf(request)
-    form = await request.form()
-    name = form_text(form, "name")
-    settings = request.app.state.settings
-    try:
-        async for _ in start_encounter_turn(
-            request.app.state.engine,
-            request.app.state.providers,
-            settings.llm_models,
-            request.app.state.content,
-            settings.llm_context_tokens,
-            user.id,
-            campaign_id,
-            name,
-        ):
-            pass
-    except InvalidInput as exc:
-        return _campaign_page(request, user, campaign_id, 400, str(exc))
-    except Conflict as exc:
-        return _campaign_page(request, user, campaign_id, 409, str(exc))
-    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
-
-
 @router.post("/{campaign_id}/encounter/turn/end")
 async def end_encounter_turn(request: Request, campaign_id: int) -> Response:
     user = page_user(request)
