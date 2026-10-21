@@ -376,6 +376,7 @@ def test_all_at_location_describes_a_place_without_statblocks(
         "description": away["location"]["description"],
         "discovered": False,
         "position_km": {"x": -1.2, "y": 1.4},
+        "parent": None,
     }
 
 
@@ -1244,6 +1245,128 @@ def test_off_map_cannot_be_combined_with_a_position(client_factory: Callable[[],
     with pytest.raises(InvalidInput, match="off_map must be true or false"):
         ctx.world.update_location("Mossbell Hollow", "Still here.", off_map="yes")
     assert _state(app, campaign_id).named("Mossbell Hollow").position == Position(x=0.0, y=0.0)
+
+
+def test_a_place_inside_another_has_no_map_point_of_its_own(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Ashen Ford", "description": "A ford.", "discovered": True, "x": 2, "y": 3},
+    )
+    created = _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {
+            "name": "Ferry Post",
+            "description": "A post by the ford.",
+            "discovered": True,
+            "parent": "Ashen Ford",
+        },
+    )
+    assert created == {"created": "location", "name": "Ferry Post", "discovered": True}
+    place = _state(app, campaign_id).named("Ferry Post")
+    assert place.parent == "Ashen Ford"
+    assert place.position is None
+
+    view = world.map_view(_state(app, campaign_id))
+    assert "Ferry Post" in [p.name for p in view.places]
+    assert "Ferry Post" not in [m.name for m in view.markers]
+    assert view.numbers == {"Ashen Ford": 1, "Mossbell Hollow": 2}
+
+    refused = _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Mill", "description": "A mill.", "parent": "Ashen Ford", "x": 5, "y": 5},
+    )
+    assert "no map position" in refused["error"]
+    assert _state(app, campaign_id).named("Mill") is None
+
+
+def test_a_place_cannot_be_inside_a_place_that_is_inside_another(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "create_location", {"name": "Ashen Ford", "description": "A ford."})
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Ferry Post", "description": "A post.", "parent": "Ashen Ford"},
+    )
+    refused = _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Dock", "description": "A dock.", "parent": "Ferry Post"},
+    )
+    assert "is itself inside Ashen Ford" in refused["error"]
+    assert _state(app, campaign_id).named("Dock") is None
+
+    missing = _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Dock", "description": "A dock.", "parent": "Nowhere"},
+    )
+    assert "there is no location named 'Nowhere'" in missing["error"]
+
+
+def test_a_place_inside_another_cannot_be_moved_onto_the_map(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "create_location", {"name": "Ashen Ford", "description": "A ford."})
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Ferry Post", "description": "A post.", "parent": "Ashen Ford"},
+    )
+    refused = _tool(
+        app,
+        campaign_id,
+        "update_location",
+        {"name": "Ferry Post", "description": "A post.", "x": 1, "y": 1},
+    )
+    assert "no map position" in refused["error"]
+    assert _state(app, campaign_id).named("Ferry Post").position is None
+
+    _tool(
+        app,
+        campaign_id,
+        "update_location",
+        {"name": "Ferry Post", "description": "The post has burned down."},
+    )
+    place = _state(app, campaign_id).named("Ferry Post")
+    assert place.parent == "Ashen Ford"
+    assert place.position is None
+    assert place.description == "The post has burned down."
+
+
+def test_a_place_with_places_inside_cannot_be_deleted_until_they_are_gone(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "create_location", {"name": "Ashen Ford", "description": "A ford."})
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Ferry Post", "description": "A post.", "parent": "Ashen Ford"},
+    )
+    refused = _tool(app, campaign_id, "delete_location", {"name": "Ashen Ford"})
+    assert "Ferry Post inside it" in refused["error"]
+    assert _state(app, campaign_id).named("Ashen Ford") is not None
+
+    _tool(app, campaign_id, "delete_location", {"name": "Ferry Post"})
+    _tool(app, campaign_id, "delete_location", {"name": "Ashen Ford"})
+    assert _state(app, campaign_id).named("Ashen Ford") is None
 
 
 def test_discover_location_marks_a_place_once(client_factory: Callable[[], TestClient], app):

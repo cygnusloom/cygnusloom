@@ -121,9 +121,12 @@ class WorldTools:
         x: float | None = None,
         y: float | None = None,
         force: bool = False,
+        parent: str | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return create_location(db, self.campaign_id, name, description, discovered, x, y, force)
+            return create_location(
+                db, self.campaign_id, name, description, discovered, x, y, force, parent
+            )
 
     def discover_location(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -332,6 +335,7 @@ def create_location(
     x: float | None = None,
     y: float | None = None,
     force: bool = False,
+    parent: str | None = None,
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     name = _text(name, "name", MAX_NAME)
@@ -340,11 +344,18 @@ def create_location(
     if not isinstance(discovered, bool):
         raise InvalidInput("discovered must be true or false")
     px, py = _coordinates(x, y)
-    _ensure_open_point(state, name, px, py, force)
+    inside = None
+    if parent is not None:
+        inside = _parent_for_new_place(state, parent, px, py)
+        px, py = None, None
+    else:
+        _ensure_open_point(state, name, px, py, force)
     record(
         db,
         campaign_id,
-        LocationAdded(name=name, description=text, discovered=discovered, x=px, y=py),
+        LocationAdded(
+            name=name, description=text, discovered=discovered, x=px, y=py, parent=inside
+        ),
     )
     db.commit()
     return {"created": "location", "name": name, "discovered": discovered}
@@ -410,6 +421,10 @@ def update_location(
     if not isinstance(off_map, bool):
         raise InvalidInput("off_map must be true or false")
     px, py = _coordinates(x, y)
+    if where.parent is not None:
+        if px is not None or py is not None:
+            raise InvalidInput(f"{where.name} is inside {where.parent}, so it has no map position")
+        off_map = False
     if off_map:
         if px is not None or py is not None:
             raise InvalidInput("give x and y to move the place, or off_map to take it off the map")
@@ -437,6 +452,11 @@ def delete_location(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
     if occupants:
         raise InvalidInput(
             f"{where.name} still has {', '.join(occupants)} there; move them elsewhere first"
+        )
+    inside = _children_of(state, where.name)
+    if inside:
+        raise InvalidInput(
+            f"{where.name} still has {', '.join(inside)} inside it; delete those places first"
         )
     record(db, campaign_id, LocationRemoved(name=where.name))
     db.commit()
@@ -716,6 +736,7 @@ def _location_entry(place: Place) -> dict[str, Any]:
         "description": place.description,
         "discovered": place.discovered,
         "position_km": position,
+        "parent": place.parent,
     }
 
 
@@ -807,6 +828,25 @@ def _place_named(state: CampaignState, name: str) -> Place:
     if not isinstance(entry, Place):
         raise InvalidInput(f"there is no location named {name!r}")
     return entry
+
+
+def _children_of(state: CampaignState, name: str) -> list[str]:
+    return sorted(p.name for p in state.places.values() if p.parent == name)
+
+
+def _parent_for_new_place(
+    state: CampaignState, parent: str, x: float | None, y: float | None
+) -> str:
+    """Check a place to be created inside another. Such a place has no point of its own, and only
+    a top-level place can hold others."""
+    if x is not None or y is not None:
+        raise InvalidInput("a place inside another has no map position; leave out x and y")
+    outer = _place_named(state, parent)
+    if outer.parent is not None:
+        raise InvalidInput(
+            f"{outer.name} is itself inside {outer.parent}; place it inside {outer.parent} instead"
+        )
+    return outer.name
 
 
 def _ensure_open_point(

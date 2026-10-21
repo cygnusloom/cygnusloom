@@ -77,6 +77,9 @@ class Place:
     # Discovered places are ones the player character has visited or heard about in detail.
     discovered: bool = False
     position: Position | None = None
+    # The place this one is inside, such as a building in a city. Such a place has no position of
+    # its own; it is shown with its parent.
+    parent: str | None = None
 
 
 def _position(x: float | None, y: float | None) -> Position | None:
@@ -265,10 +268,11 @@ class LocationAdded(GameEvent):
     discovered: bool = False
     x: float | None = None
     y: float | None = None
+    parent: str | None = None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.places[name_key(self.name)] = Place(
-            self.name, self.description, self.discovered, _position(self.x, self.y)
+            self.name, self.description, self.discovered, _position(self.x, self.y), self.parent
         )
 
     def render(self) -> str:
@@ -403,7 +407,7 @@ class LocationUpdated(GameEvent):
         key = name_key(self.name)
         before = state.places[key]
         state.places[key] = Place(
-            self.name, self.description, before.discovered, _position(self.x, self.y)
+            self.name, self.description, before.discovered, _position(self.x, self.y), before.parent
         )
 
     def render(self) -> str:

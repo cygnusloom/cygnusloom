@@ -16,9 +16,10 @@ def create_location(
     x: float | None = None,
     y: float | None = None,
     force: bool = False,
+    parent: str | None = None,
 ) -> dict[str, Any]:
     return ctx.world.create_location(
-        name, description, discovered=discovered, x=x, y=y, force=force
+        name, description, discovered=discovered, x=x, y=y, force=force, parent=parent
     )
 
 

@@ -5,7 +5,7 @@
     "name": "create_location",
     "python_module": "core",
     "function": "create_location",
-    "description": "Add a new location to the campaign, such as a village, a clearing, or a building. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs. Set discovered to true only when anyone in the world would have heard of the place, so the player already knows it. A point on the map can hold only one place: if another place already has the point, the call is refused until you pass force=true.",
+    "description": "Add a new location to the campaign, such as a village, a clearing, or a building. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs. Set discovered to true only when anyone in the world would have heard of the place, so the player already knows it. A point on the map can hold only one place: if another place already has the point, the call is refused until you pass force=true. To put a place inside another, such as a building in a city, give parent set to the name of that top-level location; such a place has no map point of its own, so leave out x and y.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -32,6 +32,10 @@
         "force": {
           "type": "boolean",
           "description": "Set true only to put this place on a point another place already has, as when two places are the same spot. Without it, a point another place already has is refused."
+        },
+        "parent": {
+          "type": "string",
+          "description": "The name of the top-level location this place is inside, such as a city for a building. Leave it out for a place on the map. A place with a parent cannot be given x or y."
         }
       },
       "required": [
@@ -307,7 +311,7 @@
     "name": "update_location",
     "python_module": "core",
     "function": "update_location",
-    "description": "Change a location's description, for example after the place changes. Move it on the map by giving x and y, or take it off the map by setting off_map to true. Its name stays the same. Leave x, y, and off_map out to keep its position. Use delete_location instead to remove the place from the story.",
+    "description": "Change a location's description, for example after the place changes. Move it on the map by giving x and y, or take it off the map by setting off_map to true. A place inside another cannot be given x or y. Its name stays the same. Leave x, y, and off_map out to keep its position. Use delete_location instead to remove the place from the story.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -368,7 +372,7 @@
     "name": "delete_location",
     "python_module": "core",
     "function": "delete_location",
-    "description": "Remove a location from the campaign. It is refused while any character is still there; move them first. Notes about the location are kept.",
+    "description": "Remove a location from the campaign. It is refused while any character is still there; move them first, and refused while places are inside it; remove those first. Notes about the location are kept.",
     "parameters": {
       "type": "object",
       "properties": {

@@ -29,7 +29,7 @@
   {% for place in view.places %}
     <div class="map-place">
       <strong>{% if place.name in view.numbers %}<span class="map-number">{{ view.numbers[place.name] }}</span> {% endif %}{{ place.name }}</strong>
-      {% if place.position %}<span class="muted">{{ place.position.x }} km east, {{ place.position.y }} km north</span>{% endif %}
+      {% if place.parent %}<span class="muted">Inside {{ place.parent }}</span>{% elif place.position %}<span class="muted">{{ place.position.x }} km east, {{ place.position.y }} km north</span>{% endif %}
       <p>{{ place.description }}</p>
     </div>
   {% else %}
