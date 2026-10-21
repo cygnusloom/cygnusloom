@@ -482,7 +482,9 @@ def _campaign_page(
         options,
         settings.llm_context_tokens,
     )
-    encounter = encounter_view(world.state, rule_set.grid if rule_set else None)
+    encounter = encounter_view(
+        world.state, rule_set.grid if rule_set else None, rule_set.combat if rule_set else None
+    )
     return render(
         request,
         "campaign.html",

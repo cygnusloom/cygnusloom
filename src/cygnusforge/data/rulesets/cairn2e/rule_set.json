@@ -42,6 +42,12 @@
   },
   {
     "type": "rule",
+    "id": "defeat",
+    "important": true,
+    "text": "A player character who is defeated in combat is in critical damage and unconscious. When the story brings them round, call recover_character with how they survived and what it cost them, such as being dragged to safety, a lasting injury, a lost possession, or a debt. Keep the harm they took: recovery does not heal it."
+  },
+  {
+    "type": "rule",
     "id": "omens",
     "text": "The campaign has one omen, chosen from the Omens table when the campaign is created rather than rolled by the youngest character. Every character shares it. It should be read aloud to the players when the campaign begins."
   },

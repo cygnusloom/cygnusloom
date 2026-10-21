@@ -314,7 +314,9 @@ class WorldTools:
 
     def recover_character(self, name: str, explanation: str, consequence: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return combat.recover_character(db, self.campaign_id, name, explanation, consequence)
+            return combat.recover_character(
+                db, self.campaign_id, name, explanation, consequence, self._rules()
+            )
 
     def _rules(self) -> CombatRules:
         if self.combat is None:
@@ -363,7 +365,7 @@ class WorldTools:
     def get_statblock(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return get_statblock(
-                load_state(db, self.campaign_id), name, self.character, self.combat is not None
+                load_state(db, self.campaign_id), name, self.character, self.combat
             )
 
     def character_options(self, field: str | None = None) -> dict[str, Any]:
@@ -886,15 +888,15 @@ def lookup_index(state: CampaignState) -> dict[str, list[dict[str, Any]]]:
 
 
 def get_statblock(
-    state: CampaignState, name: str, spec: CharacterSpec, with_combat: bool = False
+    state: CampaignState, name: str, spec: CharacterSpec, combat: CombatRules | None = None
 ) -> dict[str, Any]:
     """A character's stats, template, features, and fields, one line each. Works for the player
-    character and for NPCs. With `with_combat`, the armor, attacks, harm, and status follow."""
+    character and for NPCs. With a rule set's `combat`, the armor, attacks, harm, and status follow."""
     character = _character_named(state, name)
     kind = "player character" if character.kind == PC_KIND else "npc"
     lines = describe(spec, _sheet_of(character)).splitlines()
-    if with_combat:
-        lines += _combat_lines(character, spec)
+    if combat is not None:
+        lines += _combat_lines(character, spec, combat)
     return {
         "name": character.name,
         "kind": kind,
@@ -903,7 +905,7 @@ def get_statblock(
     }
 
 
-def _combat_lines(character: Character, spec: CharacterSpec) -> list[str]:
+def _combat_lines(character: Character, spec: CharacterSpec, combat: CombatRules) -> list[str]:
     lines = [f"Armor: {character.armor}"]
     if character.attacks:
         attacks = ", ".join(f"{name} {formula}" for name, formula in character.attacks.items())
@@ -914,7 +916,7 @@ def _combat_lines(character: Character, spec: CharacterSpec) -> list[str]:
         )
         lines.append(f"Harm: {harm}")
     if character.defeated:
-        lines.append(f"Status: {defeat_status(character)}")
+        lines.append(f"Status: {defeat_status(character, combat.defeat)}")
     elif character.save_due is not None:
         lines.append(f"Status: {spec.stats[character.save_due].name} save due")
     return lines
@@ -990,7 +992,10 @@ def scene_view(state: CampaignState, spec: CharacterSpec) -> SceneView:
 
 
 def world_state_text(
-    state: CampaignState, campaign: CampaignSpec, grid: EncounterGrid | None = None
+    state: CampaignState,
+    campaign: CampaignSpec,
+    grid: EncounterGrid | None = None,
+    combat: CombatRules | None = None,
 ) -> str:
     """The GM's orientation at the start of a turn: the campaign options, the player character and
     where they are, the NPCs there, and any encounter in progress. The rest is looked up with the
@@ -1011,12 +1016,14 @@ def world_state_text(
         lines.append(f"Player character: {pc.name}, at {pc.location}.")
         names = [npc.name for npc in _npcs_at(state, pc.location)]
         lines.append(f"NPCs here: {', '.join(names) if names else 'none'}.")
-    lines.extend(_encounter_lines(state, grid))
+    lines.extend(_encounter_lines(state, grid, combat))
     return "\n".join(lines)
 
 
-def _encounter_lines(state: CampaignState, grid: EncounterGrid | None) -> list[str]:
-    view = encounters.encounter_view(state, grid)
+def _encounter_lines(
+    state: CampaignState, grid: EncounterGrid | None, combat: CombatRules | None
+) -> list[str]:
+    view = encounters.encounter_view(state, grid, combat)
     if view is None:
         return []
     lines = [
@@ -1026,7 +1033,7 @@ def _encounter_lines(state: CampaignState, grid: EncounterGrid | None) -> list[s
     if view["awaiting_initiative"]:
         waiting = ", ".join(view["awaiting_initiative"])
         lines.append(
-            f"Initiative is not set yet. {waiting} must roll a DEX save with player_initiative."
+            f"Initiative is not set yet. {waiting} must roll for initiative with player_initiative."
         )
     if view["acting"] is not None:
         left = (

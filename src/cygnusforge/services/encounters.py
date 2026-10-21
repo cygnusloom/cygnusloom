@@ -11,7 +11,7 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusforge.content.library import EncounterGrid
+from cygnusforge.content.library import CombatRules, EncounterGrid
 from cygnusforge.services.common import InvalidInput, bounded_text
 from cygnusforge.services.events import (
     FOES_SIDE,
@@ -434,9 +434,9 @@ def end_turn(db: Session, campaign_id: int, name: str, by_player: bool) -> dict[
     return {"ended_turn": character.name}
 
 
-def _status(character: Character) -> str:
+def _status(character: Character, combat: CombatRules | None) -> str:
     if character.defeated:
-        return defeat_status(character)
+        return defeat_status(character, combat.defeat if combat else {})
     if character.save_due is not None:
         return f"{character.save_due} save due"
     return ""
@@ -449,7 +449,9 @@ def _creature_label(character: Character) -> str:
     return character.creature
 
 
-def encounter_view(state: CampaignState, grid: EncounterGrid | None) -> dict[str, Any] | None:
+def encounter_view(
+    state: CampaignState, grid: EncounterGrid | None, combat: CombatRules | None
+) -> dict[str, Any] | None:
     """The encounter in progress as the UI and the GM's orientation text show it."""
     encounter = state.encounter
     if encounter is None:
@@ -475,7 +477,7 @@ def encounter_view(state: CampaignState, grid: EncounterGrid | None) -> dict[str
                 "side": encounter.sides.get(name_key(character.name), ""),
                 "initiative": encounter.initiative.get(name_key(character.name)),
                 "defeated": character.defeated,
-                "status": _status(character),
+                "status": _status(character, combat),
             }
         )
     return {

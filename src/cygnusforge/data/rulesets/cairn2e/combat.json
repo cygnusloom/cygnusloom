@@ -8,8 +8,13 @@
     "type": "combat",
     "id": "cairn",
     "python_module": "cairn2e",
-    "hit_points": "hp",
-    "overflow": "str",
-    "initiative_stat": "dex"
+    "damage": [
+      {"kind": "absorb"},
+      {"kind": "harm", "stat": "hp"},
+      {"kind": "overflow", "stat": "str"}
+    ],
+    "check_die": "1d20",
+    "initiative_stat": "dex",
+    "defeat": {"player_character": "in critical damage", "npc": "dead"}
   }
 ]

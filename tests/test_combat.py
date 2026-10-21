@@ -13,12 +13,13 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.content.library import MonsterTemplate, _load_combat, _load_monster
+from cygnusforge.content.library import DamageStep, MonsterTemplate, _load_combat, _load_monster
 from cygnusforge.llm.base import ToolRequest
 from cygnusforge.rules import cairn2e
 from cygnusforge.rules.cairn2e import save_succeeds
 from cygnusforge.rules.context import ToolContext
 from cygnusforge.services import encounters
+from cygnusforge.services.combat import Damage, apply_damage
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import NPC_KIND, ChatGM, EncounterEnded, Struck, record
 from cygnusforge.services.tools import Ask, RollAnswer, ToolRun, run_tool
@@ -168,14 +169,22 @@ def test_a_bad_monster_definition_is_rejected(changes, message):
         _load_monster(_monster(**changes), CAIRN.character, "cairn2e")
 
 
+CAIRN_DAMAGE = [
+    {"kind": "absorb"},
+    {"kind": "harm", "stat": "hp"},
+    {"kind": "overflow", "stat": "str"},
+]
+
+
 def _combat(**changes: Any) -> Definition:
     data: dict[str, Any] = {
         "type": "combat",
         "id": "cairn",
         "python_module": "cairn2e",
-        "hit_points": "hp",
-        "overflow": "str",
+        "damage": CAIRN_DAMAGE,
+        "check_die": "1d20",
         "initiative_stat": "dex",
+        "defeat": {"player_character": "in critical damage", "npc": "dead"},
     }
     data.update(changes)
     return Definition(type="combat", id="cairn", data=data)
@@ -183,21 +192,84 @@ def _combat(**changes: Any) -> Definition:
 
 def test_a_combat_definition_is_read_with_its_module_and_stats():
     combat = _load_combat(_combat(), {"cairn2e": cairn2e}, CAIRN.character, "cairn2e")
-    assert (combat.hit_points, combat.overflow, combat.initiative_stat) == ("hp", "str", "dex")
+    assert combat.damage == (
+        DamageStep("absorb", None),
+        DamageStep("harm", "hp"),
+        DamageStep("overflow", "str"),
+    )
+    assert (combat.check_die, combat.check_sides, combat.initiative_stat) == ("1d20", 20, "dex")
+    assert combat.defeat == {"player_character": "in critical damage", "npc": "dead"}
     assert combat.module is cairn2e
+
+
+def test_a_harm_only_combat_definition_is_accepted():
+    combat = _load_combat(
+        _combat(damage=[{"kind": "harm", "stat": "hp"}], check_die="1d12"),
+        {"cairn2e": cairn2e},
+        CAIRN.character,
+        "cairn2e",
+    )
+    assert combat.damage == (DamageStep("harm", "hp"),)
+    assert combat.check_sides == 12
 
 
 @pytest.mark.parametrize(
     ("changes", "message"),
     [
         ({"python_module": "nope"}, "unknown python_module 'nope'"),
-        ({"overflow": "luck"}, "'overflow' names no stat"),
-        ({"hit_points": "str"}, "must name different stats"),
+        ({"damage": []}, "'damage' must be a non-empty list"),
+        ({"damage": ["harm"]}, "each damage step must be an object"),
+        ({"damage": [{"kind": "burn", "stat": "hp"}]}, "kind 'burn' is not one of"),
+        ({"damage": [{"kind": "harm", "stat": "luck"}]}, "damage step names no stat"),
+        ({"damage": [{"kind": "absorb", "stat": "hp"}]}, "an 'absorb' damage step takes no stat"),
+        ({"damage": [{"kind": "absorb"}]}, "needs a 'harm' or 'overflow' step"),
+        (
+            {"damage": [{"kind": "overflow", "stat": "str"}, {"kind": "harm", "stat": "hp"}]},
+            "'overflow' must be the last damage step",
+        ),
+        (
+            {"damage": [{"kind": "harm", "stat": "hp"}, {"kind": "absorb"}]},
+            "'absorb' must be the first damage step",
+        ),
+        (
+            {"damage": [{"kind": "absorb"}, {"kind": "absorb"}, {"kind": "harm", "stat": "hp"}]},
+            "may each appear at most once",
+        ),
+        (
+            {"damage": [{"kind": "harm", "stat": "hp"}, {"kind": "harm", "stat": "hp"}]},
+            "each stat may be used by one damage step only",
+        ),
+        ({"check_die": "d20"}, "'check_die' must be a single die"),
+        ({"check_die": "1d1"}, "'check_die' must be a single die"),
+        ({"initiative_stat": "luck"}, "'initiative_stat' names no stat"),
+        ({"defeat": "dead"}, "'defeat' must be an object"),
+        ({"defeat": {"player_character": "down"}}, "'npc' must be a non-empty string"),
     ],
 )
 def test_a_bad_combat_definition_is_rejected(changes, message):
     with pytest.raises(ContentError, match=message):
         _load_combat(_combat(**changes), {"cairn2e": cairn2e}, CAIRN.character, "cairn2e")
+
+
+def test_apply_damage_takes_armor_then_harm_then_overflow():
+    steps = _load_combat(_combat(), {"cairn2e": cairn2e}, CAIRN.character, "cairn2e").damage
+    stats = {"hp": 4, "str": 10}
+    result = apply_damage(steps, armor=2, current_of=stats.__getitem__, raw=9)
+    assert result == Damage(absorbed=2, harm={"hp": 4, "str": 3}, save="str")
+
+
+def test_apply_damage_without_overflow_leaves_no_save():
+    steps = _load_combat(_combat(), {"cairn2e": cairn2e}, CAIRN.character, "cairn2e").damage
+    stats = {"hp": 4, "str": 10}
+    result = apply_damage(steps, armor=0, current_of=stats.__getitem__, raw=3)
+    assert result == Damage(absorbed=0, harm={"hp": 3}, save=None)
+
+
+def test_apply_damage_for_a_harm_only_rule_set_ignores_armor_and_saves():
+    steps = (DamageStep("harm", "hp"),)
+    stats = {"hp": 5}
+    result = apply_damage(steps, armor=3, current_of=stats.__getitem__, raw=9)
+    assert result == Damage(absorbed=0, harm={"hp": 5}, save=None)
 
 
 def test_a_combat_module_needs_the_save_and_initiative_functions():
@@ -239,7 +311,7 @@ def test_the_encounter_view_names_the_statblock_a_monster_was_built_from(client_
     tools.add_participant("Rover")
     tools.create_monster("Brute", YARD, description="A brute.", stats=FULL_STATS)
     tools.add_participant("Brute")
-    view = encounters.encounter_view(_state(app, campaign_id), None)
+    view = encounters.encounter_view(_state(app, campaign_id), None, CAIRN.combat)
     creatures = {p["name"]: p["creature"] for p in view["participants"]}
     assert creatures == {PC: "", "Rover": "Blink Dog", "Brute": ""}
 
@@ -248,7 +320,7 @@ def test_a_monster_named_after_its_statblock_does_not_repeat_it(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     tools.create_monster("blink dog", YARD, template="blink-dog")
     tools.add_participant("blink dog")
-    view = encounters.encounter_view(_state(app, campaign_id), None)
+    view = encounters.encounter_view(_state(app, campaign_id), None, CAIRN.combat)
     creatures = {p["name"]: p["creature"] for p in view["participants"]}
     assert creatures["blink dog"] == ""
 

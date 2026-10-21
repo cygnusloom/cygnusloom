@@ -99,11 +99,10 @@ STATE_INSTRUCTION = (
     "give speech for an attack, a hit, a miss, pain, or effort; the narration covers those. "
     "When a scene or encounter ends, delete the NPCs who only passed through "
     "it, such as strangers, guards, and monsters, and who matter little to the story; keep anyone "
-    "the story may bring back. An NPC who falls in combat is dead and stays as a body; delete it "
+    "the story may bring back. An NPC who falls in combat stays where it fell as a body; delete it "
     "once it no longer matters to the story. An encounter ends on its own when one side can no "
-    "longer fight. A player character who falls is in critical damage, unconscious: when the story "
-    "brings them round, call recover_character with how they survived and what it cost them, and "
-    "keep the harm they took. Notes and narration must agree with the recorded harm and status: never "
+    "longer fight. A defeated player character is handled by the rule set's rules for defeat and "
+    "recovery. Notes and narration must agree with the recorded harm and status: never "
     "call a character unhurt or scratched while they carry harm. Notes hold settled facts that the story could lose, such as secrets, "
     "promises, debts, and clues. Do not copy into a note anything a location, character, statblock, "
     "or NPC record already holds. Before adding a note, check the existing notes: update one rather "
@@ -112,10 +111,11 @@ STATE_INSTRUCTION = (
     "short sentence saying so."
 )
 NARRATE_INSTRUCTION = (
-    "Narration step. Write the next beat as a good editor would: concise, specific, and free of "
-    "filler. Aim for three to five sentences. Cut repetition and restated detail. Base the outcome "
-    "on the state changes and tool results above. Narrate what the player can perceive: arrivals "
-    "and departures, new or changed places, NPC speech, and roll outcomes. The queued dialogue is "
+    "Narration step. Write the next beat in the present tense, as a good editor would: concise, "
+    "specific, and free of filler. Aim for three to five sentences. Cut repetition and restated "
+    "detail. Base the outcome on the state changes and tool results above. Narrate what the player "
+    "can perceive: arrivals and departures, new or changed places, NPC speech, and roll outcomes. "
+    "The queued dialogue is "
     "JSON: work each entry's dialogue value into the narration where it fits, copied exactly, and "
     "do not write any other words for an NPC. Weave dialogue into the prose as plain sentences, "
     "with ordinary quotation marks at most; never put it in block quotes, bullet points, labels, or "
@@ -496,7 +496,12 @@ def context_usage(
             rule_set.important if rule_set else frozenset(),
             state.summary,
             state.through,
-            world_state_text(state, options, rule_set.grid if rule_set else None),
+            world_state_text(
+                state,
+                options,
+                rule_set.grid if rule_set else None,
+                rule_set.combat if rule_set else None,
+            ),
         )
     )
     used += sum(estimate_tokens(m.content) for m in unsummarized)
@@ -890,7 +895,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     state = _state(run.engine, run.campaign_id)
     rule_set = run.rule_set
     summary, watermark = state.summary, state.through
-    world_text = world_state_text(state, rule_set.campaign, rule_set.grid)
+    world_text = world_state_text(state, rule_set.campaign, rule_set.grid, rule_set.combat)
     message = OPENING_PROMPT if turn.opening else turn.text
     history = [
         m for m in list_messages(run.engine, run.campaign_id) if watermark < m.id < turn.opener

@@ -136,17 +136,34 @@ class MonsterTemplate:
     attacks: Mapping[str, str]
 
 
+DAMAGE_KINDS = ("absorb", "harm", "overflow")
+
+
+@dataclass(frozen=True)
+class DamageStep:
+    """One step a hit's damage passes through, in order. `absorb` takes the target's armor off the
+    hit. `harm` takes up to the stat's current value. `overflow` takes the rest, and the target owes
+    a save on the stat. Damage left after the last step has no effect."""
+
+    kind: str
+    stat: str | None
+
+
 @dataclass(frozen=True)
 class CombatRules:
     """How a rule set resolves combat. `module` supplies `save_succeeds(roll, score)` and
-    `initiative_order(entries)`. Hit points take harm first, then `overflow` takes the rest and the
-    target saves against it. `initiative_stat` is what a player character saves against to act."""
+    `initiative_order(entries)`. `damage` is the order a hit's damage goes through. `check_die` is
+    the die a save or initiative roll is made with, and `check_sides` its number of sides.
+    `initiative_stat` is what a player character saves against to act. `defeat` says where a defeat
+    leaves a player character (`player_character`) and an NPC (`npc`)."""
 
     id: str
     module: ModuleType
-    hit_points: str
-    overflow: str
+    damage: tuple[DamageStep, ...]
+    check_die: str
+    check_sides: int
     initiative_stat: str
+    defeat: Mapping[str, str]
 
 
 @dataclass(frozen=True)
@@ -415,15 +432,68 @@ def _load_combat(
     for function_name in ("save_succeeds", "initiative_order"):
         if not callable(getattr(module, function_name, None)):
             raise ContentError(f"{label}: {function_name!r} is not a function in {module_id!r}")
-    stats = {}
-    for key in ("hit_points", "overflow", "initiative_stat"):
-        stat = required_text(data, key, label)
-        if stat not in character.stats:
-            raise ContentError(f"{label}: {key!r} names no stat ({stat!r})")
-        stats[key] = stat
-    if stats["hit_points"] == stats["overflow"]:
-        raise ContentError(f"{label}: 'hit_points' and 'overflow' must name different stats")
-    return CombatRules(id=definition.id, module=module, **stats)
+    damage = _load_damage(data, character, label)
+    check_die = required_text(data, "check_die", label)
+    if not re.fullmatch(r"1d[0-9]+", check_die) or int(check_die[2:]) < 2:
+        raise ContentError(f"{label}: 'check_die' must be a single die such as '1d20'")
+    initiative_stat = required_text(data, "initiative_stat", label)
+    if initiative_stat not in character.stats:
+        raise ContentError(f"{label}: 'initiative_stat' names no stat ({initiative_stat!r})")
+    defeat_data = data.get("defeat")
+    if not isinstance(defeat_data, Mapping):
+        raise ContentError(f"{label}: 'defeat' must be an object")
+    defeat = {
+        key: required_text(defeat_data, key, f"{label}: defeat")
+        for key in ("player_character", "npc")
+    }
+    return CombatRules(
+        id=definition.id,
+        module=module,
+        damage=damage,
+        check_die=check_die,
+        check_sides=int(check_die[2:]),
+        initiative_stat=initiative_stat,
+        defeat=defeat,
+    )
+
+
+def _load_damage(
+    data: Mapping[str, Any], character: CharacterSpec, label: str
+) -> tuple[DamageStep, ...]:
+    """The damage steps, in order: at most one `absorb` first, then `harm` steps, then at most one
+    `overflow` last. Each stat must be a character stat, and no stat may be used twice."""
+    entries = data.get("damage")
+    if not isinstance(entries, list) or not entries:
+        raise ContentError(f"{label}: 'damage' must be a non-empty list of steps")
+    steps = []
+    for entry in entries:
+        if not isinstance(entry, Mapping):
+            raise ContentError(f"{label}: each damage step must be an object")
+        kind = required_text(entry, "kind", label)
+        if kind not in DAMAGE_KINDS:
+            raise ContentError(f"{label}: damage step kind {kind!r} is not one of {DAMAGE_KINDS}")
+        if kind == "absorb":
+            if "stat" in entry:
+                raise ContentError(f"{label}: an 'absorb' damage step takes no stat")
+            stat = None
+        else:
+            stat = required_text(entry, "stat", label)
+            if stat not in character.stats:
+                raise ContentError(f"{label}: damage step names no stat ({stat!r})")
+        steps.append(DamageStep(kind=kind, stat=stat))
+    kinds = [step.kind for step in steps]
+    if kinds.count("absorb") > 1 or kinds.count("overflow") > 1:
+        raise ContentError(f"{label}: 'absorb' and 'overflow' may each appear at most once")
+    if "absorb" in kinds and kinds[0] != "absorb":
+        raise ContentError(f"{label}: 'absorb' must be the first damage step")
+    if "overflow" in kinds and kinds[-1] != "overflow":
+        raise ContentError(f"{label}: 'overflow' must be the last damage step")
+    if "harm" not in kinds and "overflow" not in kinds:
+        raise ContentError(f"{label}: 'damage' needs a 'harm' or 'overflow' step")
+    stats = [step.stat for step in steps if step.stat is not None]
+    if len(stats) != len(set(stats)):
+        raise ContentError(f"{label}: each stat may be used by one damage step only")
+    return tuple(steps)
 
 
 def _load_monster(

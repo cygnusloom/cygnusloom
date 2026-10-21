@@ -8,11 +8,13 @@ change, records its events, and commits."""
 from __future__ import annotations
 
 import random
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from sqlmodel import Session
 
-from cygnusforge.content.library import CombatRules
+from cygnusforge.content.library import CombatRules, DamageStep
 from cygnusforge.rules.dice import roll_total
 from cygnusforge.services.common import InvalidInput, bounded_text, whole_number
 from cygnusforge.services.encounters import (
@@ -38,9 +40,17 @@ from cygnusforge.services.events import (
     record,
 )
 
-D20 = "1d20"
 MAX_DAMAGE = 1000
 MAX_RECOVERY_TEXT = 600
+
+
+@dataclass(frozen=True)
+class Damage:
+    """What a hit did: the damage armor absorbed, the harm by stat, and the stat a save is owed on."""
+
+    absorbed: int
+    harm: dict[str, int]
+    save: str | None
 
 
 def current(character: Character, stat: str) -> int:
@@ -48,9 +58,41 @@ def current(character: Character, stat: str) -> int:
     return max(0, character.stats.get(stat, 0) - character.harm.get(stat, 0))
 
 
-def _living(character: Character) -> Character:
+def apply_damage(
+    steps: Sequence[DamageStep],
+    armor: int,
+    current_of: Callable[[str], int],
+    raw: int,
+) -> Damage:
+    """Run a hit's damage through the rule set's steps in order. `absorb` takes up to `armor` off
+    the hit. `harm` takes up to the stat's current score. `overflow` takes the rest and owes a save
+    on its stat. Damage left after the last step has no effect."""
+    absorbed = 0
+    harm: dict[str, int] = {}
+    save: str | None = None
+    dealt = raw
+    for step in steps:
+        if step.kind == "absorb":
+            absorbed = min(armor, dealt)
+            dealt -= absorbed
+        elif step.kind == "harm":
+            assert step.stat is not None
+            taken = min(dealt, current_of(step.stat))
+            if taken:
+                harm[step.stat] = taken
+            dealt -= taken
+        else:
+            assert step.stat is not None
+            if dealt:
+                harm[step.stat] = dealt
+                save = step.stat
+            dealt = 0
+    return Damage(absorbed=absorbed, harm=harm, save=save)
+
+
+def _living(character: Character, combat: CombatRules) -> Character:
     if character.defeated:
-        raise InvalidInput(f"{character.name} is {defeat_status(character)}")
+        raise InvalidInput(f"{character.name} is {defeat_status(character, combat.defeat)}")
     return character
 
 
@@ -64,21 +106,11 @@ def _strike(
     weapon: str,
     raw: int,
 ) -> dict[str, Any]:
-    """Apply a hit. Armor absorbs first, then hit points take harm, then the overflow comes off
-    the overflow stat and the target must save against it. An NPC saves at once; a player
-    character saves when the player rolls, so a character who still owes a save takes no more hits."""
+    """Apply a hit through the rule set's damage steps. A target that owes a save takes no more
+    hits. An NPC saves at once; a player character saves when the player rolls."""
     if target.save_due is not None:
         raise InvalidInput(f"{target.name} must make their {target.save_due} save first")
-    absorbed = min(target.armor, raw)
-    dealt = raw - absorbed
-    on_hit_points = min(dealt, current(target, combat.hit_points))
-    overflow = dealt - on_hit_points
-    harm: dict[str, int] = {}
-    if on_hit_points:
-        harm[combat.hit_points] = on_hit_points
-    if overflow:
-        harm[combat.overflow] = overflow
-    save = combat.overflow if overflow else None
+    damage = apply_damage(combat.damage, target.armor, lambda stat: current(target, stat), raw)
     record(
         db,
         campaign_id,
@@ -87,23 +119,23 @@ def _strike(
             attacker=attacker,
             weapon=weapon,
             raw=raw,
-            armor=absorbed,
-            harm=harm,
-            save=save,
+            armor=damage.absorbed,
+            harm=damage.harm,
+            save=damage.save,
         ),
     )
     db.commit()
     result: dict[str, Any] = {
         "target": target.name,
         "raw": raw,
-        "armor": absorbed,
-        "harm": harm,
-        "save_due": save,
+        "armor": damage.absorbed,
+        "harm": damage.harm,
+        "save_due": damage.save,
     }
-    if save is not None and target.kind == NPC_KIND:
+    if damage.save is not None and target.kind == NPC_KIND:
         state = load_state(db, campaign_id)
         character = state.characters[name_key(target.name)]
-        result["save"] = _save(db, campaign_id, combat, rng, character, save)
+        result["save"] = _save(db, campaign_id, combat, rng, character, damage.save)
     result["defeated"] = load_state(db, campaign_id).characters[name_key(target.name)].defeated
     _end_if_one_side_left(db, campaign_id)
     return result
@@ -142,7 +174,7 @@ def _save(
     character: Character,
     stat: str,
 ) -> dict[str, Any]:
-    roll = roll_total(D20, rng)
+    roll = roll_total(combat.check_die, rng)
     score = current(character, stat)
     passed = combat.module.save_succeeds(roll, score)
     record(
@@ -154,7 +186,7 @@ def _save(
             roll=roll,
             score=score,
             passed=passed,
-            status=defeat_status(character),
+            status=defeat_status(character, combat.defeat),
         ),
     )
     db.commit()
@@ -183,9 +215,9 @@ def attack(
     source = _participant(state, attacker)
     if source.kind != NPC_KIND:
         raise InvalidInput(f"{source.name} is a player character; use player_attack instead")
-    _living(source)
+    _living(source, combat)
     struck = _participant(state, target)
-    _living(struck)
+    _living(struck, combat)
     wanted = attack_name.strip().casefold()
     matches = [name for name in source.attacks if name.casefold() == wanted]
     if not matches:
@@ -211,9 +243,9 @@ def player_attack(
     pc = state.pc()
     if pc is None:
         raise InvalidInput("there is no player character in this campaign")
-    _living(pc)
+    _living(pc, combat)
     struck = _participant(state, target)
-    _living(struck)
+    _living(struck, combat)
     raw = whole_number(damage, "damage", 0, MAX_DAMAGE)
     name = weapon.strip()
     if not name:
@@ -227,7 +259,7 @@ def player_save(db: Session, campaign_id: int, roll: int, combat: CombatRules) -
     pc = state.pc()
     if pc is None or pc.save_due is None:
         raise InvalidInput("no player character owes a save")
-    roll = whole_number(roll, "roll", 1, 20)
+    roll = whole_number(roll, "roll", 1, combat.check_sides)
     stat = pc.save_due
     score = current(pc, stat)
     passed = combat.module.save_succeeds(roll, score)
@@ -240,7 +272,7 @@ def player_save(db: Session, campaign_id: int, roll: int, combat: CombatRules) -
             roll=roll,
             score=score,
             passed=passed,
-            status=defeat_status(pc),
+            status=defeat_status(pc, combat.defeat),
         ),
     )
     db.commit()
@@ -251,14 +283,14 @@ def player_save(db: Session, campaign_id: int, roll: int, combat: CombatRules) -
 def player_initiative(
     db: Session, campaign_id: int, roll: int, combat: CombatRules
 ) -> dict[str, Any]:
-    """A player character's DEX save for initiative. Once every player character has rolled, the
-    order of round one is set."""
+    """A player character's initiative save, on the rule set's initiative stat. Once every player
+    character has rolled, the order of round one is set."""
     state = load_state(db, campaign_id)
     waiting = awaiting_initiative(state)
     if not waiting:
         raise InvalidInput("no one is rolling for initiative right now")
     character = state.characters[name_key(waiting[0])]
-    roll = whole_number(roll, "roll", 1, 20)
+    roll = whole_number(roll, "roll", 1, combat.check_sides)
     score = current(character, combat.initiative_stat)
     passed = combat.module.save_succeeds(roll, score)
     record(db, campaign_id, InitiativeRolled(name=character.name, passed=passed))
@@ -286,7 +318,12 @@ def set_armor(db: Session, campaign_id: int, name: str, armor: int) -> dict[str,
 
 
 def recover_character(
-    db: Session, campaign_id: int, name: str, explanation: str, consequence: str
+    db: Session,
+    campaign_id: int,
+    name: str,
+    explanation: str,
+    consequence: str,
+    combat: CombatRules,
 ) -> dict[str, Any]:
     """Bring a player character back from critical damage. The GM says how they survived and what
     it cost them; the harm they took stays as it was."""
@@ -297,7 +334,7 @@ def recover_character(
     if character.kind != PC_KIND:
         raise InvalidInput(f"{character.name} is not a player character and cannot be recovered")
     if not character.defeated:
-        raise InvalidInput(f"{character.name} is not in critical damage")
+        raise InvalidInput(f"{character.name} is not {combat.defeat['player_character']}")
     record(
         db,
         campaign_id,

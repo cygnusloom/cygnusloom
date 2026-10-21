@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 import math
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import asdict, dataclass, field, fields, replace
 from enum import StrEnum
 from typing import Any, ClassVar
@@ -114,10 +114,11 @@ class Character:
     defeated: bool = False
 
 
-def defeat_status(character: Character) -> str:
-    """Where a defeat leaves a character. A player character is in critical damage and can be
-    recovered; an NPC is dead and stays where it fell as a body."""
-    return "in critical damage" if character.kind == PC_KIND else "dead"
+def defeat_status(character: Character, defeat: Mapping[str, str]) -> str:
+    """Where a defeat leaves a character, in the rule set's words: `defeat` maps `player_character`
+    and `npc` to a label. A character with no label in `defeat` reads as just defeated."""
+    key = "player_character" if character.kind == PC_KIND else "npc"
+    return defeat.get(key, "defeated")
 
 
 @dataclass(frozen=True)
