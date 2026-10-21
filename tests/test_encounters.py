@@ -397,9 +397,13 @@ def test_campaign_page_shows_the_encounter_board_and_turn_controls(
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "encounter-board" in page
     assert MAP in page
+    assert "Ada moves to column 3, row 4." in page
     assert "Start Pip" in page
     assert "column 3, row 4" in page
     assert "Start your turn" not in page
+    assert 'id="tab-encounter" aria-controls="panel-encounter" aria-selected="true"' in page
+    assert 'id="tab-world" aria-controls="panel-world" aria-selected="false"' in page
+    assert "world-map-details" not in page
 
     _begin(app, campaign_id, "Pip")
     _finish_gm_reply(app, campaign_id)
@@ -414,3 +418,4 @@ def test_campaign_page_shows_the_encounter_board_and_turn_controls(
 def test_campaign_page_has_no_board_without_an_encounter(client_factory: Callable[[], TestClient]):
     client, campaign_id = _campaign_id(client_factory)
     assert "encounter-board" not in client.get(f"/campaigns/{campaign_id}").text
+    assert 'id="tab-world"' not in client.get(f"/campaigns/{campaign_id}").text

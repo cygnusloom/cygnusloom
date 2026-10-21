@@ -904,7 +904,7 @@ class ParticipantPlaced(GameEvent):
             encounter.moved += self.cost
 
     def render(self) -> str:
-        return f"{self.name} moves to column {self.column}, row {self.row}."
+        return f"{self.name} moves to column {self.column + 1}, row {self.row + 1}."
 
 
 @dataclass(frozen=True)

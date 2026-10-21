@@ -128,8 +128,17 @@
           </section>
 
           <section class="tabs-panel">
+            <div class="tab-list" role="tablist" aria-label="Panels">
+              {% if encounter %}
+              <button type="button" class="tab" role="tab" id="tab-encounter" aria-controls="panel-encounter" aria-selected="true">Encounter</button>
+              <button type="button" class="tab" role="tab" id="tab-world" aria-controls="panel-world" aria-selected="false" tabindex="-1">World map</button>
+              {% endif %}
+              <button type="button" class="tab" role="tab" id="tab-characters" aria-controls="panel-characters" aria-selected="{{ 'false' if encounter else 'true' }}" tabindex="{{ -1 if encounter else 0 }}">Characters</button>
+              <button type="button" class="tab" role="tab" id="tab-sheet" aria-controls="panel-sheet" aria-selected="false" tabindex="-1">Sheet</button>
+              <button type="button" class="tab" role="tab" id="tab-notes" aria-controls="panel-notes" aria-selected="false" tabindex="-1">Notes</button>
+            </div>
             {% if encounter %}
-            <section class="encounter-status" aria-label="Encounter">
+            <div class="tab-panel encounter-status" role="tabpanel" id="panel-encounter" aria-labelledby="tab-encounter">
               <p><strong>{{ encounter.map }}</strong> <span class="muted">{{ encounter.location }}, round {{ encounter.round }}</span></p>
               <ul class="encounter-list">
                 {% for participant in encounter.participants %}
@@ -142,19 +151,12 @@
                 <li class="muted">No one has joined yet.</li>
                 {% endfor %}
               </ul>
-              <details class="world-map-details">
-                <summary>World map</summary>
-                {{ map_board(world_map) }}
-              </details>
-            </section>
-            {% endif %}
-
-            <div class="tab-list" role="tablist" aria-label="Panels">
-              <button type="button" class="tab" role="tab" id="tab-characters" aria-controls="panel-characters" aria-selected="true">Characters</button>
-              <button type="button" class="tab" role="tab" id="tab-sheet" aria-controls="panel-sheet" aria-selected="false" tabindex="-1">Sheet</button>
-              <button type="button" class="tab" role="tab" id="tab-notes" aria-controls="panel-notes" aria-selected="false" tabindex="-1">Notes</button>
             </div>
-            <div class="tab-panel" role="tabpanel" id="panel-characters" aria-labelledby="tab-characters">
+            <div class="tab-panel" role="tabpanel" id="panel-world" aria-labelledby="tab-world" hidden>
+              {{ map_board(world_map) }}
+            </div>
+            {% endif %}
+            <div class="tab-panel" role="tabpanel" id="panel-characters" aria-labelledby="tab-characters"{% if encounter %} hidden{% endif %}>
               {% if scene.pc %}
               <ul>
                 <li><strong>{{ scene.pc.name }}</strong> <span class="muted">(you), {{ scene.location.name if scene.location else "not yet placed" }}</span></li>
