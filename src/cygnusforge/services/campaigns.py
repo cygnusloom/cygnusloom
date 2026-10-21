@@ -101,11 +101,13 @@ NARRATE_INSTRUCTION = (
     "Do not call tools."
 )
 OPENING_PROMPT = (
-    "Opening instruction. The campaign is starting and the player has not acted yet. Begin it as "
-    "the GM: place the player character in the world with move_actor, then set the scene. Read "
-    "out the campaign's omen if the rules call for one. Briefly introduce the world and the player "
-    "character, and end with what they see and can do next, so the player can begin. Do not speak "
-    "or act for the player character."
+    "Opening instruction. This is setup, not play: do not narrate a scene, speak as a character, "
+    "or act for the player character. Make any tool calls first and write no text before them: "
+    "place the player character in the world with move_actor, and make any opening reading or roll "
+    "the rule set calls for. Then call ooc with no_narration true. In your reply, introduce "
+    "yourself to the player as Cygnus, the game master, and introduce the world and any pertinent "
+    "details the player needs before they act. Keep the opening as brief as possible. Do not end "
+    "with a question to the player. Then stop and leave the player to act."
 )
 OOC_INSTRUCTION = (
     "Out-of-character step. The player is talking to you as the GM, not to their character. Reply "
