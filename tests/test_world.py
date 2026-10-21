@@ -16,8 +16,10 @@ from cygnusforge.content.character import NO_CAMPAIGN, TableOption, choice_optio
 from cygnusforge.content.library import ContentLibrary, LocationTemplate
 from cygnusforge.db.models import Event
 from cygnusforge.llm.base import ChatReply, ToolRequest
+from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.rules.context import ToolContext, brief
 from cygnusforge.services import world
+from cygnusforge.services.campaigns import SPEECH_ATTEMPTS
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
     NPC_KIND,
@@ -766,6 +768,77 @@ def test_speech_is_a_separate_call_and_only_the_narration_is_saved(
     ]
     narration = recorder.calls[-1]["messages"]
     assert "Mind the bog, dearie." in json.dumps(narration)
+
+
+class _EmptySpeech(FakeProvider):
+    """Answers the first `empty` speech steps with no text."""
+
+    def __init__(self, empty: int) -> None:
+        super().__init__()
+        self.empty = empty
+
+    async def chat(
+        self,
+        model: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+    ) -> ChatReply:
+        if self.empty and "Speech step." in str(messages[0]["content"]):
+            self.empty -= 1
+            return ChatReply(text="")
+        return await super().chat(model, messages, tools)
+
+
+def _speech_calls(recorder: Any) -> list[dict[str, Any]]:
+    return [
+        call
+        for call in recorder.calls
+        if call["messages"] and "Speech step." in str(call["messages"][0]["content"])
+    ]
+
+
+def test_an_empty_speech_reply_is_retried(client_factory: Callable[[], TestClient], app: FastAPI):
+    recorder = _recording_provider()
+    recorder.inner = _EmptySpeech(empty=1)
+    client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (recorder, model_id)
+    _place_pc(client, campaign_id)
+    speak_call = {
+        "name": "speak",
+        "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
+    }
+    script = _script(
+        {
+            "rounds": [[speak_call]],
+            "text": "Mara looks up from her kettle.",
+            "speech": {"Mara Thistledown": "Mind the bog, dearie."},
+        }
+    )
+
+    _send(client, campaign_id, script)
+
+    assert len(_speech_calls(recorder)) == 2
+    assert _saved(app, campaign_id)[-1] == ("assistant", "Mara looks up from her kettle.")
+    assert "Mind the bog, dearie." in json.dumps(recorder.calls[-1]["messages"])
+
+
+def test_speech_retries_are_bounded(client_factory: Callable[[], TestClient], app: FastAPI):
+    recorder = _recording_provider()
+    recorder.inner = _EmptySpeech(empty=SPEECH_ATTEMPTS)
+    client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (recorder, model_id)
+    _place_pc(client, campaign_id)
+    speak_call = {
+        "name": "speak",
+        "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
+    }
+    script = _script({"rounds": [[speak_call]], "text": "Mara looks up.", "speech": {}})
+
+    _send(client, campaign_id, script)
+
+    assert len(_speech_calls(recorder)) == SPEECH_ATTEMPTS
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "the speech step returned no dialogue" in page
 
 
 def test_queued_dialogue_reaches_the_narration_as_json(

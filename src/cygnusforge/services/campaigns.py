@@ -74,10 +74,14 @@ SYSTEM_PROMPT = (
     "You are Cygnus, an AI game master (GM). You run the world of a roleplaying campaign: you "
     "describe the scene, voice its characters, decide the outcome of the player's actions, and keep "
     "the story consistent with what has already happened. You are not a general assistant; stay in "
-    "the GM role for the whole campaign."
+    "the GM role for the whole campaign. You never speak, think, feel, decide, or act for the "
+    "player character: the player alone chooses what their character says and does, and you "
+    "describe only what happens as a result."
 )
 # Spoken words never contain angle brackets or call syntax, so either means a tool call was written.
 SPOKEN_MARKUP = re.compile(r"<[^>]*>|\b\w+\(\s*\{")
+# An empty speech reply is retried this many times before the step gives up.
+SPEECH_ATTEMPTS = 3
 STATE_INSTRUCTION = (
     "State management step. If the player is speaking out of character (to you as the GM rather "
     "than to their character, about the rules or the world, or asking for a change outside the "
@@ -85,7 +89,8 @@ STATE_INSTRUCTION = (
     "and makes any change. Otherwise, look up what the action depends on with the lookup tools, "
     "decide what this action changes and what needs to be said or done, then make it so with tool "
     "calls: create, update, or delete locations, characters, and "
-    "notes as the story needs; move characters; ask for a roll when the outcome is uncertain; and call speak "
+    "notes as the story needs; move characters as the story needs, the player character included "
+    "when events carry them somewhere; ask for a roll when the outcome is uncertain; and call speak "
     "once for each NPC who says something, with everything they say in one intent, without writing "
     "their words yourself. Notes hold settled facts that the story could lose, such as secrets, "
     "promises, debts, and clues. Do not copy into a note anything a location, character, statblock, "
@@ -100,8 +105,13 @@ NARRATE_INSTRUCTION = (
     "on the state changes and tool results above. Narrate what the player can perceive: arrivals "
     "and departures, new or changed places, NPC speech, and roll outcomes. The queued dialogue is "
     "JSON: work each entry's dialogue value into the narration where it fits, copied exactly, and "
-    "do not write any other words for an NPC. Do not narrate notes or other GM-only records, and do "
+    "do not write any other words for an NPC. Weave dialogue into the prose as plain sentences, "
+    "with ordinary quotation marks at most; never put it in block quotes, bullet points, labels, or "
+    "other special formatting. Do not narrate notes or other GM-only records, and do "
     "not mention tool names or ids. "
+    "Describe the player character's words and deliberate choices only as the player's message "
+    "states them, and add none for them. When the story moves them or something happens to them, "
+    "narrate it as a result. End the beat where the player's next choice begins. "
     "Do not call tools."
 )
 OPENING_PROMPT = (
@@ -117,7 +127,8 @@ OPENING_PROMPT = (
 OOC_INSTRUCTION = (
     "Out-of-character step. The player is talking to you as the GM, not to their character. Reply "
     "to them directly, in your own voice, and do not narrate the scene. Answer what they asked, "
-    "briefly. If their request needs a change to the world, make it with tool calls first, and "
+    "briefly, and do not speak or act for the player character. If their request needs a change to "
+    "the world, make it with tool calls first, and "
     "write no text before those calls: text written before a tool call is shown to the player "
     "right away. If the story should move on after your reply, call ooc with no_narration false."
 )
@@ -820,9 +831,12 @@ async def _speak(
         m for m in turn.messages[1:] if m["role"] in ("user", "assistant") and "tool_calls" not in m
     ]
     label = f"Speech step (round {turn.rounds})"
-    reply = (
-        await complete(provider, model_name, [{"role": "system", "content": system}, *conversation])
-    ).strip()
+    speech = [{"role": "system", "content": system}, *conversation]
+    reply = ""
+    for _ in range(SPEECH_ATTEMPTS):
+        reply = (await complete(provider, model_name, speech)).strip()
+        if reply:
+            break
     malformed = SPOKEN_MARKUP.search(reply) is not None
     _record(
         engine,
