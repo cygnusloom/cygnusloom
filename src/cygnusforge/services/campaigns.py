@@ -97,7 +97,7 @@ NARRATE_INSTRUCTION = (
     "on the state changes and tool results above. Narrate what the player can perceive: arrivals "
     "and departures, new or changed places, NPC speech, and roll outcomes. Work the queued NPC "
     "dialogue into the narration where it fits, copied exactly, and do not write any other words for "
-    "an NPC. Do not narrate notes or other GM-only records, and do not mention tool names or ids. "
+    "an NPC. You must include ALL dialogue provided.Do not narrate notes or other GM-only records, and do not mention tool names or ids. "
     "Do not call tools."
 )
 OPENING_PROMPT = (
