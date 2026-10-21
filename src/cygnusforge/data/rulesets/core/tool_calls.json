@@ -573,7 +573,7 @@
     "name": "update_encounter_map",
     "python_module": "core",
     "function": "update_encounter_map",
-    "description": "Change an encounter map's size or description. Refused if a participant would be left outside the new size.",
+    "description": "Change an encounter map: its name, the location it is in, its size, or its description. Refused if the new name is taken or a participant would be left outside the new size.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -592,6 +592,14 @@
         "description": {
           "type": "string",
           "description": "What the map shows now."
+        },
+        "new_name": {
+          "type": "string",
+          "description": "A new name for the map. Leave out to keep the current name."
+        },
+        "location": {
+          "type": "string",
+          "description": "The name of the location the map is in. Leave out to keep the current location."
         }
       },
       "required": [

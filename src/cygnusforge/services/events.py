@@ -202,6 +202,15 @@ def name_key(name: str) -> str:
     return name.strip().casefold()
 
 
+def token_label(name: str) -> str:
+    """A short label for a map token: the initials of a multi-word name, or the first three letters
+    of a single word. The full name is the token's tooltip."""
+    words = name.split()
+    if len(words) > 1:
+        return "".join(word[0] for word in words[:3]).upper()
+    return name.strip()[:3]
+
+
 EVENT_TYPES: dict[str, type[GameEvent]] = {}
 
 
@@ -790,21 +799,34 @@ class MapCreated(GameEvent):
 
 @dataclass(frozen=True)
 class MapUpdated(GameEvent):
+    """A map's size, description, name, or location changes. An empty `new_name` or `location`
+    keeps the current one. An encounter running on the map follows it."""
+
     kind: ClassVar[str] = "map.updated"
 
     name: str
     columns: int
     rows: int
     description: str
+    new_name: str = ""
+    location: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         key = name_key(self.name)
-        before = state.maps[key]
-        state.maps[key] = EncounterMap(
-            before.name, before.location, self.columns, self.rows, self.description
+        before = state.maps.pop(key)
+        name = self.new_name or before.name
+        location = self.location or before.location
+        state.maps[name_key(name)] = EncounterMap(
+            name, location, self.columns, self.rows, self.description
         )
+        encounter = state.encounter
+        if encounter is not None and name_key(encounter.map) == key:
+            encounter.map = name
+            encounter.location = location
 
     def render(self) -> str:
+        if self.new_name:
+            return f"Encounter map updated: {self.name} is now {self.new_name}."
         return f"Encounter map updated: {self.name}."
 
 

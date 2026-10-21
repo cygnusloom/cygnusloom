@@ -33,6 +33,7 @@ from cygnusforge.services.events import (
     load_state,
     name_key,
     record,
+    token_label,
 )
 
 MAX_MAP_NAME = 120
@@ -134,12 +135,26 @@ def update_map(
     columns: int,
     rows: int,
     description: str,
+    new_name: str | None = None,
+    location: str | None = None,
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     entry = _map_named(state, name)
     columns, rows = _size(columns, rows)
     description = bounded_text(description, "description", MAX_MAP_TEXT)
-    if state.encounter is not None and name_key(state.encounter.map) == name_key(entry.name):
+    renamed = ""
+    if new_name is not None:
+        renamed = bounded_text(new_name, "name", MAX_MAP_NAME)
+        if name_key(renamed) != name_key(entry.name) and name_key(renamed) in state.maps:
+            raise InvalidInput(f"there is already an encounter map named {renamed!r}")
+    moved = ""
+    if location is not None:
+        place = state.named(bounded_text(location, "location", MAX_MAP_NAME))
+        if not isinstance(place, Place):
+            raise InvalidInput(f"there is no location named {location!r}")
+        moved = place.name
+    in_use = state.encounter is not None and name_key(state.encounter.map) == name_key(entry.name)
+    if in_use:
         for who, (column, row) in state.encounter.cells.items():
             if column >= columns or row >= rows:
                 raise InvalidInput(
@@ -149,10 +164,23 @@ def update_map(
     record(
         db,
         campaign_id,
-        MapUpdated(name=entry.name, columns=columns, rows=rows, description=description),
+        MapUpdated(
+            name=entry.name,
+            columns=columns,
+            rows=rows,
+            description=description,
+            new_name=renamed,
+            location=moved,
+        ),
     )
     db.commit()
-    return {"updated": "encounter map", "name": entry.name, "columns": columns, "rows": rows}
+    return {
+        "updated": "encounter map",
+        "name": renamed or entry.name,
+        "location": moved or entry.location,
+        "columns": columns,
+        "rows": rows,
+    }
 
 
 def delete_map(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
@@ -333,6 +361,7 @@ def encounter_view(state: CampaignState, grid: EncounterGrid | None) -> dict[str
         participants.append(
             {
                 "number": number,
+                "label": token_label(character.name),
                 "name": character.name,
                 "is_pc": character.kind == PC_KIND,
                 "cell": encounter.cells.get(name_key(character.name)),

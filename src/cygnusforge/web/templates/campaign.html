@@ -129,17 +129,12 @@
               {{ encounter_board(encounter, encounter_rows) }}
               <div class="encounter-status">
                 <p><strong>{{ encounter.map }}</strong> <span class="muted">{{ encounter.location }}, round {{ encounter.round }}</span></p>
-                <ul class="encounter-list">
-                  {% for participant in encounter.participants %}
-                  <li{% if participant.acting %} class="acting"{% endif %}>
-                    <span class="map-number">{{ participant.number }}</span>
-                    <strong>{{ participant.name }}</strong>{% if participant.is_pc %} <span class="muted">(you)</span>{% endif %}
-                    <span class="muted">{% if participant.cell %}column {{ participant.cell[0] + 1 }}, row {{ participant.cell[1] + 1 }}{% else %}not on the map{% endif %}</span>
-                  </li>
-                  {% else %}
-                  <li class="muted">No one has joined yet.</li>
-                  {% endfor %}
-                </ul>
+                {% set off_map = encounter.participants | rejectattr("cell") | map(attribute="name") | list %}
+                {% if not encounter.participants %}
+                <p class="muted">No one has joined yet.</p>
+                {% elif off_map %}
+                <p class="muted">Not on the map: {{ off_map | join(", ") }}.</p>
+                {% endif %}
               </div>
             </div>
             <div class="tab-panel map-view" role="tabpanel" id="panel-world" aria-labelledby="tab-world" hidden>

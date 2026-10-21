@@ -1404,7 +1404,7 @@ def test_a_place_inside_another_has_no_map_point_of_its_own(
     view = world.map_view(_state(app, campaign_id))
     assert "Ferry Post" in [p.name for p in view.places]
     assert "Ferry Post" not in [m.name for m in view.markers]
-    assert view.numbers == {"Ashen Ford": 1, "Mossbell Hollow": 2}
+    assert {m.name: m.label for m in view.markers} == {"Ashen Ford": "AF", "Mossbell Hollow": "MH"}
 
     refused = _tool(
         app,
@@ -1540,8 +1540,8 @@ def test_map_shows_only_discovered_places_with_positions(
     _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Mossbell Hollow"})
     view = world.map_view(_state(app, campaign_id))
     assert [place.name for place in view.places] == ["Mossbell Hollow"]
-    assert [(m.name, m.number, m.left, m.top, m.here) for m in view.markers] == [
-        ("Mossbell Hollow", 1, 50.0, 50.0, True)
+    assert [(m.name, m.label, m.left, m.top, m.here) for m in view.markers] == [
+        ("Mossbell Hollow", "MH", 50.0, 50.0, True)
     ]
     assert view.radius_km == 1.1
 
@@ -1568,7 +1568,11 @@ def test_map_shows_only_discovered_places_with_positions(
     assert markers["Glowcap Ring"].here is False
     assert "Spore Bridge" not in markers
     assert all(0 <= m.left <= 100 and 0 <= m.top <= 100 for m in view.markers)
-    assert view.numbers == {"Far Shore": 1, "Glowcap Ring": 2, "Mossbell Hollow": 3}
+    assert {m.name: m.label for m in view.markers} == {
+        "Far Shore": "FS",
+        "Glowcap Ring": "GR",
+        "Mossbell Hollow": "MH",
+    }
 
 
 def test_map_on_a_fresh_campaign_has_a_default_scale(client_factory: Callable[[], TestClient], app):
@@ -1588,7 +1592,7 @@ def test_campaign_page_draws_discovered_places_on_the_map(
 
     map_view = page[page.index('data-view="map"') : page.index('data-view="lore"')]
     assert (
-        'class="map-marker here" style="left: 50.0%; top: 50.0%" title="Mossbell Hollow (you)">2</span>'
+        'class="map-marker here" style="left: 50.0%; top: 50.0%" title="Mossbell Hollow (you)">MH</span>'
         in map_view
     )
     assert "Glowcap Ring" in map_view

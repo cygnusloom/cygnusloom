@@ -101,9 +101,17 @@ def create_encounter_map(
 
 
 def update_encounter_map(
-    name: str, columns: int, rows: int, description: str, ctx: ToolContext
+    name: str,
+    columns: int,
+    rows: int,
+    description: str,
+    ctx: ToolContext,
+    new_name: str | None = None,
+    location: str | None = None,
 ) -> dict[str, Any]:
-    return ctx.world.update_encounter_map(name, columns, rows, description)
+    return ctx.world.update_encounter_map(
+        name, columns, rows, description, new_name=new_name, location=location
+    )
 
 
 def delete_encounter_map(name: str, ctx: ToolContext) -> dict[str, Any]:

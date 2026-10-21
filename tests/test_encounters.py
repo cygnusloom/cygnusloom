@@ -14,7 +14,7 @@ from cygnusforge.content.library import EncounterGrid
 from cygnusforge.llm.base import ToolRequest
 from cygnusforge.services import campaigns, encounters
 from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import CampaignState, ChatGM, record
+from cygnusforge.services.events import CampaignState, ChatGM, record, token_label
 from cygnusforge.services.tools import ToolRun, run_tool
 from tests.conftest import content_library, csrf_token
 from tests.test_campaigns import _campaign_id, _place_pc, _send
@@ -424,3 +424,109 @@ def test_campaign_page_has_no_board_without_an_encounter(client_factory: Callabl
     client, campaign_id = _campaign_id(client_factory)
     assert "encounter-board" not in client.get(f"/campaigns/{campaign_id}").text
     assert 'id="tab-world"' not in client.get(f"/campaigns/{campaign_id}").text
+
+
+def test_token_labels_are_short_initials_or_a_prefix():
+    assert token_label("Mossbell Hollow") == "MH"
+    assert token_label("Ashen Ford Inn") == "AFI"
+    assert token_label("Ada Lovelace the Third") == "ALT"
+    assert token_label("Pip") == "Pip"
+    assert token_label("  Bartholomew ") == "Bar"
+
+
+def test_encounter_map_can_be_renamed_and_moved_while_in_use(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _encounter_with(client_factory, columns=20, rows=20)
+    app = client.app
+    _call(app, campaign_id, "create_location", {"name": "Far Shore", "description": "Across."})
+    _place(app, campaign_id, "Ada", 2, 2, grid=None)
+
+    renamed = _call(
+        app,
+        campaign_id,
+        "update_encounter_map",
+        {
+            "name": MAP,
+            "columns": 12,
+            "rows": 12,
+            "description": "Smaller now.",
+            "new_name": "Green Two",
+            "location": "Far Shore",
+        },
+    )
+    assert renamed == {
+        "updated": "encounter map",
+        "name": "Green Two",
+        "location": "Far Shore",
+        "columns": 12,
+        "rows": 12,
+    }
+    state = _encounter(app, campaign_id)
+    assert state.maps.keys() == {"green two"}
+    assert state.maps["green two"].location == "Far Shore"
+    assert state.encounter.map == "Green Two"
+    assert state.encounter.location == "Far Shore"
+    assert state.encounter.cells["ada"] == (2, 2)
+
+    assert _place(app, campaign_id, "Ada", 11, 11)["placed"] == "Ada"
+    assert "error" in _place(app, campaign_id, "Ada", 12, 0)
+
+
+def test_encounter_map_rename_keeps_its_own_name_and_refuses_clashes(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _encounter_with(client_factory, columns=20, rows=20)
+    app = client.app
+    _call(
+        app,
+        campaign_id,
+        "create_encounter_map",
+        {
+            "name": "Shore Green",
+            "location": TOWN,
+            "columns": 5,
+            "rows": 5,
+            "description": "Pebbles.",
+        },
+    )
+    base = {"name": MAP, "columns": 20, "rows": 20, "description": "Open ground."}
+
+    clash = _call(app, campaign_id, "update_encounter_map", {**base, "new_name": "shore GREEN"})
+    assert "already" in clash["error"]
+    nowhere = _call(app, campaign_id, "update_encounter_map", {**base, "location": "Nowhere"})
+    assert "no location named" in nowhere["error"]
+    blank = _call(app, campaign_id, "update_encounter_map", {**base, "new_name": "   "})
+    assert "error" in blank
+
+    same = _call(app, campaign_id, "update_encounter_map", {**base, "new_name": MAP.upper()})
+    assert same["name"] == MAP.upper()
+    assert _encounter(app, campaign_id).maps.keys() == {MAP.casefold(), "shore green"}
+
+
+def test_campaign_page_draws_tokens_with_full_name_tooltips_and_no_legend(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
+    app = client.app
+    _place(app, campaign_id, "Ada", 2, 3, grid=None)
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert '<span class="map-token">Ada</span>' in page
+    assert 'title="Ada"' in page
+    assert "Not on the map: Pip." in page
+    assert "encounter-list" not in page
+    assert "map-legend" not in page
+    assert "map-number" not in page
+
+
+def test_campaign_page_says_when_no_one_is_on_the_encounter_map(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
+    app = client.app
+    _place(app, campaign_id, "Ada", 1, 1, grid=None)
+    _place(app, campaign_id, "Pip", 2, 1, grid=None)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "Not on the map" not in page
+    assert '<span class="map-token">Pip</span>' in page

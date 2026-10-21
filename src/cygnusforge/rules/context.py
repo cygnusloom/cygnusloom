@@ -45,7 +45,13 @@ class World(Protocol):
     ) -> dict[str, Any]: ...
 
     def update_encounter_map(
-        self, name: str, columns: int, rows: int, description: str
+        self,
+        name: str,
+        columns: int,
+        rows: int,
+        description: str,
+        new_name: str | None = None,
+        location: str | None = None,
     ) -> dict[str, Any]: ...
 
     def delete_encounter_map(self, name: str) -> dict[str, Any]: ...

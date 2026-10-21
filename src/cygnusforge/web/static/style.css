@@ -162,29 +162,19 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .encounter-turn form { margin: 0.25rem 0; }
 .encounter-status p { margin: 0.25rem 0; }
 .encounter-status form { margin: 0.25rem 0; }
-.encounter-list { list-style: none; margin: 0.25rem 0; padding: 0; font-size: 0.9rem; }
-.encounter-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; padding: 0.15rem 0; }
-.encounter-list li.acting strong { color: var(--accent); }
 .map-origin {
   position: absolute; left: 50%; top: 50%; width: 0.75rem; height: 0.75rem;
   transform: translate(-50%, -50%); border: 1px dashed var(--muted); border-radius: 50%;
 }
 .map-marker {
   position: absolute; transform: translate(-50%, -50%);
-  display: grid; place-items: center; width: 1.5rem; height: 1.5rem; box-sizing: border-box;
-  font-size: 0.75rem; font-weight: 600; border-radius: 50%;
+  display: grid; place-items: center; min-width: 1.75rem; height: 1.25rem; box-sizing: border-box;
+  padding: 0 0.3rem; white-space: nowrap;
+  font-size: 0.7rem; font-weight: 600; border-radius: 999px;
   background: var(--panel); border: 1px solid var(--border);
 }
 .map-marker.here { color: var(--accent); border-color: var(--accent); }
-.map-number {
-  display: inline-grid; place-items: center; min-width: 1.25rem; height: 1.25rem; box-sizing: border-box;
-  font-size: 0.75rem; font-weight: 600; border-radius: 50%; border: 1px solid var(--border);
-}
-.map-legend {
-  list-style: none; margin: 0.25rem 0 0; padding: 0; font-size: 0.8rem;
-  display: flex; flex-wrap: wrap; gap: 0.2rem 0.75rem;
-}
-.map-legend .here { color: var(--accent); }
+.map-token { font-size: 0.6rem; font-weight: 600; line-height: 1; white-space: nowrap; }
 .map-scale { margin: 0; font-size: 0.8rem; }
 .map-page h2, .map-page h3 { margin-top: 1rem; }
 .map-place { padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
@@ -209,9 +199,8 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
   display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
   padding: 0.5rem 0 0; overflow-y: auto;
 }
-.map-view > .map-board { flex: 1 0 auto; min-height: 7rem; width: auto; height: auto; max-height: 100%; }
+.map-view > .map-board { flex: 0 1 auto; min-height: 7rem; width: auto; height: auto; max-height: 100%; }
 .map-view > .encounter-status { flex: none; width: 100%; }
-.map-view .encounter-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 1rem; margin: 0; }
 .map-view .encounter-status p { text-align: center; }
 
 

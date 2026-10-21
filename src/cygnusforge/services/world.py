@@ -57,6 +57,7 @@ from cygnusforge.services.events import (
     load_state,
     name_key,
     record,
+    token_label,
 )
 from cygnusforge.services.tools import check_arguments
 
@@ -85,10 +86,10 @@ class SceneView:
 
 @dataclass(frozen=True)
 class MapMarker:
-    """A numbered pin for one place. Left and top are percentages of the map's width and height."""
+    """A token for one place. Left and top are percentages of the map's width and height."""
 
     name: str
-    number: int
+    label: str
     left: float
     top: float
     here: bool
@@ -98,12 +99,11 @@ class MapMarker:
 class MapView:
     """The player's map. Only discovered places appear on it. Places with a position are placed on a
     square centered on the origin and sized to fit the farthest one. Every discovered place is listed.
-    The placed ones are numbered, and the numbers match the pins."""
+    """
 
     radius_km: float
     markers: list[MapMarker]
     places: list[Place]
-    numbers: dict[str, int]
 
 
 @dataclass(frozen=True)
@@ -212,10 +212,18 @@ class WorldTools:
             )
 
     def update_encounter_map(
-        self, name: str, columns: int, rows: int, description: str
+        self,
+        name: str,
+        columns: int,
+        rows: int,
+        description: str,
+        new_name: str | None = None,
+        location: str | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return encounters.update_map(db, self.campaign_id, name, columns, rows, description)
+            return encounters.update_map(
+                db, self.campaign_id, name, columns, rows, description, new_name, location
+            )
 
     def delete_encounter_map(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -740,11 +748,10 @@ def map_view(state: CampaignState) -> MapView:
     radius = reach * MAP_MARGIN
     pc = state.pc()
     here = pc.location if pc is not None else None
-    numbers = {place.name: index for index, place in enumerate(placed, start=1)}
     markers = [
         MapMarker(
             name=place.name,
-            number=numbers[place.name],
+            label=token_label(place.name),
             left=round(50 + place.position.x / radius * 50, 2),
             top=round(50 - place.position.y / radius * 50, 2),
             here=place.name == here,
@@ -752,7 +759,7 @@ def map_view(state: CampaignState) -> MapView:
         for place in placed
         if place.position is not None
     ]
-    return MapView(radius_km=round(radius, 2), markers=markers, places=places, numbers=numbers)
+    return MapView(radius_km=round(radius, 2), markers=markers, places=places)
 
 
 def scene_view(state: CampaignState, spec: CharacterSpec) -> SceneView:
