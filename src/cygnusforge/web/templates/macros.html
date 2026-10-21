@@ -6,13 +6,15 @@
   {% endfor %}
 {%- endmacro %}
 
-{% macro map_board(view) -%}
+{% macro map_board(view, framed=false) -%}
+  {% if framed %}<div class="map-frame">{% endif %}
   <div class="map-board" aria-label="Map of discovered places">
     <span class="map-origin" aria-hidden="true"></span>
     {% for marker in view.markers %}
       <span class="map-marker{% if marker.here %} here{% endif %}" style="left: {{ marker.left }}%; top: {{ marker.top }}%" title="{{ marker.name }}{% if marker.here %} (you){% endif %}">{{ marker.label }}</span>
     {% endfor %}
   </div>
+  {% if framed %}</div>{% endif %}
   {% if view.markers %}
     <p class="muted map-scale">About {{ (view.radius_km * 2) | round(1) }} km across. North is up.</p>
   {% endif %}

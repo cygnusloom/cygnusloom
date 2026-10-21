@@ -126,7 +126,7 @@
               <button type="button" class="tab" role="tab" id="tab-world" aria-controls="panel-world" aria-selected="false" tabindex="-1">World map</button>
             </div>
             <div class="tab-panel map-view" role="tabpanel" id="panel-encounter" aria-labelledby="tab-encounter">
-              {{ encounter_board(encounter, encounter_rows) }}
+              <div class="map-frame">{{ encounter_board(encounter, encounter_rows) }}</div>
               <div class="encounter-status">
                 <p><strong>{{ encounter.map }}</strong> <span class="muted">{{ encounter.location }}, round {{ encounter.round }}</span></p>
                 {% if not encounter.participants %}
@@ -135,10 +135,10 @@
               </div>
             </div>
             <div class="tab-panel map-view" role="tabpanel" id="panel-world" aria-labelledby="tab-world" hidden>
-              {{ map_board(world_map) }}
+              {{ map_board(world_map, framed=true) }}
             </div>
             {% else %}
-              {{ map_board(world_map) }}
+              {{ map_board(world_map, framed=true) }}
             {% endif %}
           </section>
 
