@@ -14,7 +14,7 @@
 {% block play %}{% endblock %}
     <section class="view map-page" data-view="map" aria-labelledby="map-title" hidden>
       <h2 id="map-title">Map</h2>
-      {{ map_board(world_map) }}
+      {{ map_board(world_map, legend=False) }}
       <h3>Places</h3>
       {{ map_places(world_map) }}
     </section>

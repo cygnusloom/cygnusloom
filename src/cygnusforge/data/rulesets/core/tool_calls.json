@@ -5,7 +5,7 @@
     "name": "create_location",
     "python_module": "core",
     "function": "create_location",
-    "description": "Add a new location to the campaign, such as a village, a clearing, or a building. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs. Set discovered to true only when anyone in the world would have heard of the place, so the player already knows it.",
+    "description": "Add a new location to the campaign, such as a village, a clearing, or a building. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs. Set discovered to true only when anyone in the world would have heard of the place, so the player already knows it. A point on the map can hold only one place: if another place already has the point, the call is refused until you pass force=true.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -28,6 +28,10 @@
         "y": {
           "type": "number",
           "description": "Kilometers north of the map's center; negative for south. Give x and y together, or neither. Only when the place's position relative to others is known."
+        },
+        "force": {
+          "type": "boolean",
+          "description": "Set true only to put this place on a point another place already has, as when two places are the same spot. Without it, a point another place already has is refused."
         }
       },
       "required": [
@@ -303,7 +307,7 @@
     "name": "update_location",
     "python_module": "core",
     "function": "update_location",
-    "description": "Change a location's description, for example after the place changes, or move it on the map by giving x and y. Its name stays the same. Leave x and y out to keep its position.",
+    "description": "Change a location's description, for example after the place changes. Move it on the map by giving x and y, or take it off the map by setting off_map to true. Its name stays the same. Leave x, y, and off_map out to keep its position. Use delete_location instead to remove the place from the story.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -322,6 +326,14 @@
         "y": {
           "type": "number",
           "description": "Kilometers north of the map's center; negative for south. Give x and y together. Only when the place's position relative to others is known."
+        },
+        "off_map": {
+          "type": "boolean",
+          "description": "True to take the place off the map, for example when its position is no longer known. It stays in the story and keeps its description. Do not give x or y with it. False by default."
+        },
+        "force": {
+          "type": "boolean",
+          "description": "Set true only to put this place on a point another place already has, as when two places are the same spot. Without it, a point another place already has is refused."
         }
       },
       "required": [

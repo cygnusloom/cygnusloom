@@ -64,6 +64,8 @@ QUIRKS_PER_NPC = 2
 # The map always shows at least this many kilometers from its center, and leaves a margin.
 MIN_MAP_RADIUS_KM = 1.0
 MAP_MARGIN = 1.1
+# Two places count as sharing a point when their positions agree to this many kilometers.
+SAME_POINT_KM = 0.01
 
 
 @dataclass(frozen=True)
@@ -80,9 +82,10 @@ class SceneView:
 
 @dataclass(frozen=True)
 class MapMarker:
-    """A discovered place on the map. Left and top are percentages of the map's width and height."""
+    """A numbered pin for one place. Left and top are percentages of the map's width and height."""
 
     name: str
+    number: int
     left: float
     top: float
     here: bool
@@ -91,11 +94,13 @@ class MapMarker:
 @dataclass(frozen=True)
 class MapView:
     """The player's map. Only discovered places appear on it. Places with a position are placed on a
-    square centered on the origin and sized to fit the farthest one. Every discovered place is listed."""
+    square centered on the origin and sized to fit the farthest one. Every discovered place is listed.
+    The placed ones are numbered, and the numbers match the pins."""
 
     radius_km: float
     markers: list[MapMarker]
     places: list[Place]
+    numbers: dict[str, int]
 
 
 @dataclass(frozen=True)
@@ -115,9 +120,10 @@ class WorldTools:
         discovered: bool = False,
         x: float | None = None,
         y: float | None = None,
+        force: bool = False,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return create_location(db, self.campaign_id, name, description, discovered, x, y)
+            return create_location(db, self.campaign_id, name, description, discovered, x, y, force)
 
     def discover_location(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -154,10 +160,16 @@ class WorldTools:
             return move_actor(db, self.campaign_id, name, location)
 
     def update_location(
-        self, name: str, description: str, x: float | None = None, y: float | None = None
+        self,
+        name: str,
+        description: str,
+        x: float | None = None,
+        y: float | None = None,
+        off_map: bool = False,
+        force: bool = False,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return update_location(db, self.campaign_id, name, description, x, y)
+            return update_location(db, self.campaign_id, name, description, x, y, off_map, force)
 
     def delete_location(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -319,6 +331,7 @@ def create_location(
     discovered: bool = False,
     x: float | None = None,
     y: float | None = None,
+    force: bool = False,
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     name = _text(name, "name", MAX_NAME)
@@ -327,6 +340,7 @@ def create_location(
     if not isinstance(discovered, bool):
         raise InvalidInput("discovered must be true or false")
     px, py = _coordinates(x, y)
+    _ensure_open_point(state, name, px, py, force)
     record(
         db,
         campaign_id,
@@ -385,15 +399,23 @@ def update_location(
     description: str,
     x: float | None = None,
     y: float | None = None,
+    off_map: bool = False,
+    force: bool = False,
 ) -> dict[str, Any]:
-    """Change a location's description and, if given, its map position. Without x and y the
-    position stays as it is."""
+    """Change a location's description and its map position. Giving x and y moves it. Giving
+    off_map takes it off the map. Without any of these the position stays as it is."""
     state = load_state(db, campaign_id)
     where = _place_named(state, name)
     text = _text(description, "description", MAX_TEXT)
+    if not isinstance(off_map, bool):
+        raise InvalidInput("off_map must be true or false")
     px, py = _coordinates(x, y)
-    if px is None and py is None and where.position is not None:
+    if off_map:
+        if px is not None or py is not None:
+            raise InvalidInput("give x and y to move the place, or off_map to take it off the map")
+    elif px is None and py is None and where.position is not None:
         px, py = where.position.x, where.position.y
+    _ensure_open_point(state, where.name, px, py, force)
     record(db, campaign_id, LocationUpdated(name=where.name, description=text, x=px, y=py))
     db.commit()
     return {"updated": "location", "name": where.name}
@@ -630,9 +652,11 @@ def map_view(state: CampaignState) -> MapView:
     radius = reach * MAP_MARGIN
     pc = state.pc()
     here = pc.location if pc is not None else None
+    numbers = {place.name: index for index, place in enumerate(placed, start=1)}
     markers = [
         MapMarker(
             name=place.name,
+            number=numbers[place.name],
             left=round(50 + place.position.x / radius * 50, 2),
             top=round(50 - place.position.y / radius * 50, 2),
             here=place.name == here,
@@ -640,7 +664,7 @@ def map_view(state: CampaignState) -> MapView:
         for place in placed
         if place.position is not None
     ]
-    return MapView(radius_km=round(radius, 2), markers=markers, places=places)
+    return MapView(radius_km=round(radius, 2), markers=markers, places=places, numbers=numbers)
 
 
 def scene_view(state: CampaignState, spec: CharacterSpec) -> SceneView:
@@ -783,6 +807,25 @@ def _place_named(state: CampaignState, name: str) -> Place:
     if not isinstance(entry, Place):
         raise InvalidInput(f"there is no location named {name!r}")
     return entry
+
+
+def _ensure_open_point(
+    state: CampaignState, name: str, x: float | None, y: float | None, force: bool
+) -> None:
+    """Refuse a point that another place already has, unless the GM passes force. Places do not
+    share a point by default, so their pins never sit on top of each other."""
+    if not isinstance(force, bool):
+        raise InvalidInput("force must be true or false")
+    if x is None or y is None or force:
+        return
+    for other in state.places.values():
+        if other.name == name or other.position is None:
+            continue
+        if abs(other.position.x - x) < SAME_POINT_KM and abs(other.position.y - y) < SAME_POINT_KM:
+            raise InvalidInput(
+                f"{other.name!r} is already at that point. Choose another point, or pass "
+                "force=true to put both places there."
+            )
 
 
 def _character_named(state: CampaignState, name: str) -> Character:

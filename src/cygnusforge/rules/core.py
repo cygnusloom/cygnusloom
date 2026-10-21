@@ -15,8 +15,11 @@ def create_location(
     discovered: bool = False,
     x: float | None = None,
     y: float | None = None,
+    force: bool = False,
 ) -> dict[str, Any]:
-    return ctx.world.create_location(name, description, discovered=discovered, x=x, y=y)
+    return ctx.world.create_location(
+        name, description, discovered=discovered, x=x, y=y, force=force
+    )
 
 
 def create_npc(
@@ -46,8 +49,10 @@ def update_location(
     ctx: ToolContext,
     x: float | None = None,
     y: float | None = None,
+    off_map: bool = False,
+    force: bool = False,
 ) -> dict[str, Any]:
-    return ctx.world.update_location(name, description, x=x, y=y)
+    return ctx.world.update_location(name, description, x=x, y=y, off_map=off_map, force=force)
 
 
 def discover_location(name: str, ctx: ToolContext) -> dict[str, Any]:

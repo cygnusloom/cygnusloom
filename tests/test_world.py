@@ -1129,6 +1129,123 @@ def test_update_keeps_a_position_unless_a_new_one_is_given(
     assert place.discovered is True
 
 
+def test_two_places_cannot_share_a_point_unless_forced(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Ashen Ford", "description": "A ford.", "discovered": True, "x": 2, "y": 3},
+    )
+    refused = _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Ferry Post", "description": "A post.", "x": 2, "y": 3},
+    )
+    assert "Ashen Ford" in refused["error"] and "force=true" in refused["error"]
+    assert _state(app, campaign_id).named("Ferry Post") is None
+
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Ferry Post", "description": "A post.", "x": 2, "y": 3, "force": True},
+    )
+    assert _state(app, campaign_id).named("Ferry Post").position == Position(x=2.0, y=3.0)
+
+
+def test_moving_a_place_onto_another_needs_force(client_factory: Callable[[], TestClient], app):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Ashen Ford", "description": "A ford.", "discovered": True, "x": 2, "y": 3},
+    )
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Ferry Post", "description": "A post.", "discovered": True, "x": 5, "y": 5},
+    )
+    refused = _tool(
+        app,
+        campaign_id,
+        "update_location",
+        {"name": "Ferry Post", "description": "A post.", "x": 2, "y": 3},
+    )
+    assert "Ashen Ford" in refused["error"]
+    assert _state(app, campaign_id).named("Ferry Post").position == Position(x=5.0, y=5.0)
+
+    _tool(
+        app,
+        campaign_id,
+        "update_location",
+        {"name": "Ferry Post", "description": "A post.", "x": 2, "y": 3, "force": True},
+    )
+    assert _state(app, campaign_id).named("Ferry Post").position == Position(x=2.0, y=3.0)
+
+    # A place keeps its own point when it is updated without moving.
+    _tool(
+        app,
+        campaign_id,
+        "update_location",
+        {"name": "Ashen Ford", "description": "Deeper now.", "x": 2, "y": 3},
+    )
+    assert _state(app, campaign_id).named("Ashen Ford").position == Position(x=2.0, y=3.0)
+
+
+def test_force_must_be_true_or_false(client_factory: Callable[[], TestClient], app):
+    _, campaign_id = _campaign_id(client_factory)
+    refused = _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Ashen Ford", "description": "A ford.", "x": 1, "y": 1, "force": "yes"},
+    )
+    assert "force" in refused["error"]
+    assert _state(app, campaign_id).named("Ashen Ford") is None
+
+
+def test_update_can_take_a_place_off_the_map_and_keep_it(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Ashen Ford", "description": "A ford.", "discovered": True, "x": 2, "y": 3},
+    )
+    _tool(
+        app,
+        campaign_id,
+        "update_location",
+        {"name": "Ashen Ford", "description": "The ford is lost in fog.", "off_map": True},
+    )
+    place = _state(app, campaign_id).named("Ashen Ford")
+    assert place.position is None
+    assert place.discovered is True
+    assert place.description == "The ford is lost in fog."
+
+    view = world.map_view(_state(app, campaign_id))
+    assert "Ashen Ford" in [p.name for p in view.places]
+    assert "Ashen Ford" not in [m.name for m in view.markers]
+
+
+def test_off_map_cannot_be_combined_with_a_position(client_factory: Callable[[], TestClient], app):
+    _, campaign_id = _campaign_id(client_factory)
+    ctx = _ctx(app, campaign_id)
+    with pytest.raises(InvalidInput, match="off_map"):
+        ctx.world.update_location("Mossbell Hollow", "Still here.", x=1, y=1, off_map=True)
+    with pytest.raises(InvalidInput, match="off_map must be true or false"):
+        ctx.world.update_location("Mossbell Hollow", "Still here.", off_map="yes")
+    assert _state(app, campaign_id).named("Mossbell Hollow").position == Position(x=0.0, y=0.0)
+
+
 def test_discover_location_marks_a_place_once(client_factory: Callable[[], TestClient], app):
     _, campaign_id = _campaign_id(client_factory)
     assert _state(app, campaign_id).named("Spore Bridge").discovered is False
@@ -1172,8 +1289,8 @@ def test_map_shows_only_discovered_places_with_positions(
     _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Mossbell Hollow"})
     view = world.map_view(_state(app, campaign_id))
     assert [place.name for place in view.places] == ["Mossbell Hollow"]
-    assert [(m.name, m.left, m.top, m.here) for m in view.markers] == [
-        ("Mossbell Hollow", 50.0, 50.0, True)
+    assert [(m.name, m.number, m.left, m.top, m.here) for m in view.markers] == [
+        ("Mossbell Hollow", 1, 50.0, 50.0, True)
     ]
     assert view.radius_km == 1.1
 
@@ -1200,6 +1317,7 @@ def test_map_shows_only_discovered_places_with_positions(
     assert markers["Glowcap Ring"].here is False
     assert "Spore Bridge" not in markers
     assert all(0 <= m.left <= 100 and 0 <= m.top <= 100 for m in view.markers)
+    assert view.numbers == {"Far Shore": 1, "Glowcap Ring": 2, "Mossbell Hollow": 3}
 
 
 def test_map_on_a_fresh_campaign_has_a_default_scale(client_factory: Callable[[], TestClient], app):
@@ -1219,7 +1337,8 @@ def test_campaign_page_draws_discovered_places_on_the_map(
 
     map_view = page[page.index('data-view="map"') : page.index('data-view="lore"')]
     assert (
-        'class="map-marker here" style="left: 50.0%; top: 50.0%">Mossbell Hollow (you)' in map_view
+        'class="map-marker here" style="left: 50.0%; top: 50.0%" title="Mossbell Hollow (you)">2</span>'
+        in map_view
     )
     assert "Glowcap Ring" in map_view
     assert "Spore Bridge" not in map_view
