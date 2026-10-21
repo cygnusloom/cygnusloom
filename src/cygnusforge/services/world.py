@@ -28,9 +28,10 @@ from cygnusforge.content.character import (
     describe,
     resolve,
 )
-from cygnusforge.content.library import WorldTemplate
+from cygnusforge.content.library import EncounterGrid, WorldTemplate
 from cygnusforge.rules.context import brief
-from cygnusforge.services.common import InvalidInput, session_scope
+from cygnusforge.services import encounters
+from cygnusforge.services.common import InvalidInput, bounded_text, session_scope
 from cygnusforge.services.events import (
     CAMPAIGN_WIDE,
     NPC_KIND,
@@ -114,6 +115,8 @@ class WorldTools:
     tables: Mapping[str, Sequence[TableOption]]
     rng: random.Random
     character: CharacterSpec
+    # The rule set's encounter grid, or None when its encounters have no movement limit.
+    grid: EncounterGrid | None = None
 
     def create_location(
         self,
@@ -194,6 +197,53 @@ class WorldTools:
     def delete_npc(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return delete_npc(db, self.campaign_id, name)
+
+    def create_encounter_map(
+        self,
+        name: str,
+        location: str,
+        columns: int,
+        rows: int,
+        description: str,
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return encounters.create_map(
+                db, self.campaign_id, name, location, columns, rows, description
+            )
+
+    def update_encounter_map(
+        self, name: str, columns: int, rows: int, description: str
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return encounters.update_map(db, self.campaign_id, name, columns, rows, description)
+
+    def delete_encounter_map(self, name: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return encounters.delete_map(db, self.campaign_id, name)
+
+    def start_encounter(self, map: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return encounters.start_encounter(db, self.campaign_id, map)
+
+    def end_encounter(self) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return encounters.end_encounter(db, self.campaign_id)
+
+    def add_participant(self, name: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return encounters.add_participant(db, self.campaign_id, name)
+
+    def remove_participant(self, name: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return encounters.remove_participant(db, self.campaign_id, name)
+
+    def place_participant(self, name: str, column: int, row: int) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return encounters.place_participant(db, self.campaign_id, name, column, row, self.grid)
+
+    def end_npc_turn(self, name: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return encounters.end_turn(db, self.campaign_id, name, by_player=False)
 
     def add_note(self, text: str, subject: str | None = None) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -315,7 +365,7 @@ def create_player_character(
         raise InvalidInput("the player character already exists")
     if campaign.fields and not state.options:
         raise InvalidInput("the campaign options must be chosen before the player character")
-    name = _text(name, "name", MAX_NAME)
+    name = bounded_text(name, "name", MAX_NAME)
     _ensure_free_name(state, name)
     chosen = submitted.get("stats", {})
     if set(chosen) != set(spec.stats):
@@ -345,9 +395,9 @@ def create_location(
     parent: str | None = None,
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
-    name = _text(name, "name", MAX_NAME)
+    name = bounded_text(name, "name", MAX_NAME)
     _ensure_free_name(state, name)
-    text = _text(description, "description", MAX_TEXT)
+    text = bounded_text(description, "description", MAX_TEXT)
     if not isinstance(discovered, bool):
         raise InvalidInput("discovered must be true or false")
     px, py = _coordinates(x, y)
@@ -383,7 +433,7 @@ def create_npc(
     character: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
-    name = _text(name, "name", MAX_NAME)
+    name = bounded_text(name, "name", MAX_NAME)
     _ensure_free_name(state, name)
     where = _place_named(state, location)
     try:
@@ -396,7 +446,7 @@ def create_npc(
         spec,
         name=name,
         location=where.name,
-        description=_text(description, "description", MAX_TEXT),
+        description=bounded_text(description, "description", MAX_TEXT),
         personality=_optional_text(personality, "personality"),
         accent=_optional_text(accent, "accent"),
         quirks=_quirks(quirks),
@@ -428,7 +478,7 @@ def update_location(
     off_map takes it off the map. Without any of these the position stays as it is."""
     state = load_state(db, campaign_id)
     where = _place_named(state, name)
-    text = _text(description, "description", MAX_TEXT)
+    text = bounded_text(description, "description", MAX_TEXT)
     if not isinstance(off_map, bool):
         raise InvalidInput("off_map must be true or false")
     px, py = _coordinates(x, y)
@@ -469,6 +519,11 @@ def delete_location(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
         raise InvalidInput(
             f"{where.name} still has {', '.join(inside)} inside it; delete those places first"
         )
+    mapped = [m.name for m in state.maps.values() if name_key(m.location) == name_key(where.name)]
+    if mapped:
+        raise InvalidInput(
+            f"{where.name} still has the encounter map {', '.join(mapped)}; delete the map first"
+        )
     record(db, campaign_id, LocationRemoved(name=where.name))
     db.commit()
     return {"deleted": "location", "name": where.name}
@@ -492,11 +547,11 @@ def update_npc(
         name=npc.name,
         description=npc.description
         if description is None
-        else _text(description, "description", MAX_TEXT),
+        else bounded_text(description, "description", MAX_TEXT),
         personality=npc.personality
         if personality is None
-        else _text(personality, "personality", MAX_NAME),
-        accent=npc.accent if accent is None else _text(accent, "accent", MAX_NAME),
+        else bounded_text(personality, "personality", MAX_NAME),
+        accent=npc.accent if accent is None else bounded_text(accent, "accent", MAX_NAME),
         quirks=list(npc.quirks) if quirks is None else _quirks(quirks) or [],
     )
     record(db, campaign_id, event)
@@ -507,6 +562,8 @@ def update_npc(
 def delete_npc(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     npc = _npc_named(state, name)
+    if state.encounter is not None and npc.name in state.encounter.order:
+        raise InvalidInput(f"{npc.name} is in the encounter; remove them from the encounter first")
     record(db, campaign_id, NpcRemoved(name=npc.name))
     db.commit()
     return {"deleted": "npc", "name": npc.name}
@@ -528,7 +585,7 @@ def add_note(
     db: Session, campaign_id: int, text: str, subject: str | None = None
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
-    text = _text(text, "text", MAX_TEXT)
+    text = bounded_text(text, "text", MAX_TEXT)
     subject_name: str | None = None
     label = _optional_text(subject, "subject")
     if label is not None:
@@ -548,7 +605,7 @@ def add_note(
 def update_note(db: Session, campaign_id: int, note_id: int, text: str) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     _note_with_id(state, note_id)
-    record(db, campaign_id, NoteUpdated(note_id=note_id, text=_text(text, "text", MAX_TEXT)))
+    record(db, campaign_id, NoteUpdated(note_id=note_id, text=bounded_text(text, "text", MAX_TEXT)))
     db.commit()
     return {"updated": "note", "id": note_id}
 
@@ -716,9 +773,12 @@ def scene_view(state: CampaignState, spec: CharacterSpec) -> SceneView:
     return SceneView(pc=pc, location=place, npcs=npcs, notes=notes, sheet=sheet)
 
 
-def world_state_text(state: CampaignState, campaign: CampaignSpec) -> str:
+def world_state_text(
+    state: CampaignState, campaign: CampaignSpec, grid: EncounterGrid | None = None
+) -> str:
     """The GM's orientation at the start of a turn: the campaign options, the player character and
-    where they are, and the NPCs there. The rest is looked up with the lookup tools."""
+    where they are, the NPCs there, and any encounter in progress. The rest is looked up with the
+    lookup tools."""
     pc = state.pc()
     if pc is None:
         return ""
@@ -731,11 +791,37 @@ def world_state_text(state: CampaignState, campaign: CampaignSpec) -> str:
         lines.append(
             f"Player character: {pc.name}, not yet placed; place them with move_actor on your first turn."
         )
-        return "\n".join(lines)
-    lines.append(f"Player character: {pc.name}, at {pc.location}.")
-    names = [npc.name for npc in _npcs_at(state, pc.location)]
-    lines.append(f"NPCs here: {', '.join(names) if names else 'none'}.")
+    else:
+        lines.append(f"Player character: {pc.name}, at {pc.location}.")
+        names = [npc.name for npc in _npcs_at(state, pc.location)]
+        lines.append(f"NPCs here: {', '.join(names) if names else 'none'}.")
+    lines.extend(_encounter_lines(state, grid))
     return "\n".join(lines)
+
+
+def _encounter_lines(state: CampaignState, grid: EncounterGrid | None) -> list[str]:
+    view = encounters.encounter_view(state, grid)
+    if view is None:
+        return []
+    lines = [
+        f"Encounter in progress on the map {view['map']} at {view['location']}, round {view['round']}.",
+        f"Map: {view['columns']} by {view['rows']} cells, columns and rows counted from 0 at the top left. {view['description']}",
+    ]
+    if view["acting"] is not None:
+        left = (
+            f", with {view['moves_left']} of {view['move_cells']} cells of movement left"
+            if view["moves_left"] is not None
+            else ""
+        )
+        lines.append(f"Taking their turn now: {view['acting']}{left}.")
+    if not view["participants"]:
+        lines.append("No participants yet.")
+    for who in view["participants"]:
+        cell = who["cell"]
+        where = f"column {cell[0]}, row {cell[1]}" if cell else "not yet placed"
+        kind = "player character" if who["is_pc"] else "NPC"
+        lines.append(f"- {who['number']}. {who['name']} ({kind}), {where}.")
+    return lines
 
 
 def _location_entry(place: Place) -> dict[str, Any]:
@@ -901,7 +987,7 @@ def _note_with_id(state: CampaignState, note_id: int) -> Note:
 
 
 def _words(query: str) -> list[str]:
-    return _text(query, "query", MAX_TEXT).casefold().split()
+    return bounded_text(query, "query", MAX_TEXT).casefold().split()
 
 
 def _has_words(words: Sequence[str], *parts: str) -> bool:
@@ -909,17 +995,10 @@ def _has_words(words: Sequence[str], *parts: str) -> bool:
     return all(word in haystack for word in words)
 
 
-def _text(value: object, label: str, limit: int) -> str:
-    text = value.strip() if isinstance(value, str) else ""
-    if not text or len(text) > limit:
-        raise InvalidInput(f"{label} must be 1 to {limit} characters")
-    return text
-
-
 def _optional_text(value: object, label: str) -> str | None:
     if value is None or (isinstance(value, str) and not value.strip()):
         return None
-    return _text(value, label, MAX_NAME)
+    return bounded_text(value, label, MAX_NAME)
 
 
 def _coordinates(x: object, y: object) -> tuple[float | None, float | None]:
@@ -942,4 +1021,4 @@ def _quirks(value: Sequence[str] | None) -> list[str] | None:
         return None
     if isinstance(value, str) or len(value) > MAX_QUIRKS:
         raise InvalidInput(f"quirks must be a list of up to {MAX_QUIRKS} short texts")
-    return [_text(item, "each quirk", MAX_NAME) for item in value]
+    return [bounded_text(item, "each quirk", MAX_NAME) for item in value]

@@ -108,6 +108,19 @@ class ToolCall:
 
 
 @dataclass(frozen=True)
+class EncounterGrid:
+    """The scale of an encounter map: how many feet a cell is, and how far a participant may move
+    in one turn."""
+
+    cell_feet: int
+    move_feet: int
+
+    @property
+    def move_cells(self) -> int:
+        return self.move_feet // self.cell_feet
+
+
+@dataclass(frozen=True)
 class RuleSet:
     id: str
     name: str
@@ -121,6 +134,9 @@ class RuleSet:
     tables: Mapping[str, tuple[TableOption, ...]] = field(default_factory=dict)
     # Rules whose text goes into every prompt. The others are read with lookup_rule.
     important: frozenset[str] = frozenset()
+    # The scale of encounter maps, or None when the rule set has no grid: its encounters have no
+    # movement limit.
+    grid: EncounterGrid | None = None
 
 
 @dataclass(frozen=True)
@@ -314,6 +330,10 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     table_names = {d.id: _table_label(d, template) for d in definitions if d.type == "table"}
     character = build_character(definitions, tables, table_names, template)
     campaign = build_campaign(definitions, tables, table_names, template)
+    grids = [d for d in definitions if d.type == "encounter_grid"]
+    if len(grids) > 1:
+        raise ContentError(f"{template}: more than one encounter grid")
+    grid = _load_grid(grids[0], template) if grids else None
     tool_calls: dict[str, ToolCall] = {}
     tool_names: set[str] = set()
     for d in definitions:
@@ -334,7 +354,20 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         character=character,
         campaign=campaign,
         tables=tables,
+        grid=grid,
     )
+
+
+def _load_grid(definition: Definition, template: str) -> EncounterGrid:
+    label = f"{template}: encounter grid {definition.id}"
+    cell_feet = definition.data.get("cell_feet")
+    move_feet = definition.data.get("move_feet")
+    for key, value in (("cell_feet", cell_feet), ("move_feet", move_feet)):
+        if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+            raise ContentError(f"{label}: {key!r} must be a whole number of feet, at least 1")
+    if move_feet < cell_feet:
+        raise ContentError(f"{label}: 'move_feet' must be at least one cell")
+    return EncounterGrid(cell_feet=cell_feet, move_feet=move_feet)
 
 
 def _load_table(definition: Definition, template: str) -> tuple[TableOption, ...]:

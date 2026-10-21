@@ -6,6 +6,7 @@ import json
 import random
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from typing import Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse, StreamingResponse
@@ -32,6 +33,7 @@ from cygnusforge.services.campaigns import (
     context_usage,
     create_campaign,
     create_character,
+    end_player_turn,
     get_campaign,
     get_turn_context,
     get_turn_transcript,
@@ -43,12 +45,14 @@ from cygnusforge.services.campaigns import (
     rollback_to,
     send_message,
     set_campaign_model,
+    start_encounter_turn,
     stream_message,
 )
 from cygnusforge.services.campaigns import (
     discard_pending as discard_pending_turn,
 )
 from cygnusforge.services.common import Conflict, InvalidInput, NotFound
+from cygnusforge.services.encounters import encounter_view
 from cygnusforge.services.names import random_campaign_name
 from cygnusforge.services.tools import check_arguments
 from cygnusforge.services.world import map_view, scene_view
@@ -317,6 +321,74 @@ async def post_pending_stream(request: Request, campaign_id: int) -> Response:
     )
 
 
+@router.post("/{campaign_id}/encounter/turn/stream")
+async def post_encounter_turn_stream(request: Request, campaign_id: int) -> Response:
+    """Start an NPC's encounter turn. The GM plays it out, streamed the same way as a reply."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    name = form_text(form, "name")
+    settings = request.app.state.settings
+    events = start_encounter_turn(
+        request.app.state.engine,
+        request.app.state.providers,
+        settings.llm_models,
+        request.app.state.content,
+        settings.llm_context_tokens,
+        user.id,
+        campaign_id,
+        name,
+    )
+    return StreamingResponse(
+        _turn_lines(events),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+@router.post("/{campaign_id}/encounter/turn/start")
+async def start_player_encounter_turn(request: Request, campaign_id: int) -> Response:
+    """Start a player character's encounter turn. Nothing is played for the player: they act in
+    chat, then end the turn."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    name = form_text(form, "name")
+    settings = request.app.state.settings
+    try:
+        async for _ in start_encounter_turn(
+            request.app.state.engine,
+            request.app.state.providers,
+            settings.llm_models,
+            request.app.state.content,
+            settings.llm_context_tokens,
+            user.id,
+            campaign_id,
+            name,
+        ):
+            pass
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
+@router.post("/{campaign_id}/encounter/turn/end")
+async def end_encounter_turn(request: Request, campaign_id: int) -> Response:
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    name = form_text(form, "name")
+    try:
+        end_player_turn(request.app.state.engine, user.id, campaign_id, name)
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
 async def _turn_lines(events: AsyncIterator[TurnEvent]) -> AsyncIterator[str]:
     try:
         async for event in events:
@@ -438,6 +510,7 @@ def _campaign_page(
         options,
         settings.llm_context_tokens,
     )
+    encounter = encounter_view(world.state, rule_set.grid if rule_set else None)
     return render(
         request,
         "campaign.html",
@@ -455,7 +528,22 @@ def _campaign_page(
         draft=draft,
         pending=pending_turn(engine, user.id, campaign.id),
         models=settings.llm_models,
+        encounter=encounter,
+        encounter_rows=_encounter_rows(encounter) if encounter is not None else [],
     )
+
+
+def _encounter_rows(encounter: dict[str, Any]) -> list[list[dict[str, Any] | None]]:
+    """The encounter map as rows of cells, each holding the participant standing on it, if any."""
+    occupants = {
+        tuple(participant["cell"]): participant
+        for participant in encounter["participants"]
+        if participant["cell"] is not None
+    }
+    return [
+        [occupants.get((column, row)) for column in range(encounter["columns"])]
+        for row in range(encounter["rows"])
+    ]
 
 
 def _roll_key(campaign_id: int) -> str:

@@ -26,14 +26,17 @@ from cygnusforge.llm.base import (
 from cygnusforge.llm.registry import ProviderFactory
 from cygnusforge.rules.context import ToolContext, brief
 from cygnusforge.rules.dice import roll_total
+from cygnusforge.services import encounters
 from cygnusforge.services.common import Conflict, InvalidInput, NotFound, session_scope
 from cygnusforge.services.events import (
     CHARS_PER_TOKEN,
+    NPC_KIND,
     CampaignState,
     Channel,
     ChatGM,
     ChatPlayer,
     ContextPart,
+    EncounterTurnEnded,
     GameEvent,
     OocStarted,
     PromptShown,
@@ -49,6 +52,7 @@ from cygnusforge.services.events import (
     events_since,
     last_event_id,
     load_state,
+    name_key,
     record,
     truncate,
 )
@@ -480,7 +484,7 @@ def context_usage(
             rule_set.important if rule_set else frozenset(),
             state.summary,
             state.through,
-            world_state_text(state, options),
+            world_state_text(state, options, rule_set.grid if rule_set else None),
         )
     )
     used += sum(estimate_tokens(m.content) for m in unsummarized)
@@ -738,7 +742,14 @@ def _tool_context(
         _record(engine, campaign_id, OocStarted(narrate=narrate))
 
     return ToolContext(
-        world=WorldTools(engine, campaign_id, library.core.tables, rng, rule_set.character),
+        world=WorldTools(
+            engine,
+            campaign_id,
+            library.core.tables,
+            rng,
+            rule_set.character,
+            rule_set.grid,
+        ),
         speak=speak,
         ooc=ooc,
         rules=rule_set.rules,
@@ -865,7 +876,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     state = _state(run.engine, run.campaign_id)
     rule_set = run.rule_set
     summary, watermark = state.summary, state.through
-    world_text = world_state_text(state, rule_set.campaign)
+    world_text = world_state_text(state, rule_set.campaign, rule_set.grid)
     message = OPENING_PROMPT if turn.opening else turn.text
     history = [
         m for m in list_messages(run.engine, run.campaign_id) if watermark < m.id < turn.opener
@@ -895,9 +906,13 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
             watermark = folded[-1].id
             history = history[start:]
             events.append(SummaryUpdated(summary=summary, through=watermark))
-    player = ContextPart(
-        "user", "Opening instruction" if turn.opening else "This message (player)", message
-    )
+    if turn.opening:
+        label = "Opening instruction"
+    elif turn.actor is not None:
+        label = "Encounter instruction"
+    else:
+        label = "This message (player)"
+    player = ContextPart("user", label, message)
     system = system_parts(
         rule_set.id, rule_set.rules, rule_set.important, summary, watermark, world_text
     )
@@ -1183,9 +1198,64 @@ async def resume_turn(
             answer = TextAnswer(clean)
         else:
             raise InvalidInput("that action is not available")
+        actor = turn.actor
         run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
         async for event in _guarded(run, _answer(run, answer)):
             yield event
+        if actor is not None:
+            _close_npc_turn(engine, campaign.id, actor)
+
+
+def _close_npc_turn(engine: Engine, campaign_id: int, name: str) -> None:
+    """End an NPC's turn once the GM's reply has finished, if the GM did not call end_turn itself,
+    so the order can move on. A reply still waiting on a prompt keeps the turn open."""
+    state = _state(engine, campaign_id)
+    encounter = state.encounter
+    if state.turn is not None or encounter is None or encounter.acting is None:
+        return
+    if name_key(encounter.acting) == name_key(name):
+        _record(engine, campaign_id, EncounterTurnEnded(name=encounter.acting))
+
+
+async def start_encounter_turn(
+    engine: Engine,
+    providers: ProviderFactory,
+    allowed_models: Iterable[str],
+    library: ContentLibrary,
+    context_tokens: int,
+    owner_id: int,
+    campaign_id: int,
+    name: str,
+    rng: random.Random | None = None,
+) -> AsyncIterator[TurnEvent]:
+    """Start the turn of the participant who is next in the encounter order. An NPC's turn is
+    played out by the GM and streamed like a reply. A player character's turn opens nothing: the
+    player acts in chat and ends the turn with `end_player_turn`."""
+    campaign = get_campaign(engine, owner_id, campaign_id)
+    if campaign.model not in allowed_models:
+        raise InvalidInput("that model is not available")
+    with _exclusive(campaign.id):
+        rule_set = library.rule_sets.get(campaign.rule_set)
+        if rule_set is None:
+            raise InvalidInput("that campaign's rule set is no longer available")
+        with session_scope(engine) as db:
+            character = encounters.begin_turn(db, campaign.id, name)
+        if character.kind != NPC_KIND:
+            return
+        run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
+        async for event in _guarded(run, _carry_on(run)):
+            yield event
+        _close_npc_turn(engine, campaign.id, character.name)
+
+
+def end_player_turn(engine: Engine, owner_id: int, campaign_id: int, name: str) -> None:
+    """End a player character's turn. Refused while the GM's reply is still open."""
+    get_campaign(engine, owner_id, campaign_id)
+    with _exclusive(campaign_id):
+        if _state(engine, campaign_id).turn is not None:
+            raise InvalidInput("the GM's reply is unfinished; finish it before ending your turn")
+        with session_scope(engine) as db:
+            encounters.end_turn(db, campaign_id, name, by_player=True)
 
 
 @dataclass(frozen=True)

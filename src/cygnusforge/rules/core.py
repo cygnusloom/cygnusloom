@@ -89,6 +89,51 @@ def move_actor(name: str, location: str, ctx: ToolContext) -> dict[str, str]:
     return ctx.world.move_actor(name, location)
 
 
+def create_encounter_map(
+    name: str,
+    location: str,
+    columns: int,
+    rows: int,
+    description: str,
+    ctx: ToolContext,
+) -> dict[str, Any]:
+    return ctx.world.create_encounter_map(name, location, columns, rows, description)
+
+
+def update_encounter_map(
+    name: str, columns: int, rows: int, description: str, ctx: ToolContext
+) -> dict[str, Any]:
+    return ctx.world.update_encounter_map(name, columns, rows, description)
+
+
+def delete_encounter_map(name: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.delete_encounter_map(name)
+
+
+def start_encounter(map: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.start_encounter(map)
+
+
+def end_encounter(ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.end_encounter()
+
+
+def add_participant(name: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.add_participant(name)
+
+
+def remove_participant(name: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.remove_participant(name)
+
+
+def place_participant(name: str, column: int, row: int, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.place_participant(name, column, row)
+
+
+def end_npc_turn(name: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.end_npc_turn(name)
+
+
 def add_note(text: str, ctx: ToolContext, subject: str | None = None) -> dict[str, Any]:
     return ctx.world.add_note(text, subject)
 

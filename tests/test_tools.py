@@ -101,6 +101,15 @@ CORE_TOOL_NAMES = {
     "ooc",
     "lookup_rule",
     "list_lookups",
+    "create_encounter_map",
+    "update_encounter_map",
+    "delete_encounter_map",
+    "start_encounter",
+    "end_encounter",
+    "add_participant",
+    "remove_participant",
+    "place_participant",
+    "end_turn",
 }
 
 SOCIAL_ARGUMENTS = '{"prompt": "Roll to persuade.", "relationship": 2, "circumstance": -1}'

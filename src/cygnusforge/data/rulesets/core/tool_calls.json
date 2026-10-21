@@ -526,5 +526,223 @@
       },
       "required": []
     }
+  },
+  {
+    "type": "tool_call",
+    "id": "create_encounter_map",
+    "name": "create_encounter_map",
+    "python_module": "core",
+    "function": "create_encounter_map",
+    "description": "Create an encounter map: a grid of cells set in an existing location, where a tactical encounter takes place. Use it before starting an encounter there. Cells are scaled by the rule set's grid.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "A name for the map, unique among maps."
+        },
+        "location": {
+          "type": "string",
+          "description": "The name of the existing location the map is set in."
+        },
+        "columns": {
+          "type": "integer",
+          "description": "How many cells wide the map is, from 1 to 60."
+        },
+        "rows": {
+          "type": "integer",
+          "description": "How many cells tall the map is, from 1 to 60."
+        },
+        "description": {
+          "type": "string",
+          "description": "What the map shows: terrain, cover, hazards, and anything else that matters for tactics."
+        }
+      },
+      "required": [
+        "name",
+        "location",
+        "columns",
+        "rows",
+        "description"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "update_encounter_map",
+    "name": "update_encounter_map",
+    "python_module": "core",
+    "function": "update_encounter_map",
+    "description": "Change an encounter map's size or description. Refused if a participant would be left outside the new size.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the map to change."
+        },
+        "columns": {
+          "type": "integer",
+          "description": "How many cells wide the map is, from 1 to 60."
+        },
+        "rows": {
+          "type": "integer",
+          "description": "How many cells tall the map is, from 1 to 60."
+        },
+        "description": {
+          "type": "string",
+          "description": "What the map shows now."
+        }
+      },
+      "required": [
+        "name",
+        "columns",
+        "rows",
+        "description"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "delete_encounter_map",
+    "name": "delete_encounter_map",
+    "python_module": "core",
+    "function": "delete_encounter_map",
+    "description": "Delete an encounter map. Refused while an encounter is using it.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the map to delete."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "start_encounter",
+    "name": "start_encounter",
+    "python_module": "core",
+    "function": "start_encounter",
+    "description": "Start an encounter on an encounter map. Its location becomes the encounter's location. Only one encounter can be in progress at a time. Add participants after starting. The player character and NPCs take turns in the order they join.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "map": {
+          "type": "string",
+          "description": "The name of the encounter map to play on."
+        }
+      },
+      "required": [
+        "map"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "end_encounter",
+    "name": "end_encounter",
+    "python_module": "core",
+    "function": "end_encounter",
+    "description": "End the encounter in progress. Refused while a participant is taking their turn.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "add_participant",
+    "name": "add_participant",
+    "python_module": "core",
+    "function": "add_participant",
+    "description": "Add a character to the encounter in progress. They join the turn order after the participants already there. A character who is not at the encounter's location is still added, and the result carries a warning to act on.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the player character or of an NPC."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "remove_participant",
+    "name": "remove_participant",
+    "python_module": "core",
+    "function": "remove_participant",
+    "description": "Take a character out of the encounter in progress. Refused while they are taking their turn.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the participant to remove."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "place_participant",
+    "name": "place_participant",
+    "python_module": "core",
+    "function": "place_participant",
+    "description": "Put a participant on a cell of the encounter map, counted from 0 at the top left: column increases to the right and row increases downward. Moving is limited to the rule set's movement per turn, counted as the number of cells moved in a straight line or diagonal (Chebyshev distance). That limit applies only to the participant whose turn it is; moving anyone else is free. The first placement is free. Use this to move a participant, not to tell the story of how they got there.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the participant to place."
+        },
+        "column": {
+          "type": "integer",
+          "description": "The cell's column, from 0 at the left edge."
+        },
+        "row": {
+          "type": "integer",
+          "description": "The cell's row, from 0 at the top edge."
+        }
+      },
+      "required": [
+        "name",
+        "column",
+        "row"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "end_turn",
+    "name": "end_turn",
+    "python_module": "core",
+    "function": "end_npc_turn",
+    "description": "End the turn of the NPC whose turn it is in the encounter. Call it once the NPC's action is resolved. Player characters end their own turns, so do not use this for them.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the NPC whose turn is ending."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
   }
 ]

@@ -194,16 +194,17 @@
   // leaves the server's state correct; reloading shows that state with a Continue button.
   document.addEventListener("submit", async (event) => {
     const form = event.target;
-    if (!(form instanceof HTMLFormElement) || !form.hasAttribute("data-pending-action")) return;
+    if (!(form instanceof HTMLFormElement)) return;
+    if (!form.hasAttribute("data-pending-action") && !form.hasAttribute("data-encounter-turn")) return;
     event.preventDefault();
     const data = new FormData(form);
     const kind = data.get("kind");
     const answer = String(data.get("content") || "").trim();
     if (kind === "text" && !answer) return;
 
-    for (const control of form.closest("[data-pending]")?.querySelectorAll("button, textarea") ?? []) {
-      control.disabled = true;
-    }
+    // Encounter turn forms have no pending block, so their own controls are disabled instead.
+    const controls = (form.closest("[data-pending]") ?? form).querySelectorAll("button, textarea");
+    for (const control of controls) control.disabled = true;
     const reply = addBubble("assistant", "Cygnus");
     const attempt = { started: false };
     try {
@@ -215,9 +216,7 @@
       if (form.hasAttribute("data-auto-start") && !attempt.started) {
         reply.bubble.remove();
         showError(error instanceof TurnFailure ? error.message : "The GM's reply did not finish. Try again.");
-        for (const control of form.closest("[data-pending]")?.querySelectorAll("button, textarea") ?? []) {
-          control.disabled = false;
-        }
+        for (const control of controls) control.disabled = false;
         return;
       }
       // Once the stream started, the server has recorded the failure and the reloaded page shows

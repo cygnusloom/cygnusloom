@@ -136,6 +136,39 @@ class Turn:
     speech: list[dict[str, str]] = field(default_factory=list)
     # Why the last step stopped, when it stopped with an error and has not been retried yet.
     failed: str | None = None
+    # The NPC whose encounter turn this reply plays out, or None for a reply to the player.
+    actor: str | None = None
+
+
+@dataclass(frozen=True)
+class EncounterMap:
+    """A grid of cells set in a location. Cells are as wide as the rule set's grid says; a rule set
+    without one has no scale, and its cells only place participants relative to each other."""
+
+    name: str
+    location: str
+    columns: int
+    rows: int
+    description: str
+
+
+@dataclass
+class Encounter:
+    """An encounter in progress on a map. Participants take turns in the order they joined."""
+
+    map: str
+    location: str
+    # Display names of the participants, in turn order.
+    order: list[str] = field(default_factory=list)
+    # Cell of each participant, as (column, row) counted from the top left. Keys are name_key.
+    cells: dict[str, tuple[int, int]] = field(default_factory=dict)
+    # Index into `order` of the participant whose turn is next.
+    up: int = 0
+    round: int = 1
+    # The participant whose turn is running, or None between turns.
+    acting: str | None = None
+    # Cells the acting participant has moved this turn.
+    moved: int = 0
 
 
 @dataclass
@@ -151,6 +184,9 @@ class CampaignState:
     summary: str = ""
     through: int = 0
     turn: Turn | None = None
+    # Encounter maps by name without case, and the encounter in progress, if any.
+    maps: dict[str, EncounterMap] = field(default_factory=dict)
+    encounter: Encounter | None = None
 
     def named(self, name: str) -> Place | Character | None:
         key = name_key(name)
@@ -728,3 +764,190 @@ class PromptShown(GameEvent):
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         _open_turn(state).prompt = Ask(self.text, self.dice, self.details)
+
+
+@dataclass(frozen=True)
+class MapCreated(GameEvent):
+    kind: ClassVar[str] = "map.created"
+
+    name: str
+    location: str
+    columns: int
+    rows: int
+    description: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.maps[name_key(self.name)] = EncounterMap(
+            self.name, self.location, self.columns, self.rows, self.description
+        )
+
+    def render(self) -> str:
+        return (
+            f"New encounter map: {self.name}, at {self.location} "
+            f"({self.columns} by {self.rows} cells)."
+        )
+
+
+@dataclass(frozen=True)
+class MapUpdated(GameEvent):
+    kind: ClassVar[str] = "map.updated"
+
+    name: str
+    columns: int
+    rows: int
+    description: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        key = name_key(self.name)
+        before = state.maps[key]
+        state.maps[key] = EncounterMap(
+            before.name, before.location, self.columns, self.rows, self.description
+        )
+
+    def render(self) -> str:
+        return f"Encounter map updated: {self.name}."
+
+
+@dataclass(frozen=True)
+class MapDeleted(GameEvent):
+    kind: ClassVar[str] = "map.deleted"
+
+    name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.maps.pop(name_key(self.name), None)
+
+    def render(self) -> str:
+        return f"Encounter map deleted: {self.name}."
+
+
+@dataclass(frozen=True)
+class EncounterStarted(GameEvent):
+    kind: ClassVar[str] = "encounter.started"
+
+    map: str
+    location: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.encounter = Encounter(map=self.map, location=self.location)
+
+    def render(self) -> str:
+        return f"Encounter begins at {self.map}, {self.location}."
+
+
+@dataclass(frozen=True)
+class EncounterEnded(GameEvent):
+    kind: ClassVar[str] = "encounter.ended"
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.encounter = None
+
+    def render(self) -> str:
+        return "The encounter is over."
+
+
+@dataclass(frozen=True)
+class ParticipantJoined(GameEvent):
+    kind: ClassVar[str] = "encounter.joined"
+
+    name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        if state.encounter is not None:
+            state.encounter.order.append(state.characters[name_key(self.name)].name)
+
+    def render(self) -> str:
+        return f"{self.name} joins the encounter."
+
+
+@dataclass(frozen=True)
+class ParticipantLeft(GameEvent):
+    kind: ClassVar[str] = "encounter.left"
+
+    name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        encounter = state.encounter
+        if encounter is None:
+            return
+        key = name_key(self.name)
+        index = next(i for i, name in enumerate(encounter.order) if name_key(name) == key)
+        del encounter.order[index]
+        encounter.cells.pop(key, None)
+        if index < encounter.up:
+            encounter.up -= 1
+        encounter.up = encounter.up % len(encounter.order) if encounter.order else 0
+
+    def render(self) -> str:
+        return f"{self.name} leaves the encounter."
+
+
+@dataclass(frozen=True)
+class ParticipantPlaced(GameEvent):
+    """A participant is put on a cell. `cost` is the cells moved, which only counts against the
+    movement allowance when the participant is taking their turn; placing them otherwise is free."""
+
+    kind: ClassVar[str] = "encounter.placed"
+
+    name: str
+    column: int
+    row: int
+    cost: int = 0
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        encounter = state.encounter
+        if encounter is None:
+            return
+        key = name_key(self.name)
+        encounter.cells[key] = (self.column, self.row)
+        if encounter.acting is not None and name_key(encounter.acting) == key:
+            encounter.moved += self.cost
+
+    def render(self) -> str:
+        return f"{self.name} moves to column {self.column}, row {self.row}."
+
+
+@dataclass(frozen=True)
+class EncounterTurnBegun(GameEvent):
+    """A participant's turn starts. An NPC's turn opens a GM reply that plays it out, from the
+    instruction recorded here. A player character's turn opens nothing: the player acts in chat
+    and ends the turn with a button."""
+
+    kind: ClassVar[str] = "encounter.turn_begun"
+
+    name: str
+    instruction: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        encounter = state.encounter
+        if encounter is None:
+            return
+        character = state.characters[name_key(self.name)]
+        encounter.acting = character.name
+        encounter.moved = 0
+        if character.kind == NPC_KIND and state.turn is None:
+            state.turn = Turn(opener=event_id, text=self.instruction, actor=character.name)
+
+    def render(self) -> str:
+        return f"{self.name}'s turn begins."
+
+
+@dataclass(frozen=True)
+class EncounterTurnEnded(GameEvent):
+    kind: ClassVar[str] = "encounter.turn_ended"
+
+    name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        encounter = state.encounter
+        if encounter is None:
+            return
+        encounter.acting = None
+        encounter.moved = 0
+        encounter.up += 1
+        if encounter.up >= len(encounter.order):
+            encounter.up = 0
+            encounter.round += 1
+
+    def render(self) -> str:
+        return f"{self.name}'s turn ends."

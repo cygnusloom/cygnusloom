@@ -1,5 +1,5 @@
 {% extends "campaign_base.html" %}
-{% from "macros.html" import notes_list, map_board %}
+{% from "macros.html" import notes_list, map_board, encounter_board %}
 {% block title %}{{ campaign.name }}{% endblock %}
 {% block play %}
     <div class="workspace" data-view="play">
@@ -96,10 +96,59 @@
 
         <aside class="side">
           <section class="map-panel" aria-label="Map">
-            {{ map_board(world_map) }}
+            {% if encounter %}
+              {{ encounter_board(encounter, encounter_rows) }}
+            {% else %}
+              {{ map_board(world_map) }}
+            {% endif %}
           </section>
 
           <section class="tabs-panel">
+            {% if encounter %}
+            <section class="encounter-status" aria-label="Encounter">
+              <p><strong>{{ encounter.map }}</strong> <span class="muted">{{ encounter.location }}, round {{ encounter.round }}</span></p>
+              {% set actor = encounter.participants | selectattr("acting") | first %}
+              {% set next = encounter.participants | selectattr("next") | first %}
+              {% if actor and actor.is_pc %}
+                <p>It is your turn. Act in chat, then end your turn.{% if encounter.moves_left is not none %} {{ encounter.moves_left }} of {{ encounter.move_cells }} cells of movement left.{% endif %}</p>
+                <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/end">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="name" value="{{ actor.name }}">
+                  <button type="submit"{% if pending %} disabled{% endif %}>End your turn</button>
+                </form>
+              {% elif actor %}
+                <p class="muted">{{ actor.name }} is taking their turn.</p>
+              {% elif next and next.is_pc %}
+                <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/start">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="name" value="{{ next.name }}">
+                  <button type="submit"{% if pending %} disabled{% endif %}>Start your turn</button>
+                </form>
+              {% elif next %}
+                <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/stream" data-encounter-turn>
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="name" value="{{ next.name }}">
+                  <button type="submit"{% if pending %} disabled{% endif %}>Start {{ next.name }}'s turn</button>
+                </form>
+              {% endif %}
+              <ul class="encounter-list">
+                {% for participant in encounter.participants %}
+                <li{% if participant.acting %} class="acting"{% endif %}>
+                  <span class="map-number">{{ participant.number }}</span>
+                  <strong>{{ participant.name }}</strong>{% if participant.is_pc %} <span class="muted">(you)</span>{% endif %}
+                  <span class="muted">{% if participant.cell %}column {{ participant.cell[0] + 1 }}, row {{ participant.cell[1] + 1 }}{% else %}not on the map{% endif %}</span>
+                </li>
+                {% else %}
+                <li class="muted">No one has joined yet.</li>
+                {% endfor %}
+              </ul>
+              <details class="world-map-details">
+                <summary>World map</summary>
+                {{ map_board(world_map) }}
+              </details>
+            </section>
+            {% endif %}
+
             <div class="tab-list" role="tablist" aria-label="Panels">
               <button type="button" class="tab" role="tab" id="tab-characters" aria-controls="panel-characters" aria-selected="true">Characters</button>
               <button type="button" class="tab" role="tab" id="tab-sheet" aria-controls="panel-sheet" aria-selected="false" tabindex="-1">Sheet</button>

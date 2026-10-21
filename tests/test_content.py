@@ -88,6 +88,15 @@ CORE_TOOLS = {
     "ooc",
     "lookup_rule",
     "list_lookups",
+    "create_encounter_map",
+    "update_encounter_map",
+    "delete_encounter_map",
+    "start_encounter",
+    "end_encounter",
+    "add_participant",
+    "remove_participant",
+    "place_participant",
+    "end_turn",
 }
 
 

@@ -145,6 +145,25 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 }
 .map-panel .map-board { width: auto; height: 100%; max-height: 100%; }
 .map-page .map-board { width: min(100%, 70vh); margin: 0 auto; }
+.encounter-board {
+  display: grid; grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--rows), minmax(0, 1fr));
+  aspect-ratio: var(--columns) / var(--rows);
+}
+.encounter-board::before { display: none; }
+.encounter-cell {
+  display: grid; place-items: center; min-width: 0; min-height: 0; box-sizing: border-box;
+  border: 1px solid var(--border);
+}
+.encounter-cell.occupied { background: var(--panel); }
+.encounter-cell.acting { border: 2px solid var(--accent); }
+.encounter-status { padding: 0.5rem; border-bottom: 1px solid var(--border); overflow-y: auto; }
+.encounter-status p { margin: 0.25rem 0; }
+.encounter-status form { margin: 0.25rem 0; }
+.encounter-list { list-style: none; margin: 0.25rem 0; padding: 0; font-size: 0.9rem; }
+.encounter-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; padding: 0.15rem 0; }
+.encounter-list li.acting strong { color: var(--accent); }
+.world-map-details { margin-top: 0.5rem; }
 .map-origin {
   position: absolute; left: 50%; top: 50%; width: 0.75rem; height: 0.75rem;
   transform: translate(-50%, -50%); border: 1px dashed var(--muted); border-radius: 50%;

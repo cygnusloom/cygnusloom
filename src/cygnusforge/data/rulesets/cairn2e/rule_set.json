@@ -44,5 +44,11 @@
     "type": "rule",
     "id": "omens",
     "text": "The campaign has one omen, chosen from the Omens table when the campaign is created rather than rolled by the youngest character. Every character shares it. It should be read aloud to the players when the campaign begins."
+  },
+  {
+    "type": "encounter_grid",
+    "id": "cairn",
+    "cell_feet": 5,
+    "move_feet": 40
   }
 ]

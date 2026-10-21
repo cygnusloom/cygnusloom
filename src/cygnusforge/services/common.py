@@ -19,6 +19,13 @@ class InvalidInput(Exception):
     """A submitted value failed validation. The message is safe to show the user."""
 
 
+def bounded_text(value: object, label: str, limit: int) -> str:
+    text = value.strip() if isinstance(value, str) else ""
+    if not text or len(text) > limit:
+        raise InvalidInput(f"{label} must be 1 to {limit} characters")
+    return text
+
+
 @contextmanager
 def session_scope(engine: Engine) -> Iterator[Session]:
     with Session(engine, expire_on_commit=False) as db:
