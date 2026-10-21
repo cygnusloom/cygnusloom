@@ -726,6 +726,15 @@ def test_campaign_page_panels_show_only_the_scene(client_factory: Callable[[], T
     assert "New location: Mossbell Hollow." in page
 
 
+def test_campaign_page_maps_can_be_panned_and_zoomed(client_factory: Callable[[], TestClient]):
+    client, campaign_id = _described_campaign(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    assert '<script src="/static/map_view.js"></script>' in page
+    # The world map is framed in the Map view and in the side panel.
+    assert page.count('<div class="map-frame">') >= 2
+
+
 def test_campaign_page_escapes_character_names(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
     response = _new_campaign(client)

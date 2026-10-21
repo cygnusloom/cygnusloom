@@ -14,7 +14,7 @@
 {% block play %}{% endblock %}
     <section class="view map-page" data-view="map" aria-labelledby="map-title" hidden>
       <h2 id="map-title">Map</h2>
-      {{ map_board(world_map) }}
+      {{ map_board(world_map, framed=true) }}
       <h3>Places</h3>
       {{ map_places(world_map) }}
     </section>
@@ -59,4 +59,5 @@
 {% endblock %}
 {% block scripts %}
   <script src="/static/workspace.js"></script>
+  <script src="/static/map_view.js"></script>
 {% endblock %}
