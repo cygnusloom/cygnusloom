@@ -4,6 +4,7 @@ import asyncio
 import json
 import random
 from collections.abc import Callable
+from dataclasses import replace
 from typing import Any
 
 import pytest
@@ -12,7 +13,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 from cygnusforge.content.character import NO_CAMPAIGN, TableOption
-from cygnusforge.content.library import ContentLibrary
+from cygnusforge.content.library import ContentLibrary, LocationTemplate
 from cygnusforge.db.models import Event
 from cygnusforge.llm.base import ChatReply, ToolRequest
 from cygnusforge.rules.context import ToolContext, brief
@@ -108,6 +109,26 @@ def test_player_character_starts_unplaced(client_factory: Callable[[], TestClien
     assert "Player character: Ada, not yet placed; place them with move_actor" in (
         world.world_state_text(state, NO_CAMPAIGN)
     )
+
+
+def test_a_world_can_declare_a_place_inside_another(
+    client_factory: Callable[[], TestClient], app: FastAPI, monkeypatch: pytest.MonkeyPatch
+):
+    template = app.state.content.world_templates["gnomeforest"]
+    inn = LocationTemplate(
+        id="drowsy-cap",
+        name="The Drowsy Cap",
+        description="A tavern carved under the oak.",
+        parent="mossbell-hollow",
+    )
+    world = replace(template, locations=(*template.locations, inn))
+    monkeypatch.setitem(app.state.content.world_templates, "gnomeforest", world)
+    response = _new_campaign(_signed_in(client_factory))
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    drowsy = _state(app, campaign_id).places["the drowsy cap"]
+    assert drowsy.parent == "Mossbell Hollow"
+    assert drowsy.position is None
+    assert not drowsy.discovered
 
 
 def test_bundled_npcs_are_placed_at_their_locations(

@@ -50,6 +50,9 @@ class LocationTemplate:
     discovered: bool = False
     x: float | None = None
     y: float | None = None
+    # The id of the place this one is inside, such as a building in a village. A place inside
+    # another has no map position of its own.
+    parent: str | None = None
 
 
 @dataclass(frozen=True)
@@ -182,6 +185,7 @@ def _load_world(directory: Path) -> WorldTemplate:
             raise ContentError(
                 f"{template}: npc {npc.id!r} is in unknown location {npc.location!r}"
             )
+    _check_parents(locations, template)
     _check_unique_names([*locations, *npcs], template)
     return WorldTemplate(
         id=world.id,
@@ -213,7 +217,31 @@ def _load_location(definition: Definition, template: str) -> LocationTemplate:
         discovered=discovered,
         x=None if x is None else float(x),
         y=None if y is None else float(y),
+        parent=_optional_text(data, "parent", label),
     )
+
+
+def _check_parents(locations: tuple[LocationTemplate, ...], template: str) -> None:
+    """A place can be inside another place, but only one level deep, and only a place at the top
+    level has a map position."""
+    by_id = {location.id: location for location in locations}
+    for location in locations:
+        if location.parent is None:
+            continue
+        label = f"{template}: location {location.id}"
+        if location.parent == location.id:
+            raise ContentError(f"{label}: cannot be inside itself")
+        outer = by_id.get(location.parent)
+        if outer is None:
+            raise ContentError(
+                f"{label}: parent {location.parent!r} is not a location in this world"
+            )
+        if outer.parent is not None:
+            raise ContentError(
+                f"{label}: parent {location.parent!r} is itself inside {outer.parent!r}"
+            )
+        if location.x is not None:
+            raise ContentError(f"{label}: a place inside another place has no map position")
 
 
 def _load_npc(definition: Definition, template: str) -> NpcTemplate:

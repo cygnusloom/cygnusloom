@@ -244,7 +244,8 @@ def seed_campaign(
 ) -> None:
     """Record a campaign's places and the world's NPCs as events. The player character is made
     later, by `create_player_character`."""
-    names: dict[str, str] = {}
+    # A place can be declared before the place it is inside, so every name is known first.
+    names = {spot.id: spot.name for spot in world.locations}
     for spot in world.locations:
         record(
             db,
@@ -255,9 +256,9 @@ def seed_campaign(
                 discovered=spot.discovered,
                 x=spot.x,
                 y=spot.y,
+                parent=None if spot.parent is None else names[spot.parent],
             ),
         )
-        names[spot.id] = spot.name
     for npc in world.npcs:
         event = _npc_event(
             tables,

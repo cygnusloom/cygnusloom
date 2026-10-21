@@ -616,6 +616,39 @@ def test_bad_location_map_fields_are_rejected(tree: Path, fields: dict, message:
         ContentLibrary.load(tree)
 
 
+def _place(id: str, **fields: Any) -> dict[str, Any]:
+    return {"type": "location", "id": id, "name": id.title(), "description": "A place.", **fields}
+
+
+def test_location_can_be_declared_inside_another(tree: Path):
+    world = [*_world()[:1], _place("town", x=0, y=0), _place("inn", parent="town")]
+    _write(tree, {"worlds/testland/world.json": world})
+    town, inn = ContentLibrary.load(tree).world_templates["testland"].locations
+    assert (town.parent, inn.parent) == (None, "town")
+    assert (inn.x, inn.y) == (None, None)
+
+
+@pytest.mark.parametrize(
+    "places, message",
+    [
+        ([_place("inn", parent="nowhere")], "location inn: parent 'nowhere' is not a location"),
+        ([_place("inn", parent="inn")], "location inn: cannot be inside itself"),
+        (
+            [_place("town"), _place("inn", parent="town"), _place("cellar", parent="inn")],
+            "location cellar: parent 'inn' is itself inside 'town'",
+        ),
+        (
+            [_place("town"), _place("inn", parent="town", x=1, y=2)],
+            "location inn: a place inside another place has no map position",
+        ),
+    ],
+)
+def test_bad_parent_locations_are_rejected(tree: Path, places: list, message: str):
+    _write(tree, {"worlds/testland/world.json": [*_world()[:1], *places]})
+    with pytest.raises(ContentError, match=message):
+        ContentLibrary.load(tree)
+
+
 def test_named_table_options_keep_their_name_and_description(tree: Path):
     _write(
         tree,
