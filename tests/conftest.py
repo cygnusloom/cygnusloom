@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import atexit
+import functools
 import re
+import shutil
+import tempfile
 from collections.abc import Callable, Iterator
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -12,12 +17,35 @@ from fastapi.testclient import TestClient
 
 from cygnusforge.auth import passwords
 from cygnusforge.config import Settings
+from cygnusforge.content.library import DATA_DIR, ContentLibrary
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.web.app import create_app
 
 SECRET = "test-secret-key-0123456789abcdef"
 PASSWORD = "correct-horse-battery"
 TOKEN_RE = re.compile(r'name="csrf_token" value="([^"]+)"')
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+@functools.cache
+def content_tree() -> Path:
+    """The bundled content with the test-only fixtures added. The product never loads it."""
+    root = Path(tempfile.mkdtemp(prefix="cygnusforge-content-"))
+    atexit.register(shutil.rmtree, root, ignore_errors=True)
+    shutil.copytree(DATA_DIR, root, dirs_exist_ok=True)
+    shutil.copytree(FIXTURES, root, dirs_exist_ok=True)
+    return root
+
+
+def content_library() -> ContentLibrary:
+    return ContentLibrary.load(content_tree())
+
+
+def make_app(settings: Settings, fake_provider: FakeProvider | None = None) -> FastAPI:
+    """An app whose content includes the test-only fixtures."""
+    app = create_app(settings, fake_provider=fake_provider)
+    app.state.content = content_library()
+    return app
 
 
 class LiveNetworkBlocked(RuntimeError):
@@ -59,7 +87,7 @@ def fake() -> FakeProvider:
 
 @pytest.fixture
 def app(settings: Settings, fake: FakeProvider) -> FastAPI:
-    return create_app(settings, fake_provider=fake)
+    return make_app(settings, fake)
 
 
 @pytest.fixture

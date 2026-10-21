@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 from cygnusforge.content.character import NO_CAMPAIGN, TableOption, choice_options, option_fields
-from cygnusforge.content.library import ContentLibrary, LocationTemplate
+from cygnusforge.content.library import LocationTemplate
 from cygnusforge.db.models import Event
 from cygnusforge.llm.base import ChatReply, ToolRequest
 from cygnusforge.llm.fake import FakeProvider
@@ -29,7 +29,7 @@ from cygnusforge.services.events import (
     load_state,
 )
 from cygnusforge.services.tools import ToolRun, run_tool
-from tests.conftest import csrf_token
+from tests.conftest import content_library, csrf_token
 from tests.test_campaigns import (
     _campaign_id,
     _create_character,
@@ -40,7 +40,7 @@ from tests.test_campaigns import (
 )
 from tests.test_tools import _recording_provider, _saved, _script
 
-LIBRARY = ContentLibrary.load()
+LIBRARY = content_library()
 TOOLS = LIBRARY.core.tool_calls
 TABLES = LIBRARY.core.tables
 CAIRN = LIBRARY.rule_sets["cairn2e"]
@@ -50,7 +50,7 @@ def _values(table: str) -> list[str]:
     return [option.value for option in TABLES[table]]
 
 
-SPEC = LIBRARY.rule_sets["freeform"].character
+SPEC = LIBRARY.rule_sets["rolltest"].character
 BUNDLED_NPCS = {
     "Mara Thistledown": "Mossbell Hollow",
     "Brin Gallowcap": "Glowcap Ring",
@@ -76,7 +76,7 @@ def _ctx(
         ),
         speak=speak or quiet_speak,
         ooc=lambda narrate: None,
-        rules=LIBRARY.rule_sets["freeform"].rules,
+        rules=LIBRARY.rule_sets["rolltest"].rules,
         lookup_tools={tool.name: brief(tool.description) for tool in TOOLS.values() if tool.lookup},
     )
 
@@ -116,7 +116,7 @@ def test_player_character_starts_unplaced(client_factory: Callable[[], TestClien
 def test_a_world_can_declare_a_place_inside_another(
     client_factory: Callable[[], TestClient], app: FastAPI, monkeypatch: pytest.MonkeyPatch
 ):
-    template = app.state.content.world_templates["gnomeforest"]
+    template = app.state.content.world_templates["testhollow"]
     inn = LocationTemplate(
         id="drowsy-cap",
         name="The Drowsy Cap",
@@ -124,7 +124,7 @@ def test_a_world_can_declare_a_place_inside_another(
         parent="mossbell-hollow",
     )
     world = replace(template, locations=(*template.locations, inn))
-    monkeypatch.setitem(app.state.content.world_templates, "gnomeforest", world)
+    monkeypatch.setitem(app.state.content.world_templates, "testhollow", world)
     response = _new_campaign(_signed_in(client_factory))
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     drowsy = _state(app, campaign_id).places["the drowsy cap"]
@@ -1144,7 +1144,7 @@ def test_lookup_rule_returns_a_rule_in_full_or_names_the_rules(
 ):
     _, campaign_id = _campaign_id(client_factory)
     found = _tool(app, campaign_id, "lookup_rule", {"rule": "notes"})
-    assert found == {"rule": "notes", "text": LIBRARY.rule_sets["freeform"].rules["notes"]}
+    assert found == {"rule": "notes", "text": LIBRARY.rule_sets["rolltest"].rules["notes"]}
     missing = _tool(app, campaign_id, "lookup_rule", {"rule": "nope"})
     assert "no rule 'nope'" in missing["error"]
     assert "notes" in missing["error"]
@@ -1157,8 +1157,8 @@ def test_list_lookups_gives_a_brief_of_every_tool_rule_location_and_npc(
     listing = _tool(app, campaign_id, "list_lookups", {})
     assert {entry["tool"] for entry in listing["tools"]} == LOOKUP_TOOL_NAMES
     assert all(entry["brief"] for entry in listing["tools"])
-    freeform_rules = LIBRARY.rule_sets["freeform"].rules
-    assert {entry["rule"] for entry in listing["rules"]} == set(freeform_rules)
+    fixture_rules = LIBRARY.rule_sets["rolltest"].rules
+    assert {entry["rule"] for entry in listing["rules"]} == set(fixture_rules)
     assert all(entry["brief"] for entry in listing["rules"])
     locations = {entry["name"]: entry["brief"] for entry in listing["locations"]}
     assert "Mossbell Hollow" in locations

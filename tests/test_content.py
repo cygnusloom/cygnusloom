@@ -10,7 +10,8 @@ import pytest
 from cygnusforge.content.character import NO_CAMPAIGN, TableOption, campaign_schema
 from cygnusforge.content.definitions import ContentError, read_definitions
 from cygnusforge.content.library import ContentLibrary, PlayerInput
-from cygnusforge.rules.freeform import SocialRoll, social_roll
+from tests.conftest import content_library
+from tests.rolls import SocialRoll, social_roll
 
 
 def _write(root: Path, files: dict[str, Any]) -> None:
@@ -56,7 +57,7 @@ def _social_tool(**overrides: Any) -> dict[str, Any]:
 
 def _module(**tool_overrides: Any) -> list[dict[str, Any]]:
     return [
-        {"type": "python_module", "id": "m", "module": "cygnusforge.rules.freeform"},
+        {"type": "python_module", "id": "m", "module": "tests.rolls"},
         _social_tool(**tool_overrides),
     ]
 
@@ -114,20 +115,25 @@ def tree(tmp_path: Path) -> Path:
 
 def test_bundled_content_loads():
     library = ContentLibrary.load()
-    assert set(library.world_templates) == {"gnomeforest", "kilharbor"}
-    assert library.world_templates["gnomeforest"].name == "Gnome Forest"
+    assert set(library.world_templates) == {"kilharbor"}
     assert library.world_templates["kilharbor"].name == "Kilharbor"
     kilharbor = library.world_templates["kilharbor"]
     assert kilharbor.locations == ()
     assert kilharbor.npcs == ()
-    freeform = library.rule_sets["freeform"]
-    assert freeform.name == "Freeform"
-    assert "consistency" in freeform.rules
-    assert set(freeform.tool_calls) == CORE_TOOLS | {"social_roll"}
+    assert set(library.rule_sets) == {"cairn2e"}
 
 
-def test_bundled_social_roll_is_a_tool_call_backed_by_python():
-    tool = ContentLibrary.load().rule_sets["freeform"].tool_calls["social_roll"]
+def test_test_fixtures_add_a_hidden_roll_rule_set():
+    library = content_library()
+    assert {"kilharbor", "testhollow"} <= set(library.world_templates)
+    rule_set = library.rule_sets["rolltest"]
+    assert rule_set.name == "Roll Test"
+    assert "consistency" in rule_set.rules
+    assert set(rule_set.tool_calls) == CORE_TOOLS | {"social_roll"}
+
+
+def test_social_roll_fixture_is_a_tool_call_backed_by_python():
+    tool = content_library().rule_sets["rolltest"].tool_calls["social_roll"]
     assert tool.name == "social_roll"
     assert tool.function is social_roll
     assert set(tool.parameters["properties"]) == {"prompt", "relationship", "circumstance"}
@@ -512,7 +518,7 @@ def test_roll_type_is_no_longer_read(tree: Path):
         tree,
         {
             "rulesets/testset/module.json": [
-                {"type": "python_module", "id": "m", "module": "cygnusforge.rules.freeform"},
+                {"type": "python_module", "id": "m", "module": "tests.rolls"},
                 {"type": "roll", "id": "social", "python_module": "m", "function": "social_roll"},
             ]
         },

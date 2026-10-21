@@ -31,7 +31,7 @@ Every JSON file is a list of objects. Each object has a `type` and an `id`, in t
 
 ```json
 [
-  {"type": "world", "id": "gnomeforest", "name": "Gnome Forest", "description": "..."}
+  {"type": "world", "id": "kilharbor", "name": "Kilharbor", "description": "..."}
 ]
 ```
 
@@ -64,8 +64,6 @@ Every campaign uses the `core` rule set, whatever its rule set. It is merged und
 
 - `core` rule set (loaded for every campaign): the role-play rules, the tools `create_location` (optional `force`, to put it on a point another place has, and optional `parent`, to put it inside a top-level location such as a city), `update_location` (optional `x` and `y` to move it, `off_map` to take it off the map, `force`), `discover_location`, `delete_location`, `create_npc`, `update_npc`, `delete_npc`, `move_actor`, `add_note`, `update_note`, `delete_note`, `search_notes`, the lookup tools `all_at_location`, `search_location`, `search_npc`, `get_statblock`, `character_options`, `lookup_rule`, and `list_lookups`, and `speak` and `ooc`, the tables `personality`, `accent`, and `quirk`, and the character fields `appearance` and `biography`, which every rule set has. It is not selectable on its own.
 - `cairn2e` rule set: Cairn 2e (https://cairnrpg.com/second-edition/). Stats Strength, Dexterity, and Willpower are rolled 3d6 and may swap one pair within the group, and Hit Protection is 1d6. The 20 backgrounds are the templates. They grant items (petty or bulky), a Backpack, gold, and gear, and roll their own tables. The character fields (physique, skin, hair, face, speech, clothing, virtue, vice, and bond) are rolled from tables. The omen is a campaign option: it is chosen once when the campaign is created, before any character, and the GM sees it in its context. Backgrounds are structure only: they have no mechanical effects yet. The content is taken verbatim from cairnrpg.com by a generator script that asserts each description and table entry matches the source. The game was written by Yochai Gal and is licensed CC BY-SA 4.0.
-- `freeform` rule set: no fixed rules beyond keeping the world consistent unless the player asks otherwise. Its `social_roll` tool call asks the player to roll one d20 (the GM writes the prompt), then adds a relationship modifier and a circumstance modifier, which the AI GM decides. The player may type a free-form reply instead. The Python side is [rules/freeform.py](src/cygnusforge/rules/freeform.py) and the dice are in [rules/dice.py](src/cygnusforge/rules/dice.py).
-- `gnomeforest` world: a magical mushroom gnome forest. It starts the player character in Mossbell Hollow, which is discovered from the start, with the locations Glowcap Ring and Spore Bridge (both placed on the map but not yet discovered), and the NPCs Mara Thistledown (with a fixed personality, accent, and quirks), Brin Gallowcap, and Old Hob (both with random traits).
 - `kilharbor` world: a cold, ancient forest harbor, where the PCs arrive by ship to seek treasure and knowledge. It has no pre-generated locations or NPCs; the AI GM creates everything. Use it with the `cairn2e` rule set.
 
 Tool calls: each message offers the rule set's `tool_call` entries to the model as function tools. When the model calls one, the engine runs the Python function with the model's arguments and returns the result to the model, which then writes its reply. A message may run any number of rounds of tool calls, and nothing caps them: a model that never stops calling tools keeps the reply open until you discard it. Bad calls (unknown name, invalid JSON, wrong or missing or unexpected arguments, or a function that raises) return an `error` object to the model instead of failing the turn, so it can recover. The transcript keeps the chat lines. The turn's tool activity (for example "You rolled 14 on the d20...") goes into the chat as a small log line, and the raw tool results are in the Transcript tab.
@@ -102,7 +100,7 @@ For a throwaway database, run the "Cygnus Forge: web server (temp database)" lau
 
 Token counts are estimates (about four characters per token). The campaign page shows the estimated prompt size next to the settings button. The full transcript is always kept; only the prompt sent to the model is summarized. A summary is asked to stay within about 25% of the window, and if it still runs longer, its oldest text is dropped.
 
-A reply has two phases. In the state management phase the GM decides what the action changes and what needs to be said or done, and makes the tool calls that change the world, notes, and NPC speech; its text is not shown. If the player is speaking out of character (asking the GM about the rules, the setup, or the game itself), the state phase calls `ooc` instead, with no other tool calls. The out-of-character phase then replies directly, with all tools available. Its text streams to the player and is saved as a GM message. The `ooc` argument `no_narration` decides what follows: when true the reply is the whole turn, and when false the story continues in a second message with the narration phase. Text streamed before a tool call in this phase stays visible even though the reply goes on, so the model is told to make its tool calls before writing text. In the narration phase the GM writes the reply the player reads, narrating the world-visible results of those changes, and only that text streams in. A status line shows the current phase (for example "Managing state...", "Running social_roll...", or "Narrating..."). A turn that waits for a player roll pauses between phases, so decisions can continue after the answer. A reply is saved only after the model finishes. Your message is recorded when you send it. If the reply fails, your message stays and the reply stays open: Continue retries it, and Discard reply removes the reply and the message that started it so you can send it again. While a reply is open you cannot send another message, and a pending roll must be answered first.
+A reply has two phases. In the state management phase the GM decides what the action changes and what needs to be said or done, and makes the tool calls that change the world, notes, and NPC speech; its text is not shown. If the player is speaking out of character (asking the GM about the rules, the setup, or the game itself), the state phase calls `ooc` instead, with no other tool calls. The out-of-character phase then replies directly, with all tools available. Its text streams to the player and is saved as a GM message. The `ooc` argument `no_narration` decides what follows: when true the reply is the whole turn, and when false the story continues in a second message with the narration phase. Text streamed before a tool call in this phase stays visible even though the reply goes on, so the model is told to make its tool calls before writing text. In the narration phase the GM writes the reply the player reads, narrating the world-visible results of those changes, and only that text streams in. A status line shows the current phase (for example "Managing state...", "Running lookup_rule...", or "Narrating..."). A turn that waits for a player roll pauses between phases, so decisions can continue after the answer. A reply is saved only after the model finishes. Your message is recorded when you send it. If the reply fails, your message stays and the reply stays open: Continue retries it, and Discard reply removes the reply and the message that started it so you can send it again. While a reply is open you cannot send another message, and a pending roll must be answered first.
 
 ## Event log, log lines, and rollback
 
@@ -114,6 +112,8 @@ Each AI reply has a rollback button. It deletes every event after that reply, so
 
 Each AI reply has a gear button. It opens a "Reply details" dialog with two tabs. The Context tab shows exactly what the model received for that reply (the system prompt, rules, tool definitions, the summary, the kept messages, and any tool rounds), with each part labelled by its source. The Transcript tab shows everything that happened in that round: your message, tool calls and their results, and the reply. Each reply stores its own copy of that context and transcript, so long chats use more database space. Replies from before these features show "No context was recorded" or no transcript.
 
+Test-only content lives in [tests/fixtures/](tests/fixtures/): the `rolltest` rule set (a `social_roll` tool that asks the player for a d20 roll, backed by [tests/rolls.py](tests/rolls.py)) and the `testhollow` world. Tests merge it into the app's content; the app does not show it.
+
 Model ids take the form `provider/model`, for example `ollama/gemma4:e2b` or `openai/gpt-4o-mini` with `CYGNUSFORGE_LLM_OPENAI_BASE_URL` set.
 
 ## Scripted fake model (for tests)
@@ -123,13 +123,13 @@ Model ids take the form `provider/model`, for example `ollama/gemma4:e2b` or `op
 ```text
 __FAKE__:{"turns": [
   {"text": "Hello."},
-  {"rounds": [[{"name": "social_roll", "arguments": {"prompt": "Roll to persuade.", "relationship": 1, "circumstance": 0}}]],
-   "text": "You rolled well."},
+  {"rounds": [[{"name": "lookup_rule", "arguments": {"rule": "locations"}}]],
+   "text": "The rule is clear."},
   {"error": "upstream exploded"}
 ]}
 ```
 
-- `rounds` lists the tool calls the GM makes, one list per round. The engine runs them for real, so each name must be a tool in the rule set. State steps get these rounds; the narration does not. A `social_roll` call needs a `prompt` argument, and it pauses the turn until the roll (or a text reply) is posted.
+- `rounds` lists the tool calls the GM makes, one list per round. The engine runs them for real, so each name must be a tool in the rule set. State steps get these rounds; the narration does not. A tool whose `player_input` asks for a roll pauses the turn until the roll (or a text reply) is posted. The test-only `rolltest` rule set has one, `social_roll`.
 - `text` is the narration the player reads.
 - `ooc` is the out-of-character reply, used when a state step calls `ooc` and the out-of-character phase has no tool calls left. Without it that reply is empty and fails.
 - `speech` maps an NPC's name to the dialogue its speech step returns. An NPC not listed there gets the intent back as its dialogue.

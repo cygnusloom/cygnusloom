@@ -1,9 +1,9 @@
 [
   {
     "type": "rule_set",
-    "id": "freeform",
-    "name": "Freeform",
-    "description": "No fixed mechanics. The GM keeps the world consistent unless the player explicitly asks otherwise."
+    "id": "rolltest",
+    "name": "Roll Test",
+    "description": "Test-only rule set with a player roll. Not shown in the app."
   },
   {
     "type": "rule",
@@ -13,7 +13,7 @@
   },
   {
     "type": "python_module",
-    "id": "freeform",
-    "module": "cygnusforge.rules.freeform"
+    "id": "rolls",
+    "module": "tests.rolls"
   }
 ]

@@ -4,9 +4,8 @@ A user message may carry a directive, `__FAKE__:` followed by a JSON object:
 
     __FAKE__:{"turns": [
         {"text": "Hello."},
-        {"rounds": [[{"name": "social_roll",
-                      "arguments": {"prompt": "Roll.", "relationship": 1, "circumstance": 0}}]],
-         "text": "You rolled well."},
+        {"rounds": [[{"name": "lookup_rule", "arguments": {"rule": "locations"}}]],
+         "text": "The rule is clear."},
         {"error": "upstream exploded"}
     ]}
 

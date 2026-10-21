@@ -3,7 +3,7 @@
     "type": "tool_call",
     "id": "social_roll",
     "name": "social_roll",
-    "python_module": "freeform",
+    "python_module": "rolls",
     "function": "social_roll",
     "description": "Ask the player to roll a d20 for a social action where the outcome is uncertain and matters to the story, such as persuading, deceiving, intimidating, or charming an NPC. Do not call it for actions that obviously succeed or fail. Choose the modifiers from the NPC's current attitude and the situation, and write the prompt the player sees, in the GM's voice, asking them to roll or describe what they do instead. The player's roll (or their typed reply) comes back as the result; use the total for the outcome. The result has the die, both modifiers, and their total, or the player's reply in place of a roll.",
     "parameters": {

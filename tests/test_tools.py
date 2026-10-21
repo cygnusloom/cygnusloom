@@ -8,11 +8,12 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusforge.content.library import ContentLibrary, ToolCall
+from cygnusforge.content.library import ToolCall
 from cygnusforge.llm.base import ChatReply, ToolRequest
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.services.campaigns import list_messages
 from cygnusforge.services.tools import Ask, RollAnswer, TextAnswer, ToolRun, run_tool, tool_specs
+from tests.conftest import content_library
 from tests.test_campaigns import _answer, _campaign_id, _pending, _place_pc, _send
 
 ROLL = {
@@ -21,8 +22,8 @@ ROLL = {
 }
 
 
-def _freeform_tools() -> dict[str, ToolCall]:
-    return ContentLibrary.load().rule_sets["freeform"].tool_calls
+def _roll_tools() -> dict[str, ToolCall]:
+    return content_library().rule_sets["rolltest"].tool_calls
 
 
 def _tool(function: Callable[..., Any]) -> dict[str, ToolCall]:
@@ -66,7 +67,7 @@ def test_no_tools_means_no_tool_list():
 
 
 def test_specs_describe_the_social_roll_tool():
-    specs = {spec["function"]["name"]: spec for spec in tool_specs(_freeform_tools()) or []}
+    specs = {spec["function"]["name"]: spec for spec in tool_specs(_roll_tools()) or []}
     assert set(specs) == {"social_roll", *CORE_TOOL_NAMES}
     spec = specs["social_roll"]
     assert spec["type"] == "function"
@@ -106,7 +107,7 @@ SOCIAL_ARGUMENTS = '{"prompt": "Roll to persuade.", "relationship": 2, "circumst
 
 
 def test_social_roll_asks_the_player_before_it_runs():
-    ask = _call(_freeform_tools(), _request("social_roll", SOCIAL_ARGUMENTS))
+    ask = _call(_roll_tools(), _request("social_roll", SOCIAL_ARGUMENTS))
     assert ask == Ask(
         text="Roll to persuade.",
         dice="1d20",
@@ -115,7 +116,7 @@ def test_social_roll_asks_the_player_before_it_runs():
 
 
 def test_social_roll_runs_with_the_players_roll():
-    run = _call(_freeform_tools(), _request("social_roll", SOCIAL_ARGUMENTS), RollAnswer(14))
+    run = _call(_roll_tools(), _request("social_roll", SOCIAL_ARGUMENTS), RollAnswer(14))
     assert isinstance(run, ToolRun)
     assert json.loads(run.output) == {"die": 14, "relationship": 2, "circumstance": -1, "total": 15}
     assert (
@@ -126,7 +127,7 @@ def test_social_roll_runs_with_the_players_roll():
 
 def test_social_roll_takes_a_free_form_reply_instead_of_a_roll():
     run = _call(
-        _freeform_tools(),
+        _roll_tools(),
         _request("social_roll", SOCIAL_ARGUMENTS),
         TextAnswer("I show him the letter"),
     )
@@ -137,7 +138,7 @@ def test_social_roll_takes_a_free_form_reply_instead_of_a_roll():
 
 def test_social_roll_needs_a_prompt_for_the_player():
     error = _error_of(
-        _run(_freeform_tools(), _request("social_roll", '{"relationship": 2, "circumstance": 0}'))
+        _run(_roll_tools(), _request("social_roll", '{"relationship": 2, "circumstance": 0}'))
     )
     assert error == "missing required argument 'prompt'"
 
@@ -157,7 +158,7 @@ def test_raising_tool_returns_a_generic_error():
 
 
 def test_unknown_tool_is_reported():
-    error = _error_of(_run(_freeform_tools(), _request("nope", "{}")))
+    error = _error_of(_run(_roll_tools(), _request("nope", "{}")))
     assert "no tool named 'nope'" in error
 
 

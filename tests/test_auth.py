@@ -11,8 +11,7 @@ from cygnusforge.config import Settings
 from cygnusforge.db.session import make_engine
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.services.accounts import reset_password
-from cygnusforge.web.app import create_app
-from tests.conftest import PASSWORD, csrf_token, login, register
+from tests.conftest import PASSWORD, csrf_token, login, make_app, register
 
 
 def test_register_signs_in_and_opens_campaigns(client: TestClient):
@@ -104,7 +103,7 @@ def test_test_user_button_is_hidden_by_default(client: TestClient):
 
 
 def _test_login_factory(settings: Settings, fake: FakeProvider) -> Callable[[], TestClient]:
-    app = create_app(replace(settings, test_login=True), fake_provider=fake)
+    app = make_app(replace(settings, test_login=True), fake_provider=fake)
     return lambda: TestClient(app)
 
 

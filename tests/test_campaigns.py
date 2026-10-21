@@ -24,8 +24,8 @@ def _signed_in(client_factory: Callable[[], TestClient], email: str = "ada@examp
 def _new_campaign(
     client: TestClient,
     name: str = "Test chat",
-    world_template: str = "gnomeforest",
-    rule_set: str = "freeform",
+    world_template: str = "testhollow",
+    rule_set: str = "rolltest",
 ):
     token = csrf_token(client, "/campaigns/new")
     return client.post(
@@ -165,9 +165,9 @@ def test_new_campaign_form_offers_world_and_rule_set(client_factory: Callable[[]
     client = _signed_in(client_factory)
     page = client.get("/campaigns/new").text
     assert '<select name="world_template" required>' in page
-    assert '<option value="gnomeforest">Gnome Forest</option>' in page
+    assert '<option value="testhollow">Test Hollow</option>' in page
     assert '<select name="rule_set" required>' in page
-    assert '<option value="freeform">Freeform</option>' in page
+    assert '<option value="rolltest">Roll Test</option>' in page
 
 
 def test_campaign_shows_the_world_and_rule_set_it_was_created_with(
@@ -175,7 +175,7 @@ def test_campaign_shows_the_world_and_rule_set_it_was_created_with(
 ):
     client, campaign_id = _campaign_id(client_factory)
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert "Gnome Forest · Freeform" in page
+    assert "Test Hollow · Roll Test" in page
 
 
 def test_create_rejects_unknown_world_template(client_factory: Callable[[], TestClient]):
@@ -199,7 +199,7 @@ def test_create_stores_the_chosen_settings(client_factory: Callable[[], TestClie
     campaign_id = response.headers["location"].rsplit("/", 1)[1]
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "Mushroom court" in page
-    assert "Gnome Forest · Freeform" in page
+    assert "Test Hollow · Roll Test" in page
 
 
 def test_chat_round_trip_saves_both_messages(client_factory: Callable[[], TestClient]):

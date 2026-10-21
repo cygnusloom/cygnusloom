@@ -1,4 +1,4 @@
-"""Python side of the freeform rule set. Its JSON names these functions."""
+"""Python side of the test-only rolltest rule set. Its JSON names these functions."""
 
 from __future__ import annotations
 

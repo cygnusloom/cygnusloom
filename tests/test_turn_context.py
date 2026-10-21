@@ -61,8 +61,8 @@ def test_reply_context_lists_the_system_prompt_tools_and_the_message(
 
     sources = [part.source for part in parts]
     assert sources[0] == "Base prompt"
-    assert any(source.startswith("Rules from rule set 'freeform'") for source in sources)
-    assert "Tool 'social_roll' from rule set 'freeform'" in sources
+    assert any(source.startswith("Rules from rule set 'rolltest'") for source in sources)
+    assert "Tool 'social_roll' from rule set 'rolltest'" in sources
     assert sources[-3:] == ["This message (player)", "State instruction", "Narrate instruction"]
     assert parts[-3].content == "hello"
     page = client.get(f"/campaigns/{campaign_id}/messages/{reply_id}/context")

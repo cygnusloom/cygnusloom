@@ -16,7 +16,7 @@ from cygnusforge.llm.base import ChatReply, LLMError
 from cygnusforge.rules.context import brief
 from cygnusforge.services.campaigns import SUMMARY_PROMPT, SYSTEM_PROMPT, system_parts
 from cygnusforge.services.events import CampaignState, Channel, load_state
-from cygnusforge.web.app import create_app
+from tests.conftest import make_app
 from tests.test_campaigns import _campaign_id, _send
 
 METER_RE = re.compile(r'<span class="muted">([\d,]+) / 32,768</span>')
@@ -61,9 +61,7 @@ class RecordingProvider:
 
 def _small_window_app(settings: Settings, provider: RecordingProvider) -> FastAPI:
     # A 1000-token window: summaries start at 500 tokens and the verbatim tail is about 100.
-    return create_app(
-        dataclasses.replace(settings, llm_context_tokens=1000), fake_provider=provider
-    )
+    return make_app(dataclasses.replace(settings, llm_context_tokens=1000), fake_provider=provider)
 
 
 def _stored(app: FastAPI, campaign_id: int) -> Campaign:
@@ -100,7 +98,7 @@ def _system_text(
     important: frozenset[str] | None = None,
 ) -> str:
     shown = frozenset(rules) if important is None else important
-    parts = system_parts("freeform", rules, shown, summary, through)
+    parts = system_parts("rolltest", rules, shown, summary, through)
     return "\n\n".join(part.content for part in parts)
 
 
@@ -155,11 +153,11 @@ def test_summary_is_added_to_the_system_prompt_only_when_present():
 
 def test_chat_sends_every_rule_to_the_model_and_only_important_rules_in_full(settings: Settings):
     provider = RecordingProvider()
-    app = create_app(settings, fake_provider=provider)
+    app = make_app(settings, fake_provider=provider)
     client, campaign_id = _campaign_id(lambda: TestClient(app))
     assert _send(client, campaign_id, "hello").status_code == 303
     system = provider.calls[0][0]["content"]
-    rule_set = app.state.content.rule_sets["freeform"]
+    rule_set = app.state.content.rule_sets["rolltest"]
     for rule_id, rule_text in rule_set.rules.items():
         assert f"- {rule_id}:" in system
         if rule_id in rule_set.important:
@@ -168,7 +166,7 @@ def test_chat_sends_every_rule_to_the_model_and_only_important_rules_in_full(set
 
 def test_no_summary_when_the_chat_is_well_inside_the_window(settings: Settings):
     provider = RecordingProvider()
-    app = create_app(settings, fake_provider=provider)
+    app = make_app(settings, fake_provider=provider)
     client, campaign_id = _campaign_id(lambda: TestClient(app))
     for _ in range(3):
         assert _send(client, campaign_id, "x" * 400).status_code == 303
@@ -270,7 +268,7 @@ def test_context_meter_sits_before_the_settings_button(client_factory: Callable[
 
 
 def test_context_meter_shows_the_window_from_settings(settings: Settings):
-    app = create_app(
+    app = make_app(
         dataclasses.replace(settings, llm_context_tokens=4096), fake_provider=RecordingProvider()
     )
     client, campaign_id = _campaign_id(lambda: TestClient(app))
@@ -279,7 +277,7 @@ def test_context_meter_shows_the_window_from_settings(settings: Settings):
 
 
 def test_context_meter_grows_with_saved_history(settings: Settings):
-    app = create_app(settings, fake_provider=RecordingProvider())
+    app = make_app(settings, fake_provider=RecordingProvider())
     client, campaign_id = _campaign_id(lambda: TestClient(app))
     empty = int(
         METER_RE.search(client.get(f"/campaigns/{campaign_id}").text).group(1).replace(",", "")
