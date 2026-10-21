@@ -101,6 +101,15 @@ class Character:
     templates: dict[str, str] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
     fields: dict[str, str] = field(default_factory=dict)
+    # What each hit absorbs. Monsters have it in their statblock; player characters get it from gear.
+    armor: int = 0
+    # A monster's attacks, by name, as dice formulas such as "1d8+1d8". Empty for player characters.
+    attacks: dict[str, str] = field(default_factory=dict)
+    # Harm taken so far, by stat id. A stat's current value is its score less its harm, at least 0.
+    harm: dict[str, int] = field(default_factory=dict)
+    # The stat id of a save the character must make after harm overflowed, or None.
+    save_due: str | None = None
+    defeated: bool = False
 
 
 @dataclass(frozen=True)
@@ -170,6 +179,14 @@ class Encounter:
     acting: str | None = None
     # Cells the acting participant has moved this turn.
     moved: int = 0
+    # The side each participant fights on, as given when they joined. Keys are name_key.
+    sides: dict[str, str] = field(default_factory=dict)
+    # Whether round one starts with each player character rolling initiative.
+    rolls_initiative: bool = False
+    # True once the round one order has been set from the initiative rolls.
+    settled: bool = False
+    # Initiative rolls that passed, by name_key. A player character missing here has not rolled.
+    initiative: dict[str, bool] = field(default_factory=dict)
 
 
 @dataclass
@@ -201,6 +218,39 @@ class CampaignState:
 
 def name_key(name: str) -> str:
     return name.strip().casefold()
+
+
+PARTY_SIDE = "party"
+FOES_SIDE = "foes"
+
+
+def _side_key(encounter: Encounter, name: str) -> str:
+    return name_key(encounter.sides.get(name_key(name), ""))
+
+
+def group_by_side(encounter: Encounter, keep_turn: bool = True) -> None:
+    """Keep the order grouped by side: the party first, then the other sides in the order they
+    first appear. With `keep_turn`, the participant whose turn is next keeps it."""
+    if not encounter.order:
+        return
+    next_name = encounter.order[encounter.up] if keep_turn else None
+    first: dict[str, int] = {}
+    for index, name in enumerate(encounter.order):
+        first.setdefault(_side_key(encounter, name), index)
+
+    def rank(name: str) -> tuple[int, int]:
+        side = _side_key(encounter, name)
+        return (0 if side == name_key(PARTY_SIDE) else 1, first[side])
+
+    encounter.order.sort(key=rank)
+    if next_name is not None:
+        encounter.up = encounter.order.index(next_name)
+
+
+def _next_round(encounter: Encounter) -> None:
+    encounter.up = 0
+    encounter.round += 1
+    group_by_side(encounter, keep_turn=False)
 
 
 def token_label(name: str) -> str:
@@ -405,6 +455,8 @@ class NpcAdded(GameEvent):
     templates: dict[str, str] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
     fields: dict[str, str] = field(default_factory=dict)
+    armor: int = 0
+    attacks: dict[str, str] = field(default_factory=dict)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.characters[name_key(self.name)] = Character(
@@ -419,6 +471,8 @@ class NpcAdded(GameEvent):
             templates=dict(self.templates),
             features=dict(self.features),
             fields=dict(self.fields),
+            armor=self.armor,
+            attacks=dict(self.attacks),
         )
 
     def render(self) -> str:
@@ -870,9 +924,12 @@ class EncounterStarted(GameEvent):
 
     map: str
     location: str
+    rolls_initiative: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        state.encounter = Encounter(map=self.map, location=self.location)
+        state.encounter = Encounter(
+            map=self.map, location=self.location, rolls_initiative=self.rolls_initiative
+        )
 
     def render(self) -> str:
         return f"Encounter begins at {self.map}, {self.location}."
@@ -894,13 +951,20 @@ class ParticipantJoined(GameEvent):
     kind: ClassVar[str] = "encounter.joined"
 
     name: str
+    side: str
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        if state.encounter is not None:
-            state.encounter.order.append(state.characters[name_key(self.name)].name)
+        encounter = state.encounter
+        if encounter is None:
+            return
+        encounter.order.append(state.characters[name_key(self.name)].name)
+        encounter.sides[name_key(self.name)] = self.side
+        # In round one the order is set by initiative, so a late joiner waits at the end of it.
+        if encounter.round > 1:
+            group_by_side(encounter)
 
     def render(self) -> str:
-        return f"{self.name} joins the encounter."
+        return f"{self.name} joins the {self.side} side of the encounter."
 
 
 @dataclass(frozen=True)
@@ -917,14 +981,15 @@ class ParticipantLeft(GameEvent):
         index = next(i for i, name in enumerate(encounter.order) if name_key(name) == key)
         del encounter.order[index]
         encounter.cells.pop(key, None)
+        encounter.sides.pop(key, None)
+        encounter.initiative.pop(key, None)
         if encounter.acting is not None and name_key(encounter.acting) == key:
             encounter.acting = None
             encounter.moved = 0
         if index < encounter.up:
             encounter.up -= 1
         if encounter.order and encounter.up >= len(encounter.order):
-            encounter.up = 0
-            encounter.round += 1
+            _next_round(encounter)
 
     def render(self) -> str:
         return f"{self.name} leaves the encounter."
@@ -994,8 +1059,122 @@ class EncounterTurnEnded(GameEvent):
         encounter.moved = 0
         encounter.up += 1
         if encounter.up >= len(encounter.order):
-            encounter.up = 0
-            encounter.round += 1
+            _next_round(encounter)
 
     def render(self) -> str:
         return f"{self.name}'s turn ends."
+
+
+@dataclass(frozen=True)
+class InitiativeRolled(GameEvent):
+    """A player character's DEX save for initiative. Passing acts before the opponents and failing
+    acts after them."""
+
+    kind: ClassVar[str] = "encounter.initiative_rolled"
+
+    name: str
+    passed: bool
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        encounter = state.encounter
+        if encounter is None:
+            return
+        encounter.initiative[name_key(self.name)] = self.passed
+
+    def render(self) -> str:
+        result = "passes" if self.passed else "fails"
+        return f"{self.name} {result} the initiative save."
+
+
+@dataclass(frozen=True)
+class InitiativeSettled(GameEvent):
+    """The round one order, once every player character has rolled for initiative."""
+
+    kind: ClassVar[str] = "encounter.initiative_settled"
+
+    order: list[str]
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        encounter = state.encounter
+        if encounter is None:
+            return
+        encounter.order = list(self.order)
+        encounter.up = 0
+        encounter.settled = True
+
+    def render(self) -> str:
+        return "Initiative is set: " + ", ".join(self.order) + "."
+
+
+@dataclass(frozen=True)
+class Struck(GameEvent):
+    """A hit on a character after armor. `harm` is what each stat loses: hit points take what they
+    can, and any overflow comes off the stat named by `save`, which the target must then save
+    against."""
+
+    kind: ClassVar[str] = "combat.struck"
+
+    name: str
+    source: str
+    raw: int
+    armor: int
+    harm: dict[str, int]
+    save: str | None = None
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        for stat, amount in self.harm.items():
+            character.harm[stat] = character.harm.get(stat, 0) + amount
+        if self.save is not None:
+            character.save_due = self.save
+
+    def render(self) -> str:
+        taken = sum(self.harm.values())
+        text = f"{self.source} hits {self.name} for {self.raw}"
+        if self.armor:
+            text += f", {self.armor} absorbed by armor"
+        text += f"; {self.name} takes {taken} harm."
+        if self.save is not None:
+            text += f" A {self.save.upper()} save is due."
+        return text
+
+
+@dataclass(frozen=True)
+class SaveRolled(GameEvent):
+    """A d20 save against a stat. A failed save defeats the character."""
+
+    kind: ClassVar[str] = "combat.save_rolled"
+
+    name: str
+    stat: str
+    roll: int
+    score: int
+    passed: bool
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        if character.save_due == self.stat:
+            character.save_due = None
+        if not self.passed:
+            character.defeated = True
+
+    def render(self) -> str:
+        result = "succeeds" if self.passed else "fails"
+        text = f"{self.name} rolls {self.roll} on a {self.stat.upper()} save of {self.score} and {result}."
+        if not self.passed:
+            text += f" {self.name} is defeated."
+        return text
+
+
+@dataclass(frozen=True)
+class ArmorSet(GameEvent):
+    kind: ClassVar[str] = "combat.armor_set"
+
+    name: str
+    armor: int
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].armor = self.armor
+
+    def render(self) -> str:
+        return f"{self.name}'s armor is now {self.armor}."

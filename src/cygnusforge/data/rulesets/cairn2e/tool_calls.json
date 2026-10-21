@@ -1,0 +1,254 @@
+[
+  {
+    "type": "tool_call",
+    "id": "search_monster",
+    "name": "search_monster",
+    "python_module": "cairn2e",
+    "function": "search_monster",
+    "lookup": true,
+    "description": "Find monster statblocks in the Cairn bestiary by words in their name, id, or description. Every word in the query must appear. Each result gives the statblock's stats, armor, and attacks, which create_monster can use as a template.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Words to look for, such as 'wolf' or 'giant spider'."
+        }
+      },
+      "required": [
+        "query"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "create_monster",
+    "name": "create_monster",
+    "python_module": "cairn2e",
+    "function": "create_monster",
+    "description": "Create a monster NPC in the world. Give a template to start from a bestiary statblock (see search_monster), and any value you give replaces the template's. Without a template, give a description and every stat: hit_points, strength, dexterity, and willpower are required. Attacks replace the template's attacks when given.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The monster's name, such as 'Grey Wolf'. It must be new."
+        },
+        "location": {
+          "type": "string",
+          "description": "The name of the location it is at."
+        },
+        "description": {
+          "type": "string",
+          "description": "What the monster looks like and how it behaves. Required without a template."
+        },
+        "template": {
+          "type": "string",
+          "description": "The id of a bestiary statblock to start from, as listed by search_monster."
+        },
+        "hit_points": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999,
+          "description": "Hit Protection, the first damage it takes."
+        },
+        "strength": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999,
+          "description": "Strength, which takes damage that gets past Hit Protection."
+        },
+        "dexterity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999,
+          "description": "Dexterity, used for initiative in the first round."
+        },
+        "willpower": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999,
+          "description": "Willpower."
+        },
+        "armor": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999,
+          "description": "Armor, subtracted from each hit before it reaches Hit Protection. Leave it out to use the template's, or 0 without one."
+        },
+        "attacks": {
+          "type": "array",
+          "description": "The monster's attacks, each with a name and dice such as '1d8' or '1d6+1d6'. Replaces the template's attacks when given.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The attack's name, such as 'bite'."
+              },
+              "dice": {
+                "type": "string",
+                "description": "The damage dice, such as '1d8' or '1d6+1d6'."
+              }
+            },
+            "required": [
+              "name",
+              "dice"
+            ]
+          }
+        }
+      },
+      "required": [
+        "name",
+        "location"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "attack",
+    "name": "attack",
+    "python_module": "cairn2e",
+    "function": "attack",
+    "description": "Make an NPC's attack against a character. Attacks always hit. The attack's damage is rolled by the engine and reduces the target's armor, then Hit Protection, then Strength, and a target whose Strength is used up must make a Strength save. Use it only when the attacker's side is acting, after the initiative is set. Player characters attack with player_attack, not this tool.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "attacker": {
+          "type": "string",
+          "description": "The name of the NPC attacking."
+        },
+        "attack": {
+          "type": "string",
+          "description": "The name of one of the attacker's attacks, as the statblock lists it."
+        },
+        "target": {
+          "type": "string",
+          "description": "The name of the character being attacked."
+        }
+      },
+      "required": [
+        "attacker",
+        "attack",
+        "target"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "player_attack",
+    "name": "player_attack",
+    "python_module": "cairn2e",
+    "function": "player_attack",
+    "description": "Record the player character's attack against a target. Attacks always hit, so the player only rolls the damage. Use it when the player says what they attack with and the target is in the encounter. The target takes the damage through its armor, Hit Protection, and Strength, as with an NPC attack.",
+    "player_input": {
+      "dice_param": "damage_dice",
+      "param": "damage",
+      "details": "{weapon} against {target}: roll {damage_dice} for damage."
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "string",
+          "description": "The name of the character or NPC being attacked."
+        },
+        "weapon": {
+          "type": "string",
+          "description": "The weapon or means of attack, such as 'longsword'."
+        },
+        "damage_dice": {
+          "type": "string",
+          "description": "The damage dice for this attack, such as '1d8' for a longsword or '1d6+1d6' for two dice. Use the weapon's dice from the player character's statblock."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "What the player is asked to do, such as 'Roll your longsword damage.'"
+        }
+      },
+      "required": [
+        "target",
+        "weapon",
+        "damage_dice",
+        "prompt"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "player_save",
+    "name": "player_save",
+    "python_module": "cairn2e",
+    "function": "player_save",
+    "description": "Ask the player character to make the save they owe after their Strength was used up. The player rolls a d20 and the engine decides whether it passed. Use it when the player character's statblock shows a save due.",
+    "player_input": {
+      "dice": "1d20",
+      "param": "roll",
+      "details": "Save: roll 1d20 and succeed on a roll at or under your score."
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "What the player is asked to do, such as 'Make your Strength save.'"
+        }
+      },
+      "required": [
+        "prompt"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "player_initiative",
+    "name": "player_initiative",
+    "python_module": "cairn2e",
+    "function": "player_initiative",
+    "description": "Ask the player character to make their DEX save for initiative in the first round of an encounter. Call it once for each player character the encounter says is waiting for initiative. The result says whether more are still waiting, and when none are, the turn order is set and the first turn begins.",
+    "player_input": {
+      "dice": "1d20",
+      "param": "roll",
+      "details": "Initiative: roll 1d20 and pass on a roll at or under your Dexterity."
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "What the player is asked to do, such as 'Make your Dexterity save for initiative.'"
+        }
+      },
+      "required": [
+        "prompt"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "set_armor",
+    "name": "set_armor",
+    "python_module": "cairn2e",
+    "function": "set_armor",
+    "description": "Set a character's armor, which is subtracted from each hit before it reaches Hit Protection. Use it when a character puts on or takes off armor, or when a monster's armor changes.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character or NPC."
+        },
+        "armor": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999,
+          "description": "The new armor value. 0 means none."
+        }
+      },
+      "required": [
+        "name",
+        "armor"
+      ]
+    }
+  }
+]

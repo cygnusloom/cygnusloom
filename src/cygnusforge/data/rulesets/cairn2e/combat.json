@@ -1,0 +1,15 @@
+[
+  {
+    "type": "python_module",
+    "id": "cairn2e",
+    "module": "cygnusforge.rules.cairn2e"
+  },
+  {
+    "type": "combat",
+    "id": "cairn",
+    "python_module": "cairn2e",
+    "hit_points": "hp",
+    "overflow": "str",
+    "initiative_stat": "dex"
+  }
+]

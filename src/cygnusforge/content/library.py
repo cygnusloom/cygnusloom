@@ -81,12 +81,15 @@ class WorldTemplate:
 class PlayerInput:
     """The player supplies a value for a tool before it runs.
 
-    The player rolls `dice` (a formula such as "1d20") or types free-form text. A roll's
-    total is passed to the function as keyword argument `param`. `details`, if set, is a
-    template filled from the arguments and shown with the prompt, such as the modifiers."""
+    The player rolls `dice` (a fixed formula such as "1d20") or, when `dice_param` is set, the
+    formula the GM gave in that string argument, such as "1d8+1d8". The player may also type
+    free-form text instead. A roll's total is passed to the function as keyword argument `param`.
+    `details`, if set, is a template filled from the arguments and shown with the prompt, such as
+    the modifiers."""
 
-    dice: str
     param: str
+    dice: str | None = None
+    dice_param: str | None = None
     details: str | None = None
 
 
@@ -121,6 +124,32 @@ class EncounterGrid:
 
 
 @dataclass(frozen=True)
+class MonsterTemplate:
+    """A statblock a GM can base a monster on. `stats` has every stat of the rule set's character,
+    and `attacks` maps each attack's name to its dice formula."""
+
+    id: str
+    name: str
+    description: str
+    stats: Mapping[str, int]
+    armor: int
+    attacks: Mapping[str, str]
+
+
+@dataclass(frozen=True)
+class CombatRules:
+    """How a rule set resolves combat. `module` supplies `save_succeeds(roll, score)` and
+    `initiative_order(entries)`. Hit points take harm first, then `overflow` takes the rest and the
+    target saves against it. `initiative_stat` is what a player character saves against to act."""
+
+    id: str
+    module: ModuleType
+    hit_points: str
+    overflow: str
+    initiative_stat: str
+
+
+@dataclass(frozen=True)
 class RuleSet:
     id: str
     name: str
@@ -137,6 +166,10 @@ class RuleSet:
     # The scale of encounter maps, or None when the rule set has no grid: its encounters have no
     # movement limit.
     grid: EncounterGrid | None = None
+    # How combat resolves, or None when the rule set has no combat.
+    combat: CombatRules | None = None
+    # Statblocks for monsters, by id.
+    monsters: Mapping[str, MonsterTemplate] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -334,6 +367,13 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     if len(grids) > 1:
         raise ContentError(f"{template}: more than one encounter grid")
     grid = _load_grid(grids[0], template) if grids else None
+    combats = [d for d in definitions if d.type == "combat"]
+    if len(combats) > 1:
+        raise ContentError(f"{template}: more than one combat definition")
+    combat = _load_combat(combats[0], modules, character, template) if combats else None
+    monsters = {
+        d.id: _load_monster(d, character, template) for d in definitions if d.type == "monster"
+    }
     tool_calls: dict[str, ToolCall] = {}
     tool_names: set[str] = set()
     for d in definitions:
@@ -355,7 +395,73 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         campaign=campaign,
         tables=tables,
         grid=grid,
+        combat=combat,
+        monsters=monsters,
     )
+
+
+def _load_combat(
+    definition: Definition,
+    modules: Mapping[str, ModuleType],
+    character: CharacterSpec,
+    template: str,
+) -> CombatRules:
+    label = f"{template}: combat {definition.id}"
+    data = definition.data
+    module_id = required_text(data, "python_module", label)
+    if module_id not in modules:
+        raise ContentError(f"{label}: unknown python_module {module_id!r}")
+    module = modules[module_id]
+    for function_name in ("save_succeeds", "initiative_order"):
+        if not callable(getattr(module, function_name, None)):
+            raise ContentError(f"{label}: {function_name!r} is not a function in {module_id!r}")
+    stats = {}
+    for key in ("hit_points", "overflow", "initiative_stat"):
+        stat = required_text(data, key, label)
+        if stat not in character.stats:
+            raise ContentError(f"{label}: {key!r} names no stat ({stat!r})")
+        stats[key] = stat
+    if stats["hit_points"] == stats["overflow"]:
+        raise ContentError(f"{label}: 'hit_points' and 'overflow' must name different stats")
+    return CombatRules(id=definition.id, module=module, **stats)
+
+
+def _load_monster(
+    definition: Definition, character: CharacterSpec, template: str
+) -> MonsterTemplate:
+    label = f"{template}: monster {definition.id}"
+    data = definition.data
+    stats = data.get("stats")
+    if not isinstance(stats, dict) or set(stats) != set(character.stats):
+        names = ", ".join(sorted(character.stats))
+        raise ContentError(f"{label}: 'stats' must give a whole number for each of: {names}")
+    for key, value in stats.items():
+        _check_whole(value, f"{label}: stat {key!r}")
+    armor = data.get("armor", 0)
+    _check_whole(armor, f"{label}: 'armor'")
+    attacks = data.get("attacks", {})
+    if not isinstance(attacks, dict):
+        raise ContentError(f"{label}: 'attacks' must be an object of attack names to dice")
+    for attack_name, formula in attacks.items():
+        if not isinstance(attack_name, str) or not attack_name.strip():
+            raise ContentError(f"{label}: attack names must be non-empty text")
+        if not is_formula(formula):
+            raise ContentError(
+                f"{label}: attack {attack_name!r} must be a dice formula such as '1d8'"
+            )
+    return MonsterTemplate(
+        id=definition.id,
+        name=required_text(data, "name", label),
+        description=required_text(data, "description", label),
+        stats=dict(stats),
+        armor=armor,
+        attacks=dict(attacks),
+    )
+
+
+def _check_whole(value: object, label: str) -> None:
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise ContentError(f"{label} must be a whole number, at least 0")
 
 
 def _load_grid(definition: Definition, template: str) -> EncounterGrid:
@@ -473,7 +579,12 @@ def _with_character(
 
 def _consumed(player_input: PlayerInput | None) -> frozenset[str]:
     """Schema arguments the engine uses itself rather than passing to the function."""
-    return frozenset({PROMPT_ARGUMENT}) if player_input else frozenset()
+    if player_input is None:
+        return frozenset()
+    consumed = {PROMPT_ARGUMENT}
+    if player_input.dice_param:
+        consumed.add(player_input.dice_param)
+    return frozenset(consumed)
 
 
 def _check_player_input(
@@ -484,8 +595,17 @@ def _check_player_input(
     if not isinstance(data, dict):
         raise ContentError(f"{label}: 'player_input' must be an object")
     dice = data.get("dice")
-    if not is_formula(dice):
+    dice_param = data.get("dice_param")
+    if (dice is None) == (dice_param is None):
+        raise ContentError(f"{label}: 'player_input' needs exactly one of 'dice' or 'dice_param'")
+    if dice is not None and not is_formula(dice):
         raise ContentError(f"{label}: 'player_input.dice' must be a formula such as '1d20'")
+    if dice_param is not None:
+        schema = parameters["properties"].get(dice_param)
+        if not isinstance(schema, dict) or schema.get("type") != "string":
+            raise ContentError(f"{label}: 'player_input.dice_param' must name a string parameter")
+        if dice_param not in parameters.get("required", []):
+            raise ContentError(f"{label}: 'player_input.dice_param' must be a required parameter")
     param = data.get("param")
     if not isinstance(param, str) or not param:
         raise ContentError(f"{label}: 'player_input.param' must name a function parameter")
@@ -504,7 +624,7 @@ def _check_player_input(
     details = _check_template(data.get("details"), "player_input.details", label)
     if details is not None:
         _check_fields(details, parameters["properties"], "player_input.details", label)
-    return PlayerInput(dice=dice, param=param, details=details)
+    return PlayerInput(dice=dice, dice_param=dice_param, param=param, details=details)
 
 
 def _check_activity(template: object, label: str) -> str | None:

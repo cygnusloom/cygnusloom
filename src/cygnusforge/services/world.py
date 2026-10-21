@@ -9,7 +9,7 @@ from __future__ import annotations
 import math
 import random
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from sqlalchemy import Engine
@@ -28,10 +28,16 @@ from cygnusforge.content.character import (
     describe,
     resolve,
 )
-from cygnusforge.content.library import EncounterGrid, WorldTemplate
+from cygnusforge.content.library import CombatRules, EncounterGrid, MonsterTemplate, WorldTemplate
 from cygnusforge.rules.context import brief
-from cygnusforge.services import encounters
-from cygnusforge.services.common import InvalidInput, bounded_text, session_scope
+from cygnusforge.rules.dice import is_formula
+from cygnusforge.services import combat, encounters
+from cygnusforge.services.common import (
+    InvalidInput,
+    bounded_text,
+    session_scope,
+    whole_number,
+)
 from cygnusforge.services.events import (
     CAMPAIGN_WIDE,
     NPC_KIND,
@@ -62,6 +68,7 @@ from cygnusforge.services.events import (
 from cygnusforge.services.tools import check_arguments
 
 MAX_NAME = 120
+MAX_STAT = 999
 MAX_TEXT = 2000
 MAX_QUIRKS = 10
 QUIRKS_PER_NPC = 2
@@ -117,6 +124,9 @@ class WorldTools:
     character: CharacterSpec
     # The rule set's encounter grid, or None when its encounters have no movement limit.
     grid: EncounterGrid | None = None
+    # The rule set's combat, or None when it has none, and its monster statblocks by id.
+    combat: CombatRules | None = None
+    monsters: Mapping[str, MonsterTemplate] = field(default_factory=dict)
 
     def create_location(
         self,
@@ -231,19 +241,83 @@ class WorldTools:
 
     def start_encounter(self, map: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return encounters.start_encounter(db, self.campaign_id, map)
+            return encounters.start_encounter(
+                db, self.campaign_id, map, rolls_initiative=self.combat is not None
+            )
 
     def end_encounter(self) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return encounters.end_encounter(db, self.campaign_id)
 
-    def add_participant(self, name: str) -> dict[str, Any]:
+    def add_participant(self, name: str, side: str | None = None) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return encounters.add_participant(db, self.campaign_id, name)
+            return encounters.add_participant(db, self.campaign_id, name, side)
 
     def remove_participant(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return encounters.remove_participant(db, self.campaign_id, name)
+            return encounters.remove_participant(
+                db, self.campaign_id, name, self._initiative_order()
+            )
+
+    def create_monster(
+        self,
+        name: str,
+        location: str,
+        description: str | None = None,
+        template: str | None = None,
+        stats: Mapping[str, int | None] | None = None,
+        armor: int | None = None,
+        attacks: Sequence[Mapping[str, str]] | None = None,
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return create_monster(
+                db,
+                self.campaign_id,
+                self.monsters,
+                self.character,
+                name,
+                location,
+                description,
+                template,
+                stats or {},
+                armor,
+                attacks,
+            )
+
+    def search_monster(self, query: str) -> dict[str, list[dict[str, Any]]]:
+        return search_monster(self.monsters, query)
+
+    def attack(self, attacker: str, attack: str, target: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return combat.attack(
+                db, self.campaign_id, attacker, attack, target, self._rules(), self.rng
+            )
+
+    def player_attack(self, target: str, weapon: str, damage: int) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return combat.player_attack(
+                db, self.campaign_id, target, weapon, damage, self._rules(), self.rng
+            )
+
+    def player_save(self, roll: int) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return combat.player_save(db, self.campaign_id, roll, self._rules())
+
+    def player_initiative(self, roll: int) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return combat.player_initiative(db, self.campaign_id, roll, self._rules())
+
+    def set_armor(self, name: str, armor: int) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return combat.set_armor(db, self.campaign_id, name, armor)
+
+    def _rules(self) -> CombatRules:
+        if self.combat is None:
+            raise InvalidInput("this rule set has no combat")
+        return self.combat
+
+    def _initiative_order(self) -> encounters.InitiativeOrder | None:
+        return self.combat.module.initiative_order if self.combat is not None else None
 
     def place_participant(self, name: str, column: int, row: int) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -283,7 +357,9 @@ class WorldTools:
 
     def get_statblock(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return get_statblock(load_state(db, self.campaign_id), name, self.character)
+            return get_statblock(
+                load_state(db, self.campaign_id), name, self.character, self.combat is not None
+            )
 
     def character_options(self, field: str | None = None) -> dict[str, Any]:
         return choice_options(self.character, field)
@@ -470,6 +546,112 @@ def create_npc(
         "accent": event.accent,
         "quirks": list(event.quirks),
     }
+
+
+def create_monster(
+    db: Session,
+    campaign_id: int,
+    monsters: Mapping[str, MonsterTemplate],
+    spec: CharacterSpec,
+    name: str,
+    location: str,
+    description: str | None,
+    template: str | None,
+    stats: Mapping[str, int | None],
+    armor: int | None,
+    attacks: Sequence[Mapping[str, str]] | None,
+) -> dict[str, Any]:
+    """An NPC built from a statblock. A template gives the starting values, and any value given
+    replaces it. Without a template, the description and every stat come from the call."""
+    state = load_state(db, campaign_id)
+    name = bounded_text(name, "name", MAX_NAME)
+    _ensure_free_name(state, name)
+    where = _place_named(state, location)
+    base: MonsterTemplate | None = None
+    if template is not None:
+        base = monsters.get(template.strip())
+        if base is None:
+            raise InvalidInput(
+                f"there is no monster template {template!r}; search_monster lists them"
+            )
+    given = {key: value for key, value in stats.items() if value is not None}
+    merged = {**(base.stats if base else {}), **given}
+    unknown = [key for key in merged if key not in spec.stats]
+    if unknown:
+        raise InvalidInput("unknown stats: " + ", ".join(unknown))
+    missing = [spec.stats[key].name for key in spec.stats if key not in merged]
+    if missing:
+        raise InvalidInput("missing stats: " + ", ".join(missing))
+    for key, value in merged.items():
+        whole_number(value, f"{spec.stats[key].name}", 0, MAX_STAT)
+    if description is not None:
+        text = description
+    elif base is not None:
+        text = base.description
+    else:
+        raise InvalidInput("a description is needed when there is no template")
+    armor_value = whole_number(
+        armor if armor is not None else (base.armor if base else 0), "armor", 0, MAX_STAT
+    )
+    attack_map = _attacks(attacks) if attacks is not None else dict(base.attacks if base else {})
+    event = NpcAdded(
+        name=name,
+        location=where.name,
+        description=bounded_text(text, "description", MAX_TEXT),
+        personality="",
+        accent="",
+        quirks=[],
+        stats=dict(merged),
+        armor=armor_value,
+        attacks=attack_map,
+    )
+    record(db, campaign_id, event)
+    db.commit()
+    return {
+        "created": "monster",
+        "name": event.name,
+        "location": event.location,
+        "template": base.id if base else None,
+        "stats": dict(merged),
+        "armor": armor_value,
+        "attacks": attack_map,
+    }
+
+
+def _attacks(attacks: Sequence[Mapping[str, str]]) -> dict[str, str]:
+    """Each attack is {"name", "dice"}, and its dice must be a formula such as '1d8' or '1d6+1d6'."""
+    checked: dict[str, str] = {}
+    seen: set[str] = set()
+    for attack in attacks:
+        label = bounded_text(attack.get("name", ""), "attack name", MAX_NAME)
+        dice = attack.get("dice", "")
+        if label.casefold() in seen:
+            raise InvalidInput(f"attack {label!r} is listed twice")
+        if not isinstance(dice, str) or not is_formula(dice):
+            raise InvalidInput(f"attack {label!r} needs a dice formula such as '1d8' or '1d6+1d6'")
+        seen.add(label.casefold())
+        checked[label] = dice
+    return checked
+
+
+def search_monster(
+    monsters: Mapping[str, MonsterTemplate], query: str
+) -> dict[str, list[dict[str, Any]]]:
+    """Statblocks whose id, name, or description contain every word of `query`."""
+    words = _words(query)
+    matches = [
+        {
+            "id": monster.id,
+            "name": monster.name,
+            "description": monster.description,
+            "stats": dict(monster.stats),
+            "armor": monster.armor,
+            "attacks": dict(monster.attacks),
+        }
+        for monster in monsters.values()
+        if _has_words(words, monster.id, monster.name, monster.description)
+    ]
+    return {"monsters": matches}
 
 
 def update_location(
@@ -697,17 +879,39 @@ def lookup_index(state: CampaignState) -> dict[str, list[dict[str, Any]]]:
     return {"locations": locations, "npcs": npcs}
 
 
-def get_statblock(state: CampaignState, name: str, spec: CharacterSpec) -> dict[str, Any]:
+def get_statblock(
+    state: CampaignState, name: str, spec: CharacterSpec, with_combat: bool = False
+) -> dict[str, Any]:
     """A character's stats, template, features, and fields, one line each. Works for the player
-    character and for NPCs."""
+    character and for NPCs. With `with_combat`, the armor, attacks, harm, and status follow."""
     character = _character_named(state, name)
     kind = "player character" if character.kind == PC_KIND else "npc"
+    lines = describe(spec, _sheet_of(character)).splitlines()
+    if with_combat:
+        lines += _combat_lines(character, spec)
     return {
         "name": character.name,
         "kind": kind,
         "location": character.location,
-        "statblock": describe(spec, _sheet_of(character)).splitlines(),
+        "statblock": lines,
     }
+
+
+def _combat_lines(character: Character, spec: CharacterSpec) -> list[str]:
+    lines = [f"Armor: {character.armor}"]
+    if character.attacks:
+        attacks = ", ".join(f"{name} {formula}" for name, formula in character.attacks.items())
+        lines.append(f"Attacks: {attacks}")
+    if any(character.harm.values()):
+        harm = ", ".join(
+            f"{spec.stats[stat].name} {amount}" for stat, amount in character.harm.items() if amount
+        )
+        lines.append(f"Harm: {harm}")
+    if character.defeated:
+        lines.append("Status: defeated")
+    elif character.save_due is not None:
+        lines.append(f"Status: {spec.stats[character.save_due].name} save due")
+    return lines
 
 
 def speaker_profile(state: CampaignState, name: str, spec: CharacterSpec) -> str:
@@ -719,14 +923,12 @@ def speaker_profile(state: CampaignState, name: str, spec: CharacterSpec) -> str
     if pc is None or npc.location != pc.location:
         raise InvalidInput(f"{npc.name} is not at the player character's location")
     quirks = "; ".join(npc.quirks) or "none"
-    lines = [
-        f"Speaker: {npc.name}",
-        f"Who they are: {npc.description}",
-        f"Personality: {npc.personality}",
-        f"Accent: {npc.accent}",
-        f"Quirks: {quirks}",
-        f"Location: {npc.location}",
-    ]
+    lines = [f"Speaker: {npc.name}", f"Who they are: {npc.description}"]
+    if npc.personality:
+        lines.append(f"Personality: {npc.personality}")
+    if npc.accent:
+        lines.append(f"Accent: {npc.accent}")
+    lines += [f"Quirks: {quirks}", f"Location: {npc.location}"]
     sheet = describe(spec, _sheet_of(npc))
     if sheet:
         lines.append(sheet)
@@ -815,6 +1017,11 @@ def _encounter_lines(state: CampaignState, grid: EncounterGrid | None) -> list[s
         f"Encounter in progress on the map {view['map']} at {view['location']}, round {view['round']}.",
         f"Map: {view['columns']} by {view['rows']} cells, columns and rows counted from 0 at the top left. {view['description']}",
     ]
+    if view["awaiting_initiative"]:
+        waiting = ", ".join(view["awaiting_initiative"])
+        lines.append(
+            f"Initiative is not set yet. {waiting} must roll a DEX save with player_initiative."
+        )
     if view["acting"] is not None:
         left = (
             f", with {view['moves_left']} of {view['move_cells']} cells of movement left"
@@ -828,7 +1035,10 @@ def _encounter_lines(state: CampaignState, grid: EncounterGrid | None) -> list[s
         cell = who["cell"]
         where = f"column {cell[0]}, row {cell[1]}" if cell else "not yet placed"
         kind = "player character" if who["is_pc"] else "NPC"
-        lines.append(f"- {who['number']}. {who['name']} ({kind}), {where}.")
+        status = f", {who['status']}" if who["status"] else ""
+        lines.append(
+            f"- {who['number']}. {who['name']} ({kind}, {who['side']} side{status}), {where}."
+        )
     return lines
 
 

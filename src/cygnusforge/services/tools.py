@@ -9,9 +9,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from cygnusforge.content.library import CONTEXT_ARGUMENT, PROMPT_ARGUMENT, ToolCall
+from cygnusforge.content.library import CONTEXT_ARGUMENT, PROMPT_ARGUMENT, PlayerInput, ToolCall
 from cygnusforge.llm.base import LLMError, ToolRequest
 from cygnusforge.rules.context import ToolContext
+from cygnusforge.rules.dice import is_formula
 from cygnusforge.services.common import InvalidInput, NotFound
 
 logger = logging.getLogger(__name__)
@@ -89,16 +90,27 @@ async def run_tool(
     if tool.player_input is None:
         return await _call(tool, arguments, ctx)
     if answer is None:
+        dice = _dice_for(tool.player_input, arguments)
+        if not is_formula(dice):
+            return ToolRun(_error(f"{dice!r} is not a dice formula such as '1d8'"), None)
         return Ask(
             text=arguments[PROMPT_ARGUMENT],
-            dice=tool.player_input.dice,
+            dice=dice,
             details=_details(tool, arguments),
         )
     arguments.pop(PROMPT_ARGUMENT, None)
     if isinstance(answer, TextAnswer):
         return ToolRun(json.dumps({"player_text": answer.text}), None)
+    if tool.player_input.dice_param:
+        arguments.pop(tool.player_input.dice_param, None)
     arguments[tool.player_input.param] = answer.total
     return await _call(tool, arguments, ctx)
+
+
+def _dice_for(player_input: PlayerInput, arguments: Mapping[str, Any]) -> str:
+    if player_input.dice is not None:
+        return player_input.dice
+    return str(arguments.get(player_input.dice_param, ""))
 
 
 async def _call(tool: ToolCall, arguments: dict[str, Any], ctx: ToolContext | None) -> ToolRun:

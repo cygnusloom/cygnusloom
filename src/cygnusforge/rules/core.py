@@ -126,8 +126,8 @@ def end_encounter(ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.end_encounter()
 
 
-def add_participant(name: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.add_participant(name)
+def add_participant(name: str, ctx: ToolContext, side: str | None = None) -> dict[str, Any]:
+    return ctx.world.add_participant(name, side)
 
 
 def remove_participant(name: str, ctx: ToolContext) -> dict[str, Any]:

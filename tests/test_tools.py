@@ -8,7 +8,7 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusforge.content.library import ToolCall
+from cygnusforge.content.library import PlayerInput, ToolCall
 from cygnusforge.llm.base import ChatReply, ToolRequest
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.services.campaigns import list_messages
@@ -60,6 +60,44 @@ def _error_of(result: str) -> str:
     data = json.loads(result)
     assert set(data) == {"error"}
     return data["error"]
+
+
+def _damage_tools() -> dict[str, ToolCall]:
+    schema = {
+        "type": "object",
+        "properties": {"prompt": {"type": "string"}, "damage_dice": {"type": "string"}},
+        "required": ["prompt", "damage_dice"],
+    }
+    tool = ToolCall(
+        id="hit",
+        name="hit",
+        description="A test attack.",
+        parameters=schema,
+        function=lambda damage: {"damage": damage},
+        player_input=PlayerInput(dice_param="damage_dice", param="damage"),
+    )
+    return {"hit": tool}
+
+
+def test_dice_param_asks_with_the_formula_the_gm_gave():
+    request = _request("hit", json.dumps({"prompt": "Roll damage.", "damage_dice": "1d8+1d6"}))
+    ask = _call(_damage_tools(), request)
+    assert isinstance(ask, Ask)
+    assert (ask.text, ask.dice) == ("Roll damage.", "1d8+1d6")
+
+
+def test_dice_param_passes_the_roll_as_the_param_and_drops_the_formula():
+    request = _request("hit", json.dumps({"prompt": "Roll damage.", "damage_dice": "1d8"}))
+    run = _call(_damage_tools(), request, RollAnswer(7))
+    assert isinstance(run, ToolRun)
+    assert json.loads(run.output) == {"damage": 7}
+
+
+def test_dice_param_rejects_a_formula_that_is_not_dice():
+    request = _request("hit", json.dumps({"prompt": "Roll damage.", "damage_dice": "d8"}))
+    run = _call(_damage_tools(), request)
+    assert isinstance(run, ToolRun)
+    assert "is not a dice formula" in _error_of(run.output)
 
 
 def test_no_tools_means_no_tool_list():

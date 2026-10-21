@@ -15,8 +15,12 @@ from cygnusforge.llm.base import ToolRequest
 from cygnusforge.services import campaigns, encounters
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
+    NPC_KIND,
     CampaignState,
+    Character,
     ChatGM,
+    Encounter,
+    group_by_side,
     record,
     token_label,
     token_labels,
@@ -377,7 +381,8 @@ def test_player_turn_starts_on_its_own_and_ends_by_button(
 
     assert _encounter_post(client, campaign_id, "end", "Ada").status_code == 303
     state = _state(app, campaign_id)
-    assert state.encounter.acting is None
+    # Round two starts with the party again, so Ada's turn opens straight away.
+    assert state.encounter.acting == "Ada"
     assert state.encounter.round == 2
 
 
@@ -587,3 +592,47 @@ def test_campaign_page_has_no_roster_or_taller_map_without_an_encounter(
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "encounter-roster" not in page
     assert 'class="side"' in page
+
+
+def _npc(name: str) -> Character:
+    return Character(
+        kind=NPC_KIND,
+        name=name,
+        location=None,
+        description="",
+        personality="",
+        accent="",
+        quirks=[],
+    )
+
+
+def test_group_by_side_keeps_the_party_first_and_the_next_turn():
+    state = CampaignState()
+    for name in ("Pip", "Ada", "Bo", "Cy"):
+        state.characters[name.casefold()] = _npc(name)
+    encounter = Encounter(
+        map="Green",
+        location="Hollow",
+        order=["Pip", "Ada", "Bo", "Cy"],
+        sides={"pip": "foes", "ada": "party", "bo": "foes", "cy": "party"},
+        up=2,
+        round=2,
+    )
+
+    group_by_side(encounter)
+
+    assert encounter.order == ["Ada", "Cy", "Pip", "Bo"]
+    assert encounter.order[encounter.up] == "Bo"
+
+
+def test_group_by_side_puts_a_new_side_after_the_ones_already_there():
+    encounter = Encounter(
+        map="Green",
+        location="Hollow",
+        order=["Wolf", "Ada", "Hound"],
+        sides={"wolf": "beasts", "ada": "party", "hound": "wardens"},
+    )
+
+    group_by_side(encounter, keep_turn=False)
+
+    assert encounter.order == ["Ada", "Wolf", "Hound"]

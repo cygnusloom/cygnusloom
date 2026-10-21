@@ -1,0 +1,13 @@
+[
+  {"type": "monster", "id": "basilisk", "name": "Basilisk", "description": "A serpent-like beast whose gaze is said to turn the unwary to stone.", "stats": {"hp": 10, "str": 12, "dex": 13, "wil": 13}, "armor": 1, "attacks": {"bite": "1d10"}},
+  {"type": "monster", "id": "blink-dog", "name": "Blink Dog", "description": "A small, quick hound that vanishes and reappears a few steps away.", "stats": {"hp": 5, "str": 11, "dex": 14, "wil": 5}, "armor": 0, "attacks": {"bite": "1d6"}},
+  {"type": "monster", "id": "blood-elk", "name": "Blood Elk", "description": "A large deer with a red coat and antlers that are sharp enough to kill.", "stats": {"hp": 4, "str": 12, "dex": 13, "wil": 5}, "armor": 0, "attacks": {"horns": "1d8"}},
+  {"type": "monster", "id": "cave-locust", "name": "Cave Locust", "description": "A giant insect that swarms in the dark places underground.", "stats": {"hp": 2, "str": 6, "dex": 12, "wil": 3}, "armor": 0, "attacks": {"bite": "1d6"}},
+  {"type": "monster", "id": "cobblehounds", "name": "Cobblehounds", "description": "Hounds made of stone and rubble that guard ruins on their masters' orders.", "stats": {"hp": 12, "str": 14, "dex": 1, "wil": 8}, "armor": 2, "attacks": {"bite": "1d10"}},
+  {"type": "monster", "id": "creeping-vines", "name": "Creeping Vines", "description": "A tangle of thorned vines that grows over anything still for long enough.", "stats": {"hp": 8, "str": 10, "dex": 12, "wil": 2}, "armor": 0, "attacks": {"vines": "1d4"}},
+  {"type": "monster", "id": "grizzly-bear", "name": "Grizzly Bear", "description": "A huge bear with long claws, cross and quick to defend its territory.", "stats": {"hp": 6, "str": 15, "dex": 13, "wil": 5}, "armor": 0, "attacks": {"claws": "1d8+1d8"}},
+  {"type": "monster", "id": "killer-bees", "name": "Killer Bees", "description": "A swarm of bees whose stings are far more dangerous than an ordinary bee's.", "stats": {"hp": 6, "str": 6, "dex": 14, "wil": 8}, "armor": 0, "attacks": {"sting": "1d6"}},
+  {"type": "monster", "id": "night-cat", "name": "Night Cat", "description": "A large, black-furred cat that hunts only after dark.", "stats": {"hp": 6, "str": 9, "dex": 14, "wil": 5}, "armor": 0, "attacks": {"claws": "1d6+1d6"}},
+  {"type": "monster", "id": "viper", "name": "Viper", "description": "A venomous snake that strikes from cover in the undergrowth.", "stats": {"hp": 3, "str": 5, "dex": 12, "wil": 3}, "armor": 0, "attacks": {"bite": "1d6"}},
+  {"type": "monster", "id": "wolf", "name": "Wolf", "description": "A grey wolf that hunts in packs and fights to pull down its prey.", "stats": {"hp": 6, "str": 12, "dex": 14, "wil": 8}, "armor": 0, "attacks": {"bite": "1d8"}}
+]

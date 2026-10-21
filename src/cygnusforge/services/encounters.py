@@ -6,6 +6,7 @@ change, records its events, and commits."""
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from sqlmodel import Session
@@ -13,7 +14,9 @@ from sqlmodel import Session
 from cygnusforge.content.library import EncounterGrid
 from cygnusforge.services.common import InvalidInput, bounded_text
 from cygnusforge.services.events import (
+    FOES_SIDE,
     NPC_KIND,
+    PARTY_SIDE,
     PC_KIND,
     CampaignState,
     Character,
@@ -23,6 +26,7 @@ from cygnusforge.services.events import (
     EncounterStarted,
     EncounterTurnBegun,
     EncounterTurnEnded,
+    InitiativeSettled,
     MapCreated,
     MapDeleted,
     MapUpdated,
@@ -35,6 +39,9 @@ from cygnusforge.services.events import (
     record,
     token_labels,
 )
+
+# Given the entries (name, passed the initiative save, or None for an NPC), the order of round one.
+InitiativeOrder = Callable[[Sequence[tuple[str, bool | None]]], list[str]]
 
 MAX_MAP_NAME = 120
 MAX_MAP_TEXT = 2000
@@ -193,14 +200,24 @@ def delete_map(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
     return {"deleted": "encounter map", "name": entry.name}
 
 
-def start_encounter(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
+def start_encounter(
+    db: Session, campaign_id: int, name: str, rolls_initiative: bool = False
+) -> dict[str, Any]:
+    """Start an encounter on a map. With `rolls_initiative`, round one waits for each player
+    character to roll for initiative before anyone acts."""
     state = load_state(db, campaign_id)
     if state.encounter is not None:
         raise InvalidInput(
             f"an encounter is already in progress at {state.encounter.map}; end it first"
         )
     entry = _map_named(state, name)
-    record(db, campaign_id, EncounterStarted(map=entry.name, location=entry.location))
+    record(
+        db,
+        campaign_id,
+        EncounterStarted(
+            map=entry.name, location=entry.location, rolls_initiative=rolls_initiative
+        ),
+    )
     db.commit()
     _open_player_turn(db, campaign_id)
     return {"started": "encounter", "map": entry.name, "location": entry.location}
@@ -214,16 +231,25 @@ def end_encounter(db: Session, campaign_id: int) -> dict[str, Any]:
     return {"ended": "encounter", "map": encounter.map}
 
 
-def add_participant(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
+def add_participant(
+    db: Session, campaign_id: int, name: str, side: str | None = None
+) -> dict[str, Any]:
+    """Add a character to the encounter on a side. Player characters default to the party and
+    other characters to the foes. A side is any name the GM gives it."""
     state = load_state(db, campaign_id)
     encounter = _encounter(state)
     character = _character(state, name)
     if character.name in encounter.order:
         raise InvalidInput(f"{character.name} is already in the encounter")
-    record(db, campaign_id, ParticipantJoined(name=character.name))
+    if side is None:
+        side = PARTY_SIDE if character.kind == PC_KIND else FOES_SIDE
+    elif not isinstance(side, str) or not side.strip():
+        raise InvalidInput("a side needs a name, such as party or foes")
+    side = side.strip()
+    record(db, campaign_id, ParticipantJoined(name=character.name, side=side))
     db.commit()
     _open_player_turn(db, campaign_id)
-    result: dict[str, Any] = {"added": character.name}
+    result: dict[str, Any] = {"added": character.name, "side": side}
     if character.location != encounter.location:
         where = character.location or "nowhere in particular"
         result["warning"] = (
@@ -233,11 +259,18 @@ def add_participant(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
     return result
 
 
-def remove_participant(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
+def remove_participant(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    initiative_order: InitiativeOrder | None = None,
+) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     character = _participant(state, name)
     record(db, campaign_id, ParticipantLeft(name=character.name))
     db.commit()
+    if initiative_order is not None:
+        settle_initiative(db, campaign_id, initiative_order)
     _open_player_turn(db, campaign_id)
     return {"removed": character.name}
 
@@ -293,11 +326,65 @@ def place_participant(
     }
 
 
+def _initiative_window(encounter: Encounter) -> bool:
+    """Whether round one is still waiting for its initiative rolls. Once a turn has begun, the
+    order is fixed, so a participant who joins later does not roll."""
+    return (
+        encounter.rolls_initiative
+        and not encounter.settled
+        and encounter.round == 1
+        and encounter.up == 0
+        and encounter.acting is None
+    )
+
+
+def awaiting_initiative(state: CampaignState) -> list[str]:
+    """The display names of the player characters who must still roll for initiative."""
+    encounter = state.encounter
+    if encounter is None or not _initiative_window(encounter):
+        return []
+    return [
+        name
+        for name in encounter.order
+        if state.characters[name_key(name)].kind == PC_KIND
+        and name_key(name) not in encounter.initiative
+    ]
+
+
+def initiative_open(state: CampaignState) -> bool:
+    """Whether no one may act until the player characters have rolled for initiative."""
+    return bool(awaiting_initiative(state))
+
+
+def settle_initiative(db: Session, campaign_id: int, initiative_order: InitiativeOrder) -> None:
+    """Set round one's order once every player character has rolled. Nothing happens while a roll
+    is still owed, or when no player character is taking part."""
+    state = load_state(db, campaign_id)
+    encounter = state.encounter
+    if encounter is None or not _initiative_window(encounter) or awaiting_initiative(state):
+        return
+    entries: list[tuple[str, bool | None]] = []
+    for name in encounter.order:
+        key = name_key(name)
+        if state.characters[key].kind == PC_KIND:
+            entries.append((name, encounter.initiative[key]))
+        else:
+            entries.append((name, None))
+    if not any(passed is not None for _, passed in entries):
+        return
+    record(db, campaign_id, InitiativeSettled(order=initiative_order(entries)))
+    db.commit()
+    _open_player_turn(db, campaign_id)
+
+
 def begin_turn(db: Session, campaign_id: int, name: str) -> Character:
     """Start the turn of the NPC who is next in order. The GM plays it out afterwards. A player
     character's turn starts on its own, see `_open_player_turn`."""
     state = load_state(db, campaign_id)
     encounter = _encounter(state)
+    if initiative_open(state):
+        waiting = ", ".join(awaiting_initiative(state))
+        raise InvalidInput(f"initiative is not set yet; {waiting} must roll for it first")
     if state.turn is not None:
         raise InvalidInput("the GM is still answering; wait for the reply to finish")
     if encounter.acting is not None:
@@ -322,6 +409,8 @@ def _open_player_turn(db: Session, campaign_id: int) -> None:
     encounter = state.encounter
     if encounter is None or encounter.acting is not None or not encounter.order:
         return
+    if initiative_open(state):
+        return
     character = state.characters[name_key(encounter.order[encounter.up])]
     if character.kind == PC_KIND:
         record(db, campaign_id, EncounterTurnBegun(name=character.name))
@@ -342,6 +431,14 @@ def end_turn(db: Session, campaign_id: int, name: str, by_player: bool) -> dict[
     db.commit()
     _open_player_turn(db, campaign_id)
     return {"ended_turn": character.name}
+
+
+def _status(character: Character) -> str:
+    if character.defeated:
+        return "defeated"
+    if character.save_due is not None:
+        return f"{character.save_due} save due"
+    return ""
 
 
 def encounter_view(state: CampaignState, grid: EncounterGrid | None) -> dict[str, Any] | None:
@@ -366,6 +463,9 @@ def encounter_view(state: CampaignState, grid: EncounterGrid | None) -> dict[str
                 "next": encounter.acting is None
                 and encounter.order[encounter.up] == character.name,
                 "location": character.location,
+                "side": encounter.sides.get(name_key(character.name), ""),
+                "initiative": encounter.initiative.get(name_key(character.name)),
+                "status": _status(character),
             }
         )
     return {
@@ -376,6 +476,7 @@ def encounter_view(state: CampaignState, grid: EncounterGrid | None) -> dict[str
         "rows": entry.rows,
         "round": encounter.round,
         "acting": encounter.acting,
+        "awaiting_initiative": awaiting_initiative(state),
         "moves_left": _moves_left(encounter, grid),
         "move_cells": grid.move_cells if grid is not None else None,
         "cell_feet": grid.cell_feet if grid is not None else None,
