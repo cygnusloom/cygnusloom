@@ -118,7 +118,7 @@
           </form>
         </section>
 
-        <aside class="side">
+        <aside class="side{% if encounter %} in-encounter{% endif %}">
           <section class="map-panel" aria-label="Map">
             {% if encounter %}
             <div class="tab-list" role="tablist" aria-label="Map views">
@@ -133,6 +133,18 @@
                 <p class="muted">No one has joined yet.</p>
                 {% endif %}
               </div>
+              {% if encounter.participants %}
+              <ul class="encounter-roster" aria-label="Turn order">
+                {% for participant in encounter.participants %}
+                <li{% if participant.acting %} class="acting"{% endif %}>
+                  <span class="muted">{{ participant.number }}.</span>
+                  <strong>{{ participant.name }}</strong>
+                  {% if participant.is_pc %}<span class="muted">(you)</span>{% endif %}
+                  {% if participant.acting %}<span class="roster-state">acting</span>{% elif participant.next %}<span class="roster-state muted">next</span>{% endif %}
+                </li>
+                {% endfor %}
+              </ul>
+              {% endif %}
             </div>
             <div class="tab-panel map-view" role="tabpanel" id="panel-world" aria-labelledby="tab-world" hidden>
               {{ map_board(world_map, framed=true) }}

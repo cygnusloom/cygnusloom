@@ -84,5 +84,49 @@
     new ResizeObserver(() => fit(frame, board)).observe(frame);
   };
 
+  // Token names pop up in the same pill as the token. The popup sits on the page, not in the board,
+  // so zooming does not scale it.
+  const tip = document.createElement("div");
+  tip.className = "map-tip";
+  tip.setAttribute("role", "tooltip");
+  tip.hidden = true;
+  document.body.append(tip);
+  let current = null;
+
+  const hideTip = () => {
+    current = null;
+    tip.hidden = true;
+  };
+
+  const showTip = (target) => {
+    current = target;
+    tip.textContent = target.dataset.tip;
+    tip.classList.toggle("here", target.classList.contains("here"));
+    tip.hidden = false;
+    const rect = target.getBoundingClientRect();
+    const size = tip.getBoundingClientRect();
+    const margin = 4;
+    const left = Math.min(
+      Math.max(margin, rect.left + rect.width / 2 - size.width / 2),
+      window.innerWidth - size.width - margin,
+    );
+    // Above the token, or below it when there is no room above.
+    const above = rect.top - size.height - margin * 2;
+    const top = above >= margin ? above : rect.bottom + margin;
+    tip.style.left = `${left}px`;
+    tip.style.top = `${top}px`;
+  };
+
+  document.addEventListener("pointerover", (event) => {
+    const target = event.target.closest?.(".map-frame [data-tip]");
+    if (target && target !== current) showTip(target);
+  });
+  document.addEventListener("pointerout", (event) => {
+    if (current && !current.contains(event.relatedTarget)) hideTip();
+  });
+  document.addEventListener("pointerdown", hideTip);
+  document.addEventListener("wheel", hideTip, { passive: true });
+  window.addEventListener("scroll", hideTip, true);
+
   document.querySelectorAll(".map-frame").forEach(attach);
 })();

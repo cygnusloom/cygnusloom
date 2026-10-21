@@ -540,7 +540,7 @@ def test_campaign_page_draws_tokens_with_full_name_tooltips_and_no_legend(
 
     page = client.get(f"/campaigns/{campaign_id}").text
     assert '<span class="map-token">Ada</span>' in page
-    assert 'title="Ada"' in page
+    assert 'data-tip="Ada"' in page
     assert "Not on the map" not in page
     assert "encounter-list" not in page
     assert "map-legend" not in page
@@ -557,3 +557,33 @@ def test_campaign_page_says_when_no_one_is_on_the_encounter_map(
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "Not on the map" not in page
     assert '<span class="map-token">Pip</span>' in page
+
+
+def test_campaign_page_lists_the_encounter_turn_order_under_the_map(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
+    app = client.app
+    _place(app, campaign_id, "Ada", 2, 3, grid=None)
+    _place(app, campaign_id, "Pip", 4, 4, grid=None)
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert 'class="side in-encounter"' in page
+    roster = page[page.index('class="encounter-roster"') :]
+    assert roster.index("Pip") < roster.index("Ada")
+    assert page.index('class="encounter-roster"') < page.index('aria-label="Panels"')
+
+    _begin(app, campaign_id, "Pip")
+    _finish_gm_reply(app, campaign_id)
+    acting = client.get(f"/campaigns/{campaign_id}").text
+    assert '<li class="acting">' in acting
+    assert '<span class="roster-state">acting</span>' in acting
+
+
+def test_campaign_page_has_no_roster_or_taller_map_without_an_encounter(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _campaign_id(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "encounter-roster" not in page
+    assert 'class="side"' in page

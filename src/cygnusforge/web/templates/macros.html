@@ -11,7 +11,7 @@
   <div class="map-board" aria-label="Map of discovered places">
     <span class="map-origin" aria-hidden="true"></span>
     {% for marker in view.markers %}
-      <span class="map-marker{% if marker.here %} here{% endif %}" style="left: {{ marker.left }}%; top: {{ marker.top }}%" title="{{ marker.name }}{% if marker.here %} (you){% endif %}">{{ marker.label }}</span>
+      <span class="map-marker{% if marker.here %} here{% endif %}" style="left: {{ marker.left }}%; top: {{ marker.top }}%" data-tip="{{ marker.name }}{% if marker.here %} (you){% endif %}">{{ marker.label }}</span>
     {% endfor %}
   </div>
   {% if framed %}</div>{% endif %}
@@ -24,7 +24,7 @@
   <div class="map-board encounter-board" role="img" aria-label="Encounter map: {{ encounter.map }}" style="--columns: {{ encounter.columns }}; --rows: {{ encounter.rows }}">
     {% for row in rows %}
       {% for occupant in row %}
-        <span class="encounter-cell{% if occupant %} occupied{% endif %}{% if occupant and occupant.acting %} acting{% endif %}"{% if occupant %} title="{{ occupant.name }}"{% endif %}>{% if occupant %}<span class="map-token">{{ occupant.label }}</span>{% endif %}</span>
+        <span class="encounter-cell{% if occupant %} occupied{% endif %}{% if occupant and occupant.acting %} acting{% endif %}"{% if occupant %} data-tip="{{ occupant.name }}"{% endif %}>{% if occupant %}<span class="map-token">{{ occupant.label }}</span>{% endif %}</span>
       {% endfor %}
     {% endfor %}
   </div>
