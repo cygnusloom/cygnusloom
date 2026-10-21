@@ -64,6 +64,7 @@ def _ctx(
             character=SPEC,
         ),
         speak=speak or quiet_speak,
+        ooc=lambda narrate: None,
     )
 
 

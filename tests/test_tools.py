@@ -91,6 +91,7 @@ CORE_TOOL_NAMES = {
     "delete_note",
     "search_notes",
     "speak",
+    "ooc",
 }
 
 SOCIAL_ARGUMENTS = '{"prompt": "Roll to persuade.", "relationship": 2, "circumstance": -1}'

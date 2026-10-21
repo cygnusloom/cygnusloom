@@ -112,20 +112,25 @@
     }
     attempt.started = true;
     let finished = false;
+    // The bubble the reply streams into. An out-of-character reply can be followed by the story.
+    let current = reply;
     await readLines(response.body, (item) => {
       switch (item.type) {
         case "status":
-          reply.statusText.textContent = item.text;
-          reply.status.hidden = false;
+          current.statusText.textContent = item.text;
+          current.status.hidden = false;
           scrollDown();
           break;
         case "log":
-          appendLog(item.text, reply.bubble);
+          appendLog(item.text, current.bubble);
           break;
         case "delta":
-          reply.status.hidden = true;
-          reply.content.textContent += item.text;
+          current.status.hidden = true;
+          current.content.textContent += item.text;
           scrollDown();
+          break;
+        case "next_message":
+          current = addBubble("assistant", "Cygnus");
           break;
         case "saved":
         case "prompt":

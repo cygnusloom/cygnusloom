@@ -86,3 +86,14 @@ async def speak(npc: str, intent: str, ctx: ToolContext, replace: bool = False) 
     profile = ctx.world.speaker_profile(npc)
     await ctx.speak(npc, profile, intent, replace)
     return {"speaker": npc, "status": "dialogue queued for the narration"}
+
+
+def ooc(ctx: ToolContext, no_narration: bool = False) -> dict[str, str]:
+    ctx.ooc(not no_narration)
+    if no_narration:
+        status = (
+            "your next reply goes to the player directly, and the story is not narrated after it"
+        )
+    else:
+        status = "your next reply goes to the player directly, and the story is narrated after it"
+    return {"status": status}

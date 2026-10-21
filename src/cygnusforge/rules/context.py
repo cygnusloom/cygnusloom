@@ -57,3 +57,6 @@ class ToolContext:
     # Writes an NPC's dialogue and queues it for the narration. Takes the speaker, profile, intent,
     # and whether to replace the line already queued for that speaker.
     speak: Callable[[str, str, str, bool], Awaitable[None]]
+    # Marks the player's message as out of character. Takes whether the story is narrated after the
+    # out-of-character reply.
+    ooc: Callable[[bool], None]

@@ -316,5 +316,23 @@
         "note_id"
       ]
     }
+  },
+  {
+    "type": "tool_call",
+    "id": "ooc",
+    "name": "ooc",
+    "python_module": "core",
+    "function": "ooc",
+    "description": "Mark the player's message as out of character: they talk to you as the GM rather than to their character, ask about the rules or the world, or ask for a change outside the story. Call it in place of the other tools for the message. An out-of-character step then replies to the player directly and has all the tools. Set no_narration when the reply needs no story beat after it.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "no_narration": {
+          "type": "boolean",
+          "description": "Set true when the out-of-character reply is the whole response. Leave it false, the default, when the story should move on after the reply, which is then narrated."
+        }
+      },
+      "required": []
+    }
   }
 ]

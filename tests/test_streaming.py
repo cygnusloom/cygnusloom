@@ -163,3 +163,79 @@ def test_a_recording_provider_sees_the_streamed_turn(
 
     assert recorder.calls
     assert _deltas(events) == "Hi."
+
+
+OOC_REPLY = {"name": "ooc", "arguments": {"no_narration": True}}
+OOC_THEN_STORY = {"name": "ooc", "arguments": {"no_narration": False}}
+
+
+def test_out_of_character_reply_is_the_final_message_when_nothing_is_narrated(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+
+    events = _stream(
+        client,
+        campaign_id,
+        _script({"rounds": [[OOC_REPLY]], "ooc": "The rules say two rolls for a wound."}),
+    )
+
+    assert _deltas(events) == "The rules say two rolls for a wound."
+    assert "next_message" not in [e["type"] for e in events]
+    assert "Narrating..." not in [e.get("text") for e in events]
+    assert events[-1] == {"type": "saved", "event_id": _assistant_ids(app, campaign_id)[-1]}
+    assert _state(app, campaign_id).turn is None
+
+
+def test_out_of_character_reply_can_be_followed_by_the_story(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+
+    events = _stream(
+        client,
+        campaign_id,
+        _script(
+            {"rounds": [[OOC_THEN_STORY]], "ooc": "Sure, ask away.", "text": "The tide turns."}
+        ),
+    )
+
+    split = events.index({"type": "next_message"})
+    assert _deltas(events[:split]) == "Sure, ask away."
+    assert _deltas(events[split:]) == "The tide turns."
+    assert events[-1]["type"] == "saved"
+    assert len(_assistant_ids(app, campaign_id)) == 2
+    assert _state(app, campaign_id).turn is None
+
+
+def test_out_of_character_step_can_roll_and_resume_with_its_reply(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+
+    paused = _stream(
+        client,
+        campaign_id,
+        _script({"rounds": [[OOC_REPLY], [ROLL]], "ooc": "Roll to see if they listen."}),
+    )
+    assert paused[-1]["type"] == "prompt"
+    assert _assistant_ids(app, campaign_id) == []
+
+    events = _answer(client, campaign_id, "roll")
+
+    assert _deltas(events) == "Roll to see if they listen."
+    assert events[-1]["type"] == "saved"
+    assert _state(app, campaign_id).turn is None
+
+
+def test_empty_out_of_character_reply_fails_and_keeps_the_message(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+
+    events = _stream(client, campaign_id, _script({"rounds": [[OOC_REPLY]]}))
+
+    assert events[-1]["type"] == "error"
+    assert "empty reply" in events[-1]["message"]
+    assert _assistant_ids(app, campaign_id) == []
+    assert _saved_message_count(app) == 1

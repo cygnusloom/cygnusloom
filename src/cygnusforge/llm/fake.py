@@ -33,6 +33,7 @@ from cygnusforge.llm.base import ChatReply, LLMError, TextDelta, ToolRequest
 
 DIRECTIVE = "__FAKE__:"
 SPEECH_MARKER = "Speech step."
+OOC_MARKER = "Out-of-character step."
 _decoder = json.JSONDecoder()
 _WORDS = re.compile(r"\s*\S+|\s+")
 
@@ -61,7 +62,8 @@ class FakeProvider:
         tools: list[dict[str, Any]] | None = None,
     ) -> AsyncIterator[TextDelta | ChatReply]:
         self.calls.append(messages)
-        reply = _respond(messages, decision=False)  # errors surface before anything is yielded
+        # Narration has no tools; a step that offers tools makes decisions, as chat does.
+        reply = _respond(messages, decision=tools is not None)  # errors surface before any yield
         for piece in _WORDS.findall(reply.text):
             yield TextDelta(piece)
         yield reply
@@ -127,9 +129,19 @@ def _respond(messages: list[dict[str, Any]], decision: bool) -> ChatReply:
     last_user = max(i for i, m in enumerate(messages) if m["role"] == "user")
     done = sum(1 for m in messages[last_user + 1 :] if "tool_calls" in m)
     if done >= len(rounds):
+        if _is_ooc(messages):
+            return ChatReply(text=str(turn.get("ooc", "")))
         return ChatReply(text="")
     prefix = f"fake_{turn_index}_{done}"
     return ChatReply(text="", tool_requests=_tool_requests(rounds[done], prefix))
+
+
+def _is_ooc(messages: list[dict[str, Any]]) -> bool:
+    return (
+        bool(messages)
+        and messages[-1]["role"] == "system"
+        and OOC_MARKER in messages[-1]["content"]
+    )
 
 
 def _echo(messages: list[dict[str, Any]]) -> str:

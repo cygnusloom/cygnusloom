@@ -34,6 +34,7 @@ from cygnusforge.services.events import (
     ChatPlayer,
     ContextPart,
     GameEvent,
+    OocStarted,
     PromptShown,
     SpeechWritten,
     StateStepMade,
@@ -77,9 +78,12 @@ SYSTEM_PROMPT = (
 )
 TOOL_CALL_MARKUP = "<tool_call"
 STATE_INSTRUCTION = (
-    "State management step. Decide what this action changes and what needs to be said or done, "
-    "then make it so with tool calls: create, update, or delete locations, characters, and notes as "
-    "the story needs; move characters; ask for a roll when the outcome is uncertain; and call speak "
+    "State management step. If the player is speaking out of character (to you as the GM rather "
+    "than to their character, about the rules or the world, or asking for a change outside the "
+    "story), call ooc and make no other tool calls: the out-of-character step that follows replies "
+    "and makes any change. Otherwise, decide what this action changes and what needs to be said or "
+    "done, then make it so with tool calls: create, update, or delete locations, characters, and "
+    "notes as the story needs; move characters; ask for a roll when the outcome is uncertain; and call speak "
     "once for each NPC who says something, with everything they say in one intent, without writing "
     "their words yourself. Before adding a note, check the existing notes: update one rather than "
     "repeating a fact. Record only settled facts, not actions still in progress. Do not narrate "
@@ -94,6 +98,13 @@ NARRATE_INSTRUCTION = (
     "dialogue into the narration where it fits, copied exactly, and do not write any other words for "
     "an NPC. Do not narrate notes or other GM-only records, and do not mention tool names or ids. "
     "Do not call tools."
+)
+OOC_INSTRUCTION = (
+    "Out-of-character step. The player is talking to you as the GM, not to their character. Reply "
+    "to them directly, in your own voice, and do not narrate the scene. Answer what they asked, "
+    "briefly. If their request needs a change to the world, make it with tool calls first, and "
+    "write no text before those calls: text written before a tool call is shown to the player "
+    "right away. If the story should move on after your reply, call ooc with no_narration false."
 )
 SPEECH_INSTRUCTION = (
     "Speech step. Write only the words the speaker says aloud to the player, in character, "
@@ -517,7 +528,12 @@ class Saved:
     event_id: int
 
 
-TurnEvent = Status | Delta | Logged | Prompt | Saved
+@dataclass(frozen=True)
+class NextMessage:
+    """The reply goes on in a new message, such as the story after an out-of-character reply."""
+
+
+TurnEvent = Status | Delta | Logged | Prompt | Saved | NextMessage
 
 
 def _add_instruction(
@@ -548,6 +564,22 @@ def _queued_dialogue_note(speech: list[dict[str, str]]) -> dict[str, str]:
         "content": "Dialogue already queued this reply, in the order it was said:\n"
         f"{lines}\nDo not speak these NPCs again. To amend a queued line, call speak with "
         "replace: true.",
+    }
+
+
+def _tool_call_message(step: ChatReply) -> dict[str, Any]:
+    """The assistant message that records a step's tool requests, as the model sees it."""
+    return {
+        "role": "assistant",
+        "content": step.text or None,
+        "tool_calls": [
+            {
+                "id": request.id,
+                "type": "function",
+                "function": {"name": request.name, "arguments": request.arguments},
+            }
+            for request in step.tool_requests
+        ],
     }
 
 
@@ -643,9 +675,13 @@ def _tool_context(
     async def speak(speaker: str, profile: str, intent: str, replace: bool) -> None:
         await _speak(engine, provider, model_name, campaign_id, speaker, profile, intent, replace)
 
+    def ooc(narrate: bool) -> None:
+        _record(engine, campaign_id, OocStarted(narrate=narrate))
+
     return ToolContext(
         world=WorldTools(engine, campaign_id, library.core.tables, rng, character),
         speak=speak,
+        ooc=ooc,
     )
 
 
@@ -832,6 +868,59 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             continue
         if turn.narrating:
             break
+        if turn.ooc:
+            yield Status("Replying out of character...")
+            round_no = turn.rounds + 1
+            view = list(turn.messages)
+            if turn.speech:
+                view.append(_queued_dialogue_note(turn.speech))
+            view.append({"role": "system", "content": OOC_INSTRUCTION})
+            step: ChatReply | None = None
+            async for item in run.provider.stream(run.model_name, view, tools):
+                if isinstance(item, TextDelta):
+                    yield Delta(item.text)
+                else:
+                    step = item
+            if step is None:
+                raise LLMError("the model returned no reply")
+            if step.tool_requests:
+                context = []
+                if step.text:
+                    context.append(
+                        ContextPart(
+                            "assistant", f"GM out-of-character text (round {round_no})", step.text
+                        )
+                    )
+                _record(
+                    run.engine,
+                    run.campaign_id,
+                    StateStepMade(
+                        requests=[asdict(request) for request in step.tool_requests],
+                        messages=[_tool_call_message(step)],
+                        context=_dicts(context),
+                    ),
+                )
+                continue
+            reply = step.text.strip()
+            if not reply:
+                raise LLMError("the model returned an empty reply")
+            if turn.ooc_narrate:
+                messages: list[dict[str, Any]] = [{"role": "assistant", "content": reply}]
+                context = [ContextPart("assistant", "GM out-of-character reply", reply)]
+                if turn.speech:
+                    _add_speech(messages, context, turn.speech)
+                _add_instruction(messages, context, "Narrate instruction", NARRATE_INSTRUCTION)
+                _record(
+                    run.engine,
+                    run.campaign_id,
+                    StateStepMade(requests=[], messages=messages, context=_dicts(context)),
+                    ChatGM(content=reply, model=run.model, final=False),
+                )
+                yield NextMessage()
+                continue
+            event_id = _record(run.engine, run.campaign_id, ChatGM(content=reply, model=run.model))
+            yield Saved(event_id)
+            return
         yield Status("Managing state...")
         round_no = turn.rounds + 1
         view = [*turn.messages, state]
@@ -858,26 +947,12 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
         context = []
         if step.text:
             context.append(ContextPart("assistant", f"GM text (round {round_no})", step.text))
-        messages = [
-            {
-                "role": "assistant",
-                "content": step.text or None,
-                "tool_calls": [
-                    {
-                        "id": request.id,
-                        "type": "function",
-                        "function": {"name": request.name, "arguments": request.arguments},
-                    }
-                    for request in step.tool_requests
-                ],
-            }
-        ]
         _record(
             run.engine,
             run.campaign_id,
             StateStepMade(
                 requests=[asdict(request) for request in step.tool_requests],
-                messages=messages,
+                messages=[_tool_call_message(step)],
                 context=_dicts(context),
             ),
         )

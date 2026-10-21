@@ -78,6 +78,7 @@ CORE_TOOLS = {
     "delete_note",
     "search_notes",
     "speak",
+    "ooc",
 }
 
 

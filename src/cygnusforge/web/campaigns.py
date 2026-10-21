@@ -19,6 +19,7 @@ from cygnusforge.services.accounts import is_test_user
 from cygnusforge.services.campaigns import (
     Delta,
     Logged,
+    NextMessage,
     Prompt,
     Saved,
     Status,
@@ -320,6 +321,8 @@ def _line(event: TurnEvent | TurnError) -> str:
             payload = {"type": "prompt", "text": text, "dice": dice, "details": details}
         case Saved(event_id):
             payload = {"type": "saved", "event_id": event_id}
+        case NextMessage():
+            payload = {"type": "next_message"}
         case TurnError(status, message):
             payload = {"type": "error", "status": status, "message": message}
     return json.dumps(payload)

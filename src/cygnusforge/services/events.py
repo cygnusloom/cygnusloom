@@ -103,6 +103,10 @@ class Turn:
     rounds: int = 0
     queue: list[ToolRequest] = field(default_factory=list)
     narrating: bool = False
+    # The player's message is out of character: an out-of-character step replies next. The story
+    # is narrated after that reply only when `ooc_narrate` is set.
+    ooc: bool = False
+    ooc_narrate: bool = True
     prompt: Ask | None = None
     # NPC lines written this turn that the narration has not seen yet: {"speaker", "dialogue"}.
     speech: list[dict[str, str]] = field(default_factory=list)
@@ -517,17 +521,22 @@ class ChatPlayer(GameEvent):
 
 @dataclass(frozen=True)
 class ChatGM(GameEvent):
-    """The GM's reply. It closes the turn, and the turn's context is what this reply was written
-    from."""
+    """The GM's reply. The final reply closes the turn, and the turn's context is what this reply
+    was written from. A reply that is not final is an out-of-character reply that the story
+    continues after."""
 
     kind: ClassVar[str] = "chat.gm"
     channel: ClassVar[Channel] = Channel.TRANSCRIPT
 
     content: str
     model: str
+    final: bool = True
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        state.turn = None
+        if self.final:
+            state.turn = None
+        else:
+            _open_turn(state).ooc = False
 
     def render(self) -> str:
         return self.content
@@ -606,6 +615,22 @@ class StateStepMade(GameEvent):
         if not self.requests:
             turn.narrating = True
             turn.speech = []
+
+
+@dataclass(frozen=True)
+class OocStarted(GameEvent):
+    """The open turn's player message is out of character. The out-of-character step replies
+    next, and the story is narrated after that reply only when `narrate` is set."""
+
+    kind: ClassVar[str] = "turn.ooc"
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    narrate: bool
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        turn = _open_turn(state)
+        turn.ooc = True
+        turn.ooc_narrate = self.narrate
 
 
 @dataclass(frozen=True)
