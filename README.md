@@ -82,6 +82,8 @@ Speech: the GM does not write dialogue in its narration. To have an NPC speak, i
 
 Settings are fixed when a campaign is created. The schema changed, so databases from earlier versions need a new one: delete `cygnusforge.db` or point `CYGNUSFORGE_DATABASE_URL` somewhere new.
 
+For a throwaway database, run the "Cygnus Forge: web server (temp database)" launch configuration in VS Code. It runs `scripts/temp_server.py`, which creates a new SQLite database in a temp directory on each start and deletes it when the server stops. It does not reload on code changes, so restart it after editing code.
+
 ## Configuration
 
 | Variable | Default | Purpose |

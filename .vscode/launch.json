@@ -16,6 +16,17 @@
             "console": "integratedTerminal",
             "jinja": true,
             "justMyCode": false
+        },
+        {
+            "name": "Cygnus Forge: web server (temp database)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/temp_server.py",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "envFile": "${workspaceFolder}/.env",
+            "console": "integratedTerminal",
+            "jinja": true,
+            "justMyCode": false
         }
     ]
 }
