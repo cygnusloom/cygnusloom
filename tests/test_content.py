@@ -78,6 +78,7 @@ CORE_TOOLS = {
     "search_location",
     "search_npc",
     "get_statblock",
+    "character_options",
     "add_note",
     "update_note",
     "delete_note",

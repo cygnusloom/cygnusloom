@@ -22,7 +22,9 @@ from cygnusforge.content.character import (
     Sheet,
     TableOption,
     campaign_schema,
+    check_choices,
     check_swaps,
+    choice_options,
     describe,
     resolve,
 )
@@ -225,6 +227,9 @@ class WorldTools:
         with session_scope(self.engine) as db:
             return get_statblock(load_state(db, self.campaign_id), name, self.character)
 
+    def character_options(self, field: str | None = None) -> dict[str, Any]:
+        return choice_options(self.character, field)
+
     def lookup_index(self) -> dict[str, list[dict[str, Any]]]:
         with session_scope(self.engine) as db:
             return lookup_index(load_state(db, self.campaign_id))
@@ -317,6 +322,7 @@ def create_player_character(
         raise InvalidInput("every stat needs a value")
     try:
         check_swaps(spec, rolled, chosen)
+        check_choices(spec, submitted.get("fields", {}))
     except CharacterError as error:
         raise InvalidInput(str(error)) from error
     sheet = resolve(spec, submitted, rng)
@@ -380,6 +386,10 @@ def create_npc(
     name = _text(name, "name", MAX_NAME)
     _ensure_free_name(state, name)
     where = _place_named(state, location)
+    try:
+        check_choices(spec, (character or {}).get("fields", {}))
+    except CharacterError as error:
+        raise InvalidInput(str(error)) from error
     event = _npc_event(
         tables,
         rng,

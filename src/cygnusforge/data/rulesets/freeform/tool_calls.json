@@ -11,7 +11,7 @@
       "properties": {
         "prompt": {
           "type": "string",
-          "description": "What the GM says to the player to invite the roll, for example: \"Roll to see if Mara believes you.\" The player sees this text."
+          "description": "What the GM says to the player to invite the roll. The player sees this text."
         },
         "relationship": {
           "type": "integer",

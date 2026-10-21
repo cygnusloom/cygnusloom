@@ -12,7 +12,9 @@ from cygnusforge.content.character import (
     Sheet,
     TableOption,
     character_schema,
+    check_choices,
     check_swaps,
+    choice_options,
     describe,
     resolve,
     roll_stats,
@@ -201,19 +203,38 @@ def _named_work_spec(options: tuple[TableOption, ...]) -> CharacterSpec:
     )
 
 
-def test_schema_lists_named_options_with_their_descriptions():
+def test_schema_leaves_table_values_to_the_lookup():
     named = TableOption(name="The Wild Tongue", description="A bundle of scrolls.")
     plain = TableOption(name=None, description="Lilt")
     spec = _named_work_spec((named, plain))
     field = character_schema(spec)["properties"]["fields"]["properties"]["work"]
-    assert field["enum"] == ["The Wild Tongue", "Lilt"]
-    assert field["description"] == ("What you did\n- The Wild Tongue: A bundle of scrolls.\n- Lilt")
+    assert field == {"type": "string", "description": "What you did"}
 
 
-def test_schema_leaves_description_only_tables_as_they_are():
-    spec = _named_work_spec((TableOption(name=None, description="Lilt"),))
-    field = character_schema(spec)["properties"]["fields"]["properties"]["work"]
-    assert field == {"type": "string", "enum": ["Lilt"], "description": "What you did"}
+def test_choice_options_lists_table_fields_then_their_values():
+    named = TableOption(name="The Wild Tongue", description="A bundle of scrolls.")
+    spec = _named_work_spec((named, TableOption(name=None, description="Lilt")))
+    assert choice_options(spec) == {"fields": [{"field": "work", "name": "What you did"}]}
+    assert choice_options(spec, "work") == {
+        "field": "work",
+        "options": [
+            {"value": "The Wild Tongue", "description": "A bundle of scrolls."},
+            {"value": "Lilt"},
+        ],
+    }
+    assert "error" in choice_options(spec, "nope")
+
+
+def test_check_choices_accepts_listed_values_and_rejects_others():
+    named = TableOption(name="The Wild Tongue", description="A bundle of scrolls.")
+    spec = _named_work_spec((named, TableOption(name=None, description="Lilt")))
+    check_choices(spec, {"work": "The Wild Tongue"})
+    check_choices(spec, {"work": "Lilt"})
+    check_choices(spec, {})
+    with pytest.raises(CharacterError):
+        check_choices(spec, {"work": "Nope"})
+    with pytest.raises(CharacterError):
+        check_choices(spec, {"work": "A bundle of scrolls."})
 
 
 def test_resolve_stores_the_name_of_a_named_option():

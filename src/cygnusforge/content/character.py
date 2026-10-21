@@ -254,7 +254,8 @@ def _is_count(text: str) -> bool:
 
 def character_schema(spec: CharacterSpec) -> dict[str, Any]:
     """The JSON schema for a character's options. Every part is optional: a GM may give any
-    combination, and anything left out is rolled or left blank."""
+    combination, and anything left out is rolled or left blank. A field that takes a table value
+    lists its values with `choice_options`, not here; `check_choices` checks them."""
     properties: dict[str, Any] = {}
     if spec.stats:
         properties["stats"] = _object(
@@ -286,43 +287,71 @@ def character_schema(spec: CharacterSpec) -> dict[str, Any]:
             "uniqueItems": True,
             "description": "Features the character has besides any a template grants",
         }
-    fields = {f.id: _field_schema(f, spec.tables) for f in spec.fields.values()}
+    fields = {
+        f.id: {"type": "string", "description": f.description or f.name}
+        for f in spec.fields.values()
+    }
     for template in spec.templates.values():
         for table in template.tables:
-            fields[table] = _choice_schema(spec.table_names.get(table, table), spec.tables[table])
+            fields[table] = {"type": "string", "description": spec.table_names.get(table, table)}
     properties["fields"] = _object(fields)
     return {
         "type": "object",
-        "description": "Character options. Anything left out is rolled or left blank.",
+        "description": (
+            "Character options. Anything left out is rolled or left blank. A field that takes "
+            "a table value must use one of the values from the character_options lookup."
+        ),
         "properties": properties,
         "additionalProperties": False,
     }
 
 
-def _field_schema(field: Field, tables: Mapping[str, Sequence[TableOption]]) -> dict[str, Any]:
-    description = field.description or field.name
-    if field.table is None:
-        return {"type": "string", "description": description}
-    return _choice_schema(description, tables[field.table])
-
-
-def _choice_schema(description: str, options: Sequence[TableOption]) -> dict[str, Any]:
-    """A choice from a table. When some options are named, each is listed with its description,
-    so the GM can choose by what the option does."""
-    schema: dict[str, Any] = {
-        "type": "string",
-        "enum": [option.value for option in options],
-        "description": description,
+def option_fields(spec: CharacterSpec) -> dict[str, tuple[str, str]]:
+    """The fields that take a table value, each with its label and table. A template's table is
+    keyed by the table's id, as it is in the character's fields."""
+    found = {
+        f.id: (f.description or f.name, f.table)
+        for f in spec.fields.values()
+        if f.table is not None
     }
-    if any(option.name is not None for option in options):
-        lines = [
-            f"- {option.name}: {option.description}"
-            if option.name is not None
-            else f"- {option.description}"
-            for option in options
-        ]
-        schema["description"] = description + "\n" + "\n".join(lines)
-    return schema
+    for template in spec.templates.values():
+        for table in template.tables:
+            found[table] = (spec.table_names.get(table, table), table)
+    return found
+
+
+def choice_options(spec: CharacterSpec, field: str | None = None) -> dict[str, Any]:
+    """The fields that take a table value when `field` is None. Otherwise, the values that field
+    can take, with a description for each option that has a name."""
+    fields = option_fields(spec)
+    if field is None:
+        return {"fields": [{"field": key, "name": label} for key, (label, _) in fields.items()]}
+    if field not in fields:
+        return {"error": f"no field {field!r}; the fields with choices are {', '.join(fields)}"}
+    return {
+        "field": field,
+        "options": [_option_entry(option) for option in spec.tables[fields[field][1]]],
+    }
+
+
+def _option_entry(option: TableOption) -> dict[str, str]:
+    if option.name is None:
+        return {"value": option.description}
+    return {"value": option.name, "description": option.description}
+
+
+def check_choices(spec: CharacterSpec, fields: Mapping[str, Any]) -> None:
+    """Raise CharacterError when a field that takes a table value is given a value that is not
+    one of the table's options."""
+    tables = option_fields(spec)
+    for key, value in fields.items():
+        if key not in tables:
+            continue
+        values = [option.value for option in spec.tables[tables[key][1]]]
+        if value not in values:
+            raise CharacterError(
+                f"{key!r} must be one of the values from character_options for {key!r}"
+            )
 
 
 def _object(properties: dict[str, Any]) -> dict[str, Any]:
@@ -361,6 +390,32 @@ def campaign_schema(spec: CampaignSpec) -> dict[str, Any]:
         "required": list(properties),
         "additionalProperties": False,
     }
+
+
+def _field_schema(field: Field, tables: Mapping[str, Sequence[TableOption]]) -> dict[str, Any]:
+    description = field.description or field.name
+    if field.table is None:
+        return {"type": "string", "description": description}
+    return _choice_schema(description, tables[field.table])
+
+
+def _choice_schema(description: str, options: Sequence[TableOption]) -> dict[str, Any]:
+    """A choice from a table. When some options are named, each is listed with its description,
+    so the GM can choose by what the option does."""
+    schema: dict[str, Any] = {
+        "type": "string",
+        "enum": [option.value for option in options],
+        "description": description,
+    }
+    if any(option.name is not None for option in options):
+        lines = [
+            f"- {option.name}: {option.description}"
+            if option.name is not None
+            else f"- {option.description}"
+            for option in options
+        ]
+        schema["description"] = description + "\n" + "\n".join(lines)
+    return schema
 
 
 NO_CHARACTER = CharacterSpec(
@@ -411,8 +466,9 @@ def check_swaps(spec: CharacterSpec, rolled: Mapping[str, int], chosen: Mapping[
 
 def resolve(spec: CharacterSpec, submitted: Mapping[str, Any], rng: random.Random) -> Sheet:
     """Fill in what a GM or player left out, and roll what is random. `submitted` must already
-    match `character_schema(spec)`. Stats left out are rolled; text left out is blank; a table
-    left out is rolled; a template's features are added with their rolled counts."""
+    match `character_schema(spec)` and pass `check_choices`. Stats left out are rolled; text left
+    out is blank; a table left out is rolled; a template's features are added with their rolled
+    counts."""
     given_stats = submitted.get("stats", {})
     given_templates = submitted.get("templates", {})
     given_features = submitted.get("features", [])

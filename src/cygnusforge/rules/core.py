@@ -121,6 +121,10 @@ def get_statblock(name: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.get_statblock(name)
 
 
+def character_options(ctx: ToolContext, field: str | None = None) -> dict[str, Any]:
+    return ctx.world.character_options(field)
+
+
 def lookup_rule(rule: str, ctx: ToolContext) -> dict[str, str]:
     text = ctx.rules.get(rule)
     if text is None:

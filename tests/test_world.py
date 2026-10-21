@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from cygnusforge.content.character import NO_CAMPAIGN, TableOption
+from cygnusforge.content.character import NO_CAMPAIGN, TableOption, choice_options, option_fields
 from cygnusforge.content.library import ContentLibrary, LocationTemplate
 from cygnusforge.db.models import Event
 from cygnusforge.llm.base import ChatReply, ToolRequest
@@ -264,6 +264,39 @@ def test_location_and_character_names_are_unique(client_factory: Callable[[], Te
         {"name": "Ada", "location": "Mossbell Hollow", "description": ""},
     )
     assert "error" in error
+
+
+def test_npc_character_values_come_from_the_lookup(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    _, campaign_id = _campaign_id(client_factory)
+    field = next(iter(option_fields(CAIRN.character)))
+    value = choice_options(CAIRN.character, field)["options"][0]["value"]
+    with _db(app) as db, pytest.raises(InvalidInput, match=repr(field)):
+        world.create_npc(
+            db,
+            campaign_id,
+            TABLES,
+            random.Random(0),
+            CAIRN.character,
+            name="Pip",
+            location="Mossbell Hollow",
+            description="A tinker.",
+            character={"fields": {field: "Not a value"}},
+        )
+    with _db(app) as db:
+        world.create_npc(
+            db,
+            campaign_id,
+            TABLES,
+            random.Random(0),
+            CAIRN.character,
+            name="Pip",
+            location="Mossbell Hollow",
+            description="A tinker.",
+            character={"fields": {field: value}},
+        )
+        db.commit()
 
 
 def test_npc_needs_a_known_location(client_factory: Callable[[], TestClient], app):
@@ -1028,6 +1061,7 @@ LOOKUP_TOOL_NAMES = {
     "search_location",
     "search_npc",
     "get_statblock",
+    "character_options",
     "lookup_rule",
 }
 

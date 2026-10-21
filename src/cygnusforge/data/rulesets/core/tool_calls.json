@@ -5,13 +5,13 @@
     "name": "create_location",
     "python_module": "core",
     "function": "create_location",
-    "description": "Add a new location to the campaign, such as a village, a clearing, or a building. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs. Set discovered to true only when anyone in the world would have heard of the place, so the player already knows it. A point on the map can hold only one place: if another place already has the point, the call is refused until you pass force=true. To put a place inside another, such as a building in a city, give parent set to the name of that top-level location; such a place has no map point of its own, so leave out x and y.",
+    "description": "Add a new location to the campaign. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs. Set discovered to true only when anyone in the world would have heard of the place, so the player already knows it. To put a place inside another, give parent set to the name of that top-level location; such a place has no map point of its own, so leave out x and y.",
     "parameters": {
       "type": "object",
       "properties": {
         "name": {
           "type": "string",
-          "description": "The location's name, such as \"Mossbell Hollow\"."
+          "description": "The location's name."
         },
         "description": {
           "type": "string",
@@ -35,7 +35,7 @@
         },
         "parent": {
           "type": "string",
-          "description": "The name of the top-level location this place is inside, such as a city for a building. Leave it out for a place on the map. A place with a parent cannot be given x or y."
+          "description": "The name of the top-level location this place is inside. Leave it out for a place on the map. A place with a parent cannot be given x or y."
         }
       },
       "required": [
@@ -69,7 +69,7 @@
         },
         "personality": {
           "type": "string",
-          "description": "Optional. How the NPC carries themselves, such as \"gruff and suspicious\"."
+          "description": "Optional. How the NPC carries themselves."
         },
         "accent": {
           "type": "string",
@@ -152,7 +152,7 @@
       "properties": {
         "query": {
           "type": "string",
-          "description": "Words to look for, such as \"bridge\" or \"Mara oath\"."
+          "description": "Words to look for."
         }
       },
       "required": [
@@ -192,7 +192,7 @@
       "properties": {
         "query": {
           "type": "string",
-          "description": "Words to look for, such as \"harbor\" or \"old mill\"."
+          "description": "Words to look for."
         }
       },
       "required": [
@@ -213,7 +213,7 @@
       "properties": {
         "query": {
           "type": "string",
-          "description": "Words to look for, such as \"ferryman\" or \"nervous\"."
+          "description": "Words to look for."
         }
       },
       "required": [
@@ -240,6 +240,25 @@
       "required": [
         "name"
       ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "character_options",
+    "name": "character_options",
+    "python_module": "core",
+    "function": "character_options",
+    "lookup": true,
+    "description": "List the values a character field can take, for create_npc's character option. Call it with no field to list the fields that take a value from a table. Call it with a field to list that field's values, with a description of what each named option does.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "The field to list, from the fields that take a table value."
+        }
+      },
+      "required": []
     }
   },
   {
@@ -292,7 +311,7 @@
         },
         "intent": {
           "type": "string",
-          "description": "What the NPC wants to say or achieve in this moment, such as \"warns the player off the bridge\"."
+          "description": "What the NPC wants to say or achieve in this moment."
         },
         "replace": {
           "type": "boolean",
@@ -311,7 +330,7 @@
     "name": "update_location",
     "python_module": "core",
     "function": "update_location",
-    "description": "Change a location's description, for example after the place changes. Move it on the map by giving x and y, or take it off the map by setting off_map to true. A place inside another cannot be given x or y. Its name stays the same. Leave x, y, and off_map out to keep its position. Use delete_location instead to remove the place from the story.",
+    "description": "Change a location's description. Move it on the map by giving x and y, or take it off the map by setting off_map to true. A place inside another cannot be given x or y. Its name stays the same. Leave x, y, and off_map out to keep its position. Use delete_location instead to remove the place from the story.",
     "parameters": {
       "type": "object",
       "properties": {
