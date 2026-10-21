@@ -697,13 +697,16 @@ def test_campaign_page_panels_show_only_the_scene(client_factory: Callable[[], T
         db.commit()
     page = client.get(f"/campaigns/{campaign_id}").text
 
-    characters = page[page.index('id="panel-characters"') : page.index('id="panel-sheet"')]
+    characters = page[page.index('id="panel-location"') : page.index('id="panel-character"')]
     assert "Brin Gallowcap" in characters
     assert "Mara Thistledown" not in characters
     assert "Mossbell Hollow" not in characters
 
-    sheet = page[page.index('id="panel-sheet"') : page.index('id="panel-notes"')]
+    sheet = page[page.index('id="panel-character"') : page.index('id="panel-notes"')]
     assert "Tall, with a red scarf." in sheet
+    assert ">Location<" in page
+    assert ">Character<" in page
+    assert ">Sheet<" not in page
 
     notes = page[page.index('id="panel-notes"') : page.index('id="dialog-turn-context"')]
     assert "Find the lost key." in notes

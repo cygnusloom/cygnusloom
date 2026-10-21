@@ -33,7 +33,7 @@ from cygnusforge.services.events import (
     load_state,
     name_key,
     record,
-    token_label,
+    token_labels,
 )
 
 MAX_MAP_NAME = 120
@@ -355,13 +355,14 @@ def encounter_view(state: CampaignState, grid: EncounterGrid | None) -> dict[str
         return None
     entry = state.maps[name_key(encounter.map)]
     participants = []
-    for number, display in enumerate(encounter.order, start=1):
-        character = state.characters[name_key(display)]
+    characters = [state.characters[name_key(display)] for display in encounter.order]
+    labels = token_labels(character.name for character in characters)
+    for number, character in enumerate(characters, start=1):
         acting = encounter.acting == character.name
         participants.append(
             {
                 "number": number,
-                "label": token_label(character.name),
+                "label": labels[character.name],
                 "name": character.name,
                 "is_pc": character.kind == PC_KIND,
                 "cell": encounter.cells.get(name_key(character.name)),

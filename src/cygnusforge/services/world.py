@@ -57,7 +57,7 @@ from cygnusforge.services.events import (
     load_state,
     name_key,
     record,
-    token_label,
+    token_labels,
 )
 from cygnusforge.services.tools import check_arguments
 
@@ -748,10 +748,11 @@ def map_view(state: CampaignState) -> MapView:
     radius = reach * MAP_MARGIN
     pc = state.pc()
     here = pc.location if pc is not None else None
+    labels = token_labels(place.name for place in places)
     markers = [
         MapMarker(
             name=place.name,
-            label=token_label(place.name),
+            label=labels[place.name],
             left=round(50 + place.position.x / radius * 50, 2),
             top=round(50 - place.position.y / radius * 50, 2),
             here=place.name == here,

@@ -14,7 +14,13 @@ from cygnusforge.content.library import EncounterGrid
 from cygnusforge.llm.base import ToolRequest
 from cygnusforge.services import campaigns, encounters
 from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import CampaignState, ChatGM, record, token_label
+from cygnusforge.services.events import (
+    CampaignState,
+    ChatGM,
+    record,
+    token_label,
+    token_labels,
+)
 from cygnusforge.services.tools import ToolRun, run_tool
 from tests.conftest import content_library, csrf_token
 from tests.test_campaigns import _campaign_id, _place_pc, _send
@@ -407,7 +413,7 @@ def test_campaign_page_shows_the_encounter_board_and_turn_controls(
     assert page.index('aria-label="Map views"') < page.index('aria-label="Panels"')
     assert page.index('id="panel-encounter"') < page.index('aria-label="Panels"')
     assert page.index('id="panel-world"') < page.index('aria-label="Panels"')
-    assert 'id="tab-characters" aria-controls="panel-characters" aria-selected="true"' in page
+    assert 'id="tab-location" aria-controls="panel-location" aria-selected="true"' in page
     assert "world-map-details" not in page
 
     _begin(app, campaign_id, "Pip")
@@ -432,6 +438,15 @@ def test_token_labels_are_short_initials_or_a_prefix():
     assert token_label("Ada Lovelace the Third") == "ALT"
     assert token_label("Pip") == "Pip"
     assert token_label("  Bartholomew ") == "Bar"
+
+
+def test_token_labels_never_share_a_label_within_a_set():
+    labels = token_labels(["Mara Thistledown", "Mossbell Terrace", "Mossbell Hollow"])
+    assert labels["Mossbell Hollow"] == "MH"
+    assert len(set(labels.values())) == 3
+
+    labels = token_labels(["Mara Tower", "Mara Thistledown"])
+    assert len(set(labels.values())) == 2
 
 
 def test_encounter_map_can_be_renamed_and_moved_while_in_use(
@@ -514,7 +529,7 @@ def test_campaign_page_draws_tokens_with_full_name_tooltips_and_no_legend(
     page = client.get(f"/campaigns/{campaign_id}").text
     assert '<span class="map-token">Ada</span>' in page
     assert 'title="Ada"' in page
-    assert "Not on the map: Pip." in page
+    assert "Not on the map" not in page
     assert "encounter-list" not in page
     assert "map-legend" not in page
     assert "map-number" not in page

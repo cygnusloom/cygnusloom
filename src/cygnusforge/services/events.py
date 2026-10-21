@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field, fields, replace
 from enum import StrEnum
 from typing import Any, ClassVar
@@ -209,6 +210,26 @@ def token_label(name: str) -> str:
     if len(words) > 1:
         return "".join(word[0] for word in words[:3]).upper()
     return name.strip()[:3]
+
+
+def token_labels(names: Iterable[str]) -> dict[str, str]:
+    """Map each name to a token label that no other name in the set shares. A label that clashes is
+    lengthened, one letter at a time, until it is unique or the name has no letters left to add."""
+    names = list(names)
+    compact = {name: "".join(ch for ch in name if ch.isalnum()) for name in names}
+    labels = {name: token_label(name) for name in names}
+    widths = {name: len(labels[name]) for name in names}
+    while True:
+        owners: dict[str, list[str]] = {}
+        for name, label in labels.items():
+            owners.setdefault(label, []).append(name)
+        clashing = [name for group in owners.values() if len(group) > 1 for name in group]
+        grown = [name for name in clashing if widths[name] < len(compact[name])]
+        if not grown:
+            return labels
+        for name in grown:
+            widths[name] += 1
+            labels[name] = compact[name][: widths[name]]
 
 
 EVENT_TYPES: dict[str, type[GameEvent]] = {}
