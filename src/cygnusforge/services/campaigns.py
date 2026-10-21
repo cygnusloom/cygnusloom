@@ -107,7 +107,7 @@ OPENING_PROMPT = (
     "the rule set calls for. Then call ooc with no_narration true. In your reply, write one sentence "
     "for each of these, in this order, and nothing more: introducing yourself as Cygnus, the game "
     "master; one for each important detail the player must know before they act; one for each player "
-    "character; setting the scene; and prompting the player to begin acting. Then stop and leave the "
+    "character; setting the scene; and prompting the player to begin acting. You do not need to rehash game rules or character attributes - assume the player already knows these. This is a thematic introduction.Bold any keywords or core concepts. Use line breaks to separate each sentence. Then stop and leave the "
     "player to act."
 )
 OOC_INSTRUCTION = (
