@@ -95,9 +95,10 @@ NARRATE_INSTRUCTION = (
     "Narration step. Write the next beat as a good editor would: concise, specific, and free of "
     "filler. Aim for three to five sentences. Cut repetition and restated detail. Base the outcome "
     "on the state changes and tool results above. Narrate what the player can perceive: arrivals "
-    "and departures, new or changed places, NPC speech, and roll outcomes. Work the queued NPC "
-    "dialogue into the narration where it fits, copied exactly (minus any surrounding metadata/quotes), and do not write any other words for "
-    "an NPC. Do not narrate notes or other GM-only records, and do not mention tool names or ids. "
+    "and departures, new or changed places, NPC speech, and roll outcomes. The queued dialogue is "
+    "JSON: work each entry's dialogue value into the narration where it fits, copied exactly, and "
+    "do not write any other words for an NPC. Do not narrate notes or other GM-only records, and do "
+    "not mention tool names or ids. "
     "Do not call tools."
 )
 OPENING_PROMPT = (
@@ -580,13 +581,9 @@ def _add_instruction(
 def _add_speech(
     messages: list[dict[str, Any]], context: list[ContextPart], speech: list[dict[str, str]]
 ) -> None:
-    lines = "\n".join(f'{line["speaker"]}: "{line["dialogue"]}"' for line in speech)
-    _add_instruction(
-        messages,
-        context,
-        "Queued dialogue",
-        f"Dialogue spoken this turn, in the order it was said:\n{lines}",
-    )
+    lines = [{"speaker": line["speaker"], "dialogue": line["dialogue"]} for line in speech]
+    payload = json.dumps({"queued_dialogue": lines}, ensure_ascii=False, indent=2)
+    _add_instruction(messages, context, "Queued dialogue", payload)
 
 
 def _queued_dialogue_note(speech: list[dict[str, str]]) -> dict[str, str]:

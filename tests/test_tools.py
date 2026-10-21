@@ -315,7 +315,7 @@ def test_npc_dialogue_is_queued_for_the_narration_not_sent_as_a_tool_result(
     queued = [
         m
         for m in messages
-        if m["role"] == "system" and 'Mara Thistledown: "Mind the bog, dearie."' in m["content"]
+        if m["role"] == "system" and '"dialogue": "Mind the bog, dearie."' in m["content"]
     ]
     assert len(queued) == 1
     assert _saved(app, campaign_id)[-1] == (

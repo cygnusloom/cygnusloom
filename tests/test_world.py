@@ -560,6 +560,32 @@ def test_speech_is_a_separate_call_and_only_the_narration_is_saved(
     assert "Mind the bog, dearie." in json.dumps(narration)
 
 
+def test_queued_dialogue_reaches_the_narration_as_json(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    recorder = _recording_provider()
+    client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (recorder, model_id)
+    _place_pc(client, campaign_id)
+    speak_call = {
+        "name": "speak",
+        "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
+    }
+    said = 'Mind the bog: "it swallows boots".\nThen run.'
+    script = _script(
+        {"rounds": [[speak_call]], "text": "Mara looks up.", "speech": {"Mara Thistledown": said}}
+    )
+
+    _send(client, campaign_id, script)
+
+    queued = [
+        json.loads(m["content"])
+        for m in recorder.calls[-1]["messages"]
+        if m["role"] == "system" and "queued_dialogue" in str(m["content"])
+    ]
+    assert queued == [{"queued_dialogue": [{"speaker": "Mara Thistledown", "dialogue": said}]}]
+
+
 def _non_user(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """The messages the model wrote or was given by the GM, without the player's transcript."""
     return [m for m in messages if m["role"] != "user"]
@@ -629,8 +655,8 @@ def test_replace_amends_the_queued_line(client_factory: Callable[[], TestClient]
         for call in recorder.calls
     )
     narration = _contents(recorder.calls[-1]["messages"])
-    assert 'Mara Thistledown: "Warn Ada about the bog and the lantern-moths."' in narration
-    assert 'Mara Thistledown: "Warn Ada about the bog."' not in narration
+    assert '"dialogue": "Warn Ada about the bog and the lantern-moths."' in narration
+    assert '"dialogue": "Warn Ada about the bog."' not in narration
 
 
 def test_a_failed_replace_keeps_the_queued_line(
@@ -666,7 +692,7 @@ def test_a_failed_replace_keeps_the_queued_line(
     _send(client, campaign_id, script)
 
     narration = _contents(recorder.calls[-1]["messages"])
-    assert 'Mara Thistledown: "Warn Ada about the bog."' in narration
+    assert '"dialogue": "Warn Ada about the bog."' in narration
     assert "<tool_call" not in narration
 
 
