@@ -86,3 +86,11 @@ def recover_character(
     name: str, explanation: str, consequence: str, ctx: ToolContext
 ) -> dict[str, Any]:
     return ctx.world.recover_character(name, explanation, consequence)
+
+
+def retreat(name: str, safe: bool, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.retreat(name, safe)
+
+
+def player_retreat(safe: bool, ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
+    return ctx.world.player_retreat(safe, roll)

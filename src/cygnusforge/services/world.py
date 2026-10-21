@@ -31,7 +31,7 @@ from cygnusforge.content.character import (
 from cygnusforge.content.library import CombatRules, EncounterGrid, MonsterTemplate, WorldTemplate
 from cygnusforge.rules.context import brief
 from cygnusforge.rules.dice import is_formula
-from cygnusforge.services import combat, encounters
+from cygnusforge.services import combat, encounters, morale
 from cygnusforge.services.common import (
     InvalidInput,
     bounded_text,
@@ -317,6 +317,14 @@ class WorldTools:
             return combat.recover_character(
                 db, self.campaign_id, name, explanation, consequence, self._rules()
             )
+
+    def retreat(self, name: str, safe: bool) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return morale.retreat(db, self.campaign_id, name, safe, self._rules(), self.rng)
+
+    def player_retreat(self, safe: bool, roll: int) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return morale.player_retreat(db, self.campaign_id, safe, roll, self._rules())
 
     def _rules(self) -> CombatRules:
         if self.combat is None:
@@ -917,6 +925,8 @@ def _combat_lines(character: Character, spec: CharacterSpec, combat: CombatRules
         lines.append(f"Harm: {harm}")
     if character.defeated:
         lines.append(f"Status: {defeat_status(character, combat.defeat)}")
+    elif character.fled:
+        lines.append("Status: fled")
     elif character.save_due is not None:
         lines.append(f"Status: {spec.stats[character.save_due].name} save due")
     return lines

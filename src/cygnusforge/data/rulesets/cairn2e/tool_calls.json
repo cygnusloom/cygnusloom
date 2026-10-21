@@ -280,5 +280,60 @@
         "consequence"
       ]
     }
+  },
+  {
+    "type": "tool_call",
+    "id": "retreat",
+    "name": "retreat",
+    "python_module": "cairn2e",
+    "function": "retreat",
+    "description": "Have a non-player character try to run from the encounter. The engine makes its DEX save. Pass safe as true only when the NPC has a safe way out; if not, the attempt is refused. A passed save takes the NPC out of the fight. A failed save leaves it in the fight.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the NPC running."
+        },
+        "safe": {
+          "type": "boolean",
+          "description": "True when the NPC has a safe destination to run to."
+        }
+      },
+      "required": [
+        "name",
+        "safe"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "player_retreat",
+    "name": "player_retreat",
+    "python_module": "cairn2e",
+    "function": "player_retreat",
+    "description": "Ask the player character to make their DEX save to run from the encounter. Pass safe as true only when there is a safe destination to run to; if not, the attempt is refused. A passed save takes the character out of the fight. A failed save leaves them in it.",
+    "player_input": {
+      "dice": "1d20",
+      "param": "roll",
+      "details": "Run: roll 1d20 and get clear on a roll at or under your Dexterity."
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "What the player is asked to do, such as 'Make your Dexterity save to run.'"
+        },
+        "safe": {
+          "type": "boolean",
+          "description": "True when there is a safe destination to run to."
+        }
+      },
+      "required": [
+        "prompt",
+        "safe"
+      ]
+    }
   }
 ]

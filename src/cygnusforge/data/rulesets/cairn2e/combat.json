@@ -15,6 +15,13 @@
     ],
     "check_die": "1d20",
     "initiative_stat": "dex",
-    "defeat": {"player_character": "in critical damage", "npc": "dead"}
+    "defeat": {"player_character": "in critical damage", "npc": "dead"},
+    "morale": {
+      "wil_stat": "wil",
+      "first_casualty": true,
+      "half": true,
+      "lone_at": "hp",
+      "retreat_stat": "dex"
+    }
   }
 ]

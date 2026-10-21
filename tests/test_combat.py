@@ -454,7 +454,7 @@ def test_a_failed_save_defeats_a_monster(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Ghoul", claw="1d6+1d6")
     _foe(tools, "Bo")
-    result = _hit(tools, "Ghoul", "Bo", 6, 5, 20)
+    result = _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1)
     assert result["save"]["passed"] is False
     assert result["defeated"] is True
     assert _character(app, campaign_id, "Bo").defeated is True
@@ -464,7 +464,7 @@ def test_a_defeated_monster_cannot_be_hit_or_attack(client_factory):
     _, _, tools = _fight(client_factory)
     _foe(tools, "Ghoul", claw="1d6+1d6")
     _foe(tools, "Bo")
-    _hit(tools, "Ghoul", "Bo", 6, 5, 20)
+    _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1)
     with pytest.raises(InvalidInput, match="Bo is dead"):
         _hit(tools, "Ghoul", "Bo", 1)
     with pytest.raises(InvalidInput, match="Bo is dead"):
@@ -544,7 +544,7 @@ def test_a_defeated_foe_is_skipped_when_its_turn_comes_round(client_factory):
     _foe(tools, "Ghoul", claw="1d6+1d6")
     _foe(tools, "Bo")
     _foe(tools, "Cy")
-    _hit(tools, "Ghoul", "Bo", 6, 5, 20)
+    _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1)
     assert _character(app, campaign_id, "Bo").defeated is True
     _finish_gm_reply(app, campaign_id)
 
@@ -627,7 +627,7 @@ def test_a_defeated_foe_does_not_end_the_encounter_while_another_foe_stands(clie
     _foe(tools, "Ghoul", claw="1d6+1d6")
     _foe(tools, "Bo")
     _foe(tools, "Cy")
-    _hit(tools, "Ghoul", "Bo", 6, 5, 20)
+    _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1)
     assert _character(app, campaign_id, "Bo").defeated is True
     assert _state(app, campaign_id).encounter is not None
 
@@ -709,7 +709,7 @@ def test_a_defeated_foe_stays_on_the_map_as_a_body(client_factory):
     _foe(tools, "Bo")
     _foe(tools, "Cy")
     tools.place_participant("Bo", 2, 2)
-    _hit(tools, "Ghoul", "Bo", 6, 5, 20)
+    _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1)
     page = client.get(f"/campaigns/{campaign_id}").text
     roster = page[page.index('class="encounter-roster"') : page.index('aria-label="Panels"')]
     assert '<span class="roster-status">dead</span>' in roster
