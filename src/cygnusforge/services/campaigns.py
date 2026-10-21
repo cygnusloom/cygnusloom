@@ -96,7 +96,7 @@ NARRATE_INSTRUCTION = (
     "filler. Aim for three to five sentences. Cut repetition and restated detail. Base the outcome "
     "on the state changes and tool results above. Narrate what the player can perceive: arrivals "
     "and departures, new or changed places, NPC speech, and roll outcomes. Work the queued NPC "
-    "dialogue into the narration where it fits, copied exactly, and do not write any other words for "
+    "dialogue into the narration where it fits, copied exactly (minus any surrounding metadata/quotes), and do not write any other words for "
     "an NPC. Do not narrate notes or other GM-only records, and do not mention tool names or ids. "
     "Do not call tools."
 )
