@@ -102,20 +102,28 @@
           <section class="tabs-panel">
             <div class="tab-list" role="tablist" aria-label="Panels">
               <button type="button" class="tab" role="tab" id="tab-characters" aria-controls="panel-characters" aria-selected="true">Characters</button>
+              <button type="button" class="tab" role="tab" id="tab-sheet" aria-controls="panel-sheet" aria-selected="false" tabindex="-1">Sheet</button>
               <button type="button" class="tab" role="tab" id="tab-notes" aria-controls="panel-notes" aria-selected="false" tabindex="-1">Notes</button>
             </div>
             <div class="tab-panel" role="tabpanel" id="panel-characters" aria-labelledby="tab-characters">
-              {% if world_view.pc %}
+              {% if scene.pc %}
               <ul>
-                <li><strong>{{ world_view.pc.name }}</strong> <span class="muted">(you), {{ world_view.pc.location or "not yet placed" }}</span></li>
-                {% for npc in world_view.npcs %}
-                <li><strong>{{ npc.name }}</strong> <span class="muted">, {{ npc.location }}</span></li>
+                <li><strong>{{ scene.pc.name }}</strong> <span class="muted">(you), {{ scene.location.name if scene.location else "not yet placed" }}</span></li>
+                {% for npc in scene.npcs %}
+                <li><strong>{{ npc.name }}</strong></li>
                 {% endfor %}
               </ul>
               {% endif %}
             </div>
+            <div class="tab-panel" role="tabpanel" id="panel-sheet" aria-labelledby="tab-sheet" hidden>
+              {% for line in scene.sheet %}
+              <p>{{ line }}</p>
+              {% else %}
+              <p class="muted">No character sheet yet.</p>
+              {% endfor %}
+            </div>
             <div class="tab-panel" role="tabpanel" id="panel-notes" aria-labelledby="tab-notes" hidden>
-              {{ notes_list(world_view.notes) }}
+              {{ notes_list(scene.notes) }}
             </div>
           </section>
         </aside>

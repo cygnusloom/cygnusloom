@@ -8,6 +8,7 @@
   {
     "type": "rule",
     "id": "consistency",
+    "important": true,
     "text": "Keep the world consistent unless the player explicitly asks otherwise."
   },
   {

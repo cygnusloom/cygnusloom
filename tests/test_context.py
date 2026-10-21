@@ -5,6 +5,7 @@ import re
 from collections.abc import Callable
 from typing import Any
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, func, select
@@ -12,6 +13,7 @@ from sqlmodel import Session, func, select
 from cygnusforge.config import Settings
 from cygnusforge.db.models import Campaign, Event
 from cygnusforge.llm.base import ChatReply, LLMError
+from cygnusforge.rules.context import brief
 from cygnusforge.services.campaigns import SUMMARY_PROMPT, SYSTEM_PROMPT, system_parts
 from cygnusforge.services.events import CampaignState, Channel, load_state
 from cygnusforge.web.app import create_app
@@ -91,15 +93,53 @@ def _send_until_summarized(client: TestClient, app: FastAPI, campaign_id: int, s
             return
 
 
-def _system_text(rules: dict[str, str], summary: str, through: int = 0) -> str:
-    return "\n\n".join(part.content for part in system_parts("freeform", rules, summary, through))
+def _system_text(
+    rules: dict[str, str],
+    summary: str,
+    through: int = 0,
+    important: frozenset[str] | None = None,
+) -> str:
+    shown = frozenset(rules) if important is None else important
+    parts = system_parts("freeform", rules, shown, summary, through)
+    return "\n\n".join(part.content for part in parts)
 
 
-def test_rules_are_added_to_the_system_prompt():
-    prompt = _system_text({"consistency": "be consistent", "fourth": "no fourth wall"}, "")
+def test_important_rules_are_in_full_and_the_prompt_starts_with_the_base():
+    prompt = _system_text(
+        {"consistency": "be consistent", "fourth": "no fourth wall"},
+        "",
+        important=frozenset({"consistency", "fourth"}),
+    )
     assert prompt.startswith("You are Cygnus, an AI game master (GM).")
-    assert "Rules for this campaign:\n- be consistent\n- no fourth wall" in prompt
+    assert "- consistency: be consistent\n- fourth: no fourth wall" in prompt
     assert "Summary of earlier events" not in prompt
+
+
+def test_other_rules_are_listed_with_a_brief_and_their_full_text_is_left_out():
+    rules = {
+        "consistency": "Keep the world consistent. Do it always.",
+        "age": "Roll 2d20+10 for your character's age. Then write it down with much more detail.",
+    }
+    prompt = _system_text(rules, "", important=frozenset({"consistency"}))
+    assert "- consistency: Keep the world consistent. Do it always." in prompt
+    assert "- age: Roll 2d20+10 for your character's age" in prompt
+    assert "Then write it down" not in prompt
+    assert "read any other rule with lookup_rule" in prompt
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        (
+            "Roll 2d20+10 for your character's age. Then more.",
+            "Roll 2d20+10 for your character's age",
+        ),
+        ("No period here", "No period here"),
+        ("x" * 200, "x" * 119 + "…"),
+    ],
+)
+def test_brief_is_the_first_sentence_cut_to_a_short_length(text: str, expected: str):
+    assert brief(text) == expected
 
 
 def test_base_prompts_make_cygnus_the_ai_gm():
@@ -113,14 +153,17 @@ def test_summary_is_added_to_the_system_prompt_only_when_present():
     assert "Rules for this campaign" not in prompt
 
 
-def test_chat_sends_every_rule_set_rule_to_the_model(settings: Settings):
+def test_chat_sends_every_rule_to_the_model_and_only_important_rules_in_full(settings: Settings):
     provider = RecordingProvider()
     app = create_app(settings, fake_provider=provider)
     client, campaign_id = _campaign_id(lambda: TestClient(app))
     assert _send(client, campaign_id, "hello").status_code == 303
     system = provider.calls[0][0]["content"]
-    for rule_text in app.state.content.rule_sets["freeform"].rules.values():
-        assert rule_text in system
+    rule_set = app.state.content.rule_sets["freeform"]
+    for rule_id, rule_text in rule_set.rules.items():
+        assert f"- {rule_id}:" in system
+        if rule_id in rule_set.important:
+            assert rule_text in system
 
 
 def test_no_summary_when_the_chat_is_well_inside_the_window(settings: Settings):

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from cygnusforge.rules.context import ToolContext
+from cygnusforge.rules.context import ToolContext, brief
 
 
 def create_location(name: str, description: str, ctx: ToolContext) -> dict[str, Any]:
@@ -80,6 +80,39 @@ def delete_note(note_id: int, ctx: ToolContext) -> dict[str, Any]:
 
 def search_notes(query: str, ctx: ToolContext) -> dict[str, list[dict[str, Any]]]:
     return ctx.world.search_notes(query)
+
+
+def all_at_location(ctx: ToolContext, location: str | None = None) -> dict[str, Any]:
+    return ctx.world.all_at_location(location)
+
+
+def search_location(query: str, ctx: ToolContext) -> dict[str, list[dict[str, Any]]]:
+    return ctx.world.search_location(query)
+
+
+def search_npc(query: str, ctx: ToolContext) -> dict[str, list[dict[str, Any]]]:
+    return ctx.world.search_npc(query)
+
+
+def get_statblock(name: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.get_statblock(name)
+
+
+def lookup_rule(rule: str, ctx: ToolContext) -> dict[str, str]:
+    text = ctx.rules.get(rule)
+    if text is None:
+        return {"error": f"no rule {rule!r}; the rules are {', '.join(ctx.rules)}"}
+    return {"rule": rule, "text": text}
+
+
+def list_lookups(ctx: ToolContext) -> dict[str, Any]:
+    index = ctx.world.lookup_index()
+    return {
+        "tools": [{"tool": name, "brief": text} for name, text in ctx.lookup_tools.items()],
+        "rules": [{"rule": name, "brief": brief(text)} for name, text in ctx.rules.items()],
+        "locations": index["locations"],
+        "npcs": index["npcs"],
+    }
 
 
 async def speak(npc: str, intent: str, ctx: ToolContext, replace: bool = False) -> dict[str, str]:

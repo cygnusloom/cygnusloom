@@ -73,12 +73,18 @@ CORE_TOOLS = {
     "update_npc",
     "delete_npc",
     "move_actor",
+    "all_at_location",
+    "search_location",
+    "search_npc",
+    "get_statblock",
     "add_note",
     "update_note",
     "delete_note",
     "search_notes",
     "speak",
     "ooc",
+    "lookup_rule",
+    "list_lookups",
 }
 
 
@@ -389,6 +395,63 @@ def test_tool_call_function_must_exist_in_its_module(tree: Path):
 )
 def test_tool_call_definition_is_checked(tree: Path, overrides: dict[str, Any], message: str):
     _write(tree, {"rulesets/testset/module.json": _module(**overrides)})
+    with pytest.raises(ContentError, match=message):
+        ContentLibrary.load(tree)
+
+
+def test_important_rules_and_lookup_tools_are_flagged(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/rules.json": [
+                {"type": "rule", "id": "r1", "text": "No magic.", "important": True},
+                {"type": "rule", "id": "r2", "text": "Lots of detail."},
+            ],
+            "rulesets/testset/module.json": _module(lookup=True),
+        },
+    )
+    rule_set = ContentLibrary.load(tree).rule_sets["testset"]
+    assert rule_set.important == {"r1"}
+    assert rule_set.tool_calls["social"].lookup is True
+
+
+def test_unflagged_rules_and_tools_are_not_important_or_lookups(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/rules.json": [
+                {"type": "rule", "id": "r1", "text": "No magic."},
+            ],
+            "rulesets/testset/module.json": _module(),
+        },
+    )
+    rule_set = ContentLibrary.load(tree).rule_sets["testset"]
+    assert rule_set.important == frozenset()
+    assert rule_set.tool_calls["social"].lookup is False
+
+
+@pytest.mark.parametrize(
+    "rule_overrides, tool_overrides, message",
+    [
+        ({"important": "yes"}, {}, "'important' must be true or false"),
+        ({}, {"lookup": "yes"}, "'lookup' must be true or false"),
+    ],
+)
+def test_flags_must_be_true_or_false(
+    tree: Path,
+    rule_overrides: dict[str, Any],
+    tool_overrides: dict[str, Any],
+    message: str,
+):
+    _write(
+        tree,
+        {
+            "rulesets/testset/rules.json": [
+                {"type": "rule", "id": "r1", "text": "No magic.", **rule_overrides}
+            ],
+            "rulesets/testset/module.json": _module(**tool_overrides),
+        },
+    )
     with pytest.raises(ContentError, match=message):
         ContentLibrary.load(tree)
 

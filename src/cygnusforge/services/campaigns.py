@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import random
+import re
 import threading
 from collections.abc import AsyncIterator, Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
@@ -23,7 +24,7 @@ from cygnusforge.llm.base import (
     complete,
 )
 from cygnusforge.llm.registry import ProviderFactory
-from cygnusforge.rules.context import ToolContext
+from cygnusforge.rules.context import ToolContext, brief
 from cygnusforge.rules.dice import roll_total
 from cygnusforge.services.common import Conflict, InvalidInput, NotFound, session_scope
 from cygnusforge.services.events import (
@@ -61,11 +62,9 @@ from cygnusforge.services.tools import (
 )
 from cygnusforge.services.world import (
     WorldTools,
-    WorldView,
     create_player_character,
     seed_campaign,
     set_campaign_options,
-    snapshot,
     world_state_text,
 )
 
@@ -77,17 +76,21 @@ SYSTEM_PROMPT = (
     "the story consistent with what has already happened. You are not a general assistant; stay in "
     "the GM role for the whole campaign."
 )
-TOOL_CALL_MARKUP = "<tool_call"
+# Spoken words never contain angle brackets or call syntax, so either means a tool call was written.
+SPOKEN_MARKUP = re.compile(r"<[^>]*>|\b\w+\(\s*\{")
 STATE_INSTRUCTION = (
     "State management step. If the player is speaking out of character (to you as the GM rather "
     "than to their character, about the rules or the world, or asking for a change outside the "
     "story), call ooc and make no other tool calls: the out-of-character step that follows replies "
-    "and makes any change. Otherwise, decide what this action changes and what needs to be said or "
-    "done, then make it so with tool calls: create, update, or delete locations, characters, and "
+    "and makes any change. Otherwise, look up what the action depends on with the lookup tools, "
+    "decide what this action changes and what needs to be said or done, then make it so with tool "
+    "calls: create, update, or delete locations, characters, and "
     "notes as the story needs; move characters; ask for a roll when the outcome is uncertain; and call speak "
     "once for each NPC who says something, with everything they say in one intent, without writing "
-    "their words yourself. Before adding a note, check the existing notes: update one rather than "
-    "repeating a fact. Record only settled facts, not actions still in progress. Do not narrate "
+    "their words yourself. Notes hold settled facts that the story could lose, such as secrets, "
+    "promises, debts, and clues. Do not copy into a note anything a location, character, statblock, "
+    "or NPC record already holds. Before adding a note, check the existing notes: update one rather "
+    "than repeating a fact. Record only settled facts, not actions still in progress. Do not narrate "
     "here; the narration comes in the next step. When nothing else needs to change, reply with one "
     "short sentence saying so."
 )
@@ -104,8 +107,8 @@ NARRATE_INSTRUCTION = (
 OPENING_PROMPT = (
     "Opening instruction. This is setup, not play: do not narrate a scene, speak as a character, "
     "or act for the player character. Make any tool calls first and write no text before them: "
-    "place the player character in the world with move_actor, and make any opening reading or roll "
-    "the rule set calls for. Then call ooc with no_narration true. In your reply, write one sentence "
+    "place the player character in the world with move_actor, look up the starting location with "
+    "all_at_location, and make any opening reading or roll the rule set calls for. Then call ooc with no_narration true. In your reply, write one sentence "
     "for each of these, in this order, and nothing more: introducing yourself as Cygnus, the game "
     "master; one for each important detail the player must know before they act; one for each player "
     "character; setting the scene; and prompting the player to begin acting. You do not need to rehash game rules or character attributes - assume the player already knows these. This is a thematic introduction.Bold any keywords or core concepts. Use line breaks to separate each sentence. Then stop and leave the "
@@ -121,8 +124,11 @@ OOC_INSTRUCTION = (
 SPEECH_INSTRUCTION = (
     "Speech step. Write only the words the speaker says aloud to the player, in character, "
     "following the speaker's personality, accent, and quirks, and the intent given. Keep it short: "
-    "one or two sentences, as the speaker would actually say it. Do not describe actions and do not "
-    "narrate. Reply with the spoken words only."
+    "one or two sentences, as the speaker would actually say it. "
+    "Do not describe actions, do not narrate, and do not add anything the intent does not call for. "
+    "Stage directions such as gestures, tone, or what the speaker does belong to the narration, not "
+    "to the speech: every word you write must be something the speaker says. "
+    "Reply with the spoken words only."
 )
 SUMMARY_PROMPT = (
     "You are Cygnus, the AI game master of a roleplaying campaign, and you keep its memory. Given "
@@ -316,16 +322,14 @@ def set_campaign_model(
 
 @dataclass(frozen=True)
 class CampaignWorld:
-    """The folded campaign state, and the world as the page shows it."""
+    """The folded campaign state."""
 
     state: CampaignState
-    view: WorldView
 
 
 def campaign_world(engine: Engine, owner_id: int, campaign_id: int) -> CampaignWorld:
     get_campaign(engine, owner_id, campaign_id)
-    state = _state(engine, campaign_id)
-    return CampaignWorld(state=state, view=snapshot(state))
+    return CampaignWorld(state=_state(engine, campaign_id))
 
 
 @dataclass(frozen=True)
@@ -375,20 +379,33 @@ def _chat_message(row: Event) -> ChatMessage:
 def system_parts(
     rule_set_id: str,
     rules: Mapping[str, str],
+    important: frozenset[str],
     summary: str,
     summary_through: int,
     world_text: str = "",
 ) -> list[ContextPart]:
-    """The system prompt in sections. Joined with blank lines, they are the system message."""
+    """The system prompt in sections. Joined with blank lines, they are the system message.
+
+    Every rule is listed with a brief. The important rules are given in full. The others are read
+    with lookup_rule.
+    """
     parts = [ContextPart("system", "Base prompt", SYSTEM_PROMPT)]
     if rules:
-        rule_lines = "\n".join(f"- {rule}" for rule in rules.values())
-        ids = ", ".join(rules)
+        intro = (
+            "Rules for this campaign. The important rules are given in full; "
+            "read any other rule with lookup_rule."
+        )
+        lines = [intro]
+        for rule_id, text in rules.items():
+            if rule_id in important:
+                lines.append(f"- {rule_id}: {text}")
+            else:
+                lines.append(f"- {rule_id}: {brief(text)}")
         parts.append(
             ContextPart(
                 "system",
-                f"Rules from rule set '{rule_set_id}': {ids}",
-                "Rules for this campaign:\n" + rule_lines,
+                f"Rules from rule set '{rule_set_id}': {', '.join(rules)}",
+                "\n".join(lines),
             )
         )
     if world_text:
@@ -439,8 +456,7 @@ def context_usage(
     campaign: Campaign,
     state: CampaignState,
     history: Sequence[ChatMessage],
-    rules: Mapping[str, str],
-    character: CharacterSpec,
+    rule_set: RuleSet | None,
     options: CampaignSpec,
     limit: int,
 ) -> ContextUsage:
@@ -449,10 +465,11 @@ def context_usage(
         part.tokens
         for part in system_parts(
             campaign.rule_set,
-            rules,
+            rule_set.rules if rule_set else {},
+            rule_set.important if rule_set else frozenset(),
             state.summary,
             state.through,
-            world_state_text(state, character, options),
+            world_state_text(state, options),
         )
     )
     used += sum(estimate_tokens(m.content) for m in unsummarized)
@@ -701,7 +718,7 @@ def _tool_context(
     provider: Provider,
     model_name: str,
     campaign_id: int,
-    character: CharacterSpec,
+    rule_set: RuleSet,
 ) -> ToolContext:
     async def speak(speaker: str, profile: str, intent: str, replace: bool) -> None:
         await _speak(engine, provider, model_name, campaign_id, speaker, profile, intent, replace)
@@ -710,9 +727,15 @@ def _tool_context(
         _record(engine, campaign_id, OocStarted(narrate=narrate))
 
     return ToolContext(
-        world=WorldTools(engine, campaign_id, library.core.tables, rng, character),
+        world=WorldTools(engine, campaign_id, library.core.tables, rng, rule_set.character),
         speak=speak,
         ooc=ooc,
+        rules=rule_set.rules,
+        lookup_tools={
+            tool.name: brief(tool.description)
+            for tool in rule_set.tool_calls.values()
+            if tool.lookup
+        },
     )
 
 
@@ -741,7 +764,7 @@ def _start_run(
             provider,
             model_name,
             campaign.id,
-            rule_set.character,
+            rule_set,
         ),
         cursor=_newest(engine, campaign.id),
     )
@@ -770,7 +793,8 @@ async def _speak(
     sees the conversation as text, without the tool calls, so it writes dialogue rather than
     narration. Each NPC gets one queued line per reply, so the narration never repeats a speaker.
     With `replace`, the new line takes the queued line's place; a failed attempt keeps the old one."""
-    turn = _turn(_state(engine, campaign_id))
+    state = _state(engine, campaign_id)
+    turn = _turn(state)
     queued = next(
         (line for line in turn.speech if line["speaker"].casefold() == speaker.casefold()), None
     )
@@ -779,7 +803,12 @@ async def _speak(
             f"{speaker} already has dialogue for this reply; put everything they say in one intent, "
             "or pass replace: true to rewrite that line"
         )
-    system_parts = [SPEECH_INSTRUCTION, turn.messages[0]["content"], profile]
+    # The speech step gets no rules or tool instructions: it only writes words, and those
+    # instructions get copied into dialogue as tool-call markup.
+    system_parts = [SPEECH_INSTRUCTION]
+    if state.summary:
+        system_parts.append("Summary of earlier events in this campaign:\n" + state.summary)
+    system_parts.append(profile)
     if queued:
         system_parts.append(
             f"The line already queued for {speaker}, which this intent replaces: "
@@ -794,7 +823,7 @@ async def _speak(
     reply = (
         await complete(provider, model_name, [{"role": "system", "content": system}, *conversation])
     ).strip()
-    malformed = TOOL_CALL_MARKUP in reply
+    malformed = SPOKEN_MARKUP.search(reply) is not None
     _record(
         engine,
         campaign_id,
@@ -822,13 +851,16 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     state = _state(run.engine, run.campaign_id)
     rule_set = run.rule_set
     summary, watermark = state.summary, state.through
-    world_text = world_state_text(state, rule_set.character, rule_set.campaign)
+    world_text = world_state_text(state, rule_set.campaign)
     message = OPENING_PROMPT if turn.opening else turn.text
     history = [
         m for m in list_messages(run.engine, run.campaign_id) if watermark < m.id < turn.opener
     ]
     prompt_tokens = sum(
-        p.tokens for p in system_parts(rule_set.id, rule_set.rules, summary, watermark, world_text)
+        p.tokens
+        for p in system_parts(
+            rule_set.id, rule_set.rules, rule_set.important, summary, watermark, world_text
+        )
     )
     prompt_tokens += estimate_tokens(message) + sum(estimate_tokens(m.content) for m in history)
     summary_record: list[ContextPart] = []
@@ -852,7 +884,9 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     player = ContextPart(
         "user", "Opening instruction" if turn.opening else "This message (player)", message
     )
-    system = system_parts(rule_set.id, rule_set.rules, summary, watermark, world_text)
+    system = system_parts(
+        rule_set.id, rule_set.rules, rule_set.important, summary, watermark, world_text
+    )
     conversation = [
         *(ContextPart(m.role, _message_source(m), m.content) for m in history),
         player,

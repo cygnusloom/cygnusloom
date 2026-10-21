@@ -125,6 +125,7 @@
     "name": "search_notes",
     "python_module": "core",
     "function": "search_notes",
+    "lookup": true,
     "description": "Search your GM notes on events, updates, and situations, to stay consistent. Every word in the query must appear in the note's text or in its subject's name. Each result includes the note's id. Use it before continuing a thread or answering questions about what has happened before.",
     "parameters": {
       "type": "object",
@@ -137,6 +138,122 @@
       "required": [
         "query"
       ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "all_at_location",
+    "name": "all_at_location",
+    "python_module": "core",
+    "function": "all_at_location",
+    "lookup": true,
+    "description": "Look up a location: its description, the NPCs there (with personality, accent, and quirks), whether the player character is there, and the notes about the place or those NPCs. Leave out the location to look at the player character's current location. Use it whenever you need to know what is in a place before you narrate it or act in it.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "location": {
+          "type": "string",
+          "description": "The location's name. Leave it out for the player character's location."
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "search_location",
+    "name": "search_location",
+    "python_module": "core",
+    "function": "search_location",
+    "lookup": true,
+    "description": "Find locations by words in their name or description. Every word in the query must appear. Use it to find a place you have described before or to check whether a place already exists before you create one.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Words to look for, such as \"harbor\" or \"old mill\"."
+        }
+      },
+      "required": [
+        "query"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "search_npc",
+    "name": "search_npc",
+    "python_module": "core",
+    "function": "search_npc",
+    "lookup": true,
+    "description": "Find NPCs anywhere in the world by words in their name, location, description, personality, accent, or quirks. Every word in the query must appear. Each result gives the NPC's location. Use it to check whether an NPC already exists before you create one, or to find someone the story mentions.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Words to look for, such as \"ferryman\" or \"nervous\"."
+        }
+      },
+      "required": [
+        "query"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "get_statblock",
+    "name": "get_statblock",
+    "python_module": "core",
+    "function": "get_statblock",
+    "lookup": true,
+    "description": "Get a character's statblock: stats, template, features, and fields. Works for the player character and for NPCs. Statblocks are not in your context until you fetch them, so fetch one before a roll, before a change to a character's abilities or gear, or whenever their capabilities matter to the outcome.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The character's name."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "lookup_rule",
+    "name": "lookup_rule",
+    "python_module": "core",
+    "function": "lookup_rule",
+    "lookup": true,
+    "description": "Read the full text of a rule. Your context lists every rule with a brief and shows the important rules in full. Read a rule you only have the brief of before you rely on it.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "rule": {
+          "type": "string",
+          "description": "The rule's id, as listed in your context."
+        }
+      },
+      "required": [
+        "rule"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "list_lookups",
+    "name": "list_lookups",
+    "python_module": "core",
+    "function": "list_lookups",
+    "description": "List everything you can look up, each with a short brief: the lookup tools, the rules, and the locations and NPCs in the world. Use it when you are unsure what exists. Then look up the full entry with the matching tool.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
     }
   },
   {

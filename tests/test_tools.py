@@ -86,12 +86,18 @@ CORE_TOOL_NAMES = {
     "update_npc",
     "delete_npc",
     "move_actor",
+    "all_at_location",
+    "search_location",
+    "search_npc",
+    "get_statblock",
     "add_note",
     "update_note",
     "delete_note",
     "search_notes",
     "speak",
     "ooc",
+    "lookup_rule",
+    "list_lookups",
 }
 
 SOCIAL_ARGUMENTS = '{"prompt": "Roll to persuade.", "relationship": 2, "circumstance": -1}'

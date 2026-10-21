@@ -51,6 +51,7 @@ from cygnusforge.services.campaigns import (
 from cygnusforge.services.common import Conflict, InvalidInput, NotFound
 from cygnusforge.services.names import random_campaign_name
 from cygnusforge.services.tools import check_arguments
+from cygnusforge.services.world import scene_view
 from cygnusforge.web.character_form import (
     campaign_submission_from_form,
     campaign_view,
@@ -400,7 +401,7 @@ def _campaign_page(
             status_code=status_code,
             campaign=campaign,
             world=library.world_templates.get(campaign.world_template),
-            world_view=world.view,
+            scene=scene_view(world.state, spec),
             rule_set=rule_set,
             options=campaign_view(options),
             error=error,
@@ -418,7 +419,7 @@ def _campaign_page(
             status_code=status_code,
             campaign=campaign,
             world=library.world_templates.get(campaign.world_template),
-            world_view=world.view,
+            scene=scene_view(world.state, spec),
             rule_set=rule_set,
             character=character,
             error=error,
@@ -429,8 +430,7 @@ def _campaign_page(
         campaign,
         world.state,
         messages,
-        rule_set.rules if rule_set else {},
-        spec,
+        rule_set,
         options,
         settings.llm_context_tokens,
     )
@@ -440,7 +440,7 @@ def _campaign_page(
         status_code=status_code,
         campaign=campaign,
         world=library.world_templates.get(campaign.world_template),
-        world_view=world.view,
+        scene=scene_view(world.state, spec),
         rule_set=rule_set,
         messages=messages,
         transcript=transcript,

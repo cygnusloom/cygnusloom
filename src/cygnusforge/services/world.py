@@ -26,10 +26,12 @@ from cygnusforge.content.character import (
     resolve,
 )
 from cygnusforge.content.library import WorldTemplate
+from cygnusforge.rules.context import brief
 from cygnusforge.services.common import InvalidInput, session_scope
 from cygnusforge.services.events import (
     CAMPAIGN_WIDE,
     NPC_KIND,
+    PC_KIND,
     ActorMoved,
     CampaignOptionsChosen,
     CampaignState,
@@ -59,11 +61,15 @@ QUIRKS_PER_NPC = 2
 
 
 @dataclass(frozen=True)
-class WorldView:
+class SceneView:
+    """What the player may see: the player character, the place they are in, the NPCs there, the
+    notes that concern them, and the player character's statblock."""
+
     pc: Character | None
-    locations: list[Place]
+    location: Place | None
     npcs: list[Character]
     notes: list[Note]
+    sheet: list[str]
 
 
 @dataclass(frozen=True)
@@ -148,6 +154,26 @@ class WorldTools:
     def search_notes(self, query: str) -> dict[str, list[dict[str, Any]]]:
         with session_scope(self.engine) as db:
             return search_notes(load_state(db, self.campaign_id), query)
+
+    def all_at_location(self, location: str | None = None) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return all_at_location(load_state(db, self.campaign_id), location)
+
+    def search_location(self, query: str) -> dict[str, list[dict[str, Any]]]:
+        with session_scope(self.engine) as db:
+            return search_location(load_state(db, self.campaign_id), query)
+
+    def search_npc(self, query: str) -> dict[str, list[dict[str, Any]]]:
+        with session_scope(self.engine) as db:
+            return search_npc(load_state(db, self.campaign_id), query)
+
+    def get_statblock(self, name: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return get_statblock(load_state(db, self.campaign_id), name, self.character)
+
+    def lookup_index(self) -> dict[str, list[dict[str, Any]]]:
+        with session_scope(self.engine) as db:
+            return lookup_index(load_state(db, self.campaign_id))
 
     def speaker_profile(self, name: str) -> str:
         with session_scope(self.engine) as db:
@@ -396,13 +422,86 @@ def delete_note(db: Session, campaign_id: int, note_id: int) -> dict[str, Any]:
 
 def search_notes(state: CampaignState, query: str) -> dict[str, list[dict[str, Any]]]:
     """Notes whose text or subject name contains every word of `query`, newest first."""
-    words = _text(query, "query", MAX_TEXT).casefold().split()
+    words = _words(query)
     matches: list[dict[str, Any]] = []
     for note in reversed(state.notes):
-        haystack = f"{note.subject} {note.text}".casefold()
-        if all(word in haystack for word in words):
+        if _has_words(words, note.subject, note.text):
             matches.append({"id": note.id, "subject": note.subject, "text": note.text})
     return {"notes": matches}
+
+
+def all_at_location(state: CampaignState, location: str | None) -> dict[str, Any]:
+    """A location as the GM needs it: its description, the NPCs there, whether the player character
+    is there, and the notes about the place or the NPCs in it. Without a location, it is the
+    player character's location. Statblocks are left out; `get_statblock` returns them."""
+    if location is None:
+        pc = state.pc()
+        if pc is None or pc.location is None:
+            raise InvalidInput("the player character is not at a location yet; name a location")
+        location = pc.location
+    place = _place_named(state, location)
+    npcs = _npcs_at(state, place.name)
+    pc = state.pc()
+    subjects = {place.name, *(npc.name for npc in npcs)}
+    return {
+        "location": {"name": place.name, "description": place.description},
+        "player_character_here": pc is not None and pc.location == place.name,
+        "npcs": [_npc_summary(npc) for npc in npcs],
+        "notes": [
+            {"id": note.id, "subject": note.subject, "text": note.text}
+            for note in reversed(state.notes)
+            if note.subject in subjects
+        ],
+    }
+
+
+def search_location(state: CampaignState, query: str) -> dict[str, list[dict[str, Any]]]:
+    """Locations whose name or description contains every word of `query`."""
+    words = _words(query)
+    matches = [
+        {"name": place.name, "description": place.description}
+        for place in state.places.values()
+        if _has_words(words, place.name, place.description)
+    ]
+    return {"locations": matches}
+
+
+def search_npc(state: CampaignState, query: str) -> dict[str, list[dict[str, Any]]]:
+    """NPCs anywhere in the world whose details contain every word of `query`."""
+    words = _words(query)
+    matches = [
+        _npc_summary(npc)
+        for npc in state.characters.values()
+        if npc.kind == NPC_KIND and _has_words(words, *_npc_words(npc))
+    ]
+    return {"npcs": matches}
+
+
+def lookup_index(state: CampaignState) -> dict[str, list[dict[str, Any]]]:
+    """Every location and NPC by name, each with a one-sentence brief. The brief is enough to know
+    what to look up; the full entry comes from the lookup tools."""
+    locations = [
+        {"name": place.name, "brief": brief(place.description)} for place in state.places.values()
+    ]
+    npcs = [
+        {"name": npc.name, "location": npc.location, "brief": brief(npc.description)}
+        for npc in state.characters.values()
+        if npc.kind == NPC_KIND
+    ]
+    return {"locations": locations, "npcs": npcs}
+
+
+def get_statblock(state: CampaignState, name: str, spec: CharacterSpec) -> dict[str, Any]:
+    """A character's stats, template, features, and fields, one line each. Works for the player
+    character and for NPCs."""
+    character = _character_named(state, name)
+    kind = "player character" if character.kind == PC_KIND else "npc"
+    return {
+        "name": character.name,
+        "kind": kind,
+        "location": character.location,
+        "statblock": describe(spec, _sheet_of(character)).splitlines(),
+    }
 
 
 def speaker_profile(state: CampaignState, name: str, spec: CharacterSpec) -> str:
@@ -428,44 +527,63 @@ def speaker_profile(state: CampaignState, name: str, spec: CharacterSpec) -> str
     return "\n".join(lines)
 
 
-def snapshot(state: CampaignState) -> WorldView:
-    return WorldView(
-        pc=state.pc(),
-        locations=list(state.places.values()),
-        npcs=[c for c in state.characters.values() if c.kind == NPC_KIND],
-        notes=list(reversed(state.notes)),
-    )
+def scene_view(state: CampaignState, spec: CharacterSpec) -> SceneView:
+    """The player's view. It shows only what is at the player character's location."""
+    pc = state.pc()
+    location = pc.location if pc is not None else None
+    found = state.named(location) if location is not None else None
+    place = found if isinstance(found, Place) else None
+    npcs = _npcs_at(state, place.name) if place is not None else []
+    subjects = {CAMPAIGN_WIDE}
+    if pc is not None:
+        subjects.add(pc.name)
+    if place is not None:
+        subjects.add(place.name)
+    subjects.update(npc.name for npc in npcs)
+    notes = [note for note in reversed(state.notes) if note.subject in subjects]
+    sheet = describe(spec, _sheet_of(pc)).splitlines() if pc is not None else []
+    return SceneView(pc=pc, location=place, npcs=npcs, notes=notes, sheet=sheet)
 
 
-def world_state_text(state: CampaignState, spec: CharacterSpec, campaign: CampaignSpec) -> str:
-    """The current places and characters, for the GM's system prompt. Notes are searched, not sent."""
-    view = snapshot(state)
-    if view.pc is None:
+def world_state_text(state: CampaignState, campaign: CampaignSpec) -> str:
+    """The GM's orientation at the start of a turn: the campaign options, the player character and
+    where they are, and the NPCs there. The rest is looked up with the lookup tools."""
+    pc = state.pc()
+    if pc is None:
         return ""
     lines = [
         f"Campaign {campaign.fields[field_id].name.lower()}: {value}."
         for field_id, value in state.options.items()
         if field_id in campaign.fields
     ]
-    if view.pc.location is None:
-        where = "not yet placed; place them with move_actor on your first turn"
-    else:
-        where = f"at {view.pc.location}"
-    lines.append(f"Player character: {view.pc.name}, {where}.")
-    pc_sheet = describe(spec, _sheet_of(view.pc)).replace("\n", "; ")
-    if pc_sheet:
-        lines.append(f"  {pc_sheet}")
-    lines.append("Locations:")
-    lines += [f"- {place.name}: {place.description}" for place in view.locations]
-    lines.append("NPCs:")
-    if not view.npcs:
-        lines.append("- none yet")
-    for npc in view.npcs:
-        lines.append(f"- {npc.name}, at {npc.location}: {npc.description}")
-        npc_sheet = describe(spec, _sheet_of(npc)).replace("\n", "; ")
-        if npc_sheet:
-            lines.append(f"  {npc_sheet}")
+    if pc.location is None:
+        lines.append(
+            f"Player character: {pc.name}, not yet placed; place them with move_actor on your first turn."
+        )
+        return "\n".join(lines)
+    lines.append(f"Player character: {pc.name}, at {pc.location}.")
+    names = [npc.name for npc in _npcs_at(state, pc.location)]
+    lines.append(f"NPCs here: {', '.join(names) if names else 'none'}.")
     return "\n".join(lines)
+
+
+def _npcs_at(state: CampaignState, location: str) -> list[Character]:
+    return [c for c in state.characters.values() if c.kind == NPC_KIND and c.location == location]
+
+
+def _npc_summary(npc: Character) -> dict[str, Any]:
+    return {
+        "name": npc.name,
+        "location": npc.location,
+        "description": npc.description,
+        "personality": npc.personality,
+        "accent": npc.accent,
+        "quirks": list(npc.quirks),
+    }
+
+
+def _npc_words(npc: Character) -> list[str]:
+    return [npc.name, npc.location or "", npc.description, npc.personality, npc.accent, *npc.quirks]
 
 
 def _npc_event(
@@ -558,6 +676,15 @@ def _note_with_id(state: CampaignState, note_id: int) -> Note:
     if note is None:
         raise InvalidInput(f"there is no note with id {note_id}")
     return note
+
+
+def _words(query: str) -> list[str]:
+    return _text(query, "query", MAX_TEXT).casefold().split()
+
+
+def _has_words(words: Sequence[str], *parts: str) -> bool:
+    haystack = " ".join(parts).casefold()
+    return all(word in haystack for word in words)
 
 
 def _text(value: object, label: str, limit: int) -> str:

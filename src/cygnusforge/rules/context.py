@@ -48,7 +48,25 @@ class World(Protocol):
 
     def search_notes(self, query: str) -> dict[str, list[dict[str, Any]]]: ...
 
+    def all_at_location(self, location: str | None = None) -> dict[str, Any]: ...
+
+    def search_location(self, query: str) -> dict[str, list[dict[str, Any]]]: ...
+
+    def search_npc(self, query: str) -> dict[str, list[dict[str, Any]]]: ...
+
+    def get_statblock(self, name: str) -> dict[str, Any]: ...
+
+    def lookup_index(self) -> dict[str, list[dict[str, Any]]]: ...
+
     def speaker_profile(self, name: str) -> str: ...
+
+
+def brief(text: str, limit: int = 120) -> str:
+    """The first sentence of text, cut to limit characters."""
+    first = text.strip().split(". ", 1)[0].rstrip(".")
+    if len(first) <= limit:
+        return first
+    return first[: limit - 1].rstrip() + "…"
 
 
 @dataclass(frozen=True)
@@ -60,3 +78,7 @@ class ToolContext:
     # Marks the player's message as out of character. Takes whether the story is narrated after the
     # out-of-character reply.
     ooc: Callable[[bool], None]
+    # The rule set's full rule text by id, for lookup_rule. Rules the prompt does not show are here.
+    rules: Mapping[str, str]
+    # Name and brief of each lookup tool, for list_lookups.
+    lookup_tools: Mapping[str, str]

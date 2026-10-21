@@ -313,5 +313,5 @@ def test_the_omen_is_a_campaign_option_given_to_the_gm(client_factory: Callable[
         == 303
     )
     with Session(client.app.state.engine) as db:
-        text = world.world_state_text(load_state(db, campaign_id), cairn.character, cairn.campaign)
+        text = world.world_state_text(load_state(db, campaign_id), cairn.campaign)
     assert f"Campaign omen: {omen}." in text

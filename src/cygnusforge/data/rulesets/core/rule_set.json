@@ -12,22 +12,32 @@
   },
   {
     "type": "rule",
+    "id": "lookup",
+    "important": true,
+    "text": "You do not carry the whole world in your head, so look things up. The state above gives only the player character's location and the NPCs there. Use all_at_location to see a place with everyone and everything recorded at it, search_location and search_npc to find places and NPCs by words, search_notes for past events, and get_statblock for a character's stats, features, and fields. Use these tools liberally: look up anything you need before you act, narrate, or decide an outcome. A statblock is not in your context until you fetch it, so fetch it before any roll or change to a character's abilities. Do not guess what is not in front of you. Your context lists every rule with a brief, and the important rules in full; read the full text of any other rule with lookup_rule. Use list_lookups when you are unsure what you can look up."
+  },
+  {
+    "type": "rule",
     "id": "locations",
+    "important": true,
     "text": "Locations are places the characters can be in. Create a location when the story reaches a new place, and give it a name and a description the players can picture. Update a location's description when the place changes. Delete a location only when it no longer belongs in the story, and only once nobody is there; move anyone away first. The player character and every NPC are at exactly one location. Move the player character when they travel."
   },
   {
     "type": "rule",
     "id": "npcs",
+    "important": true,
     "text": "NPCs are people (or other creatures) the player character can meet. Create an NPC when the story needs one, place it at a location, and describe who they are. NPCs have a personality, an accent, and quirks. Update an NPC when they change, and delete one when they leave the story for good. Keep them consistent with what has happened. Only an NPC who is at the player character's location can speak to them. The player character is not an NPC and cannot be updated or removed this way."
   },
   {
     "type": "rule",
     "id": "notes",
+    "important": true,
     "text": "Notes are for you, the GM. Use them to keep track of events, updates, and situations so you stay consistent: what has happened, promises made, secrets, clues, changes to a place or NPC, and where things stand. Write them as your own record, not as narration for the player. Record a note whenever something changes that you may need later. Update a note when what it records changes, and delete it when it no longer holds. Notes are never narrated to the player. Attach a note to a location or NPC when it is about that subject, and leave it campaign-wide otherwise. Search your notes before continuing a thread or answering a question about past events, so you do not contradict what was established."
   },
   {
     "type": "rule",
     "id": "speech",
+    "important": true,
     "text": "NPC dialogue is written separately. Never write an NPC's words in the narration yourself. To make an NPC speak, call speak with the NPC's name and what they want to say. Then quote the dialogue exactly as the tool returns it."
   },
   {

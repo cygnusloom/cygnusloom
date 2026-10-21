@@ -96,6 +96,8 @@ class ToolCall:
     activity: str | None = None
     # True when the function declares CONTEXT_ARGUMENT and the engine must pass it.
     takes_context: bool = False
+    # True for tools that only read the world. The GM lists them with list_lookups.
+    lookup: bool = False
 
 
 @dataclass(frozen=True)
@@ -110,6 +112,8 @@ class RuleSet:
     campaign: CampaignSpec
     # Named option lists, such as "personality", used to generate NPC traits.
     tables: Mapping[str, tuple[TableOption, ...]] = field(default_factory=dict)
+    # Rules whose text goes into every prompt. The others are read with lookup_rule.
+    important: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -251,6 +255,11 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         for d in definitions
         if d.type == "rule"
     }
+    important = frozenset(
+        d.id
+        for d in definitions
+        if d.type == "rule" and _flag(d.data, "important", f"{template}: rule {d.id}")
+    )
     tables = {d.id: _load_table(d, template) for d in definitions if d.type == "table"}
     for name in REQUIRED_TABLES:
         if name not in tables:
@@ -273,6 +282,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         name=required_text(head.data, "name", label),
         description=required_text(head.data, "description", label),
         rules=rules,
+        important=important,
         tool_calls=tool_calls,
         character=character,
         campaign=campaign,
@@ -343,7 +353,7 @@ def _load_tool_call(
     if not TOOL_NAME.fullmatch(name):
         raise ContentError(f"{label}: 'name' must be 1 to 64 letters, digits, '_' or '-'")
     parameters = _check_parameters(data.get("parameters"), label)
-    if _character_flag(data, label):
+    if _flag(data, "character_options", label):
         parameters = _with_character(parameters, character, label)
     if CONTEXT_ARGUMENT in parameters["properties"]:
         raise ContentError(f"{label}: {CONTEXT_ARGUMENT!r} is reserved and not a parameter")
@@ -359,13 +369,14 @@ def _load_tool_call(
         player_input=player_input,
         activity=activity,
         takes_context=CONTEXT_ARGUMENT in inspect.signature(function).parameters,
+        lookup=_flag(data, "lookup", label),
     )
 
 
-def _character_flag(data: Mapping[str, Any], label: str) -> bool:
-    flag = data.get("character_options", False)
+def _flag(data: Mapping[str, Any], key: str, label: str) -> bool:
+    flag = data.get(key, False)
     if not isinstance(flag, bool):
-        raise ContentError(f"{label}: 'character_options' must be true or false")
+        raise ContentError(f"{label}: {key!r} must be true or false")
     return flag
 
 

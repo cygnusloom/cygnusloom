@@ -14,7 +14,7 @@ from sqlmodel import Session
 from cygnusforge.content.character import NO_CAMPAIGN, TableOption
 from cygnusforge.content.library import ContentLibrary
 from cygnusforge.llm.base import ChatReply, ToolRequest
-from cygnusforge.rules.context import ToolContext
+from cygnusforge.rules.context import ToolContext, brief
 from cygnusforge.services import world
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import NPC_KIND, CampaignState, Character, load_state
@@ -66,6 +66,8 @@ def _ctx(
         ),
         speak=speak or quiet_speak,
         ooc=lambda narrate: None,
+        rules=LIBRARY.rule_sets["freeform"].rules,
+        lookup_tools={tool.name: brief(tool.description) for tool in TOOLS.values() if tool.lookup},
     )
 
 
@@ -97,7 +99,7 @@ def test_player_character_starts_unplaced(client_factory: Callable[[], TestClien
     assert pc.name == "Ada"
     assert pc.location is None
     assert "Player character: Ada, not yet placed; place them with move_actor" in (
-        world.world_state_text(state, SPEC, NO_CAMPAIGN)
+        world.world_state_text(state, NO_CAMPAIGN)
     )
 
 
@@ -248,9 +250,9 @@ def test_moving_the_player_changes_the_world_state(client_factory: Callable[[], 
     _, campaign_id = _campaign_id(client_factory)
     moved = _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
     assert moved == {"moved": "Ada", "location": "Glowcap Ring"}
-    text = world.world_state_text(_state(app, campaign_id), SPEC, NO_CAMPAIGN)
+    text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
     assert "Player character: Ada, at Glowcap Ring." in text
-    assert "- Brin Gallowcap, at Glowcap Ring:" in text
+    assert "NPCs here: Brin Gallowcap." in text
 
 
 def test_moving_needs_a_known_character_and_location(client_factory: Callable[[], TestClient], app):
@@ -276,12 +278,139 @@ def test_notes_attach_to_the_campaign_a_location_or_a_character(
         world.add_note(db, campaign_id, "The bridge sways.", subject="Spore Bridge")
         world.add_note(db, campaign_id, "Hob owes Mara a favour.", subject="Old Hob")
         db.commit()
-    view = world.snapshot(_state(app, campaign_id))
-    assert [(note.subject, note.text) for note in view.notes] == [
-        ("Old Hob", "Hob owes Mara a favour."),
-        ("Spore Bridge", "The bridge sways."),
+    notes = _state(app, campaign_id).notes
+    assert [(note.subject, note.text) for note in notes] == [
         (world.CAMPAIGN_WIDE, "Find the lost key."),
+        ("Spore Bridge", "The bridge sways."),
+        ("Old Hob", "Hob owes Mara a favour."),
     ]
+
+
+def _described_campaign(client_factory: Callable[[], TestClient]) -> tuple[TestClient, int]:
+    """A campaign whose player character has an appearance, so the sheet has lines to show."""
+    client = _signed_in(client_factory)
+    response = _new_campaign(client)
+    assert response.status_code == 303
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    created = _create_character(
+        client,
+        campaign_id,
+        fields={
+            "field-appearance": "Tall, with a red scarf.",
+            "field-biography": "Raised in the reeds.",
+        },
+    )
+    assert created.status_code == 303
+    return client, campaign_id
+
+
+def test_the_player_sees_only_what_is_at_their_location(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _described_campaign(client_factory)
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
+    with _db(app) as db:
+        world.add_note(db, campaign_id, "Find the lost key.")
+        world.add_note(db, campaign_id, "Ada has a map.", subject="Ada")
+        world.add_note(db, campaign_id, "The ring hums.", subject="Glowcap Ring")
+        world.add_note(db, campaign_id, "Mara sings.", subject="Mossbell Hollow")
+        world.add_note(db, campaign_id, "Brin owes a debt.", subject="Brin Gallowcap")
+        world.add_note(db, campaign_id, "Hob hides a key.", subject="Old Hob")
+        db.commit()
+    state = _state(app, campaign_id)
+    scene = world.scene_view(state, SPEC)
+    assert scene.pc is not None and scene.pc.name == "Ada"
+    assert scene.location is not None and scene.location.name == "Glowcap Ring"
+    assert [npc.name for npc in scene.npcs] == ["Brin Gallowcap"]
+    assert {note.subject for note in scene.notes} == {
+        world.CAMPAIGN_WIDE,
+        "Ada",
+        "Glowcap Ring",
+        "Brin Gallowcap",
+    }
+    assert scene.sheet == world.get_statblock(state, "Ada", SPEC)["statblock"]
+    assert "Appearance: Tall, with a red scarf." in scene.sheet
+
+
+def test_an_unplaced_player_sees_no_location_or_npcs(client_factory: Callable[[], TestClient], app):
+    _, campaign_id = _campaign_id(client_factory)
+    with _db(app) as db:
+        world.add_note(db, campaign_id, "Find the lost key.")
+        db.commit()
+    scene = world.scene_view(_state(app, campaign_id), SPEC)
+    assert scene.location is None
+    assert scene.npcs == []
+    assert [note.subject for note in scene.notes] == [world.CAMPAIGN_WIDE]
+
+
+def test_all_at_location_describes_a_place_without_statblocks(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
+    with _db(app) as db:
+        world.add_note(db, campaign_id, "The ring hums.", subject="Glowcap Ring")
+        world.add_note(db, campaign_id, "Brin owes a debt.", subject="Brin Gallowcap")
+        world.add_note(db, campaign_id, "Hob hides a key.", subject="Old Hob")
+        db.commit()
+    state = _state(app, campaign_id)
+    here = world.all_at_location(state, None)
+    assert here["location"]["name"] == "Glowcap Ring"
+    assert here["player_character_here"] is True
+    assert [npc["name"] for npc in here["npcs"]] == ["Brin Gallowcap"]
+    assert all("statblock" not in npc for npc in here["npcs"])
+    assert {note["subject"] for note in here["notes"]} == {"Glowcap Ring", "Brin Gallowcap"}
+    away = world.all_at_location(state, "Spore Bridge")
+    assert away["player_character_here"] is False
+    assert [npc["name"] for npc in away["npcs"]] == ["Old Hob"]
+    assert [note["subject"] for note in away["notes"]] == ["Old Hob"]
+    assert _tool(app, campaign_id, "all_at_location", {"location": "Spore Bridge"})["location"] == {
+        "name": "Spore Bridge",
+        "description": away["location"]["description"],
+    }
+
+
+def test_all_at_location_needs_a_location_when_the_player_has_none(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    with pytest.raises(InvalidInput):
+        world.all_at_location(_state(app, campaign_id), None)
+    assert "error" in _tool(app, campaign_id, "all_at_location", {})
+
+
+def test_search_lookups_match_every_word_of_npc_and_location_details(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    found = _tool(app, campaign_id, "search_npc", {"query": "ranger glowcap"})
+    assert [npc["name"] for npc in found["npcs"]] == ["Brin Gallowcap"]
+    assert _tool(app, campaign_id, "search_npc", {"query": "dragon"}) == {"npcs": []}
+    places = _tool(app, campaign_id, "search_location", {"query": "bridge"})
+    assert [place["name"] for place in places["locations"]] == ["Spore Bridge"]
+
+
+def test_get_statblock_returns_the_player_or_an_npc_on_request(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _described_campaign(client_factory)
+    state = _state(app, campaign_id)
+    pc = world.get_statblock(state, "Ada", SPEC)
+    assert pc["kind"] == "player character"
+    assert "Appearance: Tall, with a red scarf." in pc["statblock"]
+    npc = _tool(app, campaign_id, "get_statblock", {"name": "Brin Gallowcap"})
+    assert npc["kind"] == "npc"
+    assert npc["location"] == "Glowcap Ring"
+    assert isinstance(npc["statblock"], list)
+    assert "error" in _tool(app, campaign_id, "get_statblock", {"name": "Nobody"})
+
+
+def test_statblocks_stay_out_of_the_gm_orientation(client_factory: Callable[[], TestClient], app):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
+    text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
+    assert "Stats" not in text
+    assert "Brin Gallowcap" in text
 
 
 def test_note_subject_must_exist_and_text_must_not_be_blank(
@@ -492,25 +621,40 @@ def test_speak_tool_refuses_an_npc_away_from_the_player(
     assert asked == []
 
 
-def test_campaign_page_lists_places_characters_and_notes(
-    client_factory: Callable[[], TestClient], app
-):
-    client, campaign_id = _campaign_id(client_factory)
+def test_campaign_page_panels_show_only_the_scene(client_factory: Callable[[], TestClient], app):
+    client, campaign_id = _described_campaign(client_factory)
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
     with _db(app) as db:
-        world.add_note(db, campaign_id, "The bridge is unsafe.", subject="Spore Bridge")
+        world.add_note(db, campaign_id, "Find the lost key.")
+        world.add_note(db, campaign_id, "Mara sings.", subject="Mossbell Hollow")
+        world.add_note(db, campaign_id, "Hob hides a key.", subject="Old Hob")
         db.commit()
     page = client.get(f"/campaigns/{campaign_id}").text
-    for text in (
-        "Ada",
-        "Mara Thistledown",
-        "Brin Gallowcap",
-        "Old Hob",
-        "Mossbell Hollow",
-        "Glowcap Ring",
-        "Spore Bridge",
-        "The bridge is unsafe.",
-    ):
-        assert text in page
+
+    characters = page[page.index('id="panel-characters"') : page.index('id="panel-sheet"')]
+    assert "Brin Gallowcap" in characters
+    assert "Mara Thistledown" not in characters
+    assert "Mossbell Hollow" not in characters
+
+    sheet = page[page.index('id="panel-sheet"') : page.index('id="panel-notes"')]
+    assert "Tall, with a red scarf." in sheet
+
+    notes = page[page.index('id="panel-notes"') : page.index('id="dialog-turn-context"')]
+    assert "Find the lost key." in notes
+    assert "Mara sings." not in notes
+    assert "Hob hides a key." not in notes
+
+    drawer = page[page.index('id="drawer-notes"') : page.index('id="dialog-characters"')]
+    assert "Find the lost key." in drawer
+    assert "Mara sings." not in drawer
+
+    dialog = page[page.index('id="dialog-characters"') :]
+    dialog = dialog[: dialog.index("</dialog>")]
+    assert "Mossbell Hollow" not in dialog
+    assert "Mara Thistledown" not in dialog
+
+    # The activity log keeps its history of what the GM wrote, by design.
+    assert "New location: Mossbell Hollow." in page
 
 
 def test_campaign_page_escapes_character_names(client_factory: Callable[[], TestClient]):
@@ -729,6 +873,58 @@ def test_speech_with_tool_call_markup_is_not_spoken(
     ]
 
 
+def test_speech_with_tag_style_tool_markup_is_not_spoken(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    recorder = _recording_provider()
+    client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (recorder, model_id)
+    _place_pc(client, campaign_id)
+    speak_call = {
+        "name": "speak",
+        "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
+    }
+    markup = '<get_statblock name="Mara Thistledown"/>'
+    script = _script(
+        {
+            "rounds": [[speak_call]],
+            "text": "Mara turns back to her kettle.",
+            "speech": {"Mara Thistledown": markup},
+        }
+    )
+
+    _send(client, campaign_id, script)
+
+    assert any(
+        "wrote a tool call instead" in json.dumps(call["messages"]) for call in recorder.calls
+    )
+    narration = json.dumps(_non_user(recorder.calls[-1]["messages"]))
+    assert "<get_statblock" not in narration
+
+
+def test_speech_step_gets_no_rules_or_lookup_instructions(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    recorder = _recording_provider()
+    client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (recorder, model_id)
+    _place_pc(client, campaign_id)
+    speak_call = {
+        "name": "speak",
+        "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
+    }
+    script = _script({"rounds": [[speak_call]], "text": "Mara turns back to her kettle."})
+
+    _send(client, campaign_id, script)
+
+    speech = [call for call in recorder.calls if "Speech step." in str(call["messages"][0])]
+    assert speech
+    system = str(speech[0]["messages"][0]["content"])
+    assert "Warn Ada about the bog." in system
+    assert "lookup" not in system
+    assert "Rules for this campaign" not in system
+
+
 def test_speech_shows_a_writing_dialogue_status(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
@@ -793,3 +989,43 @@ def test_campaign_options_are_stored_once_and_checked(
         assert load_state(db, campaign_id).options == {"omen": omen}
         with pytest.raises(InvalidInput, match="already chosen"):
             world.set_campaign_options(db, campaign_id, CAIRN.campaign, {"omen": omen})
+
+
+LOOKUP_TOOL_NAMES = {
+    "search_notes",
+    "all_at_location",
+    "search_location",
+    "search_npc",
+    "get_statblock",
+    "lookup_rule",
+}
+
+
+def test_lookup_rule_returns_a_rule_in_full_or_names_the_rules(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    _, campaign_id = _campaign_id(client_factory)
+    found = _tool(app, campaign_id, "lookup_rule", {"rule": "notes"})
+    assert found == {"rule": "notes", "text": LIBRARY.rule_sets["freeform"].rules["notes"]}
+    missing = _tool(app, campaign_id, "lookup_rule", {"rule": "nope"})
+    assert "no rule 'nope'" in missing["error"]
+    assert "notes" in missing["error"]
+
+
+def test_list_lookups_gives_a_brief_of_every_tool_rule_location_and_npc(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    _, campaign_id = _campaign_id(client_factory)
+    listing = _tool(app, campaign_id, "list_lookups", {})
+    assert {entry["tool"] for entry in listing["tools"]} == LOOKUP_TOOL_NAMES
+    assert all(entry["brief"] for entry in listing["tools"])
+    freeform_rules = LIBRARY.rule_sets["freeform"].rules
+    assert {entry["rule"] for entry in listing["rules"]} == set(freeform_rules)
+    assert all(entry["brief"] for entry in listing["rules"])
+    locations = {entry["name"]: entry["brief"] for entry in listing["locations"]}
+    assert "Mossbell Hollow" in locations
+    npcs = {entry["name"]: entry for entry in listing["npcs"]}
+    assert set(BUNDLED_NPCS) <= set(npcs)
+    assert npcs["Mara Thistledown"]["location"] == BUNDLED_NPCS["Mara Thistledown"]
+    assert all(entry["brief"] for entry in listing["npcs"])
+    assert "Ada" not in npcs

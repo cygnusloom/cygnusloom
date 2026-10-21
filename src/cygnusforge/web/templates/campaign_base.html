@@ -20,33 +20,31 @@
         <h2>Notes</h2>
         <button type="button" class="close" data-drawer-close aria-label="Close">&times;</button>
       </div>
-      {{ notes_list(world_view.notes) }}
+      {{ notes_list(scene.notes) }}
     </aside>
   </div>
 </div>
 <dialog id="dialog-characters" class="app-dialog" aria-labelledby="dialog-characters-title">
   <form method="dialog">
     <h2 id="dialog-characters-title">Characters</h2>
-    {% if world_view.pc %}
+    {% if scene.pc %}
     <h3>You</h3>
-    <p><strong>{{ world_view.pc.name }}</strong>{% if world_view.pc.location %}, at {{ world_view.pc.location }}{% else %}, not yet placed{% endif %}</p>
+    <p><strong>{{ scene.pc.name }}</strong>{% if scene.location %}, at {{ scene.location.name }}{% else %}, not yet placed{% endif %}</p>
     {% endif %}
-    <h3>Locations</h3>
-    {% for location in world_view.locations %}
-      <p><strong>{{ location.name }}</strong>: {{ location.description }}</p>
-    {% else %}
-      <p class="muted">No locations yet.</p>
-    {% endfor %}
-    <h3>NPCs</h3>
-    {% for npc in world_view.npcs %}
+    {% if scene.location %}
+    <h3>Here</h3>
+    <p><strong>{{ scene.location.name }}</strong>: {{ scene.location.description }}</p>
+    <h3>NPCs here</h3>
+    {% for npc in scene.npcs %}
       <div class="npc">
-        <p><strong>{{ npc.name }}</strong>, at {{ npc.location }}</p>
+        <p><strong>{{ npc.name }}</strong></p>
         <p>{{ npc.description }}</p>
         <p class="muted">Personality: {{ npc.personality }}. Accent: {{ npc.accent }}. Quirks: {{ npc.quirks | join("; ") or "none" }}.</p>
       </div>
     {% else %}
-      <p class="muted">No NPCs yet.</p>
+      <p class="muted">No NPCs here.</p>
     {% endfor %}
+    {% endif %}
     <button type="submit">Close</button>
   </form>
 </dialog>
