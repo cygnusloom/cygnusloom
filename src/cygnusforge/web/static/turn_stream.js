@@ -168,7 +168,7 @@
     // Disabling the Send button drops focus, so move it back to the message box.
     textarea.focus();
 
-    const player = addBubble("user", "user");
+    const player = addBubble("user", `${composer.dataset.playerName} (you)`);
     player.content.textContent = text;
     const reply = addBubble("assistant", "Cygnus");
     const attempt = { started: false };

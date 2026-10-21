@@ -408,7 +408,8 @@ def _campaign_page(
             options=campaign_view(options),
             error=error,
         )
-    if world.state.pc() is None:
+    pc = world.state.pc()
+    if pc is None:
         character = None
         if rule_set is not None:
             rolled = request.session.get(_roll_key(campaign.id))
@@ -448,6 +449,7 @@ def _campaign_page(
         rule_set=rule_set,
         messages=messages,
         transcript=transcript,
+        player_name=pc.name,
         context=context,
         error=error,
         draft=draft,

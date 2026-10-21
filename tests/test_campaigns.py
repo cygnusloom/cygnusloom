@@ -210,7 +210,8 @@ def test_chat_round_trip_saves_both_messages(client_factory: Callable[[], TestCl
     assert "Hi there." in page.text
     assert "hello" in page.text
     assert page.text.count('class="message ') == 3
-    assert '<span class="role">user</span>' in page.text
+    assert '<span class="role">Ada (you)</span>' in page.text
+    assert 'data-player-name="Ada"' in page.text
     assert '<span class="role">Cygnus' in page.text
     assert '<span class="role">assistant' not in page.text
 
