@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import PlainTextResponse, RedirectResponse
+from fastapi.responses import PlainTextResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -24,6 +24,16 @@ from cygnusforge.web.campaigns import router as campaigns_router
 SESSION_COOKIE = "cygnusforge_session"
 SESSION_SECONDS = 14 * 24 * 60 * 60
 STATIC_DIR = Path(__file__).parent / "static"
+
+
+class RevalidatingStaticFiles(StaticFiles):
+    """Static files that browsers must revalidate. Without this, a browser can reuse an old script
+    from its heuristic cache after an update, and the page runs stale code until a hard refresh."""
+
+    async def get_response(self, path: str, scope) -> Response:
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
 
 
 def create_app(settings: Settings, fake_provider: FakeProvider | None = None) -> FastAPI:
@@ -47,7 +57,7 @@ def create_app(settings: Settings, fake_provider: FakeProvider | None = None) ->
     )
     app.add_exception_handler(LoginRequired, _login_redirect)
     app.add_exception_handler(NotFound, _not_found)
-    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    app.mount("/static", RevalidatingStaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(accounts_router)
     app.include_router(campaigns_router)
     return app
