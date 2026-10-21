@@ -114,6 +114,12 @@ class Character:
     defeated: bool = False
 
 
+def defeat_status(character: Character) -> str:
+    """Where a defeat leaves a character. A player character is in critical damage and can be
+    recovered; an NPC is dead and stays where it fell as a body."""
+    return "in critical damage" if character.kind == PC_KIND else "dead"
+
+
 @dataclass(frozen=True)
 class Note:
     # The id of the note.added event that wrote it, so it stays the same across replays.
@@ -951,13 +957,37 @@ class EncounterStarted(GameEvent):
 
 @dataclass(frozen=True)
 class EncounterEnded(GameEvent):
+    """The encounter is over. `reason` says why it ended early, such as a side being down."""
+
     kind: ClassVar[str] = "encounter.ended"
+
+    reason: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.encounter = None
 
     def render(self) -> str:
+        if self.reason:
+            return f"{self.reason} The encounter is over."
         return "The encounter is over."
+
+
+@dataclass(frozen=True)
+class CharacterRecovered(GameEvent):
+    """A player character brought back from critical damage. The GM says how they survived and
+    what it cost them."""
+
+    kind: ClassVar[str] = "character.recovered"
+
+    name: str
+    explanation: str
+    consequence: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].defeated = False
+
+    def render(self) -> str:
+        return f"{self.name} comes to. {self.explanation} {self.consequence}"
 
 
 @dataclass(frozen=True)
@@ -1130,7 +1160,8 @@ class Struck(GameEvent):
     kind: ClassVar[str] = "combat.struck"
 
     name: str
-    source: str
+    attacker: str
+    weapon: str
     raw: int
     armor: int
     harm: dict[str, int]
@@ -1145,7 +1176,7 @@ class Struck(GameEvent):
 
     def render(self) -> str:
         taken = sum(self.harm.values())
-        text = f"{self.source} hits {self.name} for {self.raw}"
+        text = f"{self.attacker} strikes {self.name} with the {self.weapon} for {self.raw}"
         if self.armor:
             text += f", {self.armor} absorbed by armor"
         text += f"; {self.name} takes {taken} harm."
@@ -1156,7 +1187,7 @@ class Struck(GameEvent):
 
 @dataclass(frozen=True)
 class SaveRolled(GameEvent):
-    """A d20 save against a stat. A failed save defeats the character."""
+    """A d20 save against a stat. A failed save defeats the character, leaving it `status`."""
 
     kind: ClassVar[str] = "combat.save_rolled"
 
@@ -1165,6 +1196,7 @@ class SaveRolled(GameEvent):
     roll: int
     score: int
     passed: bool
+    status: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
@@ -1177,7 +1209,7 @@ class SaveRolled(GameEvent):
         result = "succeeds" if self.passed else "fails"
         text = f"{self.name} rolls {self.roll} on a {self.stat.upper()} save of {self.score} and {result}."
         if not self.passed:
-            text += f" {self.name} is defeated."
+            text += f" {self.name} is {self.status}."
         return text
 
 

@@ -20,7 +20,7 @@ from cygnusforge.rules.cairn2e import save_succeeds
 from cygnusforge.rules.context import ToolContext
 from cygnusforge.services import encounters
 from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import NPC_KIND, ChatGM, record
+from cygnusforge.services.events import NPC_KIND, ChatGM, EncounterEnded, Struck, record
 from cygnusforge.services.tools import Ask, RollAnswer, ToolRun, run_tool
 from cygnusforge.services.world import WorldTools
 from tests.conftest import content_library
@@ -393,9 +393,9 @@ def test_a_defeated_monster_cannot_be_hit_or_attack(client_factory):
     _foe(tools, "Ghoul", claw="1d6+1d6")
     _foe(tools, "Bo")
     _hit(tools, "Ghoul", "Bo", 6, 5, 20)
-    with pytest.raises(InvalidInput, match="Bo is defeated"):
+    with pytest.raises(InvalidInput, match="Bo is dead"):
         _hit(tools, "Ghoul", "Bo", 1)
-    with pytest.raises(InvalidInput, match="Bo is defeated"):
+    with pytest.raises(InvalidInput, match="Bo is dead"):
         _hit(tools, "Bo", "Ghoul", 1)
 
 
@@ -467,12 +467,13 @@ def test_a_player_character_who_fails_the_save_is_defeated(client_factory):
     assert _character(app, campaign_id, PC).defeated is True
 
 
-def test_a_defeated_character_is_skipped_when_the_turn_comes_round(client_factory):
+def test_a_defeated_foe_is_skipped_when_its_turn_comes_round(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="1d6+1d6+1d6")
-    _hit(tools, "Ghoul", PC, 6, 6, 6)
-    tools.player_save(20)
-    assert _character(app, campaign_id, PC).defeated is True
+    _foe(tools, "Ghoul", claw="1d6+1d6")
+    _foe(tools, "Bo")
+    _foe(tools, "Cy")
+    _hit(tools, "Ghoul", "Bo", 6, 5, 20)
+    assert _character(app, campaign_id, "Bo").defeated is True
     _finish_gm_reply(app, campaign_id)
 
     with _db(app) as db:
@@ -480,8 +481,7 @@ def test_a_defeated_character_is_skipped_when_the_turn_comes_round(client_factor
         encounters.begin_turn(db, campaign_id, "Ghoul")
         encounters.end_turn(db, campaign_id, "Ghoul", by_player=False)
     state = _state(app, campaign_id).encounter
-    assert state.round == 2
-    assert state.order[state.up] == "Ghoul"
+    assert state.order[state.up] == "Cy"
     assert state.acting is None
 
 
@@ -548,3 +548,111 @@ def test_player_attack_asks_for_damage_then_resolves_through_the_tool(client_fac
     result = json.loads(run.output)
     assert "error" not in result
     assert result["harm"] == {"hp": 3}
+
+
+def test_a_defeated_foe_does_not_end_the_encounter_while_another_foe_stands(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, "Ghoul", claw="1d6+1d6")
+    _foe(tools, "Bo")
+    _foe(tools, "Cy")
+    _hit(tools, "Ghoul", "Bo", 6, 5, 20)
+    assert _character(app, campaign_id, "Bo").defeated is True
+    assert _state(app, campaign_id).encounter is not None
+
+
+def test_the_encounter_ends_when_the_last_foe_falls(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, "Bo")
+    replace(tools, rng=Rolls(20)).player_attack("Bo", "Sword", 20)
+    assert _character(app, campaign_id, "Bo").defeated is True
+    assert _state(app, campaign_id).encounter is None
+
+
+def test_the_encounter_ends_when_the_player_character_is_knocked_out(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, "Bo", claw="1d6+1d6+1d6+1d6")
+    _hit(tools, "Bo", PC, 6, 6, 6, 6)
+    assert _character(app, campaign_id, PC).save_due is not None
+    tools.player_save(20)
+    assert _character(app, campaign_id, PC).defeated is True
+    assert _state(app, campaign_id).encounter is None
+
+
+def test_the_encounter_end_says_which_side_can_still_fight():
+    assert EncounterEnded(reason="Only the foes side can still fight.").render() == (
+        "Only the foes side can still fight. The encounter is over."
+    )
+    assert EncounterEnded().render() == "The encounter is over."
+
+
+def _knock_out_pc(tools: WorldTools) -> None:
+    _foe(tools, "Bo", claw="1d6+1d6+1d6+1d6")
+    _hit(tools, "Bo", PC, 6, 6, 6, 6)
+    tools.player_save(20)
+
+
+def test_the_gm_brings_a_knocked_out_character_back_with_an_explanation(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _knock_out_pc(tools)
+    assert _character(app, campaign_id, PC).defeated is True
+    result = tools.recover_character(
+        PC, "A passing cart carried her to the chapel.", "Her left hand is lamed."
+    )
+    assert result == {"character": PC, "recovered": True}
+    assert _character(app, campaign_id, PC).defeated is False
+
+
+def test_the_statblock_shows_a_knocked_out_character_in_critical_damage(client_factory):
+    _, _, tools = _fight(client_factory)
+    assert "Status: in critical damage" not in "\n".join(tools.get_statblock(PC)["statblock"])
+    _knock_out_pc(tools)
+    assert "Status: in critical damage" in "\n".join(tools.get_statblock(PC)["statblock"])
+    tools.recover_character(PC, "A passing cart carried her to the chapel.", "Her hand is lamed.")
+    assert "Status: in critical damage" not in "\n".join(tools.get_statblock(PC)["statblock"])
+
+
+def test_recovery_says_how_the_character_survived_and_what_it_cost():
+    from cygnusforge.services.events import CharacterRecovered
+
+    text = CharacterRecovered(
+        name=PC, explanation="A passing cart carried her out.", consequence="Her hand is lamed."
+    ).render()
+    assert text == "Mara comes to. A passing cart carried her out. Her hand is lamed."
+
+
+def test_recovery_refuses_an_npc_and_a_character_who_is_not_down(client_factory):
+    _app, _campaign_id, tools = _fight(client_factory)
+    _foe(tools, "Bo")
+    with pytest.raises(InvalidInput, match="not a player character"):
+        tools.recover_character("Bo", "Lucky.", "Nothing.")
+    with pytest.raises(InvalidInput, match="not in critical damage"):
+        tools.recover_character(PC, "Lucky.", "Nothing.")
+    with pytest.raises(InvalidInput, match="no character named"):
+        tools.recover_character("Nobody", "Lucky.", "Nothing.")
+
+
+def test_a_defeated_foe_stays_on_the_map_as_a_body(client_factory):
+    client, campaign_id, tools = _fight_client(client_factory)
+    _foe(tools, "Ghoul", claw="1d6+1d6")
+    _foe(tools, "Bo")
+    _foe(tools, "Cy")
+    tools.place_participant("Bo", 2, 2)
+    _hit(tools, "Ghoul", "Bo", 6, 5, 20)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    roster = page[page.index('class="encounter-roster"') : page.index('aria-label="Panels"')]
+    assert '<span class="roster-status">dead</span>' in roster
+    assert "encounter-cell occupied defeated" in page
+
+
+def test_a_strike_names_the_attacker_and_weapon_in_one_sentence():
+    strike = Struck(
+        name="Ysolde Vane",
+        attacker="Cavity Ghoul",
+        weapon="claws",
+        raw=6,
+        armor=0,
+        harm={"hp": 6},
+    )
+    assert strike.render() == (
+        "Cavity Ghoul strikes Ysolde Vane with the claws for 6; Ysolde Vane takes 6 harm."
+    )

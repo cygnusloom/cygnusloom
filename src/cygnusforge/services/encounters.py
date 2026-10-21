@@ -34,6 +34,7 @@ from cygnusforge.services.events import (
     ParticipantLeft,
     ParticipantPlaced,
     Place,
+    defeat_status,
     load_state,
     name_key,
     record,
@@ -435,7 +436,7 @@ def end_turn(db: Session, campaign_id: int, name: str, by_player: bool) -> dict[
 
 def _status(character: Character) -> str:
     if character.defeated:
-        return "defeated"
+        return defeat_status(character)
     if character.save_due is not None:
         return f"{character.save_due} save due"
     return ""
@@ -473,6 +474,7 @@ def encounter_view(state: CampaignState, grid: EncounterGrid | None) -> dict[str
                 "location": character.location,
                 "side": encounter.sides.get(name_key(character.name), ""),
                 "initiative": encounter.initiative.get(name_key(character.name)),
+                "defeated": character.defeated,
                 "status": _status(character),
             }
         )

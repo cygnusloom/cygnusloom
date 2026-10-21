@@ -60,6 +60,7 @@ from cygnusforge.services.events import (
     OpeningStarted,
     PcAdded,
     Place,
+    defeat_status,
     load_state,
     name_key,
     record,
@@ -310,6 +311,10 @@ class WorldTools:
     def set_armor(self, name: str, armor: int) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.set_armor(db, self.campaign_id, name, armor)
+
+    def recover_character(self, name: str, explanation: str, consequence: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return combat.recover_character(db, self.campaign_id, name, explanation, consequence)
 
     def _rules(self) -> CombatRules:
         if self.combat is None:
@@ -909,7 +914,7 @@ def _combat_lines(character: Character, spec: CharacterSpec) -> list[str]:
         )
         lines.append(f"Harm: {harm}")
     if character.defeated:
-        lines.append("Status: defeated")
+        lines.append(f"Status: {defeat_status(character)}")
     elif character.save_due is not None:
         lines.append(f"Status: {spec.stats[character.save_due].name} save due")
     return lines

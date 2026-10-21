@@ -80,3 +80,9 @@ def player_initiative(ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
 
 def set_armor(name: str, armor: int, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.set_armor(name, armor)
+
+
+def recover_character(
+    name: str, explanation: str, consequence: str, ctx: ToolContext
+) -> dict[str, Any]:
+    return ctx.world.recover_character(name, explanation, consequence)

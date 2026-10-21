@@ -250,5 +250,35 @@
         "armor"
       ]
     }
+  },
+  {
+    "type": "tool_call",
+    "id": "recover_character",
+    "name": "recover_character",
+    "python_module": "cairn2e",
+    "function": "recover_character",
+    "description": "Bring a player character back from critical damage, where they were left unconscious and bleeding out. Use it only for a player character whose statblock shows Status: in critical damage. Narrate how they survived, such as being dragged to safety, bandaged in time, or kept alive by a companion, and what it cost them, such as a lasting injury, a lost possession, or a debt. The harm they took stays as it was.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the player character."
+        },
+        "explanation": {
+          "type": "string",
+          "description": "How they survived, in a sentence or two."
+        },
+        "consequence": {
+          "type": "string",
+          "description": "What it cost them, in a sentence or two."
+        }
+      },
+      "required": [
+        "name",
+        "explanation",
+        "consequence"
+      ]
+    }
   }
 ]

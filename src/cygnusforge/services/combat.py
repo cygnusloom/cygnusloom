@@ -14,7 +14,7 @@ from sqlmodel import Session
 
 from cygnusforge.content.library import CombatRules
 from cygnusforge.rules.dice import roll_total
-from cygnusforge.services.common import InvalidInput, whole_number
+from cygnusforge.services.common import InvalidInput, bounded_text, whole_number
 from cygnusforge.services.encounters import (
     _participant,
     awaiting_initiative,
@@ -23,12 +23,16 @@ from cygnusforge.services.encounters import (
 )
 from cygnusforge.services.events import (
     NPC_KIND,
+    PC_KIND,
     ArmorSet,
     CampaignState,
     Character,
+    CharacterRecovered,
+    EncounterEnded,
     InitiativeRolled,
     SaveRolled,
     Struck,
+    defeat_status,
     load_state,
     name_key,
     record,
@@ -36,6 +40,7 @@ from cygnusforge.services.events import (
 
 D20 = "1d20"
 MAX_DAMAGE = 1000
+MAX_RECOVERY_TEXT = 600
 
 
 def current(character: Character, stat: str) -> int:
@@ -45,7 +50,7 @@ def current(character: Character, stat: str) -> int:
 
 def _living(character: Character) -> Character:
     if character.defeated:
-        raise InvalidInput(f"{character.name} is defeated")
+        raise InvalidInput(f"{character.name} is {defeat_status(character)}")
     return character
 
 
@@ -55,7 +60,8 @@ def _strike(
     combat: CombatRules,
     rng: random.Random,
     target: Character,
-    source: str,
+    attacker: str,
+    weapon: str,
     raw: int,
 ) -> dict[str, Any]:
     """Apply a hit. Armor absorbs first, then hit points take harm, then the overflow comes off
@@ -76,7 +82,15 @@ def _strike(
     record(
         db,
         campaign_id,
-        Struck(name=target.name, source=source, raw=raw, armor=absorbed, harm=harm, save=save),
+        Struck(
+            name=target.name,
+            attacker=attacker,
+            weapon=weapon,
+            raw=raw,
+            armor=absorbed,
+            harm=harm,
+            save=save,
+        ),
     )
     db.commit()
     result: dict[str, Any] = {
@@ -91,7 +105,33 @@ def _strike(
         character = state.characters[name_key(target.name)]
         result["save"] = _save(db, campaign_id, combat, rng, character, save)
     result["defeated"] = load_state(db, campaign_id).characters[name_key(target.name)].defeated
+    _end_if_one_side_left(db, campaign_id)
     return result
+
+
+def _end_if_one_side_left(db: Session, campaign_id: int) -> None:
+    """End the encounter once only one side still has a character who can fight. The check
+    needs at least two sides in the encounter, so a fight among one side is left alone."""
+    state = load_state(db, campaign_id)
+    encounter = state.encounter
+    if encounter is None:
+        return
+    sides: dict[str, list[Character]] = {}
+    for display in encounter.order:
+        character = state.characters[name_key(display)]
+        side = encounter.sides.get(name_key(character.name), "")
+        sides.setdefault(side, []).append(character)
+    if len(sides) < 2:
+        return
+    standing = [side for side, members in sides.items() if any(not m.defeated for m in members)]
+    if len(standing) > 1:
+        return
+    if standing:
+        reason = f"Only the {standing[0]} side can still fight."
+    else:
+        reason = "Nobody is left able to fight."
+    record(db, campaign_id, EncounterEnded(reason=reason))
+    db.commit()
 
 
 def _save(
@@ -108,7 +148,14 @@ def _save(
     record(
         db,
         campaign_id,
-        SaveRolled(name=character.name, stat=stat, roll=roll, score=score, passed=passed),
+        SaveRolled(
+            name=character.name,
+            stat=stat,
+            roll=roll,
+            score=score,
+            passed=passed,
+            status=defeat_status(character),
+        ),
     )
     db.commit()
     return {"stat": stat, "roll": roll, "score": score, "passed": passed}
@@ -146,7 +193,7 @@ def attack(
         raise InvalidInput(f"{source.name} has no attack named {attack_name!r}; attacks: {options}")
     name = matches[0]
     raw = roll_total(source.attacks[name], rng)
-    return _strike(db, campaign_id, combat, rng, struck, f"{source.name}'s {name}", raw)
+    return _strike(db, campaign_id, combat, rng, struck, source.name, name, raw)
 
 
 def player_attack(
@@ -171,7 +218,7 @@ def player_attack(
     name = weapon.strip()
     if not name:
         raise InvalidInput("weapon must name the attack")
-    return _strike(db, campaign_id, combat, rng, struck, f"{pc.name}'s {name}", raw)
+    return _strike(db, campaign_id, combat, rng, struck, pc.name, name, raw)
 
 
 def player_save(db: Session, campaign_id: int, roll: int, combat: CombatRules) -> dict[str, Any]:
@@ -187,9 +234,17 @@ def player_save(db: Session, campaign_id: int, roll: int, combat: CombatRules) -
     record(
         db,
         campaign_id,
-        SaveRolled(name=pc.name, stat=stat, roll=roll, score=score, passed=passed),
+        SaveRolled(
+            name=pc.name,
+            stat=stat,
+            roll=roll,
+            score=score,
+            passed=passed,
+            status=defeat_status(pc),
+        ),
     )
     db.commit()
+    _end_if_one_side_left(db, campaign_id)
     return {"character": pc.name, "stat": stat, "roll": roll, "score": score, "passed": passed}
 
 
@@ -228,3 +283,29 @@ def set_armor(db: Session, campaign_id: int, name: str, armor: int) -> dict[str,
     record(db, campaign_id, ArmorSet(name=character.name, armor=value))
     db.commit()
     return {"character": character.name, "armor": value}
+
+
+def recover_character(
+    db: Session, campaign_id: int, name: str, explanation: str, consequence: str
+) -> dict[str, Any]:
+    """Bring a player character back from critical damage. The GM says how they survived and what
+    it cost them; the harm they took stays as it was."""
+    state = load_state(db, campaign_id)
+    character = state.characters.get(name_key(name))
+    if character is None:
+        raise InvalidInput(f"there is no character named {name!r}")
+    if character.kind != PC_KIND:
+        raise InvalidInput(f"{character.name} is not a player character and cannot be recovered")
+    if not character.defeated:
+        raise InvalidInput(f"{character.name} is not in critical damage")
+    record(
+        db,
+        campaign_id,
+        CharacterRecovered(
+            name=character.name,
+            explanation=bounded_text(explanation, "explanation", MAX_RECOVERY_TEXT),
+            consequence=bounded_text(consequence, "consequence", MAX_RECOVERY_TEXT),
+        ),
+    )
+    db.commit()
+    return {"character": character.name, "recovered": True}

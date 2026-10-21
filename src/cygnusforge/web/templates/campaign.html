@@ -6,7 +6,7 @@
       <section class="chat" aria-label="Chat">
           <h1 class="chat-title">{{ campaign.name }}</h1>
           <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
-          <div class="transcript" data-transcript>
+          <div class="transcript" data-transcript data-gm-state="{{ 'busy' if pending and pending.auto_continue else 'waiting' }}">
             {% for message in transcript %}
               {% if message.role == "log" %}
               <div class="log-line">{{ message.content }}</div>
@@ -141,6 +141,7 @@
                   <strong>{{ participant.name }}</strong>
                   {% if participant.creature %}<span class="muted">{{ participant.creature }}</span>{% endif %}
                   {% if participant.is_pc %}<span class="muted">(you)</span>{% endif %}
+                  {% if participant.status %}<span class="roster-status">{{ participant.status }}</span>{% endif %}
                   {% if participant.acting %}<span class="roster-state">acting</span>{% elif participant.next %}<span class="roster-state muted">next</span>{% endif %}
                 </li>
                 {% endfor %}

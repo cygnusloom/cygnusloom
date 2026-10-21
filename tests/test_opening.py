@@ -119,3 +119,22 @@ def test_failed_opening_offers_continue_instead_of_auto_start(
     assert 'name="kind" value="continue"' in page
     assert "data-auto-start" not in page
     assert "The GM is opening the campaign." not in page
+
+
+def test_transcript_reports_busy_while_the_opening_runs_and_waiting_when_it_stopped(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    class Broken:
+        name = "broken"
+
+        async def chat(self, model, messages, tools=None):
+            raise LLMError("provider broken is unreachable")
+
+        async def stream(self, model, messages, tools=None):
+            yield await self.chat(model, messages, tools)
+
+    client, campaign_id = _created_campaign(client_factory)
+    assert 'data-gm-state="busy"' in client.get(f"/campaigns/{campaign_id}").text
+    app.state.providers = lambda model_id: (Broken(), "model")
+    _answer(client, campaign_id, "continue")
+    assert 'data-gm-state="waiting"' in client.get(f"/campaigns/{campaign_id}").text

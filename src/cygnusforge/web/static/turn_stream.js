@@ -65,9 +65,15 @@
     transcript.insertBefore(line, before);
   };
 
+  // "busy" while the GM is working on a turn; "waiting" once the page is ready for player input.
+  const setGmState = (state) => {
+    transcript.dataset.gmState = state;
+  };
+
   const setBusy = (busy) => {
     submit.disabled = busy;
     textarea.readOnly = busy;
+    setGmState(busy ? "busy" : "waiting");
   };
 
   const showError = (message) => {
@@ -205,6 +211,7 @@
     // Encounter turn forms have no pending block, so their own controls are disabled instead.
     const controls = (form.closest("[data-pending]") ?? form).querySelectorAll("button, textarea");
     for (const control of controls) control.disabled = true;
+    setGmState("busy");
     const reply = addBubble("assistant", "Cygnus");
     const attempt = { started: false };
     try {
@@ -217,6 +224,7 @@
         reply.bubble.remove();
         showError(error instanceof TurnFailure ? error.message : "The GM's reply did not finish. Try again.");
         for (const control of controls) control.disabled = false;
+        setGmState("waiting");
         return;
       }
       // Once the stream started, the server has recorded the failure and the reloaded page shows
