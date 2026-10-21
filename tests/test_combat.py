@@ -20,7 +20,7 @@ from cygnusforge.rules.cairn2e import save_succeeds
 from cygnusforge.rules.context import ToolContext
 from cygnusforge.services import encounters
 from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import NPC_KIND
+from cygnusforge.services.events import NPC_KIND, ChatGM, record
 from cygnusforge.services.tools import Ask, RollAnswer, ToolRun, run_tool
 from cygnusforge.services.world import WorldTools
 from tests.conftest import content_library
@@ -93,6 +93,13 @@ def _foe(tools: WorldTools, name: str, hp: int = 6, armor: int = 0, claw: str = 
         attacks=[{"name": "Claw", "dice": claw}],
     )
     tools.add_participant(name)
+
+
+def _finish_gm_reply(app: FastAPI, campaign_id: int) -> None:
+    """The GM's final reply, which closes the turn it was answering."""
+    with _db(app) as db:
+        record(db, campaign_id, ChatGM(content="The turn plays out.", model="test"))
+        db.commit()
 
 
 def _hit(tools: WorldTools, attacker: str, target: str, *dice: int) -> dict[str, Any]:
@@ -420,6 +427,24 @@ def test_a_player_character_who_fails_the_save_is_defeated(client_factory):
     assert result["passed"] is False
     assert result["stat"] == "str"
     assert _character(app, campaign_id, PC).defeated is True
+
+
+def test_a_defeated_character_is_skipped_when_the_turn_comes_round(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, "Ghoul", claw="1d6+1d6+1d6")
+    _hit(tools, "Ghoul", PC, 6, 6, 6)
+    tools.player_save(20)
+    assert _character(app, campaign_id, PC).defeated is True
+    _finish_gm_reply(app, campaign_id)
+
+    with _db(app) as db:
+        encounters.end_turn(db, campaign_id, PC, by_player=True)
+        encounters.begin_turn(db, campaign_id, "Ghoul")
+        encounters.end_turn(db, campaign_id, "Ghoul", by_player=False)
+    state = _state(app, campaign_id).encounter
+    assert state.round == 2
+    assert state.order[state.up] == "Ghoul"
+    assert state.acting is None
 
 
 def test_a_player_character_who_passes_the_save_stands(client_factory):

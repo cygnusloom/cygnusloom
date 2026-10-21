@@ -253,6 +253,16 @@ def _next_round(encounter: Encounter) -> None:
     group_by_side(encounter, keep_turn=False)
 
 
+def _skip_defeated(encounter: Encounter, state: CampaignState) -> None:
+    """Pass the turn over defeated participants. It stays put when everyone is defeated."""
+    if all(state.characters[name_key(name)].defeated for name in encounter.order):
+        return
+    while state.characters[name_key(encounter.order[encounter.up])].defeated:
+        encounter.up += 1
+        if encounter.up >= len(encounter.order):
+            _next_round(encounter)
+
+
 def token_label(name: str) -> str:
     """A short label for a map token: the initials of a multi-word name, or the first three letters
     of a single word. The full name is the token's tooltip."""
@@ -1060,6 +1070,7 @@ class EncounterTurnEnded(GameEvent):
         encounter.up += 1
         if encounter.up >= len(encounter.order):
             _next_round(encounter)
+        _skip_defeated(encounter, state)
 
     def render(self) -> str:
         return f"{self.name}'s turn ends."
