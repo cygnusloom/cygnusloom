@@ -441,6 +441,13 @@ def _status(character: Character) -> str:
     return ""
 
 
+def _creature_label(character: Character) -> str:
+    """The statblock to show beside a combatant, or nothing when it would repeat the name."""
+    if name_key(character.creature) == name_key(character.name):
+        return ""
+    return character.creature
+
+
 def encounter_view(state: CampaignState, grid: EncounterGrid | None) -> dict[str, Any] | None:
     """The encounter in progress as the UI and the GM's orientation text show it."""
     encounter = state.encounter
@@ -458,7 +465,7 @@ def encounter_view(state: CampaignState, grid: EncounterGrid | None) -> dict[str
                 "label": labels[character.name],
                 "name": character.name,
                 "is_pc": character.kind == PC_KIND,
-                "creature": character.creature,
+                "creature": _creature_label(character),
                 "cell": encounter.cells.get(name_key(character.name)),
                 "acting": acting,
                 "next": encounter.acting is None

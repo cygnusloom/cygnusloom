@@ -244,6 +244,15 @@ def test_the_encounter_view_names_the_statblock_a_monster_was_built_from(client_
     assert creatures == {PC: "", "Rover": "Blink Dog", "Brute": ""}
 
 
+def test_a_monster_named_after_its_statblock_does_not_repeat_it(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools.create_monster("blink dog", YARD, template="blink-dog")
+    tools.add_participant("blink dog")
+    view = encounters.encounter_view(_state(app, campaign_id), None)
+    creatures = {p["name"]: p["creature"] for p in view["participants"]}
+    assert creatures["blink dog"] == ""
+
+
 def test_given_values_replace_the_template_and_the_rest_are_kept(client_factory):
     _, _, tools = _fight(client_factory)
     result = tools.create_monster(
