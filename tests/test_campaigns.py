@@ -55,12 +55,14 @@ def _create_character(
 
 
 def _campaign_id(client_factory: Callable[[], TestClient]) -> tuple[TestClient, int]:
+    """A campaign whose opening GM turn has finished, so players can act."""
     client = _signed_in(client_factory)
     response = _new_campaign(client)
     assert response.status_code == 303
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     created = _create_character(client, campaign_id)
     assert created.status_code == 303
+    _answer(client, campaign_id, "continue")
     return client, campaign_id
 
 
@@ -131,8 +133,8 @@ def test_model_change_applies_to_the_next_message(
         async def stream(self, model, messages, tools=None):
             yield await self.chat(model, messages, tools)
 
-    app.state.providers = lambda model_id: (Echo(), model_id)
     client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (Echo(), model_id)
     _send(client, campaign_id, "one")
     assert _set_model(client, campaign_id, "ollama/test-model").status_code == 303
     _send(client, campaign_id, "two")
@@ -207,7 +209,7 @@ def test_chat_round_trip_saves_both_messages(client_factory: Callable[[], TestCl
     page = client.get(f"/campaigns/{campaign_id}")
     assert "Hi there." in page.text
     assert "hello" in page.text
-    assert page.text.count('class="message ') == 2
+    assert page.text.count('class="message ') == 3
     assert '<span class="role">user</span>' in page.text
     assert '<span class="role">Cygnus' in page.text
     assert '<span class="role">assistant' not in page.text
@@ -235,9 +237,16 @@ def test_history_is_sent_to_the_model(client_factory: Callable[[], TestClient], 
     _send(client, campaign_id, "first")
     _send(client, campaign_id, "second")
     last = fake.calls[-1]
-    assert [m["role"] for m in last] == ["system", "user", "assistant", "user", "system"]
-    assert last[1]["content"] == "first"
-    assert last[3]["content"] == "second"
+    assert [m["role"] for m in last] == [
+        "system",
+        "assistant",
+        "user",
+        "assistant",
+        "user",
+        "system",
+    ]
+    assert last[2]["content"] == "first"
+    assert last[4]["content"] == "second"
     assert last[-1]["content"] == NARRATE_INSTRUCTION
 
 
@@ -248,7 +257,7 @@ def test_scripted_directive_drives_later_turns(client_factory: Callable[[], Test
     _send(client, campaign_id, "next")
     _send(client, campaign_id, "again")
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert page.count('class="message ') == 6
+    assert page.count('class="message ') == 7
     assert "You said: again" in page
     assert ">two<" in page and ">one<" in page
 
@@ -279,8 +288,8 @@ def test_failed_reply_keeps_the_message_and_offers_continue(
         async def stream(self, model, messages, tools=None):
             yield await self.chat(model, messages, tools)
 
-    app.state.providers = lambda model_id: (Broken(), "model")
     client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (Broken(), "model")
     response = _send(client, campaign_id, "are you there?")
     assert response.status_code == 502
     page = client.get(f"/campaigns/{campaign_id}").text
@@ -295,7 +304,7 @@ def test_failed_reply_keeps_the_message_and_offers_continue(
 def test_empty_message_is_rejected(client_factory: Callable[[], TestClient]):
     client, campaign_id = _campaign_id(client_factory)
     assert _send(client, campaign_id, "  ").status_code == 400
-    assert 'class="message ' not in client.get(f"/campaigns/{campaign_id}").text
+    assert client.get(f"/campaigns/{campaign_id}").text.count('class="message ') == 1
 
 
 def test_other_accounts_cannot_see_or_post(client_factory: Callable[[], TestClient]):

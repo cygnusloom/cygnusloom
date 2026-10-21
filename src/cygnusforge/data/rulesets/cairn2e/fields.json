@@ -8,5 +8,5 @@
   {"type": "character_field", "id": "virtue", "name": "Virtue", "table": "virtue"},
   {"type": "character_field", "id": "vice", "name": "Vice", "table": "vice"},
   {"type": "character_field", "id": "bond", "name": "Bond", "table": "bond"},
-  {"type": "character_field", "id": "omen", "name": "Omen", "table": "omen"}
+  {"type": "campaign_field", "id": "omen", "name": "Omen", "table": "omen"}
 ]

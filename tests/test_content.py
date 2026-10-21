@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from cygnusforge.content.character import TableOption
+from cygnusforge.content.character import NO_CAMPAIGN, TableOption, campaign_schema
 from cygnusforge.content.definitions import ContentError, read_definitions
 from cygnusforge.content.library import ContentLibrary, PlayerInput
 from cygnusforge.rules.freeform import SocialRoll, social_roll
@@ -550,3 +550,20 @@ def test_table_options_must_be_text_or_named_text(tree: Path, options: list[Any]
     )
     with pytest.raises(ContentError, match="table accent"):
         ContentLibrary.load(tree)
+
+
+def test_cairn_campaign_options_are_the_omen_alone():
+    cairn = ContentLibrary.load().rule_sets["cairn2e"]
+    assert set(cairn.campaign.fields) == {"omen"}
+    assert "omen" in cairn.campaign.tables
+    assert "omen" not in cairn.character.fields
+    schema = campaign_schema(cairn.campaign)
+    assert schema["required"] == ["omen"]
+    assert schema["additionalProperties"] is False
+    omen = cairn.campaign.tables["omen"][0].value
+    assert schema["properties"]["omen"]["enum"][0] == omen
+
+
+def test_no_campaign_has_no_options():
+    assert not NO_CAMPAIGN.fields
+    assert campaign_schema(NO_CAMPAIGN)["required"] == []

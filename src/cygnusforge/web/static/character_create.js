@@ -1,5 +1,5 @@
 (() => {
-  const form = document.querySelector(".character-form");
+  const form = document.querySelector(".creation-form");
 
   // Only the tables of the chosen template are shown. Hidden tables are skipped on submit.
   const revealTables = (kind) => {
@@ -56,7 +56,7 @@
   // Suggests a name from the chosen templates' names, or from every template's names when no
   // chosen template suggests any. The name typed by the player is replaced.
   const rollName = () => {
-    const input = form.querySelector('input[name="name"]');
+    const input = form?.querySelector('input[name="name"]');
     const lists = [...document.querySelectorAll("[data-name-source]")];
     const chosen = new Set(
       [...document.querySelectorAll('input[type="radio"][name^="template-"]:checked')].map((radio) => radio.value),
@@ -89,7 +89,7 @@
   // unchosen mode a name already typed counts as chosen and is kept.
   const randomizeAll = (onlyUnchosen) => {
     randomizeChoices(onlyUnchosen);
-    const input = form.querySelector('input[name="name"]');
+    const input = form?.querySelector('input[name="name"]');
     if (onlyUnchosen && input?.value.trim()) return;
     rollName();
   };

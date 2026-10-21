@@ -7,7 +7,9 @@ from collections.abc import Callable
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from cygnusforge.services import world
 from cygnusforge.services.events import load_state
+from tests.conftest import csrf_token
 from tests.test_campaigns import _create_character, _new_campaign, _send, _signed_in
 
 STAT_SELECT_RE = re.compile(r'<select name="stat-(\w+)">(.*?)</select>', re.DOTALL)
@@ -16,10 +18,25 @@ RADIO_RE = re.compile(r'<input type="radio" name="((?:template|field)-[\w-]+)" v
 
 
 def _cairn_campaign(client_factory: Callable[[], TestClient]) -> tuple[TestClient, int]:
+    """A Cairn campaign whose shared options are chosen, so the character step is next."""
     client = _signed_in(client_factory)
     response = _new_campaign(client, world_template="kilharbor", rule_set="cairn2e")
     assert response.status_code == 303
-    return client, int(response.headers["location"].rsplit("/", 1)[1])
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    assert _choose_campaign(client, campaign_id).status_code == 303
+    return client, campaign_id
+
+
+def _choose_campaign(client: TestClient, campaign_id: int, fields: dict[str, str] | None = None):
+    """Submit the campaign options form, with the first choice of each unless given."""
+    page = client.get(f"/campaigns/{campaign_id}").text
+    token = csrf_token(client, f"/campaigns/{campaign_id}")
+    chosen = _choices(page) if fields is None else fields
+    return client.post(
+        f"/campaigns/{campaign_id}/options",
+        data={"csrf_token": token, **chosen},
+        follow_redirects=False,
+    )
 
 
 def _rolled_stats(page: str) -> dict[str, int]:
@@ -245,3 +262,56 @@ def test_a_named_option_is_stored_by_its_name(client_factory: Callable[[], TestC
         pc = load_state(db, campaign_id).pc()
     assert pc is not None
     assert pc.fields[SCRIVENER_WORK] == WILD_TONGUE
+
+
+def test_cairn_campaign_asks_for_its_options_before_the_character(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, world_template="kilharbor", rule_set="cairn2e")
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "Create your campaign" in page
+    assert 'name="field-omen"' in page
+    assert f'action="/campaigns/{campaign_id}/options"' in page
+    assert "Create your character" not in page
+    assert 'name="stat-str"' not in page
+
+
+def test_the_campaign_options_must_all_be_chosen(client_factory: Callable[[], TestClient]):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, world_template="kilharbor", rule_set="cairn2e")
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    response = _choose_campaign(client, campaign_id, fields={})
+    assert response.status_code == 400
+    assert "Choose Omen" in response.text
+    with Session(client.app.state.engine) as db:
+        assert load_state(db, campaign_id).options == {}
+
+
+def test_campaign_options_are_chosen_once(client_factory: Callable[[], TestClient]):
+    client, campaign_id = _cairn_campaign(client_factory)
+    with Session(client.app.state.engine) as db:
+        omen = load_state(db, campaign_id).options["omen"]
+    response = _choose_campaign(client, campaign_id, fields={"field-omen": omen})
+    assert response.status_code == 400
+    assert "already chosen" in response.text
+
+
+def test_the_omen_is_a_campaign_option_given_to_the_gm(client_factory: Callable[[], TestClient]):
+    client, campaign_id = _cairn_campaign(client_factory)
+    cairn = client.app.state.content.rule_sets["cairn2e"]
+    with Session(client.app.state.engine) as db:
+        omen = load_state(db, campaign_id).options["omen"]
+    assert omen in {option.value for option in cairn.campaign.tables["omen"]}
+    assert "omen" not in cairn.character.fields
+
+    assert (
+        _create_character(
+            client, campaign_id, name="Mara", fields=_complete_form(client, campaign_id)
+        ).status_code
+        == 303
+    )
+    with Session(client.app.state.engine) as db:
+        text = world.world_state_text(load_state(db, campaign_id), cairn.character, cairn.campaign)
+    assert f"Campaign omen: {omen}." in text

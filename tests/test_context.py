@@ -129,7 +129,7 @@ def test_no_summary_when_the_chat_is_well_inside_the_window(settings: Settings):
     client, campaign_id = _campaign_id(lambda: TestClient(app))
     for _ in range(3):
         assert _send(client, campaign_id, "x" * 400).status_code == 303
-    assert len(provider.calls) == 6
+    assert len(provider.calls) == 8
     assert provider.summarizer_calls() == []
     state = _state(app, campaign_id)
     assert state.summary == ""
@@ -200,7 +200,7 @@ def test_failed_reply_after_summarizing_keeps_the_summary_and_the_open_turn(sett
     assert state.summary == "SUMMARY"
     assert state.through > 0
     assert state.turn is not None and state.turn.failed
-    assert _saved_message_count(app) == 2 * (len(statuses) - 1) + 1
+    assert _saved_message_count(app) == 2 * (len(statuses) - 1) + 2
 
 
 def test_transcript_keeps_every_message_after_summarizing(settings: Settings):
@@ -214,7 +214,7 @@ def test_transcript_keeps_every_message_after_summarizing(settings: Settings):
         if _state(app, campaign_id).summary:
             break
     assert _state(app, campaign_id).summary == "SUMMARY"
-    assert _saved_message_count(app) == 2 * sends
+    assert _saved_message_count(app) == 2 * sends + 1
     assert "m0 " in client.get(f"/campaigns/{campaign_id}").text
 
 

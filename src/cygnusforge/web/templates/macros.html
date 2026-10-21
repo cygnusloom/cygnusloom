@@ -31,6 +31,27 @@
   </dialog>
 {%- endmacro %}
 
+{# A choice from a table, as a panel in the creation grid. The options open in a dialog. #}
+{% macro choice_panel(name, label, options, description=None) -%}
+  <fieldset class="creation-panel" data-choice-panel="{{ name }}" data-choice-label="{{ label }}" aria-labelledby="panel-{{ name }}">
+    <h3 id="panel-{{ name }}">{{ label }}</h3>
+    {% call choice_picker(name, label, description) %}
+      {% for option in options %}
+        {{ choice(name, option.value, option.title, option.detail) }}
+      {% endfor %}
+    {% endcall %}
+  </fieldset>
+{%- endmacro %}
+
+{% macro text_panel(name, label, description="") -%}
+  <section class="creation-panel" aria-labelledby="panel-{{ name }}">
+    <h3 id="panel-{{ name }}">{{ label }}</h3>
+    <label>
+      <textarea name="{{ name }}" rows="3" maxlength="2000" placeholder="{{ description }}" aria-labelledby="panel-{{ name }}"></textarea>
+    </label>
+  </section>
+{%- endmacro %}
+
 {% macro dice_button(name, label, attribute="data-dice-for") -%}
   <button type="button" class="secondary dice" {{ attribute }}="{{ name }}" title="Pick a random {{ label }}" aria-label="Pick a random {{ label }}">
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">

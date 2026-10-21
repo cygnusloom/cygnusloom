@@ -43,6 +43,6 @@
   {
     "type": "rule",
     "id": "omens",
-    "text": "If you are the youngest character, roll on the Omens table. The result should be read aloud to the other players."
+    "text": "The campaign has one omen, chosen from the Omens table when the campaign is created rather than rolled by the youngest character. Every character shares it. It should be read aloud to the players when the campaign begins."
   }
 ]

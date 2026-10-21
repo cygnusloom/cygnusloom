@@ -12,7 +12,7 @@ from fastapi.responses import RedirectResponse, StreamingResponse
 from starlette.responses import Response
 
 from cygnusforge.auth.deps import page_user, verify_csrf
-from cygnusforge.content.character import NO_CHARACTER, character_schema
+from cygnusforge.content.character import NO_CAMPAIGN, NO_CHARACTER, character_schema
 from cygnusforge.db.models import User
 from cygnusforge.llm.base import LLMError
 from cygnusforge.services.accounts import is_test_user
@@ -24,9 +24,11 @@ from cygnusforge.services.campaigns import (
     Saved,
     Status,
     TurnEvent,
+    campaign_spec,
     campaign_transcript,
     campaign_world,
     character_spec,
+    choose_campaign_options,
     context_usage,
     create_campaign,
     create_character,
@@ -49,7 +51,12 @@ from cygnusforge.services.campaigns import (
 from cygnusforge.services.common import Conflict, InvalidInput, NotFound
 from cygnusforge.services.names import random_campaign_name
 from cygnusforge.services.tools import check_arguments
-from cygnusforge.web.character_form import creation_view, submission_from_form
+from cygnusforge.web.character_form import (
+    campaign_submission_from_form,
+    campaign_view,
+    creation_view,
+    submission_from_form,
+)
 from cygnusforge.web.forms import form_text
 from cygnusforge.web.rendering import render
 
@@ -111,6 +118,24 @@ async def reroll_character_stats(request: Request, campaign_id: int) -> Response
         _roll_stats(request, user, campaign_id)
     except InvalidInput as exc:
         return _campaign_page(request, user, campaign_id, 400, str(exc))
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
+@router.post("/{campaign_id}/options")
+async def choose_options(request: Request, campaign_id: int) -> Response:
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    engine = request.app.state.engine
+    library = request.app.state.content
+    try:
+        spec = campaign_spec(library, get_campaign(engine, user.id, campaign_id))
+        submitted = campaign_submission_from_form(spec, form)
+        choose_campaign_options(engine, library, user.id, campaign_id, submitted)
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
@@ -256,6 +281,8 @@ async def discard_pending(request: Request, campaign_id: int) -> Response:
     await verify_csrf(request)
     try:
         discard_pending_turn(request.app.state.engine, user.id, campaign_id)
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
     except Conflict as exc:
         return _campaign_page(request, user, campaign_id, 409, str(exc))
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
@@ -364,7 +391,20 @@ def _campaign_page(
     campaign = get_campaign(engine, user.id, campaign_id)
     rule_set = library.rule_sets.get(campaign.rule_set)
     spec = rule_set.character if rule_set else NO_CHARACTER
+    options = rule_set.campaign if rule_set else NO_CAMPAIGN
     world = campaign_world(engine, user.id, campaign.id)
+    if options.fields and not world.state.options:
+        return render(
+            request,
+            "campaign_create.html",
+            status_code=status_code,
+            campaign=campaign,
+            world=library.world_templates.get(campaign.world_template),
+            world_view=world.view,
+            rule_set=rule_set,
+            options=campaign_view(options),
+            error=error,
+        )
     if world.state.pc() is None:
         character = None
         if rule_set is not None:
@@ -391,6 +431,7 @@ def _campaign_page(
         messages,
         rule_set.rules if rule_set else {},
         spec,
+        options,
         settings.llm_context_tokens,
     )
     return render(

@@ -133,4 +133,4 @@ def test_chat_is_in_the_transcript_and_not_in_the_log(
         owner_id = db.get(Campaign, campaign_id).owner_id
     log = campaign_log(app.state.engine, owner_id, campaign_id)
     assert not any("Hello, is anyone there?" in line for line in log)
-    assert list_messages(app.state.engine, campaign_id)[0].content == "Hello, is anyone there?"
+    assert list_messages(app.state.engine, campaign_id)[1].content == "Hello, is anyone there?"

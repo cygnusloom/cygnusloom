@@ -42,6 +42,7 @@ def test_every_turn_action_is_refused_while_a_turn_is_running(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
+    saved_before = _saved_message_count(app)
     with service._exclusive(campaign_id):
         assert _send(client, campaign_id, "hi").status_code == 409
         assert _set_model(client, campaign_id, "ollama/test-model").status_code == 409
@@ -50,7 +51,7 @@ def test_every_turn_action_is_refused_while_a_turn_is_running(
         assert _answer(client, campaign_id, "text", "hello") == [BUSY]
 
         assert _campaign_model(app, campaign_id) == "fake/scripted"
-        assert _saved_message_count(app) == 0
+        assert _saved_message_count(app) == saved_before
 
     assert _send(client, campaign_id, "hi").status_code == 303
 

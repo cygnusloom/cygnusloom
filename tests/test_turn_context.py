@@ -55,7 +55,7 @@ def test_reply_context_lists_the_system_prompt_tools_and_the_message(
 ):
     client, campaign_id = _campaign_id(client_factory)
     _send(client, campaign_id, "hello")
-    reply_id = _message_ids(app, campaign_id, "assistant")[0]
+    reply_id = _message_ids(app, campaign_id, "assistant")[-1]
 
     parts = _context(app, campaign_id, reply_id)
 
@@ -104,7 +104,7 @@ def test_context_shows_history_and_this_turns_tool_rounds(
     _send(client, campaign_id, _script({"text": "Hello back."}))
     _send(client, campaign_id, "second")
     first_user, second_user = _message_ids(app, campaign_id, "user")
-    first_reply = _message_ids(app, campaign_id, "assistant")[0]
+    first_reply = _message_ids(app, campaign_id, "assistant")[1]
     script = _script({"rounds": [[ROLL]], "text": "Well rolled."})
     _send(client, campaign_id, script)
     _answer(client, campaign_id, "roll")
@@ -169,7 +169,7 @@ def test_context_is_only_for_the_owner_and_only_for_replies(
 ):
     owner, campaign_id = _campaign_id(client_factory)
     _send(owner, campaign_id, "hi")
-    reply_id = _message_ids(app, campaign_id, "assistant")[0]
+    reply_id = _message_ids(app, campaign_id, "assistant")[-1]
     user_id = _message_ids(app, campaign_id, "user")[0]
     intruder = _signed_in(client_factory, "intruder@example.com")
 
@@ -182,7 +182,7 @@ def test_context_is_only_for_the_owner_and_only_for_replies(
 def test_context_fragment_escapes_html(client_factory: Callable[[], TestClient], app: FastAPI):
     client, campaign_id = _campaign_id(client_factory)
     _send(client, campaign_id, "<img src=x onerror=alert(1)>")
-    reply_id = _message_ids(app, campaign_id, "assistant")[0]
+    reply_id = _message_ids(app, campaign_id, "assistant")[-1]
 
     text = client.get(f"/campaigns/{campaign_id}/messages/{reply_id}/context").text
 
@@ -195,7 +195,7 @@ def test_each_reply_has_a_gear_but_user_messages_do_not(
 ):
     client, campaign_id = _campaign_id(client_factory)
     _send(client, campaign_id, "hello")
-    reply_id = _message_ids(app, campaign_id, "assistant")[0]
+    reply_id = _message_ids(app, campaign_id, "assistant")[-1]
     user_id = _message_ids(app, campaign_id, "user")[0]
 
     page = client.get(f"/campaigns/{campaign_id}").text
@@ -261,7 +261,7 @@ def test_transcript_records_the_summary_exchange_when_compressing(
 def test_transcript_fragment_escapes_html(client_factory: Callable[[], TestClient], app: FastAPI):
     client, campaign_id = _campaign_id(client_factory)
     _send(client, campaign_id, "<img src=x onerror=alert(1)>")
-    reply_id = _message_ids(app, campaign_id, "assistant")[0]
+    reply_id = _message_ids(app, campaign_id, "assistant")[-1]
 
     text = client.get(f"/campaigns/{campaign_id}/messages/{reply_id}/transcript").text
 
@@ -272,7 +272,7 @@ def test_transcript_fragment_escapes_html(client_factory: Callable[[], TestClien
 def test_transcript_is_only_for_the_owner(client_factory: Callable[[], TestClient], app: FastAPI):
     owner, campaign_id = _campaign_id(client_factory)
     _send(owner, campaign_id, "hi")
-    reply_id = _message_ids(app, campaign_id, "assistant")[0]
+    reply_id = _message_ids(app, campaign_id, "assistant")[-1]
     intruder = _signed_in(client_factory, "intruder@example.com")
 
     assert (

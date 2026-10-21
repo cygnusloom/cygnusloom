@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.content.character import TableOption
+from cygnusforge.content.character import NO_CAMPAIGN, TableOption
 from cygnusforge.content.library import ContentLibrary
 from cygnusforge.llm.base import ChatReply, ToolRequest
 from cygnusforge.rules.context import ToolContext
@@ -33,6 +33,7 @@ from tests.test_tools import _recording_provider, _saved, _script
 LIBRARY = ContentLibrary.load()
 TOOLS = LIBRARY.core.tool_calls
 TABLES = LIBRARY.core.tables
+CAIRN = LIBRARY.rule_sets["cairn2e"]
 
 
 def _values(table: str) -> list[str]:
@@ -96,7 +97,7 @@ def test_player_character_starts_unplaced(client_factory: Callable[[], TestClien
     assert pc.name == "Ada"
     assert pc.location is None
     assert "Player character: Ada, not yet placed; place them with move_actor" in (
-        world.world_state_text(state, SPEC)
+        world.world_state_text(state, SPEC, NO_CAMPAIGN)
     )
 
 
@@ -247,7 +248,7 @@ def test_moving_the_player_changes_the_world_state(client_factory: Callable[[], 
     _, campaign_id = _campaign_id(client_factory)
     moved = _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
     assert moved == {"moved": "Ada", "location": "Glowcap Ring"}
-    text = world.world_state_text(_state(app, campaign_id), SPEC)
+    text = world.world_state_text(_state(app, campaign_id), SPEC, NO_CAMPAIGN)
     assert "Player character: Ada, at Glowcap Ring." in text
     assert "- Brin Gallowcap, at Glowcap Ring:" in text
 
@@ -526,8 +527,8 @@ def test_speech_is_a_separate_call_and_only_the_narration_is_saved(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     recorder = _recording_provider()
-    app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (recorder, model_id)
     _place_pc(client, campaign_id)
     speak_call = {
         "name": "speak",
@@ -551,7 +552,7 @@ def test_speech_is_a_separate_call_and_only_the_narration_is_saved(
     assert len(speech_calls) == 1
     assert "Speaker: Mara Thistledown" in json.dumps(speech_calls[0]["messages"])
     assert "Intent: Warn Ada about the bog." in json.dumps(speech_calls[0]["messages"])
-    assert _saved(app, campaign_id) == [
+    assert _saved(app, campaign_id)[1:] == [
         ("user", script),
         ("assistant", "Mara looks up from her kettle."),
     ]
@@ -570,8 +571,8 @@ def _contents(messages: list[dict[str, Any]]) -> str:
 
 def test_an_npc_gets_one_line_per_reply(client_factory: Callable[[], TestClient], app: FastAPI):
     recorder = _recording_provider()
-    app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (recorder, model_id)
     _place_pc(client, campaign_id)
     speak_call = {
         "name": "speak",
@@ -604,8 +605,8 @@ def test_an_npc_gets_one_line_per_reply(client_factory: Callable[[], TestClient]
 
 def test_replace_amends_the_queued_line(client_factory: Callable[[], TestClient], app: FastAPI):
     recorder = _recording_provider()
-    app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (recorder, model_id)
     _place_pc(client, campaign_id)
     first = {
         "name": "speak",
@@ -649,8 +650,8 @@ def test_a_failed_replace_keeps_the_queued_line(
         return await inner_chat(model, messages, tools)
 
     recorder.chat = chat
-    app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (recorder, model_id)
     _place_pc(client, campaign_id)
     first = {
         "name": "speak",
@@ -673,8 +674,8 @@ def test_speech_with_tool_call_markup_is_not_spoken(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     recorder = _recording_provider()
-    app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (recorder, model_id)
     _place_pc(client, campaign_id)
     speak_call = {
         "name": "speak",
@@ -696,7 +697,7 @@ def test_speech_with_tool_call_markup_is_not_spoken(
     )
     narration = json.dumps(_non_user(recorder.calls[-1]["messages"]))
     assert "<tool_call" not in narration
-    assert _saved(app, campaign_id) == [
+    assert _saved(app, campaign_id)[1:] == [
         ("user", script),
         ("assistant", "Mara turns back to her kettle."),
     ]
@@ -706,8 +707,8 @@ def test_speech_shows_a_writing_dialogue_status(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     recorder = _recording_provider()
-    app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (recorder, model_id)
     _place_pc(client, campaign_id)
     script = _script(
         {
@@ -737,3 +738,32 @@ def test_speech_shows_a_writing_dialogue_status(
     ]
     assert "Writing dialogue for Mara Thistledown..." in statuses
     assert "Running speak..." not in statuses
+
+
+def test_player_character_waits_for_the_campaign_options(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, world_template="kilharbor", rule_set="cairn2e")
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    with Session(app.state.engine) as db, pytest.raises(InvalidInput, match="campaign options"):
+        world.create_player_character(
+            db, campaign_id, CAIRN.campaign, CAIRN.character, "Mara", {}, {}, random.Random(0)
+        )
+
+
+def test_campaign_options_are_stored_once_and_checked(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, world_template="kilharbor", rule_set="cairn2e")
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    omen = CAIRN.campaign.tables["omen"][0].value
+    with Session(app.state.engine) as db:
+        with pytest.raises(InvalidInput):
+            world.set_campaign_options(db, campaign_id, CAIRN.campaign, {"omen": "Not an omen"})
+        assert load_state(db, campaign_id).options == {}
+        world.set_campaign_options(db, campaign_id, CAIRN.campaign, {"omen": omen})
+        assert load_state(db, campaign_id).options == {"omen": omen}
+        with pytest.raises(InvalidInput, match="already chosen"):
+            world.set_campaign_options(db, campaign_id, CAIRN.campaign, {"omen": omen})

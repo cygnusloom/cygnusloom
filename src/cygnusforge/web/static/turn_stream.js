@@ -210,6 +210,16 @@
       await playTurn(form.action, data, reply, attempt);
       reload();
     } catch (error) {
+      // An opening that could not start stays on the page with its Continue button, rather than
+      // reloading into another automatic start.
+      if (form.hasAttribute("data-auto-start") && !attempt.started) {
+        reply.bubble.remove();
+        showError(error instanceof TurnFailure ? error.message : "The GM's reply did not finish. Try again.");
+        for (const control of form.closest("[data-pending]")?.querySelectorAll("button, textarea") ?? []) {
+          control.disabled = false;
+        }
+        return;
+      }
       // Once the stream started, the server has recorded the failure and the reloaded page shows
       // it, so only a failure before the stream needs a flash message.
       if (!attempt.started) {
@@ -233,4 +243,8 @@
     sessionStorage.removeItem(FLASH_KEY);
     showError(flashed);
   }
+
+  // The campaign's opening starts on its own once the character exists: the player waits for it.
+  const autoStart = document.querySelector("form[data-auto-start]");
+  if (autoStart) autoStart.requestSubmit();
 })();

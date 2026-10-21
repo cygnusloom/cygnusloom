@@ -43,7 +43,7 @@ def test_rollback_restores_the_chat_and_the_world_to_just_after_the_reply(
 ):
     client, campaign_id = _campaign_id(client_factory)
     _send(client, campaign_id, "First question.")
-    first_reply = _ids(app, campaign_id, "assistant")[0]
+    first_reply = _ids(app, campaign_id, "assistant")[-1]
     with Session(app.state.engine) as db:
         record(db, campaign_id, LocationAdded(name="Test Ledge", description="A ledge."))
         db.commit()
@@ -56,8 +56,8 @@ def test_rollback_restores_the_chat_and_the_world_to_just_after_the_reply(
     assert response.status_code == 303
     assert response.headers["location"] == f"/campaigns/{campaign_id}"
     messages = list_messages(app.state.engine, campaign_id)
-    assert [m.role for m in messages] == ["user", "assistant"]
-    assert messages[0].content == "First question."
+    assert [m.role for m in messages] == ["assistant", "user", "assistant"]
+    assert messages[1].content == "First question."
     assert messages[-1].id == first_reply
     assert not _location_exists(app, campaign_id, "Test Ledge")
     assert not any("Test Ledge" in line for line in _log(app, campaign_id))
@@ -68,7 +68,7 @@ def test_rollback_discards_a_paused_turn(client_factory: Callable[[], TestClient
     app.state.providers = lambda model_id: (_recording_provider(), model_id)
     client, campaign_id = _campaign_id(client_factory)
     _send(client, campaign_id, "First question.")
-    first_reply = _ids(app, campaign_id, "assistant")[0]
+    first_reply = _ids(app, campaign_id, "assistant")[-1]
     _send(client, campaign_id, _script({"rounds": [[ROLL]], "text": "Well rolled."}))
     assert _pending(app, campaign_id) is not None
 
@@ -77,7 +77,7 @@ def test_rollback_discards_a_paused_turn(client_factory: Callable[[], TestClient
     assert _pending(app, campaign_id) is None
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "Roll to persuade." not in page
-    assert len(list_messages(app.state.engine, campaign_id)) == 2
+    assert len(list_messages(app.state.engine, campaign_id)) == 3
 
 
 def test_rollback_is_refused_for_other_accounts(
@@ -85,13 +85,13 @@ def test_rollback_is_refused_for_other_accounts(
 ):
     owner, campaign_id = _campaign_id(client_factory)
     _send(owner, campaign_id, "Hello.")
-    reply = _ids(app, campaign_id, "assistant")[0]
+    reply = _ids(app, campaign_id, "assistant")[-1]
     intruder = _signed_in(client_factory, "intruder@example.com")
 
     response = _rollback(intruder, campaign_id, reply, page="/campaigns")
 
     assert response.status_code == 404
-    assert len(list_messages(app.state.engine, campaign_id)) == 2
+    assert len(list_messages(app.state.engine, campaign_id)) == 3
 
 
 def test_only_gm_replies_can_be_rolled_back(client_factory: Callable[[], TestClient], app: FastAPI):
@@ -101,19 +101,19 @@ def test_only_gm_replies_can_be_rolled_back(client_factory: Callable[[], TestCli
 
     assert _rollback(client, campaign_id, user_line).status_code == 404
     assert _rollback(client, campaign_id, 999999).status_code == 404
-    assert len(list_messages(app.state.engine, campaign_id)) == 2
+    assert len(list_messages(app.state.engine, campaign_id)) == 3
 
 
 def test_rollback_needs_the_csrf_token(client_factory: Callable[[], TestClient], app: FastAPI):
     client, campaign_id = _campaign_id(client_factory)
     _send(client, campaign_id, "Hello.")
-    reply = _ids(app, campaign_id, "assistant")[0]
+    reply = _ids(app, campaign_id, "assistant")[-1]
     _send(client, campaign_id, "Again.")
 
     response = _rollback(client, campaign_id, reply, token="forged")
 
     assert response.status_code == 403
-    assert len(list_messages(app.state.engine, campaign_id)) == 4
+    assert len(list_messages(app.state.engine, campaign_id)) == 5
 
 
 def test_each_gm_reply_has_a_rollback_button_and_the_player_lines_do_not(
@@ -156,10 +156,7 @@ def test_discard_removes_a_failed_first_reply_and_its_message(
 
     assert response.status_code == 303
     assert _pending(app, campaign_id) is None
-    assert list_messages(app.state.engine, campaign_id) == []
-    assert (
-        "Say something to start the conversation." in client.get(f"/campaigns/{campaign_id}").text
-    )
+    assert [m.role for m in list_messages(app.state.engine, campaign_id)] == ["assistant"]
 
 
 def test_discard_keeps_the_earlier_exchange(client_factory: Callable[[], TestClient], app: FastAPI):
@@ -173,5 +170,9 @@ def test_discard_keeps_the_earlier_exchange(client_factory: Callable[[], TestCli
     client.post(f"/campaigns/{campaign_id}/pending/discard", data={"csrf_token": token})
 
     assert _pending(app, campaign_id) is None
-    assert before == ["user", "assistant", "user"]
-    assert [m.role for m in list_messages(app.state.engine, campaign_id)] == ["user", "assistant"]
+    assert before == ["assistant", "user", "assistant", "user"]
+    assert [m.role for m in list_messages(app.state.engine, campaign_id)] == [
+        "assistant",
+        "user",
+        "assistant",
+    ]

@@ -1,5 +1,5 @@
 {% extends "campaign_base.html" %}
-{% from "macros.html" import choice, choice_picker, dice_button %}
+{% from "macros.html" import choice, choice_picker, choice_panel, dice_button, text_panel %}
 {% block title %}Create your character · {{ campaign.name }}{% endblock %}
 {% block play %}
 <section class="view creation" data-view="play" aria-labelledby="creation-title">
@@ -15,7 +15,7 @@
     <button type="button" class="secondary" data-randomize="all">Randomize all</button>
     <button type="button" class="secondary" data-randomize="unchosen">Randomize all not chosen</button>
   </div>
-  <form method="post" action="/campaigns/{{ campaign.id }}/character" class="character-form">
+  <form method="post" action="/campaigns/{{ campaign.id }}/character" class="creation-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="creation-grid">
       <section class="creation-panel" aria-labelledby="panel-name">
@@ -68,37 +68,19 @@
         {% for template in group.templates %}
           <div class="template-tables" data-template-group="{{ group.kind }}" data-template="{{ template.id }}" hidden>
             {% for table in template.tables %}
-              <fieldset class="creation-panel" data-choice-panel="field-{{ table.id }}" data-choice-label="{{ table.label }}" aria-labelledby="panel-table-{{ table.id }}">
-                <h3 id="panel-table-{{ table.id }}">{{ table.label }}</h3>
-                {% call choice_picker("field-" ~ table.id, table.label) %}
-                  {% for option in table.options %}
-                    {{ choice("field-" ~ table.id, option.value, option.title, option.detail) }}
-                  {% endfor %}
-                {% endcall %}
-              </fieldset>
+              {{ choice_panel("field-" ~ table.id, table.label, table.options) }}
             {% endfor %}
           </div>
         {% endfor %}
       {% endfor %}
       {% for field in character.choice_fields %}
-        <fieldset class="creation-panel" data-choice-panel="field-{{ field.id }}" data-choice-label="{{ field.name }}" aria-labelledby="panel-field-{{ field.id }}">
-          <h3 id="panel-field-{{ field.id }}">{{ field.name }}</h3>
-          {% call choice_picker("field-" ~ field.id, field.name, field.description) %}
-            {% for option in field.options %}
-              {{ choice("field-" ~ field.id, option.value, option.title, option.detail) }}
-            {% endfor %}
-          {% endcall %}
-        </fieldset>
+        {{ choice_panel("field-" ~ field.id, field.name, field.options, field.description) }}
       {% endfor %}
       {% for field in character.text_fields %}
-        <section class="creation-panel" aria-labelledby="panel-text-{{ field.id }}">
-          <h3 id="panel-text-{{ field.id }}">{{ field.name }}</h3>
-          <label>
-            <textarea name="field-{{ field.id }}" rows="3" maxlength="2000" placeholder="{{ field.description }}" aria-labelledby="panel-text-{{ field.id }}"></textarea>
-          </label>
-        </section>
+        {{ text_panel("field-" ~ field.id, field.name, field.description) }}
       {% endfor %}
     </div>
+    {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
     <p class="form-error" role="alert" hidden></p>
     <button type="submit">Create character</button>
   </form>

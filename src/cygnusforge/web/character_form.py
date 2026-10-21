@@ -7,7 +7,7 @@ from typing import Any
 
 from starlette.datastructures import FormData
 
-from cygnusforge.content.character import CharacterSpec, TableOption
+from cygnusforge.content.character import CampaignSpec, CharacterSpec, TableOption
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.web.forms import form_text
 
@@ -75,6 +75,38 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
         "text_fields": text_fields,
         "name_suggestions": any(template.names for template in spec.templates.values()),
     }
+
+
+def campaign_view(spec: CampaignSpec) -> dict[str, Any]:
+    """What the campaign options form shows: each campaign option as a panel."""
+    choice_fields = [
+        {
+            "id": field.id,
+            "name": field.name,
+            "description": field.description,
+            "options": _option_views(spec.tables[field.table]),
+        }
+        for field in spec.fields.values()
+        if field.table is not None
+    ]
+    text_fields = [
+        {"id": field.id, "name": field.name, "description": field.description}
+        for field in spec.fields.values()
+        if field.table is None
+    ]
+    return {"choice_fields": choice_fields, "text_fields": text_fields}
+
+
+def campaign_submission_from_form(spec: CampaignSpec, form: FormData) -> dict[str, Any]:
+    """The campaign options a form stands for, keyed by option id as the schema expects.
+    Every option must be given."""
+    options: dict[str, Any] = {}
+    for field in spec.fields.values():
+        value = form_text(form, FIELD_PREFIX + field.id)
+        if not value:
+            raise InvalidInput(f"Choose {field.name}")
+        options[field.id] = value
+    return options
 
 
 def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:

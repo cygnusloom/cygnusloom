@@ -80,9 +80,9 @@ def test_each_phase_shows_a_status_and_only_the_narration_is_streamed(
 def test_state_steps_offer_tools_and_the_narration_does_not(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
+    client, campaign_id = _campaign_id(client_factory)
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
-    client, campaign_id = _campaign_id(client_factory)
 
     _stream(client, campaign_id, _script({"rounds": [[ROLL]], "text": "Done."}))
     _answer(client, campaign_id, "roll")
@@ -109,6 +109,7 @@ def test_retired_campaign_model_is_reported_in_band_and_saves_nothing(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
+    saved_before = _saved_message_count(app)
     with Session(app.state.engine) as db:
         campaign = db.get(Campaign, campaign_id)
         assert campaign is not None
@@ -119,7 +120,7 @@ def test_retired_campaign_model_is_reported_in_band_and_saves_nothing(
     events = _stream(client, campaign_id, "hello")
 
     assert events == [{"type": "error", "status": 400, "message": "that model is not available"}]
-    assert _saved_message_count(app) == 0
+    assert _saved_message_count(app) == saved_before
 
 
 def test_provider_failure_is_reported_and_keeps_the_message(
@@ -135,8 +136,8 @@ def test_provider_failure_is_reported_and_keeps_the_message(
             raise LLMError("provider broken is unreachable")
             yield  # pragma: no cover
 
-    app.state.providers = lambda model_id: (Broken(), "model")
     client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (Broken(), "model")
 
     events = _stream(client, campaign_id, "are you there?")
 
@@ -147,7 +148,7 @@ def test_provider_failure_is_reported_and_keeps_the_message(
         "message": "provider broken is unreachable",
     }
     assert not any(e["type"] == "saved" for e in events)
-    assert _saved_message_count(app) == 1
+    assert _saved_message_count(app) == 2
     turn = _state(app, campaign_id).turn
     assert turn is not None and turn.failed
 
@@ -204,7 +205,7 @@ def test_out_of_character_reply_can_be_followed_by_the_story(
     assert _deltas(events[:split]) == "Sure, ask away."
     assert _deltas(events[split:]) == "The tide turns."
     assert events[-1]["type"] == "saved"
-    assert len(_assistant_ids(app, campaign_id)) == 2
+    assert len(_assistant_ids(app, campaign_id)) == 3
     assert _state(app, campaign_id).turn is None
 
 
@@ -212,6 +213,7 @@ def test_out_of_character_step_can_roll_and_resume_with_its_reply(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
+    opening_replies = _assistant_ids(app, campaign_id)
 
     paused = _stream(
         client,
@@ -219,7 +221,7 @@ def test_out_of_character_step_can_roll_and_resume_with_its_reply(
         _script({"rounds": [[OOC_REPLY], [ROLL]], "ooc": "Roll to see if they listen."}),
     )
     assert paused[-1]["type"] == "prompt"
-    assert _assistant_ids(app, campaign_id) == []
+    assert _assistant_ids(app, campaign_id) == opening_replies
 
     events = _answer(client, campaign_id, "roll")
 
@@ -232,10 +234,11 @@ def test_empty_out_of_character_reply_fails_and_keeps_the_message(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
+    opening_replies = _assistant_ids(app, campaign_id)
 
     events = _stream(client, campaign_id, _script({"rounds": [[OOC_REPLY]]}))
 
     assert events[-1]["type"] == "error"
     assert "empty reply" in events[-1]["message"]
-    assert _assistant_ids(app, campaign_id) == []
-    assert _saved_message_count(app) == 1
+    assert _assistant_ids(app, campaign_id) == opening_replies
+    assert _saved_message_count(app) == 2

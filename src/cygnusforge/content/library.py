@@ -13,8 +13,10 @@ from types import ModuleType
 from typing import Any
 
 from cygnusforge.content.character import (
+    CampaignSpec,
     CharacterSpec,
     TableOption,
+    build_campaign,
     build_character,
     character_schema,
 )
@@ -104,6 +106,8 @@ class RuleSet:
     rules: Mapping[str, str]
     tool_calls: Mapping[str, ToolCall]
     character: CharacterSpec
+    # Options shared by every character in a campaign, such as the omen.
+    campaign: CampaignSpec
     # Named option lists, such as "personality", used to generate NPC traits.
     tables: Mapping[str, tuple[TableOption, ...]] = field(default_factory=dict)
 
@@ -253,6 +257,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
             raise ContentError(f"{template}: missing table {name!r}")
     table_names = {d.id: _table_label(d, template) for d in definitions if d.type == "table"}
     character = build_character(definitions, tables, table_names, template)
+    campaign = build_campaign(definitions, tables, table_names, template)
     tool_calls: dict[str, ToolCall] = {}
     tool_names: set[str] = set()
     for d in definitions:
@@ -270,6 +275,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         rules=rules,
         tool_calls=tool_calls,
         character=character,
+        campaign=campaign,
         tables=tables,
     )
 

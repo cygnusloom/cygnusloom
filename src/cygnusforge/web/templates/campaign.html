@@ -47,6 +47,15 @@
                       <button type="submit">Send</button>
                     </form>
                   </div>
+                {% elif pending.auto_continue %}
+                  <div class="pending-prompt">
+                    <p class="muted">The GM is opening the campaign.</p>
+                    <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action data-auto-start>
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                      <input type="hidden" name="kind" value="continue">
+                      <button type="submit">Continue</button>
+                    </form>
+                  </div>
                 {% else %}
                   <div class="pending-prompt">
                     <p class="muted">{{ pending.error }}</p>
@@ -57,10 +66,12 @@
                     </form>
                   </div>
                 {% endif %}
+                {% if not pending.opening %}
                 <form method="post" action="/campaigns/{{ campaign.id }}/pending/discard" data-confirm="Discard this reply and your message? It cannot be undone.">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                   <button type="submit">Discard reply</button>
                 </form>
+                {% endif %}
               </div>
             {% elif not messages %}
               <p class="muted">Say something to start the conversation.</p>

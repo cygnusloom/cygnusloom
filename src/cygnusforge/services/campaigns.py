@@ -11,7 +11,7 @@ from typing import Any
 from sqlalchemy import Engine
 from sqlmodel import select
 
-from cygnusforge.content.character import CharacterSpec, roll_stats
+from cygnusforge.content.character import CampaignSpec, CharacterSpec, roll_stats
 from cygnusforge.content.library import ContentLibrary, RuleSet, ToolCall
 from cygnusforge.db.models import Campaign, Event
 from cygnusforge.llm.base import (
@@ -64,6 +64,7 @@ from cygnusforge.services.world import (
     WorldView,
     create_player_character,
     seed_campaign,
+    set_campaign_options,
     snapshot,
     world_state_text,
 )
@@ -98,6 +99,13 @@ NARRATE_INSTRUCTION = (
     "dialogue into the narration where it fits, copied exactly, and do not write any other words for "
     "an NPC. Do not narrate notes or other GM-only records, and do not mention tool names or ids. "
     "Do not call tools."
+)
+OPENING_PROMPT = (
+    "Opening instruction. The campaign is starting and the player has not acted yet. Begin it as "
+    "the GM: place the player character in the world with move_actor, then set the scene. Read "
+    "out the campaign's omen if the rules call for one. Briefly introduce the world and the player "
+    "character, and end with what they see and can do next, so the player can begin. Do not speak "
+    "or act for the player character."
 )
 OOC_INSTRUCTION = (
     "Out-of-character step. The player is talking to you as the GM, not to their character. Reply "
@@ -203,6 +211,7 @@ def create_character(
         return create_player_character(
             db,
             campaign_id,
+            campaign_spec(library, campaign),
             spec,
             name,
             rolled,
@@ -211,11 +220,32 @@ def create_character(
         )
 
 
+def choose_campaign_options(
+    engine: Engine,
+    library: ContentLibrary,
+    owner_id: int,
+    campaign_id: int,
+    submitted: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Record the options every character in the campaign shares, such as the omen."""
+    campaign = get_campaign(engine, owner_id, campaign_id)
+    spec = campaign_spec(library, campaign)
+    with _exclusive(campaign_id), session_scope(engine) as db:
+        return set_campaign_options(db, campaign_id, spec, submitted)
+
+
 def character_spec(library: ContentLibrary, campaign: Campaign) -> CharacterSpec:
     rule_set = library.rule_sets.get(campaign.rule_set)
     if rule_set is None:
         raise InvalidInput("that campaign's rule set is no longer available")
     return rule_set.character
+
+
+def campaign_spec(library: ContentLibrary, campaign: Campaign) -> CampaignSpec:
+    rule_set = library.rule_sets.get(campaign.rule_set)
+    if rule_set is None:
+        raise InvalidInput("that campaign's rule set is no longer available")
+    return rule_set.campaign
 
 
 def list_campaigns(engine: Engine, owner_id: int) -> list[Campaign]:
@@ -407,6 +437,7 @@ def context_usage(
     history: Sequence[ChatMessage],
     rules: Mapping[str, str],
     character: CharacterSpec,
+    options: CampaignSpec,
     limit: int,
 ) -> ContextUsage:
     unsummarized = [m for m in history if m.id > state.through]
@@ -417,7 +448,7 @@ def context_usage(
             rules,
             state.summary,
             state.through,
-            world_state_text(state, character),
+            world_state_text(state, character, options),
         )
     )
     used += sum(estimate_tokens(m.content) for m in unsummarized)
@@ -791,14 +822,15 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     state = _state(run.engine, run.campaign_id)
     rule_set = run.rule_set
     summary, watermark = state.summary, state.through
-    world_text = world_state_text(state, rule_set.character)
+    world_text = world_state_text(state, rule_set.character, rule_set.campaign)
+    message = OPENING_PROMPT if turn.opening else turn.text
     history = [
         m for m in list_messages(run.engine, run.campaign_id) if watermark < m.id < turn.opener
     ]
     prompt_tokens = sum(
         p.tokens for p in system_parts(rule_set.id, rule_set.rules, summary, watermark, world_text)
     )
-    prompt_tokens += estimate_tokens(turn.text) + sum(estimate_tokens(m.content) for m in history)
+    prompt_tokens += estimate_tokens(message) + sum(estimate_tokens(m.content) for m in history)
     summary_record: list[ContextPart] = []
     events: list[GameEvent] = []
     if prompt_tokens >= run.context_tokens * COMPRESS_AT:
@@ -817,7 +849,9 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
             watermark = folded[-1].id
             history = history[start:]
             events.append(SummaryUpdated(summary=summary, through=watermark))
-    player = ContextPart("user", "This message (player)", turn.text)
+    player = ContextPart(
+        "user", "Opening instruction" if turn.opening else "This message (player)", message
+    )
     system = system_parts(rule_set.id, rule_set.rules, summary, watermark, world_text)
     conversation = [
         *(ContextPart(m.role, _message_source(m), m.content) for m in history),
@@ -1109,10 +1143,13 @@ async def resume_turn(
 @dataclass(frozen=True)
 class PendingView:
     """An open reply that needs attention: its prompt, or why it stopped. The player's words and
-    the rest of the turn are already in the transcript and the Log."""
+    the rest of the turn are already in the transcript and the Log. `auto_continue` is set for the
+    campaign's opening before it has failed, so the page can start it without the player."""
 
     prompt: Ask | None
     error: str | None = None
+    opening: bool = False
+    auto_continue: bool = False
 
 
 def pending_turn(engine: Engine, owner_id: int, campaign_id: int) -> PendingView | None:
@@ -1126,8 +1163,14 @@ def pending_turn(engine: Engine, owner_id: int, campaign_id: int) -> PendingView
     if turn is None:
         return None
     if turn.prompt is not None:
-        return PendingView(prompt=turn.prompt)
-    return PendingView(prompt=None, error=turn.failed or "The GM's reply did not finish.")
+        return PendingView(prompt=turn.prompt, opening=turn.opening)
+    auto = turn.opening and turn.failed is None
+    return PendingView(
+        prompt=None,
+        error=turn.failed or "The GM's reply did not finish.",
+        opening=turn.opening,
+        auto_continue=auto,
+    )
 
 
 async def send_message(
@@ -1168,12 +1211,15 @@ def rollback_to(engine: Engine, owner_id: int, campaign_id: int, event_id: int) 
 
 def discard_pending(engine: Engine, owner_id: int, campaign_id: int) -> None:
     """Remove the open reply and the player's message that started it, so the player can send
-    the message again. Used when a reply cannot be continued."""
+    the message again. Used when a reply cannot be continued. The opening cannot be discarded: it
+    is recorded with the player character, and it is continued instead."""
     get_campaign(engine, owner_id, campaign_id)
     with _exclusive(campaign_id), session_scope(engine) as db:
         turn = load_state(db, campaign_id).turn
         if turn is None:
             raise NotFound("there is no open reply to discard")
+        if turn.opening:
+            raise InvalidInput("the campaign's opening cannot be discarded; continue it instead")
         truncate(db, campaign_id, turn.opener - 1)
         db.commit()
 

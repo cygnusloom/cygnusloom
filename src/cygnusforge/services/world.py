@@ -15,10 +15,12 @@ from sqlalchemy import Engine
 from sqlmodel import Session
 
 from cygnusforge.content.character import (
+    CampaignSpec,
     CharacterError,
     CharacterSpec,
     Sheet,
     TableOption,
+    campaign_schema,
     check_swaps,
     describe,
     resolve,
@@ -29,6 +31,7 @@ from cygnusforge.services.events import (
     CAMPAIGN_WIDE,
     NPC_KIND,
     ActorMoved,
+    CampaignOptionsChosen,
     CampaignState,
     Character,
     LocationAdded,
@@ -41,11 +44,13 @@ from cygnusforge.services.events import (
     NpcAdded,
     NpcRemoved,
     NpcUpdated,
+    OpeningStarted,
     PcAdded,
     Place,
     load_state,
     record,
 )
+from cygnusforge.services.tools import check_arguments
 
 MAX_NAME = 120
 MAX_TEXT = 2000
@@ -179,9 +184,28 @@ def seed_campaign(
     db.commit()
 
 
+def set_campaign_options(
+    db: Session, campaign_id: int, campaign: CampaignSpec, submitted: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Record the campaign's shared options. They are chosen once, so the campaign's omen and
+    the like cannot change after the characters are made."""
+    if not campaign.fields:
+        raise InvalidInput("this campaign has no options to choose")
+    state = load_state(db, campaign_id)
+    if state.options:
+        raise InvalidInput("the campaign options are already chosen")
+    problem = check_arguments(campaign_schema(campaign), dict(submitted))
+    if problem is not None:
+        raise InvalidInput(problem)
+    record(db, campaign_id, CampaignOptionsChosen(options=dict(submitted)))
+    db.commit()
+    return {"chosen": "campaign"}
+
+
 def create_player_character(
     db: Session,
     campaign_id: int,
+    campaign: CampaignSpec,
     spec: CharacterSpec,
     name: str,
     rolled: Mapping[str, int],
@@ -193,6 +217,8 @@ def create_player_character(
     state = load_state(db, campaign_id)
     if state.pc() is not None:
         raise InvalidInput("the player character already exists")
+    if campaign.fields and not state.options:
+        raise InvalidInput("the campaign options must be chosen before the player character")
     name = _text(name, "name", MAX_NAME)
     _ensure_free_name(state, name)
     chosen = submitted.get("stats", {})
@@ -205,6 +231,7 @@ def create_player_character(
     sheet = resolve(spec, submitted, rng)
     _check_sheet_text(sheet)
     record(db, campaign_id, PcAdded(name=name, **_sheet_fields(sheet)))
+    record(db, campaign_id, OpeningStarted())
     db.commit()
     return {"created": "pc", "name": name, "location": None}
 
@@ -410,16 +437,21 @@ def snapshot(state: CampaignState) -> WorldView:
     )
 
 
-def world_state_text(state: CampaignState, spec: CharacterSpec) -> str:
+def world_state_text(state: CampaignState, spec: CharacterSpec, campaign: CampaignSpec) -> str:
     """The current places and characters, for the GM's system prompt. Notes are searched, not sent."""
     view = snapshot(state)
     if view.pc is None:
         return ""
+    lines = [
+        f"Campaign {campaign.fields[field_id].name.lower()}: {value}."
+        for field_id, value in state.options.items()
+        if field_id in campaign.fields
+    ]
     if view.pc.location is None:
         where = "not yet placed; place them with move_actor on your first turn"
     else:
         where = f"at {view.pc.location}"
-    lines = [f"Player character: {view.pc.name}, {where}."]
+    lines.append(f"Player character: {view.pc.name}, {where}.")
     pc_sheet = describe(spec, _sheet_of(view.pc)).replace("\n", "; ")
     if pc_sheet:
         lines.append(f"  {pc_sheet}")

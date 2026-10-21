@@ -105,7 +105,9 @@ def build_character(
     """Build the character spec from a rule set's definitions. `tables` are already loaded."""
     stats = _each(definitions, "stat", lambda d: _stat(d, template))
     features = _each(definitions, "feature", lambda d: _feature(d, template))
-    fields = _each(definitions, "character_field", lambda d: _field(d, tables, template))
+    fields = _each(
+        definitions, "character_field", lambda d: _field(d, tables, "character_field", template)
+    )
     templates = _each(definitions, "template", lambda d: _template(d, features, tables, template))
     field_ids = set(fields)
     for item in templates.values():
@@ -173,8 +175,8 @@ def _feature(definition: Definition, template: str) -> Feature:
     )
 
 
-def _field(definition: Definition, tables: Mapping[str, object], template: str) -> Field:
-    label = f"{template}: character_field {definition.id}"
+def _field(definition: Definition, tables: Mapping[str, object], kind: str, template: str) -> Field:
+    label = f"{template}: {kind} {definition.id}"
     table = definition.data.get("table")
     if table is not None:
         table = required_text(definition.data, "table", label)
@@ -327,9 +329,45 @@ def _object(properties: dict[str, Any]) -> dict[str, Any]:
     return {"type": "object", "properties": properties, "additionalProperties": False}
 
 
+@dataclass(frozen=True)
+class CampaignSpec:
+    """Options every character in a campaign shares, chosen once when the campaign is created."""
+
+    fields: Mapping[str, Field]
+    tables: Mapping[str, tuple[TableOption, ...]]
+    table_names: Mapping[str, str]
+
+
+def build_campaign(
+    definitions: list[Definition],
+    tables: Mapping[str, tuple[TableOption, ...]],
+    table_names: Mapping[str, str],
+    template: str,
+) -> CampaignSpec:
+    fields = _each(
+        definitions, "campaign_field", lambda d: _field(d, tables, "campaign_field", template)
+    )
+    return CampaignSpec(fields=fields, tables=tables, table_names=table_names)
+
+
+def campaign_schema(spec: CampaignSpec) -> dict[str, Any]:
+    """The JSON schema for a campaign's options. Every option is required: the campaign cannot
+    start until each one has a value."""
+    properties = {f.id: _field_schema(f, spec.tables) for f in spec.fields.values()}
+    return {
+        "type": "object",
+        "description": "Campaign options, chosen once for the whole campaign.",
+        "properties": properties,
+        "required": list(properties),
+        "additionalProperties": False,
+    }
+
+
 NO_CHARACTER = CharacterSpec(
     stats={}, templates={}, features={}, fields={}, tables={}, table_names={}
 )
+
+NO_CAMPAIGN = CampaignSpec(fields={}, tables={}, table_names={})
 
 
 class CharacterError(ValueError):

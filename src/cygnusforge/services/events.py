@@ -95,6 +95,8 @@ class Turn:
 
     opener: int
     text: str
+    # The campaign's opening: the GM's first turn, which the player does not write.
+    opening: bool = False
     begun: bool = False
     head: list[ContextPart] = field(default_factory=list)
     context: list[ContextPart] = field(default_factory=list)
@@ -122,6 +124,8 @@ class CampaignState:
     places: dict[str, Place] = field(default_factory=dict)
     characters: dict[str, Character] = field(default_factory=dict)
     notes: list[Note] = field(default_factory=list)
+    # Options shared by the whole campaign, keyed by field id. Empty until they are chosen.
+    options: dict[str, str] = field(default_factory=dict)
     summary: str = ""
     through: int = 0
     turn: Turn | None = None
@@ -277,6 +281,20 @@ class PcAdded(GameEvent):
         if self.location is None:
             return f"{self.name} is ready to begin, not yet placed at a location."
         return f"{self.name} begins at {self.location}."
+
+
+@dataclass(frozen=True)
+class CampaignOptionsChosen(GameEvent):
+    """The options every character in the campaign shares. Chosen once, before the player
+    character, and given to the GM through the state text rather than the chat."""
+
+    kind: ClassVar[str] = "campaign.options"
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    options: dict[str, str]
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.options = dict(self.options)
 
 
 @dataclass(frozen=True)
@@ -517,6 +535,19 @@ class ChatPlayer(GameEvent):
 
     def render(self) -> str:
         return self.content
+
+
+@dataclass(frozen=True)
+class OpeningStarted(GameEvent):
+    """The campaign's opening: the GM's first turn, which begins before the player acts. It is
+    recorded with the player character, so the campaign is never left without its opening."""
+
+    kind: ClassVar[str] = "turn.opening"
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        if state.turn is None:
+            state.turn = Turn(opener=event_id, text="", opening=True)
 
 
 @dataclass(frozen=True)

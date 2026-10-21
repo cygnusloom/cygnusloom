@@ -63,11 +63,11 @@ def _owner_id(app: FastAPI, campaign_id: int) -> int:
 def test_a_pause_saves_the_prompt_but_no_reply(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    app.state.providers = lambda model_id: (_recording_provider(), model_id)
     client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (_recording_provider(), model_id)
     _send(client, campaign_id, _script({"rounds": [[ROLL]], "text": "Well rolled."}))
 
-    assert [m.role for m in _saved_messages(app, campaign_id)] == ["user"]
+    assert [m.role for m in _saved_messages(app, campaign_id)] == ["assistant", "user"]
     assert _pending(app, campaign_id) is not None
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "Roll to persuade." in page
@@ -80,23 +80,23 @@ def test_a_pause_saves_the_prompt_but_no_reply(
 def test_a_new_message_is_refused_while_a_prompt_is_pending(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    app.state.providers = lambda model_id: (_recording_provider(), model_id)
     client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (_recording_provider(), model_id)
     _send(client, campaign_id, _script({"rounds": [[ROLL]], "text": "Well rolled."}))
 
     response = _send(client, campaign_id, "Actually, never mind.")
 
     assert response.status_code == 400
     assert "answer" in response.text
-    assert [m.role for m in _saved_messages(app, campaign_id)] == ["user"]
+    assert [m.role for m in _saved_messages(app, campaign_id)] == ["assistant", "user"]
     assert _pending(app, campaign_id) is not None
 
 
 def test_a_roll_is_logged_and_the_reply_is_saved(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    app.state.providers = lambda model_id: (_recording_provider(), model_id)
     client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (_recording_provider(), model_id)
     script = _script({"rounds": [[ROLL]], "text": "Well rolled."})
     _send(client, campaign_id, script)
 
@@ -107,7 +107,10 @@ def test_a_roll_is_logged_and_the_reply_is_saved(
     activity = next(event["text"] for event in events if event["type"] == "log")
     assert activity.startswith("You rolled ") and " on the d20" in activity
     saved = _saved_messages(app, campaign_id)
-    assert [(m.role, m.content) for m in saved] == [("user", script), ("assistant", "Well rolled.")]
+    assert [(m.role, m.content) for m in saved[1:]] == [
+        ("user", script),
+        ("assistant", "Well rolled."),
+    ]
     log = campaign_log(app.state.engine, _owner_id(app, campaign_id), campaign_id)
     assert log[-1] == activity
     assert _pending(app, campaign_id) is None
@@ -120,8 +123,8 @@ def test_a_roll_is_logged_and_the_reply_is_saved(
 def test_the_log_is_shown_in_the_chat_before_the_reply(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    app.state.providers = lambda model_id: (_recording_provider(), model_id)
     client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (_recording_provider(), model_id)
     _send(client, campaign_id, _script({"rounds": [[ROLL]], "text": "Well rolled."}))
     _answer(client, campaign_id, "roll")
 
@@ -140,8 +143,8 @@ def test_a_text_answer_reaches_the_gm_instead_of_a_roll(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     recorder = _recording_provider()
-    app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (recorder, model_id)
     _send(client, campaign_id, _script({"rounds": [[ROLL]], "text": "He reads it."}))
 
     events = _answer(client, campaign_id, "text", "I show him the letter")
@@ -157,14 +160,14 @@ def test_continue_after_a_failed_narration_does_not_roll_again(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     provider = FlakyNarration()
-    app.state.providers = lambda model_id: (provider, model_id)
     client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (provider, model_id)
     _send(client, campaign_id, _script({"rounds": [[ROLL]], "text": "Well rolled."}))
 
     failed = _answer(client, campaign_id, "roll")
     assert failed[-1]["type"] == "error" and "narration broke" in failed[-1]["message"]
     assert _pending(app, campaign_id) is not None
-    assert [m.role for m in _saved_messages(app, campaign_id)] == ["user"]
+    assert [m.role for m in _saved_messages(app, campaign_id)] == ["assistant", "user"]
 
     events = _answer(client, campaign_id, "continue")
 
@@ -179,8 +182,8 @@ def test_continue_after_a_failed_narration_does_not_roll_again(
 def test_invalid_answers_are_reported_as_error_events(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    app.state.providers = lambda model_id: (_recording_provider(), model_id)
     client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (_recording_provider(), model_id)
 
     no_turn = _answer(client, campaign_id, "roll")
     assert no_turn[-1]["type"] == "error"
@@ -198,8 +201,8 @@ def test_invalid_answers_are_reported_as_error_events(
 def test_the_player_roll_uses_the_given_generator(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    app.state.providers = lambda model_id: (_recording_provider(), model_id)
     client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (_recording_provider(), model_id)
     _send(client, campaign_id, _script({"rounds": [[ROLL]], "text": "Well rolled."}))
     with Session(app.state.engine) as db:
         owner_id = db.get(Campaign, campaign_id).owner_id
