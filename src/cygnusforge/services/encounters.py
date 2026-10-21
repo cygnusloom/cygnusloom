@@ -458,6 +458,7 @@ def encounter_view(state: CampaignState, grid: EncounterGrid | None) -> dict[str
                 "label": labels[character.name],
                 "name": character.name,
                 "is_pc": character.kind == PC_KIND,
+                "creature": character.creature,
                 "cell": encounter.cells.get(name_key(character.name)),
                 "acting": acting,
                 "next": encounter.acting is None

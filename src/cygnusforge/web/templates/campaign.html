@@ -139,6 +139,7 @@
                 <li{% if participant.acting %} class="acting"{% endif %}>
                   <span class="muted">{{ participant.number }}.</span>
                   <strong>{{ participant.name }}</strong>
+                  {% if participant.creature %}<span class="muted">{{ participant.creature }}</span>{% endif %}
                   {% if participant.is_pc %}<span class="muted">(you)</span>{% endif %}
                   {% if participant.acting %}<span class="roster-state">acting</span>{% elif participant.next %}<span class="roster-state muted">next</span>{% endif %}
                 </li>

@@ -105,6 +105,8 @@ class Character:
     armor: int = 0
     # A monster's attacks, by name, as dice formulas such as "1d8+1d8". Empty for player characters.
     attacks: dict[str, str] = field(default_factory=dict)
+    # The name of the bestiary statblock a monster was built from, such as "Wolf". Empty if none.
+    creature: str = ""
     # Harm taken so far, by stat id. A stat's current value is its score less its harm, at least 0.
     harm: dict[str, int] = field(default_factory=dict)
     # The stat id of a save the character must make after harm overflowed, or None.
@@ -467,6 +469,7 @@ class NpcAdded(GameEvent):
     fields: dict[str, str] = field(default_factory=dict)
     armor: int = 0
     attacks: dict[str, str] = field(default_factory=dict)
+    creature: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.characters[name_key(self.name)] = Character(
@@ -483,6 +486,7 @@ class NpcAdded(GameEvent):
             fields=dict(self.fields),
             armor=self.armor,
             attacks=dict(self.attacks),
+            creature=self.creature,
         )
 
     def render(self) -> str:

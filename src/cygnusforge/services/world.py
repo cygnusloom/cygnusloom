@@ -604,6 +604,7 @@ def create_monster(
         stats=dict(merged),
         armor=armor_value,
         attacks=attack_map,
+        creature=base.name if base else "",
     )
     record(db, campaign_id, event)
     db.commit()

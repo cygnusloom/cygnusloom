@@ -67,6 +67,13 @@ def _fight(
 ) -> tuple[FastAPI, int, WorldTools]:
     """A Cairn campaign with Mara in the yard, the yard mapped, and an encounter under way. Unless
     `rolled` is False, Mara has rolled for initiative, and the order is set."""
+    client, campaign_id, tools = _fight_client(client_factory, rolled)
+    return client.app, campaign_id, tools
+
+
+def _fight_client(
+    client_factory: Callable[[], TestClient], rolled: bool = True
+) -> tuple[TestClient, int, WorldTools]:
     client, campaign_id = _cairn_campaign(client_factory)
     created = _create_character(
         client, campaign_id, name=PC, fields=_complete_form(client, campaign_id)
@@ -80,7 +87,7 @@ def _fight(
     tools.add_participant(PC)
     if rolled:
         tools.player_initiative(1)
-    return client.app, campaign_id, tools
+    return client, campaign_id, tools
 
 
 def _foe(tools: WorldTools, name: str, hp: int = 6, armor: int = 0, claw: str = "1d6") -> None:
@@ -213,6 +220,28 @@ def test_a_statblock_template_gives_the_starting_values(client_factory):
     rover = _character(app, campaign_id, "Rover")
     assert rover.kind == NPC_KIND
     assert rover.attacks == {"bite": "1d6"}
+    assert rover.creature == "Blink Dog"
+
+
+def test_the_roster_shows_the_statblock_beside_a_monster(client_factory):
+    client, campaign_id, tools = _fight_client(client_factory)
+    tools.create_monster("Rover", YARD, template="blink-dog")
+    tools.add_participant("Rover")
+    page = client.get(f"/campaigns/{campaign_id}").text
+    roster = page[page.index('class="encounter-roster"') : page.index('aria-label="Panels"')]
+    assert "<strong>Rover</strong>" in roster
+    assert '<span class="muted">Blink Dog</span>' in roster
+
+
+def test_the_encounter_view_names_the_statblock_a_monster_was_built_from(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools.create_monster("Rover", YARD, template="blink-dog")
+    tools.add_participant("Rover")
+    tools.create_monster("Brute", YARD, description="A brute.", stats=FULL_STATS)
+    tools.add_participant("Brute")
+    view = encounters.encounter_view(_state(app, campaign_id), None)
+    creatures = {p["name"]: p["creature"] for p in view["participants"]}
+    assert creatures == {PC: "", "Rover": "Blink Dog", "Brute": ""}
 
 
 def test_given_values_replace_the_template_and_the_rest_are_kept(client_factory):
