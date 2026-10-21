@@ -228,17 +228,29 @@ def test_turns_follow_join_order_and_wrap_into_a_new_round(
     assert _encounter(app, campaign_id).encounter.round == first_round + 1
 
 
-def test_encounter_cannot_end_mid_turn(client_factory: Callable[[], TestClient]):
+def test_encounter_ends_mid_turn(client_factory: Callable[[], TestClient]):
     client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
     app = client.app
     _begin(app, campaign_id, "Pip")
-    assert "still taking their turn" in _call(app, campaign_id, "end_encounter", {})["error"]
-    _end(app, campaign_id, "Pip", by_player=False)
-    _finish_gm_reply(app, campaign_id)
-    assert "Ada is still taking their turn" in _call(app, campaign_id, "end_encounter", {})["error"]
-    _end(app, campaign_id, "Ada", by_player=True)
     assert _call(app, campaign_id, "end_encounter", {})["ended"] == "encounter"
     assert _encounter(app, campaign_id).encounter is None
+    _finish_gm_reply(app, campaign_id)
+    assert _encounter(app, campaign_id).turn is None
+
+
+def test_removing_the_acting_participant_passes_the_turn_on(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
+    app = client.app
+    _begin(app, campaign_id, "Pip")
+    assert _call(app, campaign_id, "remove_participant", {"name": "Pip"}) == {"removed": "Pip"}
+    state = _encounter(app, campaign_id).encounter
+    assert state.acting == "Ada"
+    assert state.order == ["Ada"]
+    assert state.moved == 0
+    _end(app, campaign_id, "Ada", by_player=True)
+    assert _call(app, campaign_id, "end_encounter", {})["ended"] == "encounter"
 
 
 def test_guards_protect_participants_maps_and_locations(client_factory: Callable[[], TestClient]):

@@ -917,9 +917,14 @@ class ParticipantLeft(GameEvent):
         index = next(i for i, name in enumerate(encounter.order) if name_key(name) == key)
         del encounter.order[index]
         encounter.cells.pop(key, None)
+        if encounter.acting is not None and name_key(encounter.acting) == key:
+            encounter.acting = None
+            encounter.moved = 0
         if index < encounter.up:
             encounter.up -= 1
-        encounter.up = encounter.up % len(encounter.order) if encounter.order else 0
+        if encounter.order and encounter.up >= len(encounter.order):
+            encounter.up = 0
+            encounter.round += 1
 
     def render(self) -> str:
         return f"{self.name} leaves the encounter."

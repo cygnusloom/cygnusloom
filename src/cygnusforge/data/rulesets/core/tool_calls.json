@@ -656,7 +656,7 @@
     "name": "end_encounter",
     "python_module": "core",
     "function": "end_encounter",
-    "description": "End the encounter in progress. Refused while a participant is taking their turn.",
+    "description": "End the encounter in progress. Any turn in progress ends with it.",
     "parameters": {
       "type": "object",
       "properties": {},
@@ -689,7 +689,7 @@
     "name": "remove_participant",
     "python_module": "core",
     "function": "remove_participant",
-    "description": "Take a character out of the encounter in progress. Refused while they are taking their turn.",
+    "description": "Take a character out of the encounter in progress. If they are taking their turn, it ends and the next participant's turn follows.",
     "parameters": {
       "type": "object",
       "properties": {

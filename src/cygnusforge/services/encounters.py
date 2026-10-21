@@ -209,8 +209,6 @@ def start_encounter(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
 def end_encounter(db: Session, campaign_id: int) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     encounter = _encounter(state)
-    if encounter.acting is not None:
-        raise InvalidInput(f"{encounter.acting} is still taking their turn")
     record(db, campaign_id, EncounterEnded())
     db.commit()
     return {"ended": "encounter", "map": encounter.map}
@@ -238,8 +236,6 @@ def add_participant(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
 def remove_participant(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     character = _participant(state, name)
-    if state.encounter is not None and state.encounter.acting == character.name:
-        raise InvalidInput(f"{character.name} is taking their turn; wait until it ends")
     record(db, campaign_id, ParticipantLeft(name=character.name))
     db.commit()
     _open_player_turn(db, campaign_id)
