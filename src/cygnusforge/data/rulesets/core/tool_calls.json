@@ -450,7 +450,7 @@
     "name": "delete_npc",
     "python_module": "core",
     "function": "delete_npc",
-    "description": "Remove an NPC from the campaign, for example when they leave the story or die. Notes about them are kept. The player character cannot be removed.",
+    "description": "Remove an NPC from the campaign. Use it for a temporary NPC who matters little to the story, such as a passing stranger, a hired guard, or a monster from a fight, once they have left the scene or the encounter they were in has ended. Keep NPCs the story may bring back, and remove an NPC who leaves the story or dies only when they are no longer needed. Notes about them are kept. The player character cannot be removed.",
     "parameters": {
       "type": "object",
       "properties": {
