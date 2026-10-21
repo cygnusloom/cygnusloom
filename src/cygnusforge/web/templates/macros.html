@@ -6,6 +6,28 @@
   {% endfor %}
 {%- endmacro %}
 
+{% macro map_board(view) -%}
+  <div class="map-board" aria-label="Map of discovered places">
+    <span class="map-origin" aria-hidden="true"></span>
+    {% for marker in view.markers %}
+      <span class="map-marker{% if marker.here %} here{% endif %}" style="left: {{ marker.left }}%; top: {{ marker.top }}%">{{ marker.name }}{% if marker.here %} (you){% endif %}</span>
+    {% endfor %}
+  </div>
+  {% if view.markers %}<p class="muted map-scale">About {{ (view.radius_km * 2) | round(1) }} km across. North is up.</p>{% endif %}
+{%- endmacro %}
+
+{% macro map_places(view) -%}
+  {% for place in view.places %}
+    <div class="map-place">
+      <strong>{{ place.name }}</strong>
+      {% if place.position %}<span class="muted">{{ place.position.x }} km east, {{ place.position.y }} km north</span>{% endif %}
+      <p>{{ place.description }}</p>
+    </div>
+  {% else %}
+    <p class="muted">No places discovered yet.</p>
+  {% endfor %}
+{%- endmacro %}
+
 {% macro choice(name, value, title, detail=None, data_select=None) -%}
   <label class="choice">
     <input type="radio" name="{{ name }}" value="{{ value }}" data-title="{{ title }}"{% if data_select %} data-template-select="{{ data_select }}"{% endif %}>

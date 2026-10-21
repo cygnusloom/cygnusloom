@@ -82,6 +82,7 @@ CORE_TOOL_NAMES = {
     "create_location",
     "create_npc",
     "update_location",
+    "discover_location",
     "delete_location",
     "update_npc",
     "delete_npc",

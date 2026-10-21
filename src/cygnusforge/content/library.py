@@ -46,6 +46,10 @@ class LocationTemplate:
     id: str
     name: str
     description: str
+    # Known to everyone in the world from the start, so the player's map shows it.
+    discovered: bool = False
+    x: float | None = None
+    y: float | None = None
 
 
 @dataclass(frozen=True)
@@ -190,10 +194,25 @@ def _load_world(directory: Path) -> WorldTemplate:
 
 def _load_location(definition: Definition, template: str) -> LocationTemplate:
     label = f"{template}: location {definition.id}"
+    data = definition.data
+    discovered = data.get("discovered", False)
+    if not isinstance(discovered, bool):
+        raise ContentError(f"{label}: discovered must be true or false")
+    x, y = data.get("x"), data.get("y")
+    if (x is None) != (y is None):
+        raise ContentError(f"{label}: give both x and y, or neither")
+    for key, value in (("x", x), ("y", y)):
+        if value is not None and (isinstance(value, bool) or not isinstance(value, int | float)):
+            raise ContentError(
+                f"{label}: {key} must be a number of kilometers from the map's center"
+            )
     return LocationTemplate(
         id=definition.id,
-        name=required_text(definition.data, "name", label),
-        description=required_text(definition.data, "description", label),
+        name=required_text(data, "name", label),
+        description=required_text(data, "description", label),
+        discovered=discovered,
+        x=None if x is None else float(x),
+        y=None if y is None else float(y),
     )
 
 

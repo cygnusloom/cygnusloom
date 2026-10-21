@@ -5,7 +5,7 @@
     "name": "create_location",
     "python_module": "core",
     "function": "create_location",
-    "description": "Add a new location to the campaign, such as a village, a clearing, or a building. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs.",
+    "description": "Add a new location to the campaign, such as a village, a clearing, or a building. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs. Set discovered to true only when anyone in the world would have heard of the place, so the player already knows it.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -16,6 +16,18 @@
         "description": {
           "type": "string",
           "description": "What the place looks, sounds, and smells like, in a sentence or two."
+        },
+        "discovered": {
+          "type": "boolean",
+          "description": "True if the player already knows the place, because it is famous or the story has revealed it. False by default."
+        },
+        "x": {
+          "type": "number",
+          "description": "Kilometers east of the map's center; negative for west. Give x and y together, or neither to leave the place off the map. Only when the place's position relative to others is known; do not use 0 as a default."
+        },
+        "y": {
+          "type": "number",
+          "description": "Kilometers north of the map's center; negative for south. Give x and y together, or neither. Only when the place's position relative to others is known."
         }
       },
       "required": [
@@ -76,7 +88,7 @@
     "name": "move_actor",
     "python_module": "core",
     "function": "move_actor",
-    "description": "Move the player character or an NPC to another existing location. Use it when someone travels or is sent somewhere. The player character starts unplaced, so on the first turn create the place where the story begins and move the player character there.",
+    "description": "Move the player character or an NPC to another existing location. Use it when someone travels or is sent somewhere. The player character starts unplaced, so on the first turn create the place where the story begins and move the player character there. Moving the player character to a place discovers it.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -291,7 +303,7 @@
     "name": "update_location",
     "python_module": "core",
     "function": "update_location",
-    "description": "Change a location's description, for example after the place changes. Its name stays the same.",
+    "description": "Change a location's description, for example after the place changes, or move it on the map by giving x and y. Its name stays the same. Leave x and y out to keep its position.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -302,11 +314,39 @@
         "description": {
           "type": "string",
           "description": "The new description of the place, in a sentence or two."
+        },
+        "x": {
+          "type": "number",
+          "description": "Kilometers east of the map's center; negative for west. Give x and y together, or neither to leave the place off the map. Only when the place's position relative to others is known; do not use 0 as a default."
+        },
+        "y": {
+          "type": "number",
+          "description": "Kilometers north of the map's center; negative for south. Give x and y together. Only when the place's position relative to others is known."
         }
       },
       "required": [
         "name",
         "description"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "discover_location",
+    "name": "discover_location",
+    "python_module": "core",
+    "function": "discover_location",
+    "description": "Mark an existing location as discovered: the player character has heard about it in detail, or the story has revealed it. A discovered location appears on the player's map. Moving the player character there discovers it too, so use this for places they learn of without going.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the location."
+        }
+      },
+      "required": [
+        "name"
       ]
     }
   },

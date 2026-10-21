@@ -9,19 +9,26 @@
     "type": "location",
     "id": "mossbell-hollow",
     "name": "Mossbell Hollow",
-    "description": "A gnome village built into the roots of a hollow oak. Bell-shaped mushrooms hang from the eaves and chime softly when the spores drift past."
+    "description": "A gnome village built into the roots of a hollow oak. Bell-shaped mushrooms hang from the eaves and chime softly when the spores drift past.",
+    "discovered": true,
+    "x": 0,
+    "y": 0
   },
   {
     "type": "location",
     "id": "glowcap-ring",
     "name": "Glowcap Ring",
-    "description": "A circle of enormous luminous mushrooms, half a mile from the village. The caps shine blue at dusk and the air tastes faintly of pepper."
+    "description": "A circle of enormous luminous mushrooms, half a mile from the village. The caps shine blue at dusk and the air tastes faintly of pepper.",
+    "x": 0.6,
+    "y": 0.5
   },
   {
     "type": "location",
     "id": "spore-bridge",
     "name": "Spore Bridge",
-    "description": "A bridge of woven fungus strung between two giant toadstools over a deep, misty ravine. It sways when the wind picks up."
+    "description": "A bridge of woven fungus strung between two giant toadstools over a deep, misty ravine. It sways when the wind picks up.",
+    "x": -1.2,
+    "y": 1.4
   },
   {
     "type": "npc",

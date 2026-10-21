@@ -9,15 +9,22 @@ from typing import Any
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from cygnusforge.content.character import NO_CAMPAIGN, TableOption
 from cygnusforge.content.library import ContentLibrary
+from cygnusforge.db.models import Event
 from cygnusforge.llm.base import ChatReply, ToolRequest
 from cygnusforge.rules.context import ToolContext, brief
 from cygnusforge.services import world
 from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import NPC_KIND, CampaignState, Character, load_state
+from cygnusforge.services.events import (
+    NPC_KIND,
+    CampaignState,
+    Character,
+    Position,
+    load_state,
+)
 from cygnusforge.services.tools import ToolRun, run_tool
 from tests.conftest import csrf_token
 from tests.test_campaigns import (
@@ -206,7 +213,7 @@ def test_gm_creates_a_location_and_an_npc_there(client_factory: Callable[[], Tes
         "create_location",
         {"name": "Hollow Pond", "description": "Still, cold water."},
     )
-    assert place == {"created": "location", "name": "Hollow Pond"}
+    assert place == {"created": "location", "name": "Hollow Pond", "discovered": False}
     npc = _tool(
         app,
         campaign_id,
@@ -367,6 +374,8 @@ def test_all_at_location_describes_a_place_without_statblocks(
     assert _tool(app, campaign_id, "all_at_location", {"location": "Spore Bridge"})["location"] == {
         "name": "Spore Bridge",
         "description": away["location"]["description"],
+        "discovered": False,
+        "position_km": {"x": -1.2, "y": 1.4},
     }
 
 
@@ -1029,3 +1038,192 @@ def test_list_lookups_gives_a_brief_of_every_tool_rule_location_and_npc(
     assert npcs["Mara Thistledown"]["location"] == BUNDLED_NPCS["Mara Thistledown"]
     assert all(entry["brief"] for entry in listing["npcs"])
     assert "Ada" not in npcs
+
+
+def _event_kinds(app: FastAPI, campaign_id: int) -> list[str]:
+    with _db(app) as db:
+        rows = db.exec(select(Event).where(Event.campaign_id == campaign_id).order_by(Event.seq))
+        return [row.kind for row in rows]
+
+
+def test_gm_creates_a_discovered_location_with_a_position(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    created = _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {
+            "name": "Ashen Ford",
+            "description": "A ford over black water.",
+            "discovered": True,
+            "x": 2.5,
+            "y": -1,
+        },
+    )
+    assert created == {"created": "location", "name": "Ashen Ford", "discovered": True}
+    place = _state(app, campaign_id).named("Ashen Ford")
+    assert place.discovered is True
+    assert place.position == Position(x=2.5, y=-1.0)
+
+
+@pytest.mark.parametrize(
+    "arguments, message",
+    [
+        ({"x": 1}, "give both x and y, or neither"),
+        ({"y": 1}, "give both x and y, or neither"),
+        ({"x": True, "y": 0}, "argument 'x' must be number"),
+        ({"x": 0, "y": "north"}, "argument 'y' must be number"),
+    ],
+)
+def test_a_location_position_needs_two_real_numbers(
+    client_factory: Callable[[], TestClient], app, arguments: dict, message: str
+):
+    _, campaign_id = _campaign_id(client_factory)
+    refused = _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Ashen Ford", "description": "A ford.", **arguments},
+    )
+    assert message in refused["error"]
+    assert _state(app, campaign_id).named("Ashen Ford") is None
+
+
+def test_the_world_service_checks_position_values_too(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    ctx = _ctx(app, campaign_id)
+    with pytest.raises(InvalidInput, match="x must be a number of kilometers"):
+        ctx.world.create_location("Ashen Ford", "A ford.", x=float("nan"), y=0)
+    with pytest.raises(InvalidInput, match="give both x and y"):
+        ctx.world.update_location("Mossbell Hollow", "Still here.", x=1)
+    assert _state(app, campaign_id).named("Ashen Ford") is None
+
+
+def test_update_keeps_a_position_unless_a_new_one_is_given(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Ashen Ford", "description": "A ford.", "discovered": True, "x": 2, "y": 3},
+    )
+    _tool(app, campaign_id, "update_location", {"name": "Ashen Ford", "description": "Deeper now."})
+    place = _state(app, campaign_id).named("Ashen Ford")
+    assert place.position == Position(x=2.0, y=3.0)
+    assert place.discovered is True
+
+    _tool(
+        app,
+        campaign_id,
+        "update_location",
+        {"name": "Ashen Ford", "description": "Deeper now.", "x": -4, "y": 0},
+    )
+    place = _state(app, campaign_id).named("Ashen Ford")
+    assert place.position == Position(x=-4.0, y=0.0)
+    assert place.discovered is True
+
+
+def test_discover_location_marks_a_place_once(client_factory: Callable[[], TestClient], app):
+    _, campaign_id = _campaign_id(client_factory)
+    assert _state(app, campaign_id).named("Spore Bridge").discovered is False
+    first = _tool(app, campaign_id, "discover_location", {"name": "Spore Bridge"})
+    second = _tool(app, campaign_id, "discover_location", {"name": "Spore Bridge"})
+    assert first == second == {"discovered": "location", "name": "Spore Bridge"}
+    assert _state(app, campaign_id).named("Spore Bridge").discovered is True
+    assert _event_kinds(app, campaign_id).count("location.discovered") == 1
+
+
+def test_discover_location_needs_a_known_location(client_factory: Callable[[], TestClient], app):
+    _, campaign_id = _campaign_id(client_factory)
+    refused = _tool(app, campaign_id, "discover_location", {"name": "Nowhere"})
+    assert "Nowhere" in refused["error"]
+
+
+def test_the_player_discovers_what_they_visit_but_npcs_do_not(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
+    _tool(app, campaign_id, "move_actor", {"name": "Brin Gallowcap", "location": "Spore Bridge"})
+    state = _state(app, campaign_id)
+    assert state.named("Glowcap Ring").discovered is True
+    assert state.named("Spore Bridge").discovered is False
+
+
+def test_discovered_places_are_marked_in_lookups(client_factory: Callable[[], TestClient], app):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "discover_location", {"name": "Glowcap Ring"})
+    found = _tool(app, campaign_id, "search_location", {"query": "Glowcap"})
+    entry = next(item for item in found["locations"] if item["name"] == "Glowcap Ring")
+    assert entry["discovered"] is True
+    assert entry["position_km"] == {"x": 0.6, "y": 0.5}
+
+
+def test_map_shows_only_discovered_places_with_positions(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Mossbell Hollow"})
+    view = world.map_view(_state(app, campaign_id))
+    assert [place.name for place in view.places] == ["Mossbell Hollow"]
+    assert [(m.name, m.left, m.top, m.here) for m in view.markers] == [
+        ("Mossbell Hollow", 50.0, 50.0, True)
+    ]
+    assert view.radius_km == 1.1
+
+    _tool(app, campaign_id, "discover_location", {"name": "Glowcap Ring"})
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {
+            "name": "Far Shore",
+            "description": "Across the ravine.",
+            "discovered": True,
+            "x": 3,
+            "y": -2,
+        },
+    )
+    view = world.map_view(_state(app, campaign_id))
+    assert [place.name for place in view.places] == ["Far Shore", "Glowcap Ring", "Mossbell Hollow"]
+    assert view.radius_km == 3.3
+    markers = {m.name: m for m in view.markers}
+    assert set(markers) == {"Far Shore", "Glowcap Ring", "Mossbell Hollow"}
+    assert (markers["Far Shore"].left, markers["Far Shore"].top) == (95.45, 80.3)
+    assert markers["Mossbell Hollow"].here is True
+    assert markers["Glowcap Ring"].here is False
+    assert "Spore Bridge" not in markers
+    assert all(0 <= m.left <= 100 and 0 <= m.top <= 100 for m in view.markers)
+
+
+def test_map_on_a_fresh_campaign_has_a_default_scale(client_factory: Callable[[], TestClient], app):
+    _, campaign_id = _campaign_id(client_factory)
+    view = world.map_view(_state(app, campaign_id))
+    assert view.radius_km == 1.1
+    assert [m.name for m in view.markers] == ["Mossbell Hollow"]
+
+
+def test_campaign_page_draws_discovered_places_on_the_map(
+    client_factory: Callable[[], TestClient], app
+):
+    client, campaign_id = _described_campaign(client_factory)
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Mossbell Hollow"})
+    _tool(app, campaign_id, "discover_location", {"name": "Glowcap Ring"})
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    map_view = page[page.index('data-view="map"') : page.index('data-view="lore"')]
+    assert (
+        'class="map-marker here" style="left: 50.0%; top: 50.0%">Mossbell Hollow (you)' in map_view
+    )
+    assert "Glowcap Ring" in map_view
+    assert "Spore Bridge" not in map_view
+
+    panel = page[page.index('aria-label="Map"') : page.index('id="panel-')]
+    assert "map-marker" in panel
+    assert "Map placeholder" not in page

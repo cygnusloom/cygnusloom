@@ -69,6 +69,7 @@ CORE_TOOLS = {
     "create_location",
     "create_npc",
     "update_location",
+    "discover_location",
     "delete_location",
     "update_npc",
     "delete_npc",
@@ -571,6 +572,47 @@ def test_npc_must_be_in_a_declared_location(tree: Path):
     ]
     _write(tree, {"worlds/testland/world.json": world})
     with pytest.raises(ContentError, match="npc 'bo' is in unknown location 'nowhere'"):
+        ContentLibrary.load(tree)
+
+
+def test_location_map_position_and_discovery_are_read(tree: Path):
+    world = [
+        *_world(),
+        {
+            "type": "location",
+            "id": "mill",
+            "name": "Mill",
+            "description": "A water mill.",
+            "discovered": True,
+            "x": -1.5,
+            "y": 2,
+        },
+    ]
+    _write(tree, {"worlds/testland/world.json": world})
+    town, mill = ContentLibrary.load(tree).world_templates["testland"].locations
+    assert (town.discovered, town.x, town.y) == (False, None, None)
+    assert (mill.discovered, mill.x, mill.y) == (True, -1.5, 2.0)
+
+
+@pytest.mark.parametrize(
+    "fields, message",
+    [
+        ({"discovered": "yes"}, "discovered must be true or false"),
+        ({"x": 1}, "give both x and y, or neither"),
+        ({"x": 1, "y": "north"}, "y must be a number of kilometers"),
+        ({"x": True, "y": 0}, "x must be a number of kilometers"),
+    ],
+)
+def test_bad_location_map_fields_are_rejected(tree: Path, fields: dict, message: str):
+    location = {
+        "type": "location",
+        "id": "mill",
+        "name": "Mill",
+        "description": "A mill.",
+        **fields,
+    }
+    _write(tree, {"worlds/testland/world.json": [*_world(), location]})
+    with pytest.raises(ContentError, match=f"location mill: {message}"):
         ContentLibrary.load(tree)
 
 

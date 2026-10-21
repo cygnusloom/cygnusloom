@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 import math
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import asdict, dataclass, field, fields, replace
 from enum import StrEnum
 from typing import Any, ClassVar
 
@@ -28,6 +28,7 @@ from cygnusforge.services.tools import Ask
 PC_KIND = "pc"
 NPC_KIND = "npc"
 CAMPAIGN_WIDE = "campaign-wide"
+DEFAULT_DIMENSION = "default"
 # Token counts are estimates: about four characters per token.
 CHARS_PER_TOKEN = 4
 
@@ -59,9 +60,27 @@ class ContextPart:
 
 
 @dataclass(frozen=True)
+class Position:
+    """Where a place is on the world map, in kilometers from the map's center: x grows east and y
+    grows north. The map is flat for now, so z stays 0 and the dimension stays the default."""
+
+    x: float
+    y: float
+    z: float = 0.0
+    dimension: str = DEFAULT_DIMENSION
+
+
+@dataclass(frozen=True)
 class Place:
     name: str
     description: str
+    # Discovered places are ones the player character has visited or heard about in detail.
+    discovered: bool = False
+    position: Position | None = None
+
+
+def _position(x: float | None, y: float | None) -> Position | None:
+    return None if x is None or y is None else Position(x=x, y=y)
 
 
 @dataclass
@@ -243,9 +262,14 @@ class LocationAdded(GameEvent):
 
     name: str
     description: str
+    discovered: bool = False
+    x: float | None = None
+    y: float | None = None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        state.places[name_key(self.name)] = Place(self.name, self.description)
+        state.places[name_key(self.name)] = Place(
+            self.name, self.description, self.discovered, _position(self.x, self.y)
+        )
 
     def render(self) -> str:
         return f"New location: {self.name}."
@@ -365,16 +389,39 @@ class NoteAdded(GameEvent):
 
 @dataclass(frozen=True)
 class LocationUpdated(GameEvent):
+    """A location's details after an update. The position is the resolved one, and None if the
+    place has none. Discovery is not changed here; `LocationDiscovered` does that."""
+
     kind: ClassVar[str] = "location.updated"
 
     name: str
     description: str
+    x: float | None = None
+    y: float | None = None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        state.places[name_key(self.name)] = Place(self.name, self.description)
+        key = name_key(self.name)
+        before = state.places[key]
+        state.places[key] = Place(
+            self.name, self.description, before.discovered, _position(self.x, self.y)
+        )
 
     def render(self) -> str:
         return f"Location updated: {self.name}."
+
+
+@dataclass(frozen=True)
+class LocationDiscovered(GameEvent):
+    kind: ClassVar[str] = "location.discovered"
+
+    name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        key = name_key(self.name)
+        state.places[key] = replace(state.places[key], discovered=True)
+
+    def render(self) -> str:
+        return f"Discovered: {self.name}."
 
 
 @dataclass(frozen=True)

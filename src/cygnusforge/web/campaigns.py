@@ -51,7 +51,7 @@ from cygnusforge.services.campaigns import (
 from cygnusforge.services.common import Conflict, InvalidInput, NotFound
 from cygnusforge.services.names import random_campaign_name
 from cygnusforge.services.tools import check_arguments
-from cygnusforge.services.world import scene_view
+from cygnusforge.services.world import map_view, scene_view
 from cygnusforge.web.character_form import (
     campaign_submission_from_form,
     campaign_view,
@@ -394,6 +394,7 @@ def _campaign_page(
     spec = rule_set.character if rule_set else NO_CHARACTER
     options = rule_set.campaign if rule_set else NO_CAMPAIGN
     world = campaign_world(engine, user.id, campaign.id)
+    world_map = map_view(world.state)
     if options.fields and not world.state.options:
         return render(
             request,
@@ -402,6 +403,7 @@ def _campaign_page(
             campaign=campaign,
             world=library.world_templates.get(campaign.world_template),
             scene=scene_view(world.state, spec),
+            world_map=world_map,
             rule_set=rule_set,
             options=campaign_view(options),
             error=error,
@@ -420,6 +422,7 @@ def _campaign_page(
             campaign=campaign,
             world=library.world_templates.get(campaign.world_template),
             scene=scene_view(world.state, spec),
+            world_map=world_map,
             rule_set=rule_set,
             character=character,
             error=error,
@@ -441,6 +444,7 @@ def _campaign_page(
         campaign=campaign,
         world=library.world_templates.get(campaign.world_template),
         scene=scene_view(world.state, spec),
+        world_map=world_map,
         rule_set=rule_set,
         messages=messages,
         transcript=transcript,

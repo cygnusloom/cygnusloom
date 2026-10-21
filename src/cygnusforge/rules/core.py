@@ -8,8 +8,15 @@ from typing import Any
 from cygnusforge.rules.context import ToolContext, brief
 
 
-def create_location(name: str, description: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.create_location(name, description)
+def create_location(
+    name: str,
+    description: str,
+    ctx: ToolContext,
+    discovered: bool = False,
+    x: float | None = None,
+    y: float | None = None,
+) -> dict[str, Any]:
+    return ctx.world.create_location(name, description, discovered=discovered, x=x, y=y)
 
 
 def create_npc(
@@ -33,8 +40,18 @@ def create_npc(
     )
 
 
-def update_location(name: str, description: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.update_location(name, description)
+def update_location(
+    name: str,
+    description: str,
+    ctx: ToolContext,
+    x: float | None = None,
+    y: float | None = None,
+) -> dict[str, Any]:
+    return ctx.world.update_location(name, description, x=x, y=y)
+
+
+def discover_location(name: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.discover_location(name)
 
 
 def delete_location(name: str, ctx: ToolContext) -> dict[str, Any]:

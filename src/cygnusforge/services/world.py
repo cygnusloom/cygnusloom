@@ -6,6 +6,7 @@ messages are returned to the model as they are."""
 
 from __future__ import annotations
 
+import math
 import random
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -37,6 +38,7 @@ from cygnusforge.services.events import (
     CampaignState,
     Character,
     LocationAdded,
+    LocationDiscovered,
     LocationRemoved,
     LocationUpdated,
     Note,
@@ -50,6 +52,7 @@ from cygnusforge.services.events import (
     PcAdded,
     Place,
     load_state,
+    name_key,
     record,
 )
 from cygnusforge.services.tools import check_arguments
@@ -58,6 +61,9 @@ MAX_NAME = 120
 MAX_TEXT = 2000
 MAX_QUIRKS = 10
 QUIRKS_PER_NPC = 2
+# The map always shows at least this many kilometers from its center, and leaves a margin.
+MIN_MAP_RADIUS_KM = 1.0
+MAP_MARGIN = 1.1
 
 
 @dataclass(frozen=True)
@@ -73,6 +79,26 @@ class SceneView:
 
 
 @dataclass(frozen=True)
+class MapMarker:
+    """A discovered place on the map. Left and top are percentages of the map's width and height."""
+
+    name: str
+    left: float
+    top: float
+    here: bool
+
+
+@dataclass(frozen=True)
+class MapView:
+    """The player's map. Only discovered places appear on it. Places with a position are placed on a
+    square centered on the origin and sized to fit the farthest one. Every discovered place is listed."""
+
+    radius_km: float
+    markers: list[MapMarker]
+    places: list[Place]
+
+
+@dataclass(frozen=True)
 class WorldTools:
     """The world as the rule set's tools use it. Each call runs in its own session and commits."""
 
@@ -82,9 +108,20 @@ class WorldTools:
     rng: random.Random
     character: CharacterSpec
 
-    def create_location(self, name: str, description: str) -> dict[str, Any]:
+    def create_location(
+        self,
+        name: str,
+        description: str,
+        discovered: bool = False,
+        x: float | None = None,
+        y: float | None = None,
+    ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return create_location(db, self.campaign_id, name, description)
+            return create_location(db, self.campaign_id, name, description, discovered, x, y)
+
+    def discover_location(self, name: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return discover_location(db, self.campaign_id, name)
 
     def create_npc(
         self,
@@ -116,9 +153,11 @@ class WorldTools:
         with session_scope(self.engine) as db:
             return move_actor(db, self.campaign_id, name, location)
 
-    def update_location(self, name: str, description: str) -> dict[str, Any]:
+    def update_location(
+        self, name: str, description: str, x: float | None = None, y: float | None = None
+    ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return update_location(db, self.campaign_id, name, description)
+            return update_location(db, self.campaign_id, name, description, x, y)
 
     def delete_location(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -192,7 +231,17 @@ def seed_campaign(
     later, by `create_player_character`."""
     names: dict[str, str] = {}
     for spot in world.locations:
-        record(db, campaign_id, LocationAdded(name=spot.name, description=spot.description))
+        record(
+            db,
+            campaign_id,
+            LocationAdded(
+                name=spot.name,
+                description=spot.description,
+                discovered=spot.discovered,
+                x=spot.x,
+                y=spot.y,
+            ),
+        )
         names[spot.id] = spot.name
     for npc in world.npcs:
         event = _npc_event(
@@ -262,14 +311,29 @@ def create_player_character(
     return {"created": "pc", "name": name, "location": None}
 
 
-def create_location(db: Session, campaign_id: int, name: str, description: str) -> dict[str, Any]:
+def create_location(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    description: str,
+    discovered: bool = False,
+    x: float | None = None,
+    y: float | None = None,
+) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     name = _text(name, "name", MAX_NAME)
     _ensure_free_name(state, name)
     text = _text(description, "description", MAX_TEXT)
-    record(db, campaign_id, LocationAdded(name=name, description=text))
+    if not isinstance(discovered, bool):
+        raise InvalidInput("discovered must be true or false")
+    px, py = _coordinates(x, y)
+    record(
+        db,
+        campaign_id,
+        LocationAdded(name=name, description=text, discovered=discovered, x=px, y=py),
+    )
     db.commit()
-    return {"created": "location", "name": name}
+    return {"created": "location", "name": name, "discovered": discovered}
 
 
 def create_npc(
@@ -314,13 +378,34 @@ def create_npc(
     }
 
 
-def update_location(db: Session, campaign_id: int, name: str, description: str) -> dict[str, Any]:
+def update_location(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    description: str,
+    x: float | None = None,
+    y: float | None = None,
+) -> dict[str, Any]:
+    """Change a location's description and, if given, its map position. Without x and y the
+    position stays as it is."""
     state = load_state(db, campaign_id)
     where = _place_named(state, name)
     text = _text(description, "description", MAX_TEXT)
-    record(db, campaign_id, LocationUpdated(name=where.name, description=text))
+    px, py = _coordinates(x, y)
+    if px is None and py is None and where.position is not None:
+        px, py = where.position.x, where.position.y
+    record(db, campaign_id, LocationUpdated(name=where.name, description=text, x=px, y=py))
     db.commit()
     return {"updated": "location", "name": where.name}
+
+
+def discover_location(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
+    state = load_state(db, campaign_id)
+    where = _place_named(state, name)
+    if not where.discovered:
+        record(db, campaign_id, LocationDiscovered(name=where.name))
+        db.commit()
+    return {"discovered": "location", "name": where.name}
 
 
 def delete_location(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
@@ -379,6 +464,9 @@ def move_actor(db: Session, campaign_id: int, name: str, location: str) -> dict[
     actor = _character_named(state, name)
     where = _place_named(state, location)
     record(db, campaign_id, ActorMoved(name=actor.name, location=where.name))
+    # Going somewhere in person means the player character knows the place in detail.
+    if actor.kind == PC_KIND and not where.discovered:
+        record(db, campaign_id, LocationDiscovered(name=where.name))
     db.commit()
     return {"moved": actor.name, "location": where.name}
 
@@ -444,7 +532,7 @@ def all_at_location(state: CampaignState, location: str | None) -> dict[str, Any
     pc = state.pc()
     subjects = {place.name, *(npc.name for npc in npcs)}
     return {
-        "location": {"name": place.name, "description": place.description},
+        "location": _location_entry(place),
         "player_character_here": pc is not None and pc.location == place.name,
         "npcs": [_npc_summary(npc) for npc in npcs],
         "notes": [
@@ -459,7 +547,7 @@ def search_location(state: CampaignState, query: str) -> dict[str, list[dict[str
     """Locations whose name or description contains every word of `query`."""
     words = _words(query)
     matches = [
-        {"name": place.name, "description": place.description}
+        _location_entry(place)
         for place in state.places.values()
         if _has_words(words, place.name, place.description)
     ]
@@ -527,6 +615,34 @@ def speaker_profile(state: CampaignState, name: str, spec: CharacterSpec) -> str
     return "\n".join(lines)
 
 
+def map_view(state: CampaignState) -> MapView:
+    """The player's map. Only discovered places appear on it. Each marker is placed on a square
+    centered on the origin, sized to fit the farthest discovered place plus a margin."""
+    places = sorted(
+        (place for place in state.places.values() if place.discovered),
+        key=lambda place: name_key(place.name),
+    )
+    placed = [place for place in places if place.position is not None]
+    reach = max(
+        [MIN_MAP_RADIUS_KM]
+        + [max(abs(p.position.x), abs(p.position.y)) for p in placed if p.position is not None]
+    )
+    radius = reach * MAP_MARGIN
+    pc = state.pc()
+    here = pc.location if pc is not None else None
+    markers = [
+        MapMarker(
+            name=place.name,
+            left=round(50 + place.position.x / radius * 50, 2),
+            top=round(50 - place.position.y / radius * 50, 2),
+            here=place.name == here,
+        )
+        for place in placed
+        if place.position is not None
+    ]
+    return MapView(radius_km=round(radius, 2), markers=markers, places=places)
+
+
 def scene_view(state: CampaignState, spec: CharacterSpec) -> SceneView:
     """The player's view. It shows only what is at the player character's location."""
     pc = state.pc()
@@ -565,6 +681,18 @@ def world_state_text(state: CampaignState, campaign: CampaignSpec) -> str:
     names = [npc.name for npc in _npcs_at(state, pc.location)]
     lines.append(f"NPCs here: {', '.join(names) if names else 'none'}.")
     return "\n".join(lines)
+
+
+def _location_entry(place: Place) -> dict[str, Any]:
+    position = None
+    if place.position is not None:
+        position = {"x": place.position.x, "y": place.position.y}
+    return {
+        "name": place.name,
+        "description": place.description,
+        "discovered": place.discovered,
+        "position_km": position,
+    }
 
 
 def _npcs_at(state: CampaignState, location: str) -> list[Character]:
@@ -698,6 +826,21 @@ def _optional_text(value: object, label: str) -> str | None:
     if value is None or (isinstance(value, str) and not value.strip()):
         return None
     return _text(value, label, MAX_NAME)
+
+
+def _coordinates(x: object, y: object) -> tuple[float | None, float | None]:
+    """Both map coordinates or neither. Neither means the place has no position on the map."""
+    if x is None and y is None:
+        return None, None
+    if x is None or y is None:
+        raise InvalidInput("give both x and y, or neither")
+    return _kilometers(x, "x"), _kilometers(y, "y")
+
+
+def _kilometers(value: object, label: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float) or not math.isfinite(value):
+        raise InvalidInput(f"{label} must be a number of kilometers from the map's center")
+    return float(value)
 
 
 def _quirks(value: Sequence[str] | None) -> list[str] | None:
