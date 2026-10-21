@@ -203,6 +203,16 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
 .tab-panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 1rem 1.25rem; }
 .tab-panel[hidden] { display: none; }
+.map-panel > .tab-list { width: calc(100% + 1rem); margin: -0.5rem -0.5rem 0; }
+.map-view {
+  flex: 1 1 auto; align-self: stretch; min-height: 0; width: 100%;
+  display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
+  padding: 0.5rem 0 0; overflow-y: auto;
+}
+.map-view > .map-board { flex: 1 0 auto; min-height: 7rem; width: auto; height: auto; max-height: 100%; }
+.map-view > .encounter-status { flex: none; width: 100%; }
+.map-view .encounter-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 1rem; margin: 0; }
+.map-view .encounter-status p { text-align: center; }
 
 
 .shell { flex: 1; min-height: 0; display: flex; position: relative; overflow: hidden; }

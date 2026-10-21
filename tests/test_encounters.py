@@ -403,6 +403,11 @@ def test_campaign_page_shows_the_encounter_board_and_turn_controls(
     assert "Start your turn" not in page
     assert 'id="tab-encounter" aria-controls="panel-encounter" aria-selected="true"' in page
     assert 'id="tab-world" aria-controls="panel-world" aria-selected="false"' in page
+    assert 'aria-label="Map views"' in page
+    assert page.index('aria-label="Map views"') < page.index('aria-label="Panels"')
+    assert page.index('id="panel-encounter"') < page.index('aria-label="Panels"')
+    assert page.index('id="panel-world"') < page.index('aria-label="Panels"')
+    assert 'id="tab-characters" aria-controls="panel-characters" aria-selected="true"' in page
     assert "world-map-details" not in page
 
     _begin(app, campaign_id, "Pip")

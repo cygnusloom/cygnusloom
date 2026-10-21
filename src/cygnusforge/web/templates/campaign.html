@@ -121,7 +121,30 @@
         <aside class="side">
           <section class="map-panel" aria-label="Map">
             {% if encounter %}
+            <div class="tab-list" role="tablist" aria-label="Map views">
+              <button type="button" class="tab" role="tab" id="tab-encounter" aria-controls="panel-encounter" aria-selected="true">Encounter</button>
+              <button type="button" class="tab" role="tab" id="tab-world" aria-controls="panel-world" aria-selected="false" tabindex="-1">World map</button>
+            </div>
+            <div class="tab-panel map-view" role="tabpanel" id="panel-encounter" aria-labelledby="tab-encounter">
               {{ encounter_board(encounter, encounter_rows) }}
+              <div class="encounter-status">
+                <p><strong>{{ encounter.map }}</strong> <span class="muted">{{ encounter.location }}, round {{ encounter.round }}</span></p>
+                <ul class="encounter-list">
+                  {% for participant in encounter.participants %}
+                  <li{% if participant.acting %} class="acting"{% endif %}>
+                    <span class="map-number">{{ participant.number }}</span>
+                    <strong>{{ participant.name }}</strong>{% if participant.is_pc %} <span class="muted">(you)</span>{% endif %}
+                    <span class="muted">{% if participant.cell %}column {{ participant.cell[0] + 1 }}, row {{ participant.cell[1] + 1 }}{% else %}not on the map{% endif %}</span>
+                  </li>
+                  {% else %}
+                  <li class="muted">No one has joined yet.</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+            <div class="tab-panel map-view" role="tabpanel" id="panel-world" aria-labelledby="tab-world" hidden>
+              {{ map_board(world_map) }}
+            </div>
             {% else %}
               {{ map_board(world_map) }}
             {% endif %}
@@ -129,34 +152,11 @@
 
           <section class="tabs-panel">
             <div class="tab-list" role="tablist" aria-label="Panels">
-              {% if encounter %}
-              <button type="button" class="tab" role="tab" id="tab-encounter" aria-controls="panel-encounter" aria-selected="true">Encounter</button>
-              <button type="button" class="tab" role="tab" id="tab-world" aria-controls="panel-world" aria-selected="false" tabindex="-1">World map</button>
-              {% endif %}
-              <button type="button" class="tab" role="tab" id="tab-characters" aria-controls="panel-characters" aria-selected="{{ 'false' if encounter else 'true' }}" tabindex="{{ -1 if encounter else 0 }}">Characters</button>
+              <button type="button" class="tab" role="tab" id="tab-characters" aria-controls="panel-characters" aria-selected="true">Characters</button>
               <button type="button" class="tab" role="tab" id="tab-sheet" aria-controls="panel-sheet" aria-selected="false" tabindex="-1">Sheet</button>
               <button type="button" class="tab" role="tab" id="tab-notes" aria-controls="panel-notes" aria-selected="false" tabindex="-1">Notes</button>
             </div>
-            {% if encounter %}
-            <div class="tab-panel encounter-status" role="tabpanel" id="panel-encounter" aria-labelledby="tab-encounter">
-              <p><strong>{{ encounter.map }}</strong> <span class="muted">{{ encounter.location }}, round {{ encounter.round }}</span></p>
-              <ul class="encounter-list">
-                {% for participant in encounter.participants %}
-                <li{% if participant.acting %} class="acting"{% endif %}>
-                  <span class="map-number">{{ participant.number }}</span>
-                  <strong>{{ participant.name }}</strong>{% if participant.is_pc %} <span class="muted">(you)</span>{% endif %}
-                  <span class="muted">{% if participant.cell %}column {{ participant.cell[0] + 1 }}, row {{ participant.cell[1] + 1 }}{% else %}not on the map{% endif %}</span>
-                </li>
-                {% else %}
-                <li class="muted">No one has joined yet.</li>
-                {% endfor %}
-              </ul>
-            </div>
-            <div class="tab-panel" role="tabpanel" id="panel-world" aria-labelledby="tab-world" hidden>
-              {{ map_board(world_map) }}
-            </div>
-            {% endif %}
-            <div class="tab-panel" role="tabpanel" id="panel-characters" aria-labelledby="tab-characters"{% if encounter %} hidden{% endif %}>
+            <div class="tab-panel" role="tabpanel" id="panel-characters" aria-labelledby="tab-characters">
               {% if scene.pc %}
               <ul>
                 <li><strong>{{ scene.pc.name }}</strong> <span class="muted">(you), {{ scene.location.name if scene.location else "not yet placed" }}</span></li>
