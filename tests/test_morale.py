@@ -167,6 +167,32 @@ def test_the_fled_status_is_shown_for_a_fled_character(client_factory):
     assert encounters._status(bo, None) == "fled"
 
 
+def test_a_surrendered_foe_leaves_the_fight(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, "Bo")
+    _foe(tools, "Cy")
+    assert tools.surrender("Bo") == {"character": "Bo", "surrendered": True}
+    assert _character(app, campaign_id, "Bo").surrendered is True
+    assert _state(app, campaign_id).encounter is not None
+
+
+def test_the_encounter_ends_once_every_foe_has_surrendered(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, "Bo")
+    tools.surrender("Bo")
+    assert _state(app, campaign_id).encounter is None
+
+
+def test_a_surrendered_character_cannot_attack_and_shows_as_surrendered(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, "Bo")
+    _foe(tools, "Cy")
+    tools.surrender("Bo")
+    with pytest.raises(InvalidInput, match="Bo has surrendered"):
+        _hit(tools, "Bo", PC, 1)
+    assert encounters._status(_character(app, campaign_id, "Bo"), None) == "surrendered"
+
+
 def test_a_defeated_character_shows_defeat_rather_than_fled(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Ghoul", claw="1d6+1d6")

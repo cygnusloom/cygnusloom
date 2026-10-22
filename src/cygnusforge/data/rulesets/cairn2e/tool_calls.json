@@ -446,6 +446,26 @@
   },
   {
     "type": "tool_call",
+    "id": "surrender",
+    "name": "surrender",
+    "python_module": "cairn2e",
+    "function": "surrender",
+    "description": "Have a character give up the fight and lay down arms. A surrendered character takes no more part in the encounter. The encounter ends once one side has nobody left who can fight.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character surrendering."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "player_retreat",
     "name": "player_retreat",
     "python_module": "cairn2e",

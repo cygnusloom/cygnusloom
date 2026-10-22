@@ -439,6 +439,8 @@ def _status(character: Character, combat: CombatRules | None) -> str:
         return defeat_status(character, combat.defeat if combat else {})
     if character.fled:
         return "fled"
+    if character.surrendered:
+        return "surrendered"
     if character.save_due is not None:
         return f"{character.save_due} save due"
     return ""

@@ -117,6 +117,8 @@ class Character:
     scars: list[str] = field(default_factory=list)
     # Ran from the fight, or broke and fled. Cleared when the encounter ends.
     fled: bool = False
+    # Gave up the fight and laid down arms. Cleared when the encounter ends.
+    surrendered: bool = False
 
 
 def current(character: Character, stat: str) -> int:
@@ -132,8 +134,8 @@ def defeat_status(character: Character, defeat: Mapping[str, str]) -> str:
 
 
 def out_of_fight(character: Character) -> bool:
-    """Whether a character can no longer act in the encounter: defeated, or fled."""
-    return character.defeated or character.fled
+    """Whether a character can no longer act in the encounter: defeated, fled, or surrendered."""
+    return character.defeated or character.fled or character.surrendered
 
 
 @dataclass(frozen=True)
@@ -985,6 +987,7 @@ class EncounterEnded(GameEvent):
     def apply(self, state: CampaignState, event_id: int) -> None:
         for character in state.characters.values():
             character.fled = False
+            character.surrendered = False
         state.encounter = None
 
     def render(self) -> str:
@@ -1039,6 +1042,21 @@ class CharacterFled(GameEvent):
         if self.reason == "morale":
             return f"{self.name} breaks and flees."
         return f"{self.name} gets clear of the fight."
+
+
+@dataclass(frozen=True)
+class CharacterSurrendered(GameEvent):
+    """A character has given up the fight and laid down arms."""
+
+    kind: ClassVar[str] = "character.surrendered"
+
+    name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].surrendered = True
+
+    def render(self) -> str:
+        return f"{self.name} surrenders."
 
 
 @dataclass(frozen=True)

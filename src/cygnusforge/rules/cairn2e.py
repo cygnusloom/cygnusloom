@@ -110,5 +110,9 @@ def retreat(name: str, safe: bool, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.retreat(name, safe)
 
 
+def surrender(name: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.surrender(name)
+
+
 def player_retreat(safe: bool, ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
     return ctx.world.player_retreat(safe, roll)

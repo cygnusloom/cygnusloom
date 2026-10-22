@@ -47,7 +47,7 @@ Scope:
    - Multiple attackers on one foe: roll all dice and keep the single highest.
    - Unarmed: d4.
    - All actions are declared before resolution.
-7. **Retreat.** Running requires a DEX save and a safe destination.
+7. **Retreat.** Running requires a DEX save and a safe destination. A character may also surrender, which takes them out of the fight; the encounter ends once one side has nobody who can fight.
 8. **Armor.** Armor is subtracted from the damage roll before HP, with a maximum of 3.
 9. **Rounds.** PCs act first each round, then opponents act simultaneously. Current behavior is kept.
 10. **Attacks.** Attacks always hit (book rule), so the attack roll is only the damage roll.

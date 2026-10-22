@@ -36,6 +36,7 @@ from cygnusforge.services.events import (
     CampaignState,
     Character,
     CharacterRecovered,
+    CharacterSurrendered,
     EncounterEnded,
     Harmed,
     InitiativeRolled,
@@ -102,6 +103,8 @@ def _living(character: Character, combat: CombatRules) -> Character:
         raise InvalidInput(f"{character.name} is {defeat_status(character, combat.defeat)}")
     if character.fled:
         raise InvalidInput(f"{character.name} has fled the fight")
+    if character.surrendered:
+        raise InvalidInput(f"{character.name} has surrendered")
     return character
 
 
@@ -215,6 +218,23 @@ def _end_if_one_side_left(db: Session, campaign_id: int) -> None:
         reason = "Nobody is left able to fight."
     record(db, campaign_id, EncounterEnded(reason=reason))
     db.commit()
+
+
+def surrender(db: Session, campaign_id: int, name: str, combat: CombatRules) -> dict[str, Any]:
+    """A character gives up the fight. The encounter ends once one side has nobody who can fight."""
+    state = load_state(db, campaign_id)
+    if state.encounter is None:
+        raise InvalidInput("there is no encounter to surrender in")
+    character = state.characters.get(name_key(name))
+    if character is None:
+        raise InvalidInput(f"there is no character named {name!r}")
+    if name_key(character.name) not in state.encounter.sides:
+        raise InvalidInput(f"{character.name} is not in the encounter")
+    _living(character, combat)
+    record(db, campaign_id, CharacterSurrendered(name=character.name))
+    db.commit()
+    _end_if_one_side_left(db, campaign_id)
+    return {"character": character.name, "surrendered": True}
 
 
 def _save(

@@ -366,6 +366,10 @@ class WorldTools:
         with session_scope(self.engine) as db:
             return morale.player_retreat(db, self.campaign_id, safe, roll, self._rules())
 
+    def surrender(self, name: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return combat.surrender(db, self.campaign_id, name, self._rules())
+
     def _rules(self) -> CombatRules:
         if self.combat is None:
             raise InvalidInput("this rule set has no combat")
@@ -978,6 +982,8 @@ def _combat_lines(character: Character, spec: CharacterSpec, combat: CombatRules
         lines.append(f"Status: {defeat_status(character, combat.defeat)}")
     elif character.fled:
         lines.append("Status: fled")
+    elif character.surrendered:
+        lines.append("Status: surrendered")
     elif character.save_due is not None:
         lines.append(f"Status: {spec.stats[character.save_due].name} save due")
     return lines
