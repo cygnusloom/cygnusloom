@@ -20,7 +20,7 @@ This spec plans the Second Edition rules as a set of phases. Each phase is imple
 | Persistent scar effects | Structured conditions with explicit end triggers (for example "rest a few hours", "extraordinary aid", "die in one hour"). Phase 1. |
 | Morale | Engine-enforced WIL saves for enemies at first casualty, at half their number, and lone foes at 0 HP. Phase 1. |
 | Attack modifiers | Impaired, Enhanced, Blast, two weapons, and multiple attackers are rolled and applied by the engine. Phase 1. |
-| Detachments | Later phase (phase 2). |
+| Detachments | One combatant from a flagged bestiary entry, formed by the GM. A failed Critical Damage save defeats it or routs its members, per scene. Phase 2. |
 | Reactions and Die of Fate | Engine tools the GM can call; results logged. Phase 3. |
 | Deprivation and Fatigue | Engine-tracked, including inventory slots. Phase 4. |
 | Magic | Spellbooks, scrolls, and relics, with the Fatigue and WIL-save rules enforced. Phase 5. |
@@ -60,9 +60,21 @@ Acceptance:
 
 ## Phase 2: detachments
 
-- Large groups fight as one detachment.
-- Critical Damage routes or weakens a detachment. 0 STR destroys it.
-- Individual attacks on a detachment are impaired (except Blast). Detachment attacks on individuals are enhanced and Blast.
+Source: the Warden's Guide, Detachments (https://cairnrpg.com/second-edition/wardens-guide/detachments/).
+
+- A detachment is one combatant. The GM forms it with an encounter tool call, using a bestiary entry flagged `detachment` (for example Killer Bees and Traitor-Rats).
+- It uses its bestiary stat block: HP, armor, STR, DEX, WIL, and attacks.
+- Attacks on a detachment are impaired. A detachment's attacks on individuals are enhanced and Blast.
+- Damage past HP goes to STR. Damage that reaches STR triggers a Critical Damage save on STR.
+- If that save fails, the GM chooses the outcome per scene: the detachment is defeated, or its members flee, as a morale break does.
+- Engine-enforced: after a failed Critical Damage save the detachment is pending. Its attacks and hits on it are refused until the GM calls `resolve_detachment` with `defeat` or `flee`.
+- Blast: a detachment's attack rolls its enhanced dice separately for each living individual on the other side. Blast applies to individuals only; detachments do not attack detachments.
+- Detachments make no morale checks. Checked against the Combat and Detachments pages: morale is triggered by a group's casualties, and a detachment "remains a single unit until it takes critical damage", so its break point is its Critical Damage save.
+
+Acceptance:
+- Unit tests for a flagged statblock becoming a detachment, impaired attacks on it, Blast, the pending save, both resolutions, and no morale check.
+- A live session with a detachment fight: the GM forms it, attacks it, the detachment strikes individuals, a Critical Damage save fails, and the GM resolves it.
+- Transcript wording reviewed.
 
 ## Phase 3: Warden tools
 

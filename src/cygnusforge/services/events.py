@@ -121,6 +121,10 @@ class Character:
     surrendered: bool = False
     # A debug buff: no harm reaches the character. Set from the debug panel.
     invincible: bool = False
+    # A detachment is a large group the Warden fights as one unit. See SPEC.md, Phase 2.
+    detachment: bool = False
+    # A detachment whose Critical Damage save failed. The Warden must decide it is defeated or flees.
+    critical_due: bool = False
 
 
 def current(character: Character, stat: str) -> int:
@@ -499,6 +503,7 @@ class NpcAdded(GameEvent):
     armor: int = 0
     attacks: dict[str, str] = field(default_factory=dict)
     creature: str = ""
+    detachment: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.characters[name_key(self.name)] = Character(
@@ -516,6 +521,7 @@ class NpcAdded(GameEvent):
             armor=self.armor,
             attacks=dict(self.attacks),
             creature=self.creature,
+            detachment=self.detachment,
         )
 
     def render(self) -> str:
@@ -992,6 +998,7 @@ class EncounterEnded(GameEvent):
         for character in state.characters.values():
             character.fled = False
             character.surrendered = False
+            character.critical_due = False
         state.encounter = None
 
     def render(self) -> str:
@@ -1304,7 +1311,8 @@ class Struck(GameEvent):
 
 @dataclass(frozen=True)
 class SaveRolled(GameEvent):
-    """A d20 save against a stat. A failed save defeats the character, leaving it `status`."""
+    """A d20 save against a stat. A failed save defeats the character, leaving it `status`. A
+    failed Critical Damage save on a detachment leaves it to the Warden's decision instead."""
 
     kind: ClassVar[str] = "combat.save_rolled"
 
@@ -1314,20 +1322,53 @@ class SaveRolled(GameEvent):
     score: int
     passed: bool
     status: str = ""
+    critical: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
         if character.save_due == self.stat:
             character.save_due = None
         if not self.passed:
-            character.defeated = True
+            if self.critical:
+                character.critical_due = True
+            else:
+                character.defeated = True
 
     def render(self) -> str:
         result = "succeeds" if self.passed else "fails"
         text = f"{self.name} rolls {self.roll} on a {self.stat.upper()} save of {self.score} and {result}."
-        if not self.passed:
+        if not self.passed and self.critical:
+            text += (
+                f" {self.name} is broken, and the Warden decides whether it is defeated or flees."
+            )
+        elif not self.passed:
             text += f" {self.name} is {self.status}."
         return text
+
+
+@dataclass(frozen=True)
+class DetachmentResolved(GameEvent):
+    """The Warden's decision after a detachment's Critical Damage save failed. `outcome` is
+    "defeat", leaving it `status`, or "flee", breaking it up so its members run from the fight."""
+
+    kind: ClassVar[str] = "combat.detachment_resolved"
+
+    name: str
+    outcome: str
+    status: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.critical_due = False
+        if self.outcome == "defeat":
+            character.defeated = True
+        else:
+            character.fled = True
+
+    def render(self) -> str:
+        if self.outcome == "defeat":
+            return f"{self.name} is {self.status}."
+        return f"{self.name} breaks up, and its members flee the fight."
 
 
 @dataclass(frozen=True)

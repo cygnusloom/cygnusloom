@@ -318,6 +318,10 @@ class WorldTools:
                 db, self.campaign_id, target, weapon, damage, self._rules(), self.rng, modifier
             )
 
+    def resolve_detachment(self, name: str, outcome: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return combat.resolve_detachment(db, self.campaign_id, name, outcome, self._rules())
+
     def modifier_dice(self, modifier: str) -> str | None:
         return attack_modifiers.modifier_dice(self._rules().modifiers, modifier)
 
@@ -668,6 +672,7 @@ def create_monster(
         armor=armor_value,
         attacks=attack_map,
         creature=base.name if base else "",
+        detachment=bool(base and base.detachment),
     )
     record(db, campaign_id, event)
     db.commit()
@@ -980,6 +985,10 @@ def get_statblock(
 
 def _combat_lines(character: Character, spec: CharacterSpec, combat: CombatRules) -> list[str]:
     lines = [f"Armor: {character.armor}"]
+    if character.detachment:
+        lines.append(
+            "Detachment: a group that attacks with Blast and is hit only by impaired attacks"
+        )
     if character.attacks:
         attacks = ", ".join(f"{name} {formula}" for name, formula in character.attacks.items())
         lines.append(f"Attacks: {attacks}")
@@ -994,6 +1003,8 @@ def _combat_lines(character: Character, spec: CharacterSpec, combat: CombatRules
         lines.append("Status: fled")
     elif character.surrendered:
         lines.append("Status: surrendered")
+    elif character.critical_due:
+        lines.append("Status: broken, awaiting the Warden's decision (resolve_detachment)")
     elif character.save_due is not None:
         lines.append(f"Status: {spec.stats[character.save_due].name} save due")
     return lines

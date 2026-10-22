@@ -110,7 +110,7 @@
     "name": "attack",
     "python_module": "cairn2e",
     "function": "attack",
-    "description": "Make an NPC's attack against a character. Attacks always hit. The attack's damage is rolled by the engine and reduces the target's armor, then Hit Protection, then Strength, and a target whose Strength is used up must make a Strength save. Use it only when the attacker's side is acting, after the initiative is set. Player characters attack with player_attack, not this tool.",
+    "description": "Make an NPC's attack against a character. Attacks always hit. The attack's damage is rolled by the engine and reduces the target's armor, then Hit Protection, then Strength, and a target whose Strength is used up must make a Strength save. Use it only when the attacker's side is acting, after the initiative is set. Player characters attack with player_attack, not this tool. A detachment (a statblock marked as a group) is hit only by impaired attacks. A detachment's own attack has Blast: the engine rolls its enhanced damage separately for each living individual on the other side, and the target you name is one of them. A detachment whose Strength is used up makes a Strength save; if it fails it is broken, and the attack and targeting are refused until resolve_detachment is called.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -149,7 +149,7 @@
     "name": "player_attack",
     "python_module": "cairn2e",
     "function": "player_attack",
-    "description": "Record the player character's attack against a target. Attacks always hit, so the player only rolls the damage. Use it when the player says what they attack with and the target is in the encounter. The target takes the damage through its armor, Hit Protection, and Strength, as with an NPC attack.",
+    "description": "Record the player character's attack against a target. Attacks always hit, so the player only rolls the damage. Use it when the player says what they attack with and the target is in the encounter. The target takes the damage through its armor, Hit Protection, and Strength, as with an NPC attack. A detachment can only be hit by an impaired attack.",
     "player_input": {
       "dice_param": "damage_dice",
       "param": "damage",
@@ -461,6 +461,35 @@
       },
       "required": [
         "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "resolve_detachment",
+    "name": "resolve_detachment",
+    "python_module": "cairn2e",
+    "function": "resolve_detachment",
+    "description": "Decide what happens to a detachment whose Critical Damage save failed. 'defeat' breaks it and defeats it. 'flee' breaks it up and its members run from the fight. Until this is called, a broken detachment cannot attack or be attacked. Call it only after a detachment's Strength save has failed.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the broken detachment."
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "defeat",
+            "flee"
+          ],
+          "description": "'defeat' if the detachment is broken and defeated, 'flee' if it breaks up and runs."
+        }
+      },
+      "required": [
+        "name",
+        "outcome"
       ]
     }
   },

@@ -78,6 +78,10 @@ def player_attack(
     return ctx.world.player_attack(target, weapon, damage, modifier)
 
 
+def resolve_detachment(name: str, outcome: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.resolve_detachment(name, outcome)
+
+
 def player_save(ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
     return ctx.world.player_save(roll)
 

@@ -128,7 +128,8 @@ class EncounterGrid:
 @dataclass(frozen=True)
 class MonsterTemplate:
     """A statblock a GM can base a monster on. `stats` has every stat of the rule set's character,
-    and `attacks` maps each attack's name to its dice formula."""
+    and `attacks` maps each attack's name to its dice formula. A `detachment` is a large group the
+    Warden fights as one unit."""
 
     id: str
     name: str
@@ -136,6 +137,7 @@ class MonsterTemplate:
     stats: Mapping[str, int]
     armor: int
     attacks: Mapping[str, str]
+    detachment: bool = False
 
 
 DAMAGE_KINDS = ("absorb", "harm", "overflow")
@@ -699,6 +701,9 @@ def _load_monster(
             raise ContentError(
                 f"{label}: attack {attack_name!r} must be a dice formula such as '1d8'"
             )
+    detachment = data.get("detachment", False)
+    if not isinstance(detachment, bool):
+        raise ContentError(f"{label}: 'detachment' must be true or false")
     return MonsterTemplate(
         id=definition.id,
         name=required_text(data, "name", label),
@@ -706,6 +711,7 @@ def _load_monster(
         stats=dict(stats),
         armor=armor,
         attacks=dict(attacks),
+        detachment=detachment,
     )
 
 

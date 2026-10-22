@@ -38,6 +38,7 @@ from cygnusforge.services.events import (
     CharacterRecovered,
     CharacterSurrendered,
     DebugStatSet,
+    DetachmentResolved,
     EncounterEnded,
     Harmed,
     InitiativeRolled,
@@ -107,7 +108,17 @@ def _living(character: Character, combat: CombatRules) -> Character:
         raise InvalidInput(f"{character.name} has fled the fight")
     if character.surrendered:
         raise InvalidInput(f"{character.name} has surrendered")
+    if character.critical_due:
+        raise InvalidInput(
+            f"{character.name} is broken and awaits the Warden's decision; call resolve_detachment"
+        )
     return character
+
+
+def _require_impaired(target: Character, modifier: str) -> None:
+    """A detachment is hit only by impaired attacks."""
+    if target.detachment and modifier != "impaired":
+        raise InvalidInput(f"{target.name} is a detachment; attacks on it must be impaired")
 
 
 def _strike(
@@ -161,7 +172,7 @@ def _strike(
         state = load_state(db, campaign_id)
         character = state.characters[name_key(target.name)]
         result["save"] = _save(db, campaign_id, combat, rng, character, damage.save)
-    if target.kind == NPC_KIND and combat.morale is not None:
+    if target.kind == NPC_KIND and not target.detachment and combat.morale is not None:
         # morale imports this module for the shared helpers, so it is imported here to avoid a cycle.
         from cygnusforge.services.morale import check_morale
 
@@ -253,6 +264,7 @@ def _save(
     roll = roll_total(combat.check_die, rng)
     score = current(character, stat)
     passed = combat.module.save_succeeds(roll, score)
+    critical = character.detachment
     record(
         db,
         campaign_id,
@@ -262,7 +274,8 @@ def _save(
             roll=roll,
             score=score,
             passed=passed,
-            status=defeat_status(character, combat.defeat),
+            status="" if critical else defeat_status(character, combat.defeat),
+            critical=critical,
         ),
     )
     db.commit()
@@ -307,6 +320,9 @@ def attack(
     struck = _participant(state, target)
     _living(struck, combat)
     name = _attack_named(source, attack_name)
+    if source.detachment:
+        return _blast(db, campaign_id, combat, rng, state, source, struck, name, modifier)
+    _require_impaired(struck, modifier_name(modifier))
     dice = modifier_dice(combat.modifiers, modifier)
     raw = roll_total(dice or source.attacks[name], rng)
     return _strike(
@@ -320,6 +336,70 @@ def attack(
         raw,
         modifier=modifier_name(modifier),
     )
+
+
+def _blast(
+    db: Session,
+    campaign_id: int,
+    combat: CombatRules,
+    rng: random.Random,
+    state: CampaignState,
+    source: Character,
+    struck: Character,
+    name: str,
+    modifier: str,
+) -> dict[str, Any]:
+    """A detachment's attack, which has Blast: it rolls enhanced dice separately for each living
+    individual on the other side. The named target must be one of them, but every one is hit."""
+    encounter = state.encounter
+    assert encounter is not None
+    own_side = encounter.sides.get(name_key(source.name), "")
+    if encounter.sides.get(name_key(struck.name), "") == own_side:
+        raise InvalidInput(f"{source.name} is on {struck.name}'s side and cannot attack them")
+    if struck.detachment:
+        raise InvalidInput(
+            f"{source.name} is a detachment and cannot attack {struck.name}, another detachment"
+        )
+    if modifier_name(modifier) not in ("", "enhanced"):
+        raise InvalidInput(
+            f"{source.name} is a detachment; its attacks are enhanced, so leave the modifier out"
+        )
+    targets = [
+        state.characters[name_key(display)]
+        for display in encounter.order
+        if encounter.sides.get(name_key(display), "") != own_side
+        and not state.characters[name_key(display)].detachment
+        and not out_of_fight(state.characters[name_key(display)])
+    ]
+    if not targets:
+        raise InvalidInput(
+            f"there is no living individual on the other side for {source.name} to hit"
+        )
+    owed = [target.name for target in targets if target.save_due is not None]
+    if owed:
+        raise InvalidInput(f"{', '.join(owed)} must make their save first")
+    dice = modifier_dice(combat.modifiers, "enhanced") or source.attacks[name]
+    results = []
+    for target in targets:
+        # An earlier hit in the blast can break another target's side, so each is checked as it comes up.
+        current_target = load_state(db, campaign_id).characters[name_key(target.name)]
+        if out_of_fight(current_target):
+            continue
+        raw = roll_total(dice, rng)
+        results.append(
+            _strike(
+                db,
+                campaign_id,
+                combat,
+                rng,
+                current_target,
+                source.name,
+                name,
+                raw,
+                modifier="enhanced",
+            )
+        )
+    return {"attacker": source.name, "attack": name, "blast": True, "targets": results}
 
 
 def resolve_attacks(
@@ -351,8 +431,11 @@ def resolve_attacks(
         source = _living(_participant(state, attacker_name), combat)
         if source.kind != NPC_KIND:
             raise InvalidInput(f"{source.name} is a player character; use player_attack instead")
+        if source.detachment:
+            raise InvalidInput(f"{source.name} is a detachment; use attack, which has its Blast")
         if encounter.sides.get(name_key(source.name), "") == foe_side:
             raise InvalidInput(f"{source.name} is on {struck.name}'s side and cannot attack them")
+        _require_impaired(struck, modifier_name(entry.get("modifier")))
         name = _attack_named(source, attack_name)
         dice = modifier_dice(combat.modifiers, entry.get("modifier"))
         planned.append(
@@ -391,7 +474,7 @@ def player_attack(
     modifier: str = "",
 ) -> dict[str, Any]:
     """A player character's hit. The player rolls the damage, using the modifier's dice when there
-    is one; the attack always hits."""
+    is one; the attack always hits. A detachment takes only impaired attacks."""
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     pc = state.pc()
@@ -406,9 +489,37 @@ def player_attack(
         raise InvalidInput("weapon must name the attack")
     # The modifier's dice are rolled by the player, so this only checks the modifier is known.
     modifier_dice(combat.modifiers, modifier)
+    _require_impaired(struck, modifier_name(modifier))
     return _strike(
         db, campaign_id, combat, rng, struck, pc.name, name, raw, modifier=modifier_name(modifier)
     )
+
+
+def resolve_detachment(
+    db: Session, campaign_id: int, name: str, outcome: str, combat: CombatRules
+) -> dict[str, Any]:
+    """The Warden's decision after a detachment's Critical Damage save failed: "defeat" breaks and
+    defeats it, "flee" breaks it up so its members run from the fight. Until this is called, the
+    detachment cannot attack or be attacked."""
+    state = load_state(db, campaign_id)
+    character = state.characters.get(name_key(name))
+    if character is None:
+        raise InvalidInput(f"there is no character named {name!r}")
+    if not character.detachment:
+        raise InvalidInput(f"{character.name} is not a detachment")
+    if not character.critical_due:
+        raise InvalidInput(f"{character.name} has no failed critical damage save to resolve")
+    if outcome not in ("defeat", "flee"):
+        raise InvalidInput("outcome must be 'defeat' or 'flee'")
+    status = defeat_status(character, combat.defeat) if outcome == "defeat" else ""
+    record(
+        db,
+        campaign_id,
+        DetachmentResolved(name=character.name, outcome=outcome, status=status),
+    )
+    db.commit()
+    _end_if_one_side_left(db, campaign_id)
+    return {"character": character.name, "outcome": outcome}
 
 
 def player_save(db: Session, campaign_id: int, roll: int, combat: CombatRules) -> dict[str, Any]:

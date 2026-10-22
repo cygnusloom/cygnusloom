@@ -57,7 +57,7 @@ def check_morale(
         if encounter is None:
             break
         character = state.characters.get(name_key(target))
-        if character is None or character.kind != NPC_KIND:
+        if character is None or character.kind != NPC_KIND or character.detachment:
             break
         side = encounter.sides.get(name_key(character.name), "")
         tag = _due_tag(state, side, morale)
@@ -135,7 +135,11 @@ def _side_npcs(state: CampaignState, side: str) -> list[Character]:
     members = []
     for display in encounter.order:
         character = state.characters[name_key(display)]
-        if character.kind == NPC_KIND and encounter.sides.get(name_key(display), "") == side:
+        if (
+            character.kind == NPC_KIND
+            and not character.detachment
+            and encounter.sides.get(name_key(display), "") == side
+        ):
             members.append(character)
     return members
 
