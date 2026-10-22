@@ -176,6 +176,9 @@
                 {% for npc in scene.npcs %}
                 <li><strong>{{ npc.name }}</strong>{% if npc.defeated %} <span class="muted">(body)</span>{% endif %}</li>
                 {% endfor %}
+                {% for hireling in scene.hirelings %}
+                <li><strong>{{ hireling.name }}</strong> <span class="muted">(hireling of {{ hireling.employer }})</span></li>
+                {% endfor %}
               </ul>
               {% if not scene.location %}
               <p class="muted">Not yet at a location.</p>

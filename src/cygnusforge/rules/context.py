@@ -38,6 +38,20 @@ class World(Protocol):
 
     def delete_npc(self, name: str) -> dict[str, Any]: ...
 
+    def hire_hireling(
+        self,
+        name: str,
+        employer: str,
+        wage: int,
+        description: str,
+        personality: str | None = None,
+        accent: str | None = None,
+        quirks: Sequence[str] | None = None,
+        character: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]: ...
+
+    def dismiss_hireling(self, name: str, cause: str) -> dict[str, Any]: ...
+
     def move_actor(self, name: str, location: str | None = None) -> dict[str, str]: ...
 
     def create_encounter_map(

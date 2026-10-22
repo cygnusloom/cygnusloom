@@ -70,6 +70,8 @@ from cygnusforge.services.events import (
     CampaignOptionsChosen,
     CampaignState,
     Character,
+    HirelingAdded,
+    HirelingDismissed,
     Item,
     LocationAdded,
     LocationDiscovered,
@@ -116,6 +118,7 @@ class SceneView:
     notes: list[Note]
     sheet: list[str]
     pack: PackView | None = None
+    hirelings: tuple[Character, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -426,6 +429,38 @@ class WorldTools:
                 quirks,
                 character,
             )
+
+    def hire_hireling(
+        self,
+        name: str,
+        employer: str,
+        wage: int,
+        description: str,
+        personality: str | None = None,
+        accent: str | None = None,
+        quirks: Sequence[str] | None = None,
+        character: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return hire_hireling(
+                db,
+                self.campaign_id,
+                self.tables,
+                self.rng,
+                self.character,
+                name,
+                employer,
+                wage,
+                description,
+                personality,
+                accent,
+                quirks,
+                character,
+            )
+
+    def dismiss_hireling(self, name: str, cause: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return dismiss_hireling(db, self.campaign_id, name, cause)
 
     def move_actor(self, name: str, location: str | None = None) -> dict[str, str]:
         with session_scope(self.engine) as db:
@@ -914,6 +949,93 @@ def create_npc(
     }
 
 
+def hire_hireling(
+    db: Session,
+    campaign_id: int,
+    tables: Mapping[str, Sequence[TableOption]],
+    rng: random.Random,
+    spec: CharacterSpec,
+    name: str,
+    employer: str,
+    wage: int,
+    description: str,
+    personality: str | None = None,
+    accent: str | None = None,
+    quirks: Sequence[str] | None = None,
+    character: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Hire a character into the employer's company, at the employer's location. The hireling is
+    controlled by the player and its wage is paid each day from the employer's gold. Its sheet is
+    rolled the way an NPC's is."""
+    state = load_state(db, campaign_id)
+    name = bounded_text(name, "name", MAX_NAME)
+    _ensure_free_name(state, name)
+    boss = state.characters.get(name_key(employer))
+    if boss is None or boss.kind != PC_KIND or boss.hireling:
+        raise InvalidInput(f"{employer} is not a player character who can hire")
+    if boss.location is None:
+        raise InvalidInput(f"{boss.name} has no location yet, so cannot hire anyone")
+    if not isinstance(wage, int) or isinstance(wage, bool) or wage < 0:
+        raise InvalidInput("the wage must be a whole number of gold, zero or more")
+    try:
+        check_choices(spec, (character or {}).get("fields", {}))
+    except CharacterError as error:
+        raise InvalidInput(str(error)) from error
+    event = _npc_event(
+        tables,
+        rng,
+        spec,
+        name=name,
+        location=boss.location,
+        description=bounded_text(description, "description", MAX_TEXT),
+        personality=_optional_text(personality, "personality"),
+        accent=_optional_text(accent, "accent"),
+        quirks=_quirks(quirks),
+        character=character,
+    )
+    record(
+        db,
+        campaign_id,
+        HirelingAdded(
+            name=event.name,
+            employer=boss.name,
+            wage=wage,
+            location=event.location,
+            description=event.description,
+            personality=event.personality,
+            accent=event.accent,
+            quirks=list(event.quirks),
+            stats=dict(event.stats),
+            templates=dict(event.templates),
+            features=dict(event.features),
+            fields=dict(event.fields),
+        ),
+    )
+    db.commit()
+    return {
+        "hired": event.name,
+        "employer": boss.name,
+        "wage": wage,
+        "location": event.location,
+        "personality": event.personality,
+        "accent": event.accent,
+        "quirks": list(event.quirks),
+    }
+
+
+def dismiss_hireling(db: Session, campaign_id: int, name: str, cause: str) -> dict[str, Any]:
+    """The hireling leaves its employer's company and stays where it is, as an NPC."""
+    state = load_state(db, campaign_id)
+    hireling = state.characters.get(name_key(name))
+    if hireling is None or not hireling.hireling:
+        raise InvalidInput(f"{name} is not a hireling")
+    cause = bounded_text(cause, "cause", MAX_TEXT)
+    employer = hireling.employer
+    record(db, campaign_id, HirelingDismissed(name=hireling.name, cause=cause))
+    db.commit()
+    return {"dismissed": hireling.name, "employer": employer}
+
+
 def create_monster(
     db: Session,
     campaign_id: int,
@@ -1173,6 +1295,11 @@ def move_actor(
     # Going somewhere in person means the player character knows the place in detail.
     if actor.kind == PC_KIND and not where.discovered:
         record(db, campaign_id, LocationDiscovered(name=where.name))
+    # Hirelings travel with the player character who employs them.
+    if actor.kind == PC_KIND and not actor.hireling:
+        for hireling in state.characters.values():
+            if hireling.hireling and hireling.employer == actor.name:
+                record(db, campaign_id, ActorMoved(name=hireling.name, location=where.name))
     db.commit()
     return {"moved": actor.name, "location": where.name}
 
@@ -1423,8 +1550,8 @@ def map_view(state: CampaignState) -> MapView:
 def scene_view(
     state: CampaignState, spec: CharacterSpec, inventory: InventoryRules | None = None
 ) -> SceneView:
-    """The player's view. It shows only what is at the player character's location. The pack shows
-    the player character's items when the rule set has an inventory."""
+    """The player's view. It shows only what is at the player character's location, including any
+    hirelings there. The pack shows the player character's items when the rule set has an inventory."""
     pc = state.pc()
     location = pc.location if pc is not None else None
     found = state.named(location) if location is not None else None
@@ -1456,7 +1583,14 @@ def scene_view(
             used=inventory_service.used_slots(pc),
             capacity=inventory.capacity,
         )
-    return SceneView(pc=pc, location=place, npcs=npcs, notes=notes, sheet=sheet, pack=pack)
+    hirelings = tuple(
+        c
+        for c in state.characters.values()
+        if c.hireling and place is not None and c.location == place.name
+    )
+    return SceneView(
+        pc=pc, location=place, npcs=npcs, notes=notes, sheet=sheet, pack=pack, hirelings=hirelings
+    )
 
 
 def world_state_text(
@@ -1489,6 +1623,17 @@ def world_state_text(
         lines.append(f"Player character: {pc.name}, at {pc.location}.")
         names = [npc.name for npc in _npcs_at(state, pc.location)]
         lines.append(f"NPCs here: {', '.join(names) if names else 'none'}.")
+    hirelings = [c for c in state.characters.values() if c.hireling]
+    if hirelings:
+        lines.append(
+            "Hirelings, controlled by the player: "
+            + "; ".join(
+                f"{h.name}, at {h.location or 'no location'}, hired by {h.employer} "
+                f"at {h.wage} a day"
+                for h in hirelings
+            )
+            + "."
+        )
     wind = _npcs_in_the_wind(state)
     if wind:
         lines.append(f"NPCs in the wind, at no location: {', '.join(wind)}.")

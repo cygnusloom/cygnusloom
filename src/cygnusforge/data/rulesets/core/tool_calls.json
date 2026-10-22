@@ -406,6 +406,82 @@
   },
   {
     "type": "tool_call",
+    "id": "hire_hireling",
+    "name": "hire_hireling",
+    "python_module": "core",
+    "function": "hire_hireling",
+    "character_options": true,
+    "description": "Hire a character into a player character's company. The hireling has a rolled sheet like an NPC's and is controlled by the player. Its wage is paid from the employer's gold each new day, and an employer who cannot pay is reported as unpaid. The employer must be a player character who has a location. Give the wage the hireling asks for, or the marketplace's listed wage for a hireling listed there. Leave personality, accent, or quirks out to have them rolled. Names must be unique among locations and characters.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The hireling's name."
+        },
+        "employer": {
+          "type": "string",
+          "description": "The name of the player character who hires them. The wage comes from this character's gold."
+        },
+        "wage": {
+          "type": "integer",
+          "description": "Gold per day, zero or more."
+        },
+        "description": {
+          "type": "string",
+          "description": "Who the hireling is: appearance, role, and what they are good for."
+        },
+        "personality": {
+          "type": "string",
+          "description": "Optional. How the hireling carries themselves."
+        },
+        "accent": {
+          "type": "string",
+          "description": "Optional. How the hireling sounds when they speak."
+        },
+        "quirks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional. Habits or mannerisms the hireling shows."
+        }
+      },
+      "required": [
+        "name",
+        "employer",
+        "wage",
+        "description"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "dismiss_hireling",
+    "name": "dismiss_hireling",
+    "python_module": "core",
+    "function": "dismiss_hireling",
+    "description": "Remove a hireling from its employer's company. It stays where it is and becomes an ordinary NPC. Use this when the story has the hireling leave, for example when its wage went unpaid and it goes, or when it chooses to go. Give the cause in a few words.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The hireling's name."
+        },
+        "cause": {
+          "type": "string",
+          "description": "Why the hireling leaves, in a few words."
+        }
+      },
+      "required": [
+        "name",
+        "cause"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "update_npc",
     "name": "update_npc",
     "python_module": "core",

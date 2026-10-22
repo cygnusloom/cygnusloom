@@ -152,6 +152,11 @@ class Character:
     # The campaign day a deprivation began, or None while the character is not deprived.
     deprived_since: int | None = None
     deprivation_cause: str = ""
+    # A hireling is a player-controlled character a party member hired. Its employer pays its
+    # wage each day. Empty and zero for everyone else.
+    hireling: bool = False
+    employer: str = ""
+    wage: int = 0
 
 
 def current(character: Character, stat: str) -> int:
@@ -297,7 +302,9 @@ class CampaignState:
         return self.characters.get(key)
 
     def pc(self) -> Character | None:
-        return next((c for c in self.characters.values() if c.kind == PC_KIND), None)
+        return next(
+            (c for c in self.characters.values() if c.kind == PC_KIND and not c.hireling), None
+        )
 
 
 def name_key(name: str) -> str:
@@ -576,6 +583,90 @@ class NpcAdded(GameEvent):
 
     def render(self) -> str:
         return f"New character: {self.name}, at {self.location}."
+
+
+@dataclass(frozen=True)
+class HirelingAdded(GameEvent):
+    """A hireling joins a party member's company. It has the player character's sheet shape and
+    is controlled by the player, paid `wage` a day from its employer's gold."""
+
+    kind: ClassVar[str] = "hireling.added"
+
+    name: str
+    employer: str
+    wage: int
+    location: str
+    description: str
+    personality: str
+    accent: str
+    quirks: list[str]
+    stats: dict[str, int] = field(default_factory=dict)
+    templates: dict[str, str] = field(default_factory=dict)
+    features: dict[str, int] = field(default_factory=dict)
+    fields: dict[str, str] = field(default_factory=dict)
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)] = Character(
+            kind=PC_KIND,
+            name=self.name,
+            location=self.location,
+            description=self.description,
+            personality=self.personality,
+            accent=self.accent,
+            quirks=list(self.quirks),
+            stats=dict(self.stats),
+            templates=dict(self.templates),
+            features=dict(self.features),
+            fields=dict(self.fields),
+            hireling=True,
+            employer=self.employer,
+            wage=self.wage,
+        )
+
+    def render(self) -> str:
+        return f"{self.name} joins {self.employer}'s company as a hireling, at {self.location}."
+
+
+@dataclass(frozen=True)
+class HirelingDismissed(GameEvent):
+    """A hireling leaves its employer's company and becomes an ordinary NPC where it stands."""
+
+    kind: ClassVar[str] = "hireling.dismissed"
+
+    name: str
+    cause: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.kind = NPC_KIND
+        character.hireling = False
+        character.employer = ""
+        character.wage = 0
+
+    def render(self) -> str:
+        return f"{self.name} leaves the company: {self.cause}."
+
+
+@dataclass(frozen=True)
+class HirelingUnpaid(GameEvent):
+    """The employer could not pay a hireling's wage for the day. The GM decides what the hireling
+    does about it."""
+
+    kind: ClassVar[str] = "hireling.unpaid"
+
+    name: str
+    employer: str
+    wage: int
+    currency: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        pass
+
+    def render(self) -> str:
+        return (
+            f"{self.employer} cannot pay {self.name}'s wage of {self.wage} {self.currency}. "
+            "The Warden decides whether the hireling stays."
+        )
 
 
 @dataclass(frozen=True)

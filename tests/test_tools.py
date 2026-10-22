@@ -125,6 +125,8 @@ CORE_TOOL_NAMES = {
     "delete_location",
     "update_npc",
     "delete_npc",
+    "hire_hireling",
+    "dismiss_hireling",
     "move_actor",
     "all_at_location",
     "search_location",

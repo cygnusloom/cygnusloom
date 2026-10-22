@@ -275,6 +275,9 @@ class ClockRules:
 
     parts: tuple[str, ...]
     stale_days: int
+    # The currency feature a hireling's wage is paid in, taken from its employer each day. Empty
+    # when the rule set has no wages.
+    wage_currency: str = ""
 
 
 @dataclass(frozen=True)
@@ -940,7 +943,10 @@ def _load_clock(definitions: list[Definition], template: str) -> ClockRules | No
     if not parts or len(set(parts)) != len(parts):
         raise ContentError(f"{label}: 'parts' must be a non-empty list of distinct names")
     stale_days = _whole(definition.data, "stale_days", label, 1)
-    return ClockRules(parts=parts, stale_days=stale_days)
+    wage_currency = definition.data.get("wage_currency", "")
+    if not isinstance(wage_currency, str):
+        raise ContentError(f"{label}: 'wage_currency' must be text")
+    return ClockRules(parts=parts, stale_days=stale_days, wage_currency=wage_currency)
 
 
 def _load_rests(

@@ -152,6 +152,8 @@ Background tables come from `backgrounds.json`. Attributes roll 3d6 each, and HP
 
 ## Phase 8: hirelings
 
+Status: engine implemented (`hire_hireling` and `dismiss_hireling` core tools; daily wage paid from the employer's gold via the clock's `wage_currency`; unpaid wages recorded as `hireling.unpaid` with no deduction, and the Warden decides; hirelings are PC-kind, so the player controls their turns; hirelings travel with the employer on `move_actor`; hirelings listed in the location panel). Unit tests in `tests/test_hirelings.py`. Live browser test: hire, location listing, and daily wage charged (`wages for Wen` gold event) verified on a fresh DB. Unpaid path NOT reached live; the GM's narrated gold gift diverged from the engine balance (see gap register).
+
 Source: Core Rules, "Hirelings"; Marketplace, "Hirelings (per day)". The book is the authority.
 
 - Two creation paths, both from the book:
@@ -260,7 +262,7 @@ Phase 6 (gold and marketplace):
 - Room & Board, Private Room, and Stable have prices but no mechanical text.
 - Whether lodging covers only the next night's meal is unverified. The payer rule (first named PC pays) is an assumption.
 - The live test on a fresh DB and the Phase 6 final-decision update were not completed.
-- Hireling wages are stored but not charged. Phase 8.
+- Hireling wages are stored but not charged. Phase 8. Resolved: wages are charged daily from the employer's gold, and unpaid wages are recorded.
 
 Phase 7 (character creation and starting gear):
 
@@ -276,6 +278,14 @@ Phase 7 (character creation and starting gear):
 - Last-use removal of an item was covered by unit tests only, not live.
 
 Phase 8 (hirelings): scope in phase 8. Includes 3d6 attributes, 1d6 HP, wages, and joining the party.
+
+- Phase 8 starting gear conflict: the user chose "rolled starting gear, as for a PC", but the book's role path says to give equipment suited to the station. Unscheduled, needs a decision.
+- Hirelings get no armor or attacks: `HirelingAdded` does not carry armor or attacks, unlike `NpcAdded`. Unscheduled, needs a phase.
+- Hirelings carrying gear: the book allows hirelings to carry equipment, but carried items do not yet count toward the party's inventory. Unscheduled, needs a decision on the mechanic.
+- Hirings are not offered through the marketplace flow: the GM passes the wage by hand from the listing. Unscheduled, needs a phase.
+- Unpaid hireling wages leave the GM to decide; there is no automatic departure rule. Unscheduled, needs a decision.
+- No tool gives, takes, or sets gold. Gold moves only through purchases and wages. In the live test the GM narrated a gift of all Johanna's gold to a widow, so the prose said she had none, but the engine kept 9 gold. The wage was still charged, and the GM then refused a 5-gold purchase. The GM's narration and the engine's balance diverged. Needs a generic currency-adjust tool, then re-test the unpaid path live.
+- Hirelings are not fed from the party's rations. In the live test, Wen (a hireling) went deprived on days 1 and 2 while Johanna's rations were the only food. Needs a decision on hireling upkeep.
 
 Phase 9 (death rules): critical damage, Scars 11 (Mortal Wound) and 12 (Doomed), and new characters.
 

@@ -11,6 +11,7 @@ from sqlmodel import Session
 from cygnusforge.content.library import ClockRules, DeprivationRules, InventoryRules, RestLength
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import Clock, ClockAdvanced, Item, load_state, record
+from cygnusforge.services.hirelings import pay_wages
 from cygnusforge.services.inventory import FATIGUE_NAME, carry_item
 
 MAX_ADVANCE_DAYS = 365
@@ -57,6 +58,9 @@ def advance_to(
         ClockAdvanced(day=new.day, part=new.part, part_name=clock_rules.parts[new.part]),
     )
     result: dict[str, Any] = {"day": new.day, "part": clock_rules.parts[new.part]}
+    if clock_rules.wage_currency:
+        for _ in range(before.day + 1, new.day + 1):
+            pay_wages(db, campaign_id, clock_rules.wage_currency)
     if deprivation is not None and inventory is not None:
         for day in range(before.day + 1, new.day + 1):
             state = load_state(db, campaign_id)

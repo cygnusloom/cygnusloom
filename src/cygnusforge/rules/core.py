@@ -64,6 +64,33 @@ def delete_location(name: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.delete_location(name)
 
 
+def hire_hireling(
+    name: str,
+    employer: str,
+    wage: int,
+    description: str,
+    ctx: ToolContext,
+    personality: str | None = None,
+    accent: str | None = None,
+    quirks: Sequence[str] | None = None,
+    character: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    return ctx.world.hire_hireling(
+        name=name,
+        employer=employer,
+        wage=wage,
+        description=description,
+        personality=personality,
+        accent=accent,
+        quirks=quirks,
+        character=character,
+    )
+
+
+def dismiss_hireling(name: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.dismiss_hireling(name, cause)
+
+
 def update_npc(
     name: str,
     ctx: ToolContext,
