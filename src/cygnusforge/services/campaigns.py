@@ -390,11 +390,19 @@ def campaign_transcript(
     happened."""
     get_campaign(engine, owner_id, campaign_id)
     with session_scope(engine) as db:
+        # A failure is news only until a later step goes through, as in load_state.
+        progress = max(
+            (row.id or 0 for row in events_since(db, campaign_id) if row.kind != TurnFailed.kind),
+            default=0,
+        )
         items: list[ChatMessage | LogLine] = [
             _chat_message(row) for row in events_since(db, campaign_id, channel=Channel.TRANSCRIPT)
         ]
         for row in events_since(db, campaign_id, channel=Channel.LOG):
-            if (text := decode(row).render()) is not None:
+            event = decode(row)
+            if isinstance(event, TurnFailed) and (row.id or 0) < progress:
+                continue
+            if (text := event.render()) is not None:
                 items.append(LogLine(id=row.id or 0, content=text))
     return sorted(items, key=lambda item: item.id)
 

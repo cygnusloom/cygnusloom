@@ -302,6 +302,31 @@ def test_failed_reply_keeps_the_message_and_offers_continue(
     assert turn is not None and turn.prompt is None and turn.failed
 
 
+def test_a_failure_leaves_the_transcript_once_the_continued_reply_goes_through(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    class Broken:
+        name = "broken"
+
+        async def chat(self, model, messages, tools=None):
+            raise LLMError("provider broken is unreachable")
+
+        async def stream(self, model, messages, tools=None):
+            yield await self.chat(model, messages, tools)
+
+    client, campaign_id = _campaign_id(client_factory)
+    working = app.state.providers
+    app.state.providers = lambda model_id: (Broken(), "model")
+    _send(client, campaign_id, "are you there?")
+    assert "provider broken is unreachable" in client.get(f"/campaigns/{campaign_id}").text
+    app.state.providers = working
+    _answer(client, campaign_id, "continue")
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "provider broken is unreachable" not in page
+    assert "The GM stopped" not in page
+    assert _pending(app, campaign_id) is None or not _pending(app, campaign_id).failed
+
+
 def test_empty_message_is_rejected(client_factory: Callable[[], TestClient]):
     client, campaign_id = _campaign_id(client_factory)
     assert _send(client, campaign_id, "  ").status_code == 400
