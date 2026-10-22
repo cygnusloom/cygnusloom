@@ -31,17 +31,21 @@ from cygnusforge.services.events import (
     Character,
     CharacterRecovered,
     EncounterEnded,
+    Harmed,
     InitiativeRolled,
     SaveRolled,
     Struck,
+    current,
     defeat_status,
     load_state,
     name_key,
     record,
 )
+from cygnusforge.services.scars import EffectContext, gain_scar
 
 MAX_DAMAGE = 1000
 MAX_RECOVERY_TEXT = 600
+MAX_CAUSE_TEXT = 200
 
 
 @dataclass(frozen=True)
@@ -51,11 +55,6 @@ class Damage:
     absorbed: int
     harm: dict[str, int]
     save: str | None
-
-
-def current(character: Character, stat: str) -> int:
-    """A stat's score less the harm it has taken, never below 0."""
-    return max(0, character.stats.get(stat, 0) - character.harm.get(stat, 0))
 
 
 def apply_damage(
@@ -132,6 +131,9 @@ def _strike(
         "harm": damage.harm,
         "save_due": damage.save,
     }
+    scar = _scar_from_hit(db, campaign_id, combat, rng, target.name, damage)
+    if scar is not None:
+        result["scar"] = scar
     if damage.save is not None and target.kind == NPC_KIND:
         state = load_state(db, campaign_id)
         character = state.characters[name_key(target.name)]
@@ -139,6 +141,31 @@ def _strike(
     result["defeated"] = load_state(db, campaign_id).characters[name_key(target.name)].defeated
     _end_if_one_side_left(db, campaign_id)
     return result
+
+
+def _scar_from_hit(
+    db: Session,
+    campaign_id: int,
+    combat: CombatRules,
+    rng: random.Random,
+    name: str,
+    damage: Damage,
+) -> str | None:
+    """A player character hit to exactly 0 on the scar stat gains a scar. The scar is the table
+    entry numbered by the harm this hit did, capped at the table's last entry. A hit whose damage
+    overflowed onto another stat owes a save instead, so it gains no scar."""
+    table = combat.scar_table
+    if table is None or damage.save is not None:
+        return None
+    lost = damage.harm.get(table.stat, 0)
+    if lost == 0:
+        return None
+    character = load_state(db, campaign_id).characters[name_key(name)]
+    if character.kind != PC_KIND or current(character, table.stat) != 0:
+        return None
+    roll = min(lost, len(table.entries))
+    entry = gain_scar(db, campaign_id, name, table, roll, EffectContext(rng=rng, combat=combat))
+    return entry.name
 
 
 def _end_if_one_side_left(db: Session, campaign_id: int) -> None:
@@ -346,3 +373,51 @@ def recover_character(
     )
     db.commit()
     return {"character": character.name, "recovered": True}
+
+
+def harm_character(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    stat: str,
+    amount: int,
+    cause: str,
+    combat: CombatRules,
+) -> dict[str, Any]:
+    """Harm a player character outside combat, such as from a fall or poison. Only the rule set's
+    outside-harm stats can take it. Harm that takes the overflow stat to 0 defeats the character."""
+    state = load_state(db, campaign_id)
+    character = state.characters.get(name_key(name))
+    if character is None:
+        raise InvalidInput(f"there is no character named {name!r}")
+    _living(character, combat)
+    if stat not in combat.outside_harm:
+        options = ", ".join(combat.outside_harm) or "none"
+        raise InvalidInput(f"harm outside combat can only take {options}, not {stat!r}")
+    value = whole_number(amount, "amount", 1, MAX_DAMAGE)
+    before = current(character, stat)
+    if before == 0:
+        raise InvalidInput(f"{character.name} has no {stat.upper()} left to lose")
+    taken = min(value, before)
+    overflow = [step.stat for step in combat.damage if step.kind == "overflow"]
+    defeats = stat in overflow and taken == before
+    record(
+        db,
+        campaign_id,
+        Harmed(
+            name=character.name,
+            stat=stat,
+            taken=taken,
+            cause=bounded_text(cause, "cause", MAX_CAUSE_TEXT),
+            defeats=defeats,
+            status=defeat_status(character, combat.defeat) if defeats else "",
+        ),
+    )
+    db.commit()
+    return {
+        "character": character.name,
+        "stat": stat,
+        "taken": taken,
+        "current": before - taken,
+        "defeated": defeats,
+    }

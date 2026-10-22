@@ -21,7 +21,14 @@ from cygnusforge.rules.context import ToolContext
 from cygnusforge.services import encounters
 from cygnusforge.services.combat import Damage, apply_damage
 from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import NPC_KIND, ChatGM, EncounterEnded, Struck, record
+from cygnusforge.services.events import (
+    NPC_KIND,
+    ChatGM,
+    EncounterEnded,
+    MaxChanged,
+    Struck,
+    record,
+)
 from cygnusforge.services.tools import Ask, RollAnswer, ToolRun, run_tool
 from cygnusforge.services.world import WorldTools
 from tests.conftest import content_library
@@ -60,6 +67,7 @@ def _tools(app: FastAPI, campaign_id: int, rng: random.Random | None = None) -> 
         grid=CAIRN.grid,
         combat=CAIRN.combat,
         monsters=CAIRN.monsters,
+        conditions=CAIRN.conditions,
     )
 
 
@@ -191,7 +199,7 @@ def _combat(**changes: Any) -> Definition:
 
 
 def test_a_combat_definition_is_read_with_its_module_and_stats():
-    combat = _load_combat(_combat(), {"cairn2e": cairn2e}, CAIRN.character, "cairn2e")
+    combat = _load_combat(_combat(), {"cairn2e": cairn2e}, CAIRN.character, {}, "cairn2e")
     assert combat.damage == (
         DamageStep("absorb", None),
         DamageStep("harm", "hp"),
@@ -207,6 +215,7 @@ def test_a_harm_only_combat_definition_is_accepted():
         _combat(damage=[{"kind": "harm", "stat": "hp"}], check_die="1d12"),
         {"cairn2e": cairn2e},
         CAIRN.character,
+        {},
         "cairn2e",
     )
     assert combat.damage == (DamageStep("harm", "hp"),)
@@ -248,18 +257,18 @@ def test_a_harm_only_combat_definition_is_accepted():
 )
 def test_a_bad_combat_definition_is_rejected(changes, message):
     with pytest.raises(ContentError, match=message):
-        _load_combat(_combat(**changes), {"cairn2e": cairn2e}, CAIRN.character, "cairn2e")
+        _load_combat(_combat(**changes), {"cairn2e": cairn2e}, CAIRN.character, {}, "cairn2e")
 
 
 def test_apply_damage_takes_armor_then_harm_then_overflow():
-    steps = _load_combat(_combat(), {"cairn2e": cairn2e}, CAIRN.character, "cairn2e").damage
+    steps = _load_combat(_combat(), {"cairn2e": cairn2e}, CAIRN.character, {}, "cairn2e").damage
     stats = {"hp": 4, "str": 10}
     result = apply_damage(steps, armor=2, current_of=stats.__getitem__, raw=9)
     assert result == Damage(absorbed=2, harm={"hp": 4, "str": 3}, save="str")
 
 
 def test_apply_damage_without_overflow_leaves_no_save():
-    steps = _load_combat(_combat(), {"cairn2e": cairn2e}, CAIRN.character, "cairn2e").damage
+    steps = _load_combat(_combat(), {"cairn2e": cairn2e}, CAIRN.character, {}, "cairn2e").damage
     stats = {"hp": 4, "str": 10}
     result = apply_damage(steps, armor=0, current_of=stats.__getitem__, raw=3)
     assert result == Damage(absorbed=0, harm={"hp": 3}, save=None)
@@ -278,6 +287,7 @@ def test_a_combat_module_needs_the_save_and_initiative_functions():
             _combat(python_module="bare"),
             {"bare": ModuleType("bare")},
             CAIRN.character,
+            {},
             "cairn2e",
         )
 
@@ -377,6 +387,13 @@ def test_search_finds_statblocks_by_the_words_in_their_text(client_factory):
 def test_attacks_wait_until_player_characters_roll_for_initiative(client_factory):
     app, campaign_id, tools = _fight(client_factory, rolled=False)
     _foe(tools, "Ghoul")
+    # Stats are random per run; a 1-damage hit on a PC at 1 HP would scar and need another die.
+    with _db(app) as db:
+        before = _character(app, campaign_id, PC).stats["hp"]
+        record(
+            db, campaign_id, MaxChanged(name=PC, stat="hp", before=before, after=10, cause="a test")
+        )
+        db.commit()
     with pytest.raises(InvalidInput, match="initiative is not set yet; Mara must roll"):
         _hit(tools, "Ghoul", PC, 2)
     with pytest.raises(InvalidInput, match="initiative is not set yet"):

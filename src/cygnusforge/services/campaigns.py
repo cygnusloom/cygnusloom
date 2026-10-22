@@ -501,6 +501,7 @@ def context_usage(
                 options,
                 rule_set.grid if rule_set else None,
                 rule_set.combat if rule_set else None,
+                rule_set.conditions if rule_set else None,
             ),
         )
     )
@@ -768,6 +769,7 @@ def _tool_context(
             grid=rule_set.grid,
             combat=rule_set.combat,
             monsters=rule_set.monsters,
+            conditions=rule_set.conditions,
         ),
         speak=speak,
         ooc=ooc,
@@ -895,7 +897,9 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     state = _state(run.engine, run.campaign_id)
     rule_set = run.rule_set
     summary, watermark = state.summary, state.through
-    world_text = world_state_text(state, rule_set.campaign, rule_set.grid, rule_set.combat)
+    world_text = world_state_text(
+        state, rule_set.campaign, rule_set.grid, rule_set.combat, rule_set.conditions
+    )
     message = OPENING_PROMPT if turn.opening else turn.text
     history = [
         m for m in list_messages(run.engine, run.campaign_id) if watermark < m.id < turn.opener

@@ -1549,5 +1549,197 @@
         "description": "A blank parchment. Whomever unfurls it sees their actions of the day slowly revealed in a tight scrawl. Petty."
       }
     ]
+  },
+  {
+    "type": "scar_table",
+    "id": "scars",
+    "name": "Scars",
+    "entries": [
+      {
+        "roll": 1,
+        "name": "Lasting Scar",
+        "text": "A scar that will not fade. Roll for where it is, then roll again for your maximum HP, keeping the new result if it is higher.",
+        "effects": [
+          {
+            "op": "note",
+            "text": "Roll 1d6 for where the scar is: 1 neck, 2 hands, 3 eye, 4 chest, 5 legs, 6 ear."
+          },
+          {
+            "op": "set_max",
+            "stat": "hp",
+            "dice": "1d6",
+            "mode": "if_higher"
+          }
+        ]
+      },
+      {
+        "roll": 2,
+        "name": "Rattling Blow",
+        "text": "You are disoriented and shaken. Describe how you refocus.",
+        "effects": [
+          {
+            "op": "note",
+            "text": "You are disoriented and shaken. Describe how you refocus."
+          },
+          {
+            "op": "set_max",
+            "stat": "hp",
+            "dice": "1d6",
+            "mode": "if_higher"
+          }
+        ]
+      },
+      {
+        "roll": 3,
+        "name": "Walloped",
+        "text": "You are winded and deprived until you rest for a few hours. Then your maximum HP rises.",
+        "effects": [
+          {
+            "op": "condition",
+            "id": "walloped"
+          }
+        ]
+      },
+      {
+        "roll": 4,
+        "name": "Broken Limb",
+        "text": "A bone is broken. Once it is mended, your maximum HP may rise.",
+        "effects": [
+          {
+            "op": "note",
+            "text": "Roll 1d6 for the broken bone: 1-2 leg, 3-4 arm, 5 rib, 6 skull."
+          },
+          {
+            "op": "condition",
+            "id": "broken_limb"
+          }
+        ]
+      },
+      {
+        "roll": 5,
+        "name": "Diseased",
+        "text": "A gross infection. When you get over it, your maximum HP may rise.",
+        "effects": [
+          {
+            "op": "condition",
+            "id": "diseased"
+          }
+        ]
+      },
+      {
+        "roll": 6,
+        "name": "Reorienting Head Wound",
+        "text": "Roll for the attribute the wound affects: 1-2 STR, 3-4 DEX, 5-6 WIL. Then roll 3d6 for that attribute's maximum, keeping the new result if it is higher than the current score.",
+        "effects": [
+          {
+            "op": "pick_stat",
+            "options": [
+              "str",
+              "dex",
+              "wil"
+            ],
+            "dice": "1d6"
+          },
+          {
+            "op": "set_max",
+            "stat": "$picked",
+            "dice": "3d6",
+            "mode": "if_above_current"
+          }
+        ]
+      },
+      {
+        "roll": 7,
+        "name": "Hamstrung",
+        "text": "You can barely move until you get serious help and rest. After recovery, your maximum DEX may rise.",
+        "effects": [
+          {
+            "op": "condition",
+            "id": "hamstrung"
+          }
+        ]
+      },
+      {
+        "roll": 8,
+        "name": "Deafened",
+        "text": "You cannot hear anything until you find extraordinary aid. Then make a WIL save; if you pass, your maximum WIL rises.",
+        "effects": [
+          {
+            "op": "condition",
+            "id": "deafened"
+          },
+          {
+            "op": "save",
+            "stat": "wil",
+            "pass": [
+              {
+                "op": "set_max",
+                "stat": "wil",
+                "dice": "1d4",
+                "mode": "add"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "roll": 9,
+        "name": "Re-brained",
+        "text": "A hidden part of your psyche is knocked loose. Roll 3d6; if higher than your maximum WIL, keep it.",
+        "effects": [
+          {
+            "op": "set_max",
+            "stat": "wil",
+            "dice": "3d6",
+            "mode": "if_higher"
+          }
+        ]
+      },
+      {
+        "roll": 10,
+        "name": "Sundered",
+        "text": "An appendage is torn off, crippled, or useless; the GM says which. Then make a WIL save; if you pass, your maximum WIL rises.",
+        "effects": [
+          {
+            "op": "note",
+            "text": "An appendage is torn off, crippled, or useless. The GM says which."
+          },
+          {
+            "op": "save",
+            "stat": "wil",
+            "pass": [
+              {
+                "op": "set_max",
+                "stat": "wil",
+                "dice": "1d6",
+                "mode": "add"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "roll": 11,
+        "name": "Mortal Wound",
+        "text": "You are deprived and out of action, and you die in one hour unless healed. Once recovered, your maximum HP is 2d6.",
+        "effects": [
+          {
+            "op": "condition",
+            "id": "mortal_wound"
+          }
+        ]
+      },
+      {
+        "roll": 12,
+        "name": "Doomed",
+        "text": "Death seemed close. If your next save against critical damage is a fail, you die. If you pass, roll 3d6 for your maximum HP, keeping it if higher.",
+        "effects": [
+          {
+            "op": "condition",
+            "id": "doomed"
+          }
+        ]
+      }
+    ]
   }
 ]
