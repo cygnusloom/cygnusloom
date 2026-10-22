@@ -28,7 +28,13 @@ from cygnusforge.content.character import (
     describe,
     resolve,
 )
-from cygnusforge.content.library import CombatRules, EncounterGrid, MonsterTemplate, WorldTemplate
+from cygnusforge.content.library import (
+    CombatRules,
+    ConditionRules,
+    EncounterGrid,
+    MonsterTemplate,
+    WorldTemplate,
+)
 from cygnusforge.rules.context import brief
 from cygnusforge.rules.dice import is_formula
 from cygnusforge.services import combat, encounters
@@ -38,6 +44,7 @@ from cygnusforge.services.common import (
     session_scope,
     whole_number,
 )
+from cygnusforge.services.conditions import active_conditions, end_condition
 from cygnusforge.services.events import (
     CAMPAIGN_WIDE,
     NPC_KIND,
@@ -128,6 +135,8 @@ class WorldTools:
     # The rule set's combat, or None when it has none, and its monster statblocks by id.
     combat: CombatRules | None = None
     monsters: Mapping[str, MonsterTemplate] = field(default_factory=dict)
+    # The rule set's conditions by id.
+    conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
 
     def create_location(
         self,
@@ -318,6 +327,25 @@ class WorldTools:
                 db, self.campaign_id, name, explanation, consequence, self._rules()
             )
 
+    def harm_character(self, name: str, stat: str, amount: int, cause: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return combat.harm_character(
+                db, self.campaign_id, name, stat, amount, cause, self._rules()
+            )
+
+    def end_condition(self, name: str, condition: str, how: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return end_condition(
+                db,
+                self.campaign_id,
+                name,
+                condition,
+                how,
+                self._rules(),
+                self.conditions,
+                self.rng,
+            )
+
     def _rules(self) -> CombatRules:
         if self.combat is None:
             raise InvalidInput("this rule set has no combat")
@@ -365,7 +393,11 @@ class WorldTools:
     def get_statblock(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return get_statblock(
-                load_state(db, self.campaign_id), name, self.character, self.combat
+                load_state(db, self.campaign_id),
+                name,
+                self.character,
+                self.combat,
+                self.conditions,
             )
 
     def character_options(self, field: str | None = None) -> dict[str, Any]:
@@ -888,15 +920,22 @@ def lookup_index(state: CampaignState) -> dict[str, list[dict[str, Any]]]:
 
 
 def get_statblock(
-    state: CampaignState, name: str, spec: CharacterSpec, combat: CombatRules | None = None
+    state: CampaignState,
+    name: str,
+    spec: CharacterSpec,
+    combat: CombatRules | None = None,
+    conditions: Mapping[str, ConditionRules] | None = None,
 ) -> dict[str, Any]:
     """A character's stats, template, features, and fields, one line each. Works for the player
-    character and for NPCs. With a rule set's `combat`, the armor, attacks, harm, and status follow."""
+    character and for NPCs. With a rule set's `combat`, the armor, attacks, harm, and status follow.
+    With its `conditions`, the conditions and scars follow."""
     character = _character_named(state, name)
     kind = "player character" if character.kind == PC_KIND else "npc"
     lines = describe(spec, _sheet_of(character)).splitlines()
     if combat is not None:
         lines += _combat_lines(character, spec, combat)
+    if conditions is not None:
+        lines += _status_lines(character, conditions)
     return {
         "name": character.name,
         "kind": kind,
@@ -919,6 +958,14 @@ def _combat_lines(character: Character, spec: CharacterSpec, combat: CombatRules
         lines.append(f"Status: {defeat_status(character, combat.defeat)}")
     elif character.save_due is not None:
         lines.append(f"Status: {spec.stats[character.save_due].name} save due")
+    return lines
+
+
+def _status_lines(character: Character, conditions: Mapping[str, ConditionRules]) -> list[str]:
+    held = [rules.label for rules in active_conditions(character, conditions)]
+    lines = [f"Conditions: {', '.join(held) if held else 'none'}"]
+    if character.scars:
+        lines.append(f"Scars: {'; '.join(character.scars)}")
     return lines
 
 
@@ -996,6 +1043,7 @@ def world_state_text(
     campaign: CampaignSpec,
     grid: EncounterGrid | None = None,
     combat: CombatRules | None = None,
+    conditions: Mapping[str, ConditionRules] | None = None,
 ) -> str:
     """The GM's orientation at the start of a turn: the campaign options, the player character and
     where they are, the NPCs there, and any encounter in progress. The rest is looked up with the
@@ -1016,6 +1064,8 @@ def world_state_text(
         lines.append(f"Player character: {pc.name}, at {pc.location}.")
         names = [npc.name for npc in _npcs_at(state, pc.location)]
         lines.append(f"NPCs here: {', '.join(names) if names else 'none'}.")
+    if conditions is not None:
+        lines.extend(_status_lines(pc, conditions))
     lines.extend(_encounter_lines(state, grid, combat))
     return "\n".join(lines)
 

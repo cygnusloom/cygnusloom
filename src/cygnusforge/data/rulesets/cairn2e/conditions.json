@@ -1,0 +1,142 @@
+[
+  {
+    "type": "condition",
+    "id": "walloped",
+    "label": "Walloped",
+    "description": "Dazed from a heavy blow. Ends when you rest.",
+    "ends": [
+      "rest"
+    ],
+    "on_end": [
+      {
+        "op": "set_max",
+        "stat": "hp",
+        "dice": "1d6",
+        "mode": "add"
+      }
+    ]
+  },
+  {
+    "type": "condition",
+    "id": "broken_limb",
+    "label": "Broken limb",
+    "description": "A bone is broken. Ends with time or aid.",
+    "ends": [
+      "time",
+      "aid"
+    ],
+    "on_end": [
+      {
+        "op": "set_max",
+        "stat": "hp",
+        "dice": "2d6",
+        "mode": "if_higher"
+      }
+    ]
+  },
+  {
+    "type": "condition",
+    "id": "diseased",
+    "label": "Diseased",
+    "description": "An illness. Ends as the GM decides.",
+    "ends": [
+      "gm"
+    ],
+    "on_end": [
+      {
+        "op": "set_max",
+        "stat": "hp",
+        "dice": "2d6",
+        "mode": "if_higher"
+      }
+    ]
+  },
+  {
+    "type": "condition",
+    "id": "hamstrung",
+    "label": "Hamstrung",
+    "description": "A cut tendon. Ends with extended rest or aid.",
+    "ends": [
+      "extended_rest",
+      "aid"
+    ],
+    "on_end": [
+      {
+        "op": "set_max",
+        "stat": "dex",
+        "dice": "3d6",
+        "mode": "if_higher"
+      }
+    ]
+  },
+  {
+    "type": "condition",
+    "id": "deafened",
+    "label": "Deafened",
+    "description": "Unable to hear. Ends with aid.",
+    "ends": [
+      "aid"
+    ],
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "mortal_wound",
+    "label": "Mortal wound",
+    "description": "Out of action and dying. Ends with aid.",
+    "ends": [
+      "aid"
+    ],
+    "on_end": [
+      {
+        "op": "set_max",
+        "stat": "hp",
+        "dice": "2d6",
+        "mode": "always"
+      }
+    ]
+  },
+  {
+    "type": "condition",
+    "id": "doomed",
+    "label": "Doomed",
+    "description": "Doomed by a wound. Ends as the GM decides.",
+    "ends": [
+      "gm"
+    ],
+    "on_end": [
+      {
+        "op": "set_max",
+        "stat": "hp",
+        "dice": "3d6",
+        "mode": "if_higher"
+      }
+    ]
+  },
+  {
+    "type": "condition",
+    "id": "paralyzed",
+    "label": "Paralyzed",
+    "description": "DEX is at 0 while its maximum is above 0.",
+    "ends": [],
+    "on_end": [],
+    "derived": {
+      "stat": "dex",
+      "current": 0,
+      "needs_max": true
+    }
+  },
+  {
+    "type": "condition",
+    "id": "delirious",
+    "label": "Delirious",
+    "description": "WIL is at 0.",
+    "ends": [],
+    "on_end": [],
+    "derived": {
+      "stat": "wil",
+      "current": 0,
+      "needs_max": false
+    }
+  }
+]

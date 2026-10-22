@@ -280,5 +280,73 @@
         "consequence"
       ]
     }
+  },
+  {
+    "type": "tool_call",
+    "id": "harm_character",
+    "name": "harm_character",
+    "python_module": "cairn2e",
+    "function": "harm_character",
+    "description": "Harm a player character outside combat, from a fall, poison, exposure, or a similar hazard. Only the outside-harm stats can take it. Narrate what hurt them. Harm that takes their STR to 0 defeats them. Use it only for harm that does not come from a combat attack.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the player character."
+        },
+        "stat": {
+          "type": "string",
+          "enum": ["str", "dex", "wil"],
+          "description": "The stat that takes the harm."
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "How much harm to take, from the hazard's roll."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What did the harm, in a few words."
+        }
+      },
+      "required": [
+        "name",
+        "stat",
+        "amount",
+        "cause"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "end_condition",
+    "name": "end_condition",
+    "python_module": "cairn2e",
+    "function": "end_condition",
+    "description": "End a condition a player character has, when its ending happens in the story, such as a rest, first aid, the time running out, or a decision of yours. Use the trigger the condition names, or gm to end it by your decision.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the player character."
+        },
+        "condition": {
+          "type": "string",
+          "description": "The id of the condition to end, such as walloped or broken_limb."
+        },
+        "how": {
+          "type": "string",
+          "enum": ["rest", "extended_rest", "aid", "time", "gm"],
+          "description": "What ended it."
+        }
+      },
+      "required": [
+        "name",
+        "condition",
+        "how"
+      ]
+    }
   }
 ]

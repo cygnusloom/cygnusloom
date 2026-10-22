@@ -86,3 +86,13 @@ def recover_character(
     name: str, explanation: str, consequence: str, ctx: ToolContext
 ) -> dict[str, Any]:
     return ctx.world.recover_character(name, explanation, consequence)
+
+
+def harm_character(
+    name: str, stat: str, amount: int, cause: str, ctx: ToolContext
+) -> dict[str, Any]:
+    return ctx.world.harm_character(name, stat, amount, cause)
+
+
+def end_condition(name: str, condition: str, how: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.end_condition(name, condition, how)

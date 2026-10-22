@@ -112,6 +112,14 @@ class Character:
     # The stat id of a save the character must make after harm overflowed, or None.
     save_due: str | None = None
     defeated: bool = False
+    # The ids of the conditions the character has, and the names of their scars, in the order gained.
+    conditions: list[str] = field(default_factory=list)
+    scars: list[str] = field(default_factory=list)
+
+
+def current(character: Character, stat: str) -> int:
+    """A stat's score less the harm it has taken, never below 0."""
+    return max(0, character.stats.get(stat, 0) - character.harm.get(stat, 0))
 
 
 def defeat_status(character: Character, defeat: Mapping[str, str]) -> str:
@@ -1226,3 +1234,145 @@ class ArmorSet(GameEvent):
 
     def render(self) -> str:
         return f"{self.name}'s armor is now {self.armor}."
+
+
+@dataclass(frozen=True)
+class EffectNoted(GameEvent):
+    """A rule effect with no mechanical change, such as a location roll or a choice the GM narrates."""
+
+    kind: ClassVar[str] = "effect.noted"
+
+    name: str
+    text: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        return None
+
+    def render(self) -> str:
+        return f"{self.name}: {self.text}"
+
+
+@dataclass(frozen=True)
+class MaxChanged(GameEvent):
+    """A stat's maximum score changed from `before` to `after`. `cause` says what changed it."""
+
+    kind: ClassVar[str] = "character.max_changed"
+
+    name: str
+    stat: str
+    before: int
+    after: int
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].stats[self.stat] = self.after
+
+    def render(self) -> str:
+        text = f"{self.name}'s maximum {self.stat.upper()} goes from {self.before} to {self.after}"
+        return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
+class ConditionAdded(GameEvent):
+    kind: ClassVar[str] = "condition.added"
+
+    name: str
+    condition: str
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].conditions.append(self.condition)
+
+    def render(self) -> str:
+        text = f"{self.name} gains the condition {self.condition}"
+        return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
+class ConditionEnded(GameEvent):
+    kind: ClassVar[str] = "condition.ended"
+
+    name: str
+    condition: str
+    how: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        conditions = state.characters[name_key(self.name)].conditions
+        if self.condition in conditions:
+            conditions.remove(self.condition)
+
+    def render(self) -> str:
+        return f"{self.name} no longer has the condition {self.condition} (ended by {self.how})."
+
+
+@dataclass(frozen=True)
+class ScarGained(GameEvent):
+    """A scar from the Scars table. `roll` is the table entry it came from."""
+
+    kind: ClassVar[str] = "scar.gained"
+
+    name: str
+    scar: str
+    roll: int
+    text: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].scars.append(self.scar)
+
+    def render(self) -> str:
+        text = f"{self.name} gains the scar {self.scar} (Scars table {self.roll})."
+        return f"{text} {self.text}" if self.text else text
+
+
+@dataclass(frozen=True)
+class Harmed(GameEvent):
+    """Harm taken outside combat, which takes no armor. `defeats` is set when it took the stat that
+    decides defeat to 0; `status` is where that leaves the character."""
+
+    kind: ClassVar[str] = "combat.harmed"
+
+    name: str
+    stat: str
+    taken: int
+    cause: str = ""
+    defeats: bool = False
+    status: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        if self.taken:
+            character.harm[self.stat] = character.harm.get(self.stat, 0) + self.taken
+        if self.defeats:
+            character.defeated = True
+
+    def render(self) -> str:
+        text = f"{self.name} loses {self.taken} {self.stat.upper()}"
+        if self.cause:
+            text += f" from {self.cause}"
+        text += "."
+        if self.defeats:
+            text += f" {self.name} is {self.status}."
+        return text
+
+
+@dataclass(frozen=True)
+class CharacterSaved(GameEvent):
+    """A save made outside a fight, such as one a scar calls for. Unlike SaveRolled, a failure does
+    not defeat the character; the effects of a pass or fail are recorded as their own events."""
+
+    kind: ClassVar[str] = "character.saved"
+
+    name: str
+    stat: str
+    roll: int
+    score: int
+    passed: bool
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        return None
+
+    def render(self) -> str:
+        result = "succeeds" if self.passed else "fails"
+        text = f"{self.name} rolls {self.roll} on a {self.stat.upper()} save of {self.score} and {result}"
+        return f"{text} ({self.cause})." if self.cause else f"{text}."

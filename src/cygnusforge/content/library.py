@@ -137,6 +137,18 @@ class MonsterTemplate:
 
 
 DAMAGE_KINDS = ("absorb", "harm", "overflow")
+# When a condition can end: by a rest, extended rest, aid from someone else, the passing of time,
+# or the GM's say-so. A condition's `ends` lists the ones that end it; `gm` always does.
+CONDITION_ENDS = ("rest", "extended_rest", "aid", "time", "gm")
+# The effect ops a scar or condition may run, in the order they are listed.
+EFFECT_OPS = ("note", "set_max", "condition", "save", "pick_stat")
+# `if_higher` compares the roll with the maximum; `if_above_current` compares it with the current score.
+MAX_MODES = ("if_higher", "if_above_current", "add", "always")
+# The name a `pick_stat` op stores its choice under, for later ops to use as their `stat`.
+PICKED = "$picked"
+DICE_SIDES = re.compile(r"1d[0-9]+")
+# The Scars table has one entry for each hit that takes exactly 0 HP, up to this many points.
+SCAR_ROLLS = 12
 
 
 @dataclass(frozen=True)
@@ -147,6 +159,46 @@ class DamageStep:
 
     kind: str
     stat: str | None
+
+
+@dataclass(frozen=True)
+class DerivedRule:
+    """A condition the stats show rather than one stored on the character. It holds while `stat`'s
+    current score is `current`, and, when `needs_max`, the stat's maximum is above 0."""
+
+    stat: str
+    current: int
+    needs_max: bool
+
+
+@dataclass(frozen=True)
+class ConditionRules:
+    """A condition a scar or an effect can give a character. `ends` lists the triggers that end it,
+    and `on_end` are the effect ops run when it does. A derived condition has `derived` instead."""
+
+    id: str
+    label: str
+    description: str
+    ends: tuple[str, ...]
+    on_end: tuple[Mapping[str, Any], ...]
+    derived: DerivedRule | None = None
+
+
+@dataclass(frozen=True)
+class ScarEntry:
+    roll: int
+    name: str
+    text: str
+    effects: tuple[Mapping[str, Any], ...]
+
+
+@dataclass(frozen=True)
+class ScarTable:
+    """The Scars table, with the `stat` whose hit that reaches 0 rolls on it."""
+
+    id: str
+    stat: str
+    entries: tuple[ScarEntry, ...]
 
 
 @dataclass(frozen=True)
@@ -164,6 +216,10 @@ class CombatRules:
     check_sides: int
     initiative_stat: str
     defeat: Mapping[str, str]
+    # The Scars table a player character rolls on when a hit takes their `stat` to exactly 0.
+    scar_table: ScarTable | None = None
+    # The stats outside combat harm can take, such as strength, dexterity, and willpower.
+    outside_harm: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -187,6 +243,8 @@ class RuleSet:
     combat: CombatRules | None = None
     # Statblocks for monsters, by id.
     monsters: Mapping[str, MonsterTemplate] = field(default_factory=dict)
+    # Conditions a scar or effect can give, by id. Derived conditions are included.
+    conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -387,7 +445,15 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     combats = [d for d in definitions if d.type == "combat"]
     if len(combats) > 1:
         raise ContentError(f"{template}: more than one combat definition")
-    combat = _load_combat(combats[0], modules, character, template) if combats else None
+    conditions = _load_conditions(definitions, character, template)
+    scar_tables = {
+        d.id: _load_scar_entries(d, character, conditions, template)
+        for d in definitions
+        if d.type == "scar_table"
+    }
+    combat = (
+        _load_combat(combats[0], modules, character, scar_tables, template) if combats else None
+    )
     monsters = {
         d.id: _load_monster(d, character, template) for d in definitions if d.type == "monster"
     }
@@ -414,6 +480,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         grid=grid,
         combat=combat,
         monsters=monsters,
+        conditions=conditions,
     )
 
 
@@ -421,6 +488,7 @@ def _load_combat(
     definition: Definition,
     modules: Mapping[str, ModuleType],
     character: CharacterSpec,
+    scar_tables: Mapping[str, tuple[ScarEntry, ...]],
     template: str,
 ) -> CombatRules:
     label = f"{template}: combat {definition.id}"
@@ -446,6 +514,8 @@ def _load_combat(
         key: required_text(defeat_data, key, f"{label}: defeat")
         for key in ("player_character", "npc")
     }
+    scar_table = _load_scar_table_ref(data, character, scar_tables, label)
+    outside_harm = _load_outside_harm(data, character, label)
     return CombatRules(
         id=definition.id,
         module=module,
@@ -454,7 +524,44 @@ def _load_combat(
         check_sides=int(check_die[2:]),
         initiative_stat=initiative_stat,
         defeat=defeat,
+        scar_table=scar_table,
+        outside_harm=outside_harm,
     )
+
+
+def _load_scar_table_ref(
+    data: Mapping[str, Any],
+    character: CharacterSpec,
+    scar_tables: Mapping[str, tuple[ScarEntry, ...]],
+    label: str,
+) -> ScarTable | None:
+    """The `scars` key names the Scars table to roll on and the stat whose hit to 0 rolls on it."""
+    if "scars" not in data:
+        return None
+    ref = data["scars"]
+    if not isinstance(ref, Mapping):
+        raise ContentError(f"{label}: 'scars' must be an object")
+    table_id = required_text(ref, "table", f"{label}: scars")
+    if table_id not in scar_tables:
+        raise ContentError(f"{label}: 'scars' names no scar table ({table_id!r})")
+    stat = required_text(ref, "stat", f"{label}: scars")
+    if stat not in character.stats:
+        raise ContentError(f"{label}: 'scars' names no stat ({stat!r})")
+    return ScarTable(id=table_id, stat=stat, entries=scar_tables[table_id])
+
+
+def _load_outside_harm(
+    data: Mapping[str, Any], character: CharacterSpec, label: str
+) -> tuple[str, ...]:
+    stats = data.get("outside_harm", [])
+    if not isinstance(stats, list) or not all(isinstance(stat, str) for stat in stats):
+        raise ContentError(f"{label}: 'outside_harm' must be a list of stat ids")
+    for stat in stats:
+        if stat not in character.stats:
+            raise ContentError(f"{label}: 'outside_harm' names no stat ({stat!r})")
+    if len(stats) != len(set(stats)):
+        raise ContentError(f"{label}: 'outside_harm' lists a stat twice")
+    return tuple(stats)
 
 
 def _load_damage(
@@ -544,6 +651,145 @@ def _load_grid(definition: Definition, template: str) -> EncounterGrid:
     if move_feet < cell_feet:
         raise ContentError(f"{label}: 'move_feet' must be at least one cell")
     return EncounterGrid(cell_feet=cell_feet, move_feet=move_feet)
+
+
+def _load_conditions(
+    definitions: list[Definition], character: CharacterSpec, template: str
+) -> dict[str, ConditionRules]:
+    """Conditions by id. A stored condition is one a character can have; a derived one shows up
+    from the stats and has no entry on the character."""
+    stored = frozenset(
+        d.id for d in definitions if d.type == "condition" and d.data.get("derived") is None
+    )
+    conditions: dict[str, ConditionRules] = {}
+    for d in definitions:
+        if d.type != "condition":
+            continue
+        label = f"{template}: condition {d.id}"
+        if d.id in conditions:
+            raise ContentError(f"{template}: duplicate condition {d.id!r}")
+        ends = d.data.get("ends", [])
+        if not isinstance(ends, list) or any(end not in CONDITION_ENDS for end in ends):
+            raise ContentError(f"{label}: 'ends' must list only {CONDITION_ENDS}")
+        on_end, _ = _check_effects(d.data.get("on_end", []), label, character, stored, False)
+        derived = _load_derived(d.data.get("derived"), character, label)
+        if derived is not None and (ends or on_end):
+            raise ContentError(f"{label}: a derived condition cannot have 'ends' or 'on_end'")
+        conditions[d.id] = ConditionRules(
+            id=d.id,
+            label=required_text(d.data, "label", label),
+            description=required_text(d.data, "description", label),
+            ends=tuple(ends),
+            on_end=on_end,
+            derived=derived,
+        )
+    return conditions
+
+
+def _load_derived(value: object, character: CharacterSpec, label: str) -> DerivedRule | None:
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label}: 'derived' must be an object")
+    stat = required_text(value, "stat", f"{label}: derived")
+    if stat not in character.stats:
+        raise ContentError(f"{label}: derived names no stat ({stat!r})")
+    current = value.get("current")
+    if not isinstance(current, int) or isinstance(current, bool) or current < 0:
+        raise ContentError(f"{label}: derived 'current' must be a whole number of 0 or more")
+    needs_max = _flag(value, "needs_max", f"{label}: derived")
+    return DerivedRule(stat=stat, current=current, needs_max=needs_max)
+
+
+def _load_scar_entries(
+    definition: Definition,
+    character: CharacterSpec,
+    conditions: Mapping[str, ConditionRules],
+    template: str,
+) -> tuple[ScarEntry, ...]:
+    """A Scars table: one entry for each roll from 1 to SCAR_ROLLS, in order."""
+    label = f"{template}: scar table {definition.id}"
+    entries = definition.data.get("entries")
+    if not isinstance(entries, list) or len(entries) != SCAR_ROLLS:
+        raise ContentError(f"{label}: 'entries' must list exactly {SCAR_ROLLS} entries")
+    stored = frozenset(cid for cid, rules in conditions.items() if rules.derived is None)
+    loaded = []
+    for position, entry in enumerate(entries, start=1):
+        if not isinstance(entry, Mapping):
+            raise ContentError(f"{label}: each entry must be an object")
+        entry_label = f"{label}: entry {position}"
+        if entry.get("roll") != position:
+            raise ContentError(f"{entry_label}: 'roll' must be {position}")
+        effects, _ = _check_effects(entry.get("effects", []), entry_label, character, stored, False)
+        loaded.append(
+            ScarEntry(
+                roll=position,
+                name=required_text(entry, "name", entry_label),
+                text=required_text(entry, "text", entry_label),
+                effects=effects,
+            )
+        )
+    return tuple(loaded)
+
+
+def _check_effects(
+    ops: object,
+    label: str,
+    character: CharacterSpec,
+    conditions: frozenset[str],
+    picked: bool,
+) -> tuple[tuple[Mapping[str, Any], ...], bool]:
+    """Validate a list of effect ops, in order. `picked` says whether a `pick_stat` came before,
+    so `$picked` may be used. Returns the ops and whether a stat has been picked by the end."""
+    if not isinstance(ops, list):
+        raise ContentError(f"{label}: effects must be a list")
+    checked: list[Mapping[str, Any]] = []
+    for op in ops:
+        if not isinstance(op, Mapping):
+            raise ContentError(f"{label}: each effect must be an object")
+        name = required_text(op, "op", label)
+        if name not in EFFECT_OPS:
+            raise ContentError(f"{label}: effect op {name!r} is not one of {EFFECT_OPS}")
+        if name == "note":
+            required_text(op, "text", label)
+        elif name == "set_max":
+            stat = required_text(op, "stat", label)
+            if stat == PICKED:
+                if not picked:
+                    raise ContentError(f"{label}: {PICKED!r} is used before a pick_stat")
+            elif stat not in character.stats:
+                raise ContentError(f"{label}: set_max names no stat ({stat!r})")
+            dice = required_text(op, "dice", label)
+            if not is_formula(dice):
+                raise ContentError(f"{label}: set_max 'dice' is not a formula ({dice!r})")
+            mode = required_text(op, "mode", label)
+            if mode not in MAX_MODES:
+                raise ContentError(f"{label}: set_max 'mode' must be one of {MAX_MODES}")
+        elif name == "condition":
+            condition = required_text(op, "id", label)
+            if condition not in conditions:
+                raise ContentError(
+                    f"{label}: condition op names no stored condition ({condition!r})"
+                )
+        elif name == "save":
+            stat = required_text(op, "stat", label)
+            if stat not in character.stats:
+                raise ContentError(f"{label}: save names no stat ({stat!r})")
+            _, picked = _check_effects(op.get("pass", []), label, character, conditions, picked)
+            _, picked = _check_effects(op.get("fail", []), label, character, conditions, picked)
+        elif name == "pick_stat":
+            options = op.get("options")
+            if not isinstance(options, list) or not options:
+                raise ContentError(f"{label}: pick_stat 'options' must be a non-empty list")
+            for option in options:
+                if option not in character.stats:
+                    raise ContentError(f"{label}: pick_stat names no stat ({option!r})")
+            dice = required_text(op, "dice", label)
+            if not DICE_SIDES.fullmatch(dice):
+                raise ContentError(f"{label}: pick_stat 'dice' must be a single die such as '1d6'")
+            picked = True
+        checked.append(op)
+    return tuple(checked), picked
 
 
 def _load_table(definition: Definition, template: str) -> tuple[TableOption, ...]:
