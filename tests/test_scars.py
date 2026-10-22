@@ -248,3 +248,17 @@ def test_the_loaded_scar_table_has_twelve_entries_in_order():
         "Walloped",
     ]
     assert table.entries[-1].name == "Doomed"
+
+
+def test_the_scar_text_is_the_books_text():
+    table = CAIRN.combat.scar_table
+    assert table is not None
+    assert table.entries[0].text == (
+        "Roll 1d6. 1: Neck, 2: Hands, 3: Eye, 4: Chest, 5: Legs, 6: Ear. "
+        "Roll 1d6. If the total is higher than your max HP, take the new result."
+    )
+    assert table.entries[5].text == (
+        "Roll 1d6. 1-2: STR, 3-4: DEX, 5-6: WIL. Roll 3d6. "
+        "If the total is higher than your current attribute, take the new result."
+    )
+    assert table.entries[-1].text.startswith("Death seemed ever so close")
