@@ -152,8 +152,17 @@ Background tables come from `backgrounds.json`. Attributes roll 3d6 each, and HP
 
 ## Phase 8: hirelings
 
-- Built from a marketplace role or a background, with 3d6 attributes and 1d6 HP, then Character Traits rolls.
-- Hirelings are NPCs with the PC sheet shape. They can join the party.
+Source: Core Rules, "Hirelings"; Marketplace, "Hirelings (per day)". The book is the authority.
+
+- Two creation paths, both from the book:
+  - Role path: choose a role from the Hirelings table. Roll 3d6 for each attribute and 1d6 for HP. Give equipment appropriate to the role (chosen, not rolled). Then roll the Character Traits tables.
+  - Background path: choose or roll a background and a name. Roll (or choose from) its tables for Rations, Gold, Attributes, HP, and age. Starting gear comes from the background's item table, as for a PC.
+- The user's answer said "rolled starting gear for both paths". The book does not say that for the role path, so the role path follows the book. This is a decision the user should confirm.
+- Hireling wages are charged per day from party gold by the daily clock tick.
+- When the party cannot pay, the hireling leaves if able. Otherwise it seeks the first chance to leave. The GM decides the outcome. The engine records the unpaid wage as an event.
+- Hirelings can also be paid to carry equipment. Their carry capacity counts toward the party's inventory. Confirm the exact mechanic when building it.
+- Hirelings are NPCs with the PC sheet shape. The player controls a hireling once it joins. The GM can also create ad hoc NPC allies with the same tool.
+- A hireling joins the party when hired, or when a PC dies (Phase 9).
 
 ## Phase 9: death rules
 
