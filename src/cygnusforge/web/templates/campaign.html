@@ -160,6 +160,7 @@
             <div class="tab-list" role="tablist" aria-label="Panels">
               <button type="button" class="tab" role="tab" id="tab-location" aria-controls="panel-location" aria-selected="true">Location</button>
               <button type="button" class="tab" role="tab" id="tab-character" aria-controls="panel-character" aria-selected="false" tabindex="-1">Character</button>
+              <button type="button" class="tab" role="tab" id="tab-inventory" aria-controls="panel-inventory" aria-selected="false" tabindex="-1">Inventory</button>
               <button type="button" class="tab" role="tab" id="tab-notes" aria-controls="panel-notes" aria-selected="false" tabindex="-1">Notes</button>
               {% if debug_panel %}<button type="button" class="tab" role="tab" id="tab-debug" aria-controls="panel-debug" aria-selected="false" tabindex="-1">Debug</button>{% endif %}
             </div>
@@ -190,6 +191,28 @@
               {% else %}
               <p class="muted">No character sheet yet.</p>
               {% endfor %}
+            </div>
+            <div class="tab-panel" role="tabpanel" id="panel-inventory" aria-labelledby="tab-inventory" hidden>
+              {% if scene.pack %}
+              <p>Carrying {{ scene.pack.used }} of {{ scene.pack.capacity }} slots.</p>
+              {% if scene.pack.items %}
+              <ul data-inventory>
+                {% for item in scene.pack.items %}
+                <li>
+                  <strong>{{ item.name }}</strong>
+                  {% if item.size %}{{ item.size }}, {% endif %}{% if item.slots %}{{ item.slots }} slot{{ "" if item.slots == 1 else "s" }}{% else %}no slots{% endif %}
+                  {% if item.max_uses > 0 %}· {{ item.uses }} uses left{% endif %}
+                  {% if item.kind %}<span class="muted">({{ item.kind|capitalize }})</span>{% endif %}
+                  {% if item.text %}<p class="muted">{{ item.text }}</p>{% endif %}
+                </li>
+                {% endfor %}
+              </ul>
+              {% else %}
+              <p class="muted">Carrying nothing.</p>
+              {% endif %}
+              {% else %}
+              <p class="muted">No inventory yet.</p>
+              {% endif %}
             </div>
             <div class="tab-panel" role="tabpanel" id="panel-notes" aria-labelledby="tab-notes" hidden>
               {{ notes_list(scene.notes) }}

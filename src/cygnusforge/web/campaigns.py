@@ -514,6 +514,7 @@ def _campaign_page(
     library = request.app.state.content
     campaign = get_campaign(engine, user.id, campaign_id)
     rule_set = library.rule_sets.get(campaign.rule_set)
+    inventory_rules = rule_set.inventory if rule_set is not None else None
     spec = rule_set.character if rule_set else NO_CHARACTER
     options = rule_set.campaign if rule_set else NO_CAMPAIGN
     world = campaign_world(engine, user.id, campaign.id)
@@ -525,7 +526,7 @@ def _campaign_page(
             status_code=status_code,
             campaign=campaign,
             world=library.world_templates.get(campaign.world_template),
-            scene=scene_view(world.state, spec),
+            scene=scene_view(world.state, spec, inventory_rules),
             world_map=world_map,
             rule_set=rule_set,
             options=campaign_view(options),
@@ -545,7 +546,7 @@ def _campaign_page(
             status_code=status_code,
             campaign=campaign,
             world=library.world_templates.get(campaign.world_template),
-            scene=scene_view(world.state, spec),
+            scene=scene_view(world.state, spec, inventory_rules),
             world_map=world_map,
             rule_set=rule_set,
             character=character,
@@ -570,7 +571,7 @@ def _campaign_page(
         status_code=status_code,
         campaign=campaign,
         world=library.world_templates.get(campaign.world_template),
-        scene=scene_view(world.state, spec),
+        scene=scene_view(world.state, spec, inventory_rules),
         world_map=world_map,
         rule_set=rule_set,
         messages=messages,

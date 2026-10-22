@@ -26,6 +26,7 @@ from cygnusforge.services.events import (
     CampaignState,
     Character,
     Harmed,
+    ItemAdded,
     Position,
     load_state,
     record,
@@ -435,6 +436,43 @@ def test_an_unplaced_player_sees_no_location_or_npcs(client_factory: Callable[[]
     assert scene.location is None
     assert scene.npcs == []
     assert [note.subject for note in scene.notes] == [world.CAMPAIGN_WIDE]
+
+
+def test_the_pack_lists_items_with_uses_slots_and_capacity(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    with _db(app) as db:
+        record(db, campaign_id, ItemAdded(name="Ada", item="Rope", size="normal", slots=1))
+        record(
+            db,
+            campaign_id,
+            ItemAdded(name="Ada", item="Rations", size="petty", slots=0, uses=2, max_uses=3),
+        )
+        record(
+            db,
+            campaign_id,
+            ItemAdded(name="Ada", item="Fatigue", size="", slots=0, kind_of_item="fatigue"),
+        )
+        db.commit()
+    state = _state(app, campaign_id)
+    pack = world.scene_view(state, SPEC, LIBRARY.rule_sets["cairn2e"].inventory).pack
+    assert pack is not None
+    assert [item.name for item in pack.items] == ["Rope", "Rations", "Fatigue"]
+    rations = pack.items[1]
+    assert (rations.slots, rations.uses, rations.max_uses) == (0, 2, 3)
+    assert pack.used == 1
+    assert pack.capacity == LIBRARY.rule_sets["cairn2e"].inventory.capacity
+
+
+def test_the_pack_is_absent_without_a_character_or_an_inventory_rule(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    assert world.scene_view(_state(app, campaign_id), SPEC).pack is None
+    assert (
+        world.scene_view(CampaignState(), SPEC, LIBRARY.rule_sets["cairn2e"].inventory).pack is None
+    )
 
 
 def test_all_at_location_describes_a_place_without_statblocks(

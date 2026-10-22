@@ -115,6 +115,29 @@ class SceneView:
     npcs: list[Character]
     notes: list[Note]
     sheet: list[str]
+    pack: PackView | None = None
+
+
+@dataclass(frozen=True)
+class PackItem:
+    """One item the player character carries, as the player sees it."""
+
+    name: str
+    size: str
+    slots: int
+    uses: int
+    max_uses: int
+    kind: str
+    text: str
+
+
+@dataclass(frozen=True)
+class PackView:
+    """The player character's items in carried order, with the slots used and the capacity."""
+
+    items: list[PackItem]
+    used: int
+    capacity: int
 
 
 @dataclass(frozen=True)
@@ -1397,8 +1420,11 @@ def map_view(state: CampaignState) -> MapView:
     return MapView(radius_km=round(radius, 2), markers=markers, places=places)
 
 
-def scene_view(state: CampaignState, spec: CharacterSpec) -> SceneView:
-    """The player's view. It shows only what is at the player character's location."""
+def scene_view(
+    state: CampaignState, spec: CharacterSpec, inventory: InventoryRules | None = None
+) -> SceneView:
+    """The player's view. It shows only what is at the player character's location. The pack shows
+    the player character's items when the rule set has an inventory."""
     pc = state.pc()
     location = pc.location if pc is not None else None
     found = state.named(location) if location is not None else None
@@ -1412,7 +1438,25 @@ def scene_view(state: CampaignState, spec: CharacterSpec) -> SceneView:
     subjects.update(npc.name for npc in npcs)
     notes = [note for note in reversed(state.notes) if note.subject in subjects]
     sheet = describe(spec, _sheet_of(pc)).splitlines() if pc is not None else []
-    return SceneView(pc=pc, location=place, npcs=npcs, notes=notes, sheet=sheet)
+    pack = None
+    if pc is not None and inventory is not None:
+        pack = PackView(
+            items=[
+                PackItem(
+                    name=item.name,
+                    size=item.size,
+                    slots=item.slots,
+                    uses=item.uses,
+                    max_uses=item.max_uses,
+                    kind=item.kind,
+                    text=item.text,
+                )
+                for item in pc.items
+            ],
+            used=inventory_service.used_slots(pc),
+            capacity=inventory.capacity,
+        )
+    return SceneView(pc=pc, location=place, npcs=npcs, notes=notes, sheet=sheet, pack=pack)
 
 
 def world_state_text(

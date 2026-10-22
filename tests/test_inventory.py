@@ -11,7 +11,7 @@ from sqlmodel import Session
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import ItemAdded, current, record
 from cygnusforge.services.world import WorldTools
-from tests.test_combat import CAIRN, PC, _character, _fight
+from tests.test_combat import CAIRN, PC, _character, _fight, _fight_client
 
 CAPACITY = CAIRN.inventory.capacity
 
@@ -179,3 +179,13 @@ def test_use_item_refuses_a_relic(client_factory):
     _add_consumable(app, campaign_id, "Sun Charm", 3, kind=CAIRN.magic.relic_kind)
     with pytest.raises(InvalidInput, match="use_relic"):
         tools.use_item(PC, "Sun Charm")
+
+
+def test_the_campaign_page_lists_the_pack(client_factory: Callable[[], TestClient]):
+    client, campaign_id, tools = _fight_client(client_factory, rolled=False)
+    tools.give_item(PC, "Rope")
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert 'id="tab-inventory"' in page
+    inventory = page[page.index('id="panel-inventory"') : page.index('id="panel-notes"')]
+    assert f"Carrying {_used(client.app, campaign_id)} of {CAPACITY} slots." in inventory
+    assert "<strong>Rope</strong>" in inventory
