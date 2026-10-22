@@ -208,6 +208,14 @@
                 <button type="submit" name="active" value="1">Make invincible</button>
                 {% endif %}
               </form>
+              <form method="post" action="/campaigns/{{ campaign.id }}/debug/stat">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="name" value="{{ player_name }}">
+                <p>Set <strong>{{ player_name }}</strong>'s current score:</p>
+                <label>Stat <select name="stat"><option value="hp">HP</option><option value="str">STR</option></select></label>
+                <label>Remaining <input type="number" name="remaining" min="0" required></label>
+                <button type="submit">Set score</button>
+              </form>
             </div>
             {% endif %}
           </section>

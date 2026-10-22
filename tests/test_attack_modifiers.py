@@ -26,6 +26,7 @@ from tests.test_combat import (
     _foe,
     _hit,
     _no_speak,
+    _set_stat,
 )
 from tests.test_combat import _combat as _combat_definition
 
@@ -156,14 +157,14 @@ def test_resolve_attacks_keeps_the_highest_roll_and_applies_one_hit(client_facto
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Ghoul", claw="1d6")
     _foe(tools, "Bo", claw="1d6")
-    hp = _character(app, campaign_id, PC).stats["hp"]
+    _set_stat(app, campaign_id, PC, "hp", 0)
     result = replace(tools, rng=Rolls(2, 5)).resolve_attacks(
         PC, [{"attacker": "Ghoul", "attack": "Claw"}, {"attacker": "Bo", "attack": "Claw"}]
     )
     assert result["raw"] == 5
-    assert result["harm"] == {"hp": min(hp, 5), **({"str": 5 - hp} if hp < 5 else {})}
-    assert result["save_due"] == ("str" if hp < 5 else None)
-    assert _character(app, campaign_id, PC).harm == result["harm"]
+    assert result["harm"] == {"str": 5}
+    assert result["save_due"] == "str"
+    assert _character(app, campaign_id, PC).harm["str"] == 5
     strikes = _struck(app, campaign_id)
     assert len(strikes) == 1
     assert strikes[0].attacker == "Bo"
@@ -176,6 +177,7 @@ def test_resolve_attacks_ties_go_to_the_earlier_attack(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Ghoul", claw="1d6")
     _foe(tools, "Bo", claw="1d6")
+    _set_stat(app, campaign_id, PC, "hp", 0)
     replace(tools, rng=Rolls(4, 4)).resolve_attacks(
         PC, [{"attacker": "Ghoul", "attack": "Claw"}, {"attacker": "Bo", "attack": "Claw"}]
     )
@@ -186,6 +188,7 @@ def test_resolve_attacks_uses_each_attacks_modifier_and_records_it(client_factor
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Ghoul", claw="1d6")
     _foe(tools, "Bo", claw="1d6")
+    _set_stat(app, campaign_id, PC, "hp", 0)
     replace(tools, rng=Rolls(3, 12)).resolve_attacks(
         PC,
         [
@@ -202,6 +205,7 @@ def test_resolve_attacks_uses_each_attacks_modifier_and_records_it(client_factor
 def test_resolve_attacks_with_one_attack_has_no_rolled_record(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Ghoul", claw="1d6")
+    _set_stat(app, campaign_id, PC, "hp", 0)
     replace(tools, rng=Rolls(3)).resolve_attacks(PC, [{"attacker": "Ghoul", "attack": "Claw"}])
     assert _struck(app, campaign_id)[-1].rolled == ""
 
@@ -255,6 +259,7 @@ def test_resolve_attacks_through_the_tool_takes_modifiers(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Ghoul", claw="1d6")
     _foe(tools, "Bo", claw="1d6")
+    _set_stat(app, campaign_id, PC, "hp", 0)
     run = _run(
         replace(tools, rng=Rolls(2, 3)),
         "resolve_attacks",

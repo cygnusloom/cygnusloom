@@ -101,6 +101,15 @@ def _set_invincibility(client: TestClient, campaign_id: int, name: str, active: 
     )
 
 
+def _set_debug_stat(client: TestClient, campaign_id: int, name: str, stat: str, remaining: str):
+    token = csrf_token(client, "/campaigns")
+    return client.post(
+        f"/campaigns/{campaign_id}/debug/stat",
+        data={"csrf_token": token, "name": name, "stat": stat, "remaining": remaining},
+        follow_redirects=False,
+    )
+
+
 def _debug_client_factory(settings: Settings, fake: FakeProvider) -> Callable[[], TestClient]:
     app = make_app(replace(settings, debug_panel=True), fake_provider=fake)
     return lambda: TestClient(app)
@@ -391,3 +400,15 @@ def test_debug_panel_refuses_a_name_that_is_not_a_player_character(
 ):
     client, campaign_id = _campaign_id(_debug_client_factory(settings, fake))
     assert _set_invincibility(client, campaign_id, "Nobody", True).status_code == 400
+
+
+def test_debug_panel_refuses_a_bad_score(settings: Settings, fake: FakeProvider):
+    client, campaign_id = _campaign_id(_debug_client_factory(settings, fake))
+    assert "Set score" in client.get(f"/campaigns/{campaign_id}").text
+    assert _set_debug_stat(client, campaign_id, "Ada", "hp", "lots").status_code == 400
+    assert _set_debug_stat(client, campaign_id, "Nobody", "hp", "2").status_code == 400
+
+
+def test_debug_stat_route_is_hidden_by_default(client_factory):
+    client, campaign_id = _campaign_id(client_factory)
+    assert _set_debug_stat(client, campaign_id, "Ada", "hp", "2").status_code == 404

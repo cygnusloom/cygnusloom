@@ -77,15 +77,16 @@ def test_a_hit_that_leaves_hp_above_zero_gives_no_scar(client_factory):
     assert _character(app, campaign_id, PC).scars == []
 
 
-def test_a_hit_that_overflows_onto_strength_owes_a_save_and_gives_no_scar(client_factory):
+def test_a_hit_that_takes_hp_to_zero_and_overflows_gains_a_scar_and_owes_a_save(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Ghoul", claw="1d20")
-    hp = _character(app, campaign_id, PC).stats["hp"]
-    result = _hit(tools, "Ghoul", PC, hp + 2)
+    _set_max(app, campaign_id, "hp", 3)
+    result = _hit(tools, "Ghoul", PC, 5)
 
+    assert result["harm"] == {"hp": 3, "str": 2}
     assert result["save_due"] == "str"
-    assert "scar" not in result
-    assert _character(app, campaign_id, PC).scars == []
+    assert result["scar"] == "Walloped"
+    assert _character(app, campaign_id, PC).scars == ["Walloped"]
 
 
 def test_a_foe_brought_to_zero_gains_no_scar(client_factory):

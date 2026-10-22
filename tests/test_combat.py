@@ -19,7 +19,13 @@ from cygnusforge.rules import cairn2e
 from cygnusforge.rules.cairn2e import save_succeeds
 from cygnusforge.rules.context import ToolContext
 from cygnusforge.services import encounters
-from cygnusforge.services.combat import Damage, apply_damage, player_save, set_invincibility
+from cygnusforge.services.combat import (
+    Damage,
+    apply_damage,
+    player_save,
+    set_debug_stat,
+    set_invincibility,
+)
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
     NPC_KIND,
@@ -27,6 +33,7 @@ from cygnusforge.services.events import (
     EncounterEnded,
     MaxChanged,
     Struck,
+    current,
     record,
 )
 from cygnusforge.services.tools import Ask, RollAnswer, ToolRun, run_tool
@@ -489,14 +496,48 @@ def test_turning_invincibility_off_restores_harm(client_factory):
     _hit(tools, "Ghoul", PC, 6)
     assert _character(app, campaign_id, PC).harm == {}
     _set_invincible(app, campaign_id, PC, False)
+    _set_stat(app, campaign_id, PC, "hp", 0)
+    before = dict(_character(app, campaign_id, PC).harm)
     result = _hit(tools, "Ghoul", PC, 6)
     assert result["harm"]
-    assert _character(app, campaign_id, PC).harm == result["harm"]
+    after = _character(app, campaign_id, PC).harm
+    for stat, lost in result["harm"].items():
+        assert after[stat] == before.get(stat, 0) + lost
+
+
+def _set_stat(
+    app: FastAPI, campaign_id: int, name: str, stat: str, remaining: int
+) -> dict[str, Any]:
+    with _db(app) as db:
+        return set_debug_stat(db, campaign_id, name, stat, remaining)
+
+
+def test_a_debug_score_sets_how_much_of_a_stat_is_left(client_factory):
+    app, campaign_id, _tools = _fight(client_factory)
+    maximum = _character(app, campaign_id, PC).stats["hp"]
+    _set_stat(app, campaign_id, PC, "hp", 0)
+    pc = _character(app, campaign_id, PC)
+    assert pc.harm == {"hp": maximum}
+    assert current(pc, "hp") == 0
+    _set_stat(app, campaign_id, PC, "hp", maximum)
+    assert current(_character(app, campaign_id, PC), "hp") == maximum
+
+
+def test_a_debug_score_is_refused_for_an_npc_or_out_of_range(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, "Ghoul")
+    with pytest.raises(InvalidInput):
+        _set_stat(app, campaign_id, "Ghoul", "hp", 2)
+    with pytest.raises(InvalidInput):
+        _set_stat(app, campaign_id, PC, "hp", 999)
+    with pytest.raises(InvalidInput):
+        _set_stat(app, campaign_id, PC, "luck", 1)
 
 
 def test_turning_invincibility_on_clears_a_pending_save(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Ghoul", claw="1d6+1d6+1d6+1d6")
+    _set_stat(app, campaign_id, PC, "hp", 0)
     _hit(tools, "Ghoul", PC, 6, 6, 6, 6)
     assert _character(app, campaign_id, PC).save_due is not None
     _set_invincible(app, campaign_id, PC, True)
@@ -594,6 +635,7 @@ def test_a_player_hit_is_refused_for_a_bad_damage_or_weapon(
 def test_overflow_on_a_player_character_waits_for_the_player_to_save(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Ghoul", claw="1d6+1d6+1d6")
+    _set_stat(app, campaign_id, PC, "hp", 0)
     result = _hit(tools, "Ghoul", PC, 6, 6, 6)
     assert result["save_due"] == "str"
     assert "save" not in result
@@ -609,6 +651,7 @@ def test_overflow_on_a_player_character_waits_for_the_player_to_save(client_fact
 def test_a_player_character_who_fails_the_save_is_defeated(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Ghoul", claw="1d6+1d6+1d6")
+    _set_stat(app, campaign_id, PC, "hp", 0)
     _hit(tools, "Ghoul", PC, 6, 6, 6)
     result = tools.player_save(20)
     assert result["passed"] is False
@@ -637,6 +680,7 @@ def test_a_defeated_foe_is_skipped_when_its_turn_comes_round(client_factory):
 def test_a_player_character_who_passes_the_save_stands(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Ghoul", claw="1d6+1d6+1d6")
+    _set_stat(app, campaign_id, PC, "hp", 0)
     _hit(tools, "Ghoul", PC, 6, 6, 6)
     result = tools.player_save(1)
     assert result["passed"] is True
@@ -720,6 +764,7 @@ def test_the_encounter_ends_when_the_last_foe_falls(client_factory):
 def test_the_encounter_ends_when_the_player_character_is_knocked_out(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Bo", claw="1d6+1d6+1d6+1d6")
+    _set_stat(app, campaign_id, PC, "hp", 0)
     _hit(tools, "Bo", PC, 6, 6, 6, 6)
     assert _character(app, campaign_id, PC).save_due is not None
     tools.player_save(20)
@@ -734,15 +779,16 @@ def test_the_encounter_end_says_which_side_can_still_fight():
     assert EncounterEnded().render() == "The encounter is over."
 
 
-def _knock_out_pc(tools: WorldTools) -> None:
+def _knock_out_pc(app: FastAPI, campaign_id: int, tools: WorldTools) -> None:
     _foe(tools, "Bo", claw="1d6+1d6+1d6+1d6")
+    _set_stat(app, campaign_id, PC, "hp", 0)
     _hit(tools, "Bo", PC, 6, 6, 6, 6)
     tools.player_save(20)
 
 
 def test_the_gm_brings_a_knocked_out_character_back_with_an_explanation(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _knock_out_pc(tools)
+    _knock_out_pc(app, campaign_id, tools)
     assert _character(app, campaign_id, PC).defeated is True
     result = tools.recover_character(
         PC, "A passing cart carried her to the chapel.", "Her left hand is lamed."
@@ -752,9 +798,9 @@ def test_the_gm_brings_a_knocked_out_character_back_with_an_explanation(client_f
 
 
 def test_the_statblock_shows_a_knocked_out_character_in_critical_damage(client_factory):
-    _, _, tools = _fight(client_factory)
+    app, campaign_id, tools = _fight(client_factory)
     assert "Status: in critical damage" not in "\n".join(tools.get_statblock(PC)["statblock"])
-    _knock_out_pc(tools)
+    _knock_out_pc(app, campaign_id, tools)
     assert "Status: in critical damage" in "\n".join(tools.get_statblock(PC)["statblock"])
     tools.recover_character(PC, "A passing cart carried her to the chapel.", "Her hand is lamed.")
     assert "Status: in critical damage" not in "\n".join(tools.get_statblock(PC)["statblock"])

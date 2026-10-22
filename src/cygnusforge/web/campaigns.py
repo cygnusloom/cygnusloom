@@ -46,6 +46,7 @@ from cygnusforge.services.campaigns import (
     send_message,
     set_campaign_model,
     set_debug_invincibility,
+    set_debug_stat,
     start_encounter_turn,
     stream_message,
 )
@@ -215,6 +216,29 @@ async def change_debug_invincibility(request: Request, campaign_id: int) -> Resp
     active = form_text(form, "active") == "1"
     try:
         set_debug_invincibility(request.app.state.engine, user.id, campaign_id, name, active)
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
+@router.post("/{campaign_id}/debug/stat")
+async def change_debug_stat(request: Request, campaign_id: int) -> Response:
+    settings = request.app.state.settings
+    if not settings.debug_panel:
+        raise NotFound("not found")
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    name = form_text(form, "name")
+    stat = form_text(form, "stat")
+    try:
+        remaining = int(form_text(form, "remaining"))
+    except ValueError:
+        return _campaign_page(request, user, campaign_id, 400, "remaining must be a whole number")
+    try:
+        set_debug_stat(request.app.state.engine, user.id, campaign_id, name, stat, remaining)
     except InvalidInput as exc:
         return _campaign_page(request, user, campaign_id, 400, str(exc))
     except Conflict as exc:

@@ -378,6 +378,16 @@ def set_debug_invincibility(
         return combat.set_invincibility(db, campaign_id, name, active)
 
 
+def set_debug_stat(
+    engine: Engine, owner_id: int, campaign_id: int, name: str, stat: str, remaining: int
+) -> dict[str, Any]:
+    """Set a player character's current score for one stat from the debug panel. Refused while the
+    GM is still writing a reply."""
+    get_campaign(engine, owner_id, campaign_id)
+    with _exclusive(campaign_id), session_scope(engine) as db:
+        return combat.set_debug_stat(db, campaign_id, name, stat, remaining)
+
+
 @dataclass(frozen=True)
 class ChatMessage:
     """A line of the chat: the player's, or the GM's reply with the model that wrote it. `id` is

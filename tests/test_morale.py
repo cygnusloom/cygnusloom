@@ -8,7 +8,17 @@ from cygnusforge.rules.cairn2e import save_succeeds
 from cygnusforge.services import encounters
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import FOES_SIDE, MoraleChecked
-from tests.test_combat import PC, YARD, Rolls, _character, _fight, _finish_gm_reply, _foe, _hit
+from tests.test_combat import (
+    PC,
+    YARD,
+    Rolls,
+    _character,
+    _fight,
+    _finish_gm_reply,
+    _foe,
+    _hit,
+    _set_stat,
+)
 from tests.test_world import _db, _state
 
 LEADER_WIL = 15
@@ -125,6 +135,7 @@ def test_a_failed_group_check_flees_every_living_foe_and_ends_the_fight(client_f
 def test_a_player_character_is_never_checked_for_morale(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Bo", claw="1d6+1d6+1d6+1d6")
+    _set_stat(app, campaign_id, PC, "hp", 0)
     result = _hit(tools, "Bo", PC, 6, 6, 6, 6)
     assert "morale" not in result
     assert _morale(app, campaign_id) == {}

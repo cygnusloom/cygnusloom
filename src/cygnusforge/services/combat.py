@@ -37,6 +37,7 @@ from cygnusforge.services.events import (
     Character,
     CharacterRecovered,
     CharacterSurrendered,
+    DebugStatSet,
     EncounterEnded,
     Harmed,
     InitiativeRolled,
@@ -181,10 +182,10 @@ def _scar_from_hit(
     damage: Damage,
 ) -> str | None:
     """A player character hit to exactly 0 on the scar stat gains a scar. The scar is the table
-    entry numbered by the harm this hit did, capped at the table's last entry. A hit whose damage
-    overflowed onto another stat owes a save instead, so it gains no scar."""
+    entry numbered by the harm this hit did, capped at the table's last entry. Damage that
+    overflows onto another stat is separate: it owes a save, and the scar still applies."""
     table = combat.scar_table
-    if table is None or damage.save is not None:
+    if table is None:
         return None
     lost = damage.harm.get(table.stat, 0)
     if lost == 0:
@@ -485,6 +486,24 @@ def set_invincibility(db: Session, campaign_id: int, name: str, active: bool) ->
     record(db, campaign_id, InvincibilitySet(name=character.name, active=active))
     db.commit()
     return {"character": character.name, "invincible": active}
+
+
+def set_debug_stat(
+    db: Session, campaign_id: int, name: str, stat: str, remaining: int
+) -> dict[str, Any]:
+    """Set a player character's current score for one stat, for testing damage rules."""
+    state = load_state(db, campaign_id)
+    character = state.characters.get(name_key(name))
+    if character is None:
+        raise InvalidInput(f"there is no character named {name!r}")
+    if character.kind != PC_KIND:
+        raise InvalidInput(f"{character.name} is not a player character")
+    if stat not in character.stats:
+        raise InvalidInput(f"{character.name} has no stat {stat!r}")
+    value = whole_number(remaining, "remaining", 0, character.stats[stat])
+    record(db, campaign_id, DebugStatSet(name=character.name, stat=stat, remaining=value))
+    db.commit()
+    return {"character": character.name, "stat": stat, "remaining": value}
 
 
 def recover_character(

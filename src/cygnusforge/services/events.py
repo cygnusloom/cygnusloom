@@ -1366,6 +1366,26 @@ class InvincibilitySet(GameEvent):
 
 
 @dataclass(frozen=True)
+class DebugStatSet(GameEvent):
+    """A debug setting of a player character's current score for one stat, by recording the harm
+    that leaves it at `remaining`. Internal, so the GM does not see it."""
+
+    kind: ClassVar[str] = "combat.debug_stat_set"
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    name: str
+    stat: str
+    remaining: int
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.harm[self.stat] = max(0, character.stats.get(self.stat, 0) - self.remaining)
+
+    def render(self) -> str:
+        return f"{self.name}'s {self.stat.upper()} is set to {self.remaining}."
+
+
+@dataclass(frozen=True)
 class EffectNoted(GameEvent):
     """A rule effect with no mechanical change, such as a location roll or a choice the GM narrates."""
 
