@@ -225,7 +225,7 @@ def test_medical_healing_restores_only_the_patients_and_the_payer_pays_once(clie
 def test_medical_healing_also_restores_hp(client_factory):
     app, campaign_id, tools = _pcs(client_factory)
     _grant_gold(app, campaign_id, 100)
-    _set_stat(app, campaign_id, PC, "hp", 1)
+    _set_stat(app, campaign_id, PC, "hp", 0)
     assert _character(app, campaign_id, PC).harm.get("hp", 0) > 0
     result = tools.buy_service([PC], "medical_healing")
     assert result["served"] == [PC]
@@ -302,7 +302,7 @@ def test_the_starting_pack_is_an_item_with_its_uses(client_factory):
     app, campaign_id, _ = _pcs(client_factory)
     packs = _rations(app, campaign_id)
     assert len(packs) == 1
-    assert packs[0].uses == CAIRN.food.uses
+    assert packs[0].uses == CAIRN.character.features[CAIRN.food.feature].uses
 
 
 def test_search_needs_every_word_to_match(client_factory):

@@ -134,7 +134,9 @@ STATE_INSTRUCTION = (
 NARRATE_INSTRUCTION = (
     "Narration step. Write the next beat in the present tense, as a good editor would: concise, "
     "specific, and free of filler. Aim for three to five sentences. Cut repetition and restated "
-    "detail. Base the outcome on the state changes and tool results above. Narrate what the player "
+    "detail. Base the outcome on the state changes and tool results above. Describe an item as used, "
+    "burned, or spent only when a tool result above records that use; otherwise the item is unchanged. "
+    "Narrate what the player "
     "can perceive: arrivals and departures, new or changed places, NPC speech, and roll outcomes. "
     "The queued dialogue is "
     "JSON: work each entry's dialogue value into the narration where it fits, copied exactly, and "
@@ -283,9 +285,10 @@ def create_character(
             rolled,
             submitted,
             rng if rng is not None else random.Random(),
-            food=rule_set.food,
             inventory=rule_set.inventory,
             item_sizes=rule_set.item_sizes,
+            magic=rule_set.magic,
+            currency=rule_set.marketplace.currency if rule_set.marketplace else "",
         )
 
 

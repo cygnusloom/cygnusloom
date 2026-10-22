@@ -173,10 +173,9 @@ def test_backpack_is_described_as_in_the_source():
 
 
 def test_petty_and_bulky_items_are_flagged():
-    assert SPEC.features["badge"].petty
-    assert not SPEC.features["badge"].bulky
-    assert SPEC.features["bow"].bulky
-    assert not SPEC.features["bow"].petty
+    assert SPEC.features["badge"].size == "petty"
+    assert SPEC.features["bow"].size == "bulky"
+    assert SPEC.features["torch"].size == "normal"
 
 
 def test_each_background_suggests_names_that_are_not_a_choice():

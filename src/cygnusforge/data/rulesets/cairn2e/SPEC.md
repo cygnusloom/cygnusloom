@@ -134,9 +134,16 @@ The book gives prices but no rules for most services. Decisions below come from 
 
 ## Phase 7: character creation
 
-- Background roll or choice, name list, starting items.
-- Attribute rolls: 3d6 per attribute, 1d6 HP. Max HP and max attributes follow the rules.
-- Background tables from `backgrounds.json`.
+Background tables come from `backgrounds.json`. Attributes roll 3d6 each, and HP rolls 1d6. Those rules were already in place. This phase changes what starting gear becomes.
+
+- Starting items: each item feature in the background becomes an inventory item with its real size and slots. Gold is the exception: it stays a count (see Phase 6). Spell features become spellbooks only when the rule set has magic. Otherwise they stay as features.
+- Sizes: `features.json` holds one `size` per feature (petty, normal, or bulky; default normal). Petty items take no slots and bulky items take two. Every item feature's size must exist in `inventory.json`'s `item_sizes`, which is checked when the library loads.
+- Uses: a feature may set `uses`, which becomes the item's uses and max uses. Rations, torches, and bandages have 3 uses, oil has 6, and salves have 1. Items with no use count have no uses, and `use_item` refuses them. The candle helmet has both 6 uses and armor 1. The book's text for it should be checked, since a helmet that burns candles may be meant that way.
+- Armor: a feature may set `armor`. Carried armor is summed into the character's armor when created, capped at `combat.MAX_ARMOR`. The cap is a design choice. Ten backgrounds grant armor.
+- Backpack: it is an item feature of normal size, so it takes one slot. The book's six-slot capacity is not modeled. This is an assumption, not from the book.
+- Overflow: the largest starting total is 9 slots (Outrider), under the 10-slot capacity, so starting gear never overflows.
+- Using items: `use_item(name, item)` spends one use. The last use removes the item. It refuses an item with no uses, an item not carried, and a relic (which goes through `use_relic`). Its tool text is in `tool_calls.json`.
+- Unverified: the petty and bulky flags for a few items (lockpicks, pincers, roll of tin, twin-daggers, and some petty items). Those came from a subagent's reading of the book.
 
 ## Phase 8: hirelings
 

@@ -851,6 +851,31 @@
   },
   {
     "type": "tool_call",
+    "id": "use_item",
+    "name": "use_item",
+    "python_module": "cairn2e",
+    "function": "use_item",
+    "description": "Spend one use of a consumable the character carries, such as a torch, oil, bandages, or a salve. The last use uses it up and removes it. Call this only when the character deliberately uses up that exact item (pouring the oil, applying the bandage). Never spend it for an action that uses a different item, for an attempt that fails, or for holding something in a flame that is already burning: a lit lantern or torch burns down over time, not per action. Not for relics (use use_relic), spellbooks, or gear without uses.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character or NPC."
+        },
+        "item": {
+          "type": "string",
+          "description": "The name of the consumable item."
+        }
+      },
+      "required": [
+        "name",
+        "item"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "recharge_relic",
     "name": "recharge_relic",
     "python_module": "cairn2e",
@@ -1037,7 +1062,7 @@
     "name": "drop_item",
     "python_module": "cairn2e",
     "function": "drop_item",
-    "description": "Remove an item from a character's inventory. Use it when the character drops something, or must drop an item to make room for Fatigue. Gold is not an item and cannot be dropped. Never use it to eat, drink, or spend food or another consumable: rest uses rations itself, and dropping a stack removes all of its uses.",
+    "description": "Remove an item from a character's inventory. Use it when the character drops something, or must drop an item to make room for Fatigue. Gold is not an item and cannot be dropped. Never use it to eat, drink, or spend food or another consumable: use use_item for that, and rest eats rations itself. Dropping a stack removes all of its uses.",
     "parameters": {
       "type": "object",
       "properties": {

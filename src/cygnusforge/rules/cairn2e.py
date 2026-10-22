@@ -128,6 +128,10 @@ def drop_item(name: str, item: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.drop_item(name, item)
 
 
+def use_item(name: str, item: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.use_item(name, item)
+
+
 def give_spellbook(name: str, spell: str, description: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.give_spellbook(name, spell, description)
 

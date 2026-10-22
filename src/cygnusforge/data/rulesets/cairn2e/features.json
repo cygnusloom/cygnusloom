@@ -4,18 +4,14 @@
     "id": "awl",
     "name": "Awl",
     "feature_type": "item",
-    "description": "d6",
-    "bulky": false,
-    "petty": false
+    "description": "d6"
   },
   {
     "type": "feature",
     "id": "backpack",
     "name": "Backpack",
     "feature_type": "item",
-    "description": "Can hold up to six slots of items or Fatigue.",
-    "bulky": false,
-    "petty": false
+    "description": "Can hold up to six slots of items or Fatigue."
   },
   {
     "type": "feature",
@@ -23,8 +19,7 @@
     "name": "Badge",
     "feature_type": "item",
     "description": "",
-    "bulky": false,
-    "petty": true
+    "size": "petty"
   },
   {
     "type": "feature",
@@ -32,8 +27,7 @@
     "name": "Bandages",
     "feature_type": "item",
     "description": "3 uses",
-    "bulky": false,
-    "petty": false
+    "uses": 3
   },
   {
     "type": "feature",
@@ -41,26 +35,21 @@
     "name": "Black Outfit",
     "feature_type": "item",
     "description": "",
-    "bulky": false,
-    "petty": true
+    "size": "petty"
   },
   {
     "type": "feature",
     "id": "blank-book",
     "name": "Blank Book",
     "feature_type": "item",
-    "description": "",
-    "bulky": false,
-    "petty": false
+    "description": ""
   },
   {
     "type": "feature",
     "id": "blessed-tinctures",
     "name": "Blessed Tinctures",
     "feature_type": "item",
-    "description": "",
-    "bulky": false,
-    "petty": false
+    "description": ""
   },
   {
     "type": "feature",
@@ -68,17 +57,14 @@
     "name": "Boiled Leather",
     "feature_type": "item",
     "description": "1 Armor",
-    "bulky": false,
-    "petty": false
+    "armor": 1
   },
   {
     "type": "feature",
     "id": "bonesaw",
     "name": "Bonesaw",
     "feature_type": "item",
-    "description": "d6",
-    "bulky": false,
-    "petty": false
+    "description": "d6"
   },
   {
     "type": "feature",
@@ -86,8 +72,7 @@
     "name": "Bow",
     "feature_type": "item",
     "description": "d6 damage",
-    "bulky": true,
-    "petty": false
+    "size": "bulky"
   },
   {
     "type": "feature",
@@ -95,8 +80,8 @@
     "name": "Brigandine",
     "feature_type": "item",
     "description": "1 Armor",
-    "bulky": true,
-    "petty": false
+    "armor": 1,
+    "size": "bulky"
   },
   {
     "type": "feature",
@@ -104,17 +89,15 @@
     "name": "Candle Helmet",
     "feature_type": "item",
     "description": "+1 Armor, dim, 6 uses",
-    "bulky": false,
-    "petty": false
+    "uses": 6,
+    "armor": 1
   },
   {
     "type": "feature",
     "id": "cane-sword",
     "name": "Cane Sword",
     "feature_type": "item",
-    "description": "d6",
-    "bulky": false,
-    "petty": false
+    "description": "d6"
   },
   {
     "type": "feature",
@@ -122,35 +105,28 @@
     "name": "Cart",
     "feature_type": "item",
     "description": "+4 slots",
-    "bulky": true,
-    "petty": false
+    "size": "bulky"
   },
   {
     "type": "feature",
     "id": "chains",
     "name": "Chains",
     "feature_type": "item",
-    "description": "10ft",
-    "bulky": false,
-    "petty": false
+    "description": "10ft"
   },
   {
     "type": "feature",
     "id": "compass",
     "name": "Compass",
     "feature_type": "item",
-    "description": "",
-    "bulky": false,
-    "petty": false
+    "description": ""
   },
   {
     "type": "feature",
     "id": "costume",
     "name": "Costume",
     "feature_type": "item",
-    "description": "",
-    "bulky": false,
-    "petty": false
+    "description": ""
   },
   {
     "type": "feature",
@@ -158,17 +134,14 @@
     "name": "Crossbow",
     "feature_type": "item",
     "description": "d8 damage",
-    "bulky": true,
-    "petty": false
+    "size": "bulky"
   },
   {
     "type": "feature",
     "id": "dagger",
     "name": "Dagger",
     "feature_type": "item",
-    "description": "d6",
-    "bulky": false,
-    "petty": false
+    "description": "d6"
   },
   {
     "type": "feature",
@@ -176,17 +149,14 @@
     "name": "Fancy Hat",
     "feature_type": "item",
     "description": "",
-    "bulky": false,
-    "petty": true
+    "size": "petty"
   },
   {
     "type": "feature",
     "id": "ghillie-suit",
     "name": "Ghillie Suit",
     "feature_type": "item",
-    "description": "",
-    "bulky": false,
-    "petty": false
+    "description": ""
   },
   {
     "type": "feature",
@@ -194,35 +164,28 @@
     "name": "Gloves",
     "feature_type": "item",
     "description": "",
-    "bulky": false,
-    "petty": true
+    "size": "petty"
   },
   {
     "type": "feature",
     "id": "gold",
     "name": "Gold Pieces",
     "feature_type": "item",
-    "description": "",
-    "bulky": false,
-    "petty": false
+    "description": ""
   },
   {
     "type": "feature",
     "id": "hammer",
     "name": "Hammer",
     "feature_type": "item",
-    "description": "d6",
-    "bulky": false,
-    "petty": false
+    "description": "d6"
   },
   {
     "type": "feature",
     "id": "hand-axe",
     "name": "Hand Axe",
     "feature_type": "item",
-    "description": "d6",
-    "bulky": false,
-    "petty": false
+    "description": "d6"
   },
   {
     "type": "feature",
@@ -230,8 +193,7 @@
     "name": "Healing Salve",
     "feature_type": "item",
     "description": "restore 1d4 STR, 1 use",
-    "bulky": false,
-    "petty": false
+    "uses": 1
   },
   {
     "type": "feature",
@@ -239,8 +201,7 @@
     "name": "Heartroot Salve",
     "feature_type": "item",
     "description": "restores 1d4 STR, 1 use",
-    "bulky": false,
-    "petty": false
+    "uses": 1
   },
   {
     "type": "feature",
@@ -248,8 +209,7 @@
     "name": "Heirloom Amulet",
     "feature_type": "item",
     "description": "glows in the presence of magic",
-    "bulky": false,
-    "petty": true
+    "size": "petty"
   },
   {
     "type": "feature",
@@ -257,35 +217,28 @@
     "name": "Herbs Pouch",
     "feature_type": "item",
     "description": "restore 1 STR, 3 uses",
-    "bulky": false,
-    "petty": false
+    "uses": 3
   },
   {
     "type": "feature",
     "id": "iron-dagger",
     "name": "Iron Dagger",
     "feature_type": "item",
-    "description": "d6",
-    "bulky": false,
-    "petty": false
+    "description": "d6"
   },
   {
     "type": "feature",
     "id": "iron-pot",
     "name": "Iron Pot",
     "feature_type": "item",
-    "description": "",
-    "bulky": false,
-    "petty": false
+    "description": ""
   },
   {
     "type": "feature",
     "id": "lantern",
     "name": "Lantern",
     "feature_type": "item",
-    "description": "",
-    "bulky": false,
-    "petty": false
+    "description": ""
   },
   {
     "type": "feature",
@@ -293,17 +246,14 @@
     "name": "Leather Jerkin",
     "feature_type": "item",
     "description": "1 Armor",
-    "bulky": false,
-    "petty": false
+    "armor": 1
   },
   {
     "type": "feature",
     "id": "leather-whip",
     "name": "Leather Whip",
     "feature_type": "item",
-    "description": "d6",
-    "bulky": false,
-    "petty": false
+    "description": "d6"
   },
   {
     "type": "feature",
@@ -311,17 +261,14 @@
     "name": "Leech",
     "feature_type": "item",
     "description": "restores 1 STR, 3 uses",
-    "bulky": false,
-    "petty": false
+    "uses": 3
   },
   {
     "type": "feature",
     "id": "lockpicks",
     "name": "Lockpicks",
     "feature_type": "item",
-    "description": "",
-    "bulky": false,
-    "petty": false
+    "description": ""
   },
   {
     "type": "feature",
@@ -329,8 +276,7 @@
     "name": "Long Sword",
     "feature_type": "item",
     "description": "d10",
-    "bulky": true,
-    "petty": false
+    "size": "bulky"
   },
   {
     "type": "feature",
@@ -338,35 +284,28 @@
     "name": "Lucky Jerkin",
     "feature_type": "item",
     "description": "+1 Armor",
-    "bulky": false,
-    "petty": false
+    "armor": 1
   },
   {
     "type": "feature",
     "id": "lure",
     "name": "Lure",
     "feature_type": "item",
-    "description": "",
-    "bulky": false,
-    "petty": false
+    "description": ""
   },
   {
     "type": "feature",
     "id": "metal-pail",
     "name": "Metal Pail",
     "feature_type": "item",
-    "description": "",
-    "bulky": false,
-    "petty": false
+    "description": ""
   },
   {
     "type": "feature",
     "id": "needle-knife",
     "name": "Needle-knife",
     "feature_type": "item",
-    "description": "d6",
-    "bulky": false,
-    "petty": false
+    "description": "d6"
   },
   {
     "type": "feature",
@@ -374,8 +313,7 @@
     "name": "Oil Can",
     "feature_type": "item",
     "description": "6 uses",
-    "bulky": false,
-    "petty": false
+    "uses": 6
   },
   {
     "type": "feature",
@@ -383,17 +321,14 @@
     "name": "Padded Leather",
     "feature_type": "item",
     "description": "1 Armor",
-    "bulky": false,
-    "petty": false
+    "armor": 1
   },
   {
     "type": "feature",
     "id": "pincers",
     "name": "Pincers",
     "feature_type": "item",
-    "description": "",
-    "bulky": false,
-    "petty": false
+    "description": ""
   },
   {
     "type": "feature",
@@ -401,17 +336,14 @@
     "name": "Protective Gloves",
     "feature_type": "item",
     "description": "",
-    "bulky": false,
-    "petty": true
+    "size": "petty"
   },
   {
     "type": "feature",
     "id": "quill-ink",
     "name": "Quill & Ink",
     "feature_type": "item",
-    "description": "",
-    "bulky": false,
-    "petty": false
+    "description": ""
   },
   {
     "type": "feature",
@@ -419,107 +351,84 @@
     "name": "Rations",
     "feature_type": "item",
     "description": "3 uses",
-    "bulky": false,
-    "petty": false
+    "uses": 3
   },
   {
     "type": "feature",
     "id": "repellent",
     "name": "Repellent",
     "feature_type": "item",
-    "description": "Wolfsbane, Mugwort, etc.",
-    "bulky": false,
-    "petty": false
+    "description": "Wolfsbane, Mugwort, etc."
   },
   {
     "type": "feature",
     "id": "roll-of-tin",
     "name": "Roll of Tin",
     "feature_type": "item",
-    "description": "",
-    "bulky": false,
-    "petty": false
+    "description": ""
   },
   {
     "type": "feature",
     "id": "root-knife",
     "name": "Root Knife",
     "feature_type": "item",
-    "description": "d6",
-    "bulky": false,
-    "petty": false
+    "description": "d6"
   },
   {
     "type": "feature",
     "id": "rope",
     "name": "Rope",
     "feature_type": "item",
-    "description": "25ft",
-    "bulky": false,
-    "petty": false
+    "description": "25ft"
   },
   {
     "type": "feature",
     "id": "salt-pouch",
     "name": "Salt Pouch",
     "feature_type": "item",
-    "description": "",
-    "bulky": false,
-    "petty": false
+    "description": ""
   },
   {
     "type": "feature",
     "id": "serrated-knife",
     "name": "Serrated Knife",
     "feature_type": "item",
-    "description": "d6",
-    "bulky": false,
-    "petty": false
+    "description": "d6"
   },
   {
     "type": "feature",
     "id": "sharpened-trowel",
     "name": "Sharpened Trowel",
     "feature_type": "item",
-    "description": "d6",
-    "bulky": false,
-    "petty": false
+    "description": "d6"
   },
   {
     "type": "feature",
     "id": "short-sword",
     "name": "Short Sword",
     "feature_type": "item",
-    "description": "d6",
-    "bulky": false,
-    "petty": false
+    "description": "d6"
   },
   {
     "type": "feature",
     "id": "silver-knife",
     "name": "Silver Knife",
     "feature_type": "item",
-    "description": "d6",
-    "bulky": false,
-    "petty": false
+    "description": "d6"
   },
   {
     "type": "feature",
     "id": "simple-instrument",
     "name": "Simple Instrument",
     "feature_type": "item",
-    "description": "Pipes, Lute, etc.",
-    "bulky": false,
-    "petty": false
+    "description": "Pipes, Lute, etc."
   },
   {
     "type": "feature",
     "id": "sling",
     "name": "Sling",
     "feature_type": "item",
-    "description": "d6 damage",
-    "bulky": false,
-    "petty": false
+    "description": "d6 damage"
   },
   {
     "type": "feature",
@@ -527,35 +436,28 @@
     "name": "Soporific Darts",
     "feature_type": "item",
     "description": "STR save or fall asleep, 6 uses",
-    "bulky": false,
-    "petty": false
+    "uses": 6
   },
   {
     "type": "feature",
     "id": "spellbook-thicket",
     "name": "Spellbook (Thicket)",
     "feature_type": "spell",
-    "description": "A thicket of trees and dense brush up to 50ft wide suddenly sprouts up. Wrapped in vines that must be destroyed again with each use.",
-    "bulky": false,
-    "petty": false
+    "description": "A thicket of trees and dense brush up to 50ft wide suddenly sprouts up. Wrapped in vines that must be destroyed again with each use."
   },
   {
     "type": "feature",
     "id": "spring-loaded-trap",
     "name": "Spring-Loaded trap",
     "feature_type": "item",
-    "description": "4 STR damage",
-    "bulky": false,
-    "petty": false
+    "description": "4 STR damage"
   },
   {
     "type": "feature",
     "id": "spyglass",
     "name": "Spyglass",
     "feature_type": "item",
-    "description": "",
-    "bulky": false,
-    "petty": false
+    "description": ""
   },
   {
     "type": "feature",
@@ -563,26 +465,21 @@
     "name": "Stained Medical Finery",
     "feature_type": "item",
     "description": "",
-    "bulky": false,
-    "petty": true
+    "size": "petty"
   },
   {
     "type": "feature",
     "id": "stake",
     "name": "Stake",
     "feature_type": "item",
-    "description": "d6",
-    "bulky": false,
-    "petty": false
+    "description": "d6"
   },
   {
     "type": "feature",
     "id": "tarp",
     "name": "Tarp",
     "feature_type": "item",
-    "description": "",
-    "bulky": false,
-    "petty": false
+    "description": ""
   },
   {
     "type": "feature",
@@ -590,17 +487,14 @@
     "name": "Torch",
     "feature_type": "item",
     "description": "3 uses",
-    "bulky": false,
-    "petty": false
+    "uses": 3
   },
   {
     "type": "feature",
     "id": "trick-playing-cards",
     "name": "Trick Playing Cards",
     "feature_type": "item",
-    "description": "",
-    "bulky": false,
-    "petty": false
+    "description": ""
   },
   {
     "type": "feature",
@@ -608,8 +502,7 @@
     "name": "Twin Daggers",
     "feature_type": "item",
     "description": "d6+d6",
-    "bulky": true,
-    "petty": false
+    "size": "bulky"
   },
   {
     "type": "feature",
@@ -617,8 +510,7 @@
     "name": "Twine Bauble",
     "feature_type": "item",
     "description": "Ward once per day. Ward : A silver circle 50ft across appears on the ground. Choose one species that cannot cross it.",
-    "bulky": false,
-    "petty": true
+    "size": "petty"
   },
   {
     "type": "feature",
@@ -626,16 +518,13 @@
     "name": "Vestments of the Order",
     "feature_type": "item",
     "description": "",
-    "bulky": false,
-    "petty": true
+    "size": "petty"
   },
   {
     "type": "feature",
     "id": "water-shoes",
     "name": "Water Shoes",
     "feature_type": "item",
-    "description": "",
-    "bulky": false,
-    "petty": false
+    "description": ""
   }
 ]

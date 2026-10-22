@@ -6,9 +6,10 @@ from typing import Any
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlmodel import Session
 
 from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import current
+from cygnusforge.services.events import ItemAdded, current, record
 from cygnusforge.services.world import WorldTools
 from tests.test_combat import CAIRN, PC, _character, _fight
 
@@ -28,11 +29,13 @@ def _fill(app: FastAPI, campaign_id: int, tools: WorldTools) -> list[dict[str, A
 def test_give_item_adds_a_normal_item_for_one_slot(client_factory: Callable[[], TestClient]):
     app, campaign_id, tools = _fight(client_factory)
     before = _used(app, campaign_id)
+    lanterns = len([i for i in _character(app, campaign_id, PC).items if i.name == "Lantern"])
     result = tools.give_item(PC, "Lantern")
     assert result["slots_used"] == before + 1
     assert result["capacity"] == CAPACITY
-    lantern = [i for i in _character(app, campaign_id, PC).items if i.name == "Lantern"]
-    assert [(i.size, i.slots) for i in lantern] == [("normal", 1)]
+    held = [i for i in _character(app, campaign_id, PC).items if i.name == "Lantern"]
+    assert len(held) == lanterns + 1
+    assert (held[-1].size, held[-1].slots) == ("normal", 1)
 
 
 def test_bulky_items_take_two_slots_and_petty_items_none(client_factory):
@@ -117,3 +120,62 @@ def test_a_full_night_rest_clears_fatigue(client_factory):
     tools.rest("night", reason="camp")
     kinds = [i.kind for i in _character(app, campaign_id, PC).items]
     assert "fatigue" not in kinds
+
+
+def _add_consumable(app: FastAPI, campaign_id: int, item: str, uses: int, kind: str = "") -> None:
+    with Session(app.state.engine) as db:
+        record(
+            db,
+            campaign_id,
+            ItemAdded(
+                name=PC,
+                item=item,
+                size="normal",
+                slots=1,
+                kind_of_item=kind,
+                cause="a test",
+                uses=uses,
+                max_uses=uses,
+            ),
+        )
+        db.commit()
+
+
+def test_use_item_spends_one_use_and_keeps_the_item(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _add_consumable(app, campaign_id, "Torch", 3)
+    result = tools.use_item(PC, "Torch")
+    assert result["uses_left"] == 2
+    assert result["used_up"] is False
+    torch = next(i for i in _character(app, campaign_id, PC).items if i.name == "Torch")
+    assert torch.uses == 2
+
+
+def test_use_item_on_the_last_use_removes_the_item(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _add_consumable(app, campaign_id, "Torch", 1)
+    before = _used(app, campaign_id)
+    result = tools.use_item(PC, "Torch")
+    assert result["used_up"] is True
+    assert result["slots_used"] == before - 1
+    assert "Torch" not in [i.name for i in _character(app, campaign_id, PC).items]
+
+
+def test_use_item_refuses_an_item_with_no_uses(client_factory):
+    _app, _campaign_id, tools = _fight(client_factory)
+    tools.give_item(PC, "Rope")
+    with pytest.raises(InvalidInput, match="not a consumable"):
+        tools.use_item(PC, "Rope")
+
+
+def test_use_item_refuses_an_item_not_carried(client_factory):
+    _app, _campaign_id, tools = _fight(client_factory)
+    with pytest.raises(InvalidInput, match="carries no"):
+        tools.use_item(PC, "Unicorn")
+
+
+def test_use_item_refuses_a_relic(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _add_consumable(app, campaign_id, "Sun Charm", 3, kind=CAIRN.magic.relic_kind)
+    with pytest.raises(InvalidInput, match="use_relic"):
+        tools.use_item(PC, "Sun Charm")

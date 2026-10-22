@@ -316,13 +316,11 @@ class InventoryRules:
 
 @dataclass(frozen=True)
 class FoodRules:
-    """The food a party eats on rests. A character starts with the `feature` as a pack of `uses`
-    and carries it as the item `item`, which takes `size` slots."""
+    """The food a party eats on rests. `feature` is a consumable item feature; a character starts
+    with it as an inventory item named `item`, and each night's rest spends one of its uses."""
 
     feature: str
     item: str
-    size: str
-    uses: int
 
 
 @dataclass(frozen=True)
@@ -644,6 +642,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     deprivation = _load_deprivation(definitions, template)
     inventory = _load_inventory(definitions, character, template)
     item_sizes = _load_item_sizes(definitions, template)
+    _check_item_sizes(character, item_sizes, template)
     magic = _load_magic(definitions, item_sizes, template)
     food = _load_food(definitions, rests, item_sizes, character, template)
     marketplace = _load_marketplace(definitions, item_sizes, character, template)
@@ -1084,18 +1083,22 @@ def _load_food(
     data = definition.data["food"]
     if not isinstance(data, Mapping):
         raise ContentError(f"{label} must be an object")
-    size = required_text(data, "size", label)
-    if size not in item_sizes:
-        raise ContentError(f"{label}: 'size' names no item size ({size!r})")
     feature = required_text(data, "feature", label)
     if feature not in character.features:
         raise ContentError(f"{label}: 'feature' names no character feature ({feature!r})")
-    return FoodRules(
-        feature=feature,
-        item=required_text(data, "item", label),
-        size=size,
-        uses=_whole(data, "uses", label, 1),
-    )
+    food = character.features[feature]
+    if food.feature_type != "item" or food.uses < 1:
+        raise ContentError(f"{label}: 'feature' must be a consumable item with uses ({feature!r})")
+    return FoodRules(feature=feature, item=food.name)
+
+
+def _check_item_sizes(character: CharacterSpec, item_sizes: Mapping[str, int], template: str):
+    """Every item feature must name an item size, so the engine can carry it."""
+    for feature in character.features.values():
+        if feature.feature_type == "item" and feature.size not in item_sizes:
+            raise ContentError(
+                f"{template}: feature {feature.id!r} names no item size ({feature.size!r})"
+            )
 
 
 def _load_marketplace(

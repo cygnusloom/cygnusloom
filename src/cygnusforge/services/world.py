@@ -19,6 +19,7 @@ from cygnusforge.content.character import (
     CampaignSpec,
     CharacterError,
     CharacterSpec,
+    Feature,
     Sheet,
     TableOption,
     campaign_schema,
@@ -65,6 +66,7 @@ from cygnusforge.services.events import (
     NPC_KIND,
     PC_KIND,
     ActorMoved,
+    ArmorSet,
     CampaignOptionsChosen,
     CampaignState,
     Character,
@@ -265,6 +267,17 @@ class WorldTools:
         with session_scope(self.engine) as db:
             return inventory_service.drop_item(
                 db, self.campaign_id, _required(self.inventory, "inventory"), name, item
+            )
+
+    def use_item(self, name: str, item: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return inventory_service.use_item(
+                db,
+                self.campaign_id,
+                _required(self.inventory, "inventory"),
+                name,
+                item,
+                self.magic.relic_kind if self.magic is not None else "",
             )
 
     def give_spellbook(self, name: str, spell: str, description: str) -> dict[str, Any]:
@@ -710,6 +723,26 @@ def set_campaign_options(
     return {"chosen": "campaign"}
 
 
+def _starting_item(feature: Feature, magic: MagicRules | None, item_sizes: Mapping[str, int]):
+    """The inventory item a starting feature becomes: a spellbook for a spell, else the item."""
+    if feature.feature_type == "spell":
+        assert magic is not None
+        return Item(
+            feature.name,
+            magic.spellbook_size,
+            item_sizes[magic.spellbook_size],
+            kind=magic.spellbook_kind,
+            text=feature.description,
+        )
+    return Item(
+        feature.name,
+        feature.size,
+        item_sizes[feature.size],
+        uses=feature.uses,
+        max_uses=feature.uses,
+    )
+
+
 def create_player_character(
     db: Session,
     campaign_id: int,
@@ -719,13 +752,15 @@ def create_player_character(
     rolled: Mapping[str, int],
     submitted: Mapping[str, Any],
     rng: random.Random,
-    food: FoodRules | None = None,
     inventory: InventoryRules | None = None,
     item_sizes: Mapping[str, int] | None = None,
+    magic: MagicRules | None = None,
+    currency: str = "",
 ) -> dict[str, Any]:
     """Make the player character from the player's choices. `rolled` are the stats rolled for
-    this character; the player may only keep them or swap within a swap group. The starting
-    food pack is carried as an item rather than kept as a feature count."""
+    this character; the player may only keep them or swap within a swap group. Starting item
+    features are carried as inventory items, spell features as spellbooks, and the armor they
+    give is worn. The currency stays a count."""
     state = load_state(db, campaign_id)
     if state.pc() is not None:
         raise InvalidInput("the player character already exists")
@@ -744,16 +779,32 @@ def create_player_character(
     sheet = resolve(spec, submitted, rng)
     _check_sheet_text(sheet)
     fields = _sheet_fields(sheet)
-    packs = fields["features"].pop(food.feature, 0) if food is not None else 0
+    starting = fields["features"]
+    carried: list[tuple[Feature, int]] = []
+    if inventory is not None and item_sizes is not None:
+        for feature_id in list(starting):
+            feature = spec.features[feature_id]
+            if feature_id == currency:
+                continue
+            if feature.feature_type == "item" or (
+                feature.feature_type == "spell" and magic is not None
+            ):
+                carried.append((feature, starting.pop(feature_id)))
     record(db, campaign_id, PcAdded(name=name, **fields))
-    if food is not None and inventory is not None and item_sizes is not None:
-        for _ in range(packs):
-            pack = Item(
-                food.item, food.size, item_sizes[food.size], uses=food.uses, max_uses=food.uses
-            )
+    armor = 0
+    for feature, count in carried:
+        for _ in range(count):
             inventory_service.carry_item(
-                db, campaign_id, inventory, name, pack, cause="starting pack"
+                db,
+                campaign_id,
+                inventory,
+                name,
+                _starting_item(feature, magic, item_sizes),
+                cause="starting gear",
             )
+        armor += feature.armor * count
+    if armor:
+        record(db, campaign_id, ArmorSet(name=name, armor=min(armor, combat.MAX_ARMOR)))
     record(db, campaign_id, OpeningStarted())
     db.commit()
     return {"created": "pc", "name": name, "location": None}

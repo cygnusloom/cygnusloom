@@ -18,6 +18,7 @@ from cygnusforge.services.events import (
     Item,
     ItemAdded,
     ItemRemoved,
+    ItemUsesSet,
     load_state,
     name_key,
     record,
@@ -131,6 +132,51 @@ def drop_item(
         "name": character.name,
         "item": held.name,
         "slots_used": used_slots(character) - held.slots,
+        "capacity": rules.capacity,
+    }
+
+
+def use_item(
+    db: Session,
+    campaign_id: int,
+    rules: InventoryRules,
+    name: str,
+    item: str,
+    relic_kind: str = "",
+) -> dict[str, Any]:
+    """Spend one use of a consumable the character carries. Its last use uses it up, which removes
+    it. Relics are spent with use_relic, so they are refused here."""
+    state = load_state(db, campaign_id)
+    character = character_named(state, name)
+    held = next((i for i in character.items if name_key(i.name) == name_key(item)), None)
+    if held is None:
+        raise InvalidInput(f"{character.name} carries no {item!r}")
+    if held.max_uses < 1:
+        raise InvalidInput(f"{held.name} is not a consumable and has no uses to spend")
+    if relic_kind and held.kind == relic_kind:
+        raise InvalidInput(f"{held.name} is a relic; spend it with use_relic")
+    if held.uses < 1:
+        raise InvalidInput(f"{character.name}'s {held.name} has no uses left")
+    left = held.uses - 1
+    if left > 0:
+        record(
+            db,
+            campaign_id,
+            ItemUsesSet(name=character.name, item=held.name, uses=left, cause="used"),
+        )
+    else:
+        record(
+            db,
+            campaign_id,
+            ItemRemoved(name=character.name, item=held.name, kind_of_item=held.kind),
+        )
+    db.commit()
+    return {
+        "name": character.name,
+        "item": held.name,
+        "uses_left": left,
+        "used_up": left == 0,
+        "slots_used": used_slots(character) - (held.slots if left == 0 else 0),
         "capacity": rules.capacity,
     }
 

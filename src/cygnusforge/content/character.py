@@ -45,12 +45,17 @@ class Stat:
 
 @dataclass(frozen=True)
 class Feature:
+    """A feature a character can have. An `item` is carried as an inventory item of `size`, with
+    `uses` if it is consumed and `armor` added to the character's armor while carried. A `spell`
+    is carried as a spellbook. A feature with no `uses` has none to spend."""
+
     id: str
     name: str
     feature_type: str
     description: str
-    bulky: bool
-    petty: bool
+    size: str
+    uses: int
+    armor: int
 
 
 @dataclass(frozen=True)
@@ -159,19 +164,23 @@ def _feature(definition: Definition, template: str) -> Feature:
     description = data.get("description", "")
     if not isinstance(description, str):
         raise ContentError(f"{label}: 'description' must be text")
-    bulky = data.get("bulky", False)
-    if not isinstance(bulky, bool):
-        raise ContentError(f"{label}: 'bulky' must be true or false")
-    petty = data.get("petty", False)
-    if not isinstance(petty, bool):
-        raise ContentError(f"{label}: 'petty' must be true or false")
+    size = data.get("size", "normal")
+    if not isinstance(size, str) or not size:
+        raise ContentError(f"{label}: 'size' must name an item size")
+    uses = data.get("uses", 0)
+    if isinstance(uses, bool) or not isinstance(uses, int) or uses < 0:
+        raise ContentError(f"{label}: 'uses' must be a whole number, 0 or more")
+    armor = data.get("armor", 0)
+    if isinstance(armor, bool) or not isinstance(armor, int) or armor < 0:
+        raise ContentError(f"{label}: 'armor' must be a whole number, 0 or more")
     return Feature(
         id=definition.id,
         name=required_text(data, "name", label),
         feature_type=kind,
         description=description,
-        bulky=bulky,
-        petty=petty,
+        size=size,
+        uses=uses,
+        armor=armor,
     )
 
 
