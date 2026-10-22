@@ -159,7 +159,7 @@ Source: Core Rules, "Hirelings"; Marketplace, "Hirelings (per day)". The book is
 - Two creation paths, both from the book:
   - Role path: choose a role from the Hirelings table. Roll 3d6 for each attribute and 1d6 for HP. Give equipment appropriate to the role (chosen, not rolled). Then roll the Character Traits tables.
   - Background path: choose or roll a background and a name. Roll (or choose from) its tables for Rations, Gold, Attributes, HP, and age. Starting gear comes from the background's item table, as for a PC.
-- The user's answer said "rolled starting gear for both paths". The book does not say that for the role path, so the role path follows the book. This is a decision the user should confirm.
+- Decided: the user chose station equipment from the book for role hires. The book gives no per-role gear list, only "equipment appropriate to their station," so the GM chooses it with `give_item` right after `hire_hireling`. Hireling gear is not rolled.
 - Hireling wages are charged per day from party gold by the daily clock tick.
 - When the party cannot pay, the hireling leaves if able. Otherwise it seeks the first chance to leave. The GM decides the outcome. The engine records the unpaid wage as an event.
 - Hirelings can also be paid to carry equipment. Their carry capacity counts toward the party's inventory. Confirm the exact mechanic when building it.
@@ -279,7 +279,7 @@ Phase 7 (character creation and starting gear):
 
 Phase 8 (hirelings): scope in phase 8. Includes 3d6 attributes, 1d6 HP, wages, and joining the party.
 
-- Phase 8 starting gear conflict: the user chose "rolled starting gear, as for a PC", but the book's role path says to give equipment suited to the station. Unscheduled, needs a decision.
+- Phase 8 starting gear: resolved to station equipment chosen with `give_item`. Not yet verified live; the GM must follow the instruction.
 - Hirelings get no armor or attacks: `HirelingAdded` does not carry armor or attacks, unlike `NpcAdded`. Unscheduled, needs a phase.
 - Hirelings carrying gear: the book allows hirelings to carry equipment, but carried items do not yet count toward the party's inventory. Unscheduled, needs a decision on the mechanic.
 - Hirings are not offered through the marketplace flow: the GM passes the wage by hand from the listing. Unscheduled, needs a phase.
