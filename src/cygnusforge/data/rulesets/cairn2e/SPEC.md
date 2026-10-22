@@ -125,11 +125,11 @@ The book gives prices but no rules for most services. Decisions below come from 
 - Services: `buy_service(names, service)`.
   - `room` (10 gp per night, one room for one PC) and `private_room` (35 gp, one room for up to four PCs) charge `price * ceil(n / fits)`. The first named character pays the whole bill. This is a design choice, not from the book.
   - A lodged PC is marked for the next rest. On a food rest it skips the ration and its bed is used up (`LodgingSet`).
-  - `medical_healing` (50 gp) charges `price` per patient. A patient has lost points in str, dex, or wil, and each of those is restored. HP is not restored, and a PC with no such harm is refused. Open: whether HP should also be restored.
+  - `medical_healing` (50 gp) charges `price` per patient. A patient with any harm in HP, str, dex, or wil has each of those restored. The book gives no mechanical text for healing, so this restores everything, as the Warden chose. A PC with no harm is refused.
   - `stable` is deferred until mounts are modeled, and is refused.
   - `search_marketplace` is a lookup tool. It returns up to 20 matching items, a `more` flag, and the services, and the GM uses it before quoting a price.
 - Rations: a `rations` item holds 3 uses. Starting rations from a background become one inventory item with 3 uses. A `night` or `week` rest feeds the party first (`_feed_party`): one ration use per PC that is not lodged, and an empty pack is removed. A PC with no ration and no lodging becomes Deprived, with the cause "no food". A `moments` rest uses no food.
-- Open: transport capacity bonuses (cart, wagon, horse, and mule add slots), stable and mounts, and whether medical healing should also restore HP.
+- Open: transport capacity bonuses (cart, wagon, horse, and mule add slots) and stable and mounts.
 
 ## Phase 7: character creation
 

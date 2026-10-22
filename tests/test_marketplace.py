@@ -219,6 +219,16 @@ def test_medical_healing_restores_only_the_patients_and_the_payer_pays_once(clie
     assert _gold(app, campaign_id) < 100
 
 
+def test_medical_healing_also_restores_hp(client_factory):
+    app, campaign_id, tools = _pcs(client_factory)
+    _grant_gold(app, campaign_id, 100)
+    _set_stat(app, campaign_id, PC, "hp", 1)
+    assert _character(app, campaign_id, PC).harm.get("hp", 0) > 0
+    result = tools.buy_service([PC], "medical_healing")
+    assert result["served"] == [PC]
+    assert _character(app, campaign_id, PC).harm.get("hp", 0) == 0
+
+
 def test_medical_healing_is_refused_when_nobody_named_is_hurt(client_factory):
     app, campaign_id, tools = _pcs(client_factory)
     before = _gold(app, campaign_id)

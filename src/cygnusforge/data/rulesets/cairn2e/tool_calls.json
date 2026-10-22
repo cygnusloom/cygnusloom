@@ -1009,7 +1009,7 @@
     "name": "buy_service",
     "python_module": "cairn2e",
     "function": "buy_service",
-    "description": "The named characters buy a service, such as a room for the night or medical healing. The first character named pays for the whole service. Lodging covers the party a night, and a lodged character needs no food on the next rest. Healing restores the attributes lost to harm for each named character who has lost any.",
+    "description": "The named characters buy a service, such as a room for the night or medical healing. The first character named pays for the whole service. Lodging covers the party a night, and a lodged character needs no food on the next rest. Healing restores all harm, HP and attributes, for each named character who has lost any.",
     "parameters": {
       "type": "object",
       "properties": {

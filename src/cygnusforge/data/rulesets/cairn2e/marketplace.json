@@ -840,6 +840,7 @@
     "price": 50,
     "effect": "restore",
     "restores": [
+      "hp",
       "str",
       "dex",
       "wil"
