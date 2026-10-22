@@ -46,7 +46,7 @@ def check_morale(
     target: str,
 ) -> list[dict[str, Any]]:
     """Make whatever morale checks the target's side now owes after a hit on the target. Each tag
-    is checked once per encounter. Returns the checks made, in order."""
+    is checked once per encounter, and each has its own save. Returns the checks made, in order."""
     morale = combat.morale
     if morale is None:
         return []
@@ -60,10 +60,9 @@ def check_morale(
         if character is None or character.kind != NPC_KIND:
             break
         side = encounter.sides.get(name_key(character.name), "")
-        tags = _due_tags(state, side, morale)
-        if not tags:
+        tag = _due_tag(state, side, morale)
+        if tag is None:
             break
-        tag = "+".join(tags)
         group = _side_npcs(state, side)
         living = [member for member in group if not out_of_fight(member)]
         leader = living[0]
@@ -105,30 +104,28 @@ def check_morale(
     return checks
 
 
-def _due_tags(state: CampaignState, side: str, morale: MoraleRules) -> list[str]:
-    """The morale tags the side owes now, in order. One save covers every tag due at once, so a
-    group of two losing one member makes a single check for both "first" and "half". A side with
-    no living members owes nothing."""
+def _due_tag(state: CampaignState, side: str, morale: MoraleRules) -> str | None:
+    """The morale tag the side owes now, or None. "first" is checked before "half", and each gets
+    its own save. A side with no living members owes nothing."""
     encounter = state.encounter
     assert encounter is not None
     group = _side_npcs(state, side)
     if not group or all(out_of_fight(member) for member in group):
-        return []
+        return None
     done = encounter.morale.get(side, [])
     if len(group) == 1:
         lone = group[0]
         if "first" not in done and not lone.defeated and current(lone, morale.lone_at) == 0:
-            return ["first"]
-        return []
+            return "first"
+        return None
     casualties = sum(1 for member in group if member.defeated)
     if casualties == 0:
-        return []
-    due = []
+        return None
     if morale.first_casualty and "first" not in done:
-        due.append("first")
+        return "first"
     if morale.half and "half" not in done and casualties * 2 >= len(group):
-        due.append("half")
-    return due
+        return "half"
+    return None
 
 
 def _side_npcs(state: CampaignState, side: str) -> list[Character]:

@@ -248,8 +248,9 @@ def test_resolve_attacks_rejects_a_defeated_attacker(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Ghoul", claw="1d6+1d6")
     _foe(tools, "Bo")
-    # Two of the dice are the claw, then the save for the overflow, then the morale roll.
-    _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1)
+    # Two of the dice are the claw, then the save for the overflow, then a morale roll for the
+    # first casualty and one for half the side.
+    _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1, 1)
     assert _character(app, campaign_id, "Bo").defeated is True
     with pytest.raises(InvalidInput):
         replace(tools, rng=Rolls()).resolve_attacks(PC, [{"attacker": "Bo", "attack": "Claw"}])

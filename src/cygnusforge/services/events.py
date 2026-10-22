@@ -1003,8 +1003,7 @@ class EncounterEnded(GameEvent):
 @dataclass(frozen=True)
 class MoraleChecked(GameEvent):
     """A side's WIL save for morale, made by its leader. A failed save makes the side flee.
-    `tag` is "first" for the first casualty or "half" for half the side, joined with "+" when one
-    save covers both."""
+    `tag` is "first" for the first casualty or "half" for half the side."""
 
     kind: ClassVar[str] = "morale.checked"
 
@@ -1018,11 +1017,10 @@ class MoraleChecked(GameEvent):
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         if state.encounter is not None:
-            done = state.encounter.morale.setdefault(self.side, [])
-            done.extend(self.tag.split("+"))
+            state.encounter.morale.setdefault(self.side, []).append(self.tag)
 
     def render(self) -> str:
-        label = " and ".join(MORALE_LABELS.get(part, part) for part in self.tag.split("+"))
+        label = MORALE_LABELS.get(self.tag, self.tag)
         result = "holds" if self.passed else "breaks"
         return (
             f"The {self.side} side checks morale at the {label}: {self.leader} rolls {self.roll} "

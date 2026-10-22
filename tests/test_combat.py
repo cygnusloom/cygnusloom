@@ -572,7 +572,7 @@ def test_a_failed_save_defeats_a_monster(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Ghoul", claw="1d6+1d6")
     _foe(tools, "Bo")
-    result = _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1)
+    result = _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1, 1)
     assert result["save"]["passed"] is False
     assert result["defeated"] is True
     assert _character(app, campaign_id, "Bo").defeated is True
@@ -582,7 +582,7 @@ def test_a_defeated_monster_cannot_be_hit_or_attack(client_factory):
     _, _, tools = _fight(client_factory)
     _foe(tools, "Ghoul", claw="1d6+1d6")
     _foe(tools, "Bo")
-    _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1)
+    _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1, 1)
     with pytest.raises(InvalidInput, match="Bo is dead"):
         _hit(tools, "Ghoul", "Bo", 1)
     with pytest.raises(InvalidInput, match="Bo is dead"):

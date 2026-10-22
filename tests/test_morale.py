@@ -91,14 +91,23 @@ def test_a_group_checks_at_its_first_casualty_with_the_leaders_wil(client_factor
     assert check["passed"] is save_succeeds(roll, wil)
 
 
-def test_a_group_of_two_makes_one_check_for_first_and_half_together(client_factory):
+def test_a_group_of_two_makes_a_separate_check_for_first_and_half(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _monster(tools, "Ghoul", wil=10)
     _foe(tools, "Bo")
-    result = _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1)
-    assert len(result["morale"]) == 1
-    assert result["morale"][0]["tag"] == "first+half"
+    result = _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1, 1)
+    assert [check["tag"] for check in result["morale"]] == ["first", "half"]
     assert _morale(app, campaign_id) == {FOES_SIDE: ["first", "half"]}
+
+
+def test_a_failed_first_check_makes_the_side_flee_so_no_half_check_follows(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _monster(tools, "Ghoul", wil=10)
+    _foe(tools, "Bo")
+    result = _hit(tools, "Ghoul", "Bo", 6, 5, 20, 20)
+    assert [check["tag"] for check in result["morale"]] == ["first"]
+    assert result["morale"][0]["passed"] is False
+    assert _state(app, campaign_id).encounter is None
 
 
 def test_a_group_checks_at_first_casualty_and_at_half_once_each(client_factory):
@@ -208,7 +217,7 @@ def test_a_defeated_character_shows_defeat_rather_than_fled(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Ghoul", claw="1d6+1d6")
     _foe(tools, "Bo")
-    _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1)
+    _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1, 1)
     bo = _character(app, campaign_id, "Bo")
     assert bo.defeated is True
     assert encounters._status(bo, None) != "fled"
@@ -280,11 +289,11 @@ def test_an_npc_cannot_be_asked_to_use_the_player_retreat(client_factory):
         replace(tools, rng=Rolls(1)).retreat(PC, True)
 
 
-def test_morale_checked_renders_both_tags_in_one_line():
+def test_morale_checked_renders_its_tag():
     event = MoraleChecked(
-        side=FOES_SIDE, tag="first+half", leader="Ghoul", stat="wil", roll=12, score=15, passed=True
+        side=FOES_SIDE, tag="half", leader="Ghoul", stat="wil", roll=12, score=15, passed=True
     )
     assert event.render() == (
-        "The foes side checks morale at the first casualty and half casualties: Ghoul rolls 12 "
+        "The foes side checks morale at the half casualties: Ghoul rolls 12 "
         "on a WIL save of 15 and the side holds."
     )
