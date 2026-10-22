@@ -45,6 +45,7 @@ from cygnusforge.services.campaigns import (
     rollback_to,
     send_message,
     set_campaign_model,
+    set_debug_currency,
     set_debug_invincibility,
     set_debug_stat,
     start_encounter_turn,
@@ -239,6 +240,40 @@ async def change_debug_stat(request: Request, campaign_id: int) -> Response:
         return _campaign_page(request, user, campaign_id, 400, "remaining must be a whole number")
     try:
         set_debug_stat(request.app.state.engine, user.id, campaign_id, name, stat, remaining)
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
+@router.post("/{campaign_id}/debug/gold")
+async def change_debug_gold(request: Request, campaign_id: int) -> Response:
+    settings = request.app.state.settings
+    if not settings.debug_panel:
+        raise NotFound("not found")
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    name = form_text(form, "name")
+    library = request.app.state.content
+    campaign = get_campaign(request.app.state.engine, user.id, campaign_id)
+    rule_set = library.rule_sets.get(campaign.rule_set)
+    if rule_set is None or rule_set.marketplace is None:
+        return _campaign_page(request, user, campaign_id, 400, "this rule set has no currency")
+    try:
+        amount = int(form_text(form, "amount"))
+    except ValueError:
+        return _campaign_page(request, user, campaign_id, 400, "amount must be a whole number")
+    try:
+        set_debug_currency(
+            request.app.state.engine,
+            user.id,
+            campaign_id,
+            name,
+            rule_set.marketplace.currency,
+            amount,
+        )
     except InvalidInput as exc:
         return _campaign_page(request, user, campaign_id, 400, str(exc))
     except Conflict as exc:
@@ -549,6 +584,7 @@ def _campaign_page(
         encounter=encounter,
         encounter_rows=_encounter_rows(encounter) if encounter is not None else [],
         debug_panel=settings.debug_panel,
+        debug_currency=rule_set.marketplace.currency if rule_set and rule_set.marketplace else "",
         pc_invincible=pc.invincible,
     )
 

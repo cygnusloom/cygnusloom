@@ -37,6 +37,7 @@ from cygnusforge.services.events import (
     Character,
     CharacterRecovered,
     CharacterSurrendered,
+    DebugCurrencyAdded,
     DebugStatSet,
     DetachmentResolved,
     EncounterEnded,
@@ -615,6 +616,22 @@ def set_debug_stat(
     record(db, campaign_id, DebugStatSet(name=character.name, stat=stat, remaining=value))
     db.commit()
     return {"character": character.name, "stat": stat, "remaining": value}
+
+
+def add_debug_currency(
+    db: Session, campaign_id: int, name: str, feature: str, amount: int
+) -> dict[str, Any]:
+    """Give a player character some of the rule set's currency, for testing purchases."""
+    state = load_state(db, campaign_id)
+    character = state.characters.get(name_key(name))
+    if character is None:
+        raise InvalidInput(f"there is no character named {name!r}")
+    if character.kind != PC_KIND:
+        raise InvalidInput(f"{character.name} is not a player character")
+    value = whole_number(amount, "amount", 1, 10_000)
+    record(db, campaign_id, DebugCurrencyAdded(name=character.name, feature=feature, amount=value))
+    db.commit()
+    return {"character": character.name, "feature": feature, "gained": value}
 
 
 def recover_character(

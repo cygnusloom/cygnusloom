@@ -411,6 +411,16 @@ def set_debug_stat(
         return combat.set_debug_stat(db, campaign_id, name, stat, remaining)
 
 
+def set_debug_currency(
+    engine: Engine, owner_id: int, campaign_id: int, name: str, feature: str, amount: int
+) -> dict[str, Any]:
+    """Give a player character some of the rule set's currency from the debug panel. Refused while
+    the GM is still writing a reply."""
+    get_campaign(engine, owner_id, campaign_id)
+    with _exclusive(campaign_id), session_scope(engine) as db:
+        return combat.add_debug_currency(db, campaign_id, name, feature, amount)
+
+
 @dataclass(frozen=True)
 class ChatMessage:
     """A line of the chat: the player's, or the GM's reply with the model that wrote it. `id` is

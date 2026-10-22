@@ -1502,6 +1502,26 @@ class DebugStatSet(GameEvent):
 
 
 @dataclass(frozen=True)
+class DebugCurrencyAdded(GameEvent):
+    """A debug grant of the rule set's currency, for testing purchases before the game has a way to
+    earn it. Internal, so the GM does not see it."""
+
+    kind: ClassVar[str] = "character.debug_currency_added"
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    name: str
+    feature: str
+    amount: int
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.features[self.feature] = character.features.get(self.feature, 0) + self.amount
+
+    def render(self) -> str:
+        return f"{self.name} is given {self.amount} {self.feature} from the debug panel."
+
+
+@dataclass(frozen=True)
 class EffectNoted(GameEvent):
     """A rule effect with no mechanical change, such as a location roll or a choice the GM narrates."""
 

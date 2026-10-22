@@ -116,6 +116,7 @@ Decisions (design pass):
 The book gives prices but no rules for most services. Decisions below come from the design pass and the implementation.
 
 - Gold: the currency is the `gold` feature, named by `marketplace.currency`. Backgrounds grant it (3d6). Gold is not an inventory item and takes no slots. Changes are `GoldChanged` events, clamped at 0.
+  - No play path earns gold until Phase 10 (treasure and discoveries). Until then the Debug panel's currency form gives a PC any amount, as a `DebugCurrencyAdded` event that is hidden from the GM.
 - Catalogue: `marketplace.json` holds one `shop_item` per Marketplace line, with `category`, `price`, `size` (petty, normal, or bulky), and optional `armor`, `damage`, or `uses`. Four `service` entries and twelve `hireling` entries (daily wage) are also there. Hirelings are stored but not charged until Phase 8.
 - Buying: `buy_item(name, item, price, size)`.
   - A catalogue item costs its catalogue price, and its size must match the catalogue.

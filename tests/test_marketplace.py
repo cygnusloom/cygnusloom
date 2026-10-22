@@ -7,6 +7,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from cygnusforge.config import Settings
+from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.services.combat import MAX_ARMOR
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
@@ -16,7 +18,8 @@ from cygnusforge.services.events import (
     ItemRemoved,
     record,
 )
-from tests.test_campaigns import _create_character
+from tests.conftest import csrf_token
+from tests.test_campaigns import _create_character, _debug_client_factory
 from tests.test_character_creation import _cairn_campaign, _complete_form
 from tests.test_clock_rest import _wound
 from tests.test_combat import CAIRN, PC, _character, _set_stat, _tools
@@ -313,3 +316,41 @@ def test_search_lists_services_by_name(client_factory):
     _app, _campaign_id, tools = _pcs(client_factory)
     found = tools.search_marketplace("medical")
     assert [service["service"] for service in found["services"]] == ["medical_healing"]
+
+
+def _give_debug_gold(client: TestClient, campaign_id: int, amount: str, name: str = PC):
+    token = csrf_token(client, "/campaigns")
+    return client.post(
+        f"/campaigns/{campaign_id}/debug/gold",
+        data={"csrf_token": token, "name": name, "amount": amount},
+        follow_redirects=False,
+    )
+
+
+def test_debug_gold_is_hidden_by_default(client_factory):
+    client, campaign_id = _cairn_campaign(client_factory)
+    assert _give_debug_gold(client, campaign_id, "5").status_code == 404
+
+
+def test_debug_gold_adds_the_rule_sets_currency(settings: Settings, fake: FakeProvider):
+    client, campaign_id = _cairn_campaign(_debug_client_factory(settings, fake))
+    created = _create_character(
+        client, campaign_id, name=PC, fields=_complete_form(client, campaign_id)
+    )
+    assert created.status_code == 303
+    app = client.app
+    before = _gold(app, campaign_id)
+    assert _give_debug_gold(client, campaign_id, "40").status_code == 303
+    assert _gold(app, campaign_id) == before + 40
+    assert f"Give {MARKET.currency}" in client.get(f"/campaigns/{campaign_id}").text
+
+
+def test_debug_gold_refuses_a_bad_amount(settings: Settings, fake: FakeProvider):
+    client, campaign_id = _cairn_campaign(_debug_client_factory(settings, fake))
+    created = _create_character(
+        client, campaign_id, name=PC, fields=_complete_form(client, campaign_id)
+    )
+    assert created.status_code == 303
+    assert _give_debug_gold(client, campaign_id, "lots").status_code == 400
+    assert _give_debug_gold(client, campaign_id, "0").status_code == 400
+    assert _give_debug_gold(client, campaign_id, "5", name="Nobody").status_code == 400
