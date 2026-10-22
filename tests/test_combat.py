@@ -431,8 +431,8 @@ def test_armor_that_absorbs_the_whole_hit_causes_no_harm(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Ghoul")
     _foe(tools, "Bo")
-    tools.set_armor("Bo", 6)
-    result = _hit(tools, "Ghoul", "Bo", 4)
+    tools.set_armor("Bo", 3)
+    result = _hit(tools, "Ghoul", "Bo", 3)
     assert result["harm"] == {}
     assert _character(app, campaign_id, "Bo").harm == {}
 

@@ -85,12 +85,14 @@ class PlayerInput:
     formula the GM gave in that string argument, such as "1d8+1d8". The player may also type
     free-form text instead. A roll's total is passed to the function as keyword argument `param`.
     `details`, if set, is a template filled from the arguments and shown with the prompt, such as
-    the modifiers."""
+    the modifiers. When `modifier_param` is set, the string argument it names is an attack modifier
+    (such as "impaired"); the dice then come from that modifier, not from `dice_param`."""
 
     param: str
     dice: str | None = None
     dice_param: str | None = None
     details: str | None = None
+    modifier_param: str | None = None
 
 
 @dataclass(frozen=True)
@@ -155,7 +157,8 @@ class CombatRules:
     `initiative_order(entries)`. `damage` is the order a hit's damage goes through. `check_die` is
     the die a save or initiative roll is made with, and `check_sides` its number of sides.
     `initiative_stat` is what a player character saves against to act. `defeat` says where a defeat
-    leaves a player character (`player_character`) and an NPC (`npc`)."""
+    leaves a player character (`player_character`) and an NPC (`npc`). `modifiers` maps each attack
+    modifier's name to the dice it rolls instead of the attack's own."""
 
     id: str
     module: ModuleType
@@ -164,6 +167,7 @@ class CombatRules:
     check_sides: int
     initiative_stat: str
     defeat: Mapping[str, str]
+    modifiers: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -454,7 +458,29 @@ def _load_combat(
         check_sides=int(check_die[2:]),
         initiative_stat=initiative_stat,
         defeat=defeat,
+        modifiers=_load_modifiers(data, label),
     )
+
+
+def _load_modifiers(data: Mapping[str, Any], label: str) -> dict[str, str]:
+    """The attack modifiers and the dice each rolls, such as {"impaired": "1d4"}. Optional. Names
+    are compared without regard to case; "normal" is reserved for the attack's own dice."""
+    entries = data.get("modifiers", {})
+    if not isinstance(entries, Mapping):
+        raise ContentError(f"{label}: 'modifiers' must be an object of name to dice formula")
+    modifiers: dict[str, str] = {}
+    for name, formula in entries.items():
+        key = name.strip().casefold() if isinstance(name, str) else ""
+        if not key:
+            raise ContentError(f"{label}: a modifier needs a name")
+        if key == "normal":
+            raise ContentError(f"{label}: 'normal' is reserved and cannot be a modifier")
+        if key in modifiers:
+            raise ContentError(f"{label}: modifier {name!r} is listed twice")
+        if not isinstance(formula, str) or not is_formula(formula):
+            raise ContentError(f"{label}: modifier {name!r} must be a dice formula such as '1d4'")
+        modifiers[key] = formula
+    return modifiers
 
 
 def _load_damage(
@@ -666,8 +692,17 @@ def _check_player_input(
         raise ContentError(f"{label}: 'player_input' must be an object")
     dice = data.get("dice")
     dice_param = data.get("dice_param")
+    modifier_param = data.get("modifier_param")
     if (dice is None) == (dice_param is None):
         raise ContentError(f"{label}: 'player_input' needs exactly one of 'dice' or 'dice_param'")
+    if modifier_param is not None:
+        if dice_param is None:
+            raise ContentError(f"{label}: 'player_input.modifier_param' needs 'dice_param'")
+        schema = parameters["properties"].get(modifier_param)
+        if not isinstance(schema, dict) or schema.get("type") != "string":
+            raise ContentError(
+                f"{label}: 'player_input.modifier_param' must name a string parameter"
+            )
     if dice is not None and not is_formula(dice):
         raise ContentError(f"{label}: 'player_input.dice' must be a formula such as '1d20'")
     if dice_param is not None:
@@ -694,7 +729,13 @@ def _check_player_input(
     details = _check_template(data.get("details"), "player_input.details", label)
     if details is not None:
         _check_fields(details, parameters["properties"], "player_input.details", label)
-    return PlayerInput(dice=dice, dice_param=dice_param, param=param, details=details)
+    return PlayerInput(
+        dice=dice,
+        dice_param=dice_param,
+        param=param,
+        details=details,
+        modifier_param=modifier_param,
+    )
 
 
 def _check_activity(template: object, label: str) -> str | None:

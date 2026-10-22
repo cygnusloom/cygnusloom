@@ -8,7 +8,7 @@ change, records its events, and commits."""
 from __future__ import annotations
 
 import random
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -16,6 +16,12 @@ from sqlmodel import Session
 
 from cygnusforge.content.library import CombatRules, DamageStep
 from cygnusforge.rules.dice import roll_total
+from cygnusforge.services.attacks import (
+    highest_index,
+    modifier_dice,
+    modifier_name,
+    rolls_text,
+)
 from cygnusforge.services.common import InvalidInput, bounded_text, whole_number
 from cygnusforge.services.encounters import (
     _participant,
@@ -41,6 +47,7 @@ from cygnusforge.services.events import (
 )
 
 MAX_DAMAGE = 1000
+MAX_ARMOR = 3
 MAX_RECOVERY_TEXT = 600
 
 
@@ -105,6 +112,8 @@ def _strike(
     attacker: str,
     weapon: str,
     raw: int,
+    modifier: str = "",
+    rolled: str = "",
 ) -> dict[str, Any]:
     """Apply a hit through the rule set's damage steps. A target that owes a save takes no more
     hits. An NPC saves at once; a player character saves when the player rolls."""
@@ -122,6 +131,8 @@ def _strike(
             armor=damage.absorbed,
             harm=damage.harm,
             save=damage.save,
+            modifier=modifier,
+            rolled=rolled,
         ),
     )
     db.commit()
@@ -199,6 +210,16 @@ def _no_initiative_pending(state: CampaignState) -> None:
         raise InvalidInput(f"initiative is not set yet; {waiting} must roll for it first")
 
 
+def _attack_named(source: Character, attack_name: str) -> str:
+    """The name of one of the NPC's attacks, matched without regard to case."""
+    wanted = attack_name.strip().casefold()
+    matches = [name for name in source.attacks if name.casefold() == wanted]
+    if not matches:
+        options = ", ".join(source.attacks) or "none"
+        raise InvalidInput(f"{source.name} has no attack named {attack_name!r}; attacks: {options}")
+    return matches[0]
+
+
 def attack(
     db: Session,
     campaign_id: int,
@@ -207,9 +228,11 @@ def attack(
     target: str,
     combat: CombatRules,
     rng: random.Random,
+    modifier: str = "",
 ) -> dict[str, Any]:
-    """An NPC's attack. Attacks always hit, so the attack's dice are the damage. Who acts when is
-    the turn order's job; this only checks the attacker has the attack and both are living."""
+    """An NPC's attack. Attacks always hit, so the attack's damage is the roll. A modifier rolls
+    its own dice instead of the attack's. Who acts when is the turn order's job; this only checks
+    the attacker has the attack and both are living."""
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     source = _participant(state, attacker)
@@ -218,14 +241,78 @@ def attack(
     _living(source, combat)
     struck = _participant(state, target)
     _living(struck, combat)
-    wanted = attack_name.strip().casefold()
-    matches = [name for name in source.attacks if name.casefold() == wanted]
-    if not matches:
-        options = ", ".join(source.attacks) or "none"
-        raise InvalidInput(f"{source.name} has no attack named {attack_name!r}; attacks: {options}")
-    name = matches[0]
-    raw = roll_total(source.attacks[name], rng)
-    return _strike(db, campaign_id, combat, rng, struck, source.name, name, raw)
+    name = _attack_named(source, attack_name)
+    dice = modifier_dice(combat.modifiers, modifier)
+    raw = roll_total(dice or source.attacks[name], rng)
+    return _strike(
+        db,
+        campaign_id,
+        combat,
+        rng,
+        struck,
+        source.name,
+        name,
+        raw,
+        modifier=modifier_name(modifier),
+    )
+
+
+def resolve_attacks(
+    db: Session,
+    campaign_id: int,
+    target: str,
+    attacks: Sequence[Mapping[str, Any]],
+    combat: CombatRules,
+    rng: random.Random,
+) -> dict[str, Any]:
+    """Several NPC attacks on one character, such as two NPCs of the foe side or one NPC's two
+    weapons. Every attack rolls its own dice, the highest roll is the one hit, and the rest are
+    recorded. Each attacker must be a living NPC on the foe side, and every attack is checked
+    before any die is rolled."""
+    state = load_state(db, campaign_id)
+    _no_initiative_pending(state)
+    struck = _living(_participant(state, target), combat)
+    if not attacks:
+        raise InvalidInput("list at least one attack")
+    encounter = state.encounter
+    assert encounter is not None
+    foe_side = encounter.sides.get(name_key(struck.name), "")
+    planned: list[tuple[str, str, str, str]] = []
+    for entry in attacks:
+        attacker_name = entry.get("attacker")
+        attack_name = entry.get("attack")
+        if not isinstance(attacker_name, str) or not isinstance(attack_name, str):
+            raise InvalidInput("each attack needs an attacker and an attack name")
+        source = _living(_participant(state, attacker_name), combat)
+        if source.kind != NPC_KIND:
+            raise InvalidInput(f"{source.name} is a player character; use player_attack instead")
+        if encounter.sides.get(name_key(source.name), "") == foe_side:
+            raise InvalidInput(f"{source.name} is on {struck.name}'s side and cannot attack them")
+        name = _attack_named(source, attack_name)
+        dice = modifier_dice(combat.modifiers, entry.get("modifier"))
+        planned.append(
+            (source.name, name, modifier_name(entry.get("modifier")), dice or source.attacks[name])
+        )
+    rolls = [roll_total(dice, rng) for *_, dice in planned]
+    best = highest_index(rolls)
+    attacker, weapon, modifier, _ = planned[best]
+    rolled = ""
+    if len(planned) > 1:
+        rolled = rolls_text(
+            [(who, what, mod, roll) for (who, what, mod, _), roll in zip(planned, rolls)]
+        )
+    return _strike(
+        db,
+        campaign_id,
+        combat,
+        rng,
+        struck,
+        attacker,
+        weapon,
+        rolls[best],
+        modifier=modifier,
+        rolled=rolled,
+    )
 
 
 def player_attack(
@@ -236,8 +323,10 @@ def player_attack(
     damage: int,
     combat: CombatRules,
     rng: random.Random,
+    modifier: str = "",
 ) -> dict[str, Any]:
-    """A player character's hit. The player rolls the damage; the attack always hits."""
+    """A player character's hit. The player rolls the damage, using the modifier's dice when there
+    is one; the attack always hits."""
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     pc = state.pc()
@@ -250,7 +339,11 @@ def player_attack(
     name = weapon.strip()
     if not name:
         raise InvalidInput("weapon must name the attack")
-    return _strike(db, campaign_id, combat, rng, struck, pc.name, name, raw)
+    # The modifier's dice are rolled by the player, so this only checks the modifier is known.
+    modifier_dice(combat.modifiers, modifier)
+    return _strike(
+        db, campaign_id, combat, rng, struck, pc.name, name, raw, modifier=modifier_name(modifier)
+    )
 
 
 def player_save(db: Session, campaign_id: int, roll: int, combat: CombatRules) -> dict[str, Any]:
@@ -311,7 +404,7 @@ def set_armor(db: Session, campaign_id: int, name: str, armor: int) -> dict[str,
     character = state.characters.get(name_key(name))
     if character is None:
         raise InvalidInput(f"there is no character named {name!r}")
-    value = whole_number(armor, "armor", 0, MAX_DAMAGE)
+    value = whole_number(armor, "armor", 0, MAX_ARMOR)
     record(db, campaign_id, ArmorSet(name=character.name, armor=value))
     db.commit()
     return {"character": character.name, "armor": value}

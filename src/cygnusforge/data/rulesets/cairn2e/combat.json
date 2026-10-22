@@ -15,6 +15,7 @@
     ],
     "check_die": "1d20",
     "initiative_stat": "dex",
-    "defeat": {"player_character": "in critical damage", "npc": "dead"}
+    "defeat": {"player_character": "in critical damage", "npc": "dead"},
+    "modifiers": {"impaired": "1d4", "enhanced": "1d12"}
   }
 ]

@@ -1167,6 +1167,8 @@ class Struck(GameEvent):
     armor: int
     harm: dict[str, int]
     save: str | None = None
+    modifier: str = ""
+    rolled: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
@@ -1177,10 +1179,13 @@ class Struck(GameEvent):
 
     def render(self) -> str:
         taken = sum(self.harm.values())
-        text = f"{self.attacker} strikes {self.name} with the {self.weapon} for {self.raw}"
+        weapon = f"{self.weapon} ({self.modifier})" if self.modifier else self.weapon
+        text = f"{self.attacker} strikes {self.name} with the {weapon} for {self.raw}"
         if self.armor:
             text += f", {self.armor} absorbed by armor"
         text += f"; {self.name} takes {taken} harm."
+        if self.rolled:
+            text += f" {self.rolled}"
         if self.save is not None:
             text += f" A {self.save.upper()} save is due."
         return text
