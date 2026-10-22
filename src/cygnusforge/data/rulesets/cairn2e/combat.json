@@ -24,6 +24,7 @@
       "half": true,
       "lone_at": "hp",
       "retreat_stat": "dex"
-    }
+    },
+    "modifiers": {"impaired": "1d4", "enhanced": "1d12"}
   }
 ]

@@ -13,6 +13,7 @@ from cygnusforge.content.library import CONTEXT_ARGUMENT, PROMPT_ARGUMENT, Playe
 from cygnusforge.llm.base import LLMError, ToolRequest
 from cygnusforge.rules.context import ToolContext
 from cygnusforge.rules.dice import is_formula
+from cygnusforge.services.attacks import modifier_name
 from cygnusforge.services.common import InvalidInput, NotFound
 
 logger = logging.getLogger(__name__)
@@ -90,13 +91,18 @@ async def run_tool(
     if tool.player_input is None:
         return await _call(tool, arguments, ctx)
     if answer is None:
-        dice = _dice_for(tool.player_input, arguments)
+        dice, problem = _dice_for(tool.player_input, arguments, ctx)
+        if problem is not None:
+            return ToolRun(_error(problem), None)
         if not is_formula(dice):
             return ToolRun(_error(f"{dice!r} is not a dice formula such as '1d8'"), None)
+        shown = dict(arguments)
+        if tool.player_input.dice_param:
+            shown[tool.player_input.dice_param] = dice
         return Ask(
             text=arguments[PROMPT_ARGUMENT],
             dice=dice,
-            details=_details(tool, arguments),
+            details=_details(tool, shown),
         )
     arguments.pop(PROMPT_ARGUMENT, None)
     if isinstance(answer, TextAnswer):
@@ -107,10 +113,26 @@ async def run_tool(
     return await _call(tool, arguments, ctx)
 
 
-def _dice_for(player_input: PlayerInput, arguments: Mapping[str, Any]) -> str:
+def _dice_for(
+    player_input: PlayerInput, arguments: Mapping[str, Any], ctx: ToolContext | None
+) -> tuple[str, str | None]:
+    """The dice the player rolls, and a problem if they cannot be known. An attack modifier, when
+    one is named, replaces the GM's dice with its own."""
     if player_input.dice is not None:
-        return player_input.dice
-    return str(arguments.get(player_input.dice_param, ""))
+        return player_input.dice, None
+    dice = str(arguments.get(player_input.dice_param, ""))
+    if player_input.modifier_param is None:
+        return dice, None
+    modifier = arguments.get(player_input.modifier_param)
+    if not modifier_name(modifier):
+        return dice, None
+    if ctx is None:
+        return "", "this tool cannot run without a campaign"
+    try:
+        modifier_dice = ctx.world.modifier_dice(str(modifier))
+    except InvalidInput as exc:
+        return "", str(exc)
+    return modifier_dice or dice, None
 
 
 async def _call(tool: ToolCall, arguments: dict[str, Any], ctx: ToolContext | None) -> ToolRun:

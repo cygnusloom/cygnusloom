@@ -125,6 +125,15 @@
         "target": {
           "type": "string",
           "description": "The name of the character being attacked."
+        },
+        "modifier": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "impaired",
+            "enhanced"
+          ],
+          "description": "The attack's modifier. 'normal' is the attack's own dice; 'impaired' and 'enhanced' roll different dice. Leave it out for a normal attack."
         }
       },
       "required": [
@@ -144,7 +153,8 @@
     "player_input": {
       "dice_param": "damage_dice",
       "param": "damage",
-      "details": "{weapon} against {target}: roll {damage_dice} for damage."
+      "details": "{weapon} against {target}: roll {damage_dice} for damage.",
+      "modifier_param": "modifier"
     },
     "parameters": {
       "type": "object",
@@ -164,6 +174,15 @@
         "prompt": {
           "type": "string",
           "description": "What the player is asked to do, such as 'Roll your longsword damage.'"
+        },
+        "modifier": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "impaired",
+            "enhanced"
+          ],
+          "description": "The attack's modifier. 'normal' is the attack's own dice; 'impaired' and 'enhanced' roll different dice. Leave it out for a normal attack."
         }
       },
       "required": [
@@ -241,8 +260,8 @@
         "armor": {
           "type": "integer",
           "minimum": 0,
-          "maximum": 999,
-          "description": "The new armor value. 0 means none."
+          "maximum": 3,
+          "description": "The new armor value, from 0 (none) to 3 (heaviest armor)."
         }
       },
       "required": [
@@ -278,6 +297,57 @@
         "name",
         "explanation",
         "consequence"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "resolve_attacks",
+    "name": "resolve_attacks",
+    "python_module": "cairn2e",
+    "function": "resolve_attacks",
+    "description": "Resolve several NPC attacks on one character at once, such as two foes attacking the same character or one NPC using two weapons. Each attack rolls its own dice, only the single highest roll hits, and the damage is applied once. Every attacker must be a living NPC on the side opposing the target, and the whole list is checked before any dice are rolled. Use it only when the attackers' side is acting, after the initiative is set. Player characters attack with player_attack, not this tool.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "string",
+          "description": "The name of the character being attacked."
+        },
+        "attacks": {
+          "type": "array",
+          "description": "The attacks to resolve, one entry per attack.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "attacker": {
+                "type": "string",
+                "description": "The name of the NPC attacking."
+              },
+              "attack": {
+                "type": "string",
+                "description": "The name of one of the attacker's attacks, as the statblock lists it."
+              },
+              "modifier": {
+                "type": "string",
+                "enum": [
+                  "normal",
+                  "impaired",
+                  "enhanced"
+                ],
+                "description": "The attack's modifier. 'normal' is the attack's own dice; 'impaired' and 'enhanced' roll different dice. Leave it out for a normal attack."
+              }
+            },
+            "required": [
+              "attacker",
+              "attack"
+            ]
+          }
+        }
+      },
+      "required": [
+        "target",
+        "attacks"
       ]
     }
   },

@@ -62,12 +62,20 @@ def create_monster(
     )
 
 
-def attack(attacker: str, attack: str, target: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.attack(attacker, attack, target)
+def attack(
+    attacker: str, attack: str, target: str, ctx: ToolContext, modifier: str = ""
+) -> dict[str, Any]:
+    return ctx.world.attack(attacker, attack, target, modifier)
 
 
-def player_attack(target: str, weapon: str, ctx: ToolContext, damage: int = 0) -> dict[str, Any]:
-    return ctx.world.player_attack(target, weapon, damage)
+def resolve_attacks(target: str, attacks: list[dict[str, str]], ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.resolve_attacks(target, attacks)
+
+
+def player_attack(
+    target: str, weapon: str, ctx: ToolContext, damage: int = 0, modifier: str = ""
+) -> dict[str, Any]:
+    return ctx.world.player_attack(target, weapon, damage, modifier)
 
 
 def player_save(ctx: ToolContext, roll: int = 0) -> dict[str, Any]:

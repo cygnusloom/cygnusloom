@@ -37,6 +37,7 @@ from cygnusforge.content.library import (
 )
 from cygnusforge.rules.context import brief
 from cygnusforge.rules.dice import is_formula
+from cygnusforge.services import attacks as attack_modifiers
 from cygnusforge.services import combat, encounters, morale
 from cygnusforge.services.common import (
     InvalidInput,
@@ -297,17 +298,28 @@ class WorldTools:
     def search_monster(self, query: str) -> dict[str, list[dict[str, Any]]]:
         return search_monster(self.monsters, query)
 
-    def attack(self, attacker: str, attack: str, target: str) -> dict[str, Any]:
+    def attack(self, attacker: str, attack: str, target: str, modifier: str = "") -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.attack(
-                db, self.campaign_id, attacker, attack, target, self._rules(), self.rng
+                db, self.campaign_id, attacker, attack, target, self._rules(), self.rng, modifier
             )
 
-    def player_attack(self, target: str, weapon: str, damage: int) -> dict[str, Any]:
+    def resolve_attacks(self, target: str, attacks: Sequence[Mapping[str, str]]) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return combat.resolve_attacks(
+                db, self.campaign_id, target, attacks, self._rules(), self.rng
+            )
+
+    def player_attack(
+        self, target: str, weapon: str, damage: int, modifier: str = ""
+    ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.player_attack(
-                db, self.campaign_id, target, weapon, damage, self._rules(), self.rng
+                db, self.campaign_id, target, weapon, damage, self._rules(), self.rng, modifier
             )
+
+    def modifier_dice(self, modifier: str) -> str | None:
+        return attack_modifiers.modifier_dice(self._rules().modifiers, modifier)
 
     def player_save(self, roll: int) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -638,7 +650,7 @@ def create_monster(
     else:
         raise InvalidInput("a description is needed when there is no template")
     armor_value = whole_number(
-        armor if armor is not None else (base.armor if base else 0), "armor", 0, MAX_STAT
+        armor if armor is not None else (base.armor if base else 0), "armor", 0, combat.MAX_ARMOR
     )
     attack_map = _attacks(attacks) if attacks is not None else dict(base.attacks if base else {})
     event = NpcAdded(
