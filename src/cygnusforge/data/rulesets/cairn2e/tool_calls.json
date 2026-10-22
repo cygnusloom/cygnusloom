@@ -495,6 +495,41 @@
   },
   {
     "type": "tool_call",
+    "id": "roll_tables",
+    "name": "roll_tables",
+    "python_module": "cairn2e",
+    "function": "roll_tables",
+    "description": "Roll on one or more of the Warden's dice tables and log every result. Use 'reaction' (2d6) for how an NPC or monster reacts to the party. Use 'die_of_fate' (1d6) when the outcome of an event is uncertain: 4 or more favors the PCs, 3 or less is bad luck. To create a monster, roll all eight monster_ tables (one 1d20 each) in a single call, then combine the results into a statblock and place it with create_monster. The engine does not save or place a creature from these rolls; you receive the results and decide what they mean.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "tables": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "reaction",
+              "die_of_fate",
+              "monster_appearance_physique",
+              "monster_appearance_feature",
+              "monster_traits_quirks",
+              "monster_traits_weakness",
+              "monster_attacks_type",
+              "monster_attacks_critical_damage",
+              "monster_abilities_ability",
+              "monster_abilities_target"
+            ]
+          },
+          "description": "The ids of the tables to roll on, in order. Each is rolled once."
+        }
+      },
+      "required": [
+        "tables"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "player_retreat",
     "name": "player_retreat",
     "python_module": "cairn2e",

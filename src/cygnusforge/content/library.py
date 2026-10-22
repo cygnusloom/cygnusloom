@@ -26,10 +26,12 @@ from cygnusforge.content.definitions import (
     read_definitions,
     required_text,
 )
-from cygnusforge.rules.dice import is_formula
+from cygnusforge.rules.dice import FORMULA, is_formula
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 TOOL_NAME = re.compile(r"[A-Za-z0-9_-]{1,64}")
+# A dice table row's roll: one number, or an inclusive range such as "3-5".
+ROLL_RANGE = re.compile(r"([0-9]+)(?:-([0-9]+))?")
 PROMPT_ARGUMENT = "prompt"
 # A tool flagged `character_options` gets this argument, built from the rule set's character spec.
 CHARACTER_ARGUMENT = "character"
@@ -123,6 +125,29 @@ class EncounterGrid:
     @property
     def move_cells(self) -> int:
         return self.move_feet // self.cell_feet
+
+
+@dataclass(frozen=True)
+class DiceRow:
+    """The rolls from `low` to `high`, inclusive, give `result`."""
+
+    low: int
+    high: int
+    result: str
+
+
+@dataclass(frozen=True)
+class DiceTable:
+    """A table rolled with dice, such as 2d6 for a reaction. Its rows cover every roll the dice
+    can show, from the fewest to the most."""
+
+    id: str
+    name: str
+    dice: str
+    rows: tuple[DiceRow, ...]
+
+    def row_for(self, roll: int) -> DiceRow:
+        return next(row for row in self.rows if row.low <= roll <= row.high)
 
 
 @dataclass(frozen=True)
@@ -266,6 +291,8 @@ class RuleSet:
     monsters: Mapping[str, MonsterTemplate] = field(default_factory=dict)
     # Conditions a scar or effect can give, by id. Derived conditions are included.
     conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
+    # Tables rolled with dice, by id, such as the Warden's reaction table.
+    dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -453,6 +480,9 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         if d.type == "rule" and _flag(d.data, "important", f"{template}: rule {d.id}")
     )
     tables = {d.id: _load_table(d, template) for d in definitions if d.type == "table"}
+    dice_tables = {
+        d.id: _load_dice_table(d, template) for d in definitions if d.type == "dice_table"
+    }
     for name in REQUIRED_TABLES:
         if name not in tables:
             raise ContentError(f"{template}: missing table {name!r}")
@@ -502,6 +532,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         combat=combat,
         monsters=monsters,
         conditions=conditions,
+        dice_tables=dice_tables,
     )
 
 
@@ -896,6 +927,49 @@ def _load_option(option: object, label: str) -> TableOption:
         f"{label}: every option must be non-empty text or an object with "
         "non-empty 'name' and 'description' text"
     )
+
+
+def _load_dice_table(definition: Definition, template: str) -> DiceTable:
+    """A dice table has a single dice formula and rows of `roll` ("4" or "2-3") and `result`.
+    The rows must run in order with no gaps, covering every roll the dice can show."""
+    label = f"{template}: dice table {definition.id}"
+    name = _table_label(definition, template)
+    dice = definition.data.get("dice")
+    formula = FORMULA.fullmatch(dice) if isinstance(dice, str) else None
+    if formula is None:
+        raise ContentError(f"{label}: 'dice' must be one dice formula such as '2d6'")
+    low, high = int(formula.group(1)), int(formula.group(1)) * int(formula.group(2))
+    rows = definition.data.get("rows")
+    if not isinstance(rows, list) or not rows:
+        raise ContentError(f"{label}: 'rows' must be a non-empty list")
+    loaded: list[DiceRow] = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict) or set(row) != {"roll", "result"}:
+            raise ContentError(f"{label}: row {index} needs 'roll' and 'result' and no other keys")
+        roll, result = row["roll"], row["result"]
+        bounds = ROLL_RANGE.fullmatch(roll) if isinstance(roll, str) else None
+        if bounds is None:
+            raise ContentError(
+                f"{label}: row {index} 'roll' must be a number or a range like '3-5'"
+            )
+        start = int(bounds.group(1))
+        end = int(bounds.group(2) or bounds.group(1))
+        if start > end:
+            raise ContentError(f"{label}: row {index} range {roll!r} runs backwards")
+        if not isinstance(result, str) or not result.strip():
+            raise ContentError(f"{label}: row {index} 'result' must be non-empty text")
+        loaded.append(DiceRow(start, end, result))
+    expected = low
+    for row in loaded:
+        if row.low != expected:
+            raise ContentError(
+                f"{label}: rows must run from {low} to {high} without gaps or overlaps; "
+                f"{row.low} is out of place"
+            )
+        expected = row.high + 1
+    if expected != high + 1:
+        raise ContentError(f"{label}: rows must cover every roll up to {high}")
+    return DiceTable(id=definition.id, name=name, dice=dice, rows=tuple(loaded))
 
 
 def _table_label(definition: Definition, template: str) -> str:

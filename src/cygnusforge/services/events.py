@@ -1372,6 +1372,25 @@ class DetachmentResolved(GameEvent):
 
 
 @dataclass(frozen=True)
+class TablesRolled(GameEvent):
+    """The Warden rolled on one or more dice tables. Each roll records its table, name, roll, and
+    result."""
+
+    kind: ClassVar[str] = "dice.tables_rolled"
+
+    rolls: list[dict[str, Any]]
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        return None
+
+    def render(self) -> str:
+        return " ".join(
+            f"{roll['name']}: rolls {roll['roll']} and gets {roll['result']}."
+            for roll in self.rolls
+        )
+
+
+@dataclass(frozen=True)
 class ArmorSet(GameEvent):
     kind: ClassVar[str] = "combat.armor_set"
 

@@ -812,6 +812,7 @@ def _tool_context(
             combat=rule_set.combat,
             monsters=rule_set.monsters,
             conditions=rule_set.conditions,
+            dice_tables=rule_set.dice_tables,
         ),
         speak=speak,
         ooc=ooc,

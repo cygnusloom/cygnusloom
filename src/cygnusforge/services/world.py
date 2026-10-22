@@ -31,6 +31,7 @@ from cygnusforge.content.character import (
 from cygnusforge.content.library import (
     CombatRules,
     ConditionRules,
+    DiceTable,
     EncounterGrid,
     MonsterTemplate,
     WorldTemplate,
@@ -46,6 +47,7 @@ from cygnusforge.services.common import (
     whole_number,
 )
 from cygnusforge.services.conditions import active_conditions, end_condition
+from cygnusforge.services.dice_tables import roll_tables as roll_dice_tables
 from cygnusforge.services.events import (
     CAMPAIGN_WIDE,
     NPC_KIND,
@@ -138,6 +140,11 @@ class WorldTools:
     monsters: Mapping[str, MonsterTemplate] = field(default_factory=dict)
     # The rule set's conditions by id.
     conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
+    dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
+
+    def roll_tables(self, tables: list[str]) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return roll_dice_tables(db, self.campaign_id, tables, self.dice_tables, self.rng)
 
     def create_location(
         self,

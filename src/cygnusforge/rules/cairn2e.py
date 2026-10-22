@@ -82,6 +82,10 @@ def resolve_detachment(name: str, outcome: str, ctx: ToolContext) -> dict[str, A
     return ctx.world.resolve_detachment(name, outcome)
 
 
+def roll_tables(tables: list[str], ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.roll_tables(tables)
+
+
 def player_save(ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
     return ctx.world.player_save(roll)
 
