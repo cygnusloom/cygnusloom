@@ -437,6 +437,8 @@ def end_turn(db: Session, campaign_id: int, name: str, by_player: bool) -> dict[
 def _status(character: Character, combat: CombatRules | None) -> str:
     if character.defeated:
         return defeat_status(character, combat.defeat if combat else {})
+    if character.fled:
+        return "fled"
     if character.save_due is not None:
         return f"{character.save_due} save due"
     return ""
@@ -477,6 +479,7 @@ def encounter_view(
                 "side": encounter.sides.get(name_key(character.name), ""),
                 "initiative": encounter.initiative.get(name_key(character.name)),
                 "defeated": character.defeated,
+                "fled": character.fled,
                 "status": _status(character, combat),
             }
         )

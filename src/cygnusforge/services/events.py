@@ -115,6 +115,8 @@ class Character:
     # The ids of the conditions the character has, and the names of their scars, in the order gained.
     conditions: list[str] = field(default_factory=list)
     scars: list[str] = field(default_factory=list)
+    # Ran from the fight, or broke and fled. Cleared when the encounter ends.
+    fled: bool = False
 
 
 def current(character: Character, stat: str) -> int:
@@ -127,6 +129,11 @@ def defeat_status(character: Character, defeat: Mapping[str, str]) -> str:
     and `npc` to a label. A character with no label in `defeat` reads as just defeated."""
     key = "player_character" if character.kind == PC_KIND else "npc"
     return defeat.get(key, "defeated")
+
+
+def out_of_fight(character: Character) -> bool:
+    """Whether a character can no longer act in the encounter: defeated, or fled."""
+    return character.defeated or character.fled
 
 
 @dataclass(frozen=True)
@@ -204,6 +211,8 @@ class Encounter:
     settled: bool = False
     # Initiative rolls that passed, by name_key. A player character missing here has not rolled.
     initiative: dict[str, bool] = field(default_factory=dict)
+    # Morale checks each side has made, as tags: "first" at the first casualty, "half" at half.
+    morale: dict[str, list[str]] = field(default_factory=dict)
 
 
 @dataclass
@@ -239,6 +248,7 @@ def name_key(name: str) -> str:
 
 PARTY_SIDE = "party"
 FOES_SIDE = "foes"
+MORALE_LABELS = {"first": "first casualty", "half": "half casualties"}
 
 
 def _side_key(encounter: Encounter, name: str) -> str:
@@ -271,10 +281,10 @@ def _next_round(encounter: Encounter) -> None:
 
 
 def _skip_defeated(encounter: Encounter, state: CampaignState) -> None:
-    """Pass the turn over defeated participants. It stays put when everyone is defeated."""
-    if all(state.characters[name_key(name)].defeated for name in encounter.order):
+    """Pass the turn over participants who are out of the fight. It stays put when everyone is."""
+    if all(out_of_fight(state.characters[name_key(name)]) for name in encounter.order):
         return
-    while state.characters[name_key(encounter.order[encounter.up])].defeated:
+    while out_of_fight(state.characters[name_key(encounter.order[encounter.up])]):
         encounter.up += 1
         if encounter.up >= len(encounter.order):
             _next_round(encounter)
@@ -973,12 +983,85 @@ class EncounterEnded(GameEvent):
     reason: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
+        for character in state.characters.values():
+            character.fled = False
         state.encounter = None
 
     def render(self) -> str:
         if self.reason:
             return f"{self.reason} The encounter is over."
         return "The encounter is over."
+
+
+@dataclass(frozen=True)
+class MoraleChecked(GameEvent):
+    """A side's WIL save for morale, made by its leader. A failed save makes the side flee.
+    `tag` is "first" for the first casualty or "half" for half the side, joined with "+" when one
+    save covers both."""
+
+    kind: ClassVar[str] = "morale.checked"
+
+    side: str
+    tag: str
+    leader: str
+    stat: str
+    roll: int
+    score: int
+    passed: bool
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        if state.encounter is not None:
+            done = state.encounter.morale.setdefault(self.side, [])
+            done.extend(self.tag.split("+"))
+
+    def render(self) -> str:
+        label = " and ".join(MORALE_LABELS.get(part, part) for part in self.tag.split("+"))
+        result = "holds" if self.passed else "breaks"
+        return (
+            f"The {self.side} side checks morale at the {label}: {self.leader} rolls {self.roll} "
+            f"on a {self.stat.upper()} save of {self.score} and the side {result}."
+        )
+
+
+@dataclass(frozen=True)
+class CharacterFled(GameEvent):
+    """A character has left the fight. `reason` is "morale" or "retreat"."""
+
+    kind: ClassVar[str] = "character.fled"
+
+    name: str
+    reason: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].fled = True
+
+    def render(self) -> str:
+        if self.reason == "morale":
+            return f"{self.name} breaks and flees."
+        return f"{self.name} gets clear of the fight."
+
+
+@dataclass(frozen=True)
+class RetreatRolled(GameEvent):
+    """A DEX save to run from the fight. Unlike SaveRolled, a failure does not defeat anyone; the
+    character just stays in the fight."""
+
+    kind: ClassVar[str] = "retreat.rolled"
+
+    name: str
+    stat: str
+    roll: int
+    score: int
+    passed: bool
+
+    def render(self) -> str:
+        if self.passed:
+            outcome = "and gets clear."
+        else:
+            outcome = "and cannot get clear."
+        return (
+            f"{self.name} rolls {self.roll} on a {self.stat.upper()} save of {self.score} {outcome}"
+        )
 
 
 @dataclass(frozen=True)

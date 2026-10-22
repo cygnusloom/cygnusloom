@@ -96,3 +96,11 @@ def harm_character(
 
 def end_condition(name: str, condition: str, how: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.end_condition(name, condition, how)
+
+
+def retreat(name: str, safe: bool, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.retreat(name, safe)
+
+
+def player_retreat(safe: bool, ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
+    return ctx.world.player_retreat(safe, roll)

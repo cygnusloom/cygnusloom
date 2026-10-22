@@ -202,12 +202,27 @@ class ScarTable:
 
 
 @dataclass(frozen=True)
+class MoraleRules:
+    """When a side of NPCs must make a morale save and what it is made with. `wil_stat` is the
+    leader's stat the save uses. `first_casualty` and `half` say whether a side checks at its first
+    casualty and at half its number. `lone_at` is the stat a lone foe checks at when it reaches 0.
+    `retreat_stat` is the stat a character saves against to run from a fight."""
+
+    wil_stat: str
+    first_casualty: bool
+    half: bool
+    lone_at: str
+    retreat_stat: str
+
+
+@dataclass(frozen=True)
 class CombatRules:
     """How a rule set resolves combat. `module` supplies `save_succeeds(roll, score)` and
     `initiative_order(entries)`. `damage` is the order a hit's damage goes through. `check_die` is
     the die a save or initiative roll is made with, and `check_sides` its number of sides.
     `initiative_stat` is what a player character saves against to act. `defeat` says where a defeat
-    leaves a player character (`player_character`) and an NPC (`npc`)."""
+    leaves a player character (`player_character`) and an NPC (`npc`). `morale` is None when the
+    rule set has no morale checks."""
 
     id: str
     module: ModuleType
@@ -220,6 +235,7 @@ class CombatRules:
     scar_table: ScarTable | None = None
     # The stats outside combat harm can take, such as strength, dexterity, and willpower.
     outside_harm: tuple[str, ...] = ()
+    morale: MoraleRules | None = None
 
 
 @dataclass(frozen=True)
@@ -526,6 +542,38 @@ def _load_combat(
         defeat=defeat,
         scar_table=scar_table,
         outside_harm=outside_harm,
+        morale=_load_morale(data, character, label),
+    )
+
+
+def _load_morale(
+    data: Mapping[str, Any], character: CharacterSpec, label: str
+) -> MoraleRules | None:
+    morale_data = data.get("morale")
+    if morale_data is None:
+        return None
+    if not isinstance(morale_data, Mapping):
+        raise ContentError(f"{label}: 'morale' must be an object")
+    morale_label = f"{label}: morale"
+    stats = {
+        key: required_text(morale_data, key, morale_label)
+        for key in ("wil_stat", "lone_at", "retreat_stat")
+    }
+    for key, stat in stats.items():
+        if stat not in character.stats:
+            raise ContentError(f"{morale_label}: {key!r} names no stat ({stat!r})")
+    flags = {}
+    for key in ("first_casualty", "half"):
+        value = morale_data.get(key)
+        if not isinstance(value, bool):
+            raise ContentError(f"{morale_label}: {key!r} must be true or false")
+        flags[key] = value
+    return MoraleRules(
+        wil_stat=stats["wil_stat"],
+        first_casualty=flags["first_casualty"],
+        half=flags["half"],
+        lone_at=stats["lone_at"],
+        retreat_stat=stats["retreat_stat"],
     )
 
 

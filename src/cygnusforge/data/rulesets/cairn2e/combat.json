@@ -17,6 +17,13 @@
     "initiative_stat": "dex",
     "defeat": {"player_character": "in critical damage", "npc": "dead"},
     "scars": {"table": "scars", "stat": "hp"},
-    "outside_harm": ["str", "dex", "wil"]
+    "outside_harm": ["str", "dex", "wil"],
+    "morale": {
+      "wil_stat": "wil",
+      "first_casualty": true,
+      "half": true,
+      "lone_at": "hp",
+      "retreat_stat": "dex"
+    }
   }
 ]

@@ -39,6 +39,7 @@ from cygnusforge.services.events import (
     defeat_status,
     load_state,
     name_key,
+    out_of_fight,
     record,
 )
 from cygnusforge.services.scars import EffectContext, gain_scar
@@ -92,6 +93,8 @@ def apply_damage(
 def _living(character: Character, combat: CombatRules) -> Character:
     if character.defeated:
         raise InvalidInput(f"{character.name} is {defeat_status(character, combat.defeat)}")
+    if character.fled:
+        raise InvalidInput(f"{character.name} has fled the fight")
     return character
 
 
@@ -106,7 +109,8 @@ def _strike(
     raw: int,
 ) -> dict[str, Any]:
     """Apply a hit through the rule set's damage steps. A target that owes a save takes no more
-    hits. An NPC saves at once; a player character saves when the player rolls."""
+    hits. An NPC saves at once; a player character saves when the player rolls. A hit on an NPC
+    may also bring its side's morale check."""
     if target.save_due is not None:
         raise InvalidInput(f"{target.name} must make their {target.save_due} save first")
     damage = apply_damage(combat.damage, target.armor, lambda stat: current(target, stat), raw)
@@ -138,6 +142,13 @@ def _strike(
         state = load_state(db, campaign_id)
         character = state.characters[name_key(target.name)]
         result["save"] = _save(db, campaign_id, combat, rng, character, damage.save)
+    if target.kind == NPC_KIND and combat.morale is not None:
+        # morale imports this module for the shared helpers, so it is imported here to avoid a cycle.
+        from cygnusforge.services.morale import check_morale
+
+        checks = check_morale(db, campaign_id, combat, rng, target.name)
+        if checks:
+            result["morale"] = checks
     result["defeated"] = load_state(db, campaign_id).characters[name_key(target.name)].defeated
     _end_if_one_side_left(db, campaign_id)
     return result
@@ -182,7 +193,9 @@ def _end_if_one_side_left(db: Session, campaign_id: int) -> None:
         sides.setdefault(side, []).append(character)
     if len(sides) < 2:
         return
-    standing = [side for side, members in sides.items() if any(not m.defeated for m in members)]
+    standing = [
+        side for side, members in sides.items() if any(not out_of_fight(m) for m in members)
+    ]
     if len(standing) > 1:
         return
     if standing:
