@@ -45,6 +45,7 @@ from cygnusforge.services.campaigns import (
     rollback_to,
     send_message,
     set_campaign_model,
+    set_debug_invincibility,
     start_encounter_turn,
     stream_message,
 )
@@ -195,6 +196,25 @@ async def change_model(request: Request, campaign_id: int) -> Response:
         set_campaign_model(
             request.app.state.engine, settings.llm_models, user.id, campaign_id, model
         )
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
+@router.post("/{campaign_id}/debug/invincibility")
+async def change_debug_invincibility(request: Request, campaign_id: int) -> Response:
+    settings = request.app.state.settings
+    if not settings.debug_panel:
+        raise NotFound("not found")
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    name = form_text(form, "name")
+    active = form_text(form, "active") == "1"
+    try:
+        set_debug_invincibility(request.app.state.engine, user.id, campaign_id, name, active)
     except InvalidInput as exc:
         return _campaign_page(request, user, campaign_id, 400, str(exc))
     except Conflict as exc:
@@ -504,6 +524,8 @@ def _campaign_page(
         models=settings.llm_models,
         encounter=encounter,
         encounter_rows=_encounter_rows(encounter) if encounter is not None else [],
+        debug_panel=settings.debug_panel,
+        pc_invincible=pc.invincible,
     )
 
 

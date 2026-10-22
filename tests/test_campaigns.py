@@ -2,17 +2,19 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from dataclasses import replace
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from cygnusforge.config import Settings
 from cygnusforge.llm.base import ChatReply, LLMError
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.services import world
 from cygnusforge.services.campaigns import NARRATE_INSTRUCTION
 from cygnusforge.services.events import Turn, load_state
-from tests.conftest import csrf_token, register
+from tests.conftest import csrf_token, make_app, register
 
 
 def _signed_in(client_factory: Callable[[], TestClient], email: str = "ada@example.com"):
@@ -88,6 +90,20 @@ def _set_model(client: TestClient, campaign_id: int, model: str):
         data={"csrf_token": token, "model": model},
         follow_redirects=False,
     )
+
+
+def _set_invincibility(client: TestClient, campaign_id: int, name: str, active: bool):
+    token = csrf_token(client, "/campaigns")
+    return client.post(
+        f"/campaigns/{campaign_id}/debug/invincibility",
+        data={"csrf_token": token, "name": name, "active": "1" if active else "0"},
+        follow_redirects=False,
+    )
+
+
+def _debug_client_factory(settings: Settings, fake: FakeProvider) -> Callable[[], TestClient]:
+    app = make_app(replace(settings, debug_panel=True), fake_provider=fake)
+    return lambda: TestClient(app)
 
 
 def _answer(client: TestClient, campaign_id: int, kind: str, content: str = "") -> list[dict]:
@@ -351,3 +367,27 @@ def test_campaign_page_has_sidebar_controls(client_factory: Callable[[], TestCli
     assert '<dialog id="dialog-characters"' in page
     assert 'data-drawer-target="drawer-notes"' in page
     assert '<aside class="drawer" id="drawer-notes"' in page
+
+
+def test_debug_panel_is_hidden_and_refused_by_default(client_factory):
+    client, campaign_id = _campaign_id(client_factory)
+    assert 'id="tab-debug"' not in client.get(f"/campaigns/{campaign_id}").text
+    assert _set_invincibility(client, campaign_id, "Ada", True).status_code == 404
+
+
+def test_debug_panel_turns_invincibility_on_and_off(settings: Settings, fake: FakeProvider):
+    client, campaign_id = _campaign_id(_debug_client_factory(settings, fake))
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert 'id="tab-debug"' in page
+    assert "Make invincible" in page
+    assert _set_invincibility(client, campaign_id, "Ada", True).status_code == 303
+    assert "Stop invincibility" in client.get(f"/campaigns/{campaign_id}").text
+    assert _set_invincibility(client, campaign_id, "Ada", False).status_code == 303
+    assert "Make invincible" in client.get(f"/campaigns/{campaign_id}").text
+
+
+def test_debug_panel_refuses_a_name_that_is_not_a_player_character(
+    settings: Settings, fake: FakeProvider
+):
+    client, campaign_id = _campaign_id(_debug_client_factory(settings, fake))
+    assert _set_invincibility(client, campaign_id, "Nobody", True).status_code == 400

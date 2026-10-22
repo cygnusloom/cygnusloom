@@ -19,7 +19,7 @@ from cygnusforge.rules import cairn2e
 from cygnusforge.rules.cairn2e import save_succeeds
 from cygnusforge.rules.context import ToolContext
 from cygnusforge.services import encounters
-from cygnusforge.services.combat import Damage, apply_damage
+from cygnusforge.services.combat import Damage, apply_damage, player_save, set_invincibility
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
     NPC_KIND,
@@ -452,6 +452,66 @@ def test_armor_that_absorbs_the_whole_hit_causes_no_harm(client_factory):
     result = _hit(tools, "Ghoul", "Bo", 3)
     assert result["harm"] == {}
     assert _character(app, campaign_id, "Bo").harm == {}
+
+
+def _set_invincible(app: FastAPI, campaign_id: int, name: str, active: bool) -> dict[str, Any]:
+    with _db(app) as db:
+        return set_invincibility(db, campaign_id, name, active)
+
+
+def test_an_invincible_character_takes_no_harm_from_a_strike(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, "Ghoul", claw="1d6+1d6+1d6+1d6")
+    _set_invincible(app, campaign_id, PC, True)
+    result = _hit(tools, "Ghoul", PC, 6, 6, 6, 6)
+    assert result["armor"] == 24
+    assert result["harm"] == {}
+    assert result["save_due"] is None
+    assert result["defeated"] is False
+    pc = _character(app, campaign_id, PC)
+    assert pc.harm == {}
+    assert pc.save_due is None
+    assert pc.defeated is False
+
+
+def test_an_invincible_character_takes_no_outside_harm(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _set_invincible(app, campaign_id, PC, True)
+    result = tools.harm_character(PC, "str", 5, "a fall")
+    assert result["taken"] == 0
+    assert _character(app, campaign_id, PC).harm == {}
+
+
+def test_turning_invincibility_off_restores_harm(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, "Ghoul")
+    _set_invincible(app, campaign_id, PC, True)
+    _hit(tools, "Ghoul", PC, 6)
+    assert _character(app, campaign_id, PC).harm == {}
+    _set_invincible(app, campaign_id, PC, False)
+    result = _hit(tools, "Ghoul", PC, 6)
+    assert result["harm"]
+    assert _character(app, campaign_id, PC).harm == result["harm"]
+
+
+def test_turning_invincibility_on_clears_a_pending_save(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, "Ghoul", claw="1d6+1d6+1d6+1d6")
+    _hit(tools, "Ghoul", PC, 6, 6, 6, 6)
+    assert _character(app, campaign_id, PC).save_due is not None
+    _set_invincible(app, campaign_id, PC, True)
+    assert _character(app, campaign_id, PC).save_due is None
+    with _db(app) as db, pytest.raises(InvalidInput, match="no player character owes a save"):
+        player_save(db, campaign_id, 1, CAIRN.combat)
+
+
+def test_invincibility_is_only_for_known_player_characters(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, "Ghoul")
+    with pytest.raises(InvalidInput, match="not a player character"):
+        _set_invincible(app, campaign_id, "Ghoul", True)
+    with pytest.raises(InvalidInput, match="no character named"):
+        _set_invincible(app, campaign_id, "Nobody", True)
 
 
 def test_overflow_comes_off_strength_and_a_passed_save_keeps_the_monster_standing(client_factory):

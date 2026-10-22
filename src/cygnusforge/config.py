@@ -23,6 +23,7 @@ class Settings:
     log_level: str = "INFO"
     llm_context_tokens: int = DEFAULT_CONTEXT_TOKENS
     test_login: bool = False
+    debug_panel: bool = False
 
 
 def _csv(value: str) -> tuple[str, ...]:
@@ -70,4 +71,5 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         log_level=log_level,
         llm_context_tokens=context_tokens,
         test_login=env.get("CYGNUSFORGE_TEST_LOGIN", "").strip().lower() in _TRUE_VALUES,
+        debug_panel=env.get("CYGNUSFORGE_DEBUG_PANEL", "").strip().lower() in _TRUE_VALUES,
     )

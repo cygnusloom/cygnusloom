@@ -119,6 +119,8 @@ class Character:
     fled: bool = False
     # Gave up the fight and laid down arms. Cleared when the encounter ends.
     surrendered: bool = False
+    # A debug buff: no harm reaches the character. Set from the debug panel.
+    invincible: bool = False
 
 
 def current(character: Character, stat: str) -> int:
@@ -1340,6 +1342,27 @@ class ArmorSet(GameEvent):
 
     def render(self) -> str:
         return f"{self.name}'s armor is now {self.armor}."
+
+
+@dataclass(frozen=True)
+class InvincibilitySet(GameEvent):
+    """A debug buff on a player character. While it holds, no harm reaches the character. Turning
+    it on cancels a save the character owes, since no harm can make it due."""
+
+    kind: ClassVar[str] = "combat.invincibility_set"
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    name: str
+    active: bool
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.invincible = self.active
+        if self.active:
+            character.save_due = None
+
+    def render(self) -> str:
+        return f"{self.name} is {'invincible' if self.active else 'no longer invincible'}."
 
 
 @dataclass(frozen=True)

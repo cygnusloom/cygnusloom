@@ -26,7 +26,7 @@ from cygnusforge.llm.base import (
 from cygnusforge.llm.registry import ProviderFactory
 from cygnusforge.rules.context import ToolContext, brief
 from cygnusforge.rules.dice import roll_total
-from cygnusforge.services import encounters
+from cygnusforge.services import combat, encounters
 from cygnusforge.services.common import Conflict, InvalidInput, NotFound, session_scope
 from cygnusforge.services.events import (
     CHARS_PER_TOKEN,
@@ -364,6 +364,16 @@ class CampaignWorld:
 def campaign_world(engine: Engine, owner_id: int, campaign_id: int) -> CampaignWorld:
     get_campaign(engine, owner_id, campaign_id)
     return CampaignWorld(state=_state(engine, campaign_id))
+
+
+def set_debug_invincibility(
+    engine: Engine, owner_id: int, campaign_id: int, name: str, active: bool
+) -> dict[str, Any]:
+    """Turn the debug invincibility buff on or off for a player character. Refused while the GM
+    is still writing a reply."""
+    get_campaign(engine, owner_id, campaign_id)
+    with _exclusive(campaign_id), session_scope(engine) as db:
+        return combat.set_invincibility(db, campaign_id, name, active)
 
 
 @dataclass(frozen=True)

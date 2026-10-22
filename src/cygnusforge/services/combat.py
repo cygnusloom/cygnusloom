@@ -40,6 +40,7 @@ from cygnusforge.services.events import (
     EncounterEnded,
     Harmed,
     InitiativeRolled,
+    InvincibilitySet,
     SaveRolled,
     Struck,
     current,
@@ -126,6 +127,9 @@ def _strike(
     if target.save_due is not None:
         raise InvalidInput(f"{target.name} must make their {target.save_due} save first")
     damage = apply_damage(combat.damage, target.armor, lambda stat: current(target, stat), raw)
+    if target.invincible:
+        # The whole hit is absorbed, so the log reads as a blow turned aside rather than a miss.
+        damage = Damage(absorbed=raw, harm={}, save=None)
     record(
         db,
         campaign_id,
@@ -470,6 +474,19 @@ def set_armor(db: Session, campaign_id: int, name: str, armor: int) -> dict[str,
     return {"character": character.name, "armor": value}
 
 
+def set_invincibility(db: Session, campaign_id: int, name: str, active: bool) -> dict[str, Any]:
+    """Turn the debug invincibility buff on or off for a player character."""
+    state = load_state(db, campaign_id)
+    character = state.characters.get(name_key(name))
+    if character is None:
+        raise InvalidInput(f"there is no character named {name!r}")
+    if character.kind != PC_KIND:
+        raise InvalidInput(f"{character.name} is not a player character")
+    record(db, campaign_id, InvincibilitySet(name=character.name, active=active))
+    db.commit()
+    return {"character": character.name, "invincible": active}
+
+
 def recover_character(
     db: Session,
     campaign_id: int,
@@ -522,6 +539,14 @@ def harm_character(
         raise InvalidInput(f"harm outside combat can only take {options}, not {stat!r}")
     value = whole_number(amount, "amount", 1, MAX_DAMAGE)
     before = current(character, stat)
+    if character.invincible:
+        return {
+            "character": character.name,
+            "stat": stat,
+            "taken": 0,
+            "current": before,
+            "defeated": False,
+        }
     if before == 0:
         raise InvalidInput(f"{character.name} has no {stat.upper()} left to lose")
     taken = min(value, before)
