@@ -83,13 +83,19 @@ Acceptance:
 - Creating monsters: d20 tables for Appearance, Traits (Quirks, Weakness), Attacks (Type, Critical Damage), and Abilities (Ability, Target). The GM calls `roll_tables` with all eight, then combines the results into one creature with `create_monster`.
 - Engine: a generic `dice_table` definition (dice formula plus contiguous rows) in `warden_tables.json`, and one generic `roll_tables` tool that rolls any number of them. It logs a `dice.tables_rolled` event. The GM decides when to call it. The tool returns the results and does not save or place a creature. Only the ruleset holds Cairn data.
 
-## Phase 4: deprivation and fatigue
+## Phase 4: deprivation, fatigue, rest, and inventory
 
-- A PC lacking food or rest is Deprived. Deprived for more than a day adds Fatigue, one per day.
-- A deprived PC cannot recover HP, attributes, or item slots from Fatigue.
-- Fatigue takes one inventory slot each and lasts until a full night's rest in a safe spot.
-- Inventory: ten slots. Four or five items are comfortable. Bulky items take two slots. Petty items take none. A full inventory (10 slots) reduces the character to 0 HP.
-- If there is no free slot for Fatigue, the character must drop an item.
+Generic engine mechanics, parameterized by the ruleset's JSON. Cairn numbers live only in `cairn2e/`.
+
+- Clock: the campaign has a day counter and a part of the day. Parts come from the ruleset (`clock`: morning, afternoon, evening, night). Time moves only through tools: `advance_time` and `rest`. A new day's result lists discovered places not visited for `stale_days` (ruleset, 5), so the Warden updates them.
+- Rest: the GM calls `rest(length, interrupted, reason)` when the party rests. Lengths come from the ruleset (`rest`): `moments` (one part, restores HP), `night` (until morning, full rest, clears Fatigue), `week` (seven days, full rest, restores attribute loss and clears Fatigue). An interrupted rest counts as `moments`: one part, not full. Resting is not only sleeping; the GM picks the length and whether it is interrupted.
+- Recovery: a PC that is not Deprived recovers per the rest length. A deprived PC recovers nothing (HP, attributes, or Fatigue).
+- Deprivation: `set_deprivation(name, deprived, cause)`. The GM decides using `rest_history`, which lists each PC's last full rest and recent rests. Deprived for more than one day (ruleset `after_days`) adds one Fatigue per day, applied by the engine as each day begins.
+- Fatigue: an inventory item of kind `fatigue` (ruleset `fatigue_item`). `add_fatigue(name, cause, force)` covers events in the fiction, such as spells. A deprived character is refused unless `force` is set, because the engine adds deprivation Fatigue each day.
+- Inventory: ten slots (ruleset `capacity`). Item sizes are ruleset definitions: petty (0 slots), normal (1), bulky (2). `give_item` and `drop_item` change items; the GM names and sizes new items.
+- No free slot for Fatigue: the Fatigue is still recorded, and the character reads as over capacity until the GM calls `drop_item`.
+- Full inventory: when an item makes the inventory full, the character's HP (ruleset `full.stat`) drops to 0 once. No overflow and no save; healing is needed to recover it.
+- Events: `ClockAdvanced`, `RestTaken`, `RestRecovered`, `DeprivationSet`, `ItemAdded`, `ItemRemoved`, `CharacterDrained`. Engine logic is in `services/clock.py`, `services/needs.py`, and `services/inventory.py`.
 
 ## Phase 5: magic
 

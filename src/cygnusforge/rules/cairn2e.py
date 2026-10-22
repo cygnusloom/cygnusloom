@@ -86,6 +86,34 @@ def roll_tables(tables: list[str], ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.roll_tables(tables)
 
 
+def advance_time(ctx: ToolContext, days: int = 0, parts: int = 0) -> dict[str, Any]:
+    return ctx.world.advance_time(days=days, parts=parts)
+
+
+def rest(length: str, reason: str, ctx: ToolContext, interrupted: bool = False) -> dict[str, Any]:
+    return ctx.world.rest(length, interrupted=interrupted, reason=reason)
+
+
+def rest_history(ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.rest_history()
+
+
+def set_deprivation(name: str, deprived: bool, cause: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.set_deprivation(name, deprived, cause=cause)
+
+
+def add_fatigue(name: str, cause: str, ctx: ToolContext, force: bool = False) -> dict[str, Any]:
+    return ctx.world.add_fatigue(name, cause, force=force)
+
+
+def give_item(name: str, item: str, ctx: ToolContext, size: str = "normal") -> dict[str, Any]:
+    return ctx.world.give_item(name, item, size=size)
+
+
+def drop_item(name: str, item: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.drop_item(name, item)
+
+
 def player_save(ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
     return ctx.world.player_save(roll)
 

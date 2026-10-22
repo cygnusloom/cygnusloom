@@ -1,0 +1,25 @@
+[
+  {
+    "type": "inventory",
+    "id": "cairn",
+    "capacity": 10,
+    "fatigue_item": "fatigue",
+    "fatigue_slots": 1,
+    "full_stat": "hp"
+  },
+  {
+    "type": "item_size",
+    "id": "petty",
+    "slots": 0
+  },
+  {
+    "type": "item_size",
+    "id": "normal",
+    "slots": 1
+  },
+  {
+    "type": "item_size",
+    "id": "bulky",
+    "slots": 2
+  }
+]

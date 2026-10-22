@@ -1,0 +1,41 @@
+[
+  {
+    "type": "rest",
+    "id": "cairn",
+    "lengths": {
+      "moments": {
+        "parts": 1,
+        "full": false,
+        "restores": [
+          "hp"
+        ],
+        "clears": []
+      },
+      "night": {
+        "until": "morning",
+        "full": true,
+        "restores": [
+          "hp"
+        ],
+        "clears": [
+          "fatigue"
+        ]
+      },
+      "week": {
+        "days": 7,
+        "until": "morning",
+        "full": true,
+        "restores": [
+          "hp",
+          "str",
+          "dex",
+          "wil"
+        ],
+        "clears": [
+          "fatigue"
+        ]
+      }
+    },
+    "interrupted": "moments"
+  }
+]

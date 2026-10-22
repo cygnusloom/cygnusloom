@@ -557,5 +557,200 @@
         "safe"
       ]
     }
+  },
+  {
+    "type": "tool_call",
+    "id": "advance_time",
+    "name": "advance_time",
+    "python_module": "cairn2e",
+    "function": "advance_time",
+    "description": "Move the campaign clock forward. Use it when time passes in the fiction: days, or parts of a day (morning, afternoon, evening, night). The result says when a new day begins and lists places not visited for a while, so update anything that should change.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "days": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 365,
+          "default": 0,
+          "description": "Whole days to advance, from 0 to 365. Defaults to 0."
+        },
+        "parts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 12,
+          "description": "Parts of a day to advance, from 0 to 12. Defaults to 0 when omitted."
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "rest",
+    "name": "rest",
+    "python_module": "cairn2e",
+    "function": "rest",
+    "description": "Record a rest for the whole party. The Warden decides the length from what the party does: 'moments' is a short break such as a drink and a sit-down, 'night' is a full night until morning, 'week' is a week of rest. Set interrupted when something breaks the rest, and then it counts as moments only. A full rest, uninterrupted, is the only way to clear Fatigue. A deprived character recovers nothing.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "length": {
+          "type": "string",
+          "enum": [
+            "moments",
+            "night",
+            "week"
+          ],
+          "description": "How long the rest lasts: 'moments', 'night', or 'week'."
+        },
+        "interrupted": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when something breaks the rest. An interrupted rest counts as moments only. Defaults to false."
+        },
+        "reason": {
+          "type": "string",
+          "description": "What the party was doing, such as 'camped in the ruined chapel'."
+        }
+      },
+      "required": [
+        "length",
+        "reason"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "rest_history",
+    "name": "rest_history",
+    "python_module": "cairn2e",
+    "function": "rest_history",
+    "description": "Look up the party's recent rests and each character's last full rest, to decide whether a character is deprived.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "set_deprivation",
+    "name": "set_deprivation",
+    "python_module": "cairn2e",
+    "function": "set_deprivation",
+    "description": "Mark a character as deprived of a crucial need, such as food or rest, or clear it. Call it as soon as the need goes unmet, before advancing time, so the engine can count the days. A deprived character recovers nothing, and the engine adds one Fatigue for each new day past the first. Check rest_history first when the cause is rest.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character or NPC."
+        },
+        "deprived": {
+          "type": "boolean",
+          "description": "True to mark the character as deprived, false to clear it."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What the character is deprived of, such as 'no food for two days' or 'no full night's rest since the flood'."
+        }
+      },
+      "required": [
+        "name",
+        "deprived",
+        "cause"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "add_fatigue",
+    "name": "add_fatigue",
+    "python_module": "cairn2e",
+    "function": "add_fatigue",
+    "description": "Add one Fatigue to a character's inventory because of something in the fiction, such as casting a spell or a shock. Fatigue takes one slot and lasts until a full night's rest. A deprived character is refused unless force is true: the engine adds deprivation Fatigue each day.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character or NPC."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What caused the Fatigue, such as 'cast a spell'."
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "True only for a deprived character when something besides the deprivation causes this Fatigue."
+        }
+      },
+      "required": [
+        "name",
+        "cause"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "give_item",
+    "name": "give_item",
+    "python_module": "cairn2e",
+    "function": "give_item",
+    "description": "Add an item to a character's inventory. Petty items (coins, scrolls, relics) take no slot; normal items take one; bulky items take two. A full inventory (10 slots) reduces the character to 0 HP.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character or NPC."
+        },
+        "item": {
+          "type": "string",
+          "description": "The name of the item."
+        },
+        "size": {
+          "type": "string",
+          "enum": [
+            "petty",
+            "normal",
+            "bulky"
+          ],
+          "default": "normal",
+          "description": "The item's size: 'petty' takes no slot, 'normal' takes one, 'bulky' takes two. Defaults to 'normal'."
+        }
+      },
+      "required": [
+        "name",
+        "item"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "drop_item",
+    "name": "drop_item",
+    "python_module": "cairn2e",
+    "function": "drop_item",
+    "description": "Remove an item from a character's inventory. Use it when the character drops something, or must drop an item to make room for Fatigue.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character or NPC."
+        },
+        "item": {
+          "type": "string",
+          "description": "The name of the item to drop."
+        }
+      },
+      "required": [
+        "name",
+        "item"
+      ]
+    }
   }
 ]

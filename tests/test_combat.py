@@ -75,6 +75,12 @@ def _tools(app: FastAPI, campaign_id: int, rng: random.Random | None = None) -> 
         combat=CAIRN.combat,
         monsters=CAIRN.monsters,
         conditions=CAIRN.conditions,
+        clock_rules=CAIRN.clock,
+        rests=CAIRN.rests,
+        interrupted_rest=CAIRN.interrupted_rest,
+        deprivation=CAIRN.deprivation,
+        inventory=CAIRN.inventory,
+        item_sizes=CAIRN.item_sizes,
     )
 
 

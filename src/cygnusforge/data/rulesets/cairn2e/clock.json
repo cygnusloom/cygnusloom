@@ -1,0 +1,13 @@
+[
+  {
+    "type": "clock",
+    "id": "cairn",
+    "parts": [
+      "morning",
+      "afternoon",
+      "evening",
+      "night"
+    ],
+    "stale_days": 5
+  }
+]

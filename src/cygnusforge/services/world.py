@@ -29,17 +29,24 @@ from cygnusforge.content.character import (
     resolve,
 )
 from cygnusforge.content.library import (
+    ClockRules,
     CombatRules,
     ConditionRules,
+    DeprivationRules,
     DiceTable,
     EncounterGrid,
+    InventoryRules,
     MonsterTemplate,
+    RestLength,
     WorldTemplate,
 )
 from cygnusforge.rules.context import brief
 from cygnusforge.rules.dice import is_formula
 from cygnusforge.services import attacks as attack_modifiers
+from cygnusforge.services import clock as clock_service
 from cygnusforge.services import combat, encounters, morale
+from cygnusforge.services import inventory as inventory_service
+from cygnusforge.services import needs as needs_service
 from cygnusforge.services.common import (
     InvalidInput,
     bounded_text,
@@ -141,10 +148,88 @@ class WorldTools:
     # The rule set's conditions by id.
     conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
     dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
+    # Time, rest, and needs. Each is None or empty when the rule set does not track them.
+    clock_rules: ClockRules | None = None
+    rests: Mapping[str, RestLength] = field(default_factory=dict)
+    interrupted_rest: str = ""
+    deprivation: DeprivationRules | None = None
+    inventory: InventoryRules | None = None
+    item_sizes: Mapping[str, int] = field(default_factory=dict)
 
     def roll_tables(self, tables: list[str]) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return roll_dice_tables(db, self.campaign_id, tables, self.dice_tables, self.rng)
+
+    def advance_time(self, days: int = 0, parts: int = 0) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return clock_service.advance_time(
+                db,
+                self.campaign_id,
+                _required(self.clock_rules, "time"),
+                self.deprivation,
+                self.inventory,
+                days,
+                parts,
+            )
+
+    def rest(self, length: str, interrupted: bool = False, reason: str = "") -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return needs_service.take_rest(
+                db,
+                self.campaign_id,
+                _required(self.clock_rules, "time"),
+                self.rests,
+                self.interrupted_rest,
+                self.deprivation,
+                self.inventory,
+                length,
+                interrupted,
+                reason,
+            )
+
+    def rest_history(self) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return needs_service.rest_history(db, self.campaign_id)
+
+    def set_deprivation(self, name: str, deprived: bool, cause: str = "") -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return needs_service.set_deprivation(
+                db, self.campaign_id, self.deprivation, name, deprived, cause
+            )
+
+    def add_fatigue(self, name: str, cause: str, force: bool = False) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            if not force and self.deprivation is not None:
+                character = inventory_service.character_named(
+                    load_state(db, self.campaign_id), name
+                )
+                if character.deprived_since is not None:
+                    raise InvalidInput(
+                        f"{character.name} is deprived, so the engine adds their Fatigue each day "
+                        "and none was added here; set force only if something besides the "
+                        "deprivation causes this Fatigue"
+                    )
+            return inventory_service.add_fatigue(
+                db, self.campaign_id, _required(self.inventory, "inventory"), name, cause
+            )
+
+    def give_item(self, name: str, item: str, size: str = "normal") -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return inventory_service.give_item(
+                db,
+                self.campaign_id,
+                _required(self.inventory, "inventory"),
+                self.item_sizes,
+                name,
+                item,
+                size,
+            )
+
+    def drop_item(self, name: str, item: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return inventory_service.drop_item(
+                db, self.campaign_id, _required(self.inventory, "inventory"), name, item
+            )
 
     def create_location(
         self,
@@ -433,6 +518,7 @@ class WorldTools:
                 self.character,
                 self.combat,
                 self.conditions,
+                self.inventory,
             )
 
     def character_options(self, field: str | None = None) -> dict[str, Any]:
@@ -864,7 +950,7 @@ def add_note(
     text = bounded_text(text, "text", MAX_TEXT)
     subject_name: str | None = None
     label = _optional_text(subject, "subject")
-    if label is not None:
+    if label is not None and label.casefold() != CAMPAIGN_WIDE:
         entry = state.named(label)
         if entry is None:
             raise InvalidInput(f"there is no location or character named {label!r}")
@@ -971,17 +1057,17 @@ def get_statblock(
     spec: CharacterSpec,
     combat: CombatRules | None = None,
     conditions: Mapping[str, ConditionRules] | None = None,
+    inventory: InventoryRules | None = None,
 ) -> dict[str, Any]:
     """A character's stats, template, features, and fields, one line each. Works for the player
     character and for NPCs. With a rule set's `combat`, the armor, attacks, harm, and status follow.
-    With its `conditions`, the conditions and scars follow."""
+    With its `conditions` and `inventory`, the conditions, scars, deprivation, and items follow."""
     character = _character_named(state, name)
     kind = "player character" if character.kind == PC_KIND else "npc"
     lines = describe(spec, _sheet_of(character)).splitlines()
     if combat is not None:
         lines += _combat_lines(character, spec, combat)
-    if conditions is not None:
-        lines += _status_lines(character, conditions)
+    lines += _status_lines(character, conditions, inventory)
     return {
         "name": character.name,
         "kind": kind,
@@ -1017,11 +1103,35 @@ def _combat_lines(character: Character, spec: CharacterSpec, combat: CombatRules
     return lines
 
 
-def _status_lines(character: Character, conditions: Mapping[str, ConditionRules]) -> list[str]:
-    held = [rules.label for rules in active_conditions(character, conditions)]
-    lines = [f"Conditions: {', '.join(held) if held else 'none'}"]
+def _required[T](value: T | None, what: str) -> T:
+    if value is None:
+        raise InvalidInput(f"this rule set does not track {what}")
+    return value
+
+
+def _status_lines(
+    character: Character,
+    conditions: Mapping[str, ConditionRules] | None,
+    inventory: InventoryRules | None,
+) -> list[str]:
+    """The character's conditions, scars, deprivation, and what they carry. Each part shows only
+    when the rule set has it, or when the character has something to report."""
+    lines: list[str] = []
+    if conditions is not None:
+        held = [rules.label for rules in active_conditions(character, conditions)]
+        lines.append(f"Conditions: {', '.join(held) if held else 'none'}")
     if character.scars:
         lines.append(f"Scars: {'; '.join(character.scars)}")
+    if character.deprived_since is not None:
+        lines.append(
+            f"Deprived: {character.deprivation_cause} (since day {character.deprived_since})"
+        )
+    if inventory is not None:
+        used = inventory_service.used_slots(character)
+        flag = " (over capacity)" if used > inventory.capacity else ""
+        lines.append(f"Inventory: {used} of {inventory.capacity} slots{flag}")
+        carried = ", ".join(item.name for item in character.items)
+        lines.append(f"Carrying: {carried or 'nothing'}")
     return lines
 
 
@@ -1100,10 +1210,12 @@ def world_state_text(
     grid: EncounterGrid | None = None,
     combat: CombatRules | None = None,
     conditions: Mapping[str, ConditionRules] | None = None,
+    clock_rules: ClockRules | None = None,
+    inventory: InventoryRules | None = None,
 ) -> str:
-    """The GM's orientation at the start of a turn: the campaign options, the player character and
-    where they are, the NPCs there, and any encounter in progress. The rest is looked up with the
-    lookup tools."""
+    """The GM's orientation at the start of a turn: the campaign options, the day, the player
+    character and where they are, the NPCs there, and any encounter in progress. The rest is looked
+    up with the lookup tools."""
     pc = state.pc()
     if pc is None:
         return ""
@@ -1112,6 +1224,8 @@ def world_state_text(
         for field_id, value in state.options.items()
         if field_id in campaign.fields
     ]
+    if clock_rules is not None:
+        lines.append(f"It is day {state.clock.day}, {clock_rules.parts[state.clock.part]}.")
     if pc.location is None:
         lines.append(
             f"Player character: {pc.name}, not yet placed; place them with move_actor on your first turn."
@@ -1123,8 +1237,7 @@ def world_state_text(
     wind = _npcs_in_the_wind(state)
     if wind:
         lines.append(f"NPCs in the wind, at no location: {', '.join(wind)}.")
-    if conditions is not None:
-        lines.extend(_status_lines(pc, conditions))
+    lines.extend(_status_lines(pc, conditions, inventory))
     lines.extend(_encounter_lines(state, grid, combat))
     return "\n".join(lines)
 

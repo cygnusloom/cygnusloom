@@ -269,6 +269,50 @@ class CombatRules:
 
 
 @dataclass(frozen=True)
+class ClockRules:
+    """The parts of a day, in order. A place not visited for `stale_days` days is flagged when a
+    new day begins, so the Warden can update it."""
+
+    parts: tuple[str, ...]
+    stale_days: int
+
+
+@dataclass(frozen=True)
+class RestLength:
+    """A rest the Warden can call for. It passes `parts` parts of a day, or `days` days, and
+    `until_morning` runs on to the next morning. A full rest restores what `restores` lists and
+    clears the item kinds in `clears`. A deprived character recovers nothing."""
+
+    id: str
+    parts: int
+    days: int
+    until_morning: bool
+    full: bool
+    restores: tuple[str, ...]
+    clears: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class DeprivationRules:
+    """A character deprived of a crucial need gains one `fatigue_item` a day once it has gone on
+    for more than `after_days` days."""
+
+    fatigue_item: str
+    after_days: int
+
+
+@dataclass(frozen=True)
+class InventoryRules:
+    """How many slots a character's inventory has, what Fatigue costs, and which stat takes harm
+    when the inventory fills. `item_sizes` is in `RuleSet`."""
+
+    capacity: int
+    fatigue_item: str
+    fatigue_slots: int
+    full_stat: str
+
+
+@dataclass(frozen=True)
 class RuleSet:
     id: str
     name: str
@@ -293,6 +337,15 @@ class RuleSet:
     conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
     # Tables rolled with dice, by id, such as the Warden's reaction table.
     dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
+    # Time, rest, and needs. Each is None or empty when the rule set does not track them.
+    clock: ClockRules | None = None
+    rests: Mapping[str, RestLength] = field(default_factory=dict)
+    # The rest length an interrupted rest counts as, such as "moments".
+    interrupted_rest: str = ""
+    deprivation: DeprivationRules | None = None
+    inventory: InventoryRules | None = None
+    # Item sizes by id, as the slots an item of that size takes.
+    item_sizes: Mapping[str, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -508,6 +561,12 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     monsters = {
         d.id: _load_monster(d, character, template) for d in definitions if d.type == "monster"
     }
+    clock = _load_clock(definitions, template)
+    rests = _load_rests(definitions, character, template)
+    interrupted_rest = _load_interrupted_rest(definitions, rests, template)
+    deprivation = _load_deprivation(definitions, template)
+    inventory = _load_inventory(definitions, character, template)
+    item_sizes = _load_item_sizes(definitions, template)
     tool_calls: dict[str, ToolCall] = {}
     tool_names: set[str] = set()
     for d in definitions:
@@ -533,6 +592,12 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         monsters=monsters,
         conditions=conditions,
         dice_tables=dice_tables,
+        clock=clock,
+        rests=rests,
+        interrupted_rest=interrupted_rest,
+        deprivation=deprivation,
+        inventory=inventory,
+        item_sizes=item_sizes,
     )
 
 
@@ -761,6 +826,135 @@ def _load_grid(definition: Definition, template: str) -> EncounterGrid:
     if move_feet < cell_feet:
         raise ContentError(f"{label}: 'move_feet' must be at least one cell")
     return EncounterGrid(cell_feet=cell_feet, move_feet=move_feet)
+
+
+def _single_optional(definitions: list[Definition], kind: str, template: str) -> Definition | None:
+    found = [d for d in definitions if d.type == kind]
+    if len(found) > 1:
+        raise ContentError(f"{template}: more than one {kind} definition")
+    return found[0] if found else None
+
+
+def _whole(data: Mapping[str, Any], key: str, label: str, minimum: int) -> int:
+    value = data.get(key)
+    if not isinstance(value, int) or isinstance(value, bool) or value < minimum:
+        raise ContentError(f"{label}: {key!r} must be a whole number, at least {minimum}")
+    return value
+
+
+def _names(data: Mapping[str, Any], key: str, label: str) -> tuple[str, ...]:
+    value = data.get(key, [])
+    if not isinstance(value, list) or not all(isinstance(v, str) and v.strip() for v in value):
+        raise ContentError(f"{label}: {key!r} must be a list of non-empty strings")
+    return tuple(value)
+
+
+def _load_clock(definitions: list[Definition], template: str) -> ClockRules | None:
+    definition = _single_optional(definitions, "clock", template)
+    if definition is None:
+        return None
+    label = f"{template}: clock {definition.id}"
+    parts = _names(definition.data, "parts", label)
+    if not parts or len(set(parts)) != len(parts):
+        raise ContentError(f"{label}: 'parts' must be a non-empty list of distinct names")
+    stale_days = _whole(definition.data, "stale_days", label, 1)
+    return ClockRules(parts=parts, stale_days=stale_days)
+
+
+def _load_rests(
+    definitions: list[Definition], character: CharacterSpec, template: str
+) -> dict[str, RestLength]:
+    """The rest lengths of the rule set's single rest definition, by id. Each needs `full` and at
+    least one of `parts`, `days`, or `until: "morning"`."""
+    definition = _single_optional(definitions, "rest", template)
+    if definition is None:
+        return {}
+    label = f"{template}: rest {definition.id}"
+    lengths = definition.data.get("lengths")
+    if not isinstance(lengths, Mapping) or not lengths:
+        raise ContentError(f"{label}: 'lengths' must be a non-empty object")
+    loaded: dict[str, RestLength] = {}
+    for length_id, data in lengths.items():
+        length_label = f"{label}: length {length_id}"
+        if not isinstance(data, Mapping):
+            raise ContentError(f"{length_label} must be an object")
+        parts = _whole(data, "parts", length_label, 0) if "parts" in data else 0
+        days = _whole(data, "days", length_label, 0) if "days" in data else 0
+        until = data.get("until")
+        if until is not None and until != "morning":
+            raise ContentError(f"{length_label}: 'until' must be \"morning\"")
+        if not (parts or days or until):
+            raise ContentError(f"{length_label}: needs 'parts', 'days', or 'until'")
+        full = data.get("full")
+        if not isinstance(full, bool):
+            raise ContentError(f"{length_label}: 'full' must be true or false")
+        restores = _names(data, "restores", length_label)
+        for stat in restores:
+            if stat not in character.stats:
+                raise ContentError(f"{length_label}: 'restores' names no stat ({stat!r})")
+        loaded[length_id] = RestLength(
+            id=length_id,
+            parts=parts,
+            days=days,
+            until_morning=until == "morning",
+            full=full,
+            restores=restores,
+            clears=_names(data, "clears", length_label),
+        )
+    return loaded
+
+
+def _load_interrupted_rest(
+    definitions: list[Definition], rests: Mapping[str, RestLength], template: str
+) -> str:
+    """The rest length an interrupted rest counts as. It must be a non-full rest length."""
+    definition = _single_optional(definitions, "rest", template)
+    if definition is None:
+        return ""
+    label = f"{template}: rest {definition.id}"
+    name = definition.data.get("interrupted")
+    if name not in rests:
+        raise ContentError(f"{label}: 'interrupted' must name a rest length")
+    if rests[name].full:
+        raise ContentError(f"{label}: 'interrupted' must name a rest length that is not full")
+    return name
+
+
+def _load_deprivation(definitions: list[Definition], template: str) -> DeprivationRules | None:
+    definition = _single_optional(definitions, "deprivation", template)
+    if definition is None:
+        return None
+    label = f"{template}: deprivation {definition.id}"
+    return DeprivationRules(
+        fatigue_item=required_text(definition.data, "fatigue_item", label),
+        after_days=_whole(definition.data, "after_days", label, 0),
+    )
+
+
+def _load_inventory(
+    definitions: list[Definition], character: CharacterSpec, template: str
+) -> InventoryRules | None:
+    definition = _single_optional(definitions, "inventory", template)
+    if definition is None:
+        return None
+    label = f"{template}: inventory {definition.id}"
+    full_stat = required_text(definition.data, "full_stat", label)
+    if full_stat not in character.stats:
+        raise ContentError(f"{label}: 'full_stat' names no stat ({full_stat!r})")
+    return InventoryRules(
+        capacity=_whole(definition.data, "capacity", label, 1),
+        fatigue_item=required_text(definition.data, "fatigue_item", label),
+        fatigue_slots=_whole(definition.data, "fatigue_slots", label, 0),
+        full_stat=full_stat,
+    )
+
+
+def _load_item_sizes(definitions: list[Definition], template: str) -> dict[str, int]:
+    return {
+        d.id: _whole(d.data, "slots", f"{template}: item size {d.id}", 0)
+        for d in definitions
+        if d.type == "item_size"
+    }
 
 
 def _load_conditions(

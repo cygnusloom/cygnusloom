@@ -544,6 +544,8 @@ def context_usage(
                 rule_set.grid if rule_set else None,
                 rule_set.combat if rule_set else None,
                 rule_set.conditions if rule_set else None,
+                clock_rules=rule_set.clock if rule_set else None,
+                inventory=rule_set.inventory if rule_set else None,
             ),
         )
     )
@@ -813,6 +815,12 @@ def _tool_context(
             monsters=rule_set.monsters,
             conditions=rule_set.conditions,
             dice_tables=rule_set.dice_tables,
+            clock_rules=rule_set.clock,
+            rests=rule_set.rests,
+            interrupted_rest=rule_set.interrupted_rest,
+            deprivation=rule_set.deprivation,
+            inventory=rule_set.inventory,
+            item_sizes=rule_set.item_sizes,
         ),
         speak=speak,
         ooc=ooc,
@@ -941,7 +949,13 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     rule_set = run.rule_set
     summary, watermark = state.summary, state.through
     world_text = world_state_text(
-        state, rule_set.campaign, rule_set.grid, rule_set.combat, rule_set.conditions
+        state,
+        rule_set.campaign,
+        rule_set.grid,
+        rule_set.combat,
+        rule_set.conditions,
+        clock_rules=rule_set.clock,
+        inventory=rule_set.inventory,
     )
     message = OPENING_PROMPT if turn.opening else turn.text
     history = [

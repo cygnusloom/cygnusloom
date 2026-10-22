@@ -81,6 +81,19 @@ class Place:
     # The place this one is inside, such as a building in a city. Such a place has no position of
     # its own; it is shown with its parent.
     parent: str | None = None
+    # The campaign day a player character was last in this place, or None if none has been.
+    visited_day: int | None = None
+
+
+@dataclass(frozen=True)
+class Item:
+    """Something a character carries. `size` is the rule set's item size, empty for Fatigue, and
+    `slots` is what it takes from the inventory. `kind` marks special items such as Fatigue."""
+
+    name: str
+    size: str
+    slots: int
+    kind: str = ""
 
 
 def _position(x: float | None, y: float | None) -> Position | None:
@@ -125,6 +138,11 @@ class Character:
     detachment: bool = False
     # A detachment whose Critical Damage save failed. The Warden must decide it is defeated or flees.
     critical_due: bool = False
+    # What the character carries. Fatigue is an item of the rule set's fatigue kind.
+    items: list[Item] = field(default_factory=list)
+    # The campaign day a deprivation began, or None while the character is not deprived.
+    deprived_since: int | None = None
+    deprivation_cause: str = ""
 
 
 def current(character: Character, stat: str) -> int:
@@ -223,6 +241,27 @@ class Encounter:
     morale: dict[str, list[str]] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class Clock:
+    """The campaign day, starting at 1, and the index of the part of the day within the rule set's
+    clock."""
+
+    day: int = 1
+    part: int = 0
+
+
+@dataclass(frozen=True)
+class RestRecord:
+    """A rest the party took. `full` rests are uninterrupted rests that restore the party."""
+
+    day: int
+    part: str
+    length: str
+    full: bool
+    interrupted: bool
+    reason: str
+
+
 @dataclass
 class CampaignState:
     """The campaign as its log says it is now. Keys of `places` and `characters` are the names
@@ -239,6 +278,8 @@ class CampaignState:
     # Encounter maps by name without case, and the encounter in progress, if any.
     maps: dict[str, EncounterMap] = field(default_factory=dict)
     encounter: Encounter | None = None
+    clock: Clock = field(default_factory=Clock)
+    rests: list[RestRecord] = field(default_factory=list)
 
     def named(self, name: str) -> Place | Character | None:
         key = name_key(name)
@@ -537,6 +578,9 @@ class ActorMoved(GameEvent):
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.characters[name_key(self.name)].location = self.location
+        place = state.places.get(name_key(self.location)) if self.location else None
+        if place is not None:
+            state.places[name_key(place.name)] = replace(place, visited_day=state.clock.day)
 
     def render(self) -> str:
         if self.location is None:
@@ -577,8 +621,11 @@ class LocationUpdated(GameEvent):
     def apply(self, state: CampaignState, event_id: int) -> None:
         key = name_key(self.name)
         before = state.places[key]
-        state.places[key] = Place(
-            self.name, self.description, before.discovered, _position(self.x, self.y), before.parent
+        state.places[key] = replace(
+            before,
+            name=self.name,
+            description=self.description,
+            position=_position(self.x, self.y),
         )
 
     def render(self) -> str:
@@ -1585,3 +1632,166 @@ class CharacterSaved(GameEvent):
         result = "succeeds" if self.passed else "fails"
         text = f"{self.name} rolls {self.roll} on a {self.stat.upper()} save of {self.score} and {result}"
         return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
+class ClockAdvanced(GameEvent):
+    """The campaign clock moved to a new day and part. A player character in a place is there
+    at the new time, so the place counts as visited."""
+
+    kind: ClassVar[str] = "clock.advanced"
+
+    day: int
+    part: int
+    part_name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.clock = Clock(day=self.day, part=self.part)
+        for character in state.characters.values():
+            if character.kind != PC_KIND or character.location is None:
+                continue
+            key = name_key(character.location)
+            if key in state.places:
+                state.places[key] = replace(state.places[key], visited_day=self.day)
+
+    def render(self) -> str:
+        return f"It is day {self.day}, {self.part_name}."
+
+
+@dataclass(frozen=True)
+class RestTaken(GameEvent):
+    kind: ClassVar[str] = "rest.taken"
+
+    length: str
+    full: bool
+    interrupted: bool
+    reason: str
+    day: int
+    part: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.rests.append(
+            RestRecord(
+                day=self.day,
+                part=self.part,
+                length=self.length,
+                full=self.full,
+                interrupted=self.interrupted,
+                reason=self.reason,
+            )
+        )
+
+    def render(self) -> str:
+        interrupted = ", interrupted" if self.interrupted else ""
+        return f"The party rests ({self.length}{interrupted}): {self.reason}."
+
+
+@dataclass(frozen=True)
+class RestRecovered(GameEvent):
+    """A character recovers the stats a rest restores. Recovery clears their harm in those stats."""
+
+    kind: ClassVar[str] = "rest.recovered"
+
+    name: str
+    restores: list[str]
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        for stat in self.restores:
+            character.harm.pop(stat, None)
+
+    def render(self) -> str:
+        return f"{self.name} recovers from the rest."
+
+
+@dataclass(frozen=True)
+class DeprivationSet(GameEvent):
+    """A character becomes deprived of a crucial need, or stops being deprived. A character who is
+    already deprived keeps the day the deprivation began."""
+
+    kind: ClassVar[str] = "character.deprivation_set"
+
+    name: str
+    deprived: bool
+    cause: str
+    day: int
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        if self.deprived:
+            if character.deprived_since is None:
+                character.deprived_since = self.day
+            character.deprivation_cause = self.cause
+        else:
+            character.deprived_since = None
+            character.deprivation_cause = ""
+
+    def render(self) -> str:
+        if self.deprived:
+            return f"{self.name} is deprived: {self.cause}."
+        return f"{self.name} is no longer deprived."
+
+
+@dataclass(frozen=True)
+class ItemAdded(GameEvent):
+    kind: ClassVar[str] = "character.item_added"
+
+    name: str
+    item: str
+    size: str
+    slots: int
+    kind_of_item: str = ""
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.items.append(
+            Item(name=self.item, size=self.size, slots=self.slots, kind=self.kind_of_item)
+        )
+
+    def render(self) -> str:
+        text = f"{self.name} gains {self.item}"
+        return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
+class ItemRemoved(GameEvent):
+    """Removes the first item of the character with this name, and of this kind if one is given."""
+
+    kind: ClassVar[str] = "character.item_removed"
+
+    name: str
+    item: str
+    kind_of_item: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        for index, held in enumerate(character.items):
+            if name_key(held.name) != name_key(self.item):
+                continue
+            if self.kind_of_item and held.kind != self.kind_of_item:
+                continue
+            del character.items[index]
+            return
+
+    def render(self) -> str:
+        return f"{self.name} loses {self.item}."
+
+
+@dataclass(frozen=True)
+class CharacterDrained(GameEvent):
+    """Harm takes a stat to 0 outside combat, such as when a full inventory drains HP. It is not
+    overflow, so no save is owed."""
+
+    kind: ClassVar[str] = "character.drained"
+
+    name: str
+    stat: str
+    cause: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.harm[self.stat] = character.stats.get(self.stat, 0)
+
+    def render(self) -> str:
+        return f"{self.name}'s {self.stat.upper()} drops to 0 ({self.cause})."

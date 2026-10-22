@@ -625,6 +625,17 @@ def test_gm_deletes_an_npc_and_keeps_notes_about_them(
     assert [note.subject for note in state.notes] == ["Brin Gallowcap"]
 
 
+def test_a_note_named_campaign_wide_is_not_about_any_subject(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    added = _tool(
+        app, campaign_id, "add_note", {"text": "The moon is red.", "subject": "campaign-wide"}
+    )
+    assert added["subject"] == "campaign-wide"
+    assert [note.subject for note in _state(app, campaign_id).notes] == ["campaign-wide"]
+
+
 def test_gm_updates_and_deletes_notes_by_id(client_factory: Callable[[], TestClient], app):
     _, campaign_id = _campaign_id(client_factory)
     added = _tool(app, campaign_id, "add_note", {"text": "The bridge sways."})
