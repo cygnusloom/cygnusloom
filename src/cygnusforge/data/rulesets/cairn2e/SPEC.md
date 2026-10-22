@@ -104,6 +104,13 @@ Generic engine mechanics, parameterized by the ruleset's JSON. Cairn numbers liv
 - Scrolls are petty, add no Fatigue, and disappear after one use.
 - Relics have limited uses and a Recharge condition. They add no Fatigue.
 
+Decisions (design pass):
+- Spell content is free text the Warden writes when the spell is created. The engine stores the name, description, and book slot; the Warden decides the effect.
+- Casting is a tool call, `cast_spell(name, spell)`, made after the player says the spell. The engine checks that the spellbook is held and adds one Fatigue. A spellbook holds one spell, and the spell lives on the book item.
+- A WIL save for a spell or danger is a tool call. The engine rolls and records it; the Warden applies the consequence.
+- Scrolls and relics are inventory items with a kind (`scroll`, `relic`). Scrolls are petty (no slots, no Fatigue) and are removed after one use. The spell text stays on the scroll.
+- A relic has a use count and a Recharge rule the Warden writes as text. The engine decrements uses and records recharges. A relic cannot recharge on the same clock step as its last use, so time must pass first. Relics add no Fatigue.
+
 ## Phase 6: gold and marketplace
 
 - Gold pieces and prices from the Marketplace: armor, weapons, transport, upkeep and recovery services, hirelings per day, and gear.

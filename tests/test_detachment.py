@@ -79,7 +79,8 @@ def test_a_detachment_blast_rolls_one_enhanced_die_per_living_individual(client_
     _, _, tools = _fight(client_factory)
     _detachment(tools, "Rats", side="foes")
     _ally(tools, "Tam")
-    result = replace(tools, rng=Rolls(1, 1)).attack("Rats", "Bite", "Mara", modifier="enhanced")
+    # Mara's HP is rolled at random, so a 1-point hit can take her to 0 and roll a scar die first.
+    result = replace(tools, rng=Rolls(1, 1, 1)).attack("Rats", "Bite", "Mara", modifier="enhanced")
     assert result["blast"] is True
     assert sorted(entry["target"] for entry in result["targets"]) == [PC, "Tam"]
 

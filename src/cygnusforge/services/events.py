@@ -94,6 +94,13 @@ class Item:
     size: str
     slots: int
     kind: str = ""
+    # A spellbook's spell text, or a relic's recharge rule.
+    text: str = ""
+    # A relic's uses left, and the most it holds.
+    uses: int = 0
+    max_uses: int = 0
+    # The clock when a relic was last used. It cannot recharge until the clock moves on.
+    spent_on: Clock | None = None
 
 
 def _position(x: float | None, y: float | None) -> Position | None:
@@ -1742,16 +1749,69 @@ class ItemAdded(GameEvent):
     slots: int
     kind_of_item: str = ""
     cause: str = ""
+    text: str = ""
+    uses: int = 0
+    max_uses: int = 0
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
         character.items.append(
-            Item(name=self.item, size=self.size, slots=self.slots, kind=self.kind_of_item)
+            Item(
+                name=self.item,
+                size=self.size,
+                slots=self.slots,
+                kind=self.kind_of_item,
+                text=self.text,
+                uses=self.uses,
+                max_uses=self.max_uses,
+            )
         )
 
     def render(self) -> str:
         text = f"{self.name} gains {self.item}"
         return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
+class ItemUsesSet(GameEvent):
+    """Sets a relic's uses left, after a use or a recharge. `cause` says which."""
+
+    kind: ClassVar[str] = "character.item_uses_set"
+
+    name: str
+    item: str
+    uses: int
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        for index, held in enumerate(character.items):
+            if name_key(held.name) == name_key(self.item):
+                spent_on = state.clock if self.cause == "used" else None
+                character.items[index] = replace(held, uses=self.uses, spent_on=spent_on)
+                return
+
+    def render(self) -> str:
+        text = f"{self.name}'s {self.item} has {self.uses} use{'' if self.uses == 1 else 's'} left"
+        return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
+class SpellCast(GameEvent):
+    """A spell cast from a spellbook or a scroll. The cost, if any, is recorded as its own event."""
+
+    kind: ClassVar[str] = "magic.spell_cast"
+
+    name: str
+    spell: str
+    source: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        return None
+
+    def render(self) -> str:
+        where = "from a spellbook" if self.source == "spellbook" else "from a scroll"
+        return f"{self.name} casts {self.spell} {where}."
 
 
 @dataclass(frozen=True)

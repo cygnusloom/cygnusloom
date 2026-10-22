@@ -81,6 +81,7 @@ def _tools(app: FastAPI, campaign_id: int, rng: random.Random | None = None) -> 
         deprivation=CAIRN.deprivation,
         inventory=CAIRN.inventory,
         item_sizes=CAIRN.item_sizes,
+        magic=CAIRN.magic,
     )
 
 

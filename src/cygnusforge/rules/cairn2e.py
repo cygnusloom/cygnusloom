@@ -114,6 +114,36 @@ def drop_item(name: str, item: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.drop_item(name, item)
 
 
+def give_spellbook(name: str, spell: str, description: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.give_spellbook(name, spell, description)
+
+
+def give_scroll(name: str, spell: str, description: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.give_scroll(name, spell, description)
+
+
+def give_relic(
+    name: str, item: str, uses: int, recharge: str, ctx: ToolContext, size: str = "normal"
+) -> dict[str, Any]:
+    return ctx.world.give_relic(name, item, uses, recharge, size=size)
+
+
+def cast_spell(name: str, spell: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.cast_spell(name, spell)
+
+
+def use_relic(name: str, item: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.use_relic(name, item)
+
+
+def recharge_relic(name: str, item: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.recharge_relic(name, item)
+
+
+def roll_save(name: str, stat: str, reason: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.roll_save(name, stat, reason)
+
+
 def player_save(ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
     return ctx.world.player_save(roll)
 

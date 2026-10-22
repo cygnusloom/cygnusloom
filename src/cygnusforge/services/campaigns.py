@@ -84,6 +84,8 @@ SYSTEM_PROMPT = (
 SPOKEN_MARKUP = re.compile(r"<[^>]*>|\b\w+\(\s*\{")
 # An empty speech reply is retried this many times before the step gives up.
 SPEECH_ATTEMPTS = 3
+# An empty narration is requested again this many times before the turn fails.
+NARRATION_ATTEMPTS = 2
 STATE_INSTRUCTION = (
     "State management step. If the player is speaking out of character (to you as the GM rather "
     "than to their character, about the rules or the world, or asking for a change outside the "
@@ -91,7 +93,11 @@ STATE_INSTRUCTION = (
     "and makes any change. Otherwise, look up what the action depends on with the lookup tools, "
     "decide what this action changes and what needs to be said or done, then make it so with tool "
     "calls: create, update, or delete locations, characters, and "
-    "notes as the story needs; move characters as the story needs, the player character included "
+    "notes as the story needs; advance the clock, rest, or mark deprivation only when this action "
+    "takes that time in the fiction, and never repeat a rest or time jump the transcript already "
+    "records; any rest already moves the clock, so never add advance_time for the same time; when time passes, check each relic's recharge text and call recharge_relic once its "
+    "rule is met; a spent item, spell, or relic does nothing, so narrate it as spent and record no "
+    "effect the tool results do not show; move characters as the story needs, the player character included "
     "when events carry them somewhere; ask for a roll when the outcome is uncertain; and call speak "
     "once for each NPC who says something, with everything they say in one intent, without writing "
     "their words yourself. In an encounter, combatants rarely speak: call speak only for a line that "
@@ -133,7 +139,9 @@ NARRATE_INSTRUCTION = (
     "JSON: work each entry's dialogue value into the narration where it fits, copied exactly, and "
     "do not write any other words for an NPC. Weave dialogue into the prose as plain sentences, "
     "with ordinary quotation marks at most; never put it in block quotes, bullet points, labels, or "
-    "other special formatting. Do not narrate notes or other GM-only records, and do "
+    "other special formatting. If an entry's dialogue includes a stage direction, such as a gesture "
+    "or what the speaker does, narrate that action once as prose and do not repeat it. Do not "
+    "narrate notes or other GM-only records, and do "
     "not mention tool names or ids. "
     "Describe the player character's words and deliberate choices only as the player's message "
     "states them, and add none for them. The first time the player character is mentioned in a "
@@ -821,6 +829,7 @@ def _tool_context(
             deprivation=rule_set.deprivation,
             inventory=rule_set.inventory,
             item_sizes=rule_set.item_sizes,
+            magic=rule_set.magic,
         ),
         speak=speak,
         ooc=ooc,
@@ -1136,15 +1145,19 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
 
     yield Status("Narrating...")
     messages = _turn(_state(run.engine, run.campaign_id)).messages
-    narration: ChatReply | None = None
-    async for item in run.provider.stream(run.model_name, messages, None):
-        if isinstance(item, TextDelta):
-            yield Delta(item.text)
-        else:
-            narration = item
-    if narration is None:
-        raise LLMError("the model returned no reply")
-    reply = narration.text.strip()
+    reply = ""
+    for _attempt in range(NARRATION_ATTEMPTS):
+        narration: ChatReply | None = None
+        async for item in run.provider.stream(run.model_name, messages, None):
+            if isinstance(item, TextDelta):
+                yield Delta(item.text)
+            else:
+                narration = item
+        if narration is None:
+            raise LLMError("the model returned no reply")
+        reply = narration.text.strip()
+        if reply:
+            break
     if not reply:
         raise LLMError("the model returned an empty reply")
     event_id = _record(run.engine, run.campaign_id, ChatGM(content=reply, model=run.model))

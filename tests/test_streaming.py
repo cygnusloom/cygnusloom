@@ -10,8 +10,8 @@ from sqlmodel import Session
 
 from cygnusforge.config import Settings
 from cygnusforge.db.models import Campaign
-from cygnusforge.llm.base import LLMError
-from cygnusforge.services.campaigns import list_messages
+from cygnusforge.llm.base import ChatReply, LLMError
+from cygnusforge.services.campaigns import NARRATE_INSTRUCTION, list_messages
 from tests.conftest import csrf_token
 from tests.test_campaigns import _answer, _campaign_id
 from tests.test_context import (
@@ -242,3 +242,58 @@ def test_empty_out_of_character_reply_fails_and_keeps_the_message(
     assert "empty reply" in events[-1]["message"]
     assert _assistant_ids(app, campaign_id) == opening_replies
     assert _saved_message_count(app) == 2
+
+
+def _empty_narrations(provider: Any, empty: int) -> Any:
+    """Wrap a provider so its first `empty` narration calls come back with no text."""
+
+    class EmptyFirst:
+        name = provider.name
+
+        def __init__(self) -> None:
+            self.empty_left = empty
+
+        async def chat(self, model, messages, tools=None):
+            return await provider.chat(model, messages, tools)
+
+        async def stream(self, model, messages, tools=None):
+            narrating = any(m.get("content") == NARRATE_INSTRUCTION for m in messages)
+            if narrating and self.empty_left:
+                self.empty_left -= 1
+                yield ChatReply(text="")
+                return
+            async for item in provider.stream(model, messages, tools):
+                yield item
+
+    return EmptyFirst()
+
+
+def test_an_empty_narration_is_asked_for_again(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    recorder = _recording_provider()
+    client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (_empty_narrations(recorder, 1), model_id)
+    paused = _stream(client, campaign_id, _script({"rounds": [[ROLL]], "text": "Done."}))
+    assert paused[-1]["type"] == "prompt"
+
+    events = _answer(client, campaign_id, "roll")
+
+    assert _deltas(events) == "Done."
+    assert events[-1]["type"] == "saved"
+    assert _state(app, campaign_id).turn is None
+
+
+def test_two_empty_narrations_fail_the_turn(client_factory: Callable[[], TestClient], app: FastAPI):
+    recorder = _recording_provider()
+    client, campaign_id = _campaign_id(client_factory)
+    app.state.providers = lambda model_id: (_empty_narrations(recorder, 2), model_id)
+    paused = _stream(client, campaign_id, _script({"rounds": [[ROLL]], "text": "Done."}))
+    assert paused[-1]["type"] == "prompt"
+
+    events = _answer(client, campaign_id, "roll")
+
+    assert events[-1]["type"] == "error"
+    assert "empty reply" in events[-1]["message"]
+    turn = _state(app, campaign_id).turn
+    assert turn is not None and turn.failed

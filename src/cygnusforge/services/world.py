@@ -36,6 +36,7 @@ from cygnusforge.content.library import (
     DiceTable,
     EncounterGrid,
     InventoryRules,
+    MagicRules,
     MonsterTemplate,
     RestLength,
     WorldTemplate,
@@ -46,6 +47,7 @@ from cygnusforge.services import attacks as attack_modifiers
 from cygnusforge.services import clock as clock_service
 from cygnusforge.services import combat, encounters, morale
 from cygnusforge.services import inventory as inventory_service
+from cygnusforge.services import magic as magic_service
 from cygnusforge.services import needs as needs_service
 from cygnusforge.services.common import (
     InvalidInput,
@@ -155,6 +157,7 @@ class WorldTools:
     deprivation: DeprivationRules | None = None
     inventory: InventoryRules | None = None
     item_sizes: Mapping[str, int] = field(default_factory=dict)
+    magic: MagicRules | None = None
 
     def roll_tables(self, tables: list[str]) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -229,6 +232,85 @@ class WorldTools:
         with session_scope(self.engine) as db:
             return inventory_service.drop_item(
                 db, self.campaign_id, _required(self.inventory, "inventory"), name, item
+            )
+
+    def give_spellbook(self, name: str, spell: str, description: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return magic_service.give_spellbook(
+                db,
+                self.campaign_id,
+                _required(self.magic, "magic"),
+                _required(self.inventory, "inventory"),
+                self.item_sizes,
+                name,
+                spell,
+                description,
+            )
+
+    def give_scroll(self, name: str, spell: str, description: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return magic_service.give_scroll(
+                db,
+                self.campaign_id,
+                _required(self.magic, "magic"),
+                _required(self.inventory, "inventory"),
+                self.item_sizes,
+                name,
+                spell,
+                description,
+            )
+
+    def give_relic(
+        self, name: str, item: str, uses: int, recharge: str, size: str = "normal"
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return magic_service.give_relic(
+                db,
+                self.campaign_id,
+                _required(self.magic, "magic"),
+                _required(self.inventory, "inventory"),
+                self.item_sizes,
+                name,
+                item,
+                uses,
+                recharge,
+                size,
+            )
+
+    def cast_spell(self, name: str, spell: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return magic_service.cast_spell(
+                db,
+                self.campaign_id,
+                _required(self.magic, "magic"),
+                _required(self.inventory, "inventory"),
+                name,
+                spell,
+            )
+
+    def use_relic(self, name: str, item: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return magic_service.use_relic(
+                db, self.campaign_id, _required(self.magic, "magic"), name, item
+            )
+
+    def recharge_relic(self, name: str, item: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return magic_service.recharge_relic(
+                db, self.campaign_id, _required(self.magic, "magic"), name, item
+            )
+
+    def roll_save(self, name: str, stat: str, reason: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return magic_service.roll_save(
+                db,
+                self.campaign_id,
+                _required(self.combat, "combat"),
+                self.character,
+                self.rng,
+                name,
+                stat,
+                reason,
             )
 
     def create_location(

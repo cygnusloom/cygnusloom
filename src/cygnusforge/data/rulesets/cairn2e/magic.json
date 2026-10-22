@@ -1,0 +1,12 @@
+[
+  {
+    "type": "magic",
+    "id": "cairn",
+    "spellbook_kind": "spellbook",
+    "spellbook_size": "normal",
+    "scroll_kind": "scroll",
+    "scroll_size": "petty",
+    "relic_kind": "relic",
+    "cast_fatigue": 1
+  }
+]

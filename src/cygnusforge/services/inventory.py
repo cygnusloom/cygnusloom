@@ -59,6 +59,9 @@ def carry_item(
             size=item.size,
             slots=item.slots,
             kind_of_item=item.kind,
+            text=item.text,
+            uses=item.uses,
+            max_uses=item.max_uses,
             cause=cause,
         ),
     )

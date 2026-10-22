@@ -313,6 +313,19 @@ class InventoryRules:
 
 
 @dataclass(frozen=True)
+class MagicRules:
+    """The item kinds magic uses, the size each takes, and the Fatigue a spellbook cast costs.
+    A spellbook holds one spell, a scroll is one use of a spell, and a relic has uses that recharge."""
+
+    spellbook_kind: str
+    spellbook_size: str
+    scroll_kind: str
+    scroll_size: str
+    relic_kind: str
+    cast_fatigue: int
+
+
+@dataclass(frozen=True)
 class RuleSet:
     id: str
     name: str
@@ -346,6 +359,8 @@ class RuleSet:
     inventory: InventoryRules | None = None
     # Item sizes by id, as the slots an item of that size takes.
     item_sizes: Mapping[str, int] = field(default_factory=dict)
+    # How magic uses items, or None when the rule set has no magic.
+    magic: MagicRules | None = None
 
 
 @dataclass(frozen=True)
@@ -567,6 +582,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     deprivation = _load_deprivation(definitions, template)
     inventory = _load_inventory(definitions, character, template)
     item_sizes = _load_item_sizes(definitions, template)
+    magic = _load_magic(definitions, item_sizes, template)
     tool_calls: dict[str, ToolCall] = {}
     tool_names: set[str] = set()
     for d in definitions:
@@ -598,6 +614,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         deprivation=deprivation,
         inventory=inventory,
         item_sizes=item_sizes,
+        magic=magic,
     )
 
 
@@ -955,6 +972,29 @@ def _load_item_sizes(definitions: list[Definition], template: str) -> dict[str, 
         for d in definitions
         if d.type == "item_size"
     }
+
+
+def _load_magic(
+    definitions: list[Definition], item_sizes: Mapping[str, int], template: str
+) -> MagicRules | None:
+    definition = _single_optional(definitions, "magic", template)
+    if definition is None:
+        return None
+    label = f"{template}: magic {definition.id}"
+    sizes = {
+        key: required_text(definition.data, key, label) for key in ("spellbook_size", "scroll_size")
+    }
+    for key, size in sizes.items():
+        if size not in item_sizes:
+            raise ContentError(f"{label}: {key!r} names no item size ({size!r})")
+    return MagicRules(
+        spellbook_kind=required_text(definition.data, "spellbook_kind", label),
+        spellbook_size=sizes["spellbook_size"],
+        scroll_kind=required_text(definition.data, "scroll_kind", label),
+        scroll_size=sizes["scroll_size"],
+        relic_kind=required_text(definition.data, "relic_kind", label),
+        cast_fatigue=_whole(definition.data, "cast_fatigue", label, 0),
+    )
 
 
 def _load_conditions(

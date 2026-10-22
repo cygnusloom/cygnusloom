@@ -591,7 +591,7 @@
     "name": "rest",
     "python_module": "cairn2e",
     "function": "rest",
-    "description": "Record a rest for the whole party. The Warden decides the length from what the party does: 'moments' is a short break such as a drink and a sit-down, 'night' is a full night until morning, 'week' is a week of rest. Set interrupted when something breaks the rest, and then it counts as moments only. A full rest, uninterrupted, is the only way to clear Fatigue. A deprived character recovers nothing.",
+    "description": "Record a rest for the whole party. The Warden decides the length from what the party does: 'moments' is a short break such as a drink and a sit-down, 'night' is a full night until morning, 'week' is a week of rest. The rest moves the clock forward itself, so do not also advance_time for the same time. Set interrupted when something breaks the rest, and then it counts as moments only. A full rest, uninterrupted, is the only way to clear Fatigue. A deprived character recovers nothing.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -695,11 +695,227 @@
   },
   {
     "type": "tool_call",
+    "id": "give_spellbook",
+    "name": "give_spellbook",
+    "python_module": "cairn2e",
+    "function": "give_spellbook",
+    "description": "Give a character a spellbook holding one spell. It takes one slot. Casting from it costs one Fatigue.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character or NPC."
+        },
+        "spell": {
+          "type": "string",
+          "description": "The spell's name."
+        },
+        "description": {
+          "type": "string",
+          "description": "The spell's text, as the Warden writes it."
+        }
+      },
+      "required": [
+        "name",
+        "spell",
+        "description"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "give_scroll",
+    "name": "give_scroll",
+    "python_module": "cairn2e",
+    "function": "give_scroll",
+    "description": "Give a character a scroll holding one spell. Scrolls are petty and take no slot. One cast spends the scroll and costs no Fatigue.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character or NPC."
+        },
+        "spell": {
+          "type": "string",
+          "description": "The spell's name."
+        },
+        "description": {
+          "type": "string",
+          "description": "The spell's text, as the Warden writes it."
+        }
+      },
+      "required": [
+        "name",
+        "spell",
+        "description"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "give_relic",
+    "name": "give_relic",
+    "python_module": "cairn2e",
+    "function": "give_relic",
+    "description": "Give a character a relic with a number of uses. `recharge` is the rule for restoring its uses, written as text. A relic adds no Fatigue.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character or NPC."
+        },
+        "item": {
+          "type": "string",
+          "description": "The name of the relic."
+        },
+        "uses": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "How many uses the relic has when full."
+        },
+        "recharge": {
+          "type": "string",
+          "description": "The rule that restores its uses, such as 'Capture the final breath of a dying warrior.'"
+        },
+        "size": {
+          "type": "string",
+          "enum": [
+            "petty",
+            "normal",
+            "bulky"
+          ],
+          "default": "normal",
+          "description": "The relic's size. Defaults to 'normal'."
+        }
+      },
+      "required": [
+        "name",
+        "item",
+        "uses",
+        "recharge"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "cast_spell",
+    "name": "cast_spell",
+    "python_module": "cairn2e",
+    "function": "cast_spell",
+    "description": "Cast a spell the character says they cast. From a spellbook it costs one Fatigue. From a scroll the scroll is spent and no Fatigue is added. Use it for every cast so the cost is recorded.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character or NPC."
+        },
+        "spell": {
+          "type": "string",
+          "description": "The spell's name."
+        }
+      },
+      "required": [
+        "name",
+        "spell"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "use_relic",
+    "name": "use_relic",
+    "python_module": "cairn2e",
+    "function": "use_relic",
+    "description": "Spend one use of a relic. It fails when the relic has no uses left, until it recharges.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character or NPC."
+        },
+        "item": {
+          "type": "string",
+          "description": "The name of the relic."
+        }
+      },
+      "required": [
+        "name",
+        "item"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "recharge_relic",
+    "name": "recharge_relic",
+    "python_module": "cairn2e",
+    "function": "recharge_relic",
+    "description": "Restore a relic to its full uses, once its recharge rule is met. Refused when the relic is already fully charged.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character or NPC."
+        },
+        "item": {
+          "type": "string",
+          "description": "The name of the relic."
+        }
+      },
+      "required": [
+        "name",
+        "item"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "roll_save",
+    "name": "roll_save",
+    "python_module": "cairn2e",
+    "function": "roll_save",
+    "description": "Roll a save for a character. The engine rolls the die and compares it to the stat, and records the result. A failure does not defeat the character; apply what the save costs yourself.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character or NPC."
+        },
+        "stat": {
+          "type": "string",
+          "enum": [
+            "str",
+            "dex",
+            "wil"
+          ],
+          "description": "The stat to save against."
+        },
+        "reason": {
+          "type": "string",
+          "description": "What the save is for, such as 'a spell's backlash'."
+        }
+      },
+      "required": [
+        "name",
+        "stat",
+        "reason"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "give_item",
     "name": "give_item",
     "python_module": "cairn2e",
     "function": "give_item",
-    "description": "Add an item to a character's inventory. Petty items (coins, scrolls, relics) take no slot; normal items take one; bulky items take two. A full inventory (10 slots) reduces the character to 0 HP.",
+    "description": "Add an item to a character's inventory. Petty items (such as coins and scrolls) take no slot; normal items take one; bulky items take two. A full inventory (10 slots) reduces the character to 0 HP.",
     "parameters": {
       "type": "object",
       "properties": {
