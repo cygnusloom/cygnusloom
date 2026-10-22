@@ -1158,6 +1158,7 @@ def _npc_summary(npc: Character) -> dict[str, Any]:
         "personality": npc.personality,
         "accent": npc.accent,
         "quirks": list(npc.quirks),
+        "defeated": npc.defeated,
     }
 
 

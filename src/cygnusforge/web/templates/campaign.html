@@ -172,7 +172,7 @@
                 <li><strong>{{ scene.pc.name }}</strong> <span class="muted">(you)</span></li>
                 {% endif %}
                 {% for npc in scene.npcs %}
-                <li><strong>{{ npc.name }}</strong></li>
+                <li><strong>{{ npc.name }}</strong>{% if npc.defeated %} <span class="muted">(body)</span>{% endif %}</li>
                 {% endfor %}
               </ul>
               {% if not scene.location %}

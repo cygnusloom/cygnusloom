@@ -25,8 +25,10 @@ from cygnusforge.services.events import (
     NPC_KIND,
     CampaignState,
     Character,
+    Harmed,
     Position,
     load_state,
+    record,
 )
 from cygnusforge.services.tools import ToolRun, run_tool
 from tests.conftest import content_library, csrf_token
@@ -434,6 +436,18 @@ def test_all_at_location_describes_a_place_without_statblocks(
         "position_km": {"x": -1.2, "y": 1.4},
         "parent": None,
     }
+
+
+def test_a_defeated_npc_is_marked_as_a_body_where_it_fell(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
+    with _db(app) as db:
+        record(db, campaign_id, Harmed(name="Brin Gallowcap", stat="str", taken=0, defeats=True))
+        db.commit()
+    here = world.all_at_location(_state(app, campaign_id), None)
+    assert [(npc["name"], npc["defeated"]) for npc in here["npcs"]] == [("Brin Gallowcap", True)]
 
 
 def test_all_at_location_needs_a_location_when_the_player_has_none(
