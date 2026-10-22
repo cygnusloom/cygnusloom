@@ -108,7 +108,9 @@ def _set_max(
         record(
             db,
             campaign_id,
-            EffectNoted(name=name, text=f"the maximum {stat.upper()} stays {before} ({reason})."),
+            EffectNoted(
+                name=name, text=f"{name}'s maximum {stat.upper()} stays {before} ({reason})."
+            ),
         )
     else:
         record(

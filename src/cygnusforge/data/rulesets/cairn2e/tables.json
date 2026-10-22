@@ -1561,10 +1561,6 @@
         "text": "Roll 1d6. 1: Neck, 2: Hands, 3: Eye, 4: Chest, 5: Legs, 6: Ear. Roll 1d6. If the total is higher than your max HP, take the new result.",
         "effects": [
           {
-            "op": "note",
-            "text": "Roll 1d6 for where the scar is: 1 neck, 2 hands, 3 eye, 4 chest, 5 legs, 6 ear."
-          },
-          {
             "op": "set_max",
             "stat": "hp",
             "dice": "1d6",
@@ -1605,10 +1601,6 @@
         "name": "Broken Limb",
         "text": "Roll 1d6. 1-2: Leg, 3-4: Arm, 5: Rib, 6: Skull. Once mended, roll 2d6. If the total is higher than your max HP, take the new result.",
         "effects": [
-          {
-            "op": "note",
-            "text": "Roll 1d6 for the broken bone: 1-2 leg, 3-4 arm, 5 rib, 6 skull."
-          },
           {
             "op": "condition",
             "id": "broken_limb"
