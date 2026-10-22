@@ -29,6 +29,11 @@ This spec plans the Second Edition rules as a set of phases. Each phase is imple
 | Hirelings | Built from the marketplace table or a background. Phase 8, before death rules. |
 | Death | The book's rules: critical damage is fatal unless aided, STR 0 means death, and the player makes a new PC or takes a hireling who joins immediately. Phase 9. Until then, the house rule stays: a downed PC is knocked unconscious and the GM assigns the recovery narrative. |
 | Dungeon exploration | Dungeon turn cycle and Dungeon Events table, engine-rolled. Phase 10. |
+| Inventory panel | The player sees their items in an Inventory tab: name, size, slots, uses left, and kind, against the capacity. Built after phase 7. |
+| Gaps | Every known gap from every phase is listed in the gap register, mapped to the phase that will close it or marked unscheduled. |
+| Generic engine | Phase 11 moves every Cairn-specific term, number, and prompt rule out of the engine and into the ruleset JSON, parameterized where a second rule set would need the same hook. |
+| Capstone | Phase 12 imports the first-party adventure CAS-1 in full and plays it through as the end-to-end test of Cairn 2e. |
+| D&D comparison | No D&D ruleset is in this repo, so the refactor uses D&D as a design reference only. The test for "generic" is whether a second rule set would need the same hook. |
 
 ## Phase 1: combat core
 
@@ -162,7 +167,115 @@ Background tables come from `backgrounds.json`. Attributes roll 3d6 each, and HP
 - Dungeon Events table, rolled when the party spends too long in one place, makes noise, or enters a new area.
 - Dungeon seeds and generated rooms are GM content, not engine logic.
 
-## Open items (not in any phase yet)
+## Phase 11: generic engine refactor
 
-- The bonds and omens section, the bibliography, and game files and tools were not reviewed in detail. They will be revisited before their phases.
-- The Scars table text is the book's text. The table must be transcribed exactly into `tables.json` during phase 1.
+Goal: the engine knows no Cairn terms, numbers, or prompt rules. Each Cairn rule is data in `cairn2e/`, read through a parameter the engine defines. Each parameter must be one a second rule set would need too, so the test is "would D&D need this hook?" (D&D's analogues: short and long rests, spell slots, encumbrance, hit dice, and a conditions list.) Where a rule is truly Cairn-only, it stays in `rules/cairn2e.py`, the rule-set adapter, and not in the engine.
+
+Move out of the engine (from the leak audit, with file locations as of commit `b330090`):
+
+- Deprivation penalty item: `FATIGUE_NAME` in `services/inventory.py`. Becomes a ruleset `inventory.penalty_item` with name, size, and kind. The engine reads the name.
+- Daily deprivation tick: `services/clock.py` adds Fatigue each day. Becomes a `clock.daily_effects` entry that names a condition and its trigger.
+- Fatigue rest message in `services/inventory.py`: moves into the item's `clears_on` and message template in JSON.
+- Spell cost paid in Fatigue: `services/magic.py`. Becomes a ruleset `magic.cast_cost` referencing the penalty item.
+- Armor cap (`MAX_ARMOR` in `services/combat.py`) and the armor purchase rule in `services/market.py`: become ruleset `combat.armor.max` and item `effects` with a cap.
+- Morale: `wil_stat` becomes `save_stat`. The "half casualties" trigger becomes a JSON trigger list next to `first_casualty`. Docstrings that name DEX or WIL move to generic wording.
+- `set_deprivation` in `rules/context.py` becomes `set_condition(name, active)`.
+- `resolve_detachment` is Cairn's tool name. Either it stays in `rules/cairn2e.py`, or it is renamed generically (for example `resolve_group_break`). Decide during the phase.
+- Relics (`give_relic`, `use_relic`, `recharge_relic` in `services/inventory.py` and `rules/context.py`): a generic "consumable with recharge rule" type, or kept in `rules/cairn2e.py`. Decide during the phase.
+- Debug panel stat options hard-coded in `web/templates/campaign.html`: rendered from the rule set's stats.
+- GM prompts in `services/campaigns.py` (`STATE_INSTRUCTION` and related): the generic loop stays in code. Cairn bullets (armor glancing blows, relic recharge, detachment, defeated PC rules, combat speech policy, and the sentence cap) move to the ruleset as `prompt_fragments` and `narration` config.
+- Weapon damage: free text from the GM's attack (`services/combat.py` around L484–500). Weapons should read their damage and features from the ruleset.
+- Names list in `services/names.py`: low priority. Optional per-rule-set JSON.
+
+Already generic (keep, and use as the pattern): stat keys from JSON (`morale.wil_stat`, `morale.retreat_stat` before the rename), clock parts, the debug gold route keyed on `marketplace.currency`, the marketplace structure, the `core` shared rule set, dice tables passed in by ID, scar tables passed in as `ScarTable`, modifier names as a mapping, and generic event types with ruleset-supplied names.
+
+Done when: a grep for `Cairn`, `Fatigue`, `relic`, `detachment`, `Scar`, `deprivation`, and the stat names in `src/cygnusforge/services`, `src/cygnusforge/web`, and `src/cygnusforge/rules/context.py` returns no hits outside docstrings that name the rule set generically. The full suite and a live Cairn session must still pass with no change in behavior, except for the `(used)` wording and the speech-cap fix, which are gap-register items.
+
+## Phase 12: capstone, CAS-1 "Trouble in Twin Lakes"
+
+Import the first-party adventure in its entirety and play it through as the end-to-end test of Cairn 2e: https://cairnrpg.com/adventures/first-party/cas-1
+
+Known content from the module text (read in full during the design pass; statblocks and tables transcribed during the phase):
+
+- Two mysteries: Aldra the butcher's disappearance and Jandy the tithingman's death loop. Hooks offer 750 gp, a 250 gp bonus, and 200 gp each.
+- Locations: Isthmus Town (the Stuffed Inn with its Reeve's Office and cellar, the Butcher Shop, Giva's Home), the Farming Path, Dunston, Fasha's Farm (farmhouse and abandoned home), Old Mill Road, the Stone Forest, Deadmill, East Lake Pass, the Downs, White Tower Fens (Whistlewood, pit trap, log trap, the White Tower, Bone Sump), the Temple of the Fungal Lizards (antechamber, columbarium, breeding chamber, and more), and The Roots.
+- NPCs with statblocks: Reeve Trellis, Fasha (STR 14, DEX 13, WIL 5, fists d8, hook knife d6), Aldra, Flavia, Jandy, Giva, Drum, Annafranax (the Frog Witch), and Vuk (a monster). Monsters include Night Cat and Watersnatch.
+- Relics: the Eye of Vuk, the Echo Spark, and the Wisp Lamp. These use the Phase 5 relic rules.
+- A 1d8 daily victim schedule and quicksand.
+- Dungeon Exploration procedures (book p.71), not Wilderness, plus random encounter tables. These need Phase 10.
+
+Done when: every location, NPC, monster, relic, and table in the module is in the ruleset or in an adventure data file, the module can be played from start to finish in a live session, and the transcript reads correctly. Gaps found are added to the gap register and closed or scheduled.
+
+## Gap register
+
+Every known gap, from the checkpoint history and the live tests, with the phase that closes it. "Unscheduled" means it needs a decision or a phase, and that decision is pending.
+
+Engine and prompt (cross-cutting):
+
+- Combat speech sometimes exceeds the "one sentence, two at most" cap. Prompt-only. Needs a validator or stronger prompt, then a live re-test. Phase 11.
+- Speech outside combat is not capped. An NPC gave a long non-combat speech. Phase 11.
+- Repeated speech lines (four "Fenwick" lines in one scene). Cause unverified; narration quoting NPC words is the leading hypothesis. Unscheduled, needs investigation.
+- The GM accepts player-invented past events as fact. Unscheduled, needs a prompt rule and a test.
+- Debug panel stat options are hard-coded in the template. Phase 11.
+- Cairn-specific GM prompt wording lives in `services/campaigns.py`. Phase 11.
+- Weapon damage is free text, and weapons do not read their features. Phase 11.
+- Test flakiness: a PC's max HP is random at creation and `_set_stat` clamps to it, so a max HP of 1 makes tests fail. Empty `Rolls` queues raise `IndexError`. Unscheduled, test infrastructure.
+- `tests/test_world.py` snapshot-style prompt assertions need checking after prompt edits. Unscheduled.
+
+Phase 1 (combat core):
+
+- Live test of an impaired or enhanced attack was not done.
+- Scars entry 1 `note` duplicates its text. The max-HP note in transcript wording needs fixing.
+- The Scars table must be transcribed exactly into `tables.json`. Verify it is complete.
+
+Phase 4 (deprivation, fatigue, rest, inventory):
+
+- Rest end conditions (`conditions.json`) with rest triggers are not built.
+- A rest plus `advance_time` may double-advance the clock. Not live-verified.
+- An interrupted rest can mismatch the narration and the clock.
+- The GM narrated a night's camp and eating without calling `rest`, so no ration was used. Needs a prompt rule and a test.
+- The 10-slot capacity and the full-inventory HP rule are unverified against the book.
+- The deprivation Fatigue threshold (day 2 or day 3) is unverified.
+- The `visited_day or 1` stale-place rule and STR 0 outside combat are unverified.
+
+Phase 5 (magic):
+
+- The premature-recharge refusal and the spent-relic narration with the new prompt rule are not live-verified.
+- The Phase 5 status in this spec was not updated after the work.
+
+Phase 6 (gold and marketplace):
+
+- Transport capacity bonuses (cart +4, wagon +8, horse +4, mule +6), stables, and mounts are deferred.
+- GM catalogue visibility is unresolved: prices in world-state text, or guidance in tool descriptions.
+- Medical Healing (50 gp) heals everything because the book gives no mechanical text. Antitoxin and Sedative have none either. Needs a user decision.
+- Room & Board, Private Room, and Stable have prices but no mechanical text.
+- Whether lodging covers only the next night's meal is unverified. The payer rule (first named PC pays) is an assumption.
+- The live test on a fresh DB and the Phase 6 final-decision update were not completed.
+- Hireling wages are stored but not charged. Phase 8.
+
+Phase 7 (character creation and starting gear):
+
+- The backpack's six-slot capacity is not modeled; it is treated as one normal slot. Verify against the book.
+- Lantern oil does not burn down over time.
+- The armor cap of 3 at creation is a design choice. Confirm.
+- Petty and bulky flags are unverified for lockpicks, pincers, roll of tin, twin daggers, plain daggers, badge, and black outfit.
+- `candle-helmet` has both `uses` 6 and `armor` 1, probably a data error.
+- The `(used)` wording in the `ItemUsesSet` transcript line reads awkwardly: "has 2 uses left (used)".
+- The inventory panel shows "1 uses left" (no plural handling) and lowercase size labels ("normal, 1 slot"). Cosmetic.
+- The inventory panel's empty state ("Carrying nothing") was not live-tested.
+- The GM spent oil on an unrelated needle-knife attempt, and blackened a blade over a lit lantern. The `use_item` description was tightened twice. Re-verify live.
+- Last-use removal of an item was covered by unit tests only, not live.
+
+Phase 8 (hirelings): scope in phase 8. Includes 3d6 attributes, 1d6 HP, wages, and joining the party.
+
+Phase 9 (death rules): critical damage, Scars 11 (Mortal Wound) and 12 (Doomed), and new characters.
+
+Phase 10 (dungeon exploration): the dungeon turn cycle, Dungeon Events, treasure, and gold income.
+
+Phase 11 (generic refactor): the list above.
+
+Phase 12 (capstone): the CAS-1 import and any gaps it reveals.
+
+Unscheduled, needs a book reference or a decision:
+
+- The bonds and omens section, the bibliography, and the game files and tools were not reviewed in detail. Revisit each before its phase.
