@@ -95,7 +95,8 @@ STATE_INSTRUCTION = (
     "calls: create, update, or delete locations, characters, and "
     "notes as the story needs; advance the clock, rest, or mark deprivation only when this action "
     "takes that time in the fiction, and never repeat a rest or time jump the transcript already "
-    "records; any rest already moves the clock, so never add advance_time for the same time; when time passes, check each relic's recharge text and call recharge_relic once its "
+    "records; when the party makes camp or sleeps through a night, record that night's rest with "
+    "rest in this same turn, before narrating the morning; any rest already moves the clock, so never add advance_time for the same time; when time passes, check each relic's recharge text and call recharge_relic once its "
     "rule is met; a spent item, spell, or relic does nothing, so narrate it as spent and record no "
     "effect the tool results do not show; move characters as the story needs, the player character included "
     "when events carry them somewhere; ask for a roll when the outcome is uncertain; and call speak "
@@ -271,6 +272,7 @@ def create_character(
     """Make the campaign's player character. Until it exists, the campaign cannot be played."""
     campaign = get_campaign(engine, owner_id, campaign_id)
     spec = character_spec(library, campaign)
+    rule_set = library.rule_sets[campaign.rule_set]
     with _exclusive(campaign_id), session_scope(engine) as db:
         return create_player_character(
             db,
@@ -281,6 +283,9 @@ def create_character(
             rolled,
             submitted,
             rng if rng is not None else random.Random(),
+            food=rule_set.food,
+            inventory=rule_set.inventory,
+            item_sizes=rule_set.item_sizes,
         )
 
 
@@ -835,6 +840,8 @@ def _tool_context(
             inventory=rule_set.inventory,
             item_sizes=rule_set.item_sizes,
             magic=rule_set.magic,
+            food=rule_set.food,
+            marketplace=rule_set.marketplace,
         ),
         speak=speak,
         ooc=ooc,

@@ -4,6 +4,7 @@ import pytest
 
 from cygnusforge.services.clock import absolute, rest_target
 from cygnusforge.services.common import InvalidInput
+from cygnusforge.services.events import RestTaken
 from tests.test_combat import (
     CAIRN,
     PC,
@@ -62,6 +63,14 @@ def test_a_night_rest_heals_a_wounded_character(client_factory):
     result = tools.rest("night", reason="camp")
     assert _character(app, campaign_id, PC).harm.get("hp", 0) == 0
     assert PC in result["recovered"]
+
+
+def test_a_night_rest_notice_says_the_rest_is_over_not_a_day_passed(client_factory):
+    _, _, tools = _fight(client_factory)
+    result = tools.rest("night", reason="camp")
+    assert result["notice"].startswith(
+        "the rest is over and time has passed; update anything that should be updated."
+    )
 
 
 def test_a_deprived_character_recovers_nothing_on_a_rest(client_factory):
@@ -131,6 +140,13 @@ def test_rest_history_lists_the_newest_rest_first_with_its_reason(client_factory
     tools.rest("moments", reason="watch")
     rests = tools.rest_history()["rests"]
     assert [r["reason"] for r in rests] == ["watch", "camp"]
+
+
+def test_a_rest_line_ends_with_one_full_stop_even_if_the_reason_has_one(client_factory):
+    line = RestTaken(
+        length="night", full=True, interrupted=False, reason="camp.", day=1, part="morning"
+    ).render()
+    assert line == "The party rests (night): camp."
 
 
 def test_a_discovered_place_nobody_visits_goes_stale_after_five_days(client_factory):

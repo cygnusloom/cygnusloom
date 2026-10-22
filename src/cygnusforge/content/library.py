@@ -290,6 +290,8 @@ class RestLength:
     full: bool
     restores: tuple[str, ...]
     clears: tuple[str, ...]
+    # Whether the party eats during this rest: each character who is not lodged uses a food use.
+    food: bool = False
 
 
 @dataclass(frozen=True)
@@ -310,6 +312,62 @@ class InventoryRules:
     fatigue_item: str
     fatigue_slots: int
     full_stat: str
+
+
+@dataclass(frozen=True)
+class FoodRules:
+    """The food a party eats on rests. A character starts with the `feature` as a pack of `uses`
+    and carries it as the item `item`, which takes `size` slots."""
+
+    feature: str
+    item: str
+    size: str
+    uses: int
+
+
+@dataclass(frozen=True)
+class ShopItem:
+    """A catalogue item. `price` is in gold. `armor` is added to the buyer's armor. `damage` is the
+    attack die the item gives, as text for the Warden."""
+
+    id: str
+    name: str
+    category: str
+    price: int
+    size: str
+    armor: int
+    damage: str
+    uses: int
+    description: str
+
+
+@dataclass(frozen=True)
+class ShopService:
+    """A service the marketplace sells. `effect` is "lodging", "restore", or "deferred". Lodging
+    covers `fits` characters a night. A restore gives back the attributes in `restores`."""
+
+    id: str
+    name: str
+    price: int
+    effect: str
+    fits: int = 1
+    restores: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class Hireling:
+    id: str
+    name: str
+    wage_per_day: int
+
+
+@dataclass(frozen=True)
+class Marketplace:
+    # The feature id of the currency, such as gold. Buying takes it from the buyer's features.
+    currency: str
+    items: tuple[ShopItem, ...]
+    services: tuple[ShopService, ...]
+    hirelings: tuple[Hireling, ...]
 
 
 @dataclass(frozen=True)
@@ -361,6 +419,10 @@ class RuleSet:
     item_sizes: Mapping[str, int] = field(default_factory=dict)
     # How magic uses items, or None when the rule set has no magic.
     magic: MagicRules | None = None
+    # The food a party eats on rests, or None when the rule set does not track food.
+    food: FoodRules | None = None
+    # What the marketplace sells, or None when the rule set has no marketplace.
+    marketplace: Marketplace | None = None
 
 
 @dataclass(frozen=True)
@@ -583,6 +645,8 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     inventory = _load_inventory(definitions, character, template)
     item_sizes = _load_item_sizes(definitions, template)
     magic = _load_magic(definitions, item_sizes, template)
+    food = _load_food(definitions, rests, item_sizes, character, template)
+    marketplace = _load_marketplace(definitions, item_sizes, character, template)
     tool_calls: dict[str, ToolCall] = {}
     tool_names: set[str] = set()
     for d in definitions:
@@ -615,6 +679,8 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         inventory=inventory,
         item_sizes=item_sizes,
         magic=magic,
+        food=food,
+        marketplace=marketplace,
     )
 
 
@@ -909,6 +975,9 @@ def _load_rests(
         for stat in restores:
             if stat not in character.stats:
                 raise ContentError(f"{length_label}: 'restores' names no stat ({stat!r})")
+        food = data.get("food", False)
+        if not isinstance(food, bool):
+            raise ContentError(f"{length_label}: 'food' must be true or false")
         loaded[length_id] = RestLength(
             id=length_id,
             parts=parts,
@@ -917,6 +986,7 @@ def _load_rests(
             full=full,
             restores=restores,
             clears=_names(data, "clears", length_label),
+            food=food,
         )
     return loaded
 
@@ -994,6 +1064,114 @@ def _load_magic(
         scroll_size=sizes["scroll_size"],
         relic_kind=required_text(definition.data, "relic_kind", label),
         cast_fatigue=_whole(definition.data, "cast_fatigue", label, 0),
+    )
+
+
+def _load_food(
+    definitions: list[Definition],
+    rests: Mapping[str, RestLength],
+    item_sizes: Mapping[str, int],
+    character: CharacterSpec,
+    template: str,
+) -> FoodRules | None:
+    """The food block of the rule set's rest definition. A rest length with `food` needs it."""
+    definition = _single_optional(definitions, "rest", template)
+    if definition is None or "food" not in definition.data:
+        if any(length.food for length in rests.values()):
+            raise ContentError(f"{template}: a rest eats food, so the rest needs a 'food' block")
+        return None
+    label = f"{template}: rest {definition.id} food"
+    data = definition.data["food"]
+    if not isinstance(data, Mapping):
+        raise ContentError(f"{label} must be an object")
+    size = required_text(data, "size", label)
+    if size not in item_sizes:
+        raise ContentError(f"{label}: 'size' names no item size ({size!r})")
+    feature = required_text(data, "feature", label)
+    if feature not in character.features:
+        raise ContentError(f"{label}: 'feature' names no character feature ({feature!r})")
+    return FoodRules(
+        feature=feature,
+        item=required_text(data, "item", label),
+        size=size,
+        uses=_whole(data, "uses", label, 1),
+    )
+
+
+def _load_marketplace(
+    definitions: list[Definition],
+    item_sizes: Mapping[str, int],
+    character: CharacterSpec,
+    template: str,
+) -> Marketplace | None:
+    """The marketplace: `shop_item`, `service`, and `hireling` definitions. Items may be petty,
+    normal, or bulky, as the rule set's item sizes say."""
+    shop = [d for d in definitions if d.type == "shop_item"]
+    services = [d for d in definitions if d.type == "service"]
+    hirelings = [d for d in definitions if d.type == "hireling"]
+    head = _single_optional(definitions, "marketplace", template)
+    if head is None:
+        if shop or services or hirelings:
+            raise ContentError(f"{template}: the marketplace needs a 'marketplace' definition")
+        return None
+    currency = required_text(head.data, "currency", f"{template}: marketplace")
+    if currency not in character.features:
+        raise ContentError(f"{template}: marketplace 'currency' names no feature ({currency!r})")
+    items = []
+    for d in shop:
+        label = f"{template}: shop item {d.id}"
+        size = required_text(d.data, "size", label)
+        if size not in item_sizes:
+            raise ContentError(f"{label}: 'size' names no item size ({size!r})")
+        items.append(
+            ShopItem(
+                id=d.id,
+                name=required_text(d.data, "name", label),
+                category=required_text(d.data, "category", label),
+                price=_whole(d.data, "price", label, 0),
+                size=size,
+                armor=_whole(d.data, "armor", label, 0),
+                damage=str(d.data.get("damage", "")),
+                uses=_whole(d.data, "uses", label, 0),
+                description=str(d.data.get("description", "")),
+            )
+        )
+    loaded_services = []
+    for d in services:
+        label = f"{template}: service {d.id}"
+        effect = required_text(d.data, "effect", label)
+        if effect not in ("lodging", "restore", "deferred"):
+            raise ContentError(f"{label}: 'effect' must be lodging, restore, or deferred")
+        restores = _names(d.data, "restores", label)
+        for stat in restores:
+            if stat not in character.stats:
+                raise ContentError(f"{label}: 'restores' names no stat ({stat!r})")
+        if effect == "restore" and not restores:
+            raise ContentError(f"{label}: a restore service needs 'restores'")
+        fits = _whole(d.data, "fits", label, 1) if "fits" in d.data else 1
+        loaded_services.append(
+            ShopService(
+                id=d.id,
+                name=required_text(d.data, "name", label),
+                price=_whole(d.data, "price", label, 0),
+                effect=effect,
+                fits=fits,
+                restores=restores,
+            )
+        )
+    hired = [
+        Hireling(
+            id=d.id,
+            name=required_text(d.data, "name", f"{template}: hireling {d.id}"),
+            wage_per_day=_whole(d.data, "wage_per_day", f"{template}: hireling {d.id}", 0),
+        )
+        for d in hirelings
+    ]
+    return Marketplace(
+        currency=currency,
+        items=tuple(items),
+        services=tuple(loaded_services),
+        hirelings=tuple(hired),
     )
 
 

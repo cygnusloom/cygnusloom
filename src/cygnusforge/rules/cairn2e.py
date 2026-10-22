@@ -106,6 +106,20 @@ def add_fatigue(name: str, cause: str, ctx: ToolContext, force: bool = False) ->
     return ctx.world.add_fatigue(name, cause, force=force)
 
 
+def search_marketplace(query: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.search_marketplace(query)
+
+
+def buy_item(
+    name: str, item: str, ctx: ToolContext, price: int | None = None, size: str = ""
+) -> dict[str, Any]:
+    return ctx.world.buy_item(name, item, price=price, size=size)
+
+
+def buy_service(names: list[str], service: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.buy_service(names, service)
+
+
 def give_item(name: str, item: str, ctx: ToolContext, size: str = "normal") -> dict[str, Any]:
     return ctx.world.give_item(name, item, size=size)
 

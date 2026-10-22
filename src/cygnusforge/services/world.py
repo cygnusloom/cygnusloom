@@ -35,8 +35,10 @@ from cygnusforge.content.library import (
     DeprivationRules,
     DiceTable,
     EncounterGrid,
+    FoodRules,
     InventoryRules,
     MagicRules,
+    Marketplace,
     MonsterTemplate,
     RestLength,
     WorldTemplate,
@@ -48,6 +50,7 @@ from cygnusforge.services import clock as clock_service
 from cygnusforge.services import combat, encounters, morale
 from cygnusforge.services import inventory as inventory_service
 from cygnusforge.services import magic as magic_service
+from cygnusforge.services import market as market_service
 from cygnusforge.services import needs as needs_service
 from cygnusforge.services.common import (
     InvalidInput,
@@ -65,6 +68,7 @@ from cygnusforge.services.events import (
     CampaignOptionsChosen,
     CampaignState,
     Character,
+    Item,
     LocationAdded,
     LocationDiscovered,
     LocationRemoved,
@@ -158,6 +162,8 @@ class WorldTools:
     inventory: InventoryRules | None = None
     item_sizes: Mapping[str, int] = field(default_factory=dict)
     magic: MagicRules | None = None
+    food: FoodRules | None = None
+    marketplace: Marketplace | None = None
 
     def roll_tables(self, tables: list[str]) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -185,6 +191,7 @@ class WorldTools:
                 self.interrupted_rest,
                 self.deprivation,
                 self.inventory,
+                self.food,
                 length,
                 interrupted,
                 reason,
@@ -214,6 +221,32 @@ class WorldTools:
                     )
             return inventory_service.add_fatigue(
                 db, self.campaign_id, _required(self.inventory, "inventory"), name, cause
+            )
+
+    def buy_item(
+        self, name: str, item: str, price: int | None = None, size: str = ""
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return market_service.buy_item(
+                db,
+                self.campaign_id,
+                _required(self.marketplace, "a marketplace"),
+                _required(self.inventory, "inventory"),
+                self.item_sizes,
+                name,
+                item,
+                price,
+                size,
+            )
+
+    def buy_service(self, names: Sequence[str], service: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return market_service.buy_service(
+                db,
+                self.campaign_id,
+                _required(self.marketplace, "a marketplace"),
+                names,
+                service,
             )
 
     def give_item(self, name: str, item: str, size: str = "normal") -> dict[str, Any]:
@@ -472,6 +505,9 @@ class WorldTools:
     def search_monster(self, query: str) -> dict[str, list[dict[str, Any]]]:
         return search_monster(self.monsters, query)
 
+    def search_marketplace(self, query: str) -> dict[str, Any]:
+        return search_marketplace(_required(self.marketplace, "a marketplace"), query)
+
     def attack(self, attacker: str, attack: str, target: str, modifier: str = "") -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.attack(
@@ -683,9 +719,13 @@ def create_player_character(
     rolled: Mapping[str, int],
     submitted: Mapping[str, Any],
     rng: random.Random,
+    food: FoodRules | None = None,
+    inventory: InventoryRules | None = None,
+    item_sizes: Mapping[str, int] | None = None,
 ) -> dict[str, Any]:
     """Make the player character from the player's choices. `rolled` are the stats rolled for
-    this character; the player may only keep them or swap within a swap group."""
+    this character; the player may only keep them or swap within a swap group. The starting
+    food pack is carried as an item rather than kept as a feature count."""
     state = load_state(db, campaign_id)
     if state.pc() is not None:
         raise InvalidInput("the player character already exists")
@@ -703,7 +743,17 @@ def create_player_character(
         raise InvalidInput(str(error)) from error
     sheet = resolve(spec, submitted, rng)
     _check_sheet_text(sheet)
-    record(db, campaign_id, PcAdded(name=name, **_sheet_fields(sheet)))
+    fields = _sheet_fields(sheet)
+    packs = fields["features"].pop(food.feature, 0) if food is not None else 0
+    record(db, campaign_id, PcAdded(name=name, **fields))
+    if food is not None and inventory is not None and item_sizes is not None:
+        for _ in range(packs):
+            pack = Item(
+                food.item, food.size, item_sizes[food.size], uses=food.uses, max_uses=food.uses
+            )
+            inventory_service.carry_item(
+                db, campaign_id, inventory, name, pack, cause="starting pack"
+            )
     record(db, campaign_id, OpeningStarted())
     db.commit()
     return {"created": "pc", "name": name, "location": None}
@@ -896,6 +946,34 @@ def search_monster(
         if _has_words(words, monster.id, monster.name, monster.description)
     ]
     return {"monsters": matches}
+
+
+def search_marketplace(marketplace: Marketplace, query: str) -> dict[str, Any]:
+    """Catalogue items and services whose id, name, category, or description contain every word
+    of `query`. Items come back in full, up to a limit, and `more` counts the rest."""
+    words = _words(query)
+    items = [
+        {
+            "item": item.name,
+            "category": item.category,
+            "price": item.price,
+            "size": item.size,
+            "description": item.description,
+        }
+        for item in marketplace.items
+        if _has_words(words, item.id, item.name, item.category, item.description)
+    ]
+    services = [
+        {"service": service.id, "name": service.name, "price": service.price}
+        for service in marketplace.services
+        if _has_words(words, service.id, service.name)
+    ]
+    return {
+        "currency": marketplace.currency,
+        "items": items[:MAX_MARKET_RESULTS],
+        "more": max(0, len(items) - MAX_MARKET_RESULTS),
+        "services": services,
+    }
 
 
 def update_location(
@@ -1526,6 +1604,9 @@ def _note_with_id(state: CampaignState, note_id: int) -> Note:
     if note is None:
         raise InvalidInput(f"there is no note with id {note_id}")
     return note
+
+
+MAX_MARKET_RESULTS = 20
 
 
 def _words(query: str) -> list[str]:

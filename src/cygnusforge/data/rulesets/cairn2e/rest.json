@@ -19,7 +19,8 @@
         ],
         "clears": [
           "fatigue"
-        ]
+        ],
+        "food": true
       },
       "week": {
         "days": 7,
@@ -33,9 +34,16 @@
         ],
         "clears": [
           "fatigue"
-        ]
+        ],
+        "food": true
       }
     },
-    "interrupted": "moments"
+    "interrupted": "moments",
+    "food": {
+      "feature": "rations",
+      "item": "Rations",
+      "size": "normal",
+      "uses": 3
+    }
   }
 ]

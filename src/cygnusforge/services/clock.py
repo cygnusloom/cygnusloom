@@ -42,10 +42,12 @@ def advance_to(
     target: int,
     deprivation: DeprivationRules | None,
     inventory: InventoryRules | None,
+    passed: str | None = None,
 ) -> dict[str, Any]:
     """Move the clock forward to `target`, which counts parts from day 1. It records the change,
     gives each newly started day's deprived characters their Fatigue, and reports places that have
-    gone stale. It does not commit."""
+    gone stale. `passed` replaces the day count in the notice, for time that is not a plain count
+    of days, such as a night's rest. It does not commit."""
     parts_per_day = len(clock_rules.parts)
     before = load_state(db, campaign_id).clock
     new = clock_at(target, parts_per_day)
@@ -68,9 +70,9 @@ def advance_to(
                 carry_item(db, campaign_id, inventory, character.name, fatigue, cause="deprivation")
     if new.day > before.day:
         elapsed = new.day - before.day
-        notices = [
-            f"{elapsed} day{'s' if elapsed != 1 else ''} passed; update anything that should be updated."
-        ]
+        if passed is None:
+            passed = f"{elapsed} day{'s' if elapsed != 1 else ''} passed"
+        notices = [f"{passed}; update anything that should be updated."]
         state = load_state(db, campaign_id)
         stale = sorted(
             place.name

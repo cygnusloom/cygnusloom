@@ -145,6 +145,8 @@ class Character:
     detachment: bool = False
     # A detachment whose Critical Damage save failed. The Warden must decide it is defeated or flees.
     critical_due: bool = False
+    # Paid for a bed for the night. The next rest that eats food feeds this character for free.
+    lodged: bool = False
     # What the character carries. Fatigue is an item of the rule set's fatigue kind.
     items: list[Item] = field(default_factory=list)
     # The campaign day a deprivation began, or None while the character is not deprived.
@@ -1690,17 +1692,19 @@ class RestTaken(GameEvent):
 
     def render(self) -> str:
         interrupted = ", interrupted" if self.interrupted else ""
-        return f"The party rests ({self.length}{interrupted}): {self.reason}."
+        return f"The party rests ({self.length}{interrupted}): {self.reason.rstrip('.!? ')}."
 
 
 @dataclass(frozen=True)
 class RestRecovered(GameEvent):
-    """A character recovers the stats a rest restores. Recovery clears their harm in those stats."""
+    """A character recovers the stats a rest restores. Recovery clears their harm in those stats.
+    `cause` names what restored them when it is not a rest, such as a paid treatment."""
 
     kind: ClassVar[str] = "rest.recovered"
 
     name: str
     restores: list[str]
+    cause: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
@@ -1708,7 +1712,50 @@ class RestRecovered(GameEvent):
             character.harm.pop(stat, None)
 
     def render(self) -> str:
+        if self.cause:
+            return f"{self.name} recovers: {self.cause}."
         return f"{self.name} recovers from the rest."
+
+
+@dataclass(frozen=True)
+class GoldChanged(GameEvent):
+    """Money changes hands. `feature` is the rule set's currency, held as a feature count. The
+    balance never goes below zero."""
+
+    kind: ClassVar[str] = "character.gold_changed"
+
+    name: str
+    feature: str
+    amount: int
+    cause: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        balance = character.features.get(self.feature, 0) + self.amount
+        character.features[self.feature] = max(0, balance)
+
+    def render(self) -> str:
+        if self.amount < 0:
+            return f"{self.name} pays {-self.amount} for {self.cause}."
+        return f"{self.name} gains {self.amount} from {self.cause}."
+
+
+@dataclass(frozen=True)
+class LodgingSet(GameEvent):
+    """A character has paid for a bed, or the bed is used up by the rest that ate food."""
+
+    kind: ClassVar[str] = "character.lodging_set"
+
+    name: str
+    lodged: bool
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].lodged = self.lodged
+
+    def render(self) -> str:
+        if self.lodged:
+            return f"{self.name} has a bed for the night."
+        return f"{self.name}'s bed is used up."
 
 
 @dataclass(frozen=True)

@@ -8,12 +8,22 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusforge.content.library import ClockRules, DeprivationRules, InventoryRules, RestLength
+from cygnusforge.content.library import (
+    ClockRules,
+    DeprivationRules,
+    FoodRules,
+    InventoryRules,
+    RestLength,
+)
 from cygnusforge.services.clock import absolute, advance_to, rest_target
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
     PC_KIND,
+    CampaignState,
     DeprivationSet,
+    ItemRemoved,
+    ItemUsesSet,
+    LodgingSet,
     RestRecovered,
     RestTaken,
     load_state,
@@ -33,13 +43,15 @@ def take_rest(
     interrupted_rest: str,
     deprivation: DeprivationRules | None,
     inventory: InventoryRules | None,
+    food: FoodRules | None,
     length: str,
     interrupted: bool,
     reason: str,
 ) -> dict[str, Any]:
-    """The party rests. An interrupted rest counts as the rule set's interrupted length. Time
-    passes, then each party member who is not deprived by then recovers what the rest restores.
-    A full rest also clears the item kinds it lists, such as Fatigue."""
+    """The party rests. An interrupted rest counts as the rule set's interrupted length. A rest
+    that eats food feeds the party first, and a member with none becomes deprived. Time passes,
+    then each party member who is not deprived by then recovers what the rest restores. A full
+    rest also clears the item kinds it lists, such as Fatigue."""
     chosen_id = interrupted_rest if interrupted else length
     if chosen_id not in rests:
         raise InvalidInput(f"there is no rest length named {length!r}")
@@ -60,6 +72,8 @@ def take_rest(
         ),
     )
     result: dict[str, Any] = {"length": rest.id, "interrupted": interrupted}
+    if rest.food and food is not None:
+        _feed_party(db, campaign_id, food, deprivation, state)
     result.update(
         advance_to(
             db,
@@ -68,6 +82,7 @@ def take_rest(
             rest_target(start, rest, parts_per_day),
             deprivation,
             inventory,
+            passed="the rest is over and time has passed",
         )
     )
 
@@ -86,6 +101,39 @@ def take_rest(
     result["recovered"] = [c.name for c in recovering]
     db.commit()
     return result
+
+
+def _feed_party(
+    db: Session,
+    campaign_id: int,
+    food: FoodRules,
+    deprivation: DeprivationRules | None,
+    state: CampaignState,
+) -> None:
+    """Each party member who is not lodged eats one use of the food. A member who has none is
+    deprived, if the rule set tracks deprivation. A lodged member's bed is used up instead."""
+    day = state.clock.day
+    for character in [c for c in state.characters.values() if c.kind == PC_KIND]:
+        if character.lodged:
+            record(db, campaign_id, LodgingSet(name=character.name, lodged=False))
+            continue
+        held = next((i for i in character.items if name_key(i.name) == name_key(food.item)), None)
+        if held is None:
+            if deprivation is not None and character.deprived_since is None:
+                record(
+                    db,
+                    campaign_id,
+                    DeprivationSet(name=character.name, deprived=True, cause="no food", day=day),
+                )
+            continue
+        if held.max_uses and held.uses > 1:
+            record(
+                db,
+                campaign_id,
+                ItemUsesSet(name=character.name, item=held.name, uses=held.uses - 1, cause="eaten"),
+            )
+        else:
+            record(db, campaign_id, ItemRemoved(name=character.name, item=held.name))
 
 
 def rest_history(db: Session, campaign_id: int) -> dict[str, Any]:
