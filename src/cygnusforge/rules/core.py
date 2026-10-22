@@ -85,7 +85,7 @@ def delete_npc(name: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.delete_npc(name)
 
 
-def move_actor(name: str, location: str, ctx: ToolContext) -> dict[str, str]:
+def move_actor(name: str, ctx: ToolContext, location: str | None = None) -> dict[str, str]:
     return ctx.world.move_actor(name, location)
 
 

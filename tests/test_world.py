@@ -334,6 +334,35 @@ def test_moving_needs_a_known_character_and_location(client_factory: Callable[[]
     )
 
 
+def test_an_npc_can_go_into_the_wind_and_be_brought_back(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
+    gone = _tool(app, campaign_id, "move_actor", {"name": "Brin Gallowcap"})
+    assert gone == {"moved": "Brin Gallowcap", "location": "in the wind"}
+    text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
+    assert "NPCs here: none." in text
+    assert "NPCs in the wind, at no location: Brin Gallowcap." in text
+
+    back = _tool(
+        app, campaign_id, "move_actor", {"name": "Brin Gallowcap", "location": "Glowcap Ring"}
+    )
+    assert back == {"moved": "Brin Gallowcap", "location": "Glowcap Ring"}
+    text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
+    assert "NPCs here: Brin Gallowcap." in text
+    assert "in the wind" not in text
+
+
+def test_the_player_character_cannot_go_into_the_wind(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
+    error = _tool(app, campaign_id, "move_actor", {"name": "Ada"})
+    assert "cannot go into the wind" in error["error"]
+
+
 def test_notes_attach_to_the_campaign_a_location_or_a_character(
     client_factory: Callable[[], TestClient], app
 ):

@@ -184,7 +184,7 @@ class WorldTools:
                 character,
             )
 
-    def move_actor(self, name: str, location: str) -> dict[str, str]:
+    def move_actor(self, name: str, location: str | None = None) -> dict[str, str]:
         with session_scope(self.engine) as db:
             return move_actor(db, self.campaign_id, name, location)
 
@@ -823,9 +823,19 @@ def delete_npc(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
     return {"deleted": "npc", "name": npc.name}
 
 
-def move_actor(db: Session, campaign_id: int, name: str, location: str) -> dict[str, str]:
+def move_actor(
+    db: Session, campaign_id: int, name: str, location: str | None = None
+) -> dict[str, str]:
+    """Move a character to a place. With no place, an NPC goes into the wind: it is nowhere
+    in particular until a later move brings it back."""
     state = load_state(db, campaign_id)
     actor = _character_named(state, name)
+    if location is None:
+        if actor.kind != NPC_KIND:
+            raise InvalidInput(f"{actor.name} is the player character and cannot go into the wind")
+        record(db, campaign_id, ActorMoved(name=actor.name, location=None))
+        db.commit()
+        return {"moved": actor.name, "location": "in the wind"}
     where = _place_named(state, location)
     record(db, campaign_id, ActorMoved(name=actor.name, location=where.name))
     # Going somewhere in person means the player character knows the place in detail.
@@ -1092,6 +1102,9 @@ def world_state_text(
         lines.append(f"Player character: {pc.name}, at {pc.location}.")
         names = [npc.name for npc in _npcs_at(state, pc.location)]
         lines.append(f"NPCs here: {', '.join(names) if names else 'none'}.")
+    wind = _npcs_in_the_wind(state)
+    if wind:
+        lines.append(f"NPCs in the wind, at no location: {', '.join(wind)}.")
     if conditions is not None:
         lines.extend(_status_lines(pc, conditions))
     lines.extend(_encounter_lines(state, grid, combat))
@@ -1148,6 +1161,12 @@ def _location_entry(place: Place) -> dict[str, Any]:
 
 def _npcs_at(state: CampaignState, location: str) -> list[Character]:
     return [c for c in state.characters.values() if c.kind == NPC_KIND and c.location == location]
+
+
+def _npcs_in_the_wind(state: CampaignState) -> list[str]:
+    return sorted(
+        c.name for c in state.characters.values() if c.kind == NPC_KIND and c.location is None
+    )
 
 
 def _npc_summary(npc: Character) -> dict[str, Any]:

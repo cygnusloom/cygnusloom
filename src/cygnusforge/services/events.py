@@ -527,12 +527,14 @@ class ActorMoved(GameEvent):
     kind: ClassVar[str] = "actor.moved"
 
     name: str
-    location: str
+    location: str | None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.characters[name_key(self.name)].location = self.location
 
     def render(self) -> str:
+        if self.location is None:
+            return f"{self.name} went into the wind."
         return f"{self.name} moved to {self.location}."
 
 

@@ -96,7 +96,7 @@
     "name": "move_actor",
     "python_module": "core",
     "function": "move_actor",
-    "description": "Move the player character or an NPC to another existing location. Use it when someone travels or is sent somewhere. The player character starts unplaced, so on the first turn create the place where the story begins and move the player character there. Moving the player character to a place discovers it.",
+    "description": "Move the player character or an NPC to another existing location. Use it when someone travels or is sent somewhere. The player character starts unplaced, so on the first turn create the place where the story begins and move the player character there. Moving the player character to a place discovers it. Leave location out to send an NPC into the wind: it is at no location until a later move brings it back. The player character cannot go into the wind.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -106,12 +106,11 @@
         },
         "location": {
           "type": "string",
-          "description": "The name of the location to move them to. It must already exist."
+          "description": "The name of the location to move them to. It must already exist. Omit it only to send an NPC into the wind."
         }
       },
       "required": [
-        "name",
-        "location"
+        "name"
       ]
     }
   },
