@@ -191,6 +191,7 @@ class MonsterTemplate:
     armor: int
     attacks: Mapping[str, str]
     large_group: bool = False
+    rules: tuple[str, ...] = ()
 
 
 DAMAGE_KINDS = ("absorb", "harm", "overflow")
@@ -628,7 +629,8 @@ def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldCon
         d.id: required_text(d.data, "text", f"{name}: rule {d.id}") for d in own if d.type == "rule"
     }
     known = {**rule_set.rules, **rules}
-    attached = [(f"npc {npc.id!r}", npc.rules) for npc in template.npcs]
+    attached = [(f"monster {m.id!r}", m.rules) for m in monsters.values()]
+    attached += [(f"npc {npc.id!r}", npc.rules) for npc in template.npcs]
     attached += [(f"feature {f.id!r}", f.rules) for f in features.values()]
     for owner, ids in attached:
         for rule_id in ids:
@@ -796,6 +798,13 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         for d in definitions
         if d.type == "monster"
     }
+    for monster in monsters.values():
+        for rule_id in monster.rules:
+            if rule_id not in rules:
+                raise ContentError(
+                    f"{template}: monster {monster.id!r} attaches rule {rule_id!r}, which is not "
+                    "in the rule set"
+                )
     clock = _load_clock(definitions, template)
     rests = _load_rests(definitions, character, template, clock)
     interrupted_rest = _load_interrupted_rest(definitions, rests, template)
@@ -1097,6 +1106,7 @@ def _load_monster(
         armor=armor,
         attacks=dict(attacks),
         large_group=large_group,
+        rules=rule_ids(data, label),
     )
 
 

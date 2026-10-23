@@ -1329,6 +1329,7 @@ def create_monster(
         attacks=attack_map,
         creature=base.name if base else "",
         large_group=bool(base and base.large_group),
+        rules=list(base.rules) if base else [],
     )
     record(db, campaign_id, event)
     db.commit()
@@ -1373,14 +1374,15 @@ def _statblock_conflict(base: MonsterTemplate, spec: CharacterSpec) -> str:
 
 
 def _with_statblock(event: NpcAdded, base: MonsterTemplate) -> NpcAdded:
-    """The NPC event with a statblock's armor, attacks, creature, and large-group flag. Its stats
-    are set by the caller, before the event is made, so they are not rolled."""
+    """The NPC event with a statblock's armor, attacks, creature, large-group flag, and rules.
+    Its stats are set by the caller, before the event is made, so they are not rolled."""
     return replace(
         event,
         armor=base.armor,
         attacks=dict(base.attacks),
         creature=base.name,
         large_group=base.large_group,
+        rules=list(dict.fromkeys([*event.rules, *base.rules])),
     )
 
 

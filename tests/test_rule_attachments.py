@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -13,7 +14,7 @@ from cygnusforge.services.events import Item, ItemAdded, record
 from cygnusforge.services.world import present_rules_text, world_state_text
 from tests.conftest import content_library
 from tests.test_character_creation import _cairn_campaign
-from tests.test_combat import CAIRN, PC, _fight
+from tests.test_combat import CAIRN, PC, YARD, _fight
 from tests.test_content import _core, _rule_set, _world, _write
 from tests.test_world import _db, _state
 
@@ -51,6 +52,27 @@ def test_seeding_gives_vuk_her_rules(client_factory: Callable[[], TestClient]):
     vuk = _state(client.app, campaign_id).named(VUK)
     assert vuk is not None
     assert list(vuk.rules) == [CHOKING]
+
+
+def test_twin_lakes_monsters_attach_their_module_rules():
+    monsters = LIBRARY.world_content("twin-lakes", "cairn2e").monsters
+    assert monsters["night-cat"].rules == ("night-cat-attack", "night-cat-critical-damage")
+    assert monsters["suraru-imperator"].rules == ("suraru-imperator-critical-damage",)
+    assert monsters["bandits"].rules == ("morale-bandits",)
+
+
+def test_a_monster_made_from_a_statblock_brings_its_rules(client_factory: Callable[[], TestClient]):
+    app, campaign_id, tools = _fight(client_factory)
+    content = LIBRARY.world_content("twin-lakes", "cairn2e")
+    # The app merges the world's monsters over the rule set's, as campaigns.py does.
+    tools = replace(tools, monsters={**tools.monsters, **content.monsters})
+    tools.create_monster("Night Cat", YARD)
+    state = _state(app, campaign_id)
+    cat = state.named("Night Cat")
+    assert cat is not None
+    assert list(cat.rules) == ["night-cat-attack", "night-cat-critical-damage"]
+    text = present_rules_text(state, {**LIBRARY.rule_sets["cairn2e"].rules, **content.rules})
+    assert "- night-cat-attack (from Night Cat):" in text
 
 
 def test_a_standing_npc_here_brings_its_rules(client_factory: Callable[[], TestClient]):
@@ -140,6 +162,27 @@ def test_present_rules_get_their_own_system_part():
 def test_no_present_rules_add_no_system_part():
     parts = system_parts("cairn2e", {}, frozenset(), "", 0)
     assert all(p.source != "Rules for what is present" for p in parts)
+
+
+def test_a_world_monster_attaching_an_unknown_rule_is_a_content_error(tmp_path: Path):
+    files = {
+        "worlds/testland/world.json": _world(),
+        "rulesets/core/rule_set.json": _core(),
+        "rulesets/testset/rule_set.json": _rule_set(),
+    }
+    _write(tmp_path, files)
+    stats = dict.fromkeys(ContentLibrary.load(tmp_path).rule_sets["testset"].character.stats, 1)
+    ghoul = {
+        "type": "monster",
+        "id": "ghoul",
+        "name": "Ghoul",
+        "description": "A ghoul.",
+        "stats": stats,
+        "rules": ["no-such-rule"],
+    }
+    _write(tmp_path, {"worlds/testland/world.json": [*_world(), ghoul]})
+    with pytest.raises(ContentError, match="monster 'ghoul' attaches rule 'no-such-rule'"):
+        ContentLibrary.load(tmp_path).world_content("testland", "testset")
 
 
 def test_a_world_npc_attaching_an_unknown_rule_is_a_content_error(tmp_path: Path):
