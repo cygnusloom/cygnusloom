@@ -64,6 +64,7 @@ def carry_item(
             uses=item.uses,
             max_uses=item.max_uses,
             damage=item.damage,
+            rules=list(item.rules),
             cause=cause,
         ),
     )

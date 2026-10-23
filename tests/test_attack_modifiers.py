@@ -58,38 +58,41 @@ def test_the_rule_set_names_the_impaired_and_enhanced_dice():
 
 def test_an_impaired_npc_attack_rolls_the_impaired_dice(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="1d6")
+    _foe(tools, "Grave Thing", claw="1d6")
     _foe(tools, "Bo")
-    result = replace(tools, rng=Rolls(4)).attack("Ghoul", "Claw", "Bo", modifier="impaired")
+    result = replace(tools, rng=Rolls(4)).attack("Grave Thing", "Claw", "Bo", modifier="impaired")
     assert result["raw"] == 4
     assert _struck(app, campaign_id)[-1].modifier == "impaired"
     with pytest.raises(AssertionError, match="cannot show 5"):
-        replace(tools, rng=Rolls(5)).attack("Ghoul", "Claw", "Bo", modifier="impaired")
+        replace(tools, rng=Rolls(5)).attack("Grave Thing", "Claw", "Bo", modifier="impaired")
 
 
 def test_an_enhanced_npc_attack_rolls_the_enhanced_dice(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="1d6")
+    _foe(tools, "Grave Thing", claw="1d6")
     _foe(tools, "Bo", hp=20)
-    result = replace(tools, rng=Rolls(12)).attack("Ghoul", "Claw", "Bo", modifier="Enhanced")
+    result = replace(tools, rng=Rolls(12)).attack("Grave Thing", "Claw", "Bo", modifier="Enhanced")
     assert result["raw"] == 12
     assert _struck(app, campaign_id)[-1].modifier == "enhanced"
 
 
 def test_normal_is_the_attacks_own_dice_and_no_modifier(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="1d6")
+    _foe(tools, "Grave Thing", claw="1d6")
     _foe(tools, "Bo", hp=20)
-    assert replace(tools, rng=Rolls(6)).attack("Ghoul", "Claw", "Bo", modifier="normal")["raw"] == 6
+    assert (
+        replace(tools, rng=Rolls(6)).attack("Grave Thing", "Claw", "Bo", modifier="normal")["raw"]
+        == 6
+    )
     assert _struck(app, campaign_id)[-1].modifier == ""
 
 
 def test_an_unknown_modifier_is_an_error(client_factory):
     _, _, tools = _fight(client_factory)
-    _foe(tools, "Ghoul")
+    _foe(tools, "Grave Thing")
     _foe(tools, "Bo")
     with pytest.raises(InvalidInput, match="unknown attack modifier 'stunned'"):
-        tools.attack("Ghoul", "Claw", "Bo", modifier="stunned")
+        tools.attack("Grave Thing", "Claw", "Bo", modifier="stunned")
 
 
 def test_an_unknown_modifier_on_a_player_attack_is_an_error(client_factory):
@@ -143,11 +146,11 @@ def test_a_player_attack_with_an_unknown_modifier_returns_an_error(client_factor
 
 def test_resolve_attacks_keeps_the_highest_roll_and_applies_one_hit(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="1d6")
+    _foe(tools, "Grave Thing", claw="1d6")
     _foe(tools, "Bo", claw="1d6")
     _set_stat(app, campaign_id, PC, "hp", 0)
     result = replace(tools, rng=Rolls(2, 5)).resolve_attacks(
-        PC, [{"attacker": "Ghoul", "attack": "Claw"}, {"attacker": "Bo", "attack": "Claw"}]
+        PC, [{"attacker": "Grave Thing", "attack": "Claw"}, {"attacker": "Bo", "attack": "Claw"}]
     )
     assert result["raw"] == 5
     assert result["harm"] == {"str": 5}
@@ -157,44 +160,46 @@ def test_resolve_attacks_keeps_the_highest_roll_and_applies_one_hit(client_facto
     assert len(strikes) == 1
     assert strikes[0].attacker == "Bo"
     assert strikes[0].rolled == (
-        "Rolls: Ghoul's Claw rolled 2; Bo's Claw rolled 5; the highest hits."
+        "Rolls: Grave Thing's Claw rolled 2; Bo's Claw rolled 5; the highest hits."
     )
 
 
 def test_resolve_attacks_ties_go_to_the_earlier_attack(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="1d6")
+    _foe(tools, "Grave Thing", claw="1d6")
     _foe(tools, "Bo", claw="1d6")
     _set_stat(app, campaign_id, PC, "hp", 0)
     replace(tools, rng=Rolls(4, 4)).resolve_attacks(
-        PC, [{"attacker": "Ghoul", "attack": "Claw"}, {"attacker": "Bo", "attack": "Claw"}]
+        PC, [{"attacker": "Grave Thing", "attack": "Claw"}, {"attacker": "Bo", "attack": "Claw"}]
     )
-    assert _struck(app, campaign_id)[-1].attacker == "Ghoul"
+    assert _struck(app, campaign_id)[-1].attacker == "Grave Thing"
 
 
 def test_resolve_attacks_uses_each_attacks_modifier_and_records_it(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="1d6")
+    _foe(tools, "Grave Thing", claw="1d6")
     _foe(tools, "Bo", claw="1d6")
     _set_stat(app, campaign_id, PC, "hp", 0)
     replace(tools, rng=Rolls(3, 12)).resolve_attacks(
         PC,
         [
-            {"attacker": "Ghoul", "attack": "Claw", "modifier": "impaired"},
+            {"attacker": "Grave Thing", "attack": "Claw", "modifier": "impaired"},
             {"attacker": "Bo", "attack": "Claw", "modifier": "enhanced"},
         ],
     )
     strike = _struck(app, campaign_id)[-1]
     assert (strike.attacker, strike.raw) == ("Bo", 12)
-    assert "Ghoul's Claw (impaired) rolled 3" in strike.rolled
+    assert "Grave Thing's Claw (impaired) rolled 3" in strike.rolled
     assert "Bo's Claw (enhanced) rolled 12" in strike.rolled
 
 
 def test_resolve_attacks_with_one_attack_has_no_rolled_record(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="1d6")
+    _foe(tools, "Grave Thing", claw="1d6")
     _set_stat(app, campaign_id, PC, "hp", 0)
-    replace(tools, rng=Rolls(3)).resolve_attacks(PC, [{"attacker": "Ghoul", "attack": "Claw"}])
+    replace(tools, rng=Rolls(3)).resolve_attacks(
+        PC, [{"attacker": "Grave Thing", "attack": "Claw"}]
+    )
     assert _struck(app, campaign_id)[-1].rolled == ""
 
 
@@ -202,20 +207,23 @@ def test_resolve_attacks_with_one_attack_has_no_rolled_record(client_factory):
     ("attacks", "message"),
     [
         ([], "list at least one attack"),
-        ([{"attacker": "Ghoul"}], "each attack needs an attacker and an attack name"),
-        ([{"attacker": "Ghoul", "attack": "Sting"}], "has no attack named 'Sting'"),
+        ([{"attacker": "Grave Thing"}], "each attack needs an attacker and an attack name"),
+        ([{"attacker": "Grave Thing", "attack": "Sting"}], "has no attack named 'Sting'"),
         (
-            [{"attacker": "Ghoul", "attack": "Claw", "modifier": "stunned"}],
+            [{"attacker": "Grave Thing", "attack": "Claw", "modifier": "stunned"}],
             "unknown attack modifier",
         ),
         ([{"attacker": "Nobody", "attack": "Claw"}], "Nobody"),
         ([{"attacker": PC, "attack": "Claw"}], "player character"),
-        ([{"attacker": "Bo", "attack": "Claw"}, {"attacker": "Ghoul", "attack": "Sting"}], "Sting"),
+        (
+            [{"attacker": "Bo", "attack": "Claw"}, {"attacker": "Grave Thing", "attack": "Sting"}],
+            "Sting",
+        ),
     ],
 )
 def test_resolve_attacks_checks_every_attack_before_rolling(client_factory, attacks, message):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="1d6")
+    _foe(tools, "Grave Thing", claw="1d6")
     _foe(tools, "Bo", claw="1d6")
     # With no dice at all, any roll would fail with an IndexError rather than InvalidInput.
     with pytest.raises(InvalidInput, match=message):
@@ -225,20 +233,22 @@ def test_resolve_attacks_checks_every_attack_before_rolling(client_factory, atta
 
 def test_resolve_attacks_rejects_an_attacker_on_the_targets_side(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="1d6")
+    _foe(tools, "Grave Thing", claw="1d6")
     _foe(tools, "Bo", claw="1d6")
-    with pytest.raises(InvalidInput, match="is on Ghoul's side and cannot attack them"):
-        replace(tools, rng=Rolls()).resolve_attacks("Ghoul", [{"attacker": "Bo", "attack": "Claw"}])
+    with pytest.raises(InvalidInput, match="is on Grave Thing's side and cannot attack them"):
+        replace(tools, rng=Rolls()).resolve_attacks(
+            "Grave Thing", [{"attacker": "Bo", "attack": "Claw"}]
+        )
     assert _struck(app, campaign_id) == []
 
 
 def test_resolve_attacks_rejects_a_defeated_attacker(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="2d6")
+    _foe(tools, "Grave Thing", claw="2d6")
     _foe(tools, "Bo")
     # Two of the dice are the claw, then the save for the overflow, then a morale roll for the
     # first casualty and one for half the side.
-    _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1, 1)
+    _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 1, 1)
     assert _character(app, campaign_id, "Bo").defeated is True
     with pytest.raises(InvalidInput):
         replace(tools, rng=Rolls()).resolve_attacks(PC, [{"attacker": "Bo", "attack": "Claw"}])
@@ -246,7 +256,7 @@ def test_resolve_attacks_rejects_a_defeated_attacker(client_factory):
 
 def test_resolve_attacks_through_the_tool_takes_modifiers(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="1d6")
+    _foe(tools, "Grave Thing", claw="1d6")
     _foe(tools, "Bo", claw="1d6")
     _set_stat(app, campaign_id, PC, "hp", 0)
     run = _run(
@@ -255,7 +265,7 @@ def test_resolve_attacks_through_the_tool_takes_modifiers(client_factory):
         {
             "target": PC,
             "attacks": [
-                {"attacker": "Ghoul", "attack": "Claw", "modifier": "impaired"},
+                {"attacker": "Grave Thing", "attack": "Claw", "modifier": "impaired"},
                 {"attacker": "Bo", "attack": "Claw"},
             ],
         },
@@ -317,8 +327,10 @@ def test_a_bad_modifier_is_rejected_when_the_rule_set_loads(modifiers, message):
 
 
 def test_a_struck_event_names_its_modifier_and_rolls():
-    plain = Struck(name="Mara", attacker="Ghoul", weapon="Claw", raw=2, armor=0, harm={"hp": 2})
-    assert plain.render() == "Ghoul strikes Mara with the Claw for 2; Mara takes 2 harm."
+    plain = Struck(
+        name="Mara", attacker="Grave Thing", weapon="Claw", raw=2, armor=0, harm={"hp": 2}
+    )
+    assert plain.render() == "Grave Thing strikes Mara with the Claw for 2; Mara takes 2 harm."
     modified = Struck(
         name="Mara",
         attacker="Bo",
@@ -327,9 +339,9 @@ def test_a_struck_event_names_its_modifier_and_rolls():
         armor=0,
         harm={"hp": 5},
         modifier="enhanced",
-        rolled="Rolls: Ghoul's Claw rolled 2; Bo's Claw (enhanced) rolled 5; the highest hits.",
+        rolled="Rolls: Grave Thing's Claw rolled 2; Bo's Claw (enhanced) rolled 5; the highest hits.",
     )
     assert modified.render() == (
         "Bo strikes Mara with the Claw (enhanced) for 5; Mara takes 5 harm. "
-        "Rolls: Ghoul's Claw rolled 2; Bo's Claw (enhanced) rolled 5; the highest hits."
+        "Rolls: Grave Thing's Claw rolled 2; Bo's Claw (enhanced) rolled 5; the highest hits."
     )

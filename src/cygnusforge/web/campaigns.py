@@ -585,6 +585,7 @@ def _campaign_page(
         rule_set,
         options,
         settings.llm_context_tokens,
+        library.world_content(campaign.world_template, campaign.rule_set).rules,
     )
     encounter = encounter_view(
         world.state, rule_set.grid if rule_set else None, rule_set.combat if rule_set else None

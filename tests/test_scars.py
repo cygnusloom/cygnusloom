@@ -46,10 +46,10 @@ def _set_max(app, campaign_id: int, stat: str, value: int) -> None:
 
 def test_a_hit_to_exactly_zero_hp_gives_the_scar_for_the_harm_taken(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="1d20")
+    _foe(tools, "Grave Thing", claw="1d20")
     _set_max(app, campaign_id, "hp", 10)
-    _hit(tools, "Ghoul", PC, 7)
-    result = _hit(tools, "Ghoul", PC, 3)
+    _hit(tools, "Grave Thing", PC, 7)
+    result = _hit(tools, "Grave Thing", PC, 3)
 
     assert result["injury"] == "Walloped"
     character = _character(app, campaign_id, PC)
@@ -60,9 +60,9 @@ def test_a_hit_to_exactly_zero_hp_gives_the_scar_for_the_harm_taken(client_facto
 
 def test_the_scar_roll_is_capped_at_the_last_entry(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="1d20")
+    _foe(tools, "Grave Thing", claw="1d20")
     _set_max(app, campaign_id, "hp", 20)
-    result = _hit(tools, "Ghoul", PC, 20)
+    result = _hit(tools, "Grave Thing", PC, 20)
 
     assert result["injury"] == "Doomed"
     assert _character(app, campaign_id, PC).conditions == ["doomed"]
@@ -70,9 +70,9 @@ def test_the_scar_roll_is_capped_at_the_last_entry(client_factory):
 
 def test_a_hit_that_leaves_hp_above_zero_gives_no_scar(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="1d20")
+    _foe(tools, "Grave Thing", claw="1d20")
     _set_max(app, campaign_id, "hp", 10)
-    result = _hit(tools, "Ghoul", PC, 1)
+    result = _hit(tools, "Grave Thing", PC, 1)
 
     assert "injury" not in result
     assert _character(app, campaign_id, PC).injuries == []
@@ -80,9 +80,9 @@ def test_a_hit_that_leaves_hp_above_zero_gives_no_scar(client_factory):
 
 def test_a_hit_that_takes_hp_to_zero_and_overflows_gains_a_scar_and_owes_a_save(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="1d20")
+    _foe(tools, "Grave Thing", claw="1d20")
     _set_max(app, campaign_id, "hp", 3)
-    result = _hit(tools, "Ghoul", PC, 5)
+    result = _hit(tools, "Grave Thing", PC, 5)
 
     assert result["harm"] == {"hp": 3, "str": 2}
     assert result["save_due"] == "str"
@@ -100,14 +100,14 @@ def test_a_foe_brought_to_zero_gains_no_scar(client_factory):
 
 def test_the_statblock_names_the_conditions_and_scars_a_character_has(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="1d20")
+    _foe(tools, "Grave Thing", claw="1d20")
     lines = tools.get_statblock(PC)["statblock"]
     assert "Conditions: none" in lines
     assert not any(line.startswith("Injuries:") for line in lines)
 
     _set_max(app, campaign_id, "hp", 10)
-    _hit(tools, "Ghoul", PC, 7)
-    _hit(tools, "Ghoul", PC, 3)
+    _hit(tools, "Grave Thing", PC, 7)
+    _hit(tools, "Grave Thing", PC, 3)
 
     lines = tools.get_statblock(PC)["statblock"]
     assert "Conditions: Walloped" in lines

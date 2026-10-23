@@ -940,6 +940,7 @@ def seed_campaign(
             character=None if base is None else {"stats": dict(base.stats)},
             plus=plus,
             story_only=npc.story_only,
+            rules=npc.rules,
         )
         if base is not None:
             event = _with_statblock(event, base)
@@ -981,6 +982,7 @@ def _starting_item(feature: Feature, magic: MagicRules | None, item_sizes: Mappi
         feature.size,
         item_sizes[feature.size],
         damage=feature.damage,
+        rules=feature.rules,
         uses=feature.uses,
         max_uses=feature.uses,
     )
@@ -1941,7 +1943,10 @@ def world_state_text(
         )
     else:
         lines.append(f"Player character: {pc.name}, at {pc.location}.")
-        names = [npc.name for npc in _npcs_at(state, pc.location)]
+        names = [
+            f"{npc.name} (story only, no stats yet)" if npc.story_only else npc.name
+            for npc in _npcs_at(state, pc.location)
+        ]
         lines.append(f"NPCs here: {', '.join(names) if names else 'none'}.")
         things = [o.contents for o in visible_objects(state, pc.location)]
         if things:
@@ -2017,6 +2022,33 @@ def _npcs_at(state: CampaignState, location: str) -> list[Character]:
     return [c for c in state.characters.values() if c.kind == NPC_KIND and c.location == location]
 
 
+def present_rules_text(state: CampaignState, rules: Mapping[str, str]) -> str:
+    """The text of the rules attached to what is present: the standing NPCs at the player
+    character's location and the items the player character carries. Empty when nothing is
+    attached."""
+    pc = state.pc()
+    if pc is None:
+        return ""
+    sources: dict[str, list[str]] = {}
+    if pc.location is not None:
+        for npc in _npcs_at(state, pc.location):
+            if not npc.defeated:
+                for rule_id in npc.rules:
+                    sources.setdefault(rule_id, []).append(npc.name)
+    for item in pc.items:
+        for rule_id in item.rules:
+            sources.setdefault(rule_id, []).append(item.name)
+    lines = [
+        f"- {rule_id} (from {', '.join(names)}): {rules.get(rule_id, '')}"
+        for rule_id, names in sources.items()
+    ]
+    if not lines:
+        return ""
+    return "\n".join(
+        ["These rules belong to the NPCs and items present now. Follow them as written.", *lines]
+    )
+
+
 def _npcs_in_the_wind(state: CampaignState) -> list[str]:
     return sorted(
         c.name for c in state.characters.values() if c.kind == NPC_KIND and c.location is None
@@ -2053,6 +2085,7 @@ def _npc_event(
     character: Mapping[str, Any] | None = None,
     plus: str,
     story_only: bool = False,
+    rules: Sequence[str] = (),
 ) -> NpcAdded:
     """The event that adds an NPC. A trait or character option that is not given is picked at
     random, so the picked values are stored in the event and replays do not roll again. A
@@ -2077,6 +2110,7 @@ def _npc_event(
         accent=trait_accent,
         quirks=trait_quirks,
         story_only=story_only,
+        rules=list(rules),
         **sheet_fields,
     )
 

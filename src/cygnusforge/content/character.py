@@ -58,6 +58,8 @@ class Feature:
     armor: int
     # The weapon's damage dice, such as "1d6", or "1d6+1d6" for two weapons (keep the higher). Empty when the feature is not a weapon.
     damage: str = ""
+    # The ids of rules attached to this feature. Their text reaches the GM while the item is carried.
+    rules: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -187,7 +189,18 @@ def load_feature(definition: Definition, template: str) -> Feature:
         uses=uses,
         armor=armor,
         damage=damage,
+        rules=rule_ids(data, label),
     )
+
+
+def rule_ids(data: Mapping[str, Any], label: str) -> tuple[str, ...]:
+    """The rule ids attached to an entity: a list of text, or none."""
+    rules = data.get("rules", [])
+    if not isinstance(rules, list) or not all(isinstance(r, str) and r.strip() for r in rules):
+        raise ContentError(f"{label}: 'rules' must be a list of rule ids")
+    if len(set(rules)) != len(rules):
+        raise ContentError(f"{label}: 'rules' names a rule more than once")
+    return tuple(rules)
 
 
 def _field(definition: Definition, tables: Mapping[str, object], kind: str, template: str) -> Field:

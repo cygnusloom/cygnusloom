@@ -66,6 +66,7 @@ from cygnusforge.services.tools import (
 from cygnusforge.services.world import (
     WorldTools,
     create_player_character,
+    present_rules_text,
     promote_hireling,
     seed_campaign,
     set_campaign_options,
@@ -539,6 +540,7 @@ def system_parts(
     summary: str,
     summary_through: int,
     world_text: str = "",
+    present_text: str = "",
 ) -> list[ContextPart]:
     """The system prompt in sections. Joined with blank lines, they are the system message.
 
@@ -566,6 +568,8 @@ def system_parts(
         )
     if world_text:
         parts.append(ContextPart("system", "World state", world_text))
+    if present_text:
+        parts.append(ContextPart("system", "Rules for what is present", present_text))
     if summary:
         parts.append(
             ContextPart(
@@ -615,8 +619,10 @@ def context_usage(
     rule_set: RuleSet | None,
     options: CampaignSpec,
     limit: int,
+    world_rules: Mapping[str, str],
 ) -> ContextUsage:
     unsummarized = [m for m in history if m.id > state.through]
+    all_rules = {**(rule_set.rules if rule_set else {}), **world_rules}
     used = sum(
         part.tokens
         for part in system_parts(
@@ -634,6 +640,7 @@ def context_usage(
                 clock_rules=rule_set.clock if rule_set else None,
                 inventory=rule_set.inventory if rule_set else None,
             ),
+            present_rules_text(state, all_rules),
         )
     )
     used += sum(estimate_tokens(m.content) for m in unsummarized)
@@ -1066,10 +1073,17 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     history = [
         m for m in list_messages(run.engine, run.campaign_id) if watermark < m.id < turn.opener
     ]
+    present_text = present_rules_text(state, run.ctx.rules)
     prompt_tokens = sum(
         p.tokens
         for p in system_parts(
-            rule_set.id, rule_set.rules, rule_set.important, summary, watermark, world_text
+            rule_set.id,
+            rule_set.rules,
+            rule_set.important,
+            summary,
+            watermark,
+            world_text,
+            present_text,
         )
     )
     prompt_tokens += estimate_tokens(message) + sum(estimate_tokens(m.content) for m in history)
@@ -1099,7 +1113,13 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
         label = "This message (player)"
     player = ContextPart("user", label, message)
     system = system_parts(
-        rule_set.id, rule_set.rules, rule_set.important, summary, watermark, world_text
+        rule_set.id,
+        rule_set.rules,
+        rule_set.important,
+        summary,
+        watermark,
+        world_text,
+        present_text,
     )
     conversation = [
         *(ContextPart(m.role, _message_source(m), m.content) for m in history),

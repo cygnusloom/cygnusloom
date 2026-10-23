@@ -128,21 +128,21 @@ def test_a_story_only_npc_in_the_order_is_refused_as_target_and_attacker(
     # in _living is what refuses it.
     app, campaign_id, tools = _fight(client_factory)
     tools.create_monster(
-        "Ghoul",
+        "Grave Thing",
         YARD,
         description="A foe.",
         stats={"hp": 6, "str": 10, "dex": 10, "wil": 10},
         armor=0,
         attacks=[{"name": "Claw", "dice": "1d6"}],
     )
-    tools.add_participant("Ghoul")
+    tools.add_participant("Grave Thing")
     with _db(app) as db:
         record(db, campaign_id, ParticipantJoined(name=STORY, side="foes"))
         db.commit()
     with pytest.raises(InvalidInput, match="has no stats yet"):
-        tools.attack("Ghoul", "Claw", STORY)
+        tools.attack("Grave Thing", "Claw", STORY)
     with pytest.raises(InvalidInput, match="has no stats yet"):
-        tools.attack(STORY, "Claw", "Ghoul")
+        tools.attack(STORY, "Claw", "Grave Thing")
 
 
 def test_update_npc_gives_a_story_only_npc_stats_armor_and_attacks(

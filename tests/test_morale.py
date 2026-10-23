@@ -76,14 +76,14 @@ def test_a_lone_foe_that_breaks_flees_and_the_fight_ends(client_factory):
 
 def test_a_group_checks_at_its_first_casualty_with_the_leaders_wil(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _monster(tools, "Ghoul", wil=LEADER_WIL)
+    _monster(tools, "Grave Thing", wil=LEADER_WIL)
     _foe(tools, "Bo")
     _monster(tools, "Cy", wil=3)
     encounter = _state(app, campaign_id).encounter
-    expected_leader = next(n for n in encounter.order if n in ("Ghoul", "Cy"))
-    wil = {"Ghoul": LEADER_WIL, "Cy": 3}[expected_leader]
+    expected_leader = next(n for n in encounter.order if n in ("Grave Thing", "Cy"))
+    wil = {"Grave Thing": LEADER_WIL, "Cy": 3}[expected_leader]
     roll = 12 if wil == LEADER_WIL else 4
-    result = _hit(tools, "Ghoul", "Bo", 6, 5, 20, roll)
+    result = _hit(tools, "Grave Thing", "Bo", 6, 5, 20, roll)
     check = result["morale"][0]
     assert check["leader"] == expected_leader
     assert check["score"] == wil
@@ -93,18 +93,18 @@ def test_a_group_checks_at_its_first_casualty_with_the_leaders_wil(client_factor
 
 def test_a_group_of_two_makes_a_separate_check_for_first_and_half(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _monster(tools, "Ghoul", wil=10)
+    _monster(tools, "Grave Thing", wil=10)
     _foe(tools, "Bo")
-    result = _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1, 1)
+    result = _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 1, 1)
     assert [check["tag"] for check in result["morale"]] == ["first", "half"]
     assert _morale(app, campaign_id) == {FOES_SIDE: ["first", "half"]}
 
 
 def test_a_failed_first_check_makes_the_side_flee_so_no_half_check_follows(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _monster(tools, "Ghoul", wil=10)
+    _monster(tools, "Grave Thing", wil=10)
     _foe(tools, "Bo")
-    result = _hit(tools, "Ghoul", "Bo", 6, 5, 20, 20)
+    result = _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 20)
     assert [check["tag"] for check in result["morale"]] == ["first"]
     assert result["morale"][0]["passed"] is False
     assert _state(app, campaign_id).encounter is None
@@ -112,31 +112,31 @@ def test_a_failed_first_check_makes_the_side_flee_so_no_half_check_follows(clien
 
 def test_a_group_checks_at_first_casualty_and_at_half_once_each(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _monster(tools, "Ghoul", wil=10)
+    _monster(tools, "Grave Thing", wil=10)
     _foe(tools, "Bo")
     _foe(tools, "Cy")
     _foe(tools, "Dee")
-    first = _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1)
+    first = _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 1)
     assert [check["tag"] for check in first["morale"]] == ["first"]
-    second = _hit(tools, "Ghoul", "Cy", 6, 5, 20, 1)
+    second = _hit(tools, "Grave Thing", "Cy", 6, 5, 20, 1)
     assert [check["tag"] for check in second["morale"]] == ["half"]
     assert _morale(app, campaign_id) == {FOES_SIDE: ["first", "half"]}
     # Three of four are down and both tags are spent, so no morale die is rolled. Rolls(6, 5, 20)
     # would fail if one were.
-    third = _hit(tools, "Ghoul", "Dee", 6, 5, 20)
+    third = _hit(tools, "Grave Thing", "Dee", 6, 5, 20)
     assert "morale" not in third
     assert _morale(app, campaign_id) == {FOES_SIDE: ["first", "half"]}
 
 
 def test_a_failed_group_check_flees_every_living_foe_and_ends_the_fight(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _monster(tools, "Ghoul", wil=10)
+    _monster(tools, "Grave Thing", wil=10)
     _foe(tools, "Bo")
     _foe(tools, "Cy")
-    result = _hit(tools, "Ghoul", "Bo", 6, 5, 20, 20)
+    result = _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 20)
     check = result["morale"][0]
     assert check["passed"] is False
-    assert sorted(check["fled"]) == ["Cy", "Ghoul"]
+    assert sorted(check["fled"]) == ["Cy", "Grave Thing"]
     assert _character(app, campaign_id, "Cy").fled is False
     assert _state(app, campaign_id).encounter is None
 
@@ -153,7 +153,7 @@ def test_a_player_character_is_never_checked_for_morale(client_factory):
 
 def test_a_fled_character_cannot_attack(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul")
+    _foe(tools, "Grave Thing")
     _foe(tools, "Bo")
     _foe(tools, "Cy")
     replace(tools, rng=Rolls(10)).retreat("Bo", True)
@@ -164,22 +164,22 @@ def test_a_fled_character_cannot_attack(client_factory):
 
 def test_a_fled_foe_is_skipped_when_its_turn_comes_round(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul")
+    _foe(tools, "Grave Thing")
     _foe(tools, "Bo")
     _foe(tools, "Cy")
     replace(tools, rng=Rolls(10)).retreat("Bo", True)
     _finish_gm_reply(app, campaign_id)
     with _db(app) as db:
         encounters.end_turn(db, campaign_id, PC, by_player=True)
-        encounters.begin_turn(db, campaign_id, "Ghoul")
-        encounters.end_turn(db, campaign_id, "Ghoul", by_player=False)
+        encounters.begin_turn(db, campaign_id, "Grave Thing")
+        encounters.end_turn(db, campaign_id, "Grave Thing", by_player=False)
     state = _state(app, campaign_id).encounter
     assert state.order[state.up] == "Cy"
 
 
 def test_the_fled_status_is_shown_for_a_fled_character(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul")
+    _foe(tools, "Grave Thing")
     _foe(tools, "Bo")
     _foe(tools, "Cy")
     replace(tools, rng=Rolls(10)).retreat("Bo", True)
@@ -215,9 +215,9 @@ def test_a_surrendered_character_cannot_attack_and_shows_as_surrendered(client_f
 
 def test_a_defeated_character_shows_defeat_rather_than_fled(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="2d6")
+    _foe(tools, "Grave Thing", claw="2d6")
     _foe(tools, "Bo")
-    _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1, 1)
+    _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 1, 1)
     bo = _character(app, campaign_id, "Bo")
     assert bo.defeated is True
     assert encounters._status(bo, None) != "fled"
@@ -291,9 +291,9 @@ def test_an_npc_cannot_be_asked_to_use_the_player_retreat(client_factory):
 
 def test_morale_checked_renders_its_tag():
     event = MoraleChecked(
-        side=FOES_SIDE, tag="half", leader="Ghoul", stat="wil", roll=12, score=15, passed=True
+        side=FOES_SIDE, tag="half", leader="Grave Thing", stat="wil", roll=12, score=15, passed=True
     )
     assert event.render() == (
-        "The foes side checks morale at the half casualties: Ghoul rolls 12 "
+        "The foes side checks morale at the half casualties: Grave Thing rolls 12 "
         "on a WIL save of 15 and the side holds."
     )

@@ -103,6 +103,8 @@ class Item:
     spent_on: Clock | None = None
     # A weapon's damage dice, such as "d6". Empty when the item is not a weapon.
     damage: str = ""
+    # The ids of rules attached to the item. Their text reaches the GM while the item is carried.
+    rules: tuple[str, ...] = ()
 
 
 def _position(x: float | None, y: float | None) -> Position | None:
@@ -131,6 +133,8 @@ class Character:
     creature: str = ""
     # A story-only NPC has no stats yet. It cannot fight, make saves, or be attacked until given stats.
     story_only: bool = False
+    # The ids of rules attached to the NPC. Their text reaches the GM while the NPC is here.
+    rules: list[str] = field(default_factory=list)
     # Harm taken so far, by stat id. A stat's current value is its score less its harm, at least 0.
     harm: dict[str, int] = field(default_factory=dict)
     # The stat id of a save the character must make after harm overflowed, or None.
@@ -598,6 +602,7 @@ class NpcAdded(GameEvent):
     creature: str = ""
     large_group: bool = False
     story_only: bool = False
+    rules: list[str] = field(default_factory=list)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.characters[name_key(self.name)] = Character(
@@ -617,6 +622,7 @@ class NpcAdded(GameEvent):
             creature=self.creature,
             large_group=self.large_group,
             story_only=self.story_only,
+            rules=list(self.rules),
         )
 
     def render(self) -> str:
@@ -2096,6 +2102,7 @@ class ItemAdded(GameEvent):
     uses: int = 0
     max_uses: int = 0
     damage: str = ""
+    rules: list[str] = field(default_factory=list)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
@@ -2109,6 +2116,7 @@ class ItemAdded(GameEvent):
                 damage=self.damage,
                 uses=self.uses,
                 max_uses=self.max_uses,
+                rules=tuple(self.rules),
             )
         )
 

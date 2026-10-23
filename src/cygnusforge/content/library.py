@@ -21,6 +21,7 @@ from cygnusforge.content.character import (
     build_character,
     character_schema,
     load_feature,
+    rule_ids,
 )
 from cygnusforge.content.definitions import (
     ContentError,
@@ -76,6 +77,8 @@ class NpcTemplate:
     # A story-only NPC has no stats: it cannot fight, make a save, or be an attack target until
     # the Warden gives it stats with update_npc.
     story_only: bool = False
+    # The ids of rules attached to this NPC. Their text reaches the GM while the NPC is here.
+    rules: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -620,15 +623,25 @@ def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldCon
                 f"{name}: npc {npc.id!r} has no monster {npc.monster!r} in the world or the "
                 f"{rule_set.id!r} rule set"
             )
+    features = {d.id: load_feature(d, name) for d in own if d.type == "feature"}
+    rules = {
+        d.id: required_text(d.data, "text", f"{name}: rule {d.id}") for d in own if d.type == "rule"
+    }
+    known = {**rule_set.rules, **rules}
+    attached = [(f"npc {npc.id!r}", npc.rules) for npc in template.npcs]
+    attached += [(f"feature {f.id!r}", f.rules) for f in features.values()]
+    for owner, ids in attached:
+        for rule_id in ids:
+            if rule_id not in known:
+                raise ContentError(
+                    f"{name}: {owner} attaches rule {rule_id!r}, which is not in the world or "
+                    f"the {rule_set.id!r} rule set"
+                )
     return WorldContent(
         monsters=monsters,
         tables={d.id: _load_table(d, name) for d in own if d.type == "table"},
-        features={d.id: load_feature(d, name) for d in own if d.type == "feature"},
-        rules={
-            d.id: required_text(d.data, "text", f"{name}: rule {d.id}")
-            for d in own
-            if d.type == "rule"
-        },
+        features=features,
+        rules=rules,
     )
 
 
@@ -706,6 +719,7 @@ def _load_npc(definition: Definition, template: str) -> NpcTemplate:
         quirks=quirks,
         monster=monster,
         story_only=story_only,
+        rules=rule_ids(data, label),
     )
 
 

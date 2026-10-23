@@ -162,15 +162,15 @@ def test_a_save_passes_at_or_under_the_score_and_a_one_always_passes(roll, score
 def _monster(**changes: Any) -> Definition:
     data: dict[str, Any] = {
         "type": "monster",
-        "id": "ghoul",
-        "name": "Ghoul",
+        "id": "grave-thing",
+        "name": "Grave Thing",
         "description": "A foe.",
         "stats": dict(FULL_STATS),
         "armor": 0,
         "attacks": {"claw": "1d6"},
     }
     data.update(changes)
-    return Definition(type="monster", id="ghoul", data=data)
+    return Definition(type="monster", id="grave-thing", data=data)
 
 
 def test_a_monster_definition_is_read_into_a_statblock():
@@ -178,8 +178,8 @@ def test_a_monster_definition_is_read_into_a_statblock():
         _monster(armor=2), CAIRN.character, "cairn2e", pool=_hit_pool(CAIRN.combat)
     )
     assert template == MonsterTemplate(
-        id="ghoul",
-        name="Ghoul",
+        id="grave-thing",
+        name="Grave Thing",
         description="A foe.",
         stats=FULL_STATS,
         armor=2,
@@ -459,7 +459,7 @@ def test_search_finds_statblocks_by_the_words_in_their_text(client_factory):
 
 def test_attacks_wait_until_player_characters_roll_for_initiative(client_factory):
     app, campaign_id, tools = _fight(client_factory, rolled=False)
-    _foe(tools, "Ghoul")
+    _foe(tools, "Grave Thing")
     # Stats are random per run; a 1-damage hit on a PC at 1 HP would injury and need another die.
     with _db(app) as db:
         before = _character(app, campaign_id, PC).stats["hp"]
@@ -468,22 +468,22 @@ def test_attacks_wait_until_player_characters_roll_for_initiative(client_factory
         )
         db.commit()
     with pytest.raises(InvalidInput, match="initiative is not set yet; Mara must roll"):
-        _hit(tools, "Ghoul", PC, 2)
+        _hit(tools, "Grave Thing", PC, 2)
     with pytest.raises(InvalidInput, match="initiative is not set yet"):
-        tools.player_attack("Ghoul", "Sword")
+        tools.player_attack("Grave Thing", "Sword")
     with _db(app) as db, pytest.raises(InvalidInput, match="initiative is not set yet"):
-        encounters.begin_turn(db, campaign_id, "Ghoul")
+        encounters.begin_turn(db, campaign_id, "Grave Thing")
 
     result = tools.player_initiative(1)
     assert result["passed"] is True
     assert result["still_waiting"] == []
-    assert _hit(tools, "Ghoul", PC, 1)["harm"] == {"hp": 1}
+    assert _hit(tools, "Grave Thing", PC, 1)["harm"] == {"hp": 1}
 
 
-@pytest.mark.parametrize(("roll", "first"), [(1, PC), (20, "Ghoul")])
+@pytest.mark.parametrize(("roll", "first"), [(1, PC), (20, "Grave Thing")])
 def test_passing_player_characters_act_first_in_round_one(client_factory, roll, first):
     app, campaign_id, tools = _fight(client_factory, rolled=False)
-    _foe(tools, "Ghoul")
+    _foe(tools, "Grave Thing")
     tools.player_initiative(roll)
     assert _state(app, campaign_id).encounter.order[0] == first
 
@@ -496,9 +496,9 @@ def test_a_roll_for_initiative_is_refused_when_none_is_owed(client_factory):
 
 def test_hit_points_take_harm_before_strength(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul")
+    _foe(tools, "Grave Thing")
     _foe(tools, "Bo")
-    result = _hit(tools, "Ghoul", "Bo", 4)
+    result = _hit(tools, "Grave Thing", "Bo", 4)
     assert result["armor"] == 0
     assert result["harm"] == {"hp": 4}
     assert result["save_due"] is None
@@ -508,10 +508,10 @@ def test_hit_points_take_harm_before_strength(client_factory):
 
 def test_armor_absorbs_before_hit_points(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul")
+    _foe(tools, "Grave Thing")
     _foe(tools, "Bo")
     tools.set_armor("Bo", 3)
-    result = _hit(tools, "Ghoul", "Bo", 5)
+    result = _hit(tools, "Grave Thing", "Bo", 5)
     assert result["armor"] == 3
     assert result["harm"] == {"hp": 2}
     assert _character(app, campaign_id, "Bo").armor == 3
@@ -519,10 +519,10 @@ def test_armor_absorbs_before_hit_points(client_factory):
 
 def test_armor_that_absorbs_the_whole_hit_causes_no_harm(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul")
+    _foe(tools, "Grave Thing")
     _foe(tools, "Bo")
     tools.set_armor("Bo", 3)
-    result = _hit(tools, "Ghoul", "Bo", 3)
+    result = _hit(tools, "Grave Thing", "Bo", 3)
     assert result["harm"] == {}
     assert _character(app, campaign_id, "Bo").harm == {}
 
@@ -534,9 +534,9 @@ def _set_invincible(app: FastAPI, campaign_id: int, name: str, active: bool) -> 
 
 def test_an_invincible_character_takes_no_harm_from_a_strike(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="4d6")
+    _foe(tools, "Grave Thing", claw="4d6")
     _set_invincible(app, campaign_id, PC, True)
-    result = _hit(tools, "Ghoul", PC, 6, 6, 6, 6)
+    result = _hit(tools, "Grave Thing", PC, 6, 6, 6, 6)
     assert result["armor"] == 24
     assert result["harm"] == {}
     assert result["save_due"] is None
@@ -557,14 +557,14 @@ def test_an_invincible_character_takes_no_outside_harm(client_factory):
 
 def test_turning_invincibility_off_restores_harm(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul")
+    _foe(tools, "Grave Thing")
     _set_invincible(app, campaign_id, PC, True)
-    _hit(tools, "Ghoul", PC, 6)
+    _hit(tools, "Grave Thing", PC, 6)
     assert _character(app, campaign_id, PC).harm == {}
     _set_invincible(app, campaign_id, PC, False)
     _set_stat(app, campaign_id, PC, "hp", 0)
     before = dict(_character(app, campaign_id, PC).harm)
-    result = _hit(tools, "Ghoul", PC, 6)
+    result = _hit(tools, "Grave Thing", PC, 6)
     assert result["harm"]
     after = _character(app, campaign_id, PC).harm
     for stat, lost in result["harm"].items():
@@ -591,9 +591,9 @@ def test_a_debug_score_sets_how_much_of_a_stat_is_left(client_factory):
 
 def test_a_debug_score_is_refused_for_an_npc_or_out_of_range(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul")
+    _foe(tools, "Grave Thing")
     with pytest.raises(InvalidInput):
-        _set_stat(app, campaign_id, "Ghoul", "hp", 2)
+        _set_stat(app, campaign_id, "Grave Thing", "hp", 2)
     with pytest.raises(InvalidInput):
         _set_stat(app, campaign_id, PC, "hp", 999)
     with pytest.raises(InvalidInput):
@@ -602,9 +602,9 @@ def test_a_debug_score_is_refused_for_an_npc_or_out_of_range(client_factory):
 
 def test_turning_invincibility_on_clears_a_pending_save(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="4d6")
+    _foe(tools, "Grave Thing", claw="4d6")
     _set_stat(app, campaign_id, PC, "hp", 0)
-    _hit(tools, "Ghoul", PC, 6, 6, 6, 6)
+    _hit(tools, "Grave Thing", PC, 6, 6, 6, 6)
     assert _character(app, campaign_id, PC).save_due is not None
     _set_invincible(app, campaign_id, PC, True)
     assert _character(app, campaign_id, PC).save_due is None
@@ -614,18 +614,18 @@ def test_turning_invincibility_on_clears_a_pending_save(client_factory):
 
 def test_invincibility_is_only_for_known_player_characters(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul")
+    _foe(tools, "Grave Thing")
     with pytest.raises(InvalidInput, match="not a player character"):
-        _set_invincible(app, campaign_id, "Ghoul", True)
+        _set_invincible(app, campaign_id, "Grave Thing", True)
     with pytest.raises(InvalidInput, match="no character named"):
         _set_invincible(app, campaign_id, "Nobody", True)
 
 
 def test_overflow_comes_off_strength_and_a_passed_save_keeps_the_monster_standing(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="2d6")
+    _foe(tools, "Grave Thing", claw="2d6")
     _foe(tools, "Bo")
-    result = _hit(tools, "Ghoul", "Bo", 6, 5, 1)
+    result = _hit(tools, "Grave Thing", "Bo", 6, 5, 1)
     assert result["harm"] == {"hp": 6, "str": 5}
     assert result["save"] == {"stat": "str", "roll": 1, "score": 5, "passed": True}
     assert result["defeated"] is False
@@ -636,9 +636,9 @@ def test_overflow_comes_off_strength_and_a_passed_save_keeps_the_monster_standin
 
 def test_a_failed_save_defeats_a_monster(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="2d6")
+    _foe(tools, "Grave Thing", claw="2d6")
     _foe(tools, "Bo")
-    result = _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1, 1)
+    result = _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 1, 1)
     assert result["save"]["passed"] is False
     assert result["defeated"] is True
     assert _character(app, campaign_id, "Bo").defeated is True
@@ -646,21 +646,21 @@ def test_a_failed_save_defeats_a_monster(client_factory):
 
 def test_a_defeated_monster_cannot_be_hit_or_attack(client_factory):
     _, _, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="2d6")
+    _foe(tools, "Grave Thing", claw="2d6")
     _foe(tools, "Bo")
-    _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1, 1)
+    _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 1, 1)
     with pytest.raises(InvalidInput, match="Bo is dead"):
-        _hit(tools, "Ghoul", "Bo", 1)
+        _hit(tools, "Grave Thing", "Bo", 1)
     with pytest.raises(InvalidInput, match="Bo is dead"):
-        _hit(tools, "Bo", "Ghoul", 1)
+        _hit(tools, "Bo", "Grave Thing", 1)
 
 
 def test_an_unknown_attack_is_refused_and_the_options_are_listed(client_factory):
     _, _, tools = _fight(client_factory)
-    _foe(tools, "Ghoul")
+    _foe(tools, "Grave Thing")
     _foe(tools, "Bo")
     with pytest.raises(InvalidInput, match="has no attack named 'Sting'; attacks: Claw"):
-        tools.attack("Ghoul", "Sting", "Bo")
+        tools.attack("Grave Thing", "Sting", "Bo")
 
 
 def test_a_player_character_cannot_use_the_monster_attack(client_factory):
@@ -703,25 +703,25 @@ def test_a_player_hit_is_refused_for_a_bad_weapon(client_factory, weapon, messag
 
 def test_overflow_on_a_player_character_waits_for_the_player_to_save(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="3d6")
+    _foe(tools, "Grave Thing", claw="3d6")
     _set_stat(app, campaign_id, PC, "hp", 0)
-    result = _hit(tools, "Ghoul", PC, 6, 6, 6)
+    result = _hit(tools, "Grave Thing", PC, 6, 6, 6)
     assert result["save_due"] == "str"
     assert "save" not in result
     assert result["defeated"] is False
     assert _character(app, campaign_id, PC).save_due == "str"
 
     with pytest.raises(InvalidInput, match="must make their str save first"):
-        _hit(tools, "Ghoul", PC, 1, 1, 1)
+        _hit(tools, "Grave Thing", PC, 1, 1, 1)
     with pytest.raises(InvalidInput, match="must make their str save first"):
         tools.player_attack(PC, "Sword")
 
 
 def test_a_player_character_who_fails_the_save_is_defeated(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="3d6")
+    _foe(tools, "Grave Thing", claw="3d6")
     _set_stat(app, campaign_id, PC, "hp", 0)
-    _hit(tools, "Ghoul", PC, 6, 6, 6)
+    _hit(tools, "Grave Thing", PC, 6, 6, 6)
     result = tools.player_save(20)
     assert result["passed"] is False
     assert result["stat"] == "str"
@@ -730,17 +730,17 @@ def test_a_player_character_who_fails_the_save_is_defeated(client_factory):
 
 def test_a_defeated_foe_is_skipped_when_its_turn_comes_round(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="2d6")
+    _foe(tools, "Grave Thing", claw="2d6")
     _foe(tools, "Bo")
     _foe(tools, "Cy")
-    _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1)
+    _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 1)
     assert _character(app, campaign_id, "Bo").defeated is True
     _finish_gm_reply(app, campaign_id)
 
     with _db(app) as db:
         encounters.end_turn(db, campaign_id, PC, by_player=True)
-        encounters.begin_turn(db, campaign_id, "Ghoul")
-        encounters.end_turn(db, campaign_id, "Ghoul", by_player=False)
+        encounters.begin_turn(db, campaign_id, "Grave Thing")
+        encounters.end_turn(db, campaign_id, "Grave Thing", by_player=False)
     state = _state(app, campaign_id).encounter
     assert state.order[state.up] == "Cy"
     assert state.acting is None
@@ -748,9 +748,9 @@ def test_a_defeated_foe_is_skipped_when_its_turn_comes_round(client_factory):
 
 def test_a_player_character_who_passes_the_save_stands(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="3d6")
+    _foe(tools, "Grave Thing", claw="3d6")
     _set_stat(app, campaign_id, PC, "hp", 0)
-    _hit(tools, "Ghoul", PC, 6, 6, 6)
+    _hit(tools, "Grave Thing", PC, 6, 6, 6)
     result = tools.player_save(1)
     assert result["passed"] is True
     pc = _character(app, campaign_id, PC)
@@ -774,7 +774,7 @@ def test_combat_is_refused_when_the_rule_set_has_none(client_factory):
     app, campaign_id, _ = _fight(client_factory)
     plain = replace(_tools(app, campaign_id), combat=None)
     with pytest.raises(InvalidInput, match="this rule set has no combat"):
-        plain.player_attack("Ghoul", "Sword")
+        plain.player_attack("Grave Thing", "Sword")
 
 
 async def _no_speak(*_: Any) -> None:
@@ -783,7 +783,7 @@ async def _no_speak(*_: Any) -> None:
 
 def test_player_attack_asks_for_damage_then_resolves_through_the_tool(client_factory):
     _, _, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", hp=6)
+    _foe(tools, "Grave Thing", hp=6)
     ctx = ToolContext(
         world=replace(tools, rng=Rolls(3)),
         speak=_no_speak,
@@ -796,7 +796,7 @@ def test_player_attack_asks_for_damage_then_resolves_through_the_tool(client_fac
         name="player_attack",
         arguments=json.dumps(
             {
-                "target": "Ghoul",
+                "target": "Grave Thing",
                 "weapon": "Sword",
                 "prompt": "Roll your sword damage.",
             }
@@ -818,10 +818,10 @@ def test_player_attack_asks_for_damage_then_resolves_through_the_tool(client_fac
 
 def test_a_defeated_foe_does_not_end_the_encounter_while_another_foe_stands(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="2d6")
+    _foe(tools, "Grave Thing", claw="2d6")
     _foe(tools, "Bo")
     _foe(tools, "Cy")
-    _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1)
+    _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 1)
     assert _character(app, campaign_id, "Bo").defeated is True
     assert _state(app, campaign_id).encounter is not None
 
@@ -903,11 +903,11 @@ def test_recovery_refuses_an_npc_and_a_character_who_is_not_down(client_factory)
 
 def test_a_defeated_foe_stays_on_the_map_as_a_body(client_factory):
     client, campaign_id, tools = _fight_client(client_factory)
-    _foe(tools, "Ghoul", claw="2d6")
+    _foe(tools, "Grave Thing", claw="2d6")
     _foe(tools, "Bo")
     _foe(tools, "Cy")
     tools.place_participant("Bo", 2, 2)
-    _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1)
+    _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 1)
     page = client.get(f"/campaigns/{campaign_id}").text
     roster = page[page.index('class="encounter-roster"') : page.index('aria-label="Panels"')]
     assert '<span class="roster-status">dead</span>' in roster
@@ -917,12 +917,12 @@ def test_a_defeated_foe_stays_on_the_map_as_a_body(client_factory):
 def test_a_strike_names_the_attacker_and_weapon_in_one_sentence():
     strike = Struck(
         name="Ysolde Vane",
-        attacker="Cavity Ghoul",
+        attacker="Cavity Grave Thing",
         weapon="claws",
         raw=6,
         armor=0,
         harm={"hp": 6},
     )
     assert strike.render() == (
-        "Cavity Ghoul strikes Ysolde Vane with the claws for 6; Ysolde Vane takes 6 harm."
+        "Cavity Grave Thing strikes Ysolde Vane with the claws for 6; Ysolde Vane takes 6 harm."
     )
