@@ -375,7 +375,7 @@
     "name": "discover_location",
     "python_module": "core",
     "function": "discover_location",
-    "description": "Mark an existing location as discovered: the player character has heard about it in detail, or the story has revealed it. A discovered location appears on the player's map. Moving the player character there discovers it too, so use this for places they learn of without going.",
+    "description": "Mark an existing location as discovered: the player character has heard about it in detail, or the story has revealed it. A discovered location appears on the player's map. Moving the player character there discovers it too, so use this for places they learn of without going. When an NPC gives directions, discover only the destination; do not discover the other places the directions name.",
     "parameters": {
       "type": "object",
       "properties": {
