@@ -1510,7 +1510,7 @@ def _status_lines(
 def speaker_profile(state: CampaignState, name: str, spec: CharacterSpec) -> str:
     """The NPC details a speech step needs. The NPC must be at the player character's location."""
     npc = _character_named(state, name)
-    if npc.kind != NPC_KIND:
+    if npc.kind != NPC_KIND and not npc.hireling:
         raise InvalidInput(f"{npc.name} is the player character and does not need speaking for")
     pc = state.pc()
     if pc is None or npc.location != pc.location:

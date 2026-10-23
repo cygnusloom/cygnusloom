@@ -78,7 +78,8 @@ SYSTEM_PROMPT = (
     "the story consistent with what has already happened. You are not a general assistant; stay in "
     "the GM role for the whole campaign. You never speak, think, feel, decide, or act for the "
     "player character: the player alone chooses what their character says and does, and you "
-    "describe only what happens as a result."
+    "describe only what happens as a result. A hireling the player controls is different: the "
+    "player chooses its actions, and you voice its dialogue through speak."
 )
 # Spoken words never contain angle brackets or call syntax, so either means a tool call was written.
 SPOKEN_MARKUP = re.compile(r"<[^>]*>|\b\w+\(\s*\{")
@@ -153,7 +154,8 @@ NARRATE_INSTRUCTION = (
     "narrate it as a result. Narrate everything that happens to the player character, once, in "
     "plain prose: harm, healing, Fatigue, scars, conditions, items gained or lost, the effect of a "
     "spell, scroll, or relic, a save's result, and any rest they take. Narrate these even when the "
-    "state step already recorded them. End the beat where the player's next choice begins. After a recovery, "
+    "state step already recorded them, and give any sum of money or count of items exactly as the "
+    "tool results recorded it. End the beat where the player's next choice begins. After a recovery, "
     "narrate only how the character comes round and what it cost, then stop: do not have the player "
     "character act, and do not bring back a monster or NPC that the state places elsewhere. "
     "Do not call tools."

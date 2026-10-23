@@ -225,3 +225,27 @@ def _scene(app: FastAPI, campaign_id: int):
     with Session(app.state.engine) as db:
         state = load_state(db, campaign_id)
     return scene_view(state, CAIRN.character)
+
+
+def test_the_gm_can_voice_a_hireling_at_the_players_location(client_factory):
+    _, _, tools = _pcs(client_factory)
+    _hire(tools)
+    profile = tools.speaker_profile(HIRELING)
+    assert profile.splitlines()[0] == f"Speaker: {HIRELING}"
+    assert f"Location: {PLACE}" in profile
+
+
+def test_a_hireling_away_from_the_player_cannot_speak(client_factory):
+    _, _, tools = _pcs(client_factory)
+    _hire(tools)
+    tools.create_location("The Inn", "A warm room with a fire.")
+    tools.move_actor(HIRELING, "The Inn")
+    with pytest.raises(InvalidInput, match="not at the player character's location"):
+        tools.speaker_profile(HIRELING)
+
+
+def test_the_player_character_still_cannot_be_spoken_for(client_factory):
+    _, _, tools = _pcs(client_factory)
+    _hire(tools)
+    with pytest.raises(InvalidInput, match="does not need speaking for"):
+        tools.speaker_profile(PC)
