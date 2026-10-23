@@ -157,6 +157,10 @@ class Character:
     hireling: bool = False
     employer: str = ""
     wage: int = 0
+    # Hours left before a dying character dies unless aided. None while the character is not dying.
+    dying_hours: int | None = None
+    # The character is dead. The body stays where the character fell, with its gear.
+    dead: bool = False
 
 
 def current(character: Character, stat: str) -> int:
@@ -262,6 +266,7 @@ class Clock:
 
     day: int = 1
     part: int = 0
+    hour: int = 0
 
 
 @dataclass(frozen=True)
@@ -302,9 +307,9 @@ class CampaignState:
         return self.characters.get(key)
 
     def pc(self) -> Character | None:
-        return next(
-            (c for c in self.characters.values() if c.kind == PC_KIND and not c.hireling), None
-        )
+        """The player's character: the living one if there is one, otherwise the dead one."""
+        pcs = [c for c in self.characters.values() if c.kind == PC_KIND and not c.hireling]
+        return next((c for c in pcs if not c.dead), next(iter(pcs), None))
 
 
 def name_key(name: str) -> str:
@@ -645,6 +650,28 @@ class HirelingDismissed(GameEvent):
 
     def render(self) -> str:
         return f"{self.name} leaves the company: {self.cause}."
+
+
+@dataclass(frozen=True)
+class HirelingPromoted(GameEvent):
+    """A hireling takes over as the player character after the old one died. It keeps its sheet
+    and gear and stops being paid by its employer."""
+
+    kind: ClassVar[str] = "hireling.promoted"
+
+    name: str
+    employer: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.hireling = False
+        character.employer = ""
+        character.wage = 0
+
+    def render(self) -> str:
+        return (
+            f"{self.name} takes up the player character's part, leaving {self.employer}'s company."
+        )
 
 
 @dataclass(frozen=True)
@@ -1764,9 +1791,15 @@ class ClockAdvanced(GameEvent):
     day: int
     part: int
     part_name: str
+    hour: int = 0
+    # The hours this move passed, which count down a dying character's clock.
+    elapsed_hours: int = 0
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        state.clock = Clock(day=self.day, part=self.part)
+        state.clock = Clock(day=self.day, part=self.part, hour=self.hour)
+        for character in state.characters.values():
+            if character.dying_hours is not None:
+                character.dying_hours = max(0, character.dying_hours - self.elapsed_hours)
         for character in state.characters.values():
             if character.kind != PC_KIND or character.location is None:
                 continue
@@ -1776,6 +1809,63 @@ class ClockAdvanced(GameEvent):
 
     def render(self) -> str:
         return f"It is day {self.day}, {self.part_name}."
+
+
+@dataclass(frozen=True)
+class CharacterDying(GameEvent):
+    """A player character is out of action and bleeding out. It dies when `hours` pass unless it
+    is stabilized."""
+
+    kind: ClassVar[str] = "character.dying"
+
+    name: str
+    hours: int
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].dying_hours = self.hours
+
+    def render(self) -> str:
+        source = f" {self.cause}" if self.cause else ""
+        hours = f"{self.hours} hour{'' if self.hours == 1 else 's'}"
+        return f"{self.name} is dying{source}. Death comes within {hours} unless aided."
+
+
+@dataclass(frozen=True)
+class CharacterStabilized(GameEvent):
+    """Aid stopped a dying character's clock. It is still out of action until the Warden recovers
+    it."""
+
+    kind: ClassVar[str] = "character.stabilized"
+
+    name: str
+    by: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].dying_hours = None
+
+    def render(self) -> str:
+        source = f" {self.by}." if self.by else ""
+        return f"{self.name} is stabilized.{source}"
+
+
+@dataclass(frozen=True)
+class CharacterDied(GameEvent):
+    """A character died. The body stays where it fell, with the gear it carried."""
+
+    kind: ClassVar[str] = "character.died"
+
+    name: str
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.dead = True
+        character.defeated = True
+        character.dying_hours = None
+
+    def render(self) -> str:
+        return f"{self.name} dies{f', {self.cause}' if self.cause else ''}."
 
 
 @dataclass(frozen=True)

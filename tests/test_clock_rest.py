@@ -16,6 +16,7 @@ from tests.test_combat import (
 )
 
 PARTS = len(CAIRN.clock.parts)
+HPP = CAIRN.clock.hours_per_part
 
 
 def _wound(app, campaign_id, name=PC):
@@ -24,7 +25,7 @@ def _wound(app, campaign_id, name=PC):
 
 
 def _clock_position(app, campaign_id):
-    return absolute(_state(app, campaign_id).clock, PARTS)
+    return absolute(_state(app, campaign_id).clock, PARTS, HPP)
 
 
 @pytest.mark.parametrize(
@@ -32,7 +33,12 @@ def _clock_position(app, campaign_id):
     [("moments", 0, 1), ("night", 0, 4), ("night", 3, 4), ("night", 2, 4), ("week", 0, 28)],
 )
 def test_a_rest_ends_at_its_target_part(rest_name, start, expected):
-    assert rest_target(start, CAIRN.rests[rest_name], PARTS) == expected
+    assert rest_target(start * HPP, CAIRN.rests[rest_name], PARTS, HPP) == expected * HPP
+
+
+def test_a_rest_ends_on_the_hour_it_began_plus_its_length(client_factory):
+    assert rest_target(2, CAIRN.rests["moments"], PARTS, HPP) == 2 + HPP
+    assert rest_target(1, CAIRN.rests["night"], PARTS, HPP) == 4 * HPP
 
 
 def test_advancing_a_day_lands_on_the_morning_and_a_part_moves_to_the_afternoon(client_factory):
@@ -40,9 +46,20 @@ def test_advancing_a_day_lands_on_the_morning_and_a_part_moves_to_the_afternoon(
     assert tools.advance_time(days=1) == {
         "day": 2,
         "part": "morning",
+        "hour": 0,
         "notice": "1 day passed; update anything that should be updated.",
     }
-    assert tools.advance_time(parts=1) == {"day": 2, "part": "afternoon"}
+    assert tools.advance_time(parts=1) == {"day": 2, "part": "afternoon", "hour": 0}
+
+
+def test_hours_carry_into_the_next_part_of_the_day(client_factory):
+    _, _, tools = _fight(client_factory)
+    assert tools.advance_time(hours=HPP + 2) == {"day": 1, "part": CAIRN.clock.parts[1], "hour": 2}
+
+
+def test_advancing_by_hours_alone_is_allowed(client_factory):
+    _, _, tools = _fight(client_factory)
+    assert tools.advance_time(hours=1)["hour"] == 1
 
 
 def test_advancing_by_nothing_is_refused(client_factory):
@@ -89,7 +106,7 @@ def test_an_interrupted_night_rest_becomes_a_moments_rest(client_factory):
     result = tools.rest("night", interrupted=True, reason="ambush")
     assert result["length"] == "moments"
     assert result["interrupted"] is True
-    assert _clock_position(app, campaign_id) - before == 1
+    assert _clock_position(app, campaign_id) - before == HPP
 
 
 def test_deprivation_costs_one_fatigue_each_day_after_its_first(client_factory):

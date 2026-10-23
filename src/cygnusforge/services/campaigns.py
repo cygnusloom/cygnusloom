@@ -65,6 +65,7 @@ from cygnusforge.services.tools import (
 from cygnusforge.services.world import (
     WorldTools,
     create_player_character,
+    promote_hireling,
     seed_campaign,
     set_campaign_options,
     world_state_text,
@@ -121,9 +122,12 @@ STATE_INSTRUCTION = (
     "An encounter ends on its own when one side can no "
     "longer fight. When an NPC surrenders, call surrender for it. When a detachment, a group statblock, "
     "fails its critical save and is broken, call resolve_detachment with the outcome the story needs. "
-    "A defeated player character is "
-    "handled by the rule set's rules for defeat and "
-    "recovery. Notes and narration must agree with the recorded harm and status: never "
+    "A player character who fails a save against critical damage is dying and dies within the hour "
+    "unless stabilized: the clock counts hours, so advance_time with hours runs it down, and a death "
+    "is recorded at once, in that same turn. Stabilize a dying character only when the story gives "
+    "aid, through stabilize or a Bandage used with use_item. Call recover_character only once a "
+    "stabilized character has been shown to survive. A dead character's body stays at its location "
+    "with its gear. Notes and narration must agree with the recorded harm and status: never "
     "call a character unhurt or scratched while they carry harm, and never describe a defeated or dead "
     "NPC as alive, conscious, breathing, or moving. Notes hold settled facts that the story could lose, such as secrets, "
     "promises, debts, and clues. Do not copy into a note anything a location, character, statblock, "
@@ -155,7 +159,7 @@ NARRATE_INSTRUCTION = (
     "plain prose: harm, healing, Fatigue, scars, conditions, items gained or lost, the effect of a "
     "spell, scroll, or relic, a save's result, and any rest they take. Narrate these even when the "
     "state step already recorded them, and give any sum of money or count of items exactly as the "
-    "tool results recorded it. End the beat where the player's next choice begins. After a recovery, "
+    "tool results recorded it. End the beat where the player's next choice begins. When a player character dies, narrate the death in full, with what it looked like and where the body lies, then stop: the player chooses the next character, so do not choose one for them. After a recovery, "
     "narrate only how the character comes round and what it cost, then stop: do not have the player "
     "character act, and do not bring back a monster or NPC that the state places elsewhere. "
     "Do not call tools."
@@ -292,6 +296,15 @@ def create_character(
             magic=rule_set.magic,
             currency=rule_set.marketplace.currency if rule_set.marketplace else "",
         )
+
+
+def promote_hireling_to_character(
+    engine: Engine, owner_id: int, campaign_id: int, name: str
+) -> dict[str, Any]:
+    """After the player character died, a living hireling takes over as the player character."""
+    get_campaign(engine, owner_id, campaign_id)
+    with _exclusive(campaign_id), session_scope(engine) as db:
+        return promote_hireling(db, campaign_id, name)
 
 
 def choose_campaign_options(
@@ -1266,8 +1279,11 @@ async def stream_message(
         rule_set = library.rule_sets.get(campaign.rule_set)
         if rule_set is None:
             raise InvalidInput("that campaign's rule set is no longer available")
-        if _state(engine, campaign.id).pc() is None:
+        player = _state(engine, campaign.id).pc()
+        if player is None:
             raise InvalidInput("create your character before playing")
+        if player.dead:
+            raise InvalidInput("your character is dead: choose a new character or a hireling first")
         run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
         _record(engine, campaign.id, ChatPlayer(content=text))
         async for event in _guarded(run, _carry_on(run)):

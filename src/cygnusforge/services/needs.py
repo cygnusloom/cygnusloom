@@ -57,8 +57,9 @@ def take_rest(
         raise InvalidInput(f"there is no rest length named {length!r}")
     rest = rests[chosen_id]
     parts_per_day = len(clock_rules.parts)
+    hours_per_part = clock_rules.hours_per_part
     state = load_state(db, campaign_id)
-    start = absolute(state.clock, parts_per_day)
+    start = absolute(state.clock, parts_per_day, hours_per_part)
     record(
         db,
         campaign_id,
@@ -79,7 +80,7 @@ def take_rest(
             db,
             campaign_id,
             clock_rules,
-            rest_target(start, rest, parts_per_day),
+            rest_target(start, rest, parts_per_day, hours_per_part),
             deprivation,
             inventory,
             passed="the rest is over and time has passed",

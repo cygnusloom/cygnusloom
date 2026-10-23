@@ -266,6 +266,14 @@ class CombatRules:
     outside_harm: tuple[str, ...] = ()
     morale: MoraleRules | None = None
     modifiers: Mapping[str, str] = field(default_factory=dict)
+    # A player character who is out of action and dying dies when this many hours pass unaided.
+    # Zero means dying characters do not die on a clock.
+    dying_hours: int = 0
+    # The conditions that leave a character dying, and the ones that make a failed save fatal.
+    dying_conditions: tuple[str, ...] = ()
+    fatal_conditions: tuple[str, ...] = ()
+    # The items a character can use on a dying character to stop the clock, by name.
+    aid_items: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -278,6 +286,8 @@ class ClockRules:
     # The currency feature a hireling's wage is paid in, taken from its employer each day. Empty
     # when the rule set has no wages.
     wage_currency: str = ""
+    # How many hours each part of the day holds. Hours count the time a dying character has left.
+    hours_per_part: int = 1
 
 
 @dataclass(frozen=True)
@@ -730,6 +740,10 @@ def _load_combat(
         outside_harm=outside_harm,
         morale=_load_morale(data, character, label),
         modifiers=_load_modifiers(data, label),
+        dying_hours=_whole(data, "dying_hours", label, 0) if "dying_hours" in data else 0,
+        dying_conditions=_names(data, "dying_conditions", label),
+        fatal_conditions=_names(data, "fatal_conditions", label),
+        aid_items=_names(data, "aid_items", label),
     )
 
 
@@ -946,7 +960,17 @@ def _load_clock(definitions: list[Definition], template: str) -> ClockRules | No
     wage_currency = definition.data.get("wage_currency", "")
     if not isinstance(wage_currency, str):
         raise ContentError(f"{label}: 'wage_currency' must be text")
-    return ClockRules(parts=parts, stale_days=stale_days, wage_currency=wage_currency)
+    hours_per_part = (
+        _whole(definition.data, "hours_per_part", label, 1)
+        if "hours_per_part" in definition.data
+        else 1
+    )
+    return ClockRules(
+        parts=parts,
+        stale_days=stale_days,
+        wage_currency=wage_currency,
+        hours_per_part=hours_per_part,
+    )
 
 
 def _load_rests(

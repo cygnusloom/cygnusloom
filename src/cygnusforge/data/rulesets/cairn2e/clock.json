@@ -9,6 +9,7 @@
       "night"
     ],
     "stale_days": 5,
-    "wage_currency": "gold"
+    "wage_currency": "gold",
+    "hours_per_part": 6
   }
 ]

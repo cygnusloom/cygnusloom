@@ -276,7 +276,7 @@
     "name": "recover_character",
     "python_module": "cairn2e",
     "function": "recover_character",
-    "description": "Bring a player character back from critical damage, where they were left unconscious and bleeding out. Use it only for a player character whose statblock shows Status: in critical damage. Narrate how they survived, such as being dragged to safety, bandaged in time, or kept alive by a companion, and what it cost them, such as a lasting injury, a lost possession, or a debt. The harm they took stays as it was.",
+    "description": "Bring a player character back from critical damage, where they were left unconscious and bleeding out. Use it only for a living player character whose statblock shows Status: in critical damage and who is not dying. A dying character must be stabilized first (the stabilize tool or a Bandage). Narrate how they survived, such as being dragged to safety, bandaged in time, or kept alive by a companion, and what it cost them, such as a lasting injury, a lost possession, or a debt. The harm they took stays as it was.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -385,6 +385,31 @@
         "stat",
         "amount",
         "cause"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "stabilize",
+    "name": "stabilize",
+    "python_module": "cairn2e",
+    "function": "stabilize",
+    "description": "Stabilize a dying player character, stopping the clock that would kill them, when the story gives them aid: a healer, a rescue, a miracle. Narrate how. A Mortal Wound held at that point ends by aid. Use it only for a player character who is dying.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the dying player character."
+        },
+        "explanation": {
+          "type": "string",
+          "description": "How they were stabilized, in a sentence or two."
+        }
+      },
+      "required": [
+        "name",
+        "explanation"
       ]
     }
   },
@@ -564,7 +589,7 @@
     "name": "advance_time",
     "python_module": "cairn2e",
     "function": "advance_time",
-    "description": "Move the campaign clock forward. Use it when time passes in the fiction: days, or parts of a day (morning, afternoon, evening, night). The result says when a new day begins and lists places not visited for a while, so update anything that should change.",
+    "description": "Move the campaign clock forward. Use it when time passes in the fiction: days, parts of a day (morning, afternoon, evening, night), or hours within a part. The result says when a new day begins and lists places not visited for a while, so update anything that should change. A dying character dies when enough hours have passed, so advance time only as far as the fiction needs.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -580,6 +605,13 @@
           "minimum": 0,
           "maximum": 12,
           "description": "Parts of a day to advance, from 0 to 12. Defaults to 0 when omitted."
+        },
+        "hours": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 72,
+          "default": 0,
+          "description": "Hours to advance, added after days and parts, from 0 to 72. Defaults to 0 when omitted."
         }
       },
       "required": []
@@ -855,7 +887,7 @@
     "name": "use_item",
     "python_module": "cairn2e",
     "function": "use_item",
-    "description": "Spend one use of a consumable the character carries, such as a torch, oil, bandages, or a salve. The last use uses it up and removes it. Call this only when the character deliberately uses up that exact item (pouring the oil, applying the bandage). Never spend it for an action that uses a different item, for an attempt that fails, or for holding something in a flame that is already burning: a lit lantern or torch burns down over time, not per action. Not for relics (use use_relic), spellbooks, or gear without uses.",
+    "description": "Spend one use of a consumable the character carries, such as a torch, oil, bandages, or a salve. The last use uses it up and removes it. Call this only when the character deliberately uses up that exact item (pouring the oil, applying the bandage). A Bandage may be applied to a dying character: set target to that character, and it is stabilized. Never spend it for an action that uses a different item, for an attempt that fails, or for holding something in a flame that is already burning: a lit lantern or torch burns down over time, not per action. Not for relics (use use_relic), spellbooks, or gear without uses.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -866,6 +898,10 @@
         "item": {
           "type": "string",
           "description": "The name of the consumable item."
+        },
+        "target": {
+          "type": "string",
+          "description": "Only for a Bandage used on a dying character: that character's name. Leave it out otherwise."
         }
       },
       "required": [

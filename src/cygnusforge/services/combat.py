@@ -16,6 +16,7 @@ from sqlmodel import Session
 
 from cygnusforge.content.library import CombatRules, DamageStep
 from cygnusforge.rules.dice import roll_total
+from cygnusforge.services import death
 from cygnusforge.services.attacks import (
     highest_index,
     modifier_dice,
@@ -35,6 +36,7 @@ from cygnusforge.services.events import (
     ArmorSet,
     CampaignState,
     Character,
+    CharacterDied,
     CharacterRecovered,
     CharacterSurrendered,
     DebugCurrencyAdded,
@@ -280,6 +282,9 @@ def _save(
         ),
     )
     db.commit()
+    if not passed and not critical and character.kind == PC_KIND:
+        death.on_critical_save_failed(db, campaign_id, combat, character.name)
+        db.commit()
     return {"stat": stat, "roll": roll, "score": score, "passed": passed}
 
 
@@ -546,6 +551,8 @@ def player_save(db: Session, campaign_id: int, roll: int, combat: CombatRules) -
         ),
     )
     db.commit()
+    if not passed:
+        death.on_critical_save_failed(db, campaign_id, combat, pc.name)
     _end_if_one_side_left(db, campaign_id)
     return {"character": pc.name, "stat": stat, "roll": roll, "score": score, "passed": passed}
 
@@ -650,6 +657,10 @@ def recover_character(
         raise InvalidInput(f"there is no character named {name!r}")
     if character.kind != PC_KIND:
         raise InvalidInput(f"{character.name} is not a player character and cannot be recovered")
+    if character.dead:
+        raise InvalidInput(f"{character.name} is dead and cannot be recovered")
+    if character.dying_hours is not None:
+        raise InvalidInput(f"{character.name} is still dying; stabilize them first")
     if not character.defeated:
         raise InvalidInput(f"{character.name} is not {combat.defeat['player_character']}")
     record(
@@ -711,6 +722,12 @@ def harm_character(
             status=defeat_status(character, combat.defeat) if defeats else "",
         ),
     )
+    if defeats and character.kind == PC_KIND:
+        record(
+            db,
+            campaign_id,
+            CharacterDied(name=character.name, cause="outside combat, with STR at 0"),
+        )
     db.commit()
     return {
         "character": character.name,

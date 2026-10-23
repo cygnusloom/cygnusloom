@@ -25,7 +25,7 @@ def pay_wages(db: Session, campaign_id: int, currency: str) -> None:
             continue
         key = name_key(hireling.employer)
         employer = state.characters.get(key)
-        if employer is None:
+        if employer is None or employer.dead:
             record(
                 db,
                 campaign_id,

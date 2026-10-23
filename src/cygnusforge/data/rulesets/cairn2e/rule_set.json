@@ -44,7 +44,7 @@
     "type": "rule",
     "id": "defeat",
     "important": true,
-    "text": "A player character who is defeated in combat is in critical damage and unconscious. When the story brings them round, call recover_character with how they survived and what it cost them, such as being dragged to safety, a lasting injury, a lost possession, or a debt. Keep the harm they took: recovery does not heal it."
+    "text": "A player character who fails a save against Critical Damage is in critical damage and dying: they die in one hour unless stabilized. Stabilize them with the stabilize tool (a healer, a rescue, a miracle), or with a Bandage used on them through use_item with target set to their name. Once stabilized they stay unconscious until recover_character is called, with how they survived and what it cost them. Keep the harm they took: recovery does not heal it. A PC whose STR reaches 0 outside combat dies at once. A Doomed PC who fails a save against Critical Damage dies at once. Death is final: narrate it in the turn it happens, with what it looked like and where the body lies. After the turn, the player chooses a new character or a hireling to play."
   },
   {
     "type": "rule",

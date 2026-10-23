@@ -46,9 +46,9 @@ from cygnusforge.content.library import (
 )
 from cygnusforge.rules.context import brief
 from cygnusforge.rules.dice import is_formula
+from cygnusforge.services import aid, combat, encounters, morale
 from cygnusforge.services import attacks as attack_modifiers
 from cygnusforge.services import clock as clock_service
-from cygnusforge.services import combat, encounters, morale
 from cygnusforge.services import inventory as inventory_service
 from cygnusforge.services import magic as magic_service
 from cygnusforge.services import market as market_service
@@ -72,6 +72,7 @@ from cygnusforge.services.events import (
     Character,
     HirelingAdded,
     HirelingDismissed,
+    HirelingPromoted,
     Item,
     LocationAdded,
     LocationDiscovered,
@@ -197,7 +198,7 @@ class WorldTools:
         with session_scope(self.engine) as db:
             return roll_dice_tables(db, self.campaign_id, tables, self.dice_tables, self.rng)
 
-    def advance_time(self, days: int = 0, parts: int = 0) -> dict[str, Any]:
+    def advance_time(self, days: int = 0, parts: int = 0, hours: int = 0) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return clock_service.advance_time(
                 db,
@@ -207,6 +208,7 @@ class WorldTools:
                 self.inventory,
                 days,
                 parts,
+                hours,
             )
 
     def rest(self, length: str, interrupted: bool = False, reason: str = "") -> dict[str, Any]:
@@ -312,15 +314,31 @@ class WorldTools:
                 db, self.campaign_id, _required(self.inventory, "inventory"), name, item
             )
 
-    def use_item(self, name: str, item: str) -> dict[str, Any]:
+    def use_item(self, name: str, item: str, target: str | None = None) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return inventory_service.use_item(
+            return aid.use_item(
                 db,
                 self.campaign_id,
                 _required(self.inventory, "inventory"),
+                self.combat,
+                self.conditions,
+                self.rng,
                 name,
                 item,
+                target,
                 self.magic.relic_kind if self.magic is not None else "",
+            )
+
+    def stabilize(self, name: str, explanation: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return aid.stabilize(
+                db,
+                self.campaign_id,
+                name,
+                explanation,
+                self._rules(),
+                self.conditions,
+                self.rng,
             )
 
     def give_spellbook(self, name: str, spell: str, description: str) -> dict[str, Any]:
@@ -474,6 +492,10 @@ class WorldTools:
                 quirks,
                 character,
             )
+
+    def promote_hireling(self, name: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return promote_hireling(db, self.campaign_id, name)
 
     def dismiss_hireling(self, name: str, cause: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -837,7 +859,8 @@ def create_player_character(
     features are carried as inventory items, spell features as spellbooks, and the armor they
     give is worn. The currency stays a count."""
     state = load_state(db, campaign_id)
-    if state.pc() is not None:
+    current = state.pc()
+    if current is not None and not current.dead:
         raise InvalidInput("the player character already exists")
     if campaign.fields and not state.options:
         raise InvalidInput("the campaign options must be chosen before the player character")
@@ -1051,6 +1074,23 @@ def dismiss_hireling(db: Session, campaign_id: int, name: str, cause: str) -> di
     record(db, campaign_id, HirelingDismissed(name=hireling.name, cause=cause))
     db.commit()
     return {"dismissed": hireling.name, "employer": employer}
+
+
+def promote_hireling(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
+    """After the player character died, a living hireling takes over as the player character."""
+    state = load_state(db, campaign_id)
+    current = state.pc()
+    if current is not None and not current.dead:
+        raise InvalidInput("the player character is still alive")
+    hireling = state.characters.get(name_key(name))
+    if hireling is None or not hireling.hireling:
+        raise InvalidInput(f"{name} is not a hireling")
+    if hireling.dead or hireling.dying_hours is not None:
+        raise InvalidInput(f"{hireling.name} cannot take up the part: they are not able to act")
+    employer = hireling.employer
+    record(db, campaign_id, HirelingPromoted(name=hireling.name, employer=employer))
+    db.commit()
+    return {"promoted": hireling.name, "employer": employer}
 
 
 def create_monster(
@@ -1631,8 +1671,14 @@ def world_state_text(
         if field_id in campaign.fields
     ]
     if clock_rules is not None:
-        lines.append(f"It is day {state.clock.day}, {clock_rules.parts[state.clock.part]}.")
-    if pc.location is None:
+        when = f"day {state.clock.day}, {clock_rules.parts[state.clock.part]}"
+        if clock_rules.hours_per_part > 1:
+            when += f", hour {state.clock.hour + 1} of {clock_rules.hours_per_part}"
+        lines.append(f"It is {when}.")
+    if pc.dead:
+        where = f" the body lies at {pc.location}." if pc.location is not None else ""
+        lines.append(f"Player character {pc.name} is dead;{where}".rstrip(".") + ".")
+    elif pc.location is None:
         lines.append(
             f"Player character: {pc.name}, not yet placed; place them with move_actor on your first turn."
         )

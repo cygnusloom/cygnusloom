@@ -86,8 +86,8 @@ def roll_tables(tables: list[str], ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.roll_tables(tables)
 
 
-def advance_time(ctx: ToolContext, days: int = 0, parts: int = 0) -> dict[str, Any]:
-    return ctx.world.advance_time(days=days, parts=parts)
+def advance_time(ctx: ToolContext, days: int = 0, parts: int = 0, hours: int = 0) -> dict[str, Any]:
+    return ctx.world.advance_time(days=days, parts=parts, hours=hours)
 
 
 def rest(length: str, reason: str, ctx: ToolContext, interrupted: bool = False) -> dict[str, Any]:
@@ -128,8 +128,12 @@ def drop_item(name: str, item: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.drop_item(name, item)
 
 
-def use_item(name: str, item: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.use_item(name, item)
+def use_item(name: str, item: str, ctx: ToolContext, target: str | None = None) -> dict[str, Any]:
+    return ctx.world.use_item(name, item, target)
+
+
+def stabilize(name: str, explanation: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.stabilize(name, explanation)
 
 
 def give_spellbook(name: str, spell: str, description: str, ctx: ToolContext) -> dict[str, Any]:

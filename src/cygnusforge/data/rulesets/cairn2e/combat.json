@@ -25,6 +25,10 @@
       "lone_at": "hp",
       "retreat_stat": "dex"
     },
-    "modifiers": {"impaired": "1d4", "enhanced": "1d12"}
+    "modifiers": {"impaired": "1d4", "enhanced": "1d12"},
+    "dying_hours": 1,
+    "dying_conditions": ["mortal_wound"],
+    "fatal_conditions": ["doomed"],
+    "aid_items": ["Bandages"]
   }
 ]

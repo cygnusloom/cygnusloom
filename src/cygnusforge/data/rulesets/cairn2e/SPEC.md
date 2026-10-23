@@ -27,7 +27,7 @@ This spec plans the Second Edition rules as a set of phases. Each phase is imple
 | Gold and marketplace | Engine-tracked prices and services. Phase 6. |
 | Character creation | Engine-rolled background tables (3d6 attributes, 1d6 HP, starting gear). Phase 7. |
 | Hirelings | Built from the marketplace table or a background. Phase 8, before death rules. |
-| Death | The book's rules: critical damage is fatal unless aided, STR 0 means death, and the player makes a new PC or takes a hireling who joins immediately. Phase 9. Until then, the house rule stays: a downed PC is knocked unconscious and the GM assigns the recovery narrative. |
+| Death | The book's rules: critical damage is fatal unless aided within one hour, STR 0 means death, and the player makes a new PC or promotes a hireling. The GM decides when a new PC joins. Phase 9. The knockout house rule is retired. |
 | Dungeon exploration | Dungeon turn cycle and Dungeon Events table, engine-rolled. Phase 10. |
 | Inventory panel | The player sees their items in an Inventory tab: name, size, slots, uses left, and kind, against the capacity. Built after phase 7. |
 | Gaps | Every known gap from every phase is listed in the gap register, mapped to the phase that will close it or marked unscheduled. |
@@ -39,7 +39,7 @@ This spec plans the Second Edition rules as a set of phases. Each phase is imple
 
 Scope:
 
-1. **Critical Damage.** Damage that takes HP below 0 is subtracted from STR by the remaining amount. The target then makes a STR save using the new STR. Failing means Critical Damage. A PC in Critical Damage is knocked out until aided. This phase keeps the house rule: the GM assigns the recovery narrative (`recover_character`). NPCs that fail a critical save die, at the Warden's discretion.
+1. **Critical Damage.** Damage that takes HP below 0 is subtracted from STR by the remaining amount. The target then makes a STR save using the new STR. Failing means Critical Damage. A PC in Critical Damage is knocked out until aided. Phase 9 retired the house rule: see Phase 9 for the death rules, and `recover_character` only after a PC is stabilized. NPCs that fail a critical save die, at the Warden's discretion.
 2. **Scars.** When an attack takes a PC to exactly 0 HP, roll on the Scars table (12 entries) using the HP lost in the attack. The table lives in `tables.json`. Each result is applied as a structured effect, not prose.
 3. **Structured conditions (generic engine feature).** A condition has an id, a label, effects, and end triggers. Effects can be attribute or max-attribute changes, action restrictions (for example "deprived", "out of action", "hamstrung", "deafened", "die in one hour"), or a timer. End triggers can be `rest` (a few hours), `extended_rest`, `aid` (extraordinary aid), `time` (for example one hour, then death), or GM-applied. Conditions are defined in JSON and tracked in character state. They appear on the character sheet and in the GM's state text.
 4. **Attribute loss outside combat.** Damage outside combat hits STR. STR 0 means death. DEX 0 means paralyzed. WIL 0 means delirious. Complete DEX or WIL loss means the character cannot act until restored by extended rest or extraordinary means.
@@ -169,7 +169,7 @@ Source: Core Rules, "Hirelings"; Marketplace, "Hirelings (per day)". The book is
 
 ## Phase 9: death rules
 
-Status: design decided, not started.
+Status: engine, death screen, and unit tests done. Live session partly done: Critical Damage, the dying clock, a death, the death screen, and a replacement PC are confirmed live. Bandaging, `stabilize`, and hireling promotion are not yet live. See the Phase 9 acceptance line.
 
 Source: Core Rules, Critical Damage, and Scars 11 (Mortal Wound) and 12 (Doomed) in `tables.json`. The book is the authority.
 
@@ -184,10 +184,26 @@ Decided:
 - A new PC gets a new loadout and joins the party when the GM decides the story allows it. It does not inherit gear. The dead PC's gear stays with the body, and the GM decides what happens to it.
 - Defeated PCs leave a body. Bodies hold the dead PC's gear for the GM to handle.
 - NPCs that fail a Critical Damage save die, at the Warden's discretion (unchanged).
+- The clock counts hours, so `advance_time` takes `hours`. A part is 6 hours (assumed; to confirm against the book).
+- A hireling is promoted with `hireling.promoted` once the PC is dead, and only if it is alive and not dying. It keeps its gear and stops being paid.
+- A dead employer's hirelings are unpaid, so the GM decides what they do.
 
 Acceptance:
 - Unit tests: the one-hour clock fires, bandages stop it, Doomed kills on a failed save, Mortal Wound sets max HP on recovery, and a death emits an event and opens the death screen.
 - A live session covering Critical Damage, bandaging, a death, a replacement PC, and a hireling promotion.
+  - Done live (fresh DB, campaign 1): a wolf bite overflowed to STR, the STR save failed (`character.dying`, one-hour clock), the encounter ended, the GM advanced three hours and the clock ran out (`character.died`), the GM narrated the death in the same turn, the death screen appeared on reload, and a replacement PC (Kalam) was created with starting gear and placed by the GM.
+  - Not yet live: bandaging and `stabilize` (unit-tested), and hireling promotion (this campaign had no hireling). Run them in the next live campaign by hiring before the PC dies.
+
+Fixed during the live check:
+- A dying record was lost when nothing committed after it. `begin_dying` and the Doomed branch now commit. A regression test covers this (`tests/test_death.py`). It was hidden in most fights because the encounter-end commit ran first.
+
+Gaps from Phase 9:
+- OPEN: 6 hours per part is an assumption. Confirm it against the book.
+- OPEN: STR 0 outside combat means instant death, as read from the book. Confirm the reading.
+- OPEN: a new PC is placed by the GM on its first turn. The book's rule for when a new PC joins is not modeled, so the GM decides by narrative.
+- OPEN: a dead PC's gear is not lootable by tools. The GM handles it in narration only.
+- Confirmed live: the death screen appears when the page reloads at the end of the turn, not mid-turn.
+- OPEN: `test_a_new_player_character_is_refused_while_one_lives_and_allowed_after` failed once in a full run and has not failed since (40 isolated runs and 30 runs of the related files, all passing). The likely cause is the commit bug above, since whether a random fight ended with a commit decided whether the dying record survived. Not proven. Watch for a recurrence.
 
 ## Phase 10: dungeon exploration
 
@@ -308,6 +324,17 @@ Phase 8 (hirelings): scope in phase 8. Includes 3d6 attributes, 1d6 HP, wages, a
 - OPEN: the GM narrates state changes it never records through a tool (for example, gifts of items or injuries). Unscheduled.
 
 Phase 9 (death rules): critical damage, Scars 11 (Mortal Wound) and 12 (Doomed), and new characters.
+
+- Bandaging and `stabilize` are not live-verified. Unit-tested only. Next live campaign.
+- Hireling promotion is not live-verified. Unit-tested and route-tested only.
+- 6 hours per part is an assumption. Confirm against the book.
+- STR 0 outside combat as instant death is my reading of the book. Confirm.
+- A new PC is placed by the GM, not by the book's rule for when a new PC joins. The narrative decision is the GM's.
+- A dead PC's gear is not lootable by tools. The GM handles it in narration only.
+- Whether a dead PC's gear counts toward the party inventory is undecided.
+- `_save` and `player_save` use the word `critical` for different things. `player_save` always reports `critical: false`. Rename to avoid confusion. Unscheduled.
+- Death happened at the end of a three-hour advance, not at the one-hour mark. The GM chose the advance. Consider whether the clock should stop the advance at the death hour. Unscheduled.
+- The flaky-test cause above is unconfirmed.
 
 Phase 10 (dungeon exploration): the dungeon turn cycle, Dungeon Events, treasure, and gold income.
 

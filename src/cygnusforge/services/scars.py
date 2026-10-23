@@ -13,6 +13,7 @@ from sqlmodel import Session
 
 from cygnusforge.content.library import PICKED, CombatRules, ScarEntry, ScarTable
 from cygnusforge.rules.dice import roll_total
+from cygnusforge.services.death import begin_dying
 from cygnusforge.services.events import (
     CharacterSaved,
     ConditionAdded,
@@ -73,7 +74,7 @@ def run_effects(
         elif kind == "set_max":
             _set_max(db, campaign_id, name, op, cx, cause)
         elif kind == "condition":
-            _add_condition(db, campaign_id, name, op["id"], cause)
+            _add_condition(db, campaign_id, name, op["id"], cause, cx.combat)
         elif kind == "save":
             _save(db, campaign_id, name, op, cx, cause)
         elif kind == "pick_stat":
@@ -120,7 +121,9 @@ def _set_max(
         )
 
 
-def _add_condition(db: Session, campaign_id: int, name: str, condition: str, cause: str) -> None:
+def _add_condition(
+    db: Session, campaign_id: int, name: str, condition: str, cause: str, combat: CombatRules
+) -> None:
     character = load_state(db, campaign_id).characters[name_key(name)]
     if condition in character.conditions:
         record(
@@ -130,6 +133,8 @@ def _add_condition(db: Session, campaign_id: int, name: str, condition: str, cau
         )
         return
     record(db, campaign_id, ConditionAdded(name=name, condition=condition, cause=cause))
+    if condition in combat.dying_conditions:
+        begin_dying(db, campaign_id, combat, name, cause="from a mortal wound")
 
 
 def _save(

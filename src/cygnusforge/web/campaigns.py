@@ -40,6 +40,7 @@ from cygnusforge.services.campaigns import (
     list_campaigns,
     list_messages,
     pending_turn,
+    promote_hireling_to_character,
     resume_turn,
     roll_player_stats,
     rollback_to,
@@ -140,6 +141,21 @@ async def choose_options(request: Request, campaign_id: int) -> Response:
         spec = campaign_spec(library, get_campaign(engine, user.id, campaign_id))
         submitted = campaign_submission_from_form(spec, form)
         choose_campaign_options(engine, library, user.id, campaign_id, submitted)
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
+@router.post("/{campaign_id}/hirelings/promote")
+async def promote_hireling(request: Request, campaign_id: int) -> Response:
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    engine = request.app.state.engine
+    try:
+        promote_hireling_to_character(engine, user.id, campaign_id, form_text(form, "name"))
     except InvalidInput as exc:
         return _campaign_page(request, user, campaign_id, 400, str(exc))
     except Conflict as exc:
@@ -533,7 +549,13 @@ def _campaign_page(
             error=error,
         )
     pc = world.state.pc()
-    if pc is None:
+    if pc is None or pc.dead:
+        fallen = pc
+        promotable = [
+            c
+            for c in world.state.characters.values()
+            if c.hireling and not c.dead and c.dying_hours is None
+        ]
         character = None
         if rule_set is not None:
             rolled = request.session.get(_roll_key(campaign.id))
@@ -550,6 +572,8 @@ def _campaign_page(
             world_map=world_map,
             rule_set=rule_set,
             character=character,
+            fallen=fallen,
+            promotable=promotable,
             error=error,
         )
     messages = list_messages(engine, campaign.id)

@@ -799,6 +799,7 @@ def test_the_gm_brings_a_knocked_out_character_back_with_an_explanation(client_f
     app, campaign_id, tools = _fight(client_factory)
     _knock_out_pc(app, campaign_id, tools)
     assert _character(app, campaign_id, PC).defeated is True
+    tools.stabilize(PC, "A healer's bandages stop the bleeding.")
     result = tools.recover_character(
         PC, "A passing cart carried her to the chapel.", "Her left hand is lamed."
     )
@@ -811,6 +812,7 @@ def test_the_statblock_shows_a_knocked_out_character_in_critical_damage(client_f
     assert "Status: in critical damage" not in "\n".join(tools.get_statblock(PC)["statblock"])
     _knock_out_pc(app, campaign_id, tools)
     assert "Status: in critical damage" in "\n".join(tools.get_statblock(PC)["statblock"])
+    tools.stabilize(PC, "A healer's bandages stop the bleeding.")
     tools.recover_character(PC, "A passing cart carried her to the chapel.", "Her hand is lamed.")
     assert "Status: in critical damage" not in "\n".join(tools.get_statblock(PC)["statblock"])
 

@@ -5,6 +5,27 @@
 <section class="view creation" data-view="play" aria-labelledby="creation-title">
   <h1 id="creation-title">{{ campaign.name }}</h1>
   <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
+  {% if fallen %}
+  <section class="death-screen" aria-labelledby="death-title">
+    <h2 id="death-title">{{ fallen.name }} is dead</h2>
+    <p class="muted">{% if fallen.location %}Their body lies at {{ fallen.location }}, with the gear they carried.{% else %}Their body is lost to the story.{% endif %} Choose who plays next.</p>
+    {% if promotable %}
+    <h3>Play a hireling</h3>
+    <ul>
+      {% for hireling in promotable %}
+      <li>
+        <form method="post" action="/campaigns/{{ campaign.id }}/hirelings/promote">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="name" value="{{ hireling.name }}">
+          <button type="submit">Play {{ hireling.name }}</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    <h3>Or create a new character</h3>
+    {% endif %}
+  </section>
+  {% endif %}
   <h2>Create your character</h2>
   <p class="muted">Your stats are rolled. Where a stat can be swapped, choose the rolled values you want, with one swap per group. Pick each option, roll it with the dice button, or use the randomize buttons, before you create the character.</p>
   <div class="creation-toolbar">
