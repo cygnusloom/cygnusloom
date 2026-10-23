@@ -4,6 +4,11 @@
     "id": "cairn2e",
     "name": "Cairn 2e",
     "plus": "highest",
+    "npc_hp": {
+      "average": 3,
+      "hardier": 6,
+      "serious": 10
+    },
     "description": "Character creation for Cairn, a second edition fantasy roleplaying game of wild lands and dark forests, written by Yochai Gal. Text adapted from cairnrpg.com and licensed under CC BY-SA 4.0. https://cairnrpg.com/second-edition/"
   },
   {

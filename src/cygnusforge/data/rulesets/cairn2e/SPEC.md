@@ -327,9 +327,20 @@ Known items, from Phase 11 and the gap register:
 - Conditions: needs are generic. Scars and injuries are Cairn-shaped. Decide whether a generic conditions list covers both.
 - `update_npc` attack modifiers (`armor`, `attacks`): cairn2e-specific in shape. Decide whether they belong in shared core or the cairn2e rule set (open in Phase 12).
 - Prompts: GM prompt text that names Cairn terms (`prompts.json`, `narration.json`) moves fully to the rule set. The engine only reads it.
-- Statless NPC HP: the book's guidance (average 3, hardier 6, serious 10+) is cairn2e data, not an engine rule (open in Phase 12).
+- Statless NPC HP: the book's guidance (average 3, hardier 6, serious 10+) is cairn2e data, not an engine rule. Closed in Phase 12 (`npc_hp` and `hp_tier`).
 - Rule attachments and story-only NPCs stay generic. Confirm they have no Cairn terms in the engine.
 - Verification: a grep for Cairn terms in `src/cygnusforge/` outside the adapter comes back clean, and the engine tests run with a minimal second rule set (a D&D-shaped fixture) to show the hooks work without Cairn data.
+
+Leak audit (Phase 13 start, read-only search of `src/cygnusforge/` for Cairn terms). Engine code has no hard-coded Cairn stat names, dice, or numbers. These Cairn-specific items remain, each to be moved behind a generic hook or data key:
+
+- `services/combat.py` (injury trigger, about L208–210): the injury fires on "exactly 0 on the injury stat". That is Cairn's STR 0 rule. Make it a data trigger in the rule set.
+- `services/combat.py` (about L300 and L625): `death.on_critical_save_failed` names a Cairn save. Rename it to a hook keyed by the rule set.
+- `services/combat.py` (about L122 and L577): `resolve_group_break` and its Warden-specific wording and flow. Decide whether morale is generic (it is in D&D terms too) and move the wording to data.
+- `services/needs.py` (about L94 and L182–183) and `services/world.py` (about L249): the "deprived" condition is hard-coded. `rules/context.py` (about L127–131) and the adapter `rules/cairn2e.py` (about L109–110) pass `deprived`. Make the condition name come from the rule set.
+- `services/world.py` (about L1799): the literal "Deprived:" label in the character summary. Move it to data.
+- `services/inventory.py` (about L103): the "damage the Warden names" wording for uncatalogued items. Check whether it is generic.
+- `services/morale.py`: mostly generic. Check that the first-casualty default comes from data.
+- Not yet read: `services/death.py` (the body of `on_critical_save_failed`), `services/world.py` (about L286 and L791), and `services/dice_tables.py`. Read these before scheduling them.
 
 Done when: the grep is clean, every item is closed or scheduled with a reason, the full suite passes, and a live test of Cairn 2e combat and character creation still works.
 
@@ -469,7 +480,7 @@ Phase 14 (capstone play-through): the full CAS-1 play-through and any gaps it re
   - OPEN: "Warrior Snail Acolyte" is not a separate block. Only "Acolyte" exists.
   - OPEN: Night Cat is in the core bestiary and the twin-lakes monsters. Its stats match, but its descriptions differ.
   - OPEN: Boggart, Pixie, and Will-o-Wisp have no attacks in the source.
-- OPEN (Phase 12): the Reeve Trellis, Aldra, Flavia, Jandy, Giva, and Drum have no statblock in the module. The `story_only` flag and the `update_npc` stats path are built. Decision needed: should the Warden give these six stats when they first fight?
+- RESOLVED (Phase 12, user chose the book's guidance): the eleven statless NPCs (Reeve Trellis, Aldra, Flavia, Jandy, Giva, Drum, Corsetta, Franz, Beju, Nicolas, and Berk) have no statblock in the module. Each has `hp_tier: "average"` in `twin-lakes/npcs.json`. A live seed check found five of them (Corsetta, Franz, Beju, Nicolas, Berk) untiered and rolling 1 to 6 HP; they were fixed and the test now covers all eleven, which the rule set maps to HP 3 (`npc_hp` in `cairn2e/rule_set.json`). Seeding passes that HP as given stats, so the other stats are still rolled. Tests: `tests/test_npc_hp.py`. Their description is commoner or worker, so the average tier is my judgment. Hardier and serious tiers are in the rule set for NPCs that need them. Aldra is murdered in the module, so her stats matter only if she is referenced.
 - RESOLVED (Phase 12, rule attachments, user chose always-injected): NPCs and features list rule ids in `rules`. Their text goes into a "Rules for what is present" system part on every turn. "Present" means a living NPC at the PC's location, or an item the PC carries. Ids are validated at load. Unit tests: `tests/test_rule_attachments.py`. Live-verified on a fresh Twin Lakes campaign: at the start (PC in Isthmus Town) the part is absent. After the GM moved the PC to Deadmill with `move_actor`, the next reply's context included "Rules for what is present" with Jandy's `deadmill-time-loop` text.
   - OPEN (decision, pending): the field name `rules` and the "present" definition are my defaults. Confirm with the user. Decided by the user: defeated NPCs keep their rules while they remain at the location (implemented, tested in `test_a_defeated_npc_still_here_keeps_its_rules`).
   - RESOLVED: monsters carry rules. `MonsterTemplate.rules` is loaded and checked against the rule set (ruleset monsters) or the merged rules (world monsters). A monster made from a statblock gets its rules, and seeded NPCs that name a monster merge the statblock's rules. Twin Lakes attaches Night Cat's two rules, Suraru Imperator's critical damage rule, and `morale-bandits` to Bandits and Bandit Leader. Tests: `tests/test_rule_attachments.py`. Live-verified on a fresh DB: the GM created a Night Cat at Hollowmere Village, and the next turn's context listed "Rules for what is present" with `night-cat-attack` and `night-cat-critical-damage` (from Night Cat). After the cat left, the next turn's context showed "NPCs here: none" and no rules section.
@@ -484,7 +495,8 @@ Phase 14 (capstone play-through): the full CAS-1 play-through and any gaps it re
 - OPEN (Phase 12): the module prints no HP or armor for Fasha. HP 6 is an assumption, from the "hardier" guidance. Confirm with the user.
 - OPEN (Phase 12): Reeve's Office and the Cellar are nested under the Stuffed Inn in the source, but the one-level location schema puts them under isthmus-town. Decide whether the location schema needs nesting depth 2.
 - OPEN (Phase 12): the Dungeon Events table is not reproduced in the world data.
-- OPEN (Phase 12): the book gives average 3, hardier 6, and serious threat 10 or more for statless NPCs. The engine rolls 1d6 for statless NPCs. Add this guidance to the cairn2e data, not the engine.
+- RESOLVED (Phase 12): the book's statless NPC HP tiers (average 3, hardier 6, serious 10 or more) are cairn2e data (`npc_hp`). Only an NPC with an `hp_tier` uses them.
+  - OPEN (decision): `create_npc` by the GM, with no stats and no tier, still rolls the rule set's 1d6 HP. The book says average 3. Changing that default changes behavior, so it needs the user's decision.
 
 - OPEN (Phase 12, engine): attack modifiers on `update_npc` (`armor`, `attacks`) are cairn2e-specific in shape. Decide whether they belong in shared core or in cairn2e only.
 - OPEN (Phase 12, tests): the `Ghoul` name collided with the new published Ghoul statblock. The test creature is now "Grave Thing" in five test files. `tests/test_content.py` still uses "Ghoul" in a loader test. This is a naming check, not a bug.

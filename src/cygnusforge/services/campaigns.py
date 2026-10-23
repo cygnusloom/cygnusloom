@@ -284,6 +284,7 @@ def create_campaign(
             library.rule_sets[rule_set].character,
             monsters={**library.rule_sets[rule_set].monsters, **content.monsters},
             plus=library.rule_sets[rule_set].plus,
+            npc_hp=library.rule_sets[rule_set].npc_hp,
         )
         db.refresh(campaign)
         return campaign

@@ -907,9 +907,11 @@ def seed_campaign(
     *,
     monsters: Mapping[str, MonsterTemplate],
     plus: str,
+    npc_hp: Mapping[str, int],
 ) -> None:
     """Record a campaign's places and the world's NPCs as events. The player character is made
-    later, by `create_player_character`. An NPC that names a statblock takes its stats."""
+    later, by `create_player_character`. An NPC that names a statblock takes its stats, and an
+    NPC with an HP tier and no statblock takes that tier's HP."""
     # A place can be declared before the place it is inside, so every name is known first.
     names = {spot.id: spot.name for spot in world.locations}
     for spot in world.locations:
@@ -927,6 +929,12 @@ def seed_campaign(
         )
     for npc in world.npcs:
         base = None if npc.monster is None else monsters[npc.monster]
+        if base is not None:
+            character: dict[str, Any] | None = {"stats": dict(base.stats)}
+        elif npc.hp_tier is not None:
+            character = {"stats": {"hp": npc_hp[npc.hp_tier]}}
+        else:
+            character = None
         event = _npc_event(
             tables,
             rng,
@@ -937,7 +945,7 @@ def seed_campaign(
             personality=npc.personality,
             accent=npc.accent,
             quirks=npc.quirks,
-            character=None if base is None else {"stats": dict(base.stats)},
+            character=character,
             plus=plus,
             story_only=npc.story_only,
             rules=npc.rules,

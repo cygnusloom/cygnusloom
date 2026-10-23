@@ -79,6 +79,9 @@ class NpcTemplate:
     story_only: bool = False
     # The ids of rules attached to this NPC. Their text reaches the GM while the NPC is here.
     rules: tuple[str, ...] = ()
+    # The rule set's NPC HP tier, such as "average", for an NPC with no statblock. None uses the
+    # rule set's ordinary character HP roll.
+    hp_tier: str | None = None
 
 
 @dataclass(frozen=True)
@@ -466,6 +469,8 @@ class RuleSet:
     combat: CombatRules | None = None
     # Statblocks for monsters, by id.
     monsters: Mapping[str, MonsterTemplate] = field(default_factory=dict)
+    # HP for NPCs with no statblock, by tier name, such as "average": 3.
+    npc_hp: Mapping[str, int] = field(default_factory=dict)
     # Conditions an injury or effect can give, by id. Derived conditions are included.
     conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
     # Tables rolled with dice, by id, such as the Warden's reaction table.
@@ -624,6 +629,11 @@ def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldCon
                 f"{name}: npc {npc.id!r} has no monster {npc.monster!r} in the world or the "
                 f"{rule_set.id!r} rule set"
             )
+        if npc.hp_tier is not None and npc.hp_tier not in rule_set.npc_hp:
+            raise ContentError(
+                f"{name}: npc {npc.id!r} has hp_tier {npc.hp_tier!r}, which the "
+                f"{rule_set.id!r} rule set does not define"
+            )
     features = {d.id: load_feature(d, name) for d in own if d.type == "feature"}
     rules = {
         d.id: required_text(d.data, "text", f"{name}: rule {d.id}") for d in own if d.type == "rule"
@@ -711,6 +721,11 @@ def _load_npc(definition: Definition, template: str) -> NpcTemplate:
     story_only = _flag(data, "story_only", label)
     if story_only and monster is not None:
         raise ContentError(f"{label}: a story-only NPC has no statblock or monster")
+    hp_tier = _optional_text(data, "hp_tier", label)
+    if hp_tier is not None and monster is not None:
+        raise ContentError(f"{label}: an NPC with a statblock has its own HP, not an 'hp_tier'")
+    if hp_tier is not None and story_only:
+        raise ContentError(f"{label}: a story-only NPC has no HP to set")
     return NpcTemplate(
         id=definition.id,
         name=required_text(data, "name", label),
@@ -722,6 +737,7 @@ def _load_npc(definition: Definition, template: str) -> NpcTemplate:
         monster=monster,
         story_only=story_only,
         rules=rule_ids(data, label),
+        hp_tier=hp_tier,
     )
 
 
@@ -836,6 +852,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         tool_calls=tool_calls,
         character=character,
         plus=_plus_mode(head.data, label),
+        npc_hp=_npc_hp(head.data, label),
         campaign=campaign,
         tables=tables,
         grid=grid,
@@ -1731,6 +1748,17 @@ def _load_tool_call(
         takes_context=CONTEXT_ARGUMENT in inspect.signature(function).parameters,
         lookup=_flag(data, "lookup", label),
     )
+
+
+def _npc_hp(data: Mapping[str, Any], label: str) -> dict[str, int]:
+    """The HP tiers for NPCs with no statblock, by tier name. The tier names are free text."""
+    tiers = data.get("npc_hp", {})
+    if not isinstance(tiers, dict):
+        raise ContentError(f"{label}: 'npc_hp' must map tier names to HP")
+    for tier in tiers:
+        if not tier.strip():
+            raise ContentError(f"{label}: 'npc_hp' tier names must not be blank")
+    return {tier: _whole(tiers, tier, f"{label}: npc_hp", minimum=1) for tier in tiers}
 
 
 def _plus_mode(data: Mapping[str, Any], label: str) -> str:
