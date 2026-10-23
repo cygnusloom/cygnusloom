@@ -169,9 +169,25 @@ Source: Core Rules, "Hirelings"; Marketplace, "Hirelings (per day)". The book is
 
 ## Phase 9: death rules
 
-- Critical Damage is fatal unless aided (bandages stabilize). Untreated, the PC dies within the hour.
-- When a character dies, the player creates a new character or takes control of a hireling. The replacement joins immediately.
-- Scars 11 (Mortal Wound) and 12 (Doomed) are wired into this phase.
+Status: design decided, not started.
+
+Source: Core Rules, Critical Damage, and Scars 11 (Mortal Wound) and 12 (Doomed) in `tables.json`. The book is the authority.
+
+Decided:
+- The house rule ends. A PC in Critical Damage is unconscious and bleeding out, and dies within one hour unless aided. This replaces the knockout house rule in `rule_set.json`.
+- The one-hour clock is engine-tracked. It starts when Critical Damage is taken or when Mortal Wound (Scars 11) applies. Bandages stop it, and any character may use a Bandage on the dying PC through `use_item`. The GM may also stabilize through a `stabilize` tool for other aid, which is GM-judged.
+- Mortal Wound: out of action, dying. The clock runs as above. On recovery, roll 2d6 and take the result as max HP (existing `mortal_wound` condition).
+- Doomed (Scars 12): the next save against Critical Damage that fails kills the PC. A pass rolls 3d6 for max HP if higher (existing `doomed` condition). The GM ends Doomed.
+- STR 0 outside combat means death.
+- When the engine kills a PC, it records the death at once. The GM narrates the death in the same turn, and the death screen appears when the turn ends.
+- The death screen lets the player pick a replacement: a new PC through the character creation flow, or promotion of a hireling. The engine applies the choice.
+- A new PC gets a new loadout and joins the party when the GM decides the story allows it. It does not inherit gear. The dead PC's gear stays with the body, and the GM decides what happens to it.
+- Defeated PCs leave a body. Bodies hold the dead PC's gear for the GM to handle.
+- NPCs that fail a Critical Damage save die, at the Warden's discretion (unchanged).
+
+Acceptance:
+- Unit tests: the one-hour clock fires, bandages stop it, Doomed kills on a failed save, Mortal Wound sets max HP on recovery, and a death emits an event and opens the death screen.
+- A live session covering Critical Damage, bandaging, a death, a replacement PC, and a hireling promotion.
 
 ## Phase 10: dungeon exploration
 
