@@ -184,7 +184,7 @@ Decided:
 - A new PC gets a new loadout and joins the party when the GM decides the story allows it. It does not inherit gear. The dead PC's gear stays with the body, and the GM decides what happens to it.
 - Defeated PCs leave a body. Bodies hold the dead PC's gear for the GM to handle.
 - NPCs that fail a Critical Damage save die, at the Warden's discretion (unchanged).
-- The clock counts hours, so `advance_time` takes `hours`. A part is 6 hours (assumed; to confirm against the book).
+- The clock counts hours, so `advance_time` takes `hours`. A part is 6 hours (confirmed by the user).
 - A hireling is promoted with `hireling.promoted` once the PC is dead, and only if it is alive and not dying. It keeps its gear and stops being paid.
 - A dead employer's hirelings are unpaid, so the GM decides what they do.
 
@@ -198,8 +198,8 @@ Fixed during the live check:
 - A dying record was lost when nothing committed after it. `begin_dying` and the Doomed branch now commit. A regression test covers this (`tests/test_death.py`). It was hidden in most fights because the encounter-end commit ran first.
 
 Gaps from Phase 9:
-- OPEN: 6 hours per part is an assumption. Confirm it against the book.
-- OPEN: STR 0 outside combat means instant death, as read from the book. Confirm the reading.
+- Resolved: 6 hours per part, confirmed by the user.
+- Resolved: STR 0 outside combat means instant death, confirmed by the user.
 - OPEN: a new PC is placed by the GM on its first turn. The book's rule for when a new PC joins is not modeled, so the GM decides by narrative.
 - OPEN: a dead PC's gear is not lootable by tools. The GM handles it in narration only.
 - Confirmed live: the death screen appears when the page reloads at the end of the turn, not mid-turn.
@@ -327,8 +327,8 @@ Phase 9 (death rules): critical damage, Scars 11 (Mortal Wound) and 12 (Doomed),
 
 - Bandaging and `stabilize` are not live-verified. Unit-tested only. Next live campaign.
 - Hireling promotion is not live-verified. Unit-tested and route-tested only.
-- 6 hours per part is an assumption. Confirm against the book.
-- STR 0 outside combat as instant death is my reading of the book. Confirm.
+- Resolved: 6 hours per part, confirmed by the user.
+- Resolved: STR 0 outside combat as instant death, confirmed by the user.
 - A new PC is placed by the GM, not by the book's rule for when a new PC joins. The narrative decision is the GM's.
 - A dead PC's gear is not lootable by tools. The GM handles it in narration only.
 - Whether a dead PC's gear counts toward the party inventory is undecided.
