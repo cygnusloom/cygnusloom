@@ -26,7 +26,7 @@
     "name": "create_monster",
     "python_module": "cairn2e",
     "function": "create_monster",
-    "description": "Create a monster NPC in the world. Give a template to start from a bestiary statblock (see search_monster), and any value you give replaces the template's. Without a template, give a description and every stat: hit_points, strength, dexterity, and willpower are required. Attacks replace the template's attacks when given.",
+    "description": "Create a monster NPC in the world. Give a template to start from a bestiary statblock (see search_monster), and any value you give replaces the template's. A creature named exactly like a statblock uses that statblock and gives no stats of its own; set force to create a custom creature with that name instead. Without a statblock, give a description and every stat: hit_points, strength, dexterity, and willpower are required. Attacks replace the template's attacks when given.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -88,7 +88,7 @@
               },
               "dice": {
                 "type": "string",
-                "description": "The damage dice, such as '1d8' or '1d6+1d6'. Use '1d6|1d6' when two weapons are rolled and the higher is kept."
+                "description": "The damage dice, such as '1d8' or '1d6+1d6'. Use '1d6+1d6' when two weapons are rolled and the higher is kept."
               }
             },
             "required": [
@@ -96,6 +96,10 @@
               "dice"
             ]
           }
+        },
+        "force": {
+          "type": "boolean",
+          "description": "Set true only to create a custom creature under the name of a published statblock. Without it, such a name takes the statblock and refuses stats, armor, or attacks."
         }
       },
       "required": [
@@ -1048,7 +1052,7 @@
         },
         "damage": {
           "type": "string",
-          "description": "For a weapon that is not in the catalogue: its damage dice, such as '1d6', '1d6+1d6' (summed), or '1d6|1d6' (two weapons, keep the higher). Leave it out for anything else. A catalogue item takes its damage from the catalogue, so this is refused for one."
+          "description": "For a weapon that is not in the catalogue: its damage dice, such as '1d6', '1d6+1d6' (summed), or '1d6+1d6' (two weapons, keep the higher). Leave it out for anything else. A catalogue item takes its damage from the catalogue, so this is refused for one."
         }
       },
       "required": [

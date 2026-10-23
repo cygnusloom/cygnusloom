@@ -107,6 +107,10 @@ def apply_damage(
 
 
 def _living(character: Character, combat: CombatRules) -> Character:
+    if character.story_only:
+        raise InvalidInput(
+            f"{character.name} has no stats yet; give them stats with update_npc first"
+        )
     if character.defeated:
         raise InvalidInput(f"{character.name} is {defeat_status(character, combat.defeat)}")
     if character.fled:
@@ -137,6 +141,8 @@ def _strike(
     raw: int,
     modifier: str = "",
     rolled: str = "",
+    *,
+    plus: str,
 ) -> dict[str, Any]:
     """Apply a hit through the rule set's damage steps. A target that owes a save takes no more
     hits. An NPC saves at once; a player character saves when the player rolls. A hit on an NPC
@@ -170,18 +176,18 @@ def _strike(
         "harm": damage.harm,
         "save_due": damage.save,
     }
-    injury = _injury_from_hit(db, campaign_id, combat, rng, target.name, damage)
+    injury = _injury_from_hit(db, campaign_id, combat, rng, target.name, damage, plus=plus)
     if injury is not None:
         result["injury"] = injury
     if damage.save is not None and target.kind == NPC_KIND:
         state = load_state(db, campaign_id)
         character = state.characters[name_key(target.name)]
-        result["save"] = _save(db, campaign_id, combat, rng, character, damage.save)
+        result["save"] = _save(db, campaign_id, combat, rng, character, damage.save, plus=plus)
     if target.kind == NPC_KIND and not target.large_group and combat.morale is not None:
         # morale imports this module for the shared helpers, so it is imported here to avoid a cycle.
         from cygnusforge.services.morale import check_morale
 
-        checks = check_morale(db, campaign_id, combat, rng, target.name)
+        checks = check_morale(db, campaign_id, combat, rng, target.name, plus=plus)
         if checks:
             result["morale"] = checks
     result["defeated"] = load_state(db, campaign_id).characters[name_key(target.name)].defeated
@@ -196,6 +202,8 @@ def _injury_from_hit(
     rng: random.Random,
     name: str,
     damage: Damage,
+    *,
+    plus: str,
 ) -> str | None:
     """A player character hit to exactly 0 on the injury stat gains an injury. The injury is the table
     entry numbered by the harm this hit did, capped at the table's last entry. Damage that
@@ -210,7 +218,9 @@ def _injury_from_hit(
     if character.kind != PC_KIND or current(character, table.stat) != 0:
         return None
     roll = min(lost, len(table.entries))
-    entry = gain_injury(db, campaign_id, name, table, roll, EffectContext(rng=rng, combat=combat))
+    entry = gain_injury(
+        db, campaign_id, name, table, roll, EffectContext(rng=rng, combat=combat), plus=plus
+    )
     return entry.name
 
 
@@ -265,8 +275,10 @@ def _save(
     rng: random.Random,
     character: Character,
     stat: str,
+    *,
+    plus: str,
 ) -> dict[str, Any]:
-    roll = roll_total(combat.check_die, rng)
+    roll = roll_total(combat.check_die, rng, plus=plus)
     score = current(character, stat)
     passed = combat.module.save_succeeds(roll, score)
     critical = character.large_group
@@ -315,6 +327,8 @@ def attack(
     combat: CombatRules,
     rng: random.Random,
     modifier: str = "",
+    *,
+    plus: str,
 ) -> dict[str, Any]:
     """An NPC's attack. Attacks always hit, so the attack's damage is the roll. A modifier rolls
     its own dice instead of the attack's. Who acts when is the turn order's job; this only checks
@@ -329,10 +343,12 @@ def attack(
     _living(struck, combat)
     name = _attack_named(source, attack_name)
     if source.large_group:
-        return _blast(db, campaign_id, combat, rng, state, source, struck, name, modifier)
+        return _blast(
+            db, campaign_id, combat, rng, state, source, struck, name, modifier, plus=plus
+        )
     _require_impaired(struck, modifier_name(modifier))
     dice = modifier_dice(combat.modifiers, modifier)
-    raw = roll_total(dice or source.attacks[name], rng)
+    raw = roll_total(dice or source.attacks[name], rng, plus=plus)
     return _strike(
         db,
         campaign_id,
@@ -343,6 +359,7 @@ def attack(
         name,
         raw,
         modifier=modifier_name(modifier),
+        plus=plus,
     )
 
 
@@ -356,6 +373,8 @@ def _blast(
     struck: Character,
     name: str,
     modifier: str,
+    *,
+    plus: str,
 ) -> dict[str, Any]:
     """A group's attack, which has Blast: it rolls enhanced dice separately for each living
     individual on the other side. The named target must be one of them, but every one is hit."""
@@ -393,7 +412,7 @@ def _blast(
         current_target = load_state(db, campaign_id).characters[name_key(target.name)]
         if out_of_fight(current_target):
             continue
-        raw = roll_total(dice, rng)
+        raw = roll_total(dice, rng, plus=plus)
         results.append(
             _strike(
                 db,
@@ -405,6 +424,7 @@ def _blast(
                 name,
                 raw,
                 modifier="enhanced",
+                plus=plus,
             )
         )
     return {"attacker": source.name, "attack": name, "blast": True, "targets": results}
@@ -417,6 +437,8 @@ def resolve_attacks(
     attacks: Sequence[Mapping[str, Any]],
     combat: CombatRules,
     rng: random.Random,
+    *,
+    plus: str,
 ) -> dict[str, Any]:
     """Several NPC attacks on one character, such as two NPCs of the foe side or one NPC's two
     weapons. Every attack rolls its own dice, the highest roll is the one hit, and the rest are
@@ -449,7 +471,7 @@ def resolve_attacks(
         planned.append(
             (source.name, name, modifier_name(entry.get("modifier")), dice or source.attacks[name])
         )
-    rolls = [roll_total(dice, rng) for *_, dice in planned]
+    rolls = [roll_total(dice, rng, plus=plus) for *_, dice in planned]
     best = highest_index(rolls)
     attacker, weapon, modifier, _ = planned[best]
     rolled = ""
@@ -468,6 +490,7 @@ def resolve_attacks(
         rolls[best],
         modifier=modifier,
         rolled=rolled,
+        plus=plus,
     )
 
 
@@ -488,6 +511,8 @@ def player_attack(
     combat: CombatRules,
     rng: random.Random,
     modifier: str = "",
+    *,
+    plus: str,
 ) -> dict[str, Any]:
     """A player character's hit. The engine rolls the attack's dice, so the damage is never typed
     in: the modifier's dice when there is one, else the weapon's. The attack always hits. A group
@@ -501,9 +526,18 @@ def player_attack(
     name = _weapon_name(weapon)
     dice = _attack_dice(pc, name, modifier, combat)
     _require_impaired(struck, modifier_name(modifier))
-    raw = roll_total(dice, rng)
+    raw = roll_total(dice, rng, plus=plus)
     return _strike(
-        db, campaign_id, combat, rng, struck, pc.name, name, raw, modifier=modifier_name(modifier)
+        db,
+        campaign_id,
+        combat,
+        rng,
+        struck,
+        pc.name,
+        name,
+        raw,
+        modifier=modifier_name(modifier),
+        plus=plus,
     )
 
 

@@ -15,10 +15,12 @@ from typing import Any
 from cygnusforge.content.character import (
     CampaignSpec,
     CharacterSpec,
+    Feature,
     TableOption,
     build_campaign,
     build_character,
     character_schema,
+    load_feature,
 )
 from cygnusforge.content.definitions import (
     ContentError,
@@ -26,7 +28,7 @@ from cygnusforge.content.definitions import (
     read_definitions,
     required_text,
 )
-from cygnusforge.rules.dice import FORMULA, is_formula
+from cygnusforge.rules.dice import FORMULA, PLUS_MODES, is_formula
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 TOOL_NAME = re.compile(r"[A-Za-z0-9_-]{1,64}")
@@ -68,6 +70,12 @@ class NpcTemplate:
     personality: str | None
     accent: str | None
     quirks: tuple[str, ...] | None
+    # The id of the monster that is this NPC's statblock: one in the world or the rule set. None
+    # when the NPC has no statblock. An NPC with its own statblock is a world monster of the same id.
+    monster: str | None = None
+    # A story-only NPC has no stats: it cannot fight, make a save, or be an attack target until
+    # the Warden gives it stats with update_npc.
+    story_only: bool = False
 
 
 @dataclass(frozen=True)
@@ -77,6 +85,19 @@ class WorldTemplate:
     description: str
     locations: tuple[LocationTemplate, ...]
     npcs: tuple[NpcTemplate, ...]
+    # The world's monsters, tables, features, and rules, as definitions. They are checked against
+    # each rule set in WorldContent, since a monster's stats depend on the rule set.
+    definitions: tuple[Definition, ...] = ()
+
+
+@dataclass(frozen=True)
+class WorldContent:
+    """A world's own monsters, tables, features, and rules, checked against one rule set."""
+
+    monsters: Mapping[str, MonsterTemplate]
+    tables: Mapping[str, tuple[TableOption, ...]]
+    features: Mapping[str, Feature]
+    rules: Mapping[str, str]
 
 
 @dataclass(frozen=True)
@@ -426,6 +447,8 @@ class RuleSet:
     rules: Mapping[str, str]
     tool_calls: Mapping[str, ToolCall]
     character: CharacterSpec
+    # What "+" between dice terms means: "sum" adds them, "highest" keeps the highest total.
+    plus: str
     # Options shared by every character in a campaign, such as the omen.
     campaign: CampaignSpec
     # Named option lists, such as "personality", used to generate NPC traits.
@@ -470,6 +493,21 @@ class ContentLibrary:
     # Selectable rule sets. The core rule set is not listed here: it is merged into each of these.
     rule_sets: Mapping[str, RuleSet]
     core: RuleSet
+    # Built on first use for each (world, rule set) pair, since a world's statblocks are checked
+    # against the rule set a campaign plays with.
+    _world_content: dict[tuple[str, str], WorldContent] = field(
+        default_factory=dict, init=False, repr=False, compare=False
+    )
+
+    def world_content(self, world: str, rule_set: str) -> WorldContent:
+        """A world's own content checked against one rule set. Raises ContentError when a
+        monster or NPC statblock does not fit that rule set."""
+        key = (world, rule_set)
+        if key not in self._world_content:
+            self._world_content[key] = _build_world_content(
+                self.world_templates[world], self.rule_sets[rule_set]
+            )
+        return self._world_content[key]
 
     @classmethod
     def load(cls, data_dir: Path = DATA_DIR) -> ContentLibrary:
@@ -512,6 +550,10 @@ def _check_directory_id(template: str, ident: str) -> None:
         raise ContentError(f"{template}: id must match the directory name, got {ident!r}")
 
 
+WORLD_TYPES = ("monster", "table", "feature", "rule")
+STATBLOCK_KEYS = ("stats", "armor", "attacks")
+
+
 def _load_world(directory: Path) -> WorldTemplate:
     template = directory.name
     definitions = read_definitions(directory)
@@ -519,7 +561,16 @@ def _load_world(directory: Path) -> WorldTemplate:
     _check_directory_id(template, world.id)
     label = f"{template}: world"
     locations = tuple(_load_location(d, template) for d in definitions if d.type == "location")
-    npcs = tuple(_load_npc(d, template) for d in definitions if d.type == "npc")
+    npc_definitions = [d for d in definitions if d.type == "npc"]
+    npcs = tuple(_load_npc(d, template) for d in npc_definitions)
+    statblocks = [_npc_statblock(d, template) for d in npc_definitions if _has_statblock(d.data)]
+    own = [d for d in definitions if d.type in WORLD_TYPES]
+    monster_ids = [d.id for d in own if d.type == "monster"]
+    for statblock in statblocks:
+        if statblock.id in monster_ids:
+            raise ContentError(
+                f"{template}: npc {statblock.id!r} has a statblock, so no monster may share its id"
+            )
     location_ids = {location.id for location in locations}
     for npc in npcs:
         if npc.location not in location_ids:
@@ -534,6 +585,50 @@ def _load_world(directory: Path) -> WorldTemplate:
         description=required_text(world.data, "description", label),
         locations=locations,
         npcs=npcs,
+        definitions=(*own, *statblocks),
+    )
+
+
+def _has_statblock(data: Mapping[str, Any]) -> bool:
+    return any(key in data for key in STATBLOCK_KEYS)
+
+
+def _npc_statblock(definition: Definition, template: str) -> Definition:
+    """An NPC's own statblock, as a monster with the NPC's id. Monster fields come from the NPC."""
+    fields = ("name", "description", *STATBLOCK_KEYS)
+    data = {key: definition.data[key] for key in fields if key in definition.data}
+    return Definition(
+        type="monster", id=definition.id, data={"type": "monster", "id": definition.id, **data}
+    )
+
+
+def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldContent:
+    name = template.id
+    own = template.definitions
+    monsters = {
+        d.id: _load_monster(d, rule_set.character, name, pool=_hit_pool(rule_set.combat))
+        for d in own
+        if d.type == "monster"
+    }
+    for npc in template.npcs:
+        if (
+            npc.monster is not None
+            and npc.monster not in monsters
+            and npc.monster not in rule_set.monsters
+        ):
+            raise ContentError(
+                f"{name}: npc {npc.id!r} has no monster {npc.monster!r} in the world or the "
+                f"{rule_set.id!r} rule set"
+            )
+    return WorldContent(
+        monsters=monsters,
+        tables={d.id: _load_table(d, name) for d in own if d.type == "table"},
+        features={d.id: load_feature(d, name) for d in own if d.type == "feature"},
+        rules={
+            d.id: required_text(d.data, "text", f"{name}: rule {d.id}")
+            for d in own
+            if d.type == "rule"
+        },
     )
 
 
@@ -595,6 +690,12 @@ def _load_npc(definition: Definition, template: str) -> NpcTemplate:
         ):
             raise ContentError(f"{label}: 'quirks' must be a list of non-empty text")
         quirks = tuple(quirks)
+    if _has_statblock(data) and "monster" in data:
+        raise ContentError(f"{label}: give a 'monster' id or a statblock, not both")
+    monster = definition.id if _has_statblock(data) else _optional_text(data, "monster", label)
+    story_only = _flag(data, "story_only", label)
+    if story_only and monster is not None:
+        raise ContentError(f"{label}: a story-only NPC has no statblock or monster")
     return NpcTemplate(
         id=definition.id,
         name=required_text(data, "name", label),
@@ -603,6 +704,8 @@ def _load_npc(definition: Definition, template: str) -> NpcTemplate:
         personality=_optional_text(data, "personality", label),
         accent=_optional_text(data, "accent", label),
         quirks=quirks,
+        monster=monster,
+        story_only=story_only,
     )
 
 
@@ -675,7 +778,9 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         _load_combat(combats[0], modules, character, injury_tables, template) if combats else None
     )
     monsters = {
-        d.id: _load_monster(d, character, template) for d in definitions if d.type == "monster"
+        d.id: _load_monster(d, character, template, pool=_hit_pool(combat))
+        for d in definitions
+        if d.type == "monster"
     }
     clock = _load_clock(definitions, template)
     rests = _load_rests(definitions, character, template, clock)
@@ -707,6 +812,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         important=important,
         tool_calls=tool_calls,
         character=character,
+        plus=_plus_mode(head.data, label),
         campaign=campaign,
         tables=tables,
         grid=grid,
@@ -930,8 +1036,19 @@ def _load_damage(
     return tuple(steps)
 
 
+def _hit_pool(combat: CombatRules | None) -> str | None:
+    """The stat a hit's harm takes from, which is where a monster's hit points live."""
+    if combat is None:
+        return None
+    return next((step.stat for step in combat.damage if step.kind == "harm"), None)
+
+
 def _load_monster(
-    definition: Definition, character: CharacterSpec, template: str
+    definition: Definition,
+    character: CharacterSpec,
+    template: str,
+    *,
+    pool: str | None,
 ) -> MonsterTemplate:
     label = f"{template}: monster {definition.id}"
     data = definition.data
@@ -941,6 +1058,8 @@ def _load_monster(
         raise ContentError(f"{label}: 'stats' must give a whole number for each of: {names}")
     for key, value in stats.items():
         _check_whole(value, f"{label}: stat {key!r}")
+    if pool is not None and stats[pool] < 1:
+        raise ContentError(f"{label}: stat {pool!r} must be at least 1")
     armor = data.get("armor", 0)
     _check_whole(armor, f"{label}: 'armor'")
     attacks = data.get("attacks", {})
@@ -1588,6 +1707,13 @@ def _load_tool_call(
         takes_context=CONTEXT_ARGUMENT in inspect.signature(function).parameters,
         lookup=_flag(data, "lookup", label),
     )
+
+
+def _plus_mode(data: Mapping[str, Any], label: str) -> str:
+    mode = data.get("plus", "sum")
+    if mode not in PLUS_MODES:
+        raise ContentError(f"{label}: 'plus' must be one of {', '.join(PLUS_MODES)}")
+    return mode
 
 
 def _flag(data: Mapping[str, Any], key: str, label: str) -> bool:

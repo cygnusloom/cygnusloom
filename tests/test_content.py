@@ -8,8 +8,8 @@ from typing import Any
 import pytest
 
 from cygnusforge.content.character import NO_CAMPAIGN, TableOption, campaign_schema
-from cygnusforge.content.definitions import ContentError, read_definitions
-from cygnusforge.content.library import ContentLibrary, PlayerInput
+from cygnusforge.content.definitions import ContentError, Definition, read_definitions
+from cygnusforge.content.library import ContentLibrary, PlayerInput, _load_monster
 from tests.conftest import content_library
 from tests.rolls import SocialRoll, social_roll
 
@@ -132,9 +132,9 @@ def test_bundled_content_loads():
     assert set(library.world_templates) == {"twin-lakes"}
     assert library.world_templates["twin-lakes"].name == "Twin Lakes"
     twin_lakes = library.world_templates["twin-lakes"]
-    assert twin_lakes.locations == ()
-    assert twin_lakes.npcs == ()
+    assert twin_lakes.locations
     assert set(library.rule_sets) == {"cairn2e"}
+    assert library.world_content("twin-lakes", "cairn2e").monsters
 
 
 def test_test_fixtures_add_a_hidden_roll_rule_set():
@@ -788,3 +788,24 @@ def test_bundled_cairn_prompts_and_cap_are_read():
         "defeated_character",
     ]
     assert ContentLibrary.load().core.prompt_fragments == ()
+
+
+def test_a_monster_needs_at_least_one_hit_point():
+    character = content_library().rule_sets["cairn2e"].character
+    stats = {stat: 10 for stat in character.stats}
+    stats["hp"] = 0
+    definition = Definition(
+        type="monster",
+        id="ghoul",
+        data={
+            "type": "monster",
+            "id": "ghoul",
+            "name": "Ghoul",
+            "description": "A ghoul.",
+            "stats": stats,
+        },
+    )
+    with pytest.raises(ContentError, match="stat 'hp' must be at least 1"):
+        _load_monster(definition, character, "testland", pool="hp")
+    stats["hp"] = 1
+    assert _load_monster(definition, character, "testland", pool="hp").stats["hp"] == 1

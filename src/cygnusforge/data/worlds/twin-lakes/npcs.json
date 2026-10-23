@@ -1,0 +1,103 @@
+[
+  {
+    "type": "npc",
+    "id": "reeve-trellis",
+    "name": "Reeve Trellis",
+    "location": "isthmus-town",
+    "description": "The Reeve of Isthmus Town, who collects the tithe and owns the Stuffed Inn. He is hiding the true tithing record in the inn's basement."
+  },
+  {
+    "type": "npc",
+    "id": "fasha",
+    "name": "Fasha",
+    "location": "dunston",
+    "description": "A farmer from Dunston and cult servant of Vuk, formerly weak and ill-mannered, who now revels in the newfound strength and insight gained since wearing The Eye of Vuk. If necessary he will flee to White Tower Fens, hoping that his pursuers trigger his traps there. Given the opportunity, he will drag any defeated opponent to the Temple of the Fungal Lizards to be sacrificed.",
+    "monster": "fasha"
+  },
+  {
+    "type": "npc",
+    "id": "aldra",
+    "name": "Aldra",
+    "location": "bone-sump",
+    "description": "A burly, well-liked Tideborn butcher, murdered and fed to Vuk after he saw the Reeve moving bags from the cellar trapdoor."
+  },
+  {
+    "type": "npc",
+    "id": "flavia",
+    "name": "Flavia",
+    "location": "butcher-shop",
+    "description": "Aldra's wife and co-owner of the Butcher Shop. She is distraught and holds the key to the desk drawer holding Aldra's half-finished ledger."
+  },
+  {
+    "type": "npc",
+    "id": "jandy",
+    "name": "Jandy",
+    "location": "deadmill",
+    "description": "A middle-aged Scrivener and tithingman for the Cities, trapped in a loop inside the Deadmill mill after falling into quicksand."
+  },
+  {
+    "type": "npc",
+    "id": "giva",
+    "name": "Giva",
+    "location": "giva-s-home",
+    "description": "The oldest person in Isthmus Town, grumpy and superstitious, and great-aunt of Drum. She dislikes Fasha and likes Jandy."
+  },
+  {
+    "type": "npc",
+    "id": "drum",
+    "name": "Drum",
+    "location": "the-stuffed-inn",
+    "description": "A sarcastic, lanky teenager who works afternoons and evenings at the Stuffed Inn. He saw a man vanish into the ground outside Deadmill."
+  },
+  {
+    "type": "npc",
+    "id": "annafranax",
+    "name": "Annafranax",
+    "location": "the-stone-forest",
+    "description": "Frog Witch of the Stone Forest. Can change her form depending on the audience. Although immensely powerful, she is also very old and will try to avoid combat as much as possible. Has near perfect knowledge of the forest and its history, can offer the party cures for nearly any ailment, and always keeps her word. Returns to Deadmill two days after the adventure begins, in the evening.",
+    "monster": "annafranax"
+  },
+  {
+    "type": "npc",
+    "id": "vuk",
+    "name": "Vuk",
+    "location": "t10b-interrogation-room-interior",
+    "story_only": true,
+    "description": "A former Queen, murdered by her own kind millennia ago. Cursed to haunt the chamber of her death, she is currently an ash phantom: a swirling cloud of ash in the interrogation room (T10b). She cannot leave T10b until she has consumed three human hearts and the T10a door is opened. At the start of the adventure she has already consumed Aldra's heart, so two remain. If the party arrives within 24 hours of her transformation, she has broken free and is at T9. She is immune to mundane attacks and is destroyed only by submerging her remains in water or destroying the memory prism (1000 gp, in the stoneblock at T10b). If she is reborn, only destroying the memory prism works. In full form she is a 7 ft Lich Queen with bird-like facial features and a yellow crest; she returns to full form only after consuming the hearts and the T10a door is opened."
+  },
+  {
+    "type": "npc",
+    "id": "corsetta",
+    "name": "Corsetta",
+    "location": "isthmus-town",
+    "description": "A weaver living in Isthmus Town."
+  },
+  {
+    "type": "npc",
+    "id": "franz",
+    "name": "Franz",
+    "location": "isthmus-town",
+    "description": "A chandler living in Isthmus Town."
+  },
+  {
+    "type": "npc",
+    "id": "beju",
+    "name": "Beju",
+    "location": "isthmus-town",
+    "description": "A widower living in Isthmus Town."
+  },
+  {
+    "type": "npc",
+    "id": "nicolas",
+    "name": "Nicolas",
+    "location": "isthmus-town",
+    "description": "A traveler passing through Isthmus Town."
+  },
+  {
+    "type": "npc",
+    "id": "berk",
+    "name": "Berk",
+    "location": "dunston",
+    "description": "A road worker hired with his brother to repair the old Crawko place in Dunston, paid by an unnamed philanthropist."
+  }
+]

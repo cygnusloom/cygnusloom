@@ -33,6 +33,7 @@ def _condition(app: FastAPI, campaign_id: int, name: str, condition: str) -> Non
             [{"op": "condition", "id": condition}],
             EffectContext(rng=random.Random(0), combat=CAIRN.combat, picked={}),
             "a test",
+            plus=CAIRN.plus,
         )
 
 
@@ -115,7 +116,15 @@ def test_a_new_player_character_is_refused_while_one_lives_and_allowed_after(
     tools.hire_hireling(HIRELING, PC, WAGE, "A hired hand, good with a rope.")
     with _db(client.app) as db, pytest.raises(InvalidInput, match="already exists"):
         world.create_player_character(
-            db, campaign_id, CAIRN.campaign, CAIRN.character, NEW_PC, {}, {}, random.Random(0)
+            db,
+            campaign_id,
+            CAIRN.campaign,
+            CAIRN.character,
+            NEW_PC,
+            {},
+            {},
+            random.Random(0),
+            plus=CAIRN.plus,
         )
     _kill_pc(client.app, campaign_id, tools)
     created = _create_character(

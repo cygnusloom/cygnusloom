@@ -9,7 +9,7 @@ from __future__ import annotations
 import math
 import random
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from sqlalchemy import Engine
@@ -42,6 +42,7 @@ from cygnusforge.content.library import (
     MonsterTemplate,
     NeedRules,
     RestLength,
+    ShopItem,
     WorldTemplate,
 )
 from cygnusforge.rules.context import brief
@@ -87,6 +88,7 @@ from cygnusforge.services.events import (
     NoteUpdated,
     NpcAdded,
     NpcRemoved,
+    NpcStatted,
     NpcUpdated,
     OpeningStarted,
     PcAdded,
@@ -96,6 +98,7 @@ from cygnusforge.services.events import (
     load_state,
     name_key,
     record,
+    same_item_name,
     token_labels,
 )
 from cygnusforge.services.objects import visible_objects
@@ -186,6 +189,8 @@ class WorldTools:
     # The rule set's combat, or None when it has none, and its monster statblocks by id.
     combat: CombatRules | None = None
     monsters: Mapping[str, MonsterTemplate] = field(default_factory=dict)
+    # The world's own features (relics) by id. give_item finds them by name.
+    features: Mapping[str, Feature] = field(default_factory=dict)
     # The rule set's conditions by id.
     conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
     dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
@@ -199,10 +204,14 @@ class WorldTools:
     magic: MagicRules | None = None
     food: FoodRules | None = None
     marketplace: Marketplace | None = None
+    # What "+" between dice terms means in this rule set: "sum" or "highest".
+    plus: str = field(kw_only=True)
 
     def roll_tables(self, tables: list[str]) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return roll_dice_tables(db, self.campaign_id, tables, self.dice_tables, self.rng)
+            return roll_dice_tables(
+                db, self.campaign_id, tables, self.dice_tables, self.rng, plus=self.plus
+            )
 
     def advance_time(self, days: int = 0, parts: int = 0, hours: int = 0) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -337,14 +346,30 @@ class WorldTools:
                 service,
             )
 
+    def _listed(self, item: str) -> ShopItem | None:
+        if self.marketplace is not None:
+            listed = market_service.listed_item(self.marketplace, item)
+            if listed is not None:
+                return listed
+        relic = next((f for f in self.features.values() if same_item_name(f.name, item)), None)
+        if relic is None:
+            return None
+        return ShopItem(
+            id=relic.id,
+            name=relic.name,
+            category=relic.feature_type,
+            price=0,
+            size=relic.size,
+            armor=relic.armor,
+            damage=relic.damage,
+            uses=relic.uses,
+            description=relic.description,
+        )
+
     def give_item(
         self, name: str, item: str, size: str = "normal", damage: str = ""
     ) -> dict[str, Any]:
-        listed = (
-            market_service.listed_item(self.marketplace, item)
-            if self.marketplace is not None
-            else None
-        )
+        listed = self._listed(item)
         with session_scope(self.engine) as db:
             return inventory_service.give_item(
                 db,
@@ -377,6 +402,7 @@ class WorldTools:
                 item,
                 target,
                 self.magic.charged_kind if self.magic is not None else "",
+                plus=self.plus,
             )
 
     def stabilize(self, name: str, explanation: str) -> dict[str, Any]:
@@ -389,6 +415,7 @@ class WorldTools:
                 self._rules(),
                 self.conditions,
                 self.rng,
+                plus=self.plus,
             )
 
     def give_spellbook(self, name: str, spell: str, description: str) -> dict[str, Any]:
@@ -460,12 +487,14 @@ class WorldTools:
     def dungeon_cycle(self, triggers: list[str], reason: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return dungeon_cycle_service(
-                db, self.campaign_id, triggers, reason, self.dice_tables, self.rng
+                db, self.campaign_id, triggers, reason, self.dice_tables, self.rng, plus=self.plus
             )
 
     def roll_reaction(self, reason: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return roll_reaction_service(db, self.campaign_id, reason, self.dice_tables, self.rng)
+            return roll_reaction_service(
+                db, self.campaign_id, reason, self.dice_tables, self.rng, plus=self.plus
+            )
 
     def roll_save(self, name: str, stat: str, reason: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -478,6 +507,7 @@ class WorldTools:
                 name,
                 stat,
                 reason,
+                plus=self.plus,
             )
 
     def create_location(
@@ -508,6 +538,7 @@ class WorldTools:
         accent: str | None = None,
         quirks: Sequence[str] | None = None,
         character: Mapping[str, Any] | None = None,
+        force: bool = False,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return create_npc(
@@ -523,6 +554,9 @@ class WorldTools:
                 accent,
                 quirks,
                 character,
+                monsters=self.monsters,
+                force=force,
+                plus=self.plus,
             )
 
     def hire_hireling(
@@ -551,6 +585,7 @@ class WorldTools:
                 accent,
                 quirks,
                 character,
+                plus=self.plus,
             )
 
     def promote_hireling(self, name: str) -> dict[str, Any]:
@@ -588,9 +623,27 @@ class WorldTools:
         personality: str | None = None,
         accent: str | None = None,
         quirks: Sequence[str] | None = None,
+        character: Mapping[str, Any] | None = None,
+        armor: int | None = None,
+        attacks: Sequence[Mapping[str, str]] | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return update_npc(db, self.campaign_id, name, description, personality, accent, quirks)
+            return update_npc(
+                db,
+                self.campaign_id,
+                self.character,
+                self.rng,
+                name,
+                description,
+                personality,
+                accent,
+                quirks,
+                character,
+                armor,
+                attacks,
+                armor_max=self.combat.armor_max if self.combat else 0,
+                plus=self.plus,
+            )
 
     def delete_npc(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -656,6 +709,7 @@ class WorldTools:
         stats: Mapping[str, int | None] | None = None,
         armor: int | None = None,
         attacks: Sequence[Mapping[str, str]] | None = None,
+        force: bool = False,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return create_monster(
@@ -671,6 +725,7 @@ class WorldTools:
                 armor,
                 attacks,
                 armor_max=self.combat.armor_max if self.combat else 0,
+                force=force,
             )
 
     def search_monster(self, query: str) -> dict[str, list[dict[str, Any]]]:
@@ -682,19 +737,34 @@ class WorldTools:
     def attack(self, attacker: str, attack: str, target: str, modifier: str = "") -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.attack(
-                db, self.campaign_id, attacker, attack, target, self._rules(), self.rng, modifier
+                db,
+                self.campaign_id,
+                attacker,
+                attack,
+                target,
+                self._rules(),
+                self.rng,
+                modifier,
+                plus=self.plus,
             )
 
     def resolve_attacks(self, target: str, attacks: Sequence[Mapping[str, str]]) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.resolve_attacks(
-                db, self.campaign_id, target, attacks, self._rules(), self.rng
+                db, self.campaign_id, target, attacks, self._rules(), self.rng, plus=self.plus
             )
 
     def player_attack(self, target: str, weapon: str, modifier: str = "") -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.player_attack(
-                db, self.campaign_id, target, weapon, self._rules(), self.rng, modifier
+                db,
+                self.campaign_id,
+                target,
+                weapon,
+                self._rules(),
+                self.rng,
+                modifier,
+                plus=self.plus,
             )
 
     def attack_dice(self, weapon: str, modifier: str = "") -> str:
@@ -743,11 +813,14 @@ class WorldTools:
                 self._rules(),
                 self.conditions,
                 self.rng,
+                plus=self.plus,
             )
 
     def retreat(self, name: str, safe: bool) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return morale.retreat(db, self.campaign_id, name, safe, self._rules(), self.rng)
+            return morale.retreat(
+                db, self.campaign_id, name, safe, self._rules(), self.rng, plus=self.plus
+            )
 
     def player_retreat(self, safe: bool, roll: int) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -831,9 +904,12 @@ def seed_campaign(
     tables: Mapping[str, Sequence[TableOption]],
     rng: random.Random,
     spec: CharacterSpec,
+    *,
+    monsters: Mapping[str, MonsterTemplate],
+    plus: str,
 ) -> None:
     """Record a campaign's places and the world's NPCs as events. The player character is made
-    later, by `create_player_character`."""
+    later, by `create_player_character`. An NPC that names a statblock takes its stats."""
     # A place can be declared before the place it is inside, so every name is known first.
     names = {spot.id: spot.name for spot in world.locations}
     for spot in world.locations:
@@ -850,6 +926,7 @@ def seed_campaign(
             ),
         )
     for npc in world.npcs:
+        base = None if npc.monster is None else monsters[npc.monster]
         event = _npc_event(
             tables,
             rng,
@@ -860,7 +937,12 @@ def seed_campaign(
             personality=npc.personality,
             accent=npc.accent,
             quirks=npc.quirks,
+            character=None if base is None else {"stats": dict(base.stats)},
+            plus=plus,
+            story_only=npc.story_only,
         )
+        if base is not None:
+            event = _with_statblock(event, base)
         record(db, campaign_id, event)
     db.commit()
 
@@ -918,6 +1000,8 @@ def create_player_character(
     magic: MagicRules | None = None,
     currency: str = "",
     armor_max: int = 0,
+    *,
+    plus: str,
 ) -> dict[str, Any]:
     """Make the player character from the player's choices. `rolled` are the stats rolled for
     this character; the player may only keep them or swap within a swap group. Starting item
@@ -939,7 +1023,7 @@ def create_player_character(
         check_choices(spec, submitted.get("fields", {}))
     except CharacterError as error:
         raise InvalidInput(str(error)) from error
-    sheet = resolve(spec, submitted, rng)
+    sheet = resolve(spec, submitted, rng, plus=plus)
     _check_sheet_text(sheet)
     fields = _sheet_fields(sheet)
     starting = fields["features"]
@@ -1022,6 +1106,10 @@ def create_npc(
     accent: str | None = None,
     quirks: Sequence[str] | None = None,
     character: Mapping[str, Any] | None = None,
+    *,
+    monsters: Mapping[str, MonsterTemplate],
+    force: bool = False,
+    plus: str,
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_NAME)
@@ -1031,6 +1119,11 @@ def create_npc(
         check_choices(spec, (character or {}).get("fields", {}))
     except CharacterError as error:
         raise InvalidInput(str(error)) from error
+    base = None if force else _statblock_named(monsters, name)
+    if base is not None:
+        if (character or {}).get("stats"):
+            raise InvalidInput(_statblock_conflict(base, spec))
+        character = {**(character or {}), "stats": dict(base.stats)}
     event = _npc_event(
         tables,
         rng,
@@ -1042,7 +1135,10 @@ def create_npc(
         accent=_optional_text(accent, "accent"),
         quirks=_quirks(quirks),
         character=character,
+        plus=plus,
     )
+    if base is not None:
+        event = _with_statblock(event, base)
     record(db, campaign_id, event)
     db.commit()
     return {
@@ -1052,6 +1148,7 @@ def create_npc(
         "personality": event.personality,
         "accent": event.accent,
         "quirks": list(event.quirks),
+        "statblock": base.id if base else None,
     }
 
 
@@ -1069,6 +1166,8 @@ def hire_hireling(
     accent: str | None = None,
     quirks: Sequence[str] | None = None,
     character: Mapping[str, Any] | None = None,
+    *,
+    plus: str,
 ) -> dict[str, Any]:
     """Hire a character into the employer's company, at the employer's location. The hireling is
     controlled by the player and its wage is paid each day from the employer's gold. Its sheet is
@@ -1098,6 +1197,7 @@ def hire_hireling(
         accent=_optional_text(accent, "accent"),
         quirks=_quirks(quirks),
         character=character,
+        plus=plus,
     )
     record(
         db,
@@ -1172,21 +1272,27 @@ def create_monster(
     armor: int | None,
     attacks: Sequence[Mapping[str, str]] | None,
     armor_max: int = 0,
+    force: bool = False,
 ) -> dict[str, Any]:
     """An NPC built from a statblock. A template gives the starting values, and any value given
-    replaces it. Without a template, the description and every stat come from the call."""
+    replaces it. Without a template, a name that matches a statblock uses it and takes no values
+    of its own, unless force is set."""
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_NAME)
     _ensure_free_name(state, name)
     where = _place_named(state, location)
     base: MonsterTemplate | None = None
+    given = {key: value for key, value in stats.items() if value is not None}
     if template is not None:
         base = monsters.get(template.strip())
         if base is None:
             raise InvalidInput(
                 f"there is no monster template {template!r}; search_monster lists them"
             )
-    given = {key: value for key, value in stats.items() if value is not None}
+    elif not force:
+        base = _statblock_named(monsters, name)
+        if base is not None and (given or armor is not None or attacks is not None):
+            raise InvalidInput(_statblock_conflict(base, spec))
     merged = {**(base.stats if base else {}), **given}
     unknown = [key for key in merged if key not in spec.stats]
     if unknown:
@@ -1249,6 +1355,42 @@ def _attacks(attacks: Sequence[Mapping[str, str]]) -> dict[str, str]:
         seen.add(label.casefold())
         checked[label] = dice
     return checked
+
+
+def _statblock_conflict(base: MonsterTemplate, spec: CharacterSpec) -> str:
+    """The refusal when a named statblock creature is given values of its own."""
+    stats = ", ".join(
+        f"{spec.stats[key].name} {value}" for key, value in base.stats.items() if key in spec.stats
+    )
+    attacks = "".join(f"; {label} {dice}" for label, dice in base.attacks.items())
+    return (
+        f"{base.name} has a published statblock ({stats}{attacks}). "
+        "Leave out the values you would give to use it, or set force to create a custom "
+        "creature with this name."
+    )
+
+
+def _with_statblock(event: NpcAdded, base: MonsterTemplate) -> NpcAdded:
+    """The NPC event with a statblock's armor, attacks, creature, and large-group flag. Its stats
+    are set by the caller, before the event is made, so they are not rolled."""
+    return replace(
+        event,
+        armor=base.armor,
+        attacks=dict(base.attacks),
+        creature=base.name,
+        large_group=base.large_group,
+    )
+
+
+def _statblock_named(monsters: Mapping[str, MonsterTemplate], name: str) -> MonsterTemplate | None:
+    """The statblock whose name or id is `name`, ignoring case, so a named module or bestiary
+    creature gets its published stats without the caller supplying them."""
+    wanted = name.strip().lower()
+    slug = wanted.replace(" ", "-")
+    for monster in monsters.values():
+        if monster.id.lower() in (wanted, slug) or monster.name.lower() == wanted:
+            return monster
+    return None
 
 
 def search_monster(
@@ -1367,31 +1509,70 @@ def delete_location(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
 def update_npc(
     db: Session,
     campaign_id: int,
+    spec: CharacterSpec,
+    rng: random.Random,
     name: str,
     description: str | None = None,
     personality: str | None = None,
     accent: str | None = None,
     quirks: Sequence[str] | None = None,
+    character: Mapping[str, Any] | None = None,
+    armor: int | None = None,
+    attacks: Sequence[Mapping[str, str]] | None = None,
+    *,
+    armor_max: int = 0,
+    plus: str,
 ) -> dict[str, Any]:
-    """Change the NPC's details. Only the given fields change; quirks, if given, replace the list."""
+    """Change the NPC's details. Only the given fields change; quirks, if given, replace the list.
+    A story-only NPC can be given its stats once, with character, armor, and attacks."""
     state = load_state(db, campaign_id)
     npc = _npc_named(state, name)
-    if all(value is None for value in (description, personality, accent, quirks)):
-        raise InvalidInput("give at least one of description, personality, accent, or quirks")
-    event = NpcUpdated(
-        name=npc.name,
-        description=npc.description
-        if description is None
-        else bounded_text(description, "description", MAX_TEXT),
-        personality=npc.personality
-        if personality is None
-        else bounded_text(personality, "personality", MAX_NAME),
-        accent=npc.accent if accent is None else bounded_text(accent, "accent", MAX_NAME),
-        quirks=list(npc.quirks) if quirks is None else _quirks(quirks) or [],
-    )
-    record(db, campaign_id, event)
+    text_given = any(value is not None for value in (description, personality, accent, quirks))
+    stats_given = any(value is not None for value in (character, armor, attacks))
+    if not text_given and not stats_given:
+        raise InvalidInput(
+            "give at least one of description, personality, accent, quirks, or stats"
+        )
+    statted: NpcStatted | None = None
+    if stats_given:
+        if not npc.story_only:
+            raise InvalidInput(
+                f"{npc.name} already has stats; only a story-only NPC can be given them"
+            )
+        try:
+            check_choices(spec, (character or {}).get("fields", {}))
+        except CharacterError as error:
+            raise InvalidInput(str(error)) from error
+        sheet = resolve(spec, character or {}, rng, plus=plus)
+        _check_sheet_text(sheet)
+        statted = NpcStatted(
+            name=npc.name,
+            armor=0
+            if armor is None
+            else whole_number(armor, "armor", 0, armor_max or combat.UNCAPPED_ARMOR),
+            attacks=_attacks(attacks or []),
+            **_sheet_fields(sheet),
+        )
+    if text_given:
+        record(
+            db,
+            campaign_id,
+            NpcUpdated(
+                name=npc.name,
+                description=npc.description
+                if description is None
+                else bounded_text(description, "description", MAX_TEXT),
+                personality=npc.personality
+                if personality is None
+                else bounded_text(personality, "personality", MAX_NAME),
+                accent=npc.accent if accent is None else bounded_text(accent, "accent", MAX_NAME),
+                quirks=list(npc.quirks) if quirks is None else _quirks(quirks) or [],
+            ),
+        )
+    if statted is not None:
+        record(db, campaign_id, statted)
     db.commit()
-    return {"updated": "npc", "name": npc.name}
+    return {"updated": "npc", "name": npc.name, "statted": statted is not None}
 
 
 def delete_npc(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
@@ -1870,9 +2051,12 @@ def _npc_event(
     accent: str | None,
     quirks: Sequence[str] | None,
     character: Mapping[str, Any] | None = None,
+    plus: str,
+    story_only: bool = False,
 ) -> NpcAdded:
     """The event that adds an NPC. A trait or character option that is not given is picked at
-    random, so the picked values are stored in the event and replays do not roll again."""
+    random, so the picked values are stored in the event and replays do not roll again. A
+    story-only NPC gets no stats at all."""
     trait_personality = personality or rng.choice(tables["personality"]).value
     trait_accent = accent or rng.choice(tables["accent"]).value
     if quirks is None:
@@ -1880,8 +2064,11 @@ def _npc_event(
         trait_quirks = rng.sample(pool, min(QUIRKS_PER_NPC, len(pool)))
     else:
         trait_quirks = list(quirks)
-    sheet = resolve(spec, character or {}, rng)
-    _check_sheet_text(sheet)
+    sheet_fields: dict[str, Any] = {}
+    if not story_only:
+        sheet = resolve(spec, character or {}, rng, plus=plus)
+        _check_sheet_text(sheet)
+        sheet_fields = _sheet_fields(sheet)
     return NpcAdded(
         name=name,
         location=location,
@@ -1889,7 +2076,8 @@ def _npc_event(
         personality=trait_personality,
         accent=trait_accent,
         quirks=trait_quirks,
-        **_sheet_fields(sheet),
+        story_only=story_only,
+        **sheet_fields,
     )
 
 

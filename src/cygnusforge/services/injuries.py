@@ -44,6 +44,8 @@ def gain_injury(
     table: InjuryTable,
     roll: int,
     cx: EffectContext,
+    *,
+    plus: str,
 ) -> InjuryEntry:
     """Give a character the injury at `roll` on the table, then run the injury's effects."""
     entry = table.entries[roll - 1]
@@ -53,7 +55,7 @@ def gain_injury(
         InjuryGained(name=name, injury=entry.name, roll=entry.roll, text=entry.text),
     )
     db.commit()
-    run_effects(db, campaign_id, name, entry.effects, cx, f"injury {entry.name}")
+    run_effects(db, campaign_id, name, entry.effects, cx, f"injury {entry.name}", plus=plus)
     return entry
 
 
@@ -64,6 +66,8 @@ def run_effects(
     ops: Sequence[dict[str, Any]],
     cx: EffectContext,
     cause: str,
+    *,
+    plus: str,
 ) -> None:
     """Run a list of effect ops in order, recording what each one does. The rule set's loader has
     already checked the ops, so this trusts their shape."""
@@ -72,13 +76,13 @@ def run_effects(
         if kind == "note":
             record(db, campaign_id, EffectNoted(name=name, text=op["text"]))
         elif kind == "set_max":
-            _set_max(db, campaign_id, name, op, cx, cause)
+            _set_max(db, campaign_id, name, op, cx, cause, plus=plus)
         elif kind == "condition":
             _add_condition(db, campaign_id, name, op["id"], cause, cx.combat)
         elif kind == "save":
-            _save(db, campaign_id, name, op, cx, cause)
+            _save(db, campaign_id, name, op, cx, cause, plus=plus)
         elif kind == "pick_stat":
-            _pick_stat(db, campaign_id, name, op, cx, cause)
+            _pick_stat(db, campaign_id, name, op, cx, cause, plus=plus)
         db.commit()
 
 
@@ -89,10 +93,12 @@ def _set_max(
     op: dict[str, Any],
     cx: EffectContext,
     cause: str,
+    *,
+    plus: str,
 ) -> None:
     stat = cx.picked if op["stat"] == PICKED else op["stat"]
     assert stat is not None
-    roll = roll_total(op["dice"], cx.rng)
+    roll = roll_total(op["dice"], cx.rng, plus=plus)
     character = load_state(db, campaign_id).characters[name_key(name)]
     before = character.stats.get(stat, 0)
     mode = op["mode"]
@@ -144,10 +150,12 @@ def _save(
     op: dict[str, Any],
     cx: EffectContext,
     cause: str,
+    *,
+    plus: str,
 ) -> None:
     stat = op["stat"]
     character = load_state(db, campaign_id).characters[name_key(name)]
-    roll = roll_total(cx.combat.check_die, cx.rng)
+    roll = roll_total(cx.combat.check_die, cx.rng, plus=plus)
     score = current(character, stat)
     passed = cx.combat.module.save_succeeds(roll, score)
     record(
@@ -163,7 +171,9 @@ def _save(
         ),
     )
     db.commit()
-    run_effects(db, campaign_id, name, op.get("pass" if passed else "fail", []), cx, cause)
+    run_effects(
+        db, campaign_id, name, op.get("pass" if passed else "fail", []), cx, cause, plus=plus
+    )
 
 
 def _pick_stat(
@@ -173,11 +183,13 @@ def _pick_stat(
     op: dict[str, Any],
     cx: EffectContext,
     cause: str,
+    *,
+    plus: str,
 ) -> None:
     """Roll the die and split its faces evenly across the options, in order."""
     options: list[str] = op["options"]
     sides = int(op["dice"][2:])
-    roll = roll_total(op["dice"], cx.rng)
+    roll = roll_total(op["dice"], cx.rng, plus=plus)
     stat = options[(roll - 1) * len(options) // sides]
     cx.picked = stat
     record(

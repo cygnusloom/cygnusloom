@@ -13,7 +13,8 @@ from sqlalchemy import Engine
 from sqlmodel import select
 
 from cygnusforge.content.character import CampaignSpec, CharacterSpec, roll_stats
-from cygnusforge.content.library import ContentLibrary, RuleSet, ToolCall
+from cygnusforge.content.definitions import ContentError
+from cygnusforge.content.library import ContentLibrary, RuleSet, ToolCall, WorldContent
 from cygnusforge.db.models import Campaign, Event
 from cygnusforge.llm.base import (
     ChatReply,
@@ -257,6 +258,10 @@ def create_campaign(
         raise InvalidInput("that rule set is not available")
     if model not in allowed_models:
         raise InvalidInput("that model is not available")
+    try:
+        content = library.world_content(world_template, rule_set)
+    except ContentError as error:
+        raise InvalidInput(f"that world does not work with that rule set: {error}") from error
     template = library.world_templates[world_template]
     with session_scope(engine) as db:
         campaign = Campaign(
@@ -276,6 +281,8 @@ def create_campaign(
             library.core.tables,
             rng if rng is not None else random.Random(),
             library.rule_sets[rule_set].character,
+            monsters={**library.rule_sets[rule_set].monsters, **content.monsters},
+            plus=library.rule_sets[rule_set].plus,
         )
         db.refresh(campaign)
         return campaign
@@ -292,7 +299,11 @@ def roll_player_stats(
     player submits; the roll is not stored in the campaign."""
     campaign = get_campaign(engine, owner_id, campaign_id)
     spec = character_spec(library, campaign)
-    return roll_stats(spec, rng if rng is not None else random.Random())
+    return roll_stats(
+        spec,
+        rng if rng is not None else random.Random(),
+        plus=library.rule_sets[campaign.rule_set].plus,
+    )
 
 
 def create_character(
@@ -324,6 +335,7 @@ def create_character(
             magic=rule_set.magic,
             currency=rule_set.marketplace.currency if rule_set.marketplace else "",
             armor_max=rule_set.combat.armor_max if rule_set.combat else 0,
+            plus=rule_set.plus,
         )
 
 
@@ -871,6 +883,7 @@ def _tool_context(
     model_name: str,
     campaign_id: int,
     rule_set: RuleSet,
+    world: WorldContent,
 ) -> ToolContext:
     async def speak(speaker: str, profile: str, intent: str, replace: bool) -> None:
         await _speak(
@@ -892,12 +905,13 @@ def _tool_context(
         world=WorldTools(
             engine,
             campaign_id,
-            library.core.tables,
+            {**library.core.tables, **world.tables},
             rng,
             rule_set.character,
             grid=rule_set.grid,
             combat=rule_set.combat,
-            monsters=rule_set.monsters,
+            monsters={**rule_set.monsters, **world.monsters},
+            features={**world.features},
             conditions=rule_set.conditions,
             dice_tables=rule_set.dice_tables,
             clock_rules=rule_set.clock,
@@ -909,10 +923,11 @@ def _tool_context(
             magic=rule_set.magic,
             food=rule_set.food,
             marketplace=rule_set.marketplace,
+            plus=rule_set.plus,
         ),
         speak=speak,
         ooc=ooc,
-        rules=rule_set.rules,
+        rules={**rule_set.rules, **world.rules},
         lookup_tools={
             tool.name: brief(tool.description)
             for tool in rule_set.tool_calls.values()
@@ -947,6 +962,7 @@ def _start_run(
             model_name,
             campaign.id,
             rule_set,
+            library.world_content(campaign.world_template, campaign.rule_set),
         ),
         cursor=_newest(engine, campaign.id),
     )
@@ -1368,7 +1384,7 @@ async def resume_turn(
         elif turn.prompt is None:
             raise InvalidInput("there is nothing to answer")
         elif action == "roll":
-            answer = RollAnswer(roll_total(turn.prompt.dice, rng))
+            answer = RollAnswer(roll_total(turn.prompt.dice, rng, plus=rule_set.plus))
         elif action == "text":
             clean = (text or "").strip()
             if not clean:

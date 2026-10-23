@@ -56,7 +56,7 @@ class Feature:
     size: str
     uses: int
     armor: int
-    # The weapon's damage dice, such as "1d6", or "1d6|1d6" for two weapons (keep the higher). Empty when the feature is not a weapon.
+    # The weapon's damage dice, such as "1d6", or "1d6+1d6" for two weapons (keep the higher). Empty when the feature is not a weapon.
     damage: str = ""
 
 
@@ -111,7 +111,7 @@ def build_character(
 ) -> CharacterSpec:
     """Build the character spec from a rule set's definitions. `tables` are already loaded."""
     stats = _each(definitions, "stat", lambda d: _stat(d, template))
-    features = _each(definitions, "feature", lambda d: _feature(d, template))
+    features = _each(definitions, "feature", lambda d: load_feature(d, template))
     fields = _each(
         definitions, "character_field", lambda d: _field(d, tables, "character_field", template)
     )
@@ -157,7 +157,7 @@ def _stat(definition: Definition, template: str) -> Stat:
     )
 
 
-def _feature(definition: Definition, template: str) -> Feature:
+def load_feature(definition: Definition, template: str) -> Feature:
     label = f"{template}: feature {definition.id}"
     data = definition.data
     kind = required_text(data, "feature_type", label)
@@ -455,8 +455,8 @@ class Sheet:
     fields: dict[str, str]
 
 
-def roll_stats(spec: CharacterSpec, rng: random.Random) -> dict[str, int]:
-    return {s.id: roll_total(s.formula, rng) for s in spec.stats.values()}
+def roll_stats(spec: CharacterSpec, rng: random.Random, *, plus: str) -> dict[str, int]:
+    return {s.id: roll_total(s.formula, rng, plus=plus) for s in spec.stats.values()}
 
 
 def check_swaps(spec: CharacterSpec, rolled: Mapping[str, int], chosen: Mapping[str, int]) -> None:
@@ -479,7 +479,9 @@ def check_swaps(spec: CharacterSpec, rolled: Mapping[str, int], chosen: Mapping[
             raise CharacterError(f"stats in group {group!r} allow one swap")
 
 
-def resolve(spec: CharacterSpec, submitted: Mapping[str, Any], rng: random.Random) -> Sheet:
+def resolve(
+    spec: CharacterSpec, submitted: Mapping[str, Any], rng: random.Random, *, plus: str
+) -> Sheet:
     """Fill in what a GM or player left out, and roll what is random. `submitted` must already
     match `character_schema(spec)` and pass `check_choices`. Stats left out are rolled; text left
     out is blank; a table left out is rolled; a template's features are added with their rolled
@@ -489,7 +491,7 @@ def resolve(spec: CharacterSpec, submitted: Mapping[str, Any], rng: random.Rando
     given_features = submitted.get("features", [])
     given_fields = submitted.get("fields", {})
     stats = {
-        s.id: given_stats[s.id] if s.id in given_stats else roll_total(s.formula, rng)
+        s.id: given_stats[s.id] if s.id in given_stats else roll_total(s.formula, rng, plus=plus)
         for s in spec.stats.values()
     }
     templates = dict(given_templates)
@@ -501,7 +503,7 @@ def resolve(spec: CharacterSpec, submitted: Mapping[str, Any], rng: random.Rando
             count = (
                 int(granted.quantity)
                 if granted.quantity.isdigit()
-                else roll_total(granted.quantity, rng)
+                else roll_total(granted.quantity, rng, plus=plus)
             )
             features[granted.feature] = features.get(granted.feature, 0) + count
         for table in template.tables:

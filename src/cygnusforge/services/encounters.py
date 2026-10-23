@@ -242,6 +242,10 @@ def add_participant(
     character = _character(state, name)
     if character.name in encounter.order:
         raise InvalidInput(f"{character.name} is already in the encounter")
+    if character.story_only:
+        raise InvalidInput(
+            f"{character.name} has no stats yet; give them stats with update_npc first"
+        )
     if side is None:
         side = PARTY_SIDE if character.kind == PC_KIND else FOES_SIDE
     elif not isinstance(side, str) or not side.strip():

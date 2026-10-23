@@ -21,6 +21,7 @@ class World(Protocol):
         accent: str | None = None,
         quirks: Sequence[str] | None = None,
         character: Mapping[str, Any] | None = None,
+        force: bool = False,
     ) -> dict[str, Any]: ...
 
     def update_location(self, name: str, description: str) -> dict[str, Any]: ...
@@ -34,6 +35,9 @@ class World(Protocol):
         personality: str | None = None,
         accent: str | None = None,
         quirks: Sequence[str] | None = None,
+        character: Mapping[str, Any] | None = None,
+        armor: int | None = None,
+        attacks: Sequence[Mapping[str, str]] | None = None,
     ) -> dict[str, Any]: ...
 
     def delete_npc(self, name: str) -> dict[str, Any]: ...

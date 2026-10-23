@@ -126,7 +126,12 @@ def test_roll_tables_returns_one_roll_per_named_table_and_logs_one_event(client_
         last_id = max((row.id for row in events_since(db, campaign_id)), default=0)
         before = _event_count(db, campaign_id)
         out = roll_tables(
-            db, campaign_id, ["dungeon_reaction", "die_of_fate"], tables, random.Random(1)
+            db,
+            campaign_id,
+            ["dungeon_reaction", "die_of_fate"],
+            tables,
+            random.Random(1),
+            plus=CAIRN.plus,
         )
         after = _event_count(db, campaign_id)
         new_events = events_since(db, campaign_id, after=last_id)
@@ -153,7 +158,7 @@ def test_roll_tables_refuses_an_empty_list(client_factory):
     with Session(tools.engine) as db:
         before = _event_count(db, campaign_id)
         with pytest.raises(InvalidInput, match="at least one"):
-            roll_tables(db, campaign_id, [], CAIRN.dice_tables, random.Random(1))
+            roll_tables(db, campaign_id, [], CAIRN.dice_tables, random.Random(1), plus=CAIRN.plus)
         assert _event_count(db, campaign_id) == before
 
 
@@ -164,7 +169,14 @@ def test_roll_tables_refuses_an_unknown_id_without_logging_or_rolling(client_fac
     with Session(tools.engine) as db:
         before = _event_count(db, campaign_id)
         with pytest.raises(InvalidInput, match="'nope'"):
-            roll_tables(db, campaign_id, ["dungeon_reaction", "nope"], CAIRN.dice_tables, rng)
+            roll_tables(
+                db,
+                campaign_id,
+                ["dungeon_reaction", "nope"],
+                CAIRN.dice_tables,
+                rng,
+                plus=CAIRN.plus,
+            )
         assert _event_count(db, campaign_id) == before
     assert rng.getstate() == state_before
 
@@ -178,6 +190,7 @@ def test_the_same_seed_gives_the_same_rolls(client_factory):
             ["dungeon_reaction", "die_of_fate"],
             CAIRN.dice_tables,
             random.Random(42),
+            plus=CAIRN.plus,
         )
         second = roll_tables(
             db,
@@ -185,6 +198,7 @@ def test_the_same_seed_gives_the_same_rolls(client_factory):
             ["dungeon_reaction", "die_of_fate"],
             CAIRN.dice_tables,
             random.Random(42),
+            plus=CAIRN.plus,
         )
     assert first["rolls"] == second["rolls"]
 

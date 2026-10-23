@@ -35,13 +35,15 @@ def dungeon_cycle(
     reason: str,
     tables: Mapping[str, DiceTable],
     rng: random.Random,
+    *,
+    plus: str,
 ) -> dict[str, Any]:
     """Roll once on the Dungeon Events table. The day and hour clocks are left alone."""
     unknown = [t for t in triggers if t not in TRIGGERS]
     if unknown:
         raise InvalidInput(f"unknown trigger {unknown[0]!r}; use one of {', '.join(TRIGGERS)}")
     table = _table(tables, DUNGEON_EVENTS)
-    roll = roll_total(table.dice, rng)
+    roll = roll_total(table.dice, rng, plus=plus)
     row = table.row_for(roll)
     note = ""
     if row.result == "Encounter":
@@ -75,10 +77,12 @@ def roll_reaction(
     reason: str,
     tables: Mapping[str, DiceTable],
     rng: random.Random,
+    *,
+    plus: str,
 ) -> dict[str, Any]:
     """Roll 2d6 for an NPC's reaction and log the band."""
     table = _table(tables, REACTION)
-    roll = roll_total(table.dice, rng)
+    roll = roll_total(table.dice, rng, plus=plus)
     band = table.row_for(roll).result
     record(db, campaign_id, ReactionRolled(roll=roll, band=band, reason=reason))
     db.commit()

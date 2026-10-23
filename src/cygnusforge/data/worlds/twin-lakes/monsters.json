@@ -1,0 +1,62 @@
+[
+  {
+    "type": "monster",
+    "id": "night-cat",
+    "name": "Night Cat",
+    "description": "Intelligent, nocturnal marsupial that makes its home in forests and swamps. Hunts in packs. The target of an attack must make a DEX save or take damage directly to STR. Critical damage: the Night Cat begins to eat the target (d4 STR damage) while they are still alive.",
+    "stats": {"hp": 6, "str": 9, "dex": 14, "wil": 5},
+    "attacks": {"claws": "1d6+1d6"}
+  },
+  {
+    "type": "monster",
+    "id": "fasha",
+    "name": "Fasha",
+    "description": "A farmer from Dunston, formerly weak and ill-mannered, now strengthened by The Eye of Vuk. If necessary he flees to White Tower Fens. Given the opportunity, he drags any defeated opponent to the Temple of the Fungal Lizards to be sacrificed.",
+    "stats": {"hp": 6, "str": 14, "dex": 13, "wil": 5},
+    "attacks": {"fists": "1d8+1d8", "hook knife": "1d6"}
+  },
+  {
+    "type": "monster",
+    "id": "annafranax",
+    "name": "Annafranax",
+    "description": "Frog Witch of the Stone Forest. Immensely powerful but very old; avoids combat as much as possible. Carries four Spellbooks from: Animate Object, Arcane Eye, Auditory Illusion, Beast Form, Befuddle, Haste, Pacify, Push/Pull, Read Mind, Thicket, True Sight, Visual Illusion. If she is killed, every bird in the Stone Forest attacks her murderer until they are dead or have fled The Wood.",
+    "stats": {"hp": 9, "str": 11, "dex": 14, "wil": 17},
+    "attacks": {}
+  },
+  {
+    "type": "monster",
+    "id": "bandit-leader",
+    "name": "Bandit Leader",
+    "description": "Leader of a bandit band; when killed, the bandits retreat.",
+    "stats": {"hp": 6, "str": 13, "dex": 14, "wil": 13},
+    "armor": 2,
+    "attacks": {"long sword": "1d10"}
+  },
+  {
+    "type": "monster",
+    "id": "bandits",
+    "name": "Bandits",
+    "description": "Common bandits who test Morale using the leader's WIL and retreat if their leader dies. One carries a short bow.",
+    "stats": {"hp": 4, "str": 12, "dex": 12, "wil": 9},
+    "armor": 1,
+    "attacks": {"sword": "1d6", "short bow": "1d6"}
+  },
+  {
+    "type": "monster",
+    "id": "suraru",
+    "name": "Suraru",
+    "description": "Bipedal reptilian, birthed from large fungal growths. Has perfect vision even in complete darkness. Fiercely loyal to its Imperator; if the Imperator dies, it flees to prepare a new breeding sac.",
+    "stats": {"hp": 6, "str": 14, "dex": 12, "wil": 5},
+    "armor": 1,
+    "attacks": {"claws": "1d6+1d6", "teeth": "1d8"}
+  },
+  {
+    "type": "monster",
+    "id": "suraru-imperator",
+    "name": "Suraru Imperator",
+    "description": "Rules over a brood of subservient Surarus, who will fight to the death to protect the sac. Critical damage: a body part dissolves in venomous acid, and the target loses 1 point of Armor. Module prints the venomous bite as (d6, blast); 'blast' is undefined.",
+    "stats": {"hp": 10, "str": 16, "dex": 12, "wil": 11},
+    "armor": 1,
+    "attacks": {"claws": "1d8+1d8", "venomous bite": "1d6"}
+  }
+]

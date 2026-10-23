@@ -48,8 +48,8 @@ Scope:
    - Impaired: roll 1d4 instead of the damage die (cover, bound hands, distant ranged targets).
    - Enhanced: roll 1d12 instead of the damage die (helpless foe, daring maneuver).
    - Blast: roll the damage die separately for each target.
-   - Two weapons: roll both dice and keep the single highest (written d8+d8).
-   - Multiple attackers on one foe: roll all dice and keep the single highest.
+   - Two weapons: roll both dice and keep the higher (the book writes d8+d8; stored as 1d8+1d8, since cairn2e's `+` keeps the higher).
+   - Multiple attackers on one foe: roll all dice and keep the higher.
    - Unarmed: d4.
    - All actions are declared before resolution.
 7. **Retreat.** Running requires a DEX save and a safe destination. A character may also surrender, which takes them out of the fight; the encounter ends once one side has nobody who can fight.
@@ -260,7 +260,7 @@ D&D comparison (what a second rule set would need, and where Cairn's shape would
 | Area | Cairn 2e | D&D 5e (analogue) | Engine status |
 |---|---|---|---|
 | Stats | STR, DEX, WIL from JSON | six ability scores, from JSON | Generic (stat keys in JSON). |
-| Dice | `1dN`, `+` sums, `\|` keeps the higher | `1d20`, advantage is `1d20\|1d20`, damage sums | Generic. `\|` covers advantage and two weapons. |
+| Dice | `1dN`, `+` keeps the higher | `1dN`, `+` sums (damage), advantage is two d20s kept | Generic. Each rule set declares its `plus` operator (`highest` or `sum`) in `rule_set.json`. |
 | Damage pipeline | armor, then Hit Protection, then STR, then Critical Damage save | hit points, with temporary HP | Cairn-shaped in `combat.json`. Needs a one-stage (hit points) pipeline as data. Open. |
 | Rests | short and long from `rest.json`, `until`, `stop_at`, clock parts | short rest (1 hour) and long rest (8 hours), hit dice spent on the short rest | Generic (`RestLength`, clock). Hit dice are not modeled. Open. |
 | Spell cost | Fatigue penalty item, one per cast | spell slots per level, restored on a long rest | Penalty item is read from JSON. Slots need a charged-pool type. Open. |
@@ -275,12 +275,13 @@ Decision rule for the refactor: a Cairn term may stay in `cairn2e/` JSON prose o
 
 Status (Phase 11): the leak grep is clean. The remaining hits are the word "discard" and generic docstrings. The engine reads these from `cairn2e/`: penalty item (`inventory.json` `penalty_name`, `penalty_lasts`), the armor cap (`combat.json` `armor_max`), the large-group flag (`monsters.json` `large_group`), the save stat (`save_stat`), charged items (`charged_kind`), GM prompts (`prompts.json`, 7 fragments), narration (`narration.json` `sentence_cap`), needs (`need.json`), and injury tables (`injuries`). The debug stat options come from the rule set's stats. Live-verified on a fresh DB: opening turn, a player turn with the pack, the Inventory tab ("Carrying 7 of 10 slots"), and the Debug tab. The `need_set`, `group_break_resolved`, and `injury.gained` paths were not hit in that run. Renamed event kinds break replay of old dev DBs; the user accepted this.
 
-Second live run (fresh DB, two-weapon check): the opening turn, a GM `give_item` of Twin Daggers with `1d6|1d6`, an initiative roll, a player attack that prompted `1d6|1d6`, the combat result (`combat.struck` raw 6, save failed, the thief died), the Inventory tab, and a clean DB log. The `need_set`, `group_break_resolved`, and `injury.gained` paths are covered by unit tests only. Phase 12 is the full play-through, so it should hit these paths live, and they are checked there.
+Second live run (fresh DB, two-weapon check): the opening turn, a GM `give_item` of Twin Daggers with `1d6+1d6`, an initiative roll, a player attack that prompted `1d6+1d6`, the combat result (`combat.struck` raw 6, save failed, the thief died), the Inventory tab, and a clean DB log. The `need_set`, `group_break_resolved`, and `injury.gained` paths are covered by unit tests only. Phase 12 is the full play-through, so it should hit these paths live, and they are checked there.
 
 Built since the last status: weapon damage and the dungeon reaction table merge.
 
-- Weapon damage (user decision: the engine rolls): a carried weapon's dice come from its ruleset `damage` (`features.json` for starting gear, `marketplace.json` for catalogue items, or a custom item's damage given with `give_item`). An unarmed attack uses `combat.json` `unarmed`. The GM no longer passes a damage number, and the player's roll is a flavor prompt that does not set damage. The dice grammar requires a count, so the book's single die is stored as `1d6`, and `d6+d6` as `1d6+1d6`. Unit tests: `tests/test_weapon_damage.py`. Live-verified on a fresh DB: a Sling attack on a Reed Bandit with a Club prompted `1d6` as flavor, and the logged `combat.struck` event used `weapon: sling` with raw damage 5, within 1d6. Attacking with a weapon that is not carried is refused by unit test, not live.
+- Weapon damage (user decision: the engine rolls): a carried weapon's dice come from its ruleset `damage` (`features.json` for starting gear, `marketplace.json` for catalogue items, or a custom item's damage given with `give_item`). An unarmed attack uses `combat.json` `unarmed`. The GM no longer passes a damage number, and the player's roll is a flavor prompt that does not set damage. The dice grammar requires a count, so the book's single die is stored as `1d6`, and `d6+d6` as `1d6+1d6` (keep the higher, since cairn2e's `+` keeps the higher). Unit tests: `tests/test_weapon_damage.py`. Live-verified on a fresh DB: a Sling attack on a Reed Bandit with a Club prompted `1d6` as flavor, and the logged `combat.struck` event used `weapon: sling` with raw damage 5, within 1d6. Attacking with a weapon that is not carried is refused by unit test, not live.
 - Reaction merge: the duplicate `reaction` table is removed from `warden_tables.json`. `dungeon_reaction` in `dungeon.json` is the one table, and the `roll_tables` tool enum uses it.
+- Dice operator and attachments (per rule set): the `plus` operator is declared in each rule set's `rule_set.json`. cairn2e uses `+` as keep-higher (`plus` is `highest`), so the operator is no longer one fixed rule. Story-only NPCs and rule attachments are generic engine features, not Cairn-only code.
 
 Phase 11 is closed. The generic refactor items are done, the live runs above pass, and the D&D comparison records the open shape gaps (damage pipeline, hit dice, spell-slot pool, death saves) for later. The three unhit live paths move to the Phase 12 play-through. Phase 12 is next.
 
@@ -297,7 +298,17 @@ Known content from the module text (read in full during the design pass; statblo
 - A 1d8 daily victim schedule and quicksand.
 - Dungeon Exploration procedures (book p.71), not Wilderness, plus random encounter tables. These need Phase 10.
 
+Phase 12 design decisions (user):
+
+- Module content lives in the world folder. The rule set keeps the rules and the bestiary. The Night Cat already in the bestiary is used as is, so the module does not repeat it.
+- The world folder accepts `monster`, `table`, `feature` (relics), and `rule` entries, scoped to that world. The GM can search world monsters, roll world tables, and give world features.
+- Named NPCs with statblocks: an `npc` entry takes an optional `monster` id (a monster in the same world or the rule set), or inline `stats`, `armor`, and `attacks` in monster format. NPCs with no statblock omit both. Full PC-style NPC stats (features and templates on an NPC) are scheduled as a gap, since they need persisted NPC characters.
+- Encounter tables and the victim schedule are world tables. Dungeon encounters use the Phase 10 rule: the Warden's table per dungeon, rolled by the engine.
+- Relics are world features and use the Phase 5 relic rules.
+
 World: a module is its own world. The CAS-1 import goes into the `twin-lakes` world template (`src/cygnusforge/data/worlds/twin-lakes/`). That world is the Cairn 2e test world until the feature set is complete. The `kilharbor` world was removed. Its only content was a description, and no locations or NPCs. The `twin-lakes` world has no locations or NPCs until the import fills it in.
+
+Rule attachments (in progress): a module rule that belongs to one NPC, item, or creature (for example Vuk's Choking Hold, Deadmill's rules, or the Bandits' morale) attaches to that thing. Its text goes into the GM context whenever the thing is present, not only through `lookup_rule`. This is a generic engine feature, so core and D&D need it too. cairn2e supplies the data. Gap register: OPEN (rule attachments).
 
 Done when: every location, NPC, monster, relic, and table in the module is in the ruleset or in an adventure data file, the module can be played from start to finish in a live session, and the transcript reads correctly. Gaps found are added to the gap register and closed or scheduled.
 
@@ -314,7 +325,7 @@ Engine and prompt (cross-cutting):
 - `tool_calls.json` descriptions still say "detachment". Ruleset prose to update.
 - The magic result key changed to `penalty`. Not live-checked against the prompts.
 - RESOLVED (Phase 11, user chose engine-rolled dice): weapon damage comes from the ruleset, and the GM no longer passes a damage number. Gaps left from this:
-  - RESOLVED (user chose the book rule): two weapons roll both dice and keep the higher. The dice grammar has a `|` separator, so Twin Daggers is `1d6|1d6`. `+` still sums, for monster attacks. Unit tests: `tests/test_dice.py`, `tests/test_weapon_damage.py`. Live-verified on a fresh DB: the GM gave Twin Daggers with `1d6|1d6`, and a player attack on a Hooded Thief logged `combat.struck` with weapon "Twin Daggers" and raw 6, within 1d6. The Inventory tab lists the daggers.
+  - RESOLVED (user chose the book rule): two weapons roll both dice and keep the higher. Each rule set declares its own `plus` operator. Under cairn2e (`plus: "highest"`), `+` keeps the higher, so Twin Daggers is `1d6+1d6`, and monster fists `1d8+1d8` keep the higher too. The `|` operator is removed. A multi-term formula in a rule set with no `plus` fails at roll time. Unit tests: `tests/test_dice.py`, `tests/test_weapon_damage.py`. Live-verified on a fresh DB (before the `|` removal; the unit tests cover the new grammar): the GM gave Twin Daggers with `1d6+1d6`, and a player attack on a Hooded Thief logged `combat.struck` with weapon "Twin Daggers" and raw 6, within 1d6. The Inventory tab lists the daggers.
   - The player's visible roll is a flavor prompt, so it can differ from the damage logged. The user chose this. Unscheduled, needs a UI decision.
 - The Inventory tab shows no weapon damage formula, so the player cannot see what a weapon rolls. Unscheduled, a small UI addition.
 - After a fight ends on its own (the last foe dies), the GM can still call `end_encounter`, which fails with "there is no encounter in progress". The fix is a prompt rule or a tool that accepts a no-op. Unscheduled, found live.
@@ -327,6 +338,10 @@ Engine and prompt (cross-cutting):
 - RESOLVED (Phase 11): debug panel stat options come from the rule set's stats.
 - RESOLVED (Phase 11): Cairn GM prompt wording moved to `prompts.json` and `narration.json`.
 - RESOLVED (Phase 11): weapon damage is rolled from the ruleset's weapon dice. See the Phase 11 status for the gaps left.
+- OPEN (dice): multi-term formulas in a `plus: "sum"` rule set fail at roll time if `plus` is missing. Should be validated at load. Unscheduled.
+- RESOLVED (NPC HP, from the book's Hit Protection section): an NPC's HP is average 3, hardier 6, or a serious threat 10+. The monster loader requires the HP stat, from the first `harm` damage step, to be at least 1. Fasha's 6 is an assumption, since the module prints no HP (transcription L540). Flagged for the user to confirm.
+- RESOLVED (statblock precedence, user chose): a name that matches a published statblock takes that statblock's stats, armor, and attacks. Both `create_npc` and `create_monster` refuse explicit stats under that name, and `create_monster` also refuses armor or attacks, unless `force` is set. With `force`, the GM creates a custom creature under that name. Unit tests: `tests/test_combat.py`. Live re-test on a fresh DB is pending in Phase 12.
+- OPEN (Phase 12): Vuk has no numeric stats in the module (transcription L86, L541), so she is description-only. Needs a decision on her statblock.
 - Test flakiness: a PC's max HP is random at creation and `_set_stat` clamps to it, so a max HP of 1 makes tests fail. Empty `Rolls` queues raise `IndexError`. Unscheduled, test infrastructure.
 - `tests/test_world.py` snapshot-style prompt assertions need checking after prompt edits. Unscheduled.
 
@@ -414,6 +429,20 @@ Phase 10 (dungeon exploration): the dungeon turn cycle, Dungeon Events, treasure
 Phase 11 (generic refactor): the list above.
 
 Phase 12 (capstone): the CAS-1 import and any gaps it reveals.
+
+- RESOLVED (Phase 12, seeding): `seed_campaign` ignored an NPC's monster statblock, so module NPCs with a statblock got random stats. Seeding now uses the statblock. Unit tests: `tests/test_combat.py`. Live test verified in the DB.
+- RESOLVED (Phase 12, Vuk decision): the Ash Phantom has no statblock on cairnrpg.com's Warden's Guide bestiary, and the module prints no numbers. Decision: Vuk's ash form is story-only with the Choking Hold rule attached (rule attachment is still OPEN below). Her full form, the 7 ft Lich Queen, uses the bestiary Lich (14 HP, 1 Armor, 8 STR, 8 DEX, 18 WIL, soul dagger d8). The Lich is not imported yet (see the bestiary gap).
+- OPEN (Phase 12, bestiary): the cairn2e `monsters.json` has 12 entries. The Warden's Guide bestiary at cairnrpg.com/second-edition/wardens-guide/bestiary has at least 32 stat-block entries (for example Lich, Mummy, Vampire, Ogre, Naga). The import is incomplete. Import the full bestiary from source, with a verbatim-source check like the backgrounds and tables generator.
+- OPEN (Phase 12): the Reeve Trellis, Aldra, Flavia, Jandy, Giva, and Drum have no statblock in the module. The `story_only` flag and the `update_npc` stats path are built. Decision needed: should the Warden give these six stats when they first fight?
+- OPEN (Phase 12, rule attachments): module rules that belong to a specific NPC, item, or creature must reach the AI GM whenever that thing is present, not only through `lookup_rule`. Design in progress: attach rule ids to NPCs, monsters, and items, and put the attached rule text into the GM context when present.
+- OPEN (Phase 12): the world loader reads only the text of world rules, so `"important": true` on a world rule has no effect.
+- OPEN (Phase 12): world-scope `dice_table` entries are not loaded, so the d6 and d8 rolls in the module's tables are plain options, not rolls.
+- OPEN (Phase 12, module text, user to decide; kept verbatim): "blast" (Suraru Imperator's bite) is undefined. "The Cities" and "Marchguard" are undefined. "memory prison" vs "memory prism" is treated as the prism item; the book prints both. "3 bandits*" has an asterisk with no footnote. "see p.3" points to a missing page. Vuk's heart count is "at least one" in the viscera line and three in Vuk's text.
+- OPEN (Phase 12): the unarmed 1d4 is taken from the module for unarmed attacks. It is not verified against the printed page.
+- OPEN (Phase 12): the module prints no HP or armor for Fasha. HP 6 is an assumption, from the "hardier" guidance. Confirm with the user.
+- OPEN (Phase 12): Reeve's Office and the Cellar are nested under the Stuffed Inn in the source, but the one-level location schema puts them under isthmus-town. Decide whether the location schema needs nesting depth 2.
+- OPEN (Phase 12): the Dungeon Events table is not reproduced in the world data.
+- OPEN (Phase 12): the book gives average 3, hardier 6, and serious threat 10 or more for statless NPCs. The engine rolls 1d6 for statless NPCs. Add this guidance to the cairn2e data, not the engine.
 
 Unscheduled, needs a book reference or a decision:
 

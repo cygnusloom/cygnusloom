@@ -45,6 +45,7 @@ def create_monster(
     dexterity: int | None = None,
     willpower: int | None = None,
     attacks: list[dict[str, str]] | None = None,
+    force: bool = False,
 ) -> dict[str, Any]:
     return ctx.world.create_monster(
         name,
@@ -59,6 +60,7 @@ def create_monster(
         },
         armor=armor,
         attacks=attacks,
+        force=force,
     )
 
 

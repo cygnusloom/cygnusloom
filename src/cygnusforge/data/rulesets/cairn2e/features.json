@@ -521,7 +521,7 @@
     "name": "Twin Daggers",
     "feature_type": "item",
     "description": "Two daggers. Roll both d6 and keep the higher.",
-    "damage": "1d6|1d6",
+    "damage": "1d6+1d6",
     "size": "bulky"
   },
   {

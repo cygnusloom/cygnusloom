@@ -24,7 +24,7 @@ from tests.test_world import _db, _state
 LEADER_WIL = 15
 
 
-def _monster(tools, name: str, wil: int, claw: str = "1d6+1d6") -> None:
+def _monster(tools, name: str, wil: int, claw: str = "2d6") -> None:
     tools.create_monster(
         name,
         YARD,
@@ -143,7 +143,7 @@ def test_a_failed_group_check_flees_every_living_foe_and_ends_the_fight(client_f
 
 def test_a_player_character_is_never_checked_for_morale(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Bo", claw="1d6+1d6+1d6+1d6")
+    _foe(tools, "Bo", claw="4d6")
     _set_stat(app, campaign_id, PC, "hp", 0)
     result = _hit(tools, "Bo", PC, 6, 6, 6, 6)
     assert "morale" not in result
@@ -215,7 +215,7 @@ def test_a_surrendered_character_cannot_attack_and_shows_as_surrendered(client_f
 
 def test_a_defeated_character_shows_defeat_rather_than_fled(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="1d6+1d6")
+    _foe(tools, "Ghoul", claw="2d6")
     _foe(tools, "Bo")
     _hit(tools, "Ghoul", "Bo", 6, 5, 20, 1, 1)
     bo = _character(app, campaign_id, "Bo")

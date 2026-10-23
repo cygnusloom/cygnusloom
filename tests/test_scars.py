@@ -30,7 +30,7 @@ def _run(app, campaign_id: int, ops: list[dict[str, Any]], *dice: int) -> None:
     """Run effect ops on Mara with the given dice, in order."""
     with _db(app) as db:
         cx = EffectContext(rng=Rolls(*dice), combat=CAIRN.combat)
-        run_effects(db, campaign_id, PC, ops, cx, "a test")
+        run_effects(db, campaign_id, PC, ops, cx, "a test", plus=CAIRN.plus)
 
 
 def _set_max(app, campaign_id: int, stat: str, value: int) -> None:

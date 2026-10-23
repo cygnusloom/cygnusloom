@@ -24,6 +24,7 @@ from cygnusforge.services.tools import check_arguments
 
 LIBRARY = ContentLibrary.load()
 SPEC = LIBRARY.rule_sets["cairn2e"].character
+PLUS = LIBRARY.rule_sets["cairn2e"].plus
 
 
 def _template_with(spec: CharacterSpec, attr: str):
@@ -31,7 +32,7 @@ def _template_with(spec: CharacterSpec, attr: str):
 
 
 def test_roll_stats_stay_within_their_range():
-    rolled = roll_stats(SPEC, random.Random(1))
+    rolled = roll_stats(SPEC, random.Random(1), plus=PLUS)
     assert set(rolled) == set(SPEC.stats)
     for stat in SPEC.stats.values():
         assert stat.low <= rolled[stat.id] <= stat.high
@@ -65,20 +66,20 @@ def test_stats_outside_a_group_cannot_change():
 
 
 def test_resolve_rolls_missing_stats():
-    sheet = resolve(SPEC, {}, random.Random(0))
+    sheet = resolve(SPEC, {}, random.Random(0), plus=PLUS)
     for stat in SPEC.stats.values():
         assert stat.low <= sheet.stats[stat.id] <= stat.high
 
 
 def test_resolve_keeps_given_stats():
     given = {"str": 10, "dex": 11, "wil": 12, "hp": 3}
-    sheet = resolve(SPEC, {"stats": given}, random.Random(0))
+    sheet = resolve(SPEC, {"stats": given}, random.Random(0), plus=PLUS)
     assert sheet.stats == given
 
 
 def test_resolve_adds_the_features_of_a_template():
     template = _template_with(SPEC, "features")
-    sheet = resolve(SPEC, {"templates": {template.kind: template.id}}, random.Random(0))
+    sheet = resolve(SPEC, {"templates": {template.kind: template.id}}, random.Random(0), plus=PLUS)
     assert sheet.templates == {template.kind: template.id}
     for granted in template.features:
         assert granted.feature in sheet.features
@@ -86,7 +87,7 @@ def test_resolve_adds_the_features_of_a_template():
 
 def test_resolve_rolls_template_tables_and_blanks_text_fields():
     template = _template_with(SPEC, "tables")
-    sheet = resolve(SPEC, {"templates": {template.kind: template.id}}, random.Random(0))
+    sheet = resolve(SPEC, {"templates": {template.kind: template.id}}, random.Random(0), plus=PLUS)
     for table in template.tables:
         assert sheet.fields[table] in [option.value for option in SPEC.tables[table]]
     for field in SPEC.fields.values():
@@ -97,7 +98,7 @@ def test_resolve_rolls_template_tables_and_blanks_text_fields():
 def test_resolve_keeps_a_chosen_table_value():
     field = next(f for f in SPEC.fields.values() if f.table)
     choice = SPEC.tables[field.table][-1].value
-    sheet = resolve(SPEC, {"fields": {field.id: choice}}, random.Random(0))
+    sheet = resolve(SPEC, {"fields": {field.id: choice}}, random.Random(0), plus=PLUS)
     assert sheet.fields[field.id] == choice
 
 
@@ -239,6 +240,6 @@ def test_check_choices_accepts_listed_values_and_rejects_others():
 def test_resolve_stores_the_name_of_a_named_option():
     named = TableOption(name="The Wild Tongue", description="A bundle of scrolls.")
     spec = _named_work_spec((named,))
-    sheet = resolve(spec, {"fields": {"work": "The Wild Tongue"}}, random.Random(0))
+    sheet = resolve(spec, {"fields": {"work": "The Wild Tongue"}}, random.Random(0), plus=PLUS)
     assert sheet.fields["work"] == "The Wild Tongue"
-    assert resolve(spec, {}, random.Random(0)).fields["work"] == "The Wild Tongue"
+    assert resolve(spec, {}, random.Random(0), plus=PLUS).fields["work"] == "The Wild Tongue"

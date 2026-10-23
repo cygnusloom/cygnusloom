@@ -79,7 +79,7 @@ def test_each_d6_face_maps_to_its_dungeon_event(
     face: int, client_factory: Callable[[], TestClient], monkeypatch: pytest.MonkeyPatch
 ):
     _, _, tools = _live_tools(client_factory)
-    monkeypatch.setattr(dungeon, "roll_total", lambda formula, rng=None: face)
+    monkeypatch.setattr(dungeon, "roll_total", lambda formula, rng=None, plus=None: face)
     out = tools.dungeon_cycle(["loud"], "Shouting in the hall.")
     event, text = EVENT_FOR_FACE[face]
     assert out["roll"] == face
@@ -101,9 +101,9 @@ def test_encounter_note_points_to_the_right_next_step(
     client_factory: Callable[[], TestClient], monkeypatch: pytest.MonkeyPatch
 ):
     _, _, tools = _live_tools(client_factory)
-    monkeypatch.setattr(dungeon, "roll_total", lambda formula, rng=None: 1)
+    monkeypatch.setattr(dungeon, "roll_total", lambda formula, rng=None, plus=None: 1)
     assert "roll_tables" in tools.dungeon_cycle(["new_area"], "Door.")["note"]
-    monkeypatch.setattr(dungeon, "roll_total", lambda formula, rng=None: 5)
+    monkeypatch.setattr(dungeon, "roll_total", lambda formula, rng=None, plus=None: 5)
     result = tools.dungeon_cycle(["lingering"], "Camping.")
     assert result["note"] == ""
     assert "rest" in result["text"] and "Fatigue" in result["text"] and "ration" in result["text"]
@@ -114,7 +114,7 @@ def test_the_dungeon_cycle_does_not_move_the_clock(
 ):
     app, campaign_id, tools = _live_tools(client_factory)
     clock_before = _state(app, campaign_id).clock
-    monkeypatch.setattr(dungeon, "roll_total", lambda formula, rng=None: 3)
+    monkeypatch.setattr(dungeon, "roll_total", lambda formula, rng=None, plus=None: 3)
     tools.dungeon_cycle(["hasty", "lingering"], "Running through the ruin.")
     assert _state(app, campaign_id).clock == clock_before
 
@@ -184,7 +184,7 @@ def test_the_tool_functions_reach_the_world_through_the_context(
     client_factory: Callable[[], TestClient], monkeypatch: pytest.MonkeyPatch
 ):
     app, campaign_id, tools = _live_tools(client_factory)
-    monkeypatch.setattr(dungeon, "roll_total", lambda formula, rng=None: 6)
+    monkeypatch.setattr(dungeon, "roll_total", lambda formula, rng=None, plus=None: 6)
     out = CAIRN.tool_calls["dungeon_cycle"].function(
         **{"triggers": ["loud"], "reason": "Hammering.", CONTEXT_ARGUMENT: _context(tools)}
     )

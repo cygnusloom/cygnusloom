@@ -76,6 +76,7 @@ def _ctx(
             tables=TABLES,
             rng=random.Random(0),
             character=SPEC,
+            plus="sum",
         ),
         speak=speak or quiet_speak,
         ooc=lambda narrate: None,
@@ -207,6 +208,8 @@ def test_random_traits_come_from_the_given_tables(
             name="Pip",
             location="Mossbell Hollow",
             description="A tinker.",
+            monsters={},
+            plus="sum",
         )
         db.commit()
     assert result["personality"] == "gruff"
@@ -228,6 +231,8 @@ def test_too_many_quirks_are_rejected(client_factory: Callable[[], TestClient], 
             location="Mossbell Hollow",
             description="",
             quirks=["x"] * (world.MAX_QUIRKS + 1),
+            monsters={},
+            plus="sum",
         )
 
 
@@ -288,6 +293,8 @@ def test_npc_character_values_come_from_the_lookup(
             location="Mossbell Hollow",
             description="A tinker.",
             character={"fields": {field: "Not a value"}},
+            monsters={},
+            plus=CAIRN.plus,
         )
     with _db(app) as db:
         world.create_npc(
@@ -300,6 +307,8 @@ def test_npc_character_values_come_from_the_lookup(
             location="Mossbell Hollow",
             description="A tinker.",
             character={"fields": {field: value}},
+            monsters={},
+            plus=CAIRN.plus,
         )
         db.commit()
 
@@ -1211,7 +1220,15 @@ def test_player_character_waits_for_the_campaign_options(
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     with Session(app.state.engine) as db, pytest.raises(InvalidInput, match="campaign options"):
         world.create_player_character(
-            db, campaign_id, CAIRN.campaign, CAIRN.character, "Mara", {}, {}, random.Random(0)
+            db,
+            campaign_id,
+            CAIRN.campaign,
+            CAIRN.character,
+            "Mara",
+            {},
+            {},
+            random.Random(0),
+            plus=CAIRN.plus,
         )
 
 

@@ -41,6 +41,7 @@ def _add_condition_by_effect(app, campaign_id: int, condition: str) -> None:
             [{"op": "condition", "id": condition}],
             EffectContext(rng=random.Random(0), combat=CAIRN.combat, picked={}),
             "a test",
+            plus=CAIRN.plus,
         )
 
 

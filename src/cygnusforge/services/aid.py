@@ -31,6 +31,8 @@ def stabilize(
     combat: CombatRules,
     conditions: Mapping[str, ConditionRules],
     rng: random.Random,
+    *,
+    plus: str,
 ) -> dict[str, Any]:
     """Stop a dying player character's clock. It stays out of action until the Warden recovers it.
     A lasting condition held now ends by aid, which runs its on-end effects."""
@@ -49,7 +51,9 @@ def stabilize(
     for cid in combat.dying_conditions:
         rules = conditions.get(cid)
         if cid in character.conditions and rules is not None and "aid" in rules.ends:
-            end_condition(db, campaign_id, character.name, cid, "aid", combat, conditions, rng)
+            end_condition(
+                db, campaign_id, character.name, cid, "aid", combat, conditions, rng, plus=plus
+            )
             ended.append(cid)
     return {"character": character.name, "stabilized": True, "ended": ended}
 
@@ -65,6 +69,8 @@ def use_item(
     item: str,
     target: str | None,
     charged_kind: str = "",
+    *,
+    plus: str,
 ) -> dict[str, Any]:
     """Spend one use of a consumable the character carries. An aid item, such as a Bandage, may be
     used on a dying character, and using it stabilizes them. Any other item is spent on the holder."""
@@ -82,6 +88,13 @@ def use_item(
     result = inventory_service.use_item(db, campaign_id, inventory, name, item, charged_kind)
     if aid and combat is not None:
         result["stabilized"] = stabilize(
-            db, campaign_id, target, f"{name} uses {item} on {target}", combat, conditions, rng
+            db,
+            campaign_id,
+            target,
+            f"{name} uses {item} on {target}",
+            combat,
+            conditions,
+            rng,
+            plus=plus,
         )
     return result

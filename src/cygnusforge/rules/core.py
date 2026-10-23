@@ -32,6 +32,7 @@ def create_npc(
     accent: str | None = None,
     quirks: Sequence[str] | None = None,
     character: Mapping[str, Any] | None = None,
+    force: bool = False,
 ) -> dict[str, Any]:
     return ctx.world.create_npc(
         name=name,
@@ -41,6 +42,7 @@ def create_npc(
         accent=accent,
         quirks=quirks,
         character=character,
+        force=force,
     )
 
 
@@ -122,6 +124,9 @@ def update_npc(
     personality: str | None = None,
     accent: str | None = None,
     quirks: Sequence[str] | None = None,
+    character: Mapping[str, Any] | None = None,
+    armor: int | None = None,
+    attacks: Sequence[Mapping[str, str]] | None = None,
 ) -> dict[str, Any]:
     return ctx.world.update_npc(
         name=name,
@@ -129,6 +134,9 @@ def update_npc(
         personality=personality,
         accent=accent,
         quirks=quirks,
+        character=character,
+        armor=armor,
+        attacks=attacks,
     )
 
 

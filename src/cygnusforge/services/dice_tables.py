@@ -20,6 +20,8 @@ def roll_tables(
     table_ids: Sequence[str],
     tables: Mapping[str, DiceTable],
     rng: random.Random,
+    *,
+    plus: str,
 ) -> dict[str, Any]:
     """Roll once on each named table, in order, and log all the results together."""
     if not table_ids:
@@ -30,7 +32,7 @@ def roll_tables(
     rolls: list[dict[str, Any]] = []
     for table_id in table_ids:
         table = tables[table_id]
-        roll = roll_total(table.dice, rng)
+        roll = roll_total(table.dice, rng, plus=plus)
         rolls.append(
             {
                 "table": table.id,

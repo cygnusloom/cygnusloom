@@ -45,6 +45,8 @@ def check_morale(
     combat: CombatRules,
     rng: random.Random,
     target: str,
+    *,
+    plus: str,
 ) -> list[dict[str, Any]]:
     """Make whatever morale checks the target's side now owes after a hit on the target. Each tag
     is checked once per encounter, and each has its own save. Returns the checks made, in order."""
@@ -67,7 +69,7 @@ def check_morale(
         group = _side_npcs(state, side)
         living = [member for member in group if not out_of_fight(member)]
         leader = living[0]
-        roll = roll_total(combat.check_die, rng)
+        roll = roll_total(combat.check_die, rng, plus=plus)
         score = current(leader, morale.save_stat)
         passed = combat.module.save_succeeds(roll, score)
         record(
@@ -152,13 +154,17 @@ def retreat(
     safe: bool,
     combat: CombatRules,
     rng: random.Random,
+    *,
+    plus: str,
 ) -> dict[str, Any]:
     """An NPC's attempt to run from the fight: a save on the retreat stat, rolled by the engine."""
     state = load_state(db, campaign_id)
     character = _retreat_ready(state, name, safe, combat)
     if character.kind == PC_KIND:
         raise InvalidInput(f"{character.name} is a player character; use player_retreat instead")
-    return _run_retreat(db, campaign_id, character, combat, roll_total(combat.check_die, rng))
+    return _run_retreat(
+        db, campaign_id, character, combat, roll_total(combat.check_die, rng, plus=plus)
+    )
 
 
 def player_retreat(

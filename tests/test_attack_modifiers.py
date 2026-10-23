@@ -234,7 +234,7 @@ def test_resolve_attacks_rejects_an_attacker_on_the_targets_side(client_factory)
 
 def test_resolve_attacks_rejects_a_defeated_attacker(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, "Ghoul", claw="1d6+1d6")
+    _foe(tools, "Ghoul", claw="2d6")
     _foe(tools, "Bo")
     # Two of the dice are the claw, then the save for the overflow, then a morale roll for the
     # first casualty and one for half the side.

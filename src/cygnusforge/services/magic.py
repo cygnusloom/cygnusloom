@@ -216,6 +216,8 @@ def roll_save(
     name: str,
     stat: str,
     reason: str,
+    *,
+    plus: str,
 ) -> dict[str, Any]:
     """An engine-rolled save against a stat, recorded with its reason. A failure only records the
     result; the Warden applies what it costs."""
@@ -223,7 +225,11 @@ def roll_save(
         raise InvalidInput(f"there is no stat named {stat!r}")
     state = load_state(db, campaign_id)
     character = inventory_service.character_named(state, name)
-    roll = roll_total(combat.check_die, rng)
+    if character.story_only:
+        raise InvalidInput(
+            f"{character.name} has no stats yet; give them stats with update_npc first"
+        )
+    roll = roll_total(combat.check_die, rng, plus=plus)
     score = current(character, stat)
     passed = combat.module.save_succeeds(roll, score)
     record(

@@ -129,6 +129,8 @@ class Character:
     attacks: dict[str, str] = field(default_factory=dict)
     # The name of the bestiary statblock a monster was built from, such as "Wolf". Empty if none.
     creature: str = ""
+    # A story-only NPC has no stats yet. It cannot fight, make saves, or be attacked until given stats.
+    story_only: bool = False
     # Harm taken so far, by stat id. A stat's current value is its score less its harm, at least 0.
     harm: dict[str, int] = field(default_factory=dict)
     # The stat id of a save the character must make after harm overflowed, or None.
@@ -595,6 +597,7 @@ class NpcAdded(GameEvent):
     attacks: dict[str, str] = field(default_factory=dict)
     creature: str = ""
     large_group: bool = False
+    story_only: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.characters[name_key(self.name)] = Character(
@@ -613,10 +616,39 @@ class NpcAdded(GameEvent):
             attacks=dict(self.attacks),
             creature=self.creature,
             large_group=self.large_group,
+            story_only=self.story_only,
         )
 
     def render(self) -> str:
         return f"New character: {self.name}, at {self.location}."
+
+
+@dataclass(frozen=True)
+class NpcStatted(GameEvent):
+    """A story-only NPC is given its stats. The values are the resolved ones."""
+
+    kind: ClassVar[str] = "npc.statted"
+
+    name: str
+    stats: dict[str, int]
+    templates: dict[str, str]
+    features: dict[str, int]
+    fields: dict[str, str]
+    armor: int
+    attacks: dict[str, str]
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        npc = state.characters[name_key(self.name)]
+        npc.stats = dict(self.stats)
+        npc.templates = dict(self.templates)
+        npc.features = dict(self.features)
+        npc.fields = dict(self.fields)
+        npc.armor = self.armor
+        npc.attacks = dict(self.attacks)
+        npc.story_only = False
+
+    def render(self) -> str:
+        return f"Character given stats: {self.name}."
 
 
 @dataclass(frozen=True)

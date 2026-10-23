@@ -55,6 +55,8 @@ def end_condition(
     combat: CombatRules,
     conditions: Mapping[str, ConditionRules],
     rng: random.Random,
+    *,
+    plus: str,
 ) -> dict[str, object]:
     """End a stored condition. `how` is the trigger that ends it, which must be one the condition
     lists, or `gm` for the GM ending it by decision. Then the condition's on-end effects run."""
@@ -83,5 +85,6 @@ def end_condition(
         rules.on_end,
         EffectContext(rng=rng, combat=combat),
         f"{rules.label} ended",
+        plus=plus,
     )
     return {"character": character.name, "condition": condition, "ended_by": how}

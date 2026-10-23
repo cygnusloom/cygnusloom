@@ -1,0 +1,64 @@
+[
+  {
+    "type": "rule",
+    "id": "morale-bandits",
+    "important": true,
+    "text": "When testing Morale, save using the leader's WIL. If their leader is killed, the bandits will retreat."
+  },
+  {
+    "type": "rule",
+    "id": "night-cat-attack",
+    "text": "The target must make a DEX save or take damage directly to STR."
+  },
+  {
+    "type": "rule",
+    "id": "night-cat-critical-damage",
+    "text": "Critical Damage: The Night Cat begins to eat the target (d4 STR damage) while they are still alive."
+  },
+  {
+    "type": "rule",
+    "id": "suraru-imperator-critical-damage",
+    "text": "A body part dissolves in venomous acid, and the target loses 1 point of Armor."
+  },
+  {
+    "type": "rule",
+    "id": "bloodsuckers",
+    "text": "Bloodsuckers swarm, drawn to body heat. They are nearly impossible to fight off, but willingly fly into open flame. Unless avoided, everyone adds a Fatigue."
+  },
+  {
+    "type": "rule",
+    "id": "the-downs-travel",
+    "text": "Parties traveling by foot add a Fatigue."
+  },
+  {
+    "type": "rule",
+    "id": "deadmill-sinking",
+    "text": "The south entrance is unsafe. DEX save to escape. A failed save causes the victim to sink even further (max 3 attempts)."
+  },
+  {
+    "type": "rule",
+    "id": "deadmill-time-loop",
+    "text": "The loop can be broken: either by saving Jandy or by freeing the Relic from the stone and taking it a short distance away."
+  },
+  {
+    "type": "rule",
+    "id": "vuk-choking-hold",
+    "important": true,
+    "text": "As an Ash Phantom, she fully envelops her target, controlling their body like a puppet for one action, then dropping their paralyzed body to the ground (d4 STR damage). They die of asphyxiation if the ash is not somehow expelled (save STR)."
+  },
+  {
+    "type": "rule",
+    "id": "trapdoor-butcher-block",
+    "text": "A hidden compartment (triggered by a latch underneath) contains the day's current earnings ([1d20] x the hour of the day). The money is taken out each evening and locked in the desk upstairs."
+  },
+  {
+    "type": "rule",
+    "id": "frog-trappers-toad-excretions",
+    "text": "The latter acts as a psychedelic and a sort of truth-serum."
+  },
+  {
+    "type": "rule",
+    "id": "the-roots",
+    "text": "Labyrinthine hollows stretching for immeasurable distances deep underground, connecting the sewers of the cities to far-flung ruins. Entrances to The Roots (called Gates) are scattered across the lands, and are usually protected or shrewdly hidden. Folktales tell of travelers disappearing into the depths, only to emerge decades later, claiming that only a few hours have passed. Others report having traveled vast distances in mere days."
+  }
+]
