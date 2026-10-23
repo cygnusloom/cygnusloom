@@ -168,9 +168,12 @@ def current(character: Character, stat: str) -> int:
     return max(0, character.stats.get(stat, 0) - character.harm.get(stat, 0))
 
 
-def defeat_status(character: Character, defeat: Mapping[str, str]) -> str:
+def defeat_status(character: Character, defeat: Mapping[str, str], *, killed: bool = False) -> str:
     """Where a defeat leaves a character, in the rule set's words: `defeat` maps `player_character`
-    and `npc` to a label. A character with no label in `defeat` reads as just defeated."""
+    and `npc` to a label, and optionally `player_character_dead` for a player character killed
+    outright. A character with no label in `defeat` reads as just defeated."""
+    if killed and character.kind == PC_KIND and "player_character_dead" in defeat:
+        return defeat["player_character_dead"]
     key = "player_character" if character.kind == PC_KIND else "npc"
     return defeat.get(key, "defeated")
 

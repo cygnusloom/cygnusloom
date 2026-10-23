@@ -719,7 +719,7 @@ def harm_character(
             taken=taken,
             cause=bounded_text(cause, "cause", MAX_CAUSE_TEXT),
             defeats=defeats,
-            status=defeat_status(character, combat.defeat) if defeats else "",
+            status=defeat_status(character, combat.defeat, killed=True) if defeats else "",
         ),
     )
     if defeats and character.kind == PC_KIND:

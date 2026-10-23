@@ -726,6 +726,10 @@ def _load_combat(
         key: required_text(defeat_data, key, f"{label}: defeat")
         for key in ("player_character", "npc")
     }
+    if "player_character_dead" in defeat_data:
+        defeat["player_character_dead"] = required_text(
+            defeat_data, "player_character_dead", f"{label}: defeat"
+        )
     scar_table = _load_scar_table_ref(data, character, scar_tables, label)
     outside_harm = _load_outside_harm(data, character, label)
     return CombatRules(

@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import json
 import random
 
 import pytest
+from fastapi import FastAPI
+from sqlmodel import Session, select
 
+from cygnusforge.db.models import Event
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.death import begin_dying
 from cygnusforge.services.scars import EffectContext, run_effects
@@ -17,6 +21,14 @@ from tests.test_combat import (
     _set_stat,
 )
 from tests.test_world import _db
+
+
+def _events(app: FastAPI, campaign_id: int, kind: str) -> list[Event]:
+    with Session(app.state.engine) as db:
+        rows = db.exec(
+            select(Event).where(Event.campaign_id == campaign_id).order_by(Event.id)
+        ).all()
+    return [row for row in rows if row.kind == kind]
 
 
 def _add_condition_by_effect(app, campaign_id: int, condition: str) -> None:
@@ -145,6 +157,8 @@ def test_a_harmed_pc_whose_str_reaches_zero_outside_combat_dies(client_factory):
     _set_stat(app, campaign_id, PC, "str", 2)
     tools.harm_character(PC, "str", 2, "A fall down a well.")
     assert _character(app, campaign_id, PC).dead is True
+    harmed = _events(app, campaign_id, "combat.harmed")[-1]
+    assert json.loads(harmed.payload)["status"] == "dead"
 
 
 def test_recovery_refuses_the_dead_and_the_dying(client_factory):

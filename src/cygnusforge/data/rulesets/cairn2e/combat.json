@@ -15,7 +15,11 @@
     ],
     "check_die": "1d20",
     "initiative_stat": "dex",
-    "defeat": {"player_character": "in critical damage", "npc": "dead"},
+    "defeat": {
+      "player_character": "in critical damage",
+      "player_character_dead": "dead",
+      "npc": "dead"
+    },
     "scars": {"table": "scars", "stat": "hp"},
     "outside_harm": ["str", "dex", "wil"],
     "morale": {
