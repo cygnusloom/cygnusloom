@@ -267,6 +267,17 @@ class WorldTools:
                 size,
             )
 
+    def change_gold(self, name: str, amount: int, cause: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return market_service.change_gold(
+                db,
+                self.campaign_id,
+                _required(self.marketplace, "a marketplace"),
+                name,
+                amount,
+                cause,
+            )
+
     def buy_service(self, names: Sequence[str], service: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return market_service.buy_service(

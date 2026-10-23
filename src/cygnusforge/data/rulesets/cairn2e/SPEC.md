@@ -121,6 +121,7 @@ Decisions (design pass):
 The book gives prices but no rules for most services. Decisions below come from the design pass and the implementation.
 
 - Gold: the currency is the `gold` feature, named by `marketplace.currency`. Backgrounds grant it (3d6). Gold is not an inventory item and takes no slots. Changes are `GoldChanged` events, clamped at 0.
+  - The GM can give or take gold with the core `change_gold` tool (a gift, reward, tithe, or bribe), which refuses a take the character cannot pay. Purchases and wages use the same `GoldChanged` event.
   - No play path earns gold until Phase 10 (treasure and discoveries). Until then the Debug panel's currency form gives a PC any amount, as a `DebugCurrencyAdded` event that is hidden from the GM.
 - Catalogue: `marketplace.json` holds one `shop_item` per Marketplace line, with `category`, `price`, `size` (petty, normal, or bulky), and optional `armor`, `damage`, or `uses`. Four `service` entries and twelve `hireling` entries (daily wage) are also there. Hirelings are stored but not charged until Phase 8.
 - Buying: `buy_item(name, item, price, size)`.
@@ -284,8 +285,8 @@ Phase 8 (hirelings): scope in phase 8. Includes 3d6 attributes, 1d6 HP, wages, a
 - Hirelings carrying gear: the book allows hirelings to carry equipment, but carried items do not yet count toward the party's inventory. Unscheduled, needs a decision on the mechanic.
 - Hirings are not offered through the marketplace flow: the GM passes the wage by hand from the listing. Unscheduled, needs a phase.
 - Unpaid hireling wages leave the GM to decide; there is no automatic departure rule. Unscheduled, needs a decision.
-- No tool gives, takes, or sets gold. Gold moves only through purchases and wages. In the live test the GM narrated a gift of all Johanna's gold to a widow, so the prose said she had none, but the engine kept 9 gold. The wage was still charged, and the GM then refused a 5-gold purchase. The GM's narration and the engine's balance diverged. Needs a generic currency-adjust tool, then re-test the unpaid path live.
-- Hirelings are not fed from the party's rations. In the live test, Wen (a hireling) went deprived on days 1 and 2 while Johanna's rations were the only food. Needs a decision on hireling upkeep.
+- RESOLVED in code (pending live check): no tool gave, took, or set gold, so the GM's narrated gift of Johanna's gold left the engine balance unchanged. Added the core `change_gold` tool (refuses a take the character cannot pay). Still to do: re-test the unpaid-wage path live.
+- Hireling upkeep (rules-correct, handled by the GM): the book's camp rule has each party member, hirelings included, eat a Ration. In the live test Wen went deprived because he had no rations. The `give_item` description now tells the GM to give hirelings Rations. Verify live that the GM does this.
 
 Phase 9 (death rules): critical damage, Scars 11 (Mortal Wound) and 12 (Doomed), and new characters.
 

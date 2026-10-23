@@ -191,3 +191,38 @@ def buy_service(
         "gold_left": left,
         "currency": marketplace.currency,
     }
+
+
+def change_gold(
+    db: Session,
+    campaign_id: int,
+    marketplace: Marketplace,
+    name: str,
+    amount: int,
+    cause: str,
+) -> dict[str, Any]:
+    """Give gold to a character (positive) or take it (negative) outside a purchase. Taking
+    refuses if the character lacks the gold, so there is no credit."""
+    amount = whole_number(amount, "the amount", -MAX_PRICE, MAX_PRICE)
+    if amount == 0:
+        raise InvalidInput("the amount must not be zero")
+    character = character_named(load_state(db, campaign_id), name)
+    if amount < 0:
+        left = _pay(db, campaign_id, marketplace, character, -amount, cause=cause)
+    else:
+        record(
+            db,
+            campaign_id,
+            GoldChanged(
+                name=character.name, feature=marketplace.currency, amount=amount, cause=cause
+            ),
+        )
+        left = _gold(character, marketplace.currency) + amount
+    db.commit()
+    return {
+        "name": character.name,
+        "amount": amount,
+        "gold_left": left,
+        "currency": marketplace.currency,
+        "cause": cause,
+    }

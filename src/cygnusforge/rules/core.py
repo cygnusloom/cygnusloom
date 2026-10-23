@@ -91,6 +91,10 @@ def dismiss_hireling(name: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.dismiss_hireling(name, cause)
 
 
+def change_gold(name: str, amount: int, cause: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.change_gold(name, amount, cause)
+
+
 def update_npc(
     name: str,
     ctx: ToolContext,

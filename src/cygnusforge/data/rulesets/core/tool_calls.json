@@ -482,6 +482,36 @@
   },
   {
     "type": "tool_call",
+    "id": "change_gold",
+    "name": "change_gold",
+    "python_module": "core",
+    "function": "change_gold",
+    "description": "Give a character gold from outside a purchase (a gift, a reward, a loan repaid, a loot split), or take it away (a tithe, a bribe, a debt paid to someone else). Use a positive amount to give and a negative amount to take. A take is refused if the character lacks the gold; there is no credit. Give the cause in a few words. Use buy_item for anything bought in a shop, and do not use this to make up gold the story has not earned.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The character's name."
+        },
+        "amount": {
+          "type": "integer",
+          "description": "Gold to give (positive) or take (negative)."
+        },
+        "cause": {
+          "type": "string",
+          "description": "Why the gold changes hands, in a few words."
+        }
+      },
+      "required": [
+        "name",
+        "amount",
+        "cause"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "update_npc",
     "name": "update_npc",
     "python_module": "core",
