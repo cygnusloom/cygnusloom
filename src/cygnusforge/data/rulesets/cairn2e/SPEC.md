@@ -31,8 +31,8 @@ This spec plans the Second Edition rules as a set of phases. Each phase is imple
 | Dungeon exploration | Dungeon turn cycle and Dungeon Events table, engine-rolled. Phase 10. |
 | Inventory panel | The player sees their items in an Inventory tab: name, size, slots, uses left, and kind, against the capacity. Built after phase 7. |
 | Gaps | Every known gap from every phase is listed in the gap register, mapped to the phase that will close it or marked unscheduled. |
-| Generic engine | Phase 11 moves every Cairn-specific term, number, and prompt rule out of the engine and into the ruleset JSON, parameterized where a second rule set would need the same hook. |
-| Capstone | Phase 12 imports the first-party adventure CAS-1 in full and plays it through as the end-to-end test of Cairn 2e. |
+| Generic engine | Phase 11 moves every Cairn-specific term, number, and prompt rule out of the engine and into the ruleset JSON, parameterized where a second rule set would need the same hook. Phase 13 finishes the remaining shape gaps (damage pipeline, death, conditions, spell pools) for D&D. |
+| Capstone | Phase 12 imports the CAS-1 data. Phase 13 refactors the engine for a second rule set. Phase 14 plays CAS-1 through in full as the end-to-end test of Cairn 2e. |
 | D&D comparison | No D&D ruleset is in this repo, so the refactor uses D&D as a design reference only. The test for "generic" is whether a second rule set would need the same hook. |
 
 ## Phase 1: combat core
@@ -285,9 +285,9 @@ Built since the last status: weapon damage and the dungeon reaction table merge.
 
 Phase 11 is closed. The generic refactor items are done, the live runs above pass, and the D&D comparison records the open shape gaps (damage pipeline, hit dice, spell-slot pool, death saves) for later. The three unhit live paths move to the Phase 12 play-through. Phase 12 is next.
 
-## Phase 12: capstone, CAS-1 "Trouble in Twin Lakes"
+## Phase 12: CAS-1 "Trouble in Twin Lakes" data import (in progress)
 
-Import the first-party adventure in its entirety and play it through as the end-to-end test of Cairn 2e: https://cairnrpg.com/adventures/first-party/cas-1
+Import the first-party adventure's data into the `twin-lakes` world. The full play-through, as the capstone test, is Phase 14, after the Phase 13 refactor. Source: https://cairnrpg.com/adventures/first-party/cas-1
 
 Known content from the module text (read in full during the design pass; statblocks and tables transcribed during the phase):
 
@@ -310,7 +310,34 @@ World: a module is its own world. The CAS-1 import goes into the `twin-lakes` wo
 
 Rule attachments (built, live check pending): a module rule that belongs to one NPC, item, or creature (for example Vuk's Choking Hold, Deadmill's rules, or the Bandits' morale) attaches to that thing. Its text goes into the GM context whenever the thing is present, not only through `lookup_rule`. This is a generic engine feature, so core and D&D need it too. cairn2e supplies the data. Gap register: see the Phase 12 rule attachment entry.
 
-Done when: every location, NPC, monster, relic, and table in the module is in the ruleset or in an adventure data file, the module can be played from start to finish in a live session, and the transcript reads correctly. Gaps found are added to the gap register and closed or scheduled.
+Done when: every location, NPC, monster, relic, and table in the module is in the ruleset or in an adventure data file, and each is live-checked where it matters. Play-through is Phase 14. Gaps found are added to the gap register and closed or scheduled.
+
+## Phase 13: generic refactor, rule set boundary
+
+Goal: the engine and the shared data shapes work for D&D as well as Cairn 2e. Cairn-specific behavior moves into `cairn2e/` data or the `rules/cairn2e.py` adapter. Each hook takes a generic name, and its numbers come from the rule set.
+
+Test for each item: "would D&D need this hook, and what shape would it take?" Where the D&D shape differs, the item is generalized (a data list or a pluggable pipeline), not left as a Cairn special case. Phase 11 recorded the open shape gaps. Phase 13 closes or schedules each of them.
+
+Known items, from Phase 11 and the gap register:
+
+- Damage pipeline: `combat.json` hard-codes armor, then Hit Protection, then STR, then a Critical Damage save. D&D uses hit points with temporary HP. Make the pipeline data: an ordered list of stages, each naming its kind.
+- Hit dice: not modeled. D&D's short rest spends them. Decide whether this is a rest stage hook or a charged pool.
+- Spell cost: the Fatigue penalty item is data, but slots need a charged-pool type (spell slots per level, restored on a long rest).
+- Death: death saves (D&D) and the Cairn death rules differ. The Cairn death rules stay in `cairn2e/`, behind a death hook the rule set names.
+- Conditions: needs are generic. Scars and injuries are Cairn-shaped. Decide whether a generic conditions list covers both.
+- `update_npc` attack modifiers (`armor`, `attacks`): cairn2e-specific in shape. Decide whether they belong in shared core or the cairn2e rule set (open in Phase 12).
+- Prompts: GM prompt text that names Cairn terms (`prompts.json`, `narration.json`) moves fully to the rule set. The engine only reads it.
+- Statless NPC HP: the book's guidance (average 3, hardier 6, serious 10+) is cairn2e data, not an engine rule (open in Phase 12).
+- Rule attachments and story-only NPCs stay generic. Confirm they have no Cairn terms in the engine.
+- Verification: a grep for Cairn terms in `src/cygnusforge/` outside the adapter comes back clean, and the engine tests run with a minimal second rule set (a D&D-shaped fixture) to show the hooks work without Cairn data.
+
+Done when: the grep is clean, every item is closed or scheduled with a reason, the full suite passes, and a live test of Cairn 2e combat and character creation still works.
+
+## Phase 14: capstone, CAS-1 "Trouble in Twin Lakes" play-through
+
+Play the adventure from start to finish in a live session, on the refactored engine, as the end-to-end test of Cairn 2e: https://cairnrpg.com/adventures/first-party/cas-1
+
+Done when: the module plays from the first hook to its endings in a live session, the transcript reads correctly, every gap found is in the gap register and closed or scheduled, and the Phase 12 import is complete against the transcription (every location, NPC, monster, relic, and table).
 
 ## Gap register
 
@@ -428,7 +455,11 @@ Phase 10 (dungeon exploration): the dungeon turn cycle, Dungeon Events, treasure
 
 Phase 11 (generic refactor): the list above.
 
-Phase 12 (capstone): the CAS-1 import and any gaps it reveals.
+Phase 12 (CAS-1 data import): the import and any gaps it reveals.
+
+Phase 13 (generic refactor): the Phase 13 items above.
+
+Phase 14 (capstone play-through): the full CAS-1 play-through and any gaps it reveals.
 
 - RESOLVED (Phase 12, seeding): `seed_campaign` ignored an NPC's monster statblock, so module NPCs with a statblock got random stats. Seeding now uses the statblock. Unit tests: `tests/test_combat.py`. Live test verified in the DB.
 - RESOLVED (Phase 12, Vuk decision): the Ash Phantom has no statblock on cairnrpg.com's Warden's Guide bestiary, and the module prints no numbers. Decision: Vuk's ash form is story-only with the Choking Hold rule attached (rule attachment is still OPEN below). Her full form, the 7 ft Lich Queen, uses the bestiary Lich (14 HP, 1 Armor, 8 STR, 8 DEX, 18 WIL, soul dagger d8). The Lich is not imported yet (see the bestiary gap).
