@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import pytest
 
+from cygnusforge.content.definitions import ContentError, Definition
+from cygnusforge.content.library import _load_rests
 from cygnusforge.services.clock import absolute, rest_target
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import RestTaken
@@ -30,15 +32,51 @@ def _clock_position(app, campaign_id):
 
 @pytest.mark.parametrize(
     ("rest_name", "start", "expected"),
-    [("night", 0, 3), ("night", 3, 6), ("night", 2, 3), ("week", 0, 21)],
+    # A night begun in the morning stops at dusk; begun in the afternoon, it runs to morning.
+    [("night", 0, 2), ("night", 3, 5), ("night", 1, 3), ("night", 2, 3), ("week", 0, 21)],
 )
 def test_a_rest_ends_at_its_target_part(rest_name, start, expected):
-    assert rest_target(start * HPP, CAIRN.rests[rest_name], PARTS, HPP) == expected * HPP
+    assert rest_target(start * HPP, CAIRN.rests[rest_name], CAIRN.clock) == expected * HPP
+
+
+def test_a_night_begun_in_the_morning_stops_at_dusk_in_the_cairn_ruleset():
+    assert CAIRN.rests["night"].stop_at == {"morning": "night"}
 
 
 def test_a_rest_ends_on_the_hour_it_began_plus_its_length(client_factory):
-    assert rest_target(2, CAIRN.rests["moments"], PARTS, HPP) == 3
-    assert rest_target(1, CAIRN.rests["night"], PARTS, HPP) == 3 * HPP
+    assert rest_target(2, CAIRN.rests["moments"], CAIRN.clock) == 3
+    assert rest_target(1, CAIRN.rests["night"], CAIRN.clock) == 2 * HPP
+
+
+@pytest.mark.parametrize(
+    ("lengths", "clock", "message"),
+    [
+        (
+            {"night": {"hours": 8, "full": True, "stop_at": {"morning": "night"}}},
+            CAIRN.clock,
+            "'stop_at' needs 'until'",
+        ),
+        (
+            {"night": {"until": "morning", "full": True, "stop_at": {"morning": "night"}}},
+            None,
+            "'stop_at' must be an object of parts of the day",
+        ),
+        (
+            {"night": {"until": "morning", "full": True, "stop_at": {"morning": "midnight"}}},
+            CAIRN.clock,
+            "names no part of the day",
+        ),
+        (
+            {"night": {"until": "morning", "full": True, "stop_at": ["night"]}},
+            CAIRN.clock,
+            "must be an object of parts of the day",
+        ),
+    ],
+)
+def test_a_bad_stop_at_is_rejected(lengths, clock, message):
+    definition = Definition(type="rest", id="rest", data={"lengths": lengths})
+    with pytest.raises(ContentError, match=message):
+        _load_rests([definition], None, "testset", clock)
 
 
 def test_advancing_a_day_lands_on_the_morning_and_a_part_moves_to_the_afternoon(client_factory):

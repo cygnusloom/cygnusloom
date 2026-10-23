@@ -80,7 +80,7 @@ def take_rest(
             db,
             campaign_id,
             clock_rules,
-            rest_target(start, rest, parts_per_day, hours_per_part),
+            rest_target(start, rest, clock_rules),
             need,
             inventory,
             passed="the rest is over and time has passed",

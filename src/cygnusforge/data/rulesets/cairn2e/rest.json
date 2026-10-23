@@ -13,6 +13,9 @@
       },
       "night": {
         "until": "morning",
+        "stop_at": {
+          "morning": "night"
+        },
         "full": true,
         "restores": [
           "hp"

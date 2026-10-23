@@ -36,13 +36,22 @@ def clock_at(index: int, parts_per_day: int, hours_per_part: int) -> Clock:
     return Clock(day=index // hours_per_day + 1, part=part, hour=hour)
 
 
-def rest_target(start: int, rest: RestLength, parts_per_day: int, hours_per_part: int) -> int:
+def rest_target(start: int, rest: RestLength, clock: ClockRules) -> int:
     """When a rest that starts at `start` ends, in hours. A rest that runs until morning ends at the
-    first morning after it begins, and always takes at least a part of a day."""
+    first morning after it begins, and always takes at least a part of a day, unless `stop_at` sends
+    it to a later part of the day instead."""
+    parts_per_day = len(clock.parts)
+    hours_per_part = clock.hours_per_part
+    day_hours = parts_per_day * hours_per_part
+    if rest.until_morning:
+        stop = rest.stop_at.get(clock.parts[(start // hours_per_part) % parts_per_day])
+        if stop is not None:
+            target = start - start % day_hours + clock.parts.index(stop) * hours_per_part
+            return target if target > start else target + day_hours
     target = start + rest.hours + (rest.days * parts_per_day + rest.parts) * hours_per_part
     if rest.until_morning:
         target = max(target, start + hours_per_part)
-        target += (-target) % (parts_per_day * hours_per_part)
+        target += (-target) % day_hours
     return target
 
 
@@ -58,8 +67,8 @@ def advance_to(
     """Move the clock forward to `target`, which counts hours from day 1. It records the change,
     gives each newly started day's deprived characters the need penalty, reports places that have gone
     stale, and kills a dying character whose hours have run out. `passed` replaces the day count in
-    the notice, for time that is not a plain count of days, such as a night's rest. It does not
-    commit."""
+    the notice, for time that is not a plain count of days, such as a night's rest, and a notice is
+    given for any such time that passes, even inside one day. It does not commit."""
     parts_per_day = len(clock_rules.parts)
     hours_per_part = clock_rules.hours_per_part
     before = load_state(db, campaign_id).clock
@@ -103,7 +112,7 @@ def advance_to(
                     inventory.penalty_name, "", inventory.penalty_slots, kind=inventory.penalty_item
                 )
                 carry_item(db, campaign_id, inventory, character.name, penalty, cause="need")
-    if new.day > before.day:
+    if new.day > before.day or (passed is not None and target > start):
         elapsed = new.day - before.day
         if passed is None:
             passed = f"{elapsed} day{'s' if elapsed != 1 else ''} passed"

@@ -315,6 +315,9 @@ class RestLength:
     clears: tuple[str, ...]
     # Whether the party eats during this rest: each character who is not lodged uses a food use.
     food: bool = False
+    # For a rest that runs until morning: a part it begins in maps to the part it ends at instead,
+    # such as a night rest begun in the morning that stops at the night part.
+    stop_at: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -675,7 +678,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         d.id: _load_monster(d, character, template) for d in definitions if d.type == "monster"
     }
     clock = _load_clock(definitions, template)
-    rests = _load_rests(definitions, character, template)
+    rests = _load_rests(definitions, character, template, clock)
     interrupted_rest = _load_interrupted_rest(definitions, rests, template)
     need = _load_need(definitions, template)
     inventory = _load_inventory(definitions, character, template)
@@ -1051,10 +1054,14 @@ def _load_clock(definitions: list[Definition], template: str) -> ClockRules | No
 
 
 def _load_rests(
-    definitions: list[Definition], character: CharacterSpec, template: str
+    definitions: list[Definition],
+    character: CharacterSpec,
+    template: str,
+    clock: ClockRules | None,
 ) -> dict[str, RestLength]:
     """The rest lengths of the rule set's single rest definition, by id. Each needs `full` and at
-    least one of `parts`, `days`, or `until: "morning"`."""
+    least one of `parts`, `days`, or `until: "morning"`. `stop_at` maps a part of the day to the
+    part a rest begun in it ends at instead, and needs `until` and a clock."""
     definition = _single_optional(definitions, "rest", template)
     if definition is None:
         return {}
@@ -1075,6 +1082,7 @@ def _load_rests(
             raise ContentError(f"{length_label}: 'until' must be \"morning\"")
         if not (hours or parts or days or until):
             raise ContentError(f"{length_label}: needs 'hours', 'parts', 'days', or 'until'")
+        stop_at = _stop_at(data, length_label, clock, bool(until))
         full = data.get("full")
         if not isinstance(full, bool):
             raise ContentError(f"{length_label}: 'full' must be true or false")
@@ -1095,8 +1103,27 @@ def _load_rests(
             restores=restores,
             clears=_names(data, "clears", length_label),
             food=food,
+            stop_at=stop_at,
         )
     return loaded
+
+
+def _stop_at(
+    data: Mapping[str, Any], label: str, clock: ClockRules | None, until: bool
+) -> dict[str, str]:
+    """The `stop_at` map of a rest length. Each key and value is a part of the day, and it needs a
+    rest that runs `until` morning."""
+    if "stop_at" not in data:
+        return {}
+    stops = data["stop_at"]
+    if not until:
+        raise ContentError(f"{label}: 'stop_at' needs 'until': \"morning\"")
+    if clock is None or not isinstance(stops, Mapping):
+        raise ContentError(f"{label}: 'stop_at' must be an object of parts of the day")
+    for start, stop in stops.items():
+        if start not in clock.parts or stop not in clock.parts:
+            raise ContentError(f"{label}: 'stop_at' names no part of the day ({start!r}: {stop!r})")
+    return {str(start): str(stop) for start, stop in stops.items()}
 
 
 def _load_interrupted_rest(
