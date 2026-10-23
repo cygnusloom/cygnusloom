@@ -397,7 +397,8 @@ def _blast_attack(
     plus: str,
 ) -> dict[str, Any]:
     """An NPC's attack with Blast. Each target in its area rolls separately. With no area given,
-    the area is the named target alone, so its dice roll once."""
+    the area is the named target alone, so its dice roll once. Against a group, blast damage is
+    not impaired, so the attack rolls its own dice."""
     encounter = state.encounter
     assert encounter is not None
     own_side = encounter.sides.get(name_key(source.name), "")
@@ -411,8 +412,6 @@ def _blast_attack(
     for target in chosen:
         if encounter.sides.get(name_key(target.name), "") == own_side:
             raise InvalidInput(f"{source.name} is on {target.name}'s side and cannot attack them")
-        if target.large_group:
-            raise InvalidInput(f"{name} cannot hit {target.name}, a group, yet")
     owed = [target.name for target in chosen if target.save_due is not None]
     if owed:
         raise InvalidInput(f"{', '.join(owed)} must make their save first")

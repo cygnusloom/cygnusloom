@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 
 from cygnusforge.services.common import InvalidInput
+from cygnusforge.services.events import PARTY_SIDE
 from tests.test_combat import (
     PC,
     YARD,
@@ -100,6 +101,14 @@ def test_targets_are_refused_for_a_group_attack(client_factory):
     _ally(tools, "Tam")
     with pytest.raises(InvalidInput, match="leave targets out"):
         replace(tools, rng=Rolls(1)).attack("Rats", "Bite", PC, targets=[PC])
+
+
+def test_a_blast_by_an_individual_on_a_group_is_not_impaired(client_factory):
+    _, _, tools = _fight(client_factory)
+    _blaster(tools, "Gorm", side="foes", flags=["blast"])
+    _group(tools, "Rats", side=PARTY_SIDE)
+    result = replace(tools, rng=Rolls(1)).attack("Gorm", "Claw", "Rats", targets=["Rats"])
+    assert [entry["target"] for entry in result["targets"]] == ["Rats"]
 
 
 def test_a_blast_on_a_group_still_hits_every_living_individual(client_factory):
