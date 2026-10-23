@@ -1207,7 +1207,7 @@ def test_player_character_waits_for_the_campaign_options(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="kilharbor", rule_set="cairn2e")
+    response = _new_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     with Session(app.state.engine) as db, pytest.raises(InvalidInput, match="campaign options"):
         world.create_player_character(
@@ -1219,7 +1219,7 @@ def test_campaign_options_are_stored_once_and_checked(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="kilharbor", rule_set="cairn2e")
+    response = _new_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     omen = CAIRN.campaign.tables["omen"][0].value
     with Session(app.state.engine) as db:

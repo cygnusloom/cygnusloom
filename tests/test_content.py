@@ -129,17 +129,17 @@ def tree(tmp_path: Path) -> Path:
 
 def test_bundled_content_loads():
     library = ContentLibrary.load()
-    assert set(library.world_templates) == {"kilharbor"}
-    assert library.world_templates["kilharbor"].name == "Kilharbor"
-    kilharbor = library.world_templates["kilharbor"]
-    assert kilharbor.locations == ()
-    assert kilharbor.npcs == ()
+    assert set(library.world_templates) == {"twin-lakes"}
+    assert library.world_templates["twin-lakes"].name == "Twin Lakes"
+    twin_lakes = library.world_templates["twin-lakes"]
+    assert twin_lakes.locations == ()
+    assert twin_lakes.npcs == ()
     assert set(library.rule_sets) == {"cairn2e"}
 
 
 def test_test_fixtures_add_a_hidden_roll_rule_set():
     library = content_library()
-    assert {"kilharbor", "testhollow"} <= set(library.world_templates)
+    assert {"twin-lakes", "testhollow"} <= set(library.world_templates)
     rule_set = library.rule_sets["rolltest"]
     assert rule_set.name == "Roll Test"
     assert "consistency" in rule_set.rules

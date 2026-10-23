@@ -297,6 +297,8 @@ Known content from the module text (read in full during the design pass; statblo
 - A 1d8 daily victim schedule and quicksand.
 - Dungeon Exploration procedures (book p.71), not Wilderness, plus random encounter tables. These need Phase 10.
 
+World: a module is its own world. The CAS-1 import goes into the `twin-lakes` world template (`src/cygnusforge/data/worlds/twin-lakes/`). That world is the Cairn 2e test world until the feature set is complete. The `kilharbor` world was removed. Its only content was a description, and no locations or NPCs. The `twin-lakes` world has no locations or NPCs until the import fills it in.
+
 Done when: every location, NPC, monster, relic, and table in the module is in the ruleset or in an adventure data file, the module can be played from start to finish in a live session, and the transcript reads correctly. Gaps found are added to the gap register and closed or scheduled.
 
 ## Gap register

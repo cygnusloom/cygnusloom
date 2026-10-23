@@ -20,7 +20,7 @@ RADIO_RE = re.compile(r'<input type="radio" name="((?:template|field)-[\w-]+)" v
 def _cairn_campaign(client_factory: Callable[[], TestClient]) -> tuple[TestClient, int]:
     """A Cairn campaign whose shared options are chosen, so the character step is next."""
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="kilharbor", rule_set="cairn2e")
+    response = _new_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
     assert response.status_code == 303
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     assert _choose_campaign(client, campaign_id).status_code == 303
@@ -65,7 +65,7 @@ def test_cairn_campaign_shows_the_creation_form_and_no_chat(
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "Create your character" in page
     assert 'name="stat-str"' in page
-    assert "Kilharbor" in page
+    assert "Twin Lakes" in page
     assert "Cairn 2e" in page
     assert f"/campaigns/{campaign_id}/messages" not in page
 
@@ -268,7 +268,7 @@ def test_cairn_campaign_asks_for_its_options_before_the_character(
     client_factory: Callable[[], TestClient],
 ):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="kilharbor", rule_set="cairn2e")
+    response = _new_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "Create your campaign" in page
@@ -280,7 +280,7 @@ def test_cairn_campaign_asks_for_its_options_before_the_character(
 
 def test_the_campaign_options_must_all_be_chosen(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="kilharbor", rule_set="cairn2e")
+    response = _new_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     response = _choose_campaign(client, campaign_id, fields={})
     assert response.status_code == 400
