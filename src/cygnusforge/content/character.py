@@ -56,7 +56,7 @@ class Feature:
     size: str
     uses: int
     armor: int
-    # The weapon's damage dice, such as "d6" or "d6+d6". Empty when the feature is not a weapon.
+    # The weapon's damage dice, such as "1d6", or "1d6|1d6" for two weapons (keep the higher). Empty when the feature is not a weapon.
     damage: str = ""
 
 

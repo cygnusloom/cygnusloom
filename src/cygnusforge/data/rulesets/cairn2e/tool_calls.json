@@ -88,7 +88,7 @@
               },
               "dice": {
                 "type": "string",
-                "description": "The damage dice, such as '1d8' or '1d6+1d6'."
+                "description": "The damage dice, such as '1d8' or '1d6+1d6'. Use '1d6|1d6' when two weapons are rolled and the higher is kept."
               }
             },
             "required": [
@@ -1048,7 +1048,7 @@
         },
         "damage": {
           "type": "string",
-          "description": "For a weapon that is not in the catalogue: its damage dice, such as 'd6' or 'd6+d6'. Leave it out for anything else. A catalogue item takes its damage from the catalogue, so this is refused for one."
+          "description": "For a weapon that is not in the catalogue: its damage dice, such as '1d6', '1d6+1d6' (summed), or '1d6|1d6' (two weapons, keep the higher). Leave it out for anything else. A catalogue item takes its damage from the catalogue, so this is refused for one."
         }
       },
       "required": [

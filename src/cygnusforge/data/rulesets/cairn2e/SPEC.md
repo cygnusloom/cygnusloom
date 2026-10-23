@@ -72,7 +72,7 @@ Source: the Warden's Guide, Detachments (https://cairnrpg.com/second-edition/war
 - Attacks on a detachment are impaired. A detachment's attacks on individuals are enhanced and Blast.
 - Damage past HP goes to STR. Damage that reaches STR triggers a Critical Damage save on STR.
 - If that save fails, the GM chooses the outcome per scene: the detachment is defeated, or its members flee, as a morale break does.
-- Engine-enforced: after a failed Critical Damage save the detachment is pending. Its attacks and hits on it are refused until the GM calls `resolve_detachment` with `defeat` or `flee`.
+- Engine-enforced: after a failed Critical Damage save the detachment is pending. Its attacks and hits on it are refused until the GM calls `resolve_group_break` with `defeat` or `flee`.
 - Blast: a detachment's attack rolls its enhanced dice separately for each living individual on the other side. Blast applies to individuals only; detachments do not attack detachments.
 - Detachments make no morale checks. Checked against the Combat and Detachments pages: morale is triggered by a group's casualties, and a detachment "remains a single unit until it takes critical damage", so its break point is its Critical Damage save.
 
@@ -244,8 +244,8 @@ Move out of the engine (from the leak audit, with file locations as of commit `b
 - Armor cap (`MAX_ARMOR` in `services/combat.py`) and the armor purchase rule in `services/market.py`: become ruleset `combat.armor.max` and item `effects` with a cap.
 - Morale: `wil_stat` becomes `save_stat`. The "half casualties" trigger becomes a JSON trigger list next to `first_casualty`. Docstrings that name DEX or WIL move to generic wording.
 - `set_deprivation` in `rules/context.py` becomes `set_condition(name, active)`.
-- `resolve_detachment` is Cairn's tool name. Either it stays in `rules/cairn2e.py`, or it is renamed generically (for example `resolve_group_break`). Decide during the phase.
-- Relics (`give_relic`, `use_relic`, `recharge_relic` in `services/inventory.py` and `rules/context.py`): a generic "consumable with recharge rule" type, or kept in `rules/cairn2e.py`. Decide during the phase.
+- DONE (user chose generic): the group-break tool is `resolve_group_break`, in `services/combat.py`. Cairn's word "detachment" stays only in the `cairn2e/` prose.
+- DONE (user chose generic): relics are charged items. The tools are `give_charged_item`, `use_charge`, and `recharge_charged_item`. The kind (`relic`) is set by `magic.json` `charged_kind`, and the recharge rule is the item's text.
 - Debug panel stat options hard-coded in `web/templates/campaign.html`: rendered from the rule set's stats.
 - GM prompts in `services/campaigns.py` (`STATE_INSTRUCTION` and related): the generic loop stays in code. Cairn bullets (armor glancing blows, relic recharge, detachment, defeated PC rules, combat speech policy, and the sentence cap) move to the ruleset as `prompt_fragments` and `narration` config.
 - Weapon damage: free text from the GM's attack. DONE: weapons read their dice from the ruleset (see the Phase 11 status).
@@ -255,14 +255,34 @@ Already generic (keep, and use as the pattern): stat keys from JSON (`morale.wil
 
 Done when: a grep for `Cairn`, `Fatigue`, `relic`, `detachment`, `Scar`, `deprivation`, and the stat names in `src/cygnusforge/services`, `src/cygnusforge/web`, and `src/cygnusforge/rules/context.py` returns no hits outside docstrings that name the rule set generically. The full suite and a live Cairn session must still pass with no change in behavior, except for the `(used)` wording and the speech-cap fix, which are gap-register items.
 
+D&D comparison (what a second rule set would need, and where Cairn's shape would get in the way):
+
+| Area | Cairn 2e | D&D 5e (analogue) | Engine status |
+|---|---|---|---|
+| Stats | STR, DEX, WIL from JSON | six ability scores, from JSON | Generic (stat keys in JSON). |
+| Dice | `1dN`, `+` sums, `\|` keeps the higher | `1d20`, advantage is `1d20\|1d20`, damage sums | Generic. `\|` covers advantage and two weapons. |
+| Damage pipeline | armor, then Hit Protection, then STR, then Critical Damage save | hit points, with temporary HP | Cairn-shaped in `combat.json`. Needs a one-stage (hit points) pipeline as data. Open. |
+| Rests | short and long from `rest.json`, `until`, `stop_at`, clock parts | short rest (1 hour) and long rest (8 hours), hit dice spent on the short rest | Generic (`RestLength`, clock). Hit dice are not modeled. Open. |
+| Spell cost | Fatigue penalty item, one per cast | spell slots per level, restored on a long rest | Penalty item is read from JSON. Slots need a charged-pool type. Open. |
+| Encumbrance | item slots from JSON, petty and bulky | weight or item slots | Generic (slots from JSON). |
+| Conditions | deprived (need), doomed, scars, injuries | a conditions list (poisoned, prone, and so on), and death saves | Needs are generic. Scars and death are Cairn-shaped. Death saves are a gap. |
+| Morale | group morale on casualties, WIL save | none by default | Generic, from `morale` JSON. |
+| Group break | detachment, "defeat" or "flee" | none | Generic tool `resolve_group_break`. |
+| Currency and shops | `marketplace.currency` and listings | gold and equipment tables | Generic. |
+| Time | watches, dungeon turns | rounds, turns, and days | Clock parts are data. Dungeon turns are a counter in JSON. |
+
+Decision rule for the refactor: a Cairn term may stay in `cairn2e/` JSON prose or the `rules/cairn2e.py` adapter. An engine hook needs a generic name and must read its numbers from the rule set. Where D&D would need a different shape (the damage pipeline, spell slots, death saves, hit dice), the open rows above are the gaps to record, not patch.
+
 Status (Phase 11): the leak grep is clean. The remaining hits are the word "discard" and generic docstrings. The engine reads these from `cairn2e/`: penalty item (`inventory.json` `penalty_name`, `penalty_lasts`), the armor cap (`combat.json` `armor_max`), the large-group flag (`monsters.json` `large_group`), the save stat (`save_stat`), charged items (`charged_kind`), GM prompts (`prompts.json`, 7 fragments), narration (`narration.json` `sentence_cap`), needs (`need.json`), and injury tables (`injuries`). The debug stat options come from the rule set's stats. Live-verified on a fresh DB: opening turn, a player turn with the pack, the Inventory tab ("Carrying 7 of 10 slots"), and the Debug tab. The `need_set`, `group_break_resolved`, and `injury.gained` paths were not hit in that run. Renamed event kinds break replay of old dev DBs; the user accepted this.
+
+Second live run (fresh DB, two-weapon check): the opening turn, a GM `give_item` of Twin Daggers with `1d6|1d6`, an initiative roll, a player attack that prompted `1d6|1d6`, the combat result (`combat.struck` raw 6, save failed, the thief died), the Inventory tab, and a clean DB log. The `need_set`, `group_break_resolved`, and `injury.gained` paths are covered by unit tests only. Phase 12 is the full play-through, so it should hit these paths live, and they are checked there.
 
 Built since the last status: weapon damage and the dungeon reaction table merge.
 
 - Weapon damage (user decision: the engine rolls): a carried weapon's dice come from its ruleset `damage` (`features.json` for starting gear, `marketplace.json` for catalogue items, or a custom item's damage given with `give_item`). An unarmed attack uses `combat.json` `unarmed`. The GM no longer passes a damage number, and the player's roll is a flavor prompt that does not set damage. The dice grammar requires a count, so the book's single die is stored as `1d6`, and `d6+d6` as `1d6+1d6`. Unit tests: `tests/test_weapon_damage.py`. Live-verified on a fresh DB: a Sling attack on a Reed Bandit with a Club prompted `1d6` as flavor, and the logged `combat.struck` event used `weapon: sling` with raw damage 5, within 1d6. Attacking with a weapon that is not carried is refused by unit test, not live.
 - Reaction merge: the duplicate `reaction` table is removed from `warden_tables.json`. `dungeon_reaction` in `dungeon.json` is the one table, and the `roll_tables` tool enum uses it.
 
-Phase 11 is NOT complete until the generic refactor items above are done. The weapon-damage live test has passed. Phase 12 waits on Phase 11.
+Phase 11 is closed. The generic refactor items are done, the live runs above pass, and the D&D comparison records the open shape gaps (damage pipeline, hit dice, spell-slot pool, death saves) for later. The three unhit live paths move to the Phase 12 play-through. Phase 12 is next.
 
 ## Phase 12: capstone, CAS-1 "Trouble in Twin Lakes"
 
@@ -292,8 +312,10 @@ Engine and prompt (cross-cutting):
 - `tool_calls.json` descriptions still say "detachment". Ruleset prose to update.
 - The magic result key changed to `penalty`. Not live-checked against the prompts.
 - RESOLVED (Phase 11, user chose engine-rolled dice): weapon damage comes from the ruleset, and the GM no longer passes a damage number. Gaps left from this:
-  - The book says to keep the higher of two weapons' dice, but the engine sums them (`d6+d6` rolls both). Unscheduled, needs a rule decision.
+  - RESOLVED (user chose the book rule): two weapons roll both dice and keep the higher. The dice grammar has a `|` separator, so Twin Daggers is `1d6|1d6`. `+` still sums, for monster attacks. Unit tests: `tests/test_dice.py`, `tests/test_weapon_damage.py`. Live-verified on a fresh DB: the GM gave Twin Daggers with `1d6|1d6`, and a player attack on a Hooded Thief logged `combat.struck` with weapon "Twin Daggers" and raw 6, within 1d6. The Inventory tab lists the daggers.
   - The player's visible roll is a flavor prompt, so it can differ from the damage logged. The user chose this. Unscheduled, needs a UI decision.
+- The Inventory tab shows no weapon damage formula, so the player cannot see what a weapon rolls. Unscheduled, a small UI addition.
+- After a fight ends on its own (the last foe dies), the GM can still call `end_encounter`, which fails with "there is no encounter in progress". The fix is a prompt rule or a tool that accepts a no-op. Unscheduled, found live.
   - The unarmed `1d4` and its names (`unarmed`, `fists`, `bare hands`) in `combat.json` are assumptions, not checked against the book. Unscheduled, needs a book check.
   - An item that is not carried is refused for an attack. The GM must `give_item` it first, with its damage if it is not in the catalogue.
 - RESOLVED (Phase 11 follow-up): the duplicate `reaction` table is removed from `warden_tables.json`, and `dungeon_reaction` is the one table.
