@@ -286,8 +286,8 @@ Phase 8 (hirelings): scope in phase 8. Includes 3d6 attributes, 1d6 HP, wages, a
 - Hirings are not offered through the marketplace flow: the GM passes the wage by hand from the listing. Unscheduled, needs a phase.
 - Unpaid hireling wages leave the GM to decide; there is no automatic departure rule. Unscheduled, needs a decision.
 - RESOLVED (live-verified on a fresh DB): no tool gave, took, or set gold, so the GM's narrated gift left the engine balance unchanged. The core `change_gold` tool now records it (`character.gold_changed`, refusing a take the character cannot pay). The unpaid-wage path also fired live (`hireling.unpaid`, no deduction, GM narrated it).
-- RESOLVED (live-verified): hireling upkeep. The `give_item` description tells the GM to give hirelings Rations. Tam was given Rations and Torch, and ate one at the camp rest (`item_removed`).
-- RESOLVED (player decision): the GM may voice hireling dialogue through `speak`, and the player chooses hireling actions. `speaker_profile` accepts hirelings at the player's location. Unit-tested. Live check still pending.
+- RESOLVED (live-verified on a fresh DB): hireling upkeep. The `give_item` description tells the GM to give hirelings Rations. A catalogue item given now keeps its listed uses (3), so Tam's Rations were not removed after one meal. At the camp rest, Boreas and Tam each ate one ration (3 to 2) and Tam kept his pack.
+- RESOLVED (player decision, live-verified): the GM may voice hireling dialogue through `speak`, and the player chooses hireling actions. `speaker_profile` accepts hirelings at the player's location. Tam's line was spoken through `speak` in the live session.
 - OPEN: narrated sums can diverge from the engine. In the live test the GM said "five, all told" for a 16-gold gift. The prompt now says sums and counts must match the tool results, but this is prompt-only. Needs a live recheck, and may need a tool-result line in the narration context.
 - OPEN: the GM narrates state changes it never records through a tool (for example, gifts of items or injuries). Unscheduled.
 
