@@ -6,9 +6,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from cygnusforge.content.library import ContentLibrary
 from cygnusforge.llm.base import LLMError
 from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.services.campaigns import OPENING_PROMPT
+from cygnusforge.services.campaigns import OPENING_PROMPT, opening_prompt
 from cygnusforge.services.events import load_state
 from tests.conftest import csrf_token
 from tests.test_campaigns import (
@@ -20,6 +21,19 @@ from tests.test_campaigns import (
     _send,
     _signed_in,
 )
+
+
+def test_opening_starts_the_world_at_its_start_location_with_its_hooks():
+    template = ContentLibrary.load().world_templates["twin-lakes"]
+    prompt = opening_prompt(template)
+    assert prompt.startswith(OPENING_PROMPT)
+    assert "The campaign starts at Isthmus Town (location id isthmus-town)" in prompt
+    assert "Flavia at the Butcher in Isthmus Town" in prompt
+    assert "Reeve Trellis at the Stuffed Inn" in prompt
+
+
+def test_opening_without_a_world_start_is_the_plain_instruction():
+    assert opening_prompt(None) == OPENING_PROMPT
 
 
 def _created_campaign(client_factory: Callable[[], TestClient]) -> tuple[TestClient, int]:

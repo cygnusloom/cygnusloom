@@ -129,6 +129,8 @@ class Character:
     armor: int = 0
     # A monster's attacks, by name, as dice formulas such as "1d8+1d8". Empty for player characters.
     attacks: dict[str, str] = field(default_factory=dict)
+    # The flags of the attacks that have any, by attack name, such as ["blast"].
+    attack_flags: dict[str, list[str]] = field(default_factory=dict)
     # The name of the bestiary statblock a monster was built from, such as "Wolf". Empty if none.
     creature: str = ""
     # A story-only NPC has no stats yet. It cannot fight, make saves, or be attacked until given stats.
@@ -599,6 +601,7 @@ class NpcAdded(GameEvent):
     fields: dict[str, str] = field(default_factory=dict)
     armor: int = 0
     attacks: dict[str, str] = field(default_factory=dict)
+    attack_flags: dict[str, list[str]] = field(default_factory=dict)
     creature: str = ""
     large_group: bool = False
     story_only: bool = False
@@ -619,6 +622,7 @@ class NpcAdded(GameEvent):
             fields=dict(self.fields),
             armor=self.armor,
             attacks=dict(self.attacks),
+            attack_flags={name: list(flags) for name, flags in self.attack_flags.items()},
             creature=self.creature,
             large_group=self.large_group,
             story_only=self.story_only,
@@ -642,6 +646,7 @@ class NpcStatted(GameEvent):
     fields: dict[str, str]
     armor: int
     attacks: dict[str, str]
+    attack_flags: dict[str, list[str]] = field(default_factory=dict)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         npc = state.characters[name_key(self.name)]
@@ -651,6 +656,7 @@ class NpcStatted(GameEvent):
         npc.fields = dict(self.fields)
         npc.armor = self.armor
         npc.attacks = dict(self.attacks)
+        npc.attack_flags = {name: list(flags) for name, flags in self.attack_flags.items()}
         npc.story_only = False
 
     def render(self) -> str:

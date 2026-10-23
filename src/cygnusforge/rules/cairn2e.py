@@ -65,9 +65,14 @@ def create_monster(
 
 
 def attack(
-    attacker: str, attack: str, target: str, ctx: ToolContext, modifier: str = ""
+    attacker: str,
+    attack: str,
+    target: str,
+    ctx: ToolContext,
+    modifier: str = "",
+    targets: list[str] | None = None,
 ) -> dict[str, Any]:
-    return ctx.world.attack(attacker, attack, target, modifier)
+    return ctx.world.attack(attacker, attack, target, modifier, targets)
 
 
 def resolve_attacks(target: str, attacks: list[dict[str, str]], ctx: ToolContext) -> dict[str, Any]:

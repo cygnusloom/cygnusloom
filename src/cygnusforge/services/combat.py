@@ -18,6 +18,8 @@ from cygnusforge.content.library import CombatRules, DamageStep
 from cygnusforge.rules.dice import roll_total
 from cygnusforge.services import death
 from cygnusforge.services.attacks import (
+    BLAST,
+    IGNORES_ARMOR,
     highest_index,
     modifier_dice,
     modifier_name,
@@ -143,13 +145,15 @@ def _strike(
     rolled: str = "",
     *,
     plus: str,
+    ignores_armor: bool = False,
 ) -> dict[str, Any]:
     """Apply a hit through the rule set's damage steps. A target that owes a save takes no more
     hits. An NPC saves at once; a player character saves when the player rolls. A hit on an NPC
-    may also bring its side's morale check."""
+    may also bring its side's morale check. An attack that ignores armor skips the target's armor."""
     if target.save_due is not None:
         raise InvalidInput(f"{target.name} must make their {target.save_due} save first")
-    damage = apply_damage(combat.damage, target.armor, lambda stat: current(target, stat), raw)
+    armor = 0 if ignores_armor else target.armor
+    damage = apply_damage(combat.damage, armor, lambda stat: current(target, stat), raw)
     if target.invincible:
         # The whole hit is absorbed, so the log reads as a blow turned aside rather than a miss.
         damage = Damage(absorbed=raw, harm={}, save=None)
@@ -329,10 +333,12 @@ def attack(
     modifier: str = "",
     *,
     plus: str,
+    targets: Sequence[str] | None = None,
 ) -> dict[str, Any]:
     """An NPC's attack. Attacks always hit, so the attack's damage is the roll. A modifier rolls
-    its own dice instead of the attack's. Who acts when is the turn order's job; this only checks
-    the attacker has the attack and both are living."""
+    its own dice instead of the attack's. An attack with Blast hits every target in its area, which
+    is `targets` (it must include `target`), and each target rolls separately. Who acts when is the
+    turn order's job; this only checks the attacker has the attack and both are living."""
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     source = _participant(state, attacker)
@@ -343,9 +349,21 @@ def attack(
     _living(struck, combat)
     name = _attack_named(source, attack_name)
     if source.large_group:
+        if targets:
+            raise InvalidInput(
+                f"{source.name} is a group; its Blast hits every living individual on the other "
+                "side, so leave targets out"
+            )
         return _blast(
             db, campaign_id, combat, rng, state, source, struck, name, modifier, plus=plus
         )
+    flags = source.attack_flags.get(name, [])
+    if BLAST in flags:
+        return _blast_attack(
+            db, campaign_id, combat, rng, state, source, struck, name, targets, modifier, plus=plus
+        )
+    if targets:
+        raise InvalidInput(f"{name} has no Blast, so it hits one target; leave targets out")
     _require_impaired(struck, modifier_name(modifier))
     dice = modifier_dice(combat.modifiers, modifier)
     raw = roll_total(dice or source.attacks[name], rng, plus=plus)
@@ -360,7 +378,68 @@ def attack(
         raw,
         modifier=modifier_name(modifier),
         plus=plus,
+        ignores_armor=IGNORES_ARMOR in flags,
     )
+
+
+def _blast_attack(
+    db: Session,
+    campaign_id: int,
+    combat: CombatRules,
+    rng: random.Random,
+    state: CampaignState,
+    source: Character,
+    struck: Character,
+    name: str,
+    targets: Sequence[str] | None,
+    modifier: str,
+    *,
+    plus: str,
+) -> dict[str, Any]:
+    """An NPC's attack with Blast. Each target in its area rolls separately. With no area given,
+    the area is the named target alone, so its dice roll once."""
+    encounter = state.encounter
+    assert encounter is not None
+    own_side = encounter.sides.get(name_key(source.name), "")
+    names = list(targets) if targets else [struck.name]
+    keys = [name_key(n) for n in names]
+    if len(set(keys)) != len(keys):
+        raise InvalidInput(f"{name} lists a target twice")
+    if name_key(struck.name) not in keys:
+        raise InvalidInput(f"{struck.name} must be one of the targets of {name}")
+    chosen = [_living(_participant(state, n), combat) for n in names]
+    for target in chosen:
+        if encounter.sides.get(name_key(target.name), "") == own_side:
+            raise InvalidInput(f"{source.name} is on {target.name}'s side and cannot attack them")
+        if target.large_group:
+            raise InvalidInput(f"{name} cannot hit {target.name}, a group, yet")
+    owed = [target.name for target in chosen if target.save_due is not None]
+    if owed:
+        raise InvalidInput(f"{', '.join(owed)} must make their save first")
+    dice = modifier_dice(combat.modifiers, modifier) or source.attacks[name]
+    results = []
+    for target in chosen:
+        # An earlier hit in the blast can break a later target's side, so each is checked as it comes up.
+        current_target = load_state(db, campaign_id).characters[name_key(target.name)]
+        if out_of_fight(current_target):
+            continue
+        raw = roll_total(dice, rng, plus=plus)
+        results.append(
+            _strike(
+                db,
+                campaign_id,
+                combat,
+                rng,
+                current_target,
+                source.name,
+                name,
+                raw,
+                modifier=modifier_name(modifier),
+                plus=plus,
+                ignores_armor=IGNORES_ARMOR in source.attack_flags.get(name, []),
+            )
+        )
+    return {"attacker": source.name, "attack": name, "blast": True, "targets": results}
 
 
 def _blast(
@@ -425,6 +504,7 @@ def _blast(
                 raw,
                 modifier="enhanced",
                 plus=plus,
+                ignores_armor=IGNORES_ARMOR in source.attack_flags.get(name, []),
             )
         )
     return {"attacker": source.name, "attack": name, "blast": True, "targets": results}
@@ -452,7 +532,8 @@ def resolve_attacks(
     encounter = state.encounter
     assert encounter is not None
     foe_side = encounter.sides.get(name_key(struck.name), "")
-    planned: list[tuple[str, str, str, str]] = []
+    # Each planned attack is the attacker, the attack, its modifier, its dice, and whether it ignores armor.
+    planned: list[tuple[str, str, str, str, bool]] = []
     for entry in attacks:
         attacker_name = entry.get("attacker")
         attack_name = entry.get("attack")
@@ -467,17 +548,29 @@ def resolve_attacks(
             raise InvalidInput(f"{source.name} is on {struck.name}'s side and cannot attack them")
         _require_impaired(struck, modifier_name(entry.get("modifier")))
         name = _attack_named(source, attack_name)
+        flags = source.attack_flags.get(name, [])
+        if BLAST in flags:
+            raise InvalidInput(
+                f"{source.name}'s {name} has Blast, which hits each target in its area; use "
+                "attack with targets instead"
+            )
         dice = modifier_dice(combat.modifiers, entry.get("modifier"))
         planned.append(
-            (source.name, name, modifier_name(entry.get("modifier")), dice or source.attacks[name])
+            (
+                source.name,
+                name,
+                modifier_name(entry.get("modifier")),
+                dice or source.attacks[name],
+                IGNORES_ARMOR in flags,
+            )
         )
-    rolls = [roll_total(dice, rng, plus=plus) for *_, dice in planned]
+    rolls = [roll_total(dice, rng, plus=plus) for *_, dice, _ in planned]
     best = highest_index(rolls)
-    attacker, weapon, modifier, _ = planned[best]
+    attacker, weapon, modifier, _, ignores_armor = planned[best]
     rolled = ""
     if len(planned) > 1:
         rolled = rolls_text(
-            [(who, what, mod, roll) for (who, what, mod, _), roll in zip(planned, rolls)]
+            [(who, what, mod, roll) for (who, what, mod, _, _), roll in zip(planned, rolls)]
         )
     return _strike(
         db,
@@ -491,6 +584,7 @@ def resolve_attacks(
         modifier=modifier,
         rolled=rolled,
         plus=plus,
+        ignores_armor=ignores_armor,
     )
 
 

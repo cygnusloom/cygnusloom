@@ -55,6 +55,7 @@ from cygnusforge.services import magic as magic_service
 from cygnusforge.services import market as market_service
 from cygnusforge.services import needs as needs_service
 from cygnusforge.services import objects as objects_service
+from cygnusforge.services.attacks import ATTACK_FLAGS
 from cygnusforge.services.common import (
     InvalidInput,
     bounded_text,
@@ -630,7 +631,7 @@ class WorldTools:
         quirks: Sequence[str] | None = None,
         character: Mapping[str, Any] | None = None,
         armor: int | None = None,
-        attacks: Sequence[Mapping[str, str]] | None = None,
+        attacks: Sequence[Mapping[str, Any]] | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return update_npc(
@@ -713,7 +714,7 @@ class WorldTools:
         template: str | None = None,
         stats: Mapping[str, int | None] | None = None,
         armor: int | None = None,
-        attacks: Sequence[Mapping[str, str]] | None = None,
+        attacks: Sequence[Mapping[str, Any]] | None = None,
         force: bool = False,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -739,7 +740,14 @@ class WorldTools:
     def search_marketplace(self, query: str) -> dict[str, Any]:
         return search_marketplace(_required(self.marketplace, "a marketplace"), query)
 
-    def attack(self, attacker: str, attack: str, target: str, modifier: str = "") -> dict[str, Any]:
+    def attack(
+        self,
+        attacker: str,
+        attack: str,
+        target: str,
+        modifier: str = "",
+        targets: Sequence[str] | None = None,
+    ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.attack(
                 db,
@@ -751,6 +759,7 @@ class WorldTools:
                 self.rng,
                 modifier,
                 plus=self.plus,
+                targets=targets,
             )
 
     def resolve_attacks(self, target: str, attacks: Sequence[Mapping[str, str]]) -> dict[str, Any]:
@@ -1289,7 +1298,7 @@ def create_monster(
     template: str | None,
     stats: Mapping[str, int | None],
     armor: int | None,
-    attacks: Sequence[Mapping[str, str]] | None,
+    attacks: Sequence[Mapping[str, Any]] | None,
     armor_max: int = 0,
     force: bool = False,
 ) -> dict[str, Any]:
@@ -1333,7 +1342,7 @@ def create_monster(
         0,
         armor_max or combat.UNCAPPED_ARMOR,
     )
-    attack_map = _attacks(attacks) if attacks is not None else dict(base.attacks if base else {})
+    attack_map, flag_map = _attack_table(attacks, base)
     event = NpcAdded(
         name=name,
         location=where.name,
@@ -1344,6 +1353,7 @@ def create_monster(
         stats=dict(merged),
         armor=armor_value,
         attacks=attack_map,
+        attack_flags=flag_map,
         creature=base.name if base else "",
         large_group=bool(base and base.large_group),
         rules=list(base.rules) if base else [],
@@ -1358,23 +1368,55 @@ def create_monster(
         "stats": dict(merged),
         "armor": armor_value,
         "attacks": attack_map,
+        "attack_flags": flag_map,
     }
 
 
-def _attacks(attacks: Sequence[Mapping[str, str]]) -> dict[str, str]:
-    """Each attack is {"name", "dice"}, and its dice must be a formula such as '1d8' or '1d6+1d6'."""
+def _attack_table(
+    attacks: Sequence[Mapping[str, Any]] | None, base: MonsterTemplate | None
+) -> tuple[dict[str, str], dict[str, list[str]]]:
+    """The attacks an NPC gets: the given ones, else the statblock's, else none. Returns the dice by
+    attack name and the flags of the attacks that have any."""
+    if attacks is not None:
+        return _attacks(attacks)
+    if base is None:
+        return {}, {}
+    return dict(base.attacks), {name: list(flags) for name, flags in base.attack_flags.items()}
+
+
+def _attacks(
+    attacks: Sequence[Mapping[str, Any]],
+) -> tuple[dict[str, str], dict[str, list[str]]]:
+    """Each attack is {"name", "dice", "flags"}. Its dice must be a formula such as '1d8' or
+    '1d6+1d6', and flags is an optional list of names from ATTACK_FLAGS, each listed once. Returns
+    the dice by attack name and the flags of the attacks that have any."""
     checked: dict[str, str] = {}
+    flags_by_attack: dict[str, list[str]] = {}
     seen: set[str] = set()
     for attack in attacks:
         label = bounded_text(attack.get("name", ""), "attack name", MAX_NAME)
         dice = attack.get("dice", "")
+        flags = attack.get("flags", [])
         if label.casefold() in seen:
             raise InvalidInput(f"attack {label!r} is listed twice")
         if not isinstance(dice, str) or not is_formula(dice):
             raise InvalidInput(f"attack {label!r} needs a dice formula such as '1d8' or '1d6+1d6'")
+        if not isinstance(flags, list) or not all(isinstance(flag, str) for flag in flags):
+            raise InvalidInput(f"attack {label!r} flags must be a list of names")
+        unknown = [flag for flag in flags if flag not in ATTACK_FLAGS]
+        if unknown or len(set(flags)) != len(flags):
+            options = ", ".join(ATTACK_FLAGS)
+            raise InvalidInput(f"attack {label!r} flags must each be listed once, from: {options}")
         seen.add(label.casefold())
         checked[label] = dice
-    return checked
+        if flags:
+            flags_by_attack[label] = list(flags)
+    return checked, flags_by_attack
+
+
+def _flag_text(flags: Sequence[str]) -> str:
+    """The flags of one attack as a suffix for the record, such as " (blast)", or "" if none."""
+    return f" ({', '.join(flags)})" if flags else ""
 
 
 def _statblock_conflict(base: MonsterTemplate, spec: CharacterSpec) -> str:
@@ -1382,7 +1424,10 @@ def _statblock_conflict(base: MonsterTemplate, spec: CharacterSpec) -> str:
     stats = ", ".join(
         f"{spec.stats[key].name} {value}" for key, value in base.stats.items() if key in spec.stats
     )
-    attacks = "".join(f"; {label} {dice}" for label, dice in base.attacks.items())
+    attacks = "".join(
+        f"; {label} {dice}{_flag_text(base.attack_flags.get(label, ()))}"
+        for label, dice in base.attacks.items()
+    )
     return (
         f"{base.name} has a published statblock ({stats}{attacks}). "
         "Leave out the values you would give to use it, or set force to create a custom "
@@ -1397,6 +1442,7 @@ def _with_statblock(event: NpcAdded, base: MonsterTemplate) -> NpcAdded:
         event,
         armor=base.armor,
         attacks=dict(base.attacks),
+        attack_flags={name: list(flags) for name, flags in base.attack_flags.items()},
         creature=base.name,
         large_group=base.large_group,
         rules=list(dict.fromkeys([*event.rules, *base.rules])),
@@ -1449,6 +1495,7 @@ def search_monster(
             "stats": dict(monster.stats),
             "armor": monster.armor,
             "attacks": dict(monster.attacks),
+            "attack_flags": {name: list(flags) for name, flags in monster.attack_flags.items()},
         }
         for monster in monsters.values()
         if _has_words(words, monster.id, monster.name, monster.description)
@@ -1561,7 +1608,7 @@ def update_npc(
     quirks: Sequence[str] | None = None,
     character: Mapping[str, Any] | None = None,
     armor: int | None = None,
-    attacks: Sequence[Mapping[str, str]] | None = None,
+    attacks: Sequence[Mapping[str, Any]] | None = None,
     *,
     armor_max: int = 0,
     plus: str,
@@ -1588,12 +1635,14 @@ def update_npc(
             raise InvalidInput(str(error)) from error
         sheet = resolve(spec, character or {}, rng, plus=plus)
         _check_sheet_text(sheet)
+        attack_map, attack_flags = _attacks(attacks or [])
         statted = NpcStatted(
             name=npc.name,
             armor=0
             if armor is None
             else whole_number(armor, "armor", 0, armor_max or combat.UNCAPPED_ARMOR),
-            attacks=_attacks(attacks or []),
+            attacks=attack_map,
+            attack_flags=attack_flags,
             **_sheet_fields(sheet),
         )
     if text_given:
@@ -1795,7 +1844,10 @@ def _combat_lines(character: Character, spec: CharacterSpec, combat: CombatRules
             "Large group: a group that attacks with Blast and is hit only by impaired attacks"
         )
     if character.attacks:
-        attacks = ", ".join(f"{name} {formula}" for name, formula in character.attacks.items())
+        attacks = ", ".join(
+            f"{name} {formula}{_flag_text(character.attack_flags.get(name, ()))}"
+            for name, formula in character.attacks.items()
+        )
         lines.append(f"Attacks: {attacks}")
     if any(character.harm.values()):
         harm = ", ".join(

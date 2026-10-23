@@ -6,7 +6,7 @@ import importlib
 import inspect
 import re
 import string
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
@@ -30,6 +30,7 @@ from cygnusforge.content.definitions import (
     required_text,
 )
 from cygnusforge.rules.dice import FORMULA, PLUS_MODES, is_formula
+from cygnusforge.services.attacks import ATTACK_FLAGS
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 TOOL_NAME = re.compile(r"[A-Za-z0-9_-]{1,64}")
@@ -87,6 +88,14 @@ class NpcTemplate:
 
 
 @dataclass(frozen=True)
+class WorldStart:
+    """Where a new campaign's player character begins, and the hooks that bring them there."""
+
+    location: str
+    hooks: str
+
+
+@dataclass(frozen=True)
 class WorldTemplate:
     id: str
     name: str
@@ -96,6 +105,7 @@ class WorldTemplate:
     # The world's monsters, tables, features, and rules, as definitions. They are checked against
     # each rule set in WorldContent, since a monster's stats depend on the rule set.
     definitions: tuple[Definition, ...] = ()
+    start: WorldStart | None = None
 
 
 @dataclass(frozen=True)
@@ -186,8 +196,10 @@ class DiceTable:
 @dataclass(frozen=True)
 class MonsterTemplate:
     """A statblock a GM can base a monster on. `stats` has every stat of the rule set's character,
-    and `attacks` maps each attack's name to its dice formula. A large group is a group the
-    Warden fights as one unit."""
+    and `attacks` maps each attack's name to its dice formula. `attack_flags` gives the flags of
+    the attacks that have any, such as blast. A large group is a group the Warden fights as one
+    unit. `rules` are the ids of the rules attached to the monster; `rule_text` holds the text of
+    those written in the statblock itself."""
 
     id: str
     name: str
@@ -197,6 +209,8 @@ class MonsterTemplate:
     attacks: Mapping[str, str]
     large_group: bool = False
     rules: tuple[str, ...] = ()
+    attack_flags: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+    rule_text: Mapping[str, str] = field(default_factory=dict)
 
 
 DAMAGE_KINDS = ("absorb", "harm", "overflow")
@@ -464,6 +478,9 @@ class RuleSet:
     tables: Mapping[str, tuple[TableOption, ...]] = field(default_factory=dict)
     # Rules whose text goes into every prompt. The others are read with lookup_rule.
     important: frozenset[str] = frozenset()
+    # Rules written into a statblock, by id. They are read with lookup_rule, and reach the GM
+    # while a monster that carries them is present, but are not listed in every prompt.
+    attached_rules: Mapping[str, str] = field(default_factory=dict)
     # The scale of encounter maps, or None when the rule set has no grid: its encounters have no
     # movement limit.
     grid: EncounterGrid | None = None
@@ -597,7 +614,24 @@ def _load_world(directory: Path) -> WorldTemplate:
         locations=locations,
         npcs=npcs,
         definitions=(*own, *statblocks),
+        start=_load_world_start(world.data, label, location_ids),
     )
+
+
+def _load_world_start(
+    data: Mapping[str, Any], label: str, location_ids: set[str]
+) -> WorldStart | None:
+    """The optional `start` object: a known location and the hooks that bring the party there."""
+    if "start" not in data:
+        return None
+    start = data["start"]
+    if not isinstance(start, Mapping):
+        raise ContentError(f"{label}: 'start' must be an object")
+    start_label = f"{label}: start"
+    location = required_text(start, "location", start_label)
+    if location not in location_ids:
+        raise ContentError(f"{start_label} names unknown location {location!r}")
+    return WorldStart(location=location, hooks=required_text(start, "hooks", start_label))
 
 
 def _has_statblock(data: Mapping[str, Any]) -> bool:
@@ -640,7 +674,12 @@ def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldCon
     rules = {
         d.id: required_text(d.data, "text", f"{name}: rule {d.id}") for d in own if d.type == "rule"
     }
-    known = {**rule_set.rules, **rules}
+    written = _attached_rules(monsters.values(), name)
+    shared = sorted(written.keys() & rules.keys())
+    if shared:
+        raise ContentError(f"{name}: rules {shared} are both world rules and statblock rules")
+    rules = {**rules, **written}
+    known = {**rule_set.rules, **rule_set.attached_rules, **rules}
     attached = [(f"monster {m.id!r}", m.rules) for m in monsters.values()]
     attached += [(f"npc {npc.id!r}", npc.rules) for npc in template.npcs]
     attached += [(f"feature {f.id!r}", f.rules) for f in features.values()]
@@ -816,9 +855,14 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         for d in definitions
         if d.type == "monster"
     }
+    written = _attached_rules(monsters.values(), template)
+    shared = sorted(written.keys() & rules.keys())
+    if shared:
+        raise ContentError(f"{template}: rules {shared} are both in the rule set and a statblock")
+    known = {**rules, **written}
     for monster in monsters.values():
         for rule_id in monster.rules:
-            if rule_id not in rules:
+            if rule_id not in known:
                 raise ContentError(
                     f"{template}: monster {monster.id!r} attaches rule {rule_id!r}, which is not "
                     "in the rule set"
@@ -851,6 +895,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         name=required_text(head.data, "name", label),
         description=required_text(head.data, "description", label),
         rules=rules,
+        attached_rules=written,
         important=important,
         tool_calls=tool_calls,
         character=character,
@@ -1105,29 +1150,107 @@ def _load_monster(
         raise ContentError(f"{label}: stat {pool!r} must be at least 1")
     armor = data.get("armor", 0)
     _check_whole(armor, f"{label}: 'armor'")
-    attacks = data.get("attacks", {})
-    if not isinstance(attacks, dict):
-        raise ContentError(f"{label}: 'attacks' must be an object of attack names to dice")
-    for attack_name, formula in attacks.items():
-        if not isinstance(attack_name, str) or not attack_name.strip():
-            raise ContentError(f"{label}: attack names must be non-empty text")
-        if not is_formula(formula):
-            raise ContentError(
-                f"{label}: attack {attack_name!r} must be a dice formula such as '1d8'"
-            )
+    attacks, attack_flags = _statblock_attacks(data.get("attacks", {}), label)
     large_group = data.get("large_group", False)
     if not isinstance(large_group, bool):
         raise ContentError(f"{label}: 'large_group' must be true or false")
+    rules, rule_text = _statblock_rules(data, label)
     return MonsterTemplate(
         id=definition.id,
         name=required_text(data, "name", label),
         description=required_text(data, "description", label),
         stats=dict(stats),
         armor=armor,
-        attacks=dict(attacks),
+        attacks=attacks,
         large_group=large_group,
-        rules=rule_ids(data, label),
+        rules=rules,
+        attack_flags=attack_flags,
+        rule_text=rule_text,
     )
+
+
+def _statblock_attacks(
+    raw: object, label: str
+) -> tuple[dict[str, str], dict[str, tuple[str, ...]]]:
+    """A statblock's attacks. Each is its dice, either as plain text such as "1d8", or as an object
+    with the dice and a list of flags, such as {"dice": "1d8", "flags": ["blast"]}. Returns the dice
+    by attack name and the flags of the attacks that have any."""
+    if not isinstance(raw, dict):
+        raise ContentError(f"{label}: 'attacks' must be an object of attack names to dice")
+    attacks: dict[str, str] = {}
+    flags_by_attack: dict[str, tuple[str, ...]] = {}
+    for attack_name, entry in raw.items():
+        if not isinstance(attack_name, str) or not attack_name.strip():
+            raise ContentError(f"{label}: attack names must be non-empty text")
+        if isinstance(entry, str):
+            formula, flags = entry, []
+        elif isinstance(entry, dict) and "dice" in entry and set(entry) <= {"dice", "flags"}:
+            formula, flags = entry["dice"], entry.get("flags", [])
+        else:
+            raise ContentError(
+                f"{label}: attack {attack_name!r} must be dice such as '1d8' or an object with "
+                "'dice' and 'flags'"
+            )
+        if not is_formula(formula):
+            raise ContentError(
+                f"{label}: attack {attack_name!r} must be a dice formula such as '1d8'"
+            )
+        if not isinstance(flags, list) or not all(isinstance(f, str) for f in flags):
+            raise ContentError(f"{label}: attack {attack_name!r} 'flags' must be a list of names")
+        unknown = [f for f in flags if f not in ATTACK_FLAGS]
+        if unknown or len(set(flags)) != len(flags):
+            options = ", ".join(ATTACK_FLAGS)
+            raise ContentError(
+                f"{label}: attack {attack_name!r} has flags {flags}; each flag must be listed "
+                f"once, from: {options}"
+            )
+        attacks[attack_name] = formula
+        if flags:
+            flags_by_attack[attack_name] = tuple(flags)
+    return attacks, flags_by_attack
+
+
+def _statblock_rules(data: Mapping[str, Any], label: str) -> tuple[tuple[str, ...], dict[str, str]]:
+    """A statblock's rules. Each is either the id of a rule in the rule set, or an object with an
+    'id' and 'text' written into the statblock. Returns every id, and the text of the written ones."""
+    entries = data.get("rules", [])
+    if not isinstance(entries, list):
+        raise ContentError(f"{label}: 'rules' must be a list")
+    ids: list[str] = []
+    texts: dict[str, str] = {}
+    for entry in entries:
+        if isinstance(entry, str) and entry.strip():
+            ids.append(entry)
+        elif (
+            isinstance(entry, dict)
+            and set(entry) == {"id", "text"}
+            and isinstance(entry["id"], str)
+            and entry["id"].strip()
+            and isinstance(entry["text"], str)
+            and entry["text"].strip()
+        ):
+            ids.append(entry["id"])
+            texts[entry["id"]] = entry["text"]
+        else:
+            raise ContentError(
+                f"{label}: each rule must be a rule id, or an object with an 'id' and 'text'"
+            )
+    if len(set(ids)) != len(ids):
+        raise ContentError(f"{label}: 'rules' names a rule more than once")
+    return tuple(ids), texts
+
+
+def _attached_rules(monsters: Iterable[MonsterTemplate], label: str) -> dict[str, str]:
+    """The text of every rule written into a statblock, by id. A rule written into two statblocks
+    must have the same text in both."""
+    texts: dict[str, str] = {}
+    for monster in monsters:
+        for rule_id, text in monster.rule_text.items():
+            if texts.setdefault(rule_id, text) != text:
+                raise ContentError(
+                    f"{label}: rule {rule_id!r} is written differently in two statblocks"
+                )
+    return texts
 
 
 def _check_whole(value: object, label: str) -> None:

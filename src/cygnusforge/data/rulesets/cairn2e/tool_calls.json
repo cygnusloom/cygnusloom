@@ -89,6 +89,14 @@
               "dice": {
                 "type": "string",
                 "description": "The damage dice, such as '1d8' or '1d6+1d6'. Use '1d6+1d6' when two weapons are rolled and the higher is kept."
+              },
+              "flags": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["blast", "ignores_armor"]
+                },
+                "description": "Leave out for a plain attack. 'blast' hits every target in the area named when the attack is made. 'ignores_armor' skips the target's armor."
               }
             },
             "required": [
@@ -114,7 +122,7 @@
     "name": "attack",
     "python_module": "cairn2e",
     "function": "attack",
-    "description": "Make an NPC's attack against a character. Attacks always hit. The attack's damage is rolled by the engine and reduces the target's armor, then Hit Protection, then Strength, and a target whose Strength is used up must make a Strength save. Use it only when the attacker's side is acting, after the initiative is set. Player characters attack with player_attack, not this tool. A detachment (a statblock marked as a group) is hit only by impaired attacks. A detachment's own attack has Blast: the engine rolls its enhanced damage separately for each living individual on the other side, and the target you name is one of them. A detachment whose Strength is used up makes a Strength save; if it fails it is broken, and the attack and targeting are refused until resolve_group_break is called.",
+    "description": "Make an NPC's attack against a character. Attacks always hit. The attack's damage is rolled by the engine and reduces the target's armor, then Hit Protection, then Strength, and a target whose Strength is used up must make a Strength save. Use it only when the attacker's side is acting, after the initiative is set. Player characters attack with player_attack, not this tool. A detachment (a statblock marked as a group) is hit only by impaired attacks. A detachment's own attack has Blast: the engine rolls its enhanced damage separately for each living individual on the other side, and the target you name is one of them; leave targets out for a detachment. An individual's attack with Blast (its statblock lists the attack with the blast flag) hits every target you list in targets, and each target rolls its damage separately; the target you name must be in that list. Without targets, it hits the named target alone and rolls once. An attack flagged ignores_armor skips the target's armor. A detachment whose Strength is used up makes a Strength save; if it fails it is broken, and the attack and targeting are refused until resolve_group_break is called.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -138,6 +146,13 @@
             "enhanced"
           ],
           "description": "The attack's modifier. 'normal' is the attack's own dice; 'impaired' and 'enhanced' roll different dice. Leave it out for a normal attack."
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Only for an individual's attack with Blast: the names of every character in its area, including the target. Each rolls its damage separately. Leave it out for any other attack."
         }
       },
       "required": [
@@ -304,7 +319,7 @@
     "name": "resolve_attacks",
     "python_module": "cairn2e",
     "function": "resolve_attacks",
-    "description": "Resolve several NPC attacks on one character at once, such as two foes attacking the same character or one NPC using two weapons. Each attack rolls its own dice, only the single highest roll hits, and the damage is applied once. Every attacker must be a living NPC on the side opposing the target, and the whole list is checked before any dice are rolled. Use it only when the attackers' side is acting, after the initiative is set. Player characters attack with player_attack, not this tool.",
+    "description": "Resolve several NPC attacks on one character at once, such as two foes attacking the same character or one NPC using two weapons. Each attack rolls its own dice, only the single highest roll hits, and the damage is applied once. Every attacker must be a living NPC on the side opposing the target, and the whole list is checked before any dice are rolled. Use it only when the attackers' side is acting, after the initiative is set. Player characters attack with player_attack, not this tool. An attack with Blast cannot be resolved here; use attack with targets for it.",
     "parameters": {
       "type": "object",
       "properties": {

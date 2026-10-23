@@ -596,6 +596,41 @@ def test_npc_must_be_in_a_declared_location(tree: Path):
         ContentLibrary.load(tree)
 
 
+def _start_world(start: Any) -> list[dict[str, Any]]:
+    world = _world()
+    world[0] = {**world[0], "start": start}
+    return world
+
+
+def test_world_start_is_read(tree: Path):
+    _write(
+        tree,
+        {"worlds/testland/world.json": _start_world({"location": "town", "hooks": "A reward."})},
+    )
+    start = ContentLibrary.load(tree).world_templates["testland"].start
+    assert start is not None
+    assert (start.location, start.hooks) == ("town", "A reward.")
+
+
+def test_world_without_start_has_none(tree: Path):
+    assert ContentLibrary.load(tree).world_templates["testland"].start is None
+
+
+def test_world_start_must_name_a_declared_location(tree: Path):
+    _write(
+        tree,
+        {"worlds/testland/world.json": _start_world({"location": "nowhere", "hooks": "x"})},
+    )
+    with pytest.raises(ContentError, match="start names unknown location 'nowhere'"):
+        ContentLibrary.load(tree)
+
+
+def test_world_start_needs_hooks(tree: Path):
+    _write(tree, {"worlds/testland/world.json": _start_world({"location": "town"})})
+    with pytest.raises(ContentError, match="'hooks' must be a non-empty string"):
+        ContentLibrary.load(tree)
+
+
 def test_location_map_position_and_discovery_are_read(tree: Path):
     world = [
         *_world(),

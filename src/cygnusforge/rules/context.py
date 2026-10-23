@@ -97,7 +97,12 @@ class World(Protocol):
     ) -> dict[str, Any]: ...
 
     def attack(
-        self, attacker: str, attack: str, target: str, modifier: str = ""
+        self,
+        attacker: str,
+        attack: str,
+        target: str,
+        modifier: str = "",
+        targets: Sequence[str] | None = None,
     ) -> dict[str, Any]: ...
 
     def resolve_attacks(

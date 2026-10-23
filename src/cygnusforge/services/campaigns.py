@@ -14,7 +14,13 @@ from sqlmodel import select
 
 from cygnusforge.content.character import CampaignSpec, CharacterSpec, roll_stats
 from cygnusforge.content.definitions import ContentError
-from cygnusforge.content.library import ContentLibrary, RuleSet, ToolCall, WorldContent
+from cygnusforge.content.library import (
+    ContentLibrary,
+    RuleSet,
+    ToolCall,
+    WorldContent,
+    WorldTemplate,
+)
 from cygnusforge.db.models import Campaign, Event
 from cygnusforge.llm.base import (
     ChatReply,
@@ -169,6 +175,24 @@ OPENING_PROMPT = (
     "character; setting the scene; and prompting the player to begin acting. You do not need to rehash game rules or character attributes - assume the player already knows these. This is a thematic introduction.Bold any keywords or core concepts. Use line breaks to separate each sentence. Then stop and leave the "
     "player to act."
 )
+
+
+def opening_prompt(template: WorldTemplate | None) -> str:
+    """The opening instruction, with the world's start when it has one: where the player character
+    begins, and the hooks that bring the party there."""
+    if template is None or template.start is None:
+        return OPENING_PROMPT
+    start = template.start
+    place = next(loc for loc in template.locations if loc.id == start.location)
+    return (
+        f"{OPENING_PROMPT}\n\nThe campaign starts at {place.name} (location id {place.id}). Place the "
+        f"player character there with move_actor, and do not place them anywhere else. The adventure's "
+        f"hooks, which bring the party to this start, are below. Work them into the introduction as "
+        f"what the player character has heard or been asked to do; do not state them as a list.\n\n"
+        f"{start.hooks}"
+    )
+
+
 OOC_INSTRUCTION = (
     "Out-of-character step. The player is talking to you as the GM, not to their character. Reply "
     "to them directly, in your own voice, and do not narrate the scene. Answer what they asked, "
@@ -623,7 +647,11 @@ def context_usage(
     world_rules: Mapping[str, str],
 ) -> ContextUsage:
     unsummarized = [m for m in history if m.id > state.through]
-    all_rules = {**(rule_set.rules if rule_set else {}), **world_rules}
+    all_rules = {
+        **(rule_set.rules if rule_set else {}),
+        **(rule_set.attached_rules if rule_set else {}),
+        **world_rules,
+    }
     used = sum(
         part.tokens
         for part in system_parts(
@@ -877,6 +905,7 @@ class _Run:
     model_name: str
     ctx: ToolContext
     cursor: int
+    opening: str
 
     @property
     def tool_calls(self) -> Mapping[str, ToolCall]:
@@ -936,7 +965,7 @@ def _tool_context(
         ),
         speak=speak,
         ooc=ooc,
-        rules={**rule_set.rules, **world.rules},
+        rules={**rule_set.rules, **rule_set.attached_rules, **world.rules},
         lookup_tools={
             tool.name: brief(tool.description)
             for tool in rule_set.tool_calls.values()
@@ -974,6 +1003,7 @@ def _start_run(
             library.world_content(campaign.world_template, campaign.rule_set),
         ),
         cursor=_newest(engine, campaign.id),
+        opening=opening_prompt(library.world_templates.get(campaign.world_template)),
     )
 
 
@@ -1071,7 +1101,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
         clock_rules=rule_set.clock,
         inventory=rule_set.inventory,
     )
-    message = OPENING_PROMPT if turn.opening else turn.text
+    message = run.opening if turn.opening else turn.text
     history = [
         m for m in list_messages(run.engine, run.campaign_id) if watermark < m.id < turn.opener
     ]

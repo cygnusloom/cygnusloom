@@ -198,3 +198,27 @@ def test_a_world_npc_attaching_an_unknown_rule_is_a_content_error(tmp_path: Path
     )
     with pytest.raises(ContentError, match="attaches rule 'no-such-rule'"):
         ContentLibrary.load(tmp_path).world_content("testland", "testset")
+
+
+def test_every_bestiary_entry_has_its_description_and_every_attached_rule_its_text():
+    rule_set = LIBRARY.rule_sets["cairn2e"]
+    assert len(rule_set.monsters) == 85
+    for monster in rule_set.monsters.values():
+        assert monster.description, monster.id
+        for rule_id in monster.rules:
+            assert rule_set.attached_rules.get(rule_id), f"{monster.id} has no text for {rule_id}"
+
+
+def test_a_bestiary_monster_present_brings_its_special_rules(
+    client_factory: Callable[[], TestClient],
+):
+    rule_set = LIBRARY.rule_sets["cairn2e"]
+    app, campaign_id, tools = _fight(client_factory)
+    tools.create_monster("Basilisk", YARD)
+    state = _state(app, campaign_id)
+    basilisk = state.named("Basilisk")
+    assert basilisk is not None
+    assert "basilisk-gaze" in basilisk.rules
+    text = present_rules_text(state, {**rule_set.rules, **rule_set.attached_rules})
+    assert "- basilisk-gaze (from Basilisk):" in text
+    assert "A target facing the Basilisk is slowly petrified" in text

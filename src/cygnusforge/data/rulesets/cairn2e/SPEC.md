@@ -47,7 +47,7 @@ Scope:
 6. **Attack modifiers.**
    - Impaired: roll 1d4 instead of the damage die (cover, bound hands, distant ranged targets).
    - Enhanced: roll 1d12 instead of the damage die (helpless foe, daring maneuver).
-   - Blast: roll the damage die separately for each target.
+   - Blast: roll the damage die separately for each target. The book's rule (Core Rules, https://cairnrpg.com/second-edition/players-guide/core-rules): "Attacks with the Blast quality affect all targets in the noted area, rolling separately for each affected character... If unsure how many targets can be affected, roll the related damage die for a result." Flags and targets are in Phase 2.
    - Two weapons: roll both dice and keep the higher (the book writes d8+d8; stored as 1d8+1d8, since cairn2e's `+` keeps the higher).
    - Multiple attackers on one foe: roll all dice and keep the higher.
    - Unarmed: d4.
@@ -74,6 +74,13 @@ Source: the Warden's Guide, Detachments (https://cairnrpg.com/second-edition/war
 - If that save fails, the GM chooses the outcome per scene: the detachment is defeated, or its members flee, as a morale break does.
 - Engine-enforced: after a failed Critical Damage save the detachment is pending. Its attacks and hits on it are refused until the GM calls `resolve_group_break` with `defeat` or `flee`.
 - Blast: a detachment's attack rolls its enhanced dice separately for each living individual on the other side. Blast applies to individuals only; detachments do not attack detachments.
+- Book rule (Detachments page): "Attacks against detachments by individuals are impaired (excluding blast damage). Attacks against individuals by detachments are enhanced and deal blast damage." So a detachment's attacks on individuals are enhanced and Blast, and attacks on a detachment by individuals are impaired and exclude Blast damage.
+- OPEN: a group target with a Blast attack is refused for now. The book says detachment attacks by individuals are impaired, excluding blast damage, which may mean normal dice instead. Decision pending.
+- Attack flags (design decision): a bestiary attack may be structured, for example `"attacks": {"claws": {"dice": "1d8+1d8", "flags": ["blast"]}}`. Plain dice strings such as `"bite": "1d6"` stay valid for unflagged attacks. Flags are `blast` and `ignores_armor`.
+- A non-group attack with `blast` takes a `targets` list, and each target rolls separately. With no list the damage rolls once. Detachment (large group) Blast keeps its existing behaviour.
+- OPEN: the GM tool argument shape. The attack tool takes an optional `targets` list for non-group Blast, and each target rolls separately. Whether this shape is right for the GM tool API is still to be confirmed.
+- `resolve_attacks` refuses blast attacks. `ignores_armor` skips armor. Shadow (draining touch) and Unicorn (horn) use `ignores_armor`.
+- Closed: non-detachment Blast is modelled by the `blast` flag and the `targets` list. `ignores_armor` is its own flag. Tests: `tests/test_blast.py`.
 - Detachments make no morale checks. Checked against the Combat and Detachments pages: morale is triggered by a group's casualties, and a detachment "remains a single unit until it takes critical damage", so its break point is its Critical Damage save.
 
 Acceptance:
@@ -308,7 +315,24 @@ Phase 12 design decisions (user):
 
 World: a module is its own world. The CAS-1 import goes into the `twin-lakes` world template (`src/cygnusforge/data/worlds/twin-lakes/`). That world is the Cairn 2e test world until the feature set is complete. The `kilharbor` world was removed. Its only content was a description, and no locations or NPCs. The `twin-lakes` world has no locations or NPCs until the import fills it in.
 
+Start location (implemented; live test pending): the `twin-lakes` world template has an optional `start` object in `world.json`, with `location` set to `isthmus-town` and `hooks` set to the module's Hooks text verbatim (the Tideborn 750 gp and Cities 200 gp bullets, from https://cairnrpg.com/adventures/first-party/cas-1). The loader validates the location id. The opening prompt places the player character there with `move_actor` and gives the GM the hooks. Before this, the GM invented an opening village ("Thornhallow") that is not in the module, so the player could not reach the module locations.
+
 Rule attachments (built; automated test `tests/test_rule_attachments.py` passes; live check blocked): a module rule that belongs to one NPC, item, or creature (for example Vuk's Choking Hold, Deadmill's rules, or the Bandits' morale) attaches to that thing. Its text goes into the GM context whenever the thing is present, not only through `lookup_rule`. This is a generic engine feature, so core and D&D need it too. cairn2e supplies the data. Gap register: see the Phase 12 rule attachment entry.
+
+### Bestiary audit
+
+All 84 source bestiary entries were checked against the source HTML. `monsters.json` holds 85 entries. The difference from 84 is not yet reconciled (see Traitor-Rats below).
+
+- Descriptions are verbatim from the source bullets. Stats, armor, and attack dice match the source.
+- Rules are verbatim, as inline rules `{id, text}` on each monster: 137 rules across 77 monsters. Monster rules are not listed in the rule set prompt. They are injected for the GM only when the monster is present, through the 'Rules for what is present' context part, and they are available to `lookup_rule`.
+- Shadow (draining touch) and Unicorn (horn) ignore armor. They are modelled with the `ignores_armor` flag.
+- OPEN: Traitor-Rats. Stats come from the book's Detachments example (3 HP, STR 5, DEX 15, WIL 4, bite d6, detachment). Armor 0 and the description are NOT verified and remain as they were. Verify against the book. It is the 85th entry, the worked example from the cairn2e Detachments page, and is not among the 84 source bestiary entries.
+- OPEN (judgement, confirm with the user): Ghost's source entry has an empty description. `monsters.json` sets the description to the first bullet verbatim, which is also rule `ghost-rule-1`.
+- OPEN: Bandit and Gnoll. They mention detachments only in their rule text and are not flagged as detachments. Needs a decision.
+- OPEN: Roc. The source has no statblock.
+- OPEN: Warrior Snail Acolyte. The source has no separate block, only "Acolyte".
+- OPEN: Night Cat. Its description differs between sources.
+- OPEN: Boggart, Pixie, and Will-o-Wisp. The source gives them no attacks.
 
 Done when: every location, NPC, monster, relic, and table in the module is in the ruleset or in an adventure data file, and each is live-checked where it matters. Play-through is Phase 14. Gaps found are added to the gap register and closed or scheduled.
 
@@ -475,11 +499,13 @@ Phase 14 (capstone play-through): the full CAS-1 play-through and any gaps it re
 - RESOLVED (Phase 12, seeding): `seed_campaign` ignored an NPC's monster statblock, so module NPCs with a statblock got random stats. Seeding now uses the statblock. Unit tests: `tests/test_combat.py`. Live test verified in the DB.
 - RESOLVED (Phase 12, Vuk decision): the Ash Phantom has no statblock on cairnrpg.com's Warden's Guide bestiary, and the module prints no numbers. Decision: Vuk's ash form is story-only with the Choking Hold rule attached (rule attachment is still OPEN below). Her full form, the 7 ft Lich Queen, uses the bestiary Lich (14 HP, 1 Armor, 8 STR, 8 DEX, 18 WIL, soul dagger d8). The Lich is not imported yet (see the bestiary gap).
 - RESOLVED (Phase 12, bestiary): the cairn2e `monsters.json` now has 85 entries, up from 12. Each new entry was checked verbatim against the source HTML. Known gaps from the import:
+  - Closed in this phase (bestiary audit): descriptions are verbatim, and rules are verbatim inline rules attached to each monster. See the Bestiary audit below.
   - OPEN: Roc has no stat block on the source page.
-  - OPEN: Traitor-Rats has no match in the source. Its entry is unchanged and unverified.
+  - OPEN: Traitor-Rats is the 85th entry, the worked example from the Detachments page (3 HP, STR 5, DEX 15, WIL 4, bite d6, detachment). Armor 0 and the description are unverified. Verify against the book.
   - OPEN: "Warrior Snail Acolyte" is not a separate block. Only "Acolyte" exists.
   - OPEN: Night Cat is in the core bestiary and the twin-lakes monsters. Its stats match, but its descriptions differ.
   - OPEN: Boggart, Pixie, and Will-o-Wisp have no attacks in the source.
+  - OPEN: Bandit and Gnoll mention detachments only in their rule text ("Groups of four or more are a detachment"; "attack as a pack (as detachment)"). They are not flagged as detachments. Needs a decision.
 - RESOLVED (Phase 12, user chose the book's guidance): the eleven statless NPCs (Reeve Trellis, Aldra, Flavia, Jandy, Giva, Drum, Corsetta, Franz, Beju, Nicolas, and Berk) have no statblock in the module. Each has `hp_tier: "average"` in `twin-lakes/npcs.json`. A live seed check found five of them (Corsetta, Franz, Beju, Nicolas, Berk) untiered and rolling 1 to 6 HP; they were fixed and the test now covers all eleven, which the rule set maps to HP 3 (`npc_hp` in `cairn2e/rule_set.json`). Seeding passes that HP as given stats, so the other stats are still rolled. Tests: `tests/test_npc_hp.py`. Their description is commoner or worker, so the average tier is my judgment. Hardier and serious tiers are in the rule set for NPCs that need them. Aldra is murdered in the module, so her stats matter only if she is referenced.
 - RESOLVED (Phase 12, rule attachments, user chose always-injected): NPCs and features list rule ids in `rules`. Their text goes into a "Rules for what is present" system part on every turn. "Present" means a living NPC at the PC's location, or an item the PC carries. Ids are validated at load. Unit tests: `tests/test_rule_attachments.py`. Live-verified on a fresh Twin Lakes campaign: at the start (PC in Isthmus Town) the part is absent. After the GM moved the PC to Deadmill with `move_actor`, the next reply's context included "Rules for what is present" with Jandy's `deadmill-time-loop` text.
   - OPEN (decision, pending): the field name `rules` and the "present" definition are my defaults. Confirm with the user. Decided by the user: defeated NPCs keep their rules while they remain at the location (implemented, tested in `test_a_defeated_npc_still_here_keeps_its_rules`).
@@ -490,7 +516,11 @@ Phase 14 (capstone play-through): the full CAS-1 play-through and any gaps it re
   - OPEN: several module rules have no rule id, so they are not attached. These are Eye of Vuk, Fletcher's Ire, Echo Spark, Watersnatch, Curved Dagger, Memory Prism, Wisp Lamp, Annafranax's bird revenge (§2.6), and Fasha's drag-to-temple (§2.7).
 - OPEN (Phase 12): the world loader reads only the text of world rules, so `"important": true` on a world rule has no effect.
 - OPEN (Phase 12): world-scope `dice_table` entries are not loaded, so the d6 and d8 rolls in the module's tables are plain options, not rolls.
-- OPEN (Phase 12, live gap, blocks the Vuk live check and the capstone): the GM will not route the player to T10b (Vuk's Interrogation Room). In a live session, Mara in Marrow Hollow asked to go north and into T10b. The GM replied "No change needed" and said the temple was unreachable from the crossing, with no move. In an earlier turn it had invented "South Bank Landing" with `create_location` instead of using the module's route. The module's path from the crossing to the Temple of the Fungal Lizards and T10a/T10b is not in the GM's context. Fix the location data, or the GM's guidance on routing, so the module path is reachable. Do not let the GM invent places the module already has.
+- OPEN (Phase 12, live gap, blocks the Vuk live check and the capstone; the route fix below is pending a live test): the GM will not route the player to T10b (Vuk's Interrogation Room). In a live session, Mara in Marrow Hollow asked to go north and into T10b. The GM replied "No change needed" and said the temple was unreachable from the crossing, with no move. In an earlier turn it had invented "South Bank Landing" with `create_location` instead of using the module's route. The module's path from the crossing to the Temple of the Fungal Lizards and T10a/T10b is not in the GM's context. Fix the location data, or the GM's guidance on routing, so the module path is reachable. Do not let the GM invent places the module already has.
+  - Status (this change): route prose is added to `locations.json` on bone-sump, temple-of-the-fungal-lizards, t9-chamber-of-worship, and t10b-interrogation-room-interior. The module route is Bone Sump mound stairs, then the Temple, then T9, then the short hallway, then the T10a metal door, then T10b. Fixed, pending live test.
+  - OPEN: Bone Sump is known only to Fasha and Giva, so a player needs a discovery hook from Fasha or Giva before reaching it. Decide how that discovery is modelled.
+- OPEN (Phase 12, invented locations): the GM can call `create_location` and invent places the module does not have, such as "Thornhallow" and "South Bank Landing". Nothing stops this on module-backed worlds. Decide whether to restrict `create_location` on module worlds or allow it and flag it.
+- OPEN (Phase 12, live test): `move_actor` accepts any known location, with no route or adjacency check. In a live run the GM moved Mara from Isthmus Town straight to White Tower Fens, bypassing the Bone Sump route, and narrated her getting lost. Decide whether moves need route checks, or whether the GM must narrate travel between places.
 - OPEN (Phase 12, module text, user to decide; kept verbatim): "blast" (Suraru Imperator's bite) is undefined. "The Cities" and "Marchguard" are undefined. "memory prison" vs "memory prism" is treated as the prism item; the book prints both. "3 bandits*" has an asterisk with no footnote. "see p.3" points to a missing page. Vuk's heart count is "at least one" in the viscera line and three in Vuk's text.
 - OPEN (Phase 12): the unarmed 1d4 is taken from the module for unarmed attacks. It is not verified against the printed page.
 - OPEN (Phase 12): the module prints no HP or armor for Fasha. HP 6 is an assumption, from the "hardier" guidance. Confirm with the user.

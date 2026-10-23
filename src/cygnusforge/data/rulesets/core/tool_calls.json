@@ -649,6 +649,14 @@
               "dice": {
                 "type": "string",
                 "description": "The damage dice, such as '1d8' or '1d6+1d6'."
+              },
+              "flags": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["blast", "ignores_armor"]
+                },
+                "description": "Leave out for a plain attack. The flags the rule set defines for attacks."
               }
             },
             "required": [

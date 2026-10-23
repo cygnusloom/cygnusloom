@@ -9,6 +9,11 @@ from collections.abc import Mapping, Sequence
 from cygnusforge.services.common import InvalidInput
 
 NORMAL = "normal"
+# An attack's flags. Blast hits each target named in the attack's area, rolling separately for each.
+# Ignores armor skips the target's armor.
+BLAST = "blast"
+IGNORES_ARMOR = "ignores_armor"
+ATTACK_FLAGS = (BLAST, IGNORES_ARMOR)
 
 
 def modifier_name(modifier: object) -> str:
