@@ -216,6 +216,9 @@ Gaps from Phase 9:
 - Dungeon Events table, rolled when the party spends too long in one place, makes noise, or enters a new area.
 - Dungeon seeds and generated rooms are GM content, not engine logic.
 - Source (cairnrpg.com Procedures and Warden's Guide > Dungeon Exploration, checked for Phase 10): dungeon time is counted in **turns** and **cycles**, not in minutes. A turn is one action per character plus about 40ft of movement. The book gives no length in minutes or hours for a turn. Dungeon Events are rolled when the party spends more than one cycle in one room, moves quickly, enters a new area, or makes noise. The six-entry d6 table is Encounter, Sign, Environment, Loss, Exhaustion, Quiet.
+- Source (Encounter result, d6 = 1): the book says "roll on an encounter table" but prints no fixed one. The Dungeon Seeds page tells the Warden to write encounter tables per dungeon ("Encounter Tables: create random events... wandering monsters, factions, NPCs"). The only printed d20 roll that gives monsters is the Bestiary's Monster Categories table (20 groups, each with a list of monsters). The Warden picks the monster from the group. The Reactions rule in the Core Rules decides whether an encounter is hostile.
+- Dungeon time decision (user): dungeon turns are a counter with no clock time. The hour clock still covers rest and travel.
+- Dungeon Events trigger decision (user): the GM calls one dungeon-cycle tool that states the triggers (new area, loud, hasty, repeat in the same room), and the engine rolls the d6.
 - Source conflict (gap): the Procedures page says travel is counted in **watches**, three eight-hour segments per day. The engine uses four six-hour parts (morning, afternoon, evening, night), which the user confirmed in Phase 9. Decide whether the day structure is data (`clock` in the ruleset) and which one to use.
 
 ## Phase 11: generic engine refactor
