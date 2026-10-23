@@ -227,7 +227,8 @@ Gaps from Phase 9:
 - Treasure decision (user): treasure is a **world object**, separate from actors (characters). An object is placed in a location or a dungeon area and holds gold, an item, or anything the GM chooses. The engine does not invent treasure. A dungeon area is a child `Place` (`parent` = the dungeon location), so areas already fit the model.
 - Gold decision (user): a PC who picks up gold from an object gets it. There is no shared party purse.
 - Generic candidate for Phase 11: world objects (placed, found, taken, with payload in data) are generic. D&D has the same need for treasure in rooms.
-- Phase 10 defaults (not user-chosen, to revisit if wrong): `place_object(place, contents, hidden)` for the Warden; `take_object(object, character)` for a PC; a taken item goes to inventory and is refused when the inventory is full; `dungeon_cycle(triggers, reason)` for the cycle tool, which rolls the d6 Dungeon Event and never moves the clock.
+- Phase 10 defaults (not user-chosen, to revisit if wrong): `place_object(place, name, contents, hidden)` for the Warden, where `name` is the short name a PC takes the object by; `take_object(object, character)` for a PC, matching the name, then the description, then part of either; a taken item goes to inventory and is refused when the inventory is full; `dungeon_cycle(triggers, reason)` for the cycle tool, which rolls the d6 Dungeon Event and never moves the clock.
+- Status: dungeon cycle, Dungeon Events, reaction rolls, and world objects are built. Unit tests: `tests/test_dungeon_cycle.py`, `tests/test_world_objects.py`. Full suite: 865 passing. Live-verified on a fresh DB: a dungeon event rolled on a new area; the Warden placed an offering niche with gold and an item; Mara took it by its short name, and gold and the item arrived once, with `object.taken` recorded and the object gone from the location.
 - Resolved (user choice): `moments` is one hour. A rest length can now be given in `hours`, so the rest format supports hours as well as parts and days.
 
 ## Phase 11: generic engine refactor
@@ -298,6 +299,10 @@ Phase 4 (deprivation, fatigue, rest, inventory):
 - An interrupted rest can mismatch the narration and the clock.
 - A `night` rest begun in the morning watch runs 23 hours to the next morning, skipping the afternoon and night. Live-seen on a fresh DB (day 1 morning → day 2 morning). Unclear whether a book night rest always starts at dusk. Needs a user decision.
 - The GM narrated a night's camp and eating without calling `rest`, so no ration was used. Needs a prompt rule and a test.
+- FIXED (Phase 10): `take_object` matched only the full description, so the GM's short names failed. The GM then used `give_item` and a gold change, which duplicated the loot and never removed the object. Objects now have a short `name`, the matching is name, then description, then part of either, and the prompt says never to use `give_item` for a place's object. Live-verified.
+- OPEN (Phase 10): hidden objects have no reveal path. A hidden object cannot be listed or taken, and no tool reveals it. Unscheduled; needs a decision on who reveals it (the Warden, or a search).
+- OPEN (Phase 10): `drop_item` removes the item and does not place it in the location, so a dropped item vanishes. Seen live when Mara dropped her Lure. Unscheduled; needs a decision on whether a drop creates a place object.
+- OPEN (Phase 10): the dungeon reaction table `dungeon_reaction` duplicates the `reaction` table in `warden_tables.json`, and the loader rejects duplicate ids. Merge in Phase 11.
 - The 10-slot capacity and the full-inventory HP rule are unverified against the book.
 - The deprivation Fatigue threshold (day 2 or day 3) is unverified.
 - The `visited_day or 1` stale-place rule and STR 0 outside combat are unverified.

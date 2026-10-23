@@ -284,6 +284,22 @@ class RestRecord:
     reason: str
 
 
+@dataclass(frozen=True)
+class WorldObject:
+    """Something a place holds, such as gold, an item, or anything the Warden describes. It is not
+    an actor. A hidden object is neither listed nor takeable."""
+
+    id: int
+    place: str
+    contents: str
+    gold: int = 0
+    item: str = ""
+    item_size: str = ""
+    item_slots: int = 0
+    hidden: bool = False
+    name: str = ""
+
+
 @dataclass
 class CampaignState:
     """The campaign as its log says it is now. Keys of `places` and `characters` are the names
@@ -291,6 +307,8 @@ class CampaignState:
 
     places: dict[str, Place] = field(default_factory=dict)
     characters: dict[str, Character] = field(default_factory=dict)
+    # World objects by the id of the event that placed them.
+    objects: dict[int, WorldObject] = field(default_factory=dict)
     notes: list[Note] = field(default_factory=list)
     # Options shared by the whole campaign, keyed by field id. Empty until they are chosen.
     options: dict[str, str] = field(default_factory=dict)
@@ -1574,6 +1592,40 @@ class TablesRolled(GameEvent):
 
 
 @dataclass(frozen=True)
+class DungeonEventRolled(GameEvent):
+    """A roll on the Dungeon Events table. It does not move the day or hour clock."""
+
+    kind: ClassVar[str] = "dungeon.event"
+
+    roll: int
+    event: str
+    text: str
+    triggers: list[str]
+    reason: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        return None
+
+    def render(self) -> str:
+        return f"Dungeon event ({self.reason}): rolls {self.roll}, {self.event}. {self.text}"
+
+
+@dataclass(frozen=True)
+class ReactionRolled(GameEvent):
+    kind: ClassVar[str] = "reaction.rolled"
+
+    roll: int
+    band: str
+    reason: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        return None
+
+    def render(self) -> str:
+        return f"Reaction ({self.reason}): rolls {self.roll}, {self.band}."
+
+
+@dataclass(frozen=True)
 class ArmorSet(GameEvent):
     kind: ClassVar[str] = "combat.armor_set"
 
@@ -2026,6 +2078,62 @@ class ItemAdded(GameEvent):
 
     def render(self) -> str:
         text = f"{self.name} gains {self.item}"
+        return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
+class ObjectPlaced(GameEvent):
+    """An object is put in a place. A hidden one is kept out of the log's text, so players do not
+    read of it before it is found."""
+
+    kind: ClassVar[str] = "object.placed"
+
+    place: str
+    contents: str
+    gold: int = 0
+    item: str = ""
+    item_size: str = ""
+    item_slots: int = 0
+    hidden: bool = False
+    cause: str = ""
+    name: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.objects[event_id] = WorldObject(
+            id=event_id,
+            place=self.place,
+            contents=self.contents,
+            gold=self.gold,
+            item=self.item,
+            item_size=self.item_size,
+            item_slots=self.item_slots,
+            hidden=self.hidden,
+            name=self.name,
+        )
+
+    def render(self) -> str | None:
+        if self.hidden:
+            return None
+        return f"{self.contents} is in {self.place}."
+
+
+@dataclass(frozen=True)
+class ObjectTaken(GameEvent):
+    """A character takes an object from its place. The gold and item it held are recorded by
+    their own events."""
+
+    kind: ClassVar[str] = "object.taken"
+
+    object_id: int
+    name: str
+    contents: str
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.objects.pop(self.object_id, None)
+
+    def render(self) -> str:
+        text = f"{self.name} takes {self.contents}"
         return f"{text} ({self.cause})." if self.cause else f"{text}."
 
 

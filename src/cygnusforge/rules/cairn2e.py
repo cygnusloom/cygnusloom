@@ -86,6 +86,14 @@ def roll_tables(tables: list[str], ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.roll_tables(tables)
 
 
+def dungeon_cycle(triggers: list[str], reason: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.dungeon_cycle(triggers, reason)
+
+
+def roll_reaction(reason: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.roll_reaction(reason)
+
+
 def advance_time(ctx: ToolContext, days: int = 0, parts: int = 0, hours: int = 0) -> dict[str, Any]:
     return ctx.world.advance_time(days=days, parts=parts, hours=hours)
 

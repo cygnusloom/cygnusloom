@@ -134,6 +134,7 @@ class DiceRow:
     low: int
     high: int
     result: str
+    text: str = ""
 
 
 @dataclass(frozen=True)
@@ -1396,9 +1397,16 @@ def _load_dice_table(definition: Definition, template: str) -> DiceTable:
         raise ContentError(f"{label}: 'rows' must be a non-empty list")
     loaded: list[DiceRow] = []
     for index, row in enumerate(rows):
-        if not isinstance(row, dict) or set(row) != {"roll", "result"}:
-            raise ContentError(f"{label}: row {index} needs 'roll' and 'result' and no other keys")
+        if not isinstance(row, dict) or not {"roll", "result"} <= set(row) <= {
+            "roll",
+            "result",
+            "text",
+        }:
+            raise ContentError(
+                f"{label}: row {index} needs 'roll' and 'result' and optional 'text' and no other keys"
+            )
         roll, result = row["roll"], row["result"]
+        text = row.get("text", "")
         bounds = ROLL_RANGE.fullmatch(roll) if isinstance(roll, str) else None
         if bounds is None:
             raise ContentError(
@@ -1410,7 +1418,9 @@ def _load_dice_table(definition: Definition, template: str) -> DiceTable:
             raise ContentError(f"{label}: row {index} range {roll!r} runs backwards")
         if not isinstance(result, str) or not result.strip():
             raise ContentError(f"{label}: row {index} 'result' must be non-empty text")
-        loaded.append(DiceRow(start, end, result))
+        if "text" in row and (not isinstance(text, str) or not text.strip()):
+            raise ContentError(f"{label}: row {index} 'text' must be non-empty text")
+        loaded.append(DiceRow(start, end, result, text))
     expected = low
     for row in loaded:
         if row.low != expected:

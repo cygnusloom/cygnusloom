@@ -512,6 +512,88 @@
   },
   {
     "type": "tool_call",
+    "id": "place_object",
+    "name": "place_object",
+    "python_module": "core",
+    "function": "place_object",
+    "description": "Put a world object in a place: a location or a dungeon area. It holds what the story has stocked there, such as gold, an item, or a described thing. Give a short name a character can take it by, such as 'clay jar', and a fuller description in contents. Optionally give gold or an item name. Set hidden when the object is not yet found; a hidden object cannot be seen or taken. Use this only for treasure or objects the story has placed; do not invent them unprompted.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "place": {
+          "type": "string",
+          "description": "The location or dungeon area that holds the object."
+        },
+        "name": {
+          "type": "string",
+          "description": "A short name to take the object by, such as 'clay jar' or 'chest'. Keep it to one to three words."
+        },
+        "contents": {
+          "type": "string",
+          "description": "A description of the object, such as 'a cracked clay jar with nine gold coins inside'."
+        },
+        "hidden": {
+          "type": "boolean",
+          "description": "True if the object is not yet found."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why the object is placed, in a few words."
+        },
+        "gold": {
+          "type": "integer",
+          "description": "Gold in the object, if any."
+        },
+        "item": {
+          "type": "string",
+          "description": "The name of an item in the object, if any."
+        },
+        "item_size": {
+          "type": "string",
+          "description": "The size of the item, if one is given. Defaults to normal."
+        }
+      },
+      "required": [
+        "name",
+        "place",
+        "contents",
+        "hidden",
+        "reason"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "take_object",
+    "name": "take_object",
+    "python_module": "core",
+    "function": "take_object",
+    "description": "A character takes a visible object from the place they are in. Gold goes to that character. An item goes into their inventory, and the take is refused if it does not fit. Use this only when a character acts to take the object.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "object": {
+          "type": "string",
+          "description": "The object's description, as the Warden gave it."
+        },
+        "character": {
+          "type": "string",
+          "description": "The character's name."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why the character takes it, in a few words."
+        }
+      },
+      "required": [
+        "object",
+        "character",
+        "reason"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "update_npc",
     "name": "update_npc",
     "python_module": "core",

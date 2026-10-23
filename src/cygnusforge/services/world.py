@@ -53,6 +53,7 @@ from cygnusforge.services import inventory as inventory_service
 from cygnusforge.services import magic as magic_service
 from cygnusforge.services import market as market_service
 from cygnusforge.services import needs as needs_service
+from cygnusforge.services import objects as objects_service
 from cygnusforge.services.common import (
     InvalidInput,
     bounded_text,
@@ -61,6 +62,8 @@ from cygnusforge.services.common import (
 )
 from cygnusforge.services.conditions import active_conditions, end_condition
 from cygnusforge.services.dice_tables import roll_tables as roll_dice_tables
+from cygnusforge.services.dungeon import dungeon_cycle as dungeon_cycle_service
+from cygnusforge.services.dungeon import roll_reaction as roll_reaction_service
 from cygnusforge.services.events import (
     CAMPAIGN_WIDE,
     NPC_KIND,
@@ -88,12 +91,14 @@ from cygnusforge.services.events import (
     OpeningStarted,
     PcAdded,
     Place,
+    WorldObject,
     defeat_status,
     load_state,
     name_key,
     record,
     token_labels,
 )
+from cygnusforge.services.objects import visible_objects
 from cygnusforge.services.tools import check_arguments
 
 MAX_NAME = 120
@@ -120,6 +125,7 @@ class SceneView:
     sheet: list[str]
     pack: PackView | None = None
     hirelings: tuple[Character, ...] = ()
+    objects: tuple[WorldObject, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -280,6 +286,45 @@ class WorldTools:
                 cause,
             )
 
+    def place_object(
+        self,
+        place: str,
+        contents: str,
+        hidden: bool,
+        cause: str,
+        gold: int | None = None,
+        item: str | None = None,
+        item_size: str = "",
+        name: str = "",
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return objects_service.place_object(
+                db,
+                self.campaign_id,
+                self.marketplace,
+                self.item_sizes,
+                place,
+                contents,
+                hidden,
+                cause,
+                gold,
+                item,
+                item_size,
+                name,
+            )
+
+    def take_object(self, object_name: str, character: str, cause: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return objects_service.take_object(
+                db,
+                self.campaign_id,
+                self.marketplace,
+                self.inventory,
+                object_name,
+                character,
+                cause,
+            )
+
     def buy_service(self, names: Sequence[str], service: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return market_service.buy_service(
@@ -406,6 +451,16 @@ class WorldTools:
             return magic_service.recharge_relic(
                 db, self.campaign_id, _required(self.magic, "magic"), name, item
             )
+
+    def dungeon_cycle(self, triggers: list[str], reason: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return dungeon_cycle_service(
+                db, self.campaign_id, triggers, reason, self.dice_tables, self.rng
+            )
+
+    def roll_reaction(self, reason: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return roll_reaction_service(db, self.campaign_id, reason, self.dice_tables, self.rng)
 
     def roll_save(self, name: str, stat: str, reason: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -1645,8 +1700,16 @@ def scene_view(
         for c in state.characters.values()
         if c.hireling and place is not None and c.location == place.name
     )
+    objects = tuple(visible_objects(state, place.name)) if place is not None else ()
     return SceneView(
-        pc=pc, location=place, npcs=npcs, notes=notes, sheet=sheet, pack=pack, hirelings=hirelings
+        pc=pc,
+        location=place,
+        npcs=npcs,
+        notes=notes,
+        sheet=sheet,
+        pack=pack,
+        hirelings=hirelings,
+        objects=objects,
     )
 
 
@@ -1686,6 +1749,9 @@ def world_state_text(
         lines.append(f"Player character: {pc.name}, at {pc.location}.")
         names = [npc.name for npc in _npcs_at(state, pc.location)]
         lines.append(f"NPCs here: {', '.join(names) if names else 'none'}.")
+        things = [o.contents for o in visible_objects(state, pc.location)]
+        if things:
+            lines.append(f"Objects here: {'; '.join(things)}.")
     hirelings = [c for c in state.characters.values() if c.hireling]
     if hirelings:
         lines.append(

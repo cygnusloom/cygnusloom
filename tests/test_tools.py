@@ -128,6 +128,8 @@ CORE_TOOL_NAMES = {
     "hire_hireling",
     "dismiss_hireling",
     "change_gold",
+    "place_object",
+    "take_object",
     "move_actor",
     "all_at_location",
     "search_location",

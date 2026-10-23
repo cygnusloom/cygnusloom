@@ -95,6 +95,26 @@ def change_gold(name: str, amount: int, cause: str, ctx: ToolContext) -> dict[st
     return ctx.world.change_gold(name, amount, cause)
 
 
+def place_object(
+    place: str,
+    contents: str,
+    hidden: bool,
+    reason: str,
+    ctx: ToolContext,
+    gold: int | None = None,
+    item: str | None = None,
+    item_size: str | None = None,
+    name: str | None = None,
+) -> dict[str, Any]:
+    return ctx.world.place_object(
+        place, contents, hidden, reason, gold, item, item_size or "", name or ""
+    )
+
+
+def take_object(object: str, character: str, reason: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.take_object(object, character, reason)
+
+
 def update_npc(
     name: str,
     ctx: ToolContext,

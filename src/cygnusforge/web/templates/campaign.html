@@ -180,6 +180,14 @@
                 <li><strong>{{ hireling.name }}</strong> <span class="muted">(hireling of {{ hireling.employer }})</span></li>
                 {% endfor %}
               </ul>
+              {% if scene.objects %}
+              <p><strong>Objects here</strong></p>
+              <ul>
+                {% for object in scene.objects %}
+                <li>{{ object.contents }}</li>
+                {% endfor %}
+              </ul>
+              {% endif %}
               {% if not scene.location %}
               <p class="muted">Not yet at a location.</p>
               {% endif %}

@@ -89,7 +89,7 @@ BAD_TABLE_MESSAGES = {
     "overlapping-rows": "without gaps or overlaps",
     "rows-stop-short-of-top": "must cover every roll up to 12",
     "backwards-range": "runs backwards",
-    "extra-key-in-row": "needs 'roll' and 'result' and no other keys",
+    "extra-key-in-row": "needs 'roll' and 'result' and optional 'text' and no other keys",
     "empty-result": "'result' must be non-empty text",
     "whitespace-result": "'result' must be non-empty text",
     "bad-roll-string": "'roll' must be a number or a range",
