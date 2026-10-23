@@ -195,7 +195,8 @@ Acceptance:
   - Done live (campaign "Phase Nine B", a hireling Tam, and Dorn in critical damage): the GM stabilized Dorn with a Bandage, and `character.stabilized` fired. The GM first tried `use_item` on Tam's bandage with Dorn as the target, and the engine refused it (see the naming fix below). The GM then gave Dorn a Bandage and stabilized him, which left Tam's bandage in his pack. This live pass did not run the clean `use_item` path.
   - Done live (campaign 1 "Phase Ten Live", fresh DB): Tam was hired with catalogue Bandages (3 uses), the post-fix naming. Dorn at 0 HP and STR 1 was shot outside combat, and the engine recorded instant death (`character.died`). The death screen offered "Play Tam", and promotion fired (`hireling.promoted`). Tam then killed a foe with a hand-axe in a later fight.
   - Narration mismatch found live: the engine killed Dorn at once, but the `combat.harmed` status read "in critical damage", so the GM narrated an hour of dying. Fixed: a PC killed outright outside combat now reads "dead" (`player_character_dead` in `combat.json`, `defeat_status(..., killed=True)`). A test covers it (`tests/test_death.py`).
-  - Not yet live: a bandage used on a dying PC by a hireling with the singular name, a death by the clock with a hireling present, and wages stopping after promotion on a new day.
+  - Done live (campaign 1, same DB): hireling Ysolde was hired in Rillhollow with her own 3-use Bandages. Tam, at 0 HP and 2 STR, was hit in combat (Moll's arrow): the overflow took STR to 0, the save failed, and the engine recorded Critical Damage with a one-hour clock (`character.dying`). The narration said "an hour" and matched. Ysolde used one of her Bandages (3 to 2 uses), with no duplicate, and `character.stabilized` fired. Tam's live state is stabilized, so no further clock runs.
+  - Not yet live: a death by the clock with a hireling present (the engine path is shared with PCs and covered by unit tests), and wages stopping after promotion on a new day. The PC employer had no gold, so Ysolde's wage was recorded as unpaid, as designed.
 
 Fixed during the live check:
 - A dying record was lost when nothing committed after it. `begin_dying` and the Doomed branch now commit. A regression test covers this (`tests/test_death.py`). It was hidden in most fights because the encounter-end commit ran first.
@@ -333,6 +334,7 @@ Phase 9 (death rules): critical damage, Scars 11 (Mortal Wound) and 12 (Doomed),
 - `stabilize` is live-verified once, as a GM tool call.
 - RESOLVED (live-verified): hireling promotion. Tam was promoted after Dorn's death. Still OPEN: wages stopping after promotion is not yet seen live on a new day.
 - RESOLVED: a dying-to-dead narration mismatch. The `combat.harmed` status now reads "dead" for a PC killed outright. The GM prompt was not changed, so the narration check is still live-unverified.
+- OPEN (seen live): the GM gave Ysolde a "Walking stick" mid-turn with 0 uses, so it can be swung but never spent. The same freeform-item gap as below.
 - OPEN: a hireling kit item the GM names freeform, such as "Bandage", gets no uses. The catalogue match is now plural-tolerant, but a freeform name still has no uses. Gaps like this should be caught by a `give_item` validator. Phase 11 decides.
 - Resolved: 6 hours per part, confirmed by the user.
 - Resolved: STR 0 outside combat as instant death, confirmed by the user.
