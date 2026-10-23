@@ -29,7 +29,7 @@ from cygnusforge.services.inventory import carry_item, character_named, used_slo
 MAX_PRICE = 100_000
 
 
-def _listed_item(marketplace: Marketplace, item: str) -> ShopItem | None:
+def listed_item(marketplace: Marketplace, item: str) -> ShopItem | None:
     key = name_key(item)
     return next((listed for listed in marketplace.items if name_key(listed.name) == key), None)
 
@@ -77,7 +77,7 @@ def buy_item(
     inventory is refused, and nothing is paid."""
     state = load_state(db, campaign_id)
     buyer = character_named(state, name)
-    listed = _listed_item(marketplace, item)
+    listed = listed_item(marketplace, item)
     if listed is not None:
         if price is not None and price != listed.price:
             raise InvalidInput(f"{listed.name} costs {listed.price} in the catalogue, not {price}")

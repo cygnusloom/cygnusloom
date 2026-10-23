@@ -289,6 +289,11 @@ class WorldTools:
             )
 
     def give_item(self, name: str, item: str, size: str = "normal") -> dict[str, Any]:
+        listed = (
+            market_service.listed_item(self.marketplace, item)
+            if self.marketplace is not None
+            else None
+        )
         with session_scope(self.engine) as db:
             return inventory_service.give_item(
                 db,
@@ -298,6 +303,7 @@ class WorldTools:
                 name,
                 item,
                 size,
+                listed,
             )
 
     def drop_item(self, name: str, item: str) -> dict[str, Any]:

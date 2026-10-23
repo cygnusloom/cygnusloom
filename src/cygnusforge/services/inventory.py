@@ -9,7 +9,7 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusforge.content.library import InventoryRules
+from cygnusforge.content.library import InventoryRules, ShopItem
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
     CampaignState,
@@ -94,11 +94,24 @@ def give_item(
     name: str,
     item: str,
     size: str,
+    listed: ShopItem | None = None,
 ) -> dict[str, Any]:
+    """Give a character an item. A catalogue item keeps its listed uses and description, as a
+    purchase does."""
     if size not in item_sizes:
         raise InvalidInput(f"there is no item size named {size!r}")
     slots = item_sizes[size]
-    result = carry_item(db, campaign_id, rules, name, Item(item, size, slots), cause="")
+    uses = listed.uses if listed is not None else 0
+    text = listed.description if listed is not None else ""
+    given = Item(
+        item if listed is None else listed.name,
+        size,
+        slots,
+        text=text,
+        uses=uses,
+        max_uses=uses,
+    )
+    result = carry_item(db, campaign_id, rules, name, given, cause="")
     db.commit()
     return result
 

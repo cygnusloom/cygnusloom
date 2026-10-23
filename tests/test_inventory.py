@@ -10,6 +10,7 @@ from sqlmodel import Session
 
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import ItemAdded, current, record
+from cygnusforge.services.market import listed_item
 from cygnusforge.services.world import WorldTools
 from tests.test_combat import CAIRN, PC, _character, _fight, _fight_client
 
@@ -36,6 +37,15 @@ def test_give_item_adds_a_normal_item_for_one_slot(client_factory: Callable[[], 
     held = [i for i in _character(app, campaign_id, PC).items if i.name == "Lantern"]
     assert len(held) == lanterns + 1
     assert (held[-1].size, held[-1].slots) == ("normal", 1)
+
+
+def test_a_catalogue_item_given_keeps_its_listed_uses(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    listed = listed_item(CAIRN.marketplace, "Rations")
+    assert listed is not None and listed.uses > 0
+    tools.give_item(PC, "Rations")
+    rations = [i for i in _character(app, campaign_id, PC).items if i.name == listed.name]
+    assert rations[-1].uses == rations[-1].max_uses == listed.uses
 
 
 def test_bulky_items_take_two_slots_and_petty_items_none(client_factory):
