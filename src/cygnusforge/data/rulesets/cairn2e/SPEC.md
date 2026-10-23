@@ -496,7 +496,10 @@ Phase 14 (capstone play-through): the full CAS-1 play-through and any gaps it re
 - OPEN (Phase 12): Reeve's Office and the Cellar are nested under the Stuffed Inn in the source, but the one-level location schema puts them under isthmus-town. Decide whether the location schema needs nesting depth 2.
 - OPEN (Phase 12): the Dungeon Events table is not reproduced in the world data.
 - RESOLVED (Phase 12): the book's statless NPC HP tiers (average 3, hardier 6, serious 10 or more) are cairn2e data (`npc_hp`). Only an NPC with an `hp_tier` uses them.
-  - OPEN (decision): `create_npc` by the GM, with no stats and no tier, still rolls the rule set's 1d6 HP. The book says average 3. Changing that default changes behavior, so it needs the user's decision.
+  - RESOLVED (user chose: the GM picks the tier to fit the NPC's place in the story): `create_npc` takes an optional `hp_tier`, offered only when the rule set defines `npc_hp`. The cairn2e `npc-hp-tiers` rule, which the GM always receives, gives the book's guidance. An NPC with a statblock refuses `hp_tier` unless `force` is set, and `hp_tier` plus `hp` is refused. Without a tier, the NPC still rolls 1d6 HP. Tests: `tests/test_npc_hp.py`.
+  - OPEN (Phase 12): a GM-created NPC with no statblock and no tier still rolls 1d6 HP. The GM is now told to set a tier, but the argument is optional, so an omitted tier still rolls. Decide whether a statless NPC must have a tier.
+  - OPEN (Phase 12): the PC `hp` stat has a schema max of 6, so `character.stats.hp` cannot give an NPC more than 6 HP. A `serious` tier (10) passes through `hp_tier` only. Decide whether the stat bound should depend on the character or the NPC.
+  - OPEN (Phase 12): hirelings (`hire_hireling`) roll 1d6 HP and have no tier. They are not covered by the GM's tier choice.
 
 - OPEN (Phase 12, engine): attack modifiers on `update_npc` (`armor`, `attacks`) are cairn2e-specific in shape. Decide whether they belong in shared core or in cairn2e only.
 - OPEN (Phase 12, tests): the `Ghoul` name collided with the new published Ghoul statblock. The test creature is now "Grave Thing" in five test files. `tests/test_content.py` still uses "Ghoul" in a loader test. This is a naming check, not a bug.

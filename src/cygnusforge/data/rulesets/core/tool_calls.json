@@ -51,7 +51,8 @@
     "python_module": "core",
     "function": "create_npc",
     "character_options": true,
-    "description": "Add an NPC to the campaign and place them at an existing location. Leave personality, accent, or quirks out to have them generated at random; give them only when the story calls for a specific trait. Give character options, such as appearance or biography, only when the story calls for them; anything left out is rolled or left blank. A name that matches a published statblock, such as a creature in the module, takes that statblock's stats, armor, and attacks, so leave the stats out of the character options. Names must be unique among locations and NPCs.",
+    "npc_hp_tier": true,
+    "description": "Add an NPC to the campaign and place them at an existing location. Leave personality, accent, or quirks out to have them generated at random; give them only when the story calls for a specific trait. Give character options, such as appearance or biography, only when the story calls for them; anything left out is rolled or left blank. A name that matches a published statblock, such as a creature in the module, takes that statblock's stats, armor, and attacks, so leave the stats out of the character options. For an NPC with no statblock, set hp_tier to the tier their role in the story calls for. Names must be unique among locations and NPCs.",
     "parameters": {
       "type": "object",
       "properties": {

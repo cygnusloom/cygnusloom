@@ -206,6 +206,8 @@ class WorldTools:
     marketplace: Marketplace | None = None
     # What "+" between dice terms means in this rule set: "sum" or "highest".
     plus: str = field(kw_only=True)
+    # The rule set's HP tiers for NPCs without a statblock, by tier name.
+    npc_hp: Mapping[str, int] = field(default_factory=dict)
 
     def roll_tables(self, tables: list[str]) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -539,6 +541,7 @@ class WorldTools:
         quirks: Sequence[str] | None = None,
         character: Mapping[str, Any] | None = None,
         force: bool = False,
+        hp_tier: str | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return create_npc(
@@ -557,6 +560,8 @@ class WorldTools:
                 monsters=self.monsters,
                 force=force,
                 plus=self.plus,
+                npc_hp=self.npc_hp,
+                hp_tier=hp_tier,
             )
 
     def hire_hireling(
@@ -1120,6 +1125,8 @@ def create_npc(
     monsters: Mapping[str, MonsterTemplate],
     force: bool = False,
     plus: str,
+    npc_hp: Mapping[str, int],
+    hp_tier: str | None = None,
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_NAME)
@@ -1134,6 +1141,8 @@ def create_npc(
         if (character or {}).get("stats"):
             raise InvalidInput(_statblock_conflict(base, spec))
         character = {**(character or {}), "stats": dict(base.stats)}
+    if hp_tier is not None:
+        character = _with_hp_tier(character, hp_tier, npc_hp, statblock=base is not None)
     event = _npc_event(
         tables,
         rng,
@@ -1392,6 +1401,28 @@ def _with_statblock(event: NpcAdded, base: MonsterTemplate) -> NpcAdded:
         large_group=base.large_group,
         rules=list(dict.fromkeys([*event.rules, *base.rules])),
     )
+
+
+def _with_hp_tier(
+    character: Mapping[str, Any] | None,
+    hp_tier: str,
+    npc_hp: Mapping[str, int],
+    *,
+    statblock: bool,
+) -> dict[str, Any]:
+    """The character with the HP of a tier. A tier is for an NPC with no statblock, and it sets
+    HP outright, so it cannot be combined with HP given another way."""
+    if hp_tier not in npc_hp:
+        choices = ", ".join(sorted(npc_hp)) or "none"
+        raise InvalidInput(f"Unknown HP tier {hp_tier!r}; choose one of: {choices}")
+    if statblock:
+        raise InvalidInput(
+            "A creature with a statblock takes its HP from the statblock; leave out hp_tier"
+        )
+    stats = dict((character or {}).get("stats") or {})
+    if "hp" in stats:
+        raise InvalidInput("Give either hp_tier or hp, not both")
+    return {**(character or {}), "stats": {**stats, "hp": npc_hp[hp_tier]}}
 
 
 def _statblock_named(monsters: Mapping[str, MonsterTemplate], name: str) -> MonsterTemplate | None:

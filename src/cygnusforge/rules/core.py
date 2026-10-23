@@ -33,6 +33,7 @@ def create_npc(
     quirks: Sequence[str] | None = None,
     character: Mapping[str, Any] | None = None,
     force: bool = False,
+    hp_tier: str | None = None,
 ) -> dict[str, Any]:
     return ctx.world.create_npc(
         name=name,
@@ -43,6 +44,7 @@ def create_npc(
         quirks=quirks,
         character=character,
         force=force,
+        hp_tier=hp_tier,
     )
 
 

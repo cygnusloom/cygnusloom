@@ -210,6 +210,7 @@ def test_random_traits_come_from_the_given_tables(
             description="A tinker.",
             monsters={},
             plus="sum",
+            npc_hp={},
         )
         db.commit()
     assert result["personality"] == "gruff"
@@ -233,6 +234,7 @@ def test_too_many_quirks_are_rejected(client_factory: Callable[[], TestClient], 
             quirks=["x"] * (world.MAX_QUIRKS + 1),
             monsters={},
             plus="sum",
+            npc_hp={},
         )
 
 
@@ -295,6 +297,7 @@ def test_npc_character_values_come_from_the_lookup(
             character={"fields": {field: "Not a value"}},
             monsters={},
             plus=CAIRN.plus,
+            npc_hp={},
         )
     with _db(app) as db:
         world.create_npc(
@@ -309,6 +312,7 @@ def test_npc_character_values_come_from_the_lookup(
             character={"fields": {field: value}},
             monsters={},
             plus=CAIRN.plus,
+            npc_hp={},
         )
         db.commit()
 

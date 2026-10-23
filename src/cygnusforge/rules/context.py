@@ -22,6 +22,7 @@ class World(Protocol):
         quirks: Sequence[str] | None = None,
         character: Mapping[str, Any] | None = None,
         force: bool = False,
+        hp_tier: str | None = None,
     ) -> dict[str, Any]: ...
 
     def update_location(self, name: str, description: str) -> dict[str, Any]: ...

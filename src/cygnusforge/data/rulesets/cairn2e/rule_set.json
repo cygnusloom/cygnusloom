@@ -54,6 +54,12 @@
   },
   {
     "type": "rule",
+    "id": "npc-hp-tiers",
+    "important": true,
+    "text": "Hit protection for NPCs without a statblock, from the Warden's Guide (Creating Monsters): average creatures have 3 HP, hardier ones 6 HP, and serious threats 10 or more. When you create an NPC with no statblock, set hp_tier to the tier that fits their place in the story: average for an ordinary person such as a commoner, worker, or child; hardier for someone tougher, such as a guard, fighter, or hardened traveler; serious for a dangerous threat. An NPC with a statblock takes its HP from the statblock, so give it no hp_tier."
+  },
+  {
+    "type": "rule",
     "id": "omens",
     "text": "The campaign has one omen, chosen from the Omens table when the campaign is created rather than rolled by the youngest character. Every character shares it. It should be read aloud to the players when the campaign begins."
   },

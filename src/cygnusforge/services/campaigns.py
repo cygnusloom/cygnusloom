@@ -932,6 +932,7 @@ def _tool_context(
             food=rule_set.food,
             marketplace=rule_set.marketplace,
             plus=rule_set.plus,
+            npc_hp=rule_set.npc_hp,
         ),
         speak=speak,
         ooc=ooc,

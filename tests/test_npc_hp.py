@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+import json
+import random
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -9,7 +12,11 @@ from fastapi.testclient import TestClient
 
 from cygnusforge.content.definitions import ContentError
 from cygnusforge.content.library import ContentLibrary
+from cygnusforge.llm.base import ToolRequest
+from cygnusforge.llm.fake import FakeProvider
+from cygnusforge.services.campaigns import _tool_context
 from cygnusforge.services.events import load_state
+from cygnusforge.services.tools import ToolRun, run_tool
 from tests.conftest import content_library
 from tests.test_character_creation import _cairn_campaign
 from tests.test_content import _core, _world, _write
@@ -128,3 +135,146 @@ def test_a_statblock_npc_keeps_its_monster_hp(client_factory: Callable[[], TestC
     fasha = state.named("Fasha")
     assert fasha is not None
     assert fasha.stats["hp"] == 6
+
+
+CAIRN = LIBRARY.rule_sets["cairn2e"]
+CAIRN_TABLES = LIBRARY.core.tables
+CREATE = CAIRN.tool_calls["create_npc"]
+
+
+def _gm_create(app: Any, campaign_id: int, arguments: dict[str, Any]) -> dict[str, Any]:
+    """Run the GM's create_npc with the context a campaign builds, so the rule set's tiers and
+    arguments are the ones the model sees."""
+    ctx = _tool_context(
+        app.state.engine,
+        LIBRARY,
+        random.Random(0),
+        FakeProvider(),
+        "test",
+        campaign_id,
+        CAIRN,
+        LIBRARY.world_content("twin-lakes", "cairn2e"),
+    )
+    request = ToolRequest(id="call_1", name="create_npc", arguments=json.dumps(arguments))
+    run = asyncio.run(run_tool({"create_npc": CREATE}, request, None, ctx))
+    assert isinstance(run, ToolRun)
+    return json.loads(run.output)
+
+
+def test_the_gm_is_offered_the_rule_sets_tiers_as_an_optional_argument():
+    properties = CREATE.parameters["properties"]
+    assert properties["hp_tier"]["enum"] == ["average", "hardier", "serious"]
+    assert "hp_tier" not in CREATE.parameters.get("required", [])
+
+
+def test_a_rule_set_without_tiers_is_not_offered_one(tmp_path: Path):
+    library = _load(tmp_path, _world_with_npc(), None)
+    calls = library.rule_sets["testset"].tool_calls.values()
+    assert all("hp_tier" not in call.parameters["properties"] for call in calls)
+    assert "hp_tier" not in LIBRARY.core.tool_calls["create_npc"].parameters["properties"]
+
+
+def test_the_gm_creates_an_npc_with_the_tier_hp(client_factory: Callable[[], TestClient]):
+    client, campaign_id = _cairn_campaign(client_factory)
+    for tier, hp in (("average", 3), ("hardier", 6), ("serious", 10)):
+        name = f"Sentry {tier}"
+        result = _gm_create(
+            client.app,
+            campaign_id,
+            {
+                "name": name,
+                "location": "The Stuffed Inn",
+                "description": "A guard.",
+                "hp_tier": tier,
+            },
+        )
+        assert result.get("created") == "npc", result
+        with _db(client.app) as db:
+            npc = load_state(db, campaign_id).named(name)
+        assert npc is not None
+        assert npc.stats["hp"] == hp, tier
+
+
+def test_an_unknown_tier_is_refused(client_factory: Callable[[], TestClient]):
+    client, campaign_id = _cairn_campaign(client_factory)
+    result = _gm_create(
+        client.app,
+        campaign_id,
+        {
+            "name": "Sentry",
+            "location": "The Stuffed Inn",
+            "description": "A guard.",
+            "hp_tier": "mighty",
+        },
+    )
+    assert "error" in result
+    assert "hp_tier" in result["error"] and "average, hardier, serious" in result["error"]
+
+
+def test_a_tier_with_hp_is_refused(client_factory: Callable[[], TestClient]):
+    client, campaign_id = _cairn_campaign(client_factory)
+    result = _gm_create(
+        client.app,
+        campaign_id,
+        {
+            "name": "Sentry",
+            "location": "The Stuffed Inn",
+            "description": "A guard.",
+            "hp_tier": "average",
+            "character": {"stats": {"hp": 2}},
+        },
+    )
+    assert "Give either hp_tier or hp" in result["error"]
+
+
+def test_a_tier_on_a_statblock_creature_is_refused(client_factory: Callable[[], TestClient]):
+    client, campaign_id = _cairn_campaign(client_factory)
+    result = _gm_create(
+        client.app,
+        campaign_id,
+        {
+            "name": "Blink Dog",
+            "location": "The Stuffed Inn",
+            "description": "A beast.",
+            "hp_tier": "average",
+        },
+    )
+    assert "takes its HP from the statblock" in result["error"]
+
+
+def test_a_statblock_creature_still_takes_its_statblock_without_a_tier(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _cairn_campaign(client_factory)
+    result = _gm_create(
+        client.app,
+        campaign_id,
+        {"name": "Blink Dog", "location": "The Stuffed Inn", "description": "A beast."},
+    )
+    assert result.get("created") == "npc", result
+    with _db(client.app) as db:
+        npc = load_state(db, campaign_id).named("Blink Dog")
+    assert npc is not None
+    assert npc.stats["hp"] == 5
+
+
+def test_a_tier_with_force_sets_the_hp_of_a_creature_without_its_statblock(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _cairn_campaign(client_factory)
+    result = _gm_create(
+        client.app,
+        campaign_id,
+        {
+            "name": "Blink Dog",
+            "location": "The Stuffed Inn",
+            "description": "A beast.",
+            "hp_tier": "serious",
+            "force": True,
+        },
+    )
+    assert result.get("created") == "npc", result
+    with _db(client.app) as db:
+        npc = load_state(db, campaign_id).named("Blink Dog")
+    assert npc is not None
+    assert npc.stats["hp"] == 10

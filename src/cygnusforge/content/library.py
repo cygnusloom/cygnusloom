@@ -38,6 +38,8 @@ ROLL_RANGE = re.compile(r"([0-9]+)(?:-([0-9]+))?")
 PROMPT_ARGUMENT = "prompt"
 # A tool flagged `character_options` gets this argument, built from the rule set's character spec.
 CHARACTER_ARGUMENT = "character"
+# A tool flagged `npc_hp_tier` gets this optional argument, whose values are the rule set's HP tiers.
+NPC_HP_TIER_ARGUMENT = "hp_tier"
 # The engine passes its ToolContext to a function that declares this parameter. The model
 # never sees it, so it must not appear in a tool's schema.
 CONTEXT_ARGUMENT = "ctx"
@@ -833,12 +835,13 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     marketplace = _load_marketplace(definitions, item_sizes, character, template)
     prompt_fragments = _load_prompts(definitions, template)
     sentence_cap = _load_sentence_cap(definitions, template)
+    npc_hp = _npc_hp(head.data, label)
     tool_calls: dict[str, ToolCall] = {}
     tool_names: set[str] = set()
     for d in definitions:
         if d.type != "tool_call":
             continue
-        call = _load_tool_call(d, modules, character, template)
+        call = _load_tool_call(d, modules, character, template, npc_hp)
         if call.name in tool_names:
             raise ContentError(f"{template}: duplicate tool name {call.name!r}")
         tool_names.add(call.name)
@@ -852,7 +855,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         tool_calls=tool_calls,
         character=character,
         plus=_plus_mode(head.data, label),
-        npc_hp=_npc_hp(head.data, label),
+        npc_hp=npc_hp,
         campaign=campaign,
         tables=tables,
         grid=grid,
@@ -1716,6 +1719,7 @@ def _load_tool_call(
     modules: Mapping[str, ModuleType],
     character: CharacterSpec,
     template: str,
+    npc_hp: Mapping[str, int],
 ) -> ToolCall:
     label = f"{template}: tool_call {definition.id}"
     data = definition.data
@@ -1732,6 +1736,8 @@ def _load_tool_call(
     parameters = _check_parameters(data.get("parameters"), label)
     if _flag(data, "character_options", label):
         parameters = _with_character(parameters, character, label)
+    if _flag(data, "npc_hp_tier", label) and npc_hp:
+        parameters = _with_npc_hp_tier(parameters, npc_hp, label)
     if CONTEXT_ARGUMENT in parameters["properties"]:
         raise ContentError(f"{label}: {CONTEXT_ARGUMENT!r} is reserved and not a parameter")
     player_input = _check_player_input(data.get("player_input"), parameters, function, label)
@@ -1783,6 +1789,20 @@ def _with_character(
     if CHARACTER_ARGUMENT in parameters["properties"]:
         raise ContentError(f"{label}: {CHARACTER_ARGUMENT!r} is generated and must not be declared")
     properties = {**parameters["properties"], CHARACTER_ARGUMENT: character_schema(character)}
+    return {**parameters, "properties": properties}
+
+
+def _with_npc_hp_tier(
+    parameters: dict[str, Any], npc_hp: Mapping[str, int], label: str
+) -> dict[str, Any]:
+    """Add the rule set's HP tiers as an optional `hp_tier` argument. A rule set with no tiers gets no
+    argument."""
+    if NPC_HP_TIER_ARGUMENT in parameters["properties"]:
+        raise ContentError(
+            f"{label}: {NPC_HP_TIER_ARGUMENT!r} is generated and must not be declared"
+        )
+    tier = {"type": "string", "enum": sorted(npc_hp), "description": "The NPC's HP tier."}
+    properties = {**parameters["properties"], NPC_HP_TIER_ARGUMENT: tier}
     return {**parameters, "properties": properties}
 
 
