@@ -2023,18 +2023,17 @@ def _npcs_at(state: CampaignState, location: str) -> list[Character]:
 
 
 def present_rules_text(state: CampaignState, rules: Mapping[str, str]) -> str:
-    """The text of the rules attached to what is present: the standing NPCs at the player
-    character's location and the items the player character carries. Empty when nothing is
-    attached."""
+    """The text of the rules attached to what is present: the NPCs at the player character's
+    location, defeated or not, and the items the player character carries. Empty when nothing
+    is attached."""
     pc = state.pc()
     if pc is None:
         return ""
     sources: dict[str, list[str]] = {}
     if pc.location is not None:
         for npc in _npcs_at(state, pc.location):
-            if not npc.defeated:
-                for rule_id in npc.rules:
-                    sources.setdefault(rule_id, []).append(npc.name)
+            for rule_id in npc.rules:
+                sources.setdefault(rule_id, []).append(npc.name)
     for item in pc.items:
         for rule_id in item.rules:
             sources.setdefault(rule_id, []).append(item.name)

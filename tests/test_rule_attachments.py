@@ -65,10 +65,10 @@ def test_an_npc_elsewhere_brings_no_rules(client_factory: Callable[[], TestClien
     assert present_rules_text(state, TEXT) == ""
 
 
-def test_a_defeated_npc_brings_no_rules(client_factory: Callable[[], TestClient]):
+def test_a_defeated_npc_still_here_keeps_its_rules(client_factory: Callable[[], TestClient]):
     _, _, state, vuk = _with_vuk_in_the_yard(client_factory)
     vuk.defeated = True
-    assert present_rules_text(state, TEXT) == ""
+    assert "vuk-choking-hold (from Vuk)" in present_rules_text(state, TEXT)
 
 
 def test_an_item_carried_brings_its_rules(client_factory: Callable[[], TestClient]):
