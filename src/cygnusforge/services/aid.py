@@ -13,7 +13,14 @@ from cygnusforge.content.library import CombatRules, ConditionRules, InventoryRu
 from cygnusforge.services import inventory as inventory_service
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.conditions import end_condition
-from cygnusforge.services.events import PC_KIND, CharacterStabilized, load_state, name_key, record
+from cygnusforge.services.events import (
+    PC_KIND,
+    CharacterStabilized,
+    load_state,
+    name_key,
+    record,
+    same_item_name,
+)
 
 
 def stabilize(
@@ -61,7 +68,7 @@ def use_item(
 ) -> dict[str, Any]:
     """Spend one use of a consumable the character carries. An aid item, such as a Bandage, may be
     used on a dying character, and using it stabilizes them. Any other item is spent on the holder."""
-    aid = combat is not None and any(name_key(item) == name_key(a) for a in combat.aid_items)
+    aid = combat is not None and any(same_item_name(item, a) for a in combat.aid_items)
     if target is None or name_key(target) == name_key(name):
         target = name
     elif not aid:

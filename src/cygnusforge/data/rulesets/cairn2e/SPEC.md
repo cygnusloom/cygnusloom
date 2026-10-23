@@ -169,7 +169,7 @@ Source: Core Rules, "Hirelings"; Marketplace, "Hirelings (per day)". The book is
 
 ## Phase 9: death rules
 
-Status: engine, death screen, and unit tests done. Live session partly done: Critical Damage, the dying clock, a death, the death screen, and a replacement PC are confirmed live. Bandaging, `stabilize`, and hireling promotion are not yet live. See the Phase 9 acceptance line.
+Status: engine, death screen, and unit tests done. Live session partly done: Critical Damage, the dying clock, a death, the death screen, a replacement PC, and a Bandage stabilizing a dying PC are confirmed live. Hireling promotion and a death by the clock with a hireling present are not yet live. See the Phase 9 acceptance line.
 
 Source: Core Rules, Critical Damage, and Scars 11 (Mortal Wound) and 12 (Doomed) in `tables.json`. The book is the authority.
 
@@ -192,10 +192,12 @@ Acceptance:
 - Unit tests: the one-hour clock fires, bandages stop it, Doomed kills on a failed save, Mortal Wound sets max HP on recovery, and a death emits an event and opens the death screen.
 - A live session covering Critical Damage, bandaging, a death, a replacement PC, and a hireling promotion.
   - Done live (fresh DB, campaign 1): a wolf bite overflowed to STR, the STR save failed (`character.dying`, one-hour clock), the encounter ended, the GM advanced three hours and the clock ran out (`character.died`), the GM narrated the death in the same turn, the death screen appeared on reload, and a replacement PC (Kalam) was created with starting gear and placed by the GM.
-  - Not yet live: bandaging and `stabilize` (unit-tested), and hireling promotion (this campaign had no hireling). Run them in the next live campaign by hiring before the PC dies.
+  - Done live (campaign "Phase Nine B", a hireling Tam, and Dorn in critical damage): the GM stabilized Dorn with a Bandage, and `character.stabilized` fired. The GM first tried `use_item` on Tam's bandage with Dorn as the target, and the engine refused it (see the naming fix below). The GM then gave Dorn a Bandage and stabilized him, which left Tam's bandage in his pack. This live pass did not run the clean `use_item` path.
+  - Not yet live: hireling promotion, and a death by the clock with a hireling present. Run them in the next live campaign.
 
 Fixed during the live check:
 - A dying record was lost when nothing committed after it. `begin_dying` and the Doomed branch now commit. A regression test covers this (`tests/test_death.py`). It was hidden in most fights because the encounter-end commit ran first.
+- A Bandage given as "Bandage" (singular) matched no catalogue entry, so it became a freeform item with no uses, and the aid list ("Bandages") did not match it either. Item names now match ignoring case and a plural s (`same_item_name` in `services/events.py`, used by the catalogue lookup, the held-item lookup, and the aid match). A regression test covers the singular name (`tests/test_death.py`). The live server was running the old code during this session. Verify the fix live at the next dying PC.
 
 Gaps from Phase 9:
 - Resolved: 6 hours per part, confirmed by the user.
@@ -325,8 +327,10 @@ Phase 8 (hirelings): scope in phase 8. Includes 3d6 attributes, 1d6 HP, wages, a
 
 Phase 9 (death rules): critical damage, Scars 11 (Mortal Wound) and 12 (Doomed), and new characters.
 
-- Bandaging and `stabilize` are not live-verified. Unit-tested only. Next live campaign.
+- Bandaging: live-stabilized once, but via a GM workaround. The clean `use_item` path with a singular name is unit-tested and verified live at the next dying PC. Also OPEN: the GM gave a second Bandage to the patient and used it, so there was a duplicate in the party. The GM's tool choice for aid is unreliable. Strengthen the `use_item` description or add an aid-specific tool. Phase 11 decides how.
+- `stabilize` is live-verified once, as a GM tool call.
 - Hireling promotion is not live-verified. Unit-tested and route-tested only.
+- OPEN: a hireling kit item the GM names freeform, such as "Bandage", gets no uses. The catalogue match is now plural-tolerant, but a freeform name still has no uses. Gaps like this should be caught by a `give_item` validator. Phase 11 decides.
 - Resolved: 6 hours per part, confirmed by the user.
 - Resolved: STR 0 outside combat as instant death, confirmed by the user.
 - A new PC is placed by the GM, not by the book's rule for when a new PC joins. The narrative decision is the GM's.

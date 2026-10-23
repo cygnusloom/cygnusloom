@@ -23,6 +23,7 @@ from cygnusforge.services.events import (
     load_state,
     name_key,
     record,
+    same_item_name,
 )
 from cygnusforge.services.inventory import carry_item, character_named, used_slots
 
@@ -30,8 +31,7 @@ MAX_PRICE = 100_000
 
 
 def listed_item(marketplace: Marketplace, item: str) -> ShopItem | None:
-    key = name_key(item)
-    return next((listed for listed in marketplace.items if name_key(listed.name) == key), None)
+    return next((listed for listed in marketplace.items if same_item_name(listed.name, item)), None)
 
 
 def _gold(character: Character, currency: str) -> int:

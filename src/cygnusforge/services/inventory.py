@@ -22,6 +22,7 @@ from cygnusforge.services.events import (
     load_state,
     name_key,
     record,
+    same_item_name,
 )
 
 FATIGUE_NAME = "Fatigue"
@@ -161,7 +162,7 @@ def use_item(
     it. Relics are spent with use_relic, so they are refused here."""
     state = load_state(db, campaign_id)
     character = character_named(state, name)
-    held = next((i for i in character.items if name_key(i.name) == name_key(item)), None)
+    held = next((i for i in character.items if same_item_name(i.name, item)), None)
     if held is None:
         raise InvalidInput(f"{character.name} carries no {item!r}")
     if held.max_uses < 1:

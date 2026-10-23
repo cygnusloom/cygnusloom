@@ -316,6 +316,12 @@ def name_key(name: str) -> str:
     return name.strip().casefold()
 
 
+def same_item_name(a: str, b: str) -> bool:
+    """Item names match ignoring case and a plural s, so a Bandage is the Bandages on the list."""
+    x, y = name_key(a), name_key(b)
+    return x == y or x + "s" == y or y + "s" == x
+
+
 PARTY_SIDE = "party"
 FOES_SIDE = "foes"
 MORALE_LABELS = {"first": "first casualty", "half": "half casualties"}

@@ -76,6 +76,17 @@ def test_a_bandage_stabilizes_a_dying_character_and_is_spent(client_factory):
     assert _character(app, campaign_id, PC).dying_hours is None
 
 
+def test_a_singular_bandage_name_gets_the_listed_uses_and_stabilizes(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools.give_item(PC, "Bandage")
+    held = [i for i in _character(app, campaign_id, PC).items if i.name == "Bandages"]
+    assert len(held) == 1 and held[0].max_uses == 3
+    _knock_out_pc(app, campaign_id, tools)
+    result = tools.use_item(PC, "Bandage", PC)
+    assert result["stabilized"]["stabilized"] is True
+    assert _character(app, campaign_id, PC).dying_hours is None
+
+
 def test_a_bandage_on_someone_who_is_not_dying_is_refused_before_it_is_spent(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Bo")
