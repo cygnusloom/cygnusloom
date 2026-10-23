@@ -308,7 +308,7 @@ Phase 12 design decisions (user):
 
 World: a module is its own world. The CAS-1 import goes into the `twin-lakes` world template (`src/cygnusforge/data/worlds/twin-lakes/`). That world is the Cairn 2e test world until the feature set is complete. The `kilharbor` world was removed. Its only content was a description, and no locations or NPCs. The `twin-lakes` world has no locations or NPCs until the import fills it in.
 
-Rule attachments (in progress): a module rule that belongs to one NPC, item, or creature (for example Vuk's Choking Hold, Deadmill's rules, or the Bandits' morale) attaches to that thing. Its text goes into the GM context whenever the thing is present, not only through `lookup_rule`. This is a generic engine feature, so core and D&D need it too. cairn2e supplies the data. Gap register: OPEN (rule attachments).
+Rule attachments (built, live check pending): a module rule that belongs to one NPC, item, or creature (for example Vuk's Choking Hold, Deadmill's rules, or the Bandits' morale) attaches to that thing. Its text goes into the GM context whenever the thing is present, not only through `lookup_rule`. This is a generic engine feature, so core and D&D need it too. cairn2e supplies the data. Gap register: see the Phase 12 rule attachment entry.
 
 Done when: every location, NPC, monster, relic, and table in the module is in the ruleset or in an adventure data file, the module can be played from start to finish in a live session, and the transcript reads correctly. Gaps found are added to the gap register and closed or scheduled.
 
@@ -341,7 +341,7 @@ Engine and prompt (cross-cutting):
 - OPEN (dice): multi-term formulas in a `plus: "sum"` rule set fail at roll time if `plus` is missing. Should be validated at load. Unscheduled.
 - RESOLVED (NPC HP, from the book's Hit Protection section): an NPC's HP is average 3, hardier 6, or a serious threat 10+. The monster loader requires the HP stat, from the first `harm` damage step, to be at least 1. Fasha's 6 is an assumption, since the module prints no HP (transcription L540). Flagged for the user to confirm.
 - RESOLVED (statblock precedence, user chose): a name that matches a published statblock takes that statblock's stats, armor, and attacks. Both `create_npc` and `create_monster` refuse explicit stats under that name, and `create_monster` also refuses armor or attacks, unless `force` is set. With `force`, the GM creates a custom creature under that name. Unit tests: `tests/test_combat.py`. Live re-test on a fresh DB is pending in Phase 12.
-- OPEN (Phase 12): Vuk has no numeric stats in the module (transcription L86, L541), so she is description-only. Needs a decision on her statblock.
+- RESOLVED (Phase 12, Vuk decision): Vuk has no numeric stats in the module (transcription L86, L541). Her ash form is story-only, and her full form uses the bestiary Lich. See the Phase 12 entries below.
 - Test flakiness: a PC's max HP is random at creation and `_set_stat` clamps to it, so a max HP of 1 makes tests fail. Empty `Rolls` queues raise `IndexError`. Unscheduled, test infrastructure.
 - `tests/test_world.py` snapshot-style prompt assertions need checking after prompt edits. Unscheduled.
 
@@ -432,9 +432,19 @@ Phase 12 (capstone): the CAS-1 import and any gaps it reveals.
 
 - RESOLVED (Phase 12, seeding): `seed_campaign` ignored an NPC's monster statblock, so module NPCs with a statblock got random stats. Seeding now uses the statblock. Unit tests: `tests/test_combat.py`. Live test verified in the DB.
 - RESOLVED (Phase 12, Vuk decision): the Ash Phantom has no statblock on cairnrpg.com's Warden's Guide bestiary, and the module prints no numbers. Decision: Vuk's ash form is story-only with the Choking Hold rule attached (rule attachment is still OPEN below). Her full form, the 7 ft Lich Queen, uses the bestiary Lich (14 HP, 1 Armor, 8 STR, 8 DEX, 18 WIL, soul dagger d8). The Lich is not imported yet (see the bestiary gap).
-- OPEN (Phase 12, bestiary): the cairn2e `monsters.json` has 12 entries. The Warden's Guide bestiary at cairnrpg.com/second-edition/wardens-guide/bestiary has at least 32 stat-block entries (for example Lich, Mummy, Vampire, Ogre, Naga). The import is incomplete. Import the full bestiary from source, with a verbatim-source check like the backgrounds and tables generator.
+- RESOLVED (Phase 12, bestiary): the cairn2e `monsters.json` now has 85 entries, up from 12. Each new entry was checked verbatim against the source HTML. Known gaps from the import:
+  - OPEN: Roc has no stat block on the source page.
+  - OPEN: Traitor-Rats has no match in the source. Its entry is unchanged and unverified.
+  - OPEN: "Warrior Snail Acolyte" is not a separate block. Only "Acolyte" exists.
+  - OPEN: Night Cat is in the core bestiary and the twin-lakes monsters. Its stats match, but its descriptions differ.
+  - OPEN: Boggart, Pixie, and Will-o-Wisp have no attacks in the source.
 - OPEN (Phase 12): the Reeve Trellis, Aldra, Flavia, Jandy, Giva, and Drum have no statblock in the module. The `story_only` flag and the `update_npc` stats path are built. Decision needed: should the Warden give these six stats when they first fight?
-- OPEN (Phase 12, rule attachments): module rules that belong to a specific NPC, item, or creature must reach the AI GM whenever that thing is present, not only through `lookup_rule`. Design in progress: attach rule ids to NPCs, monsters, and items, and put the attached rule text into the GM context when present.
+- RESOLVED (Phase 12, rule attachments, user chose always-injected): NPCs and features list rule ids in `rules`. Their text goes into a "Rules for what is present" system part on every turn. "Present" means a living NPC at the PC's location, or an item the PC carries. Ids are validated at load. Unit tests: `tests/test_rule_attachments.py`. Live-verified on a fresh Twin Lakes campaign: at the start (PC in Isthmus Town) the part is absent. After the GM moved the PC to Deadmill with `move_actor`, the next reply's context included "Rules for what is present" with Jandy's `deadmill-time-loop` text.
+  - OPEN (decision, pending): the field name `rules` and the "present" definition are my defaults. Confirm with the user. Defeated NPCs currently drop their rules.
+  - OPEN: monsters cannot attach rules yet. `MonsterTemplate` has no `rules` field. Night Cat's attack and critical damage rules, Suraru Imperator's critical damage rule, and the bandits' morale rule are not attached.
+  - OPEN: items from the catalogue or `give_item` do not carry rules. Only starting gear and direct events do. No twin-lakes feature has rules yet.
+  - OPEN (uncertain): Jandy's `deadmill-time-loop` attachment. The module says the loop breaks "by saving Jandy", so the attachment may be wrong.
+  - OPEN: several module rules have no rule id, so they are not attached. These are Eye of Vuk, Fletcher's Ire, Echo Spark, Watersnatch, Curved Dagger, Memory Prism, Wisp Lamp, Annafranax's bird revenge (§2.6), and Fasha's drag-to-temple (§2.7).
 - OPEN (Phase 12): the world loader reads only the text of world rules, so `"important": true` on a world rule has no effect.
 - OPEN (Phase 12): world-scope `dice_table` entries are not loaded, so the d6 and d8 rolls in the module's tables are plain options, not rolls.
 - OPEN (Phase 12, module text, user to decide; kept verbatim): "blast" (Suraru Imperator's bite) is undefined. "The Cities" and "Marchguard" are undefined. "memory prison" vs "memory prism" is treated as the prism item; the book prints both. "3 bandits*" has an asterisk with no footnote. "see p.3" points to a missing page. Vuk's heart count is "at least one" in the viscera line and three in Vuk's text.
@@ -443,6 +453,9 @@ Phase 12 (capstone): the CAS-1 import and any gaps it reveals.
 - OPEN (Phase 12): Reeve's Office and the Cellar are nested under the Stuffed Inn in the source, but the one-level location schema puts them under isthmus-town. Decide whether the location schema needs nesting depth 2.
 - OPEN (Phase 12): the Dungeon Events table is not reproduced in the world data.
 - OPEN (Phase 12): the book gives average 3, hardier 6, and serious threat 10 or more for statless NPCs. The engine rolls 1d6 for statless NPCs. Add this guidance to the cairn2e data, not the engine.
+
+- OPEN (Phase 12, engine): attack modifiers on `update_npc` (`armor`, `attacks`) are cairn2e-specific in shape. Decide whether they belong in shared core or in cairn2e only.
+- OPEN (Phase 12, tests): the `Ghoul` name collided with the new published Ghoul statblock. The test creature is now "Grave Thing" in five test files. `tests/test_content.py` still uses "Ghoul" in a loader test. This is a naming check, not a bug.
 
 Unscheduled, needs a book reference or a decision:
 
