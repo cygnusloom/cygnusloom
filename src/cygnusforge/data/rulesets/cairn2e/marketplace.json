@@ -84,7 +84,7 @@
     "price": 5,
     "size": "normal",
     "armor": 0,
-    "damage": "d6",
+    "damage": "1d6",
     "uses": 0,
     "description": "Dagger, Cudgel, Sickle, Staff, etc. (d6 damage)"
   },
@@ -96,7 +96,7 @@
     "price": 10,
     "size": "normal",
     "armor": 0,
-    "damage": "d8",
+    "damage": "1d8",
     "uses": 0,
     "description": "Spear, Sword, Mace, Axe, Flail, etc. (d8 damage)"
   },
@@ -108,7 +108,7 @@
     "price": 20,
     "size": "bulky",
     "armor": 0,
-    "damage": "d10",
+    "damage": "1d10",
     "uses": 0,
     "description": "Halberd, War Hammer, Long Sword, etc. (d10 damage, bulky)"
   },
@@ -120,7 +120,7 @@
     "price": 5,
     "size": "normal",
     "armor": 0,
-    "damage": "d6",
+    "damage": "1d6",
     "uses": 0,
     "description": "d6 damage"
   },
@@ -132,7 +132,7 @@
     "price": 20,
     "size": "bulky",
     "armor": 0,
-    "damage": "d6",
+    "damage": "1d6",
     "uses": 0,
     "description": "d6 damage, bulky"
   },
@@ -144,7 +144,7 @@
     "price": 30,
     "size": "bulky",
     "armor": 0,
-    "damage": "d8",
+    "damage": "1d8",
     "uses": 0,
     "description": "d8 damage, bulky"
   },
@@ -780,7 +780,7 @@
     "price": 35,
     "size": "normal",
     "armor": 0,
-    "damage": "d6",
+    "damage": "1d6",
     "uses": 0,
     "description": "d6 STR damage"
   },

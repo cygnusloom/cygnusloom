@@ -248,7 +248,7 @@ Move out of the engine (from the leak audit, with file locations as of commit `b
 - Relics (`give_relic`, `use_relic`, `recharge_relic` in `services/inventory.py` and `rules/context.py`): a generic "consumable with recharge rule" type, or kept in `rules/cairn2e.py`. Decide during the phase.
 - Debug panel stat options hard-coded in `web/templates/campaign.html`: rendered from the rule set's stats.
 - GM prompts in `services/campaigns.py` (`STATE_INSTRUCTION` and related): the generic loop stays in code. Cairn bullets (armor glancing blows, relic recharge, detachment, defeated PC rules, combat speech policy, and the sentence cap) move to the ruleset as `prompt_fragments` and `narration` config.
-- Weapon damage: free text from the GM's attack (`services/combat.py` around L484–500). Weapons should read their damage and features from the ruleset.
+- Weapon damage: free text from the GM's attack. DONE: weapons read their dice from the ruleset (see the Phase 11 status).
 - Names list in `services/names.py`: low priority. Optional per-rule-set JSON.
 
 Already generic (keep, and use as the pattern): stat keys from JSON (`morale.wil_stat`, `morale.retreat_stat` before the rename), clock parts, the debug gold route keyed on `marketplace.currency`, the marketplace structure, the `core` shared rule set, dice tables passed in by ID, scar tables passed in as `ScarTable`, modifier names as a mapping, and generic event types with ruleset-supplied names.
@@ -257,7 +257,12 @@ Done when: a grep for `Cairn`, `Fatigue`, `relic`, `detachment`, `Scar`, `depriv
 
 Status (Phase 11): the leak grep is clean. The remaining hits are the word "discard" and generic docstrings. The engine reads these from `cairn2e/`: penalty item (`inventory.json` `penalty_name`, `penalty_lasts`), the armor cap (`combat.json` `armor_max`), the large-group flag (`monsters.json` `large_group`), the save stat (`save_stat`), charged items (`charged_kind`), GM prompts (`prompts.json`, 7 fragments), narration (`narration.json` `sentence_cap`), needs (`need.json`), and injury tables (`injuries`). The debug stat options come from the rule set's stats. Live-verified on a fresh DB: opening turn, a player turn with the pack, the Inventory tab ("Carrying 7 of 10 slots"), and the Debug tab. The `need_set`, `group_break_resolved`, and `injury.gained` paths were not hit in that run. Renamed event kinds break replay of old dev DBs; the user accepted this.
 
-Phase 11 is NOT complete. Open: weapon damage from the ruleset (see gap register), and the dungeon reaction table merge. Phase 12 waits on both.
+Built since the last status: weapon damage and the dungeon reaction table merge.
+
+- Weapon damage (user decision: the engine rolls): a carried weapon's dice come from its ruleset `damage` (`features.json` for starting gear, `marketplace.json` for catalogue items, or a custom item's damage given with `give_item`). An unarmed attack uses `combat.json` `unarmed`. The GM no longer passes a damage number, and the player's roll is a flavor prompt that does not set damage. The dice grammar requires a count, so the book's single die is stored as `1d6`, and `d6+d6` as `1d6+1d6`. Unit tests: `tests/test_weapon_damage.py`. Live-verified on a fresh DB: a Sling attack on a Reed Bandit with a Club prompted `1d6` as flavor, and the logged `combat.struck` event used `weapon: sling` with raw damage 5, within 1d6. Attacking with a weapon that is not carried is refused by unit test, not live.
+- Reaction merge: the duplicate `reaction` table is removed from `warden_tables.json`. `dungeon_reaction` in `dungeon.json` is the one table, and the `roll_tables` tool enum uses it.
+
+Phase 11 is NOT complete until the generic refactor items above are done. The weapon-damage live test has passed. Phase 12 waits on Phase 11.
 
 ## Phase 12: capstone, CAS-1 "Trouble in Twin Lakes"
 
@@ -286,13 +291,18 @@ Engine and prompt (cross-cutting):
 - The death cause reads "with hp at 0", using the stat id. Stat display names are not in the combat config, so the text is not player-facing yet. Needs the names passed in from the rule set.
 - `tool_calls.json` descriptions still say "detachment". Ruleset prose to update.
 - The magic result key changed to `penalty`. Not live-checked against the prompts.
-- Weapon damage from the ruleset (Phase 11 item): OPEN. The attack tools still take a damage number from the GM or player, and weapons do not read their dice. Changing this changes the tool API, so it needs a user decision on the model: engine-rolled dice from the weapon, or the GM's number checked against the weapon.
-- `warden_tables.json` has duplicate `dungeon_reaction` and `reaction` tables. The loader rejects duplicate ids. Not merged in Phase 11. Unscheduled.
+- RESOLVED (Phase 11, user chose engine-rolled dice): weapon damage comes from the ruleset, and the GM no longer passes a damage number. Gaps left from this:
+  - The book says to keep the higher of two weapons' dice, but the engine sums them (`d6+d6` rolls both). Unscheduled, needs a rule decision.
+  - The player's visible roll is a flavor prompt, so it can differ from the damage logged. The user chose this. Unscheduled, needs a UI decision.
+  - The unarmed `1d4` and its names (`unarmed`, `fists`, `bare hands`) in `combat.json` are assumptions, not checked against the book. Unscheduled, needs a book check.
+  - An item that is not carried is refused for an attack. The GM must `give_item` it first, with its damage if it is not in the catalogue.
+- RESOLVED (Phase 11 follow-up): the duplicate `reaction` table is removed from `warden_tables.json`, and `dungeon_reaction` is the one table.
+- The content loader does not reject duplicate table ids. `ContentLibrary.load` builds `dice_tables` as a dict, so a duplicate silently overwrites the earlier table. Unscheduled; a loader check would catch this class of bug.
 - Repeated speech lines (four "Fenwick" lines in one scene). Cause unverified; narration quoting NPC words is the leading hypothesis. Unscheduled, needs investigation.
 - The GM accepts player-invented past events as fact. Unscheduled, needs a prompt rule and a test.
 - RESOLVED (Phase 11): debug panel stat options come from the rule set's stats.
 - RESOLVED (Phase 11): Cairn GM prompt wording moved to `prompts.json` and `narration.json`.
-- OPEN (Phase 11): weapon damage is free text, and weapons do not read their features. See the Phase 11 status.
+- RESOLVED (Phase 11): weapon damage is rolled from the ruleset's weapon dice. See the Phase 11 status for the gaps left.
 - Test flakiness: a PC's max HP is random at creation and `_set_stat` clamps to it, so a max HP of 1 makes tests fail. Empty `Rolls` queues raise `IndexError`. Unscheduled, test infrastructure.
 - `tests/test_world.py` snapshot-style prompt assertions need checking after prompt edits. Unscheduled.
 
@@ -312,7 +322,7 @@ Phase 4 (deprivation, fatigue, rest, inventory):
 - FIXED (Phase 10): `take_object` matched only the full description, so the GM's short names failed. The GM then used `give_item` and a gold change, which duplicated the loot and never removed the object. Objects now have a short `name`, the matching is name, then description, then part of either, and the prompt says never to use `give_item` for a place's object. Live-verified.
 - OPEN (Phase 10): hidden objects have no reveal path. A hidden object cannot be listed or taken, and no tool reveals it. Unscheduled; needs a decision on who reveals it (the Warden, or a search).
 - OPEN (Phase 10): `drop_item` removes the item and does not place it in the location, so a dropped item vanishes. Seen live when Mara dropped her Lure. Unscheduled; needs a decision on whether a drop creates a place object.
-- OPEN (Phase 10, not merged in Phase 11): the dungeon reaction table `dungeon_reaction` duplicates the `reaction` table in `warden_tables.json`, and the loader rejects duplicate ids. Unscheduled.
+- RESOLVED (Phase 11 follow-up): the dungeon reaction duplicate is merged (see the gap register entry above on duplicate table ids).
 - The 10-slot capacity and the full-inventory HP rule are unverified against the book.
 - The deprivation Fatigue threshold (day 2 or day 3) is unverified.
 - The `visited_day or 1` stale-place rule and STR 0 outside combat are unverified.

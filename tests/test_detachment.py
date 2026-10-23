@@ -41,7 +41,7 @@ def _ally(tools, name: str) -> None:
 def _break_group(tools, name: str) -> None:
     """Overflow a group's 3 hp onto its Strength (5), so it owes a Strength save; the d20 roll
     of 20 fails it."""
-    replace(tools, rng=Rolls(20)).player_attack(name, "Sword", 6, modifier="impaired")
+    replace(tools, rng=Rolls(4, 20)).player_attack(name, "Sword", modifier="impaired")
 
 
 def test_an_impaired_attack_may_hit_a_group(client_factory):
@@ -65,13 +65,13 @@ def test_a_normal_player_attack_is_refused_on_a_group(client_factory):
     _, _, tools = _fight(client_factory)
     _group(tools, "Rats")
     with pytest.raises(InvalidInput, match="must be impaired"):
-        tools.player_attack("Rats", "Sword", 1)
+        tools.player_attack("Rats", "Sword")
 
 
 def test_an_impaired_player_attack_is_allowed_on_a_group(client_factory):
     _, _, tools = _fight(client_factory)
     _group(tools, "Rats")
-    result = tools.player_attack("Rats", "Sword", 1, modifier="impaired")
+    result = tools.player_attack("Rats", "Sword", modifier="impaired")
     assert result["target"] == "Rats"
 
 
@@ -199,6 +199,6 @@ def test_resolve_group_break_refuses_an_unknown_name(client_factory):
 def test_a_group_hit_triggers_no_morale_check(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _group(tools, "Rats")
-    result = replace(tools, rng=Rolls()).player_attack("Rats", "Sword", 3, modifier="impaired")
+    result = replace(tools, rng=Rolls(3)).player_attack("Rats", "Sword", modifier="impaired")
     assert "morale" not in result
     assert _morale(app, campaign_id) == {}

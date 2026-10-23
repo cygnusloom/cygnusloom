@@ -72,10 +72,8 @@ def resolve_attacks(target: str, attacks: list[dict[str, str]], ctx: ToolContext
     return ctx.world.resolve_attacks(target, attacks)
 
 
-def player_attack(
-    target: str, weapon: str, ctx: ToolContext, damage: int = 0, modifier: str = ""
-) -> dict[str, Any]:
-    return ctx.world.player_attack(target, weapon, damage, modifier)
+def player_attack(target: str, weapon: str, ctx: ToolContext, modifier: str = "") -> dict[str, Any]:
+    return ctx.world.player_attack(target, weapon, modifier)
 
 
 def resolve_group_break(name: str, outcome: str, ctx: ToolContext) -> dict[str, Any]:
@@ -128,8 +126,10 @@ def buy_service(names: list[str], service: str, ctx: ToolContext) -> dict[str, A
     return ctx.world.buy_service(names, service)
 
 
-def give_item(name: str, item: str, ctx: ToolContext, size: str = "normal") -> dict[str, Any]:
-    return ctx.world.give_item(name, item, size=size)
+def give_item(
+    name: str, item: str, ctx: ToolContext, size: str = "normal", damage: str = ""
+) -> dict[str, Any]:
+    return ctx.world.give_item(name, item, size=size, damage=damage)
 
 
 def drop_item(name: str, item: str, ctx: ToolContext) -> dict[str, Any]:

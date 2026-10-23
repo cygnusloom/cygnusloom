@@ -105,6 +105,7 @@ def _fight_client(
     )
     assert created.status_code == 303
     tools = _tools(client.app, campaign_id)
+    tools.give_item(PC, "Sword", damage="1d8")
     tools.create_location(YARD, "Cobbles around a dry well.")
     tools.move_actor(PC, YARD)
     tools.create_encounter_map(MAP, YARD, 10, 10, "Open cobbles.")
@@ -414,7 +415,7 @@ def test_attacks_wait_until_player_characters_roll_for_initiative(client_factory
     with pytest.raises(InvalidInput, match="initiative is not set yet; Mara must roll"):
         _hit(tools, "Ghoul", PC, 2)
     with pytest.raises(InvalidInput, match="initiative is not set yet"):
-        tools.player_attack("Ghoul", "Sword", 2)
+        tools.player_attack("Ghoul", "Sword")
     with _db(app) as db, pytest.raises(InvalidInput, match="initiative is not set yet"):
         encounters.begin_turn(db, campaign_id, "Ghoul")
 
@@ -617,7 +618,7 @@ def test_a_player_character_cannot_use_the_monster_attack(client_factory):
 def test_a_player_hit_is_the_damage_the_player_rolled(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Bo")
-    result = tools.player_attack("Bo", "Sword", 4)
+    result = replace(tools, rng=Rolls(4)).player_attack("Bo", "Sword")
     assert result == {
         "target": "Bo",
         "raw": 4,
@@ -630,16 +631,19 @@ def test_a_player_hit_is_the_damage_the_player_rolled(client_factory):
 
 
 @pytest.mark.parametrize(
-    ("damage", "weapon", "message"),
-    [(-1, "Sword", "damage"), (1001, "Sword", "damage"), (2, "  ", "weapon must name the attack")],
+    ("weapon", "message"),
+    [
+        ("  ", "weapon must name the attack"),
+        ("Axe", "carries no weapon named 'Axe'"),
+        ("Rope", "Rope is not a weapon"),
+    ],
 )
-def test_a_player_hit_is_refused_for_a_bad_damage_or_weapon(
-    client_factory, damage, weapon, message
-):
+def test_a_player_hit_is_refused_for_a_bad_weapon(client_factory, weapon, message):
     _, _, tools = _fight(client_factory)
     _foe(tools, "Bo")
+    tools.give_item(PC, "Rope")
     with pytest.raises(InvalidInput, match=message):
-        tools.player_attack("Bo", weapon, damage)
+        tools.player_attack("Bo", weapon)
 
 
 def test_overflow_on_a_player_character_waits_for_the_player_to_save(client_factory):
@@ -655,7 +659,7 @@ def test_overflow_on_a_player_character_waits_for_the_player_to_save(client_fact
     with pytest.raises(InvalidInput, match="must make their str save first"):
         _hit(tools, "Ghoul", PC, 1, 1, 1)
     with pytest.raises(InvalidInput, match="must make their str save first"):
-        tools.player_attack(PC, "Sword", 1)
+        tools.player_attack(PC, "Sword")
 
 
 def test_a_player_character_who_fails_the_save_is_defeated(client_factory):
@@ -715,7 +719,7 @@ def test_combat_is_refused_when_the_rule_set_has_none(client_factory):
     app, campaign_id, _ = _fight(client_factory)
     plain = replace(_tools(app, campaign_id), combat=None)
     with pytest.raises(InvalidInput, match="this rule set has no combat"):
-        plain.player_attack("Ghoul", "Sword", 1)
+        plain.player_attack("Ghoul", "Sword")
 
 
 async def _no_speak(*_: Any) -> None:
@@ -726,7 +730,11 @@ def test_player_attack_asks_for_damage_then_resolves_through_the_tool(client_fac
     _, _, tools = _fight(client_factory)
     _foe(tools, "Ghoul", hp=6)
     ctx = ToolContext(
-        world=tools, speak=_no_speak, ooc=lambda narrate: None, rules={}, lookup_tools={}
+        world=replace(tools, rng=Rolls(3)),
+        speak=_no_speak,
+        ooc=lambda narrate: None,
+        rules={},
+        lookup_tools={},
     )
     request = ToolRequest(
         id="call_1",
@@ -736,7 +744,6 @@ def test_player_attack_asks_for_damage_then_resolves_through_the_tool(client_fac
                 "target": "Ghoul",
                 "weapon": "Sword",
                 "prompt": "Roll your sword damage.",
-                "damage_dice": "1d8",
             }
         ),
     )
@@ -750,6 +757,7 @@ def test_player_attack_asks_for_damage_then_resolves_through_the_tool(client_fac
     assert isinstance(run, ToolRun)
     result = json.loads(run.output)
     assert "error" not in result
+    assert result["raw"] == 3
     assert result["harm"] == {"hp": 3}
 
 
@@ -766,7 +774,7 @@ def test_a_defeated_foe_does_not_end_the_encounter_while_another_foe_stands(clie
 def test_the_encounter_ends_when_the_last_foe_falls(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Bo")
-    replace(tools, rng=Rolls(20)).player_attack("Bo", "Sword", 20)
+    replace(tools, rng=Rolls(8, 20)).player_attack("Bo", "Sword")
     assert _character(app, campaign_id, "Bo").defeated is True
     assert _state(app, campaign_id).encounter is None
 

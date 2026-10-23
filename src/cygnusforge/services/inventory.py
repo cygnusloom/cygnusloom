@@ -10,6 +10,7 @@ from typing import Any
 from sqlmodel import Session
 
 from cygnusforge.content.library import InventoryRules, ShopItem
+from cygnusforge.rules.dice import is_formula
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
     CampaignState,
@@ -62,6 +63,7 @@ def carry_item(
             text=item.text,
             uses=item.uses,
             max_uses=item.max_uses,
+            damage=item.damage,
             cause=cause,
         ),
     )
@@ -94,19 +96,26 @@ def give_item(
     item: str,
     size: str,
     listed: ShopItem | None = None,
+    damage: str = "",
 ) -> dict[str, Any]:
-    """Give a character an item. A catalogue item keeps its listed uses and description, as a
-    purchase does."""
+    """Give a character an item. A catalogue item keeps its listed uses, description, and damage,
+    as a purchase does. An item not in the catalogue is given the damage the Warden names, if it
+    is a weapon."""
     if size not in item_sizes:
         raise InvalidInput(f"there is no item size named {size!r}")
     slots = item_sizes[size]
     uses = listed.uses if listed is not None else 0
     text = listed.description if listed is not None else ""
+    if listed is not None and damage:
+        raise InvalidInput(f"{listed.name} is in the catalogue, so its damage comes from there")
+    if damage and not is_formula(damage):
+        raise InvalidInput(f"{damage!r} is not a dice formula such as 'd6'")
     given = Item(
         item if listed is None else listed.name,
         size,
         slots,
         text=text,
+        damage=(listed.damage or "") if listed is not None else damage,
         uses=uses,
         max_uses=uses,
     )

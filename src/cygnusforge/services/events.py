@@ -101,6 +101,8 @@ class Item:
     max_uses: int = 0
     # The clock when a charged item was last used. It cannot recharge until the clock moves on.
     spent_on: Clock | None = None
+    # A weapon's damage dice, such as "d6". Empty when the item is not a weapon.
+    damage: str = ""
 
 
 def _position(x: float | None, y: float | None) -> Position | None:
@@ -2061,6 +2063,7 @@ class ItemAdded(GameEvent):
     text: str = ""
     uses: int = 0
     max_uses: int = 0
+    damage: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
@@ -2071,6 +2074,7 @@ class ItemAdded(GameEvent):
                 slots=self.slots,
                 kind=self.kind_of_item,
                 text=self.text,
+                damage=self.damage,
                 uses=self.uses,
                 max_uses=self.max_uses,
             )

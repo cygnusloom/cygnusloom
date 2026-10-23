@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 import pytest
@@ -92,7 +93,7 @@ def test_a_hit_that_takes_hp_to_zero_and_overflows_gains_a_scar_and_owes_a_save(
 def test_a_foe_brought_to_zero_gains_no_scar(client_factory):
     _, _, tools = _fight(client_factory)
     _foe(tools, "Bo", hp=2)
-    result = tools.player_attack("Bo", "Sword", 2)
+    result = replace(tools, rng=Rolls(2, 1)).player_attack("Bo", "Sword")
 
     assert "injury" not in result
 

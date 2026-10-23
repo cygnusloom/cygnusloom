@@ -109,7 +109,8 @@ async def run_tool(
         return ToolRun(json.dumps({"player_text": answer.text}), None)
     if tool.player_input.dice_param:
         arguments.pop(tool.player_input.dice_param, None)
-    arguments[tool.player_input.param] = answer.total
+    if tool.player_input.param is not None:
+        arguments[tool.player_input.param] = answer.total
     return await _call(tool, arguments, ctx)
 
 
@@ -118,6 +119,15 @@ def _dice_for(
 ) -> tuple[str, str | None]:
     """The dice the player rolls, and a problem if they cannot be known. An attack modifier, when
     one is named, replaces the GM's dice with its own."""
+    if player_input.weapon_param is not None:
+        if ctx is None:
+            return "", "this tool cannot run without a campaign"
+        weapon = str(arguments.get(player_input.weapon_param, ""))
+        modifier = arguments.get(player_input.modifier_param) if player_input.modifier_param else ""
+        try:
+            return ctx.world.attack_dice(weapon, modifier or ""), None
+        except InvalidInput as exc:
+            return "", str(exc)
     if player_input.dice is not None:
         return player_input.dice, None
     dice = str(arguments.get(player_input.dice_param, ""))

@@ -43,11 +43,11 @@ def _morale(app, campaign_id: int) -> dict[str, list[str]]:
 def test_a_lone_foe_checks_morale_at_zero_hp_not_before(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Bo", hp=6)
-    result = replace(tools, rng=Rolls()).player_attack("Bo", "Sword", 3)
+    result = replace(tools, rng=Rolls(3)).player_attack("Bo", "Sword")
     assert "morale" not in result
     assert _morale(app, campaign_id) == {}
 
-    result = replace(tools, rng=Rolls(1)).player_attack("Bo", "Sword", 3)
+    result = replace(tools, rng=Rolls(3, 1)).player_attack("Bo", "Sword")
     assert result["morale"] == [
         {
             "side": FOES_SIDE,
@@ -67,7 +67,7 @@ def test_a_lone_foe_checks_morale_at_zero_hp_not_before(client_factory):
 def test_a_lone_foe_that_breaks_flees_and_the_fight_ends(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Bo", hp=6)
-    result = replace(tools, rng=Rolls(20)).player_attack("Bo", "Sword", 6)
+    result = replace(tools, rng=Rolls(6, 20)).player_attack("Bo", "Sword")
     assert result["morale"][0]["passed"] is False
     assert result["morale"][0]["fled"] == ["Bo"]
     assert _state(app, campaign_id).encounter is None

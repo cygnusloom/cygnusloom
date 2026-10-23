@@ -54,6 +54,7 @@ from cygnusforge.services.events import (
     name_key,
     out_of_fight,
     record,
+    same_item_name,
 )
 from cygnusforge.services.injuries import EffectContext, gain_injury
 
@@ -470,36 +471,70 @@ def resolve_attacks(
     )
 
 
+def attack_dice(
+    db: Session, campaign_id: int, weapon: str, combat: CombatRules, modifier: str = ""
+) -> str:
+    """The dice a player character's attack with `weapon` rolls: the modifier's dice when one is
+    named, else the weapon's own. The weapon must be carried, or be unarmed."""
+    state = load_state(db, campaign_id)
+    return _attack_dice(_player_character(state), _weapon_name(weapon), modifier, combat)
+
+
 def player_attack(
     db: Session,
     campaign_id: int,
     target: str,
     weapon: str,
-    damage: int,
     combat: CombatRules,
     rng: random.Random,
     modifier: str = "",
 ) -> dict[str, Any]:
-    """A player character's hit. The player rolls the damage, using the modifier's dice when there
-    is one; the attack always hits. A group takes only impaired attacks."""
+    """A player character's hit. The engine rolls the attack's dice, so the damage is never typed
+    in: the modifier's dice when there is one, else the weapon's. The attack always hits. A group
+    takes only impaired attacks."""
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
-    pc = state.pc()
-    if pc is None:
-        raise InvalidInput("there is no player character in this campaign")
+    pc = _player_character(state)
     _living(pc, combat)
     struck = _participant(state, target)
     _living(struck, combat)
-    raw = whole_number(damage, "damage", 0, MAX_DAMAGE)
-    name = weapon.strip()
-    if not name:
-        raise InvalidInput("weapon must name the attack")
-    # The modifier's dice are rolled by the player, so this only checks the modifier is known.
-    modifier_dice(combat.modifiers, modifier)
+    name = _weapon_name(weapon)
+    dice = _attack_dice(pc, name, modifier, combat)
     _require_impaired(struck, modifier_name(modifier))
+    raw = roll_total(dice, rng)
     return _strike(
         db, campaign_id, combat, rng, struck, pc.name, name, raw, modifier=modifier_name(modifier)
     )
+
+
+def _player_character(state: CampaignState) -> Character:
+    pc = state.pc()
+    if pc is None:
+        raise InvalidInput("there is no player character in this campaign")
+    return pc
+
+
+def _weapon_name(weapon: str) -> str:
+    name = weapon.strip()
+    if not name:
+        raise InvalidInput("weapon must name the attack")
+    return name
+
+
+def _attack_dice(pc: Character, weapon: str, modifier: str, combat: CombatRules) -> str:
+    held = next((item for item in pc.items if same_item_name(item.name, weapon)), None)
+    if held is not None:
+        if not held.damage:
+            raise InvalidInput(f"{held.name} is not a weapon: it has no damage dice")
+        weapon_dice = held.damage
+    elif name_key(weapon) in combat.unarmed_names:
+        weapon_dice = combat.unarmed_damage
+    else:
+        raise InvalidInput(
+            f"{pc.name} carries no weapon named {weapon!r}; give it with give_item first, "
+            "naming its damage if it is not in the catalogue"
+        )
+    return modifier_dice(combat.modifiers, modifier) or weapon_dice
 
 
 def resolve_group_break(

@@ -96,20 +96,20 @@ def test_an_unknown_modifier_on_a_player_attack_is_an_error(client_factory):
     _, _, tools = _fight(client_factory)
     _foe(tools, "Bo")
     with pytest.raises(InvalidInput, match="unknown attack modifier"):
-        tools.player_attack("Bo", "Sword", 4, modifier="stunned")
+        tools.player_attack("Bo", "Sword", modifier="stunned")
 
 
 def test_a_player_hit_records_its_modifier(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Bo", hp=20)
-    tools.player_attack("Bo", "Sword", 4, modifier="impaired")
+    tools.player_attack("Bo", "Sword", modifier="impaired")
     assert _struck(app, campaign_id)[-1].modifier == "impaired"
 
 
 def test_player_attack_asks_for_the_modifiers_dice(client_factory):
     _, _, tools = _fight(client_factory)
     _foe(tools, "Bo")
-    arguments = {"target": "Bo", "weapon": "Sword", "prompt": "Roll.", "damage_dice": "1d8"}
+    arguments = {"target": "Bo", "weapon": "Sword", "prompt": "Roll."}
 
     for modifier, dice in (("enhanced", ENHANCED), ("impaired", IMPAIRED), ("normal", "1d8")):
         ask = _run(tools, "player_attack", {**arguments, "modifier": modifier})
@@ -122,13 +122,7 @@ def test_the_gm_cannot_change_the_dice_of_a_modified_player_attack(client_factor
     ask = _run(
         tools,
         "player_attack",
-        {
-            "target": "Bo",
-            "weapon": "Sword",
-            "prompt": "Roll.",
-            "damage_dice": "1d4+10",
-            "modifier": "impaired",
-        },
+        {"target": "Bo", "weapon": "Sword", "prompt": "Roll.", "modifier": "impaired"},
     )
     assert ask.dice == IMPAIRED
 
@@ -139,13 +133,7 @@ def test_a_player_attack_with_an_unknown_modifier_returns_an_error(client_factor
     run = _run(
         tools,
         "player_attack",
-        {
-            "target": "Bo",
-            "weapon": "Sword",
-            "prompt": "Roll.",
-            "damage_dice": "1d8",
-            "modifier": "stunned",
-        },
+        {"target": "Bo", "weapon": "Sword", "prompt": "Roll.", "modifier": "stunned"},
         answer=None,
     )
     assert not hasattr(run, "dice")

@@ -90,9 +90,12 @@ class PlayerInput:
     the modifiers. When `modifier_param` is set, the string argument it names is an attack modifier
     (such as "impaired"); the dice then come from that modifier, not from `dice_param`."""
 
-    param: str
+    param: str | None = None
     dice: str | None = None
     dice_param: str | None = None
+    # A string argument naming the weapon. The engine rolls that weapon's dice itself, so the
+    # player's roll is only for the table and no total is passed to the function.
+    weapon_param: str | None = None
     details: str | None = None
     modifier_param: str | None = None
 
@@ -273,6 +276,9 @@ class CombatRules:
     # The conditions that leave a character dying, and the ones that make a failed save fatal.
     dying_conditions: tuple[str, ...] = ()
     fatal_conditions: tuple[str, ...] = ()
+    # The dice an unarmed attack rolls, and the names that mean unarmed, such as "fists".
+    unarmed_damage: str = ""
+    unarmed_names: frozenset[str] = frozenset()
     # The items a character can use on a dying character to stop the clock, by name.
     aid_items: tuple[str, ...] = ()
     # The most armor a character can have. Zero means armor has no cap.
@@ -755,6 +761,7 @@ def _load_combat(
         )
     injury_table = _load_injury_table_ref(data, character, injury_tables, label)
     outside_harm = _load_outside_harm(data, character, label)
+    unarmed_damage, unarmed_names = _load_unarmed(data, label)
     return CombatRules(
         id=definition.id,
         module=module,
@@ -772,6 +779,8 @@ def _load_combat(
         dying_conditions=_names(data, "dying_conditions", label),
         fatal_conditions=_names(data, "fatal_conditions", label),
         aid_items=_names(data, "aid_items", label),
+        unarmed_damage=unarmed_damage,
+        unarmed_names=unarmed_names,
     )
 
 
@@ -839,6 +848,23 @@ def _load_outside_harm(
     if len(stats) != len(set(stats)):
         raise ContentError(f"{label}: 'outside_harm' lists a stat twice")
     return tuple(stats)
+
+
+def _load_unarmed(data: Mapping[str, Any], label: str) -> tuple[str, frozenset[str]]:
+    """The dice an unarmed attack rolls and the names that mean unarmed. Optional; names are
+    compared without regard to case."""
+    block = data.get("unarmed")
+    if block is None:
+        return "", frozenset()
+    if not isinstance(block, Mapping):
+        raise ContentError(f"{label}: 'unarmed' must be an object")
+    damage = block.get("damage")
+    if not isinstance(damage, str) or not is_formula(damage):
+        raise ContentError(f"{label}: 'unarmed.damage' must be a dice formula such as '1d4'")
+    names = _names(block, "names", f"{label}: unarmed")
+    if not names:
+        raise ContentError(f"{label}: 'unarmed.names' needs at least one name")
+    return damage, frozenset(name.strip().casefold() for name in names)
 
 
 def _load_modifiers(data: Mapping[str, Any], label: str) -> dict[str, str]:
@@ -1574,12 +1600,18 @@ def _check_player_input(
         raise ContentError(f"{label}: 'player_input' must be an object")
     dice = data.get("dice")
     dice_param = data.get("dice_param")
+    weapon_param = data.get("weapon_param")
     modifier_param = data.get("modifier_param")
-    if (dice is None) == (dice_param is None):
-        raise ContentError(f"{label}: 'player_input' needs exactly one of 'dice' or 'dice_param'")
+    sources = [source for source in (dice, dice_param, weapon_param) if source is not None]
+    if len(sources) != 1:
+        raise ContentError(
+            f"{label}: 'player_input' needs exactly one of 'dice', 'dice_param', or 'weapon_param'"
+        )
     if modifier_param is not None:
-        if dice_param is None:
-            raise ContentError(f"{label}: 'player_input.modifier_param' needs 'dice_param'")
+        if dice_param is None and weapon_param is None:
+            raise ContentError(
+                f"{label}: 'player_input.modifier_param' needs 'dice_param' or 'weapon_param'"
+            )
         schema = parameters["properties"].get(modifier_param)
         if not isinstance(schema, dict) or schema.get("type") != "string":
             raise ContentError(
@@ -1593,8 +1625,20 @@ def _check_player_input(
             raise ContentError(f"{label}: 'player_input.dice_param' must name a string parameter")
         if dice_param not in parameters.get("required", []):
             raise ContentError(f"{label}: 'player_input.dice_param' must be a required parameter")
+    if weapon_param is not None:
+        schema = parameters["properties"].get(weapon_param)
+        if not isinstance(schema, dict) or schema.get("type") != "string":
+            raise ContentError(f"{label}: 'player_input.weapon_param' must name a string parameter")
+        if weapon_param not in parameters.get("required", []):
+            raise ContentError(f"{label}: 'player_input.weapon_param' must be a required parameter")
     param = data.get("param")
-    if not isinstance(param, str) or not param:
+    if weapon_param is not None:
+        if param is not None:
+            raise ContentError(
+                f"{label}: 'player_input.param' cannot be set with 'weapon_param', "
+                "because the engine rolls the weapon's dice"
+            )
+    elif not isinstance(param, str) or not param:
         raise ContentError(f"{label}: 'player_input.param' must name a function parameter")
     prompt = parameters["properties"].get(PROMPT_ARGUMENT)
     if not isinstance(prompt, dict) or prompt.get("type") != "string":
@@ -1603,17 +1647,19 @@ def _check_player_input(
         )
     if PROMPT_ARGUMENT not in parameters.get("required", []):
         raise ContentError(f"{label}: '{PROMPT_ARGUMENT}' must be required")
-    if param in parameters["properties"]:
-        raise ContentError(f"{label}: 'player_input.param' must not be a schema parameter")
-    accepted = inspect.signature(function).parameters
-    if param not in accepted:
-        raise ContentError(f"{label}: function does not accept parameter {param!r}")
+    if param is not None:
+        if param in parameters["properties"]:
+            raise ContentError(f"{label}: 'player_input.param' must not be a schema parameter")
+        accepted = inspect.signature(function).parameters
+        if param not in accepted:
+            raise ContentError(f"{label}: function does not accept parameter {param!r}")
     details = _check_template(data.get("details"), "player_input.details", label)
     if details is not None:
         _check_fields(details, parameters["properties"], "player_input.details", label)
     return PlayerInput(
         dice=dice,
         dice_param=dice_param,
+        weapon_param=weapon_param,
         param=param,
         details=details,
         modifier_param=modifier_param,

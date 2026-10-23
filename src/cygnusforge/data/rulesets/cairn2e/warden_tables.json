@@ -1,34 +1,6 @@
 [
   {
     "type": "dice_table",
-    "id": "reaction",
-    "name": "Reaction",
-    "dice": "2d6",
-    "rows": [
-      {
-        "roll": "2",
-        "result": "Hostile"
-      },
-      {
-        "roll": "3-5",
-        "result": "Wary"
-      },
-      {
-        "roll": "6-8",
-        "result": "Curious"
-      },
-      {
-        "roll": "9-11",
-        "result": "Kind"
-      },
-      {
-        "roll": "12",
-        "result": "Helpful"
-      }
-    ]
-  },
-  {
-    "type": "dice_table",
     "id": "die_of_fate",
     "name": "Die of Fate",
     "dice": "1d6",

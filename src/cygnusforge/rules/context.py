@@ -99,9 +99,11 @@ class World(Protocol):
         self, target: str, attacks: Sequence[Mapping[str, str]]
     ) -> dict[str, Any]: ...
 
-    def player_attack(
-        self, target: str, weapon: str, damage: int, modifier: str = ""
-    ) -> dict[str, Any]: ...
+    def player_attack(self, target: str, weapon: str, modifier: str = "") -> dict[str, Any]: ...
+
+    def attack_dice(self, weapon: str, modifier: str = "") -> str:
+        """The dice a player character's attack with `weapon` rolls: the modifier's dice when one
+        is named, else the weapon's own dice. Raises InvalidInput when the weapon is not carried."""
 
     def resolve_group_break(self, name: str, outcome: str) -> dict[str, Any]:
         """Resolve a group whose break save failed: `outcome` says what happens to it."""
@@ -149,7 +151,9 @@ class World(Protocol):
 
     def take_object(self, object_name: str, character: str, cause: str) -> dict[str, Any]: ...
 
-    def give_item(self, name: str, item: str, size: str = "normal") -> dict[str, Any]: ...
+    def give_item(
+        self, name: str, item: str, size: str = "normal", damage: str = ""
+    ) -> dict[str, Any]: ...
 
     def drop_item(self, name: str, item: str) -> dict[str, Any]: ...
 

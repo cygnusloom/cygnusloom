@@ -4,7 +4,8 @@
     "id": "awl",
     "name": "Awl",
     "feature_type": "item",
-    "description": "d6"
+    "description": "d6",
+    "damage": "1d6"
   },
   {
     "type": "feature",
@@ -64,7 +65,8 @@
     "id": "bonesaw",
     "name": "Bonesaw",
     "feature_type": "item",
-    "description": "d6"
+    "description": "d6",
+    "damage": "1d6"
   },
   {
     "type": "feature",
@@ -72,6 +74,7 @@
     "name": "Bow",
     "feature_type": "item",
     "description": "d6 damage",
+    "damage": "1d6",
     "size": "bulky"
   },
   {
@@ -97,7 +100,8 @@
     "id": "cane-sword",
     "name": "Cane Sword",
     "feature_type": "item",
-    "description": "d6"
+    "description": "d6",
+    "damage": "1d6"
   },
   {
     "type": "feature",
@@ -134,6 +138,7 @@
     "name": "Crossbow",
     "feature_type": "item",
     "description": "d8 damage",
+    "damage": "1d8",
     "size": "bulky"
   },
   {
@@ -141,7 +146,8 @@
     "id": "dagger",
     "name": "Dagger",
     "feature_type": "item",
-    "description": "d6"
+    "description": "d6",
+    "damage": "1d6"
   },
   {
     "type": "feature",
@@ -178,14 +184,16 @@
     "id": "hammer",
     "name": "Hammer",
     "feature_type": "item",
-    "description": "d6"
+    "description": "d6",
+    "damage": "1d6"
   },
   {
     "type": "feature",
     "id": "hand-axe",
     "name": "Hand Axe",
     "feature_type": "item",
-    "description": "d6"
+    "description": "d6",
+    "damage": "1d6"
   },
   {
     "type": "feature",
@@ -224,7 +232,8 @@
     "id": "iron-dagger",
     "name": "Iron Dagger",
     "feature_type": "item",
-    "description": "d6"
+    "description": "d6",
+    "damage": "1d6"
   },
   {
     "type": "feature",
@@ -253,7 +262,8 @@
     "id": "leather-whip",
     "name": "Leather Whip",
     "feature_type": "item",
-    "description": "d6"
+    "description": "d6",
+    "damage": "1d6"
   },
   {
     "type": "feature",
@@ -276,6 +286,7 @@
     "name": "Long Sword",
     "feature_type": "item",
     "description": "d10",
+    "damage": "1d10",
     "size": "bulky"
   },
   {
@@ -305,7 +316,8 @@
     "id": "needle-knife",
     "name": "Needle-knife",
     "feature_type": "item",
-    "description": "d6"
+    "description": "d6",
+    "damage": "1d6"
   },
   {
     "type": "feature",
@@ -372,7 +384,8 @@
     "id": "root-knife",
     "name": "Root Knife",
     "feature_type": "item",
-    "description": "d6"
+    "description": "d6",
+    "damage": "1d6"
   },
   {
     "type": "feature",
@@ -393,28 +406,32 @@
     "id": "serrated-knife",
     "name": "Serrated Knife",
     "feature_type": "item",
-    "description": "d6"
+    "description": "d6",
+    "damage": "1d6"
   },
   {
     "type": "feature",
     "id": "sharpened-trowel",
     "name": "Sharpened Trowel",
     "feature_type": "item",
-    "description": "d6"
+    "description": "d6",
+    "damage": "1d6"
   },
   {
     "type": "feature",
     "id": "short-sword",
     "name": "Short Sword",
     "feature_type": "item",
-    "description": "d6"
+    "description": "d6",
+    "damage": "1d6"
   },
   {
     "type": "feature",
     "id": "silver-knife",
     "name": "Silver Knife",
     "feature_type": "item",
-    "description": "d6"
+    "description": "d6",
+    "damage": "1d6"
   },
   {
     "type": "feature",
@@ -428,7 +445,8 @@
     "id": "sling",
     "name": "Sling",
     "feature_type": "item",
-    "description": "d6 damage"
+    "description": "d6 damage",
+    "damage": "1d6"
   },
   {
     "type": "feature",
@@ -472,7 +490,8 @@
     "id": "stake",
     "name": "Stake",
     "feature_type": "item",
-    "description": "d6"
+    "description": "d6",
+    "damage": "1d6"
   },
   {
     "type": "feature",
@@ -502,6 +521,7 @@
     "name": "Twin Daggers",
     "feature_type": "item",
     "description": "d6+d6",
+    "damage": "1d6+1d6",
     "size": "bulky"
   },
   {

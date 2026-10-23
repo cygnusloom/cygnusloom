@@ -56,6 +56,8 @@ class Feature:
     size: str
     uses: int
     armor: int
+    # The weapon's damage dice, such as "d6" or "d6+d6". Empty when the feature is not a weapon.
+    damage: str = ""
 
 
 @dataclass(frozen=True)
@@ -173,6 +175,9 @@ def _feature(definition: Definition, template: str) -> Feature:
     armor = data.get("armor", 0)
     if isinstance(armor, bool) or not isinstance(armor, int) or armor < 0:
         raise ContentError(f"{label}: 'armor' must be a whole number, 0 or more")
+    damage = data.get("damage", "")
+    if not isinstance(damage, str) or (damage and not is_formula(damage)):
+        raise ContentError(f"{label}: 'damage' must be a dice formula such as 'd6'")
     return Feature(
         id=definition.id,
         name=required_text(data, "name", label),
@@ -181,6 +186,7 @@ def _feature(definition: Definition, template: str) -> Feature:
         size=size,
         uses=uses,
         armor=armor,
+        damage=damage,
     )
 
 

@@ -44,12 +44,12 @@ def _event_count(db: Session, campaign_id: int) -> int:
 
 def test_the_real_cairn_rule_set_loads_its_dice_tables():
     tables = ContentLibrary.load(DATA_DIR).rule_sets["cairn2e"].dice_tables
-    assert {"reaction", "die_of_fate", *MONSTER_TABLES} <= set(tables)
-    assert tables["reaction"].dice == "2d6"
+    assert {"dungeon_reaction", "die_of_fate", *MONSTER_TABLES} <= set(tables)
+    assert tables["dungeon_reaction"].dice == "2d6"
 
 
 def test_cairn_reaction_table_maps_rolls_to_results():
-    reaction = ContentLibrary.load(DATA_DIR).rule_sets["cairn2e"].dice_tables["reaction"]
+    reaction = ContentLibrary.load(DATA_DIR).rule_sets["cairn2e"].dice_tables["dungeon_reaction"]
     assert reaction.row_for(2).result == "Hostile"
     assert reaction.row_for(7).result == "Curious"
     assert reaction.row_for(12).result == "Helpful"
@@ -125,12 +125,14 @@ def test_roll_tables_returns_one_roll_per_named_table_and_logs_one_event(client_
     with Session(tools.engine) as db:
         last_id = max((row.id for row in events_since(db, campaign_id)), default=0)
         before = _event_count(db, campaign_id)
-        out = roll_tables(db, campaign_id, ["reaction", "die_of_fate"], tables, random.Random(1))
+        out = roll_tables(
+            db, campaign_id, ["dungeon_reaction", "die_of_fate"], tables, random.Random(1)
+        )
         after = _event_count(db, campaign_id)
         new_events = events_since(db, campaign_id, after=last_id)
 
     rolls = out["rolls"]
-    assert [roll["table"] for roll in rolls] == ["reaction", "die_of_fate"]
+    assert [roll["table"] for roll in rolls] == ["dungeon_reaction", "die_of_fate"]
     assert set(rolls[0]) == {"table", "name", "roll", "result"}
     assert 2 <= rolls[0]["roll"] <= 12
     assert 1 <= rolls[1]["roll"] <= 6
@@ -162,7 +164,7 @@ def test_roll_tables_refuses_an_unknown_id_without_logging_or_rolling(client_fac
     with Session(tools.engine) as db:
         before = _event_count(db, campaign_id)
         with pytest.raises(InvalidInput, match="'nope'"):
-            roll_tables(db, campaign_id, ["reaction", "nope"], CAIRN.dice_tables, rng)
+            roll_tables(db, campaign_id, ["dungeon_reaction", "nope"], CAIRN.dice_tables, rng)
         assert _event_count(db, campaign_id) == before
     assert rng.getstate() == state_before
 
@@ -171,10 +173,18 @@ def test_the_same_seed_gives_the_same_rolls(client_factory):
     _, campaign_id, tools = _fight(client_factory)
     with Session(tools.engine) as db:
         first = roll_tables(
-            db, campaign_id, ["reaction", "die_of_fate"], CAIRN.dice_tables, random.Random(42)
+            db,
+            campaign_id,
+            ["dungeon_reaction", "die_of_fate"],
+            CAIRN.dice_tables,
+            random.Random(42),
         )
         second = roll_tables(
-            db, campaign_id, ["reaction", "die_of_fate"], CAIRN.dice_tables, random.Random(42)
+            db,
+            campaign_id,
+            ["dungeon_reaction", "die_of_fate"],
+            CAIRN.dice_tables,
+            random.Random(42),
         )
     assert first["rolls"] == second["rolls"]
 
@@ -182,9 +192,9 @@ def test_the_same_seed_gives_the_same_rolls(client_factory):
 def test_world_tools_roll_tables_returns_the_rolls_shape(client_factory: Callable[[], TestClient]):
     _, _, tools = _fight(client_factory)
     live = replace(tools, dice_tables=CAIRN.dice_tables, rng=random.Random(1))
-    out = live.roll_tables(["reaction"])
+    out = live.roll_tables(["dungeon_reaction"])
     assert list(out) == ["rolls"]
     (roll,) = out["rolls"]
-    assert roll["table"] == "reaction"
+    assert roll["table"] == "dungeon_reaction"
     assert roll["name"] == "Reaction"
-    assert CAIRN.dice_tables["reaction"].row_for(roll["roll"]).result == roll["result"]
+    assert CAIRN.dice_tables["dungeon_reaction"].row_for(roll["roll"]).result == roll["result"]

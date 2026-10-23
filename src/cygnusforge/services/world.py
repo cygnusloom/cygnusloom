@@ -337,7 +337,9 @@ class WorldTools:
                 service,
             )
 
-    def give_item(self, name: str, item: str, size: str = "normal") -> dict[str, Any]:
+    def give_item(
+        self, name: str, item: str, size: str = "normal", damage: str = ""
+    ) -> dict[str, Any]:
         listed = (
             market_service.listed_item(self.marketplace, item)
             if self.marketplace is not None
@@ -353,6 +355,7 @@ class WorldTools:
                 item,
                 size,
                 listed,
+                damage,
             )
 
     def drop_item(self, name: str, item: str) -> dict[str, Any]:
@@ -688,13 +691,15 @@ class WorldTools:
                 db, self.campaign_id, target, attacks, self._rules(), self.rng
             )
 
-    def player_attack(
-        self, target: str, weapon: str, damage: int, modifier: str = ""
-    ) -> dict[str, Any]:
+    def player_attack(self, target: str, weapon: str, modifier: str = "") -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.player_attack(
-                db, self.campaign_id, target, weapon, damage, self._rules(), self.rng, modifier
+                db, self.campaign_id, target, weapon, self._rules(), self.rng, modifier
             )
+
+    def attack_dice(self, weapon: str, modifier: str = "") -> str:
+        with session_scope(self.engine) as db:
+            return combat.attack_dice(db, self.campaign_id, weapon, self._rules(), modifier)
 
     def resolve_group_break(self, name: str, outcome: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -893,6 +898,7 @@ def _starting_item(feature: Feature, magic: MagicRules | None, item_sizes: Mappi
         feature.name,
         feature.size,
         item_sizes[feature.size],
+        damage=feature.damage,
         uses=feature.uses,
         max_uses=feature.uses,
     )

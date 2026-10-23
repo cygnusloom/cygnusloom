@@ -30,6 +30,7 @@
       "retreat_stat": "dex"
     },
     "modifiers": {"impaired": "1d4", "enhanced": "1d12"},
+    "unarmed": {"damage": "1d4", "names": ["unarmed", "fists", "bare hands"]},
     "armor_max": 3,
     "dying_hours": 1,
     "dying_conditions": ["mortal_wound"],
