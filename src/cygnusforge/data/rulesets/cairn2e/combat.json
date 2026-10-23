@@ -20,16 +20,17 @@
       "player_character_dead": "dead",
       "npc": "dead"
     },
-    "scars": {"table": "scars", "stat": "hp"},
+    "injuries": {"table": "injuries", "stat": "hp"},
     "outside_harm": ["str", "dex", "wil"],
     "morale": {
-      "wil_stat": "wil",
+      "save_stat": "wil",
       "first_casualty": true,
       "half": true,
       "lone_at": "hp",
       "retreat_stat": "dex"
     },
     "modifiers": {"impaired": "1d4", "enhanced": "1d12"},
+    "armor_max": 3,
     "dying_hours": 1,
     "dying_conditions": ["mortal_wound"],
     "fatal_conditions": ["doomed"],

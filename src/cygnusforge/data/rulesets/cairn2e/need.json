@@ -1,0 +1,8 @@
+[
+  {
+    "type": "need",
+    "id": "cairn",
+    "penalty_item": "fatigue",
+    "after_days": 1
+  }
+]

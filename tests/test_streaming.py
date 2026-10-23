@@ -11,8 +11,8 @@ from sqlmodel import Session
 from cygnusforge.config import Settings
 from cygnusforge.db.models import Campaign
 from cygnusforge.llm.base import ChatReply, LLMError
-from cygnusforge.services.campaigns import NARRATE_INSTRUCTION, list_messages
-from tests.conftest import csrf_token
+from cygnusforge.services.campaigns import list_messages
+from tests.conftest import NARRATE_TEXT, csrf_token
 from tests.test_campaigns import _answer, _campaign_id
 from tests.test_context import (
     RecordingProvider,
@@ -257,7 +257,7 @@ def _empty_narrations(provider: Any, empty: int) -> Any:
             return await provider.chat(model, messages, tools)
 
         async def stream(self, model, messages, tools=None):
-            narrating = any(m.get("content") == NARRATE_INSTRUCTION for m in messages)
+            narrating = any(m.get("content") == NARRATE_TEXT for m in messages)
             if narrating and self.empty_left:
                 self.empty_left -= 1
                 yield ChatReply(text="")

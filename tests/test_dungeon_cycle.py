@@ -97,15 +97,16 @@ def test_the_dungeon_events_table_has_the_six_spec_entries():
     } == (EVENT_FOR_FACE)
 
 
-def test_encounter_and_exhaustion_notes_point_to_the_right_next_step(
+def test_encounter_note_points_to_the_right_next_step(
     client_factory: Callable[[], TestClient], monkeypatch: pytest.MonkeyPatch
 ):
     _, _, tools = _live_tools(client_factory)
     monkeypatch.setattr(dungeon, "roll_total", lambda formula, rng=None: 1)
     assert "roll_tables" in tools.dungeon_cycle(["new_area"], "Door.")["note"]
     monkeypatch.setattr(dungeon, "roll_total", lambda formula, rng=None: 5)
-    note = tools.dungeon_cycle(["lingering"], "Camping.")["note"]
-    assert "rest" in note and "Fatigue" in note and "ration" in note
+    result = tools.dungeon_cycle(["lingering"], "Camping.")
+    assert result["note"] == ""
+    assert "rest" in result["text"] and "Fatigue" in result["text"] and "ration" in result["text"]
 
 
 def test_the_dungeon_cycle_does_not_move_the_clock(

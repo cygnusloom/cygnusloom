@@ -33,7 +33,6 @@ from cygnusforge.content.library import (
     ClockRules,
     CombatRules,
     ConditionRules,
-    DeprivationRules,
     DiceTable,
     EncounterGrid,
     FoodRules,
@@ -41,6 +40,7 @@ from cygnusforge.content.library import (
     MagicRules,
     Marketplace,
     MonsterTemplate,
+    NeedRules,
     RestLength,
     WorldTemplate,
 )
@@ -193,7 +193,7 @@ class WorldTools:
     clock_rules: ClockRules | None = None
     rests: Mapping[str, RestLength] = field(default_factory=dict)
     interrupted_rest: str = ""
-    deprivation: DeprivationRules | None = None
+    need: NeedRules | None = None
     inventory: InventoryRules | None = None
     item_sizes: Mapping[str, int] = field(default_factory=dict)
     magic: MagicRules | None = None
@@ -210,7 +210,7 @@ class WorldTools:
                 db,
                 self.campaign_id,
                 _required(self.clock_rules, "time"),
-                self.deprivation,
+                self.need,
                 self.inventory,
                 days,
                 parts,
@@ -225,7 +225,7 @@ class WorldTools:
                 _required(self.clock_rules, "time"),
                 self.rests,
                 self.interrupted_rest,
-                self.deprivation,
+                self.need,
                 self.inventory,
                 self.food,
                 length,
@@ -237,25 +237,26 @@ class WorldTools:
         with session_scope(self.engine) as db:
             return needs_service.rest_history(db, self.campaign_id)
 
-    def set_deprivation(self, name: str, deprived: bool, cause: str = "") -> dict[str, Any]:
+    def set_condition(self, name: str, deprived: bool, cause: str = "") -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return needs_service.set_deprivation(
-                db, self.campaign_id, self.deprivation, name, deprived, cause
+            return needs_service.set_condition(
+                db, self.campaign_id, self.need, name, deprived, cause
             )
 
-    def add_fatigue(self, name: str, cause: str, force: bool = False) -> dict[str, Any]:
+    def add_penalty(self, name: str, cause: str, force: bool = False) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            if not force and self.deprivation is not None:
+            if not force and self.need is not None:
                 character = inventory_service.character_named(
                     load_state(db, self.campaign_id), name
                 )
-                if character.deprived_since is not None:
+                if character.unmet_since is not None:
+                    penalty = _required(self.inventory, "inventory").penalty_name
                     raise InvalidInput(
-                        f"{character.name} is deprived, so the engine adds their Fatigue each day "
-                        "and none was added here; set force only if something besides the "
-                        "deprivation causes this Fatigue"
+                        f"{character.name} is deprived, so the engine adds their {penalty} each day "
+                        f"and none was added here; set force only if something besides the "
+                        f"need causes this {penalty}"
                     )
-            return inventory_service.add_fatigue(
+            return inventory_service.add_penalty(
                 db, self.campaign_id, _required(self.inventory, "inventory"), name, cause
             )
 
@@ -273,6 +274,7 @@ class WorldTools:
                 item,
                 price,
                 size,
+                armor_max=self.combat.armor_max if self.combat else 0,
             )
 
     def change_gold(self, name: str, amount: int, cause: str) -> dict[str, Any]:
@@ -371,7 +373,7 @@ class WorldTools:
                 name,
                 item,
                 target,
-                self.magic.relic_kind if self.magic is not None else "",
+                self.magic.charged_kind if self.magic is not None else "",
             )
 
     def stabilize(self, name: str, explanation: str) -> dict[str, Any]:
@@ -412,11 +414,11 @@ class WorldTools:
                 description,
             )
 
-    def give_relic(
+    def give_charged_item(
         self, name: str, item: str, uses: int, recharge: str, size: str = "normal"
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return magic_service.give_relic(
+            return magic_service.give_charged_item(
                 db,
                 self.campaign_id,
                 _required(self.magic, "magic"),
@@ -440,15 +442,15 @@ class WorldTools:
                 spell,
             )
 
-    def use_relic(self, name: str, item: str) -> dict[str, Any]:
+    def use_charge(self, name: str, item: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return magic_service.use_relic(
+            return magic_service.use_charge(
                 db, self.campaign_id, _required(self.magic, "magic"), name, item
             )
 
-    def recharge_relic(self, name: str, item: str) -> dict[str, Any]:
+    def recharge_charged_item(self, name: str, item: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return magic_service.recharge_relic(
+            return magic_service.recharge_charged_item(
                 db, self.campaign_id, _required(self.magic, "magic"), name, item
             )
 
@@ -665,6 +667,7 @@ class WorldTools:
                 stats or {},
                 armor,
                 attacks,
+                armor_max=self.combat.armor_max if self.combat else 0,
             )
 
     def search_monster(self, query: str) -> dict[str, list[dict[str, Any]]]:
@@ -693,9 +696,9 @@ class WorldTools:
                 db, self.campaign_id, target, weapon, damage, self._rules(), self.rng, modifier
             )
 
-    def resolve_detachment(self, name: str, outcome: str) -> dict[str, Any]:
+    def resolve_group_break(self, name: str, outcome: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return combat.resolve_detachment(db, self.campaign_id, name, outcome, self._rules())
+            return combat.resolve_group_break(db, self.campaign_id, name, outcome, self._rules())
 
     def modifier_dice(self, modifier: str) -> str | None:
         return attack_modifiers.modifier_dice(self._rules().modifiers, modifier)
@@ -710,7 +713,7 @@ class WorldTools:
 
     def set_armor(self, name: str, armor: int) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return combat.set_armor(db, self.campaign_id, name, armor)
+            return combat.set_armor(db, self.campaign_id, name, armor, self._rules().armor_max)
 
     def recover_character(self, name: str, explanation: str, consequence: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -908,6 +911,7 @@ def create_player_character(
     item_sizes: Mapping[str, int] | None = None,
     magic: MagicRules | None = None,
     currency: str = "",
+    armor_max: int = 0,
 ) -> dict[str, Any]:
     """Make the player character from the player's choices. `rolled` are the stats rolled for
     this character; the player may only keep them or swap within a swap group. Starting item
@@ -957,7 +961,8 @@ def create_player_character(
             )
         armor += feature.armor * count
     if armor:
-        record(db, campaign_id, ArmorSet(name=name, armor=min(armor, combat.MAX_ARMOR)))
+        cap = armor_max or combat.UNCAPPED_ARMOR
+        record(db, campaign_id, ArmorSet(name=name, armor=min(armor, cap)))
     record(db, campaign_id, OpeningStarted())
     db.commit()
     return {"created": "pc", "name": name, "location": None}
@@ -1160,6 +1165,7 @@ def create_monster(
     stats: Mapping[str, int | None],
     armor: int | None,
     attacks: Sequence[Mapping[str, str]] | None,
+    armor_max: int = 0,
 ) -> dict[str, Any]:
     """An NPC built from a statblock. A template gives the starting values, and any value given
     replaces it. Without a template, the description and every stat come from the call."""
@@ -1191,7 +1197,10 @@ def create_monster(
     else:
         raise InvalidInput("a description is needed when there is no template")
     armor_value = whole_number(
-        armor if armor is not None else (base.armor if base else 0), "armor", 0, combat.MAX_ARMOR
+        armor if armor is not None else (base.armor if base else 0),
+        "armor",
+        0,
+        armor_max or combat.UNCAPPED_ARMOR,
     )
     attack_map = _attacks(attacks) if attacks is not None else dict(base.attacks if base else {})
     event = NpcAdded(
@@ -1205,7 +1214,7 @@ def create_monster(
         armor=armor_value,
         attacks=attack_map,
         creature=base.name if base else "",
-        detachment=bool(base and base.detachment),
+        large_group=bool(base and base.large_group),
     )
     record(db, campaign_id, event)
     db.commit()
@@ -1534,7 +1543,7 @@ def get_statblock(
 ) -> dict[str, Any]:
     """A character's stats, template, features, and fields, one line each. Works for the player
     character and for NPCs. With a rule set's `combat`, the armor, attacks, harm, and status follow.
-    With its `conditions` and `inventory`, the conditions, scars, deprivation, and items follow."""
+    With its `conditions` and `inventory`, the conditions, injuries, need, and items follow."""
     character = _character_named(state, name)
     kind = "player character" if character.kind == PC_KIND else "npc"
     lines = describe(spec, _sheet_of(character)).splitlines()
@@ -1551,9 +1560,9 @@ def get_statblock(
 
 def _combat_lines(character: Character, spec: CharacterSpec, combat: CombatRules) -> list[str]:
     lines = [f"Armor: {character.armor}"]
-    if character.detachment:
+    if character.large_group:
         lines.append(
-            "Detachment: a group that attacks with Blast and is hit only by impaired attacks"
+            "Large group: a group that attacks with Blast and is hit only by impaired attacks"
         )
     if character.attacks:
         attacks = ", ".join(f"{name} {formula}" for name, formula in character.attacks.items())
@@ -1570,7 +1579,7 @@ def _combat_lines(character: Character, spec: CharacterSpec, combat: CombatRules
     elif character.surrendered:
         lines.append("Status: surrendered")
     elif character.critical_due:
-        lines.append("Status: broken, awaiting the Warden's decision (resolve_detachment)")
+        lines.append("Status: broken, awaiting the Warden's decision (resolve_group_break)")
     elif character.save_due is not None:
         lines.append(f"Status: {spec.stats[character.save_due].name} save due")
     return lines
@@ -1587,18 +1596,16 @@ def _status_lines(
     conditions: Mapping[str, ConditionRules] | None,
     inventory: InventoryRules | None,
 ) -> list[str]:
-    """The character's conditions, scars, deprivation, and what they carry. Each part shows only
+    """The character's conditions, injuries, need, and what they carry. Each part shows only
     when the rule set has it, or when the character has something to report."""
     lines: list[str] = []
     if conditions is not None:
         held = [rules.label for rules in active_conditions(character, conditions)]
         lines.append(f"Conditions: {', '.join(held) if held else 'none'}")
-    if character.scars:
-        lines.append(f"Scars: {'; '.join(character.scars)}")
-    if character.deprived_since is not None:
-        lines.append(
-            f"Deprived: {character.deprivation_cause} (since day {character.deprived_since})"
-        )
+    if character.injuries:
+        lines.append(f"Injuries: {'; '.join(character.injuries)}")
+    if character.unmet_since is not None:
+        lines.append(f"Deprived: {character.unmet_cause} (since day {character.unmet_since})")
     if inventory is not None:
         used = inventory_service.used_slots(character)
         flag = " (over capacity)" if used > inventory.capacity else ""

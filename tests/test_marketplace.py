@@ -9,7 +9,6 @@ from sqlmodel import Session
 
 from cygnusforge.config import Settings
 from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.services.combat import MAX_ARMOR
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
     ArmorSet,
@@ -26,6 +25,7 @@ from tests.test_combat import CAIRN, PC, _character, _set_stat, _tools
 from tests.test_inventory import _fill
 
 MARKET = CAIRN.marketplace
+ARMOR_MAX = CAIRN.combat.armor_max
 BRAN = "Bran"
 PLACE = "The Road"
 
@@ -165,12 +165,12 @@ def test_buying_armor_sets_armor_and_stops_at_the_cap(client_factory):
     app, campaign_id, tools = _pcs(client_factory)
     _grant_gold(app, campaign_id, 100)
     with Session(app.state.engine) as db:
-        record(db, campaign_id, ArmorSet(name=PC, armor=MAX_ARMOR))
+        record(db, campaign_id, ArmorSet(name=PC, armor=ARMOR_MAX))
         db.commit()
     armor = _listed(lambda item: item.armor > 0 and item.size == "normal")
     result = tools.buy_item(PC, armor.name)
-    assert result["armor"] == MAX_ARMOR
-    assert _character(app, campaign_id, PC).armor == MAX_ARMOR
+    assert result["armor"] == ARMOR_MAX
+    assert _character(app, campaign_id, PC).armor == ARMOR_MAX
 
 
 def test_a_service_is_paid_by_the_first_named_character(client_factory):
@@ -271,7 +271,7 @@ def test_a_rest_with_no_food_leaves_the_character_deprived(client_factory):
     app, campaign_id, tools = _pcs(client_factory)
     _set_rations(app, campaign_id, uses=0)
     tools.rest("night", reason="camp")
-    assert _character(app, campaign_id, PC).deprived_since is not None
+    assert _character(app, campaign_id, PC).unmet_since is not None
 
 
 def test_a_lodged_character_eats_nothing_and_the_bed_is_used_up(client_factory):

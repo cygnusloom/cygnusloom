@@ -1,6 +1,7 @@
-"""Spellbooks, scrolls, and relics. A spellbook holds one spell and a cast costs Fatigue; a scroll
-is spent by one cast; a relic has uses that a recharge restores. The rule set names the item kinds
-and sizes, and its `combat` supplies the save every magic roll uses."""
+"""Spellbooks, scrolls, and charged items. A spellbook holds one spell and a cast costs the rule
+set's penalty item; a scroll is spent by one cast; a charged item has uses that a recharge restores,
+as a wand has charges. The rule set names the item kinds and sizes, and its `combat` supplies the
+save every magic roll uses."""
 
 from __future__ import annotations
 
@@ -92,7 +93,7 @@ def give_scroll(
     return result
 
 
-def give_relic(
+def give_charged_item(
     db: Session,
     campaign_id: int,
     magic: MagicRules,
@@ -105,18 +106,18 @@ def give_relic(
     size: str,
 ) -> dict[str, Any]:
     if uses < 1:
-        raise InvalidInput(f"a relic needs at least one use, not {uses}")
-    relic = Item(
+        raise InvalidInput(f"a charged item needs at least one use, not {uses}")
+    charged = Item(
         item,
         size,
         _slots(item_sizes, size),
-        kind=magic.relic_kind,
+        kind=magic.charged_kind,
         text=recharge,
         uses=uses,
         max_uses=uses,
     )
     result = inventory_service.carry_item(
-        db, campaign_id, inventory, name, relic, cause=f"a {magic.relic_kind}"
+        db, campaign_id, inventory, name, charged, cause=f"a {magic.charged_kind}"
     )
     db.commit()
     return result
@@ -131,7 +132,7 @@ def cast_spell(
     spell: str,
 ) -> dict[str, Any]:
     """Cast from a spellbook when one is held, or else from a scroll, which is then spent. Only a
-    spellbook cast costs Fatigue."""
+    spellbook cast pays the penalty item."""
     state = load_state(db, campaign_id)
     character_name, held = _held(state, name, spell, (magic.spellbook_kind, magic.scroll_kind))
     if held.kind == magic.scroll_kind:
@@ -146,19 +147,19 @@ def cast_spell(
             ItemRemoved(name=character_name, item=held.name, kind_of_item=magic.scroll_kind),
         )
         db.commit()
-        return {"name": character_name, "spell": held.name, "source": "scroll", "fatigue": False}
+        return {"name": character_name, "spell": held.name, "source": "scroll", "penalty": False}
 
     record(db, campaign_id, SpellCast(name=character_name, spell=held.name, source="spellbook"))
-    fatigue = Item(
-        inventory_service.FATIGUE_NAME,
+    penalty = Item(
+        inventory.penalty_name,
         "",
-        inventory.fatigue_slots,
-        kind=inventory.fatigue_item,
+        inventory.penalty_slots,
+        kind=inventory.penalty_item,
     )
     result: dict[str, Any] = {}
-    for _ in range(magic.cast_fatigue):
+    for _ in range(magic.cast_penalty):
         result = inventory_service.carry_item(
-            db, campaign_id, inventory, character_name, fatigue, cause=f"casting {held.name}"
+            db, campaign_id, inventory, character_name, penalty, cause=f"casting {held.name}"
         )
     db.commit()
     return {
@@ -166,15 +167,15 @@ def cast_spell(
         "name": character_name,
         "spell": held.name,
         "source": "spellbook",
-        "fatigue": magic.cast_fatigue > 0,
+        "penalty": magic.cast_penalty > 0,
     }
 
 
-def use_relic(
+def use_charge(
     db: Session, campaign_id: int, magic: MagicRules, name: str, item: str
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
-    character_name, held = _held(state, name, item, (magic.relic_kind,))
+    character_name, held = _held(state, name, item, (magic.charged_kind,))
     if held.uses < 1:
         raise InvalidInput(
             f"{character_name}'s {held.name} has no uses left and must recharge first"
@@ -188,11 +189,11 @@ def use_relic(
     return {"name": character_name, "item": held.name, "uses_left": held.uses - 1}
 
 
-def recharge_relic(
+def recharge_charged_item(
     db: Session, campaign_id: int, magic: MagicRules, name: str, item: str
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
-    character_name, held = _held(state, name, item, (magic.relic_kind,))
+    character_name, held = _held(state, name, item, (magic.charged_kind,))
     if held.uses == held.max_uses:
         raise InvalidInput(f"{held.name} is already fully charged")
     if held.spent_on == state.clock:

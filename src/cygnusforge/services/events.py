@@ -87,19 +87,19 @@ class Place:
 
 @dataclass(frozen=True)
 class Item:
-    """Something a character carries. `size` is the rule set's item size, empty for Fatigue, and
-    `slots` is what it takes from the inventory. `kind` marks special items such as Fatigue."""
+    """Something a character carries. `size` is the rule set's item size, empty for the penalty item, and
+    `slots` is what it takes from the inventory. `kind` marks special items such as the penalty item."""
 
     name: str
     size: str
     slots: int
     kind: str = ""
-    # A spellbook's spell text, or a relic's recharge rule.
+    # A spellbook's spell text, or a charged item's recharge rule.
     text: str = ""
-    # A relic's uses left, and the most it holds.
+    # A charged item's uses left, and the most it holds.
     uses: int = 0
     max_uses: int = 0
-    # The clock when a relic was last used. It cannot recharge until the clock moves on.
+    # The clock when a charged item was last used. It cannot recharge until the clock moves on.
     spent_on: Clock | None = None
 
 
@@ -132,26 +132,26 @@ class Character:
     # The stat id of a save the character must make after harm overflowed, or None.
     save_due: str | None = None
     defeated: bool = False
-    # The ids of the conditions the character has, and the names of their scars, in the order gained.
+    # The ids of the conditions the character has, and the names of their injuries, in the order gained.
     conditions: list[str] = field(default_factory=list)
-    scars: list[str] = field(default_factory=list)
+    injuries: list[str] = field(default_factory=list)
     # Ran from the fight, or broke and fled. Cleared when the encounter ends.
     fled: bool = False
     # Gave up the fight and laid down arms. Cleared when the encounter ends.
     surrendered: bool = False
     # A debug buff: no harm reaches the character. Set from the debug panel.
     invincible: bool = False
-    # A detachment is a large group the Warden fights as one unit. See SPEC.md, Phase 2.
-    detachment: bool = False
-    # A detachment whose Critical Damage save failed. The Warden must decide it is defeated or flees.
+    # A large group is a group the Warden fights as one unit. See SPEC.md, Phase 2.
+    large_group: bool = False
+    # A large group whose Critical Damage save failed. The Warden must decide it is defeated or flees.
     critical_due: bool = False
     # Paid for a bed for the night. The next rest that eats food feeds this character for free.
     lodged: bool = False
-    # What the character carries. Fatigue is an item of the rule set's fatigue kind.
+    # What the character carries. The penalty item is an item of the rule set's penalty kind.
     items: list[Item] = field(default_factory=list)
-    # The campaign day a deprivation began, or None while the character is not deprived.
-    deprived_since: int | None = None
-    deprivation_cause: str = ""
+    # The campaign day a need began, or None while the character is not deprived.
+    unmet_since: int | None = None
+    unmet_cause: str = ""
     # A hireling is a player-controlled character a party member hired. Its employer pays its
     # wage each day. Empty and zero for everyone else.
     hireling: bool = False
@@ -592,7 +592,7 @@ class NpcAdded(GameEvent):
     armor: int = 0
     attacks: dict[str, str] = field(default_factory=dict)
     creature: str = ""
-    detachment: bool = False
+    large_group: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.characters[name_key(self.name)] = Character(
@@ -610,7 +610,7 @@ class NpcAdded(GameEvent):
             armor=self.armor,
             attacks=dict(self.attacks),
             creature=self.creature,
-            detachment=self.detachment,
+            large_group=self.large_group,
         )
 
     def render(self) -> str:
@@ -1210,7 +1210,7 @@ class EncounterEnded(GameEvent):
 
 @dataclass(frozen=True)
 class MoraleChecked(GameEvent):
-    """A side's WIL save for morale, made by its leader. A failed save makes the side flee.
+    """A side's morale save, made by its leader. A failed save makes the side flee.
     `tag` is "first" for the first casualty or "half" for half the side."""
 
     kind: ClassVar[str] = "morale.checked"
@@ -1271,7 +1271,7 @@ class CharacterSurrendered(GameEvent):
 
 @dataclass(frozen=True)
 class RetreatRolled(GameEvent):
-    """A DEX save to run from the fight. Unlike SaveRolled, a failure does not defeat anyone; the
+    """A save to run from the fight. Unlike SaveRolled, a failure does not defeat anyone; the
     character just stays in the fight."""
 
     kind: ClassVar[str] = "retreat.rolled"
@@ -1432,7 +1432,7 @@ class EncounterTurnEnded(GameEvent):
 
 @dataclass(frozen=True)
 class InitiativeRolled(GameEvent):
-    """A player character's DEX save for initiative. Passing acts before the opponents and failing
+    """A player character's initiative save. Passing acts before the opponents and failing
     acts after them."""
 
     kind: ClassVar[str] = "encounter.initiative_rolled"
@@ -1513,7 +1513,7 @@ class Struck(GameEvent):
 @dataclass(frozen=True)
 class SaveRolled(GameEvent):
     """A d20 save against a stat. A failed save defeats the character, leaving it `status`. A
-    failed Critical Damage save on a detachment leaves it to the Warden's decision instead."""
+    failed Critical Damage save on a large group leaves it to the Warden's decision instead."""
 
     kind: ClassVar[str] = "combat.save_rolled"
 
@@ -1548,11 +1548,11 @@ class SaveRolled(GameEvent):
 
 
 @dataclass(frozen=True)
-class DetachmentResolved(GameEvent):
-    """The Warden's decision after a detachment's Critical Damage save failed. `outcome` is
+class GroupBreakResolved(GameEvent):
+    """The Warden's decision after a large group's Critical Damage save failed. `outcome` is
     "defeat", leaving it `status`, or "flee", breaking it up so its members run from the fight."""
 
-    kind: ClassVar[str] = "combat.detachment_resolved"
+    kind: ClassVar[str] = "combat.group_break_resolved"
 
     name: str
     outcome: str
@@ -1770,21 +1770,21 @@ class ConditionEnded(GameEvent):
 
 
 @dataclass(frozen=True)
-class ScarGained(GameEvent):
-    """A scar from the Scars table. `roll` is the table entry it came from."""
+class InjuryGained(GameEvent):
+    """An injury from the Injuries table. `roll` is the table entry it came from."""
 
-    kind: ClassVar[str] = "scar.gained"
+    kind: ClassVar[str] = "injury.gained"
 
     name: str
-    scar: str
+    injury: str
     roll: int
     text: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        state.characters[name_key(self.name)].scars.append(self.scar)
+        state.characters[name_key(self.name)].injuries.append(self.injury)
 
     def render(self) -> str:
-        text = f"{self.name} gains the scar {self.scar} (Scars table {self.roll})."
+        text = f"{self.name} gains the injury {self.injury} (Injuries table {self.roll})."
         return f"{text} {self.text}" if self.text else text
 
 
@@ -1821,7 +1821,7 @@ class Harmed(GameEvent):
 
 @dataclass(frozen=True)
 class CharacterSaved(GameEvent):
-    """A save made outside a fight, such as one a scar calls for. Unlike SaveRolled, a failure does
+    """A save made outside a fight, such as one an injury calls for. Unlike SaveRolled, a failure does
     not defeat the character; the effects of a pass or fail are recorded as their own events."""
 
     kind: ClassVar[str] = "character.saved"
@@ -2021,11 +2021,11 @@ class LodgingSet(GameEvent):
 
 
 @dataclass(frozen=True)
-class DeprivationSet(GameEvent):
+class NeedSet(GameEvent):
     """A character becomes deprived of a crucial need, or stops being deprived. A character who is
-    already deprived keeps the day the deprivation began."""
+    already deprived keeps the day the need began."""
 
-    kind: ClassVar[str] = "character.deprivation_set"
+    kind: ClassVar[str] = "character.need_set"
 
     name: str
     deprived: bool
@@ -2035,12 +2035,12 @@ class DeprivationSet(GameEvent):
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
         if self.deprived:
-            if character.deprived_since is None:
-                character.deprived_since = self.day
-            character.deprivation_cause = self.cause
+            if character.unmet_since is None:
+                character.unmet_since = self.day
+            character.unmet_cause = self.cause
         else:
-            character.deprived_since = None
-            character.deprivation_cause = ""
+            character.unmet_since = None
+            character.unmet_cause = ""
 
     def render(self) -> str:
         if self.deprived:
@@ -2139,7 +2139,7 @@ class ObjectTaken(GameEvent):
 
 @dataclass(frozen=True)
 class ItemUsesSet(GameEvent):
-    """Sets a relic's uses left, after a use or a recharge. `cause` says which."""
+    """Sets a charged item's uses left, after a use or a recharge. `cause` says which."""
 
     kind: ClassVar[str] = "character.item_uses_set"
 

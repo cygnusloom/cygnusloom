@@ -1,5 +1,5 @@
 """Aid for a dying player character. Stabilizing it stops its clock: a Bandage used on it, or the
-Warden's decision that aid has held. A Mortal Wound that ends by aid ends with it."""
+referee's decision that aid has held. A dying condition that ends by aid ends with it."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ def stabilize(
     rng: random.Random,
 ) -> dict[str, Any]:
     """Stop a dying player character's clock. It stays out of action until the Warden recovers it.
-    A Mortal Wound held now ends by aid, which runs its on-end effects."""
+    A lasting condition held now ends by aid, which runs its on-end effects."""
     character = load_state(db, campaign_id).characters.get(name_key(name))
     if character is None:
         raise InvalidInput(f"there is no character named {name!r}")
@@ -64,7 +64,7 @@ def use_item(
     name: str,
     item: str,
     target: str | None,
-    relic_kind: str = "",
+    charged_kind: str = "",
 ) -> dict[str, Any]:
     """Spend one use of a consumable the character carries. An aid item, such as a Bandage, may be
     used on a dying character, and using it stabilizes them. Any other item is spent on the holder."""
@@ -79,7 +79,7 @@ def use_item(
             raise InvalidInput(f"there is no character named {target!r}")
         if patient.dying_hours is None:
             raise InvalidInput(f"{patient.name} is not dying, so {item} has nothing to stop")
-    result = inventory_service.use_item(db, campaign_id, inventory, name, item, relic_kind)
+    result = inventory_service.use_item(db, campaign_id, inventory, name, item, charged_kind)
     if aid and combat is not None:
         result["stabilized"] = stabilize(
             db, campaign_id, target, f"{name} uses {item} on {target}", combat, conditions, rng

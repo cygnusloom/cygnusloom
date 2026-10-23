@@ -1551,8 +1551,8 @@
     ]
   },
   {
-    "type": "scar_table",
-    "id": "scars",
+    "type": "injury_table",
+    "id": "injuries",
     "name": "Scars",
     "entries": [
       {

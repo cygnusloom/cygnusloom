@@ -19,7 +19,7 @@ from cygnusforge.services.events import (
     name_key,
     record,
 )
-from cygnusforge.services.scars import EffectContext, run_effects
+from cygnusforge.services.injuries import EffectContext, run_effects
 
 
 def derived_holds(character: Character, rules: ConditionRules) -> bool:

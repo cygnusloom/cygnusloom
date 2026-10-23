@@ -95,20 +95,14 @@ STATE_INSTRUCTION = (
     "and makes any change. Otherwise, look up what the action depends on with the lookup tools, "
     "decide what this action changes and what needs to be said or done, then make it so with tool "
     "calls: create, update, or delete locations, characters, and "
-    "notes as the story needs; advance the clock, rest, or mark deprivation only when this action "
+    "notes as the story needs; advance the clock, rest, or mark need only when this action "
     "takes that time in the fiction, and never repeat a rest or time jump the transcript already "
     "records; when the party makes camp or sleeps through a night, record that night's rest with "
-    "rest in this same turn, before narrating the morning; any rest already moves the clock, so never add advance_time for the same time; when time passes, check each relic's recharge text and call recharge_relic once its "
-    "rule is met; a spent item, spell, or relic does nothing, so narrate it as spent and record no "
-    "effect the tool results do not show; move characters as the story needs, the player character included "
-    "when events carry them somewhere; ask for a roll when the outcome is uncertain; and call speak "
-    "once for each NPC who says something, with everything they say in one intent, without writing "
-    "their words yourself. In an encounter, combatants rarely speak: call speak only for a line that "
-    "changes what the player must decide, such as a threat, a plea, a surrender, or a warning. Never "
-    "give speech for an attack, a hit, a miss, pain, or effort; the narration covers those. A hit "
-    "that armor absorbs entirely, with no harm, is a blow turned aside or glancing off, never a "
-    "miss. Call dungeon_cycle when the party spends more than one cycle in one place, moves quickly, "
-    "enters a new area, or makes noise, and call roll_reaction for an NPC's reaction that is not obvious. "
+    "rest in this same turn, before narrating the morning; any rest already moves the clock, so never "
+    "add advance_time for the same time; move characters as the story needs, the player character "
+    "included when events carry them somewhere; ask for a roll when the outcome is uncertain; and call "
+    "speak once for each NPC who says something, with everything they say in one intent, without "
+    "writing their words yourself. "
     "Use place_object to stock a place with treasure, gold, or an item only when the story or the rules "
     "call for it; never invent treasure unprompted. Characters use take_object to pick up an object "
     "in their place, naming it by the short name given to place_object. Never hand over an object "
@@ -120,27 +114,21 @@ STATE_INSTRUCTION = (
     "the story may bring back. An NPC who fled an encounter and matters to the story does not stay "
     "where the fight was: move it to the place it fled to, which may be a different location, or, if "
     "it simply vanished, move it into the wind with move_actor and no location. An NPC in the wind "
-    "is at no location; bring it back with move_actor when the story needs it. An NPC who falls in combat stays at its location as a body, marked "
-    "defeated in all_at_location; delete it "
+    "is at no location; bring it back with move_actor when the story needs it. An NPC who falls in "
+    "combat stays at its location as a body, marked defeated in all_at_location; delete it "
     "once it no longer matters to the story. When a fall or surrender changes what a location "
     "looks like, update that location's description so it no longer shows the NPC alive. "
     "An encounter ends on its own when one side can no "
-    "longer fight. When an NPC surrenders, call surrender for it. When a detachment, a group statblock, "
-    "fails its critical save and is broken, call resolve_detachment with the outcome the story needs. "
-    "A player character who fails a save against critical damage is dying and dies within the hour "
-    "unless stabilized: the clock counts hours, so advance_time with hours runs it down, and a death "
-    "is recorded at once, in that same turn. Stabilize a dying character only when the story gives "
-    "aid, through stabilize or a Bandage used with use_item. Call recover_character only once a "
-    "stabilized character has been shown to survive. A dead character's body stays at its location "
-    "with its gear. Notes and narration must agree with the recorded harm and status: never "
+    "longer fight. Notes and narration must agree with the recorded harm and status: never "
     "call a character unhurt or scratched while they carry harm, and never describe a defeated or dead "
-    "NPC as alive, conscious, breathing, or moving. Notes hold settled facts that the story could lose, such as secrets, "
-    "promises, debts, and clues. Do not copy into a note anything a location, character, statblock, "
-    "or NPC record already holds. Before adding a note, check the existing notes: update one rather "
-    "than repeating a fact. Record only settled facts, not actions still in progress. Do not narrate "
-    "here; the narration comes in the next step. When nothing else needs to change, reply with one "
-    "short sentence saying so."
+    "NPC as alive, conscious, breathing, or moving. Notes hold settled facts that the story could lose, "
+    "such as secrets, promises, debts, and clues. Do not copy into a note anything a location, character, "
+    "statblock, or NPC record already holds. Before adding a note, check the existing notes: update one "
+    "rather than repeating a fact. Record only settled facts, not actions still in progress. Do not "
+    "narrate here; the narration comes in the next step."
 )
+# Closes the state step after the ruleset's fragments.
+STATE_CLOSING = "When nothing else needs to change, reply with one short sentence saying so."
 NARRATE_INSTRUCTION = (
     "Narration step. Write the next beat in the present tense, as a good editor would: concise, "
     "specific, and free of filler. Aim for three to five sentences. Cut repetition and restated "
@@ -161,8 +149,8 @@ NARRATE_INSTRUCTION = (
     "narration, use their full name, since a pronoun or short name alone could be ambiguous. "
     "When the story moves them or something happens to them, "
     "narrate it as a result. Narrate everything that happens to the player character, once, in "
-    "plain prose: harm, healing, Fatigue, scars, conditions, items gained or lost, the effect of a "
-    "spell, scroll, or relic, a save's result, and any rest they take. Narrate these even when the "
+    "plain prose: harm, healing, {penalty_clause}injuries, conditions, items gained or lost, the effect of a "
+    "spell, scroll, or charged item, a save's result, and any rest they take. Narrate these even when the "
     "state step already recorded them, and give any sum of money or count of items exactly as the "
     "tool results recorded it. End the beat where the player's next choice begins. When a player character dies, narrate the death in full, with what it looked like and where the body lies, then stop: the player chooses the next character, so do not choose one for them. After a recovery, "
     "narrate only how the character comes round and what it cost, then stop: do not have the player "
@@ -187,17 +175,52 @@ OOC_INSTRUCTION = (
     "write no text before those calls: text written before a tool call is shown to the player "
     "right away. If the story should move on after your reply, call ooc with no_narration false."
 )
-SPEECH_INSTRUCTION = (
-    "Speech step. Write only the words the speaker says aloud to the player, in character, "
-    "following the speaker's personality, accent, and quirks, and the intent given. Write exactly "
-    "one line for the intent, as the speaker would actually say it, one sentence where you can and "
-    "two at most. Do not answer for anyone else, do not add a second line, and do not repeat a line "
-    "the intent says is already queued. "
-    "Do not describe actions, do not narrate, and do not add anything the intent does not call for. "
-    "Stage directions such as gestures, tone, or what the speaker does belong to the narration, not "
-    "to the speech: every word you write must be something the speaker says. "
-    "Reply with the spoken words only."
-)
+_NUMBER_WORDS = ("one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")
+
+
+def narrate_instruction(rule_set: RuleSet) -> str:
+    """The narration step's prompt, naming the ruleset's penalty item among what to narrate."""
+    penalty = f"{rule_set.inventory.penalty_name}, " if rule_set.inventory else ""
+    return NARRATE_INSTRUCTION.format(penalty_clause=penalty)
+
+
+def state_instruction(rule_set: RuleSet) -> str:
+    """The state step's prompt: the generic loop text, then the ruleset's prompt fragments in order."""
+    return " ".join(
+        [
+            STATE_INSTRUCTION,
+            *(fragment.text for fragment in rule_set.prompt_fragments),
+            STATE_CLOSING,
+        ]
+    )
+
+
+def speech_instruction(sentence_cap: int | None) -> str:
+    """The speech step's prompt. The sentence cap comes from the ruleset's narration settings."""
+    if sentence_cap is None:
+        length = "one sentence where you can"
+    elif sentence_cap == 1:
+        length = "one sentence"
+    else:
+        words = (
+            _NUMBER_WORDS[sentence_cap - 1]
+            if sentence_cap <= len(_NUMBER_WORDS)
+            else str(sentence_cap)
+        )
+        length = f"one sentence where you can and {words} at most"
+    return (
+        "Speech step. Write only the words the speaker says aloud to the player, in character, "
+        "following the speaker's personality, accent, and quirks, and the intent given. Write exactly "
+        f"one line for the intent, as the speaker would actually say it, {length}. Do not answer for "
+        "anyone else, do not add a second line, and do not repeat a line "
+        "the intent says is already queued. "
+        "Do not describe actions, do not narrate, and do not add anything the intent does not call for. "
+        "Stage directions such as gestures, tone, or what the speaker does belong to the narration, not "
+        "to the speech: every word you write must be something the speaker says. "
+        "Reply with the spoken words only."
+    )
+
+
 SUMMARY_PROMPT = (
     "You are Cygnus, the AI game master of a roleplaying campaign, and you keep its memory. Given "
     "the summary so far and new events, write an updated summary. Keep names, places, facts the "
@@ -300,6 +323,7 @@ def create_character(
             item_sizes=rule_set.item_sizes,
             magic=rule_set.magic,
             currency=rule_set.marketplace.currency if rule_set.marketplace else "",
+            armor_max=rule_set.combat.armor_max if rule_set.combat else 0,
         )
 
 
@@ -849,7 +873,17 @@ def _tool_context(
     rule_set: RuleSet,
 ) -> ToolContext:
     async def speak(speaker: str, profile: str, intent: str, replace: bool) -> None:
-        await _speak(engine, provider, model_name, campaign_id, speaker, profile, intent, replace)
+        await _speak(
+            engine,
+            provider,
+            model_name,
+            campaign_id,
+            speaker,
+            profile,
+            intent,
+            replace,
+            rule_set.sentence_cap,
+        )
 
     def ooc(narrate: bool) -> None:
         _record(engine, campaign_id, OocStarted(narrate=narrate))
@@ -869,7 +903,7 @@ def _tool_context(
             clock_rules=rule_set.clock,
             rests=rule_set.rests,
             interrupted_rest=rule_set.interrupted_rest,
-            deprivation=rule_set.deprivation,
+            need=rule_set.need,
             inventory=rule_set.inventory,
             item_sizes=rule_set.item_sizes,
             magic=rule_set.magic,
@@ -936,6 +970,7 @@ async def _speak(
     profile: str,
     intent: str,
     replace: bool,
+    sentence_cap: int | None,
 ) -> None:
     """Ask the speech step for an NPC's words and record them for the narration. The speech step
     sees the conversation as text, without the tool calls, so it writes dialogue rather than
@@ -953,7 +988,7 @@ async def _speak(
         )
     # The speech step gets no rules or tool instructions: it only writes words, and those
     # instructions get copied into dialogue as tool-call markup.
-    system_parts = [SPEECH_INSTRUCTION]
+    system_parts = [speech_instruction(sentence_cap)]
     if state.summary:
         system_parts.append("Summary of earlier events in this campaign:\n" + state.summary)
     system_parts.append(profile)
@@ -1060,7 +1095,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
         *({"role": p.role, "content": p.content} for p in conversation),
     ]
     round_start = len(context)
-    context.append(ContextPart("system", "State instruction", STATE_INSTRUCTION))
+    context.append(ContextPart("system", "State instruction", state_instruction(run.rule_set)))
     events.append(
         TurnBegun(
             head=_dicts([*summary_record, player]),
@@ -1076,7 +1111,7 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
     """Run the reply until it is recorded or paused. Log entries are yielded as the steps that
     recorded them finish. A pause is recorded before the player hears of it."""
     tools = tool_specs(run.tool_calls)
-    state = {"role": "system", "content": STATE_INSTRUCTION}
+    state = {"role": "system", "content": state_instruction(run.rule_set)}
     while True:
         turn = _turn(_state(run.engine, run.campaign_id))
         if turn.queue:
@@ -1140,7 +1175,9 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                 context = [ContextPart("assistant", "GM out-of-character reply", reply)]
                 if turn.speech:
                     _add_speech(messages, context, turn.speech)
-                _add_instruction(messages, context, "Narrate instruction", NARRATE_INSTRUCTION)
+                _add_instruction(
+                    messages, context, "Narrate instruction", narrate_instruction(run.rule_set)
+                )
                 _record(
                     run.engine,
                     run.campaign_id,
@@ -1168,7 +1205,9 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                 )
             if turn.speech:
                 _add_speech(messages, context, turn.speech)
-            _add_instruction(messages, context, "Narrate instruction", NARRATE_INSTRUCTION)
+            _add_instruction(
+                messages, context, "Narrate instruction", narrate_instruction(run.rule_set)
+            )
             _record(
                 run.engine,
                 run.campaign_id,

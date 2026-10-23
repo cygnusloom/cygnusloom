@@ -610,6 +610,7 @@ def _campaign_page(
         encounter_rows=_encounter_rows(encounter) if encounter is not None else [],
         debug_panel=settings.debug_panel,
         debug_currency=rule_set.marketplace.currency if rule_set and rule_set.marketplace else "",
+        debug_stats=[(stat.id, stat.name) for stat in spec.stats.values()],
         pc_invincible=pc.invincible,
     )
 

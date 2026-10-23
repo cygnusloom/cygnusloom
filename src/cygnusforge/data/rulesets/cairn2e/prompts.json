@@ -1,0 +1,37 @@
+[
+  {
+    "type": "prompt",
+    "id": "relic_recharge",
+    "text": "When time passes, check each relic's recharge text and call recharge_charged_item once its rule is met. A spent item, spell, or relic does nothing, so narrate it as spent and record no effect the tool results do not show."
+  },
+  {
+    "type": "prompt",
+    "id": "combat_speech",
+    "text": "In an encounter, combatants rarely speak: call speak only for a line that changes what the player must decide, such as a threat, a plea, a surrender, or a warning. Never give speech for an attack, a hit, a miss, pain, or effort; the narration covers those."
+  },
+  {
+    "type": "prompt",
+    "id": "armor_glancing_blows",
+    "text": "A hit that armor absorbs entirely, with no harm, is a blow turned aside or glancing off, never a miss."
+  },
+  {
+    "type": "prompt",
+    "id": "dungeon_cycle",
+    "text": "Call dungeon_cycle when the party spends more than one cycle in one place, moves quickly, enters a new area, or makes noise, and call roll_reaction for an NPC's reaction that is not obvious."
+  },
+  {
+    "type": "prompt",
+    "id": "surrender",
+    "text": "When an NPC surrenders, call surrender for it."
+  },
+  {
+    "type": "prompt",
+    "id": "group_break",
+    "text": "When a large group fails its critical save and is broken, call resolve_group_break with the outcome the story needs."
+  },
+  {
+    "type": "prompt",
+    "id": "defeated_character",
+    "text": "A player character who fails a save against critical damage is dying and dies within the hour unless stabilized: the clock counts hours, so advance_time with hours runs it down, and a death is recorded at once, in that same turn. Stabilize a dying character only when the story gives aid, through stabilize or a Bandage used with use_item. Call recover_character only once a stabilized character has been shown to survive. A dead character's body stays at its location with its gear."
+  }
+]

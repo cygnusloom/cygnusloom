@@ -12,9 +12,8 @@ from cygnusforge.config import Settings
 from cygnusforge.llm.base import ChatReply, LLMError
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.services import world
-from cygnusforge.services.campaigns import NARRATE_INSTRUCTION
 from cygnusforge.services.events import Turn, load_state
-from tests.conftest import csrf_token, make_app, register
+from tests.conftest import NARRATE_TEXT, csrf_token, make_app, register
 
 
 def _signed_in(client_factory: Callable[[], TestClient], email: str = "ada@example.com"):
@@ -273,7 +272,7 @@ def test_history_is_sent_to_the_model(client_factory: Callable[[], TestClient], 
     ]
     assert last[2]["content"] == "first"
     assert last[4]["content"] == "second"
-    assert last[-1]["content"] == NARRATE_INSTRUCTION
+    assert last[-1]["content"] == NARRATE_TEXT
 
 
 def test_scripted_directive_drives_later_turns(client_factory: Callable[[], TestClient]):

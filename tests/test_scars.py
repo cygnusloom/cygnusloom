@@ -5,16 +5,16 @@ from typing import Any
 import pytest
 
 from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.content.library import _load_scar_entries
+from cygnusforge.content.library import _load_injury_entries
 from cygnusforge.services.events import MaxChanged, current, record
-from cygnusforge.services.scars import EffectContext, run_effects
+from cygnusforge.services.injuries import EffectContext, run_effects
 from tests.test_combat import CAIRN, PC, Rolls, _character, _fight, _foe, _hit
 from tests.test_world import _db
 
 
 def _entries(count: int) -> list[dict[str, Any]]:
     return [
-        {"roll": roll, "name": f"Scar {roll}", "text": "A scar.", "effects": []}
+        {"roll": roll, "name": f"Injury {roll}", "text": "An injury.", "effects": []}
         for roll in range(1, count + 1)
     ]
 
@@ -50,9 +50,9 @@ def test_a_hit_to_exactly_zero_hp_gives_the_scar_for_the_harm_taken(client_facto
     _hit(tools, "Ghoul", PC, 7)
     result = _hit(tools, "Ghoul", PC, 3)
 
-    assert result["scar"] == "Walloped"
+    assert result["injury"] == "Walloped"
     character = _character(app, campaign_id, PC)
-    assert character.scars == ["Walloped"]
+    assert character.injuries == ["Walloped"]
     assert character.conditions == ["walloped"]
     assert current(character, "hp") == 0
 
@@ -63,7 +63,7 @@ def test_the_scar_roll_is_capped_at_the_last_entry(client_factory):
     _set_max(app, campaign_id, "hp", 20)
     result = _hit(tools, "Ghoul", PC, 20)
 
-    assert result["scar"] == "Doomed"
+    assert result["injury"] == "Doomed"
     assert _character(app, campaign_id, PC).conditions == ["doomed"]
 
 
@@ -73,8 +73,8 @@ def test_a_hit_that_leaves_hp_above_zero_gives_no_scar(client_factory):
     _set_max(app, campaign_id, "hp", 10)
     result = _hit(tools, "Ghoul", PC, 1)
 
-    assert "scar" not in result
-    assert _character(app, campaign_id, PC).scars == []
+    assert "injury" not in result
+    assert _character(app, campaign_id, PC).injuries == []
 
 
 def test_a_hit_that_takes_hp_to_zero_and_overflows_gains_a_scar_and_owes_a_save(client_factory):
@@ -85,8 +85,8 @@ def test_a_hit_that_takes_hp_to_zero_and_overflows_gains_a_scar_and_owes_a_save(
 
     assert result["harm"] == {"hp": 3, "str": 2}
     assert result["save_due"] == "str"
-    assert result["scar"] == "Walloped"
-    assert _character(app, campaign_id, PC).scars == ["Walloped"]
+    assert result["injury"] == "Walloped"
+    assert _character(app, campaign_id, PC).injuries == ["Walloped"]
 
 
 def test_a_foe_brought_to_zero_gains_no_scar(client_factory):
@@ -94,7 +94,7 @@ def test_a_foe_brought_to_zero_gains_no_scar(client_factory):
     _foe(tools, "Bo", hp=2)
     result = tools.player_attack("Bo", "Sword", 2)
 
-    assert "scar" not in result
+    assert "injury" not in result
 
 
 def test_the_statblock_names_the_conditions_and_scars_a_character_has(client_factory):
@@ -102,7 +102,7 @@ def test_the_statblock_names_the_conditions_and_scars_a_character_has(client_fac
     _foe(tools, "Ghoul", claw="1d20")
     lines = tools.get_statblock(PC)["statblock"]
     assert "Conditions: none" in lines
-    assert not any(line.startswith("Scars:") for line in lines)
+    assert not any(line.startswith("Injuries:") for line in lines)
 
     _set_max(app, campaign_id, "hp", 10)
     _hit(tools, "Ghoul", PC, 7)
@@ -110,7 +110,7 @@ def test_the_statblock_names_the_conditions_and_scars_a_character_has(client_fac
 
     lines = tools.get_statblock(PC)["statblock"]
     assert "Conditions: Walloped" in lines
-    assert "Scars: Walloped" in lines
+    assert "Injuries: Walloped" in lines
 
 
 def test_a_set_max_if_higher_keeps_the_larger_of_the_two(client_factory):
@@ -213,33 +213,33 @@ def test_a_note_changes_no_stat_or_condition(client_factory):
     app, campaign_id, _ = _fight(client_factory)
     before = _character(app, campaign_id, PC)
     snapshot = (dict(before.stats), list(before.conditions))
-    _run(app, campaign_id, [{"op": "note", "text": "Roll for where the scar is."}])
+    _run(app, campaign_id, [{"op": "note", "text": "Roll for where the injury is."}])
     after = _character(app, campaign_id, PC)
     assert (dict(after.stats), list(after.conditions)) == snapshot
 
 
 def test_a_scar_table_of_the_wrong_length_is_rejected():
-    definition = Definition(type="scar_table", id="scars", data={"entries": _entries(11)})
+    definition = Definition(type="injury_table", id="injuries", data={"entries": _entries(11)})
     with pytest.raises(ContentError, match="'entries' must list exactly 12 entries"):
-        _load_scar_entries(definition, CAIRN.character, CAIRN.conditions, "cairn2e")
+        _load_injury_entries(definition, CAIRN.character, CAIRN.conditions, "cairn2e")
 
 
 def test_a_scar_table_whose_entries_are_out_of_order_is_rejected():
-    definition = Definition(type="scar_table", id="scars", data={"entries": _swapped()})
+    definition = Definition(type="injury_table", id="injuries", data={"entries": _swapped()})
     with pytest.raises(ContentError, match="'roll' must be 1"):
-        _load_scar_entries(definition, CAIRN.character, CAIRN.conditions, "cairn2e")
+        _load_injury_entries(definition, CAIRN.character, CAIRN.conditions, "cairn2e")
 
 
 def test_a_scar_naming_an_unknown_condition_is_rejected():
     entries = _entries(12)
     entries[0]["effects"] = [{"op": "condition", "id": "not_a_condition"}]
-    definition = Definition(type="scar_table", id="scars", data={"entries": entries})
+    definition = Definition(type="injury_table", id="injuries", data={"entries": entries})
     with pytest.raises(ContentError, match="names no stored condition"):
-        _load_scar_entries(definition, CAIRN.character, CAIRN.conditions, "cairn2e")
+        _load_injury_entries(definition, CAIRN.character, CAIRN.conditions, "cairn2e")
 
 
 def test_the_loaded_scar_table_has_twelve_entries_in_order():
-    table = CAIRN.combat.scar_table
+    table = CAIRN.combat.injury_table
     assert table is not None
     assert table.stat == "hp"
     assert [entry.roll for entry in table.entries] == list(range(1, 13))
@@ -252,7 +252,7 @@ def test_the_loaded_scar_table_has_twelve_entries_in_order():
 
 
 def test_the_scar_text_is_the_books_text():
-    table = CAIRN.combat.scar_table
+    table = CAIRN.combat.injury_table
     assert table is not None
     assert table.entries[0].text == (
         "Roll 1d6. 1: Neck, 2: Hands, 3: Eye, 4: Chest, 5: Legs, 6: Ear. "

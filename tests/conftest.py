@@ -19,6 +19,7 @@ from cygnusforge.auth import passwords
 from cygnusforge.config import Settings
 from cygnusforge.content.library import DATA_DIR, ContentLibrary
 from cygnusforge.llm.fake import FakeProvider
+from cygnusforge.services.campaigns import narrate_instruction
 from cygnusforge.web.app import create_app
 
 SECRET = "test-secret-key-0123456789abcdef"
@@ -39,6 +40,10 @@ def content_tree() -> Path:
 
 def content_library() -> ContentLibrary:
     return ContentLibrary.load(content_tree())
+
+
+# The narration prompt for the rolltest rule set, which has no penalty item.
+NARRATE_TEXT = narrate_instruction(content_library().rule_sets["rolltest"])
 
 
 def make_app(settings: Settings, fake_provider: FakeProvider | None = None) -> FastAPI:

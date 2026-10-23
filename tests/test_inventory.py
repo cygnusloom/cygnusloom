@@ -94,7 +94,7 @@ def test_going_over_capacity_is_reported_without_a_second_drain(client_factory):
 def test_fatigue_on_a_full_inventory_is_still_recorded(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _fill(app, campaign_id, tools)
-    result = tools.add_fatigue(PC, "a spell")
+    result = tools.add_penalty(PC, "a spell")
     assert result["over_capacity"] is True
     fatigue = [i for i in _character(app, campaign_id, PC).items if i.kind == "fatigue"]
     assert len(fatigue) == 1
@@ -117,14 +117,14 @@ def test_drop_item_refuses_an_item_not_carried(client_factory):
 
 def test_fatigue_cannot_be_dropped_before_a_full_rest(client_factory):
     _app, _campaign_id, tools = _fight(client_factory)
-    tools.add_fatigue(PC, "a spell")
+    tools.add_penalty(PC, "a spell")
     with pytest.raises(InvalidInput, match="lasts until"):
         tools.drop_item(PC, "Fatigue")
 
 
 def test_a_full_night_rest_clears_fatigue(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    tools.add_fatigue(PC, "a spell")
+    tools.add_penalty(PC, "a spell")
     kinds = [i.kind for i in _character(app, campaign_id, PC).items]
     assert "fatigue" in kinds
     tools.rest("night", reason="camp")
@@ -186,8 +186,8 @@ def test_use_item_refuses_an_item_not_carried(client_factory):
 
 def test_use_item_refuses_a_relic(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _add_consumable(app, campaign_id, "Sun Charm", 3, kind=CAIRN.magic.relic_kind)
-    with pytest.raises(InvalidInput, match="use_relic"):
+    _add_consumable(app, campaign_id, "Sun Charm", 3, kind=CAIRN.magic.charged_kind)
+    with pytest.raises(InvalidInput, match="use_charge"):
         tools.use_item(PC, "Sun Charm")
 
 

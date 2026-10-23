@@ -10,7 +10,6 @@ from typing import Any
 from sqlmodel import Session
 
 from cygnusforge.content.library import InventoryRules, Marketplace, ShopItem, ShopService
-from cygnusforge.services.combat import MAX_ARMOR
 from cygnusforge.services.common import InvalidInput, whole_number
 from cygnusforge.services.events import (
     ArmorSet,
@@ -70,11 +69,12 @@ def buy_item(
     item: str,
     price: int | None = None,
     size: str = "",
+    armor_max: int = 0,
 ) -> dict[str, Any]:
     """A character buys an item. A catalogue item costs its listed price and takes its listed
     size, and a price or size that disagrees with the listing is refused. Any other item needs a
-    price. Armor adds to the buyer's armor, up to the cap. A purchase that would not fit in the
-    inventory is refused, and nothing is paid."""
+    price. Armor adds to the buyer's armor, up to armor_max (0 means no cap). A purchase that
+    would not fit in the inventory is refused, and nothing is paid."""
     state = load_state(db, campaign_id)
     buyer = character_named(state, name)
     listed = listed_item(marketplace, item)
@@ -119,7 +119,9 @@ def buy_item(
         cause="bought",
     )
     if listed is not None and listed.armor > 0:
-        armor = min(MAX_ARMOR, buyer.armor + listed.armor)
+        armor = buyer.armor + listed.armor
+        if armor_max > 0:
+            armor = min(armor_max, armor)
         record(db, campaign_id, ArmorSet(name=buyer.name, armor=armor))
         result["armor"] = armor
     db.commit()

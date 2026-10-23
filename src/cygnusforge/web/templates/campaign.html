@@ -246,7 +246,7 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="name" value="{{ player_name }}">
                 <p>Set <strong>{{ player_name }}</strong>'s current score:</p>
-                <label>Stat <select name="stat"><option value="hp">HP</option><option value="str">STR</option></select></label>
+                <label>Stat <select name="stat">{% for stat_id, stat_name in debug_stats %}<option value="{{ stat_id }}">{{ stat_name }}</option>{% endfor %}</select></label>
                 <label>Remaining <input type="number" name="remaining" min="0" required></label>
                 <button type="submit">Set score</button>
               </form>

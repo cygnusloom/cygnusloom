@@ -1,4 +1,4 @@
-"""Scars and the rule effects they carry. A rule set's effects are small ops, such as raising a
+"""Injuries and the rule effects they carry. A rule set's effects are small ops, such as raising a
 stat's maximum or adding a condition; this module runs them and records what they did. The ops and
 their words live in the rule set's JSON, so nothing here names a particular game's stats."""
 
@@ -11,15 +11,15 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusforge.content.library import PICKED, CombatRules, ScarEntry, ScarTable
+from cygnusforge.content.library import PICKED, CombatRules, InjuryEntry, InjuryTable
 from cygnusforge.rules.dice import roll_total
 from cygnusforge.services.death import begin_dying
 from cygnusforge.services.events import (
     CharacterSaved,
     ConditionAdded,
     EffectNoted,
+    InjuryGained,
     MaxChanged,
-    ScarGained,
     current,
     load_state,
     name_key,
@@ -37,23 +37,23 @@ class EffectContext:
     picked: str | None = None
 
 
-def gain_scar(
+def gain_injury(
     db: Session,
     campaign_id: int,
     name: str,
-    table: ScarTable,
+    table: InjuryTable,
     roll: int,
     cx: EffectContext,
-) -> ScarEntry:
-    """Give a character the scar at `roll` on the table, then run the scar's effects."""
+) -> InjuryEntry:
+    """Give a character the injury at `roll` on the table, then run the injury's effects."""
     entry = table.entries[roll - 1]
     record(
         db,
         campaign_id,
-        ScarGained(name=name, scar=entry.name, roll=entry.roll, text=entry.text),
+        InjuryGained(name=name, injury=entry.name, roll=entry.roll, text=entry.text),
     )
     db.commit()
-    run_effects(db, campaign_id, name, entry.effects, cx, f"scar {entry.name}")
+    run_effects(db, campaign_id, name, entry.effects, cx, f"injury {entry.name}")
     return entry
 
 

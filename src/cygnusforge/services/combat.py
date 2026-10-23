@@ -41,8 +41,8 @@ from cygnusforge.services.events import (
     CharacterSurrendered,
     DebugCurrencyAdded,
     DebugStatSet,
-    DetachmentResolved,
     EncounterEnded,
+    GroupBreakResolved,
     Harmed,
     InitiativeRolled,
     InvincibilitySet,
@@ -55,10 +55,11 @@ from cygnusforge.services.events import (
     out_of_fight,
     record,
 )
-from cygnusforge.services.scars import EffectContext, gain_scar
+from cygnusforge.services.injuries import EffectContext, gain_injury
 
 MAX_DAMAGE = 1000
-MAX_ARMOR = 3
+# Sanity bound on armor when the rule set sets no cap (armor_max of 0).
+UNCAPPED_ARMOR = 1000
 MAX_RECOVERY_TEXT = 600
 MAX_CAUSE_TEXT = 200
 
@@ -113,15 +114,15 @@ def _living(character: Character, combat: CombatRules) -> Character:
         raise InvalidInput(f"{character.name} has surrendered")
     if character.critical_due:
         raise InvalidInput(
-            f"{character.name} is broken and awaits the Warden's decision; call resolve_detachment"
+            f"{character.name} is broken and awaits the Warden's decision; call resolve_group_break"
         )
     return character
 
 
 def _require_impaired(target: Character, modifier: str) -> None:
-    """A detachment is hit only by impaired attacks."""
-    if target.detachment and modifier != "impaired":
-        raise InvalidInput(f"{target.name} is a detachment; attacks on it must be impaired")
+    """A group is hit only by impaired attacks."""
+    if target.large_group and modifier != "impaired":
+        raise InvalidInput(f"{target.name} is a group; attacks on it must be impaired")
 
 
 def _strike(
@@ -168,14 +169,14 @@ def _strike(
         "harm": damage.harm,
         "save_due": damage.save,
     }
-    scar = _scar_from_hit(db, campaign_id, combat, rng, target.name, damage)
-    if scar is not None:
-        result["scar"] = scar
+    injury = _injury_from_hit(db, campaign_id, combat, rng, target.name, damage)
+    if injury is not None:
+        result["injury"] = injury
     if damage.save is not None and target.kind == NPC_KIND:
         state = load_state(db, campaign_id)
         character = state.characters[name_key(target.name)]
         result["save"] = _save(db, campaign_id, combat, rng, character, damage.save)
-    if target.kind == NPC_KIND and not target.detachment and combat.morale is not None:
+    if target.kind == NPC_KIND and not target.large_group and combat.morale is not None:
         # morale imports this module for the shared helpers, so it is imported here to avoid a cycle.
         from cygnusforge.services.morale import check_morale
 
@@ -187,7 +188,7 @@ def _strike(
     return result
 
 
-def _scar_from_hit(
+def _injury_from_hit(
     db: Session,
     campaign_id: int,
     combat: CombatRules,
@@ -195,10 +196,10 @@ def _scar_from_hit(
     name: str,
     damage: Damage,
 ) -> str | None:
-    """A player character hit to exactly 0 on the scar stat gains a scar. The scar is the table
+    """A player character hit to exactly 0 on the injury stat gains an injury. The injury is the table
     entry numbered by the harm this hit did, capped at the table's last entry. Damage that
-    overflows onto another stat is separate: it owes a save, and the scar still applies."""
-    table = combat.scar_table
+    overflows onto another stat is separate: it owes a save, and the injury still applies."""
+    table = combat.injury_table
     if table is None:
         return None
     lost = damage.harm.get(table.stat, 0)
@@ -208,7 +209,7 @@ def _scar_from_hit(
     if character.kind != PC_KIND or current(character, table.stat) != 0:
         return None
     roll = min(lost, len(table.entries))
-    entry = gain_scar(db, campaign_id, name, table, roll, EffectContext(rng=rng, combat=combat))
+    entry = gain_injury(db, campaign_id, name, table, roll, EffectContext(rng=rng, combat=combat))
     return entry.name
 
 
@@ -267,7 +268,7 @@ def _save(
     roll = roll_total(combat.check_die, rng)
     score = current(character, stat)
     passed = combat.module.save_succeeds(roll, score)
-    critical = character.detachment
+    critical = character.large_group
     record(
         db,
         campaign_id,
@@ -326,7 +327,7 @@ def attack(
     struck = _participant(state, target)
     _living(struck, combat)
     name = _attack_named(source, attack_name)
-    if source.detachment:
+    if source.large_group:
         return _blast(db, campaign_id, combat, rng, state, source, struck, name, modifier)
     _require_impaired(struck, modifier_name(modifier))
     dice = modifier_dice(combat.modifiers, modifier)
@@ -355,26 +356,26 @@ def _blast(
     name: str,
     modifier: str,
 ) -> dict[str, Any]:
-    """A detachment's attack, which has Blast: it rolls enhanced dice separately for each living
+    """A group's attack, which has Blast: it rolls enhanced dice separately for each living
     individual on the other side. The named target must be one of them, but every one is hit."""
     encounter = state.encounter
     assert encounter is not None
     own_side = encounter.sides.get(name_key(source.name), "")
     if encounter.sides.get(name_key(struck.name), "") == own_side:
         raise InvalidInput(f"{source.name} is on {struck.name}'s side and cannot attack them")
-    if struck.detachment:
+    if struck.large_group:
         raise InvalidInput(
-            f"{source.name} is a detachment and cannot attack {struck.name}, another detachment"
+            f"{source.name} is a group and cannot attack {struck.name}, another group"
         )
     if modifier_name(modifier) not in ("", "enhanced"):
         raise InvalidInput(
-            f"{source.name} is a detachment; its attacks are enhanced, so leave the modifier out"
+            f"{source.name} is a group; its attacks are enhanced, so leave the modifier out"
         )
     targets = [
         state.characters[name_key(display)]
         for display in encounter.order
         if encounter.sides.get(name_key(display), "") != own_side
-        and not state.characters[name_key(display)].detachment
+        and not state.characters[name_key(display)].large_group
         and not out_of_fight(state.characters[name_key(display)])
     ]
     if not targets:
@@ -437,8 +438,8 @@ def resolve_attacks(
         source = _living(_participant(state, attacker_name), combat)
         if source.kind != NPC_KIND:
             raise InvalidInput(f"{source.name} is a player character; use player_attack instead")
-        if source.detachment:
-            raise InvalidInput(f"{source.name} is a detachment; use attack, which has its Blast")
+        if source.large_group:
+            raise InvalidInput(f"{source.name} is a group; use attack, which has its Blast")
         if encounter.sides.get(name_key(source.name), "") == foe_side:
             raise InvalidInput(f"{source.name} is on {struck.name}'s side and cannot attack them")
         _require_impaired(struck, modifier_name(entry.get("modifier")))
@@ -480,7 +481,7 @@ def player_attack(
     modifier: str = "",
 ) -> dict[str, Any]:
     """A player character's hit. The player rolls the damage, using the modifier's dice when there
-    is one; the attack always hits. A detachment takes only impaired attacks."""
+    is one; the attack always hits. A group takes only impaired attacks."""
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     pc = state.pc()
@@ -501,18 +502,18 @@ def player_attack(
     )
 
 
-def resolve_detachment(
+def resolve_group_break(
     db: Session, campaign_id: int, name: str, outcome: str, combat: CombatRules
 ) -> dict[str, Any]:
-    """The Warden's decision after a detachment's Critical Damage save failed: "defeat" breaks and
+    """The Warden's decision after a group's Critical Damage save failed: "defeat" breaks and
     defeats it, "flee" breaks it up so its members run from the fight. Until this is called, the
-    detachment cannot attack or be attacked."""
+    group cannot attack or be attacked."""
     state = load_state(db, campaign_id)
     character = state.characters.get(name_key(name))
     if character is None:
         raise InvalidInput(f"there is no character named {name!r}")
-    if not character.detachment:
-        raise InvalidInput(f"{character.name} is not a detachment")
+    if not character.large_group:
+        raise InvalidInput(f"{character.name} is not a group")
     if not character.critical_due:
         raise InvalidInput(f"{character.name} has no failed critical damage save to resolve")
     if outcome not in ("defeat", "flee"):
@@ -521,7 +522,7 @@ def resolve_detachment(
     record(
         db,
         campaign_id,
-        DetachmentResolved(name=character.name, outcome=outcome, status=status),
+        GroupBreakResolved(name=character.name, outcome=outcome, status=status),
     )
     db.commit()
     _end_if_one_side_left(db, campaign_id)
@@ -582,13 +583,16 @@ def player_initiative(
     }
 
 
-def set_armor(db: Session, campaign_id: int, name: str, armor: int) -> dict[str, Any]:
-    """Set what each hit against a character absorbs."""
+def set_armor(
+    db: Session, campaign_id: int, name: str, armor: int, armor_max: int = 0
+) -> dict[str, Any]:
+    """Set what each hit against a character absorbs, up to the rule set's armor cap (0 means
+    no cap)."""
     state = load_state(db, campaign_id)
     character = state.characters.get(name_key(name))
     if character is None:
         raise InvalidInput(f"there is no character named {name!r}")
-    value = whole_number(armor, "armor", 0, MAX_ARMOR)
+    value = whole_number(armor, "armor", 0, armor_max or UNCAPPED_ARMOR)
     record(db, campaign_id, ArmorSet(name=character.name, armor=value))
     db.commit()
     return {"character": character.name, "armor": value}
@@ -726,7 +730,7 @@ def harm_character(
         record(
             db,
             campaign_id,
-            CharacterDied(name=character.name, cause="outside combat, with STR at 0"),
+            CharacterDied(name=character.name, cause=f"outside combat, with {stat} at 0"),
         )
     db.commit()
     return {

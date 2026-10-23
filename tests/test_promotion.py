@@ -13,7 +13,7 @@ from cygnusforge.db.models import Event
 from cygnusforge.services import world
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import PC_KIND, load_state
-from cygnusforge.services.scars import EffectContext, run_effects
+from cygnusforge.services.injuries import EffectContext, run_effects
 from tests.test_campaigns import _create_character
 from tests.test_character_creation import _complete_form
 from tests.test_combat import CAIRN, PC, _character, _fight, _fight_client, _knock_out_pc

@@ -1,6 +1,6 @@
-"""What a character carries, the inventory's capacity, and Fatigue. Each item takes slots, and a
-full inventory drains the rule set's full stat, so it is shared by every rule set that tracks
-items."""
+"""What a character carries, the inventory's capacity, and the penalty item that a rule set names.
+Each item takes slots, and a full inventory drains the rule set's full stat, so it is shared by
+every rule set that tracks items."""
 
 from __future__ import annotations
 
@@ -24,8 +24,6 @@ from cygnusforge.services.events import (
     record,
     same_item_name,
 )
-
-FATIGUE_NAME = "Fatigue"
 
 
 def used_slots(character: Character) -> int:
@@ -117,11 +115,11 @@ def give_item(
     return result
 
 
-def add_fatigue(
+def add_penalty(
     db: Session, campaign_id: int, rules: InventoryRules, name: str, cause: str
 ) -> dict[str, Any]:
-    fatigue = Item(FATIGUE_NAME, "", rules.fatigue_slots, kind=rules.fatigue_item)
-    result = carry_item(db, campaign_id, rules, name, fatigue, cause=cause)
+    penalty = Item(rules.penalty_name, "", rules.penalty_slots, kind=rules.penalty_item)
+    result = carry_item(db, campaign_id, rules, name, penalty, cause=cause)
     db.commit()
     return result
 
@@ -134,8 +132,8 @@ def drop_item(
     held = next((i for i in character.items if name_key(i.name) == name_key(item)), None)
     if held is None:
         raise InvalidInput(f"{character.name} carries no {item!r}")
-    if held.kind == rules.fatigue_item:
-        raise InvalidInput(f"{character.name}'s Fatigue lasts until a full night's rest")
+    if held.kind == rules.penalty_item:
+        raise InvalidInput(f"{character.name}'s {rules.penalty_name} lasts {rules.penalty_lasts}")
     record(
         db,
         campaign_id,
@@ -156,10 +154,10 @@ def use_item(
     rules: InventoryRules,
     name: str,
     item: str,
-    relic_kind: str = "",
+    charged_kind: str = "",
 ) -> dict[str, Any]:
     """Spend one use of a consumable the character carries. Its last use uses it up, which removes
-    it. Relics are spent with use_relic, so they are refused here."""
+    it. Charged items are spent with use_charge, so they are refused here."""
     state = load_state(db, campaign_id)
     character = character_named(state, name)
     held = next((i for i in character.items if same_item_name(i.name, item)), None)
@@ -167,8 +165,8 @@ def use_item(
         raise InvalidInput(f"{character.name} carries no {item!r}")
     if held.max_uses < 1:
         raise InvalidInput(f"{held.name} is not a consumable and has no uses to spend")
-    if relic_kind and held.kind == relic_kind:
-        raise InvalidInput(f"{held.name} is a relic; spend it with use_relic")
+    if charged_kind and held.kind == charged_kind:
+        raise InvalidInput(f"{held.name} is a charged item; spend it with use_charge")
     if held.uses < 1:
         raise InvalidInput(f"{character.name}'s {held.name} has no uses left")
     left = held.uses - 1

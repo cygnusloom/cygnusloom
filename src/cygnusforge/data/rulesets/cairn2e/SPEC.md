@@ -255,6 +255,10 @@ Already generic (keep, and use as the pattern): stat keys from JSON (`morale.wil
 
 Done when: a grep for `Cairn`, `Fatigue`, `relic`, `detachment`, `Scar`, `deprivation`, and the stat names in `src/cygnusforge/services`, `src/cygnusforge/web`, and `src/cygnusforge/rules/context.py` returns no hits outside docstrings that name the rule set generically. The full suite and a live Cairn session must still pass with no change in behavior, except for the `(used)` wording and the speech-cap fix, which are gap-register items.
 
+Status (Phase 11): the leak grep is clean. The remaining hits are the word "discard" and generic docstrings. The engine reads these from `cairn2e/`: penalty item (`inventory.json` `penalty_name`, `penalty_lasts`), the armor cap (`combat.json` `armor_max`), the large-group flag (`monsters.json` `large_group`), the save stat (`save_stat`), charged items (`charged_kind`), GM prompts (`prompts.json`, 7 fragments), narration (`narration.json` `sentence_cap`), needs (`need.json`), and injury tables (`injuries`). The debug stat options come from the rule set's stats. Live-verified on a fresh DB: opening turn, a player turn with the pack, the Inventory tab ("Carrying 7 of 10 slots"), and the Debug tab. The `need_set`, `group_break_resolved`, and `injury.gained` paths were not hit in that run. Renamed event kinds break replay of old dev DBs; the user accepted this.
+
+Phase 11 is NOT complete. Open: weapon damage from the ruleset (see gap register), and the dungeon reaction table merge. Phase 12 waits on both.
+
 ## Phase 12: capstone, CAS-1 "Trouble in Twin Lakes"
 
 Import the first-party adventure in its entirety and play it through as the end-to-end test of Cairn 2e: https://cairnrpg.com/adventures/first-party/cas-1
@@ -276,13 +280,19 @@ Every known gap, from the checkpoint history and the live tests, with the phase 
 
 Engine and prompt (cross-cutting):
 
-- Combat speech sometimes exceeds the "one sentence, two at most" cap. Prompt-only. Needs a validator or stronger prompt, then a live re-test. Phase 11.
-- Speech outside combat is not capped. An NPC gave a long non-combat speech. Phase 11.
+- Combat speech sometimes exceeds the "one sentence, two at most" cap. The cap is now `narration.json` `sentence_cap`, but it is still enforced by the prompt only. Needs a validator or stronger prompt, then a live re-test. Still open after Phase 11.
+- Speech outside combat is not capped. An NPC gave a long non-combat speech. Still open after Phase 11; not live-verified.
+- Phase 11 renames break replay of old dev DBs (event kinds and payload fields). Accepted by the user. Use fresh DBs for testing.
+- The death cause reads "with hp at 0", using the stat id. Stat display names are not in the combat config, so the text is not player-facing yet. Needs the names passed in from the rule set.
+- `tool_calls.json` descriptions still say "detachment". Ruleset prose to update.
+- The magic result key changed to `penalty`. Not live-checked against the prompts.
+- Weapon damage from the ruleset (Phase 11 item): OPEN. The attack tools still take a damage number from the GM or player, and weapons do not read their dice. Changing this changes the tool API, so it needs a user decision on the model: engine-rolled dice from the weapon, or the GM's number checked against the weapon.
+- `warden_tables.json` has duplicate `dungeon_reaction` and `reaction` tables. The loader rejects duplicate ids. Not merged in Phase 11. Unscheduled.
 - Repeated speech lines (four "Fenwick" lines in one scene). Cause unverified; narration quoting NPC words is the leading hypothesis. Unscheduled, needs investigation.
 - The GM accepts player-invented past events as fact. Unscheduled, needs a prompt rule and a test.
-- Debug panel stat options are hard-coded in the template. Phase 11.
-- Cairn-specific GM prompt wording lives in `services/campaigns.py`. Phase 11.
-- Weapon damage is free text, and weapons do not read their features. Phase 11.
+- RESOLVED (Phase 11): debug panel stat options come from the rule set's stats.
+- RESOLVED (Phase 11): Cairn GM prompt wording moved to `prompts.json` and `narration.json`.
+- OPEN (Phase 11): weapon damage is free text, and weapons do not read their features. See the Phase 11 status.
 - Test flakiness: a PC's max HP is random at creation and `_set_stat` clamps to it, so a max HP of 1 makes tests fail. Empty `Rolls` queues raise `IndexError`. Unscheduled, test infrastructure.
 - `tests/test_world.py` snapshot-style prompt assertions need checking after prompt edits. Unscheduled.
 
@@ -302,7 +312,7 @@ Phase 4 (deprivation, fatigue, rest, inventory):
 - FIXED (Phase 10): `take_object` matched only the full description, so the GM's short names failed. The GM then used `give_item` and a gold change, which duplicated the loot and never removed the object. Objects now have a short `name`, the matching is name, then description, then part of either, and the prompt says never to use `give_item` for a place's object. Live-verified.
 - OPEN (Phase 10): hidden objects have no reveal path. A hidden object cannot be listed or taken, and no tool reveals it. Unscheduled; needs a decision on who reveals it (the Warden, or a search).
 - OPEN (Phase 10): `drop_item` removes the item and does not place it in the location, so a dropped item vanishes. Seen live when Mara dropped her Lure. Unscheduled; needs a decision on whether a drop creates a place object.
-- OPEN (Phase 10): the dungeon reaction table `dungeon_reaction` duplicates the `reaction` table in `warden_tables.json`, and the loader rejects duplicate ids. Merge in Phase 11.
+- OPEN (Phase 10, not merged in Phase 11): the dungeon reaction table `dungeon_reaction` duplicates the `reaction` table in `warden_tables.json`, and the loader rejects duplicate ids. Unscheduled.
 - The 10-slot capacity and the full-inventory HP rule are unverified against the book.
 - The deprivation Fatigue threshold (day 2 or day 3) is unverified.
 - The `visited_day or 1` stale-place rule and STR 0 outside combat are unverified.

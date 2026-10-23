@@ -726,3 +726,65 @@ def test_cairn_campaign_options_are_the_omen_alone():
 def test_no_campaign_has_no_options():
     assert not NO_CAMPAIGN.fields
     assert campaign_schema(NO_CAMPAIGN)["required"] == []
+
+
+def test_core_has_no_prompt_fragments_and_no_sentence_cap(tree: Path):
+    rule_set = ContentLibrary.load(tree).rule_sets["testset"]
+    assert rule_set.prompt_fragments == ()
+    assert rule_set.sentence_cap is None
+
+
+def test_prompt_fragments_keep_their_file_order(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/prompts.json": [
+                {"type": "prompt", "id": "second", "text": "Two."},
+                {"type": "prompt", "id": "first", "text": "One."},
+            ]
+        },
+    )
+    fragments = ContentLibrary.load(tree).rule_sets["testset"].prompt_fragments
+    assert [(f.id, f.text) for f in fragments] == [("second", "Two."), ("first", "One.")]
+
+
+def test_duplicate_prompt_fragment_ids_are_rejected(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/prompts.json": [
+                {"type": "prompt", "id": "same", "text": "One."},
+                {"type": "prompt", "id": "same", "text": "Two."},
+            ]
+        },
+    )
+    with pytest.raises(ContentError):
+        ContentLibrary.load(tree)
+
+
+def test_sentence_cap_is_read_from_narration(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/narration.json": [
+                {"type": "narration", "id": "speech", "sentence_cap": 3}
+            ]
+        },
+    )
+    assert ContentLibrary.load(tree).rule_sets["testset"].sentence_cap == 3
+
+
+def test_bundled_cairn_prompts_and_cap_are_read():
+    cairn = ContentLibrary.load().rule_sets["cairn2e"]
+    assert cairn.sentence_cap == 2
+    ids = [fragment.id for fragment in cairn.prompt_fragments]
+    assert ids == [
+        "relic_recharge",
+        "combat_speech",
+        "armor_glancing_blows",
+        "dungeon_cycle",
+        "surrender",
+        "group_break",
+        "defeated_character",
+    ]
+    assert ContentLibrary.load().core.prompt_fragments == ()

@@ -4,7 +4,6 @@ from collections.abc import Callable
 
 from fastapi.testclient import TestClient
 
-from cygnusforge.services.combat import MAX_ARMOR
 from tests.test_campaigns import _create_character
 from tests.test_character_creation import _cairn_campaign, _complete_form
 from tests.test_combat import CAIRN, _character
@@ -36,7 +35,7 @@ def test_starting_gold_is_a_count_not_an_item(client_factory):
 
 def test_starting_armor_is_recorded_and_capped(client_factory):
     app, campaign_id = _new_character(client_factory)
-    assert 0 <= _character(app, campaign_id, "Ada").armor <= MAX_ARMOR
+    assert 0 <= _character(app, campaign_id, "Ada").armor <= CAIRN.combat.armor_max
 
 
 def test_starting_items_carry_their_real_slots(client_factory):

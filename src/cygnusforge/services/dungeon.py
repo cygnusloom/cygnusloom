@@ -20,7 +20,6 @@ TRIGGERS = ("new_area", "loud", "hasty", "lingering")
 ENCOUNTER_NOTE = (
     "Roll the location's encounter table with roll_tables, then roll_reaction if needed."
 )
-EXHAUSTION_NOTE = "The party must rest, add a Fatigue, or consume a ration. The GM applies it."
 
 
 def _table(tables: Mapping[str, DiceTable], table_id: str) -> DiceTable:
@@ -47,8 +46,6 @@ def dungeon_cycle(
     note = ""
     if row.result == "Encounter":
         note = ENCOUNTER_NOTE
-    elif row.result == "Exhaustion":
-        note = EXHAUSTION_NOTE
     result = {
         "roll": roll,
         "event": row.result,

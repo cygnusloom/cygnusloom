@@ -10,7 +10,7 @@ from sqlmodel import Session, select
 from cygnusforge.db.models import Event
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.death import begin_dying
-from cygnusforge.services.scars import EffectContext, run_effects
+from cygnusforge.services.injuries import EffectContext, run_effects
 from tests.test_combat import (
     CAIRN,
     PC,
@@ -32,7 +32,7 @@ def _events(app: FastAPI, campaign_id: int, kind: str) -> list[Event]:
 
 
 def _add_condition_by_effect(app, campaign_id: int, condition: str) -> None:
-    """Give a condition the way a scar does, so the death clock starts as it does in play."""
+    """Give a condition the way an injury does, so the death clock starts as it does in play."""
     with _db(app) as db:
         run_effects(
             db,

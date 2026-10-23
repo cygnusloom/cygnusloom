@@ -154,7 +154,7 @@ class DiceTable:
 @dataclass(frozen=True)
 class MonsterTemplate:
     """A statblock a GM can base a monster on. `stats` has every stat of the rule set's character,
-    and `attacks` maps each attack's name to its dice formula. A `detachment` is a large group the
+    and `attacks` maps each attack's name to its dice formula. A large group is a group the
     Warden fights as one unit."""
 
     id: str
@@ -163,22 +163,22 @@ class MonsterTemplate:
     stats: Mapping[str, int]
     armor: int
     attacks: Mapping[str, str]
-    detachment: bool = False
+    large_group: bool = False
 
 
 DAMAGE_KINDS = ("absorb", "harm", "overflow")
 # When a condition can end: by a rest, extended rest, aid from someone else, the passing of time,
 # or the GM's say-so. A condition's `ends` lists the ones that end it; `gm` always does.
 CONDITION_ENDS = ("rest", "extended_rest", "aid", "time", "gm")
-# The effect ops a scar or condition may run, in the order they are listed.
+# The effect ops an injury or condition may run, in the order they are listed.
 EFFECT_OPS = ("note", "set_max", "condition", "save", "pick_stat")
 # `if_higher` compares the roll with the maximum; `if_above_current` compares it with the current score.
 MAX_MODES = ("if_higher", "if_above_current", "add", "always")
 # The name a `pick_stat` op stores its choice under, for later ops to use as their `stat`.
 PICKED = "$picked"
 DICE_SIDES = re.compile(r"1d[0-9]+")
-# The Scars table has one entry for each hit that takes exactly 0 HP, up to this many points.
-SCAR_ROLLS = 12
+# The Injuries table has one entry for each hit that takes exactly 0 HP, up to this many points.
+INJURY_ROLLS = 12
 
 
 @dataclass(frozen=True)
@@ -203,7 +203,7 @@ class DerivedRule:
 
 @dataclass(frozen=True)
 class ConditionRules:
-    """A condition a scar or an effect can give a character. `ends` lists the triggers that end it,
+    """A condition an injury or an effect can give a character. `ends` lists the triggers that end it,
     and `on_end` are the effect ops run when it does. A derived condition has `derived` instead."""
 
     id: str
@@ -215,7 +215,7 @@ class ConditionRules:
 
 
 @dataclass(frozen=True)
-class ScarEntry:
+class InjuryEntry:
     roll: int
     name: str
     text: str
@@ -223,22 +223,22 @@ class ScarEntry:
 
 
 @dataclass(frozen=True)
-class ScarTable:
-    """The Scars table, with the `stat` whose hit that reaches 0 rolls on it."""
+class InjuryTable:
+    """The Injuries table, with the `stat` whose hit that reaches 0 rolls on it."""
 
     id: str
     stat: str
-    entries: tuple[ScarEntry, ...]
+    entries: tuple[InjuryEntry, ...]
 
 
 @dataclass(frozen=True)
 class MoraleRules:
-    """When a side of NPCs must make a morale save and what it is made with. `wil_stat` is the
+    """When a side of NPCs must make a morale save and what it is made with. `save_stat` is the
     leader's stat the save uses. `first_casualty` and `half` say whether a side checks at its first
     casualty and at half its number. `lone_at` is the stat a lone foe checks at when it reaches 0.
     `retreat_stat` is the stat a character saves against to run from a fight."""
 
-    wil_stat: str
+    save_stat: str
     first_casualty: bool
     half: bool
     lone_at: str
@@ -262,7 +262,7 @@ class CombatRules:
     check_sides: int
     initiative_stat: str
     defeat: Mapping[str, str]
-    scar_table: ScarTable | None = None
+    injury_table: InjuryTable | None = None
     # The stats outside combat harm can take, such as strength, dexterity, and willpower.
     outside_harm: tuple[str, ...] = ()
     morale: MoraleRules | None = None
@@ -275,6 +275,8 @@ class CombatRules:
     fatal_conditions: tuple[str, ...] = ()
     # The items a character can use on a dying character to stop the clock, by name.
     aid_items: tuple[str, ...] = ()
+    # The most armor a character can have. Zero means armor has no cap.
+    armor_max: int = 0
 
 
 @dataclass(frozen=True)
@@ -310,22 +312,25 @@ class RestLength:
 
 
 @dataclass(frozen=True)
-class DeprivationRules:
-    """A character deprived of a crucial need gains one `fatigue_item` a day once it has gone on
+class NeedRules:
+    """A character deprived of a crucial need gains one `penalty_item` a day once it has gone on
     for more than `after_days` days."""
 
-    fatigue_item: str
+    penalty_item: str
     after_days: int
 
 
 @dataclass(frozen=True)
 class InventoryRules:
-    """How many slots a character's inventory has, what Fatigue costs, and which stat takes harm
+    """How many slots a character's inventory has, what the penalty costs, and which stat takes harm
     when the inventory fills. `item_sizes` is in `RuleSet`."""
 
     capacity: int
-    fatigue_item: str
-    fatigue_slots: int
+    penalty_name: str
+    # How long the penalty lasts, as a phrase, such as "until a full night's rest".
+    penalty_lasts: str
+    penalty_item: str
+    penalty_slots: int
     full_stat: str
 
 
@@ -385,15 +390,23 @@ class Marketplace:
 
 @dataclass(frozen=True)
 class MagicRules:
-    """The item kinds magic uses, the size each takes, and the Fatigue a spellbook cast costs.
-    A spellbook holds one spell, a scroll is one use of a spell, and a relic has uses that recharge."""
+    """The item kinds magic uses, the size each takes, and the penalty a spellbook cast costs.
+    A spellbook holds one spell, a scroll is one use of a spell, and a charged item has uses that recharge."""
 
     spellbook_kind: str
     spellbook_size: str
     scroll_kind: str
     scroll_size: str
-    relic_kind: str
-    cast_fatigue: int
+    charged_kind: str
+    cast_penalty: int
+
+
+@dataclass(frozen=True)
+class PromptFragment:
+    """A rule-set sentence group for the GM prompt, such as how armor absorbs a blow."""
+
+    id: str
+    text: str
 
 
 @dataclass(frozen=True)
@@ -417,7 +430,7 @@ class RuleSet:
     combat: CombatRules | None = None
     # Statblocks for monsters, by id.
     monsters: Mapping[str, MonsterTemplate] = field(default_factory=dict)
-    # Conditions a scar or effect can give, by id. Derived conditions are included.
+    # Conditions an injury or effect can give, by id. Derived conditions are included.
     conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
     # Tables rolled with dice, by id, such as the Warden's reaction table.
     dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
@@ -426,7 +439,7 @@ class RuleSet:
     rests: Mapping[str, RestLength] = field(default_factory=dict)
     # The rest length an interrupted rest counts as, such as "moments".
     interrupted_rest: str = ""
-    deprivation: DeprivationRules | None = None
+    need: NeedRules | None = None
     inventory: InventoryRules | None = None
     # Item sizes by id, as the slots an item of that size takes.
     item_sizes: Mapping[str, int] = field(default_factory=dict)
@@ -436,6 +449,10 @@ class RuleSet:
     food: FoodRules | None = None
     # What the marketplace sells, or None when the rule set has no marketplace.
     marketplace: Marketplace | None = None
+    # Prompt fragments the GM prompt adds after its generic text, in file order.
+    prompt_fragments: tuple[PromptFragment, ...] = ()
+    # The most sentences a speech line may run, or None when the rule set does not cap it.
+    sentence_cap: int | None = None
 
 
 @dataclass(frozen=True)
@@ -640,13 +657,13 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     if len(combats) > 1:
         raise ContentError(f"{template}: more than one combat definition")
     conditions = _load_conditions(definitions, character, template)
-    scar_tables = {
-        d.id: _load_scar_entries(d, character, conditions, template)
+    injury_tables = {
+        d.id: _load_injury_entries(d, character, conditions, template)
         for d in definitions
-        if d.type == "scar_table"
+        if d.type == "injury_table"
     }
     combat = (
-        _load_combat(combats[0], modules, character, scar_tables, template) if combats else None
+        _load_combat(combats[0], modules, character, injury_tables, template) if combats else None
     )
     monsters = {
         d.id: _load_monster(d, character, template) for d in definitions if d.type == "monster"
@@ -654,13 +671,15 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     clock = _load_clock(definitions, template)
     rests = _load_rests(definitions, character, template)
     interrupted_rest = _load_interrupted_rest(definitions, rests, template)
-    deprivation = _load_deprivation(definitions, template)
+    need = _load_need(definitions, template)
     inventory = _load_inventory(definitions, character, template)
     item_sizes = _load_item_sizes(definitions, template)
     _check_item_sizes(character, item_sizes, template)
     magic = _load_magic(definitions, item_sizes, template)
     food = _load_food(definitions, rests, item_sizes, character, template)
     marketplace = _load_marketplace(definitions, item_sizes, character, template)
+    prompt_fragments = _load_prompts(definitions, template)
+    sentence_cap = _load_sentence_cap(definitions, template)
     tool_calls: dict[str, ToolCall] = {}
     tool_names: set[str] = set()
     for d in definitions:
@@ -689,12 +708,14 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         clock=clock,
         rests=rests,
         interrupted_rest=interrupted_rest,
-        deprivation=deprivation,
+        need=need,
         inventory=inventory,
         item_sizes=item_sizes,
         magic=magic,
         food=food,
         marketplace=marketplace,
+        prompt_fragments=prompt_fragments,
+        sentence_cap=sentence_cap,
     )
 
 
@@ -702,7 +723,7 @@ def _load_combat(
     definition: Definition,
     modules: Mapping[str, ModuleType],
     character: CharacterSpec,
-    scar_tables: Mapping[str, tuple[ScarEntry, ...]],
+    injury_tables: Mapping[str, tuple[InjuryEntry, ...]],
     template: str,
 ) -> CombatRules:
     label = f"{template}: combat {definition.id}"
@@ -732,7 +753,7 @@ def _load_combat(
         defeat["player_character_dead"] = required_text(
             defeat_data, "player_character_dead", f"{label}: defeat"
         )
-    scar_table = _load_scar_table_ref(data, character, scar_tables, label)
+    injury_table = _load_injury_table_ref(data, character, injury_tables, label)
     outside_harm = _load_outside_harm(data, character, label)
     return CombatRules(
         id=definition.id,
@@ -742,11 +763,12 @@ def _load_combat(
         check_sides=int(check_die[2:]),
         initiative_stat=initiative_stat,
         defeat=defeat,
-        scar_table=scar_table,
+        injury_table=injury_table,
         outside_harm=outside_harm,
         morale=_load_morale(data, character, label),
         modifiers=_load_modifiers(data, label),
         dying_hours=_whole(data, "dying_hours", label, 0) if "dying_hours" in data else 0,
+        armor_max=_whole(data, "armor_max", label, 0),
         dying_conditions=_names(data, "dying_conditions", label),
         fatal_conditions=_names(data, "fatal_conditions", label),
         aid_items=_names(data, "aid_items", label),
@@ -764,7 +786,7 @@ def _load_morale(
     morale_label = f"{label}: morale"
     stats = {
         key: required_text(morale_data, key, morale_label)
-        for key in ("wil_stat", "lone_at", "retreat_stat")
+        for key in ("save_stat", "lone_at", "retreat_stat")
     }
     for key, stat in stats.items():
         if stat not in character.stats:
@@ -776,7 +798,7 @@ def _load_morale(
             raise ContentError(f"{morale_label}: {key!r} must be true or false")
         flags[key] = value
     return MoraleRules(
-        wil_stat=stats["wil_stat"],
+        save_stat=stats["save_stat"],
         first_casualty=flags["first_casualty"],
         half=flags["half"],
         lone_at=stats["lone_at"],
@@ -784,25 +806,25 @@ def _load_morale(
     )
 
 
-def _load_scar_table_ref(
+def _load_injury_table_ref(
     data: Mapping[str, Any],
     character: CharacterSpec,
-    scar_tables: Mapping[str, tuple[ScarEntry, ...]],
+    injury_tables: Mapping[str, tuple[InjuryEntry, ...]],
     label: str,
-) -> ScarTable | None:
-    """The `scars` key names the Scars table to roll on and the stat whose hit to 0 rolls on it."""
-    if "scars" not in data:
+) -> InjuryTable | None:
+    """The `injuries` key names the Injuries table to roll on and the stat whose hit to 0 rolls on it."""
+    if "injuries" not in data:
         return None
-    ref = data["scars"]
+    ref = data["injuries"]
     if not isinstance(ref, Mapping):
-        raise ContentError(f"{label}: 'scars' must be an object")
-    table_id = required_text(ref, "table", f"{label}: scars")
-    if table_id not in scar_tables:
-        raise ContentError(f"{label}: 'scars' names no scar table ({table_id!r})")
-    stat = required_text(ref, "stat", f"{label}: scars")
+        raise ContentError(f"{label}: 'injuries' must be an object")
+    table_id = required_text(ref, "table", f"{label}: injuries")
+    if table_id not in injury_tables:
+        raise ContentError(f"{label}: 'injuries' names no injury table ({table_id!r})")
+    stat = required_text(ref, "stat", f"{label}: injuries")
     if stat not in character.stats:
-        raise ContentError(f"{label}: 'scars' names no stat ({stat!r})")
-    return ScarTable(id=table_id, stat=stat, entries=scar_tables[table_id])
+        raise ContentError(f"{label}: 'injuries' names no stat ({stat!r})")
+    return InjuryTable(id=table_id, stat=stat, entries=injury_tables[table_id])
 
 
 def _load_outside_harm(
@@ -902,9 +924,9 @@ def _load_monster(
             raise ContentError(
                 f"{label}: attack {attack_name!r} must be a dice formula such as '1d8'"
             )
-    detachment = data.get("detachment", False)
-    if not isinstance(detachment, bool):
-        raise ContentError(f"{label}: 'detachment' must be true or false")
+    large_group = data.get("large_group", False)
+    if not isinstance(large_group, bool):
+        raise ContentError(f"{label}: 'large_group' must be true or false")
     return MonsterTemplate(
         id=definition.id,
         name=required_text(data, "name", label),
@@ -912,7 +934,7 @@ def _load_monster(
         stats=dict(stats),
         armor=armor,
         attacks=dict(attacks),
-        detachment=detachment,
+        large_group=large_group,
     )
 
 
@@ -938,6 +960,29 @@ def _single_optional(definitions: list[Definition], kind: str, template: str) ->
     if len(found) > 1:
         raise ContentError(f"{template}: more than one {kind} definition")
     return found[0] if found else None
+
+
+def _load_prompts(definitions: list[Definition], template: str) -> tuple[PromptFragment, ...]:
+    """The `prompt` definitions, in file order. Each is a sentence group the GM prompt adds."""
+    fragments = []
+    ids: set[str] = set()
+    for d in definitions:
+        if d.type != "prompt":
+            continue
+        label = f"{template}: prompt {d.id!r}"
+        if d.id in ids:
+            raise ContentError(f"{template}: duplicate prompt {d.id!r}")
+        ids.add(d.id)
+        fragments.append(PromptFragment(id=d.id, text=required_text(d.data, "text", label)))
+    return tuple(fragments)
+
+
+def _load_sentence_cap(definitions: list[Definition], template: str) -> int | None:
+    """The speech sentence cap from the `narration` definition, or None when there is none."""
+    head = _single_optional(definitions, "narration", template)
+    if head is None:
+        return None
+    return _whole(head.data, "sentence_cap", f"{template}: narration", minimum=1)
 
 
 def _whole(data: Mapping[str, Any], key: str, label: str, minimum: int) -> int:
@@ -1044,13 +1089,13 @@ def _load_interrupted_rest(
     return name
 
 
-def _load_deprivation(definitions: list[Definition], template: str) -> DeprivationRules | None:
-    definition = _single_optional(definitions, "deprivation", template)
+def _load_need(definitions: list[Definition], template: str) -> NeedRules | None:
+    definition = _single_optional(definitions, "need", template)
     if definition is None:
         return None
-    label = f"{template}: deprivation {definition.id}"
-    return DeprivationRules(
-        fatigue_item=required_text(definition.data, "fatigue_item", label),
+    label = f"{template}: need {definition.id}"
+    return NeedRules(
+        penalty_item=required_text(definition.data, "penalty_item", label),
         after_days=_whole(definition.data, "after_days", label, 0),
     )
 
@@ -1067,8 +1112,10 @@ def _load_inventory(
         raise ContentError(f"{label}: 'full_stat' names no stat ({full_stat!r})")
     return InventoryRules(
         capacity=_whole(definition.data, "capacity", label, 1),
-        fatigue_item=required_text(definition.data, "fatigue_item", label),
-        fatigue_slots=_whole(definition.data, "fatigue_slots", label, 0),
+        penalty_name=required_text(definition.data, "penalty_name", label),
+        penalty_lasts=required_text(definition.data, "penalty_lasts", label),
+        penalty_item=required_text(definition.data, "penalty_item", label),
+        penalty_slots=_whole(definition.data, "penalty_slots", label, 0),
         full_stat=full_stat,
     )
 
@@ -1099,8 +1146,8 @@ def _load_magic(
         spellbook_size=sizes["spellbook_size"],
         scroll_kind=required_text(definition.data, "scroll_kind", label),
         scroll_size=sizes["scroll_size"],
-        relic_kind=required_text(definition.data, "relic_kind", label),
-        cast_fatigue=_whole(definition.data, "cast_fatigue", label, 0),
+        charged_kind=required_text(definition.data, "charged_kind", label),
+        cast_penalty=_whole(definition.data, "cast_penalty", label, 0),
     )
 
 
@@ -1264,17 +1311,17 @@ def _load_derived(value: object, character: CharacterSpec, label: str) -> Derive
     return DerivedRule(stat=stat, current=current, needs_max=needs_max)
 
 
-def _load_scar_entries(
+def _load_injury_entries(
     definition: Definition,
     character: CharacterSpec,
     conditions: Mapping[str, ConditionRules],
     template: str,
-) -> tuple[ScarEntry, ...]:
-    """A Scars table: one entry for each roll from 1 to SCAR_ROLLS, in order."""
-    label = f"{template}: scar table {definition.id}"
+) -> tuple[InjuryEntry, ...]:
+    """An Injuries table: one entry for each roll from 1 to INJURY_ROLLS, in order."""
+    label = f"{template}: injury table {definition.id}"
     entries = definition.data.get("entries")
-    if not isinstance(entries, list) or len(entries) != SCAR_ROLLS:
-        raise ContentError(f"{label}: 'entries' must list exactly {SCAR_ROLLS} entries")
+    if not isinstance(entries, list) or len(entries) != INJURY_ROLLS:
+        raise ContentError(f"{label}: 'entries' must list exactly {INJURY_ROLLS} entries")
     stored = frozenset(cid for cid, rules in conditions.items() if rules.derived is None)
     loaded = []
     for position, entry in enumerate(entries, start=1):
@@ -1285,7 +1332,7 @@ def _load_scar_entries(
             raise ContentError(f"{entry_label}: 'roll' must be {position}")
         effects, _ = _check_effects(entry.get("effects", []), entry_label, character, stored, False)
         loaded.append(
-            ScarEntry(
+            InjuryEntry(
                 roll=position,
                 name=required_text(entry, "name", entry_label),
                 text=required_text(entry, "text", entry_label),

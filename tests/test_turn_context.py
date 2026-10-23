@@ -11,13 +11,13 @@ from sqlmodel import Session
 
 from cygnusforge.config import Settings
 from cygnusforge.services.campaigns import (
-    NARRATE_INSTRUCTION,
     STATE_INSTRUCTION,
     get_turn_context,
     get_turn_transcript,
     list_messages,
 )
 from cygnusforge.services.events import ChatGM, record
+from tests.conftest import NARRATE_TEXT
 from tests.test_campaigns import _answer, _campaign_id, _send, _signed_in
 from tests.test_context import (
     RecordingProvider,
@@ -91,7 +91,7 @@ def test_recorded_system_text_is_exactly_what_the_model_received(
     ]
     final_call = recorder.calls[-1]["messages"]
     assert final_call[0] == {"role": "system", "content": "\n\n".join(p.content for p in base)}
-    assert final_call[-1] == {"role": "system", "content": NARRATE_INSTRUCTION}
+    assert final_call[-1] == {"role": "system", "content": NARRATE_TEXT}
     assert all(message["content"] != STATE_INSTRUCTION for message in final_call)
 
 

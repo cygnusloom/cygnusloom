@@ -21,7 +21,7 @@ def save_succeeds(roll: int, score: int) -> bool:
 
 
 def initiative_order(entries: Sequence[tuple[str, bool | None]]) -> list[str]:
-    """The order of round one. Player characters who passed their DEX save act first, then the
+    """The order of round one. Player characters who passed their initiative save act first, then the
     NPCs (given as None), then those who failed. Each group keeps the order it came in."""
     passed = [name for name, result in entries if result is True]
     npcs = [name for name, result in entries if result is None]
@@ -78,8 +78,8 @@ def player_attack(
     return ctx.world.player_attack(target, weapon, damage, modifier)
 
 
-def resolve_detachment(name: str, outcome: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.resolve_detachment(name, outcome)
+def resolve_group_break(name: str, outcome: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.resolve_group_break(name, outcome)
 
 
 def roll_tables(tables: list[str], ctx: ToolContext) -> dict[str, Any]:
@@ -106,12 +106,12 @@ def rest_history(ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.rest_history()
 
 
-def set_deprivation(name: str, deprived: bool, cause: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.set_deprivation(name, deprived, cause=cause)
+def set_condition(name: str, deprived: bool, cause: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.set_condition(name, deprived, cause=cause)
 
 
-def add_fatigue(name: str, cause: str, ctx: ToolContext, force: bool = False) -> dict[str, Any]:
-    return ctx.world.add_fatigue(name, cause, force=force)
+def add_penalty(name: str, cause: str, ctx: ToolContext, force: bool = False) -> dict[str, Any]:
+    return ctx.world.add_penalty(name, cause, force=force)
 
 
 def search_marketplace(query: str, ctx: ToolContext) -> dict[str, Any]:
@@ -152,22 +152,22 @@ def give_scroll(name: str, spell: str, description: str, ctx: ToolContext) -> di
     return ctx.world.give_scroll(name, spell, description)
 
 
-def give_relic(
+def give_charged_item(
     name: str, item: str, uses: int, recharge: str, ctx: ToolContext, size: str = "normal"
 ) -> dict[str, Any]:
-    return ctx.world.give_relic(name, item, uses, recharge, size=size)
+    return ctx.world.give_charged_item(name, item, uses, recharge, size=size)
 
 
 def cast_spell(name: str, spell: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.cast_spell(name, spell)
 
 
-def use_relic(name: str, item: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.use_relic(name, item)
+def use_charge(name: str, item: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.use_charge(name, item)
 
 
-def recharge_relic(name: str, item: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.recharge_relic(name, item)
+def recharge_charged_item(name: str, item: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.recharge_charged_item(name, item)
 
 
 def roll_save(name: str, stat: str, reason: str, ctx: ToolContext) -> dict[str, Any]:

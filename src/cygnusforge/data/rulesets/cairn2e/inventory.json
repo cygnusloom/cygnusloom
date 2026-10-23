@@ -3,8 +3,10 @@
     "type": "inventory",
     "id": "cairn",
     "capacity": 10,
-    "fatigue_item": "fatigue",
-    "fatigue_slots": 1,
+    "penalty_name": "Fatigue",
+    "penalty_lasts": "until a full night's rest",
+    "penalty_item": "fatigue",
+    "penalty_slots": 1,
     "full_stat": "hp"
   },
   {

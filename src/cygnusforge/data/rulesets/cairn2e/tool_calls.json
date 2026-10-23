@@ -110,7 +110,7 @@
     "name": "attack",
     "python_module": "cairn2e",
     "function": "attack",
-    "description": "Make an NPC's attack against a character. Attacks always hit. The attack's damage is rolled by the engine and reduces the target's armor, then Hit Protection, then Strength, and a target whose Strength is used up must make a Strength save. Use it only when the attacker's side is acting, after the initiative is set. Player characters attack with player_attack, not this tool. A detachment (a statblock marked as a group) is hit only by impaired attacks. A detachment's own attack has Blast: the engine rolls its enhanced damage separately for each living individual on the other side, and the target you name is one of them. A detachment whose Strength is used up makes a Strength save; if it fails it is broken, and the attack and targeting are refused until resolve_detachment is called.",
+    "description": "Make an NPC's attack against a character. Attacks always hit. The attack's damage is rolled by the engine and reduces the target's armor, then Hit Protection, then Strength, and a target whose Strength is used up must make a Strength save. Use it only when the attacker's side is acting, after the initiative is set. Player characters attack with player_attack, not this tool. A detachment (a statblock marked as a group) is hit only by impaired attacks. A detachment's own attack has Blast: the engine rolls its enhanced damage separately for each living individual on the other side, and the target you name is one of them. A detachment whose Strength is used up makes a Strength save; if it fails it is broken, and the attack and targeting are refused until resolve_group_break is called.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -491,10 +491,10 @@
   },
   {
     "type": "tool_call",
-    "id": "resolve_detachment",
-    "name": "resolve_detachment",
+    "id": "resolve_group_break",
+    "name": "resolve_group_break",
     "python_module": "cairn2e",
-    "function": "resolve_detachment",
+    "function": "resolve_group_break",
     "description": "Decide what happens to a detachment whose Critical Damage save failed. 'defeat' breaks it and defeats it. 'flee' breaks it up and its members run from the fight. Until this is called, a broken detachment cannot attack or be attacked. Call it only after a detachment's Strength save has failed.",
     "parameters": {
       "type": "object",
@@ -721,11 +721,11 @@
   },
   {
     "type": "tool_call",
-    "id": "set_deprivation",
-    "name": "set_deprivation",
+    "id": "set_condition",
+    "name": "set_condition",
     "python_module": "cairn2e",
-    "function": "set_deprivation",
-    "description": "Mark a character as deprived of a crucial need, such as food or rest, or clear it. Call it as soon as the need goes unmet, before advancing time, so the engine can count the days. A deprived character recovers nothing, and the engine adds one Fatigue for each new day past the first. Check rest_history first when the cause is rest.",
+    "function": "set_condition",
+    "description": "Mark a character as deprived of a crucial need, such as food or rest, or clear it. Call it as soon as the need goes unmet, before advancing time, so the engine can count the days. A deprived character recovers nothing, and the engine adds the deprivation penalty (Fatigue) for each new day past the first. Check rest_history first when the cause is rest.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -751,11 +751,11 @@
   },
   {
     "type": "tool_call",
-    "id": "add_fatigue",
-    "name": "add_fatigue",
+    "id": "add_penalty",
+    "name": "add_penalty",
     "python_module": "cairn2e",
-    "function": "add_fatigue",
-    "description": "Add one Fatigue to a character's inventory because of something in the fiction, such as casting a spell or a shock. Fatigue takes one slot and lasts until a full night's rest. A deprived character is refused unless force is true: the engine adds deprivation Fatigue each day.",
+    "function": "add_penalty",
+    "description": "Add one penalty item (Fatigue) to a character's inventory because of something in the fiction, such as casting a spell or a shock. Fatigue takes one slot and lasts until a full night's rest. A deprived character is refused unless force is true: the engine adds the deprivation penalty each day.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -841,10 +841,10 @@
   },
   {
     "type": "tool_call",
-    "id": "give_relic",
-    "name": "give_relic",
+    "id": "give_charged_item",
+    "name": "give_charged_item",
     "python_module": "cairn2e",
-    "function": "give_relic",
+    "function": "give_charged_item",
     "description": "Give a character a relic with a number of uses. `recharge` is the rule for restoring its uses, written as text. A relic adds no Fatigue.",
     "parameters": {
       "type": "object",
@@ -912,10 +912,10 @@
   },
   {
     "type": "tool_call",
-    "id": "use_relic",
-    "name": "use_relic",
+    "id": "use_charge",
+    "name": "use_charge",
     "python_module": "cairn2e",
-    "function": "use_relic",
+    "function": "use_charge",
     "description": "Spend one use of a relic. It fails when the relic has no uses left, until it recharges.",
     "parameters": {
       "type": "object",
@@ -941,7 +941,7 @@
     "name": "use_item",
     "python_module": "cairn2e",
     "function": "use_item",
-    "description": "Spend one use of a consumable the character carries, such as a torch, oil, bandages, or a salve. The last use uses it up and removes it. Call this only when the character deliberately uses up that exact item (pouring the oil, applying the bandage). A Bandage may be applied to a dying character: set target to that character, and it is stabilized. Never spend it for an action that uses a different item, for an attempt that fails, or for holding something in a flame that is already burning: a lit lantern or torch burns down over time, not per action. Not for relics (use use_relic), spellbooks, or gear without uses.",
+    "description": "Spend one use of a consumable the character carries, such as a torch, oil, bandages, or a salve. The last use uses it up and removes it. Call this only when the character deliberately uses up that exact item (pouring the oil, applying the bandage). A Bandage may be applied to a dying character: set target to that character, and it is stabilized. Never spend it for an action that uses a different item, for an attempt that fails, or for holding something in a flame that is already burning: a lit lantern or torch burns down over time, not per action. Not for relics (use use_charge), spellbooks, or gear without uses.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -966,10 +966,10 @@
   },
   {
     "type": "tool_call",
-    "id": "recharge_relic",
-    "name": "recharge_relic",
+    "id": "recharge_charged_item",
+    "name": "recharge_charged_item",
     "python_module": "cairn2e",
-    "function": "recharge_relic",
+    "function": "recharge_charged_item",
     "description": "Restore a relic to its full uses, once its recharge rule is met. Refused when the relic is already fully charged.",
     "parameters": {
       "type": "object",

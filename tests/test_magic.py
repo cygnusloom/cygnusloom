@@ -45,7 +45,7 @@ def test_casting_from_a_spellbook_adds_exactly_one_fatigue(client_factory):
     assert not _fatigue(app, campaign_id)
     result = tools.cast_spell(PC, SPELL)
     assert result["source"] == "spellbook"
-    assert result["fatigue"] is True
+    assert result["penalty"] is True
     assert len(_fatigue(app, campaign_id)) == 1
     assert _named(app, campaign_id, SPELL), "a spellbook is kept after casting"
 
@@ -79,7 +79,7 @@ def test_casting_a_scroll_uses_it_up_and_adds_no_fatigue(client_factory):
     tools.give_scroll(PC, SPELL, TEXT)
     result = tools.cast_spell(PC, SPELL)
     assert result["source"] == "scroll"
-    assert result["fatigue"] is False
+    assert result["penalty"] is False
     assert not _named(app, campaign_id, SPELL)
     assert not _fatigue(app, campaign_id)
 
@@ -104,14 +104,14 @@ def test_a_spellbook_is_used_before_a_scroll_of_the_same_spell(client_factory):
 
 def test_a_deprived_character_can_still_cast_from_a_spellbook(client_factory):
     _app, _campaign_id, tools = _fight(client_factory)
-    tools.set_deprivation(PC, True, cause="no food")
+    tools.set_condition(PC, True, cause="no food")
     tools.give_spellbook(PC, SPELL, TEXT)
-    assert tools.cast_spell(PC, SPELL)["fatigue"] is True
+    assert tools.cast_spell(PC, SPELL)["penalty"] is True
 
 
 def test_a_relic_starts_at_its_uses_and_records_its_recharge_rule(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    tools.give_relic(PC, "Ring of Sight", uses=2, recharge="Recharges at dawn.")
+    tools.give_charged_item(PC, "Ring of Sight", uses=2, recharge="Recharges at dawn.")
     relic = _named(app, campaign_id, "Ring of Sight")
     assert [(i.kind, i.uses, i.max_uses, i.text) for i in relic] == [
         ("relic", 2, 2, "Recharges at dawn.")
@@ -120,8 +120,8 @@ def test_a_relic_starts_at_its_uses_and_records_its_recharge_rule(client_factory
 
 def test_using_a_relic_decrements_its_uses_and_adds_no_fatigue(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    tools.give_relic(PC, "Ring of Sight", uses=2, recharge="Recharges at dawn.")
-    result = tools.use_relic(PC, "Ring of Sight")
+    tools.give_charged_item(PC, "Ring of Sight", uses=2, recharge="Recharges at dawn.")
+    result = tools.use_charge(PC, "Ring of Sight")
     assert result == {"name": PC, "item": "Ring of Sight", "uses_left": 1}
     assert [i.uses for i in _named(app, campaign_id, "Ring of Sight")] == [1]
     assert not _fatigue(app, campaign_id)
@@ -129,44 +129,44 @@ def test_using_a_relic_decrements_its_uses_and_adds_no_fatigue(client_factory):
 
 def test_a_relic_with_no_uses_left_must_be_recharged_before_use(client_factory):
     _app, _campaign_id, tools = _fight(client_factory)
-    tools.give_relic(PC, "Ring of Sight", uses=1, recharge="Recharges at dawn.")
-    tools.use_relic(PC, "Ring of Sight")
+    tools.give_charged_item(PC, "Ring of Sight", uses=1, recharge="Recharges at dawn.")
+    tools.use_charge(PC, "Ring of Sight")
     with pytest.raises(InvalidInput, match="recharg"):
-        tools.use_relic(PC, "Ring of Sight")
+        tools.use_charge(PC, "Ring of Sight")
 
 
 def test_recharging_a_relic_restores_its_maximum_uses(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    tools.give_relic(PC, "Ring of Sight", uses=3, recharge="Recharges at dawn.")
-    tools.use_relic(PC, "Ring of Sight")
-    tools.use_relic(PC, "Ring of Sight")
+    tools.give_charged_item(PC, "Ring of Sight", uses=3, recharge="Recharges at dawn.")
+    tools.use_charge(PC, "Ring of Sight")
+    tools.use_charge(PC, "Ring of Sight")
     tools.advance_time(days=1)
-    result = tools.recharge_relic(PC, "Ring of Sight")
+    result = tools.recharge_charged_item(PC, "Ring of Sight")
     assert result == {"name": PC, "item": "Ring of Sight", "uses": 3}
     assert [i.uses for i in _named(app, campaign_id, "Ring of Sight")] == [3]
 
 
 def test_a_relic_cannot_recharge_until_time_passes_after_its_last_use(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    tools.give_relic(PC, "Ring of Sight", uses=2, recharge="Recharges at dawn.")
-    tools.use_relic(PC, "Ring of Sight")
+    tools.give_charged_item(PC, "Ring of Sight", uses=2, recharge="Recharges at dawn.")
+    tools.use_charge(PC, "Ring of Sight")
     with pytest.raises(InvalidInput, match="until time passes"):
-        tools.recharge_relic(PC, "Ring of Sight")
+        tools.recharge_charged_item(PC, "Ring of Sight")
     assert [i.uses for i in _named(app, campaign_id, "Ring of Sight")] == [1]
 
 
 def test_recharging_a_relic_that_is_already_full_is_refused(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    tools.give_relic(PC, "Ring of Sight", uses=2, recharge="Recharges at dawn.")
+    tools.give_charged_item(PC, "Ring of Sight", uses=2, recharge="Recharges at dawn.")
     with pytest.raises(InvalidInput, match="fully charged"):
-        tools.recharge_relic(PC, "Ring of Sight")
+        tools.recharge_charged_item(PC, "Ring of Sight")
     assert [i.uses for i in _named(app, campaign_id, "Ring of Sight")] == [2]
 
 
 def test_a_relic_with_no_uses_is_refused_when_given(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     with pytest.raises(InvalidInput):
-        tools.give_relic(PC, "Dud Ring", uses=0, recharge="Never.")
+        tools.give_charged_item(PC, "Dud Ring", uses=0, recharge="Never.")
     assert not _named(app, campaign_id, "Dud Ring")
 
 

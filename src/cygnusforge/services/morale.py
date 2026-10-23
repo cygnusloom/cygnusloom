@@ -1,7 +1,8 @@
 """Morale and retreat. A side of NPCs makes a morale save at its first casualty and again at half
-its number; a lone NPC makes one when it reaches 0 on its lone stat. A failed save makes every
-living member of the side flee. Any character can try to run, which takes a save and a safe way
-out. Both checks come from the rule set's morale block and never touch player characters' morale.
+its number (when the rule set's morale block enables them); a lone NPC makes one when it reaches 0
+on its lone stat. A failed save makes every living member of the side flee. Any character can try
+to run, which takes a save on the retreat stat and a safe way out. Both checks come from the rule
+set's morale block and never touch player characters' morale.
 
 Like the rest of the world service, each function loads the campaign's state, validates the
 change, records its events, and commits."""
@@ -57,7 +58,7 @@ def check_morale(
         if encounter is None:
             break
         character = state.characters.get(name_key(target))
-        if character is None or character.kind != NPC_KIND or character.detachment:
+        if character is None or character.kind != NPC_KIND or character.large_group:
             break
         side = encounter.sides.get(name_key(character.name), "")
         tag = _due_tag(state, side, morale)
@@ -67,7 +68,7 @@ def check_morale(
         living = [member for member in group if not out_of_fight(member)]
         leader = living[0]
         roll = roll_total(combat.check_die, rng)
-        score = current(leader, morale.wil_stat)
+        score = current(leader, morale.save_stat)
         passed = combat.module.save_succeeds(roll, score)
         record(
             db,
@@ -76,7 +77,7 @@ def check_morale(
                 side=side,
                 tag=tag,
                 leader=leader.name,
-                stat=morale.wil_stat,
+                stat=morale.save_stat,
                 roll=roll,
                 score=score,
                 passed=passed,
@@ -92,7 +93,7 @@ def check_morale(
                 "side": side,
                 "tag": tag,
                 "leader": leader.name,
-                "stat": morale.wil_stat,
+                "stat": morale.save_stat,
                 "roll": roll,
                 "score": score,
                 "passed": passed,
@@ -137,7 +138,7 @@ def _side_npcs(state: CampaignState, side: str) -> list[Character]:
         character = state.characters[name_key(display)]
         if (
             character.kind == NPC_KIND
-            and not character.detachment
+            and not character.large_group
             and encounter.sides.get(name_key(display), "") == side
         ):
             members.append(character)
@@ -152,7 +153,7 @@ def retreat(
     combat: CombatRules,
     rng: random.Random,
 ) -> dict[str, Any]:
-    """An NPC's attempt to run from the fight: a DEX save, rolled by the engine."""
+    """An NPC's attempt to run from the fight: a save on the retreat stat, rolled by the engine."""
     state = load_state(db, campaign_id)
     character = _retreat_ready(state, name, safe, combat)
     if character.kind == PC_KIND:
@@ -167,7 +168,7 @@ def player_retreat(
     roll: int,
     combat: CombatRules,
 ) -> dict[str, Any]:
-    """The player character's attempt to run from the fight. The player rolls the DEX save."""
+    """The player character's attempt to run from the fight. The player rolls the retreat save."""
     state = load_state(db, campaign_id)
     pc = state.pc()
     if pc is None:

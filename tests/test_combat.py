@@ -78,7 +78,7 @@ def _tools(app: FastAPI, campaign_id: int, rng: random.Random | None = None) -> 
         clock_rules=CAIRN.clock,
         rests=CAIRN.rests,
         interrupted_rest=CAIRN.interrupted_rest,
-        deprivation=CAIRN.deprivation,
+        need=CAIRN.need,
         inventory=CAIRN.inventory,
         item_sizes=CAIRN.item_sizes,
         magic=CAIRN.magic,
@@ -208,6 +208,7 @@ def _combat(**changes: Any) -> Definition:
         "damage": CAIRN_DAMAGE,
         "check_die": "1d20",
         "initiative_stat": "dex",
+        "armor_max": 3,
         "defeat": {"player_character": "in critical damage", "npc": "dead"},
     }
     data.update(changes)
@@ -403,7 +404,7 @@ def test_search_finds_statblocks_by_the_words_in_their_text(client_factory):
 def test_attacks_wait_until_player_characters_roll_for_initiative(client_factory):
     app, campaign_id, tools = _fight(client_factory, rolled=False)
     _foe(tools, "Ghoul")
-    # Stats are random per run; a 1-damage hit on a PC at 1 HP would scar and need another die.
+    # Stats are random per run; a 1-damage hit on a PC at 1 HP would injury and need another die.
     with _db(app) as db:
         before = _character(app, campaign_id, PC).stats["hp"]
         record(
