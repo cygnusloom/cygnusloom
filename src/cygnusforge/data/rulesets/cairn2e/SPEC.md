@@ -222,7 +222,7 @@ Gaps from Phase 9:
 - Encounter decision (user: "follow the book procedure"): a d6 result of 1 rolls on an encounter table for the location. The Warden writes these tables per dungeon (Dungeon Seeds), so the engine rolls against a Warden-authored table and does not invent one. A non-obvious NPC reaction is a 2d6 roll on the Reactions table (Hostile 2, Wary 3-5, Curious 6-8, Kind 9-11, Helpful 12), from the Core Rules. Wilderness uses the same encounter-table wording, so the table mechanism is shared with the wilderness work.
 - Generic candidate for Phase 11: a band lookup on a 2d6 (or any dice) result, defined in data. D&D's analogue is any table-by-range lookup, e.g. reaction or random-event tables.
 - Source (treasure and gold income): the Cairn 2e pages checked (Procedures, Core Rules, Marketplace, Warden's Guide > Dungeon Exploration, Dungeon Seeds, Reliquary, Bestiary) print no treasure table and no gold-income rule. Gold appears only as Marketplace prices. The Dungeon Seeds page says to give treasure beyond gold (knowledge, allies, trade goods, artifacts). The Reliquary's Coin of the Father is an illusion, not income. The book's treasure is therefore the Warden's call. Any gold-income tool is a house rule until the user picks one.
-- Day structure (resolved, user choice): the Procedures page says travel is counted in **watches**, three eight-hour segments per day, named morning, afternoon, and night. The engine now uses those (`clock.json`: `parts` morning, afternoon, night; `hours_per_part` 8). The day shape stays ruleset data. Tests that hard-coded four parts were updated. Full suite: 835 passing.
+- Day structure (resolved, user choice): the Procedures page says travel is counted in **watches**, three eight-hour segments per day, named morning, afternoon, and night. The engine now uses those (`clock.json`: `parts` morning, afternoon, night; `hours_per_part` 8). The day shape stays ruleset data. Tests that hard-coded four parts were updated. Full suite: 834 passing. Live-verified on a fresh DB: a moments rest advanced the clock by 1 hour; a night rest from morning reached day 2 morning.
 - Resolved (user choice): `moments` is one hour. A rest length can now be given in `hours`, so the rest format supports hours as well as parts and days.
 
 ## Phase 11: generic engine refactor
@@ -291,6 +291,7 @@ Phase 4 (deprivation, fatigue, rest, inventory):
 - Rest end conditions (`conditions.json`) with rest triggers are not built.
 - A rest plus `advance_time` may double-advance the clock. Not live-verified.
 - An interrupted rest can mismatch the narration and the clock.
+- A `night` rest begun in the morning watch runs 23 hours to the next morning, skipping the afternoon and night. Live-seen on a fresh DB (day 1 morning → day 2 morning). Unclear whether a book night rest always starts at dusk. Needs a user decision.
 - The GM narrated a night's camp and eating without calling `rest`, so no ration was used. Needs a prompt rule and a test.
 - The 10-slot capacity and the full-inventory HP rule are unverified against the book.
 - The deprivation Fatigue threshold (day 2 or day 3) is unverified.
