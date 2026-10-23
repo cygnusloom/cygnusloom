@@ -39,7 +39,7 @@ def clock_at(index: int, parts_per_day: int, hours_per_part: int) -> Clock:
 def rest_target(start: int, rest: RestLength, parts_per_day: int, hours_per_part: int) -> int:
     """When a rest that starts at `start` ends, in hours. A rest that runs until morning ends at the
     first morning after it begins, and always takes at least a part of a day."""
-    target = start + (rest.days * parts_per_day + rest.parts) * hours_per_part
+    target = start + rest.hours + (rest.days * parts_per_day + rest.parts) * hours_per_part
     if rest.until_morning:
         target = max(target, start + hours_per_part)
         target += (-target) % (parts_per_day * hours_per_part)

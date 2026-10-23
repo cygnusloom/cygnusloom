@@ -92,8 +92,8 @@ Acceptance:
 
 Generic engine mechanics, parameterized by the ruleset's JSON. Cairn numbers live only in `cairn2e/`.
 
-- Clock: the campaign has a day counter and a part of the day. Parts come from the ruleset (`clock`: morning, afternoon, evening, night). Time moves only through tools: `advance_time` and `rest`. A new day's result lists discovered places not visited for `stale_days` (ruleset, 5), so the Warden updates them.
-- Rest: the GM calls `rest(length, interrupted, reason)` when the party rests. Lengths come from the ruleset (`rest`): `moments` (one part, restores HP), `night` (until morning, full rest, clears Fatigue), `week` (seven days, full rest, restores attribute loss and clears Fatigue). An interrupted rest counts as `moments`: one part, not full. Resting is not only sleeping; the GM picks the length and whether it is interrupted.
+- Clock: the campaign has a day counter and a watch of the day. Watches come from the ruleset (`clock`: morning, afternoon, night, eight hours each, the book's three watches). Time moves only through tools: `advance_time` and `rest`. A new day's result lists discovered places not visited for `stale_days` (ruleset, 5), so the Warden updates them.
+- Rest: the GM calls `rest(length, interrupted, reason)` when the party rests. Lengths come from the ruleset (`rest`): `moments` (one hour, restores HP), `night` (until morning, full rest, clears Fatigue), `week` (seven days, full rest, restores attribute loss and clears Fatigue). An interrupted rest counts as `moments`: one hour, not full. Resting is not only sleeping; the GM picks the length and whether it is interrupted. A rest length can be given in `hours`, `parts`, `days`, or `until: "morning"`.
 - Recovery: a PC that is not Deprived recovers per the rest length. A deprived PC recovers nothing (HP, attributes, or Fatigue).
 - Deprivation: `set_deprivation(name, deprived, cause)`. The GM decides using `rest_history`, which lists each PC's last full rest and recent rests. Deprived for more than one day (ruleset `after_days`) adds one Fatigue per day, applied by the engine as each day begins.
 - Fatigue: an inventory item of kind `fatigue` (ruleset `fatigue_item`). `add_fatigue(name, cause, force)` covers events in the fiction, such as spells. A deprived character is refused unless `force` is set, because the engine adds deprivation Fatigue each day.
@@ -184,7 +184,7 @@ Decided:
 - A new PC gets a new loadout and joins the party when the GM decides the story allows it. It does not inherit gear. The dead PC's gear stays with the body, and the GM decides what happens to it.
 - Defeated PCs leave a body. Bodies hold the dead PC's gear for the GM to handle.
 - NPCs that fail a Critical Damage save die, at the Warden's discretion (unchanged).
-- The clock counts hours, so `advance_time` takes `hours`. A part is 6 hours (confirmed by the user).
+- The clock counts hours, so `advance_time` takes `hours`. The Phase 9 part of 6 hours was superseded in Phase 10 by the book's eight-hour watch (see Phase 10).
 - A hireling is promoted with `hireling.promoted` once the PC is dead, and only if it is alive and not dying. It keeps its gear and stops being paid.
 - A dead employer's hirelings are unpaid, so the GM decides what they do.
 
@@ -203,7 +203,7 @@ Fixed during the live check:
 - A Bandage given as "Bandage" (singular) matched no catalogue entry, so it became a freeform item with no uses, and the aid list ("Bandages") did not match it either. Item names now match ignoring case and a plural s (`same_item_name` in `services/events.py`, used by the catalogue lookup, the held-item lookup, and the aid match). A regression test covers the singular name (`tests/test_death.py`). The live server was running the old code during this session. Verify the fix live at the next dying PC.
 
 Gaps from Phase 9:
-- Resolved: 6 hours per part, confirmed by the user.
+- Superseded in Phase 10: the 6-hour part became the book's 8-hour watch (user choice). Death timing is in hours (`dying_hours: 1`), so it did not change.
 - Resolved: STR 0 outside combat means instant death, confirmed by the user.
 - OPEN: a new PC is placed by the GM on its first turn. The book's rule for when a new PC joins is not modeled, so the GM decides by narrative.
 - OPEN: a dead PC's gear is not lootable by tools. The GM handles it in narration only.
@@ -222,7 +222,8 @@ Gaps from Phase 9:
 - Encounter decision (user: "follow the book procedure"): a d6 result of 1 rolls on an encounter table for the location. The Warden writes these tables per dungeon (Dungeon Seeds), so the engine rolls against a Warden-authored table and does not invent one. A non-obvious NPC reaction is a 2d6 roll on the Reactions table (Hostile 2, Wary 3-5, Curious 6-8, Kind 9-11, Helpful 12), from the Core Rules. Wilderness uses the same encounter-table wording, so the table mechanism is shared with the wilderness work.
 - Generic candidate for Phase 11: a band lookup on a 2d6 (or any dice) result, defined in data. D&D's analogue is any table-by-range lookup, e.g. reaction or random-event tables.
 - Source (treasure and gold income): the Cairn 2e pages checked (Procedures, Core Rules, Marketplace, Warden's Guide > Dungeon Exploration, Dungeon Seeds, Reliquary, Bestiary) print no treasure table and no gold-income rule. Gold appears only as Marketplace prices. The Dungeon Seeds page says to give treasure beyond gold (knowledge, allies, trade goods, artifacts). The Reliquary's Coin of the Father is an illusion, not income. The book's treasure is therefore the Warden's call. Any gold-income tool is a house rule until the user picks one.
-- Source conflict (gap): the Procedures page says travel is counted in **watches**, three eight-hour segments per day. The engine uses four six-hour parts (morning, afternoon, evening, night), which the user confirmed in Phase 9. Decide whether the day structure is data (`clock` in the ruleset) and which one to use.
+- Day structure (resolved, user choice): the Procedures page says travel is counted in **watches**, three eight-hour segments per day, named morning, afternoon, and night. The engine now uses those (`clock.json`: `parts` morning, afternoon, night; `hours_per_part` 8). The day shape stays ruleset data. Tests that hard-coded four parts were updated. Full suite: 835 passing.
+- Resolved (user choice): `moments` is one hour. A rest length can now be given in `hours`, so the rest format supports hours as well as parts and days.
 
 ## Phase 11: generic engine refactor
 
@@ -344,7 +345,7 @@ Phase 9 (death rules): critical damage, Scars 11 (Mortal Wound) and 12 (Doomed),
 - RESOLVED: a dying-to-dead narration mismatch. The `combat.harmed` status now reads "dead" for a PC killed outright. The GM prompt was not changed, so the narration check is still live-unverified.
 - OPEN (seen live): the GM gave Ysolde a "Walking stick" mid-turn with 0 uses, so it can be swung but never spent. The same freeform-item gap as below.
 - OPEN: a hireling kit item the GM names freeform, such as "Bandage", gets no uses. The catalogue match is now plural-tolerant, but a freeform name still has no uses. Gaps like this should be caught by a `give_item` validator. Phase 11 decides.
-- Resolved: 6 hours per part, confirmed by the user.
+- Superseded in Phase 10: 6-hour parts became 8-hour watches (user choice).
 - Resolved: STR 0 outside combat as instant death, confirmed by the user.
 - A new PC is placed by the GM, not by the book's rule for when a new PC joins. The narrative decision is the GM's.
 - A dead PC's gear is not lootable by tools. The GM handles it in narration only.

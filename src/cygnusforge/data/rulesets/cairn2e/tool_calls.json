@@ -589,7 +589,7 @@
     "name": "advance_time",
     "python_module": "cairn2e",
     "function": "advance_time",
-    "description": "Move the campaign clock forward. Use it when time passes in the fiction: days, parts of a day (morning, afternoon, evening, night), or hours within a part. The result says when a new day begins and lists places not visited for a while, so update anything that should change. A dying character dies when enough hours have passed, so advance time only as far as the fiction needs.",
+    "description": "Move the campaign clock forward. Use it when time passes in the fiction: days, watches of the day (morning, afternoon, night; eight hours each), or hours within a watch. The result says when a new day begins and lists places not visited for a while, so update anything that should change. A dying character dies when enough hours have passed, so advance time only as far as the fiction needs.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -623,7 +623,7 @@
     "name": "rest",
     "python_module": "cairn2e",
     "function": "rest",
-    "description": "Record a rest for the whole party. The Warden decides the length from what the party does: 'moments' is a short break such as a drink and a sit-down, 'night' is a full night until morning, 'week' is a week of rest. The rest moves the clock forward itself, so do not also advance_time for the same time. Set interrupted when something breaks the rest, and then it counts as moments only. A full rest, uninterrupted, is the only way to clear Fatigue. A deprived character recovers nothing. Rest eats one ration per character itself (a lodged character uses the bed instead), so never remove rations before resting; a character with no ration is deprived.",
+    "description": "Record a rest for the whole party. The Warden decides the length from what the party does: 'moments' is a short break of one hour, such as a drink and a sit-down, 'night' is a full night until morning, 'week' is a week of rest. The rest moves the clock forward itself, so do not also advance_time for the same time. Set interrupted when something breaks the rest, and then it counts as moments only. A full rest, uninterrupted, is the only way to clear Fatigue. A deprived character recovers nothing. Rest eats one ration per character itself (a lodged character uses the bed instead), so never remove rations before resting; a character with no ration is deprived.",
     "parameters": {
       "type": "object",
       "properties": {

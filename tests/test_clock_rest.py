@@ -30,15 +30,15 @@ def _clock_position(app, campaign_id):
 
 @pytest.mark.parametrize(
     ("rest_name", "start", "expected"),
-    [("moments", 0, 1), ("night", 0, 4), ("night", 3, 4), ("night", 2, 4), ("week", 0, 28)],
+    [("night", 0, 3), ("night", 3, 6), ("night", 2, 3), ("week", 0, 21)],
 )
 def test_a_rest_ends_at_its_target_part(rest_name, start, expected):
     assert rest_target(start * HPP, CAIRN.rests[rest_name], PARTS, HPP) == expected * HPP
 
 
 def test_a_rest_ends_on_the_hour_it_began_plus_its_length(client_factory):
-    assert rest_target(2, CAIRN.rests["moments"], PARTS, HPP) == 2 + HPP
-    assert rest_target(1, CAIRN.rests["night"], PARTS, HPP) == 4 * HPP
+    assert rest_target(2, CAIRN.rests["moments"], PARTS, HPP) == 3
+    assert rest_target(1, CAIRN.rests["night"], PARTS, HPP) == 3 * HPP
 
 
 def test_advancing_a_day_lands_on_the_morning_and_a_part_moves_to_the_afternoon(client_factory):
@@ -106,7 +106,7 @@ def test_an_interrupted_night_rest_becomes_a_moments_rest(client_factory):
     result = tools.rest("night", interrupted=True, reason="ambush")
     assert result["length"] == "moments"
     assert result["interrupted"] is True
-    assert _clock_position(app, campaign_id) - before == HPP
+    assert _clock_position(app, campaign_id) - before == CAIRN.rests["moments"].hours
 
 
 def test_deprivation_costs_one_fatigue_each_day_after_its_first(client_factory):

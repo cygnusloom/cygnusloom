@@ -292,11 +292,12 @@ class ClockRules:
 
 @dataclass(frozen=True)
 class RestLength:
-    """A rest the Warden can call for. It passes `parts` parts of a day, or `days` days, and
-    `until_morning` runs on to the next morning. A full rest restores what `restores` lists and
-    clears the item kinds in `clears`. A deprived character recovers nothing."""
+    """A rest the Warden can call for. It passes `hours` hours, `parts` parts of a day, or `days`
+    days, and `until_morning` runs on to the next morning. A full rest restores what `restores`
+    lists and clears the item kinds in `clears`. A deprived character recovers nothing."""
 
     id: str
+    hours: int
     parts: int
     days: int
     until_morning: bool
@@ -996,11 +997,12 @@ def _load_rests(
             raise ContentError(f"{length_label} must be an object")
         parts = _whole(data, "parts", length_label, 0) if "parts" in data else 0
         days = _whole(data, "days", length_label, 0) if "days" in data else 0
+        hours = _whole(data, "hours", length_label, 0) if "hours" in data else 0
         until = data.get("until")
         if until is not None and until != "morning":
             raise ContentError(f"{length_label}: 'until' must be \"morning\"")
-        if not (parts or days or until):
-            raise ContentError(f"{length_label}: needs 'parts', 'days', or 'until'")
+        if not (hours or parts or days or until):
+            raise ContentError(f"{length_label}: needs 'hours', 'parts', 'days', or 'until'")
         full = data.get("full")
         if not isinstance(full, bool):
             raise ContentError(f"{length_label}: 'full' must be true or false")
@@ -1013,6 +1015,7 @@ def _load_rests(
             raise ContentError(f"{length_label}: 'food' must be true or false")
         loaded[length_id] = RestLength(
             id=length_id,
+            hours=hours,
             parts=parts,
             days=days,
             until_morning=until == "morning",
