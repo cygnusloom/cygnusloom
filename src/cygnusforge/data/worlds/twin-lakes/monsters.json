@@ -26,26 +26,6 @@
   },
   {
     "type": "monster",
-    "id": "bandit-leader",
-    "name": "Bandit Leader",
-    "rules": ["morale-bandits"],
-    "description": "Leader of a bandit band; when killed, the bandits retreat.",
-    "stats": {"hp": 6, "str": 13, "dex": 14, "wil": 13},
-    "armor": 2,
-    "attacks": {"long sword": "1d10"}
-  },
-  {
-    "type": "monster",
-    "id": "bandits",
-    "name": "Bandits",
-    "rules": ["morale-bandits"],
-    "description": "Common bandits who test Morale using the leader's WIL and retreat if their leader dies. One carries a short bow.",
-    "stats": {"hp": 4, "str": 12, "dex": 12, "wil": 9},
-    "armor": 1,
-    "attacks": {"sword": "1d6", "short bow": "1d6"}
-  },
-  {
-    "type": "monster",
     "id": "suraru",
     "name": "Suraru",
     "description": "Bipedal reptilian, birthed from large fungal growths. Has perfect vision even in complete darkness. Fiercely loyal to its Imperator; if the Imperator dies, it flees to prepare a new breeding sac.",

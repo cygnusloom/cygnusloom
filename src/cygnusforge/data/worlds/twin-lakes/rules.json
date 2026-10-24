@@ -1,12 +1,6 @@
 [
   {
     "type": "rule",
-    "id": "morale-bandits",
-    "important": true,
-    "text": "When testing Morale, save using the leader's WIL. If their leader is killed, the bandits will retreat."
-  },
-  {
-    "type": "rule",
     "id": "night-cat-attack",
     "text": "The target must make a DEX save or take damage directly to STR."
   },

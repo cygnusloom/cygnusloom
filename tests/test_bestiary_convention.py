@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import replace
 
 from fastapi.testclient import TestClient
 
@@ -60,15 +59,14 @@ def test_a_group_member_at_the_pc_location_brings_its_rules(
     client_factory: Callable[[], TestClient],
 ):
     app, campaign_id, tools = _fight(client_factory)
-    tools = replace(tools, monsters={**tools.monsters, **TWIN_LAKES.monsters})
-    tools.create_monster("Bandits", YARD)
+    tools.create_monster("Bandit", YARD)
     state = _state(app, campaign_id)
-    bandits = state.named("Bandits")
-    assert bandits is not None
-    assert "morale-bandits" in bandits.rules
+    bandit = state.named("Bandit")
+    assert bandit is not None
+    assert "bandit-loyal" in bandit.rules
     rules = {**RULE_SET.rules, **TWIN_LAKES.rules, **RULE_SET.attached_rules}
     text = present_rules_text(state, rules)
-    assert "- morale-bandits (from Bandits):" in text
+    assert "- bandit-loyal (from Bandit):" in text
 
 
 def test_a_monster_present_brings_its_bullet_rules(client_factory: Callable[[], TestClient]):

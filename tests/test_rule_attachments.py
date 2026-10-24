@@ -58,7 +58,6 @@ def test_twin_lakes_monsters_attach_their_module_rules():
     monsters = LIBRARY.world_content("twin-lakes", "cairn2e").monsters
     assert monsters["night-cat"].rules == ("night-cat-attack", "night-cat-critical-damage")
     assert monsters["suraru-imperator"].rules == ("suraru-imperator-critical-damage",)
-    assert monsters["bandits"].rules == ("morale-bandits",)
 
 
 def test_a_monster_made_from_a_statblock_brings_its_rules(client_factory: Callable[[], TestClient]):
