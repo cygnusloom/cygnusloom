@@ -208,3 +208,32 @@ def test_a_group_hit_triggers_no_morale_check(client_factory):
     result = replace(tools, rng=Rolls(3)).player_attack("Swarm", "Sword", modifier="impaired")
     assert "morale" not in result
     assert _morale(app, campaign_id) == {}
+
+
+def _bandit(tools, name: str, detachment: bool | None) -> dict:
+    return tools.create_monster(
+        name, YARD, description="A bandit.", template="bandit", detachment=detachment
+    )
+
+
+def test_a_bandit_is_an_individual_unless_the_gm_runs_it_as_a_detachment(client_factory):
+    _, _, tools = _fight(client_factory)
+    assert _bandit(tools, "Ned", None)["detachment"] is False
+    assert _bandit(tools, "Band", True)["detachment"] is True
+    assert _bandit(tools, "Lone", False)["detachment"] is False
+
+
+def test_a_bandit_run_as_a_detachment_is_refused_a_normal_attack(client_factory):
+    _, _, tools = _fight(client_factory)
+    _bandit(tools, "Band", True)
+    tools.add_participant("Band", side="foes")
+    with pytest.raises(InvalidInput, match="must be impaired"):
+        tools.player_attack("Band", "Sword")
+
+
+def test_a_bandit_run_as_an_individual_takes_a_normal_attack(client_factory):
+    _, _, tools = _fight(client_factory)
+    _bandit(tools, "Ned", None)
+    tools.add_participant("Ned", side="foes")
+    result = tools.player_attack("Ned", "Sword")
+    assert result["target"] == "Ned"

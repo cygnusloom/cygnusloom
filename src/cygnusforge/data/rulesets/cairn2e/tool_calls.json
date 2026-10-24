@@ -108,6 +108,10 @@
         "force": {
           "type": "boolean",
           "description": "Set true only to create a custom creature under the name of a published statblock. Without it, such a name takes the statblock and refuses stats, armor, or attacks."
+        },
+        "detachment": {
+          "type": "boolean",
+          "description": "Set true to run this creature as a detachment (a group of four or more, such as bandits or gnolls), so Blast and morale treat it as one group. Set false to run it as one individual. Leave it out to use the statblock's own setting; most statblocks are individuals."
         }
       },
       "required": [

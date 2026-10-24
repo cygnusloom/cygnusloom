@@ -335,6 +335,20 @@ def test_location_and_character_names_are_unique(client_factory: Callable[[], Te
     assert "error" in error
 
 
+def test_a_place_cannot_repeat_an_existing_one_under_an_article(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    _, campaign_id = _campaign_id(client_factory)
+    error = _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "The Mossbell Hollow", "description": "Again."},
+    )
+    assert "error" in error
+    assert "discover_location" in error["error"]
+
+
 def test_npc_character_values_come_from_the_lookup(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):

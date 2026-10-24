@@ -716,6 +716,7 @@ class WorldTools:
         armor: int | None = None,
         attacks: Sequence[Mapping[str, Any]] | None = None,
         force: bool = False,
+        detachment: bool | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return create_monster(
@@ -732,6 +733,7 @@ class WorldTools:
                 attacks,
                 armor_max=self.combat.armor_max if self.combat else 0,
                 force=force,
+                detachment=detachment,
             )
 
     def search_monster(self, query: str) -> dict[str, list[dict[str, Any]]]:
@@ -1096,6 +1098,7 @@ def create_location(
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_NAME)
     _ensure_free_name(state, name)
+    _ensure_no_same_place(state, name)
     text = bounded_text(description, "description", MAX_TEXT)
     if not isinstance(discovered, bool):
         raise InvalidInput("discovered must be true or false")
@@ -1301,10 +1304,12 @@ def create_monster(
     attacks: Sequence[Mapping[str, Any]] | None,
     armor_max: int = 0,
     force: bool = False,
+    detachment: bool | None = None,
 ) -> dict[str, Any]:
     """An NPC built from a statblock. A template gives the starting values, and any value given
     replaces it. Without a template, a name that matches a statblock uses it and takes no values
-    of its own, unless force is set."""
+    of its own, unless force is set. A detachment flag overrides the statblock's group setting;
+    without it, the statblock decides."""
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_NAME)
     _ensure_free_name(state, name)
@@ -1355,7 +1360,7 @@ def create_monster(
         attacks=attack_map,
         attack_flags=flag_map,
         creature=base.name if base else "",
-        large_group=bool(base and base.large_group),
+        large_group=(detachment if detachment is not None else bool(base and base.large_group)),
         rules=list(base.rules) if base else [],
     )
     record(db, campaign_id, event)
@@ -1369,6 +1374,7 @@ def create_monster(
         "armor": armor_value,
         "attacks": attack_map,
         "attack_flags": flag_map,
+        "detachment": event.large_group,
     }
 
 
@@ -2244,6 +2250,23 @@ def _check_sheet_text(sheet: Sheet) -> None:
 def _ensure_free_name(state: CampaignState, name: str) -> None:
     if state.named(name) is not None:
         raise InvalidInput(f"the name {name!r} is already used by a location or character")
+
+
+def _ensure_no_same_place(state: CampaignState, name: str) -> None:
+    """A new place may not repeat an existing one under a different article, such as "The Farming
+    Path" for "Farming Path"; discover_location reveals the existing place instead."""
+    bare = _without_article(name)
+    for place in state.places.values():
+        if _without_article(place.name) == bare:
+            raise InvalidInput(
+                f"there is already a location called {place.name!r}; "
+                "use discover_location to reveal it"
+            )
+
+
+def _without_article(name: str) -> str:
+    key = name_key(name)
+    return key.removeprefix("the ")
 
 
 def _place_named(state: CampaignState, name: str) -> Place:
