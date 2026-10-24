@@ -16,6 +16,11 @@
   },
   {
     "type": "prompt",
+    "id": "wilderness_action",
+    "text": "While the party is out in the wild, call wilderness_action once per watch with the Wilderness Action the party takes: explore, supply, or make_camp. The call rolls the weather and the events and spends the watch, so narrate its result. Never call it inside a dungeon."
+  },
+  {
+    "type": "prompt",
     "id": "dungeon_cycle",
     "text": "Call dungeon_cycle only while the party is inside a dungeon, when it spends more than one cycle in one place, moves quickly, enters a new area, or makes noise. Never call dungeon_cycle during overland travel. Call roll_reaction for an NPC's reaction that is not obvious."
   },

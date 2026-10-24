@@ -834,6 +834,7 @@ def test_bundled_cairn_prompts_and_cap_are_read():
         "relic_recharge",
         "combat_speech",
         "armor_glancing_blows",
+        "wilderness_action",
         "dungeon_cycle",
         "surrender",
         "group_break",

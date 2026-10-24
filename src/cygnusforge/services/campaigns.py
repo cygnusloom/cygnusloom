@@ -327,6 +327,7 @@ def create_campaign(
             monsters={**library.rule_sets[rule_set].monsters, **content.monsters},
             plus=library.rule_sets[rule_set].plus,
             npc_hp=library.rule_sets[rule_set].npc_hp,
+            wilderness=library.rule_sets[rule_set].wilderness,
         )
         db.refresh(campaign)
         return campaign
@@ -1007,6 +1008,7 @@ def _tool_context(
         plus=rule_set.plus,
         npc_hp=rule_set.npc_hp,
         travel=rule_set.travel,
+        wilderness=rule_set.wilderness,
     )
 
     async def check_new_location(name: str) -> None:

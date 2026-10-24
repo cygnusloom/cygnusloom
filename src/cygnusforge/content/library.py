@@ -96,10 +96,12 @@ class NpcTemplate:
 
 @dataclass(frozen=True)
 class WorldStart:
-    """Where a new campaign's player character begins, and the hooks that bring them there."""
+    """Where a new campaign's player character begins, and the hooks that bring them there. The
+    season is optional; None means the rule set's starting season."""
 
     location: str
     hooks: str
+    season: str | None = None
 
 
 @dataclass(frozen=True)
@@ -178,6 +180,42 @@ class Travel:
     modes: Mapping[str, TravelMode]
     default_leg_minutes: int
     default_leg_note: str
+
+
+@dataclass(frozen=True)
+class WildernessAction:
+    """A Wilderness Action a party member can choose once per watch, such as Travel or Make Camp."""
+
+    id: str
+    name: str
+    text: str
+    # The mechanic the engine applies: "supply" finds rations, "make_camp" sets camp. None when
+    # the action has no mechanic beyond its text.
+    effect: str | None = None
+
+
+WILDERNESS_EFFECTS = ("supply", "make_camp")
+
+
+@dataclass(frozen=True)
+class Wilderness:
+    """The wilderness procedure: seasons and weather, the Wilderness Events table, the lost odds
+    by path, and the actions. Dice tables it names are in the rule set's dice tables."""
+
+    seasons: tuple[str, ...]
+    start_season: str
+    season_days: int
+    night_event_rolls: int
+    # A run of this many weather results in a row, of catastrophe_weather, becomes catastrophe_result.
+    catastrophe_streak: int
+    catastrophe_weather: str
+    catastrophe_result: str
+    # Path id to the number of d6 faces that mean the party is lost. Zero means never lost.
+    lost_on: Mapping[str, int]
+    actions: Mapping[str, WildernessAction]
+    events_table: str
+    # Season to the dice table that rolls its weather.
+    weather_tables: Mapping[str, str]
 
 
 @dataclass(frozen=True)
@@ -587,6 +625,8 @@ class RuleSet:
     sentence_cap: int | None = None
     # How fast travel goes, or None when the rule set does not charge time for travel.
     travel: Travel | None = None
+    # The wilderness procedure, or None when the rule set has none.
+    wilderness: Wilderness | None = None
     # Encounter-map content, by id: ground, objects that stand on it, and starter maps.
     terrain: Mapping[str, EncounterTerrain] = field(default_factory=dict)
     encounter_objects: Mapping[str, EncounterObject] = field(default_factory=dict)
@@ -709,7 +749,12 @@ def _load_world_start(
     location = required_text(start, "location", start_label)
     if location not in location_ids:
         raise ContentError(f"{start_label} names unknown location {location!r}")
-    return WorldStart(location=location, hooks=required_text(start, "hooks", start_label))
+    season = None
+    if "season" in start:
+        season = required_text(start, "season", start_label)
+    return WorldStart(
+        location=location, hooks=required_text(start, "hooks", start_label), season=season
+    )
 
 
 def _has_statblock(data: Mapping[str, Any]) -> bool:
@@ -909,6 +954,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     dice_tables = {
         d.id: _load_dice_table(d, template) for d in definitions if d.type == "dice_table"
     }
+    wilderness = _load_wilderness(definitions, dice_tables, template)
     for name in REQUIRED_TABLES:
         if name not in tables:
             raise ContentError(f"{template}: missing table {name!r}")
@@ -1010,6 +1056,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         terrain=terrain,
         encounter_objects=encounter_objects,
         encounter_templates=encounter_templates,
+        wilderness=wilderness,
     )
 
 
@@ -1041,6 +1088,78 @@ def _load_travel(definitions: list[Definition], template: str) -> Travel | None:
         modes=modes,
         default_leg_minutes=_whole(default, "minutes", f"{label}: default_leg", 1),
         default_leg_note=required_text(default, "note", f"{label}: default_leg"),
+    )
+
+
+def _load_wilderness(
+    definitions: list[Definition], dice_tables: Mapping[str, DiceTable], template: str
+) -> Wilderness | None:
+    definition = _single_optional(definitions, "wilderness", template)
+    if definition is None:
+        return None
+    data = definition.data
+    label = f"{template}: wilderness {definition.id}"
+    seasons = _names(data, "seasons", label)
+    if not seasons or len(set(seasons)) != len(seasons):
+        raise ContentError(f"{label}: 'seasons' must be a non-empty list of distinct names")
+    start_season = required_text(data, "start_season", label)
+    if start_season not in seasons:
+        raise ContentError(f"{label}: 'start_season' {start_season!r} is not one of 'seasons'")
+    lost_on_data = data.get("lost_on")
+    if not isinstance(lost_on_data, Mapping):
+        raise ContentError(f"{label}: 'lost_on' must map path ids to whole numbers from 0 to 6")
+    lost_on = {}
+    for path, faces in lost_on_data.items():
+        if not isinstance(faces, int) or isinstance(faces, bool) or not 0 <= faces <= 6:
+            raise ContentError(f"{label}: 'lost_on' {path!r} must be a whole number from 0 to 6")
+        lost_on[path] = faces
+    actions_data = data.get("actions")
+    if not isinstance(actions_data, Mapping) or not actions_data:
+        raise ContentError(f"{label}: 'actions' must map action ids to objects")
+    actions = {}
+    for action_id, action in actions_data.items():
+        action_label = f"{label}: action {action_id!r}"
+        if not isinstance(action, Mapping):
+            raise ContentError(f"{action_label} must be an object")
+        effect = action.get("effect")
+        if effect is not None and effect not in WILDERNESS_EFFECTS:
+            raise ContentError(
+                f"{action_label}: 'effect' must be one of {', '.join(WILDERNESS_EFFECTS)}"
+            )
+        actions[action_id] = WildernessAction(
+            id=action_id,
+            name=required_text(action, "name", action_label),
+            text=required_text(action, "text", action_label),
+            effect=effect,
+        )
+    effects = [a.effect for a in actions.values() if a.effect is not None]
+    if len(set(effects)) != len(effects):
+        raise ContentError(f"{label}: each 'effect' may be given to only one action")
+    events_table = required_text(data, "events_table", label)
+    if events_table not in dice_tables:
+        raise ContentError(f"{label}: 'events_table' names unknown dice table {events_table!r}")
+    weather_data = data.get("weather_tables")
+    if not isinstance(weather_data, Mapping) or set(weather_data) != set(seasons):
+        raise ContentError(f"{label}: 'weather_tables' must have exactly one entry per season")
+    weather_tables = {}
+    for season, table in weather_data.items():
+        if not isinstance(table, str) or table not in dice_tables:
+            raise ContentError(
+                f"{label}: 'weather_tables' {season!r} names unknown dice table {table!r}"
+            )
+        weather_tables[season] = table
+    return Wilderness(
+        seasons=seasons,
+        start_season=start_season,
+        season_days=_whole(data, "season_days", label, 1),
+        night_event_rolls=_whole(data, "night_event_rolls", label, 1),
+        catastrophe_streak=_whole(data, "catastrophe_streak", label, 1),
+        catastrophe_weather=required_text(data, "catastrophe_weather", label),
+        catastrophe_result=required_text(data, "catastrophe_result", label),
+        lost_on=lost_on,
+        actions=actions,
+        events_table=events_table,
+        weather_tables=weather_tables,
     )
 
 

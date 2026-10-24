@@ -628,3 +628,58 @@ Verified matches (no gap): the Night Cat, Annafranax, Suraru, Reeve Trellis, Ald
 Triage decisions to record (user answers, not yet built):
 - DECIDED: The "show hidden events" control moves into the model settings dialog.
 - DECIDED: Hovering a terrain cell shows the terrain name and its movement cost.
+
+## Wilderness procedure (tracker: wilderness cycle; decided, not yet built)
+
+Source: Player's Guide, procedures page, "Wilderness Exploration" (the Stone Forest's "Wilderness Events table, pg. 78" is this table). Warden's Guide wilderness page has only the worked example.
+
+User decisions:
+- Scope: everything. The Wilderness Events roll, the Wilderness Actions, and the elements (night, sleep, light, weather).
+- Design: ruleset data. Actions, tables, the lost roll, and weather live in the cairn2e JSON, and the engine reads them generically. No Cairn-specific service with hard-coded ids (unlike `services/dungeon.py`).
+- Travel: switch to the book's watch model. Path, terrain, and weather penalties add watches. This replaces the minute-based leg, so the accepted 56-minute explanation and the minute charge change.
+- Events are rolled by the engine after each overland Wilderness Action, the same way the dungeon cycle is triggered. `dungeon_cycle` stays for dungeons only.
+
+Book rules to build (from the Player's Guide procedures page):
+- Watches: three per day (morning, afternoon, night). Each character chooses one Wilderness Action per watch. A split party is treated as independent groups.
+- Travel duration: watches. Path penalty: roads none, trails +1 watch, wilderness +2 watches. Path distance: short +1, medium +2, long +3. Terrain: Easy none, Tough +1, Perilous +2. Vast terrain up to +2. Weather adds per step. A pair of penalties sums.
+- Lost: Path odds are roads none, trails 2-in-6, wilderness 3-in-6. Roll 1d6 after each Wilderness Action. A lost party must spend an action to recover.
+- Wilderness Events, d6: 1 Encounter (roll the terrain or location table, then reactions), 2 Sign, 3 Environment (weather or terrain shift), 4 Loss (rations, tools, time, or effort), 5 Exhaustion (a barrier that costs an extra action or Fatigue), 6 Discovery (food, treasure, or resources; the Warden may reveal the area's main feature instead).
+- Night travel: the Warden rolls the Events table twice. Night travel is far slower and more treacherous.
+- Sleep: the third watch is reserved for Make Camp. Skipping it adds a Fatigue to each member and makes them deprived. Travel while sleep-deprived raises terrain Difficulty by one step.
+- Make Camp: each member and mount consumes a Ration. Members who rest remove all Fatigue.
+- Light: torches light 40 ft, a torch lasts 3 uses, a lantern is refillable with an oil can (6 uses). Without light, panic.
+- Supply: hunting, fishing, or foraging yields 1d4 Rations (3 uses each). The bounty die grows with party size (1d4, 1d6, up to 1d12).
+- Weather: rolled daily by season (spring, summer, fall, winter) on a d6 table: Nice, Fair, Unpleasant, Inclement, Extreme, Catastrophic. Two Extremes in a row make it Catastrophic. Unpleasant adds a Fatigue or a watch. Inclement adds a Fatigue or +1 watch, plus a terrain step. Extreme adds a Fatigue, +1 watch, and a terrain step. Catastrophic: most parties cannot travel.
+
+Decided (user, terrain source): travel path and terrain difficulty can be authored in the world data. Where the world data has none, the AI GM derives them and supplies them when it travels the party. Both paths feed the same watch calculation.
+
+Clock fact: `clock.json` already has three parts (morning, afternoon, night) of 8 hours each. Those map directly onto the book's three watches, so no clock change is needed.
+
+Decided (user, needs): track all the book's needs. Rations and torches are items with uses (the existing `ItemUsesSet` mechanism). Fatigue is the existing inventory penalty item (`penalty_item: fatigue`). Sleep is the existing need (`need.json`). No new engine counters.
+
+Decided (user, season): the campaign gets a season (Spring, Summer, Fall, Winter), set at the start and advanced by the clock. Weather uses the current season.
+
+Decided (user, season length): 90 days per season.
+
+Gaps to resolve before building (ask the user):
+- None.
+
+### Design (decided; build in three phases, each live-checked and committed)
+
+Book facts checked against the Player's Guide procedures page (Wilderness Exploration). Actions: Travel, Explore, Supply, Make Camp. Each watch is one cycle: one action per character, then one Wilderness Events roll (two at night). Travel also rolls 1d6 for lost (roads never, trails on 1-2, wilderness on 1-3). Weather is rolled once a day by season. Weather rows: Nice, Fair, Unpleasant, Inclement, Extreme, Catastrophic (two Extremes in a row).
+
+Ruleset data (cairn2e, all generic in the engine):
+- New content type `wilderness` (file `wilderness.json`): `seasons` (spring, summer, fall, winter in order), `season_days` (90), `night_event_rolls` (2), `catastrophe_streak` (2), `lost_on` by path (roads 0, trails 2, wilderness 3 faces of d6), and the four Wilderness Actions with their text (travel, explore, supply, make_camp).
+- Dice tables in `tables.json`: `wilderness_events` (d6: Encounter, Sign, Environment, Loss, Exhaustion, Discovery, with text). Weather is one d6 table per season: `weather_spring`, `weather_summer`, `weather_fall`, `weather_winter`.
+- Start season: a world's start data may set `season`. The default is spring. The season for a day is derived from the day count: `seasons[(start + (day-1) // season_days) % 4]`. No stored season state beyond the start.
+
+Engine (new `services/wilderness.py`, generic, reads the `Wilderness` dataclass):
+- `roll_weather`: once per in-game day, lazily, on the first wilderness action or travel of that day. Stores the day's weather, and counts consecutive Extremes to make Catastrophic.
+- `wilderness_action(action, reason, ...)`: travel and explore return results. Supply rolls 1d4 rations, with the die growing with party size (1d4, 1d6, up to 1d12). Make Camp uses one Ration per member and clears Fatigue. Make Camp is the night watch.
+- Events and lost are logged as events (`WildernessEventRolled`, `WeatherRolled`, `LostRolled`, `SupplyGathered`, `CampMade`). New event fields have defaults, and the HIDDEN_KINDS test must still pass.
+- Registered in `rules/cairn2e.py` and exposed through the tool schemas in `tool_calls.json`. The prompt text says which tool to use for which action, and the dungeon-only restriction stays.
+
+Phases:
+- W1: calendar, weather, the four actions, the events roll, and the Make Camp / Supply rules. No change to travel yet.
+- W2: travel as watches. Replace `_travel_minutes` and `_charge_travel` with watch penalties (path, distance, terrain, weather, vast, deprivation). Each watch of travel is one cycle: a lost roll, then an events roll (two at night). Path, terrain, and distance come from the world data where authored, otherwise the GM passes them in. The clock advances by watches (parts, eight hours each). The minute-based leg is removed for overland travel.
+- W3: consumables. Torches (3 uses) and lanterns (oil can, 6 uses) lose a use each night watch, with no light causing panic. Rations are consumed by Make Camp (PC and hirelings). Fatigue uses the existing penalty item.

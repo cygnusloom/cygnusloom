@@ -97,6 +97,10 @@ def dungeon_cycle(triggers: list[str], reason: str, ctx: ToolContext) -> dict[st
     return ctx.world.dungeon_cycle(triggers, reason)
 
 
+def wilderness_action(action: str, reason: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.wilderness_action(action, reason)
+
+
 def roll_reaction(reason: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.roll_reaction(reason)
 

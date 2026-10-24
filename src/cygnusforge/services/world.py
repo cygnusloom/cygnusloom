@@ -48,6 +48,7 @@ from cygnusforge.content.library import (
     RestLength,
     ShopItem,
     Travel,
+    Wilderness,
     WorldTemplate,
 )
 from cygnusforge.rules.context import brief
@@ -60,6 +61,7 @@ from cygnusforge.services import magic as magic_service
 from cygnusforge.services import market as market_service
 from cygnusforge.services import needs as needs_service
 from cygnusforge.services import objects as objects_service
+from cygnusforge.services import wilderness as wilderness_service
 from cygnusforge.services.attacks import ATTACK_FLAGS
 from cygnusforge.services.common import (
     InvalidInput,
@@ -100,6 +102,7 @@ from cygnusforge.services.events import (
     OpeningStarted,
     PcAdded,
     Place,
+    SeasonSet,
     TravelCharged,
     WorldObject,
     defeat_status,
@@ -230,6 +233,8 @@ class WorldTools:
     npc_hp: Mapping[str, int] = field(default_factory=dict)
     # The rule set's travel modes and default leg, or None when it does not charge travel time.
     travel: Travel | None = None
+    # The rule set's wilderness calendar, weather, and Wilderness Actions, or None when it has none.
+    wilderness: Wilderness | None = None
 
     def roll_tables(self, tables: list[str]) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -513,6 +518,41 @@ class WorldTools:
             return dungeon_cycle_service(
                 db, self.campaign_id, triggers, reason, self.dice_tables, self.rng, plus=self.plus
             )
+
+    def wilderness_action(self, action: str, reason: str) -> dict[str, Any]:
+        """Take a Wilderness Action for the current watch, then spend that watch. The action rolls
+        the day's weather and the events; the last part of the day counts as night."""
+        wilderness = _required(self.wilderness, "wilderness")
+        clock_rules = _required(self.clock_rules, "time")
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            day = state.clock.day
+            night = state.clock.part == len(clock_rules.parts) - 1
+            season = wilderness_service.season_for_day(
+                wilderness, state.start_season or wilderness.start_season, day
+            )
+            party_size = sum(
+                1 for c in state.characters.values() if c.kind == PC_KIND and not c.dead
+            )
+            result = wilderness_service.wilderness_action(
+                db,
+                self.campaign_id,
+                action,
+                reason,
+                wilderness,
+                self.dice_tables,
+                self.rng,
+                plus=self.plus,
+                day=day,
+                season=season,
+                party_size=party_size,
+                night=night,
+            )
+        with session_scope(self.engine) as db:
+            result["clock"] = clock_service.advance_time(
+                db, self.campaign_id, clock_rules, self.need, self.inventory, days=0, parts=1
+            )
+        return result
 
     def roll_reaction(self, reason: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -988,10 +1028,16 @@ def seed_campaign(
     monsters: Mapping[str, MonsterTemplate],
     plus: str,
     npc_hp: Mapping[str, int],
+    wilderness: Wilderness | None = None,
 ) -> None:
     """Record a campaign's places and the world's NPCs as events. The player character is made
     later, by `create_player_character`. An NPC that names a statblock takes its stats, and an
-    NPC with an HP tier and no statblock takes that tier's HP."""
+    NPC with an HP tier and no statblock takes that tier's HP. A rule set with a wilderness
+    calendar also records the season the campaign starts in."""
+    if wilderness is not None:
+        requested = world.start.season if world.start is not None else None
+        season = wilderness_service.start_season_for(wilderness, requested)
+        record(db, campaign_id, SeasonSet(season=season))
     # A place can be declared before the place it is inside, so every name is known first.
     names = {spot.id: spot.name for spot in world.locations}
     for spot in world.locations:

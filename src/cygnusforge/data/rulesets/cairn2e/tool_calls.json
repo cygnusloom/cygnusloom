@@ -572,6 +572,36 @@
   },
   {
     "type": "tool_call",
+    "id": "wilderness_action",
+    "name": "wilderness_action",
+    "python_module": "cairn2e",
+    "function": "wilderness_action",
+    "description": "Take a Wilderness Action for the party's current watch, while it is out in the wild. Choose explore to search a large area for hidden features, supply to hunt, fish, or forage for Rations, or make_camp to set up camp, which consumes a Ration for each member and removes Fatigue from members who rest. The engine rolls the day's weather and the Wilderness Events (twice at night) and then spends one watch. Narrate the result. Do not use it inside a dungeon.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "explore",
+            "supply",
+            "make_camp"
+          ],
+          "description": "The Wilderness Action the party takes this watch."
+        },
+        "reason": {
+          "type": "string",
+          "description": "A short note on what the party is doing, for the log."
+        }
+      },
+      "required": [
+        "action",
+        "reason"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "dungeon_cycle",
     "name": "dungeon_cycle",
     "python_module": "cairn2e",

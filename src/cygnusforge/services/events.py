@@ -361,6 +361,10 @@ class CampaignState:
     rests: list[RestRecord] = field(default_factory=list)
     # Travel minutes not yet a whole hour on the clock. They carry over to the next move.
     travel_minutes: int = 0
+    # The day of the last weather roll, and how many catastrophe weather results in a row came before it.
+    weather_day: int | None = None
+    weather_streak: int = 0
+    start_season: str | None = None
 
     def named(self, name: str) -> Place | Character | None:
         key = name_key(name)
@@ -1787,6 +1791,127 @@ class ReactionRolled(GameEvent):
         return f"Reaction ({self.reason}): rolls {self.roll}, {self.band}."
 
 
+def _why(reason: str) -> str:
+    return f" ({reason})" if reason else ""
+
+
+@dataclass(frozen=True)
+class WeatherRolled(GameEvent):
+    """A roll on the weather table of the season. `weather` is the catastrophe result when a run
+    of catastrophe weather reached the streak; `catastrophe` says so, and `extreme` says the roll
+    itself landed on the catastrophe weather."""
+
+    kind: ClassVar[str] = "wilderness.weather_rolled"
+
+    day: int
+    season: str
+    roll: int
+    weather: str
+    catastrophe: bool = False
+    extreme: bool = False
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.weather_day = self.day
+        state.weather_streak = (
+            state.weather_streak + 1 if self.extreme and not self.catastrophe else 0
+        )
+
+    def render(self) -> str:
+        return f"Weather (day {self.day}, {self.season}): rolls {self.roll}, {self.weather}."
+
+
+@dataclass(frozen=True)
+class SeasonSet(GameEvent):
+    """The season the campaign starts in. The wilderness calendar counts its days from here."""
+
+    kind: ClassVar[str] = "wilderness.season_set"
+
+    season: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.start_season = self.season
+
+    def render(self) -> str:
+        return f"The campaign starts in {self.season}."
+
+
+@dataclass(frozen=True)
+class WildernessEventRolled(GameEvent):
+    """A roll on the Wilderness Events table during a Wilderness Action. It does not move the clock."""
+
+    kind: ClassVar[str] = "wilderness.event_rolled"
+
+    action: str
+    roll: int
+    event: str
+    text: str
+    night: bool
+    reason: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        return None
+
+    def render(self) -> str:
+        night = " at night" if self.night else ""
+        return (
+            f"Wilderness event ({self.action}{night}{_why(self.reason)}): "
+            f"rolls {self.roll}, {self.event}. {self.text}"
+        )
+
+
+@dataclass(frozen=True)
+class SupplyGathered(GameEvent):
+    """Rations found by a Supply action. The bounty die has `sides` faces."""
+
+    kind: ClassVar[str] = "wilderness.supply_gathered"
+
+    rations: int
+    sides: int
+    party_size: int
+    reason: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        return None
+
+    def render(self) -> str:
+        return f"Supplies{_why(self.reason)}: found {self.rations} ration(s) on a d{self.sides}."
+
+
+@dataclass(frozen=True)
+class CampMade(GameEvent):
+    kind: ClassVar[str] = "wilderness.camp_made"
+
+    party_size: int
+    reason: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        return None
+
+    def render(self) -> str:
+        return f"Camp made{_why(self.reason)} for a party of {self.party_size}."
+
+
+@dataclass(frozen=True)
+class LostRolled(GameEvent):
+    """A lost check on a path. `roll` is None when the path can never lose the party."""
+
+    kind: ClassVar[str] = "wilderness.lost_rolled"
+
+    path: str
+    roll: int | None
+    lost: bool
+    reason: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        return None
+
+    def render(self) -> str:
+        if self.roll is None:
+            return f"Path {self.path}{_why(self.reason)}: never lost."
+        verdict = "lost" if self.lost else "not lost"
+        return f"Path {self.path}{_why(self.reason)}: rolls {self.roll}, {verdict}."
+
+
 @dataclass(frozen=True)
 class ArmorSet(GameEvent):
     kind: ClassVar[str] = "combat.armor_set"
@@ -2436,6 +2561,13 @@ HIDDEN_KINDS: dict[str, bool] = {
     "dungeon.event": True,
     "dice.tables_rolled": True,
     "reaction.rolled": True,
+    # Wilderness rolls are GM-only too, like the Dungeon Events table.
+    "wilderness.weather_rolled": True,
+    "wilderness.season_set": True,
+    "wilderness.event_rolled": True,
+    "wilderness.supply_gathered": True,
+    "wilderness.camp_made": True,
+    "wilderness.lost_rolled": True,
     # Debug edits.
     "combat.debug_stat_set": True,
     "combat.invincibility_set": True,
