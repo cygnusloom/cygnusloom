@@ -199,7 +199,9 @@
     "id": "temple-of-the-fungal-lizards",
     "name": "Temple of the Fungal Lizards",
     "description": "A dark complex, built as a building-sized ship shaped like a beetle; its entry, reached by the stairs under the Bone Sump mound, is the beetle's \"head.\" Route: the Chamber of Worship (T9) lies deeper in the temple, and a short hallway runs from it to the door at T10a. General information: no light. Sconces with diamond-shaped objects protrude from the corners of each room (see T7, Light Room); they are currently off. The walls and floors are painted blue-black and made from a foreign alloy. They cannot be chipped or broken by mundane weapons, although fire and explosive powders have some effect. Two Surarus roam the temple. They appear on both Encounters and Environmental results from the Cairn 2e Dungeon Events table (not reproduced here).",
-    "discovered": false
+    "discovered": false,
+    "x": 3.4,
+    "y": -0.8
   },
   {
     "type": "location",

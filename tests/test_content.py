@@ -150,7 +150,7 @@ def test_twin_lakes_map_matches_the_module_map():
     assert km("isthmus-town", "dunston") / 4 == pytest.approx(1, abs=0.25)
     assert km("isthmus-town", "white-tower-fens") / 4 == pytest.approx(2, abs=0.25)
     assert km("dunston", "white-tower-fens") / 4 == pytest.approx(2, abs=0.25)
-    assert places["temple-of-the-fungal-lizards"].x is None
+    assert km("temple-of-the-fungal-lizards", "bone-sump") < 1
 
 
 def test_test_fixtures_add_a_hidden_roll_rule_set():

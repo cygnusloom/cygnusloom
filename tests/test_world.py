@@ -1612,7 +1612,7 @@ def test_twin_lakes_map_places_every_module_location_it_has_a_position_for(
         for loc in app.state.content.world_templates["twin-lakes"].locations
         if loc.x is not None
     }
-    assert len(placed) == 11
+    assert len(placed) == 12
     for name in placed:
         _tool(app, campaign_id, "discover_location", {"name": name})
 
