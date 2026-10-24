@@ -137,6 +137,22 @@ def test_bundled_content_loads():
     assert library.world_content("twin-lakes", "cairn2e").monsters
 
 
+def test_twin_lakes_map_matches_the_module_map():
+    """The module's map has no scale bar. It gives travel times instead: Dunston is one hour
+    from Isthmus Town, and the White Tower Fens are two hours from either. At four kilometres
+    an hour on foot, the placed positions must agree with those times."""
+    places = {loc.id: loc for loc in ContentLibrary.load().world_templates["twin-lakes"].locations}
+
+    def km(a: str, b: str) -> float:
+        pa, pb = places[a], places[b]
+        return ((pa.x - pb.x) ** 2 + (pa.y - pb.y) ** 2) ** 0.5
+
+    assert km("isthmus-town", "dunston") / 4 == pytest.approx(1, abs=0.25)
+    assert km("isthmus-town", "white-tower-fens") / 4 == pytest.approx(2, abs=0.25)
+    assert km("dunston", "white-tower-fens") / 4 == pytest.approx(2, abs=0.25)
+    assert places["temple-of-the-fungal-lizards"].x is None
+
+
 def test_test_fixtures_add_a_hidden_roll_rule_set():
     library = content_library()
     assert {"twin-lakes", "testhollow"} <= set(library.world_templates)

@@ -1601,6 +1601,26 @@ def test_update_can_take_a_place_off_the_map_and_keep_it(
     assert "Ashen Ford" not in [m.name for m in view.markers]
 
 
+def test_twin_lakes_map_places_every_module_location_it_has_a_position_for(
+    client_factory: Callable[[], TestClient], app
+):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    placed = {
+        loc.name
+        for loc in app.state.content.world_templates["twin-lakes"].locations
+        if loc.x is not None
+    }
+    assert len(placed) == 11
+    for name in placed:
+        _tool(app, campaign_id, "discover_location", {"name": name})
+
+    view = world.map_view(_state(app, campaign_id))
+    assert {m.name for m in view.markers} == placed
+    assert all(0 <= m.left <= 100 and 0 <= m.top <= 100 for m in view.markers)
+
+
 def test_off_map_cannot_be_combined_with_a_position(client_factory: Callable[[], TestClient], app):
     _, campaign_id = _campaign_id(client_factory)
     ctx = _ctx(app, campaign_id)
