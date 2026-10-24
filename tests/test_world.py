@@ -5,6 +5,7 @@ import json
 import random
 from collections.abc import Callable
 from dataclasses import replace
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -114,6 +115,34 @@ def test_player_character_starts_unplaced(client_factory: Callable[[], TestClien
     assert pc.location is None
     assert "Player character: Ada, not yet placed; place them with move_actor" in (
         world.world_state_text(state, NO_CAMPAIGN)
+    )
+
+
+def test_the_locations_rule_uses_an_authored_route_before_inventing_a_place():
+    import cygnusforge
+
+    path = Path(cygnusforge.__file__).parent / "data/rulesets/core/rule_set.json"
+
+    def find(node: Any) -> dict[str, Any] | None:
+        if isinstance(node, dict):
+            if node.get("id") == "locations":
+                return node
+            for value in node.values():
+                found = find(value)
+                if found:
+                    return found
+        elif isinstance(node, list):
+            for value in node:
+                found = find(value)
+                if found:
+                    return found
+        return None
+
+    rule = find(json.loads(path.read_text(encoding="utf-8")))
+    assert rule is not None
+    assert (
+        "do not invent a corridor, passage, or other place between two places an authored route connects"
+        in rule["text"]
     )
 
 
