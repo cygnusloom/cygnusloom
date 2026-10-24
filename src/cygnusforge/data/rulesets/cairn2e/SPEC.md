@@ -542,3 +542,19 @@ Phase 14 (capstone play-through): the full CAS-1 play-through and any gaps it re
 Unscheduled, needs a book reference or a decision:
 
 - The bonds and omens section, the bibliography, and the game files and tools were not reviewed in detail. Revisit each before its phase.
+
+## Bone Sump live run and bestiary convention (open items)
+
+Decision (user): a monster's description is the book's description text, verbatim. Its mechanic bullets are ALSO added as whole rules, so the GM receives them through "Rules for what is present". Descriptions are never stripped and sentences are never split.
+
+- RESOLVED: all 84 bestiary source entries follow the convention (`monsters.json`: 85 entries including Traitor-Rats). Verification: every source bullet is in the description, and every mechanic bullet is a whole rule. Ghost's description was restored after regeneration. The regeneration dropped 17 fragment rule ids, and none are referenced in `src` or `tests`.
+- OPEN (bestiary): mechanic/flavour calls that were judgement calls: aranea S0, sphinx S0 ("Immune to magic of any kind."), titan S2 (levitate and shape shift), invisible-stalker S0 ("Completely invisible and silent."), lamia S1, and troll S1 (regeneration). Confirm each with the user.
+- OPEN (bestiary): Traitor-Rats is not in the source file (armor 0, description unverified).
+- OPEN (bestiary): Bandit and Gnoll are not flagged as detachments, so their group behavior is unverified.
+- OPEN (bestiary): the Roc has no source statblock.
+- OPEN (bestiary): source discrepancies for Warrior Snail Acolyte, Night Cat, and Boggart/Pixie/Will-o-Wisp. Night Cat's ruleset attack is `claws: 1d6+1d6` with no flag, and the Twin Lakes world overrides it with `night-cat-attack`.
+- OPEN (injection): group members (bandits, gnolls) do not yet have a verified path into `present_rules_text`. A regression test is in progress (`tests/test_bestiary_convention.py`).
+- OPEN (live, Bone Sump run): narration runs ahead of `move_actor`. Seen twice. (1) Arrival at Bone Sump was narrated while the engine still had Mara at The Dead Creek Trail. (2) The GM narrated Mara entering T2, the Columbarium, but no move was recorded, and the location panel stayed at Temple of the Fungal Lizards. Decide whether T2 is a sub-location of the Temple, and whether the prompt or tool results should require the move before narrated arrival.
+- OPEN (live): the numbered Temple rooms (t1 to t10b) are already real locations nested under the Temple (commit 44cdbc6). The T2 failure was the GM narrating the move without calling `move_actor` for `t2-columbarium`, so the engine stayed at the Temple. Fix in the prompt or tool guidance, not the data. The room descriptions are condensed from `files/cas1-transcription.md` (section 4.12) with Route notes added. Decide whether to restore verbatim text, given ISSUE_TRACKER item (i) asks for briefer, non-spoiling descriptions. Also, the GM created the Suraru characters at the Temple rather than in a room.
+- OPEN (live): Giva's second set of directions (Old Mill Road) conflicts with the first (creek toward the Fens). The GM invented "The Dead Creek Trail" as a filler. The user accepted invented fillers only between authored places, but the GM must not invent a route that contradicts the authored one.
+- OPEN (live): the GM created "The Butcher" at Isthmus Town and then removed it with `remove_location`. Check whether invented places should be removed at all.
