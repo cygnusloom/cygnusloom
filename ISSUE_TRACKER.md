@@ -4,15 +4,18 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
 
 # Untriaged Issues
 
-* The "Character Name (You)" above user input should change to be whichever PC (or hireling) was/is acting on that turn.
-* Harden the AI GM against obeying player input when it does not regard the player. The player should only be able to do things that the PC can do; however, if the player insists, the AI GM can act to fix mistakes or change the direction of the story.
-* The world map and encounter map should have terrain/objects/flavor. This will help the AI GM lay out the map, as well as give tactical decisions on each encounter map. For encounters, the AI GM can adjust terrain, add objects as needed to set up the encounter. I think we should have a set of "standard" templates for encounters that are generic enough to fit most situations, and the AI GM can use them as a base if it wants.
-* Icons and graphics - terrain, objects, inventory items, and map tokens should get SVG-art icons to help visually spice up the game.
-* Record pronouns for NPCs so the AI GM doesn't have to guess.
-* Currently everything is shown in the transcript, even items that the player may not know. Add a "GM" flag to events shown in the transcript so they will be hidden unless the player checks a "show hidden events"
-* The twin lakes locations need to be laid out appropriately on the map.
-* Travel should take an appropriate length of time. The GM should have an option to have appropriate story moments or encounters to interrupt travel or rest.
-* Player-facing location descriptions are currently too deep - they should be briefer and not spoil anything.
-* Ensure that narration is actually narrating everything. I sometimes see actions or notes that affect the player only in the event log.
+* Center the world map where the PC is, so locations report their relative distances from them.
+* Add background terrain to the maps.
+* Move the show hidden events checkbox into the model settings dialog; expanded now to not just be model choice but also whether to show hidden events
+* Mousing over terrain shows what kind of terrain it is and what it does somewhere near the map.
 
 # Triaged Issues
+
+Order below is the work order. Each entry lists the decisions made in triage.
+
+2. Hardening against player input: enforced by prompt guidance only. The GM does not obey a player action the PC could not do. If the player insists, the GM may correct the mistake or redirect the story. No engine check.
+3. Terrain, objects, and encounter templates: standard encounter templates live in the ruleset (generic, GM free to adjust). Maps gain terrain and object data that the GM sets. The GM may adjust terrain and add objects for an encounter.
+4. SVG icons: a hand-drawn fixed set stored as data, covering terrain, objects, item types, and map tokens.
+8. Travel time: each leg takes time from its route. Each ruleset has a reference table of travel rates (for example paved road, rough terrain, vehicle, animal). The GM may interrupt travel or rest with a story moment or encounter.
+9. Briefer, non-spoiling location descriptions: player-facing text is shortened. GM-only detail stays out of it.
+10. Narration covers everything: enforced by prompt guidance, the same as item 2.
