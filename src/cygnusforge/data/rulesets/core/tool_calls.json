@@ -105,7 +105,7 @@
     "name": "move_actor",
     "python_module": "core",
     "function": "move_actor",
-    "description": "Move the player character or an NPC to another existing location. Use it when someone travels or is sent somewhere. Travel follows the routes in the location descriptions: send the player character only to a place reached by a route from where they are, and never to a place they have not heard of, unless something forces them there (a trap, a teleporter, or a spell). A forced move discovers the place on arrival. The player character starts unplaced, so on the first turn create the place where the story begins and move the player character there. Moving the player character to a place discovers it. Leave location out to send an NPC into the wind: it is at no location until a later move brings it back. The player character cannot go into the wind. A player character's move takes time, set by the travel argument and the distance; the result reports the minutes charged.",
+    "description": "Move the player character or an NPC to another existing location. Use it when someone travels or is sent somewhere. Travel follows the routes in the location descriptions: send the player character only to a place reached by a route from where they are, and never to a place they have not heard of, unless something forces them there (a trap, a teleporter, or a spell). A forced move discovers the place on arrival. The player character starts unplaced, so on the first turn create the place where the story begins and move the player character there. Moving the player character to a place discovers it. Leave location out to send an NPC into the wind: it is at no location until a later move brings it back. The player character cannot go into the wind. Always give the mode. Use overland for a journey across the wilderness, which takes watches and needs a route. Use in_settlement for a walk within a town or city, which takes minutes at the travel speed. Use in_dungeon for a move through a dungeon or building, which takes no clock time. The result reports the time charged.",
     "travel": true,
     "parameters": {
       "type": "object",
@@ -117,10 +117,28 @@
         "location": {
           "type": "string",
           "description": "The name of the location to move them to. It must already exist. Omit it only to send an NPC into the wind."
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["overland", "in_settlement", "in_dungeon"],
+          "description": "How the move is made: overland (watches across the wilderness, needs a route), in_settlement (minutes at the travel speed), or in_dungeon (no clock time). NPC moves take no clock time whatever the mode."
+        },
+        "route": {
+          "type": "object",
+          "description": "Required for an overland move, and ignored for other modes. Describe the journey. path: the kind of path the party follows (the names the rule set gives). distance: short, medium, or long. terrain: the hardest ground on the route. vast: 0 to 2, how wide and empty the land is. weather_choice: when today's weather is Unpleasant or Inclement, fatigue (each traveller takes Fatigue) or watch (the journey takes one more watch). The names of path, distance, and terrain come from the rule set.",
+          "properties": {
+            "path": {"type": "string"},
+            "distance": {"type": "string"},
+            "terrain": {"type": "string"},
+            "vast": {"type": "integer", "minimum": 0},
+            "weather_choice": {"type": "string", "enum": ["fatigue", "watch"]}
+          },
+          "required": ["path", "distance", "terrain"]
         }
       },
       "required": [
-        "name"
+        "name",
+        "mode"
       ]
     }
   },

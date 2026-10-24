@@ -164,11 +164,21 @@ def test_the_gm_sees_the_places_inside_the_players_location(
         {"name": "Armoury", "description": "Racks.", "parent": "Old Keep"},
     )
     _tool(app, campaign_id, "discover_location", {"name": "Gate Room"})
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Old Keep"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Old Keep"},
+    )
     text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
     assert "Places inside Old Keep: Armoury (not yet discovered), Gate Room (discovered)." in text
 
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Gate Room"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Gate Room"},
+    )
     text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
     assert "Gate Room is inside Old Keep." in text
     assert "Places inside Gate Room" not in text
@@ -322,7 +332,12 @@ def test_gm_creates_a_location_and_an_npc_there(client_factory: Callable[[], Tes
 
 def test_gm_records_npc_pronouns_and_they_replay(client_factory: Callable[[], TestClient], app):
     client, campaign_id = _described_campaign(client_factory)
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Glowcap Ring"},
+    )
     npc = _tool(
         app,
         campaign_id,
@@ -346,7 +361,12 @@ def test_npc_without_pronouns_still_works_and_omits_the_line(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _described_campaign(client_factory)
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Glowcap Ring"},
+    )
     npc = _tool(
         app,
         campaign_id,
@@ -438,7 +458,12 @@ def test_npc_needs_a_known_location(client_factory: Callable[[], TestClient], ap
 
 def test_moving_the_player_changes_the_world_state(client_factory: Callable[[], TestClient], app):
     _, campaign_id = _campaign_id(client_factory)
-    moved = _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
+    moved = _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Glowcap Ring"},
+    )
     assert moved == {"moved": "Ada", "location": "Glowcap Ring"}
     text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
     assert "Player character: Ada, at Glowcap Ring." in text
@@ -449,13 +474,21 @@ def test_moving_needs_a_known_character_and_location(client_factory: Callable[[]
     _, campaign_id = _campaign_id(client_factory)
     assert (
         "no character named 'Nobody'"
-        in _tool(app, campaign_id, "move_actor", {"name": "Nobody", "location": "Glowcap Ring"})[
-            "error"
-        ]
+        in _tool(
+            app,
+            campaign_id,
+            "move_actor",
+            {"mode": "in_settlement", "name": "Nobody", "location": "Glowcap Ring"},
+        )["error"]
     )
     assert (
         "no location named 'Nowhere'"
-        in _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Nowhere"})["error"]
+        in _tool(
+            app,
+            campaign_id,
+            "move_actor",
+            {"mode": "in_settlement", "name": "Ada", "location": "Nowhere"},
+        )["error"]
     )
 
 
@@ -463,15 +496,25 @@ def test_an_npc_can_go_into_the_wind_and_be_brought_back(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _campaign_id(client_factory)
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
-    gone = _tool(app, campaign_id, "move_actor", {"name": "Brin Gallowcap"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Glowcap Ring"},
+    )
+    gone = _tool(
+        app, campaign_id, "move_actor", {"mode": "in_settlement", "name": "Brin Gallowcap"}
+    )
     assert gone == {"moved": "Brin Gallowcap", "location": "in the wind"}
     text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
     assert "NPCs here: none." in text
     assert "NPCs in the wind, at no location: Brin Gallowcap." in text
 
     back = _tool(
-        app, campaign_id, "move_actor", {"name": "Brin Gallowcap", "location": "Glowcap Ring"}
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Brin Gallowcap", "location": "Glowcap Ring"},
     )
     assert back == {"moved": "Brin Gallowcap", "location": "Glowcap Ring"}
     text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
@@ -483,8 +526,13 @@ def test_the_player_character_cannot_go_into_the_wind(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _campaign_id(client_factory)
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
-    error = _tool(app, campaign_id, "move_actor", {"name": "Ada"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Glowcap Ring"},
+    )
+    error = _tool(app, campaign_id, "move_actor", {"mode": "in_settlement", "name": "Ada"})
     assert "cannot go into the wind" in error["error"]
 
 
@@ -527,7 +575,12 @@ def test_the_player_sees_only_what_is_at_their_location(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _described_campaign(client_factory)
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Glowcap Ring"},
+    )
     with _db(app) as db:
         world.add_note(db, campaign_id, "Find the lost key.")
         world.add_note(db, campaign_id, "Ada has a map.", subject="Ada")
@@ -603,7 +656,12 @@ def test_all_at_location_describes_a_place_without_statblocks(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _campaign_id(client_factory)
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Glowcap Ring"},
+    )
     with _db(app) as db:
         world.add_note(db, campaign_id, "The ring hums.", subject="Glowcap Ring")
         world.add_note(db, campaign_id, "Brin owes a debt.", subject="Brin Gallowcap")
@@ -634,7 +692,12 @@ def test_a_defeated_npc_is_marked_as_a_body_where_it_fell(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _campaign_id(client_factory)
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Glowcap Ring"},
+    )
     with _db(app) as db:
         record(db, campaign_id, Harmed(name="Brin Gallowcap", stat="str", taken=0, defeats=True))
         db.commit()
@@ -679,7 +742,12 @@ def test_get_statblock_returns_the_player_or_an_npc_on_request(
 
 def test_statblocks_stay_out_of_the_gm_orientation(client_factory: Callable[[], TestClient], app):
     _, campaign_id = _campaign_id(client_factory)
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Glowcap Ring"},
+    )
     text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
     assert "Stats" not in text
     assert "Brin Gallowcap" in text
@@ -733,7 +801,12 @@ def test_a_location_with_someone_in_it_cannot_be_deleted(
 ):
     _, campaign_id = _campaign_id(client_factory)
     _tool(app, campaign_id, "create_location", {"name": "Test Ledge", "description": "A ledge."})
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Test Ledge"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Test Ledge"},
+    )
     refused = _tool(app, campaign_id, "delete_location", {"name": "Test Ledge"})
     assert "still has Ada there" in refused["error"]
     assert _state(app, campaign_id).named("Test Ledge") is not None
@@ -906,7 +979,12 @@ def test_speak_tool_refuses_an_npc_away_from_the_player(
 
 def test_campaign_page_panels_show_only_the_scene(client_factory: Callable[[], TestClient], app):
     client, campaign_id = _described_campaign(client_factory)
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Glowcap Ring"},
+    )
     with _db(app) as db:
         world.add_note(db, campaign_id, "Find the lost key.")
         world.add_note(db, campaign_id, "Mara sings.", subject="Mossbell Hollow")
@@ -1828,7 +1906,12 @@ def test_the_player_sees_the_summary_not_the_full_description(
         "discover_location",
         {"name": "Glowcap Ring", "summary": "Glowing caps line the ring."},
     )
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Glowcap Ring"},
+    )
     page = client.get(f"/campaigns/{campaign_id}").text
     location = page[page.index('id="panel-location"') : page.index('id="panel-character"')]
     assert "Glowing caps line the ring." in location
@@ -1839,8 +1922,18 @@ def test_the_player_discovers_what_they_visit_but_npcs_do_not(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _campaign_id(client_factory)
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
-    _tool(app, campaign_id, "move_actor", {"name": "Brin Gallowcap", "location": "Spore Bridge"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Glowcap Ring"},
+    )
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Brin Gallowcap", "location": "Spore Bridge"},
+    )
     state = _state(app, campaign_id)
     assert state.named("Glowcap Ring").discovered is True
     assert state.named("Spore Bridge").discovered is False
@@ -1859,7 +1952,12 @@ def test_map_shows_only_discovered_places_with_positions(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _campaign_id(client_factory)
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Mossbell Hollow"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Mossbell Hollow"},
+    )
     view = world.map_view(_state(app, campaign_id))
     assert [place.name for place in view.places] == ["Mossbell Hollow"]
     assert [(m.name, m.label, m.left, m.top, m.here) for m in view.markers] == [
@@ -1908,7 +2006,12 @@ def test_campaign_page_draws_discovered_places_on_the_map(
     client_factory: Callable[[], TestClient], app
 ):
     client, campaign_id = _described_campaign(client_factory)
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Mossbell Hollow"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Mossbell Hollow"},
+    )
     _tool(app, campaign_id, "discover_location", {"name": "Glowcap Ring"})
     page = client.get(f"/campaigns/{campaign_id}").text
 
@@ -1942,7 +2045,12 @@ def test_map_centers_on_the_player_character_and_says_you_are_here(
             "y": -2,
         },
     )
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Far Shore"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Far Shore"},
+    )
     view = world.map_view(_state(app, campaign_id))
     markers = {m.name: m for m in view.markers}
     assert (markers["Far Shore"].left, markers["Far Shore"].top) == (50.0, 50.0)
@@ -1973,7 +2081,12 @@ def test_map_distance_labels_are_measured_from_the_player_character(
         "create_location",
         {"name": "Ridge", "description": "A ridge.", "discovered": True, "x": 5, "y": 1},
     )
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Far Shore"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Far Shore"},
+    )
     view = world.map_view(_state(app, campaign_id))
     assert view.where["Ridge"] == "2 km east, 3 km north"
     assert view.where["Mossbell Hollow"] == "3 km west, 2 km north"
@@ -2000,7 +2113,12 @@ def test_map_centers_on_the_nearest_placed_ancestor(client_factory: Callable[[],
             "parent": "Ashen Ford",
         },
     )
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Ferry Post"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Ferry Post"},
+    )
     view = world.map_view(_state(app, campaign_id))
     assert view.where["Ferry Post"] == "Inside Ashen Ford"
     assert view.where["Mossbell Hollow"] == "2 km west, 3 km south"
@@ -2018,7 +2136,12 @@ def test_map_without_a_placed_ancestor_has_no_distance_labels(
         "create_location",
         {"name": "Hollow Dell", "description": "A dell.", "discovered": True},
     )
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Hollow Dell"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Hollow Dell"},
+    )
     view = world.map_view(_state(app, campaign_id))
     assert view.origin == (50.0, 50.0)
     assert view.where == {"Hollow Dell": "You are here"}

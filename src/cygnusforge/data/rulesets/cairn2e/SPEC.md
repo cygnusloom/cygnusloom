@@ -696,5 +696,21 @@ Engine (new `services/wilderness.py`, generic, reads the `Wilderness` dataclass)
 
 Phases:
 - W1: calendar, weather, the four actions, the events roll, and the Make Camp / Supply rules. No change to travel yet.
-- W2: travel as watches. Replace `_travel_minutes` and `_charge_travel` with watch penalties (path, distance, terrain, weather, vast, deprivation). Each watch of travel is one cycle: a lost roll, then an events roll (two at night). Path, terrain, and distance come from the world data where authored, otherwise the GM passes them in. The clock advances by watches (parts, eight hours each). The minute-based leg is removed for overland travel.
+- W2: travel as watches. Decided design below ("W2 design (decided)"). Overland moves use watches. In-settlement moves keep the minute charge. In-dungeon moves take no clock time.
+
+#### W2 design (decided, user answers)
+
+- `move_actor` (core tool) takes a mandatory `mode` for a player character's move: `overland`, `in_settlement`, or `in_dungeon`. The mode is required, so the GM must always say which kind of move it is. NPC and hireling moves keep no clock time.
+  - `in_settlement`: keeps the minute charge from the `travel` speed table (`on_foot` default) and the straight-line distance, as today.
+  - `in_dungeon`: no clock time. The place moves only.
+  - `overland`: watch-based. The rule set's wilderness rules give the cost. It needs the wilderness rules, else the move is refused.
+- Overland route: `route` object, required for `overland` and refused otherwise. Keys: `path` (roads, trails, wilderness), `distance` (short, medium, long), `terrain` (easy, tough, perilous), `vast` (whole number 0 to 2), `weather_choice` (`fatigue` or `watch`, required on a day whose weather is a choice row). Authored world data for path and terrain is not built yet (open below). For now the GM supplies the route.
+- Watch cost: path penalty + distance penalty + terrain penalty (after terrain steps) + vast + weather watches. Terrain steps come from sleep deprivation (any travelling party member deprived raises the terrain by one step), from weather, and are capped at perilous. A step moves one level up the terrain order (easy, tough, perilous).
+- Each watch of travel is one cycle: a lost roll (path odds), then one Wilderness Events roll (two at night). Each watch advances the clock one part.
+- Lost (no state stored): when a watch rolls lost, the next travel watch in the same move is spent recovering. It counts as a watch but makes no progress. A new move starts fresh.
+- Weather: Unpleasant, Inclement: the GM chooses Fatigue or +1 watch (`weather_choice`). Inclement also adds a terrain step. Extreme adds a Fatigue, +1 watch, and a terrain step, with no choice. Catastrophic: overland travel is refused.
+- The result reports each watch: the lost roll, the events, the weather, the clock, and the progress. The GM narrates the journey.
+- `wilderness_action` with `travel` is refused. Overland travel goes only through `move_actor` with `mode: overland`, because a route is needed. Explore and Supply stay Wilderness Actions. This is an implementation choice, noted for the user's review.
+- Open (not built yet): authored path and terrain in world data (decided in principle: world data where authored, else the GM supplies). No location field exists yet, so this is a follow-up.
+- Assumptions to confirm with the user (not from the book): (a) the Supply die is `min(12, 2 + 2 × party size)`; (b) a Catastrophic day resets the Extreme streak to 0; (c) for a choice row the GM chooses fatigue or watch, and the choice is required, not defaulted; (d) each travel watch rolls one Wilderness Events roll; (e) the start season is spring unless the world start sets `season`.
 - W3: consumables. Torches (3 uses) and lanterns (oil can, 6 uses) lose a use each night watch, with no light causing panic. Rations are consumed by Make Camp (PC and hirelings). Fatigue uses the existing penalty item.

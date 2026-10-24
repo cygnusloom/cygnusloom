@@ -37,6 +37,49 @@
       "summer": "weather_summer",
       "fall": "weather_fall",
       "winter": "weather_winter"
+    },
+    "travel": {
+      "path": {
+        "roads": 0,
+        "trails": 1,
+        "wilderness": 2
+      },
+      "distance": {
+        "short": 1,
+        "medium": 2,
+        "long": 3
+      },
+      "terrain": {
+        "easy": 0,
+        "tough": 1,
+        "perilous": 2
+      },
+      "vast_max": 2,
+      "deprived_terrain_steps": 1,
+      "weather": {
+        "Unpleasant": {
+          "choice": true,
+          "fatigue": 1,
+          "watches": 1,
+          "terrain_steps": 0
+        },
+        "Inclement": {
+          "choice": true,
+          "fatigue": 1,
+          "watches": 1,
+          "terrain_steps": 1
+        },
+        "Extreme": {
+          "choice": false,
+          "fatigue": 1,
+          "watches": 1,
+          "terrain_steps": 1
+        },
+        "Catastrophic": {
+          "choice": false,
+          "travel": false
+        }
+      }
     }
   },
   {

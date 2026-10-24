@@ -297,6 +297,7 @@ def test_night_travel_rolls_the_events_twice(
             party=[],
             night=True,
             give=_no_give,
+            travel_watch=True,
         )
     assert len(result["events"]) == 2
     assert result["events"][0] == {"roll": 2, "event": "Sign", "text": "sign"}
@@ -330,6 +331,7 @@ def test_a_day_watch_travel_rolls_the_events_once(
             party=[],
             night=False,
             give=_no_give,
+            travel_watch=True,
         )
     assert len(result["events"]) == 1
     assert result["effects"] == []
@@ -555,19 +557,13 @@ def test_a_wilderness_action_spends_one_watch(
     assert kinds.count(WildernessEventRolled.kind) == 1
 
 
-def test_the_last_part_of_the_day_is_night_and_rolls_events_twice(
+def test_the_travel_action_is_refused_outside_overland_travel(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     _, campaign_id = _cairn_campaign(client_factory)
     tools = _live_wilderness_tools(app, campaign_id)
-    last = len(CAIRN.clock.parts) - 1
-    with _db(app) as db:
-        state = load_state(db, campaign_id)
-    tools.advance_time(parts=last - state.clock.part)
-    result = tools.wilderness_action("travel", "a night march")
-    assert result["night"] is True
-    assert len(result["events"]) == 2
-    assert _kinds(app, campaign_id).count(WildernessEventRolled.kind) == 2
+    with pytest.raises(InvalidInput, match="move_actor in overland mode"):
+        tools.wilderness_action("travel", "a night march")
 
 
 def test_a_night_watch_that_is_not_travel_rolls_the_events_once(

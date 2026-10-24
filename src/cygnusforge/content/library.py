@@ -255,6 +255,33 @@ class Wilderness:
     weather_tables: Mapping[str, str]
     # Run for every Wilderness Action, before the action's own hooks.
     hooks: WildernessHooks
+    travel: WildernessTravel | None = None
+
+
+@dataclass(frozen=True)
+class WeatherPenalty:
+    """What a weather result does to overland travel."""
+
+    # True: the GM picks one of fatigue or watches. False: both apply.
+    choice: bool = False
+    fatigue: int = 0
+    watches: int = 0
+    terrain_steps: int = 0
+    # False refuses overland travel.
+    travel: bool = True
+
+
+@dataclass(frozen=True)
+class WildernessTravel:
+    """Overland travel: the cost of each path, distance, and terrain, and how weather changes them."""
+
+    path: Mapping[str, int]
+    distance: Mapping[str, int]
+    # Watch penalty per terrain level, in difficulty order.
+    terrain: Mapping[str, int]
+    vast_max: int
+    deprived_terrain_steps: int
+    weather: Mapping[str, WeatherPenalty]
 
 
 @dataclass(frozen=True)
@@ -1145,6 +1172,7 @@ WILDERNESS_KEYS = frozenset(
         "events_table",
         "weather_tables",
         "hooks",
+        "travel",
     }
 )
 
@@ -1216,7 +1244,80 @@ def _load_wilderness(
         events_table=events_table,
         weather_tables=weather_tables,
         hooks=_load_hooks(data.get("hooks"), label),
+        travel=_load_wilderness_travel(data.get("travel"), lost_on, label)
+        if "travel" in data
+        else None,
     )
+
+
+TRAVEL_KEYS = frozenset(
+    {"path", "distance", "terrain", "vast_max", "deprived_terrain_steps", "weather"}
+)
+WEATHER_PENALTY_KEYS = frozenset({"choice", "fatigue", "watches", "terrain_steps", "travel"})
+
+
+def _load_wilderness_travel(
+    data: object, lost_on: Mapping[str, int], label: str
+) -> WildernessTravel:
+    if not isinstance(data, Mapping):
+        raise ContentError(f"{label}: 'travel' must be an object")
+    travel_label = f"{label}: travel"
+    unknown = set(data) - TRAVEL_KEYS
+    if unknown:
+        raise ContentError(f"{travel_label} has unknown keys {sorted(unknown)}")
+    path = _whole_map(data, "path", travel_label)
+    if set(path) != set(lost_on):
+        raise ContentError(f"{travel_label}: 'path' keys must match the keys of 'lost_on'")
+    weather_data = data.get("weather", {})
+    if not isinstance(weather_data, Mapping):
+        raise ContentError(f"{travel_label}: 'weather' must map weather results to objects")
+    weather = {}
+    for result, penalty in weather_data.items():
+        penalty_label = f"{travel_label}: weather {result!r}"
+        if not isinstance(penalty, Mapping):
+            raise ContentError(f"{penalty_label} must be an object")
+        unknown = set(penalty) - WEATHER_PENALTY_KEYS
+        if unknown:
+            raise ContentError(f"{penalty_label} has unknown keys {sorted(unknown)}")
+        weather[result] = WeatherPenalty(
+            choice=_flag(penalty, "choice", penalty_label),
+            fatigue=_optional_whole(penalty, "fatigue", penalty_label),
+            watches=_optional_whole(penalty, "watches", penalty_label),
+            terrain_steps=_optional_whole(penalty, "terrain_steps", penalty_label),
+            travel=_flag_default(penalty, "travel", penalty_label, True),
+        )
+    return WildernessTravel(
+        path=path,
+        distance=_whole_map(data, "distance", travel_label),
+        terrain=_whole_map(data, "terrain", travel_label),
+        vast_max=_whole(data, "vast_max", travel_label, 0),
+        deprived_terrain_steps=_whole(data, "deprived_terrain_steps", travel_label, 0),
+        weather=weather,
+    )
+
+
+def _whole_map(data: Mapping[str, Any], key: str, label: str) -> dict[str, int]:
+    value = data.get(key)
+    if not isinstance(value, Mapping) or not value:
+        raise ContentError(f"{label}: {key!r} must map names to whole numbers, at least 0")
+    result = {}
+    for name, number in value.items():
+        if not isinstance(number, int) or isinstance(number, bool) or number < 0:
+            raise ContentError(f"{label}: {key!r} {name!r} must be a whole number, at least 0")
+        result[name] = number
+    return result
+
+
+def _optional_whole(data: Mapping[str, Any], key: str, label: str) -> int:
+    if key not in data:
+        return 0
+    return _whole(data, key, label, 0)
+
+
+def _flag_default(data: Mapping[str, Any], key: str, label: str, default: bool) -> bool:
+    if key not in data:
+        return default
+    return _flag(data, key, label)
 
 
 def _load_hooks(data: object, label: str) -> WildernessHooks:

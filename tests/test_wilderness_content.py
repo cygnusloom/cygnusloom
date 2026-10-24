@@ -7,6 +7,7 @@ from cygnusforge.content.library import (
     DATA_DIR,
     ContentLibrary,
     DieGrowth,
+    WeatherPenalty,
     WildernessEffect,
     WildernessHooks,
     _load_dice_table,
@@ -79,6 +80,38 @@ def test_the_real_cairn_actions_declare_their_hooks(wilderness):
 
 def test_the_real_cairn_wilderness_lost_on_values(wilderness):
     assert dict(wilderness.lost_on) == {"roads": 0, "trails": 2, "wilderness": 3}
+
+
+def test_the_real_cairn_wilderness_travel_values(wilderness):
+    travel = wilderness.travel
+    assert travel is not None
+    assert dict(travel.path) == {"roads": 0, "trails": 1, "wilderness": 2}
+    assert dict(travel.distance) == {"short": 1, "medium": 2, "long": 3}
+    assert list(travel.terrain.keys()) == ["easy", "tough", "perilous"]
+    assert travel.vast_max == 2
+    assert travel.deprived_terrain_steps == 1
+    assert travel.weather["Catastrophic"].travel is False
+    assert travel.weather["Inclement"].terrain_steps == 1
+    assert travel.weather["Extreme"].fatigue == 1
+    assert travel.weather["Extreme"].watches == 1
+    assert travel.weather["Unpleasant"] == WeatherPenalty(
+        choice=True, fatigue=1, watches=1, terrain_steps=0
+    )
+    assert travel.weather["Unpleasant"].choice is True
+    assert travel.weather["Unpleasant"].watches == 1
+    assert travel.weather["Inclement"] == WeatherPenalty(
+        choice=True, fatigue=1, watches=1, terrain_steps=1
+    )
+    assert travel.weather["Extreme"] == WeatherPenalty(
+        choice=False, fatigue=1, watches=1, terrain_steps=1
+    )
+    assert travel.weather["Catastrophic"] == WeatherPenalty(choice=False, travel=False)
+
+
+def test_a_wilderness_without_travel_loads_with_travel_none():
+    loaded = _load_wilderness([_definition()], _tables(), "t")
+    assert loaded is not None
+    assert loaded.travel is None
 
 
 def test_the_real_cairn_events_table_has_the_six_events(wilderness, dice_tables):
@@ -228,4 +261,55 @@ def test_leftover_top_level_key_raises_content_error():
 def test_unknown_hooks_key_raises_content_error():
     definition = _definition(hooks={"later": []})
     with pytest.raises(ContentError, match="'hooks' must be an object with only"):
+        _load_wilderness([definition], _tables(), "t")
+
+
+def _travel(**overrides) -> dict:
+    travel = {
+        "path": {"roads": 0},
+        "distance": {"short": 1},
+        "terrain": {"easy": 0},
+        "vast_max": 2,
+        "deprived_terrain_steps": 1,
+        "weather": {"Inclement": {"choice": True, "terrain_steps": 1}},
+    }
+    travel.update(overrides)
+    return travel
+
+
+def test_a_valid_travel_block_loads():
+    loaded = _load_wilderness([_definition(travel=_travel())], _tables(), "t")
+    assert loaded is not None
+    assert loaded.travel is not None
+    assert loaded.travel.weather["Inclement"] == WeatherPenalty(choice=True, terrain_steps=1)
+
+
+def test_unknown_top_level_travel_key_raises_content_error():
+    definition = _definition(travel=_travel(speed=2))
+    with pytest.raises(ContentError, match="travel has unknown keys \\['speed'\\]"):
+        _load_wilderness([definition], _tables(), "t")
+
+
+def test_unknown_weather_penalty_key_raises_content_error():
+    weather = {"Inclement": {"choice": True, "rain": 1}}
+    definition = _definition(travel=_travel(weather=weather))
+    with pytest.raises(ContentError, match="has unknown keys \\['rain'\\]"):
+        _load_wilderness([definition], _tables(), "t")
+
+
+def test_travel_path_keys_must_match_lost_on_keys_raises_content_error():
+    definition = _definition(travel=_travel(path={"roads": 0, "trails": 1}))
+    with pytest.raises(ContentError, match="'path' keys must match the keys of 'lost_on'"):
+        _load_wilderness([definition], _tables(), "t")
+
+
+def test_negative_travel_distance_raises_content_error():
+    definition = _definition(travel=_travel(distance={"short": -1}))
+    with pytest.raises(ContentError, match="'distance' 'short' must be a whole number"):
+        _load_wilderness([definition], _tables(), "t")
+
+
+def test_boolean_vast_max_raises_content_error():
+    definition = _definition(travel=_travel(vast_max=True))
+    with pytest.raises(ContentError, match="'vast_max' must be a whole number"):
         _load_wilderness([definition], _tables(), "t")

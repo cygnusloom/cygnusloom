@@ -199,7 +199,12 @@ def test_place_without_icon_uses_fallback():
 
 def test_campaign_map_draws_a_marker_icon(client_factory: Callable[[], TestClient], app: FastAPI):
     client, campaign_id = _described_campaign(client_factory)
-    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Mossbell Hollow"})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Mossbell Hollow"},
+    )
     page = client.get(f"/campaigns/{campaign_id}").text
 
     map_view = page[page.index('data-view="map"') : page.index('data-view="lore"')]

@@ -194,6 +194,14 @@ class MapView:
     origin: tuple[float, float] | None = None
 
 
+# How a player character moves: overland takes watches, in a settlement takes minutes at a speed,
+# and in a dungeon takes no clock time.
+OVERLAND = "overland"
+IN_SETTLEMENT = "in_settlement"
+IN_DUNGEON = "in_dungeon"
+MOVE_MODES = (OVERLAND, IN_SETTLEMENT, IN_DUNGEON)
+
+
 @dataclass(frozen=True)
 class WorldTools:
     """The world as the rule set's tools use it. Each call runs in its own session and commits."""
@@ -689,8 +697,21 @@ class WorldTools:
             return dismiss_hireling(db, self.campaign_id, name, cause)
 
     def move_actor(
-        self, name: str, location: str | None = None, travel: str = "on_foot"
+        self,
+        name: str,
+        location: str | None = None,
+        travel: str = DEFAULT_TRAVEL_MODE,
+        mode: str = IN_SETTLEMENT,
+        route: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
+        if mode not in MOVE_MODES:
+            names = ", ".join(MOVE_MODES)
+            raise InvalidInput(f"there is no move mode named {mode!r}; use one of {names}")
+        if mode == OVERLAND and location is not None:
+            with session_scope(self.engine) as db:
+                actor = _character_named(load_state(db, self.campaign_id), name)
+            if actor.kind == PC_KIND:
+                return self._overland_move(actor.name, location, route)
         with session_scope(self.engine) as db:
             return move_actor(
                 db,
@@ -698,11 +719,129 @@ class WorldTools:
                 name,
                 location,
                 travel=self.travel,
-                mode=travel,
+                speed=travel,
+                mode=mode,
                 clock_rules=self.clock_rules,
                 need=self.need,
                 inventory=self.inventory,
             )
+
+    def _overland_move(
+        self, name: str, location: str, route: Mapping[str, Any] | None
+    ) -> dict[str, Any]:
+        """An overland move takes watches. Each watch rolls for the party getting lost, takes the
+        Travel Wilderness Action (weather, events, night hooks), and advances the clock one part.
+        A lost watch makes the next one a recovery that makes no progress. The move places the
+        character once the last progress watch is spent."""
+        wilderness = _required(self.wilderness, "wilderness")
+        clock_rules = _required(self.clock_rules, "time")
+        if route is None:
+            raise InvalidInput("an overland move needs a route with path, distance, and terrain")
+        inventory = _required(self.inventory, "inventory")
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            actor = _character_named(state, name)
+            where = _place_named(state, location)
+            party = _travelling_party(state, actor)
+            start = state.clock
+            season = wilderness_service.season_for_day(
+                wilderness, state.start_season or wilderness.start_season, start.day
+            )
+            deprived = any(c.unmet_since is not None for c in party)
+            weather = wilderness_service.roll_weather(
+                db,
+                self.campaign_id,
+                wilderness,
+                self.dice_tables,
+                self.rng,
+                plus=self.plus,
+                day=start.day,
+                season=season,
+            )
+            plan = wilderness_service.plan_overland(wilderness, route, weather["weather"], deprived)
+            if plan.fatigue:
+                for member in party:
+                    inventory_service.add_penalty(
+                        db, self.campaign_id, inventory, member.name, cause="travel"
+                    )
+        journey: list[dict[str, Any]] = []
+        progress = 0
+        recovering = False
+        while progress < plan.watches:
+            with session_scope(self.engine) as db:
+                state = load_state(db, self.campaign_id)
+                clock = state.clock
+                season = wilderness_service.season_for_day(
+                    wilderness, state.start_season or wilderness.start_season, clock.day
+                )
+                names = [m.name for m in _travelling_party(state, _character_named(state, name))]
+                lost = wilderness_service.roll_lost(
+                    db,
+                    self.campaign_id,
+                    route["path"],
+                    wilderness,
+                    self.rng,
+                    reason=f"overland travel to {where.name}",
+                )
+                watch = wilderness_service.wilderness_action(
+                    db,
+                    self.campaign_id,
+                    wilderness_service.TRAVEL_ACTION,
+                    f"overland travel to {where.name}",
+                    wilderness,
+                    self.dice_tables,
+                    self.rng,
+                    plus=self.plus,
+                    day=clock.day,
+                    season=season,
+                    at=clock_service.absolute(
+                        clock, len(clock_rules.parts), clock_rules.hours_per_part
+                    ),
+                    party=names,
+                    night=clock.part == len(clock_rules.parts) - 1,
+                    give=self._give_catalogue_item,
+                    travel_watch=True,
+                )
+            with session_scope(self.engine) as db:
+                clock_now = clock_service.advance_time(
+                    db, self.campaign_id, clock_rules, self.need, self.inventory, days=0, parts=1
+                )
+            made_progress = not recovering
+            if made_progress:
+                progress += 1
+            journey.append(
+                {
+                    "lost": lost["lost"],
+                    "roll": lost["roll"],
+                    "progress": made_progress,
+                    "weather": watch["weather"],
+                    "events": watch["events"],
+                    "clock": clock_now,
+                }
+            )
+            recovering = lost["lost"]
+        with session_scope(self.engine) as db:
+            result = move_actor(
+                db,
+                self.campaign_id,
+                name,
+                location,
+                travel=self.travel,
+                mode=OVERLAND,
+                clock_rules=self.clock_rules,
+                need=self.need,
+                inventory=self.inventory,
+            )
+        result.update(
+            {
+                "watches": plan.watches,
+                "terrain": plan.terrain,
+                "fatigue": plan.fatigue,
+                "lost_watches": sum(1 for w in journey if w["lost"]),
+                "journey": journey,
+            }
+        )
+        return result
 
     def update_location(
         self,
@@ -1831,15 +1970,17 @@ def move_actor(
     location: str | None = None,
     *,
     travel: Travel | None = None,
-    mode: str = DEFAULT_TRAVEL_MODE,
+    speed: str = DEFAULT_TRAVEL_MODE,
+    mode: str = IN_SETTLEMENT,
     clock_rules: ClockRules | None = None,
     need: NeedRules | None = None,
     inventory: InventoryRules | None = None,
 ) -> dict[str, Any]:
     """Move a character to a place. With no place, an NPC goes into the wind: it is nowhere
-    in particular until a later move brings it back. A player character's move takes time from
-    the travel table when the rule set has one. The clock advances by whole hours; the rest of
-    the minutes carry to the next move."""
+    in particular until a later move brings it back. A player character's move in a settlement
+    takes time from the travel table at the given speed, when the rule set has one. Moves in a
+    dungeon, and overland moves placed after their watches, take no clock time here. The clock
+    advances by whole hours; the rest of the minutes carry to the next move."""
     state = load_state(db, campaign_id)
     actor = _character_named(state, name)
     if location is None:
@@ -1848,14 +1989,14 @@ def move_actor(
         record(db, campaign_id, ActorMoved(name=actor.name, location=None))
         db.commit()
         return {"moved": actor.name, "location": "in the wind"}
-    if travel is not None and mode not in travel.modes:
+    if travel is not None and speed not in travel.modes:
         raise InvalidInput(
-            f"there is no travel mode named {mode!r}; use one of {', '.join(sorted(travel.modes))}"
+            f"there is no travel mode named {speed!r}; use one of {', '.join(sorted(travel.modes))}"
         )
     where = _place_named(state, location)
     minutes = None
-    if travel is not None and actor.kind == PC_KIND:
-        minutes = _travel_minutes(state, actor, where, travel, mode)
+    if travel is not None and actor.kind == PC_KIND and mode == IN_SETTLEMENT:
+        minutes = _travel_minutes(state, actor, where, travel, speed)
     record(db, campaign_id, ActorMoved(name=actor.name, location=where.name))
     # Going somewhere in person means the player character knows the place in detail.
     if actor.kind == PC_KIND and not where.discovered:
@@ -1868,10 +2009,18 @@ def move_actor(
     result: dict[str, Any] = {"moved": actor.name, "location": where.name}
     if minutes is not None and clock_rules is not None:
         result.update(
-            _charge_travel(db, campaign_id, state, minutes, clock_rules, need, inventory, mode)
+            _charge_travel(db, campaign_id, state, minutes, clock_rules, need, inventory, speed)
         )
     db.commit()
     return result
+
+
+def _travelling_party(state: CampaignState, actor: Character) -> list[Character]:
+    """The character and the hirelings who go with them, in that order."""
+    if actor.hireling:
+        return [actor]
+    hirelings = [c for c in state.characters.values() if c.hireling and c.employer == actor.name]
+    return [actor, *hirelings]
 
 
 def _travel_minutes(
@@ -1901,7 +2050,7 @@ def _charge_travel(
     total = state.travel_minutes + minutes
     hours, carried = divmod(total, 60)
     record(db, campaign_id, TravelCharged(minutes=carried))
-    result: dict[str, Any] = {"minutes": minutes, "mode": mode}
+    result: dict[str, Any] = {"minutes": minutes, "speed": mode}
     if hours:
         start = clock_service.absolute(
             state.clock, len(clock_rules.parts), clock_rules.hours_per_part

@@ -54,7 +54,7 @@ def test_a_four_kilometre_leg_on_foot_takes_an_hour(client_factory):
     result = tools.move_actor(PC, "Four Out")
 
     assert result["minutes"] == 60
-    assert result["mode"] == "on_foot"
+    assert result["speed"] == "on_foot"
     assert _hours(app, campaign_id) - before == 1
 
 

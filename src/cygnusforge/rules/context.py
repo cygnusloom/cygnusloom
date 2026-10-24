@@ -59,7 +59,12 @@ class World(Protocol):
     def dismiss_hireling(self, name: str, cause: str) -> dict[str, Any]: ...
 
     def move_actor(
-        self, name: str, location: str | None = None, travel: str = "on_foot"
+        self,
+        name: str,
+        location: str | None = None,
+        travel: str = "on_foot",
+        mode: str = "in_settlement",
+        route: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]: ...
 
     def create_encounter_map(

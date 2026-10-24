@@ -10,7 +10,12 @@ from typing import Any
 
 from sqlmodel import Session, select
 
-from cygnusforge.content.library import DiceTable, Wilderness, WildernessEffect
+from cygnusforge.content.library import (
+    DiceTable,
+    WeatherPenalty,
+    Wilderness,
+    WildernessEffect,
+)
 from cygnusforge.db.models import Event
 from cygnusforge.rules.dice import roll_total
 from cygnusforge.services.common import InvalidInput
@@ -289,6 +294,10 @@ def _join(names: Sequence[str]) -> str:
     return ", ".join(names) if names else "nobody"
 
 
+# The action every overland travel watch takes. A GM cannot pick it: it runs only inside move_actor.
+TRAVEL_ACTION = "travel"
+
+
 def wilderness_action(
     db: Session,
     campaign_id: int,
@@ -305,6 +314,7 @@ def wilderness_action(
     party: Sequence[str],
     night: bool,
     give: GiveItem,
+    travel_watch: bool = False,
 ) -> dict[str, Any]:
     """Take a Wilderness Action for one watch. The day's weather rolls first, then the events
     roll once, then the hooks apply: the night hooks on a night watch, then the resolve hooks.
@@ -312,6 +322,8 @@ def wilderness_action(
     if action not in wilderness.actions:
         names = ", ".join(sorted(wilderness.actions))
         raise InvalidInput(f"there is no wilderness action named {action!r}; use one of {names}")
+    if action == TRAVEL_ACTION and not travel_watch:
+        raise InvalidInput("travel is made with move_actor in overland mode, with a route")
     chosen = wilderness.actions[action]
 
     weather = _roll_weather(
@@ -373,3 +385,64 @@ def roll_lost(
     record(db, campaign_id, LostRolled(path=path, roll=roll, lost=lost, reason=reason))
     db.commit()
     return {"path": path, "roll": roll, "lost": lost}
+
+
+@dataclass(frozen=True)
+class TravelPlan:
+    """The watches an overland move takes, and what the journey costs the party."""
+
+    watches: int
+    terrain: str
+    # Fatigue each traveller takes for the journey.
+    fatigue: int
+
+
+ROUTE_KEYS = ("path", "distance", "terrain", "vast", "weather_choice")
+WEATHER_CHOICES = ("fatigue", "watch")
+
+
+def _route_name(route: Mapping[str, Any], key: str, table: Mapping[str, int]) -> str:
+    value = route.get(key)
+    if value is None:
+        raise InvalidInput(f"an overland route needs a {key}; use one of {', '.join(table)}")
+    if not isinstance(value, str) or value not in table:
+        raise InvalidInput(f"there is no {key} named {value!r}; use one of {', '.join(table)}")
+    return str(value)
+
+
+def plan_overland(
+    wilderness: Wilderness, route: Mapping[str, Any], weather: str, deprived: bool
+) -> TravelPlan:
+    """Work out the watches of one overland move. The weather of the day it starts sets the
+    penalty for the whole journey. A deprived traveller makes the ground one step harder."""
+    travel = wilderness.travel
+    if travel is None:
+        raise InvalidInput("this rule set has no overland travel; use the in_settlement mode")
+    unknown = sorted(set(route) - set(ROUTE_KEYS))
+    if unknown:
+        raise InvalidInput(f"an overland route has no {', '.join(unknown)}")
+    path = _route_name(route, "path", travel.path)
+    distance = _route_name(route, "distance", travel.distance)
+    terrain = _route_name(route, "terrain", travel.terrain)
+    vast = route.get("vast", 0)
+    if isinstance(vast, bool) or not isinstance(vast, int) or not 0 <= vast <= travel.vast_max:
+        raise InvalidInput(f"vast must be a whole number from 0 to {travel.vast_max}")
+
+    penalty = travel.weather.get(weather, WeatherPenalty())
+    if not penalty.travel:
+        raise InvalidInput(f"no overland travel is possible in {weather} weather")
+    choice = route.get("weather_choice")
+    if penalty.choice and choice not in WEATHER_CHOICES:
+        raise InvalidInput(
+            f"the weather is {weather}: choose weather_choice, one of {', '.join(WEATHER_CHOICES)}"
+        )
+    fatigue, watches = penalty.fatigue, penalty.watches
+    if penalty.choice:
+        fatigue, watches = (penalty.fatigue, 0) if choice == "fatigue" else (0, penalty.watches)
+
+    levels = tuple(travel.terrain)
+    steps = penalty.terrain_steps + (travel.deprived_terrain_steps if deprived else 0)
+    level = min(levels.index(terrain) + steps, len(levels) - 1)
+    hardest = levels[level]
+    watches += travel.path[path] + travel.distance[distance] + vast + travel.terrain[hardest]
+    return TravelPlan(watches=watches, terrain=hardest, fatigue=fatigue)
