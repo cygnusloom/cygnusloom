@@ -576,7 +576,7 @@
     "name": "dungeon_cycle",
     "python_module": "cairn2e",
     "function": "dungeon_cycle",
-    "description": "Roll once on the Dungeon Events table (1d6) when the party spends more than one cycle in one place, moves quickly, enters a new area, or makes noise. Pass the triggers that apply. The roll logs the event and does not move the day or hour clock. The result tells you what the event is. Effects such as Fatigue or a ration are yours to apply with the other tools.",
+    "description": "Roll once on the Dungeon Events table (1d6) when the party, inside a dungeon, spends more than one cycle in one place, moves quickly, enters a new area, or makes noise. Never call it during overland travel. Pass the triggers that apply. The roll logs the event and does not move the day or hour clock. The result tells you what the event is. Effects such as Fatigue or a ration are yours to apply with the other tools.",
     "parameters": {
       "type": "object",
       "properties": {
