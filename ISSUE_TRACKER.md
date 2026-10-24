@@ -13,5 +13,6 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
 * The twin lakes locations need to be laid out appropriately on the map.
 * Travel should take an appropriate length of time. The GM should have an option to have appropriate story moments or encounters to interrupt travel or rest.
 * Player-facing location descriptions are currently too deep - they should be briefer and not spoil anything.
+* Ensure that narration is actually narrating everything. I sometimes see actions or notes that affect the player only in the event log.
 
 # Triaged Issues
