@@ -336,6 +336,87 @@ def test_a_day_watch_travel_rolls_the_events_once(
     assert _kinds(app, campaign_id).count(WildernessEventRolled.kind) == 1
 
 
+def test_a_supply_stops_when_the_pack_is_full(
+    client_factory: Callable[[], TestClient],
+    app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _fix_roll(monkeypatch, 1)
+    rng = StubRng(3)
+    given: list[tuple[str, str]] = []
+
+    def give(db: Session, name: str, item: str) -> bool:
+        if len(given) == 2:
+            return False
+        given.append((name, item))
+        return True
+
+    with _db(app) as db:
+        result = wilderness_action(
+            db,
+            campaign_id,
+            "supply",
+            "Hunting.",
+            _wilderness(),
+            TABLES,
+            rng,
+            plus=None,
+            day=1,
+            season="spring",
+            at=0,
+            party=["Ada"],
+            night=False,
+            give=give,
+        )
+    assert given == [("Ada", "rations")] * 2
+    assert result["effects"] == [
+        {
+            "do": "grant",
+            "text": f"Ada finds 3 rations (d{rng.sides[0]}). "
+            "Only 2 fit in the pack; the rest are left behind.",
+        }
+    ]
+
+
+def test_a_supply_with_no_room_keeps_nothing(
+    client_factory: Callable[[], TestClient],
+    app: FastAPI,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _fix_roll(monkeypatch, 1)
+    rng = StubRng(3)
+
+    def give(db: Session, name: str, item: str) -> bool:
+        return False
+
+    with _db(app) as db:
+        result = wilderness_action(
+            db,
+            campaign_id,
+            "supply",
+            "Hunting.",
+            _wilderness(),
+            TABLES,
+            rng,
+            plus=None,
+            day=1,
+            season="spring",
+            at=0,
+            party=["Ada"],
+            night=False,
+            give=give,
+        )
+    assert result["effects"] == [
+        {
+            "do": "grant",
+            "text": f"Ada finds 3 rations (d{rng.sides[0]}). "
+            "None fit in the pack, so none are kept.",
+        }
+    ]
+
+
 @pytest.mark.parametrize(
     ("party", "sides"),
     [(["Ada"], 4), (["Ada", "Bren"], 6), (["Ada", "Bren", "Cato", "Dara", "Eve"], 12)],
@@ -352,8 +433,9 @@ def test_the_bounty_die_grows_with_the_party(
     rng = StubRng(3)
     given: list[tuple[str, str]] = []
 
-    def give(db: Session, name: str, item: str) -> None:
+    def give(db: Session, name: str, item: str) -> bool:
         given.append((name, item))
+        return True
 
     with _db(app) as db:
         result = wilderness_action(

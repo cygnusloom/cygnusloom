@@ -106,7 +106,7 @@ Generic engine mechanics, parameterized by the ruleset's JSON. Cairn numbers liv
 - Fatigue: an inventory item of kind `fatigue` (ruleset `fatigue_item`). `add_fatigue(name, cause, force)` covers events in the fiction, such as spells. A deprived character is refused unless `force` is set, because the engine adds deprivation Fatigue each day.
 - Inventory: ten slots (ruleset `capacity`). Item sizes are ruleset definitions: petty (0 slots), normal (1), bulky (2). `give_item` and `drop_item` change items; the GM names and sizes new items.
 - No free slot for Fatigue: the Fatigue is still recorded, and the character reads as over capacity until the GM calls `drop_item`.
-- Full inventory: when an item makes the inventory full, the character's HP (ruleset `full.stat`) drops to 0 once. No overflow and no save; healing is needed to recover it.
+- Full inventory: when an item makes the inventory full, the character's HP (ruleset `full.stat`) drops to 0 once. No overflow and no save; healing is needed to recover it. The book (Character Creation, Inventory) says "Anyone carrying a full inventory (i.e. filling all 10 slots) is reduced to 0 HP. A character cannot fill more than ten slots." Exactly full counts.
 - Events: `ClockAdvanced`, `RestTaken`, `RestRecovered`, `DeprivationSet`, `ItemAdded`, `ItemRemoved`, `CharacterDrained`. Engine logic is in `services/clock.py`, `services/needs.py`, and `services/inventory.py`.
 
 ## Phase 5: magic
@@ -425,7 +425,8 @@ Phase 4 (deprivation, fatigue, rest, inventory):
 - OPEN (Phase 10): hidden objects have no reveal path. A hidden object cannot be listed or taken, and no tool reveals it. Unscheduled; needs a decision on who reveals it (the Warden, or a search).
 - OPEN (Phase 10): `drop_item` removes the item and does not place it in the location, so a dropped item vanishes. Seen live when Mara dropped her Lure. Unscheduled; needs a decision on whether a drop creates a place object.
 - RESOLVED (Phase 11 follow-up): the dungeon reaction duplicate is merged (see the gap register entry above on duplicate table ids).
-- The 10-slot capacity and the full-inventory HP rule are unverified against the book.
+- The 10-slot capacity and the full-inventory HP rule are verified against the book (Character Creation, Inventory).
+- Open: the book says each PC starts with a Backpack that holds up to six slots of items or Fatigue. The engine has no bag limit yet; it counts only the ten-slot total.
 - The deprivation Fatigue threshold (day 2 or day 3) is unverified.
 - The `visited_day or 1` stale-place rule and STR 0 outside combat are unverified.
 
@@ -650,7 +651,7 @@ Book rules to build (from the Player's Guide procedures page):
 - Sleep: the third watch is reserved for Make Camp. Skipping it adds a Fatigue to each member and makes them deprived. Travel while sleep-deprived raises terrain Difficulty by one step.
 - Make Camp: each member and mount consumes a Ration. Members who rest remove all Fatigue.
 - Light: torches light 40 ft, a torch lasts 3 uses, a lantern is refillable with an oil can (6 uses). Without light, panic.
-- Supply: hunting, fishing, or foraging yields 1d4 Rations (3 uses each). The bounty die grows with party size (1d4, 1d6, up to 1d12).
+- Supply: hunting, fishing, or foraging yields 1d4 Rations (3 uses each). The bounty die grows with party size (1d4, 1d6, up to 1d12). Decided (user): a bounty only keeps what fits in the pack. Rations that would go over the ten slots are left behind, and the result says how many were kept. The book says a character cannot fill more than ten slots.
 - Weather: rolled daily by season (spring, summer, fall, winter) on a d6 table: Nice, Fair, Unpleasant, Inclement, Extreme, Catastrophic. Two Extremes in a row make it Catastrophic. The book says "if the Extreme weather result is rolled twice in a row", so the streak counts rolled Extremes. A Catastrophic day still counts, so a rolled Extreme right after it is Catastrophic again. Only a non-Extreme roll breaks the run (user chose "book behavior"). Unpleasant adds a Fatigue or a watch. Inclement adds a Fatigue or +1 watch, plus a terrain step. Extreme adds a Fatigue, +1 watch, and a terrain step. Catastrophic: most parties cannot travel.
 
 Decided (user, terrain source): travel path and terrain difficulty can be authored in the world data. Where the world data has none, the AI GM derives them and supplies them when it travels the party. Both paths feed the same watch calculation.

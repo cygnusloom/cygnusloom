@@ -34,7 +34,9 @@ from cygnusforge.services.inventory import clear_items
 WEATHER_KIND = WeatherRolled.kind
 
 # Gives one copy of a catalogue item to a named character. The caller owns the transaction.
-GiveItem = Callable[[Session, str, str], None]
+# Gives one copy of a catalogue item to a character. It returns False, and records nothing, when
+# the item does not fit in the character's pack.
+GiveItem = Callable[[Session, str, str], bool]
 
 
 def _table(tables: Mapping[str, DiceTable], table_id: str) -> DiceTable:
@@ -234,9 +236,17 @@ class _Watch:
         sides = min(count.max, count.base + count.per_member * len(self.party))
         found = self.rng.randint(1, sides)
         payer = self.party[0]
+        carried = 0
         for _ in range(found):
-            self.give(self.db, payer, item)
-        return f"{payer} finds {found} {item} (d{sides})."
+            if not self.give(self.db, payer, item):
+                break
+            carried += 1
+        text = f"{payer} finds {found} {item} (d{sides})."
+        if carried == 0:
+            return f"{text} None fit in the pack, so none are kept."
+        if carried < found:
+            return f"{text} Only {carried} fit in the pack; the rest are left behind."
+        return text
 
     def _clear(self, effect: WildernessEffect) -> str:
         item = effect.item or ""

@@ -375,18 +375,17 @@ class WorldTools:
                 service,
             )
 
-    def _give_catalogue_item(self, db: Session, name: str, item: str) -> None:
+    def _give_catalogue_item(self, db: Session, name: str, item: str) -> bool:
         listed = self._listed(item)
         if listed is None:
             raise InvalidInput(f"this rule set has no item named {item!r} to give")
-        inventory_service.carry_listed(
-            db,
-            self.campaign_id,
-            _required(self.inventory, "inventory"),
-            self.item_sizes,
-            name,
-            listed,
-        )
+        rules = _required(self.inventory, "inventory")
+        if not inventory_service.fits_listed(
+            db, self.campaign_id, rules, self.item_sizes, name, listed
+        ):
+            return False
+        inventory_service.carry_listed(db, self.campaign_id, rules, self.item_sizes, name, listed)
+        return True
 
     def _listed(self, item: str) -> ShopItem | None:
         if self.marketplace is not None:

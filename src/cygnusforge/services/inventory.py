@@ -149,6 +149,22 @@ def carry_listed(
     return carry_item(db, campaign_id, rules, name, item, cause="")
 
 
+def fits_listed(
+    db: Session,
+    campaign_id: int,
+    rules: InventoryRules,
+    item_sizes: Mapping[str, int],
+    name: str,
+    listed: ShopItem,
+) -> bool:
+    """Whether one copy of a catalogue item fits in the character's pack without going over
+    capacity. Nothing is recorded."""
+    if listed.size not in item_sizes:
+        raise InvalidInput(f"there is no item size named {listed.size!r}")
+    character = character_named(load_state(db, campaign_id), name)
+    return used_slots(character) + item_sizes[listed.size] <= rules.capacity
+
+
 def add_penalty(
     db: Session, campaign_id: int, rules: InventoryRules, name: str, cause: str
 ) -> dict[str, Any]:
