@@ -64,8 +64,8 @@ def update_location(
     return ctx.world.update_location(name, description, x=x, y=y, off_map=off_map, force=force)
 
 
-def discover_location(name: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.discover_location(name)
+def discover_location(name: str, ctx: ToolContext, summary: str | None = None) -> dict[str, Any]:
+    return ctx.world.discover_location(name, summary)
 
 
 def delete_location(name: str, ctx: ToolContext) -> dict[str, Any]:

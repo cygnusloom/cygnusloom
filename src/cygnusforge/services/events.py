@@ -84,6 +84,8 @@ class Place:
     # The campaign day a player character was last in this place, or None if none has been.
     visited_day: int | None = None
     icon: str | None = None
+    # What the player sees of a discovered place. The full description stays GM-only.
+    summary: str | None = None
 
 
 @dataclass(frozen=True)
@@ -862,13 +864,31 @@ class LocationDiscovered(GameEvent):
     kind: ClassVar[str] = "location.discovered"
 
     name: str
+    summary: str | None = None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         key = name_key(self.name)
-        state.places[key] = replace(state.places[key], discovered=True)
+        state.places[key] = replace(state.places[key], discovered=True, summary=self.summary)
 
     def render(self) -> str:
         return f"Discovered: {self.name}."
+
+
+@dataclass(frozen=True)
+class LocationSummarized(GameEvent):
+    """A new player-facing summary for a place that is already discovered."""
+
+    kind: ClassVar[str] = "location.summarized"
+
+    name: str
+    summary: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        key = name_key(self.name)
+        state.places[key] = replace(state.places[key], summary=self.summary)
+
+    def render(self) -> str:
+        return f"Summary updated: {self.name}."
 
 
 @dataclass(frozen=True)
@@ -2336,6 +2356,7 @@ HIDDEN_KINDS: dict[str, bool] = {
     "location.added": True,
     "location.updated": True,
     "location.removed": True,
+    "location.summarized": True,
     "map.created": True,
     "map.updated": True,
     "map.deleted": True,

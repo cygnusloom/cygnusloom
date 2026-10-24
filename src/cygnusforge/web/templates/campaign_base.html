@@ -40,7 +40,7 @@
     {% endif %}
     {% if scene.location %}
     <h3>Here</h3>
-    <p><strong>{{ scene.location.name }}</strong>: {{ scene.location.description }}</p>
+    <p><strong>{{ scene.location.name }}</strong>{% if scene.location.summary %}: {{ scene.location.summary }}{% endif %}</p>
     <h3>NPCs here</h3>
     {% for npc in scene.npcs %}
       <div class="npc">

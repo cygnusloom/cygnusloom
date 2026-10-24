@@ -623,6 +623,7 @@ def test_all_at_location_describes_a_place_without_statblocks(
     assert _tool(app, campaign_id, "all_at_location", {"location": "Spore Bridge"})["location"] == {
         "name": "Spore Bridge",
         "description": away["location"]["description"],
+        "summary": None,
         "discovered": False,
         "position_km": {"x": -1.2, "y": 1.4},
         "parent": None,
@@ -1767,6 +1768,71 @@ def test_discover_location_needs_a_known_location(client_factory: Callable[[], T
     _, campaign_id = _campaign_id(client_factory)
     refused = _tool(app, campaign_id, "discover_location", {"name": "Nowhere"})
     assert "Nowhere" in refused["error"]
+
+
+def test_discover_location_sets_the_player_summary(client_factory: Callable[[], TestClient], app):
+    _, campaign_id = _campaign_id(client_factory)
+    text = "Pale mushrooms ring a dry well."
+    result = _tool(app, campaign_id, "discover_location", {"name": "Spore Bridge", "summary": text})
+    assert result == {"discovered": "location", "name": "Spore Bridge"}
+    place = _state(app, campaign_id).named("Spore Bridge")
+    assert place.discovered is True
+    assert place.summary == text
+    assert _event_kinds(app, campaign_id).count("location.discovered") == 1
+    view = world.map_view(_state(app, campaign_id))
+    assert [p.summary for p in view.places if p.name == "Spore Bridge"] == [text]
+
+
+def test_a_summary_replaces_the_one_a_discovered_place_has(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "discover_location", {"name": "Spore Bridge"})
+    assert _state(app, campaign_id).named("Spore Bridge").summary is None
+    full = _state(app, campaign_id).named("Spore Bridge").description
+    _tool(app, campaign_id, "discover_location", {"name": "Spore Bridge", "summary": "A bridge."})
+    _tool(app, campaign_id, "discover_location", {"name": "Spore Bridge", "summary": "A bridge."})
+    place = _state(app, campaign_id).named("Spore Bridge")
+    assert place.summary == "A bridge."
+    assert place.description == full
+    assert _event_kinds(app, campaign_id).count("location.summarized") == 1
+
+
+def test_a_discovery_without_a_summary_keeps_the_existing_one(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "discover_location", {"name": "Spore Bridge", "summary": "A bridge."})
+    _tool(app, campaign_id, "discover_location", {"name": "Spore Bridge"})
+    assert _state(app, campaign_id).named("Spore Bridge").summary == "A bridge."
+    assert _event_kinds(app, campaign_id).count("location.summarized") == 0
+
+
+def test_a_summary_is_bounded(client_factory: Callable[[], TestClient], app):
+    _, campaign_id = _campaign_id(client_factory)
+    refused = _tool(
+        app, campaign_id, "discover_location", {"name": "Spore Bridge", "summary": "x" * 301}
+    )
+    assert "summary" in refused["error"]
+    assert _state(app, campaign_id).named("Spore Bridge").discovered is False
+
+
+def test_the_player_sees_the_summary_not_the_full_description(
+    client_factory: Callable[[], TestClient], app
+):
+    client, campaign_id = _described_campaign(client_factory)
+    full = _state(app, campaign_id).named("Glowcap Ring").description
+    _tool(
+        app,
+        campaign_id,
+        "discover_location",
+        {"name": "Glowcap Ring", "summary": "Glowing caps line the ring."},
+    )
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
+    page = client.get(f"/campaigns/{campaign_id}").text
+    location = page[page.index('id="panel-location"') : page.index('id="panel-character"')]
+    assert "Glowing caps line the ring." in location
+    assert full not in page
 
 
 def test_the_player_discovers_what_they_visit_but_npcs_do_not(

@@ -84,6 +84,7 @@ from cygnusforge.services.events import (
     LocationAdded,
     LocationDiscovered,
     LocationRemoved,
+    LocationSummarized,
     LocationUpdated,
     Note,
     NoteAdded,
@@ -111,6 +112,8 @@ from cygnusforge.services.tools import check_arguments
 MAX_NAME = 120
 MAX_STAT = 999
 MAX_TEXT = 2000
+# A player-facing summary of a place: a sentence or two, not the place's full description.
+MAX_SUMMARY = 300
 MAX_QUIRKS = 10
 QUIRKS_PER_NPC = 2
 # The map always shows at least this many kilometers from its center, and leaves a margin.
@@ -540,9 +543,9 @@ class WorldTools:
                 db, self.campaign_id, name, description, discovered, x, y, force, parent
             )
 
-    def discover_location(self, name: str) -> dict[str, Any]:
+    def discover_location(self, name: str, summary: str | None = None) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return discover_location(db, self.campaign_id, name)
+            return discover_location(db, self.campaign_id, name, summary)
 
     def create_npc(
         self,
@@ -1600,11 +1603,19 @@ def update_location(
     return {"updated": "location", "name": where.name}
 
 
-def discover_location(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
+def discover_location(
+    db: Session, campaign_id: int, name: str, summary: str | None = None
+) -> dict[str, Any]:
+    """Discover a place. A given summary is what the player sees of it. Giving one for a place that
+    is already discovered replaces its summary. A summary is never required."""
     state = load_state(db, campaign_id)
     where = _place_named(state, name)
+    text = _optional_text(summary, "summary", MAX_SUMMARY)
     if not where.discovered:
-        record(db, campaign_id, LocationDiscovered(name=where.name))
+        record(db, campaign_id, LocationDiscovered(name=where.name, summary=text))
+        db.commit()
+    elif text is not None and text != where.summary:
+        record(db, campaign_id, LocationSummarized(name=where.name, summary=text))
         db.commit()
     return {"discovered": "location", "name": where.name}
 
@@ -2218,6 +2229,7 @@ def _location_entry(place: Place) -> dict[str, Any]:
     return {
         "name": place.name,
         "description": place.description,
+        "summary": place.summary,
         "discovered": place.discovered,
         "position_km": position,
         "parent": place.parent,
@@ -2447,10 +2459,10 @@ def _has_words(words: Sequence[str], *parts: str) -> bool:
     return all(word in haystack for word in words)
 
 
-def _optional_text(value: object, label: str) -> str | None:
+def _optional_text(value: object, label: str, limit: int = MAX_NAME) -> str | None:
     if value is None or (isinstance(value, str) and not value.strip()):
         return None
-    return bounded_text(value, label, MAX_NAME)
+    return bounded_text(value, label, limit)
 
 
 def _coordinates(x: object, y: object) -> tuple[float | None, float | None]:

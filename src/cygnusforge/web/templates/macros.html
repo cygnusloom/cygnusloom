@@ -35,7 +35,7 @@
     <div class="map-place">
       <strong>{{ place.name }}</strong>
       {% if place.parent %}<span class="muted">Inside {{ place.parent }}</span>{% elif place.position %}<span class="muted">{{ place.position.x }} km east, {{ place.position.y }} km north</span>{% endif %}
-      <p>{{ place.description }}</p>
+      {% if place.summary %}<p>{{ place.summary }}</p>{% endif %}
     </div>
   {% else %}
     <p class="muted">No places discovered yet.</p>

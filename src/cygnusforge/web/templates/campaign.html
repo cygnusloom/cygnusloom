@@ -168,7 +168,7 @@
             <div class="tab-panel" role="tabpanel" id="panel-location" aria-labelledby="tab-location">
               {% if scene.location %}
               <p><strong>{{ scene.location.name }}</strong></p>
-              <p>{{ scene.location.description }}</p>
+              {% if scene.location.summary %}<p>{{ scene.location.summary }}</p>{% endif %}
               {% endif %}
               <ul>
                 {% if scene.pc %}
