@@ -23,6 +23,7 @@ class World(Protocol):
         character: Mapping[str, Any] | None = None,
         force: bool = False,
         hp_tier: str | None = None,
+        pronouns: str | None = None,
     ) -> dict[str, Any]: ...
 
     def update_location(self, name: str, description: str) -> dict[str, Any]: ...
@@ -254,3 +255,6 @@ class ToolContext:
     rules: Mapping[str, str]
     # Name and brief of each lookup tool, for list_lookups.
     lookup_tools: Mapping[str, str]
+    # Checks a new place's name against the existing places before it is added. It raises when the
+    # name repeats one. None when the rule set does not check.
+    check_new_location: Callable[[str], Awaitable[None]] | None = None

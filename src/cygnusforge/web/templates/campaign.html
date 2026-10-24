@@ -6,14 +6,15 @@
       <section class="chat" aria-label="Chat">
           <h1 class="chat-title">{{ campaign.name }}</h1>
           <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
+          <label class="show-hidden-toggle muted"><input type="checkbox" data-show-hidden> Show hidden events</label>
           <div class="transcript" data-transcript data-gm-state="{{ 'busy' if pending and pending.auto_continue else 'waiting' }}">
             {% for message in transcript %}
               {% if message.role == "log" %}
-              <div class="log-line">{{ message.content }}</div>
+              <div class="log-line{% if message.hidden %} hidden-event{% endif %}">{{ message.content }}</div>
               {% else %}
               <div class="message {{ message.role }}">
                 <div class="message-header">
-                  <span class="role">{% if message.role == "assistant" %}Cygnus{% elif message.role == "user" %}{{ player_name }} (you){% else %}{{ message.role }}{% endif %}{% if message.model %} · <span class="muted">{{ message.model }}</span>{% endif %}</span>
+                  <span class="role">{% if message.role == "assistant" %}Cygnus{% elif message.role == "user" %}{{ message.speaker or player_name }} (you){% else %}{{ message.role }}{% endif %}{% if message.model %} · <span class="muted">{{ message.model }}</span>{% endif %}</span>
                   {% if message.role == "assistant" %}
                   <div class="message-tools">
                   <button type="button" class="message-gear" data-turn-context-url="/campaigns/{{ campaign.id }}/messages/{{ message.id }}/context" data-turn-transcript-url="/campaigns/{{ campaign.id }}/messages/{{ message.id }}/transcript" aria-label="Show details for this reply" title="Show details for this reply"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
@@ -102,7 +103,7 @@
           </div>
           {% endif %}
           {% endif %}
-          <form method="post" action="/campaigns/{{ campaign.id }}/messages" data-stream-action="/campaigns/{{ campaign.id }}/messages/stream" data-player-name="{{ player_name }}" class="composer" id="composer">
+          <form method="post" action="/campaigns/{{ campaign.id }}/messages" data-stream-action="/campaigns/{{ campaign.id }}/messages/stream" data-player-name="{{ acting_name }}" class="composer" id="composer">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <textarea name="content" rows="3" required maxlength="8000" placeholder="{{ ('Answer the GM above first' if pending.prompt else 'Continue the reply first') if pending else 'Message' }}"{% if pending %} disabled{% endif %}>{{ draft }}</textarea>
             <div class="composer-actions">

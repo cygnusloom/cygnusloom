@@ -92,6 +92,8 @@ button, .button {
 .message-gear svg, .message-rollback svg { width: 1rem; height: 1rem; }
 .rollback-form { margin: 0; }
 .log-line { font-size: 0.8rem; color: var(--muted); overflow-wrap: anywhere; }
+.transcript:not(.show-hidden) .hidden-event { display: none; }
+.show-hidden-toggle { align-self: flex-end; font-size: 0.8rem; }
 .message.streaming .content { white-space: pre-wrap; }
 .turn-status { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; font-size: 0.85rem; color: var(--muted); }
 .turn-status[hidden] { display: none; }

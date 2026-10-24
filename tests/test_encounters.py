@@ -16,12 +16,14 @@ from cygnusforge.services import campaigns, encounters
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
     NPC_KIND,
+    PC_KIND,
     CampaignState,
     Character,
     ChatGM,
     Encounter,
     group_by_side,
     record,
+    speaker_name,
     token_label,
     token_labels,
 )
@@ -604,6 +606,32 @@ def _npc(name: str) -> Character:
         accent="",
         quirks=[],
     )
+
+
+def test_composer_speaks_for_the_acting_pc_or_hireling_and_otherwise_the_pc():
+    pc = Character(
+        kind=PC_KIND,
+        name="Ada",
+        location=None,
+        description="",
+        personality="",
+        accent="",
+        quirks=[],
+    )
+    hireling = replace(pc, name="Bram", hireling=True)
+    pip = _npc("Pip")
+    characters = {c.name.casefold(): c for c in (pc, hireling, pip)}
+
+    def acting(name: str | None) -> str | None:
+        encounter = Encounter(map=MAP, location=TOWN, order=["Ada", "Bram", "Pip"], acting=name)
+        return speaker_name(CampaignState(characters=characters, encounter=encounter))
+
+    assert acting(None) == "Ada"
+    assert acting("Bram") == "Bram"
+    assert acting("Ada") == "Ada"
+    assert acting("Pip") == "Ada"
+    assert speaker_name(CampaignState(characters=characters)) == "Ada"
+    assert speaker_name(CampaignState()) is None
 
 
 def test_group_by_side_keeps_the_party_first_and_the_next_turn():

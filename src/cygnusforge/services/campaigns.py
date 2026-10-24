@@ -55,10 +55,12 @@ from cygnusforge.services.events import (
     decode,
     estimate_tokens,
     events_since,
+    is_hidden,
     last_event_id,
     load_state,
     name_key,
     record,
+    speaker_name,
     truncate,
 )
 from cygnusforge.services.tools import (
@@ -148,6 +150,8 @@ NARRATE_INSTRUCTION = (
     "burned, or spent only when a tool result above records that use; otherwise the item is unchanged. "
     "Narrate what the player "
     "can perceive: arrivals and departures, new or changed places, NPC speech, and roll outcomes. "
+    "The transcript hides the records of NPCs, places, and objects, so the narration is how the "
+    "player learns of one: narrate each the first time it comes into view. "
     "The queued dialogue is "
     "JSON: work each entry's dialogue value into the narration where it fits, copied exactly, and "
     "do not write any other words for an NPC. Weave dialogue into the prose as plain sentences, "
@@ -155,7 +159,9 @@ NARRATE_INSTRUCTION = (
     "other special formatting. If an entry's dialogue includes a stage direction, such as a gesture "
     "or what the speaker does, narrate that action once as prose and do not repeat it. Do not "
     "narrate notes or other GM-only records, and do "
-    "not mention tool names or ids. "
+    "not mention tool names or ids. Do not tell the player about a refused or failed tool call, a "
+    "naming or bookkeeping rule, or the text of a rule or tool description; speak only in the world's "
+    "terms, and if a name was changed, give the player the name as it now stands. "
     "Describe the player character's words and deliberate choices only as the player's message "
     "states them, and add none for them. The first time the player character is mentioned in a "
     "narration, use their full name, since a pronoun or short name alone could be ambiguous. "
@@ -251,6 +257,14 @@ def speech_instruction(sentence_cap: int | None) -> str:
     )
 
 
+NAME_CHECK_PROMPT = (
+    "You check whether a new place name repeats a place that already exists in a tabletop "
+    "campaign. A new name repeats an existing place when it names the same place in other words, "
+    "such as 'Farm Road' for 'Farming Path', or 'The Old Mill' for 'Old Mill'. A different place "
+    "with a related name is not a repeat when it is a separate place. Reply with exactly one line: "
+    "'REPEAT: <existing name>' when the new name repeats an existing place, or 'NEW' otherwise. "
+    "Reply with nothing else."
+)
 SUMMARY_PROMPT = (
     "You are Cygnus, the AI game master of a roleplaying campaign, and you keep its memory. Given "
     "the summary so far and new events, write an updated summary. Keep names, places, facts the "
@@ -513,12 +527,13 @@ def set_debug_currency(
 @dataclass(frozen=True)
 class ChatMessage:
     """A line of the chat: the player's, or the GM's reply with the model that wrote it. `id` is
-    the id of the event that recorded it."""
+    the id of the event that recorded it. `speaker` is the character a player's message spoke for."""
 
     id: int
     role: str
     content: str
     model: str | None = None
+    speaker: str | None = None
 
 
 def list_messages(engine: Engine, campaign_id: int) -> list[ChatMessage]:
@@ -547,14 +562,16 @@ def campaign_transcript(
             if isinstance(event, TurnFailed) and (row.id or 0) < progress:
                 continue
             if (text := event.render()) is not None:
-                items.append(LogLine(id=row.id or 0, content=text))
+                items.append(LogLine(id=row.id or 0, content=text, hidden=is_hidden(row.kind)))
     return sorted(items, key=lambda item: item.id)
 
 
 def _chat_message(row: Event) -> ChatMessage:
     event = decode(row)
     if isinstance(event, ChatPlayer):
-        return ChatMessage(id=row.id or 0, role="user", content=event.content)
+        return ChatMessage(
+            id=row.id or 0, role="user", content=event.content, speaker=event.speaker
+        )
     if isinstance(event, ChatGM):
         return ChatMessage(
             id=row.id or 0, role="assistant", content=event.content, model=event.model
@@ -703,6 +720,25 @@ def _keep_newest(text: str, budget_tokens: int) -> str:
     return kept[first_space + 1 :] if first_space != -1 else kept
 
 
+async def _repeated_place(
+    provider: Provider, model_name: str, names: Sequence[str], name: str
+) -> str | None:
+    """The existing place that `name` repeats, or None. The model judges the wording, so a name
+    that repeats a place in other words is caught too."""
+    if not names:
+        return None
+    listing = "\n".join(f"- {existing}" for existing in names)
+    messages = [
+        {"role": "system", "content": NAME_CHECK_PROMPT},
+        {"role": "user", "content": f"Existing places:\n{listing}\n\nNew place: {name}"},
+    ]
+    reply = (await complete(provider, model_name, messages)).strip()
+    if not reply.upper().startswith("REPEAT:"):
+        return None
+    named = reply.split(":", 1)[1].strip().casefold()
+    return next((existing for existing in names if existing.casefold() == named), None)
+
+
 async def _summarize(
     provider: Provider,
     model_name: str,
@@ -757,6 +793,7 @@ class LogLine:
     id: int
     content: str
     role: str = "log"
+    hidden: bool = False
 
 
 @dataclass(frozen=True)
@@ -764,6 +801,7 @@ class Logged:
     """Something that happened during the reply and is shown in the Log, such as a roll."""
 
     text: str
+    hidden: bool = False
 
 
 @dataclass(frozen=True)
@@ -942,31 +980,40 @@ def _tool_context(
     def ooc(narrate: bool) -> None:
         _record(engine, campaign_id, OocStarted(narrate=narrate))
 
+    world_tools = WorldTools(
+        engine,
+        campaign_id,
+        {**library.core.tables, **world.tables},
+        rng,
+        rule_set.character,
+        grid=rule_set.grid,
+        combat=rule_set.combat,
+        monsters={**rule_set.monsters, **world.monsters},
+        features={**world.features},
+        conditions=rule_set.conditions,
+        dice_tables=rule_set.dice_tables,
+        clock_rules=rule_set.clock,
+        rests=rule_set.rests,
+        interrupted_rest=rule_set.interrupted_rest,
+        need=rule_set.need,
+        inventory=rule_set.inventory,
+        item_sizes=rule_set.item_sizes,
+        magic=rule_set.magic,
+        food=rule_set.food,
+        marketplace=rule_set.marketplace,
+        plus=rule_set.plus,
+        npc_hp=rule_set.npc_hp,
+    )
+
+    async def check_new_location(name: str) -> None:
+        repeated = await _repeated_place(provider, model_name, world_tools.place_names(), name)
+        if repeated is not None:
+            raise InvalidInput(
+                f"there is already a location called {repeated!r}; use discover_location to reveal it"
+            )
+
     return ToolContext(
-        world=WorldTools(
-            engine,
-            campaign_id,
-            {**library.core.tables, **world.tables},
-            rng,
-            rule_set.character,
-            grid=rule_set.grid,
-            combat=rule_set.combat,
-            monsters={**rule_set.monsters, **world.monsters},
-            features={**world.features},
-            conditions=rule_set.conditions,
-            dice_tables=rule_set.dice_tables,
-            clock_rules=rule_set.clock,
-            rests=rule_set.rests,
-            interrupted_rest=rule_set.interrupted_rest,
-            need=rule_set.need,
-            inventory=rule_set.inventory,
-            item_sizes=rule_set.item_sizes,
-            magic=rule_set.magic,
-            food=rule_set.food,
-            marketplace=rule_set.marketplace,
-            plus=rule_set.plus,
-            npc_hp=rule_set.npc_hp,
-        ),
+        world=world_tools,
         speak=speak,
         ooc=ooc,
         rules={**rule_set.rules, **rule_set.attached_rules, **world.rules},
@@ -975,6 +1022,7 @@ def _tool_context(
             for tool in rule_set.tool_calls.values()
             if tool.lookup
         },
+        check_new_location=check_new_location,
     )
 
 
@@ -1017,7 +1065,11 @@ def _flush(run: _Run) -> list[Logged]:
         rows = events_since(db, run.campaign_id, run.cursor, Channel.LOG)
     if rows:
         run.cursor = rows[-1].id or run.cursor
-    return [Logged(text) for row in rows if (text := decode(row).render()) is not None]
+    return [
+        Logged(text, hidden=is_hidden(row.kind))
+        for row in rows
+        if (text := decode(row).render()) is not None
+    ]
 
 
 async def _speak(
@@ -1340,7 +1392,8 @@ async def _answer(run: _Run, answer: RollAnswer | TextAnswer | None) -> AsyncIte
         for entry in _flush(run):
             yield entry
         if isinstance(answer, TextAnswer):
-            _record(run.engine, run.campaign_id, ChatPlayer(content=answer.text))
+            speaker = speaker_name(_state(run.engine, run.campaign_id))
+            _record(run.engine, run.campaign_id, ChatPlayer(content=answer.text, speaker=speaker))
     async for event in _carry_on(run):
         yield event
 
@@ -1401,7 +1454,8 @@ async def stream_message(
         if player.dead:
             raise InvalidInput("your character is dead: choose a new character or a hireling first")
         run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
-        _record(engine, campaign.id, ChatPlayer(content=text))
+        speaker = speaker_name(_state(engine, campaign.id))
+        _record(engine, campaign.id, ChatPlayer(content=text, speaker=speaker))
         async for event in _guarded(run, _carry_on(run)):
             yield event
 

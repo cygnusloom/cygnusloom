@@ -5,7 +5,7 @@
     "name": "create_location",
     "python_module": "core",
     "function": "create_location",
-    "description": "Add a new location to the campaign. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs. Set discovered to true only when anyone in the world would have heard of the place, so the player already knows it. To put a place inside another, give parent set to the name of that top-level location; such a place has no map point of its own, so leave out x and y.",
+    "description": "Add a new location to the campaign. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs, and a name that repeats an existing place in other words (such as 'Farm Road' for 'Farming Path') is refused. Set discovered to true only when anyone in the world would have heard of the place, so the player already knows it. To put a place inside another, give parent set to the name of that top-level location; such a place has no map point of its own, so leave out x and y.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -67,6 +67,10 @@
         "description": {
           "type": "string",
           "description": "Who the NPC is: appearance, role, and what they are doing."
+        },
+        "pronouns": {
+          "type": "string",
+          "description": "Optional. The NPC's pronouns, such as \"she/her\", \"he/him\", or \"they/them\", or another form. Record them whenever the NPC is written in the text, so the GM does not have to guess."
         },
         "personality": {
           "type": "string",

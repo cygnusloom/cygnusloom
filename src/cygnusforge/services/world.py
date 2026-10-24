@@ -513,6 +513,11 @@ class WorldTools:
                 plus=self.plus,
             )
 
+    def place_names(self) -> list[str]:
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            return sorted(place.name for place in state.places.values())
+
     def create_location(
         self,
         name: str,
@@ -543,6 +548,7 @@ class WorldTools:
         character: Mapping[str, Any] | None = None,
         force: bool = False,
         hp_tier: str | None = None,
+        pronouns: str | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return create_npc(
@@ -563,6 +569,7 @@ class WorldTools:
                 plus=self.plus,
                 npc_hp=self.npc_hp,
                 hp_tier=hp_tier,
+                pronouns=pronouns,
             )
 
     def hire_hireling(
@@ -1139,6 +1146,7 @@ def create_npc(
     plus: str,
     npc_hp: Mapping[str, int],
     hp_tier: str | None = None,
+    pronouns: str | None = None,
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_NAME)
@@ -1167,6 +1175,7 @@ def create_npc(
         quirks=_quirks(quirks),
         character=character,
         plus=plus,
+        pronouns=_optional_text(pronouns, "pronouns"),
     )
     if base is not None:
         event = _with_statblock(event, base)
@@ -1179,6 +1188,7 @@ def create_npc(
         "personality": event.personality,
         "accent": event.accent,
         "quirks": list(event.quirks),
+        "pronouns": event.pronouns,
         "statblock": base.id if base else None,
     }
 
@@ -2047,6 +2057,9 @@ def world_state_text(
             for npc in _npcs_at(state, pc.location)
         ]
         lines.append(f"NPCs here: {', '.join(names) if names else 'none'}.")
+        for npc in _npcs_at(state, pc.location):
+            if npc.pronouns:
+                lines.append(f"Pronouns: {npc.name}, {npc.pronouns}.")
         things = [o.contents for o in visible_objects(state, pc.location)]
         if things:
             lines.append(f"Objects here: {'; '.join(things)}.")
@@ -2171,6 +2184,7 @@ def _npc_summary(npc: Character) -> dict[str, Any]:
         "personality": npc.personality,
         "accent": npc.accent,
         "quirks": list(npc.quirks),
+        "pronouns": npc.pronouns,
         "defeated": npc.defeated,
     }
 
@@ -2194,6 +2208,7 @@ def _npc_event(
     plus: str,
     story_only: bool = False,
     rules: Sequence[str] = (),
+    pronouns: str | None = None,
 ) -> NpcAdded:
     """The event that adds an NPC. A trait or character option that is not given is picked at
     random, so the picked values are stored in the event and replays do not roll again. A
@@ -2219,6 +2234,7 @@ def _npc_event(
         quirks=trait_quirks,
         story_only=story_only,
         rules=list(rules),
+        pronouns=pronouns,
         **sheet_fields,
     )
 

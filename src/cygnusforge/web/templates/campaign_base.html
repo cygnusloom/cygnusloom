@@ -46,7 +46,7 @@
       <div class="npc">
         <p><strong>{{ npc.name }}</strong></p>
         <p>{{ npc.description }}</p>
-        <p class="muted">Personality: {{ npc.personality }}. Accent: {{ npc.accent }}. Quirks: {{ npc.quirks | join("; ") or "none" }}.</p>
+        <p class="muted">{% if npc.pronouns %}Pronouns: {{ npc.pronouns }}. {% endif %}Personality: {{ npc.personality }}. Accent: {{ npc.accent }}. Quirks: {{ npc.quirks | join("; ") or "none" }}.</p>
       </div>
     {% else %}
       <p class="muted">No NPCs here.</p>

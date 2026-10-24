@@ -7,10 +7,21 @@
     }
   });
 
+  const transcript = document.querySelector("[data-transcript]");
+  // The "Show hidden events" checkbox toggles a class; the CSS hides .hidden-event lines otherwise.
+  const showHidden = document.querySelector("[data-show-hidden]");
+  const syncShowHidden = () => {
+    if (transcript && showHidden) transcript.classList.toggle("show-hidden", showHidden.checked);
+  };
+  if (showHidden) {
+    showHidden.checked = false;
+    showHidden.addEventListener("change", syncShowHidden);
+    syncShowHidden();
+  }
+
   const composer = document.getElementById("composer");
   if (!composer || !composer.dataset.streamAction || !window.ReadableStream) return;
 
-  const transcript = document.querySelector("[data-transcript]");
   const errorBox = document.querySelector(".turn-error");
   const textarea = composer.querySelector("textarea");
   const submit = composer.querySelector('button[type="submit"]');
@@ -58,9 +69,9 @@
   };
 
   // Log entries sit in the chat just before the reply they belong to.
-  const appendLog = (text, before) => {
+  const appendLog = (text, hidden, before) => {
     const line = document.createElement("div");
-    line.className = "log-line";
+    line.className = hidden ? "log-line hidden-event" : "log-line";
     line.textContent = text;
     transcript.insertBefore(line, before);
   };
@@ -128,7 +139,7 @@
           scrollDown();
           break;
         case "log":
-          appendLog(item.text, current.bubble);
+          appendLog(item.text, item.hidden, current.bubble);
           break;
         case "delta":
           current.status.hidden = true;

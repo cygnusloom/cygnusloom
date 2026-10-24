@@ -120,6 +120,8 @@ class Character:
     personality: str
     accent: str
     quirks: list[str]
+    # How the GM refers to the character, such as "she/her". None if it was never recorded.
+    pronouns: str | None = None
     # The character options, resolved when the character was created. See content/character.py.
     stats: dict[str, int] = field(default_factory=dict)
     templates: dict[str, str] = field(default_factory=dict)
@@ -341,6 +343,18 @@ class CampaignState:
         """The player's character: the living one if there is one, otherwise the dead one."""
         pcs = [c for c in self.characters.values() if c.kind == PC_KIND and not c.hireling]
         return next((c for c in pcs if not c.dead), next(iter(pcs), None))
+
+
+def speaker_name(state: CampaignState) -> str | None:
+    """Whose turn the player's next message speaks for: the acting PC or hireling in an encounter,
+    else the player character. None when there is no player character."""
+    encounter = state.encounter
+    if encounter is not None and encounter.acting is not None:
+        acting = state.characters.get(name_key(encounter.acting))
+        if acting is not None and acting.kind == PC_KIND:
+            return acting.name
+    pc = state.pc()
+    return pc.name if pc is not None else None
 
 
 def name_key(name: str) -> str:
@@ -595,6 +609,7 @@ class NpcAdded(GameEvent):
     personality: str
     accent: str
     quirks: list[str]
+    pronouns: str | None = None
     stats: dict[str, int] = field(default_factory=dict)
     templates: dict[str, str] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
@@ -616,6 +631,7 @@ class NpcAdded(GameEvent):
             personality=self.personality,
             accent=self.accent,
             quirks=list(self.quirks),
+            pronouns=self.pronouns,
             stats=dict(self.stats),
             templates=dict(self.templates),
             features=dict(self.features),
@@ -991,12 +1007,13 @@ class SpeechWritten(GameEvent):
 @dataclass(frozen=True)
 class ChatPlayer(GameEvent):
     """The player's message. A message sent while no turn is open starts one; a message sent while
-    a turn is open answers its prompt."""
+    a turn is open answers its prompt. `speaker` is the character the message speaks for."""
 
     kind: ClassVar[str] = "chat.player"
     channel: ClassVar[Channel] = Channel.TRANSCRIPT
 
     content: str
+    speaker: str | None = None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         if state.turn is None:
@@ -2270,3 +2287,101 @@ class CharacterDrained(GameEvent):
 
     def render(self) -> str:
         return f"{self.name}'s {self.stat.upper()} drops to 0 ({self.cause})."
+
+
+# Whether the player's transcript hides an event kind. Hidden kinds are GM bookkeeping or
+# things the player does not perceive; the rest are what the player's character says or
+# witnesses. Every registered kind must appear here (see tests/test_events.py).
+HIDDEN_KINDS: dict[str, bool] = {
+    # Turn plumbing and GM-only state.
+    "turn.begun": True,
+    "turn.opening": True,
+    "turn.prompted": True,
+    "turn.state_step": True,
+    "turn.ooc": True,
+    "speech.written": True,
+    "summary.updated": True,
+    "campaign.options": True,
+    # GM notes and GM-only records.
+    "note.added": True,
+    "note.updated": True,
+    "note.removed": True,
+    "npc.added": True,
+    "npc.statted": True,
+    "npc.updated": True,
+    "npc.removed": True,
+    "location.added": True,
+    "location.updated": True,
+    "location.removed": True,
+    "map.created": True,
+    "map.updated": True,
+    "map.deleted": True,
+    "effect.noted": True,
+    # GM-only rolls the player does not see.
+    "dungeon.event": True,
+    "dice.tables_rolled": True,
+    "reaction.rolled": True,
+    # Debug edits.
+    "combat.debug_stat_set": True,
+    "combat.invincibility_set": True,
+    "character.debug_currency_added": True,
+    # Tool plumbing. The roll result a tool produces is shown to the player.
+    "turn.failed": False,
+    "tool.ran": False,
+    # Player and GM speech.
+    "chat.player": False,
+    "chat.gm": False,
+    # Things the player's character does or witnesses.
+    "actor.moved": False,
+    "location.discovered": False,
+    "pc.added": False,
+    "hireling.added": False,
+    "hireling.dismissed": False,
+    "hireling.promoted": False,
+    "hireling.unpaid": False,
+    "encounter.started": False,
+    "encounter.ended": False,
+    "encounter.joined": False,
+    "encounter.left": False,
+    "encounter.placed": False,
+    "encounter.turn_begun": False,
+    "encounter.turn_ended": False,
+    "encounter.initiative_rolled": False,
+    "encounter.initiative_settled": False,
+    "combat.struck": False,
+    "combat.harmed": False,
+    "combat.save_rolled": False,
+    "combat.group_break_resolved": False,
+    "combat.armor_set": False,
+    "morale.checked": False,
+    "retreat.rolled": False,
+    "character.fled": False,
+    "character.surrendered": False,
+    "character.recovered": False,
+    "character.saved": False,
+    "character.dying": False,
+    "character.stabilized": False,
+    "character.died": False,
+    "character.drained": False,
+    "character.max_changed": False,
+    "character.gold_changed": False,
+    "character.lodging_set": False,
+    "character.need_set": False,
+    "character.item_added": False,
+    "character.item_removed": False,
+    "character.item_uses_set": False,
+    "condition.added": False,
+    "condition.ended": False,
+    "injury.gained": False,
+    "rest.taken": False,
+    "rest.recovered": False,
+    "object.placed": False,
+    "object.taken": False,
+    "magic.spell_cast": False,
+    "clock.advanced": False,
+}
+
+
+def is_hidden(kind: str) -> bool:
+    """Whether the player's transcript hides events of this kind."""
+    return HIDDEN_KINDS[kind]

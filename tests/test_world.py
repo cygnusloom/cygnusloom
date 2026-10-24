@@ -320,6 +320,46 @@ def test_gm_creates_a_location_and_an_npc_there(client_factory: Callable[[], Tes
     assert len(npc["quirks"]) == world.QUIRKS_PER_NPC
 
 
+def test_gm_records_npc_pronouns_and_they_replay(client_factory: Callable[[], TestClient], app):
+    client, campaign_id = _described_campaign(client_factory)
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
+    npc = _tool(
+        app,
+        campaign_id,
+        "create_npc",
+        {
+            "name": "Wren",
+            "location": "Glowcap Ring",
+            "description": "A reed-cutter.",
+            "pronouns": "she/her",
+        },
+    )
+    assert npc["pronouns"] == "she/her"
+    assert _actors(app, campaign_id)["Wren"].pronouns == "she/her"
+    text = world.world_state_text(_state(app, campaign_id), SPEC)
+    assert "Pronouns: Wren, she/her." in text
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "Pronouns: she/her." in page
+
+
+def test_npc_without_pronouns_still_works_and_omits_the_line(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _described_campaign(client_factory)
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Glowcap Ring"})
+    npc = _tool(
+        app,
+        campaign_id,
+        "create_npc",
+        {"name": "Tobb", "location": "Glowcap Ring", "description": "A stonemason."},
+    )
+    assert npc["pronouns"] is None
+    assert _actors(app, campaign_id)["Tobb"].pronouns is None
+    text = world.world_state_text(_state(app, campaign_id), SPEC)
+    assert "Tobb" in text
+    assert "Pronouns" not in text
+
+
 def test_location_and_character_names_are_unique(client_factory: Callable[[], TestClient], app):
     _, campaign_id = _campaign_id(client_factory)
     error = _tool(

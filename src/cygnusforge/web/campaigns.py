@@ -57,6 +57,7 @@ from cygnusforge.services.campaigns import (
 )
 from cygnusforge.services.common import Conflict, InvalidInput, NotFound
 from cygnusforge.services.encounters import encounter_view
+from cygnusforge.services.events import speaker_name
 from cygnusforge.services.names import random_campaign_name
 from cygnusforge.services.tools import check_arguments
 from cygnusforge.services.world import map_view, scene_view
@@ -482,8 +483,8 @@ def _line(event: TurnEvent | TurnError) -> str:
             payload: dict[str, object] = {"type": "status", "text": text}
         case Delta(text):
             payload = {"type": "delta", "text": text}
-        case Logged(text):
-            payload = {"type": "log", "text": text}
+        case Logged(text, hidden):
+            payload = {"type": "log", "text": text, "hidden": hidden}
         case Prompt(text, dice, details):
             payload = {"type": "prompt", "text": text, "dice": dice, "details": details}
         case Saved(event_id):
@@ -602,6 +603,7 @@ def _campaign_page(
         messages=messages,
         transcript=transcript,
         player_name=pc.name,
+        acting_name=speaker_name(world.state) or pc.name,
         context=context,
         error=error,
         draft=draft,

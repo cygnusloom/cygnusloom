@@ -8,7 +8,7 @@ from typing import Any
 from cygnusforge.rules.context import ToolContext, brief
 
 
-def create_location(
+async def create_location(
     name: str,
     description: str,
     ctx: ToolContext,
@@ -18,6 +18,8 @@ def create_location(
     force: bool = False,
     parent: str | None = None,
 ) -> dict[str, Any]:
+    if ctx.check_new_location is not None:
+        await ctx.check_new_location(name)
     return ctx.world.create_location(
         name, description, discovered=discovered, x=x, y=y, force=force, parent=parent
     )
@@ -34,6 +36,7 @@ def create_npc(
     character: Mapping[str, Any] | None = None,
     force: bool = False,
     hp_tier: str | None = None,
+    pronouns: str | None = None,
 ) -> dict[str, Any]:
     return ctx.world.create_npc(
         name=name,
@@ -45,6 +48,7 @@ def create_npc(
         character=character,
         force=force,
         hp_tier=hp_tier,
+        pronouns=pronouns,
     )
 
 

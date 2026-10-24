@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 
 import pytest
@@ -12,6 +13,7 @@ from cygnusforge.services.campaigns import campaign_log, list_messages
 from cygnusforge.services.events import (
     EVENT_TYPES,
     Channel,
+    ChatPlayer,
     GameEvent,
     LocationAdded,
     NoteAdded,
@@ -63,6 +65,55 @@ def test_recorded_events_decode_to_what_was_recorded(
 
     assert decode(row) == event
     assert row.channel == Channel.LOG
+
+
+def test_npc_pronouns_round_trip_and_old_events_load_without_them(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    _, campaign_id = _campaign_id(client_factory)
+    event = NpcAdded(
+        name="Pell",
+        location="Test Ledge",
+        description="A ferryman.",
+        personality="Calm",
+        accent="Soft",
+        quirks=["hums"],
+        pronouns="he/him",
+    )
+    with Session(app.state.engine) as db:
+        record(db, campaign_id, LocationAdded(name="Test Ledge", description="A ledge."))
+        event_id = record(db, campaign_id, event)
+        db.commit()
+    with Session(app.state.engine) as db:
+        row = db.get(Event, event_id)
+    assert decode(row) == event
+
+    legacy = json.loads(row.payload)
+    legacy.pop("pronouns")
+    row.payload = json.dumps(legacy)
+    assert decode(row).pronouns is None
+
+
+def test_a_player_message_keeps_the_character_it_spoke_for(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    _, campaign_id = _campaign_id(client_factory)
+    with Session(app.state.engine) as db:
+        spoken = record(db, campaign_id, ChatPlayer(content="Lead on.", speaker="Bram"))
+        legacy = record(db, campaign_id, ChatPlayer(content="Hello."))
+        db.commit()
+    with Session(app.state.engine) as db:
+        assert decode(db.get(Event, spoken)).speaker == "Bram"
+        row = db.get(Event, legacy)
+        payload = json.loads(row.payload)
+        payload.pop("speaker")
+        row.payload = json.dumps(payload)
+        db.commit()
+    with Session(app.state.engine) as db:
+        assert decode(db.get(Event, legacy)).speaker is None
+    messages = {m.id: m for m in list_messages(app.state.engine, campaign_id)}
+    assert messages[spoken].speaker == "Bram"
+    assert messages[legacy].speaker is None
 
 
 def test_truncate_removes_later_events_and_the_state_follows(
