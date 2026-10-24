@@ -222,6 +222,7 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
   position: relative; overflow: hidden; touch-action: none; cursor: grab;
 }
 .map-frame.panning { cursor: grabbing; }
+.map-frame > .map-recenter { position: absolute; top: 0.5rem; right: 0.5rem; z-index: 1; }
 .map-frame > .map-board { width: min(100cqw, 100cqh); height: auto; max-height: none; min-height: 0; transform-origin: 0 0; }
 .map-frame > .encounter-board { width: min(100cqw, calc(100cqh * var(--columns) / var(--rows))); }
 .map-view > .encounter-status { flex: none; width: 100%; }

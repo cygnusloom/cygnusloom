@@ -175,13 +175,17 @@ class MapMarker:
 
 @dataclass(frozen=True)
 class MapView:
-    """The player's map. Only discovered places appear on it. Places with a position are placed on a
-    square centered on the origin and sized to fit the farthest one. Every discovered place is listed.
+    """The player's map. Only discovered places appear on it. The map is centered on the player
+    character's place, and places with a position are placed on a square sized to fit the farthest
+    one. Every discovered place is listed. `where` holds each place's line of location text, and
+    `origin` is the percentage position of the true origin, or None when it is off the board.
     """
 
     radius_km: float
     markers: list[MapMarker]
     places: list[Place]
+    where: dict[str, str] = field(default_factory=dict)
+    origin: tuple[float, float] | None = None
 
 
 @dataclass(frozen=True)
@@ -2027,18 +2031,44 @@ def speaker_profile(state: CampaignState, name: str, spec: CharacterSpec) -> str
     return "\n".join(lines)
 
 
+def _map_center(state: CampaignState) -> tuple[float, float] | None:
+    """The position the map centers on: the player character's place, or the nearest place above it
+    that has a position. None when there is no player character or no placed place above it."""
+    pc = state.pc()
+    name = pc.location if pc is not None else None
+    seen: set[str] = set()
+    while name is not None and name_key(name) not in seen:
+        seen.add(name_key(name))
+        place = state.named(name)
+        if not isinstance(place, Place):
+            return None
+        if place.position is not None:
+            return place.position.x, place.position.y
+        name = place.parent
+    return None
+
+
+def _km_text(km: float) -> str:
+    return f"{abs(km):.1f}".rstrip("0").rstrip(".")
+
+
+def _offset_text(dx: float, dy: float) -> str:
+    east = "east" if dx >= 0 else "west"
+    north = "north" if dy >= 0 else "south"
+    return f"{_km_text(dx)} km {east}, {_km_text(dy)} km {north}"
+
+
 def map_view(state: CampaignState) -> MapView:
     """The player's map. Only discovered places appear on it. Each marker is placed on a square
-    centered on the origin, sized to fit the farthest discovered place plus a margin."""
+    centered on the player character's place, sized to fit the farthest discovered place plus a margin."""
     places = sorted(
         (place for place in state.places.values() if place.discovered),
         key=lambda place: name_key(place.name),
     )
-    placed = [place for place in places if place.position is not None]
-    reach = max(
-        [MIN_MAP_RADIUS_KM]
-        + [max(abs(p.position.x), abs(p.position.y)) for p in placed if p.position is not None]
-    )
+    center = _map_center(state)
+    cx, cy = center if center is not None else (0.0, 0.0)
+    placed = [(place, place.position) for place in places if place.position is not None]
+    reach = max([MIN_MAP_RADIUS_KM] + [max(abs(pos.x - cx), abs(pos.y - cy)) for _, pos in placed])
     radius = reach * MAP_MARGIN
     pc = state.pc()
     here = pc.location if pc is not None else None
@@ -2047,15 +2077,31 @@ def map_view(state: CampaignState) -> MapView:
         MapMarker(
             name=place.name,
             label=labels[place.name],
-            left=round(50 + place.position.x / radius * 50, 2),
-            top=round(50 - place.position.y / radius * 50, 2),
+            left=round(50 + (pos.x - cx) / radius * 50, 2),
+            top=round(50 - (pos.y - cy) / radius * 50, 2),
             here=place.name == here,
             icon=place.icon,
         )
-        for place in placed
-        if place.position is not None
+        for place, pos in placed
     ]
-    return MapView(radius_km=round(radius, 2), markers=markers, places=places)
+    where: dict[str, str] = {}
+    for place in places:
+        if place.parent:
+            where[place.name] = f"Inside {place.parent}"
+        elif place.name == here:
+            where[place.name] = "You are here"
+        elif place.position is not None and center is not None:
+            where[place.name] = _offset_text(place.position.x - cx, place.position.y - cy)
+    origin_left = round(50 - cx / radius * 50, 2)
+    origin_top = round(50 + cy / radius * 50, 2)
+    on_board = 0 <= origin_left <= 100 and 0 <= origin_top <= 100
+    return MapView(
+        radius_km=round(radius, 2),
+        markers=markers,
+        places=places,
+        where=where,
+        origin=(origin_left, origin_top) if on_board else None,
+    )
 
 
 def scene_view(

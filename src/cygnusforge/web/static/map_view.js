@@ -46,6 +46,11 @@
     if (!board) return;
     frame.title = "Scroll to zoom, drag to pan, double-click to reset";
 
+    const reset = () => {
+      Object.assign(stateOf(board), { scale: 1, left: null, top: null });
+      fit(frame, board);
+    };
+
     frame.addEventListener("wheel", (event) => {
       event.preventDefault();
       const rect = frame.getBoundingClientRect();
@@ -55,7 +60,7 @@
 
     let lastPointer = null;
     frame.addEventListener("pointerdown", (event) => {
-      if (event.button !== 0) return;
+      if (event.button !== 0 || event.target.closest?.("button")) return;
       lastPointer = { x: event.clientX, y: event.clientY };
       frame.setPointerCapture(event.pointerId);
       frame.classList.add("panning");
@@ -75,11 +80,8 @@
     frame.addEventListener("pointerup", endPan);
     frame.addEventListener("pointercancel", endPan);
 
-    frame.addEventListener("dblclick", () => {
-      const state = stateOf(board);
-      Object.assign(state, { scale: 1, left: null, top: null });
-      fit(frame, board);
-    });
+    frame.addEventListener("dblclick", reset);
+    frame.querySelector(".map-recenter")?.addEventListener("click", reset);
 
     new ResizeObserver(() => fit(frame, board)).observe(frame);
   };

@@ -9,12 +9,12 @@
 {% macro map_board(view, framed=false) -%}
   {% if framed %}<div class="map-frame">{% endif %}
   <div class="map-board" aria-label="Map of discovered places">
-    <span class="map-origin" aria-hidden="true"></span>
+    {% if view.origin %}<span class="map-origin" style="left: {{ view.origin[0] }}%; top: {{ view.origin[1] }}%" aria-hidden="true"></span>{% endif %}
     {% for marker in view.markers %}
       <span class="map-marker{% if marker.here %} here{% endif %}" style="left: {{ marker.left }}%; top: {{ marker.top }}%" role="img" aria-label="{{ marker.label }}" data-tip="{{ marker.name }}{% if marker.here %} (you){% endif %}"><img src="{{ place_icon_path(marker.icon) }}" alt=""></span>
     {% endfor %}
   </div>
-  {% if framed %}</div>{% endif %}
+  {% if framed %}<button type="button" class="secondary map-recenter">Recenter</button></div>{% endif %}
   {% if view.markers %}
     <p class="muted map-scale">About {{ (view.radius_km * 2) | round(1) }} km across. North is up.</p>
   {% endif %}
@@ -34,7 +34,7 @@
   {% for place in view.places %}
     <div class="map-place">
       <strong>{{ place.name }}</strong>
-      {% if place.parent %}<span class="muted">Inside {{ place.parent }}</span>{% elif place.position %}<span class="muted">{{ place.position.x }} km east, {{ place.position.y }} km north</span>{% endif %}
+      {% if view.where.get(place.name) %}<span class="muted">{{ view.where[place.name] }}</span>{% endif %}
       {% if place.summary %}<p>{{ place.summary }}</p>{% endif %}
     </div>
   {% else %}

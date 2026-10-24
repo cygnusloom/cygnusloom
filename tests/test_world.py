@@ -1924,3 +1924,114 @@ def test_campaign_page_draws_discovered_places_on_the_map(
     panel = page[page.index('aria-label="Map"') : page.index('id="panel-')]
     assert "map-marker" in panel
     assert "Map placeholder" not in page
+
+
+def test_map_centers_on_the_player_character_and_says_you_are_here(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {
+            "name": "Far Shore",
+            "description": "Across the ravine.",
+            "discovered": True,
+            "x": 3,
+            "y": -2,
+        },
+    )
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Far Shore"})
+    view = world.map_view(_state(app, campaign_id))
+    markers = {m.name: m for m in view.markers}
+    assert (markers["Far Shore"].left, markers["Far Shore"].top) == (50.0, 50.0)
+    assert markers["Far Shore"].here is True
+    assert view.where["Far Shore"] == "You are here"
+    assert view.origin == (4.55, 19.7)
+
+
+def test_map_distance_labels_are_measured_from_the_player_character(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {
+            "name": "Far Shore",
+            "description": "Across the ravine.",
+            "discovered": True,
+            "x": 3,
+            "y": -2,
+        },
+    )
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Ridge", "description": "A ridge.", "discovered": True, "x": 5, "y": 1},
+    )
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Far Shore"})
+    view = world.map_view(_state(app, campaign_id))
+    assert view.where["Ridge"] == "2 km east, 3 km north"
+    assert view.where["Mossbell Hollow"] == "3 km west, 2 km north"
+    markers = {m.name: m for m in view.markers}
+    assert (markers["Ridge"].left, markers["Ridge"].top) == (80.3, 4.55)
+
+
+def test_map_centers_on_the_nearest_placed_ancestor(client_factory: Callable[[], TestClient], app):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Ashen Ford", "description": "A ford.", "discovered": True, "x": 2, "y": 3},
+    )
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {
+            "name": "Ferry Post",
+            "description": "A post.",
+            "discovered": True,
+            "parent": "Ashen Ford",
+        },
+    )
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Ferry Post"})
+    view = world.map_view(_state(app, campaign_id))
+    assert view.where["Ferry Post"] == "Inside Ashen Ford"
+    assert view.where["Mossbell Hollow"] == "2 km west, 3 km south"
+    markers = {m.name: m for m in view.markers}
+    assert (markers["Ashen Ford"].left, markers["Ashen Ford"].top) == (50.0, 50.0)
+
+
+def test_map_without_a_placed_ancestor_has_no_distance_labels(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Hollow Dell", "description": "A dell.", "discovered": True},
+    )
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Hollow Dell"})
+    view = world.map_view(_state(app, campaign_id))
+    assert view.origin == (50.0, 50.0)
+    assert view.where == {"Hollow Dell": "You are here"}
+    assert [m.name for m in view.markers] == ["Mossbell Hollow"]
+    assert (view.markers[0].left, view.markers[0].top) == (50.0, 50.0)
+
+
+def test_framed_map_has_a_recenter_button_inside_the_frame(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _described_campaign(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    button = '<button type="button" class="secondary map-recenter">Recenter</button></div>'
+    assert button in page
+    frame = page.index('<div class="map-frame">')
+    assert frame < page.index(button) < page.index("map-scale", frame)
