@@ -195,7 +195,7 @@
             </div>
             <div class="tab-panel" role="tabpanel" id="panel-character" aria-labelledby="tab-character" hidden>
               {% if scene.pc %}
-              <p><strong>{{ scene.pc.name }}</strong></p>
+              <p><strong>{{ scene.pc.name }}</strong>{% if scene.pc.pronouns %} <span class="muted">Pronouns: {{ scene.pc.pronouns }}.</span>{% endif %}</p>
               {% if scene.pc.description %}<p>{{ scene.pc.description }}</p>{% endif %}
               {% endif %}
               {% for line in scene.sheet %}

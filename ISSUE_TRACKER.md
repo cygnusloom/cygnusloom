@@ -16,8 +16,6 @@ Order below is the work order. Each entry lists the decisions made in triage.
 
 3. Dungeon and wilderness cycles: the AI GM decides from the situation which cycle applies. The dungeon cycle applies in dangerous areas and dungeons; the wilderness cycle applies to broader long-term travel; neither applies in safe areas. Enforced by prompt guidance, as with items 1 and 2. The wilderness cycle is already built (W1 and W2), so this is about the GM's guidance and choosing the right cycle.
 
-4. PC pronouns at character creation, as NPCs already have them: he, she, they, or a freeform option. The AI GM uses the chosen pronouns in its narration, and they show on the character sheet.
-
 5. Model settings dialog: holds the model choice and a per-player checkbox to show hidden events. The checkbox moves out of its current place. Not campaign-wide; the GM does not set it for others.
 
 6. Background terrain on the world map: colour or texture per terrain type, laid out as a proper world map. World map only; encounter maps already have terrain. World data defines regions (polygons); the GM can add a region the data lacks, which is saved per campaign and drawn for everyone. A new region that overlaps an existing one is refused unless forced.

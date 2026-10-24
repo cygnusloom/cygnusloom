@@ -14,6 +14,10 @@ from cygnusforge.web.forms import form_text
 STAT_PREFIX = "stat-"
 TEMPLATE_PREFIX = "template-"
 FIELD_PREFIX = "field-"
+PRONOUNS_FIELD = "pronouns"
+PRONOUNS_OTHER_FIELD = "pronouns-other"
+PRONOUN_CHOICES = ("he/him", "she/her", "they/them")
+OTHER_PRONOUNS = "other"
 
 
 def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]:
@@ -74,7 +78,31 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
         "choice_fields": choice_fields,
         "text_fields": text_fields,
         "name_suggestions": any(template.names for template in spec.templates.values()),
+        "pronoun_options": _pronoun_options(),
     }
+
+
+def pronouns_from_form(form: FormData) -> str:
+    """The pronouns the player chose: one of the listed sets, or the text written for Other."""
+    chosen = form_text(form, PRONOUNS_FIELD)
+    if chosen == OTHER_PRONOUNS:
+        own = form_text(form, PRONOUNS_OTHER_FIELD).strip()
+        if not own:
+            raise InvalidInput("Write your pronouns, or choose one from the list")
+        return own
+    if chosen not in PRONOUN_CHOICES:
+        raise InvalidInput("Choose your pronouns")
+    return chosen
+
+
+def _pronoun_options() -> list[dict[str, Any]]:
+    """The listed pronoun sets, then Other. Other is freeform: a random roll skips it, since it
+    needs the text the player writes."""
+    options: list[dict[str, Any]] = [
+        {"value": value, "title": value, "freeform": False} for value in PRONOUN_CHOICES
+    ]
+    options.append({"value": OTHER_PRONOUNS, "title": "Other", "freeform": True})
+    return options
 
 
 def campaign_view(spec: CampaignSpec) -> dict[str, Any]:

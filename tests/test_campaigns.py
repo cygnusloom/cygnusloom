@@ -46,11 +46,15 @@ def _create_character(
     campaign_id: int,
     name: str = "Ada",
     fields: dict[str, str] | None = None,
+    pronouns: str | None = "she/her",
 ):
     token = csrf_token(client, f"/campaigns/{campaign_id}")
+    form = {"csrf_token": token, "name": name, **(fields or {})}
+    if pronouns is not None:
+        form["pronouns"] = pronouns
     return client.post(
         f"/campaigns/{campaign_id}/character",
-        data={"csrf_token": token, "name": name, **(fields or {})},
+        data=form,
         follow_redirects=False,
     )
 

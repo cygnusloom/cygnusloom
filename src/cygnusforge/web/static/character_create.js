@@ -45,7 +45,7 @@
 
   const rollChoice = (name) => {
     const options = [...document.querySelectorAll(`input[type="radio"][name="${name}"]`)].filter(
-      (radio) => !radio.closest("[hidden]"),
+      (radio) => !radio.closest("[hidden]") && !radio.hasAttribute("data-freeform"),
     );
     if (options.length === 0) return;
     const pick = options[Math.floor(Math.random() * options.length)];

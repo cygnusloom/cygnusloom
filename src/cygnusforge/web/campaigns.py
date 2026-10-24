@@ -65,6 +65,7 @@ from cygnusforge.web.character_form import (
     campaign_submission_from_form,
     campaign_view,
     creation_view,
+    pronouns_from_form,
     submission_from_form,
 )
 from cygnusforge.web.forms import form_text
@@ -189,7 +190,8 @@ async def create_player_character(request: Request, campaign_id: int) -> Respons
         problem = check_arguments(character_schema(spec), submitted)
         if problem:
             raise InvalidInput(problem)
-        create_character(engine, library, user.id, campaign_id, name, rolled, submitted)
+        pronouns = pronouns_from_form(form)
+        create_character(engine, library, user.id, campaign_id, name, rolled, submitted, pronouns)
     except InvalidInput as exc:
         return _campaign_page(request, user, campaign_id, 400, str(exc))
     except Conflict as exc:

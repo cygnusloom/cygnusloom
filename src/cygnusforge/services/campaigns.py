@@ -359,6 +359,7 @@ def create_character(
     name: str,
     rolled: Mapping[str, int],
     submitted: Mapping[str, Any],
+    pronouns: str,
     rng: random.Random | None = None,
 ) -> dict[str, Any]:
     """Make the campaign's player character. Until it exists, the campaign cannot be played."""
@@ -380,6 +381,7 @@ def create_character(
             magic=rule_set.magic,
             currency=rule_set.marketplace.currency if rule_set.marketplace else "",
             armor_max=rule_set.combat.armor_max if rule_set.combat else 0,
+            pronouns=pronouns,
             plus=rule_set.plus,
         )
 

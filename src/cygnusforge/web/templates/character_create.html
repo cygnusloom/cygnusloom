@@ -57,6 +57,18 @@
           {% endfor %}
         {% endfor %}
       </section>
+      <fieldset class="creation-panel" data-choice-panel="pronouns" data-choice-label="Pronouns" aria-labelledby="panel-pronouns">
+        <h3 id="panel-pronouns">Pronouns</h3>
+        {% call choice_picker("pronouns", "Pronouns") %}
+          {% for option in character.pronoun_options %}
+            {{ choice("pronouns", option.value, option.title, freeform=option.freeform) }}
+          {% endfor %}
+        {% endcall %}
+        <label class="pronouns-other">
+          Other pronouns
+          <input type="text" name="pronouns-other" maxlength="120" aria-label="Other pronouns, if chosen above">
+        </label>
+      </fieldset>
       {% if character.stats %}
         <section class="creation-panel" aria-labelledby="panel-stats">
           <h3 id="panel-stats">Stats</h3>

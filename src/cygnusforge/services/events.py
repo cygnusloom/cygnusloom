@@ -604,6 +604,7 @@ class PcAdded(GameEvent):
 
     name: str
     location: str | None = None
+    pronouns: str | None = None
     stats: dict[str, int] = field(default_factory=dict)
     templates: dict[str, str] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
@@ -618,6 +619,7 @@ class PcAdded(GameEvent):
             personality="",
             accent="",
             quirks=[],
+            pronouns=self.pronouns,
             stats=dict(self.stats),
             templates=dict(self.templates),
             features=dict(self.features),

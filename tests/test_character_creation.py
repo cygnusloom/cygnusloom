@@ -165,7 +165,7 @@ def test_every_choice_opens_a_dialog_and_radios_are_not_required(
 ):
     client, campaign_id = _cairn_campaign(client_factory)
     page = client.get(f"/campaigns/{campaign_id}").text
-    groups = {name for name, _ in RADIO_RE.findall(page)}
+    groups = set(re.findall(r'<input type="radio" name="([\w-]+)"', page))
     dialog_ids = re.findall(r'<dialog id="(choice-dialog-[\w-]+)"', page)
     opened = re.findall(r'data-open-choice="(choice-dialog-[\w-]+)"', page)
     assert {f"choice-dialog-{name}" for name in groups} == set(dialog_ids)
@@ -315,3 +315,79 @@ def test_the_omen_is_a_campaign_option_given_to_the_gm(client_factory: Callable[
     with Session(client.app.state.engine) as db:
         text = world.world_state_text(load_state(db, campaign_id), cairn.campaign)
     assert f"Campaign omen: {omen}." in text
+
+
+def _stored_pc(client: TestClient, campaign_id: int):
+    with Session(client.app.state.engine) as db:
+        return load_state(db, campaign_id).pc()
+
+
+def test_pronouns_are_required_for_a_player_character(client_factory: Callable[[], TestClient]):
+    client, campaign_id = _cairn_campaign(client_factory)
+    fields = _complete_form(client, campaign_id)
+
+    response = _create_character(client, campaign_id, name="Mara", fields=fields, pronouns=None)
+    assert response.status_code == 400
+    assert "Choose your pronouns" in response.text
+
+    response = _create_character(client, campaign_id, name="Mara", fields=fields, pronouns="")
+    assert response.status_code == 400
+    assert "Choose your pronouns" in response.text
+    assert _stored_pc(client, campaign_id) is None
+
+
+def test_other_pronouns_must_be_written(client_factory: Callable[[], TestClient]):
+    client, campaign_id = _cairn_campaign(client_factory)
+    fields = _complete_form(client, campaign_id)
+    fields["pronouns-other"] = "   "
+
+    response = _create_character(client, campaign_id, name="Mara", fields=fields, pronouns="other")
+    assert response.status_code == 400
+    assert "Write your pronouns" in response.text
+    assert _stored_pc(client, campaign_id) is None
+
+
+def test_listed_pronouns_are_stored_and_shown_to_the_gm_and_on_the_sheet(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _cairn_campaign(client_factory)
+    created = _create_character(
+        client,
+        campaign_id,
+        name="Mara",
+        fields=_complete_form(client, campaign_id),
+        pronouns="they/them",
+    )
+    assert created.status_code == 303
+
+    pc = _stored_pc(client, campaign_id)
+    assert pc is not None and pc.pronouns == "they/them"
+    with Session(client.app.state.engine) as db:
+        text = world.world_state_text(
+            load_state(db, campaign_id), client.app.state.content.rule_sets["cairn2e"].campaign
+        )
+    assert "Pronouns: Mara, they/them." in text
+    assert "Pronouns: they/them." in client.get(f"/campaigns/{campaign_id}").text
+
+
+def test_other_pronouns_are_stored_as_written(client_factory: Callable[[], TestClient]):
+    client, campaign_id = _cairn_campaign(client_factory)
+    fields = _complete_form(client, campaign_id)
+    fields["pronouns-other"] = "  xe/xem  "
+
+    created = _create_character(client, campaign_id, name="Mara", fields=fields, pronouns="other")
+    assert created.status_code == 303
+    pc = _stored_pc(client, campaign_id)
+    assert pc is not None and pc.pronouns == "xe/xem"
+
+
+def test_pronoun_choices_put_other_last_and_freeform_so_randomize_skips_it(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _cairn_campaign(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert 'data-choice-panel="pronouns"' in page
+    assert 'type="radio" name="pronouns" value="he/him"' in page
+    assert 'type="radio" name="pronouns" value="other" data-title="Other" data-freeform>' in page
+    assert page.count("data-freeform") == 1
+    assert 'name="pronouns-other"' in page

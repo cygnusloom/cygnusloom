@@ -377,7 +377,7 @@ def test_npc_without_pronouns_still_works_and_omits_the_line(
     assert _actors(app, campaign_id)["Tobb"].pronouns is None
     text = world.world_state_text(_state(app, campaign_id), SPEC)
     assert "Tobb" in text
-    assert "Pronouns" not in text
+    assert "Pronouns: Tobb" not in text
 
 
 def test_location_and_character_names_are_unique(client_factory: Callable[[], TestClient], app):
@@ -1423,6 +1423,7 @@ def test_player_character_waits_for_the_campaign_options(
             {},
             random.Random(0),
             plus=CAIRN.plus,
+            pronouns="she/her",
         )
 
 

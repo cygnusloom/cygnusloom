@@ -1296,12 +1296,13 @@ def create_player_character(
     currency: str = "",
     armor_max: int = 0,
     *,
+    pronouns: str,
     plus: str,
 ) -> dict[str, Any]:
     """Make the player character from the player's choices. `rolled` are the stats rolled for
     this character; the player may only keep them or swap within a swap group. Starting item
     features are carried as inventory items, spell features as spellbooks, and the armor they
-    give is worn. The currency stays a count."""
+    give is worn. The currency stays a count. The pronouns are how the GM refers to the character."""
     state = load_state(db, campaign_id)
     current = state.pc()
     if current is not None and not current.dead:
@@ -1309,6 +1310,7 @@ def create_player_character(
     if campaign.fields and not state.options:
         raise InvalidInput("the campaign options must be chosen before the player character")
     name = bounded_text(name, "name", MAX_NAME)
+    pronouns = bounded_text(pronouns, "pronouns", MAX_NAME)
     _ensure_free_name(state, name)
     chosen = submitted.get("stats", {})
     if set(chosen) != set(spec.stats):
@@ -1332,7 +1334,7 @@ def create_player_character(
                 feature.feature_type == "spell" and magic is not None
             ):
                 carried.append((feature, starting.pop(feature_id)))
-    record(db, campaign_id, PcAdded(name=name, **fields))
+    record(db, campaign_id, PcAdded(name=name, pronouns=pronouns, **fields))
     armor = 0
     for feature, count in carried:
         for _ in range(count):
@@ -2431,6 +2433,8 @@ def world_state_text(
         if clock_rules.hours_per_part > 1:
             when += f", hour {state.clock.hour + 1} of {clock_rules.hours_per_part}"
         lines.append(f"It is {when}.")
+    if pc.pronouns:
+        lines.append(f"Pronouns: {pc.name}, {pc.pronouns}.")
     if pc.dead:
         where = f" the body lies at {pc.location}." if pc.location is not None else ""
         lines.append(f"Player character {pc.name} is dead;{where}".rstrip(".") + ".")

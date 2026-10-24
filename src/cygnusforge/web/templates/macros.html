@@ -43,9 +43,9 @@
   {% endfor %}
 {%- endmacro %}
 
-{% macro choice(name, value, title, detail=None, data_select=None) -%}
+{% macro choice(name, value, title, detail=None, data_select=None, freeform=False) -%}
   <label class="choice">
-    <input type="radio" name="{{ name }}" value="{{ value }}" data-title="{{ title }}"{% if data_select %} data-template-select="{{ data_select }}"{% endif %}>
+    <input type="radio" name="{{ name }}" value="{{ value }}" data-title="{{ title }}"{% if data_select %} data-template-select="{{ data_select }}"{% endif %}{% if freeform %} data-freeform{% endif %}>
     <span>{{ title }}</span>
     {% if detail %}<span class="muted choice-detail">{{ detail }}</span>{% endif %}
   </label>

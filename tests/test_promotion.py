@@ -125,6 +125,7 @@ def test_a_new_player_character_is_refused_while_one_lives_and_allowed_after(
             {},
             random.Random(0),
             plus=CAIRN.plus,
+            pronouns="she/her",
         )
     _kill_pc(client.app, campaign_id, tools)
     created = _create_character(
