@@ -650,7 +650,7 @@ Book rules to build (from the Player's Guide procedures page):
 - Make Camp: each member and mount consumes a Ration. Members who rest remove all Fatigue.
 - Light: torches light 40 ft, a torch lasts 3 uses, a lantern is refillable with an oil can (6 uses). Without light, panic.
 - Supply: hunting, fishing, or foraging yields 1d4 Rations (3 uses each). The bounty die grows with party size (1d4, 1d6, up to 1d12).
-- Weather: rolled daily by season (spring, summer, fall, winter) on a d6 table: Nice, Fair, Unpleasant, Inclement, Extreme, Catastrophic. Two Extremes in a row make it Catastrophic. Unpleasant adds a Fatigue or a watch. Inclement adds a Fatigue or +1 watch, plus a terrain step. Extreme adds a Fatigue, +1 watch, and a terrain step. Catastrophic: most parties cannot travel.
+- Weather: rolled daily by season (spring, summer, fall, winter) on a d6 table: Nice, Fair, Unpleasant, Inclement, Extreme, Catastrophic. Two Extremes in a row make it Catastrophic. The book says "if the Extreme weather result is rolled twice in a row", so the streak counts rolled Extremes. A Catastrophic day still counts, so a rolled Extreme right after it is Catastrophic again. Only a non-Extreme roll breaks the run (user chose "book behavior"). Unpleasant adds a Fatigue or a watch. Inclement adds a Fatigue or +1 watch, plus a terrain step. Extreme adds a Fatigue, +1 watch, and a terrain step. Catastrophic: most parties cannot travel.
 
 Decided (user, terrain source): travel path and terrain difficulty can be authored in the world data. Where the world data has none, the AI GM derives them and supplies them when it travels the party. Both paths feed the same watch calculation.
 

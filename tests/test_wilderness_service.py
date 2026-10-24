@@ -188,7 +188,30 @@ def test_two_extremes_in_a_row_make_a_catastrophe(
     assert one["weather"] == "Extreme" and one["catastrophe"] is False
     assert two["weather"] == "Catastrophic" and two["catastrophe"] is True
     with _db(app) as db:
-        assert load_state(db, campaign_id).weather_streak == 0
+        assert load_state(db, campaign_id).weather_streak == 2
+
+
+def test_a_rolled_extreme_after_a_catastrophe_is_catastrophic_again(
+    client_factory: Callable[[], TestClient], app: FastAPI, monkeypatch: pytest.MonkeyPatch
+):
+    _, campaign_id = _campaign_id(client_factory)
+    results = []
+    for day, roll in enumerate([5, 5, 5, 1, 5], start=1):
+        _fix_roll(monkeypatch, roll)
+        with _db(app) as db:
+            results.append(
+                roll_weather(
+                    db,
+                    campaign_id,
+                    _wilderness(),
+                    TABLES,
+                    StubRng(1),
+                    plus=None,
+                    day=day,
+                    season="spring",
+                )["weather"]
+            )
+    assert results == ["Extreme", "Catastrophic", "Catastrophic", "Nice", "Extreme"]
 
 
 def test_an_unknown_wilderness_action_is_rejected(

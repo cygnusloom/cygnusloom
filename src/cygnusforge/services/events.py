@@ -1812,9 +1812,8 @@ class WeatherRolled(GameEvent):
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.weather_day = self.day
-        state.weather_streak = (
-            state.weather_streak + 1 if self.extreme and not self.catastrophe else 0
-        )
+        # Counts rolled Extremes, so a Catastrophic day still counts toward the run.
+        state.weather_streak = state.weather_streak + 1 if self.extreme else 0
 
     def render(self) -> str:
         return f"Weather (day {self.day}, {self.season}): rolls {self.roll}, {self.weather}."
