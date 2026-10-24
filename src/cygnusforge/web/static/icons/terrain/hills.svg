@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Hills</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 50 Q18 22 34 42 Q44 30 60 50 Z" fill="#7fae5a"/><path d="M14 56 Q30 30 52 56 Z" fill="#d9b97a"/>
+  </g>
+</svg>

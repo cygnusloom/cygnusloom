@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Stairs down</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 4 H18 V16 H30 V28 H42 V40 H54 V58 H6 Z" fill="#a7adb2"/><path d="M50 6 V22 M44 16 L50 24 L56 16"/>
+  </g>
+</svg>

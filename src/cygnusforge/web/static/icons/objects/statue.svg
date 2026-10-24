@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Statue</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="32" cy="14" r="6" fill="#a7adb2"/><path d="M24 50 Q22 30 26 24 H38 Q42 30 40 50 Z" fill="#a7adb2"/><path d="M18 60 H46 L42 52 H22 Z" fill="#a7adb2"/>
+  </g>
+</svg>

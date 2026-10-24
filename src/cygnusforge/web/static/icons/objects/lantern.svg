@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Lantern</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M28 6 Q32 0 36 6"/><path d="M14 14 H50 L46 8 H18 Z" fill="#2e2620"/><rect x="18" y="14" width="28" height="36" rx="4" fill="#e6b53a"/><path d="M18 26 H46 M18 40 H46"/><path d="M32 22 Q36 30 32 38 Q28 30 32 22 Z" fill="#f08a2c"/>
+  </g>
+</svg>

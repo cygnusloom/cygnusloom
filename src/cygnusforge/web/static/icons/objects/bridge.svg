@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Bridge</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 50 Q10 46 18 50 T34 50 T50 50 T62 50 V62 H2 Z" fill="#5b9bd1"/><path d="M4 46 Q32 20 60 46 V52 Q32 26 4 52 Z" fill="#8b5e3c"/>
+  </g>
+</svg>

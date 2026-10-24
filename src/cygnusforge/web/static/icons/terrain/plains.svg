@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Plains</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="6" y="6" width="52" height="52" rx="6" fill="#d9b97a"/><path d="M14 46 l4 -10 l4 10 M26 52 l4 -10 l4 10 M40 44 l4 -10 l4 10 M46 30 l3 -7 l3 7" stroke="#7fae5a" stroke-width="3"/>
+  </g>
+</svg>

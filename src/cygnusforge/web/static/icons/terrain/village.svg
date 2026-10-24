@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Village</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="8" y="40" width="20" height="16" fill="#d9b97a"/><path d="M6 40 L18 28 L30 40 Z" fill="#c0503a"/><rect x="32" y="42" width="24" height="14" fill="#d9b97a"/><path d="M30 42 L44 28 L58 42 Z" fill="#c0503a"/><path d="M4 58 H60"/>
+  </g>
+</svg>

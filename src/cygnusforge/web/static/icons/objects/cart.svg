@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Cart</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="8" y="26" width="34" height="18" fill="#8b5e3c"/><path d="M42 34 L60 44"/><circle cx="18" cy="50" r="8" fill="#d9b97a"/><circle cx="48" cy="50" r="8" fill="#d9b97a"/>
+  </g>
+</svg>

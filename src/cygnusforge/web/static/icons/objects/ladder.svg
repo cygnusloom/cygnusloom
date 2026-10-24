@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Ladder</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 4 V60 M46 4 V60" stroke="#8b5e3c" stroke-width="5"/><path d="M18 14 H46 M18 26 H46 M18 38 H46 M18 50 H46"/>
+  </g>
+</svg>

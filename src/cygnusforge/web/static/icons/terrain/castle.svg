@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Castle</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="14" y="28" width="36" height="30" fill="#a7adb2"/><rect x="6" y="18" width="12" height="40" fill="#a7adb2"/><rect x="46" y="18" width="12" height="40" fill="#a7adb2"/><path d="M6 18 V12 H10 V18 M14 18 V12 H18 V18 M46 18 V12 H50 V18 M54 18 V12 H58 V18"/><path d="M28 58 V46 Q32 40 36 46 V58 Z" fill="#2e2620"/><path d="M32 18 V6 L40 9 L32 12 Z" fill="#c0503a"/>
+  </g>
+</svg>

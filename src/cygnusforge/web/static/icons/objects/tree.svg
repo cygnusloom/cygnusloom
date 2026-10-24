@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Tree</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="28" y="36" width="8" height="22" fill="#8b5e3c"/><circle cx="32" cy="24" r="18" fill="#7fae5a"/>
+  </g>
+</svg>

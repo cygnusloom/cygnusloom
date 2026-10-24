@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Ruins</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="6" y="36" width="14" height="20" fill="#a7adb2"/><rect x="24" y="22" width="14" height="34" fill="#a7adb2"/><rect x="42" y="42" width="16" height="14" fill="#a7adb2"/><path d="M6 44 H20 M24 30 H38 M24 46 H38"/>
+  </g>
+</svg>

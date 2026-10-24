@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Shore</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2" y="4" width="60" height="36" fill="#5b9bd1"/><path d="M2 40 Q16 34 32 40 T62 40 V62 H2 Z" fill="#d9b97a"/><path d="M8 20 q4 -3 8 0 t8 0 M30 14 q4 -3 8 0 t8 0"/>
+  </g>
+</svg>

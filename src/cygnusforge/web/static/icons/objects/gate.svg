@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Gate</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 60 V22 Q32 4 52 22 V60 Z" fill="#8b5e3c"/><path d="M24 60 V14 M32 60 V10 M40 60 V14 M12 40 H52"/>
+  </g>
+</svg>

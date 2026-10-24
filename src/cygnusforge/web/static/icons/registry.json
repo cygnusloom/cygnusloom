@@ -1,0 +1,302 @@
+{
+  "plains": {
+    "category": "terrain",
+    "path": "terrain/plains.svg",
+    "label": "Plains"
+  },
+  "forest": {
+    "category": "terrain",
+    "path": "terrain/forest.svg",
+    "label": "Forest"
+  },
+  "hills": {
+    "category": "terrain",
+    "path": "terrain/hills.svg",
+    "label": "Hills"
+  },
+  "mountain": {
+    "category": "terrain",
+    "path": "terrain/mountain.svg",
+    "label": "Mountain"
+  },
+  "swamp": {
+    "category": "terrain",
+    "path": "terrain/swamp.svg",
+    "label": "Swamp"
+  },
+  "water": {
+    "category": "terrain",
+    "path": "terrain/water.svg",
+    "label": "Lake"
+  },
+  "river": {
+    "category": "terrain",
+    "path": "terrain/river.svg",
+    "label": "River"
+  },
+  "road": {
+    "category": "terrain",
+    "path": "terrain/road.svg",
+    "label": "Road"
+  },
+  "ruins": {
+    "category": "terrain",
+    "path": "terrain/ruins.svg",
+    "label": "Ruins"
+  },
+  "cave": {
+    "category": "terrain",
+    "path": "terrain/cave.svg",
+    "label": "Cave"
+  },
+  "town": {
+    "category": "terrain",
+    "path": "terrain/town.svg",
+    "label": "Town"
+  },
+  "village": {
+    "category": "terrain",
+    "path": "terrain/village.svg",
+    "label": "Village"
+  },
+  "castle": {
+    "category": "terrain",
+    "path": "terrain/castle.svg",
+    "label": "Castle"
+  },
+  "shore": {
+    "category": "terrain",
+    "path": "terrain/shore.svg",
+    "label": "Shore"
+  },
+  "fen": {
+    "category": "terrain",
+    "path": "terrain/fen.svg",
+    "label": "Fen"
+  },
+  "door": {
+    "category": "objects",
+    "path": "objects/door.svg",
+    "label": "Door"
+  },
+  "chest": {
+    "category": "objects",
+    "path": "objects/chest.svg",
+    "label": "Chest"
+  },
+  "locked-chest": {
+    "category": "objects",
+    "path": "objects/locked-chest.svg",
+    "label": "Locked chest"
+  },
+  "table": {
+    "category": "objects",
+    "path": "objects/table.svg",
+    "label": "Table"
+  },
+  "bed": {
+    "category": "objects",
+    "path": "objects/bed.svg",
+    "label": "Rough bedding"
+  },
+  "torch": {
+    "category": "objects",
+    "path": "objects/torch.svg",
+    "label": "Torch"
+  },
+  "lantern": {
+    "category": "objects",
+    "path": "objects/lantern.svg",
+    "label": "Lantern"
+  },
+  "rope": {
+    "category": "objects",
+    "path": "objects/rope.svg",
+    "label": "Rope"
+  },
+  "ladder": {
+    "category": "objects",
+    "path": "objects/ladder.svg",
+    "label": "Ladder"
+  },
+  "stairs-up": {
+    "category": "objects",
+    "path": "objects/stairs-up.svg",
+    "label": "Stairs up"
+  },
+  "stairs-down": {
+    "category": "objects",
+    "path": "objects/stairs-down.svg",
+    "label": "Stairs down"
+  },
+  "statue": {
+    "category": "objects",
+    "path": "objects/statue.svg",
+    "label": "Statue"
+  },
+  "altar": {
+    "category": "objects",
+    "path": "objects/altar.svg",
+    "label": "Altar"
+  },
+  "pillar": {
+    "category": "objects",
+    "path": "objects/pillar.svg",
+    "label": "Pillar"
+  },
+  "cart": {
+    "category": "objects",
+    "path": "objects/cart.svg",
+    "label": "Cart"
+  },
+  "boat": {
+    "category": "objects",
+    "path": "objects/boat.svg",
+    "label": "Boat"
+  },
+  "tree": {
+    "category": "objects",
+    "path": "objects/tree.svg",
+    "label": "Tree"
+  },
+  "rock": {
+    "category": "objects",
+    "path": "objects/rock.svg",
+    "label": "Rock"
+  },
+  "bones": {
+    "category": "objects",
+    "path": "objects/bones.svg",
+    "label": "Bones"
+  },
+  "campfire": {
+    "category": "objects",
+    "path": "objects/campfire.svg",
+    "label": "Campfire"
+  },
+  "well": {
+    "category": "objects",
+    "path": "objects/well.svg",
+    "label": "Well"
+  },
+  "bridge": {
+    "category": "objects",
+    "path": "objects/bridge.svg",
+    "label": "Bridge"
+  },
+  "gate": {
+    "category": "objects",
+    "path": "objects/gate.svg",
+    "label": "Gate"
+  },
+  "portcullis": {
+    "category": "objects",
+    "path": "objects/portcullis.svg",
+    "label": "Portcullis"
+  },
+  "hatch": {
+    "category": "objects",
+    "path": "objects/hatch.svg",
+    "label": "Hatch"
+  },
+  "weapon": {
+    "category": "items",
+    "path": "items/weapon.svg",
+    "label": "Sword"
+  },
+  "bow": {
+    "category": "items",
+    "path": "items/bow.svg",
+    "label": "Bow"
+  },
+  "shield": {
+    "category": "items",
+    "path": "items/shield.svg",
+    "label": "Shield"
+  },
+  "armor": {
+    "category": "items",
+    "path": "items/armor.svg",
+    "label": "Armor"
+  },
+  "potion": {
+    "category": "items",
+    "path": "items/potion.svg",
+    "label": "Potion"
+  },
+  "scroll": {
+    "category": "items",
+    "path": "items/scroll.svg",
+    "label": "Scroll"
+  },
+  "coin": {
+    "category": "items",
+    "path": "items/coin.svg",
+    "label": "Coin"
+  },
+  "gem": {
+    "category": "items",
+    "path": "items/gem.svg",
+    "label": "Gem"
+  },
+  "key": {
+    "category": "items",
+    "path": "items/key.svg",
+    "label": "Key"
+  },
+  "food": {
+    "category": "items",
+    "path": "items/food.svg",
+    "label": "Ration"
+  },
+  "tool": {
+    "category": "items",
+    "path": "items/tool.svg",
+    "label": "Tool"
+  },
+  "book": {
+    "category": "items",
+    "path": "items/book.svg",
+    "label": "Book"
+  },
+  "lantern-item": {
+    "category": "items",
+    "path": "items/lantern-item.svg",
+    "label": "Lantern"
+  },
+  "generic-item": {
+    "category": "items",
+    "path": "items/generic-item.svg",
+    "label": "Item"
+  },
+  "pc": {
+    "category": "tokens",
+    "path": "tokens/pc.svg",
+    "label": "Player character"
+  },
+  "npc": {
+    "category": "tokens",
+    "path": "tokens/npc.svg",
+    "label": "NPC"
+  },
+  "hireling": {
+    "category": "tokens",
+    "path": "tokens/hireling.svg",
+    "label": "Hireling"
+  },
+  "monster": {
+    "category": "tokens",
+    "path": "tokens/monster.svg",
+    "label": "Monster"
+  },
+  "group": {
+    "category": "tokens",
+    "path": "tokens/group.svg",
+    "label": "Group"
+  },
+  "neutral": {
+    "category": "tokens",
+    "path": "tokens/neutral.svg",
+    "label": "Neutral"
+  }
+}

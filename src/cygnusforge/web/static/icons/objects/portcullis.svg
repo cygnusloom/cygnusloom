@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Portcullis</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 6 H15 V50 L12.5 58 L10 50 Z" fill="#a7adb2"/><path d="M20 6 H25 V50 L22.5 58 L20 50 Z" fill="#a7adb2"/><path d="M30 6 H35 V50 L32.5 58 L30 50 Z" fill="#a7adb2"/><path d="M40 6 H45 V50 L42.5 58 L40 50 Z" fill="#a7adb2"/><path d="M50 6 H55 V50 L52.5 58 L50 50 Z" fill="#a7adb2"/><path d="M6 20 H58 M6 36 H58"/>
+  </g>
+</svg>

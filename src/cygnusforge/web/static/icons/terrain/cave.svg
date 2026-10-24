@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Cave</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 58 Q6 22 32 14 Q58 22 60 58 Z" fill="#a7adb2"/><path d="M18 58 Q20 36 32 34 Q44 36 46 58 Z" fill="#2e2620"/>
+  </g>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Monster</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="32" cy="32" r="27" fill="#c0503a"/><path d="M18 26 L12 12 L26 20 Z M46 26 L52 12 L38 20 Z" fill="#f5f0e4"/><ellipse cx="32" cy="38" rx="16" ry="13" fill="#f5f0e4"/><circle cx="26" cy="36" r="3" fill="#2e2620"/><circle cx="38" cy="36" r="3" fill="#2e2620"/>
+  </g>
+</svg>
