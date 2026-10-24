@@ -4,27 +4,37 @@ from __future__ import annotations
 
 import json
 import random
-from collections.abc import Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from dataclasses import dataclass, field
 from typing import Any
 
 from sqlmodel import Session, select
 
-from cygnusforge.content.library import DiceTable, Wilderness
+from cygnusforge.content.library import DiceTable, Wilderness, WildernessEffect
 from cygnusforge.db.models import Event
 from cygnusforge.rules.dice import roll_total
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
-    CampMade,
+    CampaignState,
+    CampFedSet,
+    Character,
+    Item,
+    ItemRemoved,
+    ItemUsesSet,
     LostRolled,
-    SupplyGathered,
     WeatherRolled,
+    WildernessEffectApplied,
     WildernessEventRolled,
     load_state,
+    name_key,
     record,
 )
+from cygnusforge.services.inventory import clear_items
 
 WEATHER_KIND = WeatherRolled.kind
-MAX_BOUNTY_SIDES = 12
+
+# Gives one copy of a catalogue item to a named character. The caller owns the transaction.
+GiveItem = Callable[[Session, str, str], None]
 
 
 def _table(tables: Mapping[str, DiceTable], table_id: str) -> DiceTable:
@@ -130,6 +140,145 @@ def roll_weather(
     return result
 
 
+@dataclass
+class _Watch:
+    """The state of one Wilderness Action while its hooks run. Effects append their results here."""
+
+    db: Session
+    campaign_id: int
+    action: str
+    reason: str
+    night: bool
+    # The hour the watch begins, in hours since day 1. A camp meal is marked with it.
+    at: int
+    party: tuple[str, ...]
+    wilderness: Wilderness
+    tables: Mapping[str, DiceTable]
+    rng: random.Random
+    plus: str | None
+    give: GiveItem
+    events: list[dict[str, Any]] = field(default_factory=list)
+    effects: list[dict[str, Any]] = field(default_factory=list)
+
+    def roll_events(self, times: int) -> None:
+        table = _table(self.tables, self.wilderness.events_table)
+        for _ in range(times):
+            roll = roll_total(table.dice, self.rng, plus=self.plus)
+            row = table.row_for(roll)
+            record(
+                self.db,
+                self.campaign_id,
+                WildernessEventRolled(
+                    action=self.action,
+                    roll=roll,
+                    event=row.result,
+                    text=row.text,
+                    night=self.night,
+                    reason=self.reason,
+                ),
+            )
+            self.events.append({"roll": roll, "event": row.result, "text": row.text})
+
+    def run(self, effects: Iterable[WildernessEffect]) -> None:
+        for effect in effects:
+            text = self._apply(effect)
+            record(
+                self.db,
+                self.campaign_id,
+                WildernessEffectApplied(
+                    action=self.action, do=effect.do, text=text, reason=self.reason
+                ),
+            )
+            self.effects.append({"do": effect.do, "text": text})
+
+    def _apply(self, effect: WildernessEffect) -> str:
+        if effect.do == "roll_events":
+            before = len(self.events)
+            self.roll_events(effect.times)
+            results = ", ".join(e["event"] for e in self.events[before:])
+            return f"Extra Wilderness Events roll: {results}."
+        if effect.do == "consume":
+            return self._consume(effect)
+        if effect.do == "grant":
+            return self._grant(effect)
+        if effect.do == "clear":
+            return self._clear(effect)
+        raise InvalidInput(f"a wilderness hook cannot do {effect.do!r}")
+
+    def _consume(self, effect: WildernessEffect) -> str:
+        item = effect.item or ""
+        state = load_state(self.db, self.campaign_id)
+        if effect.per == "party":
+            spender = next((n for n in self.party if _held(state, n, item)), None)
+            if spender is None:
+                return f"No {item} in the party."
+            _spend_use(self.db, self.campaign_id, state, spender, item)
+            return f"One {item} used by {spender}."
+        used = [n for n in self.party if _spend_use(self.db, self.campaign_id, state, n, item)]
+        short = [n for n in self.party if n not in used]
+        if effect.meal:
+            for name in used:
+                record(self.db, self.campaign_id, CampFedSet(name=name, at=self.at))
+        text = f"One {item} used by {_join(used)}." if used else f"No {item} used."
+        if short:
+            text += f" No {item} for {_join(short)}."
+        return text
+
+    def _grant(self, effect: WildernessEffect) -> str:
+        item = effect.item or ""
+        if not self.party:
+            return f"No one in the party to receive {item}."
+        count = effect.count
+        if count is None:
+            raise InvalidInput(f"a grant of {item!r} needs a count")
+        sides = min(count.max, count.base + count.per_member * len(self.party))
+        found = self.rng.randint(1, sides)
+        payer = self.party[0]
+        for _ in range(found):
+            self.give(self.db, payer, item)
+        return f"{payer} finds {found} {item} (d{sides})."
+
+    def _clear(self, effect: WildernessEffect) -> str:
+        item = effect.item or ""
+        state = load_state(self.db, self.campaign_id)
+        had = [n for n in self.party if _has_kind(state, n, item)]
+        clear_items(self.db, self.campaign_id, self.party, [item])
+        if not had:
+            return f"No {item} to clear."
+        return f"{item.capitalize()} cleared from {_join(had)}."
+
+
+def _held(state: CampaignState, name: str, item: str) -> Item | None:
+    character: Character = state.characters[name_key(name)]
+    return next((i for i in character.items if name_key(i.name) == name_key(item)), None)
+
+
+def _has_kind(state: CampaignState, name: str, kind: str) -> bool:
+    character: Character = state.characters[name_key(name)]
+    return any(i.kind == kind for i in character.items)
+
+
+def _spend_use(db: Session, campaign_id: int, state: CampaignState, name: str, item: str) -> bool:
+    """Spend one use of an item the character holds. A charged item keeps its remaining uses, and
+    an item with no uses, or its last use, is removed. Returns False when they hold no such item."""
+    held = _held(state, name, item)
+    if held is None:
+        return False
+    if held.max_uses and held.uses > 1:
+        record(
+            db,
+            campaign_id,
+            ItemUsesSet(name=name, item=held.name, uses=held.uses - 1, cause="used"),
+        )
+    else:
+        record(db, campaign_id, ItemRemoved(name=name, item=held.name))
+    return True
+
+
+def _join(names: Sequence[str]) -> str:
+    return ", ".join(names) if names else "nobody"
+
+
 def wilderness_action(
     db: Session,
     campaign_id: int,
@@ -142,10 +291,14 @@ def wilderness_action(
     plus: str | None,
     day: int,
     season: str,
-    party_size: int,
+    at: int,
+    party: Sequence[str],
     night: bool,
+    give: GiveItem,
 ) -> dict[str, Any]:
-    """Take a Wilderness Action for one watch: the day's weather, then the events roll."""
+    """Take a Wilderness Action for one watch. The day's weather rolls first, then the events
+    roll once, then the hooks apply: the night hooks on a night watch, then the resolve hooks.
+    Rule set hooks at the top level apply to every action, and an action's own hooks to it alone."""
     if action not in wilderness.actions:
         names = ", ".join(sorted(wilderness.actions))
         raise InvalidInput(f"there is no wilderness action named {action!r}; use one of {names}")
@@ -155,40 +308,24 @@ def wilderness_action(
         db, campaign_id, wilderness, tables, rng, plus=plus, day=day, season=season
     )
 
-    events_table = _table(tables, wilderness.events_table)
-    # Only travel at night rolls the events twice; resting or scouting at night rolls once.
-    rolls = wilderness.night_event_rolls if night and chosen.effect == "travel" else 1
-    events: list[dict[str, Any]] = []
-    for _ in range(rolls):
-        roll = roll_total(events_table.dice, rng, plus=plus)
-        row = events_table.row_for(roll)
-        record(
-            db,
-            campaign_id,
-            WildernessEventRolled(
-                action=action,
-                roll=roll,
-                event=row.result,
-                text=row.text,
-                night=night,
-                reason=reason,
-            ),
-        )
-        events.append({"roll": roll, "event": row.result, "text": row.text})
-
-    rations_found: int | None = None
-    if chosen.effect == "supply":
-        sides = min(MAX_BOUNTY_SIDES, 2 + 2 * party_size)
-        rations_found = rng.randint(1, sides)
-        record(
-            db,
-            campaign_id,
-            SupplyGathered(
-                rations=rations_found, sides=sides, party_size=party_size, reason=reason
-            ),
-        )
-    elif chosen.effect == "make_camp":
-        record(db, campaign_id, CampMade(party_size=party_size, reason=reason))
+    watch = _Watch(
+        db=db,
+        campaign_id=campaign_id,
+        action=action,
+        reason=reason,
+        night=night,
+        at=at,
+        party=tuple(party),
+        wilderness=wilderness,
+        tables=tables,
+        rng=rng,
+        plus=plus,
+        give=give,
+    )
+    watch.roll_events(1)
+    if night:
+        watch.run(wilderness.hooks.night + chosen.hooks.night)
+    watch.run(wilderness.hooks.resolve + chosen.hooks.resolve)
 
     db.commit()
     return {
@@ -198,8 +335,8 @@ def wilderness_action(
         "night": night,
         "reason": reason,
         "weather": weather,
-        "events": events,
-        "rations_found": rations_found,
+        "events": watch.events,
+        "effects": watch.effects,
     }
 
 

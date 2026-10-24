@@ -8,19 +8,29 @@ from dataclasses import replace
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import select
+from sqlmodel import Session, select
 
-from cygnusforge.content.library import DiceRow, DiceTable, Wilderness, WildernessAction
+from cygnusforge.content.library import (
+    DiceRow,
+    DiceTable,
+    DieGrowth,
+    Wilderness,
+    WildernessAction,
+    WildernessEffect,
+    WildernessHooks,
+)
 from cygnusforge.db.models import Event
 from cygnusforge.services import wilderness
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
-    CampMade,
+    CampFedSet,
+    ItemRemoved,
     LostRolled,
-    SupplyGathered,
     WeatherRolled,
+    WildernessEffectApplied,
     WildernessEventRolled,
     load_state,
+    record,
 )
 from cygnusforge.services.wilderness import (
     roll_lost,
@@ -31,7 +41,8 @@ from cygnusforge.services.wilderness import (
 )
 from tests.test_campaigns import _campaign_id
 from tests.test_character_creation import _cairn_campaign
-from tests.test_combat import CAIRN, _tools
+from tests.test_combat import CAIRN, PC, _tools
+from tests.test_travel import _pc_campaign
 from tests.test_world import _db
 
 SEASONS = ("spring", "summer", "fall", "winter")
@@ -42,23 +53,47 @@ def _wilderness(**overrides) -> Wilderness:
         "seasons": SEASONS,
         "start_season": "spring",
         "season_days": 90,
-        "night_event_rolls": 2,
         "catastrophe_streak": 2,
         "catastrophe_weather": "Extreme",
         "catastrophe_result": "Catastrophic",
         "lost_on": {"roads": 0, "trails": 2, "wilderness": 3},
         "actions": {
-            "travel": WildernessAction(id="travel", name="Travel", text="Go on.", effect="travel"),
+            "travel": WildernessAction(
+                id="travel",
+                name="Travel",
+                text="Go on.",
+                hooks=WildernessHooks(night=(WildernessEffect(do="roll_events", times=1),)),
+            ),
             "explore": WildernessAction(id="explore", name="Explore", text="Look around."),
             "supply": WildernessAction(
-                id="supply", name="Supply", text="Hunt and forage.", effect="supply"
+                id="supply",
+                name="Supply",
+                text="Hunt and forage.",
+                hooks=WildernessHooks(
+                    resolve=(
+                        WildernessEffect(
+                            do="grant",
+                            item="rations",
+                            count=DieGrowth(base=2, per_member=2, max=12),
+                        ),
+                    )
+                ),
             ),
             "make_camp": WildernessAction(
-                id="make_camp", name="Make Camp", text="Rest.", effect="make_camp"
+                id="make_camp",
+                name="Make Camp",
+                text="Rest.",
+                hooks=WildernessHooks(
+                    resolve=(
+                        WildernessEffect(do="consume", item="rations", per="member", meal=True),
+                        WildernessEffect(do="clear", item="fatigue"),
+                    )
+                ),
             ),
         },
         "events_table": "wilderness_events",
         "weather_tables": {season: "weather" for season in SEASONS},
+        "hooks": WildernessHooks(),
     }
     values.update(overrides)
     return Wilderness(**values)
@@ -214,6 +249,10 @@ def test_a_rolled_extreme_after_a_catastrophe_is_catastrophic_again(
     assert results == ["Extreme", "Catastrophic", "Catastrophic", "Nice", "Extreme"]
 
 
+def _no_give(db: Session, name: str, item: str) -> None:
+    raise AssertionError(f"nothing should be given, but {item!r} was given to {name}")
+
+
 def test_an_unknown_wilderness_action_is_rejected(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
@@ -230,8 +269,10 @@ def test_an_unknown_wilderness_action_is_rejected(
             plus=None,
             day=1,
             season="spring",
-            party_size=1,
+            at=0,
+            party=[],
             night=False,
+            give=_no_give,
         )
 
 
@@ -252,19 +293,55 @@ def test_night_travel_rolls_the_events_twice(
             plus=None,
             day=1,
             season="spring",
-            party_size=1,
+            at=0,
+            party=[],
             night=True,
+            give=_no_give,
         )
     assert len(result["events"]) == 2
     assert result["events"][0] == {"roll": 2, "event": "Sign", "text": "sign"}
-    assert result["rations_found"] is None
+    assert result["effects"] == [
+        {"do": "roll_events", "text": "Extra Wilderness Events roll: Sign."}
+    ]
     assert result["weather"]["weather"] == "Fair"
-    assert _kinds(app, campaign_id).count("wilderness.event_rolled") == 2
+    kinds = _kinds(app, campaign_id)
+    assert kinds.count(WildernessEventRolled.kind) == 2
+    assert kinds.count(WildernessEffectApplied.kind) == 1
 
 
-@pytest.mark.parametrize(("party_size", "sides"), [(1, 4), (2, 6), (5, 12)])
+def test_a_day_watch_travel_rolls_the_events_once(
+    client_factory: Callable[[], TestClient], app: FastAPI, monkeypatch: pytest.MonkeyPatch
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _fix_roll(monkeypatch, 2)
+    with _db(app) as db:
+        result = wilderness_action(
+            db,
+            campaign_id,
+            "travel",
+            "Pushing on.",
+            _wilderness(),
+            TABLES,
+            StubRng(1),
+            plus=None,
+            day=1,
+            season="spring",
+            at=0,
+            party=[],
+            night=False,
+            give=_no_give,
+        )
+    assert len(result["events"]) == 1
+    assert result["effects"] == []
+    assert _kinds(app, campaign_id).count(WildernessEventRolled.kind) == 1
+
+
+@pytest.mark.parametrize(
+    ("party", "sides"),
+    [(["Ada"], 4), (["Ada", "Bren"], 6), (["Ada", "Bren", "Cato", "Dara", "Eve"], 12)],
+)
 def test_the_bounty_die_grows_with_the_party(
-    party_size: int,
+    party: list[str],
     sides: int,
     client_factory: Callable[[], TestClient],
     app: FastAPI,
@@ -273,6 +350,11 @@ def test_the_bounty_die_grows_with_the_party(
     _, campaign_id = _campaign_id(client_factory)
     _fix_roll(monkeypatch, 1)
     rng = StubRng(3)
+    given: list[tuple[str, str]] = []
+
+    def give(db: Session, name: str, item: str) -> None:
+        given.append((name, item))
+
     with _db(app) as db:
         result = wilderness_action(
             db,
@@ -285,13 +367,41 @@ def test_the_bounty_die_grows_with_the_party(
             plus=None,
             day=1,
             season="spring",
-            party_size=party_size,
+            at=0,
+            party=party,
             night=False,
+            give=give,
         )
     assert rng.sides == [sides]
-    assert result["rations_found"] == 3
-    payloads = _event_payloads(app, campaign_id, "wilderness.supply_gathered")
-    assert payloads[-1]["sides"] == sides
+    assert given == [("Ada", "rations")] * 3
+    assert result["effects"] == [{"do": "grant", "text": f"Ada finds 3 rations (d{sides})."}]
+    payloads = _event_payloads(app, campaign_id, WildernessEffectApplied.kind)
+    assert payloads[-1]["do"] == "grant"
+
+
+def test_a_grant_with_no_one_in_the_party_gives_nothing(
+    client_factory: Callable[[], TestClient], app: FastAPI, monkeypatch: pytest.MonkeyPatch
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _fix_roll(monkeypatch, 1)
+    with _db(app) as db:
+        result = wilderness_action(
+            db,
+            campaign_id,
+            "supply",
+            "Hunting.",
+            _wilderness(),
+            TABLES,
+            StubRng(3),
+            plus=None,
+            day=1,
+            season="spring",
+            at=0,
+            party=[],
+            night=False,
+            give=_no_give,
+        )
+    assert result["effects"] == [{"do": "grant", "text": "No one in the party to receive rations."}]
 
 
 def test_a_lost_value_of_zero_never_loses_the_party(
@@ -393,15 +503,91 @@ def test_a_night_watch_that_is_not_travel_rolls_the_events_once(
     assert _kinds(app, campaign_id).count(WildernessEventRolled.kind) == 1
 
 
-def test_supply_logs_the_rations_found_and_make_camp_logs_the_camp(
-    client_factory: Callable[[], TestClient], app: FastAPI
+def _pc_tools(client_factory: Callable[[], TestClient]):
+    app, campaign_id, tools = _pc_campaign(client_factory)
+    return (
+        app,
+        campaign_id,
+        replace(tools, wilderness=CAIRN.wilderness, dice_tables=CAIRN.dice_tables),
+    )
+
+
+def _pc_rations(app: FastAPI, campaign_id: int) -> list:
+    with _db(app) as db:
+        character = load_state(db, campaign_id).characters[PC.casefold()]
+    return [item for item in character.items if item.name == "Rations"]
+
+
+def _pc_items(app: FastAPI, campaign_id: int) -> list:
+    with _db(app) as db:
+        return list(load_state(db, campaign_id).characters[PC.casefold()].items)
+
+
+def test_supply_adds_rations_to_the_party(client_factory: Callable[[], TestClient]):
+    app, campaign_id, tools = _pc_tools(client_factory)
+    before = len(_pc_rations(app, campaign_id))
+    result = tools.wilderness_action("supply", "foraging")
+    gained = len(_pc_rations(app, campaign_id)) - before
+    assert 1 <= gained <= 4
+    assert result["effects"][0]["do"] == "grant"
+    assert f"finds {gained} rations" in result["effects"][0]["text"]
+
+
+def test_make_camp_eats_a_ration_and_clears_fatigue(client_factory: Callable[[], TestClient]):
+    app, campaign_id, tools = _pc_tools(client_factory)
+    tools.add_penalty(PC, "a long march")
+    uses_before = _pc_rations(app, campaign_id)[0].uses
+    assert any(item.kind == "fatigue" for item in _pc_items(app, campaign_id))
+    result = tools.wilderness_action("make_camp", "a night's rest")
+    assert _pc_rations(app, campaign_id)[0].uses == uses_before - 1
+    assert not any(item.kind == "fatigue" for item in _pc_items(app, campaign_id))
+    assert [e["do"] for e in result["effects"]] == ["consume", "clear"]
+    assert result["effects"][1]["text"].startswith("Fatigue cleared from")
+
+
+def test_make_camp_with_no_rations_reports_the_shortage(client_factory: Callable[[], TestClient]):
+    app, campaign_id, tools = _pc_tools(client_factory)
+    with _db(app) as db:
+        record(db, campaign_id, ItemRemoved(name=PC, item="Rations"))
+        db.commit()
+    result = tools.wilderness_action("make_camp", "a night's rest")
+    assert result["effects"][0]["text"] == f"No rations used. No rations for {PC}."
+    assert _kinds(app, campaign_id).count(WildernessEffectApplied.kind) >= 2
+
+
+def _pc_camp_fed_at(app: FastAPI, campaign_id: int) -> int | None:
+    with _db(app) as db:
+        return load_state(db, campaign_id).characters[PC.casefold()].camp_fed_at
+
+
+def test_make_camp_marks_the_camp_meal_for_the_member(client_factory: Callable[[], TestClient]):
+    app, campaign_id, tools = _pc_tools(client_factory)
+    assert _pc_camp_fed_at(app, campaign_id) is None
+    tools.wilderness_action("make_camp", "a night's rest")
+    assert _pc_camp_fed_at(app, campaign_id) is not None
+    assert CampFedSet.kind in _kinds(app, campaign_id)
+
+
+def test_a_rest_right_after_make_camp_eats_no_second_ration(
+    client_factory: Callable[[], TestClient],
 ):
-    _, campaign_id = _campaign_id(client_factory)
-    tools = _live_wilderness_tools(app, campaign_id)
-    supplied = tools.wilderness_action("supply", "foraging")
-    camped = tools.wilderness_action("make_camp", "a night's rest")
-    kinds = _kinds(app, campaign_id)
-    assert SupplyGathered.kind in kinds
-    assert CampMade.kind in kinds
-    assert 1 <= supplied["rations_found"] <= 12
-    assert camped["rations_found"] is None
+    app, campaign_id, tools = _pc_tools(client_factory)
+    uses_before = _pc_rations(app, campaign_id)[0].uses
+    tools.wilderness_action("make_camp", "a night's rest")
+    assert _pc_rations(app, campaign_id)[0].uses == uses_before - 1
+    tools.rest("night")
+    assert _pc_rations(app, campaign_id)[0].uses == uses_before - 1
+    assert _pc_camp_fed_at(app, campaign_id) is None
+
+
+def test_a_stale_camp_meal_does_not_skip_a_later_rest_meal(
+    client_factory: Callable[[], TestClient],
+):
+    app, campaign_id, tools = _pc_tools(client_factory)
+    uses_before = _pc_rations(app, campaign_id)[0].uses
+    tools.wilderness_action("make_camp", "a night's rest")
+    tools.wilderness_action("explore", "a morning look around")
+    assert _pc_camp_fed_at(app, campaign_id) is not None
+    tools.rest("night")
+    assert _pc_rations(app, campaign_id)[0].uses == uses_before - 2
+    assert _pc_camp_fed_at(app, campaign_id) is None

@@ -183,18 +183,56 @@ class Travel:
 
 
 @dataclass(frozen=True)
+class DieGrowth:
+    """A die whose sides grow with the party: sides = min(max, base + per_member * party size)."""
+
+    base: int
+    per_member: int
+    max: int
+
+
+@dataclass(frozen=True)
+class WildernessEffect:
+    """One declarative step the engine applies at a lifecycle point. `do` picks the kind."""
+
+    do: str
+    item: str | None = None
+    per: str | None = None  # "member" or "party", for consume only
+    # A consume that is the member's meal for the night. A food rest that follows it does not feed them again.
+    meal: bool = False
+    count: DieGrowth | None = None  # for grant only
+    times: int = 1  # for roll_events only
+
+
+@dataclass(frozen=True)
+class WildernessHooks:
+    """The steps run at each lifecycle point: after a Wilderness Action resolves, and on a night watch."""
+
+    resolve: tuple[WildernessEffect, ...] = ()
+    night: tuple[WildernessEffect, ...] = ()
+
+
+WILDERNESS_DO = ("consume", "grant", "clear", "roll_events")
+WILDERNESS_PER = ("member", "party")
+# The keys each kind of effect takes, besides `do`.
+WILDERNESS_EFFECT_KEYS = {
+    "consume": ("item", "per", "meal"),
+    "grant": ("item", "count"),
+    "clear": ("item",),
+    "roll_events": ("times",),
+}
+# The most sides a grant's die may have.
+MAX_GRANT_SIDES = 12
+
+
+@dataclass(frozen=True)
 class WildernessAction:
     """A Wilderness Action a party member can choose once per watch, such as Travel or Make Camp."""
 
     id: str
     name: str
     text: str
-    # The mechanic the engine applies: "supply" finds rations, "make_camp" sets camp. None when
-    # the action has no mechanic beyond its text.
-    effect: str | None = None
-
-
-WILDERNESS_EFFECTS = ("supply", "make_camp", "travel")
+    hooks: WildernessHooks = WildernessHooks()
 
 
 @dataclass(frozen=True)
@@ -205,7 +243,6 @@ class Wilderness:
     seasons: tuple[str, ...]
     start_season: str
     season_days: int
-    night_event_rolls: int
     # A run of this many weather results in a row, of catastrophe_weather, becomes catastrophe_result.
     catastrophe_streak: int
     catastrophe_weather: str
@@ -216,6 +253,8 @@ class Wilderness:
     events_table: str
     # Season to the dice table that rolls its weather.
     weather_tables: Mapping[str, str]
+    # Run for every Wilderness Action, before the action's own hooks.
+    hooks: WildernessHooks
 
 
 @dataclass(frozen=True)
@@ -1091,6 +1130,25 @@ def _load_travel(definitions: list[Definition], template: str) -> Travel | None:
     )
 
 
+WILDERNESS_KEYS = frozenset(
+    {
+        "type",
+        "id",
+        "seasons",
+        "start_season",
+        "season_days",
+        "catastrophe_streak",
+        "catastrophe_weather",
+        "catastrophe_result",
+        "lost_on",
+        "actions",
+        "events_table",
+        "weather_tables",
+        "hooks",
+    }
+)
+
+
 def _load_wilderness(
     definitions: list[Definition], dice_tables: Mapping[str, DiceTable], template: str
 ) -> Wilderness | None:
@@ -1099,6 +1157,9 @@ def _load_wilderness(
         return None
     data = definition.data
     label = f"{template}: wilderness {definition.id}"
+    unknown = set(data) - WILDERNESS_KEYS
+    if unknown:
+        raise ContentError(f"{label} has unknown keys {sorted(unknown)}")
     seasons = _names(data, "seasons", label)
     if not seasons or len(set(seasons)) != len(seasons):
         raise ContentError(f"{label}: 'seasons' must be a non-empty list of distinct names")
@@ -1121,20 +1182,15 @@ def _load_wilderness(
         action_label = f"{label}: action {action_id!r}"
         if not isinstance(action, Mapping):
             raise ContentError(f"{action_label} must be an object")
-        effect = action.get("effect")
-        if effect is not None and effect not in WILDERNESS_EFFECTS:
-            raise ContentError(
-                f"{action_label}: 'effect' must be one of {', '.join(WILDERNESS_EFFECTS)}"
-            )
+        unknown = set(action) - {"name", "text", "hooks"}
+        if unknown:
+            raise ContentError(f"{action_label} has unknown keys {sorted(unknown)}")
         actions[action_id] = WildernessAction(
             id=action_id,
             name=required_text(action, "name", action_label),
             text=required_text(action, "text", action_label),
-            effect=effect,
+            hooks=_load_hooks(action.get("hooks"), action_label),
         )
-    effects = [a.effect for a in actions.values() if a.effect is not None]
-    if len(set(effects)) != len(effects):
-        raise ContentError(f"{label}: each 'effect' may be given to only one action")
     events_table = required_text(data, "events_table", label)
     if events_table not in dice_tables:
         raise ContentError(f"{label}: 'events_table' names unknown dice table {events_table!r}")
@@ -1152,7 +1208,6 @@ def _load_wilderness(
         seasons=seasons,
         start_season=start_season,
         season_days=_whole(data, "season_days", label, 1),
-        night_event_rolls=_whole(data, "night_event_rolls", label, 1),
         catastrophe_streak=_whole(data, "catastrophe_streak", label, 1),
         catastrophe_weather=required_text(data, "catastrophe_weather", label),
         catastrophe_result=required_text(data, "catastrophe_result", label),
@@ -1160,7 +1215,73 @@ def _load_wilderness(
         actions=actions,
         events_table=events_table,
         weather_tables=weather_tables,
+        hooks=_load_hooks(data.get("hooks"), label),
     )
+
+
+def _load_hooks(data: object, label: str) -> WildernessHooks:
+    """The lifecycle hooks of a wilderness procedure or action. Missing means none."""
+    if data is None:
+        return WildernessHooks()
+    if not isinstance(data, Mapping) or not set(data) <= {"resolve", "night"}:
+        raise ContentError(f"{label}: 'hooks' must be an object with only 'resolve' and 'night'")
+    return WildernessHooks(
+        resolve=_load_effects(data.get("resolve", []), f"{label}: 'hooks' 'resolve'"),
+        night=_load_effects(data.get("night", []), f"{label}: 'hooks' 'night'"),
+    )
+
+
+def _load_effects(data: object, label: str) -> tuple[WildernessEffect, ...]:
+    if not isinstance(data, list):
+        raise ContentError(f"{label} must be a list of effects")
+    return tuple(_load_effect(entry, label) for entry in data)
+
+
+def _load_effect(entry: object, label: str) -> WildernessEffect:
+    if not isinstance(entry, Mapping):
+        raise ContentError(f"{label}: each effect must be an object")
+    do = required_text(entry, "do", label)
+    if do not in WILDERNESS_DO:
+        raise ContentError(f"{label}: effect 'do' {do!r} is not one of {', '.join(WILDERNESS_DO)}")
+    unexpected = set(entry) - set(WILDERNESS_EFFECT_KEYS[do]) - {"do"}
+    if unexpected:
+        raise ContentError(f"{label}: {do} does not take {', '.join(sorted(unexpected))}")
+    if do == "consume":
+        per = required_text(entry, "per", label)
+        if per not in WILDERNESS_PER:
+            raise ContentError(f"{label}: consume 'per' must be one of {', '.join(WILDERNESS_PER)}")
+        meal = entry.get("meal", False)
+        if not isinstance(meal, bool):
+            raise ContentError(f"{label}: consume 'meal' must be true or false")
+        if meal and per != "member":
+            raise ContentError(f"{label}: a consume that is a 'meal' must be per member")
+        return WildernessEffect(do=do, item=required_text(entry, "item", label), per=per, meal=meal)
+    if do == "grant":
+        return WildernessEffect(
+            do=do, item=required_text(entry, "item", label), count=_die_growth(entry, label)
+        )
+    if do == "clear":
+        return WildernessEffect(do=do, item=required_text(entry, "item", label))
+    return WildernessEffect(do=do, times=_whole(entry, "times", label, 1))
+
+
+def _die_growth(effect: Mapping[str, Any], label: str) -> DieGrowth:
+    """The die a grant rolls, from its 'count' object."""
+    count = effect.get("count")
+    if not isinstance(count, Mapping):
+        raise ContentError(f"{label}: grant 'count' must be an object with base, per_member, max")
+    unexpected = set(count) - {"base", "per_member", "max"}
+    if unexpected:
+        raise ContentError(f"{label}: grant 'count' does not take {', '.join(sorted(unexpected))}")
+    base = _whole(count, "base", label, 1)
+    growth = DieGrowth(
+        base=base,
+        per_member=_whole(count, "per_member", label, 0),
+        max=_whole(count, "max", label, base),
+    )
+    if growth.max > MAX_GRANT_SIDES:
+        raise ContentError(f"{label}: grant 'count' max must be at most {MAX_GRANT_SIDES}")
+    return growth
 
 
 def _load_combat(

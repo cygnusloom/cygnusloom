@@ -375,6 +375,19 @@ class WorldTools:
                 service,
             )
 
+    def _give_catalogue_item(self, db: Session, name: str, item: str) -> None:
+        listed = self._listed(item)
+        if listed is None:
+            raise InvalidInput(f"this rule set has no item named {item!r} to give")
+        inventory_service.carry_listed(
+            db,
+            self.campaign_id,
+            _required(self.inventory, "inventory"),
+            self.item_sizes,
+            name,
+            listed,
+        )
+
     def _listed(self, item: str) -> ShopItem | None:
         if self.marketplace is not None:
             listed = market_service.listed_item(self.marketplace, item)
@@ -531,8 +544,10 @@ class WorldTools:
             season = wilderness_service.season_for_day(
                 wilderness, state.start_season or wilderness.start_season, day
             )
-            party_size = sum(
-                1 for c in state.characters.values() if c.kind == PC_KIND and not c.dead
+            # Living PCs and hirelings. Player characters come first, so a grant goes to one of them.
+            party = sorted(
+                (c for c in state.characters.values() if c.kind == PC_KIND and not c.dead),
+                key=lambda c: c.hireling,
             )
             result = wilderness_service.wilderness_action(
                 db,
@@ -545,8 +560,12 @@ class WorldTools:
                 plus=self.plus,
                 day=day,
                 season=season,
-                party_size=party_size,
+                at=clock_service.absolute(
+                    state.clock, len(clock_rules.parts), clock_rules.hours_per_part
+                ),
+                party=[c.name for c in party],
                 night=night,
+                give=self._give_catalogue_item,
             )
         with session_scope(self.engine) as db:
             result["clock"] = clock_service.advance_time(

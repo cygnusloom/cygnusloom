@@ -125,6 +125,30 @@ def give_item(
     return result
 
 
+def carry_listed(
+    db: Session,
+    campaign_id: int,
+    rules: InventoryRules,
+    item_sizes: Mapping[str, int],
+    name: str,
+    listed: ShopItem,
+) -> dict[str, Any]:
+    """Carry one copy of a catalogue item with its listed size, uses, and description. It does
+    not commit, so a wilderness effect can grant items inside its own transaction."""
+    if listed.size not in item_sizes:
+        raise InvalidInput(f"there is no item size named {listed.size!r}")
+    item = Item(
+        listed.name,
+        listed.size,
+        item_sizes[listed.size],
+        text=listed.description,
+        damage=listed.damage or "",
+        uses=listed.uses,
+        max_uses=listed.uses,
+    )
+    return carry_item(db, campaign_id, rules, name, item, cause="")
+
+
 def add_penalty(
     db: Session, campaign_id: int, rules: InventoryRules, name: str, cause: str
 ) -> dict[str, Any]:

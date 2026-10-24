@@ -164,6 +164,9 @@ class Character:
     critical_due: bool = False
     # Paid for a bed for the night. The next rest that eats food feeds this character for free.
     lodged: bool = False
+    # The hour a wilderness watch fed the character as its camp meal. Cleared by the food rest that
+    # follows it. None when no camp meal is owed.
+    camp_fed_at: int | None = None
     # What the character carries. The penalty item is an item of the rule set's penalty kind.
     items: list[Item] = field(default_factory=list)
     # The campaign day a need began, or None while the character is not deprived.
@@ -1858,6 +1861,7 @@ class WildernessEventRolled(GameEvent):
         )
 
 
+# Kept so logs written by the W1 supply and camp actions still replay. New watches log WildernessEffectApplied.
 @dataclass(frozen=True)
 class SupplyGathered(GameEvent):
     """Rations found by a Supply action. The bounty die has `sides` faces."""
@@ -1888,6 +1892,25 @@ class CampMade(GameEvent):
 
     def render(self) -> str:
         return f"Camp made{_why(self.reason)} for a party of {self.party_size}."
+
+
+@dataclass(frozen=True)
+class WildernessEffectApplied(GameEvent):
+    """One declarative effect from the rule set's wilderness hooks, applied to the party.
+    `do` names the kind of effect and `text` says what it did."""
+
+    kind: ClassVar[str] = "wilderness.effect_applied"
+
+    action: str
+    do: str
+    text: str
+    reason: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        return None
+
+    def render(self) -> str:
+        return f"Wilderness effect ({self.action}{_why(self.reason)}): {self.text}"
 
 
 @dataclass(frozen=True)
@@ -2321,6 +2344,25 @@ class LodgingSet(GameEvent):
 
 
 @dataclass(frozen=True)
+class CampFedSet(GameEvent):
+    """A wilderness watch fed a character as its camp meal, at the hour the watch began. `at` is
+    None once the food rest that follows has used the meal up."""
+
+    kind: ClassVar[str] = "character.camp_fed_set"
+
+    name: str
+    at: int | None
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].camp_fed_at = self.at
+
+    def render(self) -> str:
+        if self.at is None:
+            return f"{self.name}'s camp meal is used up."
+        return f"{self.name} has eaten the camp meal."
+
+
+@dataclass(frozen=True)
 class NeedSet(GameEvent):
     """A character becomes deprived of a crucial need, or stops being deprived. A character who is
     already deprived keeps the day the need began."""
@@ -2566,6 +2608,7 @@ HIDDEN_KINDS: dict[str, bool] = {
     "wilderness.event_rolled": True,
     "wilderness.supply_gathered": True,
     "wilderness.camp_made": True,
+    "wilderness.effect_applied": True,
     "wilderness.lost_rolled": True,
     # Debug edits.
     "combat.debug_stat_set": True,
@@ -2612,6 +2655,7 @@ HIDDEN_KINDS: dict[str, bool] = {
     "character.max_changed": False,
     "character.gold_changed": False,
     "character.lodging_set": False,
+    "character.camp_fed_set": True,
     "character.need_set": False,
     "character.item_added": False,
     "character.item_removed": False,

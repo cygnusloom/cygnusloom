@@ -5,16 +5,16 @@
     "seasons": ["spring", "summer", "fall", "winter"],
     "start_season": "spring",
     "season_days": 90,
-    "night_event_rolls": 2,
     "catastrophe_streak": 2,
     "catastrophe_weather": "Extreme",
     "catastrophe_result": "Catastrophic",
     "lost_on": {"roads": 0, "trails": 2, "wilderness": 3},
+    "hooks": {},
     "actions": {
       "travel": {
         "name": "Travel",
         "text": "The party travels. Roll 1d6 to see if they get lost. If they are lost, a Wilderness Action is needed to recover. Otherwise they reach the next point.",
-        "effect": "travel"
+        "hooks": {"night": [{"do": "roll_events", "times": 1}]}
       },
       "explore": {
         "name": "Explore",
@@ -22,12 +22,12 @@
       },
       "supply": {
         "name": "Supply",
-        "effect": "supply",
+        "hooks": {"resolve": [{"do": "grant", "item": "rations", "count": {"base": 2, "per_member": 2, "max": 12}}]},
         "text": "The party hunts, fishes, or forages for 1d4 Rations, each lasting 3 uses. Each added participant brings a bigger bounty."
       },
       "make_camp": {
         "name": "Make Camp",
-        "effect": "make_camp",
+        "hooks": {"resolve": [{"do": "consume", "item": "rations", "per": "member", "meal": true}, {"do": "clear", "item": "fatigue"}]},
         "text": "The party sets up camp. Each member and mount consumes a Ration. A lookout rotation is set. Members who rest remove all Fatigue."
       }
     },

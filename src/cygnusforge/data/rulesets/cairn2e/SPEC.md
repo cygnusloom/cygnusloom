@@ -142,6 +142,7 @@ The book gives prices but no rules for most services. Decisions below come from 
   - `medical_healing` (50 gp) charges `price` per patient. A patient with any harm in HP, str, dex, or wil has each of those restored. The book gives no mechanical text for healing, so this restores everything, as the Warden chose. A PC with no harm is refused.
   - `stable` is deferred until mounts are modeled, and is refused.
   - `search_marketplace` is a lookup tool. It returns up to 20 matching items, a `more` flag, and the services, and the GM uses it before quoting a price.
+- Camp meal: a rest right after Make Camp skips its ration (the camp watch already paid for it). See the Wilderness section.
 - Rations: a `rations` item holds 3 uses. Starting rations from a background become one inventory item with 3 uses. A `night` or `week` rest feeds the party first (`_feed_party`): one ration use per PC that is not lodged, and an empty pack is removed. A PC with no ration and no lodging becomes Deprived, with the cause "no food". A `moments` rest uses no food.
 - Open: transport capacity bonuses (cart, wagon, horse, and mule add slots) and stable and mounts.
 
@@ -653,6 +654,18 @@ Book rules to build (from the Player's Guide procedures page):
 - Weather: rolled daily by season (spring, summer, fall, winter) on a d6 table: Nice, Fair, Unpleasant, Inclement, Extreme, Catastrophic. Two Extremes in a row make it Catastrophic. The book says "if the Extreme weather result is rolled twice in a row", so the streak counts rolled Extremes. A Catastrophic day still counts, so a rolled Extreme right after it is Catastrophic again. Only a non-Extreme roll breaks the run (user chose "book behavior"). Unpleasant adds a Fatigue or a watch. Inclement adds a Fatigue or +1 watch, plus a terrain step. Extreme adds a Fatigue, +1 watch, and a terrain step. Catastrophic: most parties cannot travel.
 
 Decided (user, terrain source): travel path and terrain difficulty can be authored in the world data. Where the world data has none, the AI GM derives them and supplies them when it travels the party. Both paths feed the same watch calculation.
+
+Decided (user, hooks): the wilderness mechanics move out of the engine into ruleset data. Each effect is a declarative step, and the engine runs them at lifecycle points. The W1 engine effects (`supply`, `make_camp`, `travel`) are replaced.
+- Lifecycle points: `resolve` (after a Wilderness Action is resolved) and `night` (when the watch is a night watch).
+- `hooks` appears at two levels in `wilderness.json`. The top-level `hooks` run for every Wilderness Action. An action's own `hooks` run only for that action. Both lists run, top-level first.
+- Effect vocabulary (engine primitives, each object has `do`):
+  - `{"do": "consume", "item": "rations", "per": "member"}` takes one use of the item from each party member (living PCs and hirelings). `"per": "party"` takes one use once, from any holder. Charged items lose a use. Items without uses are removed. A shortage is reported in the result. A shortage does not deprive the member; the book's rest rule for a member with no ration is an open question.
+  - `{"do": "grant", "item": "rations", "count": {"base": 2, "per_member": 2, "max": 12}}` rolls 1d(sides) rations, where sides = min(max, base + per_member × party size). The rations go to the first named PC, the same payer rule as lodging.
+  - `{"do": "clear", "item": "fatigue"}` removes that penalty item from every party member (PCs and hirelings), matched by the item's kind.
+  - `{"do": "roll_events", "times": N}` adds N extra Wilderness Events rolls. Each watch always rolls the events once.
+- Planned data: `travel` has `hooks.night: [{"do": "roll_events", "times": 1}]`, which makes two rolls at night. `supply` has `hooks.resolve: [{"do": "grant", ...}]`. `make_camp` has `hooks.resolve: [{"do": "consume", "item": "rations", "per": "member"}, {"do": "clear", "item": "fatigue"}]`. Torches (W3) go in top-level `hooks.night: [{"do": "consume", "item": "torch", "per": "party"}]`.
+- Make Camp is the night's meal. The `make_camp` consume has `"meal": true` (per member only). Each member who eats records a `character.camp_fed_set` mark with the watch's start hour. The next rest that starts exactly one part later (directly after the camp watch) skips its ration but still heals; the mark is cleared at that rest. A mark that does not match is stale and never skips a later meal, so a later rest eats normally.
+- Each applied effect logs one `wilderness.effect_applied` event with its text, in place of `SupplyGathered` and `CampMade`. Item changes use the existing item events.
 
 Clock fact: `clock.json` already has three parts (morning, afternoon, night) of 8 hours each. Those map directly onto the book's three watches, so no clock change is needed.
 
