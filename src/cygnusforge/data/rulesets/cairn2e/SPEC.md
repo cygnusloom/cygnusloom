@@ -629,7 +629,7 @@ Verified gaps. Each is a data or rule fix to make before the Phase 14 capstone.
 Verified matches (no gap): the Night Cat, Annafranax, Suraru, Reeve Trellis, Aldra, Flavia, Jandy, Giva, Drum statblocks and descriptions, the Choking Hold, the Suraru Imperator critical damage, the Bloodsuckers and Vald Lore rules, and the Fletcher's Ire, Echo Spark, Moon Cloth, Curved Dagger, Watersnatch, and Memory Prism texts.
 
 Triage decisions to record (user answers, not yet built):
-- DECIDED: The "show hidden events" control moves into the model settings dialog.
+- BUILT: The "show hidden events" checkbox is in the model settings dialog. It is per viewer and resets on page load, as before.
 - DECIDED: Hovering a terrain cell shows the terrain name and its movement cost.
 
 ## Wilderness procedure (tracker: wilderness cycle; decided, not yet built)

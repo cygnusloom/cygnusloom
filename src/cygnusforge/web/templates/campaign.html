@@ -6,7 +6,6 @@
       <section class="chat" aria-label="Chat">
           <h1 class="chat-title">{{ campaign.name }}</h1>
           <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
-          <label class="show-hidden-toggle muted"><input type="checkbox" data-show-hidden> Show hidden events</label>
           <div class="transcript" data-transcript data-gm-state="{{ 'busy' if pending and pending.auto_continue else 'waiting' }}">
             {% for message in transcript %}
               {% if message.role == "log" %}
@@ -289,6 +288,7 @@
         <label><input type="radio" name="model" value="{{ model }}"{% if model == campaign.model %} checked{% endif %}> {{ model }}</label>
       {% endfor %}
     </fieldset>
+    <label class="show-hidden-option"><input type="checkbox" data-show-hidden> Show hidden events</label>
     <div class="dialog-actions">
       <button type="submit" formmethod="dialog" formnovalidate>Cancel</button>
       <button type="submit">Save</button>

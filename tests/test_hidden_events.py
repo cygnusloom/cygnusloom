@@ -75,6 +75,18 @@ def test_hidden_lines_are_marked_in_the_page_and_the_checkbox_is_unchecked(
     assert 'data-gm-state="waiting"' in page
 
 
+def test_the_show_hidden_checkbox_sits_in_the_model_settings_dialog(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _campaign_id(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    dialog_start = page.index('<dialog id="dialog-model"')
+    dialog_end = page.index("</dialog>", dialog_start)
+    checkbox = page.index("data-show-hidden>")
+    assert dialog_start < checkbox < dialog_end
+
+
 def test_the_stylesheet_hides_hidden_lines_until_the_checkbox_shows_them(
     client_factory: Callable[[], TestClient],
 ):
