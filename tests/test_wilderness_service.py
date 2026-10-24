@@ -223,10 +223,10 @@ def test_two_extremes_in_a_row_make_a_catastrophe(
     assert one["weather"] == "Extreme" and one["catastrophe"] is False
     assert two["weather"] == "Catastrophic" and two["catastrophe"] is True
     with _db(app) as db:
-        assert load_state(db, campaign_id).weather_streak == 2
+        assert load_state(db, campaign_id).weather_streak == 0
 
 
-def test_a_rolled_extreme_after_a_catastrophe_is_catastrophic_again(
+def test_a_catastrophe_ends_the_run_so_the_next_extreme_starts_a_new_one(
     client_factory: Callable[[], TestClient], app: FastAPI, monkeypatch: pytest.MonkeyPatch
 ):
     _, campaign_id = _campaign_id(client_factory)
@@ -246,7 +246,7 @@ def test_a_rolled_extreme_after_a_catastrophe_is_catastrophic_again(
                     season="spring",
                 )["weather"]
             )
-    assert results == ["Extreme", "Catastrophic", "Catastrophic", "Nice", "Extreme"]
+    assert results == ["Extreme", "Catastrophic", "Extreme", "Nice", "Extreme"]
 
 
 def _no_give(db: Session, name: str, item: str) -> None:
