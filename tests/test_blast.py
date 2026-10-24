@@ -97,25 +97,25 @@ def test_targets_are_refused_on_an_attack_without_blast(client_factory):
 
 def test_targets_are_refused_for_a_group_attack(client_factory):
     _, _, tools = _fight(client_factory)
-    _group(tools, "Rats", side="foes")
+    _group(tools, "Swarm", side="foes")
     _ally(tools, "Tam")
     with pytest.raises(InvalidInput, match="leave targets out"):
-        replace(tools, rng=Rolls(1)).attack("Rats", "Bite", PC, targets=[PC])
+        replace(tools, rng=Rolls(1)).attack("Swarm", "Sting", PC, targets=[PC])
 
 
 def test_a_blast_by_an_individual_on_a_group_is_not_impaired(client_factory):
     _, _, tools = _fight(client_factory)
     _blaster(tools, "Gorm", side="foes", flags=["blast"])
-    _group(tools, "Rats", side=PARTY_SIDE)
-    result = replace(tools, rng=Rolls(1)).attack("Gorm", "Claw", "Rats", targets=["Rats"])
-    assert [entry["target"] for entry in result["targets"]] == ["Rats"]
+    _group(tools, "Swarm", side=PARTY_SIDE)
+    result = replace(tools, rng=Rolls(1)).attack("Gorm", "Claw", "Swarm", targets=["Swarm"])
+    assert [entry["target"] for entry in result["targets"]] == ["Swarm"]
 
 
 def test_a_blast_on_a_group_still_hits_every_living_individual(client_factory):
     _, _, tools = _fight(client_factory)
-    _group(tools, "Rats", side="foes")
+    _group(tools, "Swarm", side="foes")
     _ally(tools, "Tam")
-    result = replace(tools, rng=Rolls(1, 1, 1)).attack("Rats", "Bite", "Tam", modifier="enhanced")
+    result = replace(tools, rng=Rolls(1, 1, 1)).attack("Swarm", "Sting", "Tam", modifier="enhanced")
     assert sorted(entry["target"] for entry in result["targets"]) == sorted([PC, "Tam"])
 
 

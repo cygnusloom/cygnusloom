@@ -547,9 +547,9 @@ Unscheduled, needs a book reference or a decision:
 
 Decision (user): a monster's description is the book's description text, verbatim. Its mechanic bullets are ALSO added as whole rules, so the GM receives them through "Rules for what is present". Descriptions are never stripped and sentences are never split.
 
-- RESOLVED: all 84 bestiary source entries follow the convention (`monsters.json`: 85 entries including Traitor-Rats). Verification: every source bullet is in the description, and every mechanic bullet is a whole rule. Ghost's description was restored after regeneration. The regeneration dropped 17 fragment rule ids, and none are referenced in `src` or `tests`.
+- RESOLVED: all 84 bestiary source entries follow the convention (`monsters.json`: 84 entries). Verification: every source bullet is in the description, and every mechanic bullet is a whole rule. Ghost's description was restored after regeneration. The regeneration dropped 17 fragment rule ids, and none are referenced in `src` or `tests`.
 - OPEN (bestiary): mechanic/flavour calls that were judgement calls: aranea S0, sphinx S0 ("Immune to magic of any kind."), titan S2 (levitate and shape shift), invisible-stalker S0 ("Completely invisible and silent."), lamia S1, and troll S1 (regeneration). Confirm each with the user.
-- OPEN (bestiary): Traitor-Rats is not in the source file (armor 0, description unverified).
+- RESOLVED (user): Traitor-Rats was removed. It was not in the source book list. Detachment tests now use killer-bees as the large-group template, with HP pinned to 3 in the test helper.
 - OPEN (bestiary): Bandit and Gnoll are not flagged as detachments, so their group behavior is unverified.
 - OPEN (bestiary): the Roc has no source statblock.
 - OPEN (bestiary): source discrepancies for Warrior Snail Acolyte, Night Cat, and Boggart/Pixie/Will-o-Wisp. Night Cat's ruleset attack is `claws: 1d6+1d6` with no flag, and the Twin Lakes world overrides it with `night-cat-attack`.

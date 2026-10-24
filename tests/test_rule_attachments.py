@@ -202,7 +202,7 @@ def test_a_world_npc_attaching_an_unknown_rule_is_a_content_error(tmp_path: Path
 
 def test_every_bestiary_entry_has_its_description_and_every_attached_rule_its_text():
     rule_set = LIBRARY.rule_sets["cairn2e"]
-    assert len(rule_set.monsters) == 85
+    assert len(rule_set.monsters) == 84
     for monster in rule_set.monsters.values():
         assert monster.description, monster.id
         for rule_id in monster.rules:

@@ -221,23 +221,6 @@
   },
   {
     "type": "monster",
-    "id": "traitor-rats",
-    "name": "Traitor-Rats",
-    "description": "Rats that have turned on their keepers and move as one seething mass of teeth.",
-    "stats": {
-      "hp": 3,
-      "str": 5,
-      "dex": 15,
-      "wil": 4
-    },
-    "armor": 0,
-    "attacks": {
-      "bite": "1d6"
-    },
-    "large_group": true
-  },
-  {
-    "type": "monster",
     "id": "viper",
     "name": "Viper",
     "description": "Poisonous snakes often found in caves, pits, and other dark places. An antitoxin can be made from their poison sacs. Use heat and smell to track their victims. Critical Damage: Target is poisoned, dying in 1d12 hours without a cure.",
