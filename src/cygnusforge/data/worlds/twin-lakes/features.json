@@ -4,7 +4,7 @@
     "id": "eye-of-vuk",
     "name": "Eye of Vuk",
     "feature_type": "item",
-    "description": "A heavy iron medallion strung on a fine silver chain. No Suraru will ever attack someone wearing this amulet. A WIL save is required every time the amulet is put on. On a fail, the wearer becomes more ruthless, more cruel, and more reptilian each time. Wearing it increases STR and DEX by 1d4 points each. Additionally, the wearer's sense of smell and vision is enhanced. Once per month, the wearer can fully recover STR by shedding their skin. The effects wear off if the amulet is taken off for longer than a few days.",
+    "description": "A heavy iron medallion strung on a fine silver chain. No Suraru will ever attack someone wearing this amulet. A WIL save is required every time the amulet is put on. On a fail, the wearer becomes more ruthless, more cruel, and more reptilian each time. Wearing it increases STR and DEX by [1d4] points each. Additionally, the wearer's sense of smell and vision is enhanced. Once per month, the wearer can fully recover STR by shedding their skin. The effects wear off if the amulet is taken off for longer than a few days.",
     "bulky": false
   },
   {

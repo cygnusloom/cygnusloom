@@ -66,6 +66,8 @@ class LocationTemplate:
     parent: str | None = None
     # An icon id from the icon registry, shown on the map. Places without one get a default.
     icon: str | None = None
+    # The ids of rules attached to this place. Their text reaches the GM while the player is here.
+    rules: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -758,6 +760,7 @@ def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldCon
     known = {**rule_set.rules, **rule_set.attached_rules, **rules}
     attached = [(f"monster {m.id!r}", m.rules) for m in monsters.values()]
     attached += [(f"npc {npc.id!r}", npc.rules) for npc in template.npcs]
+    attached += [(f"location {spot.id!r}", spot.rules) for spot in template.locations]
     attached += [(f"feature {f.id!r}", f.rules) for f in features.values()]
     for owner, ids in attached:
         for rule_id in ids:
@@ -797,6 +800,7 @@ def _load_location(definition: Definition, template: str) -> LocationTemplate:
         y=None if y is None else float(y),
         parent=_optional_text(data, "parent", label),
         icon=_optional_text(data, "icon", label),
+        rules=rule_ids(data, label),
     )
 
 

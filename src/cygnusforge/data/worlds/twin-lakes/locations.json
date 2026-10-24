@@ -39,7 +39,10 @@
     "name": "Butcher Shop",
     "description": "A rustic two-story building adjacent to the Stuffed Inn. A headless chicken is painted on the north entrance. The first floor has no windows; the second has two on each of the four sides. An alley separates the shop from the east wing of the Stuffed Inn. First floor: the floor is gritty with wood chips and feathers. A large, bloody butcher block divides the space. A flight of stairs in the southwest corner leads to the second floor. Flavia is here all day. Butcher block: a hidden compartment, triggered by a latch underneath, holds the day's current earnings ([1d20] x the hour of the day). The money is taken out each evening and locked in the desk upstairs. Second floor: eight windows (two in each cardinal direction) covered by fine window dressing. A four-poster bed dominates the northeast corner. South windows show the town square and a view of the Farming Path. Bed: underneath is a small dagger ([d6]) with a gold hilt, worth 20gp. Desk: paperwork and writing implements; a single drawer, locked. Sitting at the desk gives ample view of the alley between the Stuffed Inn and the Butcher, including the cellar exit there. Flavia keeps the drawer key on a chain around her neck. Inside are a sales ledger (half-finished, just as Flavia found it on the desk the night Aldra went missing) and 870gp. Painting: a humanoid creature (Rivulus) rising from the waters, wearing a white robe with three squiggly lines cut into the front. Flavia will say it was purchased only a few months ago at great expense. Worth 400gp. Route: in Isthmus Town, adjacent to the Stuffed Inn with an alley between them.",
     "discovered": false,
-    "parent": "isthmus-town"
+    "parent": "isthmus-town",
+    "rules": [
+      "trapdoor-butcher-block"
+    ]
   },
   {
     "type": "location",
@@ -109,7 +112,11 @@
     "description": "An old gristmill at the outskirts of the forest, shrouded by overgrown arboreal pillars. Due to the grove's near-constant darkness, local teens believe it is haunted. (It's not.) The mill is half-sunk into the ground, with large paddles protruding from the north side above a dried-up riverbed. Anyone coming from Old Mill Road arrives at the south entrance. Ground: the structure is slowly sinking, and some of the ground has the properties of quicksand. The south entrance is unsafe: DEX save to escape; a failed save causes the victim to sink even further (max 3 attempts). Paddles: mostly obscured from the south, save for the tip of one, painted a bright, unfaded white (see 2. The Waterwheel). Time loop: every 30 seconds the mill door opens and a man (Jandy) steps out. He quickly looks back as if hearing something, shrugs, turns around, and falls to his death in the quicksand. The sound he hears is the device being recharged after its last loop. The loop can be broken either by saving Jandy or by freeing the Relic from the stone and taking it a short distance away. Route: anyone coming from Old Mill Road arrives at the building's south entrance.",
     "discovered": false,
     "x": -1.8,
-    "y": 3.4
+    "y": 3.4,
+    "rules": [
+      "deadmill-sinking",
+      "deadmill-time-loop"
+    ]
   },
   {
     "type": "location",
@@ -144,7 +151,10 @@
     "description": "A muddy, stinking bog shrouded in mist, and a popular source for horror stories (all untrue). The only creatures that live here are frogs, fish, and birds. Its deposits of mud and stink are home to a multitude of corpses, both of animals and of those who left the trail. Parties traveling on foot add a Fatigue. Route: along East Lake Pass, through the muddy bog; parties on foot add a Fatigue.",
     "discovered": false,
     "x": 2.0,
-    "y": -4.0
+    "y": -4.0,
+    "rules": [
+      "the-downs-travel"
+    ]
   },
   {
     "type": "location",
@@ -204,7 +214,7 @@
     "id": "temple-of-the-fungal-lizards",
     "icon": "ruins",
     "name": "Temple of the Fungal Lizards",
-    "description": "A dark complex, built as a building-sized ship shaped like a beetle; its entry, reached by the stairs under the Bone Sump mound, is the beetle's \"head.\" Route: the Chamber of Worship (T9) lies deeper in the temple, and a short hallway runs from it to the door at T10a. General information: no light. Sconces with diamond-shaped objects protrude from the corners of each room (see T7, Light Room); they are currently off. The walls and floors are painted blue-black and made from a foreign alloy. They cannot be chipped or broken by mundane weapons, although fire and explosive powders have some effect. Two Surarus roam the temple. They appear on both Encounters and Environmental results from the Cairn 2e Dungeon Events table (not reproduced here).",
+    "description": "A dark complex, built as a building-sized ship shaped like a beetle; its entry, reached by the stairs under the Bone Sump mound, is the beetle's \"head.\" Route: the Chamber of Worship (T9) lies deeper in the temple, and a short hallway runs from it to the door at T10a. General information: no light. Sconces with diamond-shaped objects protrude from the corners of each room (see T7, Light Room); they are currently off. The walls and floors are painted blue-black and made from a foreign alloy. They cannot be chipped or broken by mundane weapons, although fire and explosive powders have some effect. Two Surarus roam the temple. They appear on both Encounters and Environmental results from the Cairn 2e Dungeon Events table (in the rule set: cairn2e, table \"Dungeon Events\").",
     "discovered": false,
     "x": 3.4,
     "y": -0.8

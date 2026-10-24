@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from cygnusforge.content.definitions import ContentError
 from cygnusforge.content.library import ContentLibrary
 from cygnusforge.services.campaigns import system_parts
-from cygnusforge.services.events import Item, ItemAdded, record
+from cygnusforge.services.events import Item, ItemAdded, LocationAdded, record
 from cygnusforge.services.world import present_rules_text, world_state_text
 from tests.conftest import content_library
 from tests.test_character_creation import _cairn_campaign
@@ -221,3 +221,55 @@ def test_a_bestiary_monster_present_brings_its_special_rules(
     text = present_rules_text(state, {**rule_set.rules, **rule_set.attached_rules})
     assert "- basilisk-gaze (from Basilisk):" in text
     assert "A target facing the Basilisk is slowly petrified" in text
+
+
+def test_a_place_the_player_is_in_brings_its_rules(client_factory: Callable[[], TestClient]):
+    app, campaign_id, _ = _fight(client_factory)
+    with _db(app) as db:
+        record(
+            db,
+            campaign_id,
+            LocationAdded(name=YARD, description="The yard.", discovered=True, rules=[CHOKING]),
+        )
+        db.commit()
+    text = present_rules_text(_state(app, campaign_id), TEXT)
+    assert f"- {CHOKING} (from {YARD}): {TEXT[CHOKING]}" in text
+
+
+def test_a_place_elsewhere_brings_no_rules(client_factory: Callable[[], TestClient]):
+    app, campaign_id, _ = _fight(client_factory)
+    with _db(app) as db:
+        record(
+            db,
+            campaign_id,
+            LocationAdded(name="Far Hollow", description="Far.", discovered=True, rules=[CHOKING]),
+        )
+        db.commit()
+    assert present_rules_text(_state(app, campaign_id), TEXT) == ""
+
+
+def test_twin_lakes_places_attach_their_module_rules():
+    spots = {spot.id: spot for spot in TWIN_LAKES.locations}
+    assert spots["deadmill"].rules == ("deadmill-sinking", "deadmill-time-loop")
+    assert spots["the-downs"].rules == ("the-downs-travel",)
+    assert spots["butcher-shop"].rules == ("trapdoor-butcher-block",)
+
+
+def test_a_world_place_attaching_an_unknown_rule_is_a_content_error(tmp_path: Path):
+    glade = {
+        "type": "location",
+        "id": "glade",
+        "name": "Glade",
+        "description": "A glade.",
+        "rules": ["no-such-rule"],
+    }
+    _write(
+        tmp_path,
+        {
+            "worlds/testland/world.json": [*_world(), glade],
+            "rulesets/core/rule_set.json": _core(),
+            "rulesets/testset/rule_set.json": _rule_set(),
+        },
+    )
+    with pytest.raises(ContentError, match="location 'glade' attaches rule 'no-such-rule'"):
+        ContentLibrary.load(tmp_path).world_content("testland", "testset")

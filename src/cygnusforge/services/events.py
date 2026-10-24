@@ -86,6 +86,8 @@ class Place:
     icon: str | None = None
     # What the player sees of a discovered place. The full description stays GM-only.
     summary: str | None = None
+    # The ids of rules attached to the place, whose text reaches the GM while the player is here.
+    rules: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -571,6 +573,8 @@ class LocationAdded(GameEvent):
     y: float | None = None
     parent: str | None = None
     icon: str | None = None
+    # The ids of rules attached to the place. Their text reaches the GM while the player is here.
+    rules: list[str] = field(default_factory=list)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.places[name_key(self.name)] = Place(
@@ -580,6 +584,7 @@ class LocationAdded(GameEvent):
             _position(self.x, self.y),
             self.parent,
             icon=self.icon,
+            rules=tuple(self.rules),
         )
 
     def render(self) -> str:

@@ -512,7 +512,7 @@ Phase 14 (capstone play-through): the full CAS-1 play-through and any gaps it re
   - RESOLVED: monsters carry rules. `MonsterTemplate.rules` is loaded and checked against the rule set (ruleset monsters) or the merged rules (world monsters). A monster made from a statblock gets its rules, and seeded NPCs that name a monster merge the statblock's rules. Twin Lakes attaches Night Cat's two rules, Suraru Imperator's critical damage rule, and `morale-bandits` to Bandits and Bandit Leader (both since removed; see the bandit entries below). Tests: `tests/test_rule_attachments.py`. Live-verified on a fresh DB: the GM created a Night Cat at Hollowmere Village, and the next turn's context listed "Rules for what is present" with `night-cat-attack` and `night-cat-critical-damage` (from Night Cat). After the cat left, the next turn's context showed "NPCs here: none" and no rules section.
   - OPEN: items from the catalogue or `give_item` do not carry rules. Only starting gear and direct events do. No twin-lakes feature has rules yet.
   - OPEN (browser, character creation): "Randomize all" overwrites a name the player has already typed. Found in the live run. Decide whether it should keep typed fields.
-  - OPEN (uncertain): Jandy's `deadmill-time-loop` attachment. The module says the loop breaks "by saving Jandy", so the attachment may be wrong.
+  - DONE: Jandy's `deadmill-time-loop` is attached to her NPC and to the Deadmill place. Her presence and her location both bring the loop rule to the GM. The rule text is the module's; it names Jandy as the one who breaks the loop.
   - OPEN: several module rules have no rule id, so they are not attached. These are Eye of Vuk, Fletcher's Ire, Echo Spark, Watersnatch, Curved Dagger, Memory Prism, Wisp Lamp, Annafranax's bird revenge (§2.6), and Fasha's drag-to-temple (§2.7).
 - OPEN (Phase 12): the world loader reads only the text of world rules, so `"important": true` on a world rule has no effect.
 - OPEN (Phase 12): world-scope `dice_table` entries are not loaded, so the d6 and d8 rolls in the module's tables are plain options, not rolls.
@@ -603,3 +603,28 @@ Decision (user): a monster's description is the book's description text, verbati
 - DECIDED (user, after an ask_user question): a player who explicitly asks for a near-duplicate place ("Farm Road" for "Farming Path") is refused, and the GM may explain the refusal in plain terms. Live on 8783, the GM said the engine treats the name as the same place. This is accepted. A silent redirect to the existing place was not chosen. The narration rule still forbids mentioning refusals in other cases.
 - RESOLVED (audit): the 56-minute Farming Path to Dunston charge was the carried remainder, not a leg. Leg minutes are the straight-line distance over the mode's speed: Farming Path to Dunston is 2.44 km on foot, which is 37 minutes. `travel.charged` stores the carried remainder (19 + 37 = 56 mod 60). The event field is named `minutes` but holds the remainder. Renaming it to `carried` is a cleanup to consider.
 - DECIDED (user): dungeon cycles are forbidden during overland travel. The tool description and the prompt now say so. This is prompt guidance only. No engine check exists, because places have no dungeon or overland flag. Enforcing it needs a place-type field and a data change, which is a follow-up. Live on 8783, a travel turn made no dungeon call.
+
+## Phase 12 completeness audit (CAS-1 import, read-only, checked against the transcription)
+
+Verified gaps. Each is a data or rule fix to make before the Phase 14 capstone.
+
+- DECIDED (user, commit e6d1ebc): Bandit Leader and Bandits stay out of twin-lakes. The cairn2e `bandit` carries the book's leader, detachment and loyalty rules, and the GM chooses leader overrides. A subagent re-added them; that was reverted.
+- DONE: Section 4.13 outcomes are in `rules.json` as `outcome-vuk-reborn`, `outcome-gate-opened`, `outcome-vuk-reborn-and-gate-opened`, `outcome-vuk-stopped-gate-closed`. The second id differs from the audit wording because its heading has no Vuk condition. The 4.14 overview is `twin-lakes-overview`.
+- DONE: Rule attachments. `deadmill-sinking` is on Deadmill. `deadmill-time-loop` is on Deadmill and on Jandy. `the-downs-travel` is on The Downs. `trapdoor-butcher-block` is on the Butcher Shop. The frog trappers rule names no location, so it stays unattached.
+- DONE: The Eye of Vuk text keeps "[1d4]" as printed in the source.
+- DONE: Location rules were silently dropped. `LocationTemplate` had no `rules` field, so the loader ignored them. Locations now carry rules through the loader, the `LocationAdded` event, and `Place`. `present_rules_text` includes the rules of the place the player is in, with the place name as the source. Tests: `tests/test_rule_attachments.py`.
+- OPEN: `echo-spark` and `wisp-lamp` have no location link. The schema has no field for one, and the placements appear only in prose. Decide whether to add a field.
+- OPEN: Stone Forest references the Wilderness Events table (Player's Guide pg. 78). The engine has no such table, and the source does not reproduce it. Needs a decision, not a guess.
+- DONE: The Temple note now points to the cairn2e "Dungeon Events" table.
+- OPEN: Victim Schedule (d8), Rumors (d6), and Encounters (d6) have no die field. `_load_table` reads only id, type, and options, so an added key is ignored. The Day 1 to 5 schedule text is not stored. Decide whether to extend the table schema.
+- OPEN: The Bone Sump sconce objects read "150gp each". The source says "(150gp, bulky)" for the pair, so the per-object price is unclear. Ask the user.
+- OPEN (decision): Suraru Imperator's venomous bite "blast" flag is dropped, and the source says it is undefined. Keep the note.
+- OPEN (decision): Fasha's HP 6 is not printed in the source. It is an assumption.
+- DECIDED (user, after an ask_user question): Vuk stays as line 406 records. Her ash form is story-only with the Choking Hold rule. Her full form uses the bestiary Lich stats. The user's note about an Ash Phantom statblock is not in the source, so no numbers are invented.
+- OPEN: The start hook text in `world.json` could not be compared word for word, so recheck it against section 4 of the source.
+
+Verified matches (no gap): the Night Cat, Annafranax, Suraru, Reeve Trellis, Aldra, Flavia, Jandy, Giva, Drum statblocks and descriptions, the Choking Hold, the Suraru Imperator critical damage, the Bloodsuckers and Vald Lore rules, and the Fletcher's Ire, Echo Spark, Moon Cloth, Curved Dagger, Watersnatch, and Memory Prism texts.
+
+Triage decisions to record (user answers, not yet built):
+- DECIDED: The "show hidden events" control moves into the model settings dialog.
+- DECIDED: Hovering a terrain cell shows the terrain name and its movement cost.

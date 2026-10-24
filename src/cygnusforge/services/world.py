@@ -1006,6 +1006,7 @@ def seed_campaign(
                 y=spot.y,
                 parent=None if spot.parent is None else names[spot.parent],
                 icon=spot.icon,
+                rules=list(spot.rules),
             ),
         )
     for npc in world.npcs:
@@ -2345,14 +2346,18 @@ def _npcs_at(state: CampaignState, location: str) -> list[Character]:
 
 
 def present_rules_text(state: CampaignState, rules: Mapping[str, str]) -> str:
-    """The text of the rules attached to what is present: the NPCs at the player character's
-    location, defeated or not, and the items the player character carries. Empty when nothing
-    is attached."""
+    """The text of the rules attached to what is present: the place the player character is in,
+    the NPCs there, defeated or not, and the items the player character carries. Empty when
+    nothing is attached."""
     pc = state.pc()
     if pc is None:
         return ""
     sources: dict[str, list[str]] = {}
     if pc.location is not None:
+        place = state.places.get(name_key(pc.location))
+        if place is not None:
+            for rule_id in place.rules:
+                sources.setdefault(rule_id, []).append(place.name)
         for npc in _npcs_at(state, pc.location):
             for rule_id in npc.rules:
                 sources.setdefault(rule_id, []).append(npc.name)
@@ -2366,7 +2371,10 @@ def present_rules_text(state: CampaignState, rules: Mapping[str, str]) -> str:
     if not lines:
         return ""
     return "\n".join(
-        ["These rules belong to the NPCs and items present now. Follow them as written.", *lines]
+        [
+            "These rules belong to the place, NPCs, and items present now. Follow them as written.",
+            *lines,
+        ]
     )
 
 

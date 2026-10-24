@@ -54,5 +54,30 @@
     "type": "rule",
     "id": "the-roots",
     "text": "Labyrinthine hollows stretching for immeasurable distances deep underground, connecting the sewers of the cities to far-flung ruins. Entrances to The Roots (called Gates) are scattered across the lands, and are usually protected or shrewdly hidden. Folktales tell of travelers disappearing into the depths, only to emerge decades later, claiming that only a few hours have passed. Others report having traveled vast distances in mere days."
+  },
+  {
+    "type": "rule",
+    "id": "outcome-vuk-reborn",
+    "text": "If Vuk is Reborn…: If Vuk is reborn, she will quickly move to dominate the region. Within months, Isthmus Town will be deserted, and any who remain will either be dead or have joined her cause. With Fasha as her lieutenant, she will slowly conquer the Twin Lakes region, proclaiming herself the Queen Reborn. Slowly, her brood dominates the countryside, until finally the Cities declare the lands permanently unsafe. As the Marchguard gather at the boundary, hope that the Queen stays in her new realm becomes thinner by the day…"
+  },
+  {
+    "type": "rule",
+    "id": "outcome-gate-opened",
+    "text": "If the Gate has Opened…: Unless she is stopped, Annafranax will open a Gate to the Roots two days after the adventure begins. Deadmill and the surrounding grove will be replaced by a large sinkhole, accessible only via climbing tools. Within a few weeks, creatures not seen in these lands for millenia will rise from the depths, changing its landscape for good. Due to its proximity to a nearby settlement, the death toll will be high. As word of its influence spreads, the Cities will marshall their most powerful forces to create a perimeter around the forest. Isthmus Town will survive, but in name only - it will now serve as a military outpost and last refuge on a new frontier."
+  },
+  {
+    "type": "rule",
+    "id": "outcome-vuk-reborn-and-gate-opened",
+    "text": "If Vuk is Reborn and the Gate has Opened…: Weeks after the Gate is opened, Vuk takes her armies into the Roots in search of lost artifacts from her era. Slowly, Gates all over the world begin closing, and there are whispers that an army greater than any in recorded history is marshaling its forces and preparing for war…"
+  },
+  {
+    "type": "rule",
+    "id": "outcome-vuk-stopped-gate-closed",
+    "text": "If Vuk is Stopped and the Gate is not Opened…: In the weeks that follow, a renewed calm overtakes Isthmus Town. As rumor spreads throughout the Cities of a region filled with ancient temples and strange artifacts, the hamlet sees a renewed economic growth rivaling its former days of glory. And though the locals (save Giva, perhaps) are happy with this result, soon the adventurers, scholars, and explorers begin eyeing the Stone Forest, wondering what secrets the Wood might hold…"
+  },
+  {
+    "type": "rule",
+    "id": "twin-lakes-overview",
+    "text": "This isolated region lies North of the Cities, just a few days' journey by horse through the Humpbacks. Isthmus Town, the region's only major settlement, is situated on a narrow strip of land between two freshwater lakes. To the South of the town is mostly farmland, save for Dunston, a defunct fishing village.\n\nTo the North lies the Stone Forest, a vast wooded area dotted with old mills and lumber paths. West Lake remains the primary source of both fish and water to the surrounding towns, despite its lack of walking paths or natural cultivation. A winding lakeside pass is all that remains of the once vibrant East Lake, now deprived of both fish and healthy drinking water.\n\nDespite the region's reputation for relative safety, it is still dangerous to travel at night, as both bandits and night cats are known to pursue vulnerable parties. The adventure begins during the Harvest season, just after the final crops have been gathered."
   }
 ]
