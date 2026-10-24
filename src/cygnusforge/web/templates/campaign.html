@@ -211,7 +211,7 @@
               <ul data-inventory>
                 {% for item in scene.pack.items %}
                 <li>
-                  <strong>{{ item.name }}</strong>
+                  {% set icon = item_icon_id(item.kind, item.damage) %}{% if icon %}<img class="item-icon" src="{{ icon_path(icon) }}" alt="">{% endif %}<strong>{{ item.name }}</strong>
                   {% if item.size %}{{ item.size }}, {% endif %}{% if item.slots %}{{ item.slots }} slot{{ "" if item.slots == 1 else "s" }}{% else %}no slots{% endif %}
                   {% if item.max_uses > 0 %}· {{ item.uses }} uses left{% endif %}
                   {% if item.kind %}<span class="muted">({{ item.kind|capitalize }})</span>{% endif %}

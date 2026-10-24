@@ -41,6 +41,9 @@ PROMPT_ARGUMENT = "prompt"
 CHARACTER_ARGUMENT = "character"
 # A tool flagged `npc_hp_tier` gets this optional argument, whose values are the rule set's HP tiers.
 NPC_HP_TIER_ARGUMENT = "hp_tier"
+# A tool flagged `travel` gets this argument, with the rule set's travel modes as its choices.
+TRAVEL_ARGUMENT = "travel"
+DEFAULT_TRAVEL_MODE = "on_foot"
 # The engine passes its ToolContext to a function that declares this parameter. The model
 # never sees it, so it must not appear in a tool's schema.
 CONTEXT_ARGUMENT = "ctx"
@@ -61,6 +64,8 @@ class LocationTemplate:
     # The id of the place this one is inside, such as a building in a village. A place inside
     # another has no map position of its own.
     parent: str | None = None
+    # An icon id from the icon registry, shown on the map. Places without one get a default.
+    icon: str | None = None
 
 
 @dataclass(frozen=True)
@@ -154,6 +159,23 @@ class ToolCall:
     takes_context: bool = False
     # True for tools that only read the world. The GM lists them with list_lookups.
     lookup: bool = False
+
+
+@dataclass(frozen=True)
+class TravelMode:
+    name: str
+    km_per_hour: float
+    note: str
+
+
+@dataclass(frozen=True)
+class Travel:
+    """How fast a party moves by each travel mode, and what a leg costs when its distance is
+    unknown."""
+
+    modes: Mapping[str, TravelMode]
+    default_leg_minutes: int
+    default_leg_note: str
 
 
 @dataclass(frozen=True)
@@ -513,6 +535,8 @@ class RuleSet:
     prompt_fragments: tuple[PromptFragment, ...] = ()
     # The most sentences a speech line may run, or None when the rule set does not cap it.
     sentence_cap: int | None = None
+    # How fast travel goes, or None when the rule set does not charge time for travel.
+    travel: Travel | None = None
 
 
 @dataclass(frozen=True)
@@ -720,6 +744,7 @@ def _load_location(definition: Definition, template: str) -> LocationTemplate:
         x=None if x is None else float(x),
         y=None if y is None else float(y),
         parent=_optional_text(data, "parent", label),
+        icon=_optional_text(data, "icon", label),
     )
 
 
@@ -879,13 +904,14 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     marketplace = _load_marketplace(definitions, item_sizes, character, template)
     prompt_fragments = _load_prompts(definitions, template)
     sentence_cap = _load_sentence_cap(definitions, template)
+    travel = _load_travel(definitions, template)
     npc_hp = _npc_hp(head.data, label)
     tool_calls: dict[str, ToolCall] = {}
     tool_names: set[str] = set()
     for d in definitions:
         if d.type != "tool_call":
             continue
-        call = _load_tool_call(d, modules, character, template, npc_hp)
+        call = _load_tool_call(d, modules, character, template, npc_hp, travel)
         if call.name in tool_names:
             raise ContentError(f"{template}: duplicate tool name {call.name!r}")
         tool_names.add(call.name)
@@ -919,6 +945,38 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         marketplace=marketplace,
         prompt_fragments=prompt_fragments,
         sentence_cap=sentence_cap,
+        travel=travel,
+    )
+
+
+def _load_travel(definitions: list[Definition], template: str) -> Travel | None:
+    definition = _single_optional(definitions, "travel", template)
+    if definition is None:
+        return None
+    label = f"{template}: travel {definition.id}"
+    modes_data = definition.data.get("modes")
+    if not isinstance(modes_data, dict) or not modes_data:
+        raise ContentError(f"{label}: 'modes' must map mode names to speeds")
+    modes = {}
+    for name, mode in modes_data.items():
+        mode_label = f"{label}: mode {name!r}"
+        if not isinstance(mode, dict):
+            raise ContentError(f"{mode_label} must be an object")
+        speed = mode.get("km_per_hour")
+        if not isinstance(speed, (int, float)) or isinstance(speed, bool) or speed <= 0:
+            raise ContentError(f"{mode_label}: 'km_per_hour' must be a number above 0")
+        modes[name] = TravelMode(
+            name=name,
+            km_per_hour=float(speed),
+            note=required_text(mode, "note", mode_label),
+        )
+    default = definition.data.get("default_leg")
+    if not isinstance(default, dict):
+        raise ContentError(f"{label}: 'default_leg' must be an object")
+    return Travel(
+        modes=modes,
+        default_leg_minutes=_whole(default, "minutes", f"{label}: default_leg", 1),
+        default_leg_note=required_text(default, "note", f"{label}: default_leg"),
     )
 
 
@@ -1843,6 +1901,7 @@ def _load_tool_call(
     character: CharacterSpec,
     template: str,
     npc_hp: Mapping[str, int],
+    travel: Travel | None = None,
 ) -> ToolCall:
     label = f"{template}: tool_call {definition.id}"
     data = definition.data
@@ -1861,6 +1920,8 @@ def _load_tool_call(
         parameters = _with_character(parameters, character, label)
     if _flag(data, "npc_hp_tier", label) and npc_hp:
         parameters = _with_npc_hp_tier(parameters, npc_hp, label)
+    if _flag(data, "travel", label) and travel is not None:
+        parameters = _with_travel(parameters, travel, label)
     if CONTEXT_ARGUMENT in parameters["properties"]:
         raise ContentError(f"{label}: {CONTEXT_ARGUMENT!r} is reserved and not a parameter")
     player_input = _check_player_input(data.get("player_input"), parameters, function, label)
@@ -1926,6 +1987,20 @@ def _with_npc_hp_tier(
         )
     tier = {"type": "string", "enum": sorted(npc_hp), "description": "The NPC's HP tier."}
     properties = {**parameters["properties"], NPC_HP_TIER_ARGUMENT: tier}
+    return {**parameters, "properties": properties}
+
+
+def _with_travel(parameters: dict[str, Any], travel: Travel, label: str) -> dict[str, Any]:
+    """Add the rule set's travel modes as an optional `travel` argument."""
+    if TRAVEL_ARGUMENT in parameters["properties"]:
+        raise ContentError(f"{label}: {TRAVEL_ARGUMENT!r} is generated and must not be declared")
+    mode = {
+        "type": "string",
+        "enum": sorted(travel.modes),
+        "default": DEFAULT_TRAVEL_MODE,
+        "description": "How the party travels. Defaults to on foot.",
+    }
+    properties = {**parameters["properties"], TRAVEL_ARGUMENT: mode}
     return {**parameters, "properties": properties}
 
 

@@ -1848,7 +1848,8 @@ def test_campaign_page_draws_discovered_places_on_the_map(
 
     map_view = page[page.index('data-view="map"') : page.index('data-view="lore"')]
     assert (
-        'class="map-marker here" style="left: 50.0%; top: 50.0%" data-tip="Mossbell Hollow (you)">MH</span>'
+        'class="map-marker here" style="left: 50.0%; top: 50.0%" role="img" aria-label="MH" '
+        'data-tip="Mossbell Hollow (you)"><img src="/static/icons/terrain/town.svg" alt=""></span>'
         in map_view
     )
     assert "Glowcap Ring" in map_view

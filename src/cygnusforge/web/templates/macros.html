@@ -11,7 +11,7 @@
   <div class="map-board" aria-label="Map of discovered places">
     <span class="map-origin" aria-hidden="true"></span>
     {% for marker in view.markers %}
-      <span class="map-marker{% if marker.here %} here{% endif %}" style="left: {{ marker.left }}%; top: {{ marker.top }}%" data-tip="{{ marker.name }}{% if marker.here %} (you){% endif %}">{{ marker.label }}</span>
+      <span class="map-marker{% if marker.here %} here{% endif %}" style="left: {{ marker.left }}%; top: {{ marker.top }}%" role="img" aria-label="{{ marker.label }}" data-tip="{{ marker.name }}{% if marker.here %} (you){% endif %}"><img src="{{ place_icon_path(marker.icon) }}" alt=""></span>
     {% endfor %}
   </div>
   {% if framed %}</div>{% endif %}

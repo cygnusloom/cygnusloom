@@ -83,6 +83,7 @@ class Place:
     parent: str | None = None
     # The campaign day a player character was last in this place, or None if none has been.
     visited_day: int | None = None
+    icon: str | None = None
 
 
 @dataclass(frozen=True)
@@ -332,6 +333,8 @@ class CampaignState:
     encounter: Encounter | None = None
     clock: Clock = field(default_factory=Clock)
     rests: list[RestRecord] = field(default_factory=list)
+    # Travel minutes not yet a whole hour on the clock. They carry over to the next move.
+    travel_minutes: int = 0
 
     def named(self, name: str) -> Place | Character | None:
         key = name_key(name)
@@ -543,10 +546,16 @@ class LocationAdded(GameEvent):
     x: float | None = None
     y: float | None = None
     parent: str | None = None
+    icon: str | None = None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.places[name_key(self.name)] = Place(
-            self.name, self.description, self.discovered, _position(self.x, self.y), self.parent
+            self.name,
+            self.description,
+            self.discovered,
+            _position(self.x, self.y),
+            self.parent,
+            icon=self.icon,
         )
 
     def render(self) -> str:
@@ -1936,6 +1945,20 @@ class ClockAdvanced(GameEvent):
 
 
 @dataclass(frozen=True)
+class TravelCharged(GameEvent):
+    """Travel minutes were charged to the clock. The minutes left over from a whole hour carry to
+    the next move."""
+
+    kind: ClassVar[str] = "travel.charged"
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    minutes: int
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.travel_minutes = self.minutes
+
+
+@dataclass(frozen=True)
 class CharacterDying(GameEvent):
     """A player character is out of action and bleeding out. It dies when `hours` pass unless it
     is stabilized."""
@@ -2379,6 +2402,7 @@ HIDDEN_KINDS: dict[str, bool] = {
     "object.taken": False,
     "magic.spell_cast": False,
     "clock.advanced": False,
+    "travel.charged": False,
 }
 
 

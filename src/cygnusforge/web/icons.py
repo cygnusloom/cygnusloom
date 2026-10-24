@@ -22,3 +22,20 @@ def icon_path(icon_id: str) -> str:
     Raises KeyError if the id is not in the registry.
     """
     return ICON_URL_PREFIX + _registry()[icon_id]["path"]
+
+
+PLACE_FALLBACK_ICON = "town"
+ITEM_KIND_ICONS = {"spellbook": "book", "scroll": "scroll"}
+WEAPON_ICON = "weapon"
+
+
+def place_icon_path(icon_id: str | None) -> str:
+    """The icon for a map place, falling back to a settlement for places without one."""
+    return icon_path(icon_id or PLACE_FALLBACK_ICON)
+
+
+def item_icon_id(kind: str, damage: str) -> str | None:
+    """The icon id for an item's type, or None when the type has no icon."""
+    if kind:
+        return ITEM_KIND_ICONS.get(kind)
+    return WEAPON_ICON if damage else None

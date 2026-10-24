@@ -1003,6 +1003,7 @@ def _tool_context(
         marketplace=rule_set.marketplace,
         plus=rule_set.plus,
         npc_hp=rule_set.npc_hp,
+        travel=rule_set.travel,
     )
 
     async def check_new_location(name: str) -> None:

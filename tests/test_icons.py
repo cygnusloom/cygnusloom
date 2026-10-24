@@ -3,11 +3,26 @@
 import json
 import re
 import xml.etree.ElementTree as ET
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
-from cygnusforge.web.icons import ICON_DIR, REGISTRY_PATH, icon_path
+from cygnusforge.web.icons import (
+    ICON_DIR,
+    ITEM_KIND_ICONS,
+    PLACE_FALLBACK_ICON,
+    REGISTRY_PATH,
+    WEAPON_ICON,
+    icon_path,
+    item_icon_id,
+    place_icon_path,
+)
+from tests.conftest import content_library
+from tests.test_combat import PC, _fight_client
+from tests.test_world import _described_campaign, _tool
 
 SVG_NS = "{http://www.w3.org/2000/svg}"
 
@@ -139,3 +154,68 @@ def test_required_icon_is_in_registry(category: str, icon_id: str):
     assert icon_id in registry, f"missing required {category} icon {icon_id}"
     assert registry[icon_id]["category"] == category
     assert icon_path(icon_id).startswith("/static/icons/" + category + "/")
+
+
+def _seed_map_icons() -> list[str]:
+    locations = content_library().world_templates["twin-lakes"].locations
+    return sorted({location.icon for location in locations if location.icon})
+
+
+def _assert_registered_with_file(icon_id: str) -> None:
+    registry = _registry()
+    assert icon_id in registry, f"{icon_id} is not in the registry"
+    assert (ICON_DIR / registry[icon_id]["path"]).is_file(), icon_id
+
+
+@pytest.mark.parametrize("icon_id", _seed_map_icons() + [PLACE_FALLBACK_ICON])
+def test_every_map_icon_exists(icon_id: str):
+    _assert_registered_with_file(icon_id)
+
+
+@pytest.mark.parametrize("icon_id", [*ITEM_KIND_ICONS.values(), WEAPON_ICON])
+def test_every_item_icon_exists(icon_id: str):
+    _assert_registered_with_file(icon_id)
+
+
+@pytest.mark.parametrize(
+    ("kind", "damage", "expected"),
+    [
+        ("spellbook", "", "book"),
+        ("scroll", "", "scroll"),
+        ("", "1d8", WEAPON_ICON),
+        ("", "", None),
+        ("relic", "", None),
+        ("fatigue", "", None),
+    ],
+)
+def test_item_icon_id_follows_item_type(kind: str, damage: str, expected: str | None):
+    assert item_icon_id(kind, damage) == expected
+
+
+def test_place_without_icon_uses_fallback():
+    assert place_icon_path(None) == icon_path(PLACE_FALLBACK_ICON)
+    assert place_icon_path("forest") == icon_path("forest")
+
+
+def test_campaign_map_draws_a_marker_icon(client_factory: Callable[[], TestClient], app: FastAPI):
+    client, campaign_id = _described_campaign(client_factory)
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Mossbell Hollow"})
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    map_view = page[page.index('data-view="map"') : page.index('data-view="lore"')]
+    assert f'<img src="{place_icon_path(None)}" alt="">' in map_view
+    assert 'aria-label="MH"' in map_view
+
+
+def test_campaign_pack_draws_item_icons(client_factory: Callable[[], TestClient]):
+    client, campaign_id, tools = _fight_client(client_factory, rolled=False)
+    tools.give_item(PC, "Rope")
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    inventory = page[page.index('id="panel-inventory"') : page.index('id="panel-notes"')]
+    weapon = f'<img class="item-icon" src="{icon_path(WEAPON_ICON)}" alt=""><strong>Sword</strong>'
+    assert weapon in inventory
+    assert inventory.count('class="item-icon"') == inventory.count(
+        f'src="{icon_path(WEAPON_ICON)}"'
+    )
+    assert re.search(r"<li[^>]*>\s*<strong>Rope</strong>", inventory)

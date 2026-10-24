@@ -150,8 +150,10 @@ def delete_npc(name: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.delete_npc(name)
 
 
-def move_actor(name: str, ctx: ToolContext, location: str | None = None) -> dict[str, str]:
-    return ctx.world.move_actor(name, location)
+def move_actor(
+    name: str, ctx: ToolContext, location: str | None = None, travel: str = "on_foot"
+) -> dict[str, Any]:
+    return ctx.world.move_actor(name, location, travel)
 
 
 def create_encounter_map(

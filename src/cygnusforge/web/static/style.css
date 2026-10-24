@@ -179,6 +179,8 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
   background: var(--panel); border: 1px solid var(--border);
 }
 .map-marker.here { color: var(--accent); border-color: var(--accent); }
+.map-marker img { width: 0.9rem; height: 0.9rem; vertical-align: -0.15em; }
+.item-icon { width: 1rem; height: 1rem; vertical-align: -0.2em; margin-right: 0.35rem; }
 .map-token { font-size: 0.6rem; font-weight: 600; line-height: 1; white-space: nowrap; transform: scale(calc(1 / var(--zoom, 1))); }
 .map-tip {
   position: fixed; z-index: 10; pointer-events: none;

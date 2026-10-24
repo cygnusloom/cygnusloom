@@ -2,6 +2,7 @@
   {
     "type": "location",
     "id": "isthmus-town",
+    "icon": "town",
     "name": "Isthmus Town",
     "description": "A former logging town, currently squeaking by largely on profits made from fishing West Lake. Fewer than thirty families call it home. The town market runs from 8am to 2pm each day and carries any items under 10gp (see Marketplace in the 2e Player's Guide). Local specialties are fried cod, roasted frog legs, and hot stewberry pie. Fishing equipment (15gp), bog shoes (10gp a pair), and rainproof clothing (15gp) are popular. Factions: the Tideborn, a hierarchical religious sect that worships Rivulus, a petty god of rivers and lakes; its initiation is a ritual drowning that occasionally kills participants, and survivors take a water-related name (Carp, Reed, Oxbow, and so on). The Order of Nine, a consortium of merchants, scholars, and the very powerful, focused on the discovery, identification, and regulation of Relics; it now focuses on the Roots and pays handsomely for information regarding Gates. Route: the module gives no road into Isthmus Town itself; the Farming Path runs South out of it, through the Humpbacks and into the Cities beyond.",
     "discovered": false,
@@ -94,6 +95,7 @@
   {
     "type": "location",
     "id": "the-stone-forest",
+    "icon": "forest",
     "name": "The Stone Forest",
     "description": "An unending wood stretching far to the north, its vast expanse halted only by the Marble Sea. For centuries the forest's lumber fed the needs of the Cities, until the allure of gems and ore drew their insatiable hunger South. A small creek flows from the border of the wood, northeast of East Lake, before terminating at Bone Sump. Entering the Stone Forest after dark, creating a loud disturbance, or stepping off the path triggers a roll on the Wilderness Events table (see Player's Guide pg. 78). A common arboreal predator here is the Night Cat (statblock 2.1), a nocturnal marsupial that hunts in packs. The only warning before they strike is a tick-tick-tick from the boughs above as they coordinate their attack; they go after whoever is last in the marching order. The target must make a DEX save or take damage directly to STR. Despite their name, Night Cats will attack targets during the day as well. This region will be explored in greater detail in future adventures in this series. Route: Old Mill Road leads to its edge and disappears there; the forest stretches north to the Marble Sea.",
     "discovered": false,
@@ -137,6 +139,7 @@
   {
     "type": "location",
     "id": "the-downs",
+    "icon": "hills",
     "name": "The Downs",
     "description": "A muddy, stinking bog shrouded in mist, and a popular source for horror stories (all untrue). The only creatures that live here are frogs, fish, and birds. Its deposits of mud and stink are home to a multitude of corpses, both of animals and of those who left the trail. Parties traveling on foot add a Fatigue. Route: along East Lake Pass, through the muddy bog; parties on foot add a Fatigue.",
     "discovered": false,
@@ -146,6 +149,7 @@
   {
     "type": "location",
     "id": "white-tower-fens",
+    "icon": "fen",
     "name": "White Tower Fens",
     "description": "A small wood East of the Downs, named for its ruined white tower, shrouded in the mists of the nearby bog. Entry is via East Lake Pass at the fork toward Old Mill Road. Route: via East Lake Pass at the fork toward Old Mill Road, East of the Downs.",
     "discovered": false,
@@ -179,6 +183,7 @@
   {
     "type": "location",
     "id": "the-white-tower",
+    "icon": "castle",
     "name": "The White Tower",
     "description": "A broken tower 40ft high, colored white as snow. A thick ladder stands against the tower's side. The upper portion of the tower is completely missing. Up The Ladder: the tower's bottom is bathed in darkness, its smooth white walls glittering in the light. No plant matter grows inside. Bottom: a viscous, amber-colored liquid creating a pool four feet deep, filling the tower's base. Liquid: an acid that only harms flesh (4 STR damage on contact). Any other material placed in it is undamaged and, if fully immersed, perfectly preserved. The substance is highly flammable, burning away completely within a few moments and leaving its contents unharmed. Shine: something shines inside. It is an armored skeleton from a time long ago, still wearing perfectly preserved chainmail. On its belt is a bag of ancient gold pieces (82gp) and a torn silk rope (42ft). Glittering: residue from the acid at the bottom of the tower. Oily to the touch, it sting like nettles (as printed). Route: the module names White Tower Fens for its ruined white tower, so the tower is reached through the Fens, entered via East Lake Pass at the fork toward Old Mill Road.",
     "discovered": false,
@@ -197,6 +202,7 @@
   {
     "type": "location",
     "id": "temple-of-the-fungal-lizards",
+    "icon": "ruins",
     "name": "Temple of the Fungal Lizards",
     "description": "A dark complex, built as a building-sized ship shaped like a beetle; its entry, reached by the stairs under the Bone Sump mound, is the beetle's \"head.\" Route: the Chamber of Worship (T9) lies deeper in the temple, and a short hallway runs from it to the door at T10a. General information: no light. Sconces with diamond-shaped objects protrude from the corners of each room (see T7, Light Room); they are currently off. The walls and floors are painted blue-black and made from a foreign alloy. They cannot be chipped or broken by mundane weapons, although fire and explosive powders have some effect. Two Surarus roam the temple. They appear on both Encounters and Environmental results from the Cairn 2e Dungeon Events table (not reproduced here).",
     "discovered": false,

@@ -1,0 +1,38 @@
+[
+  {
+    "type": "travel",
+    "id": "cairn",
+    "default_leg": {
+      "minutes": 10,
+      "note": "Assumption, to confirm: a leg whose distance cannot be worked out, such as a place with no position on the map, takes 10 minutes."
+    },
+    "modes": {
+      "on_foot": {
+        "km_per_hour": 4,
+        "note": "Confirmed: 4 km per hour on foot, the base rate. The module's times match it (Isthmus Town to Dunston is about an hour)."
+      },
+      "road": {
+        "km_per_hour": 6,
+        "note": "Assumption, to confirm: a made road or a well-kept trail."
+      },
+      "rough_terrain": {
+        "km_per_hour": 3,
+        "note": "Assumption, to confirm: marsh, forest without a path, hills, or broken ground."
+      },
+      "vehicle": {
+        "km_per_hour": 8,
+        "note": "Assumption, to confirm: a cart, wagon, or boat on a road or river."
+      },
+      "animal": {
+        "km_per_hour": 6,
+        "note": "Assumption, to confirm: riding or leading a beast of burden."
+      }
+    }
+  },
+  {
+    "type": "rule",
+    "id": "travel",
+    "important": true,
+    "text": "Travel takes time. When the player character moves to another place, the move takes the straight-line distance between the two places divided by the speed of the travel mode, and that time is charged to the clock. Pass travel to say how they go: on_foot (the default), road, rough_terrain, vehicle, or animal. A move with no distance to work out, such as to a place with no position on the map, takes the default leg time. The result reports the minutes charged; tell the players how long the journey took. Only the player character's travel takes time; NPCs and hirelings move with no time charged. The GM may interrupt a journey or a rest with a story moment or an encounter. When that happens, move the player character only as far as the place where the interruption stops them, or leave them where they are, and narrate the rest of the trip afterwards."
+  }
+]

@@ -30,6 +30,7 @@ from cygnusforge.content.character import (
     resolve,
 )
 from cygnusforge.content.library import (
+    DEFAULT_TRAVEL_MODE,
     ClockRules,
     CombatRules,
     ConditionRules,
@@ -43,6 +44,7 @@ from cygnusforge.content.library import (
     NeedRules,
     RestLength,
     ShopItem,
+    Travel,
     WorldTemplate,
 )
 from cygnusforge.rules.context import brief
@@ -94,6 +96,7 @@ from cygnusforge.services.events import (
     OpeningStarted,
     PcAdded,
     Place,
+    TravelCharged,
     WorldObject,
     defeat_status,
     load_state,
@@ -143,6 +146,7 @@ class PackItem:
     max_uses: int
     kind: str
     text: str
+    damage: str = ""
 
 
 @dataclass(frozen=True)
@@ -163,6 +167,7 @@ class MapMarker:
     left: float
     top: float
     here: bool
+    icon: str | None = None
 
 
 @dataclass(frozen=True)
@@ -209,6 +214,8 @@ class WorldTools:
     plus: str = field(kw_only=True)
     # The rule set's HP tiers for NPCs without a statblock, by tier name.
     npc_hp: Mapping[str, int] = field(default_factory=dict)
+    # The rule set's travel modes and default leg, or None when it does not charge travel time.
+    travel: Travel | None = None
 
     def roll_tables(self, tables: list[str]) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -609,9 +616,21 @@ class WorldTools:
         with session_scope(self.engine) as db:
             return dismiss_hireling(db, self.campaign_id, name, cause)
 
-    def move_actor(self, name: str, location: str | None = None) -> dict[str, str]:
+    def move_actor(
+        self, name: str, location: str | None = None, travel: str = "on_foot"
+    ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return move_actor(db, self.campaign_id, name, location)
+            return move_actor(
+                db,
+                self.campaign_id,
+                name,
+                location,
+                travel=self.travel,
+                mode=travel,
+                clock_rules=self.clock_rules,
+                need=self.need,
+                inventory=self.inventory,
+            )
 
     def update_location(
         self,
@@ -948,6 +967,7 @@ def seed_campaign(
                 x=spot.x,
                 y=spot.y,
                 parent=None if spot.parent is None else names[spot.parent],
+                icon=spot.icon,
             ),
         )
     for npc in world.npcs:
@@ -1694,10 +1714,21 @@ def delete_npc(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
 
 
 def move_actor(
-    db: Session, campaign_id: int, name: str, location: str | None = None
-) -> dict[str, str]:
+    db: Session,
+    campaign_id: int,
+    name: str,
+    location: str | None = None,
+    *,
+    travel: Travel | None = None,
+    mode: str = DEFAULT_TRAVEL_MODE,
+    clock_rules: ClockRules | None = None,
+    need: NeedRules | None = None,
+    inventory: InventoryRules | None = None,
+) -> dict[str, Any]:
     """Move a character to a place. With no place, an NPC goes into the wind: it is nowhere
-    in particular until a later move brings it back."""
+    in particular until a later move brings it back. A player character's move takes time from
+    the travel table when the rule set has one. The clock advances by whole hours; the rest of
+    the minutes carry to the next move."""
     state = load_state(db, campaign_id)
     actor = _character_named(state, name)
     if location is None:
@@ -1706,7 +1737,14 @@ def move_actor(
         record(db, campaign_id, ActorMoved(name=actor.name, location=None))
         db.commit()
         return {"moved": actor.name, "location": "in the wind"}
+    if travel is not None and mode not in travel.modes:
+        raise InvalidInput(
+            f"there is no travel mode named {mode!r}; use one of {', '.join(sorted(travel.modes))}"
+        )
     where = _place_named(state, location)
+    minutes = None
+    if travel is not None and actor.kind == PC_KIND:
+        minutes = _travel_minutes(state, actor, where, travel, mode)
     record(db, campaign_id, ActorMoved(name=actor.name, location=where.name))
     # Going somewhere in person means the player character knows the place in detail.
     if actor.kind == PC_KIND and not where.discovered:
@@ -1716,8 +1754,52 @@ def move_actor(
         for hireling in state.characters.values():
             if hireling.hireling and hireling.employer == actor.name:
                 record(db, campaign_id, ActorMoved(name=hireling.name, location=where.name))
+    result: dict[str, Any] = {"moved": actor.name, "location": where.name}
+    if minutes is not None and clock_rules is not None:
+        result.update(
+            _charge_travel(db, campaign_id, state, minutes, clock_rules, need, inventory, mode)
+        )
     db.commit()
-    return {"moved": actor.name, "location": where.name}
+    return result
+
+
+def _travel_minutes(
+    state: CampaignState, actor: Character, where: Place, travel: Travel, mode: str
+) -> int:
+    """The whole minutes a move takes: the straight-line distance from where the actor is, at the
+    mode's speed. A move with no distance to work out takes the default leg."""
+    origin = state.places.get(name_key(actor.location)) if actor.location else None
+    if origin is None or origin.position is None or where.position is None:
+        return travel.default_leg_minutes
+    distance = math.hypot(
+        where.position.x - origin.position.x, where.position.y - origin.position.y
+    )
+    return round(distance / travel.modes[mode].km_per_hour * 60)
+
+
+def _charge_travel(
+    db: Session,
+    campaign_id: int,
+    state: CampaignState,
+    minutes: int,
+    clock_rules: ClockRules,
+    need: NeedRules | None,
+    inventory: InventoryRules | None,
+    mode: str,
+) -> dict[str, Any]:
+    total = state.travel_minutes + minutes
+    hours, carried = divmod(total, 60)
+    record(db, campaign_id, TravelCharged(minutes=carried))
+    result: dict[str, Any] = {"minutes": minutes, "mode": mode}
+    if hours:
+        start = clock_service.absolute(
+            state.clock, len(clock_rules.parts), clock_rules.hours_per_part
+        )
+        clock = clock_service.advance_to(
+            db, campaign_id, clock_rules, start + hours, need, inventory
+        )
+        result["clock"] = clock
+    return result
 
 
 def add_note(
@@ -1957,6 +2039,7 @@ def map_view(state: CampaignState) -> MapView:
             left=round(50 + place.position.x / radius * 50, 2),
             top=round(50 - place.position.y / radius * 50, 2),
             here=place.name == here,
+            icon=place.icon,
         )
         for place in placed
         if place.position is not None
@@ -1994,6 +2077,7 @@ def scene_view(
                     max_uses=item.max_uses,
                     kind=item.kind,
                     text=item.text,
+                    damage=item.damage,
                 )
                 for item in pc.items
             ],
