@@ -117,6 +117,34 @@ def test_player_character_starts_unplaced(client_factory: Callable[[], TestClien
     )
 
 
+def test_the_gm_sees_the_places_inside_the_players_location(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "create_location", {"name": "Old Keep", "description": "A keep."})
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Gate Room", "description": "A gate.", "parent": "Old Keep"},
+    )
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Armoury", "description": "Racks.", "parent": "Old Keep"},
+    )
+    _tool(app, campaign_id, "discover_location", {"name": "Gate Room"})
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Old Keep"})
+    text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
+    assert "Places inside Old Keep: Armoury (not yet discovered), Gate Room (discovered)." in text
+
+    _tool(app, campaign_id, "move_actor", {"name": "Ada", "location": "Gate Room"})
+    text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
+    assert "Gate Room is inside Old Keep." in text
+    assert "Places inside Gate Room" not in text
+
+
 def test_a_world_can_declare_a_place_inside_another(
     client_factory: Callable[[], TestClient], app: FastAPI, monkeypatch: pytest.MonkeyPatch
 ):

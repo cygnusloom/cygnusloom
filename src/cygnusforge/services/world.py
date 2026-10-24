@@ -2044,6 +2044,16 @@ def world_state_text(
         things = [o.contents for o in visible_objects(state, pc.location)]
         if things:
             lines.append(f"Objects here: {'; '.join(things)}.")
+        here = _place_named(state, pc.location)
+        if here.parent is not None:
+            lines.append(f"{here.name} is inside {here.parent}.")
+        inside = [_place_named(state, name) for name in _children_of(state, here.name)]
+        if inside:
+            rooms = ", ".join(
+                f"{room.name} ({'discovered' if room.discovered else 'not yet discovered'})"
+                for room in inside
+            )
+            lines.append(f"Places inside {here.name}: {rooms}.")
     hirelings = [c for c in state.characters.values() if c.hireling]
     if hirelings:
         lines.append(
