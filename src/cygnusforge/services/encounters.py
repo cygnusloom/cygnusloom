@@ -365,6 +365,17 @@ def set_map_cells(
             new_terrain = _id_value(item["terrain"], terrain, "terrain")
         if "object" in item:
             new_object = _id_value(item["object"], encounter_objects, "encounter object")
+        found = encounter_objects.get(new_object) if new_object else None
+        on_this_map = state.encounter is not None and (
+            name_key(state.encounter.map) == name_key(entry.name)
+        )
+        if found is not None and found.blocks and on_this_map:
+            for key, where in state.encounter.cells.items():
+                if where == cell:
+                    raise InvalidInput(
+                        f"column {column}, row {row} is occupied by "
+                        f"{state.characters[key].name}, so it cannot be walled off"
+                    )
         marks[cell] = CellMark(new_terrain, new_object)
         touched.add(cell)
     record(
