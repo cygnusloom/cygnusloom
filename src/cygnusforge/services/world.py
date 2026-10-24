@@ -36,6 +36,9 @@ from cygnusforge.content.library import (
     ConditionRules,
     DiceTable,
     EncounterGrid,
+    EncounterObject,
+    EncounterTemplate,
+    EncounterTerrain,
     FoodRules,
     InventoryRules,
     MagicRules,
@@ -199,6 +202,10 @@ class WorldTools:
     character: CharacterSpec
     # The rule set's encounter grid, or None when its encounters have no movement limit.
     grid: EncounterGrid | None = None
+    # The rule set's encounter terrain, objects, and map templates by id.
+    terrain: Mapping[str, EncounterTerrain] = field(default_factory=dict)
+    encounter_objects: Mapping[str, EncounterObject] = field(default_factory=dict)
+    encounter_templates: Mapping[str, EncounterTemplate] = field(default_factory=dict)
     # The rule set's combat, or None when it has none, and its monster statblocks by id.
     combat: CombatRules | None = None
     monsters: Mapping[str, MonsterTemplate] = field(default_factory=dict)
@@ -692,13 +699,28 @@ class WorldTools:
         self,
         name: str,
         location: str,
-        columns: int,
-        rows: int,
+        columns: int | None,
+        rows: int | None,
         description: str,
+        template: str = "",
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return encounters.create_map(
-                db, self.campaign_id, name, location, columns, rows, description
+                db,
+                self.campaign_id,
+                name,
+                location,
+                columns,
+                rows,
+                description,
+                template,
+                self.encounter_templates,
+            )
+
+    def set_encounter_map_cells(self, map: str, cells: list[Mapping[str, Any]]) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return encounters.set_map_cells(
+                db, self.campaign_id, map, cells, self.terrain, self.encounter_objects
             )
 
     def update_encounter_map(
@@ -889,7 +911,16 @@ class WorldTools:
 
     def place_participant(self, name: str, column: int, row: int) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return encounters.place_participant(db, self.campaign_id, name, column, row, self.grid)
+            return encounters.place_participant(
+                db,
+                self.campaign_id,
+                name,
+                column,
+                row,
+                self.grid,
+                self.terrain,
+                self.encounter_objects,
+            )
 
     def end_npc_turn(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -2167,6 +2198,8 @@ def world_state_text(
     conditions: Mapping[str, ConditionRules] | None = None,
     clock_rules: ClockRules | None = None,
     inventory: InventoryRules | None = None,
+    terrain: Mapping[str, EncounterTerrain] | None = None,
+    encounter_objects: Mapping[str, EncounterObject] | None = None,
 ) -> str:
     """The GM's orientation at the start of a turn: the campaign options, the day, the player
     character and where they are, the NPCs there, and any encounter in progress. The rest is looked
@@ -2229,20 +2262,29 @@ def world_state_text(
     if wind:
         lines.append(f"NPCs in the wind, at no location: {', '.join(wind)}.")
     lines.extend(_status_lines(pc, conditions, inventory))
-    lines.extend(_encounter_lines(state, grid, combat))
+    lines.extend(_encounter_lines(state, grid, combat, terrain, encounter_objects))
     return "\n".join(lines)
 
 
 def _encounter_lines(
-    state: CampaignState, grid: EncounterGrid | None, combat: CombatRules | None
+    state: CampaignState,
+    grid: EncounterGrid | None,
+    combat: CombatRules | None,
+    terrain: Mapping[str, EncounterTerrain] | None = None,
+    encounter_objects: Mapping[str, EncounterObject] | None = None,
 ) -> list[str]:
-    view = encounters.encounter_view(state, grid, combat)
+    view = encounters.encounter_view(state, grid, combat, terrain, encounter_objects)
     if view is None:
         return []
     lines = [
         f"Encounter in progress on the map {view['map']} at {view['location']}, round {view['round']}.",
         f"Map: {view['columns']} by {view['rows']} cells, columns and rows counted from 0 at the top left. {view['description']}",
     ]
+    if view["background"] is not None:
+        lines.append(_terrain_sentence("Background", view["background"]))
+    if view["marked_cells"]:
+        marked = [_marked_cell_text(cell) for cell in view["marked_cells"]]
+        lines.append("Marked cells: " + "; ".join(marked) + ".")
     if view["awaiting_initiative"]:
         waiting = ", ".join(view["awaiting_initiative"])
         lines.append(
@@ -2266,6 +2308,22 @@ def _encounter_lines(
             f"- {who['number']}. {who['name']} ({kind}, {who['side']} side{status}), {where}."
         )
     return lines
+
+
+def _terrain_sentence(label: str, terrain: dict[str, Any]) -> str:
+    difficult = (
+        " It is difficult: each cell entered costs two moves." if terrain["difficult"] else ""
+    )
+    return f"{label} terrain: {terrain['name']}.{difficult}"
+
+
+def _marked_cell_text(cell: dict[str, Any]) -> str:
+    parts = []
+    if cell["terrain"]:
+        parts.append(f"{cell['terrain']}{' (difficult)' if cell['difficult'] else ''}")
+    if cell["object"]:
+        parts.append(f"{cell['object']}{' (blocks)' if cell['blocks'] else ''}")
+    return f"column {cell['column']}, row {cell['row']}: {', '.join(parts)}"
 
 
 def _location_entry(place: Place) -> dict[str, Any]:

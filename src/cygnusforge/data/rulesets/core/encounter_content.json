@@ -1,0 +1,90 @@
+[
+  {"type": "encounter_terrain", "id": "floor", "name": "Stone floor", "color": "#4a4d55"},
+  {"type": "encounter_terrain", "id": "grass", "name": "Grass", "color": "#3f6b35"},
+  {"type": "encounter_terrain", "id": "dirt", "name": "Dirt road", "color": "#7a5c3a"},
+  {"type": "encounter_terrain", "id": "shore", "name": "Shore", "color": "#b8a878"},
+  {"type": "encounter_terrain", "id": "mud", "name": "Mud", "color": "#5b4630", "difficult": true},
+  {"type": "encounter_terrain", "id": "rubble", "name": "Rubble", "color": "#6e6a62", "difficult": true},
+  {"type": "encounter_terrain", "id": "shallow-water", "name": "Shallow water", "color": "#2f6f8f", "difficult": true},
+
+  {"type": "encounter_object", "id": "wall", "name": "Wall", "icon": "castle", "color": "#2b2d33", "blocks": true, "solid": true},
+  {"type": "encounter_object", "id": "tree", "name": "Tree", "icon": "tree", "color": "#2f5a2a", "blocks": true},
+  {"type": "encounter_object", "id": "boulder", "name": "Boulder", "icon": "rock", "color": "#6e6a62", "blocks": true},
+  {"type": "encounter_object", "id": "pillar", "name": "Pillar", "icon": "pillar", "color": "#8a8790", "blocks": true},
+  {"type": "encounter_object", "id": "well", "name": "Well", "icon": "well", "color": "#4d5b66", "blocks": true},
+  {"type": "encounter_object", "id": "deep-water", "name": "Deep water", "icon": "water", "color": "#1f3f5c", "blocks": true},
+  {"type": "encounter_object", "id": "table", "name": "Table", "icon": "table", "color": "#7a5a34", "blocks": false},
+  {"type": "encounter_object", "id": "door", "name": "Doorway", "icon": "door", "color": "#6b4a2b", "blocks": false},
+  {"type": "encounter_object", "id": "campfire", "name": "Campfire", "icon": "campfire", "color": "#8c3d1c", "blocks": false},
+  {"type": "encounter_object", "id": "crate", "name": "Crate", "icon": "chest", "color": "#8a6a3a", "blocks": true},
+
+  {
+    "type": "encounter_template",
+    "id": "room",
+    "name": "Room",
+    "columns": 10,
+    "rows": 8,
+    "background": "floor",
+    "fills": [
+      {"from": [0, 0], "to": [9, 0], "object": "wall"},
+      {"from": [0, 7], "to": [9, 7], "object": "wall"},
+      {"from": [0, 1], "to": [0, 6], "object": "wall"},
+      {"from": [9, 1], "to": [9, 6], "object": "wall"}
+    ],
+    "cells": [
+      {"column": 4, "row": 0, "object": "door"},
+      {"column": 5, "row": 4, "object": "table"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "corridor",
+    "name": "Corridor",
+    "columns": 16,
+    "rows": 5,
+    "background": "floor",
+    "fills": [
+      {"from": [0, 0], "to": [15, 0], "object": "wall"},
+      {"from": [0, 4], "to": [15, 4], "object": "wall"}
+    ],
+    "cells": [
+      {"column": 8, "row": 2, "object": "pillar"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "clearing",
+    "name": "Clearing",
+    "columns": 14,
+    "rows": 12,
+    "background": "grass",
+    "fills": [
+      {"from": [0, 0], "to": [13, 0], "object": "tree"},
+      {"from": [0, 11], "to": [5, 11], "object": "tree"},
+      {"from": [8, 11], "to": [13, 11], "object": "tree"},
+      {"from": [0, 1], "to": [0, 10], "object": "tree"},
+      {"from": [13, 1], "to": [13, 10], "object": "tree"}
+    ],
+    "cells": [
+      {"column": 6, "row": 6, "object": "campfire"},
+      {"column": 3, "row": 4, "object": "boulder"},
+      {"column": 10, "row": 8, "object": "boulder"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "shoreline",
+    "name": "Shoreline",
+    "columns": 14,
+    "rows": 10,
+    "background": "shore",
+    "fills": [
+      {"from": [0, 0], "to": [13, 1], "object": "deep-water"},
+      {"from": [3, 2], "to": [5, 3], "terrain": "shallow-water"},
+      {"from": [9, 2], "to": [10, 3], "terrain": "shallow-water"},
+      {"from": [0, 4], "to": [13, 4], "terrain": "mud"},
+      {"from": [6, 6], "to": [13, 6], "terrain": "dirt"}
+    ],
+    "cells": []
+  }
+]

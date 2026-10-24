@@ -147,6 +147,7 @@ CORE_TOOL_NAMES = {
     "create_encounter_map",
     "update_encounter_map",
     "delete_encounter_map",
+    "set_map_cells",
     "start_encounter",
     "end_encounter",
     "add_participant",

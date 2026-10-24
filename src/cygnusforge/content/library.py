@@ -192,6 +192,54 @@ class EncounterGrid:
 
 
 @dataclass(frozen=True)
+class EncounterTerrain:
+    """A kind of ground on an encounter map. Entering difficult ground costs two movement."""
+
+    id: str
+    name: str
+    color: str
+    difficult: bool = False
+
+
+@dataclass(frozen=True)
+class EncounterObject:
+    """Something standing on an encounter map. A participant cannot enter a blocking cell.
+
+    A solid object is drawn as a block of its colour rather than its icon, so large
+    features such as walls do not clash with the smaller objects placed among them.
+    """
+
+    id: str
+    name: str
+    icon: str
+    color: str
+    blocks: bool = False
+    solid: bool = False
+
+
+@dataclass(frozen=True)
+class EncounterCell:
+    """One position on an encounter template. Terrain and object are ids, or "" for none."""
+
+    column: int
+    row: int
+    terrain: str = ""
+    object: str = ""
+
+
+@dataclass(frozen=True)
+class EncounterTemplate:
+    """A ready-made encounter map. Every cell not in `cells` has the background terrain."""
+
+    id: str
+    name: str
+    columns: int
+    rows: int
+    background: str
+    cells: tuple[EncounterCell, ...]
+
+
+@dataclass(frozen=True)
 class DiceRow:
     """The rolls from `low` to `high`, inclusive, give `result`."""
 
@@ -537,6 +585,10 @@ class RuleSet:
     sentence_cap: int | None = None
     # How fast travel goes, or None when the rule set does not charge time for travel.
     travel: Travel | None = None
+    # Encounter-map content, by id: ground, objects that stand on it, and starter maps.
+    terrain: Mapping[str, EncounterTerrain] = field(default_factory=dict)
+    encounter_objects: Mapping[str, EncounterObject] = field(default_factory=dict)
+    encounter_templates: Mapping[str, EncounterTemplate] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -905,6 +957,11 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     prompt_fragments = _load_prompts(definitions, template)
     sentence_cap = _load_sentence_cap(definitions, template)
     travel = _load_travel(definitions, template)
+    terrain = _load_encounter_terrain(definitions, template)
+    encounter_objects = _load_encounter_objects(definitions, template)
+    encounter_templates = _load_encounter_templates(
+        definitions, terrain, encounter_objects, template
+    )
     npc_hp = _npc_hp(head.data, label)
     tool_calls: dict[str, ToolCall] = {}
     tool_names: set[str] = set()
@@ -946,6 +1003,9 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         prompt_fragments=prompt_fragments,
         sentence_cap=sentence_cap,
         travel=travel,
+        terrain=terrain,
+        encounter_objects=encounter_objects,
+        encounter_templates=encounter_templates,
     )
 
 
@@ -1326,6 +1386,210 @@ def _load_grid(definition: Definition, template: str) -> EncounterGrid:
     if move_feet < cell_feet:
         raise ContentError(f"{label}: 'move_feet' must be at least one cell")
     return EncounterGrid(cell_feet=cell_feet, move_feet=move_feet)
+
+
+MAX_TEMPLATE_SIZE = 60
+
+
+_HEX_COLOR = re.compile(r"#[0-9a-fA-F]{6}")
+
+
+def _color(data: Mapping[str, Any], label: str) -> str:
+    color = required_text(data, "color", label)
+    if not _HEX_COLOR.fullmatch(color):
+        raise ContentError(f"{label}: color must be a hex colour like #3a3f47, not {color!r}")
+    return color
+
+
+def _load_encounter_terrain(
+    definitions: list[Definition], template: str
+) -> dict[str, EncounterTerrain]:
+    terrain: dict[str, EncounterTerrain] = {}
+    for d in definitions:
+        if d.type != "encounter_terrain":
+            continue
+        if d.id in terrain:
+            raise ContentError(f"{template}: duplicate encounter terrain {d.id!r}")
+        label = f"{template}: encounter terrain {d.id}"
+        terrain[d.id] = EncounterTerrain(
+            id=d.id,
+            name=required_text(d.data, "name", label),
+            color=_color(d.data, label),
+            difficult=_flag(d.data, "difficult", label),
+        )
+    return terrain
+
+
+def _load_encounter_objects(
+    definitions: list[Definition], template: str
+) -> dict[str, EncounterObject]:
+    objects: dict[str, EncounterObject] = {}
+    for d in definitions:
+        if d.type != "encounter_object":
+            continue
+        if d.id in objects:
+            raise ContentError(f"{template}: duplicate encounter object {d.id!r}")
+        label = f"{template}: encounter object {d.id}"
+        objects[d.id] = EncounterObject(
+            id=d.id,
+            name=required_text(d.data, "name", label),
+            icon=required_text(d.data, "icon", label),
+            color=_color(d.data, label),
+            blocks=_flag(d.data, "blocks", label),
+            solid=_flag(d.data, "solid", label),
+        )
+    return objects
+
+
+def _load_encounter_templates(
+    definitions: list[Definition],
+    terrain: Mapping[str, EncounterTerrain],
+    objects: Mapping[str, EncounterObject],
+    template: str,
+) -> dict[str, EncounterTemplate]:
+    templates: dict[str, EncounterTemplate] = {}
+    for d in definitions:
+        if d.type != "encounter_template":
+            continue
+        if d.id in templates:
+            raise ContentError(f"{template}: duplicate encounter template {d.id!r}")
+        label = f"{template}: encounter template {d.id}"
+        columns = _map_size(d.data, "columns", label)
+        rows = _map_size(d.data, "rows", label)
+        templates[d.id] = EncounterTemplate(
+            id=d.id,
+            name=required_text(d.data, "name", label),
+            columns=columns,
+            rows=rows,
+            background=_defined(
+                d.data.get("background"), terrain, "background", "terrain", label, empty_ok=True
+            ),
+            cells=_paint(d.data, label, columns, rows, terrain, objects),
+        )
+    return templates
+
+
+def _map_size(data: Mapping[str, Any], key: str, label: str) -> int:
+    value = data.get(key)
+    if not _is_int(value) or not 1 <= value <= MAX_TEMPLATE_SIZE:
+        raise ContentError(f"{label}: {key!r} must be a whole number from 1 to {MAX_TEMPLATE_SIZE}")
+    return value
+
+
+def _is_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _defined(
+    value: Any,
+    known: Mapping[str, Any],
+    key: str,
+    kind: str,
+    label: str,
+    empty_ok: bool = False,
+) -> str:
+    """An id that must name a defined `kind`. An empty id means none, where `empty_ok` allows it."""
+    if empty_ok and value == "":
+        return ""
+    if not isinstance(value, str) or value not in known:
+        raise ContentError(f"{label}: {key!r} must name a defined {kind}, not {value!r}")
+    return value
+
+
+def _entries(data: Mapping[str, Any], key: str, label: str) -> list[Mapping[str, Any]]:
+    value = data.get(key, [])
+    if not isinstance(value, list) or not all(isinstance(v, Mapping) for v in value):
+        raise ContentError(f"{label}: {key!r} must be a list of objects")
+    return value
+
+
+def _position(column: Any, row: Any, columns: int, rows: int, label: str) -> tuple[int, int]:
+    if not (_is_int(column) and _is_int(row)):
+        raise ContentError(f"{label}: a position must be a [column, row] pair of whole numbers")
+    if not (0 <= column < columns and 0 <= row < rows):
+        raise ContentError(
+            f"{label}: position [{column}, {row}] is outside the {columns}x{rows} grid"
+        )
+    return column, row
+
+
+def _corner(
+    entry: Mapping[str, Any], key: str, columns: int, rows: int, label: str
+) -> tuple[int, int]:
+    value = entry.get(key)
+    if not isinstance(value, list) or len(value) != 2:
+        raise ContentError(f"{label}: {key!r} must be a [column, row] pair")
+    return _position(value[0], value[1], columns, rows, label)
+
+
+def _paint(
+    data: Mapping[str, Any],
+    label: str,
+    columns: int,
+    rows: int,
+    terrain: Mapping[str, EncounterTerrain],
+    objects: Mapping[str, EncounterObject],
+) -> tuple[EncounterCell, ...]:
+    """Expand a template's fills and cells into the cells that hold terrain or an object.
+
+    Each cell starts with the background and no object. A fill or cell changes only the keys it
+    gives, and later entries overwrite earlier ones.
+    """
+    background = _defined(
+        data.get("background"), terrain, "background", "terrain", label, empty_ok=True
+    )
+    state = {
+        (column, row): {"terrain": background, "object": ""}
+        for column in range(columns)
+        for row in range(rows)
+    }
+    for fill in _entries(data, "fills", label):
+        fill_label = f"{label}: fill"
+        first = _corner(fill, "from", columns, rows, fill_label)
+        last = _corner(fill, "to", columns, rows, fill_label)
+        values = _changes(fill, terrain, objects, fill_label)
+        for column in range(min(first[0], last[0]), max(first[0], last[0]) + 1):
+            for row in range(min(first[1], last[1]), max(first[1], last[1]) + 1):
+                state[column, row].update(values)
+    for cell in _entries(data, "cells", label):
+        cell_label = f"{label}: cell"
+        position = _position(cell.get("column"), cell.get("row"), columns, rows, cell_label)
+        state[position].update(_changes(cell, terrain, objects, cell_label))
+    painted = []
+    for row in range(rows):
+        for column in range(columns):
+            values = state[column, row]
+            if values["terrain"] or values["object"]:
+                painted.append(
+                    EncounterCell(
+                        column=column,
+                        row=row,
+                        terrain=values["terrain"],
+                        object=values["object"],
+                    )
+                )
+    return tuple(painted)
+
+
+def _changes(
+    entry: Mapping[str, Any],
+    terrain: Mapping[str, EncounterTerrain],
+    objects: Mapping[str, EncounterObject],
+    label: str,
+) -> dict[str, str]:
+    """The terrain and object an entry sets. It must set at least one."""
+    changes: dict[str, str] = {}
+    if "terrain" in entry:
+        changes["terrain"] = _defined(
+            entry["terrain"], terrain, "terrain", "terrain", label, empty_ok=True
+        )
+    if "object" in entry:
+        changes["object"] = _defined(
+            entry["object"], objects, "object", "encounter object", label, empty_ok=True
+        )
+    if not changes:
+        raise ContentError(f"{label}: must set 'terrain' or 'object'")
+    return changes
 
 
 def _single_optional(definitions: list[Definition], kind: str, template: str) -> Definition | None:

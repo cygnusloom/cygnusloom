@@ -783,22 +783,24 @@
         },
         "columns": {
           "type": "integer",
-          "description": "How many cells wide the map is, from 1 to 60."
+          "description": "How many cells wide the map is, from 1 to 60. Required unless a template is given; with a template, it overrides the template's width."
         },
         "rows": {
           "type": "integer",
-          "description": "How many cells tall the map is, from 1 to 60."
+          "description": "How many cells tall the map is, from 1 to 60. Required unless a template is given; with a template, it overrides the template's height."
         },
         "description": {
           "type": "string",
           "description": "What the map shows: terrain, cover, hazards, and anything else that matters for tactics."
+        },
+        "template": {
+          "type": "string",
+          "description": "A standard layout, such as room, corridor, clearing or shoreline. The template sets the size and the starting terrain. Leave it out for an empty map."
         }
       },
       "required": [
         "name",
         "location",
-        "columns",
-        "rows",
         "description"
       ]
     }
@@ -949,7 +951,7 @@
     "name": "place_participant",
     "python_module": "core",
     "function": "place_participant",
-    "description": "Put a participant on a cell of the encounter map, counted from 0 at the top left: column increases to the right and row increases downward. Moving is limited to the rule set's movement per turn, counted as the number of cells moved in a straight line or diagonal (Chebyshev distance). That limit applies only to the participant whose turn it is; moving anyone else is free. The first placement is free. Use this to move a participant, not to tell the story of how they got there.",
+    "description": "Put a participant on a cell of the encounter map, counted from 0 at the top left: column increases to the right and row increases downward. Moving is limited to the rule set's movement per turn, counted in cells moved in a straight line or diagonal. Obstacles block: a cell with a blocking object cannot be entered or be the destination, so the participant goes around it. Difficult terrain costs two moves per cell entered. That limit applies only to the participant whose turn it is; moving anyone else is free, though they still cannot enter a blocked cell. The first placement is free. Use this to move a participant, not to tell the story of how they got there.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -970,6 +972,56 @@
         "name",
         "column",
         "row"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "set_map_cells",
+    "name": "set_map_cells",
+    "python_module": "core",
+    "function": "set_map_cells",
+    "description": "Set the terrain or object on cells of an encounter map. A cell with an object that blocks cannot be entered.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "map": {
+          "type": "string",
+          "description": "The name of the encounter map."
+        },
+        "cells": {
+          "type": "array",
+          "description": "The cells to change, at most 200 per call. Each cell needs a column and row, and terrain or object or both. Give an empty string for terrain or object to clear it.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "column": {
+                "type": "integer",
+                "description": "The cell's column, from 0 at the left edge."
+              },
+              "row": {
+                "type": "integer",
+                "description": "The cell's row, from 0 at the top edge."
+              },
+              "terrain": {
+                "type": "string",
+                "description": "The terrain id for the cell, such as mud or grass. Empty clears it."
+              },
+              "object": {
+                "type": "string",
+                "description": "The object id on the cell, such as wall or tree. Empty clears it."
+              }
+            },
+            "required": [
+              "column",
+              "row"
+            ]
+          }
+        }
+      },
+      "required": [
+        "map",
+        "cells"
       ]
     }
   },

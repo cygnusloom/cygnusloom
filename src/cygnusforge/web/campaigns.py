@@ -589,7 +589,11 @@ def _campaign_page(
         library.world_content(campaign.world_template, campaign.rule_set).rules,
     )
     encounter = encounter_view(
-        world.state, rule_set.grid if rule_set else None, rule_set.combat if rule_set else None
+        world.state,
+        rule_set.grid if rule_set else None,
+        rule_set.combat if rule_set else None,
+        rule_set.terrain if rule_set else None,
+        rule_set.encounter_objects if rule_set else None,
     )
     return render(
         request,
@@ -618,17 +622,38 @@ def _campaign_page(
     )
 
 
-def _encounter_rows(encounter: dict[str, Any]) -> list[list[dict[str, Any] | None]]:
-    """The encounter map as rows of cells, each holding the participant standing on it, if any."""
+def _encounter_rows(encounter: dict[str, Any]) -> list[list[dict[str, Any]]]:
+    """The encounter map as rows of cells. Each cell has the background or marked terrain and
+    object under it, and the participant standing on it, if any."""
     occupants = {
         tuple(participant["cell"]): participant
         for participant in encounter["participants"]
         if participant["cell"] is not None
     }
-    return [
-        [occupants.get((column, row)) for column in range(encounter["columns"])]
-        for row in range(encounter["rows"])
-    ]
+    marks = {(mark["column"], mark["row"]): mark for mark in encounter["marked_cells"]}
+    background = encounter["background"] or {}
+    rows = []
+    for row in range(encounter["rows"]):
+        cells = []
+        for column in range(encounter["columns"]):
+            mark = marks.get((column, row), {})
+            # A cell with no terrain of its own stands on the background.
+            ground = mark if mark.get("terrain") else background
+            cells.append(
+                {
+                    "occupant": occupants.get((column, row)),
+                    "terrain_color": ground.get("terrain_color", ground.get("color", "")),
+                    "terrain_name": ground.get("terrain", ground.get("name", "")),
+                    "difficult": bool(ground.get("difficult", False)),
+                    "object_icon": mark.get("object_icon", ""),
+                    "object_color": mark.get("object_color", ""),
+                    "object_solid": bool(mark.get("object_solid", False)),
+                    "object_name": mark.get("object", ""),
+                    "blocks": bool(mark.get("blocks", False)),
+                }
+            )
+        rows.append(cells)
+    return rows
 
 
 def _roll_key(campaign_id: int) -> str:

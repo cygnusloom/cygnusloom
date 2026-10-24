@@ -237,6 +237,24 @@ class Turn:
 
 
 @dataclass(frozen=True)
+class CellMark:
+    """What is on one cell of a map: a terrain id and an object id, each "" for none."""
+
+    terrain: str = ""
+    object: str = ""
+
+
+def marks_from_list(items: Iterable[Mapping[str, Any]]) -> dict[tuple[int, int], CellMark]:
+    """Turn event payload marks, a list of {"column", "row", "terrain", "object"}, into a dict."""
+    return {
+        (int(item["column"]), int(item["row"])): CellMark(
+            str(item.get("terrain", "")), str(item.get("object", ""))
+        )
+        for item in items
+    }
+
+
+@dataclass(frozen=True)
 class EncounterMap:
     """A grid of cells set in a location. Cells are as wide as the rule set's grid says; a rule set
     without one has no scale, and its cells only place participants relative to each other."""
@@ -246,6 +264,10 @@ class EncounterMap:
     columns: int
     rows: int
     description: str
+    # Terrain id under every cell without a mark; "" for none.
+    background: str = ""
+    # Marked cells, keyed by (column, row). A cell with no terrain and no object is not kept here.
+    marks: dict[tuple[int, int], CellMark] = field(default_factory=dict)
 
 
 @dataclass
@@ -1203,10 +1225,19 @@ class MapCreated(GameEvent):
     columns: int
     rows: int
     description: str
+    background: str = ""
+    # Each item is {"column", "row", "terrain", "object"}.
+    marks: list[dict[str, Any]] = field(default_factory=list)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.maps[name_key(self.name)] = EncounterMap(
-            self.name, self.location, self.columns, self.rows, self.description
+            self.name,
+            self.location,
+            self.columns,
+            self.rows,
+            self.description,
+            self.background,
+            {k: v for k, v in marks_from_list(self.marks).items() if v.terrain or v.object},
         )
 
     def render(self) -> str:
@@ -1235,8 +1266,20 @@ class MapUpdated(GameEvent):
         before = state.maps.pop(key)
         name = self.new_name or before.name
         location = self.location or before.location
+        # Marks outside a smaller map are dropped, so replaying the log gives the same map.
+        marks = {
+            (column, row): mark
+            for (column, row), mark in before.marks.items()
+            if column < self.columns and row < self.rows
+        }
         state.maps[name_key(name)] = EncounterMap(
-            name, location, self.columns, self.rows, self.description
+            name,
+            location,
+            self.columns,
+            self.rows,
+            self.description,
+            before.background,
+            marks,
         )
         encounter = state.encounter
         if encounter is not None and name_key(encounter.map) == key:
@@ -1247,6 +1290,28 @@ class MapUpdated(GameEvent):
         if self.new_name:
             return f"Encounter map updated: {self.name} is now {self.new_name}."
         return f"Encounter map updated: {self.name}."
+
+
+@dataclass(frozen=True)
+class MapCellsChanged(GameEvent):
+    """Sets cells of a map. A cell whose terrain and object are both "" is cleared."""
+
+    kind: ClassVar[str] = "map.cells_changed"
+
+    name: str
+    # Each item is {"column", "row", "terrain", "object"}.
+    marks: list[dict[str, Any]] = field(default_factory=list)
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        encounter_map = state.maps[name_key(self.name)]
+        for (column, row), mark in marks_from_list(self.marks).items():
+            if mark.terrain or mark.object:
+                encounter_map.marks[(column, row)] = mark
+            else:
+                encounter_map.marks.pop((column, row), None)
+
+    def render(self) -> str:
+        return f"Encounter map cells changed: {self.name} ({len(self.marks)} cells)."
 
 
 @dataclass(frozen=True)
@@ -2360,6 +2425,7 @@ HIDDEN_KINDS: dict[str, bool] = {
     "map.created": True,
     "map.updated": True,
     "map.deleted": True,
+    "map.cells_changed": True,
     "effect.noted": True,
     # GM-only rolls the player does not see.
     "dungeon.event": True,

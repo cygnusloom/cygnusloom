@@ -6,12 +6,19 @@ change, records its events, and commits."""
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+import heapq
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from sqlmodel import Session
 
-from cygnusforge.content.library import CombatRules, EncounterGrid
+from cygnusforge.content.library import (
+    CombatRules,
+    EncounterGrid,
+    EncounterObject,
+    EncounterTemplate,
+    EncounterTerrain,
+)
 from cygnusforge.services.common import InvalidInput, bounded_text
 from cygnusforge.services.events import (
     FOES_SIDE,
@@ -19,6 +26,7 @@ from cygnusforge.services.events import (
     PARTY_SIDE,
     PC_KIND,
     CampaignState,
+    CellMark,
     Character,
     Encounter,
     EncounterEnded,
@@ -27,6 +35,7 @@ from cygnusforge.services.events import (
     EncounterTurnBegun,
     EncounterTurnEnded,
     InitiativeSettled,
+    MapCellsChanged,
     MapCreated,
     MapDeleted,
     MapUpdated,
@@ -48,6 +57,9 @@ MAX_MAP_NAME = 120
 MAX_MAP_TEXT = 2000
 # The largest number of cells along either side of a map.
 MAX_MAP_SIDE = 60
+# The most cells one set_map_cells call may change, and how many ids an error message lists.
+MAX_CELLS_PER_CALL = 200
+MAX_LISTED_IDS = 20
 
 
 def _size(columns: object, rows: object) -> tuple[int, int]:
@@ -97,15 +109,121 @@ def _moves_left(encounter: Encounter, grid: EncounterGrid | None) -> int | None:
     return grid.move_cells - encounter.moved
 
 
+def _id_list(known: Mapping[str, object]) -> str:
+    ids = sorted(known)
+    shown = ", ".join(ids[:MAX_LISTED_IDS])
+    return shown + (" and more" if len(ids) > MAX_LISTED_IDS else "")
+
+
+def _id_value(value: object, known: Mapping[str, object], label: str) -> str:
+    """A terrain or object id from the rule set. An empty string means none."""
+    if not isinstance(value, str):
+        raise InvalidInput(f"{label} must be an id given as text")
+    if value and value not in known:
+        raise InvalidInput(f"there is no {label} {value!r}; the valid ids are {_id_list(known)}")
+    return value
+
+
+def _mark_dicts(marks: Mapping[tuple[int, int], CellMark]) -> list[dict[str, Any]]:
+    return [
+        {"column": column, "row": row, "terrain": mark.terrain, "object": mark.object}
+        for (column, row), mark in sorted(marks.items())
+    ]
+
+
+def _template_named(templates: Mapping[str, EncounterTemplate], template: str) -> EncounterTemplate:
+    layout = templates.get(template)
+    if layout is None:
+        raise InvalidInput(
+            f"there is no encounter template {template!r}; the valid ids are {_id_list(templates)}"
+        )
+    return layout
+
+
+def _template_marks(
+    layout: EncounterTemplate, columns: int, rows: int
+) -> dict[tuple[int, int], CellMark]:
+    marks: dict[tuple[int, int], CellMark] = {}
+    for cell in layout.cells:
+        if not (cell.terrain or cell.object):
+            continue
+        if not (0 <= cell.column < columns and 0 <= cell.row < rows):
+            raise InvalidInput(
+                f"the {layout.name} template has a cell at column {cell.column}, row {cell.row}, "
+                f"which is outside the {columns} by {rows} map"
+            )
+        marks[(cell.column, cell.row)] = CellMark(cell.terrain, cell.object)
+    return marks
+
+
+def _cell_terrain(entry: EncounterMap, cell: tuple[int, int]) -> str:
+    mark = entry.marks.get(cell)
+    return mark.terrain if mark and mark.terrain else entry.background
+
+
+def _blocks(
+    entry: EncounterMap, cell: tuple[int, int], objects: Mapping[str, EncounterObject]
+) -> str:
+    """The object id that blocks a cell, or '' when the cell can be entered."""
+    mark = entry.marks.get(cell)
+    if mark is None or not mark.object:
+        return ""
+    found = objects.get(mark.object)
+    return mark.object if found is not None and found.blocks else ""
+
+
+def _step_cost(
+    entry: EncounterMap, cell: tuple[int, int], terrain: Mapping[str, EncounterTerrain]
+) -> int:
+    found = terrain.get(_cell_terrain(entry, cell))
+    return 2 if found is not None and found.difficult else 1
+
+
+def _path_cost(
+    entry: EncounterMap,
+    start: tuple[int, int],
+    goal: tuple[int, int],
+    terrain: Mapping[str, EncounterTerrain],
+    objects: Mapping[str, EncounterObject],
+) -> int | None:
+    """The fewest movement points to walk from start to goal in 8 directions, or None when no
+    route exists. Blocking cells cannot be entered; entering difficult terrain costs 2."""
+    best = {start: 0}
+    queue: list[tuple[int, tuple[int, int]]] = [(0, start)]
+    while queue:
+        spent, cell = heapq.heappop(queue)
+        if cell == goal:
+            return spent
+        if spent > best.get(cell, spent):
+            continue
+        for d_column in (-1, 0, 1):
+            for d_row in (-1, 0, 1):
+                nxt = (cell[0] + d_column, cell[1] + d_row)
+                if nxt == cell or not (0 <= nxt[0] < entry.columns and 0 <= nxt[1] < entry.rows):
+                    continue
+                if _blocks(entry, nxt, objects):
+                    continue
+                total = spent + _step_cost(entry, nxt, terrain)
+                if total < best.get(nxt, float("inf")):
+                    best[nxt] = total
+                    heapq.heappush(queue, (total, nxt))
+    return None
+
+
 def create_map(
     db: Session,
     campaign_id: int,
     name: str,
     location: str,
-    columns: int,
-    rows: int,
-    description: str,
+    columns: int | None = None,
+    rows: int | None = None,
+    description: str = "",
+    template: str = "",
+    templates: Mapping[str, EncounterTemplate] | None = None,
 ) -> dict[str, Any]:
+    """Create a map. With a `template`, its size and background come from the template and its
+    cells become marks; `columns` and `rows`, if given, override the template size. Without one,
+    columns and rows are required and the map starts empty."""
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_MAP_NAME)
     if name_key(name) in state.maps:
@@ -113,7 +231,19 @@ def create_map(
     place = state.named(bounded_text(location, "location", MAX_MAP_NAME))
     if not isinstance(place, Place):
         raise InvalidInput(f"there is no location named {location!r}")
-    columns, rows = _size(columns, rows)
+    background = ""
+    marks: dict[tuple[int, int], CellMark] = {}
+    if template:
+        layout = _template_named(templates or {}, template)
+        background = layout.background
+        columns = layout.columns if columns is None else columns
+        rows = layout.rows if rows is None else rows
+        columns, rows = _size(columns, rows)
+        marks = _template_marks(layout, columns, rows)
+    elif columns is None or rows is None:
+        raise InvalidInput("columns and rows are required unless a template is given")
+    else:
+        columns, rows = _size(columns, rows)
     description = bounded_text(description, "description", MAX_MAP_TEXT)
     record(
         db,
@@ -124,16 +254,21 @@ def create_map(
             columns=columns,
             rows=rows,
             description=description,
+            background=background,
+            marks=_mark_dicts(marks),
         ),
     )
     db.commit()
-    return {
+    result: dict[str, Any] = {
         "created": "encounter map",
         "name": name,
         "location": place.name,
         "columns": columns,
         "rows": rows,
     }
+    if template:
+        result["template"] = template
+    return result
 
 
 def update_map(
@@ -189,6 +324,59 @@ def update_map(
         "columns": columns,
         "rows": rows,
     }
+
+
+def set_map_cells(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    cells: Sequence[Mapping[str, Any]],
+    terrain: Mapping[str, EncounterTerrain] | None = None,
+    encounter_objects: Mapping[str, EncounterObject] | None = None,
+) -> dict[str, Any]:
+    """Set the terrain or object on cells of a map. A key left out of a cell keeps its value; an
+    empty string clears it."""
+    state = load_state(db, campaign_id)
+    entry = _map_named(state, name)
+    if not isinstance(cells, Sequence) or isinstance(cells, str) or not cells:
+        raise InvalidInput("cells must be a non-empty list of cells")
+    if len(cells) > MAX_CELLS_PER_CALL:
+        raise InvalidInput(f"set at most {MAX_CELLS_PER_CALL} cells in one call")
+    terrain = terrain or {}
+    encounter_objects = encounter_objects or {}
+    marks = dict(entry.marks)
+    touched: set[tuple[int, int]] = set()
+    for item in cells:
+        if not isinstance(item, Mapping):
+            raise InvalidInput("each cell must be an object with column, row and terrain or object")
+        column, row = item.get("column"), item.get("row")
+        for label, value, size in (("column", column, entry.columns), ("row", row, entry.rows)):
+            if not _is_int(value) or not 0 <= value < size:
+                raise InvalidInput(
+                    f"{label} must be a whole number from 0 to {size - 1} on {entry.name}"
+                )
+        if "terrain" not in item and "object" not in item:
+            raise InvalidInput(f"the cell at column {column}, row {row} needs terrain or object")
+        cell = (column, row)
+        current = marks.get(cell, CellMark())
+        new_terrain = current.terrain
+        new_object = current.object
+        if "terrain" in item:
+            new_terrain = _id_value(item["terrain"], terrain, "terrain")
+        if "object" in item:
+            new_object = _id_value(item["object"], encounter_objects, "encounter object")
+        marks[cell] = CellMark(new_terrain, new_object)
+        touched.add(cell)
+    record(
+        db,
+        campaign_id,
+        MapCellsChanged(
+            name=entry.name,
+            marks=_mark_dicts({cell: marks[cell] for cell in touched}),
+        ),
+    )
+    db.commit()
+    return {"map": entry.name, "changed": len(touched)}
 
 
 def delete_map(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
@@ -287,7 +475,11 @@ def place_participant(
     column: int,
     row: int,
     grid: EncounterGrid | None,
+    terrain: Mapping[str, EncounterTerrain] | None = None,
+    encounter_objects: Mapping[str, EncounterObject] | None = None,
 ) -> dict[str, Any]:
+    """Move a participant to a cell. Obstacles block; difficult terrain costs two moves per cell
+    entered. Without marks or a background, the cost is the plain distance in cells."""
     state = load_state(db, campaign_id)
     encounter = _encounter(state)
     character = _participant(state, name)
@@ -305,15 +497,34 @@ def place_participant(
             raise InvalidInput(
                 f"column {column}, row {row} is taken by {state.characters[other].name}"
             )
+    target = (column, row)
+    blocker = _blocks(entry, target, encounter_objects or {})
+    if blocker:
+        raise InvalidInput(f"column {column}, row {row} is blocked by {blocker} on {entry.name}")
     cost = 0
     previous = encounter.cells.get(key)
-    if encounter.acting == character.name and previous is not None:
-        cost = max(abs(column - previous[0]), abs(row - previous[1]))
-        left = _moves_left(encounter, grid)
-        if left is not None and cost > left:
-            raise InvalidInput(
-                f"{character.name} can move {left} more cells this turn, and that is {cost}"
+    if previous is not None:
+        # A route around obstacles is required at any time, but moves are charged only on the
+        # participant's own turn.
+        acting = encounter.acting == character.name
+        left = _moves_left(encounter, grid) if acting else None
+        if entry.marks or entry.background:
+            route = _path_cost(entry, previous, target, terrain or {}, encounter_objects or {})
+            if route is None:
+                raise InvalidInput(
+                    f"{character.name} has no way to column {column}, row {row}: it is blocked"
+                )
+            too_far = (
+                f"{character.name} cannot reach column {column}, row {row} this turn: the way is "
+                f"too far, it costs {route} and {left} moves are left"
             )
+        else:
+            route = max(abs(column - previous[0]), abs(row - previous[1]))
+            too_far = f"{character.name} can move {left} more cells this turn, and that is {route}"
+        if acting:
+            cost = route
+            if left is not None and cost > left:
+                raise InvalidInput(too_far)
     record(
         db,
         campaign_id,
@@ -327,6 +538,7 @@ def place_participant(
         "placed": character.name,
         "column": column,
         "row": row,
+        "cost": cost,
         "moves_left": after,
     }
 
@@ -457,14 +669,59 @@ def _creature_label(character: Character) -> str:
     return character.creature
 
 
+def _terrain_view(
+    identifier: str, terrain: Mapping[str, EncounterTerrain]
+) -> dict[str, Any] | None:
+    if not identifier:
+        return None
+    found = terrain.get(identifier)
+    return {
+        "id": identifier,
+        "name": found.name if found is not None else identifier,
+        "color": found.color if found is not None else "",
+        "difficult": found.difficult if found is not None else False,
+    }
+
+
+def _marked_cells(
+    entry: EncounterMap,
+    terrain: Mapping[str, EncounterTerrain],
+    objects: Mapping[str, EncounterObject],
+) -> list[dict[str, Any]]:
+    cells = []
+    for (column, row), mark in sorted(entry.marks.items()):
+        found_object = objects.get(mark.object)
+        cells.append(
+            {
+                "column": column,
+                "row": row,
+                "terrain": terrain[mark.terrain].name if mark.terrain in terrain else mark.terrain,
+                "terrain_color": terrain[mark.terrain].color if mark.terrain in terrain else "",
+                "object": found_object.name if found_object is not None else mark.object,
+                "object_icon": found_object.icon if found_object is not None else "",
+                "object_color": found_object.color if found_object is not None else "",
+                "object_solid": bool(found_object is not None and found_object.solid),
+                "blocks": bool(found_object is not None and found_object.blocks),
+                "difficult": bool(mark.terrain in terrain and terrain[mark.terrain].difficult),
+            }
+        )
+    return cells
+
+
 def encounter_view(
-    state: CampaignState, grid: EncounterGrid | None, combat: CombatRules | None
+    state: CampaignState,
+    grid: EncounterGrid | None,
+    combat: CombatRules | None,
+    terrain: Mapping[str, EncounterTerrain] | None = None,
+    encounter_objects: Mapping[str, EncounterObject] | None = None,
 ) -> dict[str, Any] | None:
     """The encounter in progress as the UI and the GM's orientation text show it."""
     encounter = state.encounter
     if encounter is None:
         return None
     entry = state.maps[name_key(encounter.map)]
+    terrain = terrain or {}
+    encounter_objects = encounter_objects or {}
     participants = []
     characters = [state.characters[name_key(display)] for display in encounter.order]
     labels = token_labels(character.name for character in characters)
@@ -495,6 +752,8 @@ def encounter_view(
         "description": entry.description,
         "columns": entry.columns,
         "rows": entry.rows,
+        "background": _terrain_view(entry.background, terrain),
+        "marked_cells": _marked_cells(entry, terrain, encounter_objects),
         "round": encounter.round,
         "acting": encounter.acting,
         "awaiting_initiative": awaiting_initiative(state),

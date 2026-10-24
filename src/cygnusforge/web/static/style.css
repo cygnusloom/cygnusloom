@@ -157,9 +157,17 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .encounter-board::before { display: none; }
 .encounter-cell {
   display: grid; place-items: center; min-width: 0; min-height: 0; box-sizing: border-box;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border); position: relative; overflow: hidden;
 }
-.encounter-cell.occupied { background: var(--panel); }
+.encounter-cell .cell-object {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none;
+}
+.encounter-cell .cell-solid { position: absolute; inset: 0; pointer-events: none; }
+.encounter-cell .cell-object { inset: 12%; width: 76%; height: 76%; }
+.encounter-cell .map-token { position: relative; z-index: 1; }
+.encounter-cell.difficult { box-shadow: inset 0 0 0 2px rgba(180, 120, 40, 0.6); }
+.encounter-cell.blocked { box-shadow: inset 0 0 0 2px rgba(180, 40, 40, 0.7); }
+.encounter-cell.occupied { background: color-mix(in srgb, var(--panel) 70%, transparent); }
 .encounter-cell.acting { border: 2px solid var(--accent); }
 .encounter-cell.defeated .map-token { opacity: 0.5; text-decoration: line-through; }
 .encounter-turn { flex-shrink: 0; padding: 0.25rem 0; }

@@ -159,12 +159,15 @@ def move_actor(
 def create_encounter_map(
     name: str,
     location: str,
-    columns: int,
-    rows: int,
     description: str,
     ctx: ToolContext,
+    columns: int | None = None,
+    rows: int | None = None,
+    template: str = "",
 ) -> dict[str, Any]:
-    return ctx.world.create_encounter_map(name, location, columns, rows, description)
+    return ctx.world.create_encounter_map(
+        name, location, columns, rows, description, template=template
+    )
 
 
 def update_encounter_map(
@@ -183,6 +186,10 @@ def update_encounter_map(
 
 def delete_encounter_map(name: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.delete_encounter_map(name)
+
+
+def set_map_cells(map: str, cells: list[dict[str, Any]], ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.set_encounter_map_cells(map, cells)
 
 
 def start_encounter(map: str, ctx: ToolContext) -> dict[str, Any]:
