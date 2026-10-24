@@ -156,7 +156,8 @@ def wilderness_action(
     )
 
     events_table = _table(tables, wilderness.events_table)
-    rolls = wilderness.night_event_rolls if night else 1
+    # Only travel at night rolls the events twice; resting or scouting at night rolls once.
+    rolls = wilderness.night_event_rolls if night and chosen.effect == "travel" else 1
     events: list[dict[str, Any]] = []
     for _ in range(rolls):
         roll = roll_total(events_table.dice, rng, plus=plus)

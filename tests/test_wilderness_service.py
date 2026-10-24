@@ -48,7 +48,7 @@ def _wilderness(**overrides) -> Wilderness:
         "catastrophe_result": "Catastrophic",
         "lost_on": {"roads": 0, "trails": 2, "wilderness": 3},
         "actions": {
-            "travel": WildernessAction(id="travel", name="Travel", text="Go on."),
+            "travel": WildernessAction(id="travel", name="Travel", text="Go on.", effect="travel"),
             "explore": WildernessAction(id="explore", name="Explore", text="Look around."),
             "supply": WildernessAction(
                 id="supply", name="Supply", text="Hunt and forage.", effect="supply"
@@ -212,7 +212,7 @@ def test_an_unknown_wilderness_action_is_rejected(
         )
 
 
-def test_a_night_watch_rolls_the_events_twice(
+def test_night_travel_rolls_the_events_twice(
     client_factory: Callable[[], TestClient], app: FastAPI, monkeypatch: pytest.MonkeyPatch
 ):
     _, campaign_id = _campaign_id(client_factory)
@@ -221,8 +221,8 @@ def test_a_night_watch_rolls_the_events_twice(
         result = wilderness_action(
             db,
             campaign_id,
-            "explore",
-            "Looking for the ford.",
+            "travel",
+            "Pushing on to the ford.",
             _wilderness(),
             TABLES,
             StubRng(1),
@@ -349,9 +349,25 @@ def test_the_last_part_of_the_day_is_night_and_rolls_events_twice(
     with _db(app) as db:
         state = load_state(db, campaign_id)
     tools.advance_time(parts=last - state.clock.part)
-    result = tools.wilderness_action("explore", "a night watch")
+    result = tools.wilderness_action("travel", "a night march")
     assert result["night"] is True
+    assert len(result["events"]) == 2
     assert _kinds(app, campaign_id).count(WildernessEventRolled.kind) == 2
+
+
+def test_a_night_watch_that_is_not_travel_rolls_the_events_once(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    _, campaign_id = _cairn_campaign(client_factory)
+    tools = _live_wilderness_tools(app, campaign_id)
+    last = len(CAIRN.clock.parts) - 1
+    with _db(app) as db:
+        state = load_state(db, campaign_id)
+    tools.advance_time(parts=last - state.clock.part)
+    result = tools.wilderness_action("explore", "scouting by lantern")
+    assert result["night"] is True
+    assert len(result["events"]) == 1
+    assert _kinds(app, campaign_id).count(WildernessEventRolled.kind) == 1
 
 
 def test_supply_logs_the_rations_found_and_make_camp_logs_the_camp(

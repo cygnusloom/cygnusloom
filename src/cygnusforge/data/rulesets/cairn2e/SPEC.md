@@ -645,6 +645,7 @@ Book rules to build (from the Player's Guide procedures page):
 - Lost: Path odds are roads none, trails 2-in-6, wilderness 3-in-6. Roll 1d6 after each Wilderness Action. A lost party must spend an action to recover.
 - Wilderness Events, d6: 1 Encounter (roll the terrain or location table, then reactions), 2 Sign, 3 Environment (weather or terrain shift), 4 Loss (rations, tools, time, or effort), 5 Exhaustion (a barrier that costs an extra action or Fatigue), 6 Discovery (food, treasure, or resources; the Warden may reveal the area's main feature instead).
 - Night travel: the Warden rolls the Events table twice. Night travel is far slower and more treacherous.
+  - Fixed after W1: the double roll applies only to a night Travel action. Explore, Supply, and Make Camp at night roll once. The book says "Traveling at night is always more dangerous!" under Night, and the W1 code had rolled twice for every night watch. Data: `travel` has `effect: "travel"`, and `night_event_rolls` is 2.
 - Sleep: the third watch is reserved for Make Camp. Skipping it adds a Fatigue to each member and makes them deprived. Travel while sleep-deprived raises terrain Difficulty by one step.
 - Make Camp: each member and mount consumes a Ration. Members who rest remove all Fatigue.
 - Light: torches light 40 ft, a torch lasts 3 uses, a lantern is refillable with an oil can (6 uses). Without light, panic.

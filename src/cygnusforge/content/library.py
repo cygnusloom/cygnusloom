@@ -194,7 +194,7 @@ class WildernessAction:
     effect: str | None = None
 
 
-WILDERNESS_EFFECTS = ("supply", "make_camp")
+WILDERNESS_EFFECTS = ("supply", "make_camp", "travel")
 
 
 @dataclass(frozen=True)

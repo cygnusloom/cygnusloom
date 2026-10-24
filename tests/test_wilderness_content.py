@@ -54,7 +54,7 @@ def test_the_real_cairn_wilderness_seasons_and_timing(wilderness):
 def test_the_real_cairn_actions_declare_their_effects(wilderness):
     effects = {action.id: action.effect for action in wilderness.actions.values()}
     assert effects == {
-        "travel": None,
+        "travel": "travel",
         "explore": None,
         "supply": "supply",
         "make_camp": "make_camp",
@@ -161,7 +161,7 @@ def test_lost_on_out_of_range_raises_content_error():
 
 def test_unknown_action_effect_raises_content_error():
     actions = {"travel": {"name": "Travel", "text": "Travel.", "effect": "teleport"}}
-    with pytest.raises(ContentError, match="'effect' must be one of supply, make_camp"):
+    with pytest.raises(ContentError, match="'effect' must be one of supply, make_camp, travel"):
         _load_wilderness([_definition(actions=actions)], _tables(), "t")
 
 
