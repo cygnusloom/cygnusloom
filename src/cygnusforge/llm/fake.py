@@ -14,7 +14,8 @@ the model makes, one list per round. The engine runs them for real, so each name
 in the rule set. A `player_input` tool pauses the turn until the test answers it, so the test
 posts the answer next. Its `text` is the narration. Its `error` raises LLMError; the player's message stays and the reply stays open.
 Within a turn, `chat` calls (the GM's state steps) get the rounds and return no text, and `stream`
-calls (the narration) get `text`. A speech step (its system message starts "Speech step.") gets
+calls (the narration) get `text`. A journal step (its system message starts "Journal step.") gets the
+turn's `journal` rounds, one list of tool calls per round, and no text. A speech step (its system message starts "Speech step.") gets
 the dialogue from the turn's `speech` object, keyed by the speaker's name. A speaker not listed
 there gets the intent back as its dialogue. A newer directive replaces the older one. When the
 script runs out, the provider echoes the last user message. The script lives in the transcript,
@@ -33,6 +34,7 @@ from cygnusforge.llm.base import ChatReply, LLMError, TextDelta, ToolRequest
 DIRECTIVE = "__FAKE__:"
 SPEECH_MARKER = "Speech step."
 OOC_MARKER = "Out-of-character step."
+JOURNAL_MARKER = "Journal step."
 _decoder = json.JSONDecoder()
 _WORDS = re.compile(r"\s*\S+|\s+")
 
@@ -52,6 +54,9 @@ class FakeProvider:
         self.calls.append(messages)
         if _is_speech(messages):
             return _speech(messages)
+        journal_start = _journal_start(messages)
+        if journal_start is not None:
+            return _journal(messages, journal_start)
         return _respond(messages, decision=True)
 
     async def stream(
@@ -74,6 +79,31 @@ def _is_speech(messages: list[dict[str, Any]]) -> bool:
         and messages[0]["role"] == "system"
         and SPEECH_MARKER in messages[0]["content"]
     )
+
+
+def _journal_start(messages: list[dict[str, Any]]) -> int | None:
+    """The index of the journal instruction in the current turn, or None. Tool calls and results
+    follow it within a journal step, so it need not be the last message."""
+    last_user = max((i for i, m in enumerate(messages) if m["role"] == "user"), default=-1)
+    for index in range(len(messages) - 1, last_user, -1):
+        message = messages[index]
+        if message["role"] == "system" and JOURNAL_MARKER in message["content"]:
+            return index
+    return None
+
+
+def _journal(messages: list[dict[str, Any]], start: int) -> ChatReply:
+    current = _current_turn(messages)
+    turn_index, turn = current if current is not None else (0, {})
+    rounds = turn.get("journal", [])
+    if not isinstance(rounds, list):
+        raise LLMError('"journal" must be a list of tool-call lists')
+    # Journal rounds already taken are the tool-call messages after the journal instruction.
+    done = sum(1 for m in messages[start + 1 :] if "tool_calls" in m)
+    if done >= len(rounds):
+        return ChatReply(text="")
+    prefix = f"fake_{turn_index}_journal{done}"
+    return ChatReply(text="", tool_requests=_tool_requests(rounds[done], prefix))
 
 
 def _speech(messages: list[dict[str, Any]]) -> ChatReply:

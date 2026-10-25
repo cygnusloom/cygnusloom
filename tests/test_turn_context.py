@@ -17,7 +17,7 @@ from cygnusforge.services.campaigns import (
     list_messages,
 )
 from cygnusforge.services.events import ChatGM, record
-from tests.conftest import NARRATE_TEXT
+from tests.conftest import NARRATE_TEXT, without_journal
 from tests.test_campaigns import _answer, _campaign_id, _send, _signed_in
 from tests.test_context import (
     RecordingProvider,
@@ -89,7 +89,7 @@ def test_recorded_system_text_is_exactly_what_the_model_received(
     base = [
         part for part in parts[: sources.index("This message (player)")] if part.role == "system"
     ]
-    final_call = recorder.calls[-1]["messages"]
+    final_call = without_journal(recorder.calls)[-1]["messages"]
     assert final_call[0] == {"role": "system", "content": "\n\n".join(p.content for p in base)}
     assert final_call[-1] == {"role": "system", "content": NARRATE_TEXT}
     assert all(message["content"] != STATE_INSTRUCTION for message in final_call)

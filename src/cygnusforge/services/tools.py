@@ -46,9 +46,13 @@ class ToolRun:
     activity: str | None
 
 
-def tool_specs(tool_calls: Mapping[str, ToolCall]) -> list[dict[str, Any]] | None:
-    """The tool list for a chat request, or None when the rule set has no tools."""
-    if not tool_calls:
+def tool_specs(
+    tool_calls: Mapping[str, ToolCall], journal_step: bool = False
+) -> list[dict[str, Any]] | None:
+    """The tool list for a chat request, or None when there are no tools for it. The journal step
+    gets only its own tools; every other step gets the rest."""
+    selected = [tool for tool in tool_calls.values() if tool.journal_step == journal_step]
+    if not selected:
         return None
     return [
         {
@@ -59,7 +63,7 @@ def tool_specs(tool_calls: Mapping[str, ToolCall]) -> list[dict[str, Any]] | Non
                 "parameters": tool.parameters,
             },
         }
-        for tool in tool_calls.values()
+        for tool in selected
     ]
 
 

@@ -207,7 +207,7 @@ def test_campaign_map_draws_a_marker_icon(client_factory: Callable[[], TestClien
     )
     page = client.get(f"/campaigns/{campaign_id}").text
 
-    map_view = page[page.index('data-view="map"') : page.index('data-view="lore"')]
+    map_view = page[page.index('data-view="map"') : page.index('data-view="journal"')]
     assert f'<img src="{place_icon_path(None)}" alt="">' in map_view
     assert 'aria-label="MH"' in map_view
 

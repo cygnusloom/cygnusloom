@@ -6,6 +6,14 @@
   {% endfor %}
 {%- endmacro %}
 
+{% macro journal_text(text) -%}
+  {% for line in (text or "").split("\n") if line.strip() %}
+    <p>{{ line }}</p>
+  {% else %}
+    <p class="muted">The journal is empty so far. It fills in as the story goes on.</p>
+  {% endfor %}
+{%- endmacro %}
+
 {% macro map_board(view, framed=false) -%}
   {% if framed %}<div class="map-frame">{% endif %}
   <div class="map-board" aria-label="Map of discovered places">

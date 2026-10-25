@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% from "macros.html" import notes_list, map_board, map_places %}
+{% from "macros.html" import notes_list, journal_text, map_board, map_places %}
 {% block body_class %}workspace-page{% endblock %}
 {% block content %}
 <div class="shell">
   <nav class="sidebar" aria-label="Sidebar">
     <button type="button" class="sidebar-item" data-view-target="play" aria-pressed="true" aria-label="Play" title="Play"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 5v14l12-7z"/></svg></button>
     <button type="button" class="sidebar-item" data-view-target="map" aria-pressed="false" aria-label="Map" title="Map"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg></button>
-    <button type="button" class="sidebar-item" data-view-target="lore" aria-pressed="false" aria-label="Lore" title="Lore"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z"/></svg></button>
+    <button type="button" class="sidebar-item" data-view-target="journal" aria-pressed="false" aria-label="Journal" title="Journal"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z"/></svg></button>
     <button type="button" class="sidebar-item" data-dialog-target="dialog-characters" aria-haspopup="dialog" aria-label="Characters" title="Characters"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
     <button type="button" class="sidebar-item" data-drawer-target="drawer-notes" aria-expanded="false" aria-controls="drawer-notes" aria-label="Notes" title="Notes"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 3h10l4 4v14H5z"/><path d="M9 12h6M9 16h6"/></svg></button>
   </nav>
@@ -18,8 +18,9 @@
       <h3>Places</h3>
       {{ map_places(world_map) }}
     </section>
-    <section class="view" data-view="lore" aria-label="Lore" hidden>
-      <p class="muted">Placeholder: lore will appear here.</p>
+    <section class="view" data-view="journal" aria-label="Journal" hidden>
+      <h2>Journal</h2>
+      <div class="journal">{{ journal_text(scene.journal) }}</div>
     </section>
 
     <aside class="drawer" id="drawer-notes" aria-label="Notes">

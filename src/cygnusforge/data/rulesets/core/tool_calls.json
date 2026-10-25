@@ -189,6 +189,103 @@
   },
   {
     "type": "tool_call",
+    "id": "append_journal",
+    "name": "append_journal",
+    "python_module": "core",
+    "function": "append_journal",
+    "journal_step": true,
+    "description": "Add text to the end of the journal the player reads, a text file of what has happened in the campaign in the story's own voice. Start a new campaign day's passage with it; to add to a day that already has one, merge the text into that passage with replace_in_journal instead. Do not reveal what the player character has not learned.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "The text to add, one or more sentences in the past tense. Begin it with the campaign day, as in 'Day 3: ...'."
+        }
+      },
+      "required": [
+        "text"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "replace_in_journal",
+    "name": "replace_in_journal",
+    "python_module": "core",
+    "function": "replace_in_journal",
+    "journal_step": true,
+    "description": "Edit the journal by replacing one passage with another, like an exact find and replace. old_text must be copied exactly from the journal and match in one place only. An empty new_text deletes the passage. Use it to correct facts and to condense the journal when it runs long.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "old_text": {
+          "type": "string",
+          "description": "The exact passage to replace, copied from the journal. Quote enough of it to match only once."
+        },
+        "new_text": {
+          "type": "string",
+          "description": "The text that replaces it. Empty to delete the passage."
+        }
+      },
+      "required": [
+        "old_text",
+        "new_text"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "search_journal",
+    "name": "search_journal",
+    "python_module": "core",
+    "function": "search_journal",
+    "lookup": true,
+    "description": "Search the journal the player reads, to stay consistent with what the player has been told. Matching is fuzzy, so near spellings count. Each result gives the line numbers it covers, for view_journal.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Words to look for."
+        },
+        "context": {
+          "type": "integer",
+          "description": "Lines to include before and after each match, from 0 to 3. Defaults to 1."
+        }
+      },
+      "required": [
+        "query"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "view_journal",
+    "name": "view_journal",
+    "python_module": "core",
+    "function": "view_journal",
+    "lookup": true,
+    "description": "View lines of the journal the player reads, numbered from 1, by line range. Shows at most 50 lines at a time. Use it to read a stretch in full, such as the lines around a search result.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "start_line": {
+          "type": "integer",
+          "description": "The first line to view, from 1."
+        },
+        "end_line": {
+          "type": "integer",
+          "description": "The last line to view. Defaults to start_line."
+        }
+      },
+      "required": [
+        "start_line"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "all_at_location",
     "name": "all_at_location",
     "python_module": "core",

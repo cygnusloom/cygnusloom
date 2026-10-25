@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from collections.abc import Iterable, Mapping
 from dataclasses import asdict, dataclass, field, fields, replace
 from enum import StrEnum
@@ -211,6 +212,11 @@ class Note:
     text: str
 
 
+def normalize_journal(text: str) -> str:
+    """The journal text with no run of more than one blank line and no surrounding whitespace."""
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
 @dataclass
 class Turn:
     """A GM reply in progress, from the player's message that opened it until the reply is
@@ -352,6 +358,8 @@ class CampaignState:
     # World objects by the id of the event that placed them.
     objects: dict[int, WorldObject] = field(default_factory=dict)
     notes: list[Note] = field(default_factory=list)
+    # The journal the player reads, oldest first.
+    journal: str = ""
     # Options shared by the whole campaign, keyed by field id. Empty until they are chosen.
     options: dict[str, str] = field(default_factory=dict)
     summary: str = ""
@@ -1010,6 +1018,35 @@ class NoteRemoved(GameEvent):
 
     def render(self) -> str:
         return f"Note removed: {self.text}"
+
+
+@dataclass(frozen=True)
+class JournalAppended(GameEvent):
+    """Text added to the end of the journal. The journal is shown in its own panel, so the Log
+    does not repeat it."""
+
+    kind: ClassVar[str] = "journal.appended"
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    text: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.journal = normalize_journal(f"{state.journal}\n{self.text}")
+
+
+@dataclass(frozen=True)
+class JournalReplaced(GameEvent):
+    """One passage of the journal replaced by another, matched exactly once; an empty new passage
+    deletes it."""
+
+    kind: ClassVar[str] = "journal.replaced"
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    old_text: str
+    new_text: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.journal = normalize_journal(state.journal.replace(self.old_text, self.new_text, 1))
 
 
 @dataclass(frozen=True)
@@ -2592,6 +2629,9 @@ HIDDEN_KINDS: dict[str, bool] = {
     "note.added": True,
     "note.updated": True,
     "note.removed": True,
+    # The journal is shown in its own panel, not in the transcript.
+    "journal.appended": True,
+    "journal.replaced": True,
     "npc.added": True,
     "npc.statted": True,
     "npc.updated": True,

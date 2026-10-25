@@ -239,6 +239,26 @@ def search_notes(query: str, ctx: ToolContext) -> dict[str, list[dict[str, Any]]
     return ctx.world.search_notes(query)
 
 
+def append_journal(text: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.append_journal(text)
+
+
+def replace_in_journal(old_text: str, new_text: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.replace_in_journal(old_text, new_text)
+
+
+def search_journal(
+    query: str, ctx: ToolContext, context: int = 1
+) -> dict[str, list[dict[str, Any]]]:
+    return ctx.world.search_journal(query, context)
+
+
+def view_journal(
+    ctx: ToolContext, start_line: int = 1, end_line: int | None = None
+) -> dict[str, Any]:
+    return ctx.world.view_journal(start_line, end_line)
+
+
 def all_at_location(ctx: ToolContext, location: str | None = None) -> dict[str, Any]:
     return ctx.world.all_at_location(location)
 

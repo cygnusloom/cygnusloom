@@ -98,6 +98,7 @@ SPOKEN_MARKUP = re.compile(r"<[^>]*>|\b\w+\(\s*\{")
 SPEECH_ATTEMPTS = 3
 # An empty narration is requested again this many times before the turn fails.
 NARRATION_ATTEMPTS = 2
+JOURNAL_ROUNDS = 3
 STATE_INSTRUCTION = (
     "State management step. If the player is speaking out of character (to you as the GM rather "
     "than to their character, about the rules or the world, or asking for a change outside the "
@@ -246,6 +247,21 @@ OOC_INSTRUCTION = (
     "right away. If the story should move on after your reply, call ooc with no_narration false."
 )
 _NUMBER_WORDS = ("one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")
+
+
+JOURNAL_INSTRUCTION = (
+    "Journal step. Nothing has been narrated yet: the turn above is what happened, and the narration "
+    "will be written from it after this step. The journal is one text file of the campaign so far, "
+    "the recap the story keeps. Keep one passage per campaign day, beginning with 'Day N:'. If this "
+    "turn is the campaign's opening, record the introduction's hooks, starting situation and player "
+    "characters as the first passage. If this turn holds something worth remembering, merge it into "
+    "the current day's passage with "
+    "replace_in_journal, quoting the exact text, or start that passage with append_journal if the "
+    "day has none yet. If it changes or contradicts an earlier passage, correct that passage the same "
+    "way. Delete passages that no longer belong. When the journal runs long, condense older days into "
+    "shorter passages. Use view_journal for line numbers and search_journal to find text. Most turns "
+    "need no change: then call no tools and write no text."
+)
 
 
 def narrate_instruction(rule_set: RuleSet) -> str:
@@ -894,9 +910,18 @@ def _queued_dialogue_note(speech: list[dict[str, str]]) -> dict[str, str]:
     }
 
 
+def _text_message(content: str, reasoning: str) -> dict[str, Any]:
+    """A plain assistant message. Thinking models reject a later request whose assistant message
+    left out the reasoning they produced, so it is sent back with the content."""
+    message: dict[str, Any] = {"role": "assistant", "content": content}
+    if reasoning:
+        message["reasoning_content"] = reasoning
+    return message
+
+
 def _tool_call_message(step: ChatReply) -> dict[str, Any]:
     """The assistant message that records a step's tool requests, as the model sees it."""
-    return {
+    message: dict[str, Any] = {
         "role": "assistant",
         "content": step.text or None,
         "tool_calls": [
@@ -908,6 +933,9 @@ def _tool_call_message(step: ChatReply) -> dict[str, Any]:
             for request in step.tool_requests
         ],
     }
+    if step.reasoning:
+        message["reasoning_content"] = step.reasoning
+    return message
 
 
 def _dicts(parts: Sequence[ContextPart]) -> list[dict[str, str]]:
@@ -1329,6 +1357,41 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     _record(run.engine, run.campaign_id, *events)
 
 
+async def _write_journal(
+    run: _Run, turn: Turn, intro: str = "", reasoning: str = ""
+) -> AsyncIterator[TurnEvent]:
+    """Let the GM write what the turn changed into the journal before narrating it. The narrate
+    prompt is left out of the view, since narration has not happened yet. An opening's introduction
+    is passed as intro, since it is written before the journal step and the player reads it. The
+    journal tools record their own events, so the turn's messages and Log are left as they are."""
+    journal_tools = tool_specs(run.tool_calls, journal_step=True)
+    if journal_tools is None:
+        return
+    yield Status("Updating the journal...")
+    state = _state(run.engine, run.campaign_id)
+    instruction = f"{JOURNAL_INSTRUCTION}\n\nCampaign day {state.clock.day}. "
+    instruction += (
+        f"The journal so far:\n{state.journal}" if state.journal else "The journal is empty so far."
+    )
+    narrate = narrate_instruction(run.rule_set)
+    view: list[dict[str, Any]] = [
+        *(m for m in _narration_messages(run, turn) if m.get("content") != narrate),
+    ]
+    if intro:
+        view.append(_text_message(intro, reasoning))
+    view.append({"role": "system", "content": instruction})
+    for _round in range(JOURNAL_ROUNDS):
+        step = await run.provider.chat(run.model_name, view, journal_tools)
+        if not step.tool_requests:
+            return
+        view.append(_tool_call_message(step))
+        for request in step.tool_requests:
+            result = await run_tool(run.tool_calls, request, ctx=run.ctx)
+            if isinstance(result, Ask):
+                raise LLMError("the journal step asked the player a question")
+            view.append({"role": "tool", "tool_call_id": request.id, "content": result.output})
+
+
 async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
     """Run the reply until it is recorded or paused. Log entries are yielded as the steps that
     recorded them finish. A pause is recorded before the player hears of it."""
@@ -1393,7 +1456,7 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             if not reply:
                 raise LLMError("the model returned an empty reply")
             if turn.ooc_narrate:
-                messages: list[dict[str, Any]] = [{"role": "assistant", "content": reply}]
+                messages: list[dict[str, Any]] = [_text_message(reply, step.reasoning)]
                 context = [ContextPart("assistant", "GM out-of-character reply", reply)]
                 if turn.speech:
                     _add_speech(messages, context, turn.speech)
@@ -1408,6 +1471,9 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                 )
                 yield NextMessage()
                 continue
+            if turn.opening:
+                async for event in _write_journal(run, turn, reply, step.reasoning):
+                    yield event
             event_id = _record(run.engine, run.campaign_id, ChatGM(content=reply, model=run.model))
             yield Saved(event_id)
             return
@@ -1452,6 +1518,8 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             ),
         )
 
+    async for event in _write_journal(run, turn):
+        yield event
     yield Status("Narrating...")
     messages = _narration_messages(run, turn)
     reply = ""

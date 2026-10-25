@@ -13,7 +13,7 @@ from cygnusforge.llm.base import ChatReply, ToolRequest
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.services.campaigns import list_messages
 from cygnusforge.services.tools import Ask, RollAnswer, TextAnswer, ToolRun, run_tool, tool_specs
-from tests.conftest import content_library
+from tests.conftest import content_library, without_journal
 from tests.test_campaigns import _answer, _campaign_id, _pending, _place_pc, _send
 
 ROLL = {
@@ -140,6 +140,8 @@ CORE_TOOL_NAMES = {
     "update_note",
     "delete_note",
     "search_notes",
+    "search_journal",
+    "view_journal",
     "speak",
     "ooc",
     "lookup_rule",
@@ -301,7 +303,7 @@ def test_model_rolls_then_narrates_and_only_the_narration_is_saved(
     events = _answer(client, campaign_id, "roll")
 
     assert events[-1] == {"type": "saved", "event_id": _saved_ids(app, campaign_id)[-1]}
-    assert len(recorder.calls) == 3
+    assert len(without_journal(recorder.calls)) == 3
     tool_messages = [m for m in recorder.calls[1]["messages"] if m["role"] == "tool"]
     assert len(tool_messages) == 1
     result = json.loads(tool_messages[0]["content"])
@@ -343,7 +345,7 @@ def test_state_steps_are_not_capped_at_a_number_of_rounds(
     for _ in range(6):
         _answer(client, campaign_id, "roll")
 
-    assert len(recorder.calls) == 8
+    assert len(without_journal(recorder.calls)) == 8
     assert _saved(app, campaign_id)[-1] == ("assistant", "Done.")
 
 

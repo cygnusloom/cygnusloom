@@ -163,6 +163,8 @@ class ToolCall:
     takes_context: bool = False
     # True for tools that only read the world. The GM lists them with list_lookups.
     lookup: bool = False
+    # True for tools only the journal step offers. Every other step leaves them out.
+    journal_step: bool = False
 
 
 @dataclass(frozen=True)
@@ -2549,6 +2551,7 @@ def _load_tool_call(
         activity=activity,
         takes_context=CONTEXT_ARGUMENT in inspect.signature(function).parameters,
         lookup=_flag(data, "lookup", label),
+        journal_step=_flag(data, "journal_step", label),
     )
 
 

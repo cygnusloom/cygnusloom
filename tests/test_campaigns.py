@@ -13,7 +13,7 @@ from cygnusforge.llm.base import ChatReply, LLMError
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.services import world
 from cygnusforge.services.events import Turn, load_state
-from tests.conftest import NARRATE_TEXT, csrf_token, make_app, register
+from tests.conftest import NARRATE_TEXT, csrf_token, is_journal_messages, make_app, register
 
 
 def _signed_in(client_factory: Callable[[], TestClient], email: str = "ada@example.com"):
@@ -167,7 +167,7 @@ def test_model_change_applies_to_the_next_message(
     assert _set_model(client, campaign_id, "ollama/test-model").status_code == 303
     _send(client, campaign_id, "two")
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert used == ["fake/scripted"] * 2 + ["ollama/test-model"] * 2
+    assert used == ["fake/scripted"] * 3 + ["ollama/test-model"] * 3
     assert "from fake/scripted" in page
     assert "from ollama/test-model" in page
 
@@ -265,7 +265,7 @@ def test_history_is_sent_to_the_model(client_factory: Callable[[], TestClient], 
     client, campaign_id = _campaign_id(client_factory)
     _send(client, campaign_id, "first")
     _send(client, campaign_id, "second")
-    last = fake.calls[-1]
+    last = [c for c in fake.calls if not is_journal_messages(c)][-1]
     assert [m["role"] for m in last] == [
         "system",
         "assistant",
@@ -373,8 +373,8 @@ def test_other_accounts_cannot_see_or_post(client_factory: Callable[[], TestClie
 def test_campaign_page_has_sidebar_controls(client_factory: Callable[[], TestClient]):
     client, campaign_id = _campaign_id(client_factory)
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'data-view-target="lore"' in page
-    assert 'data-view="lore" aria-label="Lore" hidden' in page
+    assert 'data-view-target="journal"' in page
+    assert 'data-view="journal" aria-label="Journal" hidden' in page
     assert 'data-dialog-target="dialog-characters"' in page
     assert '<dialog id="dialog-characters"' in page
     assert 'data-drawer-target="drawer-notes"' in page

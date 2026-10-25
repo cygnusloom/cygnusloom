@@ -22,6 +22,8 @@ class ToolRequest:
 class ChatReply:
     text: str
     tool_requests: Sequence[ToolRequest] = field(default_factory=tuple)
+    # Thinking-mode models must get this back on the tool-call message that produced it.
+    reasoning: str = ""
 
 
 @dataclass(frozen=True)

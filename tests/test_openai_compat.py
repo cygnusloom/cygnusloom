@@ -4,8 +4,9 @@ import json
 import httpx
 import pytest
 
-from cygnusforge.llm.base import LLMError, ToolRequest, complete
+from cygnusforge.llm.base import ChatReply, LLMError, ToolRequest, complete
 from cygnusforge.llm.openai_compat import OpenAICompatProvider
+from cygnusforge.services.campaigns import _tool_call_message
 
 MESSAGES = [{"role": "user", "content": "hi"}]
 TEST_KEY = "sk-test"
@@ -203,3 +204,77 @@ def test_stream_reports_an_error_event_from_the_provider():
 
     with pytest.raises(LLMError, match="reported an error"):
         asyncio.run(_collect(_provider(handler)))
+
+
+def test_reasoning_content_is_returned_with_tool_requests():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _json_reply(
+            {
+                "role": "assistant",
+                "content": None,
+                "reasoning_content": "Check the roll first.",
+                "tool_calls": [
+                    {
+                        "id": "call_1",
+                        "type": "function",
+                        "function": {"name": "social_roll", "arguments": "{}"},
+                    }
+                ],
+            }
+        )
+
+    reply = asyncio.run(_provider(handler).chat("deepseek-flash", MESSAGES, TOOLS))
+
+    assert reply.reasoning == "Check the roll first."
+
+
+def test_stream_collects_reasoning_content_before_the_tool_call():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _events(
+            _chunk({"reasoning_content": "Check "}),
+            _chunk({"reasoning_content": "the roll."}),
+            _chunk(
+                {
+                    "tool_calls": [
+                        {
+                            "index": 0,
+                            "id": "call_1",
+                            "function": {"name": "social_roll", "arguments": "{}"},
+                        }
+                    ]
+                }
+            ),
+        )
+
+    items = asyncio.run(_collect(_provider(handler), TOOLS))
+
+    assert items[-1].reasoning == "Check the roll."
+    assert items[-1].tool_requests == (
+        ToolRequest(id="call_1", name="social_roll", arguments="{}"),
+    )
+
+
+def test_reasoning_is_passed_back_on_the_tool_call_message():
+    seen = {}
+    step = ChatReply(
+        text="",
+        tool_requests=(ToolRequest(id="call_1", name="social_roll", arguments="{}"),),
+        reasoning="Check the roll first.",
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["body"] = json.loads(request.content)
+        return _json_reply({"role": "assistant", "content": "Done."})
+
+    messages = [*MESSAGES, _tool_call_message(step)]
+    asyncio.run(_provider(handler).chat("deepseek-flash", messages, TOOLS))
+
+    assert seen["body"]["messages"][-1]["reasoning_content"] == "Check the roll first."
+
+
+def test_tool_call_message_without_reasoning_has_no_reasoning_key():
+    step = ChatReply(
+        text="", tool_requests=(ToolRequest(id="call_1", name="social_roll", arguments="{}"),)
+    )
+
+    assert "reasoning_content" not in _tool_call_message(step)

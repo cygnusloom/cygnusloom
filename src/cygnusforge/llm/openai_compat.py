@@ -41,7 +41,12 @@ class OpenAICompatProvider:
             raise LLMError(f"provider {self.name} is unreachable") from exc
         try:
             if response.status_code >= 400:
-                logger.warning("provider %s returned HTTP %d", self.name, response.status_code)
+                logger.warning(
+                    "provider %s returned HTTP %d: %s",
+                    self.name,
+                    response.status_code,
+                    (await response.aread())[:500].decode(errors="replace"),
+                )
                 raise LLMError(f"provider {self.name} returned HTTP {response.status_code}")
             data = response.json()
         except ValueError as exc:
@@ -65,9 +70,15 @@ class OpenAICompatProvider:
             raise LLMError(f"provider {self.name} is unreachable") from exc
         try:
             if response.status_code >= 400:
-                logger.warning("provider %s returned HTTP %d", self.name, response.status_code)
+                logger.warning(
+                    "provider %s returned HTTP %d: %s",
+                    self.name,
+                    response.status_code,
+                    (await response.aread())[:500].decode(errors="replace"),
+                )
                 raise LLMError(f"provider {self.name} returned HTTP {response.status_code}")
             text_parts: list[str] = []
+            reasoning_parts: list[str] = []
             calls: dict[int, dict[str, str]] = {}
             async for line in response.aiter_lines():
                 if not line.startswith("data:"):
@@ -75,10 +86,15 @@ class OpenAICompatProvider:
                 payload = line[len("data:") :].strip()
                 if payload == "[DONE]":
                     yield ChatReply(
-                        text="".join(text_parts), tool_requests=_calls(self.name, calls)
+                        text="".join(text_parts),
+                        tool_requests=_calls(self.name, calls),
+                        reasoning="".join(reasoning_parts),
                     )
                     return
                 delta = _stream_delta(self.name, payload)
+                reasoning = delta.get("reasoning_content") or ""
+                if reasoning:
+                    reasoning_parts.append(str(reasoning))
                 text = delta.get("content") or ""
                 if text:
                     text_parts.append(text)
@@ -119,6 +135,7 @@ def _parse_reply(name: str, data: Any) -> ChatReply:
     try:
         message = data["choices"][0]["message"]
         text = message.get("content") or ""
+        reasoning = str(message.get("reasoning_content") or "")
         requests = tuple(
             ToolRequest(
                 id=str(call["id"]),
@@ -129,7 +146,7 @@ def _parse_reply(name: str, data: Any) -> ChatReply:
         )
     except (KeyError, IndexError, TypeError, AttributeError) as exc:
         raise LLMError(f"provider {name} sent a reply without a message") from exc
-    return ChatReply(text=text, tool_requests=requests)
+    return ChatReply(text=text, tool_requests=requests, reasoning=reasoning)
 
 
 def _stream_delta(name: str, payload: str) -> dict[str, Any]:

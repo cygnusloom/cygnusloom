@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import atexit
 import functools
+import os
 import re
 import shutil
 import tempfile
@@ -54,6 +55,17 @@ NARRATE_TEXT = narrate_instruction(content_library().rule_sets["rolltest"])
 def make_app(settings: Settings, fake_provider: FakeProvider | None = None) -> FastAPI:
     """An app whose content includes the test-only fixtures."""
     return create_app(settings, fake_provider=fake_provider, content=content_library())
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Refuse a serial run: the suite is written for pytest-xdist. `CYGNUSFORGE_SERIAL_TESTS=1`
+    allows one, for a debugger."""
+    if hasattr(config, "workerinput") or os.environ.get("CYGNUSFORGE_SERIAL_TESTS") == "1":
+        return
+    if not getattr(config.option, "numprocesses", None):
+        raise pytest.UsageError(
+            "You ran the tests serially. This means you haven't read the documentation. Review your instructions."
+        )
 
 
 @pytest.fixture(autouse=True)
@@ -123,6 +135,17 @@ def client_factory(app: FastAPI) -> Callable[[], TestClient]:
 @pytest.fixture
 def client(client_factory: Callable[[], TestClient]) -> TestClient:
     return client_factory()
+
+
+JOURNAL_STEP = "Journal step."
+
+
+def is_journal_messages(messages: list[dict[str, Any]]) -> bool:
+    return any(m["role"] == "system" and JOURNAL_STEP in (m.get("content") or "") for m in messages)
+
+
+def without_journal(calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [call for call in calls if not is_journal_messages(call["messages"])]
 
 
 def csrf_token(client: TestClient, path: str) -> str:

@@ -36,6 +36,13 @@
   },
   {
     "type": "rule",
+    "id": "journal",
+    "text": "The journal is one text file the player reads: a running record of what has happened in the campaign, in the story's own voice. Before each turn is narrated, a separate journal step writes what the turn changed into the journal: it merges the turn into the current campaign day's passage, corrects earlier passages with an exact find and replace when new facts change them, and deletes passages that no longer belong. Keep one passage per campaign day, and when the journal runs long, condense older days into shorter passages. It is the campaign recap, so keep it accurate. The player only reads the journal, so it never reveals what the player character has not learned or any secret you are keeping. Search it with search_journal, and view line ranges with view_journal, to stay consistent with what the player has been told."
+
+
+  },
+  {
+    "type": "rule",
     "id": "speech",
     "important": true,
     "text": "NPC dialogue is written separately. Never write an NPC's words in the narration yourself. To make an NPC speak, call speak with the NPC's name and what they want to say. Then quote the dialogue exactly as the tool returns it."

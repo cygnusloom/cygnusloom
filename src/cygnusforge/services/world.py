@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import math
 import random
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
+from difflib import get_close_matches
 from typing import Any
 
 from sqlalchemy import Engine
@@ -86,6 +88,8 @@ from cygnusforge.services.events import (
     HirelingDismissed,
     HirelingPromoted,
     Item,
+    JournalAppended,
+    JournalReplaced,
     LocationAdded,
     LocationDiscovered,
     LocationRemoved,
@@ -132,13 +136,14 @@ SAME_POINT_KM = 0.01
 @dataclass(frozen=True)
 class SceneView:
     """What the player may see: the player character, the place they are in, the NPCs there, the
-    notes that concern them, and the player character's statblock."""
+    notes that concern them, the player character's statblock, and the journal."""
 
     pc: Character | None
     location: Place | None
     npcs: list[Character]
     notes: list[Note]
     sheet: list[str]
+    journal: str = ""
     pack: PackView | None = None
     hirelings: tuple[Character, ...] = ()
     objects: tuple[WorldObject, ...] = ()
@@ -1141,6 +1146,22 @@ class WorldTools:
         with session_scope(self.engine) as db:
             return search_notes(load_state(db, self.campaign_id), query)
 
+    def append_journal(self, text: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return append_journal(db, self.campaign_id, text)
+
+    def replace_in_journal(self, old_text: str, new_text: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return replace_in_journal(db, self.campaign_id, old_text, new_text)
+
+    def search_journal(self, query: str, context: int = 1) -> dict[str, list[dict[str, Any]]]:
+        with session_scope(self.engine) as db:
+            return search_journal(load_state(db, self.campaign_id), query, context)
+
+    def view_journal(self, start_line: int = 1, end_line: int | None = None) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return view_journal(load_state(db, self.campaign_id), start_line, end_line)
+
     def all_at_location(self, location: str | None = None) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return all_at_location(load_state(db, self.campaign_id), location)
@@ -2120,6 +2141,106 @@ def search_notes(state: CampaignState, query: str) -> dict[str, list[dict[str, A
     return {"notes": matches}
 
 
+def append_journal(db: Session, campaign_id: int, text: str) -> dict[str, Any]:
+    state = load_state(db, campaign_id)
+    added = bounded_text(text, "text", MAX_TEXT).strip()
+    if not added:
+        raise InvalidInput("text must hold what to add to the journal")
+    record(db, campaign_id, JournalAppended(text=added))
+    db.commit()
+    return {"added": "journal", "day": state.clock.day}
+
+
+def replace_in_journal(
+    db: Session, campaign_id: int, old_text: str, new_text: str
+) -> dict[str, Any]:
+    state = load_state(db, campaign_id)
+    old = bounded_text(old_text, "old_text", MAX_TEXT)
+    if not old.strip():
+        raise InvalidInput("old_text must hold the passage to replace")
+    new = (
+        bounded_text(new_text, "new_text", MAX_TEXT).strip() if str(new_text or "").strip() else ""
+    )
+    count = state.journal.count(old)
+    if count == 0:
+        raise InvalidInput(
+            "the journal has no passage matching old_text; view or search it for the exact text"
+        )
+    if count > 1:
+        raise InvalidInput(f"old_text matches {count} places; quote more of it so it matches once")
+    record(db, campaign_id, JournalReplaced(old_text=old, new_text=new))
+    db.commit()
+    return {"replaced": "journal", "deleted": new == ""}
+
+
+def view_journal(
+    state: CampaignState, start_line: int = 1, end_line: int | None = None
+) -> dict[str, Any]:
+    """Lines `start_line` to `end_line` of the journal, numbered from 1, at most JOURNAL_VIEW_LINES."""
+    lines = _journal_lines(state)
+    if end_line is not None and end_line < start_line:
+        raise InvalidInput("end_line must be at least start_line")
+    first = max(1, start_line)
+    last = min(first if end_line is None else end_line, len(lines))
+    last = min(last, first + JOURNAL_VIEW_LINES - 1)
+    return {
+        "total_lines": len(lines),
+        "lines": [
+            {"number": number, "text": lines[number - 1]} for number in range(first, last + 1)
+        ],
+    }
+
+
+def search_journal(
+    state: CampaignState, query: str, context: int = 1
+) -> dict[str, list[dict[str, Any]]]:
+    """The passages of the journal that best match `query`, in journal order. A passage is a
+    matching line with `context` lines on either side, numbered as `from_line` to `to_line`.
+    Matching is fuzzy: a query word matches a journal word that contains it or is spelled nearly
+    the same."""
+    words = re.findall(r"\w+", bounded_text(query, "query", MAX_TEXT).casefold())
+    lines = _journal_lines(state)
+    context = max(0, min(context, MAX_JOURNAL_CONTEXT))
+    scored = [
+        (score, index)
+        for index, line in enumerate(lines)
+        if (score := _fuzzy_score(words, line)) > 0
+    ]
+    best = sorted(scored, key=lambda pair: (-pair[0], pair[1]))[:MAX_JOURNAL_RESULTS]
+    ranges: list[list[int]] = []
+    for _score, index in sorted(best, key=lambda pair: pair[1]):
+        low, high = max(0, index - context), min(len(lines) - 1, index + context)
+        if ranges and low <= ranges[-1][1] + 1:
+            ranges[-1][1] = max(ranges[-1][1], high)
+        else:
+            ranges.append([low, high])
+    return {
+        "passages": [
+            {
+                "from_line": low + 1,
+                "to_line": high + 1,
+                "text": "\n".join(lines[low : high + 1]),
+            }
+            for low, high in ranges
+        ]
+    }
+
+
+def _journal_lines(state: CampaignState) -> list[str]:
+    return state.journal.split("\n") if state.journal else []
+
+
+def _fuzzy_score(words: Sequence[str], paragraph: str) -> int:
+    """How many of the query words the paragraph matches."""
+    found = re.findall(r"\w+", paragraph.casefold())
+    return sum(
+        1
+        for word in words
+        if any(word in candidate for candidate in found)
+        or get_close_matches(word, found, n=1, cutoff=FUZZY_CUTOFF)
+    )
+
+
 def all_at_location(state: CampaignState, location: str | None) -> dict[str, Any]:
     """A location as the GM needs it: its description, the NPCs there, whether the player character
     is there, and the notes about the place or the NPCs in it. Without a location, it is the
@@ -2413,6 +2534,7 @@ def scene_view(
         npcs=npcs,
         notes=notes,
         sheet=sheet,
+        journal=state.journal,
         pack=pack,
         hirelings=hirelings,
         objects=objects,
@@ -2793,6 +2915,10 @@ def _note_with_id(state: CampaignState, note_id: int) -> Note:
 
 
 MAX_MARKET_RESULTS = 20
+MAX_JOURNAL_RESULTS = 5
+MAX_JOURNAL_CONTEXT = 3
+JOURNAL_VIEW_LINES = 50
+FUZZY_CUTOFF = 0.8
 
 
 def _words(query: str) -> list[str]:

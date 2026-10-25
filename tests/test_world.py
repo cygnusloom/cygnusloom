@@ -1487,6 +1487,8 @@ def test_campaign_options_are_stored_once_and_checked(
 
 LOOKUP_TOOL_NAMES = {
     "search_notes",
+    "search_journal",
+    "view_journal",
     "all_at_location",
     "search_location",
     "search_npc",
@@ -2057,7 +2059,7 @@ def test_campaign_page_draws_discovered_places_on_the_map(
     _tool(app, campaign_id, "discover_location", {"name": "Glowcap Ring"})
     page = client.get(f"/campaigns/{campaign_id}").text
 
-    map_view = page[page.index('data-view="map"') : page.index('data-view="lore"')]
+    map_view = page[page.index('data-view="map"') : page.index('data-view="journal"')]
     assert (
         'class="map-marker here" style="left: 50.0%; top: 50.0%" role="img" aria-label="MH" '
         'data-tip="Mossbell Hollow (you)"><img src="/static/icons/terrain/town.svg" alt=""></span>'
