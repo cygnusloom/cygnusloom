@@ -82,6 +82,7 @@ def hire_hireling(
     accent: str | None = None,
     quirks: Sequence[str] | None = None,
     character: Mapping[str, Any] | None = None,
+    pronouns: str | None = None,
 ) -> dict[str, Any]:
     return ctx.world.hire_hireling(
         name=name,
@@ -92,6 +93,7 @@ def hire_hireling(
         accent=accent,
         quirks=quirks,
         character=character,
+        pronouns=pronouns,
     )
 
 

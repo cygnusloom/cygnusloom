@@ -669,6 +669,7 @@ class WorldTools:
         accent: str | None = None,
         quirks: Sequence[str] | None = None,
         character: Mapping[str, Any] | None = None,
+        pronouns: str | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return hire_hireling(
@@ -685,6 +686,7 @@ class WorldTools:
                 accent,
                 quirks,
                 character,
+                pronouns=pronouns,
                 plus=self.plus,
             )
 
@@ -1471,6 +1473,7 @@ def hire_hireling(
     accent: str | None = None,
     quirks: Sequence[str] | None = None,
     character: Mapping[str, Any] | None = None,
+    pronouns: str | None = None,
     *,
     plus: str,
 ) -> dict[str, Any]:
@@ -1503,6 +1506,7 @@ def hire_hireling(
         quirks=_quirks(quirks),
         character=character,
         plus=plus,
+        pronouns=_optional_text(pronouns, "pronouns"),
     )
     record(
         db,
@@ -1516,6 +1520,7 @@ def hire_hireling(
             personality=event.personality,
             accent=event.accent,
             quirks=list(event.quirks),
+            pronouns=event.pronouns,
             stats=dict(event.stats),
             templates=dict(event.templates),
             features=dict(event.features),
@@ -2476,6 +2481,9 @@ def world_state_text(
             )
             + "."
         )
+        for h in hirelings:
+            if h.pronouns:
+                lines.append(f"Pronouns: {h.name}, {h.pronouns}.")
     wind = _npcs_in_the_wind(state)
     if wind:
         lines.append(f"NPCs in the wind, at no location: {', '.join(wind)}.")

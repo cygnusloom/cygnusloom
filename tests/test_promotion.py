@@ -85,6 +85,14 @@ def test_a_dying_or_dead_hireling_cannot_be_promoted(client_factory):
         tools.promote_hireling(HIRELING)
 
 
+def test_a_promoted_hireling_keeps_its_pronouns(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools.hire_hireling(HIRELING, PC, WAGE, "A hired hand, good with a rope.", pronouns="she/her")
+    _kill_pc(app, campaign_id, tools)
+    tools.promote_hireling(HIRELING)
+    assert _character(app, campaign_id, HIRELING).pronouns == "she/her"
+
+
 def test_a_living_hireling_takes_over_after_the_player_character_dies(client_factory):
     app, campaign_id, tools = _hired_pc_dead(client_factory)
     result = tools.promote_hireling(HIRELING)

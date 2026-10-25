@@ -54,6 +54,7 @@ class World(Protocol):
         accent: str | None = None,
         quirks: Sequence[str] | None = None,
         character: Mapping[str, Any] | None = None,
+        pronouns: str | None = None,
     ) -> dict[str, Any]: ...
 
     def dismiss_hireling(self, name: str, cause: str) -> dict[str, Any]: ...

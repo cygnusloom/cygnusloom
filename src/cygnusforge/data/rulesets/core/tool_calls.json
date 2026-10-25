@@ -477,6 +477,10 @@
             "type": "string"
           },
           "description": "Optional. Habits or mannerisms the hireling shows."
+        },
+        "pronouns": {
+          "type": "string",
+          "description": "Optional. The hireling's pronouns, such as \"she/her\", \"he/him\", or \"they/them\", or another form. Record them whenever the hireling is written in the text, so the GM does not have to guess."
         }
       },
       "required": [

@@ -202,6 +202,22 @@ def test_the_gm_is_told_about_the_hireling_and_its_wage(client_factory):
     assert f"{HIRELING}, at {PLACE}, hired by {PC} at {WAGE} a day" in text
 
 
+def test_a_hireling_keeps_the_pronouns_the_gm_gives_and_the_gm_is_told(client_factory):
+    app, campaign_id, tools = _pcs(client_factory)
+    tools.hire_hireling(HIRELING, PC, WAGE, "A hired hand, good with a rope.", pronouns="they/them")
+    assert _character(app, campaign_id, HIRELING).pronouns == "they/them"
+    with Session(app.state.engine) as db:
+        state = load_state(db, campaign_id)
+        text = world_state_text(state, CAIRN.campaign, clock_rules=CAIRN.clock)
+    assert f"Pronouns: {HIRELING}, they/them." in text
+
+
+def test_a_hireling_hired_without_pronouns_has_none(client_factory):
+    app, campaign_id, tools = _pcs(client_factory)
+    _hire(tools)
+    assert _character(app, campaign_id, HIRELING).pronouns is None
+
+
 def test_a_hireling_travels_with_its_employer(client_factory):
     app, campaign_id, tools = _pcs(client_factory)
     _hire(tools)

@@ -158,7 +158,7 @@ class Character:
     surrendered: bool = False
     # A debug buff: no harm reaches the character. Set from the debug panel.
     invincible: bool = False
-    # A large group is a group the Warden fights as one unit. See SPEC.md, Phase 2.
+    # A large group is a group the Warden fights as one unit.
     large_group: bool = False
     # A large group whose Critical Damage save failed. The Warden must decide it is defeated or flees.
     critical_due: bool = False
@@ -741,6 +741,7 @@ class HirelingAdded(GameEvent):
     personality: str
     accent: str
     quirks: list[str]
+    pronouns: str | None = None
     stats: dict[str, int] = field(default_factory=dict)
     templates: dict[str, str] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
@@ -755,6 +756,7 @@ class HirelingAdded(GameEvent):
             personality=self.personality,
             accent=self.accent,
             quirks=list(self.quirks),
+            pronouns=self.pronouns,
             stats=dict(self.stats),
             templates=dict(self.templates),
             features=dict(self.features),
