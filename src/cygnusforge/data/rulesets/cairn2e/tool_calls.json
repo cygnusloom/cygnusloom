@@ -576,7 +576,7 @@
     "name": "wilderness_action",
     "python_module": "cairn2e",
     "function": "wilderness_action",
-    "description": "Take a Wilderness Action for the party's current watch, while it is out in the wild. Choose explore to search a large area for hidden features, supply to hunt, fish, or forage for Rations, or make_camp to set up camp, which consumes a Ration for each member and removes Fatigue from members who rest. The engine rolls the day's weather and the Wilderness Events (twice at night) and then spends one watch. Narrate the result. Do not use it inside a dungeon.",
+    "description": "Take a Wilderness Action for the party's current watch, during broader long-term travel through the wild. Choose explore to search a large area for hidden features, supply to hunt, fish, or forage for Rations, or make_camp to set up camp, which consumes a Ration for each member and removes Fatigue from members who rest. The engine rolls the day's weather and the Wilderness Events (twice at night) and then spends one watch. Narrate the result. Do not use it inside a dungeon or other dangerous area, or in a safe area.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -606,7 +606,7 @@
     "name": "dungeon_cycle",
     "python_module": "cairn2e",
     "function": "dungeon_cycle",
-    "description": "Roll once on the Dungeon Events table (1d6) when the party, inside a dungeon, spends more than one cycle in one place, moves quickly, enters a new area, or makes noise. Never call it during overland travel. Pass the triggers that apply. The roll logs the event and does not move the day or hour clock. The result tells you what the event is. Effects such as Fatigue or a ration are yours to apply with the other tools.",
+    "description": "Roll once on the Dungeon Events table (1d6) when the party, inside a dungeon or other dangerous area, spends more than one cycle in one place, moves quickly, enters a new area, or makes noise. Never call it during broader travel through the wild or in a safe area. Pass the triggers that apply. The roll logs the event and does not move the day or hour clock. The result tells you what the event is. Effects such as Fatigue or a ration are yours to apply with the other tools.",
     "parameters": {
       "type": "object",
       "properties": {

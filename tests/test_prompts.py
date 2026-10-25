@@ -45,3 +45,11 @@ def test_speech_instruction_for_the_cairn_cap_of_two_is_unchanged():
 
 def test_speech_instruction_falls_back_to_digits_above_the_word_table():
     assert "and 11 at most." in speech_instruction(11)
+
+
+def test_cairn_prompt_chooses_the_cycle_from_the_situation():
+    prompt = state_instruction(_cairn())
+    assert "Choose the cycle from the situation." in prompt
+    assert "wilderness cycle is for broader long-term travel" in prompt
+    assert "dungeon cycle is for a dungeon or other dangerous area" in prompt
+    assert prompt.count("or in a safe area") == 2
