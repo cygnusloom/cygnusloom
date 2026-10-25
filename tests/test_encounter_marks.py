@@ -14,6 +14,7 @@ from cygnusforge.llm.base import ToolRequest
 from cygnusforge.services import encounters
 from cygnusforge.services.events import CellMark, load_state, name_key
 from cygnusforge.services.tools import ToolRun, run_tool
+from cygnusforge.web.campaigns import _cell_tip
 from tests.conftest import content_library
 from tests.test_campaigns import _campaign_id, _place_pc
 from tests.test_world import TOOLS, _ctx, _db, _state
@@ -358,6 +359,7 @@ def test_gm_view_lists_the_background_and_marked_cells(client_factory: Callable[
         "id": "floor",
         "name": RULES.terrain["floor"].name,
         "color": RULES.terrain["floor"].color,
+        "rule": RULES.terrain["floor"].rule,
         "difficult": False,
     }
     cells = {(cell["column"], cell["row"]): cell for cell in view["marked_cells"]}
@@ -367,6 +369,7 @@ def test_gm_view_lists_the_background_and_marked_cells(client_factory: Callable[
         "row": 0,
         "terrain": RULES.terrain["floor"].name,
         "terrain_color": RULES.terrain["floor"].color,
+        "terrain_rule": RULES.terrain["floor"].rule,
         "object": RULES.encounter_objects["wall"].name,
         "object_icon": RULES.encounter_objects["wall"].icon,
         "object_color": RULES.encounter_objects["wall"].color,
@@ -380,6 +383,7 @@ def test_gm_view_lists_the_background_and_marked_cells(client_factory: Callable[
         "row": 1,
         "terrain": RULES.terrain["mud"].name,
         "terrain_color": RULES.terrain["mud"].color,
+        "terrain_rule": RULES.terrain["mud"].rule,
         "object": "",
         "object_icon": "",
         "object_color": "",
@@ -407,6 +411,32 @@ def test_campaign_board_draws_marked_terrain_and_objects(
     assert 'class="encounter-cell blocked"' in page
     assert 'class="encounter-cell difficult"' in page
     assert f'data-terrain="{RULES.terrain["mud"].name}"' in page
+
+
+def test_board_cells_hover_with_their_terrain_rule_and_any_token(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _started(client_factory, {"template": "room"})
+    app = client.app
+    _paint(
+        app,
+        campaign_id,
+        [{"column": 1, "row": 1, "terrain": "mud"}, {"column": 3, "row": 3, "terrain": "mud"}],
+    )
+    _call(app, campaign_id, "place_participant", {"name": "Ada", "column": 1, "row": 1}, CAIRN_GRID)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    mud_rule = RULES.terrain["mud"].rule
+    assert f'data-tip="Ada on Mud. {mud_rule}"' in page
+    floor = RULES.terrain["floor"]
+    assert f'data-tip="{floor.name}. {floor.rule}"' in page
+    assert f'data-tip="Mud. {mud_rule}"' in page
+
+
+def test_cell_tip_names_the_token_and_ground_or_neither():
+    assert _cell_tip(None, "", "") == ""
+    assert _cell_tip(None, "Mud", "Difficult.") == "Mud. Difficult."
+    assert _cell_tip({"name": "Ada"}, "Mud", "Difficult.") == "Ada on Mud. Difficult."
+    assert _cell_tip({"name": "Ada"}, "", "") == "Ada"
 
 
 def test_a_wall_cannot_be_set_on_a_cell_a_participant_occupies(

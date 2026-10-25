@@ -690,6 +690,7 @@ def _terrain_view(
         "id": identifier,
         "name": found.name if found is not None else identifier,
         "color": found.color if found is not None else "",
+        "rule": found.rule if found is not None else "",
         "difficult": found.difficult if found is not None else False,
     }
 
@@ -708,6 +709,7 @@ def _marked_cells(
                 "row": row,
                 "terrain": terrain[mark.terrain].name if mark.terrain in terrain else mark.terrain,
                 "terrain_color": terrain[mark.terrain].color if mark.terrain in terrain else "",
+                "terrain_rule": terrain[mark.terrain].rule if mark.terrain in terrain else "",
                 "object": found_object.name if found_object is not None else mark.object,
                 "object_icon": found_object.icon if found_object is not None else "",
                 "object_color": found_object.color if found_object is not None else "",

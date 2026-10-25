@@ -641,11 +641,15 @@ def _encounter_rows(encounter: dict[str, Any]) -> list[list[dict[str, Any]]]:
             mark = marks.get((column, row), {})
             # A cell with no terrain of its own stands on the background.
             ground = mark if mark.get("terrain") else background
+            occupant = occupants.get((column, row))
+            terrain_name = ground.get("terrain", ground.get("name", ""))
+            terrain_rule = ground.get("terrain_rule", ground.get("rule", ""))
             cells.append(
                 {
-                    "occupant": occupants.get((column, row)),
+                    "occupant": occupant,
+                    "tip": _cell_tip(occupant, terrain_name, terrain_rule),
                     "terrain_color": ground.get("terrain_color", ground.get("color", "")),
-                    "terrain_name": ground.get("terrain", ground.get("name", "")),
+                    "terrain_name": terrain_name,
                     "difficult": bool(ground.get("difficult", False)),
                     "object_icon": mark.get("object_icon", ""),
                     "object_color": mark.get("object_color", ""),
@@ -656,6 +660,14 @@ def _encounter_rows(encounter: dict[str, Any]) -> list[list[dict[str, Any]]]:
             )
         rows.append(cells)
     return rows
+
+
+def _cell_tip(occupant: dict[str, Any] | None, terrain_name: str, terrain_rule: str) -> str:
+    """The hover text for a cell: the token on it, and the ground under it with its rule effect."""
+    if not terrain_name:
+        return occupant["name"] if occupant else ""
+    ground = f"{terrain_name}. {terrain_rule}" if terrain_rule else f"{terrain_name}."
+    return f"{occupant['name']} on {ground}" if occupant else ground
 
 
 def _roll_key(campaign_id: int) -> str:

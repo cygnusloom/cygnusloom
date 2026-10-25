@@ -1,11 +1,11 @@
 [
-  {"type": "encounter_terrain", "id": "floor", "name": "Stone floor", "color": "#4a4d55"},
-  {"type": "encounter_terrain", "id": "grass", "name": "Grass", "color": "#3f6b35"},
-  {"type": "encounter_terrain", "id": "dirt", "name": "Dirt road", "color": "#7a5c3a"},
-  {"type": "encounter_terrain", "id": "shore", "name": "Shore", "color": "#b8a878"},
-  {"type": "encounter_terrain", "id": "mud", "name": "Mud", "color": "#5b4630", "difficult": true},
-  {"type": "encounter_terrain", "id": "rubble", "name": "Rubble", "color": "#6e6a62", "difficult": true},
-  {"type": "encounter_terrain", "id": "shallow-water", "name": "Shallow water", "color": "#2f6f8f", "difficult": true},
+  {"type": "encounter_terrain", "id": "floor", "name": "Stone floor", "color": "#4a4d55", "rule": "Normal ground: no effect on movement."},
+  {"type": "encounter_terrain", "id": "grass", "name": "Grass", "color": "#3f6b35", "rule": "Normal ground: no effect on movement."},
+  {"type": "encounter_terrain", "id": "dirt", "name": "Dirt road", "color": "#7a5c3a", "rule": "Normal ground: no effect on movement."},
+  {"type": "encounter_terrain", "id": "shore", "name": "Shore", "color": "#b8a878", "rule": "Normal ground: no effect on movement."},
+  {"type": "encounter_terrain", "id": "mud", "name": "Mud", "color": "#5b4630", "rule": "Difficult: each cell entered costs two moves.", "difficult": true},
+  {"type": "encounter_terrain", "id": "rubble", "name": "Rubble", "color": "#6e6a62", "rule": "Difficult: each cell entered costs two moves.", "difficult": true},
+  {"type": "encounter_terrain", "id": "shallow-water", "name": "Shallow water", "color": "#2f6f8f", "rule": "Difficult: each cell entered costs two moves.", "difficult": true},
 
   {"type": "encounter_object", "id": "wall", "name": "Wall", "icon": "castle", "color": "#2b2d33", "blocks": true, "solid": true},
   {"type": "encounter_object", "id": "tree", "name": "Tree", "icon": "tree", "color": "#2f5a2a", "blocks": true},

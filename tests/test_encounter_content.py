@@ -61,8 +61,8 @@ def _load_templates(
     template: dict[str, Any], *, terrain: dict[str, Any] | None = None
 ) -> dict[str, EncounterTemplate]:
     terrain_defs = {
-        "floor": {"name": "Floor", "color": "#4a4d55"},
-        "mud": {"name": "Mud", "color": "#5b4630"},
+        "floor": {"name": "Floor", "color": "#4a4d55", "rule": "Normal ground."},
+        "mud": {"name": "Mud", "color": "#5b4630", "rule": "Difficult ground."},
     }
     terrain_defs.update(terrain or {})
     definitions = [
@@ -103,6 +103,11 @@ def test_every_object_icon_is_registered(library: ContentLibrary) -> None:
     registry = _registry()
     for item in library.core.encounter_objects.values():
         assert item.icon in registry, f"{item.id} uses unknown icon {item.icon!r}"
+
+
+def test_every_terrain_says_its_rule_effect(library: ContentLibrary) -> None:
+    assert all(terrain.rule for terrain in library.core.terrain.values())
+    assert library.core.terrain["mud"].rule == "Difficult: each cell entered costs two moves."
 
 
 def test_every_terrain_and_object_has_a_hex_colour(library: ContentLibrary) -> None:
@@ -215,15 +220,30 @@ def test_invalid_template_raises_content_error(overrides: dict[str, Any], messag
 
 def test_non_boolean_difficult_flag_raises() -> None:
     definitions = [
-        _definition("encounter_terrain", id="bog", name="Bog", color="#5b4630", difficult="yes")
+        _definition(
+            "encounter_terrain",
+            id="bog",
+            name="Bog",
+            color="#5b4630",
+            rule="Difficult ground.",
+            difficult="yes",
+        )
     ]
     with pytest.raises(ContentError, match="'difficult' must be"):
         _load_encounter_terrain(definitions, "core")
 
 
 def test_colour_must_be_a_six_digit_hex_value() -> None:
-    definitions = [_definition("encounter_terrain", id="bog", name="Bog", color="swamp")]
+    definitions = [
+        _definition("encounter_terrain", id="bog", name="Bog", color="swamp", rule="Bog.")
+    ]
     with pytest.raises(ContentError, match="color must be a hex colour"):
+        _load_encounter_terrain(definitions, "core")
+
+
+def test_terrain_must_say_its_rule_effect() -> None:
+    definitions = [_definition("encounter_terrain", id="bog", name="Bog", color="#5b4630")]
+    with pytest.raises(ContentError, match="rule"):
         _load_encounter_terrain(definitions, "core")
 
 
@@ -249,8 +269,16 @@ def test_non_boolean_blocks_flag_raises() -> None:
 
 def test_duplicate_terrain_raises() -> None:
     definitions = [
-        _definition("encounter_terrain", id="grass", name="Grass", color="#3f6b35"),
-        _definition("encounter_terrain", id="grass", name="Grass again", color="#3f6b35"),
+        _definition(
+            "encounter_terrain", id="grass", name="Grass", color="#3f6b35", rule="Normal ground."
+        ),
+        _definition(
+            "encounter_terrain",
+            id="grass",
+            name="Grass again",
+            color="#3f6b35",
+            rule="Normal ground.",
+        ),
     ]
     with pytest.raises(ContentError, match="duplicate encounter terrain 'grass'"):
         _load_encounter_terrain(definitions, "core")
@@ -270,6 +298,10 @@ def test_duplicate_template_raises() -> None:
         _definition("encounter_template", **_template()),
         _definition("encounter_template", **_template()),
     ]
-    floor = [_definition("encounter_terrain", id="floor", name="Floor", color="#4a4d55")]
+    floor = [
+        _definition(
+            "encounter_terrain", id="floor", name="Floor", color="#4a4d55", rule="Normal ground."
+        )
+    ]
     with pytest.raises(ContentError, match="duplicate encounter template 'box'"):
         _load_encounter_templates(definitions, _load_encounter_terrain(floor, "core"), {}, "core")

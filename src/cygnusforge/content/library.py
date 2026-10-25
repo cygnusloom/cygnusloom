@@ -304,6 +304,8 @@ class EncounterTerrain:
     id: str
     name: str
     color: str
+    # The rule effect of this ground, as the rule set words it. Shown when the ground is hovered.
+    rule: str
     difficult: bool = False
 
 
@@ -1760,6 +1762,7 @@ def _load_encounter_terrain(
             id=d.id,
             name=required_text(d.data, "name", label),
             color=_color(d.data, label),
+            rule=required_text(d.data, "rule", label),
             difficult=_flag(d.data, "difficult", label),
         )
     return terrain
