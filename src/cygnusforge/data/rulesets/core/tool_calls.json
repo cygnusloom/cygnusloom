@@ -357,7 +357,7 @@
     "name": "update_location",
     "python_module": "core",
     "function": "update_location",
-    "description": "Change a location's description. Move it on the map by giving x and y, or take it off the map by setting off_map to true. A place inside another cannot be given x or y. Its name stays the same. Leave x, y, and off_map out to keep its position. Use delete_location instead to remove the place from the story.",
+    "description": "Change a location's description. Move it on the map by giving x and y, or take it off the map by setting off_map to true. A place inside another cannot be given x or y. Its name stays the same. Leave x, y, and off_map out to keep its position. It never moves a character: to take the player character or an NPC into a place, use move_actor. Use delete_location instead to remove the place from the story.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -552,7 +552,7 @@
     "name": "place_object",
     "python_module": "core",
     "function": "place_object",
-    "description": "Put a world object in a place: a location or a dungeon area. It holds what the story has stocked there, such as gold, an item, or a described thing. Give a short name a character can take it by, such as 'clay jar', and a fuller description in contents. Optionally give gold or an item name. Set hidden when the object is not yet found; a hidden object cannot be seen or taken. Use this only for treasure or objects the story has placed; do not invent them unprompted.",
+    "description": "Put a world object in a place: a location or a dungeon area. It holds what the story has stocked there, such as gold, an item, or a described thing. Give a short name a character can take it by, such as 'clay jar', and a fuller description in contents. Optionally give gold or an item name. Set hidden when the object is not yet found; a hidden object cannot be seen or taken. Use this only for treasure or objects the story has placed; do not invent them unprompted. Do not place an object again when the place already holds it: check the objects listed for the place in the scene first, and when the object is already there, leave it be.",
     "parameters": {
       "type": "object",
       "properties": {
