@@ -413,7 +413,7 @@ def test_campaign_board_draws_marked_terrain_and_objects(
     assert f'data-terrain="{RULES.terrain["mud"].name}"' in page
 
 
-def test_board_cells_hover_with_their_terrain_rule_and_any_token(
+def test_board_cells_hover_with_their_terrain_rule_object_and_any_token(
     client_factory: Callable[[], TestClient],
 ):
     client, campaign_id = _started(client_factory, {"template": "room"})
@@ -430,13 +430,28 @@ def test_board_cells_hover_with_their_terrain_rule_and_any_token(
     floor = RULES.terrain["floor"]
     assert f'data-tip="{floor.name}. {floor.rule}"' in page
     assert f'data-tip="Mud. {mud_rule}"' in page
+    _paint(app, campaign_id, [{"column": 2, "row": 2, "object": "wall"}])
+    wall = RULES.encounter_objects["wall"]
+    assert (
+        f'data-tip="{wall.name} on {floor.name}. Blocks movement'
+        in client.get(f"/campaigns/{campaign_id}").text
+    )
 
 
-def test_cell_tip_names_the_token_and_ground_or_neither():
+def test_cell_tip_names_the_token_object_and_ground_or_neither():
+    blocked = "Blocks movement: no one can enter this cell."
     assert _cell_tip(None, "", "") == ""
     assert _cell_tip(None, "Mud", "Difficult.") == "Mud. Difficult."
     assert _cell_tip({"name": "Ada"}, "Mud", "Difficult.") == "Ada on Mud. Difficult."
     assert _cell_tip({"name": "Ada"}, "", "") == "Ada"
+    assert _cell_tip(None, "", "", "Table") == "Table."
+    assert _cell_tip({"name": "Ada"}, "Grass", "Normal.", "Campfire") == (
+        "Ada on Campfire on Grass. Normal."
+    )
+    assert _cell_tip(None, "Stone floor", "Normal.", "Wall", True) == (
+        f"Wall on Stone floor. {blocked}"
+    )
+    assert _cell_tip(None, "", "", "Wall", True) == f"Wall. {blocked}"
 
 
 def test_a_wall_cannot_be_set_on_a_cell_a_participant_occupies(

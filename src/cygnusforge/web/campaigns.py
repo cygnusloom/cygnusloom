@@ -644,10 +644,13 @@ def _encounter_rows(encounter: dict[str, Any]) -> list[list[dict[str, Any]]]:
             occupant = occupants.get((column, row))
             terrain_name = ground.get("terrain", ground.get("name", ""))
             terrain_rule = ground.get("terrain_rule", ground.get("rule", ""))
+            blocks = bool(mark.get("blocks", False))
             cells.append(
                 {
                     "occupant": occupant,
-                    "tip": _cell_tip(occupant, terrain_name, terrain_rule),
+                    "tip": _cell_tip(
+                        occupant, terrain_name, terrain_rule, mark.get("object", ""), blocks
+                    ),
                     "terrain_color": ground.get("terrain_color", ground.get("color", "")),
                     "terrain_name": terrain_name,
                     "difficult": bool(ground.get("difficult", False)),
@@ -655,18 +658,27 @@ def _encounter_rows(encounter: dict[str, Any]) -> list[list[dict[str, Any]]]:
                     "object_color": mark.get("object_color", ""),
                     "object_solid": bool(mark.get("object_solid", False)),
                     "object_name": mark.get("object", ""),
-                    "blocks": bool(mark.get("blocks", False)),
+                    "blocks": blocks,
                 }
             )
         rows.append(cells)
     return rows
 
 
-def _cell_tip(occupant: dict[str, Any] | None, terrain_name: str, terrain_rule: str) -> str:
-    """The hover text for a cell: the token on it, and the ground under it with its rule effect."""
-    if not terrain_name:
+def _cell_tip(
+    occupant: dict[str, Any] | None,
+    terrain_name: str,
+    terrain_rule: str,
+    object_name: str = "",
+    blocks: bool = False,
+) -> str:
+    """The hover text for a cell: the token on it, the object, and the ground under it with its
+    rule effect. A blocking object replaces that rule, since nothing can enter the cell."""
+    where = " on ".join(part for part in (object_name, terrain_name) if part)
+    if not where:
         return occupant["name"] if occupant else ""
-    ground = f"{terrain_name}. {terrain_rule}" if terrain_rule else f"{terrain_name}."
+    rule = "Blocks movement: no one can enter this cell." if blocks else terrain_rule
+    ground = f"{where}. {rule}" if rule else f"{where}."
     return f"{occupant['name']} on {ground}" if occupant else ground
 
 
