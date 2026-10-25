@@ -12,7 +12,7 @@ Generally you should test both the automated and UI aspects of the web app to en
 - Use the project's own test runner and linter. Find them in the project config (`pyproject.toml`, `package.json`, `Makefile`) rather than assuming.
 - Never call a real LLM from automated tests. Use the fake or scripted provider, and block real network calls if the test setup supports it.
 - For multi-turn behavior, script the replies with the fake provider's input format instead of mocking inside the code.
-- See the README.md for test commands.
+- See the README.md for test commands. We need to run in parallel.
 
 ## UI tests
 
