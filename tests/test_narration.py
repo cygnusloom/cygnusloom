@@ -134,3 +134,30 @@ def test_failed_tool_calls_reach_the_narration(
 
     tool_messages = [m for m in _narrator(recorder) if m["role"] == "tool"]
     assert tool_messages and "must be integer" in tool_messages[0]["content"]
+
+
+def test_narrator_is_told_the_player_character_moves_only_when_a_move_is_recorded(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    _place_pc(client, campaign_id)
+    _send(client, campaign_id, _script({"rounds": [[]], "text": "The lane is quiet."}))
+
+    system = _system_text(_narrator(recorder))
+    assert "only when a move_actor result records it" in system
+
+
+def test_narrator_is_told_not_to_invent_times_distances_or_street_names(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    _place_pc(client, campaign_id)
+    _send(client, campaign_id, _script({"rounds": [[]], "text": "The lane is quiet."}))
+
+    system = _system_text(_narrator(recorder))
+    assert "Never write a number of minutes, hours, days, or distance" in system
+    assert "Name no street, square, alley, or route" in system
