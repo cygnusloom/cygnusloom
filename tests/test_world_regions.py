@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 import random
 from collections.abc import Callable
 
@@ -10,6 +11,7 @@ from fastapi.testclient import TestClient
 from cygnusforge.services import world
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import HIDDEN_KINDS, Region
+from cygnusforge.services.geometry import clearance, overlaps
 from tests.conftest import content_library
 from tests.test_campaigns import _new_campaign, _signed_in
 from tests.test_world import TABLES, _state
@@ -38,38 +40,65 @@ def _tools(app: FastAPI, campaign_id: int) -> world.WorldTools:
     )
 
 
+def _seeded_names() -> set[str]:
+    return {region.name.lower() for region in LIBRARY.world_templates["twin-lakes"].regions}
+
+
 def test_bundled_twin_lakes_regions_are_seeded(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     campaign_id = _twin_lakes(client_factory)
     regions = _state(app, campaign_id).regions
-    assert set(regions) == {"west lake", "east lake"}
+    assert set(regions) == _seeded_names()
+    assert len(regions) == 12
     assert all(isinstance(region, Region) for region in regions.values())
-    assert {region.name for region in regions.values()} == {"West Lake", "East Lake"}
-    assert all(region.terrain == "lake" for region in regions.values())
+    assert all(region.terrain in CAIRN.world_terrain for region in regions.values())
+    assert regions["west lake"].terrain == "lake"
+    assert regions["east lake"].terrain == "lake"
+
+
+def test_undiscovered_regions_stay_off_the_map(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    campaign_id = _twin_lakes(client_factory)
+    view = world.map_view(_state(app, campaign_id), CAIRN.world_terrain)
+    assert view.regions == []
+
+
+def test_a_discovered_place_inside_a_region_reveals_it(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    campaign_id = _twin_lakes(client_factory)
+    _tools(app, campaign_id).create_location(
+        name="Lake Shore", description="A shore.", discovered=True, x=-4.68, y=-0.44
+    )
+    view = world.map_view(_state(app, campaign_id), CAIRN.world_terrain)
+    assert {region.name for region in view.regions} == {"West Lake"}
 
 
 def test_map_view_draws_each_region_in_its_terrain_colour_and_text(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     campaign_id = _twin_lakes(client_factory)
+    _tools(app, campaign_id).create_region("Far Mere", "lake", SQUARE_OFF_THE_MAP, discovered=True)
     view = world.map_view(_state(app, campaign_id), CAIRN.world_terrain)
     by_name = {region.name: region for region in view.regions}
-    assert set(by_name) == {"West Lake", "East Lake"}
+    assert set(by_name) == {"Far Mere"}
     lake = CAIRN.world_terrain["lake"]
-    west = by_name["West Lake"]
-    assert west.color == lake.color
-    assert west.text == f"West Lake (Lake). {lake.rule}"
-    assert all(0 <= x <= 100 and 0 <= y <= 100 for x, y in west.points)
+    mere = by_name["Far Mere"]
+    assert mere.color == lake.color
+    assert mere.text == f"Far Mere (Lake). {lake.rule}"
+    assert all(0 <= x <= 100 and 0 <= y <= 100 for x, y in mere.points)
 
 
 def test_map_view_without_terrain_still_draws_regions_in_grey(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     campaign_id = _twin_lakes(client_factory)
+    _tools(app, campaign_id).create_region("Far Mere", "lake", SQUARE_OFF_THE_MAP, discovered=True)
     view = world.map_view(_state(app, campaign_id))
-    assert all(region.color == "#888888" for region in view.regions)
-    assert all(region.text.startswith(region.name) for region in view.regions)
+    assert [region.color for region in view.regions] == ["#888888"]
+    assert view.regions[0].text.startswith("Far Mere")
 
 
 def test_a_region_stretches_the_map_to_its_corners(
@@ -77,7 +106,7 @@ def test_a_region_stretches_the_map_to_its_corners(
 ):
     campaign_id = _twin_lakes(client_factory)
     before = world.map_view(_state(app, campaign_id), CAIRN.world_terrain).radius_km
-    _tools(app, campaign_id).create_region("Far Mere", "lake", SQUARE_OFF_THE_MAP)
+    _tools(app, campaign_id).create_region("Far Mere", "lake", SQUARE_OFF_THE_MAP, discovered=True)
     after = world.map_view(_state(app, campaign_id), CAIRN.world_terrain).radius_km
     assert after > before
     assert after >= 20.0
@@ -88,10 +117,47 @@ def test_gm_creates_a_region_and_it_is_saved_for_the_campaign(
 ):
     campaign_id = _twin_lakes(client_factory)
     result = _tools(app, campaign_id).create_region("Dark Mere", "lake", SQUARE_OFF_THE_MAP)
-    assert result == {"created": "region", "name": "Dark Mere", "terrain": "lake"}
+    assert result == {
+        "created": "region",
+        "name": "Dark Mere",
+        "terrain": "lake",
+        "discovered": False,
+    }
     region = _state(app, campaign_id).regions["dark mere"]
     assert isinstance(region, Region)
+    assert region.discovered is False
     assert region.points == tuple((x, y) for x, y in SQUARE_OFF_THE_MAP)
+
+
+def test_a_gm_marked_discovered_region_is_on_the_map_at_once(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    campaign_id = _twin_lakes(client_factory)
+    _tools(app, campaign_id).create_region("Dark Mere", "lake", SQUARE_OFF_THE_MAP, discovered=True)
+    assert _state(app, campaign_id).regions["dark mere"].discovered is True
+    view = world.map_view(_state(app, campaign_id), CAIRN.world_terrain)
+    assert [region.name for region in view.regions] == ["Dark Mere"]
+
+
+def test_a_place_off_the_terrain_is_refused(client_factory: Callable[[], TestClient], app):
+    campaign_id = _twin_lakes(client_factory)
+    with pytest.raises(InvalidInput, match="is not on the map's terrain"):
+        _tools(app, campaign_id).create_location(
+            name="Blank Hut", description="A hut.", x=20.0, y=20.0
+        )
+    assert "blank hut" not in _state(app, campaign_id).places
+
+
+def test_a_place_needs_ground_for_the_buffer_around_it(
+    client_factory: Callable[[], TestClient], app
+):
+    campaign_id = _twin_lakes(client_factory)
+    tools = _tools(app, campaign_id)
+    tools.create_region("Far Mere", "lake", [[20, 20], [24, 20], [24, 24], [20, 24]])
+    with pytest.raises(InvalidInput, match="is not on the map's terrain"):
+        tools.create_location(name="Shore Hut", description="A hut.", x=23.8, y=22.0)
+    created = tools.create_location(name="Mere Hut", description="A hut.", x=22.0, y=22.0)
+    assert created == {"created": "location", "name": "Mere Hut", "discovered": False}
 
 
 def test_region_names_are_unique(client_factory: Callable[[], TestClient], app: FastAPI):
@@ -137,7 +203,7 @@ def test_region_shapes_must_be_valid_polygons(client_factory: Callable[[], TestC
     bow_tie = [[0, 0], [2, 2], [2, 0], [0, 2]]
     with pytest.raises(InvalidInput, match="the region"):
         tools.create_region("Bow", "lake", bow_tie)
-    assert _state(app, campaign_id).regions.keys() == {"west lake", "east lake"}
+    assert _state(app, campaign_id).regions.keys() == _seeded_names()
 
 
 def test_force_must_be_true_or_false(client_factory: Callable[[], TestClient], app: FastAPI):
@@ -152,14 +218,41 @@ def test_the_campaign_page_draws_the_regions_with_their_tooltips(
     client = _signed_in(client_factory)
     response = _new_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    assert 'class="map-region"' not in client.get(f"/campaigns/{campaign_id}").text
+    _tools(app, campaign_id).create_region("Far Mere", "lake", SQUARE_OFF_THE_MAP, discovered=True)
     page = client.get(f"/campaigns/{campaign_id}").text
     lake = CAIRN.world_terrain["lake"]
     assert 'class="map-region"' in page
-    assert f'data-tip="West Lake (Lake). {lake.rule}"' in page
+    assert f'data-tip="Far Mere (Lake). {lake.rule}"' in page
     assert f'fill="{lake.color}"' in page
-    assert page.count("data-follow") >= 2
+    assert page.count("data-follow") >= 1
 
 
-def test_region_events_are_visible_to_everyone():
-    """Regions are drawn for every player, so their creation is not hidden from the transcript."""
-    assert HIDDEN_KINDS["region.added"] is False
+def test_region_events_are_hidden_behind_show_hidden():
+    """Region creation is GM bookkeeping, so it is hidden from the transcript by default."""
+    assert HIDDEN_KINDS["region.added"] is True
+
+
+def test_bundled_regions_cover_the_whole_world_without_overlap(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    campaign_id = _twin_lakes(client_factory)
+    regions = list(_state(app, campaign_id).regions.values())
+    for first, second in itertools.combinations(regions, 2):
+        assert not overlaps(first.points, second.points), (first.name, second.name)
+    ground = [region.points for region in regions]
+    for i, j in itertools.product(range(-7, 8), repeat=2):
+        assert clearance((i + 0.31, j + 0.31), ground) > 0, (i, j)
+
+
+def test_every_seeded_place_on_the_map_has_ground_around_it(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    campaign_id = _twin_lakes(client_factory)
+    state = _state(app, campaign_id)
+    ground = [region.points for region in state.regions.values()]
+    placed = [place for place in state.places.values() if place.position is not None]
+    assert placed
+    for place in placed:
+        point = (place.position.x, place.position.y)
+        assert clearance(point, ground) >= world.REGION_BUFFER_KM, place.name

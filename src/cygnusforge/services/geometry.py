@@ -15,8 +15,13 @@ Point = tuple[float, float]
 _SAMPLES = (0.25, 0.5, 0.75)
 # How far inside an outline a sample sits, as a fraction of the size of the two outlines.
 _INSET = 1e-7
+# Orientations this small are rounding noise, so the point counts as on the line.
+_ON_LINE = 1e-9
 # An outline whose area is this small a fraction of its size has no area.
 _FLAT = 1e-9
+# How far either side of an outline edge is probed, in km, to tell whether the edge is a seam
+# between two covered areas or the end of the covered ground.
+_SEAM_KM = 0.01
 
 
 def polygon_problem(points: Sequence[Point]) -> str | None:
@@ -70,11 +75,57 @@ def _orientation(a: Point, b: Point, c: Point) -> float:
     return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
 
 
+def _side(a: Point, b: Point, c: Point) -> int:
+    """Which side of line ab the point c is on: 1 or -1, or 0 if it is on the line."""
+    value = _orientation(a, b, c)
+    if abs(value) <= _ON_LINE:
+        return 0
+    return 1 if value > 0 else -1
+
+
 def _crosses(a: Point, b: Point, c: Point, d: Point) -> bool:
     """True if segment ab and segment cd cross at a point that is inside both of them."""
-    return _orientation(c, d, a) * _orientation(c, d, b) < 0 and (
-        _orientation(a, b, c) * _orientation(a, b, d) < 0
-    )
+    return _side(c, d, a) * _side(c, d, b) < 0 and _side(a, b, c) * _side(a, b, d) < 0
+
+
+def clearance(point: Point, polygons: Sequence[Sequence[Point]]) -> float:
+    """How far the point is from the nearest place where the covered ground ends: the edge of
+    the map, or an outline bordering blank ground. Outlines that touch each other are not ends.
+    0.0 if the point is not covered at all."""
+    if not _covered(point, polygons):
+        return 0.0
+    ends = [
+        (start, end)
+        for polygon in polygons
+        for start, end in _edges(polygon)
+        if _ends_coverage(start, end, polygons)
+    ]
+    return min((_distance_to_segment(point, start, end) for start, end in ends), default=math.inf)
+
+
+def _covered(point: Point, polygons: Sequence[Sequence[Point]]) -> bool:
+    return any(contains(point, polygon) for polygon in polygons)
+
+
+def _ends_coverage(start: Point, end: Point, polygons: Sequence[Sequence[Point]]) -> bool:
+    """True if one side of the edge is covered and the other side is not."""
+    (x1, y1), (x2, y2) = start, end
+    length = math.hypot(x2 - x1, y2 - y1)
+    if length == 0:
+        return False
+    normal_x, normal_y = -(y2 - y1) / length * _SEAM_KM, (x2 - x1) / length * _SEAM_KM
+    mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
+    left = _covered((mid_x + normal_x, mid_y + normal_y), polygons)
+    right = _covered((mid_x - normal_x, mid_y - normal_y), polygons)
+    return left != right
+
+
+def _distance_to_segment(point: Point, start: Point, end: Point) -> float:
+    (px, py), (x1, y1), (x2, y2) = point, start, end
+    dx, dy = x2 - x1, y2 - y1
+    length_sq = dx * dx + dy * dy
+    t = 0.0 if length_sq == 0 else max(0.0, min(1.0, ((px - x1) * dx + (py - y1) * dy) / length_sq))
+    return math.hypot(px - (x1 + t * dx), py - (y1 + t * dy))
 
 
 def _pokes_into(outline: Sequence[Point], other: Sequence[Point]) -> bool:
@@ -89,13 +140,13 @@ def _pokes_into(outline: Sequence[Point], other: Sequence[Point]) -> bool:
         for fraction in _SAMPLES:
             x = x1 + dx * fraction + normal_x * inset
             y = y1 + dy * fraction + normal_y * inset
-            if _inside((x, y), other):
+            if contains((x, y), other):
                 return True
     return False
 
 
-def _inside(point: Point, polygon: Sequence[Point]) -> bool:
-    """Ray casting. Only used for points kept off the outline, so the boundary never matters."""
+def contains(point: Point, polygon: Sequence[Point]) -> bool:
+    """True if the point lies inside the polygon. A point on the outline may go either way."""
     x, y = point
     inside = False
     for (x1, y1), (x2, y2) in _edges(polygon):

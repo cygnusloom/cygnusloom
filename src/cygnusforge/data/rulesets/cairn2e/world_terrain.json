@@ -5,5 +5,33 @@
     "name": "Lake",
     "color": "#2d6a8f",
     "rule": "Open water. Nothing crosses it on foot; the way round follows the shore."
+  },
+  {
+    "type": "world_terrain",
+    "id": "open",
+    "name": "Open ground",
+    "color": "#cfc89a",
+    "rule": "Open grassland and scrub. Easy going: travel on foot."
+  },
+  {
+    "type": "world_terrain",
+    "id": "forest",
+    "name": "Forest",
+    "color": "#4d7a3c",
+    "rule": "Forest without a path. Tough going: travel by rough_terrain."
+  },
+  {
+    "type": "world_terrain",
+    "id": "hills",
+    "name": "Hills",
+    "color": "#9a8456",
+    "rule": "Hills and broken ground. Tough going: travel by rough_terrain."
+  },
+  {
+    "type": "world_terrain",
+    "id": "fen",
+    "name": "Fen",
+    "color": "#5f7d55",
+    "rule": "Marsh and fen. Perilous going: travel by rough_terrain."
   }
 ]

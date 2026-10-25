@@ -630,11 +630,18 @@ TESTSET_TERRAIN = [
 
 def test_bundled_terrain_and_regions_are_read():
     library = ContentLibrary.load()
-    lake = library.rule_sets["cairn2e"].world_terrain["lake"]
+    terrain = library.rule_sets["cairn2e"].world_terrain
+    lake = terrain["lake"]
     assert (lake.name, lake.color) == ("Lake", "#2d6a8f")
+    assert {"lake", "open", "forest", "hills", "fen"} <= set(terrain)
     regions = {r.name: r for r in library.world_templates["twin-lakes"].regions}
-    assert set(regions) == {"West Lake", "East Lake"}
-    assert all(r.terrain == "lake" for r in regions.values())
+    assert len(regions) == 12
+    assert all(r.terrain in terrain for r in regions.values())
+    assert regions["West Lake"].terrain == "lake"
+    assert regions["Stone Forest"].terrain == "forest"
+    assert regions["The Downs"].terrain == "hills"
+    assert regions["White Tower Fens"].terrain == "fen"
+    assert regions["Eastern Plain"].terrain == "open"
 
 
 def test_region_points_must_outline_a_polygon(tree: Path):

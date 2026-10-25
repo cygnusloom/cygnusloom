@@ -31,8 +31,9 @@ def create_region(
     points: Sequence[Sequence[float]],
     ctx: ToolContext,
     force: bool = False,
+    discovered: bool = False,
 ) -> dict[str, Any]:
-    return ctx.world.create_region(name, terrain, points, force=force)
+    return ctx.world.create_region(name, terrain, points, force=force, discovered=discovered)
 
 
 def create_npc(

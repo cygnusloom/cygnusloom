@@ -93,6 +93,20 @@ def _tool(app: FastAPI, campaign_id: int, name: str, arguments: dict[str, Any], 
     return json.loads(run.output)
 
 
+def _give_the_map_ground(app: FastAPI, campaign_id: int) -> None:
+    """Covers the test positions with a region, since a placed location needs ground around it."""
+    tools = world.WorldTools(
+        engine=app.state.engine,
+        campaign_id=campaign_id,
+        tables=TABLES,
+        rng=random.Random(0),
+        character=SPEC,
+        plus="sum",
+        world_terrain=LIBRARY.rule_sets["cairn2e"].world_terrain,
+    )
+    tools.create_region("Test Ground", "lake", [[-12, -12], [12, -12], [12, 12], [-12, 12]])
+
+
 def _db(app: FastAPI) -> Session:
     return Session(app.state.engine, expire_on_commit=False)
 
@@ -1538,6 +1552,7 @@ def test_gm_creates_a_discovered_location_with_a_position(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _campaign_id(client_factory)
+    _give_the_map_ground(app, campaign_id)
     created = _tool(
         app,
         campaign_id,
@@ -1595,6 +1610,7 @@ def test_update_keeps_a_position_unless_a_new_one_is_given(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _campaign_id(client_factory)
+    _give_the_map_ground(app, campaign_id)
     _tool(
         app,
         campaign_id,
@@ -1621,6 +1637,7 @@ def test_two_places_cannot_share_a_point_unless_forced(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _campaign_id(client_factory)
+    _give_the_map_ground(app, campaign_id)
     _tool(
         app,
         campaign_id,
@@ -1647,6 +1664,7 @@ def test_two_places_cannot_share_a_point_unless_forced(
 
 def test_moving_a_place_onto_another_needs_force(client_factory: Callable[[], TestClient], app):
     _, campaign_id = _campaign_id(client_factory)
+    _give_the_map_ground(app, campaign_id)
     _tool(
         app,
         campaign_id,
@@ -1702,6 +1720,7 @@ def test_update_can_take_a_place_off_the_map_and_keep_it(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _campaign_id(client_factory)
+    _give_the_map_ground(app, campaign_id)
     _tool(
         app,
         campaign_id,
@@ -1758,6 +1777,7 @@ def test_a_place_inside_another_has_no_map_point_of_its_own(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _campaign_id(client_factory)
+    _give_the_map_ground(app, campaign_id)
     _tool(
         app,
         campaign_id,
@@ -1996,6 +2016,7 @@ def test_map_shows_only_discovered_places_with_positions(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _campaign_id(client_factory)
+    _give_the_map_ground(app, campaign_id)
     _tool(
         app,
         campaign_id,
@@ -2007,7 +2028,7 @@ def test_map_shows_only_discovered_places_with_positions(
     assert [(m.name, m.label, m.left, m.top, m.here) for m in view.markers] == [
         ("Mossbell Hollow", "MH", 50.0, 50.0, True)
     ]
-    assert view.radius_km == 1.1
+    assert view.radius_km == 13.2
 
     _tool(app, campaign_id, "discover_location", {"name": "Glowcap Ring"})
     _tool(
@@ -2024,10 +2045,10 @@ def test_map_shows_only_discovered_places_with_positions(
     )
     view = world.map_view(_state(app, campaign_id))
     assert [place.name for place in view.places] == ["Far Shore", "Glowcap Ring", "Mossbell Hollow"]
-    assert view.radius_km == 3.3
+    assert view.radius_km == 13.2
     markers = {m.name: m for m in view.markers}
     assert set(markers) == {"Far Shore", "Glowcap Ring", "Mossbell Hollow"}
-    assert (markers["Far Shore"].left, markers["Far Shore"].top) == (95.45, 80.3)
+    assert (markers["Far Shore"].left, markers["Far Shore"].top) == (61.36, 57.58)
     assert markers["Mossbell Hollow"].here is True
     assert markers["Glowcap Ring"].here is False
     assert "Spore Bridge" not in markers
@@ -2077,6 +2098,7 @@ def test_map_centers_on_the_player_character_and_says_you_are_here(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _campaign_id(client_factory)
+    _give_the_map_ground(app, campaign_id)
     _tool(
         app,
         campaign_id,
@@ -2100,13 +2122,14 @@ def test_map_centers_on_the_player_character_and_says_you_are_here(
     assert (markers["Far Shore"].left, markers["Far Shore"].top) == (50.0, 50.0)
     assert markers["Far Shore"].here is True
     assert view.where["Far Shore"] == "You are here"
-    assert view.origin == (4.55, 19.7)
+    assert view.origin == (40.91, 43.94)
 
 
 def test_map_distance_labels_are_measured_from_the_player_character(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _campaign_id(client_factory)
+    _give_the_map_ground(app, campaign_id)
     _tool(
         app,
         campaign_id,
@@ -2135,11 +2158,12 @@ def test_map_distance_labels_are_measured_from_the_player_character(
     assert view.where["Ridge"] == "2 km east, 3 km north"
     assert view.where["Mossbell Hollow"] == "3 km west, 2 km north"
     markers = {m.name: m for m in view.markers}
-    assert (markers["Ridge"].left, markers["Ridge"].top) == (80.3, 4.55)
+    assert (markers["Ridge"].left, markers["Ridge"].top) == (56.06, 40.91)
 
 
 def test_map_centers_on_the_nearest_placed_ancestor(client_factory: Callable[[], TestClient], app):
     _, campaign_id = _campaign_id(client_factory)
+    _give_the_map_ground(app, campaign_id)
     _tool(
         app,
         campaign_id,

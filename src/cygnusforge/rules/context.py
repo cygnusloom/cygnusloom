@@ -18,6 +18,7 @@ class World(Protocol):
         terrain: str,
         points: Sequence[Sequence[float]],
         force: bool = False,
+        discovered: bool = False,
     ) -> dict[str, Any]: ...
 
     def create_npc(

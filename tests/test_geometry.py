@@ -1,6 +1,12 @@
 import pytest
 
-from cygnusforge.services.geometry import overlaps, polygon_problem, signed_area
+from cygnusforge.services.geometry import (
+    clearance,
+    contains,
+    overlaps,
+    polygon_problem,
+    signed_area,
+)
 
 SQUARE = [(0.0, 0.0), (2.0, 0.0), (2.0, 2.0), (0.0, 2.0)]
 CLOCKWISE_SQUARE = list(reversed(SQUARE))
@@ -67,3 +73,28 @@ def test_overlap_is_symmetric_for_a_triangle_across_a_square():
     triangle = [(1.0, -1.0), (3.0, 1.0), (1.0, 3.0)]
     assert overlaps(SQUARE, triangle)
     assert overlaps(triangle, SQUARE)
+
+
+def test_a_vertex_touching_an_edge_is_not_an_overlap():
+    triangle = [(2.0, 0.5), (4.0, 0.0), (4.0, 2.0)]
+    assert not overlaps(SQUARE, triangle)
+    assert not overlaps(triangle, SQUARE)
+
+
+def test_contains_is_true_inside_and_false_outside():
+    assert contains((1.0, 1.0), SQUARE)
+    assert not contains((3.0, 1.0), SQUARE)
+
+
+def test_clearance_is_the_distance_to_the_nearest_edge():
+    assert clearance((0.5, 1.0), [SQUARE]) == pytest.approx(0.5)
+
+
+def test_clearance_is_zero_off_the_ground():
+    assert clearance((5.0, 5.0), [SQUARE]) == 0.0
+
+
+def test_neighbours_sharing_an_edge_are_not_an_end_of_ground():
+    east = shifted(SQUARE, 2.0, 0.0)
+    assert clearance((1.0, 1.0), [SQUARE, east]) == pytest.approx(1.0)
+    assert clearance((1.9, 0.5), [SQUARE, east]) == pytest.approx(0.5)

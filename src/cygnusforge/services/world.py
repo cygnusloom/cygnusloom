@@ -119,7 +119,7 @@ from cygnusforge.services.events import (
     same_item_name,
     token_labels,
 )
-from cygnusforge.services.geometry import overlaps, polygon_problem
+from cygnusforge.services.geometry import clearance, contains, overlaps, polygon_problem
 from cygnusforge.services.objects import visible_objects
 from cygnusforge.services.tools import check_arguments
 
@@ -135,6 +135,8 @@ MIN_MAP_RADIUS_KM = 1.0
 MAP_MARGIN = 1.1
 # A region outline may have at most this many corners.
 MAX_REGION_CORNERS = 200
+# A place given a map point must lie this far inside a region's edge, so the ground around it shows.
+REGION_BUFFER_KM = 0.5
 # Two places count as sharing a point when their positions agree to this many kilometers.
 SAME_POINT_KM = 0.01
 
@@ -275,10 +277,18 @@ class WorldTools:
         terrain: str,
         points: Sequence[Sequence[float]],
         force: bool = False,
+        discovered: bool = False,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return create_region(
-                db, self.campaign_id, self.world_terrain, name, terrain, points, force
+                db,
+                self.campaign_id,
+                self.world_terrain,
+                name,
+                terrain,
+                points,
+                force=force,
+                discovered=discovered,
             )
 
     def roll_tables(self, tables: list[str]) -> dict[str, Any]:
@@ -1448,6 +1458,7 @@ def create_location(
         inside = _parent_for_new_place(state, parent, px, py)
         px, py = None, None
     else:
+        _ensure_on_terrain(state, name, px, py)
         _ensure_open_point(state, name, px, py, force)
     record(
         db,
@@ -1460,6 +1471,20 @@ def create_location(
     return {"created": "location", "name": name, "discovered": discovered}
 
 
+def _ensure_on_terrain(state: CampaignState, name: str, x: float | None, y: float | None) -> None:
+    """A place with a map point must sit inside a region with ground around it, so the map shows
+    the terrain under the place rather than blank space."""
+    if x is None or y is None:
+        return
+    ground = [region.points for region in state.regions.values()]
+    if clearance((x, y), ground) < REGION_BUFFER_KM:
+        raise InvalidInput(
+            f"{name!r} is not on the map's terrain. Create a region that covers the place and "
+            f"extends at least {REGION_BUFFER_KM} km beyond it, using create_region, then add "
+            "the location."
+        )
+
+
 def create_region(
     db: Session,
     campaign_id: int,
@@ -1468,6 +1493,7 @@ def create_region(
     terrain: str,
     points: Sequence[Sequence[float]],
     force: bool = False,
+    discovered: bool = False,
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_NAME)
@@ -1485,6 +1511,8 @@ def create_region(
         )
     if not isinstance(force, bool):
         raise InvalidInput("force must be true or false")
+    if not isinstance(discovered, bool):
+        raise InvalidInput("discovered must be true or false")
     if not force:
         for other in state.regions.values():
             if overlaps(corners, other.points):
@@ -1495,10 +1523,15 @@ def create_region(
     record(
         db,
         campaign_id,
-        RegionAdded(name=name, terrain=terrain, points=[[x, y] for x, y in corners]),
+        RegionAdded(
+            name=name,
+            terrain=terrain,
+            points=[[x, y] for x, y in corners],
+            discovered=discovered,
+        ),
     )
     db.commit()
-    return {"created": "region", "name": name, "terrain": terrain}
+    return {"created": "region", "name": name, "terrain": terrain, "discovered": discovered}
 
 
 def _region_corners(points: Sequence[Sequence[float]]) -> list[tuple[float, float]]:
@@ -2540,9 +2573,10 @@ def _offset_text(dx: float, dy: float) -> str:
 
 
 def map_view(state: CampaignState, terrain: Mapping[str, WorldTerrain] | None = None) -> MapView:
-    """The player's map. Only discovered places appear on it. Each marker is placed on a square
-    centered on the player character's place, sized to fit the farthest discovered place or region
-    corner plus a margin. Regions are drawn for everyone, and `terrain` names their kinds."""
+    """The player's map. Only discovered places appear on it, and only regions that are discovered
+    or hold a discovered place. Each marker is placed on a square centered on the player
+    character's place, sized to fit the farthest discovered place or shown region corner plus a
+    margin. `terrain` names the kinds of the regions."""
     places = sorted(
         (place for place in state.places.values() if place.discovered),
         key=lambda place: name_key(place.name),
@@ -2550,7 +2584,8 @@ def map_view(state: CampaignState, terrain: Mapping[str, WorldTerrain] | None = 
     center = _map_center(state)
     cx, cy = center if center is not None else (0.0, 0.0)
     placed = [(place, place.position) for place in places if place.position is not None]
-    corners = [point for region in state.regions.values() for point in region.points]
+    shown = [region for region in state.regions.values() if _region_shown(state, region)]
+    corners = [point for region in shown for point in region.points]
     reach = max(
         [MIN_MAP_RADIUS_KM]
         + [max(abs(pos.x - cx), abs(pos.y - cy)) for _, pos in placed]
@@ -2585,7 +2620,7 @@ def map_view(state: CampaignState, terrain: Mapping[str, WorldTerrain] | None = 
     kinds = terrain or {}
     regions = [
         _map_region(region, kinds, cx, cy, radius)
-        for region in sorted(state.regions.values(), key=lambda region: name_key(region.name))
+        for region in sorted(shown, key=lambda region: name_key(region.name))
     ]
     return MapView(
         radius_km=round(radius, 2),
@@ -2594,6 +2629,19 @@ def map_view(state: CampaignState, terrain: Mapping[str, WorldTerrain] | None = 
         where=where,
         origin=(origin_left, origin_top) if on_board else None,
         regions=regions,
+    )
+
+
+def _region_shown(state: CampaignState, region: Region) -> bool:
+    """A region is on the player's map once it is discovered, or once a discovered place with a
+    map point lies inside it."""
+    if region.discovered:
+        return True
+    return any(
+        place.discovered
+        and place.position is not None
+        and contains((place.position.x, place.position.y), region.points)
+        for place in state.places.values()
     )
 
 

@@ -94,11 +94,13 @@ class Place:
 @dataclass(frozen=True)
 class Region:
     """An area of one kind of ground on the world map. Its points are outline corners in
-    kilometers from the map's center, in order around the edge."""
+    kilometers from the map's center, in order around the edge. It is shown on the player's map
+    once it is discovered, or once a discovered place lies inside it."""
 
     name: str
     terrain: str
     points: tuple[tuple[float, float], ...]
+    discovered: bool = False
 
 
 @dataclass(frozen=True)
@@ -620,18 +622,23 @@ class LocationAdded(GameEvent):
 
 @dataclass(frozen=True)
 class RegionAdded(GameEvent):
-    """An area of ground on the world map. The GM can add one the world's data lacks; it is drawn
-    for the whole campaign, and it may not overlap a region already there unless forced."""
+    """An area of ground on the world map. The GM can add one the world's data lacks. It may not
+    overlap a region already there unless forced, and it is drawn on the player's map once it is
+    discovered or a discovered place lies inside it."""
 
     kind: ClassVar[str] = "region.added"
 
     name: str
     terrain: str
     points: list[list[float]]
+    discovered: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.regions[name_key(self.name)] = Region(
-            self.name, self.terrain, tuple((x, y) for x, y in self.points)
+            self.name,
+            self.terrain,
+            tuple((x, y) for x, y in self.points),
+            discovered=self.discovered,
         )
 
     def render(self) -> str:
@@ -2702,8 +2709,7 @@ HIDDEN_KINDS: dict[str, bool] = {
     # Things the player's character does or witnesses.
     "actor.moved": False,
     "location.discovered": False,
-    # Regions are drawn on the map for everyone.
-    "region.added": False,
+    "region.added": True,
     "pc.added": False,
     "hireling.added": False,
     "hireling.dismissed": False,
