@@ -36,15 +36,20 @@ class RevalidatingStaticFiles(StaticFiles):
         return response
 
 
-def create_app(settings: Settings, fake_provider: FakeProvider | None = None) -> FastAPI:
-    """Build the app. Pass `fake_provider` to script the `fake/` models in tests."""
+def create_app(
+    settings: Settings,
+    fake_provider: FakeProvider | None = None,
+    content: ContentLibrary | None = None,
+) -> FastAPI:
+    """Build the app. Pass `fake_provider` to script the `fake/` models in tests, and `content`
+    to reuse an already-loaded library instead of reading the bundled content again."""
     if not settings.secret_key:
         raise RuntimeError("CYGNUSFORGE_SECRET_KEY is required")
     app = FastAPI(title="Cygnus Forge")
     app.state.settings = settings
     app.state.engine = make_engine(settings.database_url)
     create_schema(app.state.engine)
-    app.state.content = ContentLibrary.load()
+    app.state.content = content if content is not None else ContentLibrary.load()
     app.state.limiter = RateLimiter()
     app.state.providers = ProviderFactory(settings, fake=fake_provider)
     app.add_middleware(

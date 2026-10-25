@@ -14,12 +14,15 @@ import pytest
 from argon2 import PasswordHasher
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlalchemy import Engine, event
 
 from cygnusforge.auth import passwords
 from cygnusforge.config import Settings
 from cygnusforge.content.library import DATA_DIR, ContentLibrary
+from cygnusforge.db.session import make_engine
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.services.campaigns import narrate_instruction
+from cygnusforge.web import app as web_app
 from cygnusforge.web.app import create_app
 
 SECRET = "test-secret-key-0123456789abcdef"
@@ -38,7 +41,9 @@ def content_tree() -> Path:
     return root
 
 
+@functools.cache
 def content_library() -> ContentLibrary:
+    """Loaded once per process. The library is immutable, so tests can share it."""
     return ContentLibrary.load(content_tree())
 
 
@@ -48,9 +53,23 @@ NARRATE_TEXT = narrate_instruction(content_library().rule_sets["rolltest"])
 
 def make_app(settings: Settings, fake_provider: FakeProvider | None = None) -> FastAPI:
     """An app whose content includes the test-only fixtures."""
-    app = create_app(settings, fake_provider=fake_provider)
-    app.state.content = content_library()
-    return app
+    return create_app(settings, fake_provider=fake_provider, content=content_library())
+
+
+@pytest.fixture(autouse=True)
+def no_fsync_databases(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests never need durable writes; skipping fsync makes each commit much cheaper."""
+
+    def engine_without_fsync(url: str) -> Engine:
+        engine = make_engine(url)
+
+        @event.listens_for(engine, "connect")
+        def _relax_sync(dbapi_connection, _record) -> None:
+            dbapi_connection.execute("PRAGMA synchronous=OFF")
+
+        return engine
+
+    monkeypatch.setattr(web_app, "make_engine", engine_without_fsync)
 
 
 class LiveNetworkBlocked(RuntimeError):

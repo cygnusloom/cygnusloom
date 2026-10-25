@@ -20,11 +20,9 @@ Order below is the work order. Each entry lists the decisions made in triage.
 
 5. Terrain hover: a floating tooltip on hover, on both the world map and encounter maps, showing the terrain kind and its rule effect as the book gives it.
 
-6. Unit test speed: cut full-suite time (about 173 s today) with no loss of coverage and no change to test meaning. First measure the slowest tests, then fix the cause (such as repeated app or database setup), not the assertions.
+6. Lore panel: replaces the placeholder with a player-facing running journal of the whole campaign. The AI GM alone writes and edits it; players only read. It adds entries automatically after each GM turn when something notable happens. The AI GM can search it.
 
-7. Lore panel: replaces the placeholder with a player-facing running journal of the whole campaign. The AI GM alone writes and edits it; players only read. It adds entries automatically after each GM turn when something notable happens. The AI GM can search it.
-
-8. Master audit: a full audit of the whole Cairn 2e and Twin Lakes implementation, checking the engine, data, prompts, and tests against the source books and the module. It includes the Twin Lakes play-through, the overland route data, the W3 torch and lantern light rules, and resupply at homes and villages (in the book, not built). It runs before the Twin Lakes play-through and the generic refactor. Covers:
+7. Master audit: a full audit of the whole Cairn 2e and Twin Lakes implementation, checking the engine, data, prompts, and tests against the source books and the module. It includes the Twin Lakes play-through, the overland route data, the W3 torch and lantern light rules, and resupply at homes and villages (in the book, not built). It runs before the Twin Lakes play-through and the generic refactor. Covers:
   * GM narration and tool calls
   * Dice and rule loading
   * Items and inventory
@@ -36,4 +34,4 @@ Order below is the work order. Each entry lists the decisions made in triage.
   * Browser flow and tests
 
 
-9. Generic refactor: remove Cairn-specific words from generic code and prompts, so the engine is not cairn2e-shaped. Runs after the master audit and the Twin Lakes play-through. A second ruleset (D&D) is only a hypothetical example and has no rules here.
+8. Generic refactor: remove Cairn-specific words from generic code and prompts, so the engine is not cairn2e-shaped. Runs after the master audit and the Twin Lakes play-through. A second ruleset (D&D) is only a hypothetical example and has no rules here.

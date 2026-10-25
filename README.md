@@ -144,8 +144,10 @@ __FAKE__:{"turns": [
 
 ```sh
 uv run python -m cygnusforge.cli reset-password you@example.com
-uv run pytest
+uv run pytest -n auto
 uv run ruff check
 ```
+
+`-n auto` runs the tests on all CPUs with pytest-xdist and takes about 25 seconds. Plain `uv run pytest` runs them one at a time, which takes about 90 seconds. Use the serial form when you need readable output or a debugger (`--pdb` does not work with `-n`).
 
 Rate limiting is in memory and per process, so run a single worker.
