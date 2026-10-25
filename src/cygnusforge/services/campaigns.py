@@ -1073,6 +1073,7 @@ def _tool_context(
         npc_hp=rule_set.npc_hp,
         travel=rule_set.travel,
         wilderness=rule_set.wilderness,
+        world_terrain=rule_set.world_terrain,
     )
 
     async def check_new_location(name: str) -> None:

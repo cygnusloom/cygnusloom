@@ -31,6 +31,7 @@ from cygnusforge.content.definitions import (
 )
 from cygnusforge.rules.dice import FORMULA, PLUS_MODES, is_formula
 from cygnusforge.services.attacks import ATTACK_FLAGS
+from cygnusforge.services.geometry import overlaps, polygon_problem
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 TOOL_NAME = re.compile(r"[A-Za-z0-9_-]{1,64}")
@@ -115,6 +116,9 @@ class WorldTemplate:
     # each rule set in WorldContent, since a monster's stats depend on the rule set.
     definitions: tuple[Definition, ...] = ()
     start: WorldStart | None = None
+    # Areas of ground on the world map. They do not overlap, and are checked against the rule set's
+    # world terrain in WorldContent.
+    regions: tuple[RegionTemplate, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -309,6 +313,28 @@ class EncounterTerrain:
     # The rule effect of this ground, as the rule set words it. Shown when the ground is hovered.
     rule: str
     difficult: bool = False
+
+
+@dataclass(frozen=True)
+class WorldTerrain:
+    """A kind of ground on the world map. A region of this ground is drawn in its colour."""
+
+    id: str
+    name: str
+    color: str
+    # The rule effect of this ground, as the rule set words it. Shown when the ground is hovered.
+    rule: str
+
+
+@dataclass(frozen=True)
+class RegionTemplate:
+    """An area of one kind of ground on the world map. Its points are outline corners in
+    kilometers from the map's center, in order around the edge."""
+
+    id: str
+    name: str
+    terrain: str
+    points: tuple[tuple[float, float], ...]
 
 
 @dataclass(frozen=True)
@@ -701,6 +727,8 @@ class RuleSet:
     terrain: Mapping[str, EncounterTerrain] = field(default_factory=dict)
     encounter_objects: Mapping[str, EncounterObject] = field(default_factory=dict)
     encounter_templates: Mapping[str, EncounterTemplate] = field(default_factory=dict)
+    # Kinds of ground a world map can be divided into, by id.
+    world_terrain: Mapping[str, WorldTerrain] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -795,6 +823,7 @@ def _load_world(directory: Path) -> WorldTemplate:
             )
     _check_parents(locations, template)
     _check_unique_names([*locations, *npcs], template)
+    regions = _load_regions(definitions, template)
     return WorldTemplate(
         id=world.id,
         name=required_text(world.data, "name", label),
@@ -803,7 +832,54 @@ def _load_world(directory: Path) -> WorldTemplate:
         npcs=npcs,
         definitions=(*own, *statblocks),
         start=_load_world_start(world.data, label, location_ids),
+        regions=regions,
     )
+
+
+def _load_regions(definitions: list[Definition], template: str) -> tuple[RegionTemplate, ...]:
+    regions: list[RegionTemplate] = []
+    for d in definitions:
+        if d.type != "region":
+            continue
+        label = f"{template}: region {d.id}"
+        raw = d.data.get("points")
+        if not isinstance(raw, list) or not all(
+            isinstance(point, list)
+            and len(point) == 2
+            and all(
+                not isinstance(value, bool) and isinstance(value, int | float) for value in point
+            )
+            for point in raw
+        ):
+            raise ContentError(
+                f"{label}: points must be a list of [x, y] pairs of numbers, in kilometers from "
+                "the map's center"
+            )
+        points = tuple((float(x), float(y)) for x, y in raw)
+        problem = polygon_problem(points)
+        if problem is not None:
+            raise ContentError(f"{label}: {problem}")
+        regions.append(
+            RegionTemplate(
+                id=d.id,
+                name=required_text(d.data, "name", label),
+                terrain=required_text(d.data, "terrain", label),
+                points=points,
+            )
+        )
+    seen: set[str] = set()
+    for region in regions:
+        key = region.name.casefold()
+        if key in seen:
+            raise ContentError(f"{template}: duplicate region name {region.name!r}")
+        seen.add(key)
+    for index, region in enumerate(regions):
+        for other in regions[:index]:
+            if overlaps(region.points, other.points):
+                raise ContentError(
+                    f"{template}: region {region.name!r} overlaps region {other.name!r}"
+                )
+    return tuple(regions)
 
 
 def _load_world_start(
@@ -867,6 +943,12 @@ def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldCon
     rules = {
         d.id: required_text(d.data, "text", f"{name}: rule {d.id}") for d in own if d.type == "rule"
     }
+    for region in template.regions:
+        if region.terrain not in rule_set.world_terrain:
+            raise ContentError(
+                f"{name}: region {region.name!r} has terrain {region.terrain!r}, which the "
+                f"{rule_set.id!r} rule set does not define"
+            )
     written = _attached_rules(monsters.values(), name)
     shared = sorted(written.keys() & rules.keys())
     if shared:
@@ -1082,6 +1164,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     encounter_templates = _load_encounter_templates(
         definitions, terrain, encounter_objects, template
     )
+    world_terrain = _load_world_terrain(definitions, template)
     npc_hp = _npc_hp(head.data, label)
     tool_calls: dict[str, ToolCall] = {}
     tool_names: set[str] = set()
@@ -1126,6 +1209,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         terrain=terrain,
         encounter_objects=encounter_objects,
         encounter_templates=encounter_templates,
+        world_terrain=world_terrain,
         wilderness=wilderness,
     )
 
@@ -1766,6 +1850,23 @@ def _load_encounter_terrain(
             color=_color(d.data, label),
             rule=required_text(d.data, "rule", label),
             difficult=_flag(d.data, "difficult", label),
+        )
+    return terrain
+
+
+def _load_world_terrain(definitions: list[Definition], template: str) -> dict[str, WorldTerrain]:
+    terrain: dict[str, WorldTerrain] = {}
+    for d in definitions:
+        if d.type != "world_terrain":
+            continue
+        if d.id in terrain:
+            raise ContentError(f"{template}: duplicate world terrain {d.id!r}")
+        label = f"{template}: world terrain {d.id}"
+        terrain[d.id] = WorldTerrain(
+            id=d.id,
+            name=required_text(d.data, "name", label),
+            color=_color(d.data, label),
+            rule=required_text(d.data, "rule", label),
         )
     return terrain
 

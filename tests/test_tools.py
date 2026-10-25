@@ -119,6 +119,7 @@ def test_specs_describe_the_social_roll_tool():
 
 CORE_TOOL_NAMES = {
     "create_location",
+    "create_region",
     "create_npc",
     "update_location",
     "discover_location",

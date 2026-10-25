@@ -12,6 +12,14 @@ class World(Protocol):
 
     def create_location(self, name: str, description: str) -> dict[str, Any]: ...
 
+    def create_region(
+        self,
+        name: str,
+        terrain: str,
+        points: Sequence[Sequence[float]],
+        force: bool = False,
+    ) -> dict[str, Any]: ...
+
     def create_npc(
         self,
         name: str,

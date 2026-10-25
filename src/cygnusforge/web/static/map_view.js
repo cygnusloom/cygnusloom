@@ -100,12 +100,9 @@
     tip.hidden = true;
   };
 
-  const showTip = (target) => {
-    current = target;
-    tip.textContent = target.dataset.tip;
-    tip.classList.toggle("here", target.classList.contains("here"));
-    tip.hidden = false;
-    const rect = target.getBoundingClientRect();
+  // Places the pill above the anchor box, or below it when there is no room above. A pointer
+  // anchor is a box with no size at the pointer.
+  const placeTip = (rect) => {
     const size = tip.getBoundingClientRect();
     const margin = 4;
     const left = Math.min(
@@ -119,9 +116,25 @@
     tip.style.top = `${top}px`;
   };
 
+  // Regions have no point of their own, so their tooltip sits at the pointer and follows it.
+  const pointerBox = (event) => ({
+    left: event.clientX, right: event.clientX, top: event.clientY, bottom: event.clientY, width: 0,
+  });
+
+  const showTip = (target, event) => {
+    current = target;
+    tip.textContent = target.dataset.tip;
+    tip.classList.toggle("here", target.classList.contains("here"));
+    tip.hidden = false;
+    placeTip(target.hasAttribute("data-follow") ? pointerBox(event) : target.getBoundingClientRect());
+  };
+
   document.addEventListener("pointerover", (event) => {
     const target = event.target.closest?.(".map-frame [data-tip]");
-    if (target && target !== current) showTip(target);
+    if (target && target !== current) showTip(target, event);
+  });
+  document.addEventListener("pointermove", (event) => {
+    if (current?.hasAttribute("data-follow")) placeTip(pointerBox(event));
   });
   document.addEventListener("pointerout", (event) => {
     if (current && !current.contains(event.relatedTarget)) hideTip();

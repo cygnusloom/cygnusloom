@@ -46,6 +46,48 @@
   },
   {
     "type": "tool_call",
+    "id": "create_region",
+    "name": "create_region",
+    "python_module": "core",
+    "function": "create_region",
+    "description": "Add an area of ground to the world map, drawn as a coloured shape for the whole campaign. Use it when the story establishes a lake, bog, forest, or other terrain that the map does not show yet. The terrain names a kind of ground the rule set defines; if the name is not a kind, the refusal lists the kinds. Give points as the corners of the shape in order around its edge, each as [x, y] in kilometers from the map's center, with x positive east and y positive north. Use only corners the story has given you, drawing the outline as closely as the story supports. A name must be unique among regions. A region that overlaps another is refused; set force to true only when the two really do overlap, as when one is the other's marsh.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The region's name, such as 'West Lake'."
+        },
+        "terrain": {
+          "type": "string",
+          "description": "The id of the terrain kind this ground is."
+        },
+        "points": {
+          "type": "array",
+          "description": "The corners of the region's outline, in order around its edge. At least three.",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "force": {
+          "type": "boolean",
+          "description": "Set true only to let this region overlap another region on purpose. Without it, an overlap is refused."
+        }
+      },
+      "required": [
+        "name",
+        "terrain",
+        "points"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "create_npc",
     "name": "create_npc",
     "python_module": "core",

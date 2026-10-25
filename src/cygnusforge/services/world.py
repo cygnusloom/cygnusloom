@@ -52,6 +52,7 @@ from cygnusforge.content.library import (
     Travel,
     Wilderness,
     WorldTemplate,
+    WorldTerrain,
 )
 from cygnusforge.rules.context import brief
 from cygnusforge.rules.dice import is_formula
@@ -106,6 +107,8 @@ from cygnusforge.services.events import (
     OpeningStarted,
     PcAdded,
     Place,
+    Region,
+    RegionAdded,
     SeasonSet,
     TravelCharged,
     WorldObject,
@@ -116,6 +119,7 @@ from cygnusforge.services.events import (
     same_item_name,
     token_labels,
 )
+from cygnusforge.services.geometry import overlaps, polygon_problem
 from cygnusforge.services.objects import visible_objects
 from cygnusforge.services.tools import check_arguments
 
@@ -129,6 +133,8 @@ QUIRKS_PER_NPC = 2
 # The map always shows at least this many kilometers from its center, and leaves a margin.
 MIN_MAP_RADIUS_KM = 1.0
 MAP_MARGIN = 1.1
+# A region outline may have at most this many corners.
+MAX_REGION_CORNERS = 200
 # Two places count as sharing a point when their positions agree to this many kilometers.
 SAME_POINT_KM = 0.01
 
@@ -185,6 +191,17 @@ class MapMarker:
 
 
 @dataclass(frozen=True)
+class MapRegion:
+    """An area of ground on the map. Its points are percentages of the map's width and height, and
+    `text` is what hovering it shows."""
+
+    name: str
+    text: str
+    color: str
+    points: tuple[tuple[float, float], ...]
+
+
+@dataclass(frozen=True)
 class MapView:
     """The player's map. Only discovered places appear on it. The map is centered on the player
     character's place, and places with a position are placed on a square sized to fit the farthest
@@ -197,6 +214,7 @@ class MapView:
     places: list[Place]
     where: dict[str, str] = field(default_factory=dict)
     origin: tuple[float, float] | None = None
+    regions: list[MapRegion] = field(default_factory=list)
 
 
 # How a player character moves: overland takes watches, in a settlement takes minutes at a speed,
@@ -248,6 +266,20 @@ class WorldTools:
     travel: Travel | None = None
     # The rule set's wilderness calendar, weather, and Wilderness Actions, or None when it has none.
     wilderness: Wilderness | None = None
+    # The kinds of ground a world map's regions can be, by id.
+    world_terrain: Mapping[str, WorldTerrain] = field(default_factory=dict)
+
+    def create_region(
+        self,
+        name: str,
+        terrain: str,
+        points: Sequence[Sequence[float]],
+        force: bool = False,
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return create_region(
+                db, self.campaign_id, self.world_terrain, name, terrain, points, force
+            )
 
     def roll_tables(self, tables: list[str]) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -1239,6 +1271,16 @@ def seed_campaign(
                 rules=list(spot.rules),
             ),
         )
+    for region in world.regions:
+        record(
+            db,
+            campaign_id,
+            RegionAdded(
+                name=region.name,
+                terrain=region.terrain,
+                points=[[x, y] for x, y in region.points],
+            ),
+        )
     for npc in world.npcs:
         base = None if npc.monster is None else monsters[npc.monster]
         if base is not None:
@@ -1416,6 +1458,64 @@ def create_location(
     )
     db.commit()
     return {"created": "location", "name": name, "discovered": discovered}
+
+
+def create_region(
+    db: Session,
+    campaign_id: int,
+    kinds: Mapping[str, WorldTerrain],
+    name: str,
+    terrain: str,
+    points: Sequence[Sequence[float]],
+    force: bool = False,
+) -> dict[str, Any]:
+    state = load_state(db, campaign_id)
+    name = bounded_text(name, "name", MAX_NAME)
+    if name_key(name) in state.regions:
+        raise InvalidInput(f"there is already a region named {name!r}")
+    if terrain not in kinds:
+        choices = ", ".join(sorted(kinds)) or "none"
+        raise InvalidInput(f"{terrain!r} is not a terrain kind. The terrain kinds are: {choices}.")
+    corners = _region_corners(points)
+    problem = polygon_problem(corners)
+    if problem is not None:
+        raise InvalidInput(
+            f"the region {problem}. Give its corners in order around the edge, in kilometers "
+            "from the map's center."
+        )
+    if not isinstance(force, bool):
+        raise InvalidInput("force must be true or false")
+    if not force:
+        for other in state.regions.values():
+            if overlaps(corners, other.points):
+                raise InvalidInput(
+                    f"it overlaps {other.name!r}. Choose other corners, or pass force=true to "
+                    "overlap it."
+                )
+    record(
+        db,
+        campaign_id,
+        RegionAdded(name=name, terrain=terrain, points=[[x, y] for x, y in corners]),
+    )
+    db.commit()
+    return {"created": "region", "name": name, "terrain": terrain}
+
+
+def _region_corners(points: Sequence[Sequence[float]]) -> list[tuple[float, float]]:
+    if not isinstance(points, list | tuple) or len(points) > MAX_REGION_CORNERS:
+        raise InvalidInput(f"points must be a list of at most {MAX_REGION_CORNERS} [x, y] corners")
+    corners: list[tuple[float, float]] = []
+    for point in points:
+        if (
+            not isinstance(point, list | tuple)
+            or len(point) != 2
+            or any(isinstance(value, bool) or not isinstance(value, int | float) for value in point)
+        ):
+            raise InvalidInput(
+                "each point must be an [x, y] pair of numbers, in kilometers from the map's center"
+            )
+        corners.append((float(point[0]), float(point[1])))
+    return corners
 
 
 def create_npc(
@@ -2439,9 +2539,10 @@ def _offset_text(dx: float, dy: float) -> str:
     return f"{_km_text(dx)} km {east}, {_km_text(dy)} km {north}"
 
 
-def map_view(state: CampaignState) -> MapView:
+def map_view(state: CampaignState, terrain: Mapping[str, WorldTerrain] | None = None) -> MapView:
     """The player's map. Only discovered places appear on it. Each marker is placed on a square
-    centered on the player character's place, sized to fit the farthest discovered place plus a margin."""
+    centered on the player character's place, sized to fit the farthest discovered place or region
+    corner plus a margin. Regions are drawn for everyone, and `terrain` names their kinds."""
     places = sorted(
         (place for place in state.places.values() if place.discovered),
         key=lambda place: name_key(place.name),
@@ -2449,7 +2550,12 @@ def map_view(state: CampaignState) -> MapView:
     center = _map_center(state)
     cx, cy = center if center is not None else (0.0, 0.0)
     placed = [(place, place.position) for place in places if place.position is not None]
-    reach = max([MIN_MAP_RADIUS_KM] + [max(abs(pos.x - cx), abs(pos.y - cy)) for _, pos in placed])
+    corners = [point for region in state.regions.values() for point in region.points]
+    reach = max(
+        [MIN_MAP_RADIUS_KM]
+        + [max(abs(pos.x - cx), abs(pos.y - cy)) for _, pos in placed]
+        + [max(abs(x - cx), abs(y - cy)) for x, y in corners]
+    )
     radius = reach * MAP_MARGIN
     pc = state.pc()
     here = pc.location if pc is not None else None
@@ -2476,13 +2582,34 @@ def map_view(state: CampaignState) -> MapView:
     origin_left = round(50 - cx / radius * 50, 2)
     origin_top = round(50 + cy / radius * 50, 2)
     on_board = 0 <= origin_left <= 100 and 0 <= origin_top <= 100
+    kinds = terrain or {}
+    regions = [
+        _map_region(region, kinds, cx, cy, radius)
+        for region in sorted(state.regions.values(), key=lambda region: name_key(region.name))
+    ]
     return MapView(
         radius_km=round(radius, 2),
         markers=markers,
         places=places,
         where=where,
         origin=(origin_left, origin_top) if on_board else None,
+        regions=regions,
     )
+
+
+def _map_region(
+    region: Region, kinds: Mapping[str, WorldTerrain], cx: float, cy: float, radius: float
+) -> MapRegion:
+    kind = kinds.get(region.terrain)
+    if kind is None:
+        text, color = region.name, "#888888"
+    else:
+        text, color = f"{region.name} ({kind.name}). {kind.rule}", kind.color
+    points = tuple(
+        (round(50 + (x - cx) / radius * 50, 2), round(50 - (y - cy) / radius * 50, 2))
+        for x, y in region.points
+    )
+    return MapRegion(name=region.name, text=text, color=color, points=points)
 
 
 def scene_view(

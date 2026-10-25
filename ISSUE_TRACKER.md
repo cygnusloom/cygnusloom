@@ -10,8 +10,6 @@ None.
 
 Order below is the work order. Each entry lists the decisions made in triage.
 
-1. Background terrain on the world map: colour or texture per terrain type, laid out as a proper world map. World map only; encounter maps already have terrain. World data defines regions (polygons); the GM can add a region the data lacks, which is saved per campaign and drawn for everyone. A new region that overlaps an existing one is refused unless forced. Once the regions exist, the world map also gets the terrain hover from item 3 (a floating tooltip showing the terrain kind and its rule effect), which was left out of item 3 because the world map has no terrain data yet.
-
 2. Master audit: a full audit of the whole Cairn 2e and Twin Lakes implementation, checking the engine, data, prompts, and tests against the source books and the module. It includes the Twin Lakes play-through, the overland route data, the W3 torch and lantern light rules, and resupply at homes and villages (in the book, not built). It runs before the Twin Lakes play-through and the generic refactor. Covers:
   * GM narration and tool calls
   * Dice and rule loading

@@ -68,6 +68,7 @@ def _rule_set(ident: str = "testset") -> list[dict[str, str]]:
 
 CORE_TOOLS = {
     "create_location",
+    "create_region",
     "create_npc",
     "update_location",
     "discover_location",
@@ -615,6 +616,73 @@ def test_npc_must_be_in_a_declared_location(tree: Path):
     _write(tree, {"worlds/testland/world.json": world})
     with pytest.raises(ContentError, match="npc 'bo' is in unknown location 'nowhere'"):
         ContentLibrary.load(tree)
+
+
+def _region(ident: str, name: str, points: Any, terrain: str = "lake") -> dict[str, Any]:
+    return {"type": "region", "id": ident, "name": name, "terrain": terrain, "points": points}
+
+
+SQUARE = [[0, 0], [1, 0], [1, 1], [0, 1]]
+TESTSET_TERRAIN = [
+    {"type": "world_terrain", "id": "lake", "name": "Lake", "color": "#2d6a8f", "rule": "Water."}
+]
+
+
+def test_bundled_terrain_and_regions_are_read():
+    library = ContentLibrary.load()
+    lake = library.rule_sets["cairn2e"].world_terrain["lake"]
+    assert (lake.name, lake.color) == ("Lake", "#2d6a8f")
+    regions = {r.name: r for r in library.world_templates["twin-lakes"].regions}
+    assert set(regions) == {"West Lake", "East Lake"}
+    assert all(r.terrain == "lake" for r in regions.values())
+
+
+def test_region_points_must_outline_a_polygon(tree: Path):
+    _write(tree, {"worlds/testland/regions.json": [_region("mere", "Mere", [[0, 0], [1, 1]])]})
+    with pytest.raises(ContentError, match="testland: region mere: needs at least three points"):
+        ContentLibrary.load(tree)
+
+
+def test_region_points_must_be_number_pairs(tree: Path):
+    _write(
+        tree,
+        {"worlds/testland/regions.json": [_region("mere", "Mere", [["a", 0], [1, 0], [1, 1]])]},
+    )
+    with pytest.raises(ContentError, match="points must be a list of \\[x, y\\] pairs"):
+        ContentLibrary.load(tree)
+
+
+def test_region_names_must_be_unique(tree: Path):
+    regions = [_region("a", "Mere", SQUARE), _region("b", "mere", [[5, 5], [6, 5], [6, 6]])]
+    _write(tree, {"worlds/testland/regions.json": regions})
+    with pytest.raises(ContentError, match="duplicate region name 'mere'"):
+        ContentLibrary.load(tree)
+
+
+def test_data_regions_may_not_overlap(tree: Path):
+    regions = [_region("a", "Mere", SQUARE), _region("b", "Pool", [[0.5, 0.5], [2, 0.5], [2, 2]])]
+    _write(tree, {"worlds/testland/regions.json": regions})
+    with pytest.raises(ContentError, match="region 'Pool' overlaps region 'Mere'"):
+        ContentLibrary.load(tree)
+
+
+def test_region_terrain_must_be_defined_by_the_rule_set(tree: Path):
+    _write(tree, {"worlds/testland/regions.json": [_region("a", "Mere", SQUARE)]})
+    library = ContentLibrary.load(tree)
+    with pytest.raises(ContentError, match="has terrain 'lake', which the 'testset' rule set"):
+        library.world_content("testland", "testset")
+
+
+def test_region_terrain_is_accepted_when_the_rule_set_defines_it(tree: Path):
+    _write(
+        tree,
+        {
+            "worlds/testland/regions.json": [_region("a", "Mere", SQUARE)],
+            "rulesets/testset/world_terrain.json": TESTSET_TERRAIN,
+        },
+    )
+    library = ContentLibrary.load(tree)
+    assert library.world_content("testland", "testset") is not None
 
 
 def _start_world(start: Any) -> list[dict[str, Any]]:

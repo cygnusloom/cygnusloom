@@ -537,7 +537,7 @@ def _campaign_page(
     spec = rule_set.character if rule_set else NO_CHARACTER
     options = rule_set.campaign if rule_set else NO_CAMPAIGN
     world = campaign_world(engine, user.id, campaign.id)
-    world_map = map_view(world.state)
+    world_map = map_view(world.state, rule_set.world_terrain if rule_set else None)
     if options.fields and not world.state.options:
         return render(
             request,

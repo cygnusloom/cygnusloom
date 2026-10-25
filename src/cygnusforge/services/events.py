@@ -92,6 +92,16 @@ class Place:
 
 
 @dataclass(frozen=True)
+class Region:
+    """An area of one kind of ground on the world map. Its points are outline corners in
+    kilometers from the map's center, in order around the edge."""
+
+    name: str
+    terrain: str
+    points: tuple[tuple[float, float], ...]
+
+
+@dataclass(frozen=True)
 class Item:
     """Something a character carries. `size` is the rule set's item size, empty for the penalty item, and
     `slots` is what it takes from the inventory. `kind` marks special items such as the penalty item."""
@@ -365,6 +375,8 @@ class CampaignState:
     summary: str = ""
     through: int = 0
     turn: Turn | None = None
+    # Regions of the world map by name without case.
+    regions: dict[str, Region] = field(default_factory=dict)
     # Encounter maps by name without case, and the encounter in progress, if any.
     maps: dict[str, EncounterMap] = field(default_factory=dict)
     encounter: Encounter | None = None
@@ -604,6 +616,26 @@ class LocationAdded(GameEvent):
 
     def render(self) -> str:
         return f"New location: {self.name}."
+
+
+@dataclass(frozen=True)
+class RegionAdded(GameEvent):
+    """An area of ground on the world map. The GM can add one the world's data lacks; it is drawn
+    for the whole campaign, and it may not overlap a region already there unless forced."""
+
+    kind: ClassVar[str] = "region.added"
+
+    name: str
+    terrain: str
+    points: list[list[float]]
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.regions[name_key(self.name)] = Region(
+            self.name, self.terrain, tuple((x, y) for x, y in self.points)
+        )
+
+    def render(self) -> str:
+        return f"New region: {self.name}."
 
 
 @dataclass(frozen=True)
@@ -2670,6 +2702,8 @@ HIDDEN_KINDS: dict[str, bool] = {
     # Things the player's character does or witnesses.
     "actor.moved": False,
     "location.discovered": False,
+    # Regions are drawn on the map for everyone.
+    "region.added": False,
     "pc.added": False,
     "hireling.added": False,
     "hireling.dismissed": False,

@@ -18,6 +18,13 @@
   {% if framed %}<div class="map-frame">{% endif %}
   <div class="map-board" aria-label="Map of discovered places">
     {% if view.origin %}<span class="map-origin" style="left: {{ view.origin[0] }}%; top: {{ view.origin[1] }}%" aria-hidden="true"></span>{% endif %}
+    {% if view.regions %}
+      <svg class="map-regions" viewBox="0 0 100 100" preserveAspectRatio="none">
+        {% for region in view.regions %}
+          <polygon class="map-region" points="{% for x, y in region.points %}{{ x }},{{ y }} {% endfor %}" fill="{{ region.color }}" stroke="{{ region.color }}" role="img" aria-label="{{ region.text }}" data-tip="{{ region.text }}" data-follow></polygon>
+        {% endfor %}
+      </svg>
+    {% endif %}
     {% for marker in view.markers %}
       <span class="map-marker{% if marker.here %} here{% endif %}" style="left: {{ marker.left }}%; top: {{ marker.top }}%" role="img" aria-label="{{ marker.label }}" data-tip="{{ marker.name }}{% if marker.here %} (you){% endif %}"><img src="{{ place_icon_path(marker.icon) }}" alt=""></span>
     {% endfor %}

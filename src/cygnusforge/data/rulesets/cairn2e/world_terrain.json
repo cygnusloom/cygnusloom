@@ -1,0 +1,9 @@
+[
+  {
+    "type": "world_terrain",
+    "id": "lake",
+    "name": "Lake",
+    "color": "#2d6a8f",
+    "rule": "Open water. Nothing crosses it on foot; the way round follows the shore."
+  }
+]

@@ -25,6 +25,16 @@ async def create_location(
     )
 
 
+def create_region(
+    name: str,
+    terrain: str,
+    points: Sequence[Sequence[float]],
+    ctx: ToolContext,
+    force: bool = False,
+) -> dict[str, Any]:
+    return ctx.world.create_region(name, terrain, points, force=force)
+
+
 def create_npc(
     name: str,
     location: str,
