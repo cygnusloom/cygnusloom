@@ -251,13 +251,15 @@ def test_the_gm_can_voice_a_hireling_at_the_players_location(client_factory):
     assert f"Location: {PLACE}" in profile
 
 
-def test_a_hireling_away_from_the_player_cannot_speak(client_factory):
+def test_a_hireling_away_from_the_player_is_not_present_but_can_be_spoken_for_with_force(
+    client_factory,
+):
     _, _, tools = _pcs(client_factory)
     _hire(tools)
     tools.create_location("The Inn", "A warm room with a fire.")
     tools.move_actor(HIRELING, "The Inn")
-    with pytest.raises(InvalidInput, match="not at the player character's location"):
-        tools.speaker_profile(HIRELING)
+    assert tools.speaker_at_player(HIRELING) is False
+    assert tools.speaker_profile(HIRELING).splitlines()[0] == f"Speaker: {HIRELING}"
 
 
 def test_the_player_character_still_cannot_be_spoken_for(client_factory):

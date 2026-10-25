@@ -241,6 +241,8 @@ class World(Protocol):
 
     def speaker_profile(self, name: str) -> str: ...
 
+    def speaker_at_player(self, name: str) -> bool: ...
+
 
 def brief(text: str, limit: int = 120) -> str:
     """The first sentence of text, cut to limit characters."""

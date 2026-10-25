@@ -328,7 +328,7 @@
     "name": "speak",
     "python_module": "core",
     "function": "speak",
-    "description": "Get the exact words an NPC says. A separate step writes the dialogue from the NPC's personality, accent, and quirks, so give the intent, not the words. The NPC must be at the player character's location. In combat, speak only for a line that changes what the player must decide. Quote the returned dialogue as it is.",
+    "description": "Get the exact words an NPC says. A separate step writes the dialogue from the NPC's personality, accent, and quirks, so give the intent, not the words. The NPC should be at the player character's location; if not, nothing is written and a warning is returned, unless force is true. In combat, speak only for a line that changes what the player must decide. Quote the returned dialogue as it is.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -343,6 +343,10 @@
         "replace": {
           "type": "boolean",
           "description": "Set true to rewrite the line already queued for this NPC in this reply, for example to amend it before the next line. Without it, a second call for the same NPC is refused."
+        },
+        "force": {
+          "type": "boolean",
+          "description": "Set true to speak an NPC who is not at the player character's location, for example across a wall or by message. The narration will say they are speaking from elsewhere. Without it, an absent NPC gets a warning and no dialogue."
         }
       },
       "required": [

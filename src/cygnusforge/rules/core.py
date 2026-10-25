@@ -276,8 +276,20 @@ def list_lookups(ctx: ToolContext) -> dict[str, Any]:
     }
 
 
-async def speak(npc: str, intent: str, ctx: ToolContext, replace: bool = False) -> dict[str, str]:
+async def speak(
+    npc: str, intent: str, ctx: ToolContext, replace: bool = False, force: bool = False
+) -> dict[str, str]:
     profile = ctx.world.speaker_profile(npc)
+    if not force and not ctx.world.speaker_at_player(npc):
+        return {
+            "speaker": npc,
+            "status": "dialogue not queued",
+            "warning": (
+                f"{npc} is not at the player character's location, so nothing was written. "
+                "If they are speaking from elsewhere, such as over a wall or by message, call "
+                "speak again with force true; the narration will show where they are speaking from."
+            ),
+        }
     await ctx.speak(npc, profile, intent, replace)
     return {"speaker": npc, "status": "dialogue queued for the narration"}
 

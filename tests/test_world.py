@@ -927,11 +927,29 @@ def test_speaker_profile_describes_an_npc_at_the_players_location(
     assert "Location: Mossbell Hollow" in profile
 
 
-def test_npcs_away_from_the_player_cannot_speak(client_factory: Callable[[], TestClient], app):
+def test_speaker_at_player_tells_whether_an_npc_is_present(
+    client_factory: Callable[[], TestClient], app
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id)
+    state = _state(app, campaign_id)
+    assert world.speaker_at_player(state, "Mara Thistledown") is True
+    assert world.speaker_at_player(state, "Brin Gallowcap") is False
+
+
+def test_speaker_profile_still_describes_an_npc_away_from_the_player(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    profile = world.speaker_profile(_state(app, campaign_id), "Brin Gallowcap", SPEC)
+    assert profile.splitlines()[0] == "Speaker: Brin Gallowcap"
+
+
+def test_the_player_character_still_cannot_be_spoken_for(
+    client_factory: Callable[[], TestClient], app
+):
     _, campaign_id = _campaign_id(client_factory)
     state = _state(app, campaign_id)
-    with pytest.raises(InvalidInput, match="not at the player character's location"):
-        world.speaker_profile(state, "Brin Gallowcap", SPEC)
     with pytest.raises(InvalidInput, match="does not need speaking for"):
         world.speaker_profile(state, "Ada", SPEC)
 
@@ -961,7 +979,7 @@ def test_speak_tool_queues_dialogue_and_returns_only_an_acknowledgment(
     assert intent == "Warn Ada about the bog."
 
 
-def test_speak_tool_refuses_an_npc_away_from_the_player(
+def test_speak_tool_warns_and_queues_nothing_for_an_npc_away_from_the_player(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _campaign_id(client_factory)
@@ -973,8 +991,31 @@ def test_speak_tool_refuses_an_npc_away_from_the_player(
     result = _tool(
         app, campaign_id, "speak", {"npc": "Old Hob", "intent": "Greet Ada."}, speak=speak
     )
-    assert "error" in result
+    assert result["speaker"] == "Old Hob"
+    assert result["status"] == "dialogue not queued"
+    assert "force true" in result["warning"]
+    assert "error" not in result
     assert asked == []
+
+
+def test_speak_tool_with_force_queues_dialogue_for_an_npc_away_from_the_player(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    asked: list[tuple[str, str]] = []
+
+    async def speak(speaker: str, profile: str, intent: str, replace: bool) -> None:
+        asked.append((speaker, intent))
+
+    result = _tool(
+        app,
+        campaign_id,
+        "speak",
+        {"npc": "Old Hob", "intent": "Call to Ada from the lane.", "force": True},
+        speak=speak,
+    )
+    assert result == {"speaker": "Old Hob", "status": "dialogue queued for the narration"}
+    assert asked == [("Old Hob", "Call to Ada from the lane.")]
 
 
 def test_campaign_page_panels_show_only_the_scene(client_factory: Callable[[], TestClient], app):

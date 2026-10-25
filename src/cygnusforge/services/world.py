@@ -1175,6 +1175,10 @@ class WorldTools:
         with session_scope(self.engine) as db:
             return speaker_profile(load_state(db, self.campaign_id), name, self.character)
 
+    def speaker_at_player(self, name: str) -> bool:
+        with session_scope(self.engine) as db:
+            return speaker_at_player(load_state(db, self.campaign_id), name)
+
 
 def seed_campaign(
     db: Session,
@@ -2262,14 +2266,18 @@ def _status_lines(
     return lines
 
 
+def speaker_at_player(state: CampaignState, name: str) -> bool:
+    """Whether the named NPC or hireling is at the player character's location."""
+    npc = _character_named(state, name)
+    pc = state.pc()
+    return pc is not None and npc.location == pc.location
+
+
 def speaker_profile(state: CampaignState, name: str, spec: CharacterSpec) -> str:
-    """The NPC details a speech step needs. The NPC must be at the player character's location."""
+    """The NPC details a speech step needs."""
     npc = _character_named(state, name)
     if npc.kind != NPC_KIND and not npc.hireling:
         raise InvalidInput(f"{npc.name} is the player character and does not need speaking for")
-    pc = state.pc()
-    if pc is None or npc.location != pc.location:
-        raise InvalidInput(f"{npc.name} is not at the player character's location")
     quirks = "; ".join(npc.quirks) or "none"
     lines = [f"Speaker: {npc.name}", f"Who they are: {npc.description}"]
     if npc.personality:
