@@ -144,14 +144,32 @@ STATE_INSTRUCTION = (
 # Closes the state step after the ruleset's fragments.
 STATE_CLOSING = "When nothing else needs to change, reply with one short sentence saying so."
 NARRATE_INSTRUCTION = (
-    "Narration step. Write the next beat in the present tense, as a good editor would: concise, "
-    "specific, and free of filler. Aim for three to five sentences. Cut repetition and restated "
-    "detail. Base the outcome on the state changes and tool results above. Describe an item as used, "
+    "Narration step. Write the next beat in the present tense, as a good editor would: specific, "
+    "in character, and free of filler. Cover every numbered entry of the turn log above, in order, so "
+    "the player is told everything that happened: each arrival and departure, encounter start, "
+    "initiative, NPC action, attack and its result, save and roll outcome, and change to the player "
+    "character. Several entries may share one sentence, but no entry may be left out, and events must "
+    "appear in the numbered order: a later entry never happens before an earlier one. State each "
+    "outcome plainly, such as a surrender, a flight, a death, or the end of an encounter, rather than "
+    "leaving the player to guess it from body language. Use as many sentences as that takes. "
+    "Cut repetition and restated detail, not "
+    "facts. The turn log and the tool results above are the record of what happened. Anything they do "
+    "not record did not happen: do not narrate an item as taken, placed, used, or moved, or a "
+    "character or object as somewhere, unless they record it, invent no times, distances, figures, directions, "
+    "or motives the log and results do not give, and do not treat the GM's earlier notes "
+    "or drafts as settled. Earlier narration in this conversation is no record either: where it "
+    "disagrees with the world state above or the turn log, follow those. Base the outcome on the state changes and tool results above. Describe an item as used, "
     "burned, or spent only when a tool result above records that use; otherwise the item is unchanged. "
     "Narrate what the player "
-    "can perceive: arrivals and departures, new or changed places, NPC speech, and roll outcomes. "
+    "can perceive or is affected by: arrivals and departures, new or changed places, NPC speech, roll "
+    "outcomes, the start of an encounter, who joins it, initiative and who acts first, and where the "
+    "combatants stand relative to each other. A failed initiative roll is news for the player: say the "
+    "player character was slow to act. "
     "The transcript hides the records of NPCs, places, and objects, so the narration is how the "
-    "player learns of one: narrate each the first time it comes into view. "
+    "player learns of one: narrate each the first time it comes into view. An NPC or creature is "
+    "where the world state above places it: one at another location is not in the room, so do not "
+    "show it acting or standing there, and if its words are queued, narrate them as coming from "
+    "elsewhere. "
     "The queued dialogue is "
     "JSON: work each entry's dialogue value into the narration where it fits, copied exactly, and "
     "do not write any other words for an NPC. Weave dialogue into the prose as plain sentences, "
@@ -163,7 +181,8 @@ NARRATE_INSTRUCTION = (
     "naming or bookkeeping rule, or the text of a rule or tool description; speak only in the world's "
     "terms, and if a name was changed, give the player the name as it now stands. "
     "Describe the player character's words and deliberate choices only as the player's message "
-    "states them, and add none for them. The first time the player character is mentioned in a "
+    "states them, and add none for them, not even an action such as setting an item down. "
+    "The first time the player character is mentioned in a "
     "narration, use their full name, since a pronoun or short name alone could be ambiguous. "
     "When the story moves them or something happens to them, "
     "narrate it as a result. Narrate everything that happens to the player character, once, in "
@@ -1067,6 +1086,70 @@ def _start_run(
     )
 
 
+def _turn_log(engine: Engine, campaign_id: int, opener: int) -> list[str]:
+    """The Log lines the player is shown for the turn, in order: the ones recorded after the
+    player's message."""
+    with session_scope(engine) as db:
+        rows = events_since(db, campaign_id, opener, Channel.LOG)
+    return [
+        text
+        for row in rows
+        if not is_hidden(row.kind) and (text := decode(row).render()) is not None
+    ]
+
+
+def _world_text(run: _Run, state: CampaignState) -> str:
+    rule_set = run.rule_set
+    return world_state_text(
+        state,
+        rule_set.campaign,
+        rule_set.grid,
+        rule_set.combat,
+        rule_set.conditions,
+        clock_rules=rule_set.clock,
+        inventory=rule_set.inventory,
+    )
+
+
+def _narration_messages(run: _Run, turn: Turn) -> list[dict[str, Any]]:
+    """What the narration step reads. The turn's opening system message predates the moves made
+    in the turn, so the scene is rebuilt from the state as it is now, which also brings in the
+    rules for anything that came into the scene. The turn log follows the conversation, so the
+    narration covers each entry. A state step's prose is a draft written before the tools ran, so
+    the narration sees the tool calls but not that prose."""
+    state = _state(run.engine, run.campaign_id)
+    scene = system_parts(
+        run.rule_set.id,
+        run.rule_set.rules,
+        run.rule_set.important,
+        state.summary,
+        state.through,
+        _world_text(run, state),
+        present_rules_text(state, run.ctx.rules),
+    )
+    messages: list[dict[str, Any]] = [
+        {"role": "system", "content": "\n\n".join(p.content for p in scene)},
+        *(_without_draft(m) for m in turn.messages[1:]),
+    ]
+    log = _turn_log(run.engine, run.campaign_id, turn.opener)
+    if log:
+        lines = "\n".join(f"{number}. {line}" for number, line in enumerate(log, 1))
+        entry = {"role": "system", "content": f"Turn log, in order:\n{lines}"}
+        if messages[-1]["content"] == narrate_instruction(run.rule_set):
+            messages.insert(len(messages) - 1, entry)
+        else:
+            messages.append(entry)
+    return messages
+
+
+def _without_draft(message: dict[str, Any]) -> dict[str, Any]:
+    """A tool-call message minus the prose the state step wrote with it. The prose was written
+    before the tools ran, so it can name outcomes that never happened."""
+    if message.get("role") == "assistant" and message.get("tool_calls"):
+        return {**message, "content": None}
+    return message
+
+
 def _flush(run: _Run) -> list[Logged]:
     """The Log entries recorded since the last flush, which the player has not been shown yet."""
     with session_scope(run.engine) as db:
@@ -1156,15 +1239,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     state = _state(run.engine, run.campaign_id)
     rule_set = run.rule_set
     summary, watermark = state.summary, state.through
-    world_text = world_state_text(
-        state,
-        rule_set.campaign,
-        rule_set.grid,
-        rule_set.combat,
-        rule_set.conditions,
-        clock_rules=rule_set.clock,
-        inventory=rule_set.inventory,
-    )
+    world_text = _world_text(run, state)
     message = run.opening if turn.opening else turn.text
     history = [
         m for m in list_messages(run.engine, run.campaign_id) if watermark < m.id < turn.opener
@@ -1331,9 +1406,12 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             messages: list[dict[str, Any]] = []
             context: list[ContextPart] = []
             if step.text.strip():
-                messages.append({"role": "assistant", "content": step.text})
                 context.append(
-                    ContextPart("assistant", f"GM state step (round {round_no})", step.text)
+                    ContextPart(
+                        "assistant",
+                        f"GM state step (round {round_no}), not shown to the narration",
+                        step.text,
+                    )
                 )
             if turn.speech:
                 _add_speech(messages, context, turn.speech)
@@ -1360,7 +1438,7 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
         )
 
     yield Status("Narrating...")
-    messages = _turn(_state(run.engine, run.campaign_id)).messages
+    messages = _narration_messages(run, turn)
     reply = ""
     for _attempt in range(NARRATION_ATTEMPTS):
         narration: ChatReply | None = None
