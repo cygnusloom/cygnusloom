@@ -111,7 +111,7 @@
                   <meter min="0" max="{{ context.limit }}" value="{{ context.used }}" low="{{ context.summary_at }}" high="{{ context.summary_at }}"></meter>
                   <span class="muted">{{ '{:,}'.format(context.used) }} / {{ '{:,}'.format(context.limit) }}</span>
                 </span>
-                <button type="button" class="composer-settings" data-dialog-target="dialog-model" aria-haspopup="dialog" aria-label="Model settings" title="Model settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
+                <button type="button" class="composer-settings" data-dialog-target="dialog-settings" aria-haspopup="dialog" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
               </div>
               <button type="submit"{% if pending %} disabled{% endif %}>Send</button>
             </div>
@@ -278,10 +278,10 @@
     <button type="submit">Close</button>
   </form>
 </dialog>
-<dialog id="dialog-model" class="app-dialog" aria-labelledby="dialog-model-title">
+<dialog id="dialog-settings" class="app-dialog" aria-labelledby="dialog-settings-title">
   <form method="post" action="/campaigns/{{ campaign.id }}/model">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <h2 id="dialog-model-title">Model</h2>
+    <h2 id="dialog-settings-title">Settings</h2>
     <fieldset class="model-options">
       <legend class="muted">Used for every reply in this campaign, starting with the next one</legend>
       {% for model in models %}

@@ -75,13 +75,13 @@ def test_hidden_lines_are_marked_in_the_page_and_the_checkbox_is_unchecked(
     assert 'data-gm-state="waiting"' in page
 
 
-def test_the_show_hidden_checkbox_sits_in_the_model_settings_dialog(
+def test_the_show_hidden_checkbox_sits_in_the_settings_dialog(
     client_factory: Callable[[], TestClient],
 ):
     client, campaign_id = _campaign_id(client_factory)
     page = client.get(f"/campaigns/{campaign_id}").text
 
-    dialog_start = page.index('<dialog id="dialog-model"')
+    dialog_start = page.index('<dialog id="dialog-settings"')
     dialog_end = page.index("</dialog>", dialog_start)
     checkbox = page.index("data-show-hidden>")
     assert dialog_start < checkbox < dialog_end
@@ -93,3 +93,13 @@ def test_the_stylesheet_hides_hidden_lines_until_the_checkbox_shows_them(
     client, _ = _campaign_id(client_factory)
     css = client.get("/static/style.css").text
     assert ".transcript:not(.show-hidden) .hidden-event { display: none; }" in css
+
+
+def test_the_show_hidden_checkbox_starts_unchecked_and_is_never_stored(
+    client_factory: Callable[[], TestClient],
+):
+    client, _ = _campaign_id(client_factory)
+    script = client.get("/static/turn_stream.js").text
+    assert "showHidden.checked = false;" in script
+    assert "localStorage" not in script
+    assert "sessionStorage.setItem(SHOW" not in script
