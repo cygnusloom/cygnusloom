@@ -153,6 +153,12 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .world-map::before { display: none; }
 .map-page { display: flex; flex-direction: column; }
 .map-page .map-frame { flex: 1 1 auto; min-height: 14rem; }
+.time-strip {
+  display: flex; align-items: center; justify-content: center; gap: 0.35rem; flex: none;
+  margin: 0; padding: 0.25rem 0 0; color: var(--muted); font-size: 0.875rem;
+}
+.time-strip svg { width: 1rem; height: 1rem; flex: none; color: var(--accent); }
+.time-strip.night svg { color: #b7c6e0; }
 .encounter-board {
   display: grid; grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
   grid-template-rows: repeat(var(--rows), minmax(0, 1fr));

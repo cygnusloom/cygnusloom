@@ -60,7 +60,7 @@ from cygnusforge.services.encounters import encounter_view
 from cygnusforge.services.events import speaker_name
 from cygnusforge.services.names import random_campaign_name
 from cygnusforge.services.tools import check_arguments
-from cygnusforge.services.world import map_view, scene_view
+from cygnusforge.services.world import map_view, scene_view, time_view
 from cygnusforge.web.character_form import (
     campaign_submission_from_form,
     campaign_view,
@@ -605,6 +605,7 @@ def _campaign_page(
         world=library.world_templates.get(campaign.world_template),
         scene=scene_view(world.state, spec, inventory_rules),
         world_map=world_map,
+        time=time_view(world.state, rule_set.clock if rule_set else None),
         rule_set=rule_set,
         messages=messages,
         transcript=transcript,

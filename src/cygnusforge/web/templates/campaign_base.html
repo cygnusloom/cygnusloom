@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import notes_list, journal_text, map_board, map_places %}
+{% from "macros.html" import notes_list, journal_text, map_board, map_places, time_strip %}
 {% block body_class %}workspace-page{% endblock %}
 {% block content %}
 <div class="shell">
@@ -15,6 +15,7 @@
     <section class="view map-page" data-view="map" aria-labelledby="map-title" hidden>
       <h2 id="map-title">Map</h2>
       {{ map_board(world_map, framed=true, prefix="side") }}
+      {{ time_strip(time) }}
       <h3>Places</h3>
       {{ map_places(world_map) }}
     </section>

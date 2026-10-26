@@ -1,5 +1,5 @@
 {% extends "campaign_base.html" %}
-{% from "macros.html" import notes_list, map_board, encounter_board %}
+{% from "macros.html" import notes_list, map_board, encounter_board, time_strip %}
 {% block title %}{{ campaign.name }}{% endblock %}
 {% block play %}
     <div class="workspace" data-view="play">
@@ -154,6 +154,7 @@
             {% else %}
               {{ map_board(world_map, framed=true, prefix="tab") }}
             {% endif %}
+            {{ time_strip(time) }}
           </section>
 
           <section class="tabs-panel">

@@ -216,6 +216,15 @@ class MapPattern:
 
 
 @dataclass(frozen=True)
+class TimeView:
+    """The campaign day and the part of that day, shown beside the map."""
+
+    day: int
+    part: str
+    night: bool
+
+
+@dataclass(frozen=True)
 class MapView:
     """The player's map. Only discovered places appear on it. The map is centered on the player
     character's place, and places with a position are placed on a square sized to fit the farthest
@@ -2583,6 +2592,18 @@ def _offset_text(dx: float, dy: float) -> str:
     east = "east" if dx >= 0 else "west"
     north = "north" if dy >= 0 else "south"
     return f"{_km_text(dx)} km {east}, {_km_text(dy)} km {north}"
+
+
+def time_view(state: CampaignState, clock: ClockRules | None) -> TimeView | None:
+    """The clock's day and part. The last part of the day is night, as the wilderness rules count it."""
+    if clock is None or not clock.parts:
+        return None
+    index = state.clock.part
+    return TimeView(
+        day=state.clock.day,
+        part=clock.parts[index],
+        night=index == len(clock.parts) - 1,
+    )
 
 
 def map_view(state: CampaignState, terrain: Mapping[str, WorldTerrain] | None = None) -> MapView:

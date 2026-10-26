@@ -13,7 +13,8 @@ from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import HIDDEN_KINDS, Region
 from cygnusforge.services.geometry import clearance, overlaps
 from tests.conftest import content_library
-from tests.test_campaigns import _new_campaign, _signed_in
+from tests.test_campaigns import _create_character, _new_campaign, _signed_in
+from tests.test_character_creation import _cairn_campaign, _complete_form
 from tests.test_world import TABLES, _state
 
 LIBRARY = content_library()
@@ -267,3 +268,36 @@ def test_every_seeded_place_on_the_map_has_ground_around_it(
     for place in placed:
         point = (place.position.x, place.position.y)
         assert clearance(point, ground) >= world.REGION_BUFFER_KM, place.name
+
+
+def _clocked_tools(app: FastAPI, campaign_id: int) -> world.WorldTools:
+    return world.WorldTools(
+        engine=app.state.engine,
+        campaign_id=campaign_id,
+        tables=TABLES,
+        rng=random.Random(0),
+        character=CAIRN.character,
+        plus="sum",
+        clock_rules=CAIRN.clock,
+    )
+
+
+def test_the_map_panel_shows_the_day_and_part_of_the_day(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _cairn_campaign(client_factory)
+    created = _create_character(
+        client, campaign_id, name="Ada", fields=_complete_form(client, campaign_id)
+    )
+    assert created.status_code == 303
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert 'class="time-strip"' in page
+    assert "Day 1, Morning" in page
+    _clocked_tools(app, campaign_id).advance_time(parts=2)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert 'class="time-strip night"' in page
+    assert "Day 1, Night" in page
+    _clocked_tools(app, campaign_id).advance_time(parts=1)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert 'class="time-strip"' in page
+    assert "Day 2, Morning" in page
