@@ -6,7 +6,7 @@ import pytest
 
 from cygnusforge.llm.base import ChatReply, LLMError, ToolRequest, complete
 from cygnusforge.llm.openai_compat import OpenAICompatProvider
-from cygnusforge.services.campaigns import _tool_call_message
+from cygnusforge.services.campaigns import _text_message, _tool_call_message
 
 MESSAGES = [{"role": "user", "content": "hi"}]
 TEST_KEY = "sk-test"
@@ -270,6 +270,14 @@ def test_reasoning_is_passed_back_on_the_tool_call_message():
     asyncio.run(_provider(handler).chat("deepseek-flash", messages, TOOLS))
 
     assert seen["body"]["messages"][-1]["reasoning_content"] == "Check the roll first."
+
+
+def test_text_message_without_reasoning_sends_an_empty_reasoning_key():
+    assert _text_message("Lyra nods.", "") == {
+        "role": "assistant",
+        "content": "Lyra nods.",
+        "reasoning_content": "",
+    }
 
 
 def test_tool_call_message_without_reasoning_sends_an_empty_reasoning_key():

@@ -918,12 +918,9 @@ def _queued_dialogue_note(speech: list[dict[str, str]]) -> dict[str, str]:
 
 
 def _text_message(content: str, reasoning: str) -> dict[str, Any]:
-    """A plain assistant message. Thinking models reject a later request whose assistant message
-    left out the reasoning they produced, so it is sent back with the content."""
-    message: dict[str, Any] = {"role": "assistant", "content": content}
-    if reasoning:
-        message["reasoning_content"] = reasoning
-    return message
+    """A plain assistant message. Thinking models reject a request whose assistant message after
+    the last user message has no reasoning_content key, even when the reasoning is empty."""
+    return {"role": "assistant", "content": content, "reasoning_content": reasoning}
 
 
 def _history_message(m: ChatMessage) -> dict[str, Any]:
