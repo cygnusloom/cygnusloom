@@ -4,7 +4,7 @@ import pytest
 
 from cygnusforge.content.definitions import ContentError, Definition
 from cygnusforge.content.library import _load_rests
-from cygnusforge.services.campaigns import _turn_has_major_event
+from cygnusforge.services.campaigns import _turn_has_day_end
 from cygnusforge.services.clock import absolute, rest_target
 from cygnusforge.services.common import InvalidInput, session_scope
 from cygnusforge.services.events import RestTaken, events_since
@@ -96,18 +96,18 @@ def test_advancing_a_day_lands_on_the_morning_and_a_part_moves_to_the_afternoon(
     assert tools.advance_time(parts=1) == {"day": 2, "part": "afternoon", "hour": 0}
 
 
-def test_a_clock_move_into_a_new_day_is_a_major_event(client_factory):
+def test_a_clock_move_into_a_new_day_is_a_day_end(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     before = _last_event_id(app, campaign_id)
     tools.advance_time(days=1)
-    assert _turn_has_major_event(app.state.engine, campaign_id, before)
+    assert _turn_has_day_end(app.state.engine, campaign_id, before)
 
 
-def test_a_clock_move_within_the_same_day_is_not_a_major_event(client_factory):
+def test_a_clock_move_within_the_same_day_is_not_a_day_end(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     before = _last_event_id(app, campaign_id)
     assert tools.advance_time(parts=1)["day"] == 1
-    assert not _turn_has_major_event(app.state.engine, campaign_id, before)
+    assert not _turn_has_day_end(app.state.engine, campaign_id, before)
 
 
 def test_hours_carry_into_the_next_part_of_the_day(client_factory):

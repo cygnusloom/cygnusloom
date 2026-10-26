@@ -6,8 +6,9 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 
+from cygnusforge.db.models import Event
 from cygnusforge.llm.base import ChatReply
 from cygnusforge.services.campaigns import OPENING_PROMPT
 from cygnusforge.services.events import CampaignState, load_state
@@ -20,6 +21,7 @@ from tests.test_campaigns import (
     _send,
     _signed_in,
 )
+from tests.test_character_creation import _cairn_campaign, _complete_form
 from tests.test_tools import _recording_provider, _saved, _script
 from tests.test_world import _tool
 
@@ -27,6 +29,16 @@ from tests.test_world import _tool
 def _journal_state(app: FastAPI, campaign_id: int) -> CampaignState:
     with Session(app.state.engine, expire_on_commit=False) as db:
         return load_state(db, campaign_id)
+
+
+def _day_campaign(client_factory: Callable[[], TestClient]) -> tuple[TestClient, int]:
+    """A Cairn campaign with its player character made and its opening done. Only Cairn has the
+    clock that advance_time moves."""
+    client, campaign_id = _cairn_campaign(client_factory)
+    created = _create_character(client, campaign_id, fields=_complete_form(client, campaign_id))
+    assert created.status_code == 303
+    _answer(client, campaign_id, "continue")
+    return client, campaign_id
 
 
 def _journal_calls(calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -177,7 +189,7 @@ def test_a_routine_turn_skips_the_journal_step(
     ]
 
 
-def test_a_major_turn_ends_with_a_journal_step_that_writes_the_journal(
+def test_a_discovery_within_a_day_skips_the_journal_step(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
@@ -187,12 +199,31 @@ def test_a_major_turn_ends_with_a_journal_step_that_writes_the_journal(
     script = _script(
         {
             "rounds": [[{"name": "discover_location", "arguments": {"name": "Gate Room"}}]],
+            "text": "Ada finds the gate.",
+        }
+    )
+
+    assert _send(client, campaign_id, script).status_code == 303
+
+    assert _journal_calls(recorder.calls) == []
+    assert _journal_state(app, campaign_id).journal == ""
+
+
+def test_a_day_end_turn_ends_with_a_journal_step_that_writes_the_journal(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _day_campaign(client_factory)
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    script = _script(
+        {
+            "rounds": [[{"name": "advance_time", "arguments": {"days": 1}}]],
             "text": "The bridge groans under Ada's boots.",
             "journal": [
                 [
                     {
                         "name": "append_journal",
-                        "arguments": {"text": "Day 1: Ada crossed the bridge."},
+                        "arguments": {"text": "Day 2: Ada crossed the bridge."},
                     }
                 ]
             ],
@@ -206,7 +237,7 @@ def test_a_major_turn_ends_with_a_journal_step_that_writes_the_journal(
         ("user", script),
         ("assistant", "The bridge groans under Ada's boots."),
     ]
-    assert _journal_state(app, campaign_id).journal == "Day 1: Ada crossed the bridge."
+    assert _journal_state(app, campaign_id).journal == "Day 2: Ada crossed the bridge."
 
     journal_calls = _journal_calls(recorder.calls)
     assert journal_calls, "the journal step should have run"
@@ -215,7 +246,7 @@ def test_a_major_turn_ends_with_a_journal_step_that_writes_the_journal(
             "append_journal",
             "replace_in_journal",
         }
-        assert any("Campaign day 1." in (m.get("content") or "") for m in call["messages"])
+        assert any("Campaign day 2." in (m.get("content") or "") for m in call["messages"])
     narration = next(i for i, call in enumerate(recorder.calls) if call["tools"] is None)
     assert recorder.calls.index(journal_calls[0]) < narration
     for call in recorder.calls:
@@ -224,10 +255,74 @@ def test_a_major_turn_ends_with_a_journal_step_that_writes_the_journal(
             assert "append_journal" not in offered and "replace_in_journal" not in offered
 
 
+def _journal_steps(app: FastAPI, campaign_id: int) -> int:
+    with Session(app.state.engine) as db:
+        return len(
+            db.exec(
+                select(Event).where(
+                    Event.campaign_id == campaign_id, Event.kind == "journal.started"
+                )
+            ).all()
+        )
+
+
+def _log_text(call: dict[str, Any]) -> str:
+    return "\n".join(
+        m["content"]
+        for m in call["messages"]
+        if "Log since the journal" in (m.get("content") or "")
+    )
+
+
+def test_a_multi_day_jump_runs_the_journal_step_once(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _day_campaign(client_factory)
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    script = _script(
+        {"rounds": [[{"name": "advance_time", "arguments": {"days": 3}}]], "text": "Ok."}
+    )
+
+    assert _send(client, campaign_id, script).status_code == 303
+
+    assert _journal_steps(app, campaign_id) == 1
+
+
+def test_each_journal_step_covers_only_the_log_since_the_last_one(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _day_campaign(client_factory)
+    _tool(app, campaign_id, "create_location", {"name": "Gate Room", "description": "A gate."})
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    first = _script(
+        {"rounds": [[{"name": "advance_time", "arguments": {"days": 1}}]], "text": "Day one."}
+    )
+    second = _script(
+        {
+            "rounds": [
+                [{"name": "discover_location", "arguments": {"name": "Gate Room"}}],
+                [{"name": "advance_time", "arguments": {"days": 1}}],
+            ],
+            "text": "Day two.",
+        }
+    )
+
+    assert _send(client, campaign_id, first).status_code == 303
+    assert _send(client, campaign_id, second).status_code == 303
+
+    assert _journal_steps(app, campaign_id) == 2
+    first_log, second_log = dict.fromkeys(_log_text(c) for c in _journal_calls(recorder.calls))
+    assert "Gate Room" not in first_log
+    assert "Gate Room" in second_log
+    assert not set(first_log.splitlines()[1:]) & set(second_log.splitlines()[1:])
+
+
 def test_the_state_step_reasoning_goes_back_to_the_journal_and_narration(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    client, campaign_id = _campaign_id(client_factory)
+    client, campaign_id = _day_campaign(client_factory)
     recorder = _recording_provider()
     chat = recorder.chat
 
@@ -241,16 +336,15 @@ def test_the_state_step_reasoning_goes_back_to_the_journal_and_narration(
 
     recorder.chat = thinking_chat
     app.state.providers = lambda model_id: (recorder, model_id)
-    _tool(app, campaign_id, "create_location", {"name": "Gate Room", "description": "A gate."})
     script = _script(
         {
-            "rounds": [[{"name": "discover_location", "arguments": {"name": "Gate Room"}}]],
+            "rounds": [[{"name": "advance_time", "arguments": {"days": 1}}]],
             "text": "The bridge groans under Ada's boots.",
             "journal": [
                 [
                     {
                         "name": "append_journal",
-                        "arguments": {"text": "Day 1: Ada crossed the bridge."},
+                        "arguments": {"text": "Day 2: Ada crossed the bridge."},
                     }
                 ]
             ],

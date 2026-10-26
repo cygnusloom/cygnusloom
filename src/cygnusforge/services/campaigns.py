@@ -41,8 +41,10 @@ from cygnusforge.services.events import (
     Channel,
     ChatGM,
     ChatPlayer,
+    ClockAdvanced,
     ContextPart,
     GameEvent,
+    JournalStarted,
     OocStarted,
     PromptShown,
     SpeechWritten,
@@ -253,16 +255,17 @@ _NUMBER_WORDS = ("one", "two", "three", "four", "five", "six", "seven", "eight",
 
 JOURNAL_INSTRUCTION = (
     "Journal step. Nothing has been narrated yet: the turn above is what happened, and the narration "
-    "will be written from it after this step. The journal is one text file of the campaign so far, "
-    "the recap the story keeps. Keep one passage per campaign day, beginning with 'Day N:'. If this "
-    "turn is the campaign's opening, record the introduction's hooks, starting situation and player "
-    "characters as the first passage. If this turn holds something worth remembering, merge it into "
-    "the current day's passage with "
-    "replace_in_journal, quoting the exact text, or start that passage with append_journal if the "
-    "day has none yet. If it changes or contradicts an earlier passage, correct that passage the same "
-    "way. Delete passages that no longer belong. When the journal runs long, condense older days into "
-    "shorter passages. Use view_journal for line numbers and search_journal to find text. Most turns "
-    "need no change: then call no tools and write no text."
+    "will be written from it after this step. The log below it is everything recorded since the "
+    "journal was last written, and it may span several campaign days, since a day has ended. The "
+    "journal is one text file of the campaign so far, the recap the story keeps. Keep one passage per "
+    "campaign day, beginning with 'Day N:', and write one for each day the log covers. Merge a day's "
+    "passage into the existing one with replace_in_journal, quoting the exact text, or start it with "
+    "append_journal if the day has none yet. If the log changes or contradicts an earlier passage, "
+    "correct that passage the same way. Delete passages that no longer belong. When the journal runs "
+    "long, condense older days into shorter passages. Use view_journal for line numbers and "
+    "search_journal to find text. If this turn is the campaign's opening, record the introduction's "
+    "hooks, starting situation and player characters as the first passage. If the log holds nothing "
+    "worth keeping, call no tools and write no text."
 )
 
 
@@ -1141,11 +1144,10 @@ def _start_run(
     )
 
 
-def _turn_log(engine: Engine, campaign_id: int, opener: int) -> list[str]:
-    """The Log lines the player is shown for the turn, in order: the ones recorded after the
-    player's message."""
+def _turn_log(engine: Engine, campaign_id: int, after: int) -> list[str]:
+    """The Log lines recorded after event `after`, in order."""
     with session_scope(engine) as db:
-        rows = events_since(db, campaign_id, opener, Channel.LOG)
+        rows = events_since(db, campaign_id, after, Channel.LOG)
     return [
         text
         for row in rows
@@ -1153,12 +1155,17 @@ def _turn_log(engine: Engine, campaign_id: int, opener: int) -> list[str]:
     ]
 
 
-def _turn_has_major_event(engine: Engine, campaign_id: int, opener: int) -> bool:
-    """Whether anything recorded since the player's message is a major event, which the journal
-    step records. Hidden events count, since the journal keeps what the player does not see."""
+def _turn_has_day_end(engine: Engine, campaign_id: int, opener: int) -> bool:
+    """Whether the clock moves into a new day since the player's message, which ends the day the
+    journal records. A jump over several days counts once. Hidden events count, since the journal
+    keeps what the player does not see."""
     with session_scope(engine) as db:
         rows = events_since(db, campaign_id, opener)
-    return any(decode(row).is_major() for row in rows)
+    for row in rows:
+        event = decode(row)
+        if isinstance(event, ClockAdvanced) and event.new_day:
+            return True
+    return False
 
 
 def _world_text(run: _Run, state: CampaignState) -> str:
@@ -1174,12 +1181,14 @@ def _world_text(run: _Run, state: CampaignState) -> str:
     )
 
 
-def _narration_messages(run: _Run, turn: Turn) -> list[dict[str, Any]]:
+def _narration_messages(
+    run: _Run, turn: Turn, log: list[str] | None = None, heading: str = "Turn log, in order:"
+) -> list[dict[str, Any]]:
     """What the narration step reads. The turn's opening system message predates the moves made
     in the turn, so the scene is rebuilt from the state as it is now, which also brings in the
     rules for anything that came into the scene. The turn log follows the conversation, so the
     narration covers each entry. A state step's prose is a draft written before the tools ran, so
-    the narration sees the tool calls but not that prose."""
+    the narration sees the tool calls but not that prose. `log` replaces the turn's own Log lines."""
     state = _state(run.engine, run.campaign_id)
     scene = system_parts(
         run.rule_set.id,
@@ -1194,10 +1203,10 @@ def _narration_messages(run: _Run, turn: Turn) -> list[dict[str, Any]]:
         {"role": "system", "content": "\n\n".join(p.content for p in scene)},
         *(_without_draft(m) for m in turn.messages[1:]),
     ]
-    log = _turn_log(run.engine, run.campaign_id, turn.opener)
+    log = _turn_log(run.engine, run.campaign_id, turn.opener) if log is None else log
     if log:
         lines = "\n".join(f"{number}. {line}" for number, line in enumerate(log, 1))
-        entry = {"role": "system", "content": f"Turn log, in order:\n{lines}"}
+        entry = {"role": "system", "content": f"{heading}\n{lines}"}
         if messages[-1]["content"] == narrate_instruction(run.rule_set):
             messages.insert(len(messages) - 1, entry)
         else:
@@ -1381,22 +1390,32 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
 async def _write_journal(
     run: _Run, turn: Turn, intro: str = "", reasoning: str = ""
 ) -> AsyncIterator[TurnEvent]:
-    """Let the GM write what the turn changed into the journal before narrating it. The narrate
-    prompt is left out of the view, since narration has not happened yet. An opening's introduction
-    is passed as intro, since it is written before the journal step and the player reads it. The
-    journal tools record their own events, so the turn's messages and Log are left as they are."""
+    """Let the GM write what happened since the journal was last written into the journal before
+    narrating the turn. That log is what the step sees, along with the turn's messages. The
+    narrate prompt is left out of the view, since narration has not happened yet. An opening's
+    introduction is passed as intro, since it is written before the journal step and the player
+    reads it. The journal tools record their own events, so the turn's messages and Log are left
+    as they are."""
     journal_tools = tool_specs(run.tool_calls, journal_step=True)
     if journal_tools is None:
         return
     yield Status("Updating the journal...")
     state = _state(run.engine, run.campaign_id)
+    log = _turn_log(run.engine, run.campaign_id, state.journal_through or turn.opener)
+    _record(run.engine, run.campaign_id, JournalStarted())
     instruction = f"{JOURNAL_INSTRUCTION}\n\nCampaign day {state.clock.day}. "
     instruction += (
         f"The journal so far:\n{state.journal}" if state.journal else "The journal is empty so far."
     )
     narrate = narrate_instruction(run.rule_set)
     view: list[dict[str, Any]] = [
-        *(m for m in _narration_messages(run, turn) if m.get("content") != narrate),
+        *(
+            m
+            for m in _narration_messages(
+                run, turn, log=log, heading="Log since the journal was last written, in order:"
+            )
+            if m.get("content") != narrate
+        ),
     ]
     if intro:
         view.append(_text_message(intro, reasoning))
@@ -1548,7 +1567,7 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             ),
         )
 
-    if _turn_has_major_event(run.engine, run.campaign_id, turn.opener):
+    if _turn_has_day_end(run.engine, run.campaign_id, turn.opener):
         async for event in _write_journal(run, turn):
             yield event
     yield Status("Narrating...")

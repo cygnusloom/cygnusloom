@@ -372,6 +372,8 @@ class CampaignState:
     notes: list[Note] = field(default_factory=list)
     # The journal the player reads, oldest first.
     journal: str = ""
+    # The event that began the last journal step. The next one writes from the log after it.
+    journal_through: int = 0
     # Options shared by the whole campaign, keyed by field id. Empty until they are chosen.
     options: dict[str, str] = field(default_factory=dict)
     summary: str = ""
@@ -504,11 +506,6 @@ EVENT_TYPES: dict[str, type[GameEvent]] = {}
 class GameEvent:
     kind: ClassVar[str]
     channel: ClassVar[Channel] = Channel.LOG
-    # A major event is a story beat the journal records. A turn with none skips the journal step.
-    major: ClassVar[bool] = False
-
-    def is_major(self) -> bool:
-        return self.major
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
@@ -701,7 +698,6 @@ class CampaignOptionsChosen(GameEvent):
 @dataclass(frozen=True)
 class NpcAdded(GameEvent):
     kind: ClassVar[str] = "npc.added"
-    major: ClassVar[bool] = True
 
     name: str
     location: str
@@ -785,7 +781,6 @@ class HirelingAdded(GameEvent):
     is controlled by the player, paid `wage` a day from its employer's gold."""
 
     kind: ClassVar[str] = "hireling.added"
-    major: ClassVar[bool] = True
 
     name: str
     employer: str
@@ -829,7 +824,6 @@ class HirelingDismissed(GameEvent):
     """A hireling leaves its employer's company and becomes an ordinary NPC where it stands."""
 
     kind: ClassVar[str] = "hireling.dismissed"
-    major: ClassVar[bool] = True
 
     name: str
     cause: str
@@ -955,7 +949,6 @@ class LocationUpdated(GameEvent):
 @dataclass(frozen=True)
 class LocationDiscovered(GameEvent):
     kind: ClassVar[str] = "location.discovered"
-    major: ClassVar[bool] = True
 
     name: str
     summary: str | None = None
@@ -1024,7 +1017,6 @@ class NpcUpdated(GameEvent):
 @dataclass(frozen=True)
 class NpcRemoved(GameEvent):
     kind: ClassVar[str] = "npc.removed"
-    major: ClassVar[bool] = True
 
     name: str
 
@@ -1096,6 +1088,17 @@ class JournalReplaced(GameEvent):
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.journal = normalize_journal(state.journal.replace(self.old_text, self.new_text, 1))
+
+
+@dataclass(frozen=True)
+class JournalStarted(GameEvent):
+    """A journal step began. The log it writes from is what was recorded after this event."""
+
+    kind: ClassVar[str] = "journal.started"
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.journal_through = event_id
 
 
 @dataclass(frozen=True)
@@ -1434,7 +1437,6 @@ class MapDeleted(GameEvent):
 @dataclass(frozen=True)
 class EncounterStarted(GameEvent):
     kind: ClassVar[str] = "encounter.started"
-    major: ClassVar[bool] = True
 
     map: str
     location: str
@@ -1454,7 +1456,6 @@ class EncounterEnded(GameEvent):
     """The encounter is over. `reason` says why it ended early, such as a side being down."""
 
     kind: ClassVar[str] = "encounter.ended"
-    major: ClassVar[bool] = True
 
     reason: str = ""
 
@@ -1561,7 +1562,6 @@ class CharacterRecovered(GameEvent):
     what it cost them."""
 
     kind: ClassVar[str] = "character.recovered"
-    major: ClassVar[bool] = True
 
     name: str
     explanation: str
@@ -2264,9 +2264,6 @@ class ClockAdvanced(GameEvent):
     elapsed_hours: int = 0
     new_day: bool = False
 
-    def is_major(self) -> bool:
-        return self.new_day
-
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.clock = Clock(day=self.day, part=self.part, hour=self.hour)
         for character in state.characters.values():
@@ -2303,7 +2300,6 @@ class CharacterDying(GameEvent):
     is stabilized."""
 
     kind: ClassVar[str] = "character.dying"
-    major: ClassVar[bool] = True
 
     name: str
     hours: int
@@ -2341,7 +2337,6 @@ class CharacterDied(GameEvent):
     """A character died. The body stays where it fell, with the gear it carried."""
 
     kind: ClassVar[str] = "character.died"
-    major: ClassVar[bool] = True
 
     name: str
     cause: str = ""
@@ -2692,6 +2687,7 @@ HIDDEN_KINDS: dict[str, bool] = {
     # The journal is shown in its own panel, not in the transcript.
     "journal.appended": True,
     "journal.replaced": True,
+    "journal.started": True,
     "npc.added": True,
     "npc.statted": True,
     "npc.updated": True,
