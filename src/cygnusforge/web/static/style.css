@@ -133,7 +133,7 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .side.in-encounter { grid-template-rows: 60% minmax(0, 1fr); }
 .map-panel {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem;
-  min-height: 0; padding: 0.5rem; border-bottom: 1px solid var(--border);
+  min-height: 0; padding: 0.5rem; border-bottom: 1px solid var(--border); overflow: hidden;
 }
 .map-board {
   position: relative; border: 1px solid var(--border); border-radius: 6px;
@@ -148,6 +148,9 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
   background-size: 40px 40px;
 }
 .map-panel .map-board { width: auto; height: 100%; max-height: 100%; }
+/* The world map has no border or grid: its sky fills the frame, so the square board is not visible as a box. */
+.world-map { border: none; background-color: transparent; }
+.world-map::before { display: none; }
 .map-page { display: flex; flex-direction: column; }
 .map-page .map-frame { flex: 1 1 auto; min-height: 14rem; }
 .encounter-board {
@@ -180,9 +183,12 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
   position: absolute; left: 50%; top: 50%; width: 0.75rem; height: 0.75rem;
   transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1))); border: 1px dashed var(--muted); border-radius: 50%;
 }
-.map-regions { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; }
+.map-sky {
+  position: absolute; left: -200%; top: -200%; width: 500%; height: 500%; pointer-events: none;
+}
+.map-regions { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .map-ground { stroke-opacity: 0.7; stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
-.map-texture, .map-clouds { pointer-events: none; }
+.map-texture { opacity: 0.8; pointer-events: none; }
 .map-marker {
   position: absolute; transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1)));
   display: grid; place-items: center; min-width: 1.75rem; height: 1.25rem; box-sizing: border-box;

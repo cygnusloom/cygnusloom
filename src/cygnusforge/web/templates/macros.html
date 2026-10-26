@@ -14,54 +14,61 @@
   {% endfor %}
 {%- endmacro %}
 
-{# Pattern ids must be unique per page: every board on a campaign page defines its own copy, so prefix them. #}
+{# Pattern ids must be unique per page: every board on a campaign page defines its own copy, so prefix them. Tiles are large and irregular so the texture does not read as wallpaper. #}
 {% macro terrain_patterns(patterns, prefix) -%}
   <defs>
     {% for p in patterns %}
       {% if p.shape == "waves" %}
-        <pattern id="{{ prefix }}-{{ p.id }}" width="8" height="8" patternUnits="userSpaceOnUse">
-          <path d="M0 4 Q2 2 4 4 T8 4" fill="none" stroke="{{ p.ink }}" stroke-width="0.6" stroke-linecap="round"/>
+        <pattern id="{{ prefix }}-{{ p.id }}" width="20" height="20" patternUnits="userSpaceOnUse">
+          <path d="M0 4 q2.5 -2 5 0 t5 0 t5 0 t5 0 M0 12 q2.5 -1.5 5 0 t5 0 t5 0 t5 0 M0 17 q2.5 -2 5 0 t5 0 t5 0 t5 0" fill="none" stroke="{{ p.ink }}" stroke-width="0.6" stroke-linecap="round"/>
         </pattern>
       {% elif p.shape == "trees" %}
-        <pattern id="{{ prefix }}-{{ p.id }}" width="10" height="10" patternUnits="userSpaceOnUse">
-          <path d="M2 7 L3.5 4 L5 7 Z M6.5 10 L8 7 L9.5 10 Z" fill="{{ p.ink }}"/>
+        <pattern id="{{ prefix }}-{{ p.id }}" width="30" height="30" patternUnits="userSpaceOnUse">
+          <path d="M18.1 2.4 L19.8 6.8 L16.4 6.8 Z M10.1 6.8 L11.7 11 L8.5 11 Z M20.2 16.8 L21.9 21 L18.5 21 Z M8.8 12.3 L11 17.9 L6.6 17.9 Z M25.1 8.9 L27.1 13.9 L23.1 13.9 Z M15.8 22.9 L17.7 27.9 L13.9 27.9 Z M18 10 L19.6 14 L16.4 14 Z" fill="{{ p.ink }}" fill-opacity="0.85"/>
         </pattern>
       {% elif p.shape == "ridges" %}
-        <pattern id="{{ prefix }}-{{ p.id }}" width="12" height="10" patternUnits="userSpaceOnUse">
-          <path d="M0 8 L3 4 L5.5 6.5 L8.5 2.5 L12 8" fill="none" stroke="{{ p.ink }}" stroke-width="0.6" stroke-linejoin="round"/>
+        <pattern id="{{ prefix }}-{{ p.id }}" width="36" height="30" patternUnits="userSpaceOnUse">
+          <path d="M4 20 L7 16 L9.5 18.5 L12.5 14 L16 20 M20 9 L22.4 5.8 L24.4 7.8 L26.8 4.2 L29.6 9" fill="none" stroke="{{ p.ink }}" stroke-width="0.5" stroke-opacity="0.75" stroke-linejoin="round"/>
         </pattern>
       {% elif p.shape == "reeds" %}
-        <pattern id="{{ prefix }}-{{ p.id }}" width="8" height="8" patternUnits="userSpaceOnUse">
-          <path d="M1.5 8 V4 M2 8 L3 3 M5 8 V5 M5.5 8 L4.5 4.5" fill="none" stroke="{{ p.ink }}" stroke-width="0.5" stroke-linecap="round"/>
+        <pattern id="{{ prefix }}-{{ p.id }}" width="30" height="30" patternUnits="userSpaceOnUse">
+          <path d="M5.6 15.9 V11.7 M6.1 15.9 L5 12.75 M7.1 15.9 V10.5 M7.6 15.9 L7.5 11.85 M8.7 15.9 V12.5 M9.2 15.9 L9.4 13.35 M22.4 18.5 V14.3 M22.9 18.5 L21.8 15.35 M23.9 18.5 V13.1 M24.4 18.5 L24.3 14.45 M25.5 18.5 V15.1 M26 18.5 L26.2 15.95 M22 24.5 V20.3 M22.5 24.5 L21.4 21.35 M23.5 24.5 V19.1 M24 24.5 L23.9 20.45 M25.1 24.5 V21.1 M25.6 24.5 L25.8 21.95" fill="none" stroke="{{ p.ink }}" stroke-width="0.5" stroke-linecap="round"/>
         </pattern>
       {% elif p.shape == "tufts" %}
-        <pattern id="{{ prefix }}-{{ p.id }}" width="10" height="10" patternUnits="userSpaceOnUse">
-          <path d="M2 3 l1 -1.2 M3.2 3 l0 -1.6 M6 8 l1 -1.2 M7.2 8 l0 -1.6" fill="none" stroke="{{ p.ink }}" stroke-width="0.5" stroke-linecap="round"/>
+        <pattern id="{{ prefix }}-{{ p.id }}" width="30" height="30" patternUnits="userSpaceOnUse">
+          <path d="M19.8 6.8 l-0.710183 -1.42037 M20.8653 6.8 l0.177546 -1.77546 M21.9305 6.8 l0.798955 -1.33159 M11.7 25.8 l-0.959212 -1.91842 M13.1388 25.8 l0.239803 -2.39803 M14.5776 25.8 l1.07911 -1.79852 M17.7 15.8 l-0.803048 -1.6061 M18.9046 15.8 l0.200762 -2.00762 M20.1091 15.8 l0.903429 -1.50572 M18.7 22.4 l-0.669091 -1.33818 M19.7036 22.4 l0.167273 -1.67273 M20.7073 22.4 l0.752727 -1.25455 M3.7 10.3 l-0.655077 -1.31015 M4.68262 10.3 l0.163769 -1.63769 M5.66523 10.3 l0.736962 -1.22827 M24.7 23.2 l-0.675088 -1.35018 M25.7126 23.2 l0.168772 -1.68772 M26.7253 23.2 l0.759474 -1.26579 M10.2 18.1 l-0.840783 -1.68157 M11.4612 18.1 l0.210196 -2.10196 M12.7223 18.1 l0.945881 -1.57647 M13.6 9.1 l-0.893465 -1.78693 M14.9402 9.1 l0.223366 -2.23366 M16.2804 9.1 l1.00515 -1.67525 M23.6 12.2 l-0.775091 -1.55018 M24.7626 12.2 l0.193773 -1.93773 M25.9253 12.2 l0.871978 -1.4533" fill="none" stroke="{{ p.ink }}" stroke-width="0.5" stroke-linecap="round"/>
         </pattern>
       {% endif %}
     {% endfor %}
   </defs>
 {%- endmacro %}
 
+{# The sky, terrain and clouds reach past the square board so the frame has no bare edges. Coordinates
+   on the board run 0-100, so the layers below span -200 to 300 on both axes. #}
 {% macro map_board(view, framed=false, prefix="map") -%}
   {% if framed %}<div class="map-frame">{% endif %}
-  <div class="map-board" aria-label="Map of discovered places">
+  <div class="map-board world-map" aria-label="Map of discovered places">
     {% if view.origin %}<span class="map-origin" style="left: {{ view.origin[0] }}%; top: {{ view.origin[1] }}%" aria-hidden="true"></span>{% endif %}
+    <svg class="map-sky" viewBox="-200 -200 500 500" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <filter id="{{ prefix }}-clouds" filterUnits="userSpaceOnUse" x="-200" y="-200" width="500" height="500">
+          <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="4" seed="7"/>
+          <feColorMatrix type="matrix" values="0 0 0 0 0.96  0 0 0 0 0.97  0 0 0 0 0.98  1.2 0 0 0 -0.35"/>
+        </filter>
+      </defs>
+      <rect x="-200" y="-200" width="500" height="500" fill="#b7c6d1"/>
+      <rect class="map-clouds" x="-200" y="-200" width="500" height="500" fill="#000" filter="url(#{{ prefix }}-clouds)"/>
+    </svg>
     <svg class="map-regions" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
       {{ terrain_patterns(view.patterns, prefix) }}
       <defs>
-        {# Clouds fill any ground no region covers. #}
-        <filter id="{{ prefix }}-clouds" filterUnits="userSpaceOnUse" x="-20" y="-20" width="140" height="140">
-          <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="4" seed="7" result="noise"/>
-          <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0.93  0 0 0 0 0.95  0 0 0 0 0.97  1.4 0 0 0 -0.5"/>
-        </filter>
         {# Soft, slightly ragged edge so terrain fades into the clouds instead of stopping at a hard line. #}
-        <filter id="{{ prefix }}-soft" filterUnits="userSpaceOnUse" x="-20" y="-20" width="140" height="140">
+        <filter id="{{ prefix }}-soft" filterUnits="userSpaceOnUse" x="-200" y="-200" width="500" height="500">
           <feTurbulence type="fractalNoise" baseFrequency="0.12" numOctaves="3" seed="3" result="warp"/>
           <feDisplacementMap in="SourceGraphic" in2="warp" scale="9" xChannelSelector="R" yChannelSelector="G" result="ragged"/>
           <feGaussianBlur in="ragged" stdDeviation="1.6"/>
         </filter>
-        <mask id="{{ prefix }}-cover" maskUnits="userSpaceOnUse" x="-20" y="-20" width="140" height="140">
+        <mask id="{{ prefix }}-cover" maskUnits="userSpaceOnUse" x="-200" y="-200" width="500" height="500">
           <g filter="url(#{{ prefix }}-soft)" fill="#fff">
             {% for region in view.regions %}
               <polygon points="{% for x, y in region.points %}{{ x }},{{ y }} {% endfor %}"/>
@@ -69,7 +76,6 @@
           </g>
         </mask>
       </defs>
-      <rect class="map-clouds" x="0" y="0" width="100" height="100" fill="#000" filter="url(#{{ prefix }}-clouds)"/>
       {% if view.regions %}
         <g class="map-terrain" mask="url(#{{ prefix }}-cover)">
           {% for region in view.regions %}
