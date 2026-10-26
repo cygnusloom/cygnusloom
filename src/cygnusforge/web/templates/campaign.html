@@ -149,10 +149,10 @@
               {% endif %}
             </div>
             <div class="tab-panel map-view" role="tabpanel" id="panel-world" aria-labelledby="tab-world" hidden>
-              {{ map_board(world_map, framed=true) }}
+              {{ map_board(world_map, framed=true, prefix="tab") }}
             </div>
             {% else %}
-              {{ map_board(world_map, framed=true) }}
+              {{ map_board(world_map, framed=true, prefix="tab") }}
             {% endif %}
           </section>
 

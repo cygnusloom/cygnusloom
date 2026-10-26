@@ -182,7 +182,7 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 }
 .map-regions { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; }
 .map-ground { stroke-opacity: 0.7; stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
-.map-texture { pointer-events: none; }
+.map-texture, .map-clouds { pointer-events: none; }
 .map-marker {
   position: absolute; transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1)));
   display: grid; place-items: center; min-width: 1.75rem; height: 1.25rem; box-sizing: border-box;
