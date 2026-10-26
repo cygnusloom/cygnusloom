@@ -35,6 +35,16 @@
     "dying_hours": 1,
     "dying_conditions": ["mortal_wound"],
     "fatal_conditions": ["doomed"],
-    "aid_items": ["Bandages"]
+    "aid_items": ["Bandages"],
+    "hit_mode": "auto",
+    "multi_attack": "highest",
+    "save": {"mode": "roll_under", "auto_success": 1, "auto_fail": 20},
+    "initiative_mode": "pass_npcs_fail",
+    "groups": {
+      "incoming_modifier": "impaired",
+      "blast_modifier": "enhanced",
+      "blast_hits_all": true,
+      "break_outcomes": ["defeat", "flee"]
+    }
   }
 ]

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import notes_list, journal_text, map_board, map_places, time_strip %}
+{% from "macros.html" import journal_text, map_board, map_places, time_strip %}
 {% block body_class %}workspace-page{% endblock %}
 {% block content %}
 <div class="shell">
@@ -8,7 +8,6 @@
     <button type="button" class="sidebar-item" data-view-target="map" aria-pressed="false" aria-label="Map" title="Map"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg></button>
     <button type="button" class="sidebar-item" data-view-target="journal" aria-pressed="false" aria-label="Journal" title="Journal"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z"/></svg></button>
     <button type="button" class="sidebar-item" data-dialog-target="dialog-characters" aria-haspopup="dialog" aria-label="Characters" title="Characters"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
-    <button type="button" class="sidebar-item" data-drawer-target="drawer-notes" aria-expanded="false" aria-controls="drawer-notes" aria-label="Notes" title="Notes"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 3h10l4 4v14H5z"/><path d="M9 12h6M9 16h6"/></svg></button>
   </nav>
   <div class="views">
 {% block play %}{% endblock %}
@@ -23,14 +22,6 @@
       <h2>Journal</h2>
       <div class="journal">{{ journal_text(scene.journal) }}</div>
     </section>
-
-    <aside class="drawer" id="drawer-notes" aria-label="Notes">
-      <div class="panel-header">
-        <h2>Notes</h2>
-        <button type="button" class="close" data-drawer-close aria-label="Close">&times;</button>
-      </div>
-      {{ notes_list(scene.notes) }}
-    </aside>
   </div>
 </div>
 <dialog id="dialog-characters" class="app-dialog" aria-labelledby="dialog-characters-title">

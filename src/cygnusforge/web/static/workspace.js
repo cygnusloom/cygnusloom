@@ -97,28 +97,6 @@
     closeOnBackdropClick(turnDialog);
   }
 
-  const drawerButtons = Array.from(document.querySelectorAll("[data-drawer-target]"));
-  const setDrawer = (id, open) => {
-    const drawer = document.getElementById(id);
-    if (!open && drawer.contains(document.activeElement)) {
-      drawerButtons.find((button) => button.dataset.drawerTarget === id).focus();
-    }
-    drawer.classList.toggle("open", open);
-    for (const button of drawerButtons) {
-      if (button.dataset.drawerTarget === id) {
-        button.setAttribute("aria-expanded", String(open));
-      }
-    }
-  };
-  drawerButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      const id = button.dataset.drawerTarget;
-      setDrawer(id, !document.getElementById(id).classList.contains("open"));
-    });
-  });
-  document.querySelectorAll("[data-drawer-close]").forEach((button) => {
-    button.addEventListener("click", () => setDrawer(button.closest(".drawer").id, false));
-  });
   const composerInput = document.querySelector(".composer textarea");
   if (composerInput) {
     composerInput.addEventListener("keydown", (event) => {
@@ -127,17 +105,4 @@
       composerInput.form.requestSubmit();
     });
   }
-
-  document.addEventListener("click", (event) => {
-    for (const drawer of document.querySelectorAll(".drawer.open")) {
-      if (drawer.contains(event.target)) continue;
-      if (event.target.closest(`[data-drawer-target="${drawer.id}"]`)) continue;
-      setDrawer(drawer.id, false);
-    }
-  });
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape") return;
-    document.querySelectorAll(".drawer.open").forEach((drawer) => setDrawer(drawer.id, false));
-  });
 })();

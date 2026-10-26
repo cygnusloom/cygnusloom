@@ -217,7 +217,8 @@ def test_campaign_pack_draws_item_icons(client_factory: Callable[[], TestClient]
     tools.give_item(PC, "Rope")
     page = client.get(f"/campaigns/{campaign_id}").text
 
-    inventory = page[page.index('id="panel-inventory"') : page.index('id="panel-notes"')]
+    start = page.index('id="panel-inventory"')
+    inventory = page[start : page.index("</section>", start)]
     weapon = f'<img class="item-icon" src="{icon_path(WEAPON_ICON)}" alt=""><strong>Sword</strong>'
     assert weapon in inventory
     assert inventory.count('class="item-icon"') == inventory.count(

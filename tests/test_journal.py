@@ -368,13 +368,15 @@ def test_the_journal_panel_shows_the_text_and_has_an_empty_state(
 ):
     client, campaign_id = _campaign_id(client_factory)
     page = client.get(f"/campaigns/{campaign_id}").text
-    journal_view = page[page.index('data-view="journal"') : page.index('id="drawer-notes"')]
+    start = page.index('data-view="journal"')
+    journal_view = page[start : page.index("</section>", start)]
     assert "The journal is empty so far." in journal_view
 
     _tool(app, campaign_id, "append_journal", {"text": "Day 1: First entry about the hollow."})
     _tool(app, campaign_id, "append_journal", {"text": "Day 2: Second entry about the bridge."})
     page = client.get(f"/campaigns/{campaign_id}").text
-    journal_view = page[page.index('data-view="journal"') : page.index('id="drawer-notes"')]
+    start = page.index('data-view="journal"')
+    journal_view = page[start : page.index("</section>", start)]
     assert "The journal is empty" not in journal_view
     assert "<p>Day 1: First entry about the hollow.</p>" in journal_view
     assert journal_view.index("First entry") < journal_view.index("Second entry")

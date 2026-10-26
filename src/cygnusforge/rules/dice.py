@@ -1,6 +1,6 @@
 """Dice rolls. A formula is one or more terms joined by "+", such as "1d20" or "2d6+1d4". What
 "+" means between terms belongs to the rule set: "sum" adds every term, and "highest" rolls each
-term and keeps the higher total, as Cairn 2e does with "1d8+1d8" for two weapons."""
+term and keeps the higher total, such as "1d8+1d8" for two weapons."""
 
 from __future__ import annotations
 

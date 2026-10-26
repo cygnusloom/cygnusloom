@@ -40,6 +40,8 @@ from cygnusforge.services.events import (
     MaxChanged,
     Struck,
     current,
+    decode,
+    events_since,
     record,
 )
 from cygnusforge.services.tools import Ask, RollAnswer, ToolRun, run_tool
@@ -317,6 +319,191 @@ def test_a_combat_module_needs_the_save_and_initiative_functions():
             {},
             "cairn2e",
         )
+
+
+def _declarative_combat(**changes: Any) -> Definition:
+    """A combat definition with no python_module, so its save and initiative are declarative."""
+    data = {key: value for key, value in _combat().data.items() if key != "python_module"}
+    data.update(changes)
+    return Definition(type="combat", id="cairn", data=data)
+
+
+def _declarative(**changes: Any):
+    return _load_combat(_declarative_combat(**changes), {}, CAIRN.character, {}, "cairn2e")
+
+
+@pytest.mark.parametrize(
+    ("save", "roll", "score", "passed"),
+    [
+        ({"mode": "roll_under"}, 12, 12, True),
+        ({"mode": "roll_under"}, 13, 12, False),
+        ({"mode": "roll_over"}, 12, 12, True),
+        ({"mode": "roll_over"}, 11, 12, False),
+        ({"mode": "roll_over", "auto_success": 20, "auto_fail": 2}, 20, 1, True),
+        ({"mode": "roll_over", "auto_success": 20, "auto_fail": 2}, 2, 19, False),
+        ({"auto_success": None, "auto_fail": None}, 20, 19, False),
+        ({"auto_success": None, "auto_fail": None}, 20, 20, True),
+    ],
+)
+def test_a_declarative_save_decides_without_a_python_module(save, roll, score, passed):
+    combat = _declarative(save=save)
+    assert combat.module is None
+    assert combat.save_succeeds(roll, score) is passed
+
+
+def test_without_a_save_block_a_one_always_passes_and_a_twenty_always_fails():
+    combat = _declarative()
+    assert combat.save_succeeds(1, 0) is True
+    assert combat.save_succeeds(20, 20) is False
+
+
+@pytest.mark.parametrize(
+    ("save", "message"),
+    [
+        ({"mode": "roll_sideways"}, "'mode' must be one of"),
+        ({"auto_success": 21}, "save 'auto_success' must be a roll on the check die"),
+        ({"auto_fail": 0}, "save 'auto_fail' must be a roll on the check die"),
+    ],
+)
+def test_a_bad_declarative_save_is_rejected(save, message):
+    with pytest.raises(ContentError, match=message):
+        _declarative(save=save)
+
+
+ENTRIES = [("Ann", False), ("Ogre", None), ("Bo", True), ("Cy", None), ("Dee", True)]
+
+
+def test_a_declarative_initiative_puts_passers_then_npcs_then_failers():
+    combat = _declarative()
+    assert combat.initiative_mode == "pass_npcs_fail"
+    assert combat.initiative_order(ENTRIES) == ["Bo", "Dee", "Ogre", "Cy", "Ann"]
+
+
+def test_a_roll_order_initiative_keeps_the_entries_as_given():
+    combat = _declarative(initiative_mode="roll_order")
+    assert combat.initiative_order(ENTRIES) == ["Ann", "Ogre", "Bo", "Cy", "Dee"]
+
+
+def test_the_encounter_uses_a_declarative_initiative_order_without_a_module(client_factory):
+    _, _, tools = _fight(client_factory)
+    declarative = replace(tools, combat=_declarative(initiative_mode="roll_order"))
+    assert declarative._initiative_order()([("Ann", False), ("Bo", True)]) == ["Ann", "Bo"]
+
+
+def _struck_events(app: FastAPI, campaign_id: int) -> list[Struck]:
+    with _db(app) as db:
+        return [decode(row) for row in events_since(db, campaign_id) if row.kind == Struck.kind]
+
+
+def _sturdy(app: FastAPI, campaign_id: int) -> None:
+    """Mara at 10 hit points. Her creation rolls its stats, so a test's hits must not drop her to
+    0 at random, which would gain an injury and need another die."""
+    before = _character(app, campaign_id, PC).stats["hp"]
+    with _db(app) as db:
+        record(
+            db,
+            campaign_id,
+            MaxChanged(name=PC, stat="hp", before=before, after=10, cause="a test"),
+        )
+        db.commit()
+
+
+def test_multi_attack_each_applies_every_attack_in_turn(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _sturdy(app, campaign_id)
+    _foe(tools, "Grave Thing", claw="1d6")
+    _foe(tools, "Bo", claw="1d6")
+    each = replace(tools, combat=replace(CAIRN.combat, multi_attack="each"), rng=Rolls(1, 2))
+    result = each.resolve_attacks(
+        PC, [{"attacker": "Grave Thing", "attack": "Claw"}, {"attacker": "Bo", "attack": "Claw"}]
+    )
+    assert [attack["raw"] for attack in result["attacks"]] == [1, 2]
+    assert result["raw"] == 2
+    assert _character(app, campaign_id, PC).harm == {"hp": 3}
+    assert [strike.attacker for strike in _struck_events(app, campaign_id)] == [
+        "Grave Thing",
+        "Bo",
+    ]
+
+
+def test_multi_attack_each_stops_once_the_target_owes_a_save(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _sturdy(app, campaign_id)
+    _foe(tools, "Grave Thing", claw="1d6")
+    _foe(tools, "Bo", claw="1d6")
+    _set_stat(app, campaign_id, PC, "hp", 0)
+    each = replace(tools, combat=replace(CAIRN.combat, multi_attack="each"), rng=Rolls(2, 3))
+    result = each.resolve_attacks(
+        PC, [{"attacker": "Grave Thing", "attack": "Claw"}, {"attacker": "Bo", "attack": "Claw"}]
+    )
+    assert len(result["attacks"]) == 1
+    assert result["save_due"] == "str"
+    assert len(_struck_events(app, campaign_id)) == 1
+
+
+def test_roll_vs_defense_misses_a_blow_that_does_not_reach_the_armor(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _sturdy(app, campaign_id)
+    tools.set_armor(PC, 3)
+    _foe(tools, "Bo", claw="1d6")
+    result = replace(
+        tools, combat=replace(CAIRN.combat, hit_mode="roll_vs_defense"), rng=Rolls(5, 2)
+    ).attack("Bo", "Claw", PC)
+    assert result["hit"] is False
+    assert (result["raw"], result["to_hit"], result["harm"]) == (5, 2, {})
+    assert not any(_character(app, campaign_id, PC).harm.values())
+    strike = _struck_events(app, campaign_id)[-1]
+    assert strike.hit is False and strike.to_hit == 2
+    assert strike.render().endswith("swings the Claw at Mara and misses (rolled 2).")
+
+
+def test_roll_vs_defense_lands_a_blow_that_reaches_the_armor(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _sturdy(app, campaign_id)
+    tools.set_armor(PC, 3)
+    _foe(tools, "Bo", claw="1d6")
+    result = replace(
+        tools, combat=replace(CAIRN.combat, hit_mode="roll_vs_defense"), rng=Rolls(5, 3)
+    ).attack("Bo", "Claw", PC)
+    assert "hit" not in result
+    assert (result["raw"], result["armor"], result["harm"]) == (5, 3, {"hp": 2})
+    assert _character(app, campaign_id, PC).harm == {"hp": 2}
+    strike = _struck_events(app, campaign_id)[-1]
+    assert strike.hit is True and strike.to_hit == 3
+
+
+def test_the_auto_hit_mode_never_rolls_to_hit(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _sturdy(app, campaign_id)
+    tools.set_armor(PC, 3)
+    _foe(tools, "Bo", claw="1d6")
+    result = replace(tools, rng=Rolls(5)).attack("Bo", "Claw", PC)
+    assert result["raw"] == 5
+    assert _struck_events(app, campaign_id)[-1].to_hit is None
+
+
+def test_a_large_group_line_names_the_incoming_modifier_its_rule_set_gives(client_factory):
+    _, _, tools = _fight(client_factory)
+    tools.create_monster(
+        "Swarm", YARD, description="A group.", template="killer-bees", stats={"hp": 3, "str": 5}
+    )
+    tools.add_participant("Swarm")
+
+    def large_group_line(combat) -> str:
+        lines = replace(tools, combat=combat).get_statblock("Swarm")["statblock"]
+        return next(line for line in lines if line.startswith("Large group:"))
+
+    groups = CAIRN.combat.groups
+    assert large_group_line(CAIRN.combat) == (
+        "Large group: a group that attacks with Blast and is hit only by impaired attacks"
+    )
+    enhanced = replace(CAIRN.combat, groups=replace(groups, incoming_modifier="enhanced"))
+    assert large_group_line(enhanced) == (
+        "Large group: a group that attacks with Blast and is hit only by enhanced attacks"
+    )
+    assert large_group_line(replace(CAIRN.combat, groups=None)) == (
+        "Large group: a group that attacks with Blast"
+    )
 
 
 def test_a_statblock_template_gives_the_starting_values(client_factory):

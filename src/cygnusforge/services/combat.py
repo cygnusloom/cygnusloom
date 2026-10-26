@@ -14,7 +14,7 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusforge.content.library import CombatRules, DamageStep
+from cygnusforge.content.library import CombatRules, DamageStep, GroupRules
 from cygnusforge.rules.dice import roll_total
 from cygnusforge.services import death
 from cygnusforge.services.attacks import (
@@ -121,15 +121,19 @@ def _living(character: Character, combat: CombatRules) -> Character:
         raise InvalidInput(f"{character.name} has surrendered")
     if character.critical_due:
         raise InvalidInput(
-            f"{character.name} is broken and awaits the Warden's decision; call resolve_group_break"
+            f"{character.name} is broken and awaits the GM's decision; call resolve_group_break"
         )
     return character
 
 
-def _require_impaired(target: Character, modifier: str) -> None:
-    """A group is hit only by impaired attacks."""
-    if target.large_group and modifier != "impaired":
-        raise InvalidInput(f"{target.name} is a group; attacks on it must be impaired")
+def _require_impaired(target: Character, modifier: str, combat: CombatRules) -> None:
+    """A group is hit only by the rule set's incoming modifier. A rule set with no groups block
+    places no such limit."""
+    if combat.groups is None or not target.large_group:
+        return
+    required = combat.groups.incoming_modifier
+    if modifier != required:
+        raise InvalidInput(f"{target.name} is a group; attacks on it must be {required}")
 
 
 def _strike(
@@ -149,9 +153,45 @@ def _strike(
 ) -> dict[str, Any]:
     """Apply a hit through the rule set's damage steps. A target that owes a save takes no more
     hits. An NPC saves at once; a player character saves when the player rolls. A hit on an NPC
-    may also bring its side's morale check. An attack that ignores armor skips the target's armor."""
+    may also bring its side's morale check. An attack that ignores armor skips the target's armor.
+
+    Under the "auto" hit mode the blow always lands. Under "roll_vs_defense" the check die is rolled
+    against the target's armor as its defense (none when the attack ignores armor), and a roll below
+    the defense misses: the miss is logged and no harm is done."""
     if target.save_due is not None:
         raise InvalidInput(f"{target.name} must make their {target.save_due} save first")
+    to_hit: int | None = None
+    if combat.hit_mode == "roll_vs_defense":
+        to_hit = roll_total(combat.check_die, rng, plus=plus)
+        defense = 0 if ignores_armor else target.armor
+        if to_hit < defense:
+            record(
+                db,
+                campaign_id,
+                Struck(
+                    name=target.name,
+                    attacker=attacker,
+                    weapon=weapon,
+                    raw=raw,
+                    armor=0,
+                    harm={},
+                    modifier=modifier,
+                    rolled=rolled,
+                    hit=False,
+                    to_hit=to_hit,
+                ),
+            )
+            db.commit()
+            return {
+                "target": target.name,
+                "raw": raw,
+                "armor": 0,
+                "harm": {},
+                "save_due": None,
+                "hit": False,
+                "to_hit": to_hit,
+                "defeated": target.defeated,
+            }
     armor = 0 if ignores_armor else target.armor
     damage = apply_damage(combat.damage, armor, lambda stat: current(target, stat), raw)
     if target.invincible:
@@ -170,6 +210,7 @@ def _strike(
             save=damage.save,
             modifier=modifier,
             rolled=rolled,
+            to_hit=to_hit,
         ),
     )
     db.commit()
@@ -284,7 +325,7 @@ def _save(
 ) -> dict[str, Any]:
     roll = roll_total(combat.check_die, rng, plus=plus)
     score = current(character, stat)
-    passed = combat.module.save_succeeds(roll, score)
+    passed = combat.save_succeeds(roll, score)
     critical = character.large_group
     record(
         db,
@@ -335,10 +376,11 @@ def attack(
     plus: str,
     targets: Sequence[str] | None = None,
 ) -> dict[str, Any]:
-    """An NPC's attack. Attacks always hit, so the attack's damage is the roll. A modifier rolls
-    its own dice instead of the attack's. An attack with Blast hits every target in its area, which
-    is `targets` (it must include `target`), and each target rolls separately. Who acts when is the
-    turn order's job; this only checks the attacker has the attack and both are living."""
+    """An NPC's attack. Under the auto hit mode it always hits, so the attack's damage is the roll.
+    A modifier rolls its own dice instead of the attack's. An attack with Blast hits every target in
+    its area, which is `targets` (it must include `target`), and each target rolls separately. Who
+    acts when is the turn order's job; this only checks the attacker has the attack and both are
+    living."""
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     source = _participant(state, attacker)
@@ -364,7 +406,7 @@ def attack(
         )
     if targets:
         raise InvalidInput(f"{name} has no Blast, so it hits one target; leave targets out")
-    _require_impaired(struck, modifier_name(modifier))
+    _require_impaired(struck, modifier_name(modifier), combat)
     dice = modifier_dice(combat.modifiers, modifier)
     raw = roll_total(dice or source.attacks[name], rng, plus=plus)
     return _strike(
@@ -454,10 +496,12 @@ def _blast(
     *,
     plus: str,
 ) -> dict[str, Any]:
-    """A group's attack, which has Blast: it rolls enhanced dice separately for each living
-    individual on the other side. The named target must be one of them, but every one is hit."""
+    """A group's attack, which has Blast: it rolls the rule set's blast dice separately for each living
+    individual on the other side. The named target must be one of them. Every one is hit unless the
+    rule set's groups say a blast hits only the named target."""
     encounter = state.encounter
     assert encounter is not None
+    groups = combat.groups or GroupRules()
     own_side = encounter.sides.get(name_key(source.name), "")
     if encounter.sides.get(name_key(struck.name), "") == own_side:
         raise InvalidInput(f"{source.name} is on {struck.name}'s side and cannot attack them")
@@ -465,9 +509,10 @@ def _blast(
         raise InvalidInput(
             f"{source.name} is a group and cannot attack {struck.name}, another group"
         )
-    if modifier_name(modifier) not in ("", "enhanced"):
+    if modifier_name(modifier) not in ("", groups.blast_modifier):
         raise InvalidInput(
-            f"{source.name} is a group; its attacks are enhanced, so leave the modifier out"
+            f"{source.name} is a group; its attacks are {groups.blast_modifier}, so leave the "
+            "modifier out"
         )
     targets = [
         state.characters[name_key(display)]
@@ -476,6 +521,8 @@ def _blast(
         and not state.characters[name_key(display)].large_group
         and not out_of_fight(state.characters[name_key(display)])
     ]
+    if not groups.blast_hits_all:
+        targets = [target for target in targets if target.name == struck.name]
     if not targets:
         raise InvalidInput(
             f"there is no living individual on the other side for {source.name} to hit"
@@ -483,7 +530,7 @@ def _blast(
     owed = [target.name for target in targets if target.save_due is not None]
     if owed:
         raise InvalidInput(f"{', '.join(owed)} must make their save first")
-    dice = modifier_dice(combat.modifiers, "enhanced") or source.attacks[name]
+    dice = modifier_dice(combat.modifiers, groups.blast_modifier) or source.attacks[name]
     results = []
     for target in targets:
         # An earlier hit in the blast can break another target's side, so each is checked as it comes up.
@@ -501,7 +548,7 @@ def _blast(
                 source.name,
                 name,
                 raw,
-                modifier="enhanced",
+                modifier=groups.blast_modifier,
                 plus=plus,
                 ignores_armor=IGNORES_ARMOR in source.attack_flags.get(name, []),
             )
@@ -520,9 +567,10 @@ def resolve_attacks(
     plus: str,
 ) -> dict[str, Any]:
     """Several NPC attacks on one character, such as two NPCs of the foe side or one NPC's two
-    weapons. Every attack rolls its own dice, the highest roll is the one hit, and the rest are
-    recorded. Each attacker must be a living NPC on the foe side, and every attack is checked
-    before any die is rolled."""
+    weapons. Every attack rolls its own dice. Under the rule set's "highest" multi-attack the
+    highest roll is the one hit and the rest are recorded; under "each" every attack hits in turn.
+    Each attacker must be a living NPC on the foe side, and every attack is checked before any die
+    is rolled."""
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     struck = _living(_participant(state, target), combat)
@@ -545,7 +593,7 @@ def resolve_attacks(
             raise InvalidInput(f"{source.name} is a group; use attack, which has its Blast")
         if encounter.sides.get(name_key(source.name), "") == foe_side:
             raise InvalidInput(f"{source.name} is on {struck.name}'s side and cannot attack them")
-        _require_impaired(struck, modifier_name(entry.get("modifier")))
+        _require_impaired(struck, modifier_name(entry.get("modifier")), combat)
         name = _attack_named(source, attack_name)
         flags = source.attack_flags.get(name, [])
         if BLAST in flags:
@@ -564,6 +612,8 @@ def resolve_attacks(
             )
         )
     rolls = [roll_total(dice, rng, plus=plus) for *_, dice, _ in planned]
+    if combat.multi_attack == "each":
+        return _strike_each(db, campaign_id, combat, rng, struck.name, planned, rolls, plus=plus)
     best = highest_index(rolls)
     attacker, weapon, modifier, _, ignores_armor = planned[best]
     rolled = ""
@@ -587,6 +637,44 @@ def resolve_attacks(
     )
 
 
+def _strike_each(
+    db: Session,
+    campaign_id: int,
+    combat: CombatRules,
+    rng: random.Random,
+    target: str,
+    planned: Sequence[tuple[str, str, str, str, bool]],
+    rolls: Sequence[int],
+    *,
+    plus: str,
+) -> dict[str, Any]:
+    """Apply each planned attack in turn, with the damage it already rolled. The attacks stop once
+    the target is out of the fight or owes a save, and the result is the last hit, with every hit
+    under "attacks"."""
+    results = []
+    for (attacker, weapon, modifier, _, ignores_armor), raw in zip(planned, rolls):
+        current_target = load_state(db, campaign_id).characters[name_key(target)]
+        blocked = out_of_fight(current_target) or current_target.critical_due
+        if blocked or current_target.save_due is not None:
+            break
+        results.append(
+            _strike(
+                db,
+                campaign_id,
+                combat,
+                rng,
+                current_target,
+                attacker,
+                weapon,
+                raw,
+                modifier=modifier,
+                plus=plus,
+                ignores_armor=ignores_armor,
+            )
+        )
+    return {**results[-1], "attacks": results}
+
+
 def attack_dice(
     db: Session, campaign_id: int, weapon: str, combat: CombatRules, modifier: str = ""
 ) -> str:
@@ -608,8 +696,8 @@ def player_attack(
     plus: str,
 ) -> dict[str, Any]:
     """A player character's hit. The engine rolls the attack's dice, so the damage is never typed
-    in: the modifier's dice when there is one, else the weapon's. The attack always hits. A group
-    takes only impaired attacks."""
+    in: the modifier's dice when there is one, else the weapon's. The hit mode decides whether it
+    lands. A group takes only impaired attacks."""
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     pc = _player_character(state)
@@ -618,7 +706,7 @@ def player_attack(
     _living(struck, combat)
     name = _weapon_name(weapon)
     dice = _attack_dice(pc, name, modifier, combat)
-    _require_impaired(struck, modifier_name(modifier))
+    _require_impaired(struck, modifier_name(modifier), combat)
     raw = roll_total(dice, rng, plus=plus)
     return _strike(
         db,
@@ -667,9 +755,9 @@ def _attack_dice(pc: Character, weapon: str, modifier: str, combat: CombatRules)
 def resolve_group_break(
     db: Session, campaign_id: int, name: str, outcome: str, combat: CombatRules
 ) -> dict[str, Any]:
-    """The Warden's decision after a group's Critical Damage save failed: "defeat" breaks and
-    defeats it, "flee" breaks it up so its members run from the fight. Until this is called, the
-    group cannot attack or be attacked."""
+    """The GM's decision after a group's Critical Damage save failed. "defeat" breaks and defeats it,
+    "flee" breaks it up so its members run from the fight. Until this is called, the group cannot
+    attack or be attacked. The rule set's groups list the decisions a break may take."""
     state = load_state(db, campaign_id)
     character = state.characters.get(name_key(name))
     if character is None:
@@ -678,8 +766,9 @@ def resolve_group_break(
         raise InvalidInput(f"{character.name} is not a group")
     if not character.critical_due:
         raise InvalidInput(f"{character.name} has no failed critical damage save to resolve")
-    if outcome not in ("defeat", "flee"):
-        raise InvalidInput("outcome must be 'defeat' or 'flee'")
+    outcomes = (combat.groups or GroupRules()).break_outcomes
+    if outcome not in outcomes:
+        raise InvalidInput(f"outcome must be {' or '.join(repr(o) for o in outcomes)}")
     status = defeat_status(character, combat.defeat) if outcome == "defeat" else ""
     record(
         db,
@@ -700,7 +789,7 @@ def player_save(db: Session, campaign_id: int, roll: int, combat: CombatRules) -
     roll = whole_number(roll, "roll", 1, combat.check_sides)
     stat = pc.save_due
     score = current(pc, stat)
-    passed = combat.module.save_succeeds(roll, score)
+    passed = combat.save_succeeds(roll, score)
     record(
         db,
         campaign_id,
@@ -732,10 +821,10 @@ def player_initiative(
     character = state.characters[name_key(waiting[0])]
     roll = whole_number(roll, "roll", 1, combat.check_sides)
     score = current(character, combat.initiative_stat)
-    passed = combat.module.save_succeeds(roll, score)
+    passed = combat.save_succeeds(roll, score)
     record(db, campaign_id, InitiativeRolled(name=character.name, passed=passed))
     db.commit()
-    settle_initiative(db, campaign_id, combat.module.initiative_order)
+    settle_initiative(db, campaign_id, combat.initiative_order)
     return {
         "character": character.name,
         "roll": roll,

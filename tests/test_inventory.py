@@ -196,6 +196,7 @@ def test_the_campaign_page_lists_the_pack(client_factory: Callable[[], TestClien
     tools.give_item(PC, "Rope")
     page = client.get(f"/campaigns/{campaign_id}").text
     assert 'id="tab-inventory"' in page
-    inventory = page[page.index('id="panel-inventory"') : page.index('id="panel-notes"')]
+    start = page.index('id="panel-inventory"')
+    inventory = page[start : page.index("</section>", start)]
     assert f"Carrying {_used(client.app, campaign_id)} of {CAPACITY} slots." in inventory
     assert "<strong>Rope</strong>" in inventory

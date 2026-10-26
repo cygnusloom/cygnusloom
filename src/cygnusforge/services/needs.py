@@ -148,7 +148,7 @@ def _feed_party(
 
 
 def rest_history(db: Session, campaign_id: int) -> dict[str, Any]:
-    """The party's most recent rests, newest first, so the Warden can judge need."""
+    """The party's most recent rests, newest first, so the GM can judge need."""
     rests = load_state(db, campaign_id).rests[-HISTORY_LIMIT:]
     return {
         "rests": [

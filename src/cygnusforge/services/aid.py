@@ -1,5 +1,5 @@
-"""Aid for a dying player character. Stabilizing it stops its clock: a Bandage used on it, or the
-referee's decision that aid has held. A dying condition that ends by aid ends with it."""
+"""Aid for a dying player character. Stabilizing it stops its clock: an aid item used on it, or the
+GM's decision that aid has held. A dying condition that ends by aid ends with it."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ def stabilize(
     *,
     plus: str,
 ) -> dict[str, Any]:
-    """Stop a dying player character's clock. It stays out of action until the Warden recovers it.
+    """Stop a dying player character's clock. It stays out of action until the GM recovers it.
     A lasting condition held now ends by aid, which runs its on-end effects."""
     character = load_state(db, campaign_id).characters.get(name_key(name))
     if character is None:
@@ -72,7 +72,7 @@ def use_item(
     *,
     plus: str,
 ) -> dict[str, Any]:
-    """Spend one use of a consumable the character carries. An aid item, such as a Bandage, may be
+    """Spend one use of a consumable the character carries. An aid item, such as a bandage, may be
     used on a dying character, and using it stabilizes them. Any other item is spent on the holder."""
     aid = combat is not None and any(same_item_name(item, a) for a in combat.aid_items)
     if target is None or name_key(target) == name_key(name):

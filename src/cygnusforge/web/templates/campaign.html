@@ -1,5 +1,5 @@
 {% extends "campaign_base.html" %}
-{% from "macros.html" import notes_list, map_board, encounter_board, time_strip %}
+{% from "macros.html" import map_board, encounter_board, time_strip %}
 {% block title %}{{ campaign.name }}{% endblock %}
 {% block play %}
     <div class="workspace" data-view="play">
@@ -162,7 +162,6 @@
               <button type="button" class="tab" role="tab" id="tab-location" aria-controls="panel-location" aria-selected="true">Location</button>
               <button type="button" class="tab" role="tab" id="tab-character" aria-controls="panel-character" aria-selected="false" tabindex="-1">Character</button>
               <button type="button" class="tab" role="tab" id="tab-inventory" aria-controls="panel-inventory" aria-selected="false" tabindex="-1">Inventory</button>
-              <button type="button" class="tab" role="tab" id="tab-notes" aria-controls="panel-notes" aria-selected="false" tabindex="-1">Notes</button>
               {% if debug_panel %}<button type="button" class="tab" role="tab" id="tab-debug" aria-controls="panel-debug" aria-selected="false" tabindex="-1">Debug</button>{% endif %}
             </div>
             <div class="tab-panel" role="tabpanel" id="panel-location" aria-labelledby="tab-location">
@@ -225,9 +224,6 @@
               {% else %}
               <p class="muted">No inventory yet.</p>
               {% endif %}
-            </div>
-            <div class="tab-panel" role="tabpanel" id="panel-notes" aria-labelledby="tab-notes" hidden>
-              {{ notes_list(scene.notes) }}
             </div>
             {% if debug_panel %}
             <div class="tab-panel" role="tabpanel" id="panel-debug" aria-labelledby="tab-debug" hidden>

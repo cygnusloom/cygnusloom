@@ -144,12 +144,11 @@ SAME_POINT_KM = 0.01
 @dataclass(frozen=True)
 class SceneView:
     """What the player may see: the player character, the place they are in, the NPCs there, the
-    notes that concern them, the player character's statblock, and the journal."""
+    player character's statblock, and the journal."""
 
     pc: Character | None
     location: Place | None
     npcs: list[Character]
-    notes: list[Note]
     sheet: list[str]
     journal: str = ""
     pack: PackView | None = None
@@ -1175,7 +1174,7 @@ class WorldTools:
         return self.combat
 
     def _initiative_order(self) -> encounters.InitiativeOrder | None:
-        return self.combat.module.initiative_order if self.combat is not None else None
+        return self.combat.initiative_order if self.combat is not None else None
 
     def place_participant(self, name: str, column: int, row: int) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -2485,9 +2484,13 @@ def get_statblock(
 def _combat_lines(character: Character, spec: CharacterSpec, combat: CombatRules) -> list[str]:
     lines = [f"Armor: {character.armor}"]
     if character.large_group:
-        lines.append(
-            "Large group: a group that attacks with Blast and is hit only by impaired attacks"
-        )
+        if combat.groups is None:
+            lines.append("Large group: a group that attacks with Blast")
+        else:
+            lines.append(
+                "Large group: a group that attacks with Blast and is hit only by "
+                f"{combat.groups.incoming_modifier} attacks"
+            )
     if character.attacks:
         attacks = ", ".join(
             f"{name} {formula}{_flag_text(character.attack_flags.get(name, ()))}"
@@ -2506,7 +2509,7 @@ def _combat_lines(character: Character, spec: CharacterSpec, combat: CombatRules
     elif character.surrendered:
         lines.append("Status: surrendered")
     elif character.critical_due:
-        lines.append("Status: broken, awaiting the Warden's decision (resolve_group_break)")
+        lines.append("Status: broken, awaiting the GM's decision (resolve_group_break)")
     elif character.save_due is not None:
         lines.append(f"Status: {spec.stats[character.save_due].name} save due")
     return lines
@@ -2721,13 +2724,6 @@ def scene_view(
     found = state.named(location) if location is not None else None
     place = found if isinstance(found, Place) else None
     npcs = _npcs_at(state, place.name) if place is not None else []
-    subjects = {CAMPAIGN_WIDE}
-    if pc is not None:
-        subjects.add(pc.name)
-    if place is not None:
-        subjects.add(place.name)
-    subjects.update(npc.name for npc in npcs)
-    notes = [note for note in reversed(state.notes) if note.subject in subjects]
     sheet = describe(spec, _sheet_of(pc)).splitlines() if pc is not None else []
     pack = None
     if pc is not None and inventory is not None:
@@ -2758,7 +2754,6 @@ def scene_view(
         pc=pc,
         location=place,
         npcs=npcs,
-        notes=notes,
         sheet=sheet,
         journal=state.journal,
         pack=pack,

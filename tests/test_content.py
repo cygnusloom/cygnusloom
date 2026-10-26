@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import random
+import re
 from pathlib import Path
 from typing import Any
 
@@ -12,7 +13,9 @@ from cygnusforge.content.definitions import ContentError, Definition, read_defin
 from cygnusforge.content.library import (
     TERRAIN_PATTERNS,
     ContentLibrary,
+    ItemKind,
     PlayerInput,
+    _load_magic,
     _load_monster,
 )
 from tests.conftest import content_library
@@ -944,6 +947,12 @@ def test_bundled_cairn_prompts_and_cap_are_read():
         "surrender",
         "group_break",
         "defeated_character",
+        "time_and_rest",
+        "needs",
+        "give_item_from_place",
+        "purchases",
+        "attack_flags",
+        "overland_weather",
     ]
     assert ContentLibrary.load().core.prompt_fragments == ()
 
@@ -967,3 +976,57 @@ def test_a_monster_needs_at_least_one_hit_point():
         _load_monster(definition, character, "testland", pool="hp")
     stats["hp"] = 1
     assert _load_monster(definition, character, "testland", pool="hp").stats["hp"] == 1
+
+
+MAGIC_SIZES = {"petty": 0, "normal": 1, "bulky": 2}
+
+
+def _magic_definitions(**changes: Any) -> list[Definition]:
+    data: dict[str, Any] = {
+        "reusable": {"kind": "spellbook", "size": "normal"},
+        "single_use": {"kind": "scroll", "size": "petty"},
+        "charged": {"kind": "relic"},
+        "cast_penalty": 1,
+    }
+    data.update(changes)
+    return [Definition(type="magic", id="cairn", data=data)]
+
+
+def test_magic_roles_are_read_with_their_kinds_and_sizes():
+    magic = _load_magic(_magic_definitions(), MAGIC_SIZES, "testland")
+    assert magic is not None
+    assert magic.reusable == ItemKind("spellbook", "normal")
+    assert magic.single_use == ItemKind("scroll", "petty")
+    assert magic.charged == ItemKind("relic")
+    assert (magic.spellbook_kind, magic.spellbook_size) == ("spellbook", "normal")
+    assert (magic.scroll_kind, magic.scroll_size) == ("scroll", "petty")
+    assert magic.charged_kind == "relic"
+    assert magic.cast_penalty == 1
+
+
+def test_a_charged_role_takes_no_size_even_if_one_is_given():
+    magic = _load_magic(
+        _magic_definitions(charged={"kind": "wand", "size": "bulky"}), MAGIC_SIZES, "testland"
+    )
+    assert magic is not None
+    assert magic.charged == ItemKind("wand")
+
+
+def test_no_magic_definition_means_no_magic():
+    assert _load_magic([], MAGIC_SIZES, "testland") is None
+
+
+@pytest.mark.parametrize(
+    ("changes", "message"),
+    [
+        ({"reusable": "spellbook"}, "'reusable' must be an object with a 'kind'"),
+        ({"single_use": None}, "'single_use' must be an object with a 'kind'"),
+        ({"charged": {}}, "'kind' must be a non-empty string"),
+        ({"reusable": {"kind": "spellbook"}}, "'size' must be a non-empty string"),
+        ({"single_use": {"kind": "scroll", "size": "huge"}}, "names no item size ('huge')"),
+        ({"cast_penalty": -1}, "'cast_penalty' must be a whole number"),
+    ],
+)
+def test_a_bad_magic_role_is_rejected(changes, message):
+    with pytest.raises(ContentError, match=re.escape(message)):
+        _load_magic(_magic_definitions(**changes), MAGIC_SIZES, "testland")

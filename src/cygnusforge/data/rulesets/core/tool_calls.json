@@ -98,7 +98,7 @@
     "function": "create_npc",
     "character_options": true,
     "npc_hp_tier": true,
-    "description": "Add an NPC to the campaign and place them at an existing location. Leave personality, accent, or quirks out to have them generated at random; give them only when the story calls for a specific trait. Give character options, such as appearance or biography, only when the story calls for them; anything left out is rolled or left blank. A name that matches a published statblock, such as a creature in the module, takes that statblock's stats, armor, and attacks, so leave the stats out of the character options. For an NPC with no statblock, set hp_tier to the tier their role in the story calls for. Names must be unique among locations and NPCs.",
+    "description": "Add an NPC to the campaign and place them at an existing location. Leave personality, accent, or quirks out to have them generated at random; give them only when the story calls for a specific trait. Give character options, such as appearance or biography, only when the story calls for them; anything left out is rolled or left blank. A name that matches a published statblock, such as a creature in the module, takes that statblock's stats, armor, and attacks, so leave the stats out of the character options. Names must be unique among locations and NPCs.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -151,7 +151,7 @@
     "name": "move_actor",
     "python_module": "core",
     "function": "move_actor",
-    "description": "Move the player character or an NPC to another existing location. Use it when someone travels or is sent somewhere. Travel follows the routes in the location descriptions: send the player character only to a place reached by a route from where they are, and never to a place they have not heard of, unless something forces them there (a trap, a teleporter, or a spell). A forced move discovers the place on arrival. The player character starts unplaced, so on the first turn create the place where the story begins and move the player character there. Moving the player character to a place discovers it. Leave location out to send an NPC into the wind: it is at no location until a later move brings it back. The player character cannot go into the wind. Always give the mode. Use overland for a journey across the wilderness, which takes watches and needs a route. Use in_settlement for a walk within a town or city, which takes minutes at the travel speed. Use in_dungeon for a move through a dungeon or building, which takes no clock time. The result reports the time charged.",
+    "description": "Move the player character or an NPC to another existing location. Use it when someone travels or is sent somewhere. Travel follows the routes in the location descriptions: send the player character only to a place reached by a route from where they are, and never to a place they have not heard of, unless something forces them there (a trap, a teleporter, or a spell). A forced move discovers the place on arrival. The player character starts unplaced, so on the first turn create the place where the story begins and move the player character there. Moving the player character to a place discovers it. Leave location out to send an NPC into the wind: it is at no location until a later move brings it back. The player character cannot go into the wind. Always give the mode. Use overland for a journey across the wilderness, which takes wilderness time and needs a route. Use in_settlement for a walk within a town or city, which takes time at the travel speed. Use in_dungeon for a move through a dungeon or building, which takes no clock time. The result reports the time charged.",
     "travel": true,
     "parameters": {
       "type": "object",
@@ -167,17 +167,17 @@
         "mode": {
           "type": "string",
           "enum": ["overland", "in_settlement", "in_dungeon"],
-          "description": "How the move is made: overland (watches across the wilderness, needs a route), in_settlement (minutes at the travel speed), or in_dungeon (no clock time). NPC moves take no clock time whatever the mode."
+          "description": "How the move is made: overland (a journey across the wilderness, needs a route), in_settlement (a walk within a settlement, takes time at the travel speed), or in_dungeon (no clock time). NPC moves take no clock time whatever the mode."
         },
         "route": {
           "type": "object",
-          "description": "Required for an overland move, and ignored for other modes. Describe the journey. path: the kind of path the party follows (the names the rule set gives). distance: short, medium, or long. terrain: the hardest ground on the route. vast: 0 to 2, how wide and empty the land is. weather_choice: when today's weather is Unpleasant or Inclement, fatigue (each traveller takes Fatigue) or watch (the journey takes one more watch). The names of path, distance, and terrain come from the rule set.",
+          "description": "Required for an overland move, and ignored for other modes. Describe the journey. path: the kind of path the party follows (the names the rule set gives). distance: short, medium, or long. terrain: the hardest ground on the route. vast: 0 to 2, how wide and empty the land is. weather_choice: when the day's weather makes travel harder, the choice the rule set gives for it. The names of path, distance, and terrain come from the rule set.",
           "properties": {
             "path": {"type": "string"},
             "distance": {"type": "string"},
             "terrain": {"type": "string"},
             "vast": {"type": "integer", "minimum": 0},
-            "weather_choice": {"type": "string", "enum": ["fatigue", "watch"]}
+            "weather_choice": {"type": "string"}
           },
           "required": ["path", "distance", "terrain"]
         }
@@ -590,7 +590,7 @@
     "python_module": "core",
     "function": "hire_hireling",
     "character_options": true,
-    "description": "Hire a character into a player character's company. The hireling has a rolled sheet like an NPC's and is controlled by the player. Its wage is paid from the employer's gold each new day, and an employer who cannot pay is reported as unpaid. The employer must be a player character who has a location. Give the wage the hireling asks for, or the marketplace's listed wage for a hireling listed there. Leave personality, accent, or quirks out to have them rolled. Names must be unique among locations and characters.",
+    "description": "Hire a character into a player character's company. The hireling has a rolled sheet like an NPC's and is controlled by the player. Its wage is paid in the rule set's currency from the employer each new day, and an employer who cannot pay is reported as unpaid. The employer must be a player character who has a location. Give the wage the hireling asks for, or the marketplace's listed wage for a hireling listed there. Leave personality, accent, or quirks out to have them rolled. Names must be unique among locations and characters.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -600,11 +600,11 @@
         },
         "employer": {
           "type": "string",
-          "description": "The name of the player character who hires them. The wage comes from this character's gold."
+          "description": "The name of the player character who hires them. The wage comes from this character's money."
         },
         "wage": {
           "type": "integer",
-          "description": "Gold per day, zero or more."
+          "description": "Money per day, in the rule set's currency, zero or more."
         },
         "description": {
           "type": "string",
@@ -669,7 +669,7 @@
     "name": "change_gold",
     "python_module": "core",
     "function": "change_gold",
-    "description": "Give a character gold from outside a purchase (a gift, a reward, a loan repaid, a loot split), or take it away (a tithe, a bribe, a debt paid to someone else). Use a positive amount to give and a negative amount to take. A take is refused if the character lacks the gold; there is no credit. Give the cause in a few words. Use buy_item for anything bought in a shop, and do not use this to make up gold the story has not earned.",
+    "description": "Give a character money from outside a purchase (a gift, a reward, a loan repaid, a loot split), or take it away (a tithe, a bribe, a debt paid to someone else). Use a positive amount to give and a negative amount to take. A take is refused if the character lacks the money; there is no credit. Give the cause in a few words. Do not use this for anything bought in a shop, and do not use it to make up money the story has not earned.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -679,11 +679,11 @@
         },
         "amount": {
           "type": "integer",
-          "description": "Gold to give (positive) or take (negative)."
+          "description": "Money to give (positive) or take (negative), in the rule set's currency."
         },
         "cause": {
           "type": "string",
-          "description": "Why the gold changes hands, in a few words."
+          "description": "Why the money changes hands, in a few words."
         }
       },
       "required": [
@@ -699,7 +699,7 @@
     "name": "place_object",
     "python_module": "core",
     "function": "place_object",
-    "description": "Put a world object in a place: a location or a dungeon area. It holds what the story has stocked there, such as gold, an item, or a described thing. Give a short name a character can take it by, such as 'clay jar', and a fuller description in contents. Optionally give gold or an item name. Set hidden when the object is not yet found; a hidden object cannot be seen or taken. Use this only for treasure or objects the story has placed; do not invent them unprompted. Do not place an object again when the place already holds it: check the objects listed for the place in the scene first, and when the object is already there, leave it be.",
+    "description": "Put a world object in a place: a location or a dungeon area. It holds what the story has stocked there, such as money, an item, or a described thing. Give a short name a character can take it by, such as 'clay jar', and a fuller description in contents. Optionally give money or an item name. Set hidden when the object is not yet found; a hidden object cannot be seen or taken. Use this only for treasure or objects the story has placed; do not invent them unprompted. Do not place an object again when the place already holds it: check the objects listed for the place in the scene first, and when the object is already there, leave it be.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -713,7 +713,7 @@
         },
         "contents": {
           "type": "string",
-          "description": "A description of the object, such as 'a cracked clay jar with nine gold coins inside'."
+          "description": "A description of the object, such as 'a cracked clay jar with nine coins inside'."
         },
         "hidden": {
           "type": "boolean",
@@ -725,7 +725,7 @@
         },
         "gold": {
           "type": "integer",
-          "description": "Gold in the object, if any."
+          "description": "Money in the object, in the rule set's currency, if any."
         },
         "item": {
           "type": "string",
@@ -751,13 +751,13 @@
     "name": "take_object",
     "python_module": "core",
     "function": "take_object",
-    "description": "A character takes a visible object from the place they are in. Gold goes to that character. An item goes into their inventory, and the take is refused if it does not fit. Use this only when a character acts to take the object.",
+    "description": "A character takes a visible object from the place they are in. Money goes to that character. An item goes into their inventory, and the take is refused if it does not fit. Use this only when a character acts to take the object.",
     "parameters": {
       "type": "object",
       "properties": {
         "object": {
           "type": "string",
-          "description": "The object's description, as the Warden gave it."
+          "description": "The object's description, as the GM gave it."
         },
         "character": {
           "type": "string",
@@ -831,8 +831,7 @@
               "flags": {
                 "type": "array",
                 "items": {
-                  "type": "string",
-                  "enum": ["blast", "ignores_armor"]
+                  "type": "string"
                 },
                 "description": "Leave out for a plain attack. The flags the rule set defines for attacks."
               }

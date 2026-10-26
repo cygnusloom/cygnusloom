@@ -595,38 +595,20 @@ def test_the_player_sees_only_what_is_at_their_location(
         "move_actor",
         {"mode": "in_settlement", "name": "Ada", "location": "Glowcap Ring"},
     )
-    with _db(app) as db:
-        world.add_note(db, campaign_id, "Find the lost key.")
-        world.add_note(db, campaign_id, "Ada has a map.", subject="Ada")
-        world.add_note(db, campaign_id, "The ring hums.", subject="Glowcap Ring")
-        world.add_note(db, campaign_id, "Mara sings.", subject="Mossbell Hollow")
-        world.add_note(db, campaign_id, "Brin owes a debt.", subject="Brin Gallowcap")
-        world.add_note(db, campaign_id, "Hob hides a key.", subject="Old Hob")
-        db.commit()
     state = _state(app, campaign_id)
     scene = world.scene_view(state, SPEC)
     assert scene.pc is not None and scene.pc.name == "Ada"
     assert scene.location is not None and scene.location.name == "Glowcap Ring"
     assert [npc.name for npc in scene.npcs] == ["Brin Gallowcap"]
-    assert {note.subject for note in scene.notes} == {
-        world.CAMPAIGN_WIDE,
-        "Ada",
-        "Glowcap Ring",
-        "Brin Gallowcap",
-    }
     assert scene.sheet == world.get_statblock(state, "Ada", SPEC)["statblock"]
     assert "Appearance: Tall, with a red scarf." in scene.sheet
 
 
 def test_an_unplaced_player_sees_no_location_or_npcs(client_factory: Callable[[], TestClient], app):
     _, campaign_id = _campaign_id(client_factory)
-    with _db(app) as db:
-        world.add_note(db, campaign_id, "Find the lost key.")
-        db.commit()
     scene = world.scene_view(_state(app, campaign_id), SPEC)
     assert scene.location is None
     assert scene.npcs == []
-    assert [note.subject for note in scene.notes] == [world.CAMPAIGN_WIDE]
 
 
 def test_the_pack_lists_items_with_uses_slots_and_capacity(
@@ -1052,20 +1034,16 @@ def test_campaign_page_panels_show_only_the_scene(client_factory: Callable[[], T
     assert "Mara Thistledown" not in characters
     assert "Mossbell Hollow" not in characters
 
-    sheet = page[page.index('id="panel-character"') : page.index('id="panel-notes"')]
+    sheet = page[page.index('id="panel-character"') : page.index('id="panel-inventory"')]
     assert "Tall, with a red scarf." in sheet
     assert ">Location<" in page
     assert ">Character<" in page
     assert ">Sheet<" not in page
-
-    notes = page[page.index('id="panel-notes"') : page.index('id="dialog-turn-context"')]
-    assert "Find the lost key." in notes
-    assert "Mara sings." not in notes
-    assert "Hob hides a key." not in notes
-
-    drawer = page[page.index('id="drawer-notes"') : page.index('id="dialog-characters"')]
-    assert "Find the lost key." in drawer
-    assert "Mara sings." not in drawer
+    assert ">Notes<" not in page
+    assert 'id="panel-notes"' not in page
+    assert 'id="drawer-notes"' not in page
+    assert "data-drawer-target=" not in page
+    assert 'data-view="journal"' in page
 
     dialog = page[page.index('id="dialog-characters"') :]
     dialog = dialog[: dialog.index("</dialog>")]

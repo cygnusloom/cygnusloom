@@ -71,7 +71,7 @@ def check_morale(
         leader = living[0]
         roll = roll_total(combat.check_die, rng, plus=plus)
         score = current(leader, morale.save_stat)
-        passed = combat.module.save_succeeds(roll, score)
+        passed = combat.save_succeeds(roll, score)
         record(
             db,
             campaign_id,
@@ -210,7 +210,7 @@ def _run_retreat(
     assert morale is not None
     stat = morale.retreat_stat
     score = current(character, stat)
-    passed = combat.module.save_succeeds(roll, score)
+    passed = combat.save_succeeds(roll, score)
     record(
         db,
         campaign_id,

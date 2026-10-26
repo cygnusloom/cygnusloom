@@ -38,5 +38,35 @@
     "type": "prompt",
     "id": "defeated_character",
     "text": "A player character who fails a save against critical damage is dying and dies within the hour unless stabilized: the clock counts hours, so advance_time with hours runs it down, and a death is recorded at once, in that same turn. Stabilize a dying character only when the story gives aid, through stabilize or a Bandage used with use_item. Call recover_character only once a stabilized character has been shown to survive. A dead character's body stays at its location with its gear."
+  },
+  {
+    "type": "prompt",
+    "id": "time_and_rest",
+    "text": "Advance the clock with advance_time only when this action takes time in the fiction, and never repeat a rest or time jump the transcript already records. When the party makes camp or sleeps through a night, record that night's rest with rest in this same turn, before narrating the morning. Any rest already moves the clock, so never add advance_time for the same time."
+  },
+  {
+    "type": "prompt",
+    "id": "needs",
+    "text": "When a need such as food or rest goes unmet, mark the character with set_condition as soon as it does, before advancing time, so the engine can count the days."
+  },
+  {
+    "type": "prompt",
+    "id": "give_item_from_place",
+    "text": "An object in a place leaves it only through take_object; never hand it over with give_item."
+  },
+  {
+    "type": "prompt",
+    "id": "purchases",
+    "text": "Every sale in a shop goes through buy_item, which takes the gold and puts the item in the buyer's inventory. Never use change_gold to pay for something bought, and never buy an item by hand with give_item."
+  },
+  {
+    "type": "prompt",
+    "id": "attack_flags",
+    "text": "An attack may carry the flags blast, which hits every target in its area, and ignores_armor, which skips the target's armor. Leave flags out of an attack that has neither."
+  },
+  {
+    "type": "prompt",
+    "id": "overland_weather",
+    "text": "When today's weather is Unpleasant or Inclement, a move_actor overland move must set weather_choice to fatigue (each traveller takes Fatigue) or watch (the journey takes one more watch)."
   }
 ]

@@ -1,5 +1,5 @@
 """Hirelings' wages. A hireling is paid each new day from its employer's gold. An employer who
-cannot pay is recorded as unpaid and nothing is taken; the Warden decides what the hireling does."""
+cannot pay is recorded as unpaid and nothing is taken; the GM decides what the hireling does."""
 
 from __future__ import annotations
 

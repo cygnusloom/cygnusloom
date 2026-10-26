@@ -100,7 +100,7 @@ def give_item(
     damage: str = "",
 ) -> dict[str, Any]:
     """Give a character an item. A catalogue item keeps its listed uses, description, and damage,
-    as a purchase does. An item not in the catalogue is given the damage the Warden names, if it
+    as a purchase does. An item not in the catalogue is given the damage the GM names, if it
     is a weapon."""
     if size not in item_sizes:
         raise InvalidInput(f"there is no item size named {size!r}")

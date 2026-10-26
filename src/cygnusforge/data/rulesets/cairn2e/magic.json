@@ -2,11 +2,9 @@
   {
     "type": "magic",
     "id": "cairn",
-    "spellbook_kind": "spellbook",
-    "spellbook_size": "normal",
-    "scroll_kind": "scroll",
-    "scroll_size": "petty",
-    "charged_kind": "relic",
-    "cast_penalty": 1
+    "cast_penalty": 1,
+    "reusable": {"kind": "spellbook", "size": "normal"},
+    "single_use": {"kind": "scroll", "size": "petty"},
+    "charged": {"kind": "relic"}
   }
 ]

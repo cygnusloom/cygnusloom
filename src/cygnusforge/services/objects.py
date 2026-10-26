@@ -1,4 +1,4 @@
-"""World objects: gold, an item, or anything the Warden describes, held by a place. The Warden
+"""World objects: gold, an item, or anything the GM describes, held by a place. The GM
 stocks them; a character takes them. Nothing here creates treasure on its own."""
 
 from __future__ import annotations
@@ -173,7 +173,7 @@ def _label(obj: WorldObject) -> str:
 
 
 def _find_object(visible: list[WorldObject], wanted: str) -> WorldObject | None:
-    """Exact name or description first, then a partial match, so the Warden can say the short
+    """Exact name or description first, then a partial match, so the GM can say the short
     name or a fuller one. Ties go to the object placed first."""
     key = name_key(wanted)
     if not key:

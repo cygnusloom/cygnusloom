@@ -157,7 +157,7 @@ def _save(
     character = load_state(db, campaign_id).characters[name_key(name)]
     roll = roll_total(cx.combat.check_die, cx.rng, plus=plus)
     score = current(character, stat)
-    passed = cx.combat.module.save_succeeds(roll, score)
+    passed = cx.combat.save_succeeds(roll, score)
     record(
         db,
         campaign_id,

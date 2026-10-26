@@ -172,6 +172,7 @@ def test_a_rule_set_without_tiers_is_not_offered_one(tmp_path: Path):
     calls = library.rule_sets["testset"].tool_calls.values()
     assert all("hp_tier" not in call.parameters["properties"] for call in calls)
     assert "hp_tier" not in LIBRARY.core.tool_calls["create_npc"].parameters["properties"]
+    assert "hp_tier" not in LIBRARY.core.tool_calls["create_npc"].description
 
 
 def test_the_gm_creates_an_npc_with_the_tier_hp(client_factory: Callable[[], TestClient]):

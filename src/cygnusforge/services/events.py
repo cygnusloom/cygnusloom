@@ -171,9 +171,9 @@ class Character:
     surrendered: bool = False
     # A debug buff: no harm reaches the character. Set from the debug panel.
     invincible: bool = False
-    # A large group is a group the Warden fights as one unit.
+    # A large group is a group the GM fights as one unit.
     large_group: bool = False
-    # A large group whose Critical Damage save failed. The Warden must decide it is defeated or flees.
+    # A large group whose critical save failed. The GM must decide it is defeated or flees.
     critical_due: bool = False
     # Paid for a bed for the night. The next rest that eats food feeds this character for free.
     lodged: bool = False
@@ -346,7 +346,7 @@ class RestRecord:
 
 @dataclass(frozen=True)
 class WorldObject:
-    """Something a place holds, such as gold, an item, or anything the Warden describes. It is not
+    """Something a place holds, such as gold, an item, or anything the GM describes. It is not
     an actor. A hidden object is neither listed nor takeable."""
 
     id: int
@@ -422,7 +422,7 @@ def name_key(name: str) -> str:
 
 
 def same_item_name(a: str, b: str) -> bool:
-    """Item names match ignoring case and a plural s, so a Bandage is the Bandages on the list."""
+    """Item names match ignoring case and a plural s, so "bandage" matches "Bandages" on the list."""
     x, y = name_key(a), name_key(b)
     return x == y or x + "s" == y or y + "s" == x
 
@@ -879,7 +879,7 @@ class HirelingUnpaid(GameEvent):
     def render(self) -> str:
         return (
             f"{self.employer} cannot pay {self.name}'s wage of {self.wage} {self.currency}. "
-            "The Warden decides whether the hireling stays."
+            "The GM decides whether the hireling stays."
         )
 
 
@@ -1558,7 +1558,7 @@ class RetreatRolled(GameEvent):
 
 @dataclass(frozen=True)
 class CharacterRecovered(GameEvent):
-    """A player character brought back from critical damage. The GM says how they survived and
+    """A player character brought back from a dying condition. The GM says how they survived and
     what it cost them."""
 
     kind: ClassVar[str] = "character.recovered"
@@ -1739,7 +1739,8 @@ class InitiativeSettled(GameEvent):
 class Struck(GameEvent):
     """A hit on a character after armor. `harm` is what each stat loses: hit points take what they
     can, and any overflow comes off the stat named by `save`, which the target must then save
-    against."""
+    against. Under the "roll_vs_defense" hit mode a blow that fails to reach the target's defense
+    is a miss: `hit` is false, `to_hit` is the attack roll, and no harm is done."""
 
     kind: ClassVar[str] = "combat.struck"
 
@@ -1752,6 +1753,8 @@ class Struck(GameEvent):
     save: str | None = None
     modifier: str = ""
     rolled: str = ""
+    hit: bool = True
+    to_hit: int | None = None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
@@ -1763,6 +1766,11 @@ class Struck(GameEvent):
     def render(self) -> str:
         taken = sum(self.harm.values())
         weapon = f"{self.weapon} ({self.modifier})" if self.modifier else self.weapon
+        if not self.hit:
+            text = f"{self.attacker} swings the {weapon} at {self.name} and misses"
+            if self.to_hit is not None:
+                text += f" (rolled {self.to_hit})"
+            return text + "."
         text = f"{self.attacker} strikes {self.name} with the {weapon} for {self.raw}"
         if self.armor:
             text += f", {self.armor} absorbed by armor"
@@ -1777,7 +1785,7 @@ class Struck(GameEvent):
 @dataclass(frozen=True)
 class SaveRolled(GameEvent):
     """A d20 save against a stat. A failed save defeats the character, leaving it `status`. A
-    failed Critical Damage save on a large group leaves it to the Warden's decision instead."""
+    failed critical save on a large group leaves it to the GM's decision instead."""
 
     kind: ClassVar[str] = "combat.save_rolled"
 
@@ -1803,9 +1811,7 @@ class SaveRolled(GameEvent):
         result = "succeeds" if self.passed else "fails"
         text = f"{self.name} rolls {self.roll} on a {self.stat.upper()} save of {self.score} and {result}."
         if not self.passed and self.critical:
-            text += (
-                f" {self.name} is broken, and the Warden decides whether it is defeated or flees."
-            )
+            text += f" {self.name} is broken, and the GM decides whether it is defeated or flees."
         elif not self.passed:
             text += f" {self.name} is {self.status}."
         return text
@@ -1813,7 +1819,7 @@ class SaveRolled(GameEvent):
 
 @dataclass(frozen=True)
 class GroupBreakResolved(GameEvent):
-    """The Warden's decision after a large group's Critical Damage save failed. `outcome` is
+    """The GM's decision after a large group's critical save failed. `outcome` is
     "defeat", leaving it `status`, or "flee", breaking it up so its members run from the fight."""
 
     kind: ClassVar[str] = "combat.group_break_resolved"
@@ -1838,7 +1844,7 @@ class GroupBreakResolved(GameEvent):
 
 @dataclass(frozen=True)
 class TablesRolled(GameEvent):
-    """The Warden rolled on one or more dice tables. Each roll records its table, name, roll, and
+    """The GM rolled on one or more dice tables. Each roll records its table, name, roll, and
     result."""
 
     kind: ClassVar[str] = "dice.tables_rolled"
@@ -2316,7 +2322,7 @@ class CharacterDying(GameEvent):
 
 @dataclass(frozen=True)
 class CharacterStabilized(GameEvent):
-    """Aid stopped a dying character's clock. It is still out of action until the Warden recovers
+    """Aid stopped a dying character's clock. It is still out of action until the GM recovers
     it."""
 
     kind: ClassVar[str] = "character.stabilized"

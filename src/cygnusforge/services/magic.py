@@ -1,7 +1,8 @@
-"""Spellbooks, scrolls, and charged items. A spellbook holds one spell and a cast costs the rule
-set's penalty item; a scroll is spent by one cast; a charged item has uses that a recharge restores,
-as a wand has charges. The rule set names the item kinds and sizes, and its `combat` supplies the
-save every magic roll uses."""
+"""Magic items by role: a reusable spell container, a single-use spell, and a charged item. A
+reusable container holds one spell and a cast pays the rule set's penalty item; a single-use item
+is spent by one cast; a charged item has uses that a recharge restores, as a wand has charges. The
+rule set names each item kind and size in its data, and its `combat` supplies the save every magic
+roll uses."""
 
 from __future__ import annotations
 
@@ -220,7 +221,7 @@ def roll_save(
     plus: str,
 ) -> dict[str, Any]:
     """An engine-rolled save against a stat, recorded with its reason. A failure only records the
-    result; the Warden applies what it costs."""
+    result; the GM applies what it costs."""
     if stat not in spec.stats:
         raise InvalidInput(f"there is no stat named {stat!r}")
     state = load_state(db, campaign_id)
@@ -231,7 +232,7 @@ def roll_save(
         )
     roll = roll_total(combat.check_die, rng, plus=plus)
     score = current(character, stat)
-    passed = combat.module.save_succeeds(roll, score)
+    passed = combat.save_succeeds(roll, score)
     record(
         db,
         campaign_id,

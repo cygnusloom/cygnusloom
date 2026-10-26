@@ -296,11 +296,6 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .choice:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
 .choice:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 .choice-detail { display: block; margin-top: 0.2rem; font-size: 0.9em; }
-.drawer { position: absolute; top: 0; bottom: 0; left: 0; z-index: 1; width: 50%; box-sizing: border-box; display: flex; flex-direction: column; padding: 1rem 1.25rem; overflow-y: auto; background: var(--panel); border-right: 1px solid var(--border); transform: translateX(-100%); visibility: hidden; transition: transform 0.2s ease, visibility 0.2s; }
-.drawer.open { transform: none; visibility: visible; }
-.panel-header { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
-.panel-header h2 { margin: 0; font-size: 1.1rem; }
-.drawer .close { padding: 0 0.5rem; background: transparent; color: var(--muted); border: 0; font-size: 1.25rem; cursor: pointer; }
 .app-dialog { width: min(28rem, calc(100% - 2rem)); padding: 1.25rem; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 8px; }
 .app-dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
 .app-dialog h2 { margin: 0 0 0.5rem; font-size: 1.1rem; }

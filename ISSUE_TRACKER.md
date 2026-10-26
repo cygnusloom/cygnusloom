@@ -23,6 +23,3 @@ Order below is the work order. Each entry lists the decisions made in triage.
   * Rule attachment
   * Twin Lakes module
   * Browser flow and tests
-
-
-4. Generic refactor: remove Cairn-specific words from generic code and prompts, so the engine is not cairn2e-shaped. Runs after the master audit and the Twin Lakes play-through. A second ruleset (D&D) is only a hypothetical example and has no rules here.

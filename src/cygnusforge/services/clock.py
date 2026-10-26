@@ -1,6 +1,6 @@
-"""The campaign clock. Time is counted in hours, and a rest or the Warden can advance it. A part of
+"""The campaign clock. Time is counted in hours, and a rest or the GM can advance it. A part of
 the day holds several hours. Each new day gives deprived characters a need penalty, a place
-not visited for a while is flagged so the Warden can update it, and a dying character dies when its
+not visited for a while is flagged so the GM can update it, and a dying character dies when its
 hours run out."""
 
 from __future__ import annotations

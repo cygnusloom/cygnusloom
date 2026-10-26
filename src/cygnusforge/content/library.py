@@ -6,7 +6,7 @@ import importlib
 import inspect
 import re
 import string
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
@@ -86,7 +86,7 @@ class NpcTemplate:
     # when the NPC has no statblock. An NPC with its own statblock is a world monster of the same id.
     monster: str | None = None
     # A story-only NPC has no stats: it cannot fight, make a save, or be an attack target until
-    # the Warden gives it stats with update_npc.
+    # the GM gives it stats with update_npc.
     story_only: bool = False
     # The ids of rules attached to this NPC. Their text reaches the GM while the NPC is here.
     rules: tuple[str, ...] = ()
@@ -410,7 +410,7 @@ class DiceTable:
 class MonsterTemplate:
     """A statblock a GM can base a monster on. `stats` has every stat of the rule set's character,
     and `attacks` maps each attack's name to its dice formula. `attack_flags` gives the flags of
-    the attacks that have any, such as blast. A large group is a group the Warden fights as one
+    the attacks that have any, such as blast. A large group is a group the GM fights as one
     unit. `rules` are the ids of the rules attached to the monster; `rule_text` holds the text of
     those written in the statblock itself."""
 
@@ -506,17 +506,47 @@ class MoraleRules:
 
 
 @dataclass(frozen=True)
+class SaveRules:
+    """How a d20-style save is decided. `mode` is "roll_under" (succeeds at or under the score) or
+    "roll_over" (succeeds at or over it). `auto_success` and `auto_fail` are rolls that always pass
+    or always fail, or None for no such roll."""
+
+    mode: str = "roll_under"
+    auto_success: int | None = 1
+    auto_fail: int | None = 20
+
+
+@dataclass(frozen=True)
+class GroupRules:
+    """How large groups fight. `incoming_modifier` is the only modifier that may hit a group.
+    `blast_modifier` is the dice a group's Blast attack rolls for each target. When
+    `blast_hits_all` is false, a blast hits only the named target. `break_outcomes` are the GM's
+    decisions a broken group may take."""
+
+    incoming_modifier: str = "impaired"
+    blast_modifier: str = "enhanced"
+    blast_hits_all: bool = True
+    break_outcomes: tuple[str, ...] = ("defeat", "flee")
+
+
+@dataclass(frozen=True)
 class CombatRules:
-    """How a rule set resolves combat. `module` supplies `save_succeeds(roll, score)` and
-    `initiative_order(entries)`. `damage` is the order a hit's damage goes through. `check_die` is
-    the die a save or initiative roll is made with, and `check_sides` its number of sides.
+    """How a rule set resolves combat. `damage` is the order a hit's damage goes through. `check_die`
+    is the die a save or initiative roll is made with, and `check_sides` its number of sides.
     `initiative_stat` is what a player character saves against to act. `defeat` says where a defeat
     leaves a player character (`player_character`) and an NPC (`npc`). `morale` is None when the
     rule set has no morale checks. `modifiers` maps each attack modifier's name to the dice it rolls
-    instead of the attack's own."""
+    instead of the attack's own.
+
+    `save` and `initiative_mode` decide saves and round-one order. A rule set's `module`, when it
+    has one, supplies `save_succeeds(roll, score)` and `initiative_order(entries)` instead. `hit_mode`
+    says whether a hit lands automatically ("auto") or only when the check die reaches the target's
+    armor, which is its defense ("roll_vs_defense"; an attack that ignores armor has none).
+    `multi_attack` says whether several attacks on one target apply only the highest roll
+    ("highest") or each in turn ("each").
+    `groups` is None when the rule set has no large groups."""
 
     id: str
-    module: ModuleType
     damage: tuple[DamageStep, ...]
     check_die: str
     check_sides: int
@@ -540,12 +570,46 @@ class CombatRules:
     aid_items: tuple[str, ...] = ()
     # The most armor a character can have. Zero means armor has no cap.
     armor_max: int = 0
+    hit_mode: str = "auto"
+    multi_attack: str = "highest"
+    save: SaveRules = field(default_factory=SaveRules)
+    initiative_mode: str = "pass_npcs_fail"
+    groups: GroupRules | None = None
+    # The rule set's Python functions, when it names a python_module. Each function, when present,
+    # overrides the declarative save and initiative rules above.
+    module: ModuleType | None = None
+
+    def save_succeeds(self, roll: int, score: int) -> bool:
+        """Whether a save with this roll succeeds against a score."""
+        if self.module is not None and callable(getattr(self.module, "save_succeeds", None)):
+            return bool(self.module.save_succeeds(roll, score))
+        if self.save.auto_success is not None and roll == self.save.auto_success:
+            return True
+        if self.save.auto_fail is not None and roll == self.save.auto_fail:
+            return False
+        if self.save.mode == "roll_over":
+            return roll >= score
+        return roll <= score
+
+    def initiative_order(self, entries: Sequence[tuple[str, bool | None]]) -> list[str]:
+        """The order of round one from (name, result) pairs: True passed the initiative save, None is
+        an NPC, and False failed it. Under "pass_npcs_fail", passers act first, then NPCs, then
+        those who failed, and each group keeps its order. Under "roll_order", the entries keep the
+        order they came in."""
+        if self.module is not None and callable(getattr(self.module, "initiative_order", None)):
+            return list(self.module.initiative_order(entries))
+        if self.initiative_mode == "roll_order":
+            return [name for name, _ in entries]
+        passed = [name for name, result in entries if result is True]
+        npcs = [name for name, result in entries if result is None]
+        failed = [name for name, result in entries if result is False]
+        return passed + npcs + failed
 
 
 @dataclass(frozen=True)
 class ClockRules:
     """The parts of a day, in order. A place not visited for `stale_days` days is flagged when a
-    new day begins, so the Warden can update it."""
+    new day begins, so the GM can update it."""
 
     parts: tuple[str, ...]
     stale_days: int
@@ -558,7 +622,7 @@ class ClockRules:
 
 @dataclass(frozen=True)
 class RestLength:
-    """A rest the Warden can call for. It passes `hours` hours, `parts` parts of a day, or `days`
+    """A rest the GM can call for. It passes `hours` hours, `parts` parts of a day, or `days`
     days, and `until_morning` runs on to the next morning. A full rest restores what `restores`
     lists and clears the item kinds in `clears`. A deprived character recovers nothing."""
 
@@ -612,7 +676,7 @@ class FoodRules:
 @dataclass(frozen=True)
 class ShopItem:
     """A catalogue item. `price` is in gold. `armor` is added to the buyer's armor. `damage` is the
-    attack die the item gives, as text for the Warden."""
+    attack die the item gives, as text for the GM."""
 
     id: str
     name: str
@@ -655,16 +719,44 @@ class Marketplace:
 
 
 @dataclass(frozen=True)
-class MagicRules:
-    """The item kinds magic uses, the size each takes, and the penalty a spellbook cast costs.
-    A spellbook holds one spell, a scroll is one use of a spell, and a charged item has uses that recharge."""
+class ItemKind:
+    """The name items of a kind carry, and the size a held item takes. A charged item's size is
+    given when it is made, so its kind has none."""
 
-    spellbook_kind: str
-    spellbook_size: str
-    scroll_kind: str
-    scroll_size: str
-    charged_kind: str
+    kind: str
+    size: str = ""
+
+
+@dataclass(frozen=True)
+class MagicRules:
+    """The item kinds magic uses, by role. `reusable` holds a spell that is cast again and again,
+    and each cast of it pays `cast_penalty` items. `single_use` is one spent cast of a spell.
+    `charged` has uses that a recharge restores. The rule set names each kind and size in data."""
+
+    reusable: ItemKind
+    single_use: ItemKind
+    charged: ItemKind
     cast_penalty: int
+
+    @property
+    def spellbook_kind(self) -> str:
+        return self.reusable.kind
+
+    @property
+    def spellbook_size(self) -> str:
+        return self.reusable.size
+
+    @property
+    def scroll_kind(self) -> str:
+        return self.single_use.kind
+
+    @property
+    def scroll_size(self) -> str:
+        return self.single_use.size
+
+    @property
+    def charged_kind(self) -> str:
+        return self.charged.kind
 
 
 @dataclass(frozen=True)
@@ -705,7 +797,7 @@ class RuleSet:
     npc_hp: Mapping[str, int] = field(default_factory=dict)
     # Conditions an injury or effect can give, by id. Derived conditions are included.
     conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
-    # Tables rolled with dice, by id, such as the Warden's reaction table.
+    # Tables rolled with dice, by id, such as the GM's reaction table.
     dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
     # Time, rest, and needs. Each is None or empty when the rule set does not track them.
     clock: ClockRules | None = None
@@ -1489,17 +1581,20 @@ def _load_combat(
 ) -> CombatRules:
     label = f"{template}: combat {definition.id}"
     data = definition.data
-    module_id = required_text(data, "python_module", label)
-    if module_id not in modules:
-        raise ContentError(f"{label}: unknown python_module {module_id!r}")
-    module = modules[module_id]
-    for function_name in ("save_succeeds", "initiative_order"):
-        if not callable(getattr(module, function_name, None)):
-            raise ContentError(f"{label}: {function_name!r} is not a function in {module_id!r}")
+    module: ModuleType | None = None
+    if "python_module" in data:
+        module_id = required_text(data, "python_module", label)
+        if module_id not in modules:
+            raise ContentError(f"{label}: unknown python_module {module_id!r}")
+        module = modules[module_id]
+        for function_name in ("save_succeeds", "initiative_order"):
+            if not callable(getattr(module, function_name, None)):
+                raise ContentError(f"{label}: {function_name!r} is not a function in {module_id!r}")
     damage = _load_damage(data, character, label)
     check_die = required_text(data, "check_die", label)
     if not re.fullmatch(r"1d[0-9]+", check_die) or int(check_die[2:]) < 2:
         raise ContentError(f"{label}: 'check_die' must be a single die such as '1d20'")
+    check_sides = int(check_die[2:])
     initiative_stat = required_text(data, "initiative_stat", label)
     if initiative_stat not in character.stats:
         raise ContentError(f"{label}: 'initiative_stat' names no stat ({initiative_stat!r})")
@@ -1519,10 +1614,9 @@ def _load_combat(
     unarmed_damage, unarmed_names = _load_unarmed(data, label)
     return CombatRules(
         id=definition.id,
-        module=module,
         damage=damage,
         check_die=check_die,
-        check_sides=int(check_die[2:]),
+        check_sides=check_sides,
         initiative_stat=initiative_stat,
         defeat=defeat,
         injury_table=injury_table,
@@ -1536,6 +1630,69 @@ def _load_combat(
         aid_items=_names(data, "aid_items", label),
         unarmed_damage=unarmed_damage,
         unarmed_names=unarmed_names,
+        hit_mode=_choice(data, "hit_mode", ("auto", "roll_vs_defense"), "auto", label),
+        multi_attack=_choice(data, "multi_attack", ("highest", "each"), "highest", label),
+        save=_load_save(data, check_sides, label),
+        initiative_mode=_choice(
+            data, "initiative_mode", ("pass_npcs_fail", "roll_order"), "pass_npcs_fail", label
+        ),
+        groups=_load_groups(data, label),
+        module=module,
+    )
+
+
+def _choice(
+    data: Mapping[str, Any], key: str, choices: tuple[str, ...], default: str, label: str
+) -> str:
+    value = data.get(key, default)
+    if value not in choices:
+        raise ContentError(f"{label}: {key!r} must be one of {', '.join(choices)}")
+    return value
+
+
+def _load_save(data: Mapping[str, Any], check_sides: int, label: str) -> SaveRules:
+    """The declarative save rule. Optional; its rolls must be on the check die."""
+    block = data.get("save")
+    if block is None:
+        return SaveRules()
+    if not isinstance(block, Mapping):
+        raise ContentError(f"{label}: 'save' must be an object")
+    mode = _choice(block, "mode", ("roll_under", "roll_over"), "roll_under", f"{label}: save")
+    rolls: dict[str, int | None] = {}
+    for key in ("auto_success", "auto_fail"):
+        value = block.get(key)
+        if value is None:
+            rolls[key] = None
+        elif isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= check_sides:
+            raise ContentError(f"{label}: save {key!r} must be a roll on the check die")
+        else:
+            rolls[key] = value
+    return SaveRules(mode=mode, auto_success=rolls["auto_success"], auto_fail=rolls["auto_fail"])
+
+
+def _load_groups(data: Mapping[str, Any], label: str) -> GroupRules | None:
+    """The large-group rules. Optional; absent means the rule set has no groups."""
+    block = data.get("groups")
+    if block is None:
+        return None
+    if not isinstance(block, Mapping):
+        raise ContentError(f"{label}: 'groups' must be an object")
+    groups_label = f"{label}: groups"
+    blast_hits_all = block.get("blast_hits_all", True)
+    if not isinstance(blast_hits_all, bool):
+        raise ContentError(f"{groups_label}: 'blast_hits_all' must be true or false")
+    outcomes = block.get("break_outcomes", ["defeat", "flee"])
+    if (
+        not isinstance(outcomes, list)
+        or not outcomes
+        or not all(isinstance(outcome, str) and outcome for outcome in outcomes)
+    ):
+        raise ContentError(f"{groups_label}: 'break_outcomes' must be a non-empty list of names")
+    return GroupRules(
+        incoming_modifier=required_text(block, "incoming_modifier", groups_label),
+        blast_modifier=required_text(block, "blast_modifier", groups_label),
+        blast_hits_all=blast_hits_all,
+        break_outcomes=tuple(outcomes),
     )
 
 
@@ -2267,20 +2424,34 @@ def _load_magic(
     if definition is None:
         return None
     label = f"{template}: magic {definition.id}"
-    sizes = {
-        key: required_text(definition.data, key, label) for key in ("spellbook_size", "scroll_size")
-    }
-    for key, size in sizes.items():
-        if size not in item_sizes:
-            raise ContentError(f"{label}: {key!r} names no item size ({size!r})")
     return MagicRules(
-        spellbook_kind=required_text(definition.data, "spellbook_kind", label),
-        spellbook_size=sizes["spellbook_size"],
-        scroll_kind=required_text(definition.data, "scroll_kind", label),
-        scroll_size=sizes["scroll_size"],
-        charged_kind=required_text(definition.data, "charged_kind", label),
+        reusable=_load_item_kind(definition.data, "reusable", label, item_sizes, sized=True),
+        single_use=_load_item_kind(definition.data, "single_use", label, item_sizes, sized=True),
+        charged=_load_item_kind(definition.data, "charged", label, item_sizes, sized=False),
         cast_penalty=_whole(definition.data, "cast_penalty", label, 0),
     )
+
+
+def _load_item_kind(
+    data: Mapping[str, Any],
+    role: str,
+    label: str,
+    item_sizes: Mapping[str, int],
+    *,
+    sized: bool,
+) -> ItemKind:
+    """One magic item role: an object with a 'kind', and a 'size' naming an item size when `sized`."""
+    entry = data.get(role)
+    if not isinstance(entry, Mapping):
+        raise ContentError(f"{label}: {role!r} must be an object with a 'kind'")
+    role_label = f"{label} {role}"
+    kind = required_text(entry, "kind", role_label)
+    if not sized:
+        return ItemKind(kind)
+    size = required_text(entry, "size", role_label)
+    if size not in item_sizes:
+        raise ContentError(f"{role_label}: 'size' names no item size ({size!r})")
+    return ItemKind(kind, size)
 
 
 def _load_food(
@@ -2721,7 +2892,11 @@ def _with_npc_hp_tier(
         raise ContentError(
             f"{label}: {NPC_HP_TIER_ARGUMENT!r} is generated and must not be declared"
         )
-    tier = {"type": "string", "enum": sorted(npc_hp), "description": "The NPC's HP tier."}
+    tier = {
+        "type": "string",
+        "enum": sorted(npc_hp),
+        "description": "The HP tier of an NPC with no statblock, set to the tier their role in the story calls for.",
+    }
     properties = {**parameters["properties"], NPC_HP_TIER_ARGUMENT: tier}
     return {**parameters, "properties": properties}
 

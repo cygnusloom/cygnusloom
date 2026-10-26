@@ -18,6 +18,8 @@ def test_core_state_prompt_is_the_generic_loop_text_alone():
     assert "Cairn" not in prompt
     assert "relic" not in prompt
     assert "group" not in prompt
+    for tool in ("advance_time", "rest", "give_item", "set_condition", "recharge_charged_item"):
+        assert tool not in prompt
 
 
 def test_cairn_state_prompt_keeps_its_fragments_in_order():

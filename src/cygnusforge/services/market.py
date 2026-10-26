@@ -1,4 +1,4 @@
-"""Buying from the rule set's marketplace. Catalogue items cost their listed price. The Warden
+"""Buying from the rule set's marketplace. Catalogue items cost their listed price. The GM
 prices anything else. Services are paid by the first named character, who covers the whole bill."""
 
 from __future__ import annotations
@@ -150,7 +150,7 @@ def buy_service(
     named character who has lost any of the attributes it restores, at the price per patient."""
     listed = _find_service(marketplace, service)
     if listed.effect == "deferred":
-        raise InvalidInput(f"{listed.name} is not modelled yet, so the Warden must narrate it")
+        raise InvalidInput(f"{listed.name} is not modelled yet, so the GM must narrate it")
     if not names:
         raise InvalidInput("name the characters the service is for")
     state: CampaignState = load_state(db, campaign_id)
