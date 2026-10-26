@@ -14,14 +14,46 @@
   {% endfor %}
 {%- endmacro %}
 
+{% macro terrain_patterns(patterns) -%}
+  <defs>
+    {% for p in patterns %}
+      {% if p.shape == "waves" %}
+        <pattern id="{{ p.id }}" width="8" height="8" patternUnits="userSpaceOnUse">
+          <path d="M0 4 Q2 2 4 4 T8 4" fill="none" stroke="{{ p.ink }}" stroke-width="0.6" stroke-linecap="round"/>
+        </pattern>
+      {% elif p.shape == "trees" %}
+        <pattern id="{{ p.id }}" width="10" height="10" patternUnits="userSpaceOnUse">
+          <path d="M2 7 L3.5 4 L5 7 Z M6.5 10 L8 7 L9.5 10 Z" fill="{{ p.ink }}"/>
+        </pattern>
+      {% elif p.shape == "ridges" %}
+        <pattern id="{{ p.id }}" width="12" height="10" patternUnits="userSpaceOnUse">
+          <path d="M0 8 L3 4 L5.5 6.5 L8.5 2.5 L12 8" fill="none" stroke="{{ p.ink }}" stroke-width="0.6" stroke-linejoin="round"/>
+        </pattern>
+      {% elif p.shape == "reeds" %}
+        <pattern id="{{ p.id }}" width="8" height="8" patternUnits="userSpaceOnUse">
+          <path d="M1.5 8 V4 M2 8 L3 3 M5 8 V5 M5.5 8 L4.5 4.5" fill="none" stroke="{{ p.ink }}" stroke-width="0.5" stroke-linecap="round"/>
+        </pattern>
+      {% elif p.shape == "tufts" %}
+        <pattern id="{{ p.id }}" width="10" height="10" patternUnits="userSpaceOnUse">
+          <path d="M2 3 l1 -1.2 M3.2 3 l0 -1.6 M6 8 l1 -1.2 M7.2 8 l0 -1.6" fill="none" stroke="{{ p.ink }}" stroke-width="0.5" stroke-linecap="round"/>
+        </pattern>
+      {% endif %}
+    {% endfor %}
+  </defs>
+{%- endmacro %}
+
 {% macro map_board(view, framed=false) -%}
   {% if framed %}<div class="map-frame">{% endif %}
   <div class="map-board" aria-label="Map of discovered places">
     {% if view.origin %}<span class="map-origin" style="left: {{ view.origin[0] }}%; top: {{ view.origin[1] }}%" aria-hidden="true"></span>{% endif %}
     {% if view.regions %}
       <svg class="map-regions" viewBox="0 0 100 100" preserveAspectRatio="none">
+        {{ terrain_patterns(view.patterns) }}
         {% for region in view.regions %}
-          <polygon class="map-region" points="{% for x, y in region.points %}{{ x }},{{ y }} {% endfor %}" fill="{{ region.color }}" stroke="{{ region.color }}" role="img" aria-label="{{ region.text }}" data-tip="{{ region.text }}" data-follow></polygon>
+          <g class="map-region"{% if region.text %} role="img" aria-label="{{ region.text }}" data-tip="{{ region.text }}" data-follow{% endif %}>
+            <polygon class="map-ground" points="{% for x, y in region.points %}{{ x }},{{ y }} {% endfor %}" fill="{{ region.color }}" stroke="{{ region.color }}"></polygon>
+            {% if region.pattern %}<polygon class="map-texture" points="{% for x, y in region.points %}{{ x }},{{ y }} {% endfor %}" fill="url(#{{ region.pattern }})"></polygon>{% endif %}
+          </g>
         {% endfor %}
       </svg>
     {% endif %}

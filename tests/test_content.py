@@ -9,7 +9,12 @@ import pytest
 
 from cygnusforge.content.character import NO_CAMPAIGN, TableOption, campaign_schema
 from cygnusforge.content.definitions import ContentError, Definition, read_definitions
-from cygnusforge.content.library import ContentLibrary, PlayerInput, _load_monster
+from cygnusforge.content.library import (
+    TERRAIN_PATTERNS,
+    ContentLibrary,
+    PlayerInput,
+    _load_monster,
+)
 from tests.conftest import content_library
 from tests.rolls import SocialRoll, social_roll
 
@@ -642,6 +647,27 @@ def test_bundled_terrain_and_regions_are_read():
     assert regions["The Downs"].terrain == "hills"
     assert regions["White Tower Fens"].terrain == "fen"
     assert regions["Eastern Plain"].terrain == "open"
+
+
+def test_bundled_terrain_kinds_have_a_texture_and_ink(tree: Path):
+    terrain = ContentLibrary.load().rule_sets["cairn2e"].world_terrain
+    assert all(kind.pattern in TERRAIN_PATTERNS for kind in terrain.values())
+    assert all(kind.ink and kind.ink.startswith("#") for kind in terrain.values())
+    assert (terrain["lake"].pattern, terrain["lake"].ink) == ("waves", "#a9d4ea")
+
+
+def test_terrain_texture_must_be_one_the_engine_draws(tree: Path):
+    bad = {**TESTSET_TERRAIN[0], "pattern": "bricks", "ink": "#000000"}
+    _write(tree, {"rulesets/testset/world_terrain.json": [bad]})
+    with pytest.raises(ContentError, match="pattern must be one of waves, trees"):
+        ContentLibrary.load(tree)
+
+
+def test_terrain_texture_needs_an_ink_colour(tree: Path):
+    bad = {**TESTSET_TERRAIN[0], "pattern": "waves"}
+    _write(tree, {"rulesets/testset/world_terrain.json": [bad]})
+    with pytest.raises(ContentError, match="ink"):
+        ContentLibrary.load(tree)
 
 
 def test_region_points_must_outline_a_polygon(tree: Path):

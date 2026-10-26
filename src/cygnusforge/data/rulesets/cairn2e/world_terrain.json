@@ -4,34 +4,44 @@
     "id": "lake",
     "name": "Lake",
     "color": "#2d6a8f",
-    "rule": "Open water. Nothing crosses it on foot; the way round follows the shore."
+    "rule": "Open water. Nothing crosses it on foot; the way round follows the shore.",
+    "pattern": "waves",
+    "ink": "#a9d4ea"
   },
   {
     "type": "world_terrain",
     "id": "open",
     "name": "Open ground",
     "color": "#cfc89a",
-    "rule": "Open grassland and scrub. Easy going: travel on foot."
+    "rule": "Open grassland and scrub. Easy going: travel on foot.",
+    "pattern": "tufts",
+    "ink": "#8f8752"
   },
   {
     "type": "world_terrain",
     "id": "forest",
     "name": "Forest",
     "color": "#4d7a3c",
-    "rule": "Forest without a path. Tough going: travel by rough_terrain."
+    "rule": "Forest without a path. Tough going: travel by rough_terrain.",
+    "pattern": "trees",
+    "ink": "#24421f"
   },
   {
     "type": "world_terrain",
     "id": "hills",
     "name": "Hills",
     "color": "#9a8456",
-    "rule": "Hills and broken ground. Tough going: travel by rough_terrain."
+    "rule": "Hills and broken ground. Tough going: travel by rough_terrain.",
+    "pattern": "ridges",
+    "ink": "#5b4a2a"
   },
   {
     "type": "world_terrain",
     "id": "fen",
     "name": "Fen",
     "color": "#5f7d55",
-    "rule": "Marsh and fen. Perilous going: travel by rough_terrain."
+    "rule": "Marsh and fen. Perilous going: travel by rough_terrain.",
+    "pattern": "reeds",
+    "ink": "#2f4a2c"
   }
 ]

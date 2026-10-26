@@ -194,13 +194,25 @@ class MapMarker:
 
 @dataclass(frozen=True)
 class MapRegion:
-    """An area of ground on the map. Its points are percentages of the map's width and height, and
-    `text` is what hovering it shows."""
+    """An area of ground on the map. Its points are percentages of the map's width and height.
+    `name` and `text` are None until the region is known, and `text` is what hovering it shows.
+    `pattern` is the id of the texture drawn over its colour, when its kind has one."""
 
-    name: str
-    text: str
+    name: str | None
+    text: str | None
     color: str
     points: tuple[tuple[float, float], ...]
+    pattern: str | None = None
+
+
+@dataclass(frozen=True)
+class MapPattern:
+    """A texture drawn over a kind of ground. `id` names it in the map's SVG, `shape` is one of
+    TERRAIN_PATTERNS, and `ink` colours its marks."""
+
+    id: str
+    shape: str
+    ink: str
 
 
 @dataclass(frozen=True)
@@ -217,6 +229,7 @@ class MapView:
     where: dict[str, str] = field(default_factory=dict)
     origin: tuple[float, float] | None = None
     regions: list[MapRegion] = field(default_factory=list)
+    patterns: list[MapPattern] = field(default_factory=list)
 
 
 # How a player character moves: overland takes watches, in a settlement takes minutes at a speed,
@@ -2573,10 +2586,10 @@ def _offset_text(dx: float, dy: float) -> str:
 
 
 def map_view(state: CampaignState, terrain: Mapping[str, WorldTerrain] | None = None) -> MapView:
-    """The player's map. Only discovered places appear on it, and only regions that are discovered
-    or hold a discovered place. Each marker is placed on a square centered on the player
-    character's place, sized to fit the farthest discovered place or shown region corner plus a
-    margin. `terrain` names the kinds of the regions."""
+    """The player's map. Only discovered places appear on it. Every region is drawn, but only known
+    regions are named, and only they set the map's reach. Each marker is placed on a square centered
+    on the player character's place, sized to fit the farthest discovered place or known region
+    corner plus a margin. `terrain` gives the colour and texture of each region's kind."""
     places = sorted(
         (place for place in state.places.values() if place.discovered),
         key=lambda place: name_key(place.name),
@@ -2584,8 +2597,8 @@ def map_view(state: CampaignState, terrain: Mapping[str, WorldTerrain] | None = 
     center = _map_center(state)
     cx, cy = center if center is not None else (0.0, 0.0)
     placed = [(place, place.position) for place in places if place.position is not None]
-    shown = [region for region in state.regions.values() if _region_shown(state, region)]
-    corners = [point for region in shown for point in region.points]
+    known = [region for region in state.regions.values() if _region_known(state, region)]
+    corners = [point for region in known for point in region.points]
     reach = max(
         [MIN_MAP_RADIUS_KM]
         + [max(abs(pos.x - cx), abs(pos.y - cy)) for _, pos in placed]
@@ -2619,8 +2632,13 @@ def map_view(state: CampaignState, terrain: Mapping[str, WorldTerrain] | None = 
     on_board = 0 <= origin_left <= 100 and 0 <= origin_top <= 100
     kinds = terrain or {}
     regions = [
-        _map_region(region, kinds, cx, cy, radius)
-        for region in sorted(shown, key=lambda region: name_key(region.name))
+        _map_region(region, kinds, cx, cy, radius, _region_known(state, region))
+        for region in sorted(state.regions.values(), key=lambda region: name_key(region.name))
+    ]
+    patterns = [
+        MapPattern(id=_pattern_id(kind.id), shape=kind.pattern, ink=kind.ink)
+        for kind in kinds.values()
+        if kind.pattern is not None and kind.ink is not None
     ]
     return MapView(
         radius_km=round(radius, 2),
@@ -2629,12 +2647,13 @@ def map_view(state: CampaignState, terrain: Mapping[str, WorldTerrain] | None = 
         where=where,
         origin=(origin_left, origin_top) if on_board else None,
         regions=regions,
+        patterns=patterns,
     )
 
 
-def _region_shown(state: CampaignState, region: Region) -> bool:
-    """A region is on the player's map once it is discovered, or once a discovered place with a
-    map point lies inside it."""
+def _region_known(state: CampaignState, region: Region) -> bool:
+    """A region is known once it is discovered, or once a discovered place with a map point lies
+    inside it."""
     if region.discovered:
         return True
     return any(
@@ -2645,19 +2664,30 @@ def _region_shown(state: CampaignState, region: Region) -> bool:
     )
 
 
+def _pattern_id(kind: str) -> str:
+    return f"terrain-{kind}"
+
+
 def _map_region(
-    region: Region, kinds: Mapping[str, WorldTerrain], cx: float, cy: float, radius: float
+    region: Region,
+    kinds: Mapping[str, WorldTerrain],
+    cx: float,
+    cy: float,
+    radius: float,
+    known: bool,
 ) -> MapRegion:
     kind = kinds.get(region.terrain)
-    if kind is None:
-        text, color = region.name, "#888888"
-    else:
-        text, color = f"{region.name} ({kind.name}). {kind.rule}", kind.color
+    color = kind.color if kind is not None else "#888888"
+    name = text = None
+    if known:
+        name = region.name
+        text = region.name if kind is None else f"{region.name} ({kind.name}). {kind.rule}"
+    pattern = _pattern_id(kind.id) if kind is not None and kind.pattern is not None else None
     points = tuple(
         (round(50 + (x - cx) / radius * 50, 2), round(50 - (y - cy) / radius * 50, 2))
         for x, y in region.points
     )
-    return MapRegion(name=region.name, text=text, color=color, points=points)
+    return MapRegion(name=name, text=text, color=color, points=points, pattern=pattern)
 
 
 def scene_view(

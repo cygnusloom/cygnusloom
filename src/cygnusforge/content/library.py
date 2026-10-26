@@ -315,6 +315,10 @@ class EncounterTerrain:
     difficult: bool = False
 
 
+# The textures a world terrain kind may be drawn with. The map engine draws each one.
+TERRAIN_PATTERNS = ("waves", "trees", "ridges", "reeds", "tufts")
+
+
 @dataclass(frozen=True)
 class WorldTerrain:
     """A kind of ground on the world map. A region of this ground is drawn in its colour."""
@@ -324,6 +328,9 @@ class WorldTerrain:
     color: str
     # The rule effect of this ground, as the rule set words it. Shown when the ground is hovered.
     rule: str
+    # An optional texture from TERRAIN_PATTERNS, drawn over the colour in the ink colour.
+    pattern: str | None = None
+    ink: str | None = None
 
 
 @dataclass(frozen=True)
@@ -1827,11 +1834,21 @@ MAX_TEMPLATE_SIZE = 60
 _HEX_COLOR = re.compile(r"#[0-9a-fA-F]{6}")
 
 
-def _color(data: Mapping[str, Any], label: str) -> str:
-    color = required_text(data, "color", label)
+def _color(data: Mapping[str, Any], label: str, key: str = "color") -> str:
+    color = required_text(data, key, label)
     if not _HEX_COLOR.fullmatch(color):
-        raise ContentError(f"{label}: color must be a hex colour like #3a3f47, not {color!r}")
+        raise ContentError(f"{label}: {key} must be a hex colour like #3a3f47, not {color!r}")
     return color
+
+
+def _terrain_pattern(data: Mapping[str, Any], label: str) -> tuple[str | None, str | None]:
+    if "pattern" not in data:
+        return None, None
+    pattern = required_text(data, "pattern", label)
+    if pattern not in TERRAIN_PATTERNS:
+        allowed = ", ".join(TERRAIN_PATTERNS)
+        raise ContentError(f"{label}: pattern must be one of {allowed}, not {pattern!r}")
+    return pattern, _color(data, label, "ink")
 
 
 def _load_encounter_terrain(
@@ -1862,11 +1879,14 @@ def _load_world_terrain(definitions: list[Definition], template: str) -> dict[st
         if d.id in terrain:
             raise ContentError(f"{template}: duplicate world terrain {d.id!r}")
         label = f"{template}: world terrain {d.id}"
+        pattern, ink = _terrain_pattern(d.data, label)
         terrain[d.id] = WorldTerrain(
             id=d.id,
             name=required_text(d.data, "name", label),
             color=_color(d.data, label),
             rule=required_text(d.data, "rule", label),
+            pattern=pattern,
+            ink=ink,
         )
     return terrain
 

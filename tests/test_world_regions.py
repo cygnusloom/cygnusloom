@@ -19,7 +19,7 @@ from tests.test_world import TABLES, _state
 LIBRARY = content_library()
 CAIRN = LIBRARY.rule_sets["cairn2e"]
 SQUARE_OFF_THE_MAP = [[20.0, 20.0], [21.0, 20.0], [21.0, 21.0], [20.0, 21.0]]
-INSIDE_WEST_LAKE = [[-5.0, -1.0], [-4.0, -1.0], [-4.0, 0.0], [-5.0, 0.0]]
+INSIDE_WEST_LAKE = [[-5.8, -1.1], [-5.4, -1.1], [-5.4, -0.7], [-5.8, -0.7]]
 
 
 def _twin_lakes(client_factory: Callable[[], TestClient]) -> int:
@@ -57,12 +57,16 @@ def test_bundled_twin_lakes_regions_are_seeded(
     assert regions["east lake"].terrain == "lake"
 
 
-def test_undiscovered_regions_stay_off_the_map(
+def test_every_region_is_drawn_but_undiscovered_ones_stay_unnamed(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     campaign_id = _twin_lakes(client_factory)
     view = world.map_view(_state(app, campaign_id), CAIRN.world_terrain)
-    assert view.regions == []
+    assert len(view.regions) == 12
+    assert all(region.name is None and region.text is None for region in view.regions)
+    kinds = {region.color for region in view.regions}
+    assert CAIRN.world_terrain["open"].color in kinds
+    assert CAIRN.world_terrain["lake"].color in kinds
 
 
 def test_a_discovered_place_inside_a_region_reveals_it(
@@ -70,10 +74,11 @@ def test_a_discovered_place_inside_a_region_reveals_it(
 ):
     campaign_id = _twin_lakes(client_factory)
     _tools(app, campaign_id).create_location(
-        name="Lake Shore", description="A shore.", discovered=True, x=-4.68, y=-0.44
+        name="Lake Shore", description="A shore.", discovered=True, x=-5.59, y=-0.86
     )
     view = world.map_view(_state(app, campaign_id), CAIRN.world_terrain)
-    assert {region.name for region in view.regions} == {"West Lake"}
+    assert {region.name for region in view.regions if region.name} == {"West Lake"}
+    assert view.regions[[region.name for region in view.regions].index("West Lake")].text
 
 
 def test_map_view_draws_each_region_in_its_terrain_colour_and_text(
@@ -82,13 +87,15 @@ def test_map_view_draws_each_region_in_its_terrain_colour_and_text(
     campaign_id = _twin_lakes(client_factory)
     _tools(app, campaign_id).create_region("Far Mere", "lake", SQUARE_OFF_THE_MAP, discovered=True)
     view = world.map_view(_state(app, campaign_id), CAIRN.world_terrain)
-    by_name = {region.name: region for region in view.regions}
+    by_name = {region.name: region for region in view.regions if region.name}
     assert set(by_name) == {"Far Mere"}
     lake = CAIRN.world_terrain["lake"]
     mere = by_name["Far Mere"]
     assert mere.color == lake.color
     assert mere.text == f"Far Mere (Lake). {lake.rule}"
+    assert mere.pattern == "terrain-lake"
     assert all(0 <= x <= 100 and 0 <= y <= 100 for x, y in mere.points)
+    assert {pattern.id for pattern in view.patterns} >= {"terrain-lake"}
 
 
 def test_map_view_without_terrain_still_draws_regions_in_grey(
@@ -97,8 +104,10 @@ def test_map_view_without_terrain_still_draws_regions_in_grey(
     campaign_id = _twin_lakes(client_factory)
     _tools(app, campaign_id).create_region("Far Mere", "lake", SQUARE_OFF_THE_MAP, discovered=True)
     view = world.map_view(_state(app, campaign_id))
-    assert [region.color for region in view.regions] == ["#888888"]
-    assert view.regions[0].text.startswith("Far Mere")
+    mere = next(region for region in view.regions if region.name == "Far Mere")
+    assert mere.color == "#888888"
+    assert mere.text == "Far Mere"
+    assert mere.pattern is None
 
 
 def test_a_region_stretches_the_map_to_its_corners(
@@ -136,7 +145,7 @@ def test_a_gm_marked_discovered_region_is_on_the_map_at_once(
     _tools(app, campaign_id).create_region("Dark Mere", "lake", SQUARE_OFF_THE_MAP, discovered=True)
     assert _state(app, campaign_id).regions["dark mere"].discovered is True
     view = world.map_view(_state(app, campaign_id), CAIRN.world_terrain)
-    assert [region.name for region in view.regions] == ["Dark Mere"]
+    assert [region.name for region in view.regions if region.name] == ["Dark Mere"]
 
 
 def test_a_place_off_the_terrain_is_refused(client_factory: Callable[[], TestClient], app):
@@ -218,7 +227,9 @@ def test_the_campaign_page_draws_the_regions_with_their_tooltips(
     client = _signed_in(client_factory)
     response = _new_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-    assert 'class="map-region"' not in client.get(f"/campaigns/{campaign_id}").text
+    hidden_page = client.get(f"/campaigns/{campaign_id}").text
+    assert hidden_page.count('class="map-region"') == 12
+    assert 'data-tip="West Lake' not in hidden_page
     _tools(app, campaign_id).create_region("Far Mere", "lake", SQUARE_OFF_THE_MAP, discovered=True)
     page = client.get(f"/campaigns/{campaign_id}").text
     lake = CAIRN.world_terrain["lake"]
