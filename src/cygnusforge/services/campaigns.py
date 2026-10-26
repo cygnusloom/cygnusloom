@@ -150,20 +150,21 @@ STATE_INSTRUCTION = (
 STATE_CLOSING = "When nothing else needs to change, reply with one short sentence saying so."
 NARRATE_INSTRUCTION = (
     "Narration step. Write the next beat in the present tense, as a good editor would: specific, "
-    "in character, and free of filler. Cover every numbered entry of the turn log above, in order, so "
-    "the player is told everything that happened: each arrival and departure, encounter start, "
-    "initiative, NPC action, attack and its result, save and roll outcome, and change to the player "
-    "character. Several entries may share one sentence, but no entry may be left out, and events must "
-    "appear in the numbered order: a later entry never happens before an earlier one. State each "
-    "outcome plainly, such as a surrender, a flight, a death, or the end of an encounter, rather than "
-    "leaving the player to guess it from body language. Use as few sentences as that takes, one or two "
-    "per entry where it can. Cut repetition and restated detail, not "
-    "facts. The turn log and the tool results above are the record of what happened. Anything they do "
+    "in character, and free of filler. Keep it minimal: a routine beat, such as a short walk or an "
+    "uneventful look around, takes a sentence or two. Give more only when something really happened, "
+    "and then cover each consequential entry of the turn log above, in numbered order, with its outcome "
+    "stated plainly: each arrival and departure, encounter start, initiative, NPC action, attack and its "
+    "result, save and roll outcome, surrender, flight, death, end of an encounter, and change to the player "
+    "character. Several entries may share one sentence, and a later entry never happens before an earlier "
+    "one. Leave out entries that change nothing the player perceives or needs, and cut repetition and "
+    "restated detail. Include only the detail the player needs to act on or would notice. The turn log and "
+    "the tool results above are the record of what happened. Anything they do "
     "not record did not happen: do not narrate an item as taken, placed, used, or moved, or a "
     "character or object as somewhere, unless they record it, invent no times, distances, figures, directions, "
     "or motives the log and results do not give. Invent no objects, exits, places, or people the record does "
     "not give (a ledger in a back room, a second door), and nothing that contradicts the record. Brief flavor "
-    "such as a gesture, a mood, or a step within a fight is fine when it fits the placements and results. "
+    "such as a gesture, a mood, or a step within a fight is fine only when it matters and fits the placements "
+    "and results. "
     "Never write a number of minutes, hours, days, or distance "
     "that the log and results do not state: for travel or waiting they do not give, say a vague span such as "
     "after a while or on the walk over. Name no street, square, alley, or route that the log and results do not "
@@ -240,8 +241,9 @@ def opening_prompt(template: WorldTemplate | None) -> str:
 
 OOC_INSTRUCTION = (
     "Out-of-character step. The player is talking to you as the GM, not to their character. Reply "
-    "to them directly, in your own voice, and do not narrate the scene. Answer what they asked, "
-    "briefly, and do not speak or act for the player character. If their request needs a change to "
+    "to them directly, in your own voice, and do not narrate the scene. Answer the question in the first "
+    "sentence, with no preamble or restating it; one to three sentences is enough unless they asked for "
+    "more. Do not speak or act for the player character. If their request needs a change to "
     "the world, make it with tool calls first, and "
     "write no text before those calls: text written before a tool call is shown to the player "
     "right away. If the story should move on after your reply, call ooc with no_narration false."
@@ -587,6 +589,7 @@ class ChatMessage:
     content: str
     model: str | None = None
     speaker: str | None = None
+    reasoning: str = ""
 
 
 def list_messages(engine: Engine, campaign_id: int) -> list[ChatMessage]:
@@ -627,7 +630,11 @@ def _chat_message(row: Event) -> ChatMessage:
         )
     if isinstance(event, ChatGM):
         return ChatMessage(
-            id=row.id or 0, role="assistant", content=event.content, model=event.model
+            id=row.id or 0,
+            role="assistant",
+            content=event.content,
+            model=event.model,
+            reasoning=event.reasoning,
         )
     raise TypeError(f"{row.kind} is not a chat event")
 
@@ -919,8 +926,16 @@ def _text_message(content: str, reasoning: str) -> dict[str, Any]:
     return message
 
 
+def _history_message(m: ChatMessage) -> dict[str, Any]:
+    """A chat message as the model sees it. A GM reply keeps the reasoning it was written with."""
+    if m.role == "assistant":
+        return _text_message(m.content, m.reasoning)
+    return {"role": m.role, "content": m.content}
+
+
 def _tool_call_message(step: ChatReply) -> dict[str, Any]:
-    """The assistant message that records a step's tool requests, as the model sees it."""
+    """The assistant message that records a step's tool requests, as the model sees it. Thinking
+    models reject it with HTTP 400 when the key is missing, even if the reasoning is empty."""
     message: dict[str, Any] = {
         "role": "assistant",
         "content": step.text or None,
@@ -933,8 +948,7 @@ def _tool_call_message(step: ChatReply) -> dict[str, Any]:
             for request in step.tool_requests
         ],
     }
-    if step.reasoning:
-        message["reasoning_content"] = step.reasoning
+    message["reasoning_content"] = step.reasoning
     return message
 
 
@@ -1142,6 +1156,14 @@ def _turn_log(engine: Engine, campaign_id: int, opener: int) -> list[str]:
     ]
 
 
+def _turn_has_major_event(engine: Engine, campaign_id: int, opener: int) -> bool:
+    """Whether anything recorded since the player's message is a major event, which the journal
+    step records. Hidden events count, since the journal keeps what the player does not see."""
+    with session_scope(engine) as db:
+        rows = events_since(db, campaign_id, opener)
+    return any(decode(row).is_major() for row in rows)
+
+
 def _world_text(run: _Run, state: CampaignState) -> str:
     rule_set = run.rule_set
     return world_state_text(
@@ -1343,7 +1365,8 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     context = [*system, *tool_definition_parts(rule_set), *conversation]
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": "\n\n".join(p.content for p in system)},
-        *({"role": p.role, "content": p.content} for p in conversation),
+        *(_history_message(m) for m in history),
+        {"role": player.role, "content": player.content},
     ]
     round_start = len(context)
     context.append(ContextPart("system", "State instruction", state_instruction(run.rule_set)))
@@ -1468,14 +1491,23 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                     run.engine,
                     run.campaign_id,
                     StateStepMade(requests=[], messages=messages, context=_dicts(context)),
-                    ChatGM(content=reply, model=run.model, final=False),
+                    ChatGM(
+                        content=reply,
+                        model=run.model,
+                        final=False,
+                        reasoning=step.reasoning,
+                    ),
                 )
                 yield NextMessage()
                 continue
             if turn.opening:
                 async for event in _write_journal(run, turn, reply, step.reasoning):
                     yield event
-            event_id = _record(run.engine, run.campaign_id, ChatGM(content=reply, model=run.model))
+            event_id = _record(
+                run.engine,
+                run.campaign_id,
+                ChatGM(content=reply, model=run.model, reasoning=step.reasoning),
+            )
             yield Saved(event_id)
             return
         yield Status("Managing state...")
@@ -1519,8 +1551,9 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             ),
         )
 
-    async for event in _write_journal(run, turn):
-        yield event
+    if _turn_has_major_event(run.engine, run.campaign_id, turn.opener):
+        async for event in _write_journal(run, turn):
+            yield event
     yield Status("Narrating...")
     messages = _narration_messages(run, turn)
     reply = ""
@@ -1538,7 +1571,11 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             break
     if not reply:
         raise LLMError("the model returned an empty reply")
-    event_id = _record(run.engine, run.campaign_id, ChatGM(content=reply, model=run.model))
+    event_id = _record(
+        run.engine,
+        run.campaign_id,
+        ChatGM(content=reply, model=run.model, reasoning=narration.reasoning),
+    )
     yield Saved(event_id)
 
 

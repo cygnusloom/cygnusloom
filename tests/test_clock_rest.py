@@ -4,9 +4,10 @@ import pytest
 
 from cygnusforge.content.definitions import ContentError, Definition
 from cygnusforge.content.library import _load_rests
+from cygnusforge.services.campaigns import _turn_has_major_event
 from cygnusforge.services.clock import absolute, rest_target
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import RestTaken
+from cygnusforge.services.common import InvalidInput, session_scope
+from cygnusforge.services.events import RestTaken, events_since
 from tests.test_combat import (
     CAIRN,
     PC,
@@ -28,6 +29,11 @@ def _wound(app, campaign_id, name=PC):
 
 def _clock_position(app, campaign_id):
     return absolute(_state(app, campaign_id).clock, PARTS, HPP)
+
+
+def _last_event_id(app, campaign_id):
+    with session_scope(app.state.engine) as db:
+        return max(event.id for event in events_since(db, campaign_id))
 
 
 @pytest.mark.parametrize(
@@ -88,6 +94,20 @@ def test_advancing_a_day_lands_on_the_morning_and_a_part_moves_to_the_afternoon(
         "notice": "1 day passed; update anything that should be updated.",
     }
     assert tools.advance_time(parts=1) == {"day": 2, "part": "afternoon", "hour": 0}
+
+
+def test_a_clock_move_into_a_new_day_is_a_major_event(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    before = _last_event_id(app, campaign_id)
+    tools.advance_time(days=1)
+    assert _turn_has_major_event(app.state.engine, campaign_id, before)
+
+
+def test_a_clock_move_within_the_same_day_is_not_a_major_event(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    before = _last_event_id(app, campaign_id)
+    assert tools.advance_time(parts=1)["day"] == 1
+    assert not _turn_has_major_event(app.state.engine, campaign_id, before)
 
 
 def test_hours_carry_into_the_next_part_of_the_day(client_factory):

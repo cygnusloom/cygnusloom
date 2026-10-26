@@ -21,6 +21,7 @@ from tests.test_context import (
     _state,
 )
 from tests.test_tools import ROLL, _recording_provider, _script
+from tests.test_world import _tool
 
 
 def _stream(client: TestClient, campaign_id: int, text: str) -> list[dict[str, Any]]:
@@ -54,12 +55,21 @@ def test_stream_sends_status_then_deltas_then_saved(
     assert events[-1] == {"type": "saved", "event_id": _assistant_ids(app, campaign_id)[-1]}
 
 
+# A discovery is a major event, so the journal step runs after the roll.
+DISCOVER = {"name": "discover_location", "arguments": {"name": "Gate Room"}}
+
+
+def _major_roll_script() -> str:
+    return _script({"rounds": [[ROLL], [DISCOVER]], "text": "Done."})
+
+
 def test_each_phase_shows_a_status_and_only_the_narration_is_streamed(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "create_location", {"name": "Gate Room", "description": "A gate."})
 
-    paused = _stream(client, campaign_id, _script({"rounds": [[ROLL]], "text": "Done."}))
+    paused = _stream(client, campaign_id, _major_roll_script())
     assert paused[-1]["type"] == "prompt"
     assert paused[-1]["details"] == "Modifiers: +1 relationship, +0 circumstance."
     assert [e["text"] for e in paused if e["type"] == "status"] == [
@@ -70,7 +80,13 @@ def test_each_phase_shows_a_status_and_only_the_narration_is_streamed(
     events = _answer(client, campaign_id, "roll")
 
     statuses = [e["text"] for e in events if e["type"] == "status"]
-    assert statuses == ["Managing state...", "Updating the journal...", "Narrating..."]
+    assert statuses == [
+        "Managing state...",
+        "Running discover_location...",
+        "Managing state...",
+        "Updating the journal...",
+        "Narrating...",
+    ]
     narrating_at = events.index({"type": "status", "text": "Narrating..."})
     assert _deltas(events[:narrating_at]) == ""
     assert _deltas(events) == "Done."
@@ -81,13 +97,14 @@ def test_state_steps_offer_tools_and_the_narration_does_not(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "create_location", {"name": "Gate Room", "description": "A gate."})
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
 
-    _stream(client, campaign_id, _script({"rounds": [[ROLL]], "text": "Done."}))
+    _stream(client, campaign_id, _major_roll_script())
     _answer(client, campaign_id, "roll")
 
-    assert [call["tools"] is not None for call in recorder.calls] == [True, True, True, False]
+    assert [call["tools"] is not None for call in recorder.calls] == [True, True, True, True, False]
 
 
 def test_compression_is_announced_as_a_status(settings: Settings):

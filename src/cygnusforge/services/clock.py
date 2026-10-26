@@ -83,6 +83,7 @@ def advance_to(
             part_name=clock_rules.parts[new.part],
             hour=new.hour,
             elapsed_hours=max(0, target - start),
+            new_day=new.day != before.day,
         ),
     )
     result: dict[str, Any] = {

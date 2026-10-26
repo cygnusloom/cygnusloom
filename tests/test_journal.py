@@ -159,14 +159,34 @@ def test_the_journal_is_not_capped_in_length(
     assert viewed["lines"][0]["text"] == chunk
 
 
-def test_a_story_turn_ends_with_a_journal_step_that_writes_the_journal(
+def test_a_routine_turn_skips_the_journal_step(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
+    script = _script({"text": "Ada looks over the empty yard."})
+
+    assert _send(client, campaign_id, script).status_code == 303
+
+    assert _journal_calls(recorder.calls) == []
+    assert _journal_state(app, campaign_id).journal == ""
+    assert _saved(app, campaign_id)[1:] == [
+        ("user", script),
+        ("assistant", "Ada looks over the empty yard."),
+    ]
+
+
+def test_a_major_turn_ends_with_a_journal_step_that_writes_the_journal(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "create_location", {"name": "Gate Room", "description": "A gate."})
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
     script = _script(
         {
+            "rounds": [[{"name": "discover_location", "arguments": {"name": "Gate Room"}}]],
             "text": "The bridge groans under Ada's boots.",
             "journal": [
                 [
@@ -195,7 +215,7 @@ def test_a_story_turn_ends_with_a_journal_step_that_writes_the_journal(
             "append_journal",
             "replace_in_journal",
         }
-        assert any("Campaign day 1." in m.get("content", "") for m in call["messages"])
+        assert any("Campaign day 1." in (m.get("content") or "") for m in call["messages"])
     narration = next(i for i, call in enumerate(recorder.calls) if call["tools"] is None)
     assert recorder.calls.index(journal_calls[0]) < narration
     for call in recorder.calls:
@@ -221,9 +241,10 @@ def test_the_state_step_reasoning_goes_back_to_the_journal_and_narration(
 
     recorder.chat = thinking_chat
     app.state.providers = lambda model_id: (recorder, model_id)
+    _tool(app, campaign_id, "create_location", {"name": "Gate Room", "description": "A gate."})
     script = _script(
         {
-            "rounds": [[{"name": "add_note", "arguments": {"text": "Ada crossed the bridge."}}]],
+            "rounds": [[{"name": "discover_location", "arguments": {"name": "Gate Room"}}]],
             "text": "The bridge groans under Ada's boots.",
             "journal": [
                 [
@@ -320,3 +341,64 @@ def test_the_opening_introduction_is_written_into_the_journal(
     assert journal_calls, "the journal step should have run for the opening"
     assert any(m.get("content") == intro for m in journal_calls[0]["messages"])
     assert _saved(app, campaign_id)[-1] == ("assistant", intro)
+
+
+def test_a_thinking_model_gets_the_reasoning_of_earlier_gm_replies_with_its_tools(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    """DeepSeek's thinking mode rejects a request with tools unless every earlier assistant message
+    carries the reasoning it was written with, so the opening's text-only reply must keep its."""
+    client = _signed_in(client_factory)
+    campaign_id = int(_new_campaign(client).headers["location"].rsplit("/", 1)[1])
+    assert _create_character(client, campaign_id).status_code == 303
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    intro = "Welcome to **Twin Lakes**, Ada. The hollow waits."
+    script = _script(
+        {
+            "rounds": [[{"name": "ooc", "arguments": {"no_narration": True}}]],
+            "ooc": intro,
+            "journal": [[{"name": "append_journal", "arguments": {"text": "Day 1: Ada arrives."}}]],
+        }
+    )
+    missing: list[str] = []
+
+    def thinking(messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None) -> None:
+        if tools is None:
+            return
+        for m in messages:
+            if m["role"] == "assistant" and "reasoning_content" not in m:
+                missing.append(str(m.get("content")))
+
+    def with_script(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return [
+            {**m, "content": f"{m['content']}\n{script}"}
+            if m["role"] == "user" and OPENING_PROMPT in m["content"]
+            else m
+            for m in messages
+        ]
+
+    chat, stream = recorder.chat, recorder.stream
+
+    async def thinking_chat(
+        model: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None
+    ) -> ChatReply:
+        messages = with_script(messages)
+        thinking(messages, tools)
+        return replace(await chat(model, messages, tools), reasoning="thinking")
+
+    async def thinking_stream(
+        model: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None
+    ) -> AsyncIterator[Any]:
+        messages = with_script(messages)
+        thinking(messages, tools)
+        async for item in stream(model, messages, tools):
+            yield replace(item, reasoning="thinking") if isinstance(item, ChatReply) else item
+
+    recorder.chat = thinking_chat
+    recorder.stream = thinking_stream
+
+    _answer(client, campaign_id, "continue")
+    _send(client, campaign_id, f"I look around.\n{_script({'rounds': [[]], 'text': 'The lake.'})}")
+
+    assert missing == []

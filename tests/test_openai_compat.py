@@ -272,9 +272,9 @@ def test_reasoning_is_passed_back_on_the_tool_call_message():
     assert seen["body"]["messages"][-1]["reasoning_content"] == "Check the roll first."
 
 
-def test_tool_call_message_without_reasoning_has_no_reasoning_key():
+def test_tool_call_message_without_reasoning_sends_an_empty_reasoning_key():
     step = ChatReply(
         text="", tool_requests=(ToolRequest(id="call_1", name="social_roll", arguments="{}"),)
     )
 
-    assert "reasoning_content" not in _tool_call_message(step)
+    assert _tool_call_message(step)["reasoning_content"] == ""

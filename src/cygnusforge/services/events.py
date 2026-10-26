@@ -504,6 +504,11 @@ EVENT_TYPES: dict[str, type[GameEvent]] = {}
 class GameEvent:
     kind: ClassVar[str]
     channel: ClassVar[Channel] = Channel.LOG
+    # A major event is a story beat the journal records. A turn with none skips the journal step.
+    major: ClassVar[bool] = False
+
+    def is_major(self) -> bool:
+        return self.major
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
@@ -696,6 +701,7 @@ class CampaignOptionsChosen(GameEvent):
 @dataclass(frozen=True)
 class NpcAdded(GameEvent):
     kind: ClassVar[str] = "npc.added"
+    major: ClassVar[bool] = True
 
     name: str
     location: str
@@ -779,6 +785,7 @@ class HirelingAdded(GameEvent):
     is controlled by the player, paid `wage` a day from its employer's gold."""
 
     kind: ClassVar[str] = "hireling.added"
+    major: ClassVar[bool] = True
 
     name: str
     employer: str
@@ -822,6 +829,7 @@ class HirelingDismissed(GameEvent):
     """A hireling leaves its employer's company and becomes an ordinary NPC where it stands."""
 
     kind: ClassVar[str] = "hireling.dismissed"
+    major: ClassVar[bool] = True
 
     name: str
     cause: str
@@ -947,6 +955,7 @@ class LocationUpdated(GameEvent):
 @dataclass(frozen=True)
 class LocationDiscovered(GameEvent):
     kind: ClassVar[str] = "location.discovered"
+    major: ClassVar[bool] = True
 
     name: str
     summary: str | None = None
@@ -1015,6 +1024,7 @@ class NpcUpdated(GameEvent):
 @dataclass(frozen=True)
 class NpcRemoved(GameEvent):
     kind: ClassVar[str] = "npc.removed"
+    major: ClassVar[bool] = True
 
     name: str
 
@@ -1191,6 +1201,8 @@ class ChatGM(GameEvent):
     content: str
     model: str
     final: bool = True
+    # Thinking models reject a later tool request that leaves this reply's reasoning out.
+    reasoning: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         if self.final:
@@ -1422,6 +1434,7 @@ class MapDeleted(GameEvent):
 @dataclass(frozen=True)
 class EncounterStarted(GameEvent):
     kind: ClassVar[str] = "encounter.started"
+    major: ClassVar[bool] = True
 
     map: str
     location: str
@@ -1441,6 +1454,7 @@ class EncounterEnded(GameEvent):
     """The encounter is over. `reason` says why it ended early, such as a side being down."""
 
     kind: ClassVar[str] = "encounter.ended"
+    major: ClassVar[bool] = True
 
     reason: str = ""
 
@@ -1547,6 +1561,7 @@ class CharacterRecovered(GameEvent):
     what it cost them."""
 
     kind: ClassVar[str] = "character.recovered"
+    major: ClassVar[bool] = True
 
     name: str
     explanation: str
@@ -2247,6 +2262,10 @@ class ClockAdvanced(GameEvent):
     hour: int = 0
     # The hours this move passed, which count down a dying character's clock.
     elapsed_hours: int = 0
+    new_day: bool = False
+
+    def is_major(self) -> bool:
+        return self.new_day
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.clock = Clock(day=self.day, part=self.part, hour=self.hour)
@@ -2284,6 +2303,7 @@ class CharacterDying(GameEvent):
     is stabilized."""
 
     kind: ClassVar[str] = "character.dying"
+    major: ClassVar[bool] = True
 
     name: str
     hours: int
@@ -2321,6 +2341,7 @@ class CharacterDied(GameEvent):
     """A character died. The body stays where it fell, with the gear it carried."""
 
     kind: ClassVar[str] = "character.died"
+    major: ClassVar[bool] = True
 
     name: str
     cause: str = ""

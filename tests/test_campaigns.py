@@ -167,7 +167,7 @@ def test_model_change_applies_to_the_next_message(
     assert _set_model(client, campaign_id, "ollama/test-model").status_code == 303
     _send(client, campaign_id, "two")
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert used == ["fake/scripted"] * 3 + ["ollama/test-model"] * 3
+    assert used == ["fake/scripted"] * 2 + ["ollama/test-model"] * 2
     assert "from fake/scripted" in page
     assert "from ollama/test-model" in page
 
