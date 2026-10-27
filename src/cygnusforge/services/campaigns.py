@@ -401,39 +401,52 @@ def roll_player_stats(
     )
 
 
-def create_character(
+@dataclass(frozen=True)
+class NewCharacter:
+    """The player character a creation form stands for, before its stats are resolved."""
+
+    name: str
+    rolled: Mapping[str, int]
+    submitted: Mapping[str, Any]
+    pronouns: str
+
+
+def save_creation(
     engine: Engine,
     library: ContentLibrary,
     owner_id: int,
     campaign_id: int,
-    name: str,
-    rolled: Mapping[str, int],
-    submitted: Mapping[str, Any],
-    pronouns: str,
-    rng: random.Random | None = None,
-) -> dict[str, Any]:
-    """Make the campaign's player character. Until it exists, the campaign cannot be played."""
+    *,
+    options: Mapping[str, Any] | None = None,
+    character: NewCharacter | None = None,
+) -> None:
+    """Save the campaign options and the player character together, so either both are saved or
+    neither is. A part left as None is not saved. The character needs the options first."""
     campaign = get_campaign(engine, owner_id, campaign_id)
-    spec = character_spec(library, campaign)
-    rule_set = library.rule_sets[campaign.rule_set]
+    spec = campaign_spec(library, campaign)
     with _exclusive(campaign_id), session_scope(engine) as db:
-        return create_player_character(
-            db,
-            campaign_id,
-            campaign_spec(library, campaign),
-            spec,
-            name,
-            rolled,
-            submitted,
-            rng if rng is not None else random.Random(),
-            inventory=rule_set.inventory,
-            item_sizes=rule_set.item_sizes,
-            magic=rule_set.magic,
-            currency=rule_set.marketplace.currency if rule_set.marketplace else "",
-            armor_max=rule_set.combat.armor_max if rule_set.combat else 0,
-            pronouns=pronouns,
-            plus=rule_set.plus,
-        )
+        if options is not None:
+            set_campaign_options(db, campaign_id, spec, options)
+        if character is not None:
+            rule_set = library.rule_sets[campaign.rule_set]
+            create_player_character(
+                db,
+                campaign_id,
+                spec,
+                character_spec(library, campaign),
+                character.name,
+                character.rolled,
+                character.submitted,
+                random.Random(),
+                inventory=rule_set.inventory,
+                item_sizes=rule_set.item_sizes,
+                magic=rule_set.magic,
+                currency=rule_set.marketplace.currency if rule_set.marketplace else "",
+                armor_max=rule_set.combat.armor_max if rule_set.combat else 0,
+                pronouns=character.pronouns,
+                plus=rule_set.plus,
+            )
+        db.commit()
 
 
 def promote_hireling_to_character(
@@ -443,20 +456,6 @@ def promote_hireling_to_character(
     get_campaign(engine, owner_id, campaign_id)
     with _exclusive(campaign_id), session_scope(engine) as db:
         return promote_hireling(db, campaign_id, name)
-
-
-def choose_campaign_options(
-    engine: Engine,
-    library: ContentLibrary,
-    owner_id: int,
-    campaign_id: int,
-    submitted: Mapping[str, Any],
-) -> dict[str, Any]:
-    """Record the options every character in the campaign shares, such as the omen."""
-    campaign = get_campaign(engine, owner_id, campaign_id)
-    spec = campaign_spec(library, campaign)
-    with _exclusive(campaign_id), session_scope(engine) as db:
-        return set_campaign_options(db, campaign_id, spec, submitted)
 
 
 def character_spec(library: ContentLibrary, campaign: Campaign) -> CharacterSpec:

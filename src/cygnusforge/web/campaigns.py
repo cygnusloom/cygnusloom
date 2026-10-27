@@ -20,6 +20,7 @@ from cygnusforge.services.accounts import is_test_user
 from cygnusforge.services.campaigns import (
     Delta,
     Logged,
+    NewCharacter,
     NextMessage,
     Prompt,
     Saved,
@@ -29,10 +30,8 @@ from cygnusforge.services.campaigns import (
     campaign_transcript,
     campaign_world,
     character_spec,
-    choose_campaign_options,
     context_usage,
     create_campaign,
-    create_character,
     end_player_turn,
     get_campaign,
     get_turn_context,
@@ -44,6 +43,7 @@ from cygnusforge.services.campaigns import (
     resume_turn,
     roll_player_stats,
     rollback_to,
+    save_creation,
     send_message,
     set_campaign_model,
     set_debug_currency,
@@ -132,24 +132,6 @@ async def reroll_character_stats(request: Request, campaign_id: int) -> Response
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
-@router.post("/{campaign_id}/options")
-async def choose_options(request: Request, campaign_id: int) -> Response:
-    user = page_user(request)
-    await verify_csrf(request)
-    form = await request.form()
-    engine = request.app.state.engine
-    library = request.app.state.content
-    try:
-        spec = campaign_spec(library, get_campaign(engine, user.id, campaign_id))
-        submitted = campaign_submission_from_form(spec, form)
-        choose_campaign_options(engine, library, user.id, campaign_id, submitted)
-    except InvalidInput as exc:
-        return _campaign_page(request, user, campaign_id, 400, str(exc))
-    except Conflict as exc:
-        return _campaign_page(request, user, campaign_id, 409, str(exc))
-    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
-
-
 @router.post("/{campaign_id}/hirelings/promote")
 async def promote_hireling(request: Request, campaign_id: int) -> Response:
     user = page_user(request)
@@ -165,38 +147,57 @@ async def promote_hireling(request: Request, campaign_id: int) -> Response:
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
-@router.post("/{campaign_id}/character")
-async def create_player_character(request: Request, campaign_id: int) -> Response:
+@router.post("/{campaign_id}/creation")
+async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
+    """Save the campaign options and the player character from the one creation form. Whichever
+    parts are still pending are saved together, or neither is."""
     user = page_user(request)
     await verify_csrf(request)
     form = await request.form()
-    name = form_text(form, "name")
-    key = _roll_key(campaign_id)
-    rolled = request.session.get(key)
-    if not isinstance(rolled, dict):
-        _roll_stats(request, user, campaign_id)
-        return _campaign_page(
-            request,
-            user,
-            campaign_id,
-            400,
-            "Your stats were rolled again. Review them and create your character.",
-        )
     engine = request.app.state.engine
     library = request.app.state.content
+    key = _roll_key(campaign_id)
     try:
-        spec = character_spec(library, get_campaign(engine, user.id, campaign_id))
-        submitted = submission_from_form(spec, form)
-        problem = check_arguments(character_schema(spec), submitted)
-        if problem:
-            raise InvalidInput(problem)
-        pronouns = pronouns_from_form(form)
-        create_character(engine, library, user.id, campaign_id, name, rolled, submitted, pronouns)
+        campaign = get_campaign(engine, user.id, campaign_id)
+        options_pending, character_pending = _creation_pending(
+            campaign_world(engine, user.id, campaign_id).state,
+            library.rule_sets.get(campaign.rule_set),
+        )
+        if not options_pending and not character_pending:
+            raise InvalidInput("this campaign's options and player character are already set")
+        options = None
+        if options_pending:
+            options = campaign_submission_from_form(campaign_spec(library, campaign), form)
+        character = None
+        if character_pending:
+            rolled = request.session.get(key)
+            if not isinstance(rolled, dict):
+                _roll_stats(request, user, campaign_id)
+                return _campaign_page(
+                    request,
+                    user,
+                    campaign_id,
+                    400,
+                    "Your stats were rolled again. Review them and create your character.",
+                )
+            spec = character_spec(library, campaign)
+            submitted = submission_from_form(spec, form)
+            problem = check_arguments(character_schema(spec), submitted)
+            if problem:
+                raise InvalidInput(problem)
+            character = NewCharacter(
+                name=form_text(form, "name"),
+                rolled=rolled,
+                submitted=submitted,
+                pronouns=pronouns_from_form(form),
+            )
+        save_creation(engine, library, user.id, campaign_id, options=options, character=character)
     except InvalidInput as exc:
         return _campaign_page(request, user, campaign_id, 400, str(exc))
     except Conflict as exc:
         return _campaign_page(request, user, campaign_id, 409, str(exc))
-    request.session.pop(key, None)
+    if character is not None:
+        request.session.pop(key, None)
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
@@ -539,44 +540,34 @@ def _campaign_page(
     options = rule_set.campaign if rule_set else NO_CAMPAIGN
     world = campaign_world(engine, user.id, campaign.id)
     world_map = map_view(world.state, rule_set.world_terrain if rule_set else None)
-    if options.fields and not world.state.options:
-        return render(
-            request,
-            "campaign_create.html",
-            status_code=status_code,
-            campaign=campaign,
-            world=library.world_templates.get(campaign.world_template),
-            scene=scene_view(world.state, spec, inventory_rules),
-            world_map=world_map,
-            rule_set=rule_set,
-            options=campaign_view(options),
-            error=error,
-        )
+    options_pending, character_pending = _creation_pending(world.state, rule_set)
     pc = world.state.pc()
-    if pc is None or pc.dead:
-        fallen = pc
+    if options_pending or character_pending:
         promotable = [
             c
             for c in world.state.characters.values()
             if c.hireling and not c.dead and c.dying_hours is None
         ]
         character = None
-        if rule_set is not None:
+        if character_pending and rule_set is not None:
             rolled = request.session.get(_roll_key(campaign.id))
             if not isinstance(rolled, dict) or set(rolled) != set(spec.stats):
                 rolled = _roll_stats(request, user, campaign.id)
             character = creation_view(spec, rolled)
         return render(
             request,
-            "character_create.html",
+            "creation.html",
             status_code=status_code,
             campaign=campaign,
             world=library.world_templates.get(campaign.world_template),
             scene=scene_view(world.state, spec, inventory_rules),
             world_map=world_map,
             rule_set=rule_set,
+            show_options=options_pending,
+            options=campaign_view(options) if options_pending else None,
+            show_character=character_pending,
             character=character,
-            fallen=fallen,
+            fallen=pc,
             promotable=promotable,
             error=error,
         )
@@ -625,6 +616,14 @@ def _campaign_page(
         pc_invincible=pc.invincible,
         item_kind_icons=magic.item_kind_icons if magic is not None else {},
     )
+
+
+def _creation_pending(state: Any, rule_set: Any) -> tuple[bool, bool]:
+    """Whether the campaign options and the player character still need creating. Options can
+    only be pending while there is no player character, so a campaign is set up in one pass."""
+    options = rule_set.campaign if rule_set else NO_CAMPAIGN
+    pc = state.pc()
+    return bool(options.fields) and not state.options, pc is None or pc.dead
 
 
 def _encounter_rows(encounter: dict[str, Any]) -> list[list[dict[str, Any]]]:

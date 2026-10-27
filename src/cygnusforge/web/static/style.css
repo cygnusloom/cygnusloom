@@ -276,6 +276,7 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .creation-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: 1rem; align-items: start; }
 .creation-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
 .creation-toolbar form { margin: 0; }
+.creation-section + .creation-section { margin-top: 2rem; }
 .name-row { display: flex; align-items: center; gap: 0.5rem; }
 .name-row label { flex: 1; min-width: 0; }
 .template-tables { display: contents; }

@@ -1355,7 +1355,6 @@ def set_campaign_options(
     if problem is not None:
         raise InvalidInput(problem)
     record(db, campaign_id, CampaignOptionsChosen(options=dict(submitted)))
-    db.commit()
     return {"chosen": "campaign"}
 
 
@@ -1451,7 +1450,6 @@ def create_player_character(
         cap = armor_max or combat.UNCAPPED_ARMOR
         record(db, campaign_id, ArmorSet(name=name, armor=min(armor, cap)))
     record(db, campaign_id, OpeningStarted())
-    db.commit()
     return {"created": "pc", "name": name, "location": None}
 
 

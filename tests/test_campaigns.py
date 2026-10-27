@@ -53,7 +53,7 @@ def _create_character(
     if pronouns is not None:
         form["pronouns"] = pronouns
     return client.post(
-        f"/campaigns/{campaign_id}/character",
+        f"/campaigns/{campaign_id}/creation",
         data=form,
         follow_redirects=False,
     )

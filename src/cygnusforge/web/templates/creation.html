@@ -1,0 +1,145 @@
+{% extends "campaign_base.html" %}
+{% from "macros.html" import choice, choice_picker, choice_panel, dice_button, text_panel %}
+{% block title %}{% if show_options %}Create your campaign{% else %}Create your character{% endif %} · {{ campaign.name }}{% endblock %}
+{% block play %}
+<section class="view creation" data-view="play" aria-labelledby="creation-title">
+  <h1 id="creation-title">{{ campaign.name }}</h1>
+  <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
+  {% if show_character and fallen %}
+  <section class="death-screen" aria-labelledby="death-title">
+    <h2 id="death-title">{{ fallen.name }} is dead</h2>
+    <p class="muted">{% if fallen.location %}Their body lies at {{ fallen.location }}, with the gear they carried.{% else %}Their body is lost to the story.{% endif %} Choose who plays next.</p>
+    {% if promotable %}
+    <h3>Play a hireling</h3>
+    <ul>
+      {% for hireling in promotable %}
+      <li>
+        <form method="post" action="/campaigns/{{ campaign.id }}/hirelings/promote">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="name" value="{{ hireling.name }}">
+          <button type="submit">Play {{ hireling.name }}</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    <h3>Or create a new character</h3>
+    {% endif %}
+  </section>
+  {% endif %}
+  <div class="creation-toolbar">
+    {% if show_character %}
+    <form method="post" action="/campaigns/{{ campaign.id }}/character/reroll" class="character-reroll">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="secondary">Reroll stats</button>
+    </form>
+    {% endif %}
+    <button type="button" class="secondary" data-randomize="all">Randomize all</button>
+    <button type="button" class="secondary" data-randomize="unchosen">Randomize all not chosen</button>
+  </div>
+  <form method="post" action="/campaigns/{{ campaign.id }}/creation" class="creation-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% if show_options %}
+    <section class="creation-section" aria-labelledby="options-title">
+      <h2 id="options-title">Campaign options</h2>
+      <p class="muted">These options are shared by every character in the campaign, and they are chosen once. Pick each one, roll it with the dice button, or use the randomize buttons.</p>
+      <div class="creation-grid">
+        {% for field in options.choice_fields %}
+          {{ choice_panel("campaign-" ~ field.id, field.name, field.options, field.description) }}
+        {% endfor %}
+        {% for field in options.text_fields %}
+          {{ text_panel("campaign-" ~ field.id, field.name, field.description) }}
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+    {% if show_character %}
+    <section class="creation-section" aria-labelledby="character-title">
+      <h2 id="character-title">Your character</h2>
+      <p class="muted">Your stats are rolled. Where a stat can be swapped, choose the rolled values you want, with one swap per group. Pick each option, roll it with the dice button, or use the randomize buttons.</p>
+      <div class="creation-grid">
+        <section class="creation-panel" aria-labelledby="panel-name">
+          <h3 id="panel-name">Name</h3>
+          <div class="name-row">
+            <label>
+              <input type="text" name="name" required maxlength="120" aria-labelledby="panel-name">
+            </label>
+            {% if character.name_suggestions %}
+              {{ dice_button("name", "name", attribute="data-name-dice") }}
+            {% endif %}
+          </div>
+          {% for group in character.kinds %}
+            {% for template in group.templates %}
+              <ul class="name-pool" data-name-source="{{ template.id }}" hidden>
+                {% for name in template.names %}<li>{{ name }}</li>{% endfor %}
+              </ul>
+            {% endfor %}
+          {% endfor %}
+        </section>
+        <fieldset class="creation-panel" data-choice-panel="pronouns" data-choice-label="Pronouns" aria-labelledby="panel-pronouns">
+          <h3 id="panel-pronouns">Pronouns</h3>
+          {% call choice_picker("pronouns", "Pronouns") %}
+            {% for option in character.pronoun_options %}
+              {{ choice("pronouns", option.value, option.title, freeform=option.freeform) }}
+            {% endfor %}
+          {% endcall %}
+          <label class="pronouns-other">
+            Other pronouns
+            <input type="text" name="pronouns-other" maxlength="120" aria-label="Other pronouns, if chosen above">
+          </label>
+        </fieldset>
+        {% if character.stats %}
+          <section class="creation-panel" aria-labelledby="panel-stats">
+            <h3 id="panel-stats">Stats</h3>
+            {% for stat in character.stats %}
+              <label>
+                {{ stat.name }}
+                {% if stat.options|length > 1 %}
+                  <select name="stat-{{ stat.id }}">
+                    {% for value in stat.options %}
+                      <option value="{{ value }}"{% if value == stat.value %} selected{% endif %}>{{ value }}</option>
+                    {% endfor %}
+                  </select>
+                {% else %}
+                  <output>{{ stat.value }}</output>
+                  <input type="hidden" name="stat-{{ stat.id }}" value="{{ stat.value }}">
+                {% endif %}
+              </label>
+            {% endfor %}
+          </section>
+        {% endif %}
+        {% for group in character.kinds %}
+          <fieldset class="creation-panel" data-choice-panel="template-{{ group.kind }}" data-choice-label="{{ group.label }}" aria-labelledby="panel-kind-{{ group.kind }}">
+            <h3 id="panel-kind-{{ group.kind }}">{{ group.label }}</h3>
+            {% call choice_picker("template-" ~ group.kind, group.label) %}
+              {% for template in group.templates %}
+                {{ choice("template-" ~ group.kind, template.id, template.name, template.description, data_select=group.kind) }}
+              {% endfor %}
+            {% endcall %}
+          </fieldset>
+          {% for template in group.templates %}
+            <div class="template-tables" data-template-group="{{ group.kind }}" data-template="{{ template.id }}" hidden>
+              {% for table in template.tables %}
+                {{ choice_panel("field-" ~ table.id, table.label, table.options) }}
+              {% endfor %}
+            </div>
+          {% endfor %}
+        {% endfor %}
+        {% for field in character.choice_fields %}
+          {{ choice_panel("field-" ~ field.id, field.name, field.options, field.description) }}
+        {% endfor %}
+        {% for field in character.text_fields %}
+          {{ text_panel("field-" ~ field.id, field.name, field.description) }}
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+    {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+    <p class="form-error" role="alert" hidden></p>
+    <button type="submit">{% if show_options and show_character %}Create campaign and character{% elif show_options %}Save campaign options{% else %}Create character{% endif %}</button>
+  </form>
+</section>
+{% endblock %}
+{% block scripts %}
+  {{ super() }}
+  <script src="/static/creation.js"></script>
+{% endblock %}

@@ -1,5 +1,6 @@
-"""Turn a rule set's character spec into the creation form, and a submitted form back into
-character arguments. The form names are `stat-<id>`, `template-<kind>`, and `field-<id>`."""
+"""Turn a rule set's character spec and campaign options into the creation form, and a submitted
+form back into their arguments. The form names are `stat-<id>`, `template-<kind>`, `field-<id>`
+for the character, and `campaign-<id>` for the campaign options, which share one form."""
 
 from __future__ import annotations
 
@@ -14,6 +15,7 @@ from cygnusforge.web.forms import form_text
 STAT_PREFIX = "stat-"
 TEMPLATE_PREFIX = "template-"
 FIELD_PREFIX = "field-"
+CAMPAIGN_PREFIX = "campaign-"
 PRONOUNS_FIELD = "pronouns"
 PRONOUNS_OTHER_FIELD = "pronouns-other"
 PRONOUN_CHOICES = ("he/him", "she/her", "they/them")
@@ -130,7 +132,7 @@ def campaign_submission_from_form(spec: CampaignSpec, form: FormData) -> dict[st
     Every option must be given."""
     options: dict[str, Any] = {}
     for field in spec.fields.values():
-        value = form_text(form, FIELD_PREFIX + field.id)
+        value = form_text(form, CAMPAIGN_PREFIX + field.id)
         if not value:
             raise InvalidInput(f"Choose {field.name}")
         options[field.id] = value
