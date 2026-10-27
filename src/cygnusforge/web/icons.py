@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from functools import lru_cache
 from pathlib import Path
 
@@ -25,6 +26,7 @@ def icon_path(icon_id: str) -> str:
 
 
 PLACE_FALLBACK_ICON = "town"
+# Item kinds the icon set has a picture for, used when a rule set names no icon for a kind.
 ITEM_KIND_ICONS = {"spellbook": "book", "scroll": "scroll"}
 WEAPON_ICON = "weapon"
 
@@ -34,8 +36,10 @@ def place_icon_path(icon_id: str | None) -> str:
     return icon_path(icon_id or PLACE_FALLBACK_ICON)
 
 
-def item_icon_id(kind: str, damage: str) -> str | None:
-    """The icon id for an item's type, or None when the type has no icon."""
+def item_icon_id(kind: str, damage: str, kind_icons: Mapping[str, str] | None = None) -> str | None:
+    """The icon id for an item: its kind's icon if the rule set or the fallback names one, else the
+    weapon icon for an item with damage dice, else None."""
     if kind:
-        return ITEM_KIND_ICONS.get(kind)
+        icons = kind_icons or {}
+        return icons.get(kind) or ITEM_KIND_ICONS.get(kind)
     return WEAPON_ICON if damage else None

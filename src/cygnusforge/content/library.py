@@ -44,7 +44,6 @@ CHARACTER_ARGUMENT = "character"
 NPC_HP_TIER_ARGUMENT = "hp_tier"
 # A tool flagged `travel` gets this argument, with the rule set's travel modes as its choices.
 TRAVEL_ARGUMENT = "travel"
-DEFAULT_TRAVEL_MODE = "on_foot"
 # The engine passes its ToolContext to a function that declares this parameter. The model
 # never sees it, so it must not appear in a tool's schema.
 CONTEXT_ARGUMENT = "ctx"
@@ -187,6 +186,11 @@ class Travel:
     default_leg_minutes: int
     default_leg_note: str
 
+    @property
+    def default_mode(self) -> str:
+        """The mode a move uses when none is named: the first one the rule set lists."""
+        return next(iter(self.modes))
+
 
 @dataclass(frozen=True)
 class DieGrowth:
@@ -253,7 +257,7 @@ class Wilderness:
     catastrophe_streak: int
     catastrophe_weather: str
     catastrophe_result: str
-    # Path id to the number of d6 faces that mean the party is lost. Zero means never lost.
+    # Path id to the highest lost_die roll that means the party is lost. Zero means never lost.
     lost_on: Mapping[str, int]
     actions: Mapping[str, WildernessAction]
     events_table: str
@@ -262,6 +266,8 @@ class Wilderness:
     # Run for every Wilderness Action, before the action's own hooks.
     hooks: WildernessHooks
     travel: WildernessTravel | None = None
+    # The dice rolled to see whether the party is lost, such as "1d6".
+    lost_die: str = "1d6"
 
 
 @dataclass(frozen=True)
@@ -305,14 +311,20 @@ class EncounterGrid:
 
 @dataclass(frozen=True)
 class EncounterTerrain:
-    """A kind of ground on an encounter map. Entering difficult ground costs two movement."""
+    """A kind of ground on an encounter map. Each cell entered costs `move_cost` movement."""
 
     id: str
     name: str
     color: str
     # The rule effect of this ground, as the rule set words it. Shown when the ground is hovered.
     rule: str
-    difficult: bool = False
+    # Movement spent to enter one cell of this ground. 1 is normal ground.
+    move_cost: int = 1
+
+    @property
+    def difficult(self) -> bool:
+        """True when this ground costs more than normal movement to enter."""
+        return self.move_cost > 1
 
 
 # The textures a world terrain kind may be drawn with. The map engine draws each one.
@@ -721,10 +733,11 @@ class Marketplace:
 @dataclass(frozen=True)
 class ItemKind:
     """The name items of a kind carry, and the size a held item takes. A charged item's size is
-    given when it is made, so its kind has none."""
+    given when it is made, so its kind has none. `icon` names the picture the kind shows, if any."""
 
     kind: str
     size: str = ""
+    icon: str | None = None
 
 
 @dataclass(frozen=True)
@@ -745,6 +758,12 @@ class MagicRules:
     @property
     def spellbook_size(self) -> str:
         return self.reusable.size
+
+    @property
+    def item_kind_icons(self) -> dict[str, str]:
+        """The icon each item kind names in the rule set's data, by kind."""
+        kinds = (self.reusable, self.single_use, self.charged)
+        return {k.kind: k.icon for k in kinds if k.icon is not None}
 
     @property
     def scroll_kind(self) -> str:
@@ -1355,6 +1374,7 @@ WILDERNESS_KEYS = frozenset(
         "catastrophe_weather",
         "catastrophe_result",
         "lost_on",
+        "lost_die",
         "actions",
         "events_table",
         "weather_tables",
@@ -1389,6 +1409,9 @@ def _load_wilderness(
         if not isinstance(faces, int) or isinstance(faces, bool) or not 0 <= faces <= 6:
             raise ContentError(f"{label}: 'lost_on' {path!r} must be a whole number from 0 to 6")
         lost_on[path] = faces
+    lost_die = data.get("lost_die", "1d6")
+    if not is_formula(lost_die) or "+" in lost_die:
+        raise ContentError(f"{label}: 'lost_die' must be one dice term such as '1d6'")
     actions_data = data.get("actions")
     if not isinstance(actions_data, Mapping) or not actions_data:
         raise ContentError(f"{label}: 'actions' must map action ids to objects")
@@ -1427,6 +1450,7 @@ def _load_wilderness(
         catastrophe_weather=required_text(data, "catastrophe_weather", label),
         catastrophe_result=required_text(data, "catastrophe_result", label),
         lost_on=lost_on,
+        lost_die=lost_die,
         actions=actions,
         events_table=events_table,
         weather_tables=weather_tables,
@@ -2023,9 +2047,17 @@ def _load_encounter_terrain(
             name=required_text(d.data, "name", label),
             color=_color(d.data, label),
             rule=required_text(d.data, "rule", label),
-            difficult=_flag(d.data, "difficult", label),
+            move_cost=_terrain_move_cost(d.data, label),
         )
     return terrain
+
+
+def _terrain_move_cost(data: Mapping[str, Any], label: str) -> int:
+    """The movement one cell of ground costs. A "difficult": true flag is the older way to say
+    2, and is used only when "move_cost" is left out."""
+    if "move_cost" in data:
+        return _whole(data, "move_cost", label, 1)
+    return 2 if _flag(data, "difficult", label) else 1
 
 
 def _load_world_terrain(definitions: list[Definition], template: str) -> dict[str, WorldTerrain]:
@@ -2446,12 +2478,15 @@ def _load_item_kind(
         raise ContentError(f"{label}: {role!r} must be an object with a 'kind'")
     role_label = f"{label} {role}"
     kind = required_text(entry, "kind", role_label)
+    icon = entry.get("icon")
+    if icon is not None and (not isinstance(icon, str) or not icon.strip()):
+        raise ContentError(f"{role_label}: 'icon' must be the name of an icon")
     if not sized:
-        return ItemKind(kind)
+        return ItemKind(kind, icon=icon)
     size = required_text(entry, "size", role_label)
     if size not in item_sizes:
         raise ContentError(f"{role_label}: 'size' names no item size ({size!r})")
-    return ItemKind(kind, size)
+    return ItemKind(kind, size, icon)
 
 
 def _load_food(
@@ -2905,11 +2940,12 @@ def _with_travel(parameters: dict[str, Any], travel: Travel, label: str) -> dict
     """Add the rule set's travel modes as an optional `travel` argument."""
     if TRAVEL_ARGUMENT in parameters["properties"]:
         raise ContentError(f"{label}: {TRAVEL_ARGUMENT!r} is generated and must not be declared")
+    default = travel.default_mode
     mode = {
         "type": "string",
         "enum": sorted(travel.modes),
-        "default": DEFAULT_TRAVEL_MODE,
-        "description": "How the party travels. Defaults to on foot.",
+        "default": default,
+        "description": f"How the party travels. Defaults to {default}.",
     }
     properties = {**parameters["properties"], TRAVEL_ARGUMENT: mode}
     return {**parameters, "properties": properties}

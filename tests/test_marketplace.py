@@ -12,7 +12,7 @@ from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
     ArmorSet,
-    GoldChanged,
+    CurrencyChanged,
     ItemAdded,
     ItemRemoved,
     record,
@@ -55,7 +55,7 @@ def _grant_gold(app: FastAPI, campaign_id: int, amount: int, name: str = PC) -> 
         record(
             db,
             campaign_id,
-            GoldChanged(name=name, feature=MARKET.currency, amount=amount, cause="a test"),
+            CurrencyChanged(name=name, feature=MARKET.currency, amount=amount, cause="a test"),
         )
         db.commit()
 
@@ -321,7 +321,7 @@ def test_search_lists_services_by_name(client_factory):
 def _give_debug_gold(client: TestClient, campaign_id: int, amount: str, name: str = PC):
     token = csrf_token(client, "/campaigns")
     return client.post(
-        f"/campaigns/{campaign_id}/debug/gold",
+        f"/campaigns/{campaign_id}/debug/currency",
         data={"csrf_token": token, "name": name, "amount": amount},
         follow_redirects=False,
     )
@@ -359,8 +359,8 @@ def test_debug_gold_refuses_a_bad_amount(settings: Settings, fake: FakeProvider)
 def test_a_gift_of_gold_is_recorded_as_a_gold_change(client_factory):
     app, campaign_id, tools = _pcs(client_factory)
     before = _gold(app, campaign_id)
-    result = tools.change_gold(PC, 7, "a widow's thanks")
-    assert result["gold_left"] == before + 7
+    result = tools.change_currency(PC, 7, "a widow's thanks")
+    assert result["currency_left"] == before + 7
     assert _gold(app, campaign_id) == before + 7
 
 
@@ -368,11 +368,11 @@ def test_a_taking_of_gold_is_recorded_and_refused_without_enough(client_factory)
     app, campaign_id, tools = _pcs(client_factory)
     _grant_gold(app, campaign_id, 10)
     before = _gold(app, campaign_id)
-    result = tools.change_gold(PC, -4, "a tithe")
-    assert result["gold_left"] == before - 4
+    result = tools.change_currency(PC, -4, "a tithe")
+    assert result["currency_left"] == before - 4
     assert _gold(app, campaign_id) == before - 4
     with pytest.raises(InvalidInput):
-        tools.change_gold(PC, -(before - 4 + 1), "a bribe too far")
+        tools.change_currency(PC, -(before - 4 + 1), "a bribe too far")
     assert _gold(app, campaign_id) == before - 4
 
 
@@ -380,7 +380,7 @@ def test_a_zero_or_unknown_gold_change_is_refused(client_factory):
     app, campaign_id, tools = _pcs(client_factory)
     before = _gold(app, campaign_id)
     with pytest.raises(InvalidInput):
-        tools.change_gold(PC, 0, "nothing")
+        tools.change_currency(PC, 0, "nothing")
     with pytest.raises(InvalidInput):
-        tools.change_gold("Nobody", 5, "a gift")
+        tools.change_currency("Nobody", 5, "a gift")
     assert _gold(app, campaign_id) == before

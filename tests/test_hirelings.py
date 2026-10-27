@@ -12,7 +12,7 @@ from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
     NPC_KIND,
     PC_KIND,
-    GoldChanged,
+    CurrencyChanged,
     load_state,
     record,
 )
@@ -46,17 +46,17 @@ def _gold(app: FastAPI, campaign_id: int, name: str = PC) -> int:
 
 
 def _set_gold(app: FastAPI, campaign_id: int, amount: int, name: str = PC) -> None:
-    """Make the character's gold exactly `amount`."""
+    """Make the character's currency exactly `amount`."""
     with Session(app.state.engine) as db:
         record(
             db,
             campaign_id,
-            GoldChanged(name=name, feature=MARKET.currency, amount=-10_000, cause="a test"),
+            CurrencyChanged(name=name, feature=MARKET.currency, amount=-10_000, cause="a test"),
         )
         record(
             db,
             campaign_id,
-            GoldChanged(name=name, feature=MARKET.currency, amount=amount, cause="a test"),
+            CurrencyChanged(name=name, feature=MARKET.currency, amount=amount, cause="a test"),
         )
         db.commit()
 
@@ -122,7 +122,7 @@ def test_a_day_passing_takes_the_wage_from_the_employer(client_factory):
     _hire(tools)
     tools.advance_time(days=1)
     assert _gold(app, campaign_id) == 20 - WAGE
-    paid = _events(app, campaign_id, "character.gold_changed")
+    paid = _events(app, campaign_id, "character.currency_changed")
     assert any(f"wages for {HIRELING}" in row.payload for row in paid)
 
 

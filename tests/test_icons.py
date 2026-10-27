@@ -192,6 +192,23 @@ def test_item_icon_id_follows_item_type(kind: str, damage: str, expected: str | 
     assert item_icon_id(kind, damage) == expected
 
 
+def test_item_icon_id_prefers_the_rule_set_icon_for_a_kind():
+    assert item_icon_id("relic", "", {"relic": "potion"}) == "potion"
+    assert item_icon_id("spellbook", "", {"spellbook": "tool"}) == "tool"
+    assert item_icon_id("spellbook", "", {}) == "book"
+
+
+def _rule_set_item_icons() -> list[str]:
+    magic = content_library().rule_sets["cairn2e"].magic
+    assert magic is not None
+    return sorted(magic.item_kind_icons.values())
+
+
+@pytest.mark.parametrize("icon_id", _rule_set_item_icons())
+def test_every_rule_set_item_icon_exists(icon_id: str):
+    _assert_registered_with_file(icon_id)
+
+
 def test_place_without_icon_uses_fallback():
     assert place_icon_path(None) == icon_path(PLACE_FALLBACK_ICON)
     assert place_icon_path("forest") == icon_path("forest")

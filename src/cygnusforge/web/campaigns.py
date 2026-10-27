@@ -266,8 +266,8 @@ async def change_debug_stat(request: Request, campaign_id: int) -> Response:
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
-@router.post("/{campaign_id}/debug/gold")
-async def change_debug_gold(request: Request, campaign_id: int) -> Response:
+@router.post("/{campaign_id}/debug/currency")
+async def change_debug_currency(request: Request, campaign_id: int) -> Response:
     settings = request.app.state.settings
     if not settings.debug_panel:
         raise NotFound("not found")
@@ -534,6 +534,7 @@ def _campaign_page(
     campaign = get_campaign(engine, user.id, campaign_id)
     rule_set = library.rule_sets.get(campaign.rule_set)
     inventory_rules = rule_set.inventory if rule_set is not None else None
+    magic = rule_set.magic if rule_set is not None else None
     spec = rule_set.character if rule_set else NO_CHARACTER
     options = rule_set.campaign if rule_set else NO_CAMPAIGN
     world = campaign_world(engine, user.id, campaign.id)
@@ -622,6 +623,7 @@ def _campaign_page(
         debug_currency=rule_set.marketplace.currency if rule_set and rule_set.marketplace else "",
         debug_stats=[(stat.id, stat.name) for stat in spec.stats.values()],
         pc_invincible=pc.invincible,
+        item_kind_icons=magic.item_kind_icons if magic is not None else {},
     )
 
 

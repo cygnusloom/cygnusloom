@@ -116,7 +116,7 @@ def _feed_party(
 ) -> None:
     """Each party member who is not lodged eats one use of the food. A member who has none is
     deprived, if the rule set tracks need. A lodged member's bed is used up instead. A member who
-    ate a camp meal in the watch just before this rest, which started `start` hours in, is fed by
+    ate a meal one part of the day before this rest, which started `start` hours in, is fed by
     that meal and eats nothing more."""
     day = state.clock.day
     for character in [c for c in state.characters.values() if c.kind == PC_KIND]:

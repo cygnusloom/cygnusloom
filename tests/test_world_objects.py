@@ -41,16 +41,16 @@ def test_placing_gold_and_an_item_shows_them_in_the_place(
     client_factory: Callable[[], TestClient],
 ):
     app, campaign_id, tools = _fight(client_factory)
-    tools.place_object(YARD, "a coin purse under a flagstone", False, "a test", gold=12)
+    tools.place_object(YARD, "a coin purse under a flagstone", False, "a test", currency=12)
     tools.place_object(YARD, "a brass lamp", False, "a test", item="Lantern")
     assert _visible(app, campaign_id) == ["a coin purse under a flagstone", "a brass lamp"]
 
 
 def test_placing_an_object_records_an_event(client_factory: Callable[[], TestClient]):
     app, campaign_id, tools = _fight(client_factory)
-    tools.place_object(YARD, "a coin purse", False, "a test", gold=5)
+    tools.place_object(YARD, "a coin purse", False, "a test", currency=5)
     [placed] = _events(app, campaign_id, ObjectPlaced)
-    assert (placed.place, placed.contents, placed.gold, placed.hidden) == (
+    assert (placed.place, placed.contents, placed.currency, placed.hidden) == (
         YARD,
         "a coin purse",
         5,
@@ -63,9 +63,9 @@ def test_taking_gold_pays_the_character_and_removes_the_object(
 ):
     app, campaign_id, tools = _fight(client_factory)
     before = _gold(app, campaign_id)
-    tools.place_object(YARD, "a coin purse", False, "a test", gold=7)
+    tools.place_object(YARD, "a coin purse", False, "a test", currency=7)
     result = tools.take_object("a coin purse", PC, "a test")
-    assert result["gold"] == 7
+    assert result["currency"] == 7
     assert _gold(app, campaign_id) == before + 7
     assert _visible(app, campaign_id) == []
 
@@ -82,7 +82,7 @@ def test_taking_an_item_puts_it_in_the_inventory(client_factory: Callable[[], Te
 
 def test_taking_an_object_records_an_event(client_factory: Callable[[], TestClient]):
     app, campaign_id, tools = _fight(client_factory)
-    tools.place_object(YARD, "a coin purse", False, "a test", gold=3)
+    tools.place_object(YARD, "a coin purse", False, "a test", currency=3)
     tools.take_object("a coin purse", PC, "a test")
     [taken] = _events(app, campaign_id, ObjectTaken)
     assert (taken.name, taken.contents) == (PC, "a coin purse")
@@ -103,7 +103,7 @@ def test_a_hidden_object_is_not_listed_and_cannot_be_taken(
 ):
     app, campaign_id, tools = _fight(client_factory)
     before = _gold(app, campaign_id)
-    tools.place_object(YARD, "a secret cache", True, "a test", gold=50)
+    tools.place_object(YARD, "a secret cache", True, "a test", currency=50)
     assert _visible(app, campaign_id) == []
     with pytest.raises(InvalidInput, match="there is nothing here"):
         tools.take_object("a secret cache", PC, "a test")
@@ -112,7 +112,7 @@ def test_a_hidden_object_is_not_listed_and_cannot_be_taken(
 
 def test_a_hidden_object_event_does_not_render(client_factory: Callable[[], TestClient]):
     app, campaign_id, tools = _fight(client_factory)
-    tools.place_object(YARD, "a secret cache", True, "a test", gold=50)
+    tools.place_object(YARD, "a secret cache", True, "a test", currency=50)
     [placed] = _events(app, campaign_id, ObjectPlaced)
     assert placed.render() is None
 
@@ -122,7 +122,7 @@ def test_taking_an_object_not_in_the_characters_place_is_refused(
 ):
     app, campaign_id, tools = _fight(client_factory)
     tools.create_location("Far Hall", "A hall elsewhere.")
-    tools.place_object("Far Hall", "a coin purse", False, "a test", gold=4)
+    tools.place_object("Far Hall", "a coin purse", False, "a test", currency=4)
     with pytest.raises(InvalidInput, match="there is nothing here"):
         tools.take_object("a coin purse", PC, "a test")
     assert _visible(app, campaign_id, "Far Hall") == ["a coin purse"]
@@ -136,7 +136,7 @@ def test_an_object_is_taken_by_its_short_name_once(client_factory: Callable[[], 
         "a cracked clay jar with nine gold coins inside",
         False,
         "a test",
-        gold=9,
+        currency=9,
         name="clay jar",
     )
     result = tools.take_object("clay jar", PC, "a test")
@@ -160,7 +160,7 @@ def test_an_object_is_taken_by_a_part_of_its_short_name(
 
 def test_an_object_is_taken_by_its_full_description(client_factory: Callable[[], TestClient]):
     app, campaign_id, tools = _fight(client_factory)
-    tools.place_object(YARD, "a coin purse under a flagstone", False, "a test", gold=2)
+    tools.place_object(YARD, "a coin purse under a flagstone", False, "a test", currency=2)
     tools.take_object("a coin purse under a flagstone", PC, "a test")
     assert _visible(app, campaign_id) == []
 
@@ -169,7 +169,7 @@ def test_a_take_that_matches_nothing_lists_what_is_here(
     client_factory: Callable[[], TestClient],
 ):
     app, campaign_id, tools = _fight(client_factory)
-    tools.place_object(YARD, "a coin purse", False, "a test", gold=2, name="purse")
+    tools.place_object(YARD, "a coin purse", False, "a test", currency=2, name="purse")
     with pytest.raises(InvalidInput, match="Here .* can take: purse"):
         tools.take_object("dagger", PC, "a test")
     with pytest.raises(InvalidInput, match="there is no 'p' here"):
@@ -180,16 +180,16 @@ def test_a_take_that_matches_nothing_lists_what_is_here(
 def test_an_object_needs_a_known_place(client_factory: Callable[[], TestClient]):
     _, _, tools = _fight(client_factory)
     with pytest.raises(InvalidInput, match="no place named"):
-        tools.place_object("Nowhere", "a coin purse", False, "a test", gold=4)
+        tools.place_object("Nowhere", "a coin purse", False, "a test", currency=4)
 
 
 def test_an_object_needs_a_description(client_factory: Callable[[], TestClient]):
     _, _, tools = _fight(client_factory)
     with pytest.raises(InvalidInput, match="needs a description"):
-        tools.place_object(YARD, "   ", False, "a test", gold=4)
+        tools.place_object(YARD, "   ", False, "a test", currency=4)
 
 
 def test_gold_is_bounded(client_factory: Callable[[], TestClient]):
     _, _, tools = _fight(client_factory)
     with pytest.raises(InvalidInput):
-        tools.place_object(YARD, "a heap", False, "a test", gold=-1)
+        tools.place_object(YARD, "a heap", False, "a test", currency=-1)

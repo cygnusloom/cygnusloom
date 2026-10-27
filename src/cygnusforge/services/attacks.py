@@ -9,9 +9,11 @@ from collections.abc import Mapping, Sequence
 from cygnusforge.services.common import InvalidInput
 
 NORMAL = "normal"
-# An attack's flags. Blast hits each target named in the attack's area, rolling separately for each.
-# Ignores armor skips the target's armor.
+# Attack flags are engine capabilities, so the combat code branches on these names. A rule set
+# lists them on the attacks that have them; it cannot invent new ones.
+# Area attack: hits each target in the attack's area, rolling separately for each.
 BLAST = "blast"
+# Defense-bypassing attack: skips the target's armor.
 IGNORES_ARMOR = "ignores_armor"
 ATTACK_FLAGS = (BLAST, IGNORES_ARMOR)
 

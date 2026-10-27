@@ -372,7 +372,8 @@ def roll_lost(
     plus: str | None = None,
     reason: str = "",
 ) -> dict[str, Any]:
-    """Roll 1d6 to see whether the party gets lost on a path. A lost value of 0 never loses it."""
+    """Roll the rule set's lost die to see whether the party gets lost on a path. The party is lost
+    when the roll is at or under the path's lost value. A lost value of 0 never loses it."""
     if path not in wilderness.lost_on:
         raise InvalidInput(f"there is no path named {path!r}")
     value = wilderness.lost_on[path]
@@ -380,7 +381,7 @@ def roll_lost(
         roll: int | None = None
         lost = False
     else:
-        roll = rng.randint(1, 6)
+        roll = roll_total(wilderness.lost_die, rng, plus=plus)
         lost = roll <= value
     record(db, campaign_id, LostRolled(path=path, roll=roll, lost=lost, reason=reason))
     db.commit()
@@ -398,6 +399,7 @@ class TravelPlan:
 
 
 ROUTE_KEYS = ("path", "distance", "terrain", "vast", "weather_choice")
+# The two effects a WeatherPenalty with `choice` can pick between: its fatigue or its watches.
 WEATHER_CHOICES = ("fatigue", "watch")
 
 

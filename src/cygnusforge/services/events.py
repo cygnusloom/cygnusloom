@@ -112,7 +112,7 @@ class Item:
     size: str
     slots: int
     kind: str = ""
-    # A spellbook's spell text, or a charged item's recharge rule.
+    # A magic item's spell text, or a charged item's recharge rule.
     text: str = ""
     # A charged item's uses left, and the most it holds.
     uses: int = 0
@@ -177,7 +177,7 @@ class Character:
     critical_due: bool = False
     # Paid for a bed for the night. The next rest that eats food feeds this character for free.
     lodged: bool = False
-    # The hour a wilderness watch fed the character as its camp meal. Cleared by the food rest that
+    # The hour a wilderness action fed the character as its camp meal. Cleared by the food rest that
     # follows it. None when no camp meal is owed.
     camp_fed_at: int | None = None
     # What the character carries. The penalty item is an item of the rule set's penalty kind.
@@ -346,13 +346,13 @@ class RestRecord:
 
 @dataclass(frozen=True)
 class WorldObject:
-    """Something a place holds, such as gold, an item, or anything the GM describes. It is not
+    """Something a place holds, such as currency, an item, or anything the GM describes. It is not
     an actor. A hidden object is neither listed nor takeable."""
 
     id: int
     place: str
     contents: str
-    gold: int = 0
+    currency: int = 0
     item: str = ""
     item_size: str = ""
     item_slots: int = 0
@@ -422,7 +422,7 @@ def name_key(name: str) -> str:
 
 
 def same_item_name(a: str, b: str) -> bool:
-    """Item names match ignoring case and a plural s, so "bandage" matches "Bandages" on the list."""
+    """Item names match ignoring case and a plural s, so "potion" matches "Potions" on the list."""
     x, y = name_key(a), name_key(b)
     return x == y or x + "s" == y or y + "s" == x
 
@@ -778,7 +778,7 @@ class NpcStatted(GameEvent):
 @dataclass(frozen=True)
 class HirelingAdded(GameEvent):
     """A hireling joins a party member's company. It has the player character's sheet shape and
-    is controlled by the player, paid `wage` a day from its employer's gold."""
+    is controlled by the player, paid `wage` a day from its employer's currency."""
 
     kind: ClassVar[str] = "hireling.added"
 
@@ -1784,7 +1784,7 @@ class Struck(GameEvent):
 
 @dataclass(frozen=True)
 class SaveRolled(GameEvent):
-    """A d20 save against a stat. A failed save defeats the character, leaving it `status`. A
+    """A save against a stat. A failed save defeats the character, leaving it `status`. A
     failed critical save on a large group leaves it to the GM's decision instead."""
 
     kind: ClassVar[str] = "combat.save_rolled"
@@ -1863,7 +1863,7 @@ class TablesRolled(GameEvent):
 
 @dataclass(frozen=True)
 class DungeonEventRolled(GameEvent):
-    """A roll on the Dungeon Events table. It does not move the day or hour clock."""
+    """A roll on the rule set's dungeon event table. It does not move the day or hour clock."""
 
     kind: ClassVar[str] = "dungeon.event"
 
@@ -1965,10 +1965,10 @@ class WildernessEventRolled(GameEvent):
         )
 
 
-# Kept so logs written by the W1 supply and camp actions still replay. New watches log WildernessEffectApplied.
+# Kept so logs written by earlier supply and camp actions still replay. New watches log WildernessEffectApplied.
 @dataclass(frozen=True)
 class SupplyGathered(GameEvent):
-    """Rations found by a Supply action. The bounty die has `sides` faces."""
+    """Rations found by a Supply action. The die that sets the find has `sides` faces."""
 
     kind: ClassVar[str] = "wilderness.supply_gathered"
 
@@ -2408,11 +2408,11 @@ class RestRecovered(GameEvent):
 
 
 @dataclass(frozen=True)
-class GoldChanged(GameEvent):
+class CurrencyChanged(GameEvent):
     """Money changes hands. `feature` is the rule set's currency, held as a feature count. The
     balance never goes below zero."""
 
-    kind: ClassVar[str] = "character.gold_changed"
+    kind: ClassVar[str] = "character.currency_changed"
 
     name: str
     feature: str
@@ -2450,7 +2450,7 @@ class LodgingSet(GameEvent):
 
 @dataclass(frozen=True)
 class CampFedSet(GameEvent):
-    """A wilderness watch fed a character as its camp meal, at the hour the watch began. `at` is
+    """A wilderness action fed a character as its camp meal, at the hour that action began. `at` is
     None once the food rest that follows has used the meal up."""
 
     kind: ClassVar[str] = "character.camp_fed_set"
@@ -2541,7 +2541,7 @@ class ObjectPlaced(GameEvent):
 
     place: str
     contents: str
-    gold: int = 0
+    currency: int = 0
     item: str = ""
     item_size: str = ""
     item_slots: int = 0
@@ -2554,7 +2554,7 @@ class ObjectPlaced(GameEvent):
             id=event_id,
             place=self.place,
             contents=self.contents,
-            gold=self.gold,
+            currency=self.currency,
             item=self.item,
             item_size=self.item_size,
             item_slots=self.item_slots,
@@ -2570,7 +2570,7 @@ class ObjectPlaced(GameEvent):
 
 @dataclass(frozen=True)
 class ObjectTaken(GameEvent):
-    """A character takes an object from its place. The gold and item it held are recorded by
+    """A character takes an object from its place. The currency and item it held are recorded by
     their own events."""
 
     kind: ClassVar[str] = "object.taken"
@@ -2614,7 +2614,8 @@ class ItemUsesSet(GameEvent):
 
 @dataclass(frozen=True)
 class SpellCast(GameEvent):
-    """A spell cast from a spellbook or a scroll. The cost, if any, is recorded as its own event."""
+    """A spell cast from a source the rule set names, such as a spellbook or a scroll. The cost, if
+    any, is recorded as its own event."""
 
     kind: ClassVar[str] = "magic.spell_cast"
 
@@ -2626,8 +2627,7 @@ class SpellCast(GameEvent):
         return None
 
     def render(self) -> str:
-        where = "from a spellbook" if self.source == "spellbook" else "from a scroll"
-        return f"{self.name} casts {self.spell} {where}."
+        return f"{self.name} casts {self.spell} from a {self.source}."
 
 
 @dataclass(frozen=True)
@@ -2656,7 +2656,7 @@ class ItemRemoved(GameEvent):
 
 @dataclass(frozen=True)
 class CharacterDrained(GameEvent):
-    """Harm takes a stat to 0 outside combat, such as when a full inventory drains HP. It is not
+    """Harm takes a stat to 0 outside combat, such as when an over-full inventory drains a stat. It is not
     overflow, so no save is owed."""
 
     kind: ClassVar[str] = "character.drained"
@@ -2763,7 +2763,7 @@ HIDDEN_KINDS: dict[str, bool] = {
     "character.died": False,
     "character.drained": False,
     "character.max_changed": False,
-    "character.gold_changed": False,
+    "character.currency_changed": False,
     "character.lodging_set": False,
     "character.camp_fed_set": True,
     "character.need_set": False,

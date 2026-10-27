@@ -9,6 +9,7 @@
     "catastrophe_weather": "Extreme",
     "catastrophe_result": "Catastrophic",
     "lost_on": {"roads": 0, "trails": 2, "wilderness": 3},
+    "lost_die": "1d6",
     "hooks": {},
     "actions": {
       "travel": {

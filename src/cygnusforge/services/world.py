@@ -32,7 +32,6 @@ from cygnusforge.content.character import (
     resolve,
 )
 from cygnusforge.content.library import (
-    DEFAULT_TRAVEL_MODE,
     ClockRules,
     CombatRules,
     ConditionRules,
@@ -240,8 +239,8 @@ class MapView:
     patterns: list[MapPattern] = field(default_factory=list)
 
 
-# How a player character moves: overland takes watches, in a settlement takes minutes at a speed,
-# and in a dungeon takes no clock time.
+# How a player character moves: overland takes wilderness time, in a settlement takes minutes at a
+# speed, and in a dungeon takes no clock time.
 OVERLAND = "overland"
 IN_SETTLEMENT = "in_settlement"
 IN_DUNGEON = "in_dungeon"
@@ -266,7 +265,7 @@ class WorldTools:
     # The rule set's combat, or None when it has none, and its monster statblocks by id.
     combat: CombatRules | None = None
     monsters: Mapping[str, MonsterTemplate] = field(default_factory=dict)
-    # The world's own features (relics) by id. give_item finds them by name.
+    # The world's own features by id. give_item finds them by name.
     features: Mapping[str, Feature] = field(default_factory=dict)
     # The rule set's conditions by id.
     conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
@@ -391,9 +390,9 @@ class WorldTools:
                 armor_max=self.combat.armor_max if self.combat else 0,
             )
 
-    def change_gold(self, name: str, amount: int, cause: str) -> dict[str, Any]:
+    def change_currency(self, name: str, amount: int, cause: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return market_service.change_gold(
+            return market_service.change_currency(
                 db,
                 self.campaign_id,
                 _required(self.marketplace, "a marketplace"),
@@ -408,7 +407,7 @@ class WorldTools:
         contents: str,
         hidden: bool,
         cause: str,
-        gold: int | None = None,
+        currency: int | None = None,
         item: str | None = None,
         item_size: str = "",
         name: str = "",
@@ -423,7 +422,7 @@ class WorldTools:
                 contents,
                 hidden,
                 cause,
-                gold,
+                currency,
                 item,
                 item_size,
                 name,
@@ -770,7 +769,7 @@ class WorldTools:
         self,
         name: str,
         location: str | None = None,
-        travel: str = DEFAULT_TRAVEL_MODE,
+        travel: str | None = None,
         mode: str = IN_SETTLEMENT,
         route: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
@@ -1246,6 +1245,7 @@ class WorldTools:
                 self.combat,
                 self.conditions,
                 self.inventory,
+                self.need,
             )
 
     def character_options(self, field: str | None = None) -> dict[str, Any]:
@@ -1360,7 +1360,7 @@ def set_campaign_options(
 
 
 def _starting_item(feature: Feature, magic: MagicRules | None, item_sizes: Mapping[str, int]):
-    """The inventory item a starting feature becomes: a spellbook for a spell, else the item."""
+    """The inventory item a starting feature becomes: a magic item for a spell, else the item."""
     if feature.feature_type == "spell":
         assert magic is not None
         return Item(
@@ -1401,7 +1401,7 @@ def create_player_character(
 ) -> dict[str, Any]:
     """Make the player character from the player's choices. `rolled` are the stats rolled for
     this character; the player may only keep them or swap within a swap group. Starting item
-    features are carried as inventory items, spell features as spellbooks, and the armor they
+    features are carried as inventory items, spell features as the rule set's magic items, and the armor they
     give is worn. The currency stays a count. The pronouns are how the GM refers to the character."""
     state = load_state(db, campaign_id)
     current = state.pc()
@@ -1657,7 +1657,7 @@ def hire_hireling(
     plus: str,
 ) -> dict[str, Any]:
     """Hire a character into the employer's company, at the employer's location. The hireling is
-    controlled by the player and its wage is paid each day from the employer's gold. Its sheet is
+    controlled by the player and its wage is paid each day from the employer's currency. Its sheet is
     rolled the way an NPC's is."""
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_NAME)
@@ -1668,7 +1668,7 @@ def hire_hireling(
     if boss.location is None:
         raise InvalidInput(f"{boss.name} has no location yet, so cannot hire anyone")
     if not isinstance(wage, int) or isinstance(wage, bool) or wage < 0:
-        raise InvalidInput("the wage must be a whole number of gold, zero or more")
+        raise InvalidInput("the wage must be a whole number of currency, zero or more")
     try:
         check_choices(spec, (character or {}).get("fields", {}))
     except CharacterError as error:
@@ -2156,7 +2156,7 @@ def move_actor(
     location: str | None = None,
     *,
     travel: Travel | None = None,
-    speed: str = DEFAULT_TRAVEL_MODE,
+    speed: str | None = None,
     mode: str = IN_SETTLEMENT,
     clock_rules: ClockRules | None = None,
     need: NeedRules | None = None,
@@ -2175,6 +2175,8 @@ def move_actor(
         record(db, campaign_id, ActorMoved(name=actor.name, location=None))
         db.commit()
         return {"moved": actor.name, "location": "in the wind"}
+    if speed is None:
+        speed = travel.default_mode if travel is not None else ""
     if travel is not None and speed not in travel.modes:
         raise InvalidInput(
             f"there is no travel mode named {speed!r}; use one of {', '.join(sorted(travel.modes))}"
@@ -2463,16 +2465,18 @@ def get_statblock(
     combat: CombatRules | None = None,
     conditions: Mapping[str, ConditionRules] | None = None,
     inventory: InventoryRules | None = None,
+    need: NeedRules | None = None,
 ) -> dict[str, Any]:
     """A character's stats, template, features, and fields, one line each. Works for the player
     character and for NPCs. With a rule set's `combat`, the armor, attacks, harm, and status follow.
-    With its `conditions` and `inventory`, the conditions, injuries, need, and items follow."""
+    With its `conditions`, `inventory`, and `need`, the conditions, injuries, deprivation, and items
+    follow."""
     character = _character_named(state, name)
     kind = "player character" if character.kind == PC_KIND else "npc"
     lines = describe(spec, _sheet_of(character)).splitlines()
     if combat is not None:
         lines += _combat_lines(character, spec, combat)
-    lines += _status_lines(character, conditions, inventory)
+    lines += _status_lines(character, conditions, inventory, need)
     return {
         "name": character.name,
         "kind": kind,
@@ -2525,8 +2529,9 @@ def _status_lines(
     character: Character,
     conditions: Mapping[str, ConditionRules] | None,
     inventory: InventoryRules | None,
+    need: NeedRules | None,
 ) -> list[str]:
-    """The character's conditions, injuries, need, and what they carry. Each part shows only
+    """The character's conditions, injuries, deprivation, and what they carry. Each part shows only
     when the rule set has it, or when the character has something to report."""
     lines: list[str] = []
     if conditions is not None:
@@ -2534,7 +2539,7 @@ def _status_lines(
         lines.append(f"Conditions: {', '.join(held) if held else 'none'}")
     if character.injuries:
         lines.append(f"Injuries: {'; '.join(character.injuries)}")
-    if character.unmet_since is not None:
+    if need is not None and character.unmet_since is not None:
         lines.append(f"Deprived: {character.unmet_cause} (since day {character.unmet_since})")
     if inventory is not None:
         used = inventory_service.used_slots(character)
@@ -2772,6 +2777,7 @@ def world_state_text(
     inventory: InventoryRules | None = None,
     terrain: Mapping[str, EncounterTerrain] | None = None,
     encounter_objects: Mapping[str, EncounterObject] | None = None,
+    need: NeedRules | None = None,
 ) -> str:
     """The GM's orientation at the start of a turn: the campaign options, the day, the player
     character and where they are, the NPCs there, and any encounter in progress. The rest is looked
@@ -2838,7 +2844,7 @@ def world_state_text(
     wind = _npcs_in_the_wind(state)
     if wind:
         lines.append(f"NPCs in the wind, at no location: {', '.join(wind)}.")
-    lines.extend(_status_lines(pc, conditions, inventory))
+    lines.extend(_status_lines(pc, conditions, inventory, need))
     lines.extend(_encounter_lines(state, grid, combat, terrain, encounter_objects))
     return "\n".join(lines)
 

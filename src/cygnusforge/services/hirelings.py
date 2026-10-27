@@ -1,4 +1,4 @@
-"""Hirelings' wages. A hireling is paid each new day from its employer's gold. An employer who
+"""Hirelings' wages. A hireling is paid each new day from its employer's currency. An employer who
 cannot pay is recorded as unpaid and nothing is taken; the GM decides what the hireling does."""
 
 from __future__ import annotations
@@ -6,7 +6,7 @@ from __future__ import annotations
 from sqlmodel import Session
 
 from cygnusforge.services.events import (
-    GoldChanged,
+    CurrencyChanged,
     HirelingUnpaid,
     load_state,
     name_key,
@@ -16,7 +16,7 @@ from cygnusforge.services.events import (
 
 def pay_wages(db: Session, campaign_id: int, currency: str) -> None:
     """Pay every hireling's wage for one day. Each employer's balance is tracked across its
-    hirelings, so a second hireling is not paid from gold the first one already took. It does not
+    hirelings, so a second hireling is not paid from currency the first one already took. It does not
     commit."""
     state = load_state(db, campaign_id)
     balances: dict[str, int] = {}
@@ -55,7 +55,7 @@ def pay_wages(db: Session, campaign_id: int, currency: str) -> None:
         record(
             db,
             campaign_id,
-            GoldChanged(
+            CurrencyChanged(
                 name=employer.name,
                 feature=currency,
                 amount=-hireling.wage,

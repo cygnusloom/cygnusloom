@@ -128,7 +128,7 @@ CORE_TOOL_NAMES = {
     "delete_npc",
     "hire_hireling",
     "dismiss_hireling",
-    "change_gold",
+    "change_currency",
     "place_object",
     "take_object",
     "move_actor",

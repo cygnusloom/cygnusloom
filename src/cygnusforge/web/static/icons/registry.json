@@ -247,7 +247,7 @@
   "food": {
     "category": "items",
     "path": "items/food.svg",
-    "label": "Ration"
+    "label": "Food"
   },
   "tool": {
     "category": "items",

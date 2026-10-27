@@ -140,7 +140,7 @@ def _add_condition(
         return
     record(db, campaign_id, ConditionAdded(name=name, condition=condition, cause=cause))
     if condition in combat.dying_conditions:
-        begin_dying(db, campaign_id, combat, name, cause="from a mortal wound")
+        begin_dying(db, campaign_id, combat, name, cause=f"from {cause}")
 
 
 def _save(

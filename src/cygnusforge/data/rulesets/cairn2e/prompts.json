@@ -57,7 +57,7 @@
   {
     "type": "prompt",
     "id": "purchases",
-    "text": "Every sale in a shop goes through buy_item, which takes the gold and puts the item in the buyer's inventory. Never use change_gold to pay for something bought, and never buy an item by hand with give_item."
+    "text": "Every sale in a shop goes through buy_item, which takes the gold and puts the item in the buyer's inventory. Never use change_currency to pay for something bought, and never buy an item by hand with give_item."
   },
   {
     "type": "prompt",

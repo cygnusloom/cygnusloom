@@ -747,6 +747,7 @@ def context_usage(
                 rule_set.conditions if rule_set else None,
                 clock_rules=rule_set.clock if rule_set else None,
                 inventory=rule_set.inventory if rule_set else None,
+                need=rule_set.need if rule_set else None,
             ),
             present_rules_text(state, all_rules),
         )
@@ -1173,6 +1174,7 @@ def _world_text(run: _Run, state: CampaignState) -> str:
         rule_set.conditions,
         clock_rules=rule_set.clock,
         inventory=rule_set.inventory,
+        need=rule_set.need,
     )
 
 

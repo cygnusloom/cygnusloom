@@ -47,7 +47,8 @@ class Stat:
 class Feature:
     """A feature a character can have. An `item` is carried as an inventory item of `size`, with
     `uses` if it is consumed and `armor` added to the character's armor while carried. A `spell`
-    is carried as a spellbook. A feature with no `uses` has none to spend."""
+    is a power the character can cast; how it is cast, and from what, is set by the rule set. A
+    feature with no `uses` has none to spend."""
 
     id: str
     name: str

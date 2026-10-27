@@ -85,7 +85,7 @@ CORE_TOOLS = {
     "delete_npc",
     "hire_hireling",
     "dismiss_hireling",
-    "change_gold",
+    "change_currency",
     "place_object",
     "take_object",
     "move_actor",
@@ -983,8 +983,8 @@ MAGIC_SIZES = {"petty": 0, "normal": 1, "bulky": 2}
 
 def _magic_definitions(**changes: Any) -> list[Definition]:
     data: dict[str, Any] = {
-        "reusable": {"kind": "spellbook", "size": "normal"},
-        "single_use": {"kind": "scroll", "size": "petty"},
+        "reusable": {"kind": "spellbook", "size": "normal", "icon": "book"},
+        "single_use": {"kind": "scroll", "size": "petty", "icon": "scroll"},
         "charged": {"kind": "relic"},
         "cast_penalty": 1,
     }
@@ -992,16 +992,23 @@ def _magic_definitions(**changes: Any) -> list[Definition]:
     return [Definition(type="magic", id="cairn", data=data)]
 
 
-def test_magic_roles_are_read_with_their_kinds_and_sizes():
+def test_magic_roles_are_read_with_their_kinds_sizes_and_icons():
     magic = _load_magic(_magic_definitions(), MAGIC_SIZES, "testland")
     assert magic is not None
-    assert magic.reusable == ItemKind("spellbook", "normal")
-    assert magic.single_use == ItemKind("scroll", "petty")
+    assert magic.reusable == ItemKind("spellbook", "normal", "book")
+    assert magic.single_use == ItemKind("scroll", "petty", "scroll")
     assert magic.charged == ItemKind("relic")
+    assert magic.item_kind_icons == {"spellbook": "book", "scroll": "scroll"}
     assert (magic.spellbook_kind, magic.spellbook_size) == ("spellbook", "normal")
     assert (magic.scroll_kind, magic.scroll_size) == ("scroll", "petty")
     assert magic.charged_kind == "relic"
     assert magic.cast_penalty == 1
+
+
+def test_magic_icon_must_be_a_name():
+    data = _magic_definitions(charged={"kind": "relic", "icon": ""})
+    with pytest.raises(ContentError, match="'icon' must be the name of an icon"):
+        _load_magic(data, MAGIC_SIZES, "testland")
 
 
 def test_a_charged_role_takes_no_size_even_if_one_is_given():

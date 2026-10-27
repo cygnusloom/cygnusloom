@@ -113,7 +113,9 @@ def test_a_promoted_hireling_is_no_longer_paid_by_the_former_employer(client_fac
     tools.advance_time(days=1)
     unpaid = [e for e in _events(app, campaign_id, "hireling.unpaid") if HIRELING in e.payload]
     assert len(unpaid) == before
-    paid = [e for e in _events(app, campaign_id, "character.gold_changed") if HIRELING in e.payload]
+    paid = [
+        e for e in _events(app, campaign_id, "character.currency_changed") if HIRELING in e.payload
+    ]
     assert not any(f"wages for {HIRELING}" in e.payload for e in paid)
 
 

@@ -5,7 +5,7 @@
     "name": "create_location",
     "python_module": "core",
     "function": "create_location",
-    "description": "Add a new location to the campaign. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs, and a name that repeats an existing place in other words (such as 'Farm Road' for 'Farming Path') is refused. Set discovered to true only when anyone in the world would have heard of the place, so the player already knows it. A place given a map point (x and y) must lie inside a region of the map with at least 0.5 km of ground between the point and the region's edge; if none does, the refusal says so, and you must create that region with create_region first. To put a place inside another, give parent set to the name of that top-level location; such a place has no map point of its own, so leave out x and y.",
+    "description": "Add a new location to the campaign. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs, and a name that repeats an existing place in other words (such as 'Market Street' for 'Market Road') is refused. Set discovered to true only when anyone in the world would have heard of the place, so the player already knows it. A place given a map point (x and y) must lie inside a region of the map with at least 0.5 km of ground between the point and the region's edge; if none does, the refusal says so, and you must create that region with create_region first. To put a place inside another, give parent set to the name of that top-level location; such a place has no map point of its own, so leave out x and y.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -50,7 +50,7 @@
     "name": "create_region",
     "python_module": "core",
     "function": "create_region",
-    "description": "Add an area of ground to the world map, drawn as a coloured shape. It stays hidden from the player until it is discovered or a discovered place lies inside it; set discovered to true only when the player would know of this ground already. Use it when the story establishes a lake, bog, forest, or other terrain that the map does not show yet, and when a new place with a map point needs ground around it. The terrain names a kind of ground the rule set defines; if the name is not a kind, the refusal lists the kinds. Give points as the corners of the shape in order around its edge, each as [x, y] in kilometers from the map's center, with x positive east and y positive north. Use only corners the story has given you, drawing the outline as closely as the story supports. A name must be unique among regions. A region that overlaps another is refused; set force to true only when the two really do overlap, as when one is the other's marsh.",
+    "description": "Add an area of ground to the world map, drawn as a coloured shape. It stays hidden from the player until it is discovered or a discovered place lies inside it; set discovered to true only when the player would know of this ground already. Use it when the story establishes a lake, a crater field, or other terrain that the map does not show yet, and when a new place with a map point needs ground around it. The terrain names a kind of ground the rule set defines; if the name is not a kind, the refusal lists the kinds. Give points as the corners of the shape in order around its edge, each as [x, y] in kilometers from the map's center, with x positive east and y positive north. Use only corners the story has given you, drawing the outline as closely as the story supports. A name must be unique among regions. A region that overlaps another is refused; set force to true only when the two really do overlap, as when one is the other's marsh.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -98,7 +98,7 @@
     "function": "create_npc",
     "character_options": true,
     "npc_hp_tier": true,
-    "description": "Add an NPC to the campaign and place them at an existing location. Leave personality, accent, or quirks out to have them generated at random; give them only when the story calls for a specific trait. Give character options, such as appearance or biography, only when the story calls for them; anything left out is rolled or left blank. A name that matches a published statblock, such as a creature in the module, takes that statblock's stats, armor, and attacks, so leave the stats out of the character options. Names must be unique among locations and NPCs.",
+    "description": "Add an NPC to the campaign and place them at an existing location. Leave personality, accent, or quirks out to have them generated at random; give them only when the story calls for a specific trait. Give character options, such as appearance or biography, only when the story calls for them; anything left out is rolled or left blank. A name that matches a published statblock, such as a creature in the source material, takes that statblock's stats, armor, and attacks, so leave the stats out of the character options. Names must be unique among locations and NPCs.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -151,7 +151,7 @@
     "name": "move_actor",
     "python_module": "core",
     "function": "move_actor",
-    "description": "Move the player character or an NPC to another existing location. Use it when someone travels or is sent somewhere. Travel follows the routes in the location descriptions: send the player character only to a place reached by a route from where they are, and never to a place they have not heard of, unless something forces them there (a trap, a teleporter, or a spell). A forced move discovers the place on arrival. The player character starts unplaced, so on the first turn create the place where the story begins and move the player character there. Moving the player character to a place discovers it. Leave location out to send an NPC into the wind: it is at no location until a later move brings it back. The player character cannot go into the wind. Always give the mode. Use overland for a journey across the wilderness, which takes wilderness time and needs a route. Use in_settlement for a walk within a town or city, which takes time at the travel speed. Use in_dungeon for a move through a dungeon or building, which takes no clock time. The result reports the time charged.",
+    "description": "Move the player character or an NPC to another existing location. Use it when someone travels or is sent somewhere. Travel follows the routes in the location descriptions: send the player character only to a place reached by a route from where they are, and never to a place they have not heard of, unless something forces them there (a trap, a teleporter, or some other force). A forced move discovers the place on arrival. The player character starts unplaced, so on the first turn create the place where the story begins and move the player character there. Moving the player character to a place discovers it. Leave location out to send an NPC into the wind: it is at no location until a later move brings it back. The player character cannot go into the wind. Always give the mode. Use overland for a journey across open country or between distant sites, which takes travel time and needs a route. Use in_settlement for a walk within one settlement, station, or site, which takes time at the travel speed. Use in_dungeon for a move through a building, ship, or ruin, which takes no clock time. The result reports the time charged.",
     "travel": true,
     "parameters": {
       "type": "object",
@@ -167,11 +167,11 @@
         "mode": {
           "type": "string",
           "enum": ["overland", "in_settlement", "in_dungeon"],
-          "description": "How the move is made: overland (a journey across the wilderness, needs a route), in_settlement (a walk within a settlement, takes time at the travel speed), or in_dungeon (no clock time). NPC moves take no clock time whatever the mode."
+          "description": "How the move is made: overland (a journey across open country, needs a route), in_settlement (a walk within a settlement, takes time at the travel speed), or in_dungeon (no clock time). NPC moves take no clock time whatever the mode."
         },
         "route": {
           "type": "object",
-          "description": "Required for an overland move, and ignored for other modes. Describe the journey. path: the kind of path the party follows (the names the rule set gives). distance: short, medium, or long. terrain: the hardest ground on the route. vast: 0 to 2, how wide and empty the land is. weather_choice: when the day's weather makes travel harder, the choice the rule set gives for it. The names of path, distance, and terrain come from the rule set.",
+          "description": "Required for an overland move, and ignored for other modes. Describe the journey. path: the kind of path the party follows (the names the rule set gives). distance: short, medium, or long. terrain: the hardest ground on the route. vast: 0 to 2, how wide and empty the land is. weather_choice: when conditions on the day make travel harder, the choice the rule set gives for it. The names of path, distance, and terrain come from the rule set.",
           "properties": {
             "path": {"type": "string"},
             "distance": {"type": "string"},
@@ -665,11 +665,11 @@
   },
   {
     "type": "tool_call",
-    "id": "change_gold",
-    "name": "change_gold",
+    "id": "change_currency",
+    "name": "change_currency",
     "python_module": "core",
-    "function": "change_gold",
-    "description": "Give a character money from outside a purchase (a gift, a reward, a loan repaid, a loot split), or take it away (a tithe, a bribe, a debt paid to someone else). Use a positive amount to give and a negative amount to take. A take is refused if the character lacks the money; there is no credit. Give the cause in a few words. Do not use this for anything bought in a shop, and do not use it to make up money the story has not earned.",
+    "function": "change_currency",
+    "description": "Give a character money from outside a purchase (a gift, a reward, a loan repaid, a loot split), or take it away (a fine, a toll, a bribe, a debt paid to someone else). Use a positive amount to give and a negative amount to take. A take is refused if the character lacks the money; there is no credit. Give the cause in a few words. Do not use this for anything bought in a shop, and do not use it to make up money the story has not earned.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -699,21 +699,21 @@
     "name": "place_object",
     "python_module": "core",
     "function": "place_object",
-    "description": "Put a world object in a place: a location or a dungeon area. It holds what the story has stocked there, such as money, an item, or a described thing. Give a short name a character can take it by, such as 'clay jar', and a fuller description in contents. Optionally give money or an item name. Set hidden when the object is not yet found; a hidden object cannot be seen or taken. Use this only for treasure or objects the story has placed; do not invent them unprompted. Do not place an object again when the place already holds it: check the objects listed for the place in the scene first, and when the object is already there, leave it be.",
+    "description": "Put a world object in a place: a location or an area inside one. It holds what the story has stocked there, such as money, an item, or a described thing. Give a short name a character can take it by, such as 'sealed crate', and a fuller description in contents. Optionally give money or an item name. Set hidden when the object is not yet found; a hidden object cannot be seen or taken. Use this only for treasure or objects the story has placed; do not invent them unprompted. Do not place an object again when the place already holds it: check the objects listed for the place in the scene first, and when the object is already there, leave it be.",
     "parameters": {
       "type": "object",
       "properties": {
         "place": {
           "type": "string",
-          "description": "The location or dungeon area that holds the object."
+          "description": "The location, or the area inside it, that holds the object."
         },
         "name": {
           "type": "string",
-          "description": "A short name to take the object by, such as 'clay jar' or 'chest'. Keep it to one to three words."
+          "description": "A short name to take the object by, such as 'sealed crate' or 'chest'. Keep it to one to three words."
         },
         "contents": {
           "type": "string",
-          "description": "A description of the object, such as 'a cracked clay jar with nine coins inside'."
+          "description": "A description of the object, such as 'a dented canister with some currency inside'."
         },
         "hidden": {
           "type": "boolean",
@@ -723,7 +723,7 @@
           "type": "string",
           "description": "Why the object is placed, in a few words."
         },
-        "gold": {
+        "currency": {
           "type": "integer",
           "description": "Money in the object, in the rule set's currency, if any."
         },
@@ -963,7 +963,7 @@
         },
         "template": {
           "type": "string",
-          "description": "A standard layout, such as room, corridor, clearing or shoreline. The template sets the size and the starting terrain. Leave it out for an empty map."
+          "description": "A standard layout, such as room or corridor. The template sets the size and the starting terrain. Leave it out for an empty map."
         }
       },
       "required": [
@@ -1119,7 +1119,7 @@
     "name": "place_participant",
     "python_module": "core",
     "function": "place_participant",
-    "description": "Put a participant on a cell of the encounter map, counted from 0 at the top left: column increases to the right and row increases downward. Moving is limited to the rule set's movement per turn, counted in cells moved in a straight line or diagonal. Obstacles block: a cell with a blocking object cannot be entered or be the destination, so the participant goes around it. Difficult terrain costs two moves per cell entered. That limit applies only to the participant whose turn it is; moving anyone else is free, though they still cannot enter a blocked cell. The first placement is free. Use this to move a participant, not to tell the story of how they got there.",
+    "description": "Put a participant on a cell of the encounter map, counted from 0 at the top left: column increases to the right and row increases downward. Moving is limited to the rule set's movement per turn, counted in cells moved in a straight line or diagonal. Obstacles block: a cell with a blocking object cannot be entered or be the destination, so the participant goes around it. Terrain that costs extra movement to enter takes that many moves for each cell entered. That limit applies only to the participant whose turn it is; moving anyone else is free, though they still cannot enter a blocked cell. The first placement is free. Use this to move a participant, not to tell the story of how they got there.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -1173,11 +1173,11 @@
               },
               "terrain": {
                 "type": "string",
-                "description": "The terrain id for the cell, such as mud or grass. Empty clears it."
+                "description": "The terrain id for the cell, such as mud or floor. Empty clears it."
               },
               "object": {
                 "type": "string",
-                "description": "The object id on the cell, such as wall or tree. Empty clears it."
+                "description": "The object id on the cell, such as wall or crate. Empty clears it."
               }
             },
             "required": [

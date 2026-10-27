@@ -67,7 +67,7 @@ def advance_to(
     """Move the clock forward to `target`, which counts hours from day 1. It records the change,
     gives each newly started day's deprived characters the need penalty, reports places that have gone
     stale, and kills a dying character whose hours have run out. `passed` replaces the day count in
-    the notice, for time that is not a plain count of days, such as a night's rest, and a notice is
+    the notice, for time that is not a plain count of days, such as a rest through the night, and a notice is
     given for any such time that passes, even inside one day. It does not commit."""
     parts_per_day = len(clock_rules.parts)
     hours_per_part = clock_rules.hours_per_part
@@ -96,7 +96,9 @@ def advance_to(
             record(
                 db,
                 campaign_id,
-                CharacterDied(name=character.name, cause="bled out before anyone aided them"),
+                CharacterDied(
+                    name=character.name, cause="ran out of hours before anyone aided them"
+                ),
             )
             result.setdefault("deaths", []).append(character.name)
     if clock_rules.wage_currency:

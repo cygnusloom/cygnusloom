@@ -176,7 +176,7 @@ def _step_cost(
     entry: EncounterMap, cell: tuple[int, int], terrain: Mapping[str, EncounterTerrain]
 ) -> int:
     found = terrain.get(_cell_terrain(entry, cell))
-    return 2 if found is not None and found.difficult else 1
+    return found.move_cost if found is not None else 1
 
 
 def _path_cost(
@@ -187,7 +187,7 @@ def _path_cost(
     objects: Mapping[str, EncounterObject],
 ) -> int | None:
     """The fewest movement points to walk from start to goal in 8 directions, or None when no
-    route exists. Blocking cells cannot be entered; entering difficult terrain costs 2."""
+    route exists. Blocking cells cannot be entered; each cell entered costs its terrain's move_cost."""
     best = {start: 0}
     queue: list[tuple[int, tuple[int, int]]] = [(0, start)]
     while queue:

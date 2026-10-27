@@ -72,7 +72,7 @@ def use_item(
     *,
     plus: str,
 ) -> dict[str, Any]:
-    """Spend one use of a consumable the character carries. An aid item, such as a bandage, may be
+    """Spend one use of a consumable the character carries. An aid item the rule set lists may be
     used on a dying character, and using it stabilizes them. Any other item is spent on the holder."""
     aid = combat is not None and any(same_item_name(item, a) for a in combat.aid_items)
     if target is None or name_key(target) == name_key(name):

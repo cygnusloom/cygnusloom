@@ -15,7 +15,7 @@ from cygnusforge.services.events import (
     ArmorSet,
     CampaignState,
     Character,
-    GoldChanged,
+    CurrencyChanged,
     Item,
     LodgingSet,
     RestRecovered,
@@ -33,7 +33,7 @@ def listed_item(marketplace: Marketplace, item: str) -> ShopItem | None:
     return next((listed for listed in marketplace.items if same_item_name(listed.name, item)), None)
 
 
-def _gold(character: Character, currency: str) -> int:
+def _held(character: Character, currency: str) -> int:
     return character.features.get(currency, 0)
 
 
@@ -45,18 +45,18 @@ def _pay(
     price: int,
     cause: str,
 ) -> int:
-    """Take the price from the payer's gold. Returns what the payer has left."""
-    gold = _gold(payer, marketplace.currency)
-    if gold < price:
+    """Take the price from the payer's currency. Returns what the payer has left."""
+    held = _held(payer, marketplace.currency)
+    if held < price:
         raise InvalidInput(
-            f"{payer.name} has {gold} {marketplace.currency}, not the {price} this costs"
+            f"{payer.name} has {held} {marketplace.currency}, not the {price} this costs"
         )
     record(
         db,
         campaign_id,
-        GoldChanged(name=payer.name, feature=marketplace.currency, amount=-price, cause=cause),
+        CurrencyChanged(name=payer.name, feature=marketplace.currency, amount=-price, cause=cause),
     )
-    return gold - price
+    return held - price
 
 
 def buy_item(
@@ -125,7 +125,7 @@ def buy_item(
         record(db, campaign_id, ArmorSet(name=buyer.name, armor=armor))
         result["armor"] = armor
     db.commit()
-    result.update({"price": price, "gold_left": left, "currency": marketplace.currency})
+    result.update({"price": price, "currency_left": left, "currency": marketplace.currency})
     return result
 
 
@@ -190,12 +190,12 @@ def buy_service(
         "served": served,
         "payer": payer.name,
         "price": total,
-        "gold_left": left,
+        "currency_left": left,
         "currency": marketplace.currency,
     }
 
 
-def change_gold(
+def change_currency(
     db: Session,
     campaign_id: int,
     marketplace: Marketplace,
@@ -203,8 +203,8 @@ def change_gold(
     amount: int,
     cause: str,
 ) -> dict[str, Any]:
-    """Give gold to a character (positive) or take it (negative) outside a purchase. Taking
-    refuses if the character lacks the gold, so there is no credit."""
+    """Give currency to a character (positive) or take it (negative) outside a purchase. Taking
+    refuses if the character lacks the currency, so there is no credit."""
     amount = whole_number(amount, "the amount", -MAX_PRICE, MAX_PRICE)
     if amount == 0:
         raise InvalidInput("the amount must not be zero")
@@ -215,16 +215,16 @@ def change_gold(
         record(
             db,
             campaign_id,
-            GoldChanged(
+            CurrencyChanged(
                 name=character.name, feature=marketplace.currency, amount=amount, cause=cause
             ),
         )
-        left = _gold(character, marketplace.currency) + amount
+        left = _held(character, marketplace.currency) + amount
     db.commit()
     return {
         "name": character.name,
         "amount": amount,
-        "gold_left": left,
+        "currency_left": left,
         "currency": marketplace.currency,
         "cause": cause,
     }

@@ -1,6 +1,6 @@
-"""Death for player characters. A character with a dying condition, such as a mortal wound, dies when
-its hours run out unless aided (see the aid module). A character with a fatal condition, such as doomed,
-dies on a failed critical save. Which conditions start the clock is set by the rule set."""
+"""Death for player characters. A character with a dying condition dies when its hours run out
+unless aided (see the aid module). A character with a fatal condition dies on a failed critical
+save. Which conditions are dying or fatal is set by the rule set."""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ def begin_dying(
 
 def on_critical_save_failed(db: Session, campaign_id: int, combat: CombatRules, name: str) -> None:
     """A player character failed its critical save. A character with a fatal condition dies at once;
-    anyone else with a dying condition starts the one-hour clock."""
+    anyone else starts the dying clock, as set by the rule set."""
     character = load_state(db, campaign_id).characters.get(name_key(name))
     if character is None or character.kind != PC_KIND:
         return

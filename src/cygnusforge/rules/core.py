@@ -112,8 +112,8 @@ def dismiss_hireling(name: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.dismiss_hireling(name, cause)
 
 
-def change_gold(name: str, amount: int, cause: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.change_gold(name, amount, cause)
+def change_currency(name: str, amount: int, cause: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.change_currency(name, amount, cause)
 
 
 def place_object(
@@ -122,13 +122,13 @@ def place_object(
     hidden: bool,
     reason: str,
     ctx: ToolContext,
-    gold: int | None = None,
+    currency: int | None = None,
     item: str | None = None,
     item_size: str | None = None,
     name: str | None = None,
 ) -> dict[str, Any]:
     return ctx.world.place_object(
-        place, contents, hidden, reason, gold, item, item_size or "", name or ""
+        place, contents, hidden, reason, currency, item, item_size or "", name or ""
     )
 
 
@@ -168,10 +168,10 @@ def move_actor(
     mode: str,
     ctx: ToolContext,
     location: str | None = None,
-    travel: str = "on_foot",
+    travel: str = "",
     route: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return ctx.world.move_actor(name, location, travel, mode, route)
+    return ctx.world.move_actor(name, location, travel or None, mode, route)
 
 
 def create_encounter_map(

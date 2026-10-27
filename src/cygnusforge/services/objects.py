@@ -1,4 +1,4 @@
-"""World objects: gold, an item, or anything the GM describes, held by a place. The GM
+"""World objects: currency, an item, or anything the GM describes, held by a place. The GM
 stocks them; a character takes them. Nothing here creates treasure on its own."""
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from cygnusforge.content.library import InventoryRules, Marketplace
 from cygnusforge.services.common import InvalidInput, whole_number
 from cygnusforge.services.events import (
     CampaignState,
-    GoldChanged,
+    CurrencyChanged,
     Item,
     ObjectPlaced,
     ObjectTaken,
@@ -44,13 +44,13 @@ def place_object(
     contents: str,
     hidden: bool,
     cause: str,
-    gold: int | None = None,
+    currency: int | None = None,
     item: str | None = None,
     item_size: str = "",
     name: str = "",
 ) -> dict[str, Any]:
-    """Put an object in a place: a short name to take it by, a description, and optionally gold
-    or an item. Gold needs the rule set's currency. An item takes its size's slots, and the size
+    """Put an object in a place: a short name to take it by, a description, and optionally currency
+    or an item. Currency needs the rule set's currency. An item takes its size's slots, and the size
     defaults to normal."""
     state = load_state(db, campaign_id)
     found = state.named(place)
@@ -60,9 +60,9 @@ def place_object(
     if not contents:
         raise InvalidInput("the object needs a description")
     name = name.strip() or contents
-    gold = 0 if gold is None else whole_number(gold, "the gold", 0, MAX_PRICE)
-    if gold and marketplace is None:
-        raise InvalidInput("this rule set has no currency to hold gold")
+    currency = 0 if currency is None else whole_number(currency, "the currency", 0, MAX_PRICE)
+    if currency and marketplace is None:
+        raise InvalidInput("this rule set has no currency to hold money")
     item = (item or "").strip()
     size, slots = "", 0
     if item:
@@ -76,7 +76,7 @@ def place_object(
         ObjectPlaced(
             place=found.name,
             contents=contents,
-            gold=gold,
+            currency=currency,
             item=item,
             item_size=size,
             item_slots=slots,
@@ -91,7 +91,7 @@ def place_object(
         "place": found.name,
         "name": name,
         "contents": contents,
-        "gold": gold,
+        "currency": currency,
         "item": item,
         "hidden": hidden,
     }
@@ -106,7 +106,7 @@ def take_object(
     character: str,
     cause: str,
 ) -> dict[str, Any]:
-    """A character takes a visible object in the place they are in. Gold goes to that character.
+    """A character takes a visible object in the place they are in. Currency goes to that character.
     An item goes into their inventory, and the take is refused if it does not fit. If several
     identical objects are here, the one placed first is taken."""
     state = load_state(db, campaign_id)
@@ -122,8 +122,8 @@ def take_object(
         raise InvalidInput(
             f"there is no {object_name.strip()!r} here. Here {taker.name} can take: {names}"
         )
-    if obj.gold and marketplace is None:
-        raise InvalidInput("this rule set has no currency to hold gold")
+    if obj.currency and marketplace is None:
+        raise InvalidInput("this rule set has no currency to hold money")
     if obj.item:
         if inventory is None:
             raise InvalidInput("this rule set has no inventory to carry an item")
@@ -133,12 +133,12 @@ def take_object(
                 f"{taker.name} has room for {max(free, 0)} slots, and {obj.item} takes "
                 f"{obj.item_slots}"
             )
-    if obj.gold and marketplace is not None:
+    if obj.currency and marketplace is not None:
         record(
             db,
             campaign_id,
-            GoldChanged(
-                name=taker.name, feature=marketplace.currency, amount=obj.gold, cause=cause
+            CurrencyChanged(
+                name=taker.name, feature=marketplace.currency, amount=obj.currency, cause=cause
             ),
         )
     if obj.item and inventory is not None:
@@ -163,7 +163,7 @@ def take_object(
     return {
         "object": _label(obj),
         "character": taker.name,
-        "gold": obj.gold,
+        "currency": obj.currency,
         "item": obj.item,
     }
 

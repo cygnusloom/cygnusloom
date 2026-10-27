@@ -38,7 +38,7 @@ def dungeon_cycle(
     *,
     plus: str,
 ) -> dict[str, Any]:
-    """Roll once on the Dungeon Events table. The day and hour clocks are left alone."""
+    """Roll once on the rule set's dungeon events table. The clock is left alone."""
     unknown = [t for t in triggers if t not in TRIGGERS]
     if unknown:
         raise InvalidInput(f"unknown trigger {unknown[0]!r}; use one of {', '.join(TRIGGERS)}")
