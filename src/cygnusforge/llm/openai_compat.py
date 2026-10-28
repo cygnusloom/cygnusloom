@@ -25,7 +25,7 @@ class OpenAICompatProvider:
         self.name = name
         self._base_url = base_url.rstrip("/")
         self._api_key = api_key
-        self._client = client or httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=5.0))
+        self._client = client or httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=30.0))
 
     async def chat(
         self,

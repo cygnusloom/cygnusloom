@@ -8,14 +8,23 @@ from collections.abc import Mapping
 
 from sqlmodel import Session
 
+from cygnusforge.content.character import Feature
 from cygnusforge.content.library import (
     AdvancementRules,
     CombatRules,
     ConditionRules,
     CounterRules,
+    LearnRules,
 )
 from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import AdvancementTaken, load_state, name_key, record
+from cygnusforge.services.events import (
+    AdvancementTaken,
+    Character,
+    FeatureLearned,
+    load_state,
+    name_key,
+    record,
+)
 from cygnusforge.services.injuries import EffectContext, change_counter, run_effects
 
 
@@ -32,9 +41,12 @@ def take_advancement(
     rng: random.Random,
     plus: str,
     stat: str | None = None,
+    feature: str | None = None,
+    features: Mapping[str, Feature] | None = None,
 ) -> dict[str, object]:
     """Spend one point of the Advancement counter on `option_id`, and run the option's effects. `stat`
-    names the stat an option that picks one raises; other options take none."""
+    names the stat an option that picks one raises; other options take none. `feature` names the
+    feature an option that teaches one gives the character."""
     if advancements is None:
         raise InvalidInput("this rule set has no Advancements")
     character = load_state(db, campaign_id).characters.get(name_key(name))
@@ -55,6 +67,7 @@ def take_advancement(
     points = character.counters.get(advancements.counter, counter.initial)
     if points < 1:
         raise InvalidInput(f"{character.name} has no {advancements.label} to spend")
+    learned = _learnable(option.label, option.learn, character, feature, features or {})
 
     record(
         db,
@@ -63,6 +76,17 @@ def take_advancement(
             name=character.name, option=option_id, label=option.label, stat=stat or ""
         ),
     )
+    if learned is not None:
+        record(
+            db,
+            campaign_id,
+            FeatureLearned(
+                name=character.name,
+                feature=learned.id,
+                feature_name=learned.name,
+                cause=f"{character.name} takes {option.label}",
+            ),
+        )
     cx = EffectContext(
         rng=rng, combat=combat, picked=stat, counters=counters, conditions=conditions
     )
@@ -96,5 +120,35 @@ def take_advancement(
         "character": character.name,
         "advancement": option.label,
         "stat": stat,
+        "feature": learned.name if learned is not None else None,
         "remaining": value,
     }
+
+
+def _learnable(
+    label: str,
+    learn: LearnRules | None,
+    character: Character,
+    feature: str | None,
+    features: Mapping[str, Feature],
+) -> Feature | None:
+    """The feature an option teaches, checked against the character: it must be of the option's
+    type, carry the tag of the character's field, and not be one the character already has."""
+    if learn is None:
+        if feature is not None:
+            raise InvalidInput(f"{label} does not take a feature")
+        return None
+    tag = character.fields.get(learn.tag_field, "")
+    candidates = sorted(
+        f.name
+        for f in features.values()
+        if f.feature_type == learn.feature_type and f.tag == tag and f.id not in character.features
+    )
+    chosen = features.get(feature or "")
+    if chosen is None or chosen.feature_type != learn.feature_type or chosen.tag != tag:
+        raise InvalidInput(
+            f"{label} needs a {learn.feature_type} from {tag}; choose one of {candidates}"
+        )
+    if chosen.id in character.features:
+        raise InvalidInput(f"{character.name} already has {chosen.name}")
+    return chosen

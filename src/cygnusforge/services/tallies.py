@@ -18,8 +18,11 @@ def adjust_tally(
     change: int,
     *,
     reason: str = "",
+    award: str = "",
 ) -> dict[str, object]:
-    """Add `change` to one entry of a tally. A negative change deducts from it."""
+    """Add `change` to one entry of a tally. A negative change deducts from it. `award` is a key for
+    the event being paid out; a tally refuses an award key it has already paid, so one event is not
+    counted twice."""
     if tally is None:
         raise InvalidInput("this rule set keeps no tallies")
     label = tally.entries.get(entry)
@@ -27,7 +30,13 @@ def adjust_tally(
         raise InvalidInput(
             f"there is no {tally.label} entry {entry!r}; choose one of {sorted(tally.entries)}"
         )
-    before = load_state(db, campaign_id).tallies.get(tally.id, {}).get(entry, 0)
+    state = load_state(db, campaign_id)
+    key = award.strip()
+    if key and key in state.tally_awards.get(tally.id, set()):
+        raise InvalidInput(
+            f"{tally.label} has already paid the award {key!r}; do not award it twice"
+        )
+    before = state.tallies.get(tally.id, {}).get(entry, 0)
     after = before + change
     record(
         db,
@@ -40,6 +49,7 @@ def adjust_tally(
             before=before,
             after=after,
             cause=reason,
+            award=key,
         ),
     )
     db.commit()

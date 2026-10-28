@@ -666,7 +666,13 @@ class WorldTools:
                 plus=self.plus,
             )
 
-    def take_advancement(self, character: str, option: str, stat: str | None) -> dict[str, Any]:
+    def take_advancement(
+        self,
+        character: str,
+        option: str,
+        stat: str | None = None,
+        feature: str | None = None,
+    ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return advancements_service.take_advancement(
                 db,
@@ -680,6 +686,8 @@ class WorldTools:
                 rng=self.rng,
                 plus=self.plus,
                 stat=stat,
+                feature=feature,
+                features=self.character.features,
             )
 
     def end_period(self, period: str) -> dict[str, Any]:
@@ -691,14 +699,23 @@ class WorldTools:
                 counters=self.counters,
                 conditions=self.conditions,
                 combat=self.combat,
+                tallies=self.tallies,
                 rng=self.rng,
                 plus=self.plus,
             )
 
-    def adjust_tally(self, tally: str, entry: str, change: int, reason: str) -> dict[str, Any]:
+    def adjust_tally(
+        self, tally: str, entry: str, change: int, reason: str = "", award: str = ""
+    ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return tallies_service.adjust_tally(
-                db, self.campaign_id, self.tallies.get(tally), entry, change, reason=reason
+                db,
+                self.campaign_id,
+                self.tallies.get(tally),
+                entry,
+                change,
+                reason=reason,
+                award=award,
             )
 
     def set_relation(

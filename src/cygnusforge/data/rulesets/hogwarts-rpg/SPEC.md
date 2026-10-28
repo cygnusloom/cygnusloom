@@ -156,12 +156,20 @@ Encoded:
 - 2d6 moves with bands (10+, 7-9, 6-), the Cost choice, and Experience on a miss.
 - Luck (spend and regain at school-year end) and Experience (limit 4, then an Advancement).
 - Advancements: trait +1 (up to twice, max +3), second Favourite Subject, spell from Year, magical
-  object, and Luck. Earned at 4 Experience or at school-year end.
+  object, and Luck. Earned at 4 Experience or at school-year end. A spell Advancement names a spell
+  of the character's current Year that they do not already know (`learn` in `advancements.json`,
+  `FeatureLearned` event). It has no limit, as the PDF says.
+- Spell knowledge: a character knows every spell from earlier Years (`knows` on the Year field).
+  `describe` states it for the GM. Graduates know all Years.
+- House Points reset at the end of each school year, with their final totals logged
+  (`tallies` in `periods.json`, `TallyReset` event). This was the user's choice.
+- Award keys: an optional `award` on `adjust_tally` is refused when reused on the same tally, which
+  stops a repeat award from counting twice. Keys are cleared at a reset.
 - Conditions with their modifiers, and the exit roll (`needs_all_conditions`, `retire`).
 - Houses, blood statuses, creation tables, spells per blood status, and Favourite Subject Core and
   Elective groups.
 - Friends (limit 2) and Rivals (limit 1), changed through `set_relation`.
-- House Points, as a tally with causes.
+- House Points, as a tally with causes, including the Non-Player row.
 - Quidditch moves, Narrator moves, Serious Consequences, pets, and healing, as rule text the GM
   reads.
 
@@ -169,15 +177,23 @@ Not encoded (rule text only, or left to the GM):
 
 - The end-of-session timing for Friends and Rivals. The GM is told by the tool description.
 - The House table's "last year's winner" bonus. This is a GM-side roll.
-- The House Points tracker's "Non-Player Points" row (see Open questions).
-- Tallies are not reset by school year. The PDF does not say they are.
-- House Points can go negative. The PDF does not say whether they may.
-- Knowledge of spells from earlier years ("you know all spells from every Year you have
-  completed"). Only the Year of the pick is checked.
-- Patronus is a uniform 36-option table, not the PDF's 2d6 roll.
-- The exit-roll stat choice is free, not strictly the highest trait.
-- Potion descriptions were inferred where the PDF's print layout was hard to read.
-- Hair, complexion, and look groupings follow the print layout.
+- Casting a spell the character does not know costs a Luck point and a roll. The engine does not
+  enforce this. The GM reads it from the `describe` knowledge line.
+- The "award key" is optional. A GM who omits it has no guard against a double count. The tool
+  description tells the GM to give every award a key.
+- Potion descriptions were inferred where the PDF's print layout was hard to read. Not re-checked
+  against the PDF in this pass.
+- Hair, complexion, and look groupings follow the print layout. Not re-checked in this pass.
+
+Checked against the PDF in this pass:
+
+- Patronus: the PDF rolls 2d6, where the first die picks the animal group and the second picks the
+  patronus within it. Both dice are independent d6, so the 36 outcomes are equally likely, and the
+  uniform 36-option `patronus` table is equivalent. Its 36 names and six groups match the PDF's grid
+  in order.
+- Exit roll: the PDF rolls "+your highest trait", so `stat: highest` is correct.
+- Non-Player: the House Points tracker's Non-Player row is a tally entry (`tallies.json`).
+- House Points have no floor in the PDF, so negative totals are allowed.
 
 ## Save and combat
 
@@ -186,7 +202,7 @@ used there. The cairn2e code is tested through `tests/test_combat.py`, which hol
 
 ## Validation
 
-- Full suite: 1678 passed (`timeout 900 uv run pytest -n auto -q -p no:cacheprovider`), about 51 s.
+- Full suite: 1695 passed (`timeout 900 uv run pytest -n auto -q -p no:cacheprovider`), about 45 s.
 - Lint: `uv run ruff format --check src tests` and `uv run ruff check src tests`: clean.
 - Hogwarts tests: `tests/test_hogwarts.py`, `tests/test_hogwarts_creation.py`,
   `tests/test_hogwarts_progress.py` (advancements, periods, tallies, relations), and
@@ -210,16 +226,24 @@ Checks used the browser tools and the event log in the database.
 - Exit roll: Hide & Sneak, a failed roll (5), raised Experience 1 to 2 (`counter.changed`).
 - School-year end: `end_period` recorded `period.ended` and added 1 Advancement. Luck was already
   at 3 (its maximum), so the regain was not visible in this run. The unit tests cover it.
+- House Points reset (live, second school-year end): `tally.reset` logged the final totals
+  (Ravenclaw 50, others 0, Non-Player 0). The tally was then empty.
+- Learn-spell (live): Eldred (6th Year, one Advancement) took Confundo, a 6th Year spell she did not
+  hold. `character.feature_learned` was logged and the Advancement went 1 to 0.
 - Advancement: `take_advancement` with trait Bravery raised its maximum 0 to 1 and spent the
   Advancement (`character.max_changed`).
 
 Observed in live play (not engine faults):
 
 - The GM double-counted the Quidditch win at session end (House Points 50 to 100), then corrected
-  it with a -50 adjustment. A tally is a plain total, so the engine cannot tell a repeat award.
-  Possible fix: stronger tool-description guidance, or a per-event tally award with an id.
+  it with a -50 adjustment. The award key (`award` on `adjust_tally`) was added for this.
+- Award-key gap, found in a live test: asked to repeat the same award "with the same key", the GM
+  did not reuse the key. It sent a new one (`quidditch-ravenclaw-vs-gryffindor`), so the guard
+  did not fire, and Ravenclaw went 50 to 100. The guard blocks only an exact repeat of a key. The
+  GM chooses the key, so it can avoid the guard. Not fixed yet.
 - DeepSeek timed out twice (`ConnectTimeout`), which left the GM turn "stopped". "Continue" retried
-  the turn and worked. This is a provider issue, not an engine one.
+  the turn and worked. The connect timeout was 5 s, so it is now 30 s (`llm/openai_compat.py`).
+  The connect timeout is the likely cause, but this is not confirmed by a live run.
 - An earlier live run found and fixed two bugs with regression tests: a doubled full stop in
   `MoveMade`, and a `roll_move` enum that lacked Quidditch and exit moves (fixed with `enum_from`).
 - Live testing through `TestClient` fails across requests ("Event loop is closed"). The shared
@@ -228,12 +252,8 @@ Observed in live play (not engine faults):
 
 ## Open questions
 
-- Non-Player Points: the PDF's House Points tracker has a "Non-Player Points" row beside the four
-  Houses. The engine has no matching entry. Unclear whether it should be a tally entry or a GM note.
-- Whether House Points may go negative, and whether tallies reset each school year.
 - "Dragon Phoenix Unicorn" appears in the PDF text after the Quidditch subject. It is probably a
   wand-core list, but the text extraction does not confirm which table it belongs to.
-- Whether Hogwarts should track spells learned in earlier Years. The rule implies it.
 - Whether a Worlds Without Number ruleset should be added later, once its JSON exists.
 
 ## Commands
@@ -257,3 +277,7 @@ Observed in live play (not engine faults):
       and web form), save and initiative JSON, and the event renames.
 - [x] Live checks: creation, House Points, relation refusal and acceptance, exit roll, school-year
       end, and advancement.
+- [x] Gap fixes: House Points reset each school year, learn-spell with the Year rule, the
+      spell-knowledge rule, the award key, and the connect timeout (30 s).
+- [x] Live checks (second pass): award key, House Points reset at school-year end, learn-spell.
+- [ ] Open: the award key is chosen by the GM and can be avoided (see Live testing).

@@ -192,9 +192,13 @@ def adjust_counter(character: str, counter: str, change: int, ctx: ToolContext) 
 
 
 def take_advancement(
-    character: str, option: str, ctx: ToolContext, stat: str | None = None
+    character: str,
+    option: str,
+    ctx: ToolContext,
+    stat: str | None = None,
+    feature: str | None = None,
 ) -> dict[str, Any]:
-    return ctx.world.take_advancement(character, option, stat)
+    return ctx.world.take_advancement(character, option, stat, feature)
 
 
 def end_period(period: str, ctx: ToolContext) -> dict[str, Any]:
@@ -202,9 +206,9 @@ def end_period(period: str, ctx: ToolContext) -> dict[str, Any]:
 
 
 def adjust_tally(
-    tally: str, entry: str, change: int, ctx: ToolContext, reason: str = ""
+    tally: str, entry: str, change: int, ctx: ToolContext, reason: str = "", award: str = ""
 ) -> dict[str, Any]:
-    return ctx.world.adjust_tally(tally, entry, change, reason)
+    return ctx.world.adjust_tally(tally, entry, change, reason, award)
 
 
 def set_relation(

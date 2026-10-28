@@ -569,6 +569,17 @@ class AdvancementOption:
     limit: int | None
     picks: bool
     effects: tuple[Mapping[str, Any], ...]
+    # The feature the option lets the character learn, or None when it teaches none.
+    learn: LearnRules | None = None
+
+
+@dataclass(frozen=True)
+class LearnRules:
+    """A feature an option lets a character learn: one of `feature_type` whose tag is the value of
+    the character field `tag_field`, which the character does not already have."""
+
+    feature_type: str
+    tag_field: str
 
 
 @dataclass(frozen=True)
@@ -589,6 +600,8 @@ class PeriodRules:
     id: str
     label: str
     effects: tuple[Mapping[str, Any], ...]
+    # The tallies that start over when the period ends, after their final totals are logged.
+    tallies: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -1536,8 +1549,10 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     advancements = _load_advancements(
         definitions, character, counters, frozenset(conditions), template
     )
-    periods = _load_periods(definitions, character, counters, frozenset(conditions), template)
     tallies = _load_tallies(definitions, template)
+    periods = _load_periods(
+        definitions, character, counters, frozenset(conditions), tallies, template
+    )
     relations = _load_relations(definitions, template)
     injury_tables = {
         d.id: _load_injury_entries(d, character, conditions, template)
@@ -1602,6 +1617,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         "tally_entries": sorted({e for t in tallies.values() for e in t.entries}),
         "relations": sorted(relations),
         "advancement_options": sorted({o for a in advancements.values() for o in a.options}),
+        "features": sorted(character.features),
     }
     tool_calls: dict[str, ToolCall] = {}
     tool_names: set[str] = set()
@@ -3121,6 +3137,7 @@ def _load_advancements(
                 limit=_optional_limit(option, olabel),
                 picks=picks,
                 effects=effects,
+                learn=_load_learn(option.get("learn"), character, olabel),
             )
         loaded[d.id] = AdvancementRules(
             id=d.id,
@@ -3131,11 +3148,29 @@ def _load_advancements(
     return loaded
 
 
+def _load_learn(data: object, character: CharacterSpec, label: str) -> LearnRules | None:
+    """The feature an option teaches: a feature type, and the character field whose value its tag
+    must match. None when the option teaches none."""
+    if data is None:
+        return None
+    if not isinstance(data, Mapping):
+        raise ContentError(f"{label}: 'learn' must be an object")
+    feature_type = required_text(data, "feature_type", label)
+    tag_field = required_text(data, "tag_field", label)
+    if feature_type not in {f.feature_type for f in character.features.values()}:
+        raise ContentError(f"{label}: 'learn' names no feature type ({feature_type!r})")
+    field_spec = character.fields.get(tag_field)
+    if field_spec is None or field_spec.table is None:
+        raise ContentError(f"{label}: 'learn' needs a table field named {tag_field!r}")
+    return LearnRules(feature_type=feature_type, tag_field=tag_field)
+
+
 def _load_periods(
     definitions: list[Definition],
     character: CharacterSpec,
     counters: Mapping[str, CounterRules],
     conditions: frozenset[str],
+    tallies: Mapping[str, TallyRules],
     template: str,
 ) -> dict[str, PeriodRules]:
     loaded: dict[str, PeriodRules] = {}
@@ -3155,8 +3190,17 @@ def _load_periods(
         )
         if not effects:
             raise ContentError(f"{label}: a period needs 'effects'")
+        reset = d.data.get("tallies", [])
+        if not isinstance(reset, list) or not all(isinstance(t, str) for t in reset):
+            raise ContentError(f"{label}: 'tallies' must be a list of tally ids")
+        unknown = [t for t in reset if t not in tallies]
+        if unknown:
+            raise ContentError(f"{label}: 'tallies' names no tally ({', '.join(unknown)})")
         loaded[d.id] = PeriodRules(
-            id=d.id, label=required_text(d.data, "label", label), effects=effects
+            id=d.id,
+            label=required_text(d.data, "label", label),
+            effects=effects,
+            tallies=tuple(reset),
         )
     return loaded
 

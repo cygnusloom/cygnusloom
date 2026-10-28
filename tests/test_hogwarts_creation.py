@@ -16,6 +16,7 @@ from cygnusforge.content.character import (
     resolve,
 )
 from cygnusforge.content.definitions import ContentError, Definition
+from cygnusforge.content.library import _load_learn, _load_periods
 from tests.conftest import content_library
 
 HOGWARTS = content_library().rule_sets["hogwarts-rpg"]
@@ -117,6 +118,32 @@ def test_the_given_names_pool_has_sixty_names_and_the_surnames_thirty():
     assert len(names) == 60
     assert "Dev" in names and "Wilhelmina" in names
     assert len(_values("surnames")) == 30
+
+
+def _knowledge_line(year: str) -> str:
+    sheet = resolve(
+        SPEC,
+        {"stats": EVEN_STATS, "fields": {"year": year}},
+        random.Random(3),
+        plus=HOGWARTS.plus,
+    )
+    return next((line for line in describe(SPEC, sheet).splitlines() if "Knows" in line), "")
+
+
+def test_a_second_year_knows_the_first_year_spells():
+    assert _knowledge_line("2nd Year") == (
+        "Knows every spell tagged with an earlier Year: 1st Year"
+    )
+
+
+def test_a_graduate_knows_the_spells_of_every_year():
+    line = _knowledge_line("Graduate")
+    assert line.startswith("Knows every spell tagged with an earlier Year: 1st Year, ")
+    assert line.endswith("6th Year, 7th Year")
+
+
+def test_a_first_year_knows_no_spells_yet():
+    assert _knowledge_line("1st Year") == ""
 
 
 def test_the_statblock_shows_the_house_blood_and_creation_fields():
@@ -344,3 +371,63 @@ def test_a_pick_tag_field_that_is_not_a_table_field_is_refused_at_load():
     ]
     with pytest.raises(ContentError, match="needs a table field named 'missing'"):
         build_character(definitions, {}, {}, "test")
+
+
+def test_a_knows_field_without_a_table_is_refused_at_load():
+    definitions = [
+        Definition(
+            "character_field",
+            "year",
+            {"type": "character_field", "id": "year", "name": "Year", "knows": "spell"},
+        ),
+    ]
+    with pytest.raises(ContentError, match="'knows' needs a table"):
+        build_character(definitions, {}, {}, "test")
+
+
+def test_a_knows_field_naming_no_feature_type_is_refused_at_load():
+    definitions = [
+        Definition(
+            "character_field",
+            "year",
+            {
+                "type": "character_field",
+                "id": "year",
+                "name": "Year",
+                "table": "year",
+                "knows": "potion",
+            },
+        ),
+    ]
+    tables = {"year": (TableOption("1st Year", "1st Year"),)}
+    with pytest.raises(ContentError, match="knows 'potion', which is no feature type"):
+        build_character(definitions, tables, {"year": "Year"}, "test")
+
+
+def test_a_learn_rule_is_checked_against_the_feature_types_and_fields():
+    with pytest.raises(ContentError, match="names no feature type"):
+        _load_learn({"feature_type": "potion", "tag_field": "year"}, SPEC, "test")
+    with pytest.raises(ContentError, match="needs a table field named 'missing'"):
+        _load_learn({"feature_type": "spell", "tag_field": "missing"}, SPEC, "test")
+    with pytest.raises(ContentError, match="'learn' must be an object"):
+        _load_learn("spell", SPEC, "test")
+    learn = _load_learn({"feature_type": "spell", "tag_field": "year"}, SPEC, "test")
+    assert learn.feature_type == "spell" and learn.tag_field == "year"
+
+
+def test_a_period_that_resets_an_unknown_tally_is_refused_at_load():
+    definitions = [
+        Definition(
+            "period",
+            "school-year",
+            {
+                "type": "period",
+                "id": "school-year",
+                "label": "school year",
+                "tallies": ["nope"],
+                "effects": [{"op": "note", "text": "The year ends."}],
+            },
+        ),
+    ]
+    with pytest.raises(ContentError, match="names no tally"):
+        _load_periods(definitions, SPEC, HOGWARTS.counters, frozenset(), {}, "test")

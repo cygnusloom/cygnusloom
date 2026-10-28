@@ -3,6 +3,7 @@
     "type": "period",
     "id": "school-year",
     "label": "school year",
+    "tallies": ["house-points"],
     "effects": [
       {"op": "counter", "id": "luck", "reset": true},
       {"op": "counter", "id": "advancements", "delta": 1},

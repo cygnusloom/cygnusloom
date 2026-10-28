@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from cygnusforge.services.common import InvalidInput
+from cygnusforge.services.common import InvalidInput, session_scope
+from cygnusforge.services.events import (
+    FeatureLearned,
+    TallyReset,
+    decode,
+    events_since,
+)
 from tests.test_hogwarts import (
     HARRY,
     _campaign,
@@ -190,3 +196,106 @@ def test_the_exit_roll_refuses_a_stat_chosen_by_the_player(client_factory):
     _mark_all_conditions(tools)
     with pytest.raises(InvalidInput):
         tools.roll_move("exit_the_story", HARRY, stat="cunning")
+
+
+def _events_of(app, campaign_id: int, kind: str) -> list:
+    with session_scope(app.state.engine) as db:
+        return [decode(row) for row in events_since(db, campaign_id) if row.kind == kind]
+
+
+def test_learning_a_spell_adds_it_from_the_characters_year(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _tools(app, campaign_id)
+    _grant_advancements(tools, 1)
+    result = tools.take_advancement(HARRY, "spell", None, "aperio")
+    assert result["feature"] == "Aperio"
+    assert "aperio" in _harry(app, campaign_id).features
+    assert _counter(app, campaign_id, "advancements") == 0
+    learned = _events_of(app, campaign_id, FeatureLearned.kind)
+    assert [(e.feature, e.name) for e in learned] == [("aperio", HARRY)]
+
+
+def test_a_spell_from_another_year_cannot_be_learned_as_an_advancement(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _tools(app, campaign_id)
+    _grant_advancements(tools, 1)
+    with pytest.raises(InvalidInput, match="needs a spell from 5th Year"):
+        tools.take_advancement(HARRY, "spell", None, "lumos")
+    assert _counter(app, campaign_id, "advancements") == 1
+    assert "lumos" not in _harry(app, campaign_id).features
+
+
+def test_a_spell_already_known_cannot_be_learned_again(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _tools(app, campaign_id)
+    _grant_advancements(tools, 2)
+    tools.take_advancement(HARRY, "spell", None, "aperio")
+    with pytest.raises(InvalidInput, match="already has Aperio"):
+        tools.take_advancement(HARRY, "spell", None, "aperio")
+    assert _counter(app, campaign_id, "advancements") == 1
+
+
+def test_learning_spells_has_no_limit(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _tools(app, campaign_id)
+    _grant_advancements(tools, 2)
+    tools.take_advancement(HARRY, "spell", None, "aperio")
+    tools.take_advancement(HARRY, "spell", None, "oppugno")
+    assert {"aperio", "oppugno"} <= set(_harry(app, campaign_id).features)
+
+
+def test_a_learn_spell_advancement_needs_a_spell_to_be_named(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _tools(app, campaign_id)
+    _grant_advancements(tools, 1)
+    with pytest.raises(InvalidInput, match="needs a spell from 5th Year"):
+        tools.take_advancement(HARRY, "spell", None, None)
+    assert _counter(app, campaign_id, "advancements") == 1
+
+
+def test_a_feature_is_refused_for_an_option_that_teaches_none(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _tools(app, campaign_id)
+    _grant_advancements(tools, 1)
+    with pytest.raises(InvalidInput, match="does not take a feature"):
+        tools.take_advancement(HARRY, "subject", None, "aperio")
+
+
+def test_a_period_end_starts_house_points_over_and_logs_the_final_totals(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _tools(app, campaign_id)
+    tools.adjust_tally("house-points", "gryffindor", 10, "won the Quidditch match")
+    tools.adjust_tally("house-points", "slytherin", -4, "broke curfew")
+    tools.end_period("school-year")
+    assert _state(app, campaign_id).tallies["house-points"] == {}
+    (reset,) = _events_of(app, campaign_id, TallyReset.kind)
+    assert reset.final["gryffindor"] == 10
+    assert reset.final["slytherin"] == -4
+    assert reset.final["hufflepuff"] == 0
+    assert reset.labels["gryffindor"] == "Gryffindor"
+
+
+def test_an_award_key_cannot_be_paid_twice_on_a_tally(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _tools(app, campaign_id)
+    tools.adjust_tally("house-points", "gryffindor", 50, "won", award="match-1")
+    with pytest.raises(InvalidInput, match="already paid the award 'match-1'"):
+        tools.adjust_tally("house-points", "gryffindor", 50, "won again", award="match-1")
+    assert _state(app, campaign_id).tallies["house-points"]["gryffindor"] == 50
+
+
+def test_changes_without_an_award_key_are_not_guarded(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _tools(app, campaign_id)
+    tools.adjust_tally("house-points", "gryffindor", 10, "a")
+    tools.adjust_tally("house-points", "gryffindor", 10, "b")
+    assert _state(app, campaign_id).tallies["house-points"]["gryffindor"] == 20
+
+
+def test_a_period_end_clears_the_award_keys_so_a_new_year_can_reuse_them(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _tools(app, campaign_id)
+    tools.adjust_tally("house-points", "gryffindor", 10, "won", award="match-1")
+    tools.end_period("school-year")
+    tools.adjust_tally("house-points", "gryffindor", 5, "won", award="match-1")
+    assert _state(app, campaign_id).tallies["house-points"]["gryffindor"] == 5

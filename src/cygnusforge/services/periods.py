@@ -8,9 +8,15 @@ from collections.abc import Mapping
 
 from sqlmodel import Session
 
-from cygnusforge.content.library import CombatRules, ConditionRules, CounterRules, PeriodRules
+from cygnusforge.content.library import (
+    CombatRules,
+    ConditionRules,
+    CounterRules,
+    PeriodRules,
+    TallyRules,
+)
 from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import PC_KIND, PeriodEnded, load_state, record
+from cygnusforge.services.events import PC_KIND, PeriodEnded, TallyReset, load_state, record
 from cygnusforge.services.injuries import EffectContext, run_effects
 
 
@@ -22,15 +28,25 @@ def end_period(
     counters: Mapping[str, CounterRules],
     conditions: Mapping[str, ConditionRules],
     combat: CombatRules | None,
+    tallies: Mapping[str, TallyRules],
     rng: random.Random,
     plus: str,
 ) -> dict[str, object]:
-    """End the period for every living player character, running its effects for each of them."""
+    """End the period for every living player character, running its effects for each of them. The
+    period's tallies start over first, and their final totals are logged."""
     if period is None:
         raise InvalidInput("this rule set has no periods to end")
     state = load_state(db, campaign_id)
     pcs = [c for c in state.characters.values() if c.kind == PC_KIND and not c.retired]
     record(db, campaign_id, PeriodEnded(period=period.id, label=period.label))
+    for tally_id in period.tallies:
+        tally = tallies[tally_id]
+        final = {entry: state.tallies.get(tally_id, {}).get(entry, 0) for entry in tally.entries}
+        record(
+            db,
+            campaign_id,
+            TallyReset(tally=tally.id, label=tally.label, final=final, labels=dict(tally.entries)),
+        )
     cx = EffectContext(rng=rng, combat=combat, counters=counters, conditions=conditions)
     for character in pcs:
         run_effects(

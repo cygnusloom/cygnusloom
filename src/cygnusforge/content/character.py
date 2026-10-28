@@ -121,7 +121,9 @@ class Restriction:
 @dataclass(frozen=True)
 class Field:
     """A text field when `table` is None, otherwise a choice from that table. A `group_roll` field
-    rolls a group first and then an option within it. A `restriction` limits its options."""
+    rolls a group first and then an option within it. A `restriction` limits its options. A `knows`
+    field names a feature type: a character knows every feature of that type whose tag is an
+    earlier option of the table than the field's value."""
 
     id: str
     name: str
@@ -129,6 +131,7 @@ class Field:
     table: str | None
     group_roll: bool = False
     restriction: Restriction | None = None
+    knows: str | None = None
 
 
 @dataclass(frozen=True)
@@ -179,6 +182,13 @@ def build_character(
                 )
     _check_fields(fields, tables, template)
     _check_pick_fields(templates, fields, template)
+    feature_types = {feature.feature_type for feature in features.values()}
+    for item in fields.values():
+        if item.knows is not None and item.knows not in feature_types:
+            raise ContentError(
+                f"{template}: character_field {item.id!r} knows {item.knows!r}, "
+                "which is no feature type"
+            )
     return CharacterSpec(
         stats=stats,
         templates=templates,
@@ -361,6 +371,9 @@ def _field(definition: Definition, tables: Mapping[str, object], kind: str, temp
         raise ContentError(f"{label}: 'group_roll' must be true or false")
     if group_roll and table is None:
         raise ContentError(f"{label}: 'group_roll' needs a 'table'")
+    knows = definition.data.get("knows")
+    if knows is not None and (not isinstance(knows, str) or table is None):
+        raise ContentError(f"{label}: 'knows' needs a table and the name of a feature type")
     return Field(
         id=definition.id,
         name=required_text(definition.data, "name", label),
@@ -368,6 +381,7 @@ def _field(definition: Definition, tables: Mapping[str, object], kind: str, temp
         table=table,
         group_roll=group_roll,
         restriction=_restriction(definition.data.get("restricted_by"), label),
+        knows=knows,
     )
 
 
@@ -917,6 +931,26 @@ def _within(counter: CounterRef, value: int) -> int:
     return value
 
 
+def _known_features(spec: CharacterSpec, field_id: str, value: str) -> tuple[str, str, str] | None:
+    """The feature type a field's value knows, its table's name for the field's options, and the
+    labels of the earlier options, or None when the field knows nothing."""
+    field_spec = spec.fields.get(field_id)
+    if field_spec is None or field_spec.knows is None or field_spec.table is None:
+        return None
+    options = spec.tables[field_spec.table]
+    values = [option.value for option in options]
+    if value not in values:
+        return None
+    earlier = [option.value for option in options[: values.index(value)]]
+    if not earlier:
+        return None
+    return (
+        field_spec.knows,
+        spec.table_names.get(field_spec.table, field_spec.name),
+        ", ".join(earlier),
+    )
+
+
 def describe(spec: CharacterSpec, sheet: Sheet) -> str:
     """The character as the GM and the player read it, one line per part. Empty parts are left
     out."""
@@ -932,6 +966,10 @@ def describe(spec: CharacterSpec, sheet: Sheet) -> str:
     for counter_id, value in sheet.counters.items():
         if counter_id in spec.counters:
             lines.append(f"{spec.counters[counter_id].label}: {value}")
+    for field_id, value in sheet.fields.items():
+        known = _known_features(spec, field_id, value)
+        if known:
+            lines.append(f"Knows every {known[0]} tagged with an earlier {known[1]}: {known[2]}")
     if sheet.features:
         parts = []
         for feature, count in sheet.features.items():

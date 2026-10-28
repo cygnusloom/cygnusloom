@@ -416,6 +416,8 @@ class CampaignState:
     start_season: str | None = None
     # The campaign's tallies by tally id, then entry id, such as each House's points.
     tallies: dict[str, dict[str, int]] = field(default_factory=dict)
+    # The award keys each tally has already paid out, so an award is never paid twice.
+    tally_awards: dict[str, set[str]] = field(default_factory=dict)
 
     def named(self, name: str) -> Place | Character | None:
         key = name_key(name)
@@ -2297,12 +2299,57 @@ class TallyChanged(GameEvent):
     before: int
     after: int
     cause: str = ""
+    # The key that makes this award unique within its tally, or empty for no key.
+    award: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.tallies.setdefault(self.tally, {})[self.entry] = self.after
+        if self.award:
+            state.tally_awards.setdefault(self.tally, set()).add(self.award)
 
     def render(self) -> str:
         text = f"{self.entry_label} {self.label} goes from {self.before} to {self.after}"
+        return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
+class TallyReset(GameEvent):
+    """A tally starts over at the end of a period. `final` holds each entry's total when it ended,
+    by entry id, and `labels` names the entries."""
+
+    kind: ClassVar[str] = "tally.reset"
+
+    tally: str
+    label: str
+    final: dict[str, int]
+    labels: dict[str, str]
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.tallies[self.tally] = {}
+        state.tally_awards.pop(self.tally, None)
+
+    def render(self) -> str:
+        totals = ", ".join(f"{self.labels[e]} {v}" for e, v in self.final.items())
+        return f"The {self.label} start over, from final totals of {totals}."
+
+
+@dataclass(frozen=True)
+class FeatureLearned(GameEvent):
+    """A character learns a feature, such as a spell, that the rule set's Advancements teach."""
+
+    kind: ClassVar[str] = "character.feature_learned"
+
+    name: str
+    feature: str
+    feature_name: str
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.features[self.feature] = 1
+
+    def render(self) -> str:
+        text = f"{self.name} learns {self.feature_name}"
         return f"{text} ({self.cause})." if self.cause else f"{text}."
 
 
@@ -2954,7 +3001,9 @@ HIDDEN_KINDS: dict[str, bool] = {
     "character.advancement_taken": False,
     "character.relation_changed": False,
     "tally.changed": False,
+    "tally.reset": False,
     "period.ended": False,
+    "character.feature_learned": False,
     "character.currency_changed": False,
     "character.shelter_set": False,
     "character.meal_set": True,

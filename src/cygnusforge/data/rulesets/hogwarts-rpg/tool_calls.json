@@ -71,7 +71,7 @@
     "name": "take_advancement",
     "python_module": "core",
     "function": "take_advancement",
-    "description": "Spend one of a player character's Advancements on an option: raise a trait, add a Favourite Subject, learn a spell, gain a magical object, or regain Luck. Use stat for an option that names a trait.",
+    "description": "Spend one of a player character's Advancements on an option: raise a trait, add a Favourite Subject, learn a spell, gain a magical object, or regain Luck. Use stat for an option that names a trait. For learning a spell, use feature for the spell: it must be from the character's current Year and not one they already know.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -88,6 +88,11 @@
           "type": "string",
           "enum_from": "stats",
           "description": "The trait to raise, for an option that takes one."
+        },
+        "feature": {
+          "type": "string",
+          "enum_from": "features",
+          "description": "The spell to learn, for the learn-a-spell option."
         }
       },
       "required": [
@@ -102,7 +107,7 @@
     "name": "end_period",
     "python_module": "core",
     "function": "end_period",
-    "description": "End a stretch of play, such as a school year, for every player character at once. Call it when the school year completes; it applies that period's effects to each character.",
+    "description": "End a stretch of play, such as a school year, for every player character at once. Call it when the school year completes; it applies that period's effects to each character and starts the period's tallies, such as House Points, over from their final totals.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -123,7 +128,7 @@
     "name": "adjust_tally",
     "python_module": "core",
     "function": "adjust_tally",
-    "description": "Add points to, or deduct points from, a running tally such as a House's points. Use a negative change to deduct.",
+    "description": "Add points to, or deduct points from, a running tally such as a House's points. Use a negative change to deduct. Give every award an award key, such as the match and date; a key already used on this tally is refused, so a repeated award cannot be counted twice.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -144,6 +149,10 @@
         "reason": {
           "type": "string",
           "description": "Why the points change, such as a Quidditch win."
+        },
+        "award": {
+          "type": "string",
+          "description": "A key for this award, such as 'quidditch-2024-03-02-gryffindor-vs-slytherin'. Each award needs its own key."
         }
       },
       "required": [

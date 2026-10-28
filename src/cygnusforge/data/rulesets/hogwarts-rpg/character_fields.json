@@ -45,7 +45,8 @@
     "type": "character_field",
     "id": "year",
     "name": "Year",
-    "table": "year"
+    "table": "year",
+    "knows": "spell"
   },
   {
     "type": "character_field",

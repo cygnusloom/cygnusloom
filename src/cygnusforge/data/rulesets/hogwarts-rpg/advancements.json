@@ -24,7 +24,7 @@
         "value": "spell",
         "label": "a new spell from their Year",
         "text": "Learn a new spell from your Year. You may do this as many times as you'd like.",
-        "effects": [{"op": "note", "text": "They learn a new spell from their Year."}]
+        "learn": {"feature_type": "spell", "tag_field": "year"}
       },
       {
         "value": "object",
