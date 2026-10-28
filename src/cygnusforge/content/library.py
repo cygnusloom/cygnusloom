@@ -68,6 +68,9 @@ class LocationTemplate:
     icon: str | None = None
     # The ids of rules attached to this place. Their text reaches the GM while the player is here.
     rules: tuple[str, ...] = ()
+    # Authored overland routes from this place, by destination location id. Each route's path,
+    # distance, terrain, and vast are checked against the rule set's wilderness travel.
+    routes: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -128,6 +131,10 @@ class WorldContent:
     tables: Mapping[str, tuple[TableOption, ...]]
     features: Mapping[str, Feature]
     rules: Mapping[str, str]
+    # Rules no monster, NPC, location, or feature attaches. They are not in any owner's text.
+    unattached_rules: Mapping[str, str] = field(default_factory=dict)
+    # Dice tables the world defines itself, plus each world table as a dice table.
+    dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -202,6 +209,15 @@ class DieGrowth:
 
 
 @dataclass(frozen=True)
+class WildernessAlternative:
+    """An item that can stand in for a consume's item. `requires`, when set, is an item some
+    party member must hold for this alternative to be used."""
+
+    item: str
+    requires: str | None = None
+
+
+@dataclass(frozen=True)
 class WildernessEffect:
     """One declarative step the engine applies at a lifecycle point. `do` picks the kind."""
 
@@ -212,6 +228,12 @@ class WildernessEffect:
     meal: bool = False
     count: DieGrowth | None = None  # for grant only
     times: int = 1  # for roll_events only
+    # Items tried in order when a party consume has no `item`, such as a Lantern's oil.
+    alternatives: tuple[WildernessAlternative, ...] = ()
+    # The status the party is in when a consume finds nothing to spend, such as "panicking".
+    on_shortage: str | None = None
+    # The basic supplies a buy effect lets a resupply purchase, such as Rations.
+    items: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -222,15 +244,18 @@ class WildernessHooks:
     night: tuple[WildernessEffect, ...] = ()
 
 
-WILDERNESS_DO = ("consume", "grant", "clear", "roll_events")
+WILDERNESS_DO = ("consume", "grant", "clear", "roll_events", "buy")
 WILDERNESS_PER = ("member", "party")
 # The keys each kind of effect takes, besides `do`.
 WILDERNESS_EFFECT_KEYS = {
-    "consume": ("item", "per", "meal"),
+    "consume": ("item", "per", "meal", "alternatives", "on_shortage"),
     "grant": ("item", "count"),
     "clear": ("item",),
     "roll_events": ("times",),
+    "buy": ("items",),
 }
+WILDERNESS_ALTERNATIVE_KEYS = frozenset({"item", "requires"})
+ROUTE_KEYS = frozenset({"path", "distance", "terrain", "vast"})
 # The most sides a grant's die may have.
 MAX_GRANT_SIDES = 12
 
@@ -912,7 +937,7 @@ def _check_directory_id(template: str, ident: str) -> None:
         raise ContentError(f"{template}: id must match the directory name, got {ident!r}")
 
 
-WORLD_TYPES = ("monster", "table", "feature", "rule")
+WORLD_TYPES = ("monster", "table", "dice_table", "feature", "rule")
 STATBLOCK_KEYS = ("stats", "armor", "attacks")
 
 
@@ -940,6 +965,7 @@ def _load_world(directory: Path) -> WorldTemplate:
                 f"{template}: npc {npc.id!r} is in unknown location {npc.location!r}"
             )
     _check_parents(locations, template)
+    _check_routes(locations, template)
     _check_unique_names([*locations, *npcs], template)
     regions = _load_regions(definitions, template)
     return WorldTemplate(
@@ -1058,7 +1084,7 @@ def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldCon
                 f"{rule_set.id!r} rule set does not define"
             )
     features = {d.id: load_feature(d, name) for d in own if d.type == "feature"}
-    rules = {
+    raw_rules = {
         d.id: required_text(d.data, "text", f"{name}: rule {d.id}") for d in own if d.type == "rule"
     }
     for region in template.regions:
@@ -1067,11 +1093,13 @@ def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldCon
                 f"{name}: region {region.name!r} has terrain {region.terrain!r}, which the "
                 f"{rule_set.id!r} rule set does not define"
             )
+    for spot in template.locations:
+        _check_authored_routes(spot, rule_set, name)
     written = _attached_rules(monsters.values(), name)
-    shared = sorted(written.keys() & rules.keys())
+    shared = sorted(written.keys() & raw_rules.keys())
     if shared:
         raise ContentError(f"{name}: rules {shared} are both world rules and statblock rules")
-    rules = {**rules, **written}
+    rules = {**raw_rules, **written}
     known = {**rule_set.rules, **rule_set.attached_rules, **rules}
     attached = [(f"monster {m.id!r}", m.rules) for m in monsters.values()]
     attached += [(f"npc {npc.id!r}", npc.rules) for npc in template.npcs]
@@ -1084,12 +1112,72 @@ def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldCon
                     f"{name}: {owner} attaches rule {rule_id!r}, which is not in the world or "
                     f"the {rule_set.id!r} rule set"
                 )
+    attached_ids = {rule_id for _, ids in attached for rule_id in ids}
+    unattached_rules = {rid: text for rid, text in raw_rules.items() if rid not in attached_ids}
+    tables = {d.id: _load_table(d, name) for d in own if d.type == "table"}
+    dice_tables = _load_dice_tables(own, name)
+    for table_id, options in tables.items():
+        if table_id in dice_tables:
+            continue
+        dice_tables[table_id] = DiceTable(
+            id=table_id,
+            name=table_id.replace("-", " ").title(),
+            dice=f"1d{len(options)}",
+            rows=tuple(
+                DiceRow(
+                    low=idx,
+                    high=idx,
+                    result=opt.description
+                    if opt.name is None
+                    else f"{opt.name}: {opt.description}",
+                )
+                for idx, opt in enumerate(options, 1)
+            ),
+        )
     return WorldContent(
         monsters=monsters,
-        tables={d.id: _load_table(d, name) for d in own if d.type == "table"},
+        tables=tables,
         features=features,
         rules=rules,
+        unattached_rules=unattached_rules,
+        dice_tables=dice_tables,
     )
+
+
+def _load_dice_tables(definitions: Sequence[Definition], template: str) -> dict[str, DiceTable]:
+    """The dice tables among the definitions, by id. An id may be defined only once."""
+    dice_tables: dict[str, DiceTable] = {}
+    for d in definitions:
+        if d.type != "dice_table":
+            continue
+        if d.id in dice_tables:
+            raise ContentError(f"{template}: duplicate dice table {d.id!r}")
+        dice_tables[d.id] = _load_dice_table(d, template)
+    return dice_tables
+
+
+def _check_authored_routes(spot: LocationTemplate, rule_set: RuleSet, template: str) -> None:
+    """Each authored route must use a path, distance, and terrain the rule set's travel defines."""
+    travel = rule_set.wilderness.travel if rule_set.wilderness is not None else None
+    if travel is None:
+        return
+    for destination, route in spot.routes.items():
+        label = f"{template}: location {spot.id} route to {destination!r}"
+        if route["path"] not in travel.path:
+            raise ContentError(f"{label}: path {route['path']!r} is not in the rule set's travel")
+        if route["distance"] not in travel.distance:
+            raise ContentError(
+                f"{label}: distance {route['distance']!r} is not in the rule set's travel"
+            )
+        if route["terrain"] not in travel.terrain:
+            raise ContentError(
+                f"{label}: terrain {route['terrain']!r} is not in the rule set's travel"
+            )
+        vast = route.get("vast", 0)
+        if vast > travel.vast_max:
+            raise ContentError(
+                f"{label}: vast {vast} is more than the rule set's {travel.vast_max}"
+            )
 
 
 def _load_location(definition: Definition, template: str) -> LocationTemplate:
@@ -1116,7 +1204,44 @@ def _load_location(definition: Definition, template: str) -> LocationTemplate:
         parent=_optional_text(data, "parent", label),
         icon=_optional_text(data, "icon", label),
         rules=rule_ids(data, label),
+        routes=_load_routes(data, label),
     )
+
+
+def _load_routes(data: Mapping[str, Any], label: str) -> dict[str, dict[str, Any]]:
+    """The optional 'routes' of a location: destination location id to an authored overland route."""
+    if "routes" not in data:
+        return {}
+    raw = data["routes"]
+    if not isinstance(raw, Mapping):
+        raise ContentError(f"{label}: 'routes' must map destination location ids to route objects")
+    routes: dict[str, dict[str, Any]] = {}
+    for destination, route in raw.items():
+        route_label = f"{label}: route to {destination!r}"
+        if not isinstance(route, Mapping):
+            raise ContentError(f"{route_label} must be an object")
+        unexpected = set(route) - ROUTE_KEYS
+        if unexpected:
+            raise ContentError(f"{route_label} has unknown keys {sorted(unexpected)}")
+        loaded: dict[str, Any] = {
+            key: required_text(route, key, route_label) for key in ("path", "distance", "terrain")
+        }
+        if "vast" in route:
+            loaded["vast"] = _whole(route, "vast", route_label, 0)
+        routes[destination] = loaded
+    return routes
+
+
+def _check_routes(locations: tuple[LocationTemplate, ...], template: str) -> None:
+    """An authored route must lead to another location in this world."""
+    location_ids = {location.id for location in locations}
+    for location in locations:
+        for destination in location.routes:
+            label = f"{template}: location {location.id} route to {destination!r}"
+            if destination == location.id:
+                raise ContentError(f"{label}: cannot lead to itself")
+            if destination not in location_ids:
+                raise ContentError(f"{label}: {destination!r} is not a location in this world")
 
 
 def _check_parents(locations: tuple[LocationTemplate, ...], template: str) -> None:
@@ -1221,9 +1346,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         if d.type == "rule" and _flag(d.data, "important", f"{template}: rule {d.id}")
     )
     tables = {d.id: _load_table(d, template) for d in definitions if d.type == "table"}
-    dice_tables = {
-        d.id: _load_dice_table(d, template) for d in definitions if d.type == "dice_table"
-    }
+    dice_tables = _load_dice_tables(definitions, template)
     wilderness = _load_wilderness(definitions, dice_tables, template)
     for name in REQUIRED_TABLES:
         if name not in tables:
@@ -1567,7 +1690,16 @@ def _load_effect(entry: object, label: str) -> WildernessEffect:
             raise ContentError(f"{label}: consume 'meal' must be true or false")
         if meal and per != "member":
             raise ContentError(f"{label}: a consume that is a 'meal' must be per member")
-        return WildernessEffect(do=do, item=required_text(entry, "item", label), per=per, meal=meal)
+        return WildernessEffect(
+            do=do,
+            item=required_text(entry, "item", label),
+            per=per,
+            meal=meal,
+            alternatives=_load_alternatives(entry, label),
+            on_shortage=_optional_nonempty_text(entry, "on_shortage", label),
+        )
+    if do == "buy":
+        return WildernessEffect(do=do, items=_load_buy_items(entry, label))
     if do == "grant":
         return WildernessEffect(
             do=do, item=required_text(entry, "item", label), count=_die_growth(entry, label)
@@ -1575,6 +1707,50 @@ def _load_effect(entry: object, label: str) -> WildernessEffect:
     if do == "clear":
         return WildernessEffect(do=do, item=required_text(entry, "item", label))
     return WildernessEffect(do=do, times=_whole(entry, "times", label, 1))
+
+
+def _load_alternatives(effect: Mapping[str, Any], label: str) -> tuple[WildernessAlternative, ...]:
+    """The optional 'alternatives' of a consume: objects with an 'item' and an optional 'requires'."""
+    if "alternatives" not in effect:
+        return ()
+    raw = effect["alternatives"]
+    if not isinstance(raw, list):
+        raise ContentError(f"{label}: consume 'alternatives' must be a list of objects")
+    alternatives = []
+    for index, alt in enumerate(raw):
+        alt_label = f"{label}: consume 'alternatives' {index}"
+        if not isinstance(alt, Mapping):
+            raise ContentError(f"{alt_label} must be an object with 'item' and optional 'requires'")
+        unexpected = set(alt) - WILDERNESS_ALTERNATIVE_KEYS
+        if unexpected:
+            raise ContentError(f"{alt_label} does not take {', '.join(sorted(unexpected))}")
+        alternatives.append(
+            WildernessAlternative(
+                item=required_text(alt, "item", alt_label),
+                requires=_optional_nonempty_text(alt, "requires", alt_label),
+            )
+        )
+    return tuple(alternatives)
+
+
+def _load_buy_items(effect: Mapping[str, Any], label: str) -> tuple[str, ...]:
+    """The non-empty list of items a buy effect lets a resupply purchase."""
+    items = effect.get("items")
+    if not isinstance(items, list) or not items:
+        raise ContentError(f"{label}: buy 'items' must be a non-empty list of item names")
+    for item in items:
+        if not isinstance(item, str) or not item.strip():
+            raise ContentError(f"{label}: buy 'items' must be non-empty text")
+    return tuple(items)
+
+
+def _optional_nonempty_text(data: Mapping[str, Any], key: str, label: str) -> str | None:
+    if key not in data:
+        return None
+    value = data[key]
+    if not isinstance(value, str) or not value.strip():
+        raise ContentError(f"{label}: {key!r} must be non-empty text")
+    return value
 
 
 def _die_growth(effect: Mapping[str, Any], label: str) -> DieGrowth:

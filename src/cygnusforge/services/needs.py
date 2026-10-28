@@ -3,6 +3,7 @@ restores. A deprived character recovers nothing until the need ends."""
 
 from __future__ import annotations
 
+import random
 from collections.abc import Mapping
 from typing import Any
 
@@ -10,6 +11,8 @@ from sqlmodel import Session
 
 from cygnusforge.content.library import (
     ClockRules,
+    CombatRules,
+    ConditionRules,
     FoodRules,
     InventoryRules,
     NeedRules,
@@ -17,6 +20,7 @@ from cygnusforge.content.library import (
 )
 from cygnusforge.services.clock import absolute, advance_to, rest_target
 from cygnusforge.services.common import InvalidInput
+from cygnusforge.services.conditions import end_condition
 from cygnusforge.services.events import (
     PC_KIND,
     CampaignState,
@@ -48,11 +52,17 @@ def take_rest(
     length: str,
     interrupted: bool,
     reason: str,
+    *,
+    combat: CombatRules | None = None,
+    conditions: Mapping[str, ConditionRules] = (),
+    rng: random.Random | None = None,
+    plus: str = "sum",
 ) -> dict[str, Any]:
     """The party rests. An interrupted rest counts as the rule set's interrupted length. A rest
     that eats food feeds the party first, and a member with none becomes deprived. Time passes,
     then each party member who is not deprived by then recovers what the rest restores. A full
-    rest also clears the item kinds it lists."""
+    rest also clears the item kinds it lists. A recovering member's conditions end when this rest
+    is a trigger they list, such as a full rest or an extended one."""
     chosen_id = interrupted_rest if interrupted else length
     if chosen_id not in rests:
         raise InvalidInput(f"there is no rest length named {length!r}")
@@ -100,6 +110,30 @@ def take_rest(
             )
     if rest.full and rest.clears:
         clear_items(db, campaign_id, [c.name for c in recovering], rest.clears)
+    if combat is not None and conditions and rng is not None:
+        triggers: list[str] = []
+        if rest.full:
+            triggers.append("rest")
+        if rest.days > 1:
+            triggers.append("extended_rest")
+        for character in recovering:
+            for cid in list(character.conditions):
+                cond_rules = conditions.get(cid)
+                if cond_rules is None:
+                    continue
+                how = next((t for t in triggers if t in cond_rules.ends), None)
+                if how is not None:
+                    end_condition(
+                        db,
+                        campaign_id,
+                        character.name,
+                        cid,
+                        how,
+                        combat,
+                        conditions,
+                        rng,
+                        plus=plus,
+                    )
     result["recovered"] = [c.name for c in recovering]
     db.commit()
     return result

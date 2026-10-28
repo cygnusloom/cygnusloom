@@ -241,3 +241,58 @@ def test_a_dungeon_move_takes_no_clock_time(client_factory: Callable[[], TestCli
     result = tools.move_actor(PC, "Far", mode="in_dungeon")
     assert result["location"] == "Far"
     assert _absolute_hours(app, campaign_id) == before
+
+
+def _twin_lakes_pc_at(tools, place: str) -> None:
+    """Put the PC in a Twin Lakes place by an ordinary in-settlement move."""
+    tools.move_actor(PC, place)
+
+
+def test_an_authored_route_is_used_when_the_gm_gives_no_route(
+    client_factory: Callable[[], TestClient], monkeypatch: pytest.MonkeyPatch
+):
+    _fix_roll(monkeypatch, NICE)
+    _force_lost(monkeypatch)
+    app, campaign_id, tools = _pc_tools(client_factory)
+    _twin_lakes_pc_at(tools, "Isthmus Town")
+    before = _absolute_hours(app, campaign_id)
+    result = tools.move_actor(PC, "Dunston", mode="overland", route=None)
+    assert result["location"] == "Dunston"
+    # trails 1 + short 1 + easy 0
+    assert result["watches"] == 2
+    assert result["terrain"] == "easy"
+    assert _absolute_hours(app, campaign_id) - before == 2 * HPP
+
+
+def test_an_authored_route_applies_from_a_place_inside_another(
+    client_factory: Callable[[], TestClient], monkeypatch: pytest.MonkeyPatch
+):
+    _fix_roll(monkeypatch, NICE)
+    _force_lost(monkeypatch)
+    _app, _campaign_id, tools = _pc_tools(client_factory)
+    _twin_lakes_pc_at(tools, "Isthmus Town")
+    _twin_lakes_pc_at(tools, "The Stuffed Inn")
+    result = tools.move_actor(PC, "Dunston", mode="overland", route=None)
+    assert result["location"] == "Dunston"
+    assert result["watches"] == 2
+
+
+def test_an_authored_route_overrides_the_gm_route_but_keeps_the_weather_choice(
+    client_factory: Callable[[], TestClient], monkeypatch: pytest.MonkeyPatch
+):
+    _fix_roll(monkeypatch, UNPLEASANT, NICE)
+    _force_lost(monkeypatch)
+    app, campaign_id, tools = _pc_tools(client_factory)
+    _twin_lakes_pc_at(tools, "Isthmus Town")
+    gm_route = _route(path="wilderness", distance="long", terrain="perilous", vast=2)
+    result = tools.move_actor(
+        PC,
+        "Dunston",
+        mode="overland",
+        route={**gm_route, "weather_choice": "watch"},
+    )
+    assert result["terrain"] == "easy"
+    # The authored trails 1 + short 1 + easy 0, plus one watch for the chosen watch in bad weather.
+    assert result["watches"] == 3
+    assert result["fatigue"] == 0
+    assert _fatigue_count(app, campaign_id) == 0

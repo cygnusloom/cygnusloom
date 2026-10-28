@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import random
+from dataclasses import replace
 
 import pytest
 from fastapi import FastAPI
@@ -14,9 +15,11 @@ from cygnusforge.services.injuries import EffectContext, run_effects
 from tests.test_combat import (
     CAIRN,
     PC,
+    Rolls,
     _character,
     _fight,
     _foe,
+    _hit,
     _knock_out_pc,
     _set_stat,
 )
@@ -151,6 +154,24 @@ def test_a_doomed_character_dies_at_once_on_a_failed_save_against_critical_damag
     character = _character(app, campaign_id, PC)
     assert character.dead is True
     assert character.dying_hours is None
+
+
+def test_a_doomed_character_who_passes_the_save_is_cured_and_gains_max_hp(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _add_condition_by_effect(app, campaign_id, "doomed")
+    _foe(tools, "Bo", claw="4d6")
+    _set_stat(app, campaign_id, PC, "hp", 0)
+    _hit(tools, "Bo", PC, 6, 6, 6, 6)
+    before = _character(app, campaign_id, PC).stats["hp"]
+    assert before < 18
+
+    result = replace(tools, rng=Rolls(6, 6, 6)).player_save(1)
+
+    assert result["passed"] is True
+    character = _character(app, campaign_id, PC)
+    assert "doomed" not in character.conditions
+    # Doomed sets max HP to the 3d6 roll if that is higher: 6+6+6 = 18.
+    assert character.stats["hp"] == 18
 
 
 def test_a_harmed_pc_whose_str_reaches_zero_outside_combat_dies(client_factory):

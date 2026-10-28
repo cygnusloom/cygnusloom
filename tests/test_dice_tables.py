@@ -14,6 +14,7 @@ from cygnusforge.db.models import Event
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.dice_tables import roll_tables
 from cygnusforge.services.events import decode, events_since
+from tests.conftest import content_library
 from tests.test_combat import CAIRN, _fight
 
 TABLES_ROLLED = "dice.tables_rolled"
@@ -212,3 +213,32 @@ def test_world_tools_roll_tables_returns_the_rolls_shape(client_factory: Callabl
     assert roll["table"] == "dungeon_reaction"
     assert roll["name"] == "Reaction"
     assert CAIRN.dice_tables["dungeon_reaction"].row_for(roll["roll"]).result == roll["result"]
+
+
+TWIN_LAKES_TABLES = {"encounters": 6, "rumors": 6, "victim-schedule": 8}
+
+
+def test_the_twin_lakes_world_tables_load_as_dice_tables():
+    world = content_library().world_content("twin-lakes", "cairn2e")
+    for table_id, rows in TWIN_LAKES_TABLES.items():
+        assert table_id in world.dice_tables
+        assert len(world.dice_tables[table_id].rows) == rows
+    assert world.dice_tables["encounters"].dice == "1d6"
+    assert world.dice_tables["victim-schedule"].dice == "1d8"
+
+
+def test_the_twin_lakes_world_tables_roll_in_a_live_campaign(client_factory):
+    _, _, tools = _fight(client_factory)
+    world = content_library().world_content("twin-lakes", "cairn2e")
+    live = replace(
+        tools,
+        dice_tables={**CAIRN.dice_tables, **world.dice_tables},
+        rng=random.Random(1),
+    )
+    rolls = live.roll_tables(list(TWIN_LAKES_TABLES))["rolls"]
+    assert [roll["table"] for roll in rolls] == list(TWIN_LAKES_TABLES)
+    for roll in rolls:
+        table = world.dice_tables[roll["table"]]
+        assert 1 <= roll["roll"] <= TWIN_LAKES_TABLES[roll["table"]]
+        assert roll["name"] == table.name
+        assert roll["result"] == table.row_for(roll["roll"]).result

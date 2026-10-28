@@ -38,9 +38,9 @@
     "id": "suraru-imperator",
     "name": "Suraru Imperator",
     "rules": ["suraru-imperator-critical-damage"],
-    "description": "Rules over a brood of subservient Surarus, who will fight to the death to protect the sac. Critical damage: a body part dissolves in venomous acid, and the target loses 1 point of Armor. Module prints the venomous bite as (d6, blast); 'blast' is undefined.",
+    "description": "Rules over a brood of subservient Surarus, who will fight to the death to protect the sac. Critical damage: a body part dissolves in venomous acid, and the target loses 1 point of Armor.",
     "stats": {"hp": 10, "str": 16, "dex": 12, "wil": 11},
     "armor": 1,
-    "attacks": {"claws": "1d8+1d8", "venomous bite": "1d6"}
+    "attacks": {"claws": "1d8+1d8", "venomous bite": {"dice": "1d6", "flags": ["blast"]}}
   }
 ]

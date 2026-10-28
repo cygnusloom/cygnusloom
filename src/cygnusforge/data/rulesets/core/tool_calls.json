@@ -171,15 +171,14 @@
         },
         "route": {
           "type": "object",
-          "description": "Required for an overland move, and ignored for other modes. Describe the journey. path: the kind of path the party follows (the names the rule set gives). distance: short, medium, or long. terrain: the hardest ground on the route. vast: 0 to 2, how wide and empty the land is. weather_choice: when conditions on the day make travel harder, the choice the rule set gives for it. The names of path, distance, and terrain come from the rule set.",
+          "description": "Required for an overland move, and ignored for other modes. Describe the journey. path: the kind of path the party follows (the names the rule set gives). distance: short, medium, or long. terrain: the hardest ground on the route. vast: 0 to 2, how wide and empty the land is. weather_choice: when conditions on the day make travel harder, the choice the rule set gives for it. When an authored route connects the two locations, its path, distance, terrain, and vast are used automatically, so only weather_choice is needed. Otherwise path, distance, and terrain are required. The names of path, distance, and terrain come from the rule set.",
           "properties": {
             "path": {"type": "string"},
             "distance": {"type": "string"},
             "terrain": {"type": "string"},
             "vast": {"type": "integer", "minimum": 0},
             "weather_choice": {"type": "string"}
-          },
-          "required": ["path", "distance", "terrain"]
+          }
         }
       },
       "required": [

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import random
 import re
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,7 @@ import pytest
 from cygnusforge.content.character import NO_CAMPAIGN, TableOption, campaign_schema
 from cygnusforge.content.definitions import ContentError, Definition, read_definitions
 from cygnusforge.content.library import (
+    DATA_DIR,
     TERRAIN_PATTERNS,
     ContentLibrary,
     ItemKind,
@@ -1037,3 +1039,88 @@ def test_no_magic_definition_means_no_magic():
 def test_a_bad_magic_role_is_rejected(changes, message):
     with pytest.raises(ContentError, match=re.escape(message)):
         _load_magic(_magic_definitions(**changes), MAGIC_SIZES, "testland")
+
+
+def _twin_lakes_copy(tmp_path: Path) -> Path:
+    """A copy of the bundled content, so a test can change one location and load it."""
+    root = tmp_path / "data"
+    shutil.copytree(DATA_DIR, root)
+    return root
+
+
+def _edit_twin_lakes_location(root: Path, location_id: str, **changes: object) -> None:
+    path = root / "worlds" / "twin-lakes" / "locations.json"
+    locations = json.loads(path.read_text(encoding="utf-8"))
+    (entry,) = [loc for loc in locations if loc.get("id") == location_id]
+    entry.update(changes)
+    path.write_text(json.dumps(locations, indent=2), encoding="utf-8")
+
+
+def _valid_route(**overrides: object) -> dict[str, object]:
+    route: dict[str, object] = {"path": "trails", "distance": "short", "terrain": "easy"}
+    route.update(overrides)
+    return route
+
+
+def test_bundled_twin_lakes_routes_load_on_the_location_that_authors_them():
+    place = content_library().world_templates["twin-lakes"]
+    isthmus = next(loc for loc in place.locations if loc.id == "isthmus-town")
+    assert isthmus.routes["dunston"] == _valid_route()
+
+
+def test_an_authored_route_may_carry_vast(tmp_path: Path):
+    root = _twin_lakes_copy(tmp_path)
+    _edit_twin_lakes_location(
+        root, "isthmus-town", routes={"dunston": _valid_route(path="wilderness", vast=1)}
+    )
+    place = ContentLibrary.load(root).world_templates["twin-lakes"]
+    isthmus = next(loc for loc in place.locations if loc.id == "isthmus-town")
+    assert isthmus.routes == {
+        "dunston": {"path": "wilderness", "distance": "short", "terrain": "easy", "vast": 1}
+    }
+
+
+@pytest.mark.parametrize(
+    ("routes", "message"),
+    [
+        ({"nowhere": _valid_route()}, "'nowhere' is not a location in this world"),
+        ({"isthmus-town": _valid_route()}, "cannot lead to itself"),
+        ({"dunston": _valid_route(path="lanes")}, "path 'lanes' is not in the rule set's travel"),
+        (
+            {"dunston": _valid_route(distance="huge")},
+            "distance 'huge' is not in the rule set's travel",
+        ),
+        (
+            {"dunston": _valid_route(terrain="swamp")},
+            "terrain 'swamp' is not in the rule set's travel",
+        ),
+        ({"dunston": _valid_route(vast=3)}, "vast 3 is more than the rule set's 2"),
+        ({"dunston": _valid_route(speed="fast")}, "has unknown keys \\['speed'\\]"),
+        ({"dunston": {"distance": "short", "terrain": "easy"}}, "'path'"),
+        ({"dunston": "trails"}, "must be an object"),
+        (["dunston"], "'routes' must map destination location ids to route objects"),
+    ],
+)
+def test_an_invalid_authored_route_is_rejected(tmp_path: Path, routes: object, message: str):
+    root = _twin_lakes_copy(tmp_path)
+    _edit_twin_lakes_location(root, "isthmus-town", routes=routes)
+    with pytest.raises(ContentError, match=message):
+        ContentLibrary.load(root).world_content("twin-lakes", "cairn2e")
+
+
+def test_the_twin_lakes_features_have_their_listed_sizes_uses_and_damage():
+    features = content_library().world_content("twin-lakes", "cairn2e").features
+    fletcher = features["fletcher-s-ire"]
+    assert (fletcher.name, fletcher.size, fletcher.uses) == ("Fletcher's Ire", "bulky", 3)
+    moon = features["moon-cloth"]
+    assert (moon.name, moon.size) == ("Moon Cloth", "petty")
+    dagger = features["curved-dagger"]
+    assert (dagger.name, dagger.damage) == ("Curved Dagger", "1d6")
+    assert features["echo-spark"].uses == 1
+    assert features["watersnatch"].uses == 1
+
+
+def test_the_suraru_imperators_venomous_bite_is_a_blast():
+    monster = content_library().world_content("twin-lakes", "cairn2e").monsters["suraru-imperator"]
+    assert monster.attack_flags == {"venomous bite": ("blast",)}
+    assert monster.attacks["venomous bite"] == "1d6"

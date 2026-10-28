@@ -5,6 +5,12 @@
     "icon": "town",
     "name": "Isthmus Town",
     "description": "A former logging town, currently squeaking by largely on profits made from fishing West Lake. Fewer than thirty families call it home. The town market runs from 8am to 2pm each day and carries any items under 10gp (see Marketplace in the 2e Player's Guide). Local specialties are fried cod, roasted frog legs, and hot stewberry pie. Fishing equipment (15gp), bog shoes (10gp a pair), and rainproof clothing (15gp) are popular. Factions: the Tideborn, a hierarchical religious sect that worships Rivulus, a petty god of rivers and lakes; its initiation is a ritual drowning that occasionally kills participants, and survivors take a water-related name (Carp, Reed, Oxbow, and so on). The Order of Nine, a consortium of merchants, scholars, and the very powerful, focused on the discovery, identification, and regulation of Relics; it now focuses on the Roots and pays handsomely for information regarding Gates. Route: the module gives no road into Isthmus Town itself; the Farming Path runs South out of it, through the Humpbacks and into the Cities beyond.",
+    "routes": {
+      "farming-path": {"path": "roads", "distance": "short", "terrain": "easy"},
+      "dunston": {"path": "trails", "distance": "short", "terrain": "easy"},
+      "old-mill-road": {"path": "roads", "distance": "short", "terrain": "easy"},
+      "white-tower-fens": {"path": "trails", "distance": "medium", "terrain": "tough"}
+    },
     "discovered": false,
     "x": -3.15,
     "y": -0.85
@@ -57,6 +63,11 @@
     "id": "farming-path",
     "name": "Farming Path",
     "description": "A dry, well-trod footpath stretching South from Isthmus Town and through the Humpbacks, and into the Cities beyond. Small farms and independent homesteads are scattered alongside it. A small trail splits off to Dunston and East Lake Pass. Route: from Isthmus Town, the Farming Path runs South through the Humpbacks and into the Cities beyond; a small trail splits off it to Dunston and East Lake Pass.",
+    "routes": {
+      "isthmus-town": {"path": "roads", "distance": "short", "terrain": "easy"},
+      "dunston": {"path": "trails", "distance": "short", "terrain": "easy"},
+      "east-lake-pass": {"path": "trails", "distance": "short", "terrain": "easy"}
+    },
     "discovered": false,
     "x": -3.8,
     "y": -3.0
@@ -66,6 +77,13 @@
     "id": "dunston",
     "name": "Dunston",
     "description": "A thin circle of ramshackle homes built far apart from one another. Originally a fishing village, before the water in East Lake turned sour; only impoverished fishers and unlucky farmers make their home here now. Connects to East Lake Pass. Route: a small trail splits off the Farming Path to Dunston, which connects to East Lake Pass.",
+    "routes": {
+      "farming-path": {"path": "trails", "distance": "short", "terrain": "easy"},
+      "isthmus-town": {"path": "trails", "distance": "short", "terrain": "easy"},
+      "east-lake-pass": {"path": "trails", "distance": "short", "terrain": "easy"},
+      "the-downs": {"path": "trails", "distance": "short", "terrain": "perilous"},
+      "white-tower-fens": {"path": "trails", "distance": "medium", "terrain": "perilous"}
+    },
     "discovered": false,
     "x": -2.0,
     "y": -4.65
@@ -91,6 +109,13 @@
     "id": "old-mill-road",
     "name": "Old Mill Road",
     "description": "A short dirt path connecting Isthmus Town to the Stone Forest, where it quickly disappears. Deadmill is visible through the trees, just at the edge of the wood. If Annafranax has returned, the grove and the mill will be gone, replaced by a massive sinkhole. See \"If the Gate has Opened...\". Route: a short dirt path leads from Isthmus Town to the edge of the Stone Forest, where it disappears.",
+    "routes": {
+      "isthmus-town": {"path": "roads", "distance": "short", "terrain": "easy"},
+      "deadmill": {"path": "roads", "distance": "short", "terrain": "tough"},
+      "the-stone-forest": {"path": "roads", "distance": "short", "terrain": "tough"},
+      "east-lake-pass": {"path": "trails", "distance": "short", "terrain": "easy"},
+      "white-tower-fens": {"path": "trails", "distance": "medium", "terrain": "tough"}
+    },
     "discovered": false,
     "x": -2.35,
     "y": 1.4
@@ -101,6 +126,11 @@
     "icon": "forest",
     "name": "The Stone Forest",
     "description": "An unending wood stretching far to the north, its vast expanse halted only by the Marble Sea. For centuries the forest's lumber fed the needs of the Cities, until the allure of gems and ore drew their insatiable hunger South. A small creek flows from the border of the wood, northeast of East Lake, before terminating at Bone Sump. Entering the Stone Forest after dark, creating a loud disturbance, or stepping off the path triggers a roll on the Wilderness Events table (see Player's Guide pg. 78). A common arboreal predator here is the Night Cat (statblock 2.1), a nocturnal marsupial that hunts in packs. The only warning before they strike is a tick-tick-tick from the boughs above as they coordinate their attack; they go after whoever is last in the marching order. The target must make a DEX save or take damage directly to STR. Despite their name, Night Cats will attack targets during the day as well. This region will be explored in greater detail in future adventures in this series. Route: Old Mill Road leads to its edge and disappears there; the forest stretches north to the Marble Sea.",
+    "routes": {
+      "old-mill-road": {"path": "roads", "distance": "short", "terrain": "tough"},
+      "deadmill": {"path": "wilderness", "distance": "short", "terrain": "tough"},
+      "bone-sump": {"path": "wilderness", "distance": "short", "terrain": "perilous"}
+    },
     "discovered": false,
     "x": -0.5,
     "y": 5.2
@@ -110,6 +140,10 @@
     "id": "deadmill",
     "name": "Deadmill",
     "description": "An old gristmill at the outskirts of the forest, shrouded by overgrown arboreal pillars. Due to the grove's near-constant darkness, local teens believe it is haunted. (It's not.) The mill is half-sunk into the ground, with large paddles protruding from the north side above a dried-up riverbed. Anyone coming from Old Mill Road arrives at the south entrance. Ground: the structure is slowly sinking, and some of the ground has the properties of quicksand. The south entrance is unsafe: DEX save to escape; a failed save causes the victim to sink even further (max 3 attempts). Paddles: mostly obscured from the south, save for the tip of one, painted a bright, unfaded white (see 2. The Waterwheel). Time loop: every 30 seconds the mill door opens and a man (Jandy) steps out. He quickly looks back as if hearing something, shrugs, turns around, and falls to his death in the quicksand. The sound he hears is the device being recharged after its last loop. The loop can be broken either by saving Jandy or by freeing the Relic from the stone and taking it a short distance away. Route: anyone coming from Old Mill Road arrives at the building's south entrance.",
+    "routes": {
+      "old-mill-road": {"path": "roads", "distance": "short", "terrain": "tough"},
+      "the-stone-forest": {"path": "wilderness", "distance": "short", "terrain": "tough"}
+    },
     "discovered": false,
     "x": -1.8,
     "y": 3.4,
@@ -139,6 +173,13 @@
     "id": "east-lake-pass",
     "name": "East Lake Pass",
     "description": "A lakeside path, overgrown with shrubs and wet grasses. Winds along East Lake and through the Downs, then west toward Old Mill Road. Route: a lakeside path reached from Dunston or the trail off the Farming Path; it winds along East Lake and through the Downs, then west toward Old Mill Road.",
+    "routes": {
+      "farming-path": {"path": "trails", "distance": "short", "terrain": "easy"},
+      "dunston": {"path": "trails", "distance": "short", "terrain": "easy"},
+      "old-mill-road": {"path": "trails", "distance": "short", "terrain": "easy"},
+      "the-downs": {"path": "trails", "distance": "short", "terrain": "perilous"},
+      "white-tower-fens": {"path": "trails", "distance": "short", "terrain": "tough"}
+    },
     "discovered": false,
     "x": 2.2,
     "y": -1.2
@@ -149,6 +190,11 @@
     "icon": "hills",
     "name": "The Downs",
     "description": "A muddy, stinking bog shrouded in mist, and a popular source for horror stories (all untrue). The only creatures that live here are frogs, fish, and birds. Its deposits of mud and stink are home to a multitude of corpses, both of animals and of those who left the trail. Parties traveling on foot add a Fatigue. Route: along East Lake Pass, through the muddy bog; parties on foot add a Fatigue.",
+    "routes": {
+      "dunston": {"path": "trails", "distance": "short", "terrain": "perilous"},
+      "east-lake-pass": {"path": "trails", "distance": "short", "terrain": "perilous"},
+      "white-tower-fens": {"path": "trails", "distance": "short", "terrain": "tough"}
+    },
     "discovered": false,
     "x": 2.0,
     "y": -4.0,
@@ -162,6 +208,15 @@
     "icon": "fen",
     "name": "White Tower Fens",
     "description": "A small wood East of the Downs, named for its ruined white tower, shrouded in the mists of the nearby bog. Entry is via East Lake Pass at the fork toward Old Mill Road. Route: via East Lake Pass at the fork toward Old Mill Road, East of the Downs.",
+    "routes": {
+      "east-lake-pass": {"path": "trails", "distance": "short", "terrain": "tough"},
+      "the-downs": {"path": "trails", "distance": "short", "terrain": "tough"},
+      "old-mill-road": {"path": "trails", "distance": "medium", "terrain": "tough"},
+      "isthmus-town": {"path": "trails", "distance": "medium", "terrain": "tough"},
+      "dunston": {"path": "trails", "distance": "medium", "terrain": "perilous"},
+      "the-white-tower": {"path": "trails", "distance": "short", "terrain": "tough"},
+      "bone-sump": {"path": "wilderness", "distance": "short", "terrain": "perilous"}
+    },
     "discovered": false,
     "x": 4.1,
     "y": 1.55
@@ -196,6 +251,9 @@
     "icon": "castle",
     "name": "The White Tower",
     "description": "A broken tower 40ft high, colored white as snow. A thick ladder stands against the tower's side. The upper portion of the tower is completely missing. Up The Ladder: the tower's bottom is bathed in darkness, its smooth white walls glittering in the light. No plant matter grows inside. Bottom: a viscous, amber-colored liquid creating a pool four feet deep, filling the tower's base. Liquid: an acid that only harms flesh (4 STR damage on contact). Any other material placed in it is undamaged and, if fully immersed, perfectly preserved. The substance is highly flammable, burning away completely within a few moments and leaving its contents unharmed. Shine: something shines inside. It is an armored skeleton from a time long ago, still wearing perfectly preserved chainmail. On its belt is a bag of ancient gold pieces (82gp) and a torn silk rope (42ft). Glittering: residue from the acid at the bottom of the tower. Oily to the touch, it sting like nettles (as printed). Route: the module names White Tower Fens for its ruined white tower, so the tower is reached through the Fens, entered via East Lake Pass at the fork toward Old Mill Road.",
+    "routes": {
+      "white-tower-fens": {"path": "trails", "distance": "short", "terrain": "tough"}
+    },
     "discovered": false,
     "x": 4.55,
     "y": 2.1
@@ -205,6 +263,11 @@
     "id": "bone-sump",
     "name": "Bone Sump",
     "description": "The creek terminates in a small bog a few minutes' walk south of White Tower Fens. A smell of rot and decay permeates the area. The area does not appear on any maps and is known only to Fasha and Giva. Route: stairs under the mound lead down into the Temple of the Fungal Lizards, the only way in. Smell: animals caught in the bog's sticky solution quickly succumb to drowning or starvation; many corpses lie here in varying states of decay. Aldra's body is among them, floating amongst the reeds, well-preserved by the bog's unique chemistry. His chest is torn open and the heart has been removed. Mound: on the west end of the bog, a large mound of grass and detritus that appears freshly made. Pushing the detritus aside reveals stairs leading down into the earth beneath the bog. This is the entry to the Temple of the Fungal Lizards; the stairwell smells earthy and slightly floral. Two sconces are installed at eye-level on the walls inside the stairwell, each with a diamond-shaped object inserted. The objects can be removed and are valuable (150gp each, bulky). They are lights controlled from T7 (Light Room) and are presently turned off. The player learns of Bone Sump only from Fasha or Giva; until then it is not known to them, so do not send the player there. When Fasha or Giva tells the player of it, call discover_location for bone-sump.",
+    "routes": {
+      "white-tower-fens": {"path": "wilderness", "distance": "short", "terrain": "perilous"},
+      "the-stone-forest": {"path": "wilderness", "distance": "short", "terrain": "perilous"},
+      "temple-of-the-fungal-lizards": {"path": "wilderness", "distance": "short", "terrain": "perilous"}
+    },
     "discovered": false,
     "x": 3.8,
     "y": -0.4
@@ -215,6 +278,9 @@
     "icon": "ruins",
     "name": "Temple of the Fungal Lizards",
     "description": "A dark complex, built as a building-sized ship shaped like a beetle; its entry, reached by the stairs under the Bone Sump mound, is the beetle's \"head.\" Route: the Chamber of Worship (T9) lies deeper in the temple, and a short hallway runs from it to the door at T10a. General information: no light. Sconces with diamond-shaped objects protrude from the corners of each room (see T7, Light Room); they are currently off. The walls and floors are painted blue-black and made from a foreign alloy. They cannot be chipped or broken by mundane weapons, although fire and explosive powders have some effect. Two Surarus roam the temple. They appear on both Encounters and Environmental results from the Cairn 2e Dungeon Events table (in the rule set: cairn2e, table \"Dungeon Events\").",
+    "routes": {
+      "bone-sump": {"path": "wilderness", "distance": "short", "terrain": "perilous"}
+    },
     "discovered": false,
     "x": 3.4,
     "y": -0.8
@@ -223,7 +289,7 @@
     "type": "location",
     "id": "t1-antechamber",
     "name": "T1. Antechamber",
-    "description": "Small chambers have been carved into both the east and west walls, each with a single waist-high pedestal installed. Small statues have been fused onto all but the southeast corner, which remains empty. Statues: each can be twisted off, but makes a very loud noise. Each is worth 50gp. NW statue: a bulbous cluster of eggs, held by a scaled hand. SW statue: a cluster of fungal spores growing from a salt-like pillar. NE statue: a large, veiny spore; the outline of something reptilian is visible within. SE statue: a copper-like ring is all that is left of whatever once sat here. Route: the module does not say which room the Bone Sump mound stairs open into; the Antechamber is the temple's first room, entered from the stairs under the mound.",
+    "description": "Small chambers have been carved into both the east and west walls, each with a single waist-high pedestal installed. Small statues have been fused onto all but the southeast corner, which remains empty. Statues: each can be twisted off, but makes a very loud noise. Each is worth 50gp. NW statue: a bulbous cluster of eggs, held by a scaled hand. SW statue: a cluster of fungal spores growing from a salt-like pillar. NE statue: a large, veiny spore; the outline of something reptilian is visible within. SE statue: a copper-like ring is all that is left of whatever once sat here. Route: the stairs under the Bone Sump mound open into this north entry room; a passage leads south into T2 (Columbarium) and branches east into T3 (Breeding Chamber).",
     "discovered": false,
     "parent": "temple-of-the-fungal-lizards"
   },
@@ -231,7 +297,7 @@
     "type": "location",
     "id": "t2-columbarium",
     "name": "T2. Columbarium",
-    "description": "A thin hall divides the room, with chambers built into each side. On the north side are stacks of paper products; on the south side, rows of chipped pottery. On the southwest wall, two large horizontal seams are arranged in parallel a few feet apart. Paper: useless withered scrolls and eggshell fragments are piled together. Buried beneath them is a small tube of scaled leather, stuffed with a Watersnatch (see below). Pottery: ancient urns arranged in stacks. It takes at least two turns to search them all (characters can split up the work). A pot in the first row holds the mummified remains of a fragile, bird-like creature, valuable only to specialty buyers (150gp). In the back is a nondescript urn, firmly attached to the chamber; twisting its top opens the hatch to T4 but creates a very loud noise (roll on the Dungeon Events table). Seams: a hatch to T4. The seams are too narrow for a crowbar or blade, and there are no obvious handles, buttons, or levers in sight. Watersnatch (item, printed in T2): a cylindrical object that can absorb up to a wagon's load of water (or roughly 1000 gallons). 1 Charge. Recharge: remove from moisture of any kind for a month and a day. Route: the module gives no direct link from the temple's entry; the urn in the back of the room, if twisted (very loud), opens a hatch to T4, and its seams also open a hatch to T4.",
+    "description": "A thin hall divides the room, with chambers built into each side. On the north side are stacks of paper products; on the south side, rows of chipped pottery. On the southwest wall, two large horizontal seams are arranged in parallel a few feet apart. Paper: useless withered scrolls and eggshell fragments are piled together. Buried beneath them is a small tube of scaled leather, stuffed with a Watersnatch (see below). Pottery: ancient urns arranged in stacks. It takes at least two turns to search them all (characters can split up the work). A pot in the first row holds the mummified remains of a fragile, bird-like creature, valuable only to specialty buyers (150gp). In the back is a nondescript urn, firmly attached to the chamber; twisting its top opens the hatch to T4 but creates a very loud noise (roll on the Dungeon Events table). Seams: a hatch to T4. The seams are too narrow for a crowbar or blade, and there are no obvious handles, buttons, or levers in sight. Watersnatch (item, printed in T2): a cylindrical object that can absorb up to a wagon's load of water (or roughly 1000 gallons). 1 Charge. Recharge: remove from moisture of any kind for a month and a day. Route: reached south from T1 (Antechamber); passages lead east into T3 (Breeding Chamber) and south into T6 (Waste Disposal), and twisting the nondescript urn in the back opens the west hatch into T4 (Maintenance Tunnel).",
     "discovered": false,
     "parent": "temple-of-the-fungal-lizards"
   },
@@ -239,7 +305,7 @@
     "type": "location",
     "id": "t3-breeding-chamber",
     "name": "T3. Breeding Chamber",
-    "description": "Enormous fungal growths sprout from three sacs scattered across the floor. All but one have burst, leaving large gaping holes. A fourth nodule sits intact. Fungus: embryonic chambers for the Suraru. A learned person would note that they appear to have burst weeks ago. Nodule: twice the size of the others, pulsating and radiating a thin heat. It contains a fully-grown Suraru, ready to hatch. The sac will burst open if a loud noise is made nearby, or on an Encounter roll on the Dungeon Events table. If woken, it attacks any creature in sight, as hatchlings often eat their unhatched siblings. Route: the module does not say how to reach this place from the others; it is reached through its parent or story.",
+    "description": "Enormous fungal growths sprout from three sacs scattered across the floor. All but one have burst, leaving large gaping holes. A fourth nodule sits intact. Fungus: embryonic chambers for the Suraru. A learned person would note that they appear to have burst weeks ago. Nodule: twice the size of the others, pulsating and radiating a thin heat. It contains a fully-grown Suraru, ready to hatch. The sac will burst open if a loud noise is made nearby, or on an Encounter roll on the Dungeon Events table. If woken, it attacks any creature in sight, as hatchlings often eat their unhatched siblings. Route: reached from the north corridor from T1 or directly east of T2 (Columbarium); a passage runs south from here into T5 (Hall of Glyphs).",
     "discovered": false,
     "parent": "temple-of-the-fungal-lizards"
   },
@@ -255,7 +321,7 @@
     "type": "location",
     "id": "t5-hall-of-glyphs",
     "name": "T5. Hall of Glyphs",
-    "description": "The East wall overflows with intricate carvings, read from topmost to bottom: (1) humanoid figures stand on a tower, pointing toward an object falling from the sky that looks like an enormous beetle; (2) tall, winged figures wearing enormous headdresses stream out of a hole at the front of the \"beetle,\" followed by a pair of crouched, lizard-like creatures; (3) the lizard-like creatures rip apart the humanoid onlookers and overwhelm the tower; (4) the winged figures stand above a crowd of kneeling humanoids, their lizard \"pets\" standing aside. Route: the module does not say how to reach this place from the others; it is reached through its parent or story.",
+    "description": "The East wall overflows with intricate carvings, read from topmost to bottom: (1) humanoid figures stand on a tower, pointing toward an object falling from the sky that looks like an enormous beetle; (2) tall, winged figures wearing enormous headdresses stream out of a hole at the front of the \"beetle,\" followed by a pair of crouched, lizard-like creatures; (3) the lizard-like creatures rip apart the humanoid onlookers and overwhelm the tower; (4) the winged figures stand above a crowd of kneeling humanoids, their lizard \"pets\" standing aside. Route: reached south of T3 (Breeding Chamber) or east of T6 (Waste Disposal); a corridor continues south from here into T9 (Chamber of Worship).",
     "discovered": false,
     "parent": "temple-of-the-fungal-lizards"
   },
@@ -263,7 +329,7 @@
     "type": "location",
     "id": "t6-waste-disposal",
     "name": "T6. Waste Disposal",
-    "description": "In the center of this square-shaped room is a square well, waist-high. Well: hundreds of feet deep. A light source reveals ancient refuse floating in the water at the bottom. Three nozzles protrude from the south wall, with no visible controls in sight; a drain and grate are installed beneath each. Nozzles: automatic showers that spray scalding hot water whenever weight is placed on their drain. A single chirp from a corner light sconce is the only warning. Drains: pulling up the grate in the southwest corner triggers a hatch in the west wall, opening a secret door to T4. Seams: on the west wall, two large horizontal seams are arranged in parallel a few feet apart. They are a hatch to T4; like those in T2 and T7, they are too narrow for a crowbar or blade, and there are no obvious handles, buttons, or levers in sight. Route: from T4 (Maintenance Tunnel), through a hatch at its seams or a secret door in the west wall opened by the SW grate.",
+    "description": "In the center of this square-shaped room is a square well, waist-high. Well: hundreds of feet deep. A light source reveals ancient refuse floating in the water at the bottom. Three nozzles protrude from the south wall, with no visible controls in sight; a drain and grate are installed beneath each. Nozzles: automatic showers that spray scalding hot water whenever weight is placed on their drain. A single chirp from a corner light sconce is the only warning. Drains: pulling up the grate in the southwest corner triggers a hatch in the west wall, opening a secret door to T4. Seams: on the west wall, two large horizontal seams are arranged in parallel a few feet apart. They are a hatch to T4; like those in T2 and T7, they are too narrow for a crowbar or blade, and there are no obvious handles, buttons, or levers in sight. Route: reached south of T2 (Columbarium) or from T4 (Maintenance Tunnel) through the west hatch or secret door; a passage runs east toward T5 (Hall of Glyphs) and south into T9 (Chamber of Worship).",
     "discovered": false,
     "parent": "temple-of-the-fungal-lizards"
   },
@@ -287,7 +353,7 @@
     "type": "location",
     "id": "t9-chamber-of-worship",
     "name": "T9. Chamber of Worship",
-    "description": "The room smells like a slaughterhouse, and streaks of blood and viscera are strewn across the floor. A short hallway leads from this room to the door at T10a. An enormous fungal chamber grows in the southwest corner. Two Surarus are here. Gore: the remains of Fasha's previous victims (except Aldra) are all here. Each body is missing its heart, made clear by a deep wound in the chest. Depending on the day (see p.3), there may be one potential victim still living, tied up and unconscious. Surarus: sleeping, eating, and placing large chunks of flesh in a pile near the fungal growth. If one is killed, the others will attempt to wake the Imperator by slashing open its sac. Growth: a Suraru Imperator. The west exit to T8 is completely blocked by the growth. Route: the west exit to T8 is completely blocked by the growth, so the module's remaining link is the short hallway that runs from T9 to the T10a door.",
+    "description": "The room smells like a slaughterhouse, and streaks of blood and viscera are strewn across the floor. A short hallway leads from this room to the door at T10a. An enormous fungal chamber grows in the southwest corner. Two Surarus are here. Gore: the remains of Fasha's previous victims (except Aldra) are all here. Each body is missing its heart, made clear by a deep wound in the chest. Depending on the day (see p.3), there may be one potential victim still living, tied up and unconscious. Surarus: sleeping, eating, and placing large chunks of flesh in a pile near the fungal growth. If one is killed, the others will attempt to wake the Imperator by slashing open its sac. Growth: a Suraru Imperator. The west exit to T8 is completely blocked by the growth. Route: reached by the corridor running south from T5 (Hall of Glyphs) and T6 (Waste Disposal); the west exit to T8 (Preparation Room) is completely blocked by the fungal growth, and a short hallway leads east from T9 to the metal door at T10a.",
     "discovered": false,
     "parent": "temple-of-the-fungal-lizards"
   },

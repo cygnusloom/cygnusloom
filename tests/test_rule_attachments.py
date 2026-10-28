@@ -273,3 +273,35 @@ def test_a_world_place_attaching_an_unknown_rule_is_a_content_error(tmp_path: Pa
     )
     with pytest.raises(ContentError, match="location 'glade' attaches rule 'no-such-rule'"):
         ContentLibrary.load(tmp_path).world_content("testland", "testset")
+
+
+UNATTACHED_TWIN_LAKES_RULES = (
+    "twin-lakes-overview",
+    "the-roots",
+    "outcome-vuk-reborn",
+    "outcome-gate-opened",
+    "outcome-vuk-stopped-gate-closed",
+    "outcome-vuk-reborn-and-gate-opened",
+)
+ATTACHED_TWIN_LAKES_RULES = (
+    "vuk-choking-hold",
+    "deadmill-sinking",
+    "deadmill-time-loop",
+    "trapdoor-butcher-block",
+    "suraru-imperator-critical-damage",
+    "night-cat-attack",
+    "the-downs-travel",
+)
+
+
+def test_the_unattached_twin_lakes_rules_are_the_module_wide_ones():
+    world = LIBRARY.world_content("twin-lakes", "cairn2e")
+    for rule_id in UNATTACHED_TWIN_LAKES_RULES:
+        assert rule_id in world.unattached_rules, rule_id
+
+
+def test_entity_attached_twin_lakes_rules_are_not_unattached():
+    world = LIBRARY.world_content("twin-lakes", "cairn2e")
+    for rule_id in ATTACHED_TWIN_LAKES_RULES:
+        assert rule_id in world.rules, rule_id
+        assert rule_id not in world.unattached_rules, rule_id

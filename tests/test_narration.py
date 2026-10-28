@@ -161,3 +161,18 @@ def test_narrator_is_told_not_to_invent_times_distances_or_street_names(
     system = _system_text(_narrator(recorder))
     assert "Never write a number of minutes, hours, days, or distance" in system
     assert "Name no street, square, alley, or route" in system
+
+
+def test_narrator_keeps_routine_beats_under_sixty_words(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    _place_pc(client, campaign_id)
+    _send(client, campaign_id, _script({"rounds": [[]], "text": "The lane is quiet."}))
+
+    system = _system_text(_narrator(recorder))
+    assert "takes two or three sentences (under 60 words)" in system
+    assert "including arriving at or discovering a place" in system
+    assert "or a brief exchange of dialogue" in system

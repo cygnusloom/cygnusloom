@@ -12,6 +12,7 @@ from sqlmodel import Session, select
 
 from cygnusforge.content.library import (
     DiceTable,
+    NeedRules,
     WeatherPenalty,
     Wilderness,
     WildernessEffect,
@@ -27,12 +28,14 @@ from cygnusforge.services.events import (
     ItemRemoved,
     ItemUsesSet,
     LostRolled,
+    NeedSet,
     WeatherRolled,
     WildernessEffectApplied,
     WildernessEventRolled,
     load_state,
     name_key,
     record,
+    same_item_name,
 )
 from cygnusforge.services.inventory import clear_items
 
@@ -166,6 +169,13 @@ class _Watch:
     give: GiveItem
     events: list[dict[str, Any]] = field(default_factory=list)
     effects: list[dict[str, Any]] = field(default_factory=list)
+    need: NeedRules | None = None
+    # The day the watch falls on. A camp meal the party goes without can leave a member deprived.
+    day: int = 1
+    buy: Callable[[Session, str, str], dict[str, Any]] | None = None
+    purchases: Sequence[Mapping[str, Any]] = ()
+    # Set by a consume that found nothing to spend and has an on_shortage status, for this effect only.
+    shortage: str | None = None
 
     def roll_events(self, times: int) -> None:
         table = _table(self.tables, self.wilderness.events_table)
@@ -188,6 +198,7 @@ class _Watch:
 
     def run(self, effects: Iterable[WildernessEffect]) -> None:
         for effect in effects:
+            self.shortage = None
             text = self._apply(effect)
             record(
                 self.db,
@@ -196,7 +207,12 @@ class _Watch:
                     action=self.action, do=effect.do, text=text, reason=self.reason
                 ),
             )
-            self.effects.append({"do": effect.do, "text": text})
+            entry: dict[str, Any] = {"do": effect.do, "text": text}
+            if self.shortage is not None:
+                entry["status"] = self.shortage
+                if self.shortage == "panicking":
+                    entry["panicking"] = True
+            self.effects.append(entry)
 
     def _apply(self, effect: WildernessEffect) -> str:
         if effect.do == "roll_events":
@@ -210,26 +226,93 @@ class _Watch:
             return self._grant(effect)
         if effect.do == "clear":
             return self._clear(effect)
+        if effect.do == "buy":
+            return self._buy(effect)
         raise InvalidInput(f"a wilderness hook cannot do {effect.do!r}")
 
     def _consume(self, effect: WildernessEffect) -> str:
         item = effect.item or ""
         state = load_state(self.db, self.campaign_id)
         if effect.per == "party":
-            spender = next((n for n in self.party if _held(state, n, item)), None)
-            if spender is None:
-                return f"No {item} in the party."
-            _spend_use(self.db, self.campaign_id, state, spender, item)
-            return f"One {item} used by {spender}."
+            return self._consume_party(effect, state)
         used = [n for n in self.party if _spend_use(self.db, self.campaign_id, state, n, item)]
         short = [n for n in self.party if n not in used]
         if effect.meal:
             for name in used:
                 record(self.db, self.campaign_id, CampFedSet(name=name, at=self.at))
+            if short and self.need is not None:
+                for name in short:
+                    if state.characters[name_key(name)].unmet_since is None:
+                        record(
+                            self.db,
+                            self.campaign_id,
+                            NeedSet(name=name, deprived=True, cause=f"no {item}", day=self.day),
+                        )
         text = f"One {item} used by {_join(used)}." if used else f"No {item} used."
         if short:
             text += f" No {item} for {_join(short)}."
         return text
+
+    def _consume_party(self, effect: WildernessEffect, state: CampaignState) -> str:
+        """Spend one party-wide item: the first member holding it, else the first alternative the
+        party can use. With nothing to spend the effect may name a shortage status."""
+        item = effect.item or ""
+        spender = next((n for n in self.party if _held(state, n, item)), None)
+        if spender is not None:
+            _spend_use(self.db, self.campaign_id, state, spender, item)
+            return f"One {item} used by {spender}."
+        for alt in effect.alternatives:
+            if alt.requires is not None and not any(
+                _held(state, n, alt.requires) is not None for n in self.party
+            ):
+                continue
+            alt_spender = next((n for n in self.party if _held(state, n, alt.item)), None)
+            if alt_spender is not None:
+                _spend_use(self.db, self.campaign_id, state, alt_spender, alt.item)
+                return f"One {alt.item} used by {alt_spender}."
+        if effect.on_shortage:
+            self.shortage = effect.on_shortage
+            return f"No {item} in the party ({effect.on_shortage})."
+        return f"No {item} in the party."
+
+    def _buy(self, effect: WildernessEffect) -> str:
+        """Buy the purchases a resupply names, each one of the effect's items. The whole list is
+        checked before anything is bought."""
+        if not self.purchases:
+            raise InvalidInput("resupply needs purchases naming the basic supplies to buy")
+        if self.buy is None:
+            raise InvalidInput("resupply needs a marketplace to buy from")
+        planned: list[tuple[str, str, int]] = []
+        for entry in self.purchases:
+            if not isinstance(entry, Mapping):
+                raise InvalidInput("each purchase must be an object with an item")
+            requested = entry.get("item")
+            if not isinstance(requested, str) or not requested.strip():
+                raise InvalidInput("each purchase needs a non-empty item")
+            canonical = next((a for a in effect.items if same_item_name(requested, a)), None)
+            if canonical is None:
+                raise InvalidInput(
+                    f"resupply can only buy {', '.join(effect.items)}, not {requested!r}"
+                )
+            buyer = entry.get("name") or (self.party[0] if self.party else "")
+            if not isinstance(buyer, str) or not buyer.strip():
+                raise InvalidInput("a purchase needs a buyer in the party")
+            if name_key(buyer) not in {name_key(n) for n in self.party}:
+                raise InvalidInput(f"{buyer!r} is not in the party and cannot buy")
+            quantity = entry.get("quantity", 1)
+            if isinstance(quantity, bool) or not isinstance(quantity, int) or quantity < 1:
+                raise InvalidInput("a purchase quantity must be a whole number, at least 1")
+            planned.append((buyer, canonical, quantity))
+        bought: dict[str, dict[str, int]] = {}
+        for buyer, canonical, quantity in planned:
+            for _ in range(quantity):
+                self.buy(self.db, buyer, canonical)
+            counts = bought.setdefault(buyer, {})
+            counts[canonical] = counts.get(canonical, 0) + quantity
+        return " ".join(
+            f"{buyer} buys " + ", ".join(f"{count} {item}" for item, count in counts.items()) + "."
+            for buyer, counts in bought.items()
+        )
 
     def _grant(self, effect: WildernessEffect) -> str:
         item = effect.item or ""
@@ -256,8 +339,11 @@ class _Watch:
     def _clear(self, effect: WildernessEffect) -> str:
         item = effect.item or ""
         state = load_state(self.db, self.campaign_id)
-        had = [n for n in self.party if _has_kind(state, n, item)]
-        clear_items(self.db, self.campaign_id, self.party, [item])
+        # A deprived character cannot recover item slots from Fatigue, so their items stay.
+        eligible = [n for n in self.party if state.characters[name_key(n)].unmet_since is None]
+        had = [n for n in eligible if _has_kind(state, n, item)]
+        if eligible:
+            clear_items(self.db, self.campaign_id, eligible, [item])
         if not had:
             return f"No {item} to clear."
         return f"{item.capitalize()} cleared from {_join(had)}."
@@ -265,7 +351,7 @@ class _Watch:
 
 def _held(state: CampaignState, name: str, item: str) -> Item | None:
     character: Character = state.characters[name_key(name)]
-    return next((i for i in character.items if name_key(i.name) == name_key(item)), None)
+    return next((i for i in character.items if same_item_name(i.name, item)), None)
 
 
 def _has_kind(state: CampaignState, name: str, kind: str) -> bool:
@@ -315,16 +401,28 @@ def wilderness_action(
     night: bool,
     give: GiveItem,
     travel_watch: bool = False,
+    need: NeedRules | None = None,
+    buy: Callable[[Session, str, str], dict[str, Any]] | None = None,
+    purchases: Sequence[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Take a Wilderness Action for one watch. The day's weather rolls first, then the events
     roll once, then the hooks apply: the night hooks on a night watch, then the resolve hooks.
-    Rule set hooks at the top level apply to every action, and an action's own hooks to it alone."""
+    Rule set hooks at the top level apply to every action, and an action's own hooks to it alone.
+    A resupply names its purchases, and only an action with a buy hook takes them."""
     if action not in wilderness.actions:
         names = ", ".join(sorted(wilderness.actions))
         raise InvalidInput(f"there is no wilderness action named {action!r}; use one of {names}")
     if action == TRAVEL_ACTION and not travel_watch:
         raise InvalidInput("travel is made with move_actor in overland mode, with a route")
     chosen = wilderness.actions[action]
+    effects = wilderness.hooks.resolve + chosen.hooks.resolve
+    if night:
+        effects = wilderness.hooks.night + chosen.hooks.night + effects
+    has_buy = any(e.do == "buy" for e in effects)
+    if has_buy and not purchases:
+        raise InvalidInput(f"{action} needs purchases naming the basic supplies to buy")
+    if not has_buy and purchases:
+        raise InvalidInput(f"{action} does not take purchases; use resupply")
 
     weather = _roll_weather(
         db, campaign_id, wilderness, tables, rng, plus=plus, day=day, season=season
@@ -343,6 +441,10 @@ def wilderness_action(
         rng=rng,
         plus=plus,
         give=give,
+        need=need,
+        day=day,
+        buy=buy,
+        purchases=tuple(purchases or ()),
     )
     watch.roll_events(1)
     if night:

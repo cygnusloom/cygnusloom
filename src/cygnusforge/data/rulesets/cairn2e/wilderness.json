@@ -10,7 +10,22 @@
     "catastrophe_result": "Catastrophic",
     "lost_on": {"roads": 0, "trails": 2, "wilderness": 3},
     "lost_die": "1d6",
-    "hooks": {},
+    "hooks": {
+      "night": [
+        {
+          "do": "consume",
+          "item": "torch",
+          "alternatives": [
+            {
+              "item": "Oil Can",
+              "requires": "Lantern"
+            }
+          ],
+          "per": "party",
+          "on_shortage": "panicking"
+        }
+      ]
+    },
     "actions": {
       "travel": {
         "name": "Travel",
@@ -30,6 +45,22 @@
         "name": "Make Camp",
         "hooks": {"resolve": [{"do": "consume", "item": "rations", "per": "member", "meal": true}, {"do": "clear", "item": "fatigue"}]},
         "text": "The party sets up camp. Each member and mount consumes a Ration. A lookout rotation is set. Members who rest remove all Fatigue."
+      },
+      "resupply": {
+        "name": "Resupply",
+        "text": "The party spends gold and a full watch at a home or small village to buy basic supplies.",
+        "hooks": {
+          "resolve": [
+            {
+              "do": "buy",
+              "items": [
+                "Rations",
+                "Torch",
+                "Oil Can"
+              ]
+            }
+          ]
+        }
       }
     },
     "events_table": "wilderness_events",

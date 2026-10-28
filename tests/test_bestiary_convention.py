@@ -64,7 +64,7 @@ def test_a_group_member_at_the_pc_location_brings_its_rules(
     bandit = state.named("Bandit")
     assert bandit is not None
     assert "bandit-loyal" in bandit.rules
-    rules = {**RULE_SET.rules, **TWIN_LAKES.rules, **RULE_SET.attached_rules}
+    rules = {**RULE_SET.rules, **RULE_SET.attached_rules, **TWIN_LAKES.rules}
     text = present_rules_text(state, rules)
     assert "- bandit-loyal (from Bandit):" in text
 

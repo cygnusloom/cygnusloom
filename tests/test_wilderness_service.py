@@ -20,10 +20,12 @@ from cygnusforge.content.library import (
     WildernessHooks,
 )
 from cygnusforge.db.models import Event
+from cygnusforge.services import clock as clock_service
 from cygnusforge.services import wilderness
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
     CampFedSet,
+    ItemAdded,
     ItemRemoved,
     LostRolled,
     WeatherRolled,
@@ -32,6 +34,7 @@ from cygnusforge.services.events import (
     load_state,
     record,
 )
+from cygnusforge.services.market import listed_item
 from cygnusforge.services.wilderness import (
     roll_lost,
     roll_weather,
@@ -42,6 +45,7 @@ from cygnusforge.services.wilderness import (
 from tests.test_campaigns import _campaign_id
 from tests.test_character_creation import _cairn_campaign
 from tests.test_combat import CAIRN, PC, _tools
+from tests.test_marketplace import _gold, _grant_gold
 from tests.test_travel import _pc_campaign
 from tests.test_world import _db
 
@@ -669,3 +673,206 @@ def test_a_stale_camp_meal_does_not_skip_a_later_rest_meal(
     tools.rest("night")
     assert _pc_rations(app, campaign_id)[0].uses == uses_before - 2
     assert _pc_camp_fed_at(app, campaign_id) is None
+
+
+def _add_item(app: FastAPI, campaign_id: int, item: str, uses: int, max_uses: int) -> None:
+    with Session(app.state.engine) as db:
+        record(
+            db,
+            campaign_id,
+            ItemAdded(
+                name=PC,
+                item=item,
+                size="normal",
+                slots=1,
+                cause="a test",
+                uses=uses,
+                max_uses=max_uses,
+            ),
+        )
+        db.commit()
+
+
+def _remove_all(app: FastAPI, campaign_id: int, item: str) -> None:
+    for _ in range(20):
+        if not any(i.name == item for i in _pc_items(app, campaign_id)):
+            return
+        with Session(app.state.engine) as db:
+            record(db, campaign_id, ItemRemoved(name=PC, item=item))
+            db.commit()
+    raise AssertionError(f"could not remove every {item}")
+
+
+def _held_uses(app: FastAPI, campaign_id: int, item: str) -> list[int]:
+    return [i.uses for i in _pc_items(app, campaign_id) if i.name == item]
+
+
+def _clock_hours(app: FastAPI, campaign_id: int) -> int:
+    with _db(app) as db:
+        clock = load_state(db, campaign_id).clock
+    return clock_service.absolute(clock, len(CAIRN.clock.parts), CAIRN.clock.hours_per_part)
+
+
+def _to_the_night_watch(app: FastAPI, campaign_id: int, tools) -> None:
+    with _db(app) as db:
+        part = load_state(db, campaign_id).clock.part
+    tools.advance_time(parts=len(CAIRN.clock.parts) - 1 - part)
+
+
+def _consume_entry(result: dict) -> dict:
+    return next(e for e in result["effects"] if e["do"] == "consume")
+
+
+def test_a_night_watch_spends_one_use_of_a_carried_torch(
+    client_factory: Callable[[], TestClient],
+):
+    app, campaign_id, tools = _pc_tools(client_factory)
+    _remove_all(app, campaign_id, "Torch")
+    _remove_all(app, campaign_id, "Lantern")
+    _add_item(app, campaign_id, "Torch", uses=3, max_uses=3)
+    _to_the_night_watch(app, campaign_id, tools)
+
+    result = tools.wilderness_action("explore", "scouting by torchlight")
+
+    assert result["night"] is True
+    assert _held_uses(app, campaign_id, "Torch") == [2]
+    entry = _consume_entry(result)
+    assert entry["text"] == "One torch used by Mara."
+    assert "status" not in entry and "panicking" not in entry
+
+
+def test_a_night_watch_burns_oil_when_a_party_member_has_a_lantern(
+    client_factory: Callable[[], TestClient],
+):
+    app, campaign_id, tools = _pc_tools(client_factory)
+    _remove_all(app, campaign_id, "Torch")
+    _remove_all(app, campaign_id, "Lantern")
+    _remove_all(app, campaign_id, "Oil Can")
+    _add_item(app, campaign_id, "Lantern", uses=0, max_uses=0)
+    _add_item(app, campaign_id, "Oil Can", uses=6, max_uses=6)
+    _to_the_night_watch(app, campaign_id, tools)
+
+    result = tools.wilderness_action("explore", "scouting by lantern")
+
+    assert _held_uses(app, campaign_id, "Oil Can") == [5]
+    assert _held_uses(app, campaign_id, "Torch") == []
+    entry = _consume_entry(result)
+    assert entry["text"] == "One Oil Can used by Mara."
+    assert "panicking" not in entry
+
+
+def test_oil_without_a_lantern_does_not_light_the_night_watch(
+    client_factory: Callable[[], TestClient],
+):
+    app, campaign_id, tools = _pc_tools(client_factory)
+    _remove_all(app, campaign_id, "Torch")
+    _remove_all(app, campaign_id, "Lantern")
+    _remove_all(app, campaign_id, "Oil Can")
+    _add_item(app, campaign_id, "Oil Can", uses=6, max_uses=6)
+    _to_the_night_watch(app, campaign_id, tools)
+
+    result = tools.wilderness_action("explore", "scouting in the dark")
+
+    assert _held_uses(app, campaign_id, "Oil Can") == [6]
+    entry = _consume_entry(result)
+    assert entry["status"] == "panicking"
+    assert entry["panicking"] is True
+    assert entry["text"] == "No torch in the party (panicking)."
+
+
+def test_a_day_watch_does_not_consume_light(client_factory: Callable[[], TestClient]):
+    app, campaign_id, tools = _pc_tools(client_factory)
+    _remove_all(app, campaign_id, "Torch")
+    _add_item(app, campaign_id, "Torch", uses=3, max_uses=3)
+
+    result = tools.wilderness_action("explore", "a morning look around")
+
+    assert result["night"] is False
+    assert not any(e["do"] == "consume" for e in result["effects"])
+    assert _held_uses(app, campaign_id, "Torch") == [3]
+
+
+def test_resupply_buys_the_purchases_and_spends_a_watch(
+    client_factory: Callable[[], TestClient],
+):
+    app, campaign_id, tools = _pc_tools(client_factory)
+    _grant_gold(app, campaign_id, 100)
+    gold_before = _gold(app, campaign_id)
+    rations_before = len(_pc_rations(app, campaign_id))
+    hours_before = _clock_hours(app, campaign_id)
+    rations_price = listed_item(CAIRN.marketplace, "Rations").price
+    torch = listed_item(CAIRN.marketplace, "Torch")
+    oil = listed_item(CAIRN.marketplace, "Oil Can")
+    assert torch is not None and oil is not None
+    _remove_all(app, campaign_id, "Oil Can")
+
+    result = tools.wilderness_action(
+        "resupply",
+        "a village watch",
+        purchases=[{"item": "Rations", "quantity": 2}, {"item": "Torch"}, {"item": "Oil Can"}],
+    )
+
+    assert _gold(app, campaign_id) == gold_before - 2 * rations_price - torch.price - oil.price
+    rations = _pc_rations(app, campaign_id)
+    assert len(rations) == rations_before + 2
+    assert [r.uses for r in rations[-2:]] == [listed_item(CAIRN.marketplace, "Rations").uses] * 2
+    assert _held_uses(app, campaign_id, "Torch") == [torch.uses]
+    assert _held_uses(app, campaign_id, "Oil Can") == [oil.uses]
+    assert result["effects"][0]["do"] == "buy"
+    assert result["effects"][0]["text"] == f"{PC} buys 2 Rations, 1 Torch, 1 Oil Can."
+    assert _clock_hours(app, campaign_id) - hours_before == CAIRN.clock.hours_per_part
+
+
+def test_resupply_without_purchases_is_refused(client_factory: Callable[[], TestClient]):
+    app, campaign_id, tools = _pc_tools(client_factory)
+    hours_before = _clock_hours(app, campaign_id)
+    with pytest.raises(InvalidInput, match="resupply needs purchases"):
+        tools.wilderness_action("resupply", "a village watch")
+    assert _clock_hours(app, campaign_id) == hours_before
+
+
+def test_resupply_refuses_an_item_that_is_not_a_basic_supply(
+    client_factory: Callable[[], TestClient],
+):
+    app, campaign_id, tools = _pc_tools(client_factory)
+    _grant_gold(app, campaign_id, 100)
+    gold_before = _gold(app, campaign_id)
+    hours_before = _clock_hours(app, campaign_id)
+    with pytest.raises(InvalidInput, match="resupply can only buy Rations, Torch"):
+        tools.wilderness_action("resupply", "a village watch", purchases=[{"item": "Chainmail"}])
+    assert _gold(app, campaign_id) == gold_before
+    assert _clock_hours(app, campaign_id) == hours_before
+
+
+def test_purchases_on_a_non_resupply_action_are_refused(
+    client_factory: Callable[[], TestClient],
+):
+    app, campaign_id, tools = _pc_tools(client_factory)
+    _grant_gold(app, campaign_id, 100)
+    gold_before = _gold(app, campaign_id)
+    with pytest.raises(InvalidInput, match="explore does not take purchases; use resupply"):
+        tools.wilderness_action("explore", "a look around", purchases=[{"item": "Rations"}])
+    assert _gold(app, campaign_id) == gold_before
+
+
+def test_make_camp_with_no_rations_leaves_the_member_deprived(
+    client_factory: Callable[[], TestClient],
+):
+    app, campaign_id, tools = _pc_tools(client_factory)
+    _remove_all(app, campaign_id, "Rations")
+    tools.wilderness_action("make_camp", "a night's rest")
+    with _db(app) as db:
+        character = load_state(db, campaign_id).characters[PC.casefold()]
+    assert character.unmet_since is not None
+
+
+def test_make_camp_does_not_clear_fatigue_from_a_deprived_member(
+    client_factory: Callable[[], TestClient],
+):
+    app, campaign_id, tools = _pc_tools(client_factory)
+    tools.add_penalty(PC, "a long march")
+    _remove_all(app, campaign_id, "Rations")
+    result = tools.wilderness_action("make_camp", "a night's rest")
+    assert any(item.kind == "fatigue" for item in _pc_items(app, campaign_id))
+    assert result["effects"][1]["do"] == "clear"
+    assert result["effects"][1]["text"] == "No fatigue to clear."

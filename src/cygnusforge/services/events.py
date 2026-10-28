@@ -89,6 +89,9 @@ class Place:
     summary: str | None = None
     # The ids of rules attached to the place, whose text reaches the GM while the player is here.
     rules: tuple[str, ...] = ()
+    # Authored overland routes from this place, by destination place name key. A route gives the
+    # path, distance, terrain, and vast of an overland move that leads there.
+    routes: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -606,6 +609,8 @@ class LocationAdded(GameEvent):
     icon: str | None = None
     # The ids of rules attached to the place. Their text reaches the GM while the player is here.
     rules: list[str] = field(default_factory=list)
+    # Authored overland routes from this place, by destination location id.
+    routes: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.places[name_key(self.name)] = Place(
@@ -616,6 +621,7 @@ class LocationAdded(GameEvent):
             self.parent,
             icon=self.icon,
             rules=tuple(self.rules),
+            routes={key: dict(route) for key, route in self.routes.items()},
         )
 
     def render(self) -> str:

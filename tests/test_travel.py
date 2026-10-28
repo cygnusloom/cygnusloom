@@ -95,6 +95,17 @@ def test_an_unknown_travel_mode_is_refused(client_factory):
     assert _hours(app, campaign_id) == before
 
 
+def test_a_move_from_a_place_inside_another_uses_the_parents_position(client_factory):
+    _, _, tools = _pc_campaign(client_factory)
+    tools.move_actor(PC, "Isthmus Town")
+    tools.move_actor(PC, "The Stuffed Inn")
+
+    result = tools.move_actor(PC, "Dunston")
+
+    assert result["minutes"] != TRAVEL.default_leg_minutes
+    assert abs(result["minutes"] - 60) <= 1
+
+
 def test_a_leg_without_positions_takes_the_default_leg(client_factory):
     _, _, tools = _pc_campaign(client_factory)
     _place(tools, "Hall")

@@ -11,7 +11,16 @@ class CoreWorld(Protocol):
     """The campaign's world as the system-agnostic core tools may change and read it. Every
     rule set has these, whatever its game system."""
 
-    def create_location(self, name: str, description: str) -> dict[str, Any]: ...
+    def create_location(
+        self,
+        name: str,
+        description: str,
+        discovered: bool = False,
+        x: float | None = None,
+        y: float | None = None,
+        force: bool = False,
+        parent: str | None = None,
+    ) -> dict[str, Any]: ...
 
     def create_region(
         self,
@@ -36,7 +45,15 @@ class CoreWorld(Protocol):
         pronouns: str | None = None,
     ) -> dict[str, Any]: ...
 
-    def update_location(self, name: str, description: str) -> dict[str, Any]: ...
+    def update_location(
+        self,
+        name: str,
+        description: str,
+        x: float | None = None,
+        y: float | None = None,
+        off_map: bool = False,
+        force: bool = False,
+    ) -> dict[str, Any]: ...
 
     def delete_location(self, name: str) -> dict[str, Any]: ...
 
@@ -79,7 +96,13 @@ class CoreWorld(Protocol):
     ) -> dict[str, Any]: ...
 
     def create_encounter_map(
-        self, name: str, location: str, columns: int, rows: int, description: str
+        self,
+        name: str,
+        location: str,
+        columns: int | None,
+        rows: int | None,
+        description: str,
+        template: str = "",
     ) -> dict[str, Any]: ...
 
     def update_encounter_map(
@@ -175,8 +198,16 @@ class World(CoreWorld, Protocol):
         template: str | None = None,
         stats: Mapping[str, int | None] | None = None,
         armor: int | None = None,
-        attacks: Sequence[Mapping[str, str]] | None = None,
+        attacks: Sequence[Mapping[str, Any]] | None = None,
+        force: bool = False,
+        detachment: bool | None = None,
     ) -> dict[str, Any]: ...
+
+    def wilderness_action(
+        self, action: str, reason: str, purchases: Sequence[Mapping[str, Any]] | None = None
+    ) -> dict[str, Any]: ...
+
+    def surrender(self, name: str) -> dict[str, Any]: ...
 
     def attack(
         self,

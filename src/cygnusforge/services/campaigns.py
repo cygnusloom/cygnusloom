@@ -6,7 +6,7 @@ import re
 import threading
 from collections.abc import AsyncIterator, Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from sqlalchemy import Engine
@@ -147,10 +147,14 @@ STATE_INSTRUCTION = (
 STATE_CLOSING = "When nothing else needs to change, reply with one short sentence saying so."
 NARRATE_INSTRUCTION = (
     "Narration step. Write the next beat in the present tense, as a good editor would: specific, "
-    "in character, and free of filler. Keep it minimal: a routine beat, such as a short walk or an "
-    "uneventful look around, takes a sentence or two. Give more only when something really happened, "
-    "and then cover each consequential entry of the turn log above, in numbered order, with its outcome "
-    "stated plainly: each arrival and departure, encounter start, initiative, NPC action, attack and its "
+    "in character, and free of filler. Keep it minimal: a routine beat — including arriving at or "
+    "discovering a place, a short walk, an uneventful look around, or a brief exchange of dialogue — "
+    "takes two or three sentences (under 60 words). When a place or NPC first comes into view, give only "
+    "its immediate impression in a clause or sentence rather than cataloging every detail of its "
+    "description, and frame queued dialogue with no extra buildup. Give a longer paragraph (still under "
+    "100 words) only for a major beat such as a multi-action combat round, a character's death, or a "
+    "multi-watch journey, covering each consequential entry of the turn log above, in numbered order, "
+    "with its outcome stated plainly: each arrival and departure, encounter start, initiative, NPC action, attack and its "
     "result, save and roll outcome, surrender, flight, death, end of an encounter, and change to the player "
     "character. Several entries may share one sentence, and a later entry never happens before an earlier "
     "one. Leave out entries that change nothing the player perceives or needs, and cut repetition and "
@@ -723,6 +727,7 @@ def context_usage(
     options: CampaignSpec,
     limit: int,
     world_rules: Mapping[str, str],
+    unattached_world_rules: Mapping[str, str] | None = None,
 ) -> ContextUsage:
     unsummarized = [m for m in history if m.id > state.through]
     all_rules = {
@@ -734,7 +739,7 @@ def context_usage(
         part.tokens
         for part in system_parts(
             campaign.rule_set,
-            rule_set.rules if rule_set else {},
+            {**(rule_set.rules if rule_set else {}), **(unattached_world_rules or {})},
             rule_set.important if rule_set else frozenset(),
             state.summary,
             state.through,
@@ -1022,6 +1027,9 @@ class _Run:
     ctx: ToolContext
     cursor: int
     opening: str
+    # The world's rules that no place, NPC, or monster attaches. They are listed for the GM as
+    # campaign rules, so lookup_rule can read them.
+    unattached_rules: Mapping[str, str] = field(default_factory=dict)
 
     @property
     def tool_calls(self) -> Mapping[str, ToolCall]:
@@ -1068,7 +1076,7 @@ def _tool_context(
         monsters={**rule_set.monsters, **world.monsters},
         features={**world.features},
         conditions=rule_set.conditions,
-        dice_tables=rule_set.dice_tables,
+        dice_tables={**rule_set.dice_tables, **world.dice_tables},
         clock_rules=rule_set.clock,
         rests=rule_set.rests,
         interrupted_rest=rule_set.interrupted_rest,
@@ -1116,6 +1124,7 @@ def _start_run(
     rng: random.Random | None,
 ) -> _Run:
     provider, model_name = providers(campaign.model)
+    world = library.world_content(campaign.world_template, campaign.rule_set)
     return _Run(
         engine=engine,
         campaign_id=campaign.id,
@@ -1132,10 +1141,11 @@ def _start_run(
             model_name,
             campaign.id,
             rule_set,
-            library.world_content(campaign.world_template, campaign.rule_set),
+            world,
         ),
         cursor=_newest(engine, campaign.id),
         opening=opening_prompt(library.world_templates.get(campaign.world_template)),
+        unattached_rules=world.unattached_rules,
     )
 
 
@@ -1188,7 +1198,7 @@ def _narration_messages(
     state = _state(run.engine, run.campaign_id)
     scene = system_parts(
         run.rule_set.id,
-        run.rule_set.rules,
+        {**run.rule_set.rules, **run.unattached_rules},
         run.rule_set.important,
         state.summary,
         state.through,
@@ -1317,7 +1327,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
         p.tokens
         for p in system_parts(
             rule_set.id,
-            rule_set.rules,
+            {**rule_set.rules, **run.unattached_rules},
             rule_set.important,
             summary,
             watermark,
@@ -1353,7 +1363,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     player = ContextPart("user", label, message)
     system = system_parts(
         rule_set.id,
-        rule_set.rules,
+        {**rule_set.rules, **run.unattached_rules},
         rule_set.important,
         summary,
         watermark,

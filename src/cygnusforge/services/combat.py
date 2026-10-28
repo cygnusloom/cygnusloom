@@ -14,7 +14,7 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusforge.content.library import CombatRules, DamageStep, GroupRules
+from cygnusforge.content.library import CombatRules, ConditionRules, DamageStep, GroupRules
 from cygnusforge.rules.dice import roll_total
 from cygnusforge.services import death
 from cygnusforge.services.attacks import (
@@ -26,6 +26,7 @@ from cygnusforge.services.attacks import (
     rolls_text,
 )
 from cygnusforge.services.common import InvalidInput, bounded_text, whole_number
+from cygnusforge.services.conditions import end_condition
 from cygnusforge.services.encounters import (
     _participant,
     awaiting_initiative,
@@ -780,8 +781,18 @@ def resolve_group_break(
     return {"character": character.name, "outcome": outcome}
 
 
-def player_save(db: Session, campaign_id: int, roll: int, combat: CombatRules) -> dict[str, Any]:
-    """The save a player character owes after harm overflowed, rolled by the player."""
+def player_save(
+    db: Session,
+    campaign_id: int,
+    roll: int,
+    combat: CombatRules,
+    *,
+    conditions: Mapping[str, ConditionRules] = (),
+    rng: random.Random | None = None,
+    plus: str = "sum",
+) -> dict[str, Any]:
+    """The save a player character owes after harm overflowed, rolled by the player. Passing it
+    ends any fatal condition the character has, such as Doomed, when the rule set defines it."""
     state = load_state(db, campaign_id)
     pc = state.pc()
     if pc is None or pc.save_due is None:
@@ -805,6 +816,12 @@ def player_save(db: Session, campaign_id: int, roll: int, combat: CombatRules) -
     db.commit()
     if not passed:
         death.on_critical_save_failed(db, campaign_id, combat, pc.name)
+    elif conditions and rng is not None:
+        for cid in list(pc.conditions):
+            if cid in combat.fatal_conditions and cid in conditions:
+                end_condition(
+                    db, campaign_id, pc.name, cid, "gm", combat, conditions, rng, plus=plus
+                )
     _end_if_one_side_left(db, campaign_id)
     return {"character": pc.name, "stat": stat, "roll": roll, "score": score, "passed": passed}
 

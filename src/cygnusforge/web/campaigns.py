@@ -573,6 +573,7 @@ def _campaign_page(
         )
     messages = list_messages(engine, campaign.id)
     transcript = campaign_transcript(engine, user.id, campaign.id)
+    world_content = library.world_content(campaign.world_template, campaign.rule_set)
     context = context_usage(
         campaign,
         world.state,
@@ -580,7 +581,8 @@ def _campaign_page(
         rule_set,
         options,
         settings.llm_context_tokens,
-        library.world_content(campaign.world_template, campaign.rule_set).rules,
+        world_content.rules,
+        unattached_world_rules=world_content.unattached_rules,
     )
     encounter = encounter_view(
         world.state,

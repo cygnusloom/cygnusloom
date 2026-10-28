@@ -8,6 +8,7 @@ from cygnusforge.content.library import (
     ContentLibrary,
     DieGrowth,
     WeatherPenalty,
+    WildernessAlternative,
     WildernessEffect,
     WildernessHooks,
     _load_dice_table,
@@ -36,12 +37,13 @@ def dice_tables():
     return rule_set.dice_tables
 
 
-def test_the_real_cairn_wilderness_has_four_actions(wilderness):
-    assert set(wilderness.actions) == {"travel", "explore", "supply", "make_camp"}
+def test_the_real_cairn_wilderness_has_five_actions(wilderness):
+    assert set(wilderness.actions) == {"travel", "explore", "supply", "make_camp", "resupply"}
     assert wilderness.actions["travel"].name == "Travel"
     assert wilderness.actions["explore"].name == "Explore"
     assert wilderness.actions["supply"].name == "Supply"
     assert wilderness.actions["make_camp"].name == "Make Camp"
+    assert wilderness.actions["resupply"].name == "Resupply"
     assert all(action.text for action in wilderness.actions.values())
 
 
@@ -74,8 +76,21 @@ def test_the_real_cairn_actions_declare_their_hooks(wilderness):
                 WildernessEffect(do="clear", item="fatigue"),
             )
         ),
+        "resupply": WildernessHooks(
+            resolve=(WildernessEffect(do="buy", items=("Rations", "Torch", "Oil Can")),)
+        ),
     }
-    assert wilderness.hooks == WildernessHooks()
+    assert wilderness.hooks == WildernessHooks(
+        night=(
+            WildernessEffect(
+                do="consume",
+                item="torch",
+                per="party",
+                alternatives=(WildernessAlternative(item="Oil Can", requires="Lantern"),),
+                on_shortage="panicking",
+            ),
+        )
+    )
 
 
 def test_the_real_cairn_wilderness_lost_on_values(wilderness):
@@ -313,3 +328,132 @@ def test_boolean_vast_max_raises_content_error():
     definition = _definition(travel=_travel(vast_max=True))
     with pytest.raises(ContentError, match="'vast_max' must be a whole number"):
         _load_wilderness([definition], _tables(), "t")
+
+
+def test_a_consume_may_name_alternatives_that_need_another_item(wilderness):
+    night = wilderness.hooks.night[0]
+    assert night.alternatives == (WildernessAlternative(item="Oil Can", requires="Lantern"),)
+    assert night.on_shortage == "panicking"
+
+
+def test_an_alternative_without_a_requirement_loads():
+    actions = _travel_with_resolve(
+        {
+            "do": "consume",
+            "item": "torch",
+            "per": "party",
+            "alternatives": [{"item": "Oil, Can"}],
+        }
+    )
+    loaded = _load_wilderness([_definition(actions=actions)], _tables(), "t")
+    assert loaded is not None
+    effect = loaded.actions["travel"].hooks.resolve[0]
+    assert effect.alternatives == (WildernessAlternative(item="Oil, Can", requires=None),)
+    assert effect.on_shortage is None
+
+
+def test_alternatives_must_be_a_list_raises_content_error():
+    actions = _travel_with_resolve(
+        {"do": "consume", "item": "torch", "per": "party", "alternatives": "Oil, Can"}
+    )
+    with pytest.raises(ContentError, match="consume 'alternatives' must be a list of objects"):
+        _load_wilderness([_definition(actions=actions)], _tables(), "t")
+
+
+def test_an_alternative_that_is_not_an_object_raises_content_error():
+    actions = _travel_with_resolve(
+        {"do": "consume", "item": "torch", "per": "party", "alternatives": ["Oil, Can"]}
+    )
+    with pytest.raises(ContentError, match="consume 'alternatives' 0 must be an object"):
+        _load_wilderness([_definition(actions=actions)], _tables(), "t")
+
+
+def test_an_alternative_with_an_unknown_key_raises_content_error():
+    actions = _travel_with_resolve(
+        {
+            "do": "consume",
+            "item": "torch",
+            "per": "party",
+            "alternatives": [{"item": "Oil, Can", "fuel": 1}],
+        }
+    )
+    with pytest.raises(ContentError, match="does not take fuel"):
+        _load_wilderness([_definition(actions=actions)], _tables(), "t")
+
+
+def test_an_alternative_without_an_item_raises_content_error():
+    actions = _travel_with_resolve(
+        {
+            "do": "consume",
+            "item": "torch",
+            "per": "party",
+            "alternatives": [{"requires": "Lantern"}],
+        }
+    )
+    with pytest.raises(ContentError, match="'item'"):
+        _load_wilderness([_definition(actions=actions)], _tables(), "t")
+
+
+def test_an_alternative_with_a_blank_requirement_raises_content_error():
+    actions = _travel_with_resolve(
+        {
+            "do": "consume",
+            "item": "torch",
+            "per": "party",
+            "alternatives": [{"item": "Oil, Can", "requires": "  "}],
+        }
+    )
+    with pytest.raises(ContentError, match="'requires' must be non-empty text"):
+        _load_wilderness([_definition(actions=actions)], _tables(), "t")
+
+
+def test_a_blank_on_shortage_raises_content_error():
+    actions = _travel_with_resolve(
+        {"do": "consume", "item": "torch", "per": "party", "on_shortage": ""}
+    )
+    with pytest.raises(ContentError, match="'on_shortage' must be non-empty text"):
+        _load_wilderness([_definition(actions=actions)], _tables(), "t")
+
+
+def test_on_shortage_is_only_for_a_consume_raises_content_error():
+    count = {"base": 2, "per_member": 2, "max": 12}
+    actions = _travel_with_resolve(
+        {"do": "grant", "item": "rations", "count": count, "on_shortage": "panicking"}
+    )
+    with pytest.raises(ContentError, match="grant does not take on_shortage"):
+        _load_wilderness([_definition(actions=actions)], _tables(), "t")
+
+
+def test_a_buy_effect_loads_its_items():
+    actions = {
+        "resupply": {
+            "name": "Resupply",
+            "text": "Buy.",
+            "hooks": {"resolve": [{"do": "buy", "items": ["Rations", "Torch"]}]},
+        }
+    }
+    loaded = _load_wilderness([_definition(actions=actions)], _tables(), "t")
+    assert loaded is not None
+    assert loaded.actions["resupply"].hooks.resolve == (
+        WildernessEffect(do="buy", items=("Rations", "Torch")),
+    )
+
+
+@pytest.mark.parametrize("items", [None, "Rations", [], [""], ["Rations", 3]])
+def test_a_buy_needs_a_non_empty_list_of_item_names(items):
+    effect = {"do": "buy"} if items is None else {"do": "buy", "items": items}
+    actions = {"resupply": {"name": "Resupply", "text": "Buy.", "hooks": {"resolve": [effect]}}}
+    with pytest.raises(ContentError, match="buy 'items' must be"):
+        _load_wilderness([_definition(actions=actions)], _tables(), "t")
+
+
+def test_a_buy_takes_only_items():
+    actions = {
+        "resupply": {
+            "name": "Resupply",
+            "text": "Buy.",
+            "hooks": {"resolve": [{"do": "buy", "items": ["Rations"], "count": 2}]},
+        }
+    }
+    with pytest.raises(ContentError, match="buy does not take count"):
+        _load_wilderness([_definition(actions=actions)], _tables(), "t")

@@ -36,6 +36,30 @@ def test_walloped_ends_at_rest_and_its_on_end_raises_max_hp(client_factory):
     assert character.stats["hp"] == before + 4
 
 
+def test_a_night_rest_ends_walloped_and_adds_a_die_to_max_hp(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _add_condition(app, campaign_id, "walloped")
+    before = _character(app, campaign_id, PC).stats["hp"]
+    rest_tools = replace(tools, rng=Rolls(4))
+
+    result = rest_tools.rest("night", reason="sleep")
+
+    assert PC not in result["deprived"]
+    character = _character(app, campaign_id, PC)
+    assert character.conditions == []
+    assert character.stats["hp"] == before + 4
+
+
+def test_a_week_of_rest_ends_hamstrung_by_extended_rest(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _add_condition(app, campaign_id, "hamstrung")
+
+    result = tools.rest("week", reason="recover")
+
+    assert PC not in result["deprived"]
+    assert _character(app, campaign_id, PC).conditions == []
+
+
 def test_a_condition_names_only_its_own_triggers(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _add_condition(app, campaign_id, "walloped")

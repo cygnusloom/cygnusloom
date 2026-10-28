@@ -344,6 +344,10 @@ class WorldTools:
                 length,
                 interrupted,
                 reason,
+                combat=self.combat,
+                conditions=self.conditions,
+                rng=self.rng,
+                plus=self.plus,
             )
 
     def rest_history(self) -> dict[str, Any]:
@@ -462,6 +466,19 @@ class WorldTools:
         inventory_service.carry_listed(db, self.campaign_id, rules, self.item_sizes, name, listed)
         return True
 
+    def _buy_catalogue_item(self, db: Session, name: str, item: str) -> dict[str, Any]:
+        """Buy one copy of a catalogue item for a character, at its listed price."""
+        return market_service.buy_item(
+            db,
+            self.campaign_id,
+            _required(self.marketplace, "a marketplace"),
+            _required(self.inventory, "inventory"),
+            self.item_sizes,
+            name,
+            item,
+            armor_max=self.combat.armor_max if self.combat else 0,
+        )
+
     def _listed(self, item: str) -> ShopItem | None:
         if self.marketplace is not None:
             listed = market_service.listed_item(self.marketplace, item)
@@ -486,6 +503,8 @@ class WorldTools:
         self, name: str, item: str, size: str = "normal", damage: str = ""
     ) -> dict[str, Any]:
         listed = self._listed(item)
+        if listed is not None and size == "normal":
+            size = listed.size
         with session_scope(self.engine) as db:
             return inventory_service.give_item(
                 db,
@@ -606,9 +625,12 @@ class WorldTools:
                 db, self.campaign_id, triggers, reason, self.dice_tables, self.rng, plus=self.plus
             )
 
-    def wilderness_action(self, action: str, reason: str) -> dict[str, Any]:
+    def wilderness_action(
+        self, action: str, reason: str, purchases: Sequence[Mapping[str, Any]] | None = None
+    ) -> dict[str, Any]:
         """Take a Wilderness Action for the current watch, then spend that watch. The action rolls
-        the day's weather and the events; the last part of the day counts as night."""
+        the day's weather and the events; the last part of the day counts as night. A resupply
+        names its purchases, which are bought at the marketplace."""
         wilderness = _required(self.wilderness, "wilderness")
         clock_rules = _required(self.clock_rules, "time")
         with session_scope(self.engine) as db:
@@ -640,6 +662,9 @@ class WorldTools:
                 party=[c.name for c in party],
                 night=night,
                 give=self._give_catalogue_item,
+                need=self.need,
+                buy=self._buy_catalogue_item,
+                purchases=purchases,
             )
         with session_scope(self.engine) as db:
             result["clock"] = clock_service.advance_time(
@@ -804,13 +829,25 @@ class WorldTools:
         character once the last progress watch is spent."""
         wilderness = _required(self.wilderness, "wilderness")
         clock_rules = _required(self.clock_rules, "time")
-        if route is None:
-            raise InvalidInput("an overland move needs a route with path, distance, and terrain")
         inventory = _required(self.inventory, "inventory")
         with session_scope(self.engine) as db:
             state = load_state(db, self.campaign_id)
             actor = _character_named(state, name)
             where = _place_named(state, location)
+            origin = state.places.get(name_key(actor.location)) if actor.location else None
+            authored = _authored_route(state, origin, where)
+            if authored is not None:
+                # The world's route supplies the path, distance, terrain, and vast; only the
+                # weather choice comes from the GM.
+                effective_route: dict[str, Any] = {}
+                if route is not None and "weather_choice" in route:
+                    effective_route["weather_choice"] = route["weather_choice"]
+                effective_route.update(authored)
+                route = effective_route
+            if route is None:
+                raise InvalidInput(
+                    "an overland move needs a route with path, distance, and terrain"
+                )
             party = _travelling_party(state, actor)
             start = state.clock
             season = wilderness_service.season_for_day(
@@ -885,6 +922,7 @@ class WorldTools:
                     "progress": made_progress,
                     "weather": watch["weather"],
                     "events": watch["events"],
+                    "effects": watch["effects"],
                     "clock": clock_now,
                 }
             )
@@ -1117,7 +1155,15 @@ class WorldTools:
 
     def player_save(self, roll: int) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return combat.player_save(db, self.campaign_id, roll, self._rules())
+            return combat.player_save(
+                db,
+                self.campaign_id,
+                roll,
+                self._rules(),
+                conditions=self.conditions,
+                rng=self.rng,
+                plus=self.plus,
+            )
 
     def player_initiative(self, roll: int) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -1300,6 +1346,7 @@ def seed_campaign(
                 parent=None if spot.parent is None else names[spot.parent],
                 icon=spot.icon,
                 rules=list(spot.rules),
+                routes={key: dict(route) for key, route in spot.routes.items()},
             ),
         )
     for region in world.regions:
@@ -2214,13 +2261,54 @@ def _travel_minutes(
 ) -> int:
     """The whole minutes a move takes: the straight-line distance from where the actor is, at the
     mode's speed. A move with no distance to work out takes the default leg."""
-    origin = state.places.get(name_key(actor.location)) if actor.location else None
-    if origin is None or origin.position is None or where.position is None:
+    origin = _place_position(state, actor.location)
+    destination = _place_position(state, where.name)
+    if origin is None or destination is None:
         return travel.default_leg_minutes
-    distance = math.hypot(
-        where.position.x - origin.position.x, where.position.y - origin.position.y
-    )
+    distance = math.hypot(destination[0] - origin[0], destination[1] - origin[1])
     return round(distance / travel.modes[mode].km_per_hour * 60)
+
+
+def _place_position(state: CampaignState, name: str | None) -> tuple[float, float] | None:
+    """The map position of a place, as kilometers (x, y). A place inside another has none of its
+    own, so it is at its parent's position."""
+    place = state.places.get(name_key(name)) if name else None
+    if place is None:
+        return None
+    if place.position is None and place.parent is not None:
+        place = state.places.get(name_key(place.parent))
+        if place is None:
+            return None
+    if place.position is None:
+        return None
+    return (place.position.x, place.position.y)
+
+
+def _slug(name: str) -> str:
+    """A place name as a location id writes it: "Village Gate" becomes "village-gate"."""
+    return re.sub(r"[^a-z0-9]+", "-", name.casefold()).strip("-")
+
+
+def _authored_route(
+    state: CampaignState, origin: Place | None, dest: Place
+) -> Mapping[str, Any] | None:
+    """The route the world authors from origin to dest, or None. A place inside another place
+    uses its parent's routes, and a route to a place inside another leads to that parent."""
+    origins = [origin]
+    if origin is not None and origin.parent is not None:
+        origins.append(state.places.get(name_key(origin.parent)))
+    destinations = {_slug(dest.name), name_key(dest.name)}
+    if dest.parent is not None:
+        dest_parent = state.places.get(name_key(dest.parent))
+        if dest_parent is not None:
+            destinations |= {_slug(dest_parent.name), name_key(dest_parent.name)}
+    for place in origins:
+        if place is None:
+            continue
+        for key, route in place.routes.items():
+            if key in destinations:
+                return route
+    return None
 
 
 def _charge_travel(

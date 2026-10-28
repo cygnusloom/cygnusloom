@@ -541,26 +541,14 @@
     "name": "roll_tables",
     "python_module": "cairn2e",
     "function": "roll_tables",
-    "description": "Roll on one or more of the Warden's dice tables and log every result. Use 'dungeon_reaction' (2d6) for how an NPC or monster reacts to the party. Use 'die_of_fate' (1d6) when the outcome of an event is uncertain: 4 or more favors the PCs, 3 or less is bad luck. To create a monster, roll all eight monster_ tables (one 1d20 each) in a single call, then combine the results into a statblock and place it with create_monster. The engine does not save or place a creature from these rolls; you receive the results and decide what they mean.",
+    "description": "Roll on one or more of the Warden's dice tables and log every result. Use 'dungeon_reaction' (2d6) for how an NPC or monster reacts to the party. Use 'die_of_fate' (1d6) when the outcome of an event is uncertain: 4 or more favors the PCs, 3 or less is bad luck. To create a monster, roll all eight monster_ tables (one 1d20 each) in a single call, then combine the results into a statblock and place it with create_monster. World tables such as 'encounters', 'rumors', or 'victim-schedule' can also be rolled when the world defines them. The engine does not save or place a creature from these rolls; you receive the results and decide what they mean.",
     "parameters": {
       "type": "object",
       "properties": {
         "tables": {
           "type": "array",
           "items": {
-            "type": "string",
-            "enum": [
-              "dungeon_reaction",
-              "die_of_fate",
-              "monster_appearance_physique",
-              "monster_appearance_feature",
-              "monster_traits_quirks",
-              "monster_traits_weakness",
-              "monster_attacks_type",
-              "monster_attacks_critical_damage",
-              "monster_abilities_ability",
-              "monster_abilities_target"
-            ]
+            "type": "string"
           },
           "description": "The ids of the tables to roll on, in order. Each is rolled once."
         }
@@ -576,7 +564,7 @@
     "name": "wilderness_action",
     "python_module": "cairn2e",
     "function": "wilderness_action",
-    "description": "Take a Wilderness Action for the party's current watch, during broader long-term travel through the wild. Choose explore to search a large area for hidden features, supply to hunt, fish, or forage for Rations, or make_camp to set up camp, which consumes a Ration for each member and removes Fatigue from members who rest. The engine rolls the day's weather and the Wilderness Events (twice at night) and then spends one watch. Narrate the result. Do not use it inside a dungeon or other dangerous area, or in a safe area.",
+    "description": "Take a Wilderness Action for the party's current watch, during broader long-term travel through the wild. Choose explore to search a large area for hidden features, supply to hunt, fish, or forage for Rations, make_camp to set up camp, which consumes a Ration for each member and removes Fatigue from members who rest, or resupply at a home, farmstead, or small village in the world, which spends gold at Marketplace prices to buy Rations, a Torch, or an Oil Can, one purchase per entry in purchases. Resupply needs purchases and no other action takes them. The engine rolls the day's weather and the Wilderness Events (twice at night) and then spends one watch. Each night watch consumes one Torch for the party, or an Oil Can if a member carries a Lantern, and reports panicking when the party has no light source. Narrate the result. Do not use it inside a dungeon or other dangerous area, or in a safe area.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -585,6 +573,7 @@
           "enum": [
             "explore",
             "supply",
+            "resupply",
             "make_camp"
           ],
           "description": "The Wilderness Action the party takes this watch."
@@ -592,6 +581,31 @@
         "reason": {
           "type": "string",
           "description": "A short note on what the party is doing, for the log."
+        },
+        "purchases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "item": {
+                "type": "string",
+                "description": "The basic supply to buy: Rations, Torch, or Oil Can."
+              },
+              "quantity": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "How many to buy. Defaults to 1."
+              },
+              "name": {
+                "type": "string",
+                "description": "The party member who buys and pays. Defaults to the first player character."
+              }
+            },
+            "required": [
+              "item"
+            ]
+          },
+          "description": "The purchases a resupply makes, each at Marketplace prices. Only for resupply."
         }
       },
       "required": [

@@ -17,7 +17,7 @@
   {
     "type": "prompt",
     "id": "wilderness_action",
-    "text": "Choose the cycle from the situation. The wilderness cycle is for broader long-term travel through the wild: call wilderness_action once per watch with the Wilderness Action the party takes: explore, supply, or make_camp. The call rolls the weather and the events and spends the watch, so narrate its result. Never call it inside a dungeon or other dangerous area, or in a safe area."
+    "text": "Choose the cycle from the situation. The wilderness cycle is for broader long-term travel through the wild: call wilderness_action once per watch with the Wilderness Action the party takes: explore, supply, make_camp, or resupply. Resupply is only for when the party is at a home, farmstead, or small village in the world where supplies can be bought for gold and a full watch; it buys Rations, a Torch, or an Oil Can at Marketplace prices, with purchases naming each item. Each night watch consumes a Torch for the party (or an Oil Can if a member carries a Lantern), and the result reports panicking when the party has no light source. The call rolls the weather and the events and spends the watch, so narrate its result. Never call it inside a dungeon or other dangerous area, or in a safe area."
   },
   {
     "type": "prompt",

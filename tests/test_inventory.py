@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from typing import Any
 
 import pytest
@@ -12,6 +13,7 @@ from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import ItemAdded, current, record
 from cygnusforge.services.market import listed_item
 from cygnusforge.services.world import WorldTools
+from tests.conftest import content_library
 from tests.test_combat import CAIRN, PC, _character, _fight, _fight_client
 
 CAPACITY = CAIRN.inventory.capacity
@@ -56,6 +58,40 @@ def test_bulky_items_take_two_slots_and_petty_items_none(client_factory):
     sizes = {i.name: (i.size, i.slots) for i in _character(app, campaign_id, PC).items}
     assert sizes["Ladder"] == ("bulky", 2)
     assert sizes["Coin"] == ("petty", 0)
+
+
+def _with_world_features(tools: WorldTools) -> WorldTools:
+    return replace(
+        tools, features=content_library().world_content("twin-lakes", "cairn2e").features
+    )
+
+
+def test_a_bulky_catalogue_item_takes_its_listed_size_when_none_is_given(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    before = _used(app, campaign_id)
+    assert tools.give_item(PC, "Chainmail")["slots_used"] == before + 2
+    (held,) = [i for i in _character(app, campaign_id, PC).items if i.name == "Chainmail"]
+    assert (held.size, held.slots) == ("bulky", 2)
+
+
+def test_a_bulky_world_item_takes_its_listed_size_when_none_is_given(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools = _with_world_features(tools)
+    before = _used(app, campaign_id)
+    result = tools.give_item(PC, "Fletcher's Ire")
+    assert result["slots_used"] == before + 2
+    (held,) = [i for i in _character(app, campaign_id, PC).items if i.name == "Fletcher's Ire"]
+    assert (held.size, held.slots) == ("bulky", 2)
+    assert held.uses == 3
+
+
+def test_a_petty_world_item_takes_no_slots_when_no_size_is_given(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools = _with_world_features(tools)
+    before = _used(app, campaign_id)
+    assert tools.give_item(PC, "Moon Cloth")["slots_used"] == before
+    (held,) = [i for i in _character(app, campaign_id, PC).items if i.name == "Moon Cloth"]
+    assert (held.size, held.slots) == ("petty", 0)
 
 
 def test_an_unknown_item_size_is_refused(client_factory):
