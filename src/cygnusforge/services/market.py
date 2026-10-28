@@ -17,8 +17,8 @@ from cygnusforge.services.events import (
     Character,
     CurrencyChanged,
     Item,
-    LodgingSet,
     RestRecovered,
+    ShelterSet,
     load_state,
     name_key,
     record,
@@ -145,7 +145,7 @@ def buy_service(
     names: Sequence[str],
     service: str,
 ) -> dict[str, Any]:
-    """The named characters buy a service, and the first of them pays for all of it. Lodging
+    """The named characters buy a service, and the first of them pays for all of it. Shelter
     covers the whole party a night, with a room for each `fits` characters. Restoring treats each
     named character who has lost any of the attributes it restores, at the price per patient."""
     listed = _find_service(marketplace, service)
@@ -160,12 +160,12 @@ def buy_service(
         seen.setdefault(character.name, character)
     buyers = list(seen.values())
     payer = buyers[0]
-    if listed.effect == "lodging":
+    if listed.effect == "shelter":
         rooms = math.ceil(len(buyers) / listed.fits)
         total = listed.price * rooms
         left = _pay(db, campaign_id, marketplace, payer, total, cause=listed.name)
         for buyer in buyers:
-            record(db, campaign_id, LodgingSet(name=buyer.name, lodged=True))
+            record(db, campaign_id, ShelterSet(name=buyer.name, sheltered=True))
         served = [buyer.name for buyer in buyers]
     else:
         patients = [

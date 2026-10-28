@@ -32,6 +32,7 @@ from cygnusforge.content.character import (
     resolve,
 )
 from cygnusforge.content.library import (
+    AdvancementRules,
     ClockRules,
     CombatRules,
     ConditionRules,
@@ -48,8 +49,11 @@ from cygnusforge.content.library import (
     MonsterTemplate,
     MoveRules,
     NeedRules,
+    PeriodRules,
+    RelationRules,
     RestLength,
     ShopItem,
+    TallyRules,
     Travel,
     Wilderness,
     WorldTemplate,
@@ -57,6 +61,7 @@ from cygnusforge.content.library import (
 )
 from cygnusforge.rules.context import brief
 from cygnusforge.rules.dice import is_formula
+from cygnusforge.services import advancements as advancements_service
 from cygnusforge.services import aid, combat, encounters, morale
 from cygnusforge.services import attacks as attack_modifiers
 from cygnusforge.services import clock as clock_service
@@ -67,6 +72,9 @@ from cygnusforge.services import market as market_service
 from cygnusforge.services import moves as moves_service
 from cygnusforge.services import needs as needs_service
 from cygnusforge.services import objects as objects_service
+from cygnusforge.services import periods as periods_service
+from cygnusforge.services import relations as relations_service
+from cygnusforge.services import tallies as tallies_service
 from cygnusforge.services import wilderness as wilderness_service
 from cygnusforge.services.attacks import ATTACK_FLAGS
 from cygnusforge.services.common import (
@@ -278,6 +286,10 @@ class WorldTools:
     moves: Mapping[str, MoveRules] = field(default_factory=dict)
     # The rule set's counters by id, such as Experience or Luck.
     counters: Mapping[str, CounterRules] = field(default_factory=dict)
+    advancements: Mapping[str, AdvancementRules] = field(default_factory=dict)
+    periods: Mapping[str, PeriodRules] = field(default_factory=dict)
+    tallies: Mapping[str, TallyRules] = field(default_factory=dict)
+    relations: Mapping[str, RelationRules] = field(default_factory=dict)
     # Time, rest, and needs. Each is None or empty when the rule set does not track them.
     clock_rules: ClockRules | None = None
     rests: Mapping[str, RestLength] = field(default_factory=dict)
@@ -652,6 +664,54 @@ class WorldTools:
                 combat=self.combat,
                 rng=self.rng,
                 plus=self.plus,
+            )
+
+    def take_advancement(self, character: str, option: str, stat: str | None) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return advancements_service.take_advancement(
+                db,
+                self.campaign_id,
+                character,
+                option,
+                advancements=next(iter(self.advancements.values()), None),
+                counters=self.counters,
+                conditions=self.conditions,
+                combat=self.combat,
+                rng=self.rng,
+                plus=self.plus,
+                stat=stat,
+            )
+
+    def end_period(self, period: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return periods_service.end_period(
+                db,
+                self.campaign_id,
+                self.periods.get(period),
+                counters=self.counters,
+                conditions=self.conditions,
+                combat=self.combat,
+                rng=self.rng,
+                plus=self.plus,
+            )
+
+    def adjust_tally(self, tally: str, entry: str, change: int, reason: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return tallies_service.adjust_tally(
+                db, self.campaign_id, self.tallies.get(tally), entry, change, reason=reason
+            )
+
+    def set_relation(
+        self, character: str, relation: str, other: str, added: bool
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return relations_service.set_relation(
+                db,
+                self.campaign_id,
+                character,
+                self.relations.get(relation),
+                other,
+                added=added,
             )
 
     def use_charge(self, name: str, item: str) -> dict[str, Any]:
@@ -1519,7 +1579,7 @@ def create_player_character(
         raise InvalidInput("every stat needs a value")
     try:
         check_swaps(spec, rolled, chosen)
-        check_choices(spec, submitted.get("fields", {}))
+        check_choices(spec, submitted)
     except CharacterError as error:
         raise InvalidInput(str(error)) from error
     sheet = resolve(spec, submitted, rng, plus=plus)
@@ -1700,7 +1760,7 @@ def create_npc(
     _ensure_free_name(state, name)
     where = _place_named(state, location)
     try:
-        check_choices(spec, (character or {}).get("fields", {}))
+        check_choices(spec, character or {})
     except CharacterError as error:
         raise InvalidInput(str(error)) from error
     base = None if force else _statblock_named(monsters, name)
@@ -1774,7 +1834,7 @@ def hire_hireling(
     if not isinstance(wage, int) or isinstance(wage, bool) or wage < 0:
         raise InvalidInput("the wage must be a whole number of currency, zero or more")
     try:
-        check_choices(spec, (character or {}).get("fields", {}))
+        check_choices(spec, character or {})
     except CharacterError as error:
         raise InvalidInput(str(error)) from error
     event = _npc_event(
@@ -2207,7 +2267,7 @@ def update_npc(
                 f"{npc.name} already has stats; only a story-only NPC can be given them"
             )
         try:
-            check_choices(spec, (character or {}).get("fields", {}))
+            check_choices(spec, character or {})
         except CharacterError as error:
             raise InvalidInput(str(error)) from error
         sheet = resolve(spec, character or {}, rng, plus=plus)

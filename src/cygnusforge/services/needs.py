@@ -24,13 +24,13 @@ from cygnusforge.services.conditions import end_condition
 from cygnusforge.services.events import (
     PC_KIND,
     CampaignState,
-    CampFedSet,
     ItemRemoved,
     ItemUsesSet,
-    LodgingSet,
+    MealSet,
     NeedSet,
     RestRecovered,
     RestTaken,
+    ShelterSet,
     load_state,
     name_key,
     record,
@@ -148,19 +148,19 @@ def _feed_party(
     start: int,
     hours_per_part: int,
 ) -> None:
-    """Each party member who is not lodged eats one use of the food. A member who has none is
-    deprived, if the rule set tracks need. A lodged member's bed is used up instead. A member who
+    """Each party member who is not sheltered eats one use of the food. A member who has none is
+    deprived, if the rule set tracks need. A sheltered member's bed is used up instead. A member who
     ate a meal one part of the day before this rest, which started `start` hours in, is fed by
     that meal and eats nothing more."""
     day = state.clock.day
     for character in [c for c in state.characters.values() if c.kind == PC_KIND]:
-        camp_fed_at = character.camp_fed_at
-        if camp_fed_at is not None:
-            record(db, campaign_id, CampFedSet(name=character.name, at=None))
-        if character.lodged:
-            record(db, campaign_id, LodgingSet(name=character.name, lodged=False))
+        meal_at = character.meal_at
+        if meal_at is not None:
+            record(db, campaign_id, MealSet(name=character.name, at=None))
+        if character.sheltered:
+            record(db, campaign_id, ShelterSet(name=character.name, sheltered=False))
             continue
-        if camp_fed_at is not None and start - camp_fed_at == hours_per_part:
+        if meal_at is not None and start - meal_at == hours_per_part:
             continue
         held = next((i for i in character.items if name_key(i.name) == name_key(food.item)), None)
         if held is None:

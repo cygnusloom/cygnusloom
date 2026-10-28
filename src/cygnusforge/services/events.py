@@ -170,6 +170,10 @@ class Character:
     injuries: list[str] = field(default_factory=list)
     # The value of each counter the character keeps, by counter id. A counter not listed is at its initial value.
     counters: dict[str, int] = field(default_factory=dict)
+    # How many times each advancement option has been taken, by option id.
+    advancements_taken: dict[str, int] = field(default_factory=dict)
+    # The names of the character's Friends and Rivals, by relation id, in the order added.
+    relations: dict[str, list[str]] = field(default_factory=dict)
     # Ran from the fight, or broke and fled. Cleared when the encounter ends.
     fled: bool = False
     # Gave up the fight and laid down arms. Cleared when the encounter ends.
@@ -181,10 +185,10 @@ class Character:
     # A large group whose critical save failed. The GM must decide it is defeated or flees.
     critical_due: bool = False
     # Paid for a bed for the night. The next rest that eats food feeds this character for free.
-    lodged: bool = False
-    # The hour a wilderness action fed the character as its camp meal. Cleared by the food rest that
-    # follows it. None when no camp meal is owed.
-    camp_fed_at: int | None = None
+    sheltered: bool = False
+    # The hour a wilderness action fed the character a meal. Cleared by the food rest that
+    # follows it. None when no meal is owed.
+    meal_at: int | None = None
     # What the character carries. The penalty item is an item of the rule set's penalty kind.
     items: list[Item] = field(default_factory=list)
     # The campaign day a need began, or None while the character is not deprived.
@@ -410,6 +414,8 @@ class CampaignState:
     weather_day: int | None = None
     weather_streak: int = 0
     start_season: str | None = None
+    # The campaign's tallies by tally id, then entry id, such as each House's points.
+    tallies: dict[str, dict[str, int]] = field(default_factory=dict)
 
     def named(self, name: str) -> Place | Character | None:
         key = name_key(name)
@@ -2232,6 +2238,88 @@ class CounterChanged(GameEvent):
 
 
 @dataclass(frozen=True)
+class AdvancementTaken(GameEvent):
+    """A character spent an Advancement on an option. `stat` is the stat the option raised, or ""."""
+
+    kind: ClassVar[str] = "character.advancement_taken"
+
+    name: str
+    option: str
+    label: str
+    stat: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        taken = state.characters[name_key(self.name)].advancements_taken
+        taken[self.option] = taken.get(self.option, 0) + 1
+
+    def render(self) -> str:
+        return f"{self.name} takes the Advancement {self.label}" + (
+            f" ({self.stat.upper()})." if self.stat else "."
+        )
+
+
+@dataclass(frozen=True)
+class RelationChanged(GameEvent):
+    """A character gained or lost a relation with someone, such as a Friend or a Rival."""
+
+    kind: ClassVar[str] = "character.relation_changed"
+
+    name: str
+    relation: str
+    label: str
+    other: str
+    added: bool
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        held = state.characters[name_key(self.name)].relations.setdefault(self.relation, [])
+        if self.added:
+            held.append(self.other)
+        else:
+            held.remove(self.other)
+
+    def render(self) -> str:
+        if self.added:
+            return f"{self.name} makes {self.other} their {self.label}."
+        return f"{self.name} is no longer {self.other}'s {self.label}."
+
+
+@dataclass(frozen=True)
+class TallyChanged(GameEvent):
+    """A campaign tally moved for one entry, such as a House's points. `before` and `after` are its
+    values for the entry."""
+
+    kind: ClassVar[str] = "tally.changed"
+
+    tally: str
+    label: str
+    entry: str
+    entry_label: str
+    before: int
+    after: int
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.tallies.setdefault(self.tally, {})[self.entry] = self.after
+
+    def render(self) -> str:
+        text = f"{self.entry_label} {self.label} goes from {self.before} to {self.after}"
+        return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
+class PeriodEnded(GameEvent):
+    """A stretch of play, such as a school year, ended for every character at once."""
+
+    kind: ClassVar[str] = "period.ended"
+
+    period: str
+    label: str
+
+    def render(self) -> str:
+        return f"The {self.label} ends."
+
+
+@dataclass(frozen=True)
 class InjuryGained(GameEvent):
     """An injury from the Injuries table. `roll` is the table entry it came from."""
 
@@ -2319,6 +2407,8 @@ class MoveMade(GameEvent):
     band: str
     text: str = ""
     cause: str = ""
+    # The stat the roll added, or "" when the move rolled none.
+    stat: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         return None
@@ -2527,40 +2617,40 @@ class CurrencyChanged(GameEvent):
 
 
 @dataclass(frozen=True)
-class LodgingSet(GameEvent):
+class ShelterSet(GameEvent):
     """A character has paid for a bed, or the bed is used up by the rest that ate food."""
 
-    kind: ClassVar[str] = "character.lodging_set"
+    kind: ClassVar[str] = "character.shelter_set"
 
     name: str
-    lodged: bool
+    sheltered: bool
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        state.characters[name_key(self.name)].lodged = self.lodged
+        state.characters[name_key(self.name)].sheltered = self.sheltered
 
     def render(self) -> str:
-        if self.lodged:
+        if self.sheltered:
             return f"{self.name} has a bed for the night."
         return f"{self.name}'s bed is used up."
 
 
 @dataclass(frozen=True)
-class CampFedSet(GameEvent):
-    """A wilderness action fed a character as its camp meal, at the hour that action began. `at` is
+class MealSet(GameEvent):
+    """A wilderness action fed a character a meal, at the hour that action began. `at` is
     None once the food rest that follows has used the meal up."""
 
-    kind: ClassVar[str] = "character.camp_fed_set"
+    kind: ClassVar[str] = "character.meal_set"
 
     name: str
     at: int | None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        state.characters[name_key(self.name)].camp_fed_at = self.at
+        state.characters[name_key(self.name)].meal_at = self.at
 
     def render(self) -> str:
         if self.at is None:
-            return f"{self.name}'s camp meal is used up."
-        return f"{self.name} has eaten the camp meal."
+            return f"{self.name}'s meal is used up."
+        return f"{self.name} has eaten a meal."
 
 
 @dataclass(frozen=True)
@@ -2861,9 +2951,13 @@ HIDDEN_KINDS: dict[str, bool] = {
     "character.retired": False,
     "character.drained": False,
     "character.max_changed": False,
+    "character.advancement_taken": False,
+    "character.relation_changed": False,
+    "tally.changed": False,
+    "period.ended": False,
     "character.currency_changed": False,
-    "character.lodging_set": False,
-    "character.camp_fed_set": True,
+    "character.shelter_set": False,
+    "character.meal_set": True,
     "character.need_set": False,
     "character.item_added": False,
     "character.item_removed": False,

@@ -185,7 +185,7 @@ def test_a_service_is_paid_by_the_first_named_character(client_factory):
     assert _gold(app, campaign_id) == pc_before
 
 
-def test_lodging_for_a_group_takes_a_room_for_each_fits_characters(client_factory):
+def test_shelter_for_a_group_takes_a_room_for_each_fits_characters(client_factory):
     app, campaign_id, tools = _pcs(client_factory)
     _with_companion(tools)
     _grant_gold(app, campaign_id, 100)
@@ -193,18 +193,18 @@ def test_lodging_for_a_group_takes_a_room_for_each_fits_characters(client_factor
     result = tools.buy_service([PC, BRAN], "private_room")
     assert result["price"] == 35
     assert _gold(app, campaign_id) == before - 35
-    assert _character(app, campaign_id, PC).lodged
-    assert _character(app, campaign_id, BRAN).lodged
+    assert _character(app, campaign_id, PC).sheltered
+    assert _character(app, campaign_id, BRAN).sheltered
 
 
-def test_lodging_without_enough_gold_is_refused_and_nobody_is_lodged(client_factory):
+def test_shelter_without_enough_gold_is_refused_and_nobody_is_sheltered(client_factory):
     app, campaign_id, tools = _pcs(client_factory)
     _with_companion(tools)
     assert _gold(app, campaign_id) < 35
     with pytest.raises(InvalidInput):
         tools.buy_service([PC, BRAN], "private_room")
-    assert not _character(app, campaign_id, PC).lodged
-    assert not _character(app, campaign_id, BRAN).lodged
+    assert not _character(app, campaign_id, PC).sheltered
+    assert not _character(app, campaign_id, BRAN).sheltered
 
 
 def test_medical_healing_restores_only_the_patients_and_the_payer_pays_once(client_factory):
@@ -274,14 +274,14 @@ def test_a_rest_with_no_food_leaves_the_character_deprived(client_factory):
     assert _character(app, campaign_id, PC).unmet_since is not None
 
 
-def test_a_lodged_character_eats_nothing_and_the_bed_is_used_up(client_factory):
+def test_a_sheltered_character_eats_nothing_and_the_bed_is_used_up(client_factory):
     app, campaign_id, tools = _pcs(client_factory)
     _grant_gold(app, campaign_id, 100)
     tools.buy_service([PC], "room")
     before = _rations(app, campaign_id)[0].uses
     tools.rest("night", reason="camp")
     assert _rations(app, campaign_id)[0].uses == before
-    assert not _character(app, campaign_id, PC).lodged
+    assert not _character(app, campaign_id, PC).sheltered
 
 
 def test_a_moments_rest_eats_nothing(client_factory):

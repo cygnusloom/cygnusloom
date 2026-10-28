@@ -50,11 +50,8 @@
         },
         "counter": {
           "type": "string",
-          "enum": [
-            "luck",
-            "experience"
-          ],
-          "description": "Which counter to change."
+          "description": "Which counter to change.",
+          "enum_from": "counters"
         },
         "change": {
           "type": "integer",
@@ -65,6 +62,130 @@
         "character",
         "counter",
         "change"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "take_advancement",
+    "name": "take_advancement",
+    "python_module": "core",
+    "function": "take_advancement",
+    "description": "Spend one of a player character's Advancements on an option: raise a trait, add a Favourite Subject, learn a spell, gain a magical object, or regain Luck. Use stat for an option that names a trait.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character."
+        },
+        "option": {
+          "type": "string",
+          "enum_from": "advancement_options",
+          "description": "Which Advancement to take."
+        },
+        "stat": {
+          "type": "string",
+          "enum_from": "stats",
+          "description": "The trait to raise, for an option that takes one."
+        }
+      },
+      "required": [
+        "character",
+        "option"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "end_period",
+    "name": "end_period",
+    "python_module": "core",
+    "function": "end_period",
+    "description": "End a stretch of play, such as a school year, for every player character at once. Call it when the school year completes; it applies that period's effects to each character.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "period": {
+          "type": "string",
+          "enum_from": "periods",
+          "description": "Which stretch of play ends."
+        }
+      },
+      "required": [
+        "period"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "adjust_tally",
+    "name": "adjust_tally",
+    "python_module": "core",
+    "function": "adjust_tally",
+    "description": "Add points to, or deduct points from, a running tally such as a House's points. Use a negative change to deduct.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "tally": {
+          "type": "string",
+          "enum_from": "tallies",
+          "description": "Which tally to change."
+        },
+        "entry": {
+          "type": "string",
+          "enum_from": "tally_entries",
+          "description": "Which entry of the tally, such as a House."
+        },
+        "change": {
+          "type": "integer",
+          "description": "How many points to add (positive) or deduct (negative)."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why the points change, such as a Quidditch win."
+        }
+      },
+      "required": [
+        "tally",
+        "entry",
+        "change"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "set_relation",
+    "name": "set_relation",
+    "python_module": "core",
+    "function": "set_relation",
+    "description": "Make someone a player character's Friend or Rival, or end that relation. Use it only at the end of a session, as the rules require.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character."
+        },
+        "relation": {
+          "type": "string",
+          "enum_from": "relations",
+          "description": "Which relation to change."
+        },
+        "other": {
+          "type": "string",
+          "description": "The name of the person, player or non-player, they are linked to."
+        },
+        "added": {
+          "type": "boolean",
+          "description": "true to make them this relation, false to end it."
+        }
+      },
+      "required": [
+        "character",
+        "relation",
+        "other",
+        "added"
       ]
     }
   }

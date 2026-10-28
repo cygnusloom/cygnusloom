@@ -95,6 +95,10 @@ def _tools(app: FastAPI, campaign_id: int, rng: Any = None) -> WorldTools:
         travel=HOGWARTS.travel,
         wilderness=HOGWARTS.wilderness,
         world_terrain=HOGWARTS.world_terrain,
+        advancements=HOGWARTS.advancements,
+        periods=HOGWARTS.periods,
+        tallies=HOGWARTS.tallies,
+        relations=HOGWARTS.relations,
     )
 
 
@@ -108,7 +112,7 @@ def _counter(app: FastAPI, campaign_id: int, counter: str) -> int:
 
 
 def test_the_bundled_ruleset_has_its_counters_conditions_moves_and_tools():
-    assert set(HOGWARTS.counters) == {"luck", "experience"}
+    assert set(HOGWARTS.counters) == {"luck", "experience", "advancements"}
     assert HOGWARTS.counters["luck"].maximum == 3
     assert HOGWARTS.counters["experience"].maximum == 4
     assert len(HOGWARTS.conditions) == 8
@@ -288,7 +292,7 @@ def test_the_exit_roll_is_closed_until_every_condition_is_marked(client_factory)
     tools = _tools(app, campaign_id, Rolls(5, 5))
     tools.add_condition(HARRY, "scared", "A bad day.")
     with pytest.raises(InvalidInput, match="only open once every condition is marked"):
-        tools.roll_move("exit_the_story", HARRY, stat="bravery")
+        tools.roll_move("exit_the_story", HARRY)
 
 
 def test_a_ten_on_the_exit_roll_clears_every_condition(client_factory):
@@ -296,7 +300,7 @@ def test_a_ten_on_the_exit_roll_clears_every_condition(client_factory):
     app, campaign_id = _campaign(client_factory)
     tools = _tools(app, campaign_id, Rolls(6, 6))
     _mark_all_conditions(tools)
-    result = tools.roll_move("exit_the_story", HARRY, stat="bravery")
+    result = tools.roll_move("exit_the_story", HARRY)
     assert result["band"] == "Return with everything cleared"
     assert _harry(app, campaign_id).conditions == []
     assert not _harry(app, campaign_id).retired
@@ -306,7 +310,7 @@ def test_a_seven_to_nine_on_the_exit_roll_clears_only_unconscious(client_factory
     app, campaign_id = _campaign(client_factory)
     tools = _tools(app, campaign_id, Rolls(4, 4))
     _mark_all_conditions(tools)
-    result = tools.roll_move("exit_the_story", HARRY, stat="bravery")
+    result = tools.roll_move("exit_the_story", HARRY)
     assert result["band"] == "Return, Unconscious cleared"
     assert sorted(_harry(app, campaign_id).conditions) == sorted(
         c for c in ALL_EIGHT if c != "unconscious"
@@ -318,7 +322,7 @@ def test_a_six_or_less_on_the_exit_roll_takes_the_character_out_of_the_story(cli
     app, campaign_id = _campaign(client_factory)
     tools = _tools(app, campaign_id, Rolls(1, 2))
     _mark_all_conditions(tools)
-    result = tools.roll_move("exit_the_story", HARRY, stat="bravery")
+    result = tools.roll_move("exit_the_story", HARRY)
     assert result["band"] == "Exit the story"
     harry = _harry(app, campaign_id)
     assert harry.retired
@@ -330,7 +334,7 @@ def test_a_character_who_left_the_story_is_no_longer_the_player_character(client
     app, campaign_id = _campaign(client_factory)
     tools = _tools(app, campaign_id, Rolls(1, 2))
     _mark_all_conditions(tools)
-    tools.roll_move("exit_the_story", HARRY, stat="bravery")
+    tools.roll_move("exit_the_story", HARRY)
     state = _state(app, campaign_id)
     assert state.pc() is not None
     assert state.pc().out_of_play

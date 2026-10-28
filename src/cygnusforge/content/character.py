@@ -27,6 +27,8 @@ class TableOption:
 
     name: str | None
     description: str
+    # The group an option belongs to, such as "core". Fields can roll by group or restrict groups.
+    group: str | None = None
 
     @property
     def value(self) -> str:
@@ -66,6 +68,9 @@ class Feature:
     damage: str = ""
     # The ids of rules attached to this feature. Their text reaches the GM while the item is carried.
     rules: tuple[str, ...] = ()
+    # The rule set's label for the feature, such as the Year a spell belongs to. A template's
+    # `choose` picks features by it.
+    tag: str = ""
 
 
 @dataclass(frozen=True)
@@ -74,6 +79,16 @@ class Granted:
 
     feature: str
     quantity: str
+
+
+@dataclass(frozen=True)
+class Choose:
+    """Features a template lets the character pick: `count` of `feature_type` whose tag is the
+    value of the field `tag_field`. A pick left out is rolled from the same pool."""
+
+    count: int
+    feature_type: str
+    tag_field: str
 
 
 @dataclass(frozen=True)
@@ -90,16 +105,30 @@ class Template:
     stats: Mapping[str, int] = field(default_factory=dict)
     # Amounts added to counters' starting values, by counter id, when the template is chosen.
     counters: Mapping[str, int] = field(default_factory=dict)
+    # Features the character picks when the template is chosen.
+    choose: Choose | None = None
+
+
+@dataclass(frozen=True)
+class Restriction:
+    """Limits a field's options to `groups` while the field `field_id` takes one of `values`."""
+
+    field_id: str
+    values: tuple[str, ...]
+    groups: tuple[str, ...]
 
 
 @dataclass(frozen=True)
 class Field:
-    """A text field when `table` is None, otherwise a choice from that table."""
+    """A text field when `table` is None, otherwise a choice from that table. A `group_roll` field
+    rolls a group first and then an option within it. A `restriction` limits its options."""
 
     id: str
     name: str
     description: str
     table: str | None
+    group_roll: bool = False
+    restriction: Restriction | None = None
 
 
 @dataclass(frozen=True)
@@ -148,6 +177,8 @@ def build_character(
                 raise ContentError(
                     f"{template}: template {item.id!r} table {table!r} clashes with a field"
                 )
+    _check_fields(fields, tables, template)
+    _check_pick_fields(templates, fields, template)
     return CharacterSpec(
         stats=stats,
         templates=templates,
@@ -156,6 +187,43 @@ def build_character(
         tables=tables,
         table_names=table_names,
     )
+
+
+def _check_pick_fields(
+    templates: Mapping[str, Template], fields: Mapping[str, Field], template: str
+) -> None:
+    for item in templates.values():
+        if item.choose is None:
+            continue
+        gate = fields.get(item.choose.tag_field)
+        if gate is None or gate.table is None:
+            raise ContentError(
+                f"{template}: template {item.id!r} 'choose' needs a table field named "
+                f"{item.choose.tag_field!r}"
+            )
+
+
+def _check_fields(
+    fields: Mapping[str, Field], tables: Mapping[str, tuple[TableOption, ...]], template: str
+) -> None:
+    for item in fields.values():
+        label = f"{template}: character_field {item.id}"
+        if item.group_roll and not all(option.group for option in tables[item.table or ""]):
+            raise ContentError(f"{label}: 'group_roll' needs every option to have a 'group'")
+        restriction = item.restriction
+        if restriction is None:
+            continue
+        gate = fields.get(restriction.field_id)
+        if item.table is None or gate is None or gate.table is None:
+            raise ContentError(
+                f"{label}: 'restricted_by' needs a table field named {restriction.field_id!r}"
+            )
+        if gate.restriction is not None:
+            raise ContentError(f"{label}: the field {gate.id!r} it names may not be restricted")
+        if not set(restriction.values) <= {option.value for option in tables[gate.table]}:
+            raise ContentError(f"{label}: 'restricted_by' values must be options of {gate.id!r}")
+        if not set(restriction.groups) <= {option.group for option in tables[item.table]}:
+            raise ContentError(f"{label}: 'restricted_by' groups must be groups of its options")
 
 
 def _each(definitions: list[Definition], kind: str, make: Any) -> dict[str, Any]:
@@ -251,6 +319,9 @@ def load_feature(definition: Definition, template: str) -> Feature:
     damage = data.get("damage", "")
     if not isinstance(damage, str) or (damage and not is_formula(damage)):
         raise ContentError(f"{label}: 'damage' must be a dice formula such as 'd6'")
+    tag = data.get("tag", "")
+    if not isinstance(tag, str):
+        raise ContentError(f"{label}: 'tag' must be text")
     return Feature(
         id=definition.id,
         name=required_text(data, "name", label),
@@ -261,6 +332,7 @@ def load_feature(definition: Definition, template: str) -> Feature:
         armor=armor,
         damage=damage,
         rules=rule_ids(data, label),
+        tag=tag,
     )
 
 
@@ -284,11 +356,34 @@ def _field(definition: Definition, tables: Mapping[str, object], kind: str, temp
     description = definition.data.get("description", "")
     if not isinstance(description, str):
         raise ContentError(f"{label}: 'description' must be text")
+    group_roll = definition.data.get("group_roll", False)
+    if not isinstance(group_roll, bool):
+        raise ContentError(f"{label}: 'group_roll' must be true or false")
+    if group_roll and table is None:
+        raise ContentError(f"{label}: 'group_roll' needs a 'table'")
     return Field(
         id=definition.id,
         name=required_text(definition.data, "name", label),
         description=description,
         table=table,
+        group_roll=group_roll,
+        restriction=_restriction(definition.data.get("restricted_by"), label),
+    )
+
+
+def _restriction(data: object, label: str) -> Restriction | None:
+    if data is None:
+        return None
+    if not isinstance(data, dict) or set(data) != {"field", "values", "groups"}:
+        raise ContentError(f"{label}: 'restricted_by' needs 'field', 'values', and 'groups'")
+    values, groups = data["values"], data["groups"]
+    for key, items in (("values", values), ("groups", groups)):
+        if not isinstance(items, list) or not items or not all(isinstance(i, str) for i in items):
+            raise ContentError(f"{label}: 'restricted_by' {key} must be a non-empty list of text")
+    return Restriction(
+        field_id=required_text(data, "field", label),
+        values=tuple(values),
+        groups=tuple(groups),
     )
 
 
@@ -321,7 +416,25 @@ def _template(
         names=names,
         stats=_amounts(data.get("stats", {}), "stats", label),
         counters=_amounts(data.get("counters", {}), "counters", label, minimum=0),
+        choose=_choose(data.get("choose"), label),
     )
+
+
+def _choose(data: object, label: str) -> Choose | None:
+    if data is None:
+        return None
+    if not isinstance(data, dict):
+        raise ContentError(f"{label}: 'choose' must be an object")
+    count = data.get("count")
+    if isinstance(count, bool) or not isinstance(count, int) or count < 1:
+        raise ContentError(f"{label}: 'choose' count must be a whole number, 1 or more")
+    kind = required_text(data, "feature_type", f"{label}: 'choose'")
+    if kind not in FEATURE_TYPES:
+        raise ContentError(
+            f"{label}: 'choose' feature_type must be one of {', '.join(FEATURE_TYPES)}"
+        )
+    tag_field = required_text(data, "tag_field", f"{label}: 'choose'")
+    return Choose(count=count, feature_type=kind, tag_field=tag_field)
 
 
 def _amounts(value: object, key: str, label: str, minimum: int | None = None) -> dict[str, int]:
@@ -400,7 +513,7 @@ def character_schema(spec: CharacterSpec) -> dict[str, Any]:
             "type": "array",
             "items": {"type": "string", "enum": list(spec.features)},
             "uniqueItems": True,
-            "description": "Features the character has besides any a template grants",
+            "description": _features_description(spec),
         }
     fields = {
         f.id: {"type": "string", "description": f.description or f.name}
@@ -437,36 +550,119 @@ def option_fields(spec: CharacterSpec) -> dict[str, tuple[str, str]]:
 
 def choice_options(spec: CharacterSpec, field: str | None = None) -> dict[str, Any]:
     """The fields that take a table value when `field` is None. Otherwise, the values that field
-    can take, with a description for each option that has a name."""
+    can take, with a description for each option that has a name, and any restriction on them."""
     fields = option_fields(spec)
     if field is None:
         return {"fields": [{"field": key, "name": label} for key, (label, _) in fields.items()]}
     if field not in fields:
         return {"error": f"no field {field!r}; the fields with choices are {', '.join(fields)}"}
-    return {
+    result: dict[str, Any] = {
         "field": field,
         "options": [_option_entry(option) for option in spec.tables[fields[field][1]]],
     }
+    restriction = spec.fields[field].restriction if field in spec.fields else None
+    if restriction is not None:
+        values = ", ".join(repr(value) for value in restriction.values)
+        groups = ", ".join(repr(group) for group in restriction.groups)
+        result["note"] = (
+            f"While {restriction.field_id!r} is {values}, only options in {groups} are allowed."
+        )
+    return result
 
 
 def _option_entry(option: TableOption) -> dict[str, str]:
     if option.name is None:
-        return {"value": option.description}
-    return {"value": option.name, "description": option.description}
+        entry = {"value": option.description}
+    else:
+        entry = {"value": option.name, "description": option.description}
+    if option.group is not None:
+        entry["group"] = option.group
+    return entry
 
 
-def check_choices(spec: CharacterSpec, fields: Mapping[str, Any]) -> None:
+def allowed_options(
+    spec: CharacterSpec, field_spec: Field, fields: Mapping[str, Any]
+) -> tuple[TableOption, ...]:
+    """The options a field may take. A restriction applies while the field it names takes one of
+    its values, or while that field is not yet known, since then it applies whatever that is."""
+    options = spec.tables[field_spec.table or ""]
+    restriction = field_spec.restriction
+    if restriction is None:
+        return options
+    gate = fields.get(restriction.field_id)
+    if gate is not None and gate not in restriction.values:
+        return options
+    return tuple(option for option in options if option.group in restriction.groups)
+
+
+def check_choices(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
     """Raise CharacterError when a field that takes a table value is given a value that is not
-    one of the table's options."""
+    one of the table's options, or one a restriction rules out, or when a template's picks are
+    not features of its tag. `submitted` is the character as given: its fields, templates, and
+    features."""
+    _check_field_values(spec, submitted.get("fields", {}))
+    _check_picks(spec, submitted)
+
+
+def _check_picks(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
+    fields = submitted.get("fields", {})
+    given = submitted.get("features", [])
+    for template_id in submitted.get("templates", {}).values():
+        template = spec.templates[template_id]
+        if template.choose is None:
+            continue
+        kind = template.choose.feature_type
+        picks = [feature for feature in given if spec.features[feature].feature_type == kind]
+        if not picks:
+            continue
+        tag_field = template.choose.tag_field
+        if not fields.get(tag_field):
+            raise CharacterError(f"give {tag_field!r} to pick the {kind}s for {template.name}")
+        tag = fields[tag_field]
+        for feature in picks:
+            if spec.features[feature].tag != tag:
+                raise CharacterError(f"{spec.features[feature].name!r} is not a {kind} for {tag!r}")
+        if len(picks) > template.choose.count:
+            raise CharacterError(
+                f"{template.name} picks {template.choose.count} {kind}s, not {len(picks)}"
+            )
+
+
+def _check_field_values(spec: CharacterSpec, fields: Mapping[str, Any]) -> None:
+    """The table-value checks for `check_choices`."""
     tables = option_fields(spec)
     for key, value in fields.items():
         if key not in tables:
             continue
-        values = [option.value for option in spec.tables[tables[key][1]]]
-        if value not in values:
+        field_spec = spec.fields.get(key)
+        if field_spec is not None:
+            allowed = allowed_options(spec, field_spec, fields)
+        else:
+            allowed = spec.tables[tables[key][1]]
+        if value in [option.value for option in allowed]:
+            continue
+        restriction = field_spec.restriction if field_spec is not None else None
+        if restriction is not None and value in [
+            option.value for option in spec.tables[tables[key][1]]
+        ]:
             raise CharacterError(
-                f"{key!r} must be one of the values from character_options for {key!r}"
+                f"{value!r} cannot be {key!r} while {restriction.field_id!r} is one of "
+                f"{list(restriction.values)!r}"
             )
+        raise CharacterError(
+            f"{key!r} must be one of the values from character_options for {key!r}"
+        )
+
+
+def _features_description(spec: CharacterSpec) -> str:
+    picks = [
+        f"{template.name}: pick {template.choose.count} {template.choose.feature_type}(s) for "
+        f"the {template.choose.tag_field} given, or they are rolled"
+        for template in spec.templates.values()
+        if template.choose is not None
+    ]
+    base = "Features the character has besides any a template grants"
+    return "; ".join([base, *picks])
 
 
 def _object(properties: dict[str, Any]) -> dict[str, Any]:
@@ -625,6 +821,7 @@ def resolve(
     templates = dict(given_templates)
     features = {feature: 1 for feature in given_features}
     fields: dict[str, str] = {}
+    restricted: list[Field] = []
     counter_amounts: dict[str, int] = {}
     for template_id in templates.values():
         template = spec.templates[template_id]
@@ -644,10 +841,16 @@ def resolve(
     for field_spec in spec.fields.values():
         if field_spec.table is None:
             fields[field_spec.id] = given_fields.get(field_spec.id, "")
-        elif field_spec.id in given_fields:
-            fields[field_spec.id] = given_fields[field_spec.id]
+        elif field_spec.restriction is not None:
+            restricted.append(field_spec)
         else:
-            fields[field_spec.id] = rng.choice(spec.tables[field_spec.table]).value
+            fields[field_spec.id] = _field_value(spec, field_spec, given_fields, fields, rng)
+    for field_spec in restricted:
+        fields[field_spec.id] = _field_value(spec, field_spec, given_fields, fields, rng)
+    for template_id in templates.values():
+        choose = spec.templates[template_id].choose
+        if choose is not None:
+            _pick_features(spec, choose, fields, features, rng)
     counters = {
         counter_id: _within(spec.counters[counter_id], spec.counters[counter_id].initial + amount)
         for counter_id, amount in counter_amounts.items()
@@ -655,6 +858,55 @@ def resolve(
     return Sheet(
         stats=stats, templates=templates, features=features, fields=fields, counters=counters
     )
+
+
+def _pick_features(
+    spec: CharacterSpec,
+    choose: Choose,
+    fields: Mapping[str, str],
+    features: dict[str, int],
+    rng: random.Random,
+) -> None:
+    """Roll the picks a template's `choose` leaves to chance: features of its type whose tag is
+    the value of the gate field, skipping any the character already has. An empty pool yields no
+    picks."""
+    held = [
+        feature
+        for feature in features
+        if spec.features[feature].feature_type == choose.feature_type
+    ]
+    needed = max(0, choose.count - len(held))
+    pool = sorted(
+        feature.id
+        for feature in spec.features.values()
+        if feature.feature_type == choose.feature_type
+        and feature.tag == fields.get(choose.tag_field)
+        and feature.id not in features
+    )
+    for feature in rng.sample(pool, min(needed, len(pool))):
+        features[feature] = 1
+
+
+def _field_value(
+    spec: CharacterSpec,
+    field_spec: Field,
+    given_fields: Mapping[str, Any],
+    fields: Mapping[str, Any],
+    rng: random.Random,
+) -> str:
+    """The value of a table field: the one given, or else rolled. A group roll picks a group
+    first, so the group picked is as likely as any other."""
+    options = allowed_options(spec, field_spec, fields)
+    if field_spec.id in given_fields:
+        value = given_fields[field_spec.id]
+        if field_spec.restriction is not None and value not in [o.value for o in options]:
+            raise CharacterError(f"{value!r} is not allowed for {field_spec.id!r} here")
+        return value
+    if field_spec.group_roll:
+        groups = list(dict.fromkeys(option.group for option in options))
+        group = rng.choice(groups)
+        options = tuple(option for option in options if option.group == group)
+    return rng.choice(options).value
 
 
 def _within(counter: CounterRef, value: int) -> int:

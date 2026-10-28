@@ -1,0 +1,12 @@
+[
+  {
+    "type": "period",
+    "id": "school-year",
+    "label": "school year",
+    "effects": [
+      {"op": "counter", "id": "luck", "reset": true},
+      {"op": "counter", "id": "advancements", "delta": 1},
+      {"op": "note", "text": "The school year is completed: all their marked Luck is regained, and they may take an Advancement."}
+    ]
+  }
+]

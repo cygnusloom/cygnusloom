@@ -4,7 +4,6 @@ from dataclasses import replace
 
 import pytest
 
-from cygnusforge.rules.cairn2e import save_succeeds
 from cygnusforge.services import encounters
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import FOES_SIDE, MoraleChecked
@@ -18,6 +17,7 @@ from tests.test_combat import (
     _foe,
     _hit,
     _set_stat,
+    save_succeeds,
 )
 from tests.test_world import _db, _state
 

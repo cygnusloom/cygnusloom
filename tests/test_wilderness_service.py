@@ -24,10 +24,10 @@ from cygnusforge.services import clock as clock_service
 from cygnusforge.services import wilderness
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
-    CampFedSet,
     ItemAdded,
     ItemRemoved,
     LostRolled,
+    MealSet,
     WeatherRolled,
     WildernessEffectApplied,
     WildernessEventRolled,
@@ -637,17 +637,17 @@ def test_make_camp_with_no_rations_reports_the_shortage(client_factory: Callable
     assert _kinds(app, campaign_id).count(WildernessEffectApplied.kind) >= 2
 
 
-def _pc_camp_fed_at(app: FastAPI, campaign_id: int) -> int | None:
+def _pc_meal_at(app: FastAPI, campaign_id: int) -> int | None:
     with _db(app) as db:
-        return load_state(db, campaign_id).characters[PC.casefold()].camp_fed_at
+        return load_state(db, campaign_id).characters[PC.casefold()].meal_at
 
 
 def test_make_camp_marks_the_camp_meal_for_the_member(client_factory: Callable[[], TestClient]):
     app, campaign_id, tools = _pc_tools(client_factory)
-    assert _pc_camp_fed_at(app, campaign_id) is None
+    assert _pc_meal_at(app, campaign_id) is None
     tools.wilderness_action("make_camp", "a night's rest")
-    assert _pc_camp_fed_at(app, campaign_id) is not None
-    assert CampFedSet.kind in _kinds(app, campaign_id)
+    assert _pc_meal_at(app, campaign_id) is not None
+    assert MealSet.kind in _kinds(app, campaign_id)
 
 
 def test_a_rest_right_after_make_camp_eats_no_second_ration(
@@ -659,7 +659,7 @@ def test_a_rest_right_after_make_camp_eats_no_second_ration(
     assert _pc_rations(app, campaign_id)[0].uses == uses_before - 1
     tools.rest("night")
     assert _pc_rations(app, campaign_id)[0].uses == uses_before - 1
-    assert _pc_camp_fed_at(app, campaign_id) is None
+    assert _pc_meal_at(app, campaign_id) is None
 
 
 def test_a_stale_camp_meal_does_not_skip_a_later_rest_meal(
@@ -669,10 +669,10 @@ def test_a_stale_camp_meal_does_not_skip_a_later_rest_meal(
     uses_before = _pc_rations(app, campaign_id)[0].uses
     tools.wilderness_action("make_camp", "a night's rest")
     tools.wilderness_action("explore", "a morning look around")
-    assert _pc_camp_fed_at(app, campaign_id) is not None
+    assert _pc_meal_at(app, campaign_id) is not None
     tools.rest("night")
     assert _pc_rations(app, campaign_id)[0].uses == uses_before - 2
-    assert _pc_camp_fed_at(app, campaign_id) is None
+    assert _pc_meal_at(app, campaign_id) is None
 
 
 def _add_item(app: FastAPI, campaign_id: int, item: str, uses: int, max_uses: int) -> None:

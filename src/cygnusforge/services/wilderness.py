@@ -22,12 +22,12 @@ from cygnusforge.rules.dice import roll_total
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
     CampaignState,
-    CampFedSet,
     Character,
     Item,
     ItemRemoved,
     ItemUsesSet,
     LostRolled,
+    MealSet,
     NeedSet,
     WeatherRolled,
     WildernessEffectApplied,
@@ -159,7 +159,7 @@ class _Watch:
     action: str
     reason: str
     night: bool
-    # The hour the watch begins, in hours since day 1. A camp meal is marked with it.
+    # The hour the watch begins, in hours since day 1. A meal is marked with it.
     at: int
     party: tuple[str, ...]
     wilderness: Wilderness
@@ -170,7 +170,7 @@ class _Watch:
     events: list[dict[str, Any]] = field(default_factory=list)
     effects: list[dict[str, Any]] = field(default_factory=list)
     need: NeedRules | None = None
-    # The day the watch falls on. A camp meal the party goes without can leave a member deprived.
+    # The day the watch falls on. A meal the party goes without can leave a member deprived.
     day: int = 1
     buy: Callable[[Session, str, str], dict[str, Any]] | None = None
     purchases: Sequence[Mapping[str, Any]] = ()
@@ -239,7 +239,7 @@ class _Watch:
         short = [n for n in self.party if n not in used]
         if effect.meal:
             for name in used:
-                record(self.db, self.campaign_id, CampFedSet(name=name, at=self.at))
+                record(self.db, self.campaign_id, MealSet(name=name, at=self.at))
             if short and self.need is not None:
                 for name in short:
                     if state.characters[name_key(name)].unmet_since is None:

@@ -121,6 +121,27 @@
               {% for table in template.tables %}
                 {{ choice_panel("field-" ~ table.id, table.label, table.options) }}
               {% endfor %}
+              {% if template.picks %}
+                <fieldset class="creation-panel spell-picks" data-spell-picks="{{ template.id }}">
+                  <h3>Spells</h3>
+                  <p>{{ template.picks.hint }}</p>
+                  {% for index in range(template.picks.count) %}
+                    <label>
+                      Spell {{ index + 1 }}
+                      <select name="pick-{{ template.id }}-{{ index }}">
+                        <option value="">Roll</option>
+                        {% for group in template.picks.groups %}
+                          <optgroup label="{{ group.tag }}">
+                            {% for feature in group.features %}
+                              <option value="{{ feature.id }}">{{ feature.name }}</option>
+                            {% endfor %}
+                          </optgroup>
+                        {% endfor %}
+                      </select>
+                    </label>
+                  {% endfor %}
+                </fieldset>
+              {% endif %}
             </div>
           {% endfor %}
         {% endfor %}

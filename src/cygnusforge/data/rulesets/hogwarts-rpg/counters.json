@@ -6,7 +6,7 @@
     "min": 0,
     "max": 3,
     "initial": 3,
-    "description": "Marked to do something you normally couldn't, or to change a roll to a 10+. Regained in full when a school year ends."
+    "description": "Marked to do something you normally couldn't, or to change a roll to a 10+. All of it is regained when a school year is completed."
   },
   {
     "type": "counter",
@@ -16,8 +16,17 @@
     "max": 4,
     "initial": 0,
     "full": [
-      {"op": "note", "text": "The witch or wizard has 4 Experience: they take an Advancement now, and this Experience is cleared."},
+      {"op": "note", "text": "The witch or wizard has 4 Experience: they may take an Advancement now, and this Experience is cleared."},
+      {"op": "counter", "id": "advancements", "delta": 1},
       {"op": "counter", "id": "experience", "set": 0}
     ]
+  },
+  {
+    "type": "counter",
+    "id": "advancements",
+    "label": "Advancements",
+    "min": 0,
+    "initial": 0,
+    "description": "Advancements the witch or wizard may take. One is earned at 4 Experience and one each time a school year is completed."
   }
 ]

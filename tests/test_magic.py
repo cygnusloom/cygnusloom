@@ -7,10 +7,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusforge.rules.cairn2e import save_succeeds
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import current
-from tests.test_combat import PC, Rolls, _character, _fight, _set_stat, _tools
+from tests.test_combat import PC, Rolls, _character, _fight, _set_stat, _tools, save_succeeds
 
 SPELL = "Magic Missile"
 TEXT = "Fires a bolt of force that never misses."

@@ -22,7 +22,6 @@ from cygnusforge.content.library import (
 )
 from cygnusforge.llm.base import ToolRequest
 from cygnusforge.rules import cairn2e
-from cygnusforge.rules.cairn2e import save_succeeds
 from cygnusforge.rules.context import ToolContext
 from cygnusforge.services import encounters
 from cygnusforge.services.combat import (
@@ -53,6 +52,14 @@ from tests.test_world import _db, _state
 
 LIBRARY = content_library()
 CAIRN = LIBRARY.rule_sets["cairn2e"]
+
+
+def save_succeeds(roll: int, score: int) -> bool:
+    """Cairn's d20 save as its combat JSON declares it: a 1 passes, a 20 fails, and otherwise the
+    roll must be at or under the score."""
+    return roll == 1 or (roll != 20 and roll <= score)
+
+
 PC = "Mara"
 YARD = "Stonegate Yard"
 MAP = "Yard Green"
@@ -311,16 +318,19 @@ def test_apply_damage_for_a_harm_only_rule_set_ignores_armor_and_saves():
     assert result == Damage(absorbed=0, harm={"hp": 5}, save=None)
 
 
-def test_a_combat_module_needs_the_save_and_initiative_functions():
-    with pytest.raises(ContentError, match="'save_succeeds' is not a function"):
-        _load_combat(
-            _combat(python_module="bare"),
-            {"bare": ModuleType("bare")},
-            CAIRN.character,
-            {},
-            {},
-            "cairn2e",
-        )
+def test_a_combat_module_may_leave_the_save_and_initiative_to_its_json():
+    combat = _load_combat(
+        _combat(python_module="bare"),
+        {"bare": ModuleType("bare")},
+        CAIRN.character,
+        {},
+        {},
+        "cairn2e",
+    )
+    assert combat.module is not None
+    assert combat.save_succeeds(1, 0) is True
+    assert combat.save_succeeds(20, 20) is False
+    assert combat.save_succeeds(11, 10) is False
 
 
 def _declarative_combat(**changes: Any) -> Definition:

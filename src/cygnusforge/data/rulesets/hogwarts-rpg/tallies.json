@@ -1,0 +1,14 @@
+[
+  {
+    "type": "tally",
+    "id": "house-points",
+    "label": "House Points",
+    "entries": [
+      {"value": "gryffindor", "label": "Gryffindor"},
+      {"value": "ravenclaw", "label": "Ravenclaw"},
+      {"value": "hufflepuff", "label": "Hufflepuff"},
+      {"value": "slytherin", "label": "Slytherin"},
+      {"value": "non-player", "label": "Non-Player"}
+    ]
+  }
+]

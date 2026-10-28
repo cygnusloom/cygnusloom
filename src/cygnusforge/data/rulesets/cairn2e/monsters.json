@@ -174,7 +174,7 @@
     "type": "monster",
     "id": "killer-bees",
     "name": "Killer Bees",
-    "description": "Oversized bees that build underground hives. Hyper-aggressive, attack anything that comes near. Produce special honey that heals 1d6 STR. 3 uses. When the bees cause STR damage, the stingers are lodged into the target, dealing d4 damage each round until removed.",
+    "description": "Oversized bees that build underground hives. Hyper-aggressive, attack anything that comes near. Produce special honey that heals 1d6 STR. 3 uses. When the bees cause STR damage, the stingers are sheltered into the target, dealing d4 damage each round until removed.",
     "stats": {
       "hp": 6,
       "str": 6,
@@ -193,7 +193,7 @@
       },
       {
         "id": "killer-bees-rule-2",
-        "text": "When the bees cause STR damage, the stingers are lodged into the target, dealing d4 damage each round until removed."
+        "text": "When the bees cause STR damage, the stingers are sheltered into the target, dealing d4 damage each round until removed."
       }
     ]
   },

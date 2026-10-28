@@ -191,6 +191,28 @@ def adjust_counter(character: str, counter: str, change: int, ctx: ToolContext) 
     return ctx.world.adjust_counter(character, counter, change)
 
 
+def take_advancement(
+    character: str, option: str, ctx: ToolContext, stat: str | None = None
+) -> dict[str, Any]:
+    return ctx.world.take_advancement(character, option, stat)
+
+
+def end_period(period: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.end_period(period)
+
+
+def adjust_tally(
+    tally: str, entry: str, change: int, ctx: ToolContext, reason: str = ""
+) -> dict[str, Any]:
+    return ctx.world.adjust_tally(tally, entry, change, reason)
+
+
+def set_relation(
+    character: str, relation: str, other: str, added: bool, ctx: ToolContext
+) -> dict[str, Any]:
+    return ctx.world.set_relation(character, relation, other, added)
+
+
 def add_condition(name: str, condition: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.add_condition(name, condition, cause)
 

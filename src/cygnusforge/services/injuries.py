@@ -99,14 +99,21 @@ def run_effects(
             _save(db, campaign_id, name, op, cx, cause, plus=plus)
         elif kind == "pick_stat":
             _pick_stat(db, campaign_id, name, op, cx, cause, plus=plus)
+        elif kind == "raise_stat":
+            _raise_stat(db, campaign_id, name, op, cx, cause)
         elif kind == "counter":
+            rules = cx.counters[op["id"]]
+            if "reset" in op:
+                amount, absolute = rules.initial, True
+            else:
+                amount, absolute = op.get("delta", op.get("set")), "set" in op
             change_counter(
                 db,
                 campaign_id,
                 name,
-                cx.counters[op["id"]],
-                op.get("delta", op.get("set")),
-                absolute="set" in op,
+                rules,
+                amount,
+                absolute=absolute,
                 cause=cause,
                 cx=cx,
                 plus=plus,
@@ -219,6 +226,34 @@ def _end_condition(
     record(db, campaign_id, ConditionEnded(name=character.name, condition=condition, how=cause))
     db.commit()
     run_effects(db, campaign_id, name, rules.on_end, cx, f"{rules.label} ended", plus=plus)
+
+
+def _raise_stat(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    op: dict[str, Any],
+    cx: EffectContext,
+    cause: str,
+) -> None:
+    """Raise a stat's maximum by `delta`, but no higher than `cap`."""
+    stat = cx.picked if op["stat"] == PICKED else op["stat"]
+    assert stat is not None
+    character = load_state(db, campaign_id).characters[name_key(name)]
+    before = character.stats.get(stat, 0)
+    after = min(op["cap"], before + op["delta"])
+    if after <= before:
+        record(
+            db,
+            campaign_id,
+            EffectNoted(name=name, text=f"{name}'s {stat.upper()} stays {before} ({cause})."),
+        )
+    else:
+        record(
+            db,
+            campaign_id,
+            MaxChanged(name=name, stat=stat, before=before, after=after, cause=cause),
+        )
 
 
 def _set_max(

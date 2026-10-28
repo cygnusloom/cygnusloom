@@ -49,6 +49,11 @@
     "kind": "blood",
     "name": "Muggle-born",
     "description": "Start with 1 spell from your Year and 3 Experience.",
+    "choose": {
+      "count": 1,
+      "feature_type": "spell",
+      "tag_field": "year"
+    },
     "counters": {
       "experience": 3
     }
@@ -59,6 +64,11 @@
     "kind": "blood",
     "name": "Half-blood",
     "description": "Start with 2 spells from your Year and 2 Experience.",
+    "choose": {
+      "count": 2,
+      "feature_type": "spell",
+      "tag_field": "year"
+    },
     "counters": {
       "experience": 2
     }
@@ -69,6 +79,11 @@
     "kind": "blood",
     "name": "Pure-blood",
     "description": "Start with 3 spells from your Year and 1 Experience.",
+    "choose": {
+      "count": 3,
+      "feature_type": "spell",
+      "tag_field": "year"
+    },
     "counters": {
       "experience": 1
     }

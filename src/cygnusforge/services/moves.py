@@ -5,12 +5,13 @@ the dice, stats, bands, and effects all come from the rule set's JSON."""
 from __future__ import annotations
 
 import random
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 
 from sqlmodel import Session
 
 from cygnusforge.content.library import (
     ALL_STATS,
+    HIGHEST,
     CombatRules,
     ConditionRules,
     CounterRules,
@@ -69,7 +70,12 @@ def make_move(
     character = state.characters.get(name_key(name))
     if character is None:
         raise InvalidInput(f"there is no character named {name!r}")
-    if move.stat is not None and stat not in (None, move.stat):
+    if move.stat == HIGHEST:
+        if stat is not None:
+            raise InvalidInput(
+                f"{move.label} rolls the best of {list(move.stat_choice)}, not {stat!r}"
+            )
+    elif move.stat is not None and stat not in (None, move.stat):
         raise InvalidInput(f"{move.label} always rolls {move.stat}, not {stat!r}")
     if move.stat is None and move.stat_choice and stat not in move.stat_choice:
         raise InvalidInput(
@@ -86,7 +92,9 @@ def make_move(
                 f"{move.label} is only open once every condition is marked; "
                 f"{character.name} still lacks {', '.join(missing)}"
             )
-    rolled_stat = move.stat or stat
+    rolled_stat = (
+        best_stat(character, move.stat_choice) if move.stat == HIGHEST else move.stat or stat
+    )
     if rolled_stat is not None and rolled_stat not in character.stats:
         raise InvalidInput(
             f"there is no stat named {rolled_stat!r}; choose one of {sorted(character.stats)}"
@@ -111,6 +119,7 @@ def make_move(
             band=band.label,
             text=band.text,
             cause=cause,
+            stat=rolled_stat or "",
         ),
     )
     db.commit()
@@ -123,11 +132,13 @@ def make_move(
         cause or move.label,
         plus=plus,
     )
-    return {
-        "move": move.label,
-        "roll": roll,
-        "bonus": bonus,
-        "total": total,
-        "band": band.label,
-        "text": band.text,
-    }
+    result: dict[str, object] = {"move": move.label}
+    if move.stat == HIGHEST:
+        result["stat"] = rolled_stat
+    result.update(roll=roll, bonus=bonus, total=total, band=band.label, text=band.text)
+    return result
+
+
+def best_stat(character: Character, choice: Sequence[str]) -> str:
+    """The stat in `choice` with the highest modifier, the first one listed on a tie."""
+    return max(choice, key=lambda stat: modifier_value(character, stat))

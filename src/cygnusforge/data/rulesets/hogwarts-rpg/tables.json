@@ -133,51 +133,63 @@
     "options": [
       {
         "name": "Charms",
-        "description": "Core class."
+        "description": "Core class.",
+        "group": "core"
       },
       {
         "name": "Herbology",
-        "description": "Core class."
+        "description": "Core class.",
+        "group": "core"
       },
       {
         "name": "Potions",
-        "description": "Core class."
+        "description": "Core class.",
+        "group": "core"
       },
       {
         "name": "Defence Against the Dark Arts",
-        "description": "Core class."
+        "description": "Core class.",
+        "group": "core"
       },
       {
         "name": "History of Magic",
-        "description": "Core class."
+        "description": "Core class.",
+        "group": "core"
       },
       {
         "name": "Transfiguration",
-        "description": "Core class."
+        "description": "Core class.",
+        "group": "core"
       },
       {
         "name": "Arithmancy",
-        "description": "Elective."
+        "description": "Elective.",
+        "group": "elective"
       },
       {
         "name": "Care of Magical Creatures",
-        "description": "Elective."
+        "description": "Elective.",
+        "group": "elective"
       },
       {
         "name": "Muggle Studies",
-        "description": "Elective."
+        "description": "Elective.",
+        "group": "elective"
       },
       {
         "name": "Astronomy",
-        "description": "Elective."
+        "description": "Elective.",
+        "group": "elective"
       },
       {
         "name": "Divination",
-        "description": "Elective."
+        "description": "Elective.",
+        "group": "elective"
       },
       {
         "name": "Quidditch",
-        "description": "Elective."
+        "description": "Elective.",
+        "group": "elective"
       }
     ]
   },

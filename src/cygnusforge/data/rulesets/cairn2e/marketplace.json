@@ -813,7 +813,7 @@
     "id": "room",
     "name": "Room & Board",
     "price": 10,
-    "effect": "lodging",
+    "effect": "shelter",
     "fits": 1,
     "per": "night"
   },
@@ -822,7 +822,7 @@
     "id": "private_room",
     "name": "Private Room & Board",
     "price": 35,
-    "effect": "lodging",
+    "effect": "shelter",
     "fits": 4,
     "per": "night"
   },

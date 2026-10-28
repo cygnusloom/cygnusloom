@@ -7,27 +7,6 @@ from typing import Any
 
 from cygnusforge.rules.context import ToolContext
 
-FUMBLE = 20
-
-
-def save_succeeds(roll: int, score: int) -> bool:
-    """A d20 save succeeds when the roll is at or under the score. A roll of 1 always succeeds,
-    and a 20 always fails."""
-    if roll == 1:
-        return True
-    if roll == FUMBLE:
-        return False
-    return roll <= score
-
-
-def initiative_order(entries: Sequence[tuple[str, bool | None]]) -> list[str]:
-    """The order of round one. Player characters who passed their initiative save act first, then the
-    NPCs (given as None), then those who failed. Each group keeps the order it came in."""
-    passed = [name for name, result in entries if result is True]
-    npcs = [name for name, result in entries if result is None]
-    failed = [name for name, result in entries if result is False]
-    return passed + npcs + failed
-
 
 def search_monster(query: str, ctx: ToolContext) -> dict[str, list[dict[str, Any]]]:
     return ctx.world.search_monster(query)

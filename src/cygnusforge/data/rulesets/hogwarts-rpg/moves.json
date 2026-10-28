@@ -355,6 +355,7 @@
     "label": "Exit the Story",
     "description": "When all 8 Conditions are marked, roll +your highest trait to see if you exit the story.",
     "dice": "2d6",
+    "stat": "highest",
     "stat_choice": [
       "bravery",
       "cunning",

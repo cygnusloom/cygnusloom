@@ -5,7 +5,17 @@ import random
 
 import pytest
 
-from cygnusforge.content.character import character_schema, describe, resolve
+from cygnusforge.content.character import (
+    CharacterError,
+    TableOption,
+    build_character,
+    character_schema,
+    check_choices,
+    choice_options,
+    describe,
+    resolve,
+)
+from cygnusforge.content.definitions import ContentError, Definition
 from tests.conftest import content_library
 
 HOGWARTS = content_library().rule_sets["hogwarts-rpg"]
@@ -139,3 +149,198 @@ def test_unforgivable_curses_cannot_be_chosen_at_creation():
     schema = json.dumps(character_schema(SPEC))
     for name in ("avada-kedavra", "crucio", "imperio"):
         assert f'"{name}"' not in schema
+
+
+CORE = {option.value for option in SPEC.tables["favourite-subject"] if option.group == "core"}
+ELECTIVE = {
+    option.value for option in SPEC.tables["favourite-subject"] if option.group == "elective"
+}
+
+
+@pytest.mark.parametrize("year", ["1st Year", "2nd Year"])
+def test_first_and_second_years_roll_a_core_favourite_subject(year):
+    for seed in range(60):
+        sheet = resolve(
+            SPEC,
+            {"fields": {"year": year}},
+            random.Random(seed),
+            plus=HOGWARTS.plus,
+        )
+        assert sheet.fields["favourite-subject"] in CORE
+
+
+@pytest.mark.parametrize("year", ["3rd Year", "7th Year", "Graduate"])
+def test_later_years_roll_core_and_elective_favourite_subjects(year):
+    picks = {
+        resolve(SPEC, {"fields": {"year": year}}, random.Random(seed), plus=HOGWARTS.plus).fields[
+            "favourite-subject"
+        ]
+        for seed in range(200)
+    }
+    assert picks & CORE and picks & ELECTIVE
+
+
+def test_a_group_roll_picks_core_and_elective_equally_often():
+    cores = sum(
+        resolve(
+            SPEC, {"fields": {"year": "3rd Year"}}, random.Random(seed), plus=HOGWARTS.plus
+        ).fields["favourite-subject"]
+        in CORE
+        for seed in range(2000)
+    )
+    assert 900 <= cores <= 1100
+
+
+def test_a_first_year_cannot_choose_an_elective_favourite_subject():
+    with pytest.raises(CharacterError, match="cannot be 'favourite-subject'"):
+        check_choices(SPEC, {"fields": {"year": "1st Year", "favourite-subject": "Astronomy"}})
+
+
+def test_a_year_is_needed_to_rule_out_an_elective_favourite_subject():
+    with pytest.raises(CharacterError, match="cannot be 'favourite-subject'"):
+        check_choices(SPEC, {"fields": {"favourite-subject": "Astronomy"}})
+
+
+def test_a_core_favourite_subject_is_allowed_whatever_the_year():
+    check_choices(SPEC, {"fields": {"favourite-subject": "Potions"}})
+    check_choices(SPEC, {"fields": {"year": "1st Year", "favourite-subject": "Potions"}})
+
+
+def test_a_later_year_may_choose_an_elective_favourite_subject():
+    check_choices(SPEC, {"fields": {"year": "3rd Year", "favourite-subject": "Quidditch"}})
+
+
+def test_the_favourite_subject_choices_say_which_years_are_core_only():
+    listing = choice_options(SPEC, "favourite-subject")
+    assert {entry["group"] for entry in listing["options"]} == {"core", "elective"}
+    assert "'1st Year'" in listing["note"] and "'core'" in listing["note"]
+    assert "note" not in choice_options(SPEC, "year")
+
+
+def test_a_restriction_that_names_no_field_is_refused_at_load():
+    definitions = [
+        Definition(
+            "character_field",
+            "subject",
+            {
+                "type": "character_field",
+                "id": "subject",
+                "name": "Subject",
+                "table": "subjects",
+                "restricted_by": {"field": "missing", "values": ["A"], "groups": ["core"]},
+            },
+        ),
+    ]
+    tables = {"subjects": (TableOption("A", "a", "core"),)}
+    with pytest.raises(ContentError, match="needs a table field named 'missing'"):
+        build_character(definitions, tables, {"subjects": "Subjects"}, "test")
+
+
+SPELL_BLOOD = {"muggle-born": 1, "half-blood": 2, "pure-blood": 3}
+
+
+def _spells_of(sheet) -> set[str]:
+    return {feature for feature in sheet.features if SPEC.features[feature].feature_type == "spell"}
+
+
+def _spell_for(year: str, skip: set[str] = frozenset()) -> str:
+    return next(
+        feature.id
+        for feature in SPEC.features.values()
+        if feature.feature_type == "spell" and feature.tag == year and feature.id not in skip
+    )
+
+
+@pytest.mark.parametrize("blood,count", SPELL_BLOOD.items())
+def test_each_blood_status_rolls_its_spells_from_the_year(blood, count):
+    for seed in range(20):
+        sheet = resolve(
+            SPEC,
+            {"templates": {"blood": blood}, "fields": {"year": "3rd Year"}},
+            random.Random(seed),
+            plus=HOGWARTS.plus,
+        )
+        spells = _spells_of(sheet)
+        assert len(spells) == count
+        assert {SPEC.features[spell].tag for spell in spells} == {"3rd Year"}
+
+
+def test_given_spell_picks_are_kept_and_the_rest_are_rolled():
+    kept = _spell_for("3rd Year")
+    sheet = resolve(
+        SPEC,
+        {
+            "templates": {"blood": "pure-blood"},
+            "fields": {"year": "3rd Year"},
+            "features": [kept],
+        },
+        random.Random(3),
+        plus=HOGWARTS.plus,
+    )
+    spells = _spells_of(sheet)
+    assert len(spells) == 3 and kept in spells
+    assert {SPEC.features[spell].tag for spell in spells} == {"3rd Year"}
+
+
+def test_a_spell_from_another_year_is_refused():
+    with pytest.raises(CharacterError, match="is not a spell for '3rd Year'"):
+        check_choices(
+            SPEC,
+            {
+                "templates": {"blood": "half-blood"},
+                "fields": {"year": "3rd Year"},
+                "features": [_spell_for("1st Year")],
+            },
+        )
+
+
+def test_too_many_spell_picks_are_refused():
+    picks = []
+    while len(picks) < 3:
+        picks.append(_spell_for("3rd Year", skip=set(picks)))
+    with pytest.raises(CharacterError, match="picks 2 spells, not 3"):
+        check_choices(
+            SPEC,
+            {
+                "templates": {"blood": "half-blood"},
+                "fields": {"year": "3rd Year"},
+                "features": picks,
+            },
+        )
+
+
+def test_spell_picks_without_a_year_are_refused():
+    with pytest.raises(CharacterError, match="give 'year' to pick the spells"):
+        check_choices(
+            SPEC,
+            {
+                "templates": {"blood": "half-blood"},
+                "features": [_spell_for("3rd Year")],
+            },
+        )
+
+
+def test_a_graduate_with_a_blood_status_picks_no_spells():
+    submitted = {"templates": {"blood": "pure-blood"}, "fields": {"year": "Graduate"}}
+    check_choices(SPEC, submitted)
+    sheet = resolve(SPEC, submitted, random.Random(5), plus=HOGWARTS.plus)
+    assert _spells_of(sheet) == set()
+
+
+def test_a_pick_tag_field_that_is_not_a_table_field_is_refused_at_load():
+    definitions = [
+        Definition(
+            "template",
+            "pure-blood",
+            {
+                "type": "template",
+                "id": "pure-blood",
+                "kind": "blood",
+                "name": "Pure-blood",
+                "description": "A test blood status.",
+                "choose": {"count": 1, "feature_type": "spell", "tag_field": "missing"},
+            },
+        ),
+    ]
+    with pytest.raises(ContentError, match="needs a table field named 'missing'"):
+        build_character(definitions, {}, {}, "test")

@@ -379,7 +379,10 @@ def test_a_counter_without_a_maximum_is_unbounded_above(tree: Path):
             "'full' needs a 'max'",
         ),
         ({"full": [{"op": "counter", "id": "mana", "delta": 1}]}, "names no counter ('mana')"),
-        ({"full": [{"op": "counter", "id": "luck"}]}, "needs exactly one of 'delta' or 'set'"),
+        (
+            {"full": [{"op": "counter", "id": "luck"}]},
+            "needs exactly one of 'delta', 'set' or 'reset'",
+        ),
         ({"full": [{"op": "end_condition", "id": "ghost"}]}, "names no stored condition"),
         ({"label": ""}, "'label' must be a non-empty string"),
     ],

@@ -8,13 +8,14 @@ from typing import Any
 
 from starlette.datastructures import FormData
 
-from cygnusforge.content.character import CampaignSpec, CharacterSpec, TableOption
+from cygnusforge.content.character import CampaignSpec, CharacterSpec, TableOption, Template
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.web.forms import form_text
 
 STAT_PREFIX = "stat-"
 TEMPLATE_PREFIX = "template-"
 FIELD_PREFIX = "field-"
+PICK_PREFIX = "pick-"
 CAMPAIGN_PREFIX = "campaign-"
 PRONOUNS_FIELD = "pronouns"
 PRONOUNS_OTHER_FIELD = "pronouns-other"
@@ -48,6 +49,7 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
             "description": template.description,
             "tables": [_table_view(spec, table) for table in template.tables],
             "names": list(template.names),
+            "picks": _picks_view(spec, template),
         }
         for template in spec.templates.values()
     ]
@@ -164,6 +166,7 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
             fields[field.id] = value
         elif field.table is not None:
             raise InvalidInput(f"Choose {field.name}")
+    features: list[str] = []
     for template_id in templates.values():
         template = spec.templates.get(template_id)
         if template is None:
@@ -173,12 +176,37 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
             if not value:
                 raise InvalidInput(f"Choose {spec.table_names.get(table, table)}")
             fields[table] = value
+        if template.choose is not None:
+            for index in range(template.choose.count):
+                value = form_text(form, f"{PICK_PREFIX}{template.id}-{index}")
+                if value:
+                    features.append(value)
     submitted: dict[str, Any] = {"fields": fields}
     if spec.stats:
         submitted["stats"] = stats
     if spec.templates:
         submitted["templates"] = templates
+    if features:
+        submitted["features"] = features
     return submitted
+
+
+def _picks_view(spec: CharacterSpec, template: Template) -> dict[str, Any] | None:
+    """The spells a template lets the player pick, grouped by the tag they share (a Year). A blank
+    pick is rolled from the same group."""
+    if template.choose is None:
+        return None
+    tag_field = spec.fields[template.choose.tag_field]
+    groups: dict[str, list[dict[str, str]]] = {}
+    for feature in spec.features.values():
+        if feature.feature_type == template.choose.feature_type:
+            groups.setdefault(feature.tag, []).append({"id": feature.id, "name": feature.name})
+    return {
+        "count": template.choose.count,
+        "feature_type": template.choose.feature_type,
+        "hint": f"Pick from the spells of your {tag_field.name}, or leave a pick blank to roll it.",
+        "groups": [{"tag": tag, "features": items} for tag, items in groups.items()],
+    }
 
 
 def _table_view(spec: CharacterSpec, table: str) -> dict[str, Any]:

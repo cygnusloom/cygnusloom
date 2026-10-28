@@ -7,7 +7,6 @@
   {
     "type": "combat",
     "id": "cairn",
-    "python_module": "cairn2e",
     "damage": [
       {"kind": "absorb"},
       {"kind": "harm", "stat": "hp"},

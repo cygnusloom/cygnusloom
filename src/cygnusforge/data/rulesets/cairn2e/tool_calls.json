@@ -714,7 +714,7 @@
     "name": "rest",
     "python_module": "cairn2e",
     "function": "rest",
-    "description": "Record a rest for the whole party. The Warden decides the length from what the party does: 'moments' is a short break of one hour, such as a drink and a sit-down, 'night' is a full night's rest, which runs until morning, or until dusk when it begins in the morning, 'week' is a week of rest. The rest moves the clock forward itself, so do not also advance_time for the same time. Set interrupted when something breaks the rest, and then it counts as moments only. A full rest, uninterrupted, is the only way to clear Fatigue. A deprived character recovers nothing. Rest eats one ration per character itself (a lodged character uses the bed instead), so never remove rations before resting; a character with no ration is deprived.",
+    "description": "Record a rest for the whole party. The Warden decides the length from what the party does: 'moments' is a short break of one hour, such as a drink and a sit-down, 'night' is a full night's rest, which runs until morning, or until dusk when it begins in the morning, 'week' is a week of rest. The rest moves the clock forward itself, so do not also advance_time for the same time. Set interrupted when something breaks the rest, and then it counts as moments only. A full rest, uninterrupted, is the only way to clear Fatigue. A deprived character recovers nothing. Rest eats one ration per character itself (a sheltered character uses the bed instead), so never remove rations before resting; a character with no ration is deprived.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -1165,7 +1165,7 @@
     "name": "buy_service",
     "python_module": "cairn2e",
     "function": "buy_service",
-    "description": "The named characters buy a service, such as a room for the night or medical healing. The first character named pays for the whole service. Lodging covers the party a night, and a lodged character needs no food on the next rest. Healing restores all harm, HP and attributes, for each named character who has lost any.",
+    "description": "The named characters buy a service, such as a room for the night or medical healing. The first character named pays for the whole service. Lodging covers the party a night, and a sheltered character needs no food on the next rest. Healing restores all harm, HP and attributes, for each named character who has lost any.",
     "parameters": {
       "type": "object",
       "properties": {

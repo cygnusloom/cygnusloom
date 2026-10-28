@@ -485,6 +485,7 @@ EFFECT_OPS = (
     "counter",
     "end_condition",
     "retire",
+    "raise_stat",
 )
 # Effect ops that only moves and counters' `full` effects may run, since only they carry the rule
 # set's counters and conditions into the effect.
@@ -497,6 +498,8 @@ ALL_CONDITIONS = "*"
 MAX_MODES = ("if_higher", "if_above_current", "add", "always")
 # The name a `pick_stat` op stores its choice under, for later ops to use as their `stat`.
 PICKED = "$picked"
+# A move's `stat` of "highest" rolls the best of its `stat_choice`, without the player picking.
+HIGHEST = "highest"
 DICE_SIDES = re.compile(r"1d[0-9]+")
 # The Injuries table has one entry for each hit that takes exactly 0 HP, up to this many points.
 INJURY_ROLLS = 12
@@ -555,6 +558,60 @@ class CounterRules:
 
 
 @dataclass(frozen=True)
+class AdvancementOption:
+    """One thing an Advancement can buy. `limit` is how many times a character may take it, or None
+    when unlimited. `picks` says the option takes a stat the player names, which its effects reach
+    as `$picked`."""
+
+    value: str
+    label: str
+    text: str
+    limit: int | None
+    picks: bool
+    effects: tuple[Mapping[str, Any], ...]
+
+
+@dataclass(frozen=True)
+class AdvancementRules:
+    """What a character spends from `counter`, one point each, on one of the options."""
+
+    id: str
+    label: str
+    counter: str
+    options: Mapping[str, AdvancementOption]
+
+
+@dataclass(frozen=True)
+class PeriodRules:
+    """A stretch of play, such as a school year, that ends for every character at once. Its
+    effects run for each character."""
+
+    id: str
+    label: str
+    effects: tuple[Mapping[str, Any], ...]
+
+
+@dataclass(frozen=True)
+class TallyRules:
+    """A running score the campaign keeps by entry, such as the points of each House."""
+
+    id: str
+    label: str
+    # Entry values and their labels, in file order.
+    entries: Mapping[str, str]
+
+
+@dataclass(frozen=True)
+class RelationRules:
+    """A named link a character can have with others, such as a Friend. `limit` is how many a
+    character may have at once, or None for no limit."""
+
+    id: str
+    label: str
+    limit: int | None
+
+
+@dataclass(frozen=True)
 class MoveBand:
     """One outcome of a move. The first band whose `min` the total reaches applies, so bands run from
     the highest `min` down. The last band has no `min` and takes whatever is left."""
@@ -573,9 +630,10 @@ class MoveRules:
     label: str
     description: str
     dice: str
+    # The stat rolled, or HIGHEST for the best of `stat_choice`, or None when the player picks.
     stat: str | None
     bands: tuple[MoveBand, ...]
-    # The stats the player picks from, when the move names no fixed stat. Empty otherwise.
+    # The stats the player picks from, or that a HIGHEST move takes the best of. Empty otherwise.
     stat_choice: tuple[str, ...] = ()
     # The move is only open once the character holds every stored condition.
     needs_all_conditions: bool = False
@@ -646,7 +704,8 @@ class CombatRules:
     instead of the attack's own.
 
     `save` and `initiative_mode` decide saves and round-one order. A rule set's `module`, when it
-    has one, supplies `save_succeeds(roll, score)` and `initiative_order(entries)` instead. `hit_mode`
+    has one, may supply `save_succeeds(roll, score)` and `initiative_order(entries)` to override
+    them; a rule set that declares its save and order in JSON needs no module. `hit_mode`
     says whether a hit lands automatically ("auto") or only when the check die reaches the target's
     armor, which is its defense ("roll_vs_defense"; an attack that ignores armor has none).
     `multi_attack` says whether several attacks on one target apply only the highest roll
@@ -742,7 +801,7 @@ class RestLength:
     full: bool
     restores: tuple[str, ...]
     clears: tuple[str, ...]
-    # Whether the party eats during this rest: each character who is not lodged uses a food use.
+    # Whether the party eats during this rest: each character who is not sheltered uses a food use.
     food: bool = False
     # For a rest that runs until morning: a part it begins in maps to the part it ends at instead,
     # such as a night rest begun in the morning that stops at the night part.
@@ -799,7 +858,7 @@ class ShopItem:
 
 @dataclass(frozen=True)
 class ShopService:
-    """A service the marketplace sells. `effect` is "lodging", "restore", or "deferred". Lodging
+    """A service the marketplace sells. `effect` is "shelter", "restore", or "deferred". A shelter
     covers `fits` characters a night. A restore gives back the attributes in `restores`."""
 
     id: str
@@ -916,6 +975,14 @@ class RuleSet:
     conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
     # Counters a character keeps, by id, such as Experience.
     counters: Mapping[str, CounterRules] = field(default_factory=dict)
+    # What a counter buys, by id, such as the Advancements a character spends.
+    advancements: Mapping[str, AdvancementRules] = field(default_factory=dict)
+    # Stretches of play that end for every character at once, by id, such as a school year.
+    periods: Mapping[str, PeriodRules] = field(default_factory=dict)
+    # Running scores the campaign keeps, by id, such as House Points.
+    tallies: Mapping[str, TallyRules] = field(default_factory=dict)
+    # Kinds of named link between characters, by id, such as a Friend.
+    relations: Mapping[str, RelationRules] = field(default_factory=dict)
     # Moves a player or GM can make, by id.
     moves: Mapping[str, MoveRules] = field(default_factory=dict)
     # Tables rolled with dice, by id, such as the GM's reaction table.
@@ -1466,6 +1533,12 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     )
     _check_template_grants(character, template)
     moves = _load_moves(definitions, character, frozenset(counters), template)
+    advancements = _load_advancements(
+        definitions, character, counters, frozenset(conditions), template
+    )
+    periods = _load_periods(definitions, character, counters, frozenset(conditions), template)
+    tallies = _load_tallies(definitions, template)
+    relations = _load_relations(definitions, template)
     injury_tables = {
         d.id: _load_injury_entries(d, character, conditions, template)
         for d in definitions
@@ -1520,12 +1593,22 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         raise ContentError(f"{label}: 'npc_hp' needs 'npc_hp_stat', the stat its tiers set")
     if npc_hp_stat is not None and npc_hp_stat not in character.stats:
         raise ContentError(f"{label}: 'npc_hp_stat' {npc_hp_stat!r} is not a stat of this rule set")
+    enum_sources = {
+        "moves": sorted(moves),
+        "stats": sorted(character.stats),
+        "counters": sorted(counters),
+        "periods": sorted(periods),
+        "tallies": sorted(tallies),
+        "tally_entries": sorted({e for t in tallies.values() for e in t.entries}),
+        "relations": sorted(relations),
+        "advancement_options": sorted({o for a in advancements.values() for o in a.options}),
+    }
     tool_calls: dict[str, ToolCall] = {}
     tool_names: set[str] = set()
     for d in definitions:
         if d.type != "tool_call":
             continue
-        call = _load_tool_call(d, modules, character, template, npc_hp, travel, moves)
+        call = _load_tool_call(d, modules, character, template, npc_hp, travel, enum_sources)
         if call.name in tool_names:
             raise ContentError(f"{template}: duplicate tool name {call.name!r}")
         tool_names.add(call.name)
@@ -1539,6 +1622,10 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         important=important,
         tool_calls=tool_calls,
         character=character,
+        advancements=advancements,
+        periods=periods,
+        tallies=tallies,
+        relations=relations,
         plus=_plus_mode(head.data, label),
         npc_hp=npc_hp,
         npc_hp_stat=npc_hp_stat,
@@ -1904,9 +1991,6 @@ def _load_combat(
         if module_id not in modules:
             raise ContentError(f"{label}: unknown python_module {module_id!r}")
         module = modules[module_id]
-        for function_name in ("save_succeeds", "initiative_order"):
-            if not callable(getattr(module, function_name, None)):
-                raise ContentError(f"{label}: {function_name!r} is not a function in {module_id!r}")
     damage = _load_damage(data, character, label)
     check_die = required_text(data, "check_die", label)
     if not re.fullmatch(r"1d[0-9]+", check_die) or int(check_die[2:]) < 2:
@@ -2859,8 +2943,8 @@ def _load_marketplace(
     for d in services:
         label = f"{template}: service {d.id}"
         effect = required_text(d.data, "effect", label)
-        if effect not in ("lodging", "restore", "deferred"):
-            raise ContentError(f"{label}: 'effect' must be lodging, restore, or deferred")
+        if effect not in ("shelter", "restore", "deferred"):
+            raise ContentError(f"{label}: 'effect' must be shelter, restore, or deferred")
         restores = _names(d.data, "restores", label)
         for stat in restores:
             if stat not in character.stats:
@@ -2994,6 +3078,136 @@ def _load_counters(
     return counters
 
 
+def _load_advancements(
+    definitions: list[Definition],
+    character: CharacterSpec,
+    counters: Mapping[str, CounterRules],
+    conditions: frozenset[str],
+    template: str,
+) -> dict[str, AdvancementRules]:
+    """The rule set's Advancement, if it has one. Its options spend one point of its counter."""
+    ids = frozenset(counters)
+    loaded: dict[str, AdvancementRules] = {}
+    for d in definitions:
+        if d.type != "advancement":
+            continue
+        label = f"{template}: advancement {d.id}"
+        if loaded:
+            raise ContentError(f"{template}: more than one advancement")
+        counter = required_text(d.data, "counter", label)
+        if counter not in ids:
+            raise ContentError(f"{label}: 'counter' names no counter ({counter!r})")
+        raw = d.data.get("options")
+        if not isinstance(raw, list) or not raw:
+            raise ContentError(f"{label}: 'options' must be a non-empty list")
+        options: dict[str, AdvancementOption] = {}
+        for option in raw:
+            if not isinstance(option, Mapping):
+                raise ContentError(f"{label}: each option must be an object")
+            value = required_text(option, "value", label)
+            if value in options:
+                raise ContentError(f"{label}: option {value!r} is repeated")
+            olabel = f"{label}: option {value}"
+            picks = _flag(option, "picks", olabel)
+            effects, _ = _check_effects(
+                option.get("effects", []), olabel, character, conditions, picks, counters=ids
+            )
+            if picks and not any(op.get("stat") == PICKED for op in effects):
+                raise ContentError(f"{olabel}: 'picks' is set, but no effect uses the pick")
+            options[value] = AdvancementOption(
+                value=value,
+                label=required_text(option, "label", olabel),
+                text=required_text(option, "text", olabel),
+                limit=_optional_limit(option, olabel),
+                picks=picks,
+                effects=effects,
+            )
+        loaded[d.id] = AdvancementRules(
+            id=d.id,
+            label=required_text(d.data, "label", label),
+            counter=counter,
+            options=options,
+        )
+    return loaded
+
+
+def _load_periods(
+    definitions: list[Definition],
+    character: CharacterSpec,
+    counters: Mapping[str, CounterRules],
+    conditions: frozenset[str],
+    template: str,
+) -> dict[str, PeriodRules]:
+    loaded: dict[str, PeriodRules] = {}
+    for d in definitions:
+        if d.type != "period":
+            continue
+        label = f"{template}: period {d.id}"
+        if d.id in loaded:
+            raise ContentError(f"{template}: duplicate period {d.id!r}")
+        effects, _ = _check_effects(
+            d.data.get("effects", []),
+            label,
+            character,
+            conditions,
+            False,
+            counters=frozenset(counters),
+        )
+        if not effects:
+            raise ContentError(f"{label}: a period needs 'effects'")
+        loaded[d.id] = PeriodRules(
+            id=d.id, label=required_text(d.data, "label", label), effects=effects
+        )
+    return loaded
+
+
+def _load_tallies(definitions: list[Definition], template: str) -> dict[str, TallyRules]:
+    loaded: dict[str, TallyRules] = {}
+    for d in definitions:
+        if d.type != "tally":
+            continue
+        label = f"{template}: tally {d.id}"
+        if d.id in loaded:
+            raise ContentError(f"{template}: duplicate tally {d.id!r}")
+        raw = d.data.get("entries")
+        if not isinstance(raw, list) or not raw:
+            raise ContentError(f"{label}: 'entries' must be a non-empty list")
+        entries: dict[str, str] = {}
+        for entry in raw:
+            if not isinstance(entry, Mapping):
+                raise ContentError(f"{label}: each entry must be an object")
+            value = required_text(entry, "value", label)
+            if value in entries:
+                raise ContentError(f"{label}: entry {value!r} is repeated")
+            entries[value] = required_text(entry, "label", label)
+        loaded[d.id] = TallyRules(
+            id=d.id, label=required_text(d.data, "label", label), entries=entries
+        )
+    return loaded
+
+
+def _load_relations(definitions: list[Definition], template: str) -> dict[str, RelationRules]:
+    loaded: dict[str, RelationRules] = {}
+    for d in definitions:
+        if d.type != "relation":
+            continue
+        label = f"{template}: relation {d.id}"
+        if d.id in loaded:
+            raise ContentError(f"{template}: duplicate relation {d.id!r}")
+        loaded[d.id] = RelationRules(
+            id=d.id,
+            label=required_text(d.data, "label", label),
+            limit=_optional_limit(d.data, label),
+        )
+    return loaded
+
+
+def _optional_limit(data: Mapping[str, Any], label: str) -> int | None:
+    if "limit" not in data:
+        return None
+    return _whole(data, "limit", label, 1)
+
+
 def _load_moves(
     definitions: list[Definition],
     character: CharacterSpec,
@@ -3014,9 +3228,16 @@ def _load_moves(
         if not is_formula(dice):
             raise ContentError(f"{label}: 'dice' is not a formula ({dice!r})")
         stat = d.data.get("stat")
-        if stat is not None and (not isinstance(stat, str) or stat not in character.stats):
-            raise ContentError(f"{label}: 'stat' names no stat ({stat!r})")
-        stat_choice = _load_stat_choice(d.data, stat, character, label)
+        if stat == HIGHEST:
+            if "stat_choice" not in d.data:
+                raise ContentError(
+                    f"{label}: stat {HIGHEST!r} needs a 'stat_choice' to choose from"
+                )
+            stat_choice = _load_stat_choice(d.data, None, character, label)
+        else:
+            if stat is not None and (not isinstance(stat, str) or stat not in character.stats):
+                raise ContentError(f"{label}: 'stat' names no stat ({stat!r})")
+            stat_choice = _load_stat_choice(d.data, stat, character, label)
         needs_all = _flag_default(d.data, "needs_all_conditions", label, False)
         if needs_all and not stored:
             raise ContentError(f"{label}: needs_all_conditions, but the rule set has no conditions")
@@ -3188,11 +3409,30 @@ def _check_effects(
             counter = required_text(op, "id", label)
             if counter not in (counters or frozenset()):
                 raise ContentError(f"{label}: counter op names no counter ({counter!r})")
-            if ("delta" in op) == ("set" in op):
-                raise ContentError(f"{label}: counter op needs exactly one of 'delta' or 'set'")
-            amount = op.get("delta", op.get("set"))
-            if not isinstance(amount, int) or isinstance(amount, bool):
-                raise ContentError(f"{label}: counter op amount must be a whole number")
+            if sum(key in op for key in ("delta", "set", "reset")) != 1:
+                raise ContentError(
+                    f"{label}: counter op needs exactly one of 'delta', 'set' or 'reset'"
+                )
+            if "reset" in op:
+                if op["reset"] is not True:
+                    raise ContentError(f"{label}: counter op 'reset' must be true")
+            else:
+                amount = op.get("delta", op.get("set"))
+                if not isinstance(amount, int) or isinstance(amount, bool):
+                    raise ContentError(f"{label}: counter op amount must be a whole number")
+        elif name == "raise_stat":
+            stat = required_text(op, "stat", label)
+            if stat == PICKED:
+                if not picked:
+                    raise ContentError(f"{label}: {PICKED!r} is used before a pick_stat")
+            elif stat not in character.stats:
+                raise ContentError(f"{label}: raise_stat names no stat ({stat!r})")
+            amount = op.get("delta")
+            if not isinstance(amount, int) or isinstance(amount, bool) or amount < 1:
+                raise ContentError(f"{label}: raise_stat 'delta' must be a positive whole number")
+            cap = op.get("cap")
+            if not isinstance(cap, int) or isinstance(cap, bool) or cap < 1:
+                raise ContentError(f"{label}: raise_stat 'cap' must be a positive whole number")
         elif name == "end_condition":
             condition = required_text(op, "id", label)
             if condition not in (*conditions, ALL_CONDITIONS):
@@ -3236,18 +3476,22 @@ def _load_table(definition: Definition, template: str) -> tuple[TableOption, ...
 
 
 def _load_option(option: object, label: str) -> TableOption:
-    """An option is text, or an object with a `name` and a `description`."""
+    """An option is text, or an object with a `name` and a `description`, and optionally a
+    `group`."""
     if isinstance(option, str) and option.strip():
         return TableOption(name=None, description=option)
     if (
         isinstance(option, dict)
-        and set(option) == {"name", "description"}
+        and set(option) <= {"name", "description", "group"}
+        and {"name", "description"} <= set(option)
         and all(isinstance(option[key], str) and option[key].strip() for key in option)
     ):
-        return TableOption(name=option["name"], description=option["description"])
+        return TableOption(
+            name=option["name"], description=option["description"], group=option.get("group")
+        )
     raise ContentError(
         f"{label}: every option must be non-empty text or an object with "
-        "non-empty 'name' and 'description' text"
+        "non-empty 'name' and 'description' text, and an optional 'group'"
     )
 
 
@@ -3327,7 +3571,7 @@ def _load_tool_call(
     template: str,
     npc_hp: Mapping[str, int],
     travel: Travel | None = None,
-    moves: Mapping[str, MoveRules] | None = None,
+    enum_sources: Mapping[str, list[str]] | None = None,
 ) -> ToolCall:
     label = f"{template}: tool_call {definition.id}"
     data = definition.data
@@ -3343,7 +3587,7 @@ def _load_tool_call(
         raise ContentError(f"{label}: 'name' must be 1 to 64 letters, digits, '_' or '-'")
     parameters = _with_enum_from(
         _check_parameters(data.get("parameters"), label),
-        {"moves": sorted(moves or {}), "stats": sorted(character.stats)},
+        enum_sources or {"stats": sorted(character.stats)},
         label,
     )
     if _flag(data, "character_options", label):

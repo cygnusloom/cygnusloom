@@ -51,7 +51,18 @@
     "type": "character_field",
     "id": "favourite-subject",
     "name": "Favourite subject",
-    "table": "favourite-subject"
+    "table": "favourite-subject",
+    "group_roll": true,
+    "restricted_by": {
+      "field": "year",
+      "values": [
+        "1st Year",
+        "2nd Year"
+      ],
+      "groups": [
+        "core"
+      ]
+    }
   },
   {
     "type": "character_field",

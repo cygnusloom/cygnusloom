@@ -309,13 +309,13 @@ def test_choice_options_lists_table_fields_then_their_values():
 def test_check_choices_accepts_listed_values_and_rejects_others():
     named = TableOption(name="The Wild Tongue", description="A bundle of scrolls.")
     spec = _named_work_spec((named, TableOption(name=None, description="Lilt")))
-    check_choices(spec, {"work": "The Wild Tongue"})
-    check_choices(spec, {"work": "Lilt"})
-    check_choices(spec, {})
+    check_choices(spec, {"fields": {"work": "The Wild Tongue"}})
+    check_choices(spec, {"fields": {"work": "Lilt"}})
+    check_choices(spec, {"fields": {}})
     with pytest.raises(CharacterError):
-        check_choices(spec, {"work": "Nope"})
+        check_choices(spec, {"fields": {"work": "Nope"}})
     with pytest.raises(CharacterError):
-        check_choices(spec, {"work": "A bundle of scrolls."})
+        check_choices(spec, {"fields": {"work": "A bundle of scrolls."}})
 
 
 def test_resolve_stores_the_name_of_a_named_option():

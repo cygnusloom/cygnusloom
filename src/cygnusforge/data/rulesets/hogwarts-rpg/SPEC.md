@@ -12,26 +12,36 @@ Reference: `Hogwarts RPG Full Game.pdf` (Hogwarts: An RPG, v1.2) in this directo
 2. Refactor the engine so it is generic for any ruleset. Cairn-specific behaviour moves into
    `cairn2e`.
 3. Test both `cairn2e` and `hogwarts-rpg`.
+4. "Close the gaps": make the parts that were left as GM prose, or hardcoded, work through the
+   engine.
 
 ## Decisions
 
 - Scope: the full game, chosen by the user. Traits, 2d6 moves, Luck, Experience, Advancements,
   Conditions and the exit roll, Friends and Rivals, House Points, character creation, spells,
   potions, Quidditch, Narrator moves, and Serious Consequences.
-- Engine style: "fat yet generic". As much as possible is set in each ruleset's JSON. Ruleset
-  Python is an escape hatch, used only where JSON cannot express a rule. Hogwarts needs no Python.
+- Engine style: "fat yet generic". Each ruleset's JSON sets as much as possible. Ruleset Python is
+  an escape hatch. Hogwarts needs no Python.
 - Cairn 2e behaviour must not change. Its tests were repointed only where they named a tool that
   moved to cairn2e (see Phase 2).
 - Worlds Without Number has only its PDF, so it is out of scope. The loader skips ruleset
   directories that have no JSON, with a warning, so the app and tests still run.
-- Morale, needs, and hirelings were moved into cairn2e as a judgment call. See Open questions.
+- Morale, needs, and hirelings stay generic engine modules, not moved wholesale into cairn2e. The
+  user chose this in "Close the gaps". Each is enabled only when a ruleset's JSON turns it on.
+- Friends and Rivals may only change at the end of a session, as the PDF says. The engine does not
+  know when a session ends, so the `set_relation` tool description tells the GM to use it only then.
+  This is GM-enforced.
+- Favourite Subject is enforced: the Core/Elective split and the Year-based restriction are checked
+  by the engine (see "Restrictions"). Spells are enforced too: blood status sets the pick count,
+  and each pick must match the character's Year.
 
 ## Engine changes (generic primitives, set by JSON)
 
 Phase 1 added these. Each is parameterized, not Cairn- or Hogwarts-specific.
 
 - **Stats** may use `values`, a fixed pool of whole numbers shared by a `swap_group`. The stats in
-  the group take the values in any order. A rolled `formula` still works.
+  the group take the values in any order. A rolled `formula` still works. A stat's value may be
+  `HIGHEST`, meaning the highest of the group (used by the exit roll).
 - **Moves** (`type: move`): `dice`, then `stat` or `stat_choice` (the player picks a stat when
   rolling), then `bands` checked in order. A band has `label`, an optional `min`, `text`, and
   `effects`. The band with no `min` is the fallthrough. `needs_all_conditions` makes the move
@@ -42,13 +52,13 @@ Phase 1 added these. Each is parameterized, not Cairn- or Hogwarts-specific.
   `gm`), `on_end` effects, `modifies` (stat id to amount, where `"*"` means all stats), `dying`
   and `fatal` flags, and `derived` (a condition the stats show, not one stored on the character).
 - **Effect ops** (`EFFECT_OPS` in `content/library.py`): `note`, `set_max`, `condition`, `save`,
-  `pick_stat`, `counter`, `end_condition`, `retire`. `counter` and `end_condition` are move-only.
-  `retire` records `CharacterRetired`, which the exit roll uses. There is no op that changes a
-  stat (see Known gaps).
+  `pick_stat`, `counter`, `end_condition`, `retire`, and `raise_stat`. `counter` and `end_condition`
+  are move-only. `retire` records `CharacterRetired`, which the exit roll uses. `raise_stat` raises
+  a trait's maximum by one, up to the ruleset's limit.
 - **Template grants** (`templates.json`): `stats` (bonuses added to stats) and `counters` (amounts
   added to starting values), applied in `content/character.py` `resolve`.
-- **`enum_from`** on a tool parameter: `"moves"` or `"stats"` fills the enum from the rule set's
-  own content. The GM's `roll_move` uses it, so the choices cannot drift from the content.
+- **`enum_from`** on a tool parameter: `"moves"`, `"stats"`, or a content list (such as
+  `"relations"`) fills the enum from the rule set's own content.
 - **`condition_ends`** on `rule_set.json` names the rule set's triggers. `ALWAYS_CONDITION_END`
   (`gm`) is always available. Cairn 2e uses `rest`, `extended_rest`, `aid`, and `time`.
 - The loader skips a ruleset directory with no JSON and logs a warning.
@@ -59,9 +69,38 @@ Phase 2 genericized the coupling:
   were repointed.
 - Dying and fatal are condition flags, not hardcoded checks. The old global `CONDITION_ENDS` is
   now `ALWAYS_CONDITION_END` plus each rule set's `condition_ends`.
-- Morale, needs, and hirelings remain engine modules (`services/morale.py`, `services/needs.py`,
-  `services/hirelings.py`), enabled only when a rule set's JSON turns them on. Cairn 2e is the
-  only rule set that does.
+- Save and initiative are JSON-driven. `CombatRules.save_succeeds` and `initiative_order` read
+  `combat.json`. A ruleset may still name a Python module to override them. Cairn 2e names none.
+  The Cairn-specific save and initiative behaviour is tested by an oracle in `tests/test_combat.py`.
+- `rules/cairn2e.py` contains only the Cairn tool wrappers.
+
+Phase 3 (close the gaps) added:
+
+- **Advancements** (`advancements.json`, `services/advancements.py`): the options a character can
+  take, each with its effect, and a counter of Advancements earned. `take_advancement` spends one.
+  Trait options use `raise_stat`. The other options are a second Favourite Subject, a spell from the
+  character's Year, a magical object, and regaining Luck.
+- **Periods** (`periods.json`, `services/periods.py`, `end_period` tool): a school year ends, and
+  its effects run. Luck is regained, and an Advancement is earned. `period.ended` is recorded.
+- **Tallies** (`tallies.json`, `services/tallies.py`, `adjust_tally` tool): named totals with
+  entries, such as House Points by House. Each change is recorded as `tally.changed` with a cause.
+  Tallies are totals only. They are not reset by period.
+- **Relations** (`relations.json`, `services/relations.py`, `set_relation` tool): Friends (limit 2)
+  and Rivals (limit 1), each a list of names. The engine rejects a duplicate, an over-limit add, and
+  a removal of someone who is not a relation.
+- **Restrictions** (`content/character.py`): a Favourite Subject group (Core or Elective), and a
+  restriction on a field that depends on another field's value. Restricted fields resolve after
+  unrestricted ones. Favourite Subject is Core only in 1st and 2nd Year.
+- **Spell picks** (`Template.choose`, `Feature.tag`, `check_choices`): a template can require
+  `count` picks (1, 2, or 3 by blood status) from features whose `tag` matches a field's value
+  (`tag_field`, here the Year). A pick with no Year is rejected. `resolve` keeps the given picks and
+  rolls the rest from the matching tag, skipping features the character already has. Graduate
+  yields none.
+- **Web creation form** (`web/character_form.py`, `creation.html`): spell picks are shown per
+  template, grouped by Year, as `pick-<template>-<n>` selects. The server rejects a pick from the
+  wrong Year. Blank picks are rolled.
+- Renamed event kinds (save compatibility is not needed): `CampFedSet` to `MealSet`,
+  `LodgingSet` to `ShelterSet`, plus fields, marketplace effects, and prose.
 
 ## Hogwarts content (`src/cygnusforge/data/rulesets/hogwarts-rpg/`)
 
@@ -69,15 +108,19 @@ Phase 2 genericized the coupling:
 | --- | --- |
 | `rule_set.json` | Name, description |
 | `stats.json` | Five traits: Bravery, Cunning, Intellect, Loyalty, Magic. Values -1, 0, +1, +1, +2 in one swap group (`traits`), so any order |
-| `counters.json` | Luck (0 to 3, starts at 3). Experience (0 to 4). At 4 Experience, a `full` effect clears it and notes the Advancement |
+| `counters.json` | Luck (0 to 3, starts at 3). Experience (0 to 4). At 4 Experience, a `full` effect clears it and notes the Advancement. Advancements (earned count) |
 | `conditions.json` | Scared, Angry, Stressed, Jealous, Embarrassed (-2 to one trait each), Injured (-1 all), Hexed (-1 to a trait the Narrator picks), Unconscious (cannot act). Each has its ends and effects |
-| `moves.json` | 14 moves: Stand in the Face of Danger, Help or Hinder, Hide & Sneak, Get What You Seek, Gain Knowledge, Approach a Magical Creature, Roll, Cast a Spell, Duel, Concoct a Potion, Use a Magical Object, Exit the Story, Play a Quidditch Match, Catch the Golden Snitch |
-| `tool_calls.json` | The GM's `roll_move` tool, with `enum_from` for `move` and `stat` |
+| `moves.json` | 14 moves: Stand in the Face of Danger, Help or Hinder, Hide & Sneak, Get What You Seek, Gain Knowledge, Approach a Magical Creature, Roll, Cast a Spell, Duel, Concoct a Potion, Use a Magical Object, Exit the Story, Play a Quidditch Match, Catch the Golden Snitch. A failed roll marks Experience |
+| `tool_calls.json` | The GM's tools: `roll_move`, `adjust_counter` (Luck and Experience), `take_advancement`, `end_period`, `adjust_tally`, `set_relation` |
+| `advancements.json` | The Advancement options (see Engine changes) |
+| `periods.json` | The school year, with its end effects |
+| `tallies.json` | House Points, by House |
+| `relations.json` | Friend (limit 2) and Rival (limit 1) |
 | `rules.json` | 12 rule entries the GM reads with `lookup_rule` (below) |
-| `templates.json` | 4 houses (each +1 to one trait) and 3 blood statuses (spells and starting Experience) |
-| `tables.json` | Wand wood and ambition, Heritage, Favourite subject, Patronus, pet, look, and name tables |
-| `character_fields.json` | The creation fields that use those tables |
-| `spells.json` | 126 spell features. Unforgivable Curses are excluded (below) |
+| `templates.json` | 4 houses (each +1 to one trait) and 3 blood statuses (spell count, starting Experience) |
+| `tables.json` | Wand wood and ambition, Heritage, Favourite subject (with Core and Elective groups), Patronus, pet, look, and name tables |
+| `character_fields.json` | The creation fields that use those tables, with restrictions |
+| `spells.json` | 126 spell features, each with its Year as `tag`. Unforgivable Curses are excluded (below) |
 
 These files were generated once from the PDF text by a script that is not kept in the repo. They
 are now maintained by hand. Edit the JSON directly.
@@ -88,7 +131,9 @@ a campaign the Great Hall and the grounds.
 ### Rules the GM reads (`rules.json`)
 
 The GM sees these by brief and reads the full text with `lookup_rule`. Each entry is a paraphrase
-of the PDF, checked against the PDF text in Phase 5:
+of the PDF. The key entries (Luck, Experience, Advancements, Friends and Rivals, Serious
+Consequences, Unforgivable Curses) were spot-checked against the PDF text. The rest are not yet
+checked line by line:
 
 `narrator-moves`, `serious-consequences`, `house-points`, `luck`, `experience`, `advancements`,
 `friends-and-rivals`, `exiting-the-story`, `unforgivable-curses`, `healing`, `pets`, `patronus`.
@@ -109,79 +154,92 @@ Encoded:
 
 - Traits, with the values pool and swap-group assignment at creation.
 - 2d6 moves with bands (10+, 7-9, 6-), the Cost choice, and Experience on a miss.
-- Luck and Experience counters, with the Experience limit of 4.
+- Luck (spend and regain at school-year end) and Experience (limit 4, then an Advancement).
+- Advancements: trait +1 (up to twice, max +3), second Favourite Subject, spell from Year, magical
+  object, and Luck. Earned at 4 Experience or at school-year end.
 - Conditions with their modifiers, and the exit roll (`needs_all_conditions`, `retire`).
-- Houses, blood statuses, creation tables, spells, and the Quidditch moves.
-- Narrator moves, Serious Consequences, House Points, Friends and Rivals, pets, and healing, as
-  rule text the GM reads.
+- Houses, blood statuses, creation tables, spells per blood status, and Favourite Subject Core and
+  Elective groups.
+- Friends (limit 2) and Rivals (limit 1), changed through `set_relation`.
+- House Points, as a tally with causes.
+- Quidditch moves, Narrator moves, Serious Consequences, pets, and healing, as rule text the GM
+  reads.
 
 Not encoded (rule text only, or left to the GM):
 
-- Luck regained at the end of each school year. The counter has no reset, so the GM must apply it.
-- House Points have no counter. The GM records them in its notes. The rule text has the guide.
-- Friends and Rivals prompts and the session-end change. The rule text covers the limit (2 Friends,
-  1 Rival), but the engine does not track who they are.
-- House "Last Year's Winner" bonus.
-- Core and Elective split of the Favourite Subjects table. The engine has one list.
-- Spell counts per blood status, and Year-based spell learning.
+- The end-of-session timing for Friends and Rivals. The GM is told by the tool description.
+- The House table's "last year's winner" bonus. This is a GM-side roll.
+- The House Points tracker's "Non-Player Points" row (see Open questions).
+- Tallies are not reset by school year. The PDF does not say they are.
+- House Points can go negative. The PDF does not say whether they may.
+- Knowledge of spells from earlier years ("you know all spells from every Year you have
+  completed"). Only the Year of the pick is checked.
 - Patronus is a uniform 36-option table, not the PDF's 2d6 roll.
 - The exit-roll stat choice is free, not strictly the highest trait.
-- Advancements that raise a trait by 1 (see Known gaps).
 - Potion descriptions were inferred where the PDF's print layout was hard to read.
 - Hair, complexion, and look groupings follow the print layout.
 
-Saves and `gain_condition` still depend on combat. Hogwarts has no combat, so they are unused
-there, but they are not yet fully generic.
+## Save and combat
 
-## Known gaps
-
-- **Advancements that change a stat are not automated.** The engine has no op that changes a stat,
-  so "upgrade a trait by +1" is recorded in the rule text, and the GM must apply it by hand. A
-  generic stat-change op would fix this. It is not in this change.
-- **Creation requires explicit choices.** The creation form needs a pick for pronouns, house, blood
-  status, and each table field, or "Randomize all not chosen" to fill the rest. This is by design,
-  so a player does not get an unintended random choice.
-- **Morale, needs, and hirelings are still engine modules.** They are gated by JSON, but the code
-  lives in `services/`. Moving them wholly into cairn2e is a larger refactor.
+Save and initiative are JSON-driven (`cairn2e/combat.json`). Hogwarts has no combat, so neither is
+used there. The cairn2e code is tested through `tests/test_combat.py`, which holds the oracle.
 
 ## Validation
 
-- Full suite: 1632 passed (`uv run pytest -n auto`), about 56 s.
+- Full suite: 1678 passed (`timeout 900 uv run pytest -n auto -q -p no:cacheprovider`), about 51 s.
 - Lint: `uv run ruff format --check src tests` and `uv run ruff check src tests`: clean.
-- Hogwarts tests: `tests/test_hogwarts.py` (26) and `tests/test_hogwarts_creation.py`.
+- Hogwarts tests: `tests/test_hogwarts.py`, `tests/test_hogwarts_creation.py`,
+  `tests/test_hogwarts_progress.py` (advancements, periods, tallies, relations), and
+  `tests/test_hogwarts_creation_form.py` (spell-pick form).
+- Cairn 2e: `tests/test_combat.py` (save and initiative oracle), `tests/test_character*.py`.
 - Template-grant rejection and `enum_from` rejection: `tests/test_content.py`.
+- Event kinds: `tests/test_events.py` and `tests/test_hidden_events.py` require every kind to be in
+  `HIDDEN_KINDS`.
 
 ### Live testing (real DeepSeek model, uvicorn)
 
 Run against a live server (`uvicorn --factory cygnusforge.web.app:app_from_env`) and the real LLM.
-The browser tool could not reach the local server, so the checks went over HTTP.
+Checks used the browser tools and the event log in the database.
 
-- Creation of Harry Potter (Gryffindor, half-blood), and the GM opening at the Great Hall: works.
-- A Stand in the Face of Danger roll ("rolls 5 for 5, Failure") took Experience from 2 to 3, and
-  was narrated correctly.
-- A Hogwarts GM turn asked about the House Points for a trivial good deed. The GM called
-  `lookup_rule`, read the House Points guide, and answered 5 points. This confirms the rules
-  content works end to end.
-- Two bugs were found in the live run and fixed, each with a regression test:
-  - The `MoveMade` render printed a doubled full stop ("as a result.."). Fixed in
-    `services/events.py`.
-  - The GM could not roll Quidditch or exit the story, because the `roll_move` enum had no such
-    values. Fixed with `enum_from`.
-- Live testing through `TestClient` fails across several requests ("Event loop is closed"). The
-  shared async httpx client keeps connections from an earlier loop. This is a harness artifact, not
-  an app bug. Use a real uvicorn server with an HTTP client instead.
+- Creation through the web form: Wren Test, Gryffindor, pure-blood, 3rd Year. The spell pick
+  (`anteoculatia`) was saved, and the other two spells were rolled.
+- Quidditch win: `adjust_tally` raised Gryffindor House Points 0 to 50.
+- Friend request mid-session: the GM refused it, citing the session-end rule. Its refusal of an
+  Advancement at 1 Experience was also correct.
+- Friend at session end: `set_relation` added Perpetua Vance as Friend (`character.relation_changed`).
+- Exit roll: Hide & Sneak, a failed roll (5), raised Experience 1 to 2 (`counter.changed`).
+- School-year end: `end_period` recorded `period.ended` and added 1 Advancement. Luck was already
+  at 3 (its maximum), so the regain was not visible in this run. The unit tests cover it.
+- Advancement: `take_advancement` with trait Bravery raised its maximum 0 to 1 and spent the
+  Advancement (`character.max_changed`).
 
-Not yet live-tested: a Quidditch turn and a full exit-roll turn.
+Observed in live play (not engine faults):
+
+- The GM double-counted the Quidditch win at session end (House Points 50 to 100), then corrected
+  it with a -50 adjustment. A tally is a plain total, so the engine cannot tell a repeat award.
+  Possible fix: stronger tool-description guidance, or a per-event tally award with an id.
+- DeepSeek timed out twice (`ConnectTimeout`), which left the GM turn "stopped". "Continue" retried
+  the turn and worked. This is a provider issue, not an engine one.
+- An earlier live run found and fixed two bugs with regression tests: a doubled full stop in
+  `MoveMade`, and a `roll_move` enum that lacked Quidditch and exit moves (fixed with `enum_from`).
+- Live testing through `TestClient` fails across requests ("Event loop is closed"). The shared
+  async httpx client keeps connections from an earlier loop. This is a harness artifact. Use a real
+  uvicorn server with a browser or HTTP client instead.
 
 ## Open questions
 
-- Whether `morale`, `needs`, and `hirelings` should move wholly into cairn2e. They are gated by
-  JSON now, and the design left this open.
+- Non-Player Points: the PDF's House Points tracker has a "Non-Player Points" row beside the four
+  Houses. The engine has no matching entry. Unclear whether it should be a tally entry or a GM note.
+- Whether House Points may go negative, and whether tallies reset each school year.
+- "Dragon Phoenix Unicorn" appears in the PDF text after the Quidditch subject. It is probably a
+  wand-core list, but the text extraction does not confirm which table it belongs to.
+- Whether Hogwarts should track spells learned in earlier Years. The rule implies it.
 - Whether a Worlds Without Number ruleset should be added later, once its JSON exists.
 
 ## Commands
 
-- Tests: `uv run pytest -n auto` (serial runs are refused; `CYGNUSFORGE_SERIAL_TESTS=1` allows one).
+- Tests: `timeout 900 uv run pytest -n auto -q -p no:cacheprovider` (serial runs are refused;
+  `CYGNUSFORGE_SERIAL_TESTS=1` allows one).
 - Lint: `uv run ruff format src tests`, then `uv run ruff check --fix src tests`.
 - Server: `uv run --env-file .env uvicorn --factory cygnusforge.web.app:app_from_env`.
 
@@ -192,6 +250,10 @@ Not yet live-tested: a Quidditch turn and a full exit-roll turn.
 - [x] Phase 1: generic primitives (values pools, moves, counters, condition modifiers, exit roll).
 - [x] Phase 2: Cairn-only code moved to cairn2e. Twelve tools and 38 tests repointed.
 - [x] Phase 3: Hogwarts creation data, spells, Quidditch moves, and the world template.
-- [x] Phase 4: tests for both rulesets. Live smoke test over HTTP.
-- [x] Rules text for the GM (`rules.json`), checked against the PDF.
-- [x] Phase 5: README updated, this SPEC written, commit.
+- [x] Phase 4: tests for both rulesets. Live smoke test.
+- [x] Rules text for the GM (`rules.json`), spot-checked against the PDF.
+- [x] Phase 5 (first pass): README updated, this SPEC written, commit `aef92f6`.
+- [x] Close the gaps: advancements, periods, tallies, relations, restrictions, spell picks (engine
+      and web form), save and initiative JSON, and the event renames.
+- [x] Live checks: creation, House Points, relation refusal and acceptance, exit roll, school-year
+      end, and advancement.
