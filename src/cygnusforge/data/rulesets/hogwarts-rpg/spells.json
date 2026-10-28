@@ -1,0 +1,884 @@
+[
+  {
+    "type": "feature",
+    "id": "alohomora",
+    "name": "Alohomora",
+    "feature_type": "spell",
+    "description": "Charm (Year 1): Unlocking Charm."
+  },
+  {
+    "type": "feature",
+    "id": "calvario",
+    "name": "Calvario",
+    "feature_type": "spell",
+    "description": "Curse (Year 1): Hair Loss Curse."
+  },
+  {
+    "type": "feature",
+    "id": "colovaria",
+    "name": "Colovaria",
+    "feature_type": "spell",
+    "description": "Charm (Year 1): Color Change Charm."
+  },
+  {
+    "type": "feature",
+    "id": "diminuendo",
+    "name": "Diminuendo",
+    "feature_type": "spell",
+    "description": "Charm (Year 1): Shrinking Charm."
+  },
+  {
+    "type": "feature",
+    "id": "finite-incantatem",
+    "name": "Finite Incantatem",
+    "feature_type": "spell",
+    "description": "Defence (Year 1): Counter-Spell."
+  },
+  {
+    "type": "feature",
+    "id": "locomotor-mortis",
+    "name": "Locomotor Mortis",
+    "feature_type": "spell",
+    "description": "Curse (Year 1): Leg-Locker Curse."
+  },
+  {
+    "type": "feature",
+    "id": "lumos",
+    "name": "Lumos",
+    "feature_type": "spell",
+    "description": "Charm (Year 1): Wand-Lighting Charm."
+  },
+  {
+    "type": "feature",
+    "id": "periculum",
+    "name": "Periculum",
+    "feature_type": "spell",
+    "description": "Charm (Year 1): Red Sparks Charm."
+  },
+  {
+    "type": "feature",
+    "id": "petrificus-totalus",
+    "name": "Petrificus Totalus",
+    "feature_type": "spell",
+    "description": "Curse (Year 1): Full Body-Bind Curse."
+  },
+  {
+    "type": "feature",
+    "id": "slugulus-eructo",
+    "name": "Slugulus Eructo",
+    "feature_type": "spell",
+    "description": "Curse (Year 1): Slug-Vomiting Curse."
+  },
+  {
+    "type": "feature",
+    "id": "spongify",
+    "name": "Spongify",
+    "feature_type": "spell",
+    "description": "Charm (Year 1): Softening Charm."
+  },
+  {
+    "type": "feature",
+    "id": "tergeo",
+    "name": "Tergeo",
+    "feature_type": "spell",
+    "description": "Charm (Year 1): Cleaning Charm."
+  },
+  {
+    "type": "feature",
+    "id": "ventus",
+    "name": "Ventus",
+    "feature_type": "spell",
+    "description": "Hex (Year 1): Wind Hex."
+  },
+  {
+    "type": "feature",
+    "id": "wingardium-leviosa",
+    "name": "Wingardium Leviosa",
+    "feature_type": "spell",
+    "description": "Charm (Year 1): Levitation Charm."
+  },
+  {
+    "type": "feature",
+    "id": "reparo",
+    "name": "Reparo",
+    "feature_type": "spell",
+    "description": "Charm (Year 1): Repairing Charm."
+  },
+  {
+    "type": "feature",
+    "id": "rictusempra",
+    "name": "Rictusempra",
+    "feature_type": "spell",
+    "description": "Hex (Year 1): Laughing Hex."
+  },
+  {
+    "type": "feature",
+    "id": "serpensortia",
+    "name": "Serpensortia",
+    "feature_type": "spell",
+    "description": "Transfiguration (Year 1): Snake-Conjuring Spell."
+  },
+  {
+    "type": "feature",
+    "id": "steleus",
+    "name": "Steleus",
+    "feature_type": "spell",
+    "description": "Hex (Year 1): Sneezing Hex."
+  },
+  {
+    "type": "feature",
+    "id": "titillando",
+    "name": "Titillando",
+    "feature_type": "spell",
+    "description": "Hex (Year 1): Tickling Hex."
+  },
+  {
+    "type": "feature",
+    "id": "babbling-beverage",
+    "name": "Babbling Beverage",
+    "feature_type": "spell",
+    "description": "Potion (Year 1)."
+  },
+  {
+    "type": "feature",
+    "id": "calming-draught",
+    "name": "Calming Draught",
+    "feature_type": "spell",
+    "description": "Potion (Year 1)."
+  },
+  {
+    "type": "feature",
+    "id": "cough-potion",
+    "name": "Cough Potion",
+    "feature_type": "spell",
+    "description": "Potion (Year 1)."
+  },
+  {
+    "type": "feature",
+    "id": "shrinking-solution",
+    "name": "Shrinking Solution",
+    "feature_type": "spell",
+    "description": "Potion (Year 1)."
+  },
+  {
+    "type": "feature",
+    "id": "ageing-potion",
+    "name": "Ageing Potion",
+    "feature_type": "spell",
+    "description": "Potion (Year 1)."
+  },
+  {
+    "type": "feature",
+    "id": "beautification-potion",
+    "name": "Beautification Potion",
+    "feature_type": "spell",
+    "description": "Potion (Year 1)."
+  },
+  {
+    "type": "feature",
+    "id": "hiccoughing-solution",
+    "name": "Hiccoughing Solution",
+    "feature_type": "spell",
+    "description": "Potion (Year 1)."
+  },
+  {
+    "type": "feature",
+    "id": "mandrake-draught",
+    "name": "Mandrake Draught",
+    "feature_type": "spell",
+    "description": "Potion (Year 1): Anti-Curse Potion."
+  },
+  {
+    "type": "feature",
+    "id": "murtlap-essence",
+    "name": "Murtlap Essence",
+    "feature_type": "spell",
+    "description": "Potion (Year 1): Pain-soothing Potion."
+  },
+  {
+    "type": "feature",
+    "id": "epoximise",
+    "name": "Epoximise",
+    "feature_type": "spell",
+    "description": "Transfiguration (Year 2): Bonding Spell."
+  },
+  {
+    "type": "feature",
+    "id": "expelliarmus",
+    "name": "Expelliarmus",
+    "feature_type": "spell",
+    "description": "Charm (Year 2): Disarming Charm."
+  },
+  {
+    "type": "feature",
+    "id": "flagrate",
+    "name": "Flagrate",
+    "feature_type": "spell",
+    "description": "Transfiguration (Year 2): Fire-Writing Spell."
+  },
+  {
+    "type": "feature",
+    "id": "fumos",
+    "name": "Fumos",
+    "feature_type": "spell",
+    "description": "Transfiguration (Year 2): Smoke-Conjuring Spell."
+  },
+  {
+    "type": "feature",
+    "id": "incendio",
+    "name": "Incendio",
+    "feature_type": "spell",
+    "description": "Transfiguration (Year 2): Fire-Conjuring Spell."
+  },
+  {
+    "type": "feature",
+    "id": "mucus-ad-nauseam",
+    "name": "Mucus ad Nauseam",
+    "feature_type": "spell",
+    "description": "Curse (Year 2): Head Cold Curse."
+  },
+  {
+    "type": "feature",
+    "id": "obscuro",
+    "name": "Obscuro",
+    "feature_type": "spell",
+    "description": "Charm (Year 2): Blindfolding Charm."
+  },
+  {
+    "type": "feature",
+    "id": "protego",
+    "name": "Protego",
+    "feature_type": "spell",
+    "description": "Defence (Year 2): Shield Person Spell."
+  },
+  {
+    "type": "feature",
+    "id": "anteoculatia",
+    "name": "Anteoculatia",
+    "feature_type": "spell",
+    "description": "Hex (Year 3): Antler-Growing Hex."
+  },
+  {
+    "type": "feature",
+    "id": "colloshoo",
+    "name": "Colloshoo",
+    "feature_type": "spell",
+    "description": "Hex (Year 3): Stickfast Hex."
+  },
+  {
+    "type": "feature",
+    "id": "engorgio",
+    "name": "Engorgio",
+    "feature_type": "spell",
+    "description": "Hex (Year 3): Swelling Hex."
+  },
+  {
+    "type": "feature",
+    "id": "ferula",
+    "name": "Ferula",
+    "feature_type": "spell",
+    "description": "Healing (Year 3): Splinting/Bandaging Spell."
+  },
+  {
+    "type": "feature",
+    "id": "herbivicus",
+    "name": "Herbivicus",
+    "feature_type": "spell",
+    "description": "Charm (Year 3): Plant Growth Charm."
+  },
+  {
+    "type": "feature",
+    "id": "illegibilus",
+    "name": "Illegibilus",
+    "feature_type": "spell",
+    "description": "Charm (Year 3): Text-Scrambling Charm."
+  },
+  {
+    "type": "feature",
+    "id": "impervius",
+    "name": "Impervius",
+    "feature_type": "spell",
+    "description": "Charm (Year 3): Waterproofing Charm."
+  },
+  {
+    "type": "feature",
+    "id": "mimble-wimble",
+    "name": "Mimble Wimble",
+    "feature_type": "spell",
+    "description": "Curse (Year 3): Tongue-Tying Curse."
+  },
+  {
+    "type": "feature",
+    "id": "orchideous",
+    "name": "Orchideous",
+    "feature_type": "spell",
+    "description": "Transfiguration (Year 3): Flower-Conjuring Spell."
+  },
+  {
+    "type": "feature",
+    "id": "prior-incantato",
+    "name": "Prior Incantato",
+    "feature_type": "spell",
+    "description": "Charm (Year 3): Recent Spell Charm."
+  },
+  {
+    "type": "feature",
+    "id": "reparifarge",
+    "name": "Reparifarge",
+    "feature_type": "spell",
+    "description": "Transfiguration (Year 3): Undo Transfiguration Spell."
+  },
+  {
+    "type": "feature",
+    "id": "riddikulus",
+    "name": "Riddikulus",
+    "feature_type": "spell",
+    "description": "Defence (Year 3): Boggart Defence Spell."
+  },
+  {
+    "type": "feature",
+    "id": "tarantallegra",
+    "name": "Tarantallegra",
+    "feature_type": "spell",
+    "description": "Hex (Year 3): Dancing Hex."
+  },
+  {
+    "type": "feature",
+    "id": "deflating-draught",
+    "name": "Deflating Draught",
+    "feature_type": "spell",
+    "description": "Potion (Year 3)."
+  },
+  {
+    "type": "feature",
+    "id": "pepperup-potion",
+    "name": "Pepperup Potion",
+    "feature_type": "spell",
+    "description": "Potion (Year 3): Cold-Curing Potion."
+  },
+  {
+    "type": "feature",
+    "id": "unctuous-unction",
+    "name": "Unctuous Unction",
+    "feature_type": "spell",
+    "description": "Potion (Year 3): Friendship Potion."
+  },
+  {
+    "type": "feature",
+    "id": "sleeping-draught",
+    "name": "Sleeping Draught",
+    "feature_type": "spell",
+    "description": "Potion (Year 3)."
+  },
+  {
+    "type": "feature",
+    "id": "swelling-solution",
+    "name": "Swelling Solution",
+    "feature_type": "spell",
+    "description": "Potion (Year 3)."
+  },
+  {
+    "type": "feature",
+    "id": "accio",
+    "name": "Accio",
+    "feature_type": "spell",
+    "description": "Charm (Year 4): Summoning Charm."
+  },
+  {
+    "type": "feature",
+    "id": "avis",
+    "name": "Avis",
+    "feature_type": "spell",
+    "description": "Transfiguration (Year 4): Bird-Conjuring Spell."
+  },
+  {
+    "type": "feature",
+    "id": "densaugeo",
+    "name": "Densaugeo",
+    "feature_type": "spell",
+    "description": "Hex (Year 4): Teeth-Elongating Hex."
+  },
+  {
+    "type": "feature",
+    "id": "depulsio",
+    "name": "Depulsio",
+    "feature_type": "spell",
+    "description": "Charm (Year 4): Banishing Charm."
+  },
+  {
+    "type": "feature",
+    "id": "diffindo",
+    "name": "Diffindo",
+    "feature_type": "spell",
+    "description": "Charm (Year 4): Cutting Charm."
+  },
+  {
+    "type": "feature",
+    "id": "episkey",
+    "name": "Episkey",
+    "feature_type": "spell",
+    "description": "Healing (Year 4): Minor Healing Spell."
+  },
+  {
+    "type": "feature",
+    "id": "furnunculus",
+    "name": "Furnunculus",
+    "feature_type": "spell",
+    "description": "Hex (Year 4): Pimple/Boil Hex."
+  },
+  {
+    "type": "feature",
+    "id": "impedimenta",
+    "name": "Impedimenta",
+    "feature_type": "spell",
+    "description": "Hex (Year 4): Slowing Hex."
+  },
+  {
+    "type": "feature",
+    "id": "incaercerous",
+    "name": "Incaercerous",
+    "feature_type": "spell",
+    "description": "Transfiguration (Year 4): Chain-Conjuring Spell."
+  },
+  {
+    "type": "feature",
+    "id": "locomotor-wibbly",
+    "name": "Locomotor Wibbly",
+    "feature_type": "spell",
+    "description": "Hex (Year 4): Jelly-Legs Hex."
+  },
+  {
+    "type": "feature",
+    "id": "quietus",
+    "name": "Quietus",
+    "feature_type": "spell",
+    "description": "Charm (Year 4): Quieting Charm."
+  },
+  {
+    "type": "feature",
+    "id": "reducto",
+    "name": "Reducto",
+    "feature_type": "spell",
+    "description": "Curse (Year 4): Smashing Curse."
+  },
+  {
+    "type": "feature",
+    "id": "sonorus",
+    "name": "Sonorus",
+    "feature_type": "spell",
+    "description": "Charm (Year 4): Amplifying Charm."
+  },
+  {
+    "type": "feature",
+    "id": "stupefy",
+    "name": "Stupefy",
+    "feature_type": "spell",
+    "description": "Charm (Year 4): Stunning Charm."
+  },
+  {
+    "type": "feature",
+    "id": "blemish-blitzer",
+    "name": "Blemish Blitzer",
+    "feature_type": "spell",
+    "description": "Potion (Year 4): Acne Treatment Potion."
+  },
+  {
+    "type": "feature",
+    "id": "fire-protection-potion",
+    "name": "Fire Protection Potion",
+    "feature_type": "spell",
+    "description": "Potion (Year 4)."
+  },
+  {
+    "type": "feature",
+    "id": "laxative-potion",
+    "name": "Laxative Potion",
+    "feature_type": "spell",
+    "description": "Potion (Year 4)."
+  },
+  {
+    "type": "feature",
+    "id": "invigoration-draught",
+    "name": "Invigoration Draught",
+    "feature_type": "spell",
+    "description": "Potion (Year 4)."
+  },
+  {
+    "type": "feature",
+    "id": "anapneo",
+    "name": "Anapneo",
+    "feature_type": "spell",
+    "description": "Healing (Year 5): Reverse Choking Spell."
+  },
+  {
+    "type": "feature",
+    "id": "aperio",
+    "name": "Aperio",
+    "feature_type": "spell",
+    "description": "Charm (Year 5): Opening Charm."
+  },
+  {
+    "type": "feature",
+    "id": "cantis",
+    "name": "Cantis",
+    "feature_type": "spell",
+    "description": "Hex (Year 5): Singing Hex."
+  },
+  {
+    "type": "feature",
+    "id": "colloportus",
+    "name": "Colloportus",
+    "feature_type": "spell",
+    "description": "Charm (Year 5): Locking Charm."
+  },
+  {
+    "type": "feature",
+    "id": "evanesco",
+    "name": "Evanesco",
+    "feature_type": "spell",
+    "description": "Transfiguration (Year 5): Vanishing Spell."
+  },
+  {
+    "type": "feature",
+    "id": "expecto-patronum",
+    "name": "Expecto Patronum",
+    "feature_type": "spell",
+    "description": "Charm (Year 5): Patronus Charm; pick your Patronus from the creation table."
+  },
+  {
+    "type": "feature",
+    "id": "oppugno",
+    "name": "Oppugno",
+    "feature_type": "spell",
+    "description": "Hex (Year 5): Attacking Objects Hex."
+  },
+  {
+    "type": "feature",
+    "id": "protego-totalum",
+    "name": "Protego Totalum",
+    "feature_type": "spell",
+    "description": "Defence (Year 5): Shield Area Spell."
+  },
+  {
+    "type": "feature",
+    "id": "relashio",
+    "name": "Relashio",
+    "feature_type": "spell",
+    "description": "Hex (Year 5): Releasing Hex."
+  },
+  {
+    "type": "feature",
+    "id": "repello-muggletum",
+    "name": "Repello Muggletum",
+    "feature_type": "spell",
+    "description": "Charm (Year 5): Anti-Muggle Charm."
+  },
+  {
+    "type": "feature",
+    "id": "silencio",
+    "name": "Silencio",
+    "feature_type": "spell",
+    "description": "Charm (Year 5): Silencing Charm."
+  },
+  {
+    "type": "feature",
+    "id": "specialis-revelio",
+    "name": "Specialis Revelio",
+    "feature_type": "spell",
+    "description": "Charm (Year 5): Hex-Revealing Charm."
+  },
+  {
+    "type": "feature",
+    "id": "vulnera-sanentur",
+    "name": "Vulnera Sanentur",
+    "feature_type": "spell",
+    "description": "Healing (Year 5): Gash-Healing Spell."
+  },
+  {
+    "type": "feature",
+    "id": "amortentia",
+    "name": "Amortentia",
+    "feature_type": "spell",
+    "description": "Potion (Year 5): Love Potion."
+  },
+  {
+    "type": "feature",
+    "id": "befuddlement-draught",
+    "name": "Befuddlement Draught",
+    "feature_type": "spell",
+    "description": "Potion (Year 5)."
+  },
+  {
+    "type": "feature",
+    "id": "essence-of-dittany",
+    "name": "Essence of Dittany",
+    "feature_type": "spell",
+    "description": "Potion (Year 5): Healing Potion."
+  },
+  {
+    "type": "feature",
+    "id": "love-potion-antidote",
+    "name": "Love Potion Antidote",
+    "feature_type": "spell",
+    "description": "Potion (Year 5)."
+  },
+  {
+    "type": "feature",
+    "id": "wit-sharpening-potion",
+    "name": "Wit-Sharpening Potion",
+    "feature_type": "spell",
+    "description": "Potion (Year 5)."
+  },
+  {
+    "type": "feature",
+    "id": "aguamenti",
+    "name": "Aguamenti",
+    "feature_type": "spell",
+    "description": "Transfiguration (Year 6): Water-Conjuring Spell."
+  },
+  {
+    "type": "feature",
+    "id": "apparrate",
+    "name": "Apparrate",
+    "feature_type": "spell",
+    "description": "Transfiguration (Year 6): Teleportation Spell; requires a Ministry licence."
+  },
+  {
+    "type": "feature",
+    "id": "confundo",
+    "name": "Confundo",
+    "feature_type": "spell",
+    "description": "Charm (Year 6): Confusion Charm."
+  },
+  {
+    "type": "feature",
+    "id": "deprimo",
+    "name": "Deprimo",
+    "feature_type": "spell",
+    "description": "Charm (Year 6): Hole-Blasting Charm."
+  },
+  {
+    "type": "feature",
+    "id": "ebublio",
+    "name": "Ebublio",
+    "feature_type": "spell",
+    "description": "Hex (Year 6): Bubble Hex."
+  },
+  {
+    "type": "feature",
+    "id": "emendo",
+    "name": "Emendo",
+    "feature_type": "spell",
+    "description": "Healing (Year 6): Bone-Mending Spell."
+  },
+  {
+    "type": "feature",
+    "id": "flipendo",
+    "name": "Flipendo",
+    "feature_type": "spell",
+    "description": "Hex (Year 6): Knockback Hex."
+  },
+  {
+    "type": "feature",
+    "id": "gemino",
+    "name": "Gemino",
+    "feature_type": "spell",
+    "description": "Curse (Year 6): Duplicating Objects Curse."
+  },
+  {
+    "type": "feature",
+    "id": "langlock",
+    "name": "Langlock",
+    "feature_type": "spell",
+    "description": "Hex (Year 6): Tongue-Locking Hex."
+  },
+  {
+    "type": "feature",
+    "id": "melofors",
+    "name": "Melofors",
+    "feature_type": "spell",
+    "description": "Hex (Year 6): Pumpkin-Head Hex."
+  },
+  {
+    "type": "feature",
+    "id": "muffliato",
+    "name": "Muffliato",
+    "feature_type": "spell",
+    "description": "Charm (Year 6): Ear-Buzzing Charm."
+  },
+  {
+    "type": "feature",
+    "id": "pullus",
+    "name": "Pullus",
+    "feature_type": "spell",
+    "description": "Hex (Year 6): Chicken/Goose Hex."
+  },
+  {
+    "type": "feature",
+    "id": "revelio",
+    "name": "Revelio",
+    "feature_type": "spell",
+    "description": "Charm (Year 6): Revealing Charm."
+  },
+  {
+    "type": "feature",
+    "id": "draught-of-living-death",
+    "name": "Draught of Living Death",
+    "feature_type": "spell",
+    "description": "Potion (Year 6)."
+  },
+  {
+    "type": "feature",
+    "id": "garroting-gas",
+    "name": "Garroting Gas",
+    "feature_type": "spell",
+    "description": "Potion (Year 6): Choking Potion."
+  },
+  {
+    "type": "feature",
+    "id": "strengthening-solution",
+    "name": "Strengthening Solution",
+    "feature_type": "spell",
+    "description": "Potion (Year 6)."
+  },
+  {
+    "type": "feature",
+    "id": "veritaserum",
+    "name": "Veritaserum",
+    "feature_type": "spell",
+    "description": "Potion (Year 6): Truth Potion."
+  },
+  {
+    "type": "feature",
+    "id": "veritaserum-antidote",
+    "name": "Veritaserum Antidote",
+    "feature_type": "spell",
+    "description": "Potion (Year 6)."
+  },
+  {
+    "type": "feature",
+    "id": "baubillious",
+    "name": "Baubillious",
+    "feature_type": "spell",
+    "description": "Transfiguration (Year 7): Lightning-Conjuring Spell."
+  },
+  {
+    "type": "feature",
+    "id": "confrigo",
+    "name": "Confrigo",
+    "feature_type": "spell",
+    "description": "Curse (Year 7): Blasting Curse."
+  },
+  {
+    "type": "feature",
+    "id": "duro",
+    "name": "Duro",
+    "feature_type": "spell",
+    "description": "Charm (Year 7): Hardening Charm."
+  },
+  {
+    "type": "feature",
+    "id": "fianto-duri",
+    "name": "Fianto Duri",
+    "feature_type": "spell",
+    "description": "Defence (Year 7): Increase Protection Spell."
+  },
+  {
+    "type": "feature",
+    "id": "homenum-revelio",
+    "name": "Homenum Revelio",
+    "feature_type": "spell",
+    "description": "Charm (Year 7): Reveal Person Charm."
+  },
+  {
+    "type": "feature",
+    "id": "legilimens",
+    "name": "Legilimens",
+    "feature_type": "spell",
+    "description": "Charm (Year 7): Mind-seeing Charm."
+  },
+  {
+    "type": "feature",
+    "id": "levicorpus",
+    "name": "Levicorpus",
+    "feature_type": "spell",
+    "description": "Hex (Year 7): Body-Lifting Hex."
+  },
+  {
+    "type": "feature",
+    "id": "mutatio",
+    "name": "Mutatio",
+    "feature_type": "spell",
+    "description": "Hex (Year 7): Mutation Hex."
+  },
+  {
+    "type": "feature",
+    "id": "obliviate",
+    "name": "Obliviate",
+    "feature_type": "spell",
+    "description": "Charm (Year 7): Memory-Erasing Charm."
+  },
+  {
+    "type": "feature",
+    "id": "portus",
+    "name": "Portus",
+    "feature_type": "spell",
+    "description": "Charm (Year 7): Portkey-Creating Charm; requires Ministry permission."
+  },
+  {
+    "type": "feature",
+    "id": "redactum",
+    "name": "Redactum",
+    "feature_type": "spell",
+    "description": "Hex (Year 7): Shrinking Hex."
+  },
+  {
+    "type": "feature",
+    "id": "vermiculus",
+    "name": "Vermiculus",
+    "feature_type": "spell",
+    "description": "Hex (Year 7): Worm Hex."
+  },
+  {
+    "type": "feature",
+    "id": "blood-replenishing-potion",
+    "name": "Blood-Replenishing Potion",
+    "feature_type": "spell",
+    "description": "Potion (Year 7)."
+  },
+  {
+    "type": "feature",
+    "id": "euphoria-elixir",
+    "name": "Euphoria Elixir",
+    "feature_type": "spell",
+    "description": "Potion (Year 7)."
+  },
+  {
+    "type": "feature",
+    "id": "felix-felicis",
+    "name": "Felix Felicis",
+    "feature_type": "spell",
+    "description": "Potion (Year 7): Luck Potion."
+  },
+  {
+    "type": "feature",
+    "id": "forgetfulness-potion",
+    "name": "Forgetfulness Potion",
+    "feature_type": "spell",
+    "description": "Potion (Year 7)."
+  },
+  {
+    "type": "feature",
+    "id": "polyjuice-potion",
+    "name": "Polyjuice Potion",
+    "feature_type": "spell",
+    "description": "Potion (Year 7): Transformation Potion."
+  },
+  {
+    "type": "feature",
+    "id": "skele-gro",
+    "name": "Skele-Gro",
+    "feature_type": "spell",
+    "description": "Potion (Year 7): Bone Regrowth Potion."
+  }
+]

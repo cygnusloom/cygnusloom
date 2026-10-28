@@ -625,7 +625,7 @@ def _creation_pending(state: Any, rule_set: Any) -> tuple[bool, bool]:
     only be pending while there is no player character, so a campaign is set up in one pass."""
     options = rule_set.campaign if rule_set else NO_CAMPAIGN
     pc = state.pc()
-    return bool(options.fields) and not state.options, pc is None or pc.dead
+    return bool(options.fields) and not state.options, pc is None or pc.out_of_play
 
 
 def _encounter_rows(encounter: dict[str, Any]) -> list[list[dict[str, Any]]]:

@@ -166,18 +166,33 @@
         },
         "mode": {
           "type": "string",
-          "enum": ["overland", "in_settlement", "in_dungeon"],
+          "enum": [
+            "overland",
+            "in_settlement",
+            "in_dungeon"
+          ],
           "description": "How the move is made: overland (a journey across open country, needs a route), in_settlement (a walk within a settlement, takes time at the travel speed), or in_dungeon (no clock time). NPC moves take no clock time whatever the mode."
         },
         "route": {
           "type": "object",
           "description": "Required for an overland move, and ignored for other modes. Describe the journey. path: the kind of path the party follows (the names the rule set gives). distance: short, medium, or long. terrain: the hardest ground on the route. vast: 0 to 2, how wide and empty the land is. weather_choice: when conditions on the day make travel harder, the choice the rule set gives for it. When an authored route connects the two locations, its path, distance, terrain, and vast are used automatically, so only weather_choice is needed. Otherwise path, distance, and terrain are required. The names of path, distance, and terrain come from the rule set.",
           "properties": {
-            "path": {"type": "string"},
-            "distance": {"type": "string"},
-            "terrain": {"type": "string"},
-            "vast": {"type": "integer", "minimum": 0},
-            "weather_choice": {"type": "string"}
+            "path": {
+              "type": "string"
+            },
+            "distance": {
+              "type": "string"
+            },
+            "terrain": {
+              "type": "string"
+            },
+            "vast": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "weather_choice": {
+              "type": "string"
+            }
           }
         }
       },
@@ -584,86 +599,6 @@
   },
   {
     "type": "tool_call",
-    "id": "hire_hireling",
-    "name": "hire_hireling",
-    "python_module": "core",
-    "function": "hire_hireling",
-    "character_options": true,
-    "description": "Hire a character into a player character's company. The hireling has a rolled sheet like an NPC's and is controlled by the player. Its wage is paid in the rule set's currency from the employer each new day, and an employer who cannot pay is reported as unpaid. The employer must be a player character who has a location. Give the wage the hireling asks for, or the marketplace's listed wage for a hireling listed there. Leave personality, accent, or quirks out to have them rolled. Names must be unique among locations and characters.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The hireling's name."
-        },
-        "employer": {
-          "type": "string",
-          "description": "The name of the player character who hires them. The wage comes from this character's money."
-        },
-        "wage": {
-          "type": "integer",
-          "description": "Money per day, in the rule set's currency, zero or more."
-        },
-        "description": {
-          "type": "string",
-          "description": "Who the hireling is: appearance, role, and what they are good for."
-        },
-        "personality": {
-          "type": "string",
-          "description": "Optional. How the hireling carries themselves."
-        },
-        "accent": {
-          "type": "string",
-          "description": "Optional. How the hireling sounds when they speak."
-        },
-        "quirks": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Optional. Habits or mannerisms the hireling shows."
-        },
-        "pronouns": {
-          "type": "string",
-          "description": "Optional. The hireling's pronouns, such as \"she/her\", \"he/him\", or \"they/them\", or another form. Record them whenever the hireling is written in the text, so the GM does not have to guess."
-        }
-      },
-      "required": [
-        "name",
-        "employer",
-        "wage",
-        "description"
-      ]
-    }
-  },
-  {
-    "type": "tool_call",
-    "id": "dismiss_hireling",
-    "name": "dismiss_hireling",
-    "python_module": "core",
-    "function": "dismiss_hireling",
-    "description": "Remove a hireling from its employer's company. It stays where it is and becomes an ordinary NPC. Use this when the story has the hireling leave, for example when its wage went unpaid and it goes, or when it chooses to go. Give the cause in a few words.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The hireling's name."
-        },
-        "cause": {
-          "type": "string",
-          "description": "Why the hireling leaves, in a few words."
-        }
-      },
-      "required": [
-        "name",
-        "cause"
-      ]
-    }
-  },
-  {
-    "type": "tool_call",
     "id": "change_currency",
     "name": "change_currency",
     "python_module": "core",
@@ -932,283 +867,61 @@
   },
   {
     "type": "tool_call",
-    "id": "create_encounter_map",
-    "name": "create_encounter_map",
+    "id": "add_condition",
+    "name": "add_condition",
     "python_module": "core",
-    "function": "create_encounter_map",
-    "description": "Create an encounter map: a grid of cells set in an existing location, where a tactical encounter takes place. Use it before starting an encounter there. Cells are scaled by the rule set's grid.",
+    "function": "add_condition",
+    "description": "Give a player character a stored condition the story has put on them, such as a fright, a curse, or an injury. Name the condition by its id, and give the cause in the story.",
     "parameters": {
       "type": "object",
       "properties": {
         "name": {
           "type": "string",
-          "description": "A name for the map, unique among maps."
+          "description": "The name of the player character."
         },
-        "location": {
+        "condition": {
           "type": "string",
-          "description": "The name of the existing location the map is set in."
+          "description": "The id of the condition to give."
         },
-        "columns": {
-          "type": "integer",
-          "description": "How many cells wide the map is, from 1 to 60. Required unless a template is given; with a template, it overrides the template's width."
-        },
-        "rows": {
-          "type": "integer",
-          "description": "How many cells tall the map is, from 1 to 60. Required unless a template is given; with a template, it overrides the template's height."
-        },
-        "description": {
+        "cause": {
           "type": "string",
-          "description": "What the map shows: terrain, cover, hazards, and anything else that matters for tactics."
-        },
-        "template": {
-          "type": "string",
-          "description": "A standard layout, such as room or corridor. The template sets the size and the starting terrain. Leave it out for an empty map."
+          "description": "What in the story gave the condition."
         }
       },
       "required": [
         "name",
-        "location",
-        "description"
+        "condition",
+        "cause"
       ]
     }
   },
   {
     "type": "tool_call",
-    "id": "update_encounter_map",
-    "name": "update_encounter_map",
+    "id": "end_condition",
+    "name": "end_condition",
     "python_module": "core",
-    "function": "update_encounter_map",
-    "description": "Change an encounter map: its name, the location it is in, its size, or its description. Refused if the new name is taken or a participant would be left outside the new size.",
+    "function": "end_condition",
+    "description": "End a stored condition a player character has, when its ending happens in the story. Use one of the triggers that condition lists, or gm to end it by your decision.",
     "parameters": {
       "type": "object",
       "properties": {
         "name": {
           "type": "string",
-          "description": "The name of the map to change."
+          "description": "The name of the player character."
         },
-        "columns": {
-          "type": "integer",
-          "description": "How many cells wide the map is, from 1 to 60."
-        },
-        "rows": {
-          "type": "integer",
-          "description": "How many cells tall the map is, from 1 to 60."
-        },
-        "description": {
+        "condition": {
           "type": "string",
-          "description": "What the map shows now."
+          "description": "The id of the condition to end."
         },
-        "new_name": {
+        "how": {
           "type": "string",
-          "description": "A new name for the map. Leave out to keep the current name."
-        },
-        "location": {
-          "type": "string",
-          "description": "The name of the location the map is in. Leave out to keep the current location."
+          "description": "What ended it: one of the condition's triggers, or gm."
         }
       },
       "required": [
         "name",
-        "columns",
-        "rows",
-        "description"
-      ]
-    }
-  },
-  {
-    "type": "tool_call",
-    "id": "delete_encounter_map",
-    "name": "delete_encounter_map",
-    "python_module": "core",
-    "function": "delete_encounter_map",
-    "description": "Delete an encounter map. Refused while an encounter is using it.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the map to delete."
-        }
-      },
-      "required": [
-        "name"
-      ]
-    }
-  },
-  {
-    "type": "tool_call",
-    "id": "start_encounter",
-    "name": "start_encounter",
-    "python_module": "core",
-    "function": "start_encounter",
-    "description": "Start an encounter on an encounter map. Its location becomes the encounter's location. Only one encounter can be in progress at a time. Add participants after starting. The player character and NPCs take turns in the order they join.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "map": {
-          "type": "string",
-          "description": "The name of the encounter map to play on."
-        }
-      },
-      "required": [
-        "map"
-      ]
-    }
-  },
-  {
-    "type": "tool_call",
-    "id": "end_encounter",
-    "name": "end_encounter",
-    "python_module": "core",
-    "function": "end_encounter",
-    "description": "End the encounter in progress. Any turn in progress ends with it.",
-    "parameters": {
-      "type": "object",
-      "properties": {},
-      "required": []
-    }
-  },
-  {
-    "type": "tool_call",
-    "id": "add_participant",
-    "name": "add_participant",
-    "python_module": "core",
-    "function": "add_participant",
-    "description": "Add a character to the encounter in progress, on a side. Player characters default to the party and NPCs to the foes. The turn order keeps each side together: the party first, then the other sides in the order they first appear. A character who is not at the encounter's location is still added, and the result carries a warning to act on.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the player character or of an NPC."
-        },
-        "side": {
-          "type": "string",
-          "description": "The side the character fights on, such as party or foes. Any name works. Leave it out for the default."
-        }
-      },
-      "required": [
-        "name"
-      ]
-    }
-  },
-  {
-    "type": "tool_call",
-    "id": "remove_participant",
-    "name": "remove_participant",
-    "python_module": "core",
-    "function": "remove_participant",
-    "description": "Take a character out of the encounter in progress. If they are taking their turn, it ends and the next participant's turn follows.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the participant to remove."
-        }
-      },
-      "required": [
-        "name"
-      ]
-    }
-  },
-  {
-    "type": "tool_call",
-    "id": "place_participant",
-    "name": "place_participant",
-    "python_module": "core",
-    "function": "place_participant",
-    "description": "Put a participant on a cell of the encounter map, counted from 0 at the top left: column increases to the right and row increases downward. Moving is limited to the rule set's movement per turn, counted in cells moved in a straight line or diagonal. Obstacles block: a cell with a blocking object cannot be entered or be the destination, so the participant goes around it. Terrain that costs extra movement to enter takes that many moves for each cell entered. That limit applies only to the participant whose turn it is; moving anyone else is free, though they still cannot enter a blocked cell. The first placement is free. Use this to move a participant, not to tell the story of how they got there.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the participant to place."
-        },
-        "column": {
-          "type": "integer",
-          "description": "The cell's column, from 0 at the left edge."
-        },
-        "row": {
-          "type": "integer",
-          "description": "The cell's row, from 0 at the top edge."
-        }
-      },
-      "required": [
-        "name",
-        "column",
-        "row"
-      ]
-    }
-  },
-  {
-    "type": "tool_call",
-    "id": "set_map_cells",
-    "name": "set_map_cells",
-    "python_module": "core",
-    "function": "set_map_cells",
-    "description": "Set the terrain or object on cells of an encounter map. A cell with an object that blocks cannot be entered.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "map": {
-          "type": "string",
-          "description": "The name of the encounter map."
-        },
-        "cells": {
-          "type": "array",
-          "description": "The cells to change, at most 200 per call. Each cell needs a column and row, and terrain or object or both. Give an empty string for terrain or object to clear it.",
-          "items": {
-            "type": "object",
-            "properties": {
-              "column": {
-                "type": "integer",
-                "description": "The cell's column, from 0 at the left edge."
-              },
-              "row": {
-                "type": "integer",
-                "description": "The cell's row, from 0 at the top edge."
-              },
-              "terrain": {
-                "type": "string",
-                "description": "The terrain id for the cell, such as mud or floor. Empty clears it."
-              },
-              "object": {
-                "type": "string",
-                "description": "The object id on the cell, such as wall or crate. Empty clears it."
-              }
-            },
-            "required": [
-              "column",
-              "row"
-            ]
-          }
-        }
-      },
-      "required": [
-        "map",
-        "cells"
-      ]
-    }
-  },
-  {
-    "type": "tool_call",
-    "id": "end_turn",
-    "name": "end_turn",
-    "python_module": "core",
-    "function": "end_npc_turn",
-    "description": "End the turn of the NPC whose turn it is in the encounter. Call it once the NPC's action is resolved. Player characters end their own turns, so do not use this for them.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the NPC whose turn is ending."
-        }
-      },
-      "required": [
-        "name"
+        "condition",
+        "how"
       ]
     }
   }

@@ -85,8 +85,6 @@ CORE_TOOLS = {
     "delete_location",
     "update_npc",
     "delete_npc",
-    "hire_hireling",
-    "dismiss_hireling",
     "change_currency",
     "place_object",
     "take_object",
@@ -107,17 +105,9 @@ CORE_TOOLS = {
     "speak",
     "ooc",
     "lookup_rule",
+    "add_condition",
+    "end_condition",
     "list_lookups",
-    "create_encounter_map",
-    "update_encounter_map",
-    "delete_encounter_map",
-    "set_map_cells",
-    "start_encounter",
-    "end_encounter",
-    "add_participant",
-    "remove_participant",
-    "place_participant",
-    "end_turn",
 }
 
 
@@ -145,11 +135,11 @@ def tree(tmp_path: Path) -> Path:
 
 def test_bundled_content_loads():
     library = ContentLibrary.load()
-    assert set(library.world_templates) == {"twin-lakes"}
+    assert set(library.world_templates) == {"twin-lakes", "hogwarts"}
     assert library.world_templates["twin-lakes"].name == "Twin Lakes"
     twin_lakes = library.world_templates["twin-lakes"]
     assert twin_lakes.locations
-    assert set(library.rule_sets) == {"cairn2e"}
+    assert set(library.rule_sets) == {"cairn2e", "hogwarts-rpg"}
     assert library.world_content("twin-lakes", "cairn2e").monsters
 
 
@@ -423,6 +413,14 @@ def test_python_module_must_import(tree: Path):
 def test_tool_call_must_name_a_declared_python_module(tree: Path):
     _write(tree, {"rulesets/testset/module.json": [_social_tool(python_module="missing")]})
     with pytest.raises(ContentError, match="unknown python_module 'missing'"):
+        ContentLibrary.load(tree)
+
+
+def test_tool_call_enum_must_come_from_a_list_the_rule_set_has(tree: Path):
+    properties = {"relationship": {"type": "string", "enum_from": "bogus"}}
+    parameters = {"type": "object", "properties": properties}
+    _write(tree, {"rulesets/testset/module.json": _module(parameters=parameters)})
+    with pytest.raises(ContentError, match="has enum_from 'bogus'"):
         ContentLibrary.load(tree)
 
 
@@ -1124,3 +1122,25 @@ def test_the_suraru_imperators_venomous_bite_is_a_blast():
     monster = content_library().world_content("twin-lakes", "cairn2e").monsters["suraru-imperator"]
     assert monster.attack_flags == {"venomous bite": ("blast",)}
     assert monster.attacks["venomous bite"] == "1d6"
+
+
+def _edit_hogwarts_templates(root: Path, edit: Any) -> None:
+    path = root / "rulesets" / "hogwarts-rpg" / "templates.json"
+    templates = json.loads(path.read_text(encoding="utf-8"))
+    edit(templates)
+    path.write_text(json.dumps(templates, indent=2), encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    "edit,message",
+    [
+        (lambda t: t[0]["stats"].update({"charm": 1}), "unknown stat 'charm' in 'stats'"),
+        (lambda t: t[-1]["counters"].update({"mana": 1}), "unknown counter 'mana' in 'counters'"),
+        (lambda t: t[-1]["counters"].update({"experience": -1}), "amounts must be at least 0"),
+    ],
+)
+def test_a_template_grant_must_name_a_known_stat_or_counter(tmp_path: Path, edit, message: str):
+    root = _twin_lakes_copy(tmp_path)
+    _edit_hogwarts_templates(root, edit)
+    with pytest.raises(ContentError, match=re.escape(message)):
+        ContentLibrary.load(root)

@@ -168,6 +168,8 @@ class Character:
     # The ids of the conditions the character has, and the names of their injuries, in the order gained.
     conditions: list[str] = field(default_factory=list)
     injuries: list[str] = field(default_factory=list)
+    # The value of each counter the character keeps, by counter id. A counter not listed is at its initial value.
+    counters: dict[str, int] = field(default_factory=dict)
     # Ran from the fight, or broke and fled. Cleared when the encounter ends.
     fled: bool = False
     # Gave up the fight and laid down arms. Cleared when the encounter ends.
@@ -197,11 +199,24 @@ class Character:
     dying_hours: int | None = None
     # The character is dead. The body stays where the character fell, with its gear.
     dead: bool = False
+    # The character has left the story, and the player plays someone else. It can come back later.
+    retired: bool = False
+
+    @property
+    def out_of_play(self) -> bool:
+        """Whether the player can no longer act as this character: dead, or left the story."""
+        return self.dead or self.retired
 
 
 def current(character: Character, stat: str) -> int:
     """A stat's score less the harm it has taken, never below 0."""
     return max(0, character.stats.get(stat, 0) - character.harm.get(stat, 0))
+
+
+def modifier_value(character: Character, stat: str) -> int:
+    """A stat's score less the harm it has taken. Unlike current, it can go below 0, as a trait
+    that a move adds can."""
+    return character.stats.get(stat, 0) - character.harm.get(stat, 0)
 
 
 def defeat_status(character: Character, defeat: Mapping[str, str], *, killed: bool = False) -> str:
@@ -405,7 +420,7 @@ class CampaignState:
     def pc(self) -> Character | None:
         """The player's character: the living one if there is one, otherwise the dead one."""
         pcs = [c for c in self.characters.values() if c.kind == PC_KIND and not c.hireling]
-        return next((c for c in pcs if not c.dead), next(iter(pcs), None))
+        return next((c for c in pcs if not c.out_of_play), next(iter(pcs), None))
 
 
 def speaker_name(state: CampaignState) -> str | None:
@@ -664,6 +679,7 @@ class PcAdded(GameEvent):
     templates: dict[str, str] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
     fields: dict[str, str] = field(default_factory=dict)
+    counters: dict[str, int] = field(default_factory=dict)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.characters[name_key(self.name)] = Character(
@@ -679,6 +695,7 @@ class PcAdded(GameEvent):
             templates=dict(self.templates),
             features=dict(self.features),
             fields=dict(self.fields),
+            counters=dict(self.counters),
         )
 
     def render(self) -> str:
@@ -716,6 +733,7 @@ class NpcAdded(GameEvent):
     templates: dict[str, str] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
     fields: dict[str, str] = field(default_factory=dict)
+    counters: dict[str, int] = field(default_factory=dict)
     armor: int = 0
     attacks: dict[str, str] = field(default_factory=dict)
     attack_flags: dict[str, list[str]] = field(default_factory=dict)
@@ -738,6 +756,7 @@ class NpcAdded(GameEvent):
             templates=dict(self.templates),
             features=dict(self.features),
             fields=dict(self.fields),
+            counters=dict(self.counters),
             armor=self.armor,
             attacks=dict(self.attacks),
             attack_flags={name: list(flags) for name, flags in self.attack_flags.items()},
@@ -765,6 +784,7 @@ class NpcStatted(GameEvent):
     armor: int
     attacks: dict[str, str]
     attack_flags: dict[str, list[str]] = field(default_factory=dict)
+    counters: dict[str, int] = field(default_factory=dict)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         npc = state.characters[name_key(self.name)]
@@ -772,6 +792,7 @@ class NpcStatted(GameEvent):
         npc.templates = dict(self.templates)
         npc.features = dict(self.features)
         npc.fields = dict(self.fields)
+        npc.counters = dict(self.counters)
         npc.armor = self.armor
         npc.attacks = dict(self.attacks)
         npc.attack_flags = {name: list(flags) for name, flags in self.attack_flags.items()}
@@ -2189,6 +2210,28 @@ class ConditionEnded(GameEvent):
 
 
 @dataclass(frozen=True)
+class CounterChanged(GameEvent):
+    """A counter a character keeps moved, such as Experience marked or Luck spent. `before` and `after`
+    are its values, after the counter's bounds were applied."""
+
+    kind: ClassVar[str] = "counter.changed"
+
+    name: str
+    counter: str
+    label: str
+    before: int
+    after: int
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].counters[self.counter] = self.after
+
+    def render(self) -> str:
+        text = f"{self.name}'s {self.label} goes from {self.before} to {self.after}"
+        return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
 class InjuryGained(GameEvent):
     """An injury from the Injuries table. `roll` is the table entry it came from."""
 
@@ -2259,6 +2302,37 @@ class CharacterSaved(GameEvent):
         result = "succeeds" if self.passed else "fails"
         text = f"{self.name} rolls {self.roll} on a {self.stat.upper()} save of {self.score} and {result}"
         return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
+class MoveMade(GameEvent):
+    """A move rolled and landed in one of its bands. The band's effects are recorded as their own
+    events, after this one."""
+
+    kind: ClassVar[str] = "move.made"
+
+    name: str
+    move: str
+    roll: int
+    bonus: int
+    total: int
+    band: str
+    text: str = ""
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        return None
+
+    def render(self) -> str:
+        sign = f"{self.bonus:+d}" if self.bonus else ""
+        text = (
+            f"{self.name} makes {self.move}: rolls {self.roll}{sign} for {self.total}, {self.band}"
+        )
+        if self.text:
+            text = f"{text}. {self.text}"
+        if self.cause:
+            text = f"{text} ({self.cause})"
+        return text if text.endswith((".", "!", "?")) else f"{text}."
 
 
 @dataclass(frozen=True)
@@ -2361,6 +2435,22 @@ class CharacterDied(GameEvent):
 
     def render(self) -> str:
         return f"{self.name} dies{f', {self.cause}' if self.cause else ''}."
+
+
+@dataclass(frozen=True)
+class CharacterRetired(GameEvent):
+    """A character left the story. It is no longer played, and the player creates a new one."""
+
+    kind: ClassVar[str] = "character.retired"
+
+    name: str
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].retired = True
+
+    def render(self) -> str:
+        return f"{self.name} leaves the story{f' ({self.cause})' if self.cause else ''}."
 
 
 @dataclass(frozen=True)
@@ -2740,6 +2830,7 @@ HIDDEN_KINDS: dict[str, bool] = {
     "location.discovered": False,
     "region.added": True,
     "pc.added": False,
+    "move.made": False,
     "hireling.added": False,
     "hireling.dismissed": False,
     "hireling.promoted": False,
@@ -2767,6 +2858,7 @@ HIDDEN_KINDS: dict[str, bool] = {
     "character.dying": False,
     "character.stabilized": False,
     "character.died": False,
+    "character.retired": False,
     "character.drained": False,
     "character.max_changed": False,
     "character.currency_changed": False,
@@ -2778,6 +2870,7 @@ HIDDEN_KINDS: dict[str, bool] = {
     "character.item_uses_set": False,
     "condition.added": False,
     "condition.ended": False,
+    "counter.changed": False,
     "injury.gained": False,
     "rest.taken": False,
     "rest.recovered": False,

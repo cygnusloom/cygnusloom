@@ -28,8 +28,8 @@
   <form method="dialog">
     <h2 id="dialog-characters-title">Characters</h2>
     {% if scene.pc %}
-    <h3>{% if scene.pc.dead %}Fallen{% else %}You{% endif %}</h3>
-    <p><strong>{{ scene.pc.name }}</strong>{% if scene.pc.dead %} (dead){% endif %}{% if scene.location %}, at {{ scene.location.name }}{% else %}, not yet placed{% endif %}</p>
+    <h3>{% if scene.pc.dead %}Fallen{% elif scene.pc.retired %}Departed{% else %}You{% endif %}</h3>
+    <p><strong>{{ scene.pc.name }}</strong>{% if scene.pc.dead %} (dead){% elif scene.pc.retired %} (left the story){% endif %}{% if scene.location %}, at {{ scene.location.name }}{% else %}, not yet placed{% endif %}</p>
     {% endif %}
     {% if scene.location %}
     <h3>Here</h3>

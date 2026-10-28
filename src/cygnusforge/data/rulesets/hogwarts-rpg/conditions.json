@@ -1,0 +1,64 @@
+[
+  {
+    "type": "condition",
+    "id": "scared",
+    "label": "Scared",
+    "description": "-2 to Bravery until they avoid something difficult. Cleared when they give in to the fear, or when a friend comforts them.",
+    "ends": ["gm"],
+    "modifies": {"bravery": -2}
+  },
+  {
+    "type": "condition",
+    "id": "angry",
+    "label": "Angry",
+    "description": "-2 to Cunning until they hurt someone or break something. Cleared when they give in to the anger, or when a friend calms them.",
+    "ends": ["gm"],
+    "modifies": {"cunning": -2}
+  },
+  {
+    "type": "condition",
+    "id": "stressed",
+    "label": "Stressed",
+    "description": "-2 to Intellect until they say something hurtful to someone. Cleared when they give in to the stress, or when a friend supports them.",
+    "ends": ["gm"],
+    "modifies": {"intellect": -2}
+  },
+  {
+    "type": "condition",
+    "id": "jealous",
+    "label": "Jealous",
+    "description": "-2 to Loyalty until they betray a friend. Cleared when they give in to the jealousy, or when a friend comforts them.",
+    "ends": ["gm"],
+    "modifies": {"loyalty": -2}
+  },
+  {
+    "type": "condition",
+    "id": "embarrassed",
+    "label": "Embarrassed",
+    "description": "-2 to Magic until they take a comment the wrong way. Cleared when they give in to the embarrassment, or when a friend supports them.",
+    "ends": ["gm"],
+    "modifies": {"magic": -2}
+  },
+  {
+    "type": "condition",
+    "id": "injured",
+    "label": "Injured",
+    "description": "-1 to all traits until healed with medicine or magic, which the Narrator decides.",
+    "ends": ["gm"],
+    "modifies": {"*": -1}
+  },
+  {
+    "type": "condition",
+    "id": "hexed",
+    "label": "Hexed",
+    "description": "-1 to one trait the Narrator chooses, until cured. Give the penalty as a modifier to the roll it affects.",
+    "ends": ["gm"]
+  },
+  {
+    "type": "condition",
+    "id": "unconscious",
+    "label": "Unconscious",
+    "description": "Unable to act until revived. The witch or wizard can avoid it by taking a different Condition instead.",
+    "ends": ["gm"]
+  }
+]

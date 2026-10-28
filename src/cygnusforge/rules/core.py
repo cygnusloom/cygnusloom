@@ -83,35 +83,6 @@ def delete_location(name: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.delete_location(name)
 
 
-def hire_hireling(
-    name: str,
-    employer: str,
-    wage: int,
-    description: str,
-    ctx: ToolContext,
-    personality: str | None = None,
-    accent: str | None = None,
-    quirks: Sequence[str] | None = None,
-    character: Mapping[str, Any] | None = None,
-    pronouns: str | None = None,
-) -> dict[str, Any]:
-    return ctx.world.hire_hireling(
-        name=name,
-        employer=employer,
-        wage=wage,
-        description=description,
-        personality=personality,
-        accent=accent,
-        quirks=quirks,
-        character=character,
-        pronouns=pronouns,
-    )
-
-
-def dismiss_hireling(name: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.dismiss_hireling(name, cause)
-
-
 def change_currency(name: str, amount: int, cause: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.change_currency(name, amount, cause)
 
@@ -174,66 +145,6 @@ def move_actor(
     return ctx.world.move_actor(name, location, travel or None, mode, route)
 
 
-def create_encounter_map(
-    name: str,
-    location: str,
-    description: str,
-    ctx: ToolContext,
-    columns: int | None = None,
-    rows: int | None = None,
-    template: str = "",
-) -> dict[str, Any]:
-    return ctx.world.create_encounter_map(
-        name, location, columns, rows, description, template=template
-    )
-
-
-def update_encounter_map(
-    name: str,
-    columns: int,
-    rows: int,
-    description: str,
-    ctx: ToolContext,
-    new_name: str | None = None,
-    location: str | None = None,
-) -> dict[str, Any]:
-    return ctx.world.update_encounter_map(
-        name, columns, rows, description, new_name=new_name, location=location
-    )
-
-
-def delete_encounter_map(name: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.delete_encounter_map(name)
-
-
-def set_map_cells(map: str, cells: list[dict[str, Any]], ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.set_encounter_map_cells(map, cells)
-
-
-def start_encounter(map: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.start_encounter(map)
-
-
-def end_encounter(ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.end_encounter()
-
-
-def add_participant(name: str, ctx: ToolContext, side: str | None = None) -> dict[str, Any]:
-    return ctx.world.add_participant(name, side)
-
-
-def remove_participant(name: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.remove_participant(name)
-
-
-def place_participant(name: str, column: int, row: int, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.place_participant(name, column, row)
-
-
-def end_npc_turn(name: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.end_npc_turn(name)
-
-
 def add_note(text: str, ctx: ToolContext, subject: str | None = None) -> dict[str, Any]:
     return ctx.world.add_note(text, subject)
 
@@ -268,6 +179,24 @@ def view_journal(
     ctx: ToolContext, start_line: int = 1, end_line: int | None = None
 ) -> dict[str, Any]:
     return ctx.world.view_journal(start_line, end_line)
+
+
+def roll_move(
+    move: str, character: str, ctx: ToolContext, modifier: int = 0, stat: str | None = None
+) -> dict[str, Any]:
+    return ctx.world.roll_move(move, character, modifier, stat)
+
+
+def adjust_counter(character: str, counter: str, change: int, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.adjust_counter(character, counter, change)
+
+
+def add_condition(name: str, condition: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.add_condition(name, condition, cause)
+
+
+def end_condition(name: str, condition: str, how: str, ctx: ToolContext) -> dict[str, Any]:
+    return ctx.world.end_condition(name, condition, how)
 
 
 def all_at_location(ctx: ToolContext, location: str | None = None) -> dict[str, Any]:

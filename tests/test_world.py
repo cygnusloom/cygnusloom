@@ -45,7 +45,7 @@ from tests.test_campaigns import (
 from tests.test_tools import _recording_provider, _saved, _script
 
 LIBRARY = content_library()
-TOOLS = LIBRARY.core.tool_calls
+TOOLS = LIBRARY.rule_sets["cairn2e"].tool_calls
 TABLES = LIBRARY.core.tables
 CAIRN = LIBRARY.rule_sets["cairn2e"]
 
@@ -82,7 +82,11 @@ def _ctx(
         speak=speak or quiet_speak,
         ooc=lambda narrate: None,
         rules=LIBRARY.rule_sets["rolltest"].rules,
-        lookup_tools={tool.name: brief(tool.description) for tool in TOOLS.values() if tool.lookup},
+        lookup_tools={
+            tool.name: brief(tool.description)
+            for tool in LIBRARY.rule_sets["rolltest"].tool_calls.values()
+            if tool.lookup
+        },
     )
 
 
@@ -292,6 +296,7 @@ def test_random_traits_come_from_the_given_tables(
             monsters={},
             plus="sum",
             npc_hp={},
+            npc_hp_stat=None,
         )
         db.commit()
     assert result["personality"] == "gruff"
@@ -316,6 +321,7 @@ def test_too_many_quirks_are_rejected(client_factory: Callable[[], TestClient], 
             monsters={},
             plus="sum",
             npc_hp={},
+            npc_hp_stat=None,
         )
 
 
@@ -443,6 +449,7 @@ def test_npc_character_values_come_from_the_lookup(
             monsters={},
             plus=CAIRN.plus,
             npc_hp={},
+            npc_hp_stat=None,
         )
     with _db(app) as db:
         world.create_npc(
@@ -458,6 +465,7 @@ def test_npc_character_values_come_from_the_lookup(
             monsters={},
             plus=CAIRN.plus,
             npc_hp={},
+            npc_hp_stat=None,
         )
         db.commit()
 

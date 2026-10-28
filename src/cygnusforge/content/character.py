@@ -1,6 +1,7 @@
 """Character options a rule set defines, and the JSON schema derived from them.
 
-A character has four kinds of option. Stats are numbers rolled with a dice formula. Templates,
+A character has four kinds of option. Stats are numbers rolled with a dice formula, or assigned
+from a fixed pool of values shared by their swap group. Templates,
 such as a class or background, are chosen by kind and grant features. Features are items,
 traits, spells, or feats. Fields are text, or a choice from a table. The core rule set defines
 the options every rule set shares, such as appearance and biography."""
@@ -9,7 +10,7 @@ from __future__ import annotations
 
 import random
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from cygnusforge.content.definitions import ContentError, Definition, required_text
@@ -36,11 +37,15 @@ class TableOption:
 class Stat:
     id: str
     name: str
-    formula: str
-    # Stats that share a swap group may trade values: one swap per group at creation.
+    # The dice a stat is rolled with, or None when it is assigned from `values`.
+    formula: str | None
+    # Stats that share a swap group may trade values. A rolled group allows one swap; a group
+    # with `values` may be assigned in any order.
     swap_group: str | None
     low: int
     high: int
+    # The pool a stat with no formula is assigned from. Every stat in its group shares the pool.
+    values: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -81,6 +86,10 @@ class Template:
     tables: tuple[str, ...]
     # Suggested character names for this template. They feed the name dice, not the schema.
     names: tuple[str, ...]
+    # Bonuses added to stats, by stat id, when the template is chosen.
+    stats: Mapping[str, int] = field(default_factory=dict)
+    # Amounts added to counters' starting values, by counter id, when the template is chosen.
+    counters: Mapping[str, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -94,6 +103,17 @@ class Field:
 
 
 @dataclass(frozen=True)
+class CounterRef:
+    """A counter a template can give a starting value to, with the bounds it keeps."""
+
+    id: str
+    label: str
+    initial: int
+    minimum: int | None
+    maximum: int | None
+
+
+@dataclass(frozen=True)
 class CharacterSpec:
     stats: Mapping[str, Stat]
     templates: Mapping[str, Template]
@@ -101,6 +121,7 @@ class CharacterSpec:
     fields: Mapping[str, Field]
     tables: Mapping[str, tuple[TableOption, ...]]
     table_names: Mapping[str, str]
+    counters: Mapping[str, CounterRef] = field(default_factory=dict)
 
     def kinds(self) -> list[str]:
         return sorted({t.kind for t in self.templates.values()})
@@ -114,6 +135,7 @@ def build_character(
 ) -> CharacterSpec:
     """Build the character spec from a rule set's definitions. `tables` are already loaded."""
     stats = _each(definitions, "stat", lambda d: _stat(d, template))
+    _check_groups(stats, template)
     features = _each(definitions, "feature", lambda d: load_feature(d, template))
     fields = _each(
         definitions, "character_field", lambda d: _field(d, tables, "character_field", template)
@@ -142,22 +164,70 @@ def _each(definitions: list[Definition], kind: str, make: Any) -> dict[str, Any]
 
 def _stat(definition: Definition, template: str) -> Stat:
     label = f"{template}: stat {definition.id}"
+    name = required_text(definition.data, "name", label)
+    swap = definition.data.get("swap_group")
+    if swap is not None and (not isinstance(swap, str) or not swap.strip()):
+        raise ContentError(f"{label}: 'swap_group' must be non-empty text")
+    if "values" in definition.data:
+        return _assigned_stat(definition, label, name, swap)
     formula = required_text(definition.data, "formula", label)
     match = FORMULA.fullmatch(formula)
     if match is None:
         raise ContentError(f"{label}: 'formula' must be a dice formula such as '3d6'")
-    swap = definition.data.get("swap_group")
-    if swap is not None and (not isinstance(swap, str) or not swap.strip()):
-        raise ContentError(f"{label}: 'swap_group' must be non-empty text")
     count, sides = int(match.group(1)), int(match.group(2))
     return Stat(
         id=definition.id,
-        name=required_text(definition.data, "name", label),
+        name=name,
         formula=formula,
         swap_group=swap,
         low=count,
         high=count * sides,
     )
+
+
+def _assigned_stat(definition: Definition, label: str, name: str, swap: str | None) -> Stat:
+    if "formula" in definition.data:
+        raise ContentError(f"{label}: give 'formula' or 'values', not both")
+    values = definition.data["values"]
+    if (
+        not isinstance(values, list)
+        or not values
+        or not all(isinstance(v, int) and not isinstance(v, bool) for v in values)
+    ):
+        raise ContentError(f"{label}: 'values' must be a non-empty list of whole numbers")
+    if swap is None:
+        raise ContentError(f"{label}: a stat with 'values' needs a 'swap_group' to share them")
+    return Stat(
+        id=definition.id,
+        name=name,
+        formula=None,
+        swap_group=swap,
+        low=min(values),
+        high=max(values),
+        values=tuple(values),
+    )
+
+
+def _check_groups(stats: Mapping[str, Stat], template: str) -> None:
+    """Every stat in a swap group must be rolled, or every one assigned from the same pool with a
+    pool as big as the group."""
+    groups: dict[str | None, list[Stat]] = {}
+    for stat in stats.values():
+        if stat.swap_group is not None:
+            groups.setdefault(stat.swap_group, []).append(stat)
+    for group, members in groups.items():
+        assigned = {bool(m.values) for m in members}
+        if len(assigned) > 1:
+            raise ContentError(f"{template}: stats in swap group {group!r} mix rolled and assigned")
+        if not members[0].values:
+            continue
+        pool = sorted(members[0].values)
+        if any(sorted(m.values) != pool for m in members):
+            raise ContentError(f"{template}: stats in swap group {group!r} must share one pool")
+        if len(members) != len(pool):
+            raise ContentError(
+                f"{template}: swap group {group!r} has {len(members)} stats for {len(pool)} values"
+            )
 
 
 def load_feature(definition: Definition, template: str) -> Feature:
@@ -249,7 +319,23 @@ def _template(
         features=grants,
         tables=tuple(table_ids),
         names=names,
+        stats=_amounts(data.get("stats", {}), "stats", label),
+        counters=_amounts(data.get("counters", {}), "counters", label, minimum=0),
     )
+
+
+def _amounts(value: object, key: str, label: str, minimum: int | None = None) -> dict[str, int]:
+    """A map of ids to whole numbers, such as a template's stat bonuses."""
+    if not isinstance(value, dict):
+        raise ContentError(f"{label}: {key!r} must map ids to whole numbers")
+    amounts: dict[str, int] = {}
+    for item_id, amount in value.items():
+        if not isinstance(item_id, str) or not isinstance(amount, int) or isinstance(amount, bool):
+            raise ContentError(f"{label}: {key!r} must map ids to whole numbers")
+        if minimum is not None and amount < minimum:
+            raise ContentError(f"{label}: {key!r} amounts must be at least {minimum}")
+        amounts[item_id] = amount
+    return amounts
 
 
 def _names(
@@ -467,16 +553,37 @@ class Sheet:
     # Feature id to how many the character has.
     features: dict[str, int]
     fields: dict[str, str]
+    # Counter id to its starting value, for the counters the templates set.
+    counters: dict[str, int] = field(default_factory=dict)
+
+
+def fixed_stats(spec: CharacterSpec) -> dict[str, int]:
+    """The starting value of each stat that is assigned from a pool: its group's pool in stat
+    order."""
+    fixed: dict[str, int] = {}
+    groups: dict[str | None, list[Stat]] = {}
+    for stat in spec.stats.values():
+        if stat.formula is None:
+            groups.setdefault(stat.swap_group, []).append(stat)
+    for members in groups.values():
+        for stat, value in zip(members, members[0].values):
+            fixed[stat.id] = value
+    return fixed
 
 
 def roll_stats(spec: CharacterSpec, rng: random.Random, *, plus: str) -> dict[str, int]:
-    return {s.id: roll_total(s.formula, rng, plus=plus) for s in spec.stats.values()}
+    fixed = fixed_stats(spec)
+    return {
+        s.id: fixed[s.id] if s.formula is None else roll_total(s.formula, rng, plus=plus)
+        for s in spec.stats.values()
+    }
 
 
 def check_swaps(spec: CharacterSpec, rolled: Mapping[str, int], chosen: Mapping[str, int]) -> None:
     """A player keeps the rolled stats, except that each swap group may swap one pair of values.
     Stats outside a group must keep their rolled value."""
     groups: dict[str | None, list[str]] = {}
+    assigned = {s.id for s in spec.stats.values() if s.formula is None}
     for stat in spec.stats.values():
         groups.setdefault(stat.swap_group, []).append(stat.id)
     for group, ids in groups.items():
@@ -489,6 +596,8 @@ def check_swaps(spec: CharacterSpec, rolled: Mapping[str, int], chosen: Mapping[
             continue
         if sorted(before) != sorted(after):
             raise CharacterError(f"stats in group {group!r} must be the rolled values, reordered")
+        if ids[0] in assigned:
+            continue
         if sum(b != a for b, a in zip(before, after)) > 2:
             raise CharacterError(f"stats in group {group!r} allow one swap")
 
@@ -504,15 +613,25 @@ def resolve(
     given_templates = submitted.get("templates", {})
     given_features = submitted.get("features", [])
     given_fields = submitted.get("fields", {})
+    fixed = fixed_stats(spec)
     stats = {
-        s.id: given_stats[s.id] if s.id in given_stats else roll_total(s.formula, rng, plus=plus)
+        s.id: given_stats[s.id]
+        if s.id in given_stats
+        else fixed[s.id]
+        if s.formula is None
+        else roll_total(s.formula, rng, plus=plus)
         for s in spec.stats.values()
     }
     templates = dict(given_templates)
     features = {feature: 1 for feature in given_features}
     fields: dict[str, str] = {}
+    counter_amounts: dict[str, int] = {}
     for template_id in templates.values():
         template = spec.templates[template_id]
+        for stat_id, bonus in template.stats.items():
+            stats[stat_id] += bonus
+        for counter_id, amount in template.counters.items():
+            counter_amounts[counter_id] = counter_amounts.get(counter_id, 0) + amount
         for granted in template.features:
             count = (
                 int(granted.quantity)
@@ -529,7 +648,21 @@ def resolve(
             fields[field_spec.id] = given_fields[field_spec.id]
         else:
             fields[field_spec.id] = rng.choice(spec.tables[field_spec.table]).value
-    return Sheet(stats=stats, templates=templates, features=features, fields=fields)
+    counters = {
+        counter_id: _within(spec.counters[counter_id], spec.counters[counter_id].initial + amount)
+        for counter_id, amount in counter_amounts.items()
+    }
+    return Sheet(
+        stats=stats, templates=templates, features=features, fields=fields, counters=counters
+    )
+
+
+def _within(counter: CounterRef, value: int) -> int:
+    if counter.minimum is not None:
+        value = max(counter.minimum, value)
+    if counter.maximum is not None:
+        value = min(counter.maximum, value)
+    return value
 
 
 def describe(spec: CharacterSpec, sheet: Sheet) -> str:
@@ -544,6 +677,9 @@ def describe(spec: CharacterSpec, sheet: Sheet) -> str:
         if kind in sheet.templates:
             template = spec.templates[sheet.templates[kind]]
             lines.append(f"{kind.capitalize()}: {template.name}")
+    for counter_id, value in sheet.counters.items():
+        if counter_id in spec.counters:
+            lines.append(f"{spec.counters[counter_id].label}: {value}")
     if sheet.features:
         parts = []
         for feature, count in sheet.features.items():

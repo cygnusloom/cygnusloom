@@ -5,18 +5,29 @@ their words live in the rule set's JSON, so nothing here names a particular game
 from __future__ import annotations
 
 import random
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
 from typing import Any
 
 from sqlmodel import Session
 
-from cygnusforge.content.library import PICKED, CombatRules, InjuryEntry, InjuryTable
+from cygnusforge.content.library import (
+    ALL_CONDITIONS,
+    PICKED,
+    CombatRules,
+    ConditionRules,
+    CounterRules,
+    InjuryEntry,
+    InjuryTable,
+)
 from cygnusforge.rules.dice import roll_total
 from cygnusforge.services.death import begin_dying
 from cygnusforge.services.events import (
+    CharacterRetired,
     CharacterSaved,
     ConditionAdded,
+    ConditionEnded,
+    CounterChanged,
     EffectNoted,
     InjuryGained,
     MaxChanged,
@@ -33,8 +44,13 @@ class EffectContext:
     `pick_stat` chose, which `$picked` refers to."""
 
     rng: random.Random
-    combat: CombatRules
+    # The rule set's combat, or None when it has none. Only saves and dying conditions need it.
+    combat: CombatRules | None
     picked: str | None = None
+    # The rule set's counters and stored conditions by id. Only moves, and the effects of counters
+    # and conditions they reach, can use them.
+    counters: Mapping[str, CounterRules] = field(default_factory=dict)
+    conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
 
 
 def gain_injury(
@@ -78,12 +94,131 @@ def run_effects(
         elif kind == "set_max":
             _set_max(db, campaign_id, name, op, cx, cause, plus=plus)
         elif kind == "condition":
-            _add_condition(db, campaign_id, name, op["id"], cause, cx.combat)
+            gain_condition(db, campaign_id, name, op["id"], cause, cx.combat)
         elif kind == "save":
             _save(db, campaign_id, name, op, cx, cause, plus=plus)
         elif kind == "pick_stat":
             _pick_stat(db, campaign_id, name, op, cx, cause, plus=plus)
+        elif kind == "counter":
+            change_counter(
+                db,
+                campaign_id,
+                name,
+                cx.counters[op["id"]],
+                op.get("delta", op.get("set")),
+                absolute="set" in op,
+                cause=cause,
+                cx=cx,
+                plus=plus,
+            )
+        elif kind == "end_condition":
+            if op["id"] == ALL_CONDITIONS:
+                _end_all_conditions(db, campaign_id, name, cx, cause, plus=plus)
+            else:
+                _end_condition(db, campaign_id, name, op["id"], cx, cause, plus=plus)
+        elif kind == "retire":
+            record(db, campaign_id, CharacterRetired(name=name, cause=cause))
         db.commit()
+
+
+def change_counter(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    rules: CounterRules,
+    amount: int,
+    *,
+    absolute: bool,
+    cause: str,
+    cx: EffectContext,
+    plus: str,
+) -> None:
+    """Move a character's counter by `amount`, or set it to `amount` when `absolute`, keeping it
+    within the counter's bounds. Reaching the maximum runs the counter's `full` effects."""
+    character = load_state(db, campaign_id).characters[name_key(name)]
+    before = character.counters.get(rules.id, rules.initial)
+    after = max(rules.minimum, amount if absolute else before + amount)
+    if rules.maximum is not None:
+        after = min(rules.maximum, after)
+    if after == before:
+        record(
+            db,
+            campaign_id,
+            EffectNoted(
+                name=character.name,
+                text=f"{character.name}'s {rules.label} stays {before} ({cause}).",
+            ),
+        )
+    else:
+        record(
+            db,
+            campaign_id,
+            CounterChanged(
+                name=character.name,
+                counter=rules.id,
+                label=rules.label,
+                before=before,
+                after=after,
+                cause=cause,
+            ),
+        )
+    db.commit()
+    if rules.full and rules.maximum is not None and before < rules.maximum <= after:
+        run_effects(db, campaign_id, name, rules.full, cx, f"{rules.label} filled", plus=plus)
+
+
+def _end_all_conditions(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    cx: EffectContext,
+    cause: str,
+    *,
+    plus: str,
+) -> None:
+    """End every condition the character holds, each with its own on-end effects. A character with
+    none is noted, not an error."""
+    character = load_state(db, campaign_id).characters[name_key(name)]
+    if not character.conditions:
+        record(
+            db,
+            campaign_id,
+            EffectNoted(
+                name=character.name, text=f"{character.name} has no conditions to end ({cause})."
+            ),
+        )
+        return
+    for condition in list(character.conditions):
+        _end_condition(db, campaign_id, name, condition, cx, cause, plus=plus)
+
+
+def _end_condition(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    condition: str,
+    cx: EffectContext,
+    cause: str,
+    *,
+    plus: str,
+) -> None:
+    """End a stored condition the character has, then run its on-end effects. A character who does
+    not have it is noted, not an error, since an effect can name a condition that has already ended."""
+    character = load_state(db, campaign_id).characters[name_key(name)]
+    rules = cx.conditions[condition]
+    if condition not in character.conditions:
+        record(
+            db,
+            campaign_id,
+            EffectNoted(
+                name=character.name,
+                text=f"{character.name} does not have {rules.label}, so it does not end ({cause}).",
+            ),
+        )
+        return
+    record(db, campaign_id, ConditionEnded(name=character.name, condition=condition, how=cause))
+    db.commit()
+    run_effects(db, campaign_id, name, rules.on_end, cx, f"{rules.label} ended", plus=plus)
 
 
 def _set_max(
@@ -127,8 +262,13 @@ def _set_max(
         )
 
 
-def _add_condition(
-    db: Session, campaign_id: int, name: str, condition: str, cause: str, combat: CombatRules
+def gain_condition(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    condition: str,
+    cause: str,
+    combat: CombatRules | None,
 ) -> None:
     character = load_state(db, campaign_id).characters[name_key(name)]
     if condition in character.conditions:
@@ -139,7 +279,7 @@ def _add_condition(
         )
         return
     record(db, campaign_id, ConditionAdded(name=name, condition=condition, cause=cause))
-    if condition in combat.dying_conditions:
+    if combat is not None and condition in combat.dying_conditions:
         begin_dying(db, campaign_id, combat, name, cause=f"from {cause}")
 
 
@@ -154,10 +294,12 @@ def _save(
     plus: str,
 ) -> None:
     stat = op["stat"]
+    combat = cx.combat
+    assert combat is not None, "the loader only allows a save in a rule set with combat"
     character = load_state(db, campaign_id).characters[name_key(name)]
-    roll = roll_total(cx.combat.check_die, cx.rng, plus=plus)
+    roll = roll_total(combat.check_die, cx.rng, plus=plus)
     score = current(character, stat)
-    passed = cx.combat.save_succeeds(roll, score)
+    passed = combat.save_succeeds(roll, score)
     record(
         db,
         campaign_id,

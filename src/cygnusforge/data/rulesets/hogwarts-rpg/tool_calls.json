@@ -1,0 +1,71 @@
+[
+  {
+    "type": "tool_call",
+    "id": "roll_move",
+    "name": "roll_move",
+    "python_module": "core",
+    "function": "roll_move",
+    "description": "Roll a move for a player character: 2d6 plus the trait the move uses, plus any condition penalty. For a move that rolls +one of your traits, or Get What You Seek, give the trait as stat. Add a modifier for things the story gives, such as +1 to help or hinder a Friend or a Rival, or -1 from Hexed. Pass the result to the player and narrate the band it lands in.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "move": {
+          "type": "string",
+          "enum_from": "moves",
+          "description": "The move to roll."
+        },
+        "character": {
+          "type": "string",
+          "description": "The name of the player character who rolls."
+        },
+        "modifier": {
+          "type": "integer",
+          "description": "A situational modifier from the story, such as +1 for a Friend or -1 for Hexed. Use 0 when none applies."
+        },
+        "stat": {
+          "type": "string",
+          "enum_from": "stats",
+          "description": "The trait to roll with, for a move that does not name one."
+        }
+      },
+      "required": [
+        "move",
+        "character"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "adjust_counter",
+    "name": "adjust_counter",
+    "python_module": "core",
+    "function": "adjust_counter",
+    "description": "Change a player character's Luck or Experience: mark a point of Luck when they spend it, regain Luck at the end of a school year, or mark Experience. Use a negative change to spend or clear a point and a positive one to add or regain it.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character."
+        },
+        "counter": {
+          "type": "string",
+          "enum": [
+            "luck",
+            "experience"
+          ],
+          "description": "Which counter to change."
+        },
+        "change": {
+          "type": "integer",
+          "description": "How much to add (positive) or remove (negative)."
+        }
+      },
+      "required": [
+        "character",
+        "counter",
+        "change"
+      ]
+    }
+  }
+]

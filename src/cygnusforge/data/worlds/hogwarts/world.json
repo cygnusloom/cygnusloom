@@ -1,0 +1,12 @@
+[
+  {
+    "type": "world",
+    "id": "hogwarts",
+    "name": "Hogwarts & Grounds",
+    "description": "Hogwarts School of Witchcraft and Wizardry and the grounds around it: the castle, the lake, the Forbidden Forest, and the village of Hogsmeade just beyond the gates.",
+    "start": {
+      "location": "great-hall",
+      "hooks": "- The start of the school year brings the Sorting Feast, and the Narrator should ask each player which house their character was sorted into and why.\n- A letter from home, or a rumour in the Great Hall, sends the characters towards something strange happening near the Forbidden Forest."
+    }
+  }
+]

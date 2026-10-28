@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import importlib
 import inspect
+import logging
 import re
 import string
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -15,6 +16,7 @@ from typing import Any
 from cygnusforge.content.character import (
     CampaignSpec,
     CharacterSpec,
+    CounterRef,
     Feature,
     TableOption,
     build_campaign,
@@ -44,9 +46,14 @@ CHARACTER_ARGUMENT = "character"
 NPC_HP_TIER_ARGUMENT = "hp_tier"
 # A tool flagged `travel` gets this argument, with the rule set's travel modes as its choices.
 TRAVEL_ARGUMENT = "travel"
+# A tool property may say `"enum_from"` to take its choices from the rule set's own content: its
+# moves or its stats. The loader fills in the enum, so a tool never lists what the rule set defines.
+ENUM_FROM_KEY = "enum_from"
 # The engine passes its ToolContext to a function that declares this parameter. The model
 # never sees it, so it must not appear in a tool's schema.
 CONTEXT_ARGUMENT = "ctx"
+logger = logging.getLogger(__name__)
+
 CORE_RULE_SET = "core"
 # Every rule set must define these tables. NPCs get a random entry from each one by default.
 REQUIRED_TABLES = ("personality", "accent", "quirk")
@@ -466,9 +473,26 @@ class MonsterTemplate:
 DAMAGE_KINDS = ("absorb", "harm", "overflow")
 # When a condition can end: by a rest, extended rest, aid from someone else, the passing of time,
 # or the GM's say-so. A condition's `ends` lists the ones that end it; `gm` always does.
-CONDITION_ENDS = ("rest", "extended_rest", "aid", "time", "gm")
+# The trigger any condition can end by, decided by the GM. A rule set names its other triggers.
+ALWAYS_CONDITION_END = "gm"
 # The effect ops an injury or condition may run, in the order they are listed.
-EFFECT_OPS = ("note", "set_max", "condition", "save", "pick_stat")
+EFFECT_OPS = (
+    "note",
+    "set_max",
+    "condition",
+    "save",
+    "pick_stat",
+    "counter",
+    "end_condition",
+    "retire",
+)
+# Effect ops that only moves and counters' `full` effects may run, since only they carry the rule
+# set's counters and conditions into the effect.
+MOVE_ONLY_EFFECT_OPS = ("counter", "end_condition")
+# The key of a condition's `modifies` that applies to every stat.
+ALL_STATS = "*"
+# The `end_condition` id that ends every condition the character holds.
+ALL_CONDITIONS = "*"
 # `if_higher` compares the roll with the maximum; `if_above_current` compares it with the current score.
 MAX_MODES = ("if_higher", "if_above_current", "add", "always")
 # The name a `pick_stat` op stores its choice under, for later ops to use as their `stat`.
@@ -501,7 +525,9 @@ class DerivedRule:
 @dataclass(frozen=True)
 class ConditionRules:
     """A condition an injury or an effect can give a character. `ends` lists the triggers that end it,
-    and `on_end` are the effect ops run when it does. A derived condition has `derived` instead."""
+    and `on_end` are the effect ops run when it does. A derived condition has `derived` instead.
+    `dying` and `fatal` mark a condition that leaves a player character dying, or one that makes a
+    failed save fatal; a rule set with combat collects them into its CombatRules."""
 
     id: str
     label: str
@@ -509,6 +535,50 @@ class ConditionRules:
     ends: tuple[str, ...]
     on_end: tuple[Mapping[str, Any], ...]
     derived: DerivedRule | None = None
+    # Amounts added to a move's total while the condition holds, by stat id or ALL_STATS.
+    modifies: Mapping[str, int] = field(default_factory=dict)
+    dying: bool = False
+    fatal: bool = False
+
+
+@dataclass(frozen=True)
+class CounterRules:
+    """A number a character keeps within a range, such as Experience. When a change takes it up to
+    its maximum, the `full` effects run, so a counter can trigger an outcome when it fills."""
+
+    id: str
+    label: str
+    minimum: int
+    maximum: int | None
+    initial: int
+    full: tuple[Mapping[str, Any], ...]
+
+
+@dataclass(frozen=True)
+class MoveBand:
+    """One outcome of a move. The first band whose `min` the total reaches applies, so bands run from
+    the highest `min` down. The last band has no `min` and takes whatever is left."""
+
+    label: str
+    text: str
+    min: int | None
+    effects: tuple[Mapping[str, Any], ...]
+
+
+@dataclass(frozen=True)
+class MoveRules:
+    """A move: a roll of `dice`, plus the stat's modifier when it has one, sorted into `bands`."""
+
+    id: str
+    label: str
+    description: str
+    dice: str
+    stat: str | None
+    bands: tuple[MoveBand, ...]
+    # The stats the player picks from, when the move names no fixed stat. Empty otherwise.
+    stat_choice: tuple[str, ...] = ()
+    # The move is only open once the character holds every stored condition.
+    needs_all_conditions: bool = False
 
 
 @dataclass(frozen=True)
@@ -597,7 +667,8 @@ class CombatRules:
     # A player character who is out of action and dying dies when this many hours pass unaided.
     # Zero means dying characters do not die on a clock.
     dying_hours: int = 0
-    # The conditions that leave a character dying, and the ones that make a failed save fatal.
+    # The conditions that leave a character dying, and the ones that make a failed save fatal. Both
+    # come from the conditions' `dying` and `fatal` flags.
     dying_conditions: tuple[str, ...] = ()
     fatal_conditions: tuple[str, ...] = ()
     # The dice an unarmed attack rolls, and the names that mean unarmed, such as "fists".
@@ -839,8 +910,14 @@ class RuleSet:
     monsters: Mapping[str, MonsterTemplate] = field(default_factory=dict)
     # HP for NPCs with no statblock, by tier name, such as "average": 3.
     npc_hp: Mapping[str, int] = field(default_factory=dict)
+    # The stat an NPC's HP tier sets, such as "hp". None when the rule set has no HP tiers.
+    npc_hp_stat: str | None = None
     # Conditions an injury or effect can give, by id. Derived conditions are included.
     conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
+    # Counters a character keeps, by id, such as Experience.
+    counters: Mapping[str, CounterRules] = field(default_factory=dict)
+    # Moves a player or GM can make, by id.
+    moves: Mapping[str, MoveRules] = field(default_factory=dict)
     # Tables rolled with dice, by id, such as the GM's reaction table.
     dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
     # Time, rest, and needs. Each is None or empty when the rule set does not track them.
@@ -912,9 +989,18 @@ class ContentLibrary:
         rule_sets = {
             d.name: _load_rule_set(d, core_definitions)
             for d in rule_set_dirs
-            if d.name != CORE_RULE_SET
+            if d.name != CORE_RULE_SET and _has_definitions(d)
         }
         return cls(world_templates=worlds, rule_sets=rule_sets, core=core)
+
+
+def _has_definitions(directory: Path) -> bool:
+    """A rule set directory with no JSON yet, such as one holding only its source PDF, is skipped
+    with a warning. Once it has JSON, it loads like any other."""
+    if any(directory.rglob("*.json")):
+        return True
+    logger.warning("skipping rule set %s: no JSON files yet", directory.name)
+    return False
 
 
 def _subdirectories(path: Path) -> list[Path]:
@@ -1361,15 +1447,37 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     combats = [d for d in definitions if d.type == "combat"]
     if len(combats) > 1:
         raise ContentError(f"{template}: more than one combat definition")
-    conditions = _load_conditions(definitions, character, template)
+    condition_ends = _names(head.data, "condition_ends", template)
+    conditions = _load_conditions(definitions, character, condition_ends, template)
+    stored_conditions = frozenset(c.id for c in conditions.values() if c.derived is None)
+    counters = _load_counters(definitions, character, stored_conditions, template)
+    character = replace(
+        character,
+        counters={
+            c.id: CounterRef(
+                id=c.id,
+                label=c.label,
+                initial=c.initial,
+                minimum=c.minimum,
+                maximum=c.maximum,
+            )
+            for c in counters.values()
+        },
+    )
+    _check_template_grants(character, template)
+    moves = _load_moves(definitions, character, frozenset(counters), template)
     injury_tables = {
         d.id: _load_injury_entries(d, character, conditions, template)
         for d in definitions
         if d.type == "injury_table"
     }
     combat = (
-        _load_combat(combats[0], modules, character, injury_tables, template) if combats else None
+        _load_combat(combats[0], modules, character, conditions, injury_tables, template)
+        if combats
+        else None
     )
+    if combat is None and any(c.dying or c.fatal for c in conditions.values()):
+        raise ContentError(f"{template}: a condition is dying or fatal, but there is no combat")
     monsters = {
         d.id: _load_monster(d, character, template, pool=_hit_pool(combat))
         for d in definitions
@@ -1407,12 +1515,17 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     )
     world_terrain = _load_world_terrain(definitions, template)
     npc_hp = _npc_hp(head.data, label)
+    npc_hp_stat = _optional_text(head.data, "npc_hp_stat", label)
+    if npc_hp and npc_hp_stat is None:
+        raise ContentError(f"{label}: 'npc_hp' needs 'npc_hp_stat', the stat its tiers set")
+    if npc_hp_stat is not None and npc_hp_stat not in character.stats:
+        raise ContentError(f"{label}: 'npc_hp_stat' {npc_hp_stat!r} is not a stat of this rule set")
     tool_calls: dict[str, ToolCall] = {}
     tool_names: set[str] = set()
     for d in definitions:
         if d.type != "tool_call":
             continue
-        call = _load_tool_call(d, modules, character, template, npc_hp, travel)
+        call = _load_tool_call(d, modules, character, template, npc_hp, travel, moves)
         if call.name in tool_names:
             raise ContentError(f"{template}: duplicate tool name {call.name!r}")
         tool_names.add(call.name)
@@ -1428,12 +1541,15 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         character=character,
         plus=_plus_mode(head.data, label),
         npc_hp=npc_hp,
+        npc_hp_stat=npc_hp_stat,
         campaign=campaign,
         tables=tables,
         grid=grid,
         combat=combat,
         monsters=monsters,
         conditions=conditions,
+        counters=counters,
+        moves=moves,
         dice_tables=dice_tables,
         clock=clock,
         rests=rests,
@@ -1776,6 +1892,7 @@ def _load_combat(
     definition: Definition,
     modules: Mapping[str, ModuleType],
     character: CharacterSpec,
+    conditions: Mapping[str, ConditionRules],
     injury_tables: Mapping[str, tuple[InjuryEntry, ...]],
     template: str,
 ) -> CombatRules:
@@ -1825,8 +1942,8 @@ def _load_combat(
         modifiers=_load_modifiers(data, label),
         dying_hours=_whole(data, "dying_hours", label, 0) if "dying_hours" in data else 0,
         armor_max=_whole(data, "armor_max", label, 0),
-        dying_conditions=_names(data, "dying_conditions", label),
-        fatal_conditions=_names(data, "fatal_conditions", label),
+        dying_conditions=tuple(c.id for c in conditions.values() if c.dying),
+        fatal_conditions=tuple(c.id for c in conditions.values() if c.fatal),
         aid_items=_names(data, "aid_items", label),
         unarmed_damage=unarmed_damage,
         unarmed_names=unarmed_names,
@@ -2778,7 +2895,10 @@ def _load_marketplace(
 
 
 def _load_conditions(
-    definitions: list[Definition], character: CharacterSpec, template: str
+    definitions: list[Definition],
+    character: CharacterSpec,
+    condition_ends: tuple[str, ...],
+    template: str,
 ) -> dict[str, ConditionRules]:
     """Conditions by id. A stored condition is one a character can have; a derived one shows up
     from the stats and has no entry on the character."""
@@ -2793,8 +2913,9 @@ def _load_conditions(
         if d.id in conditions:
             raise ContentError(f"{template}: duplicate condition {d.id!r}")
         ends = d.data.get("ends", [])
-        if not isinstance(ends, list) or any(end not in CONDITION_ENDS for end in ends):
-            raise ContentError(f"{label}: 'ends' must list only {CONDITION_ENDS}")
+        allowed = (*condition_ends, ALWAYS_CONDITION_END)
+        if not isinstance(ends, list) or any(end not in allowed for end in ends):
+            raise ContentError(f"{label}: 'ends' must list only {allowed}")
         on_end, _ = _check_effects(d.data.get("on_end", []), label, character, stored, False)
         derived = _load_derived(d.data.get("derived"), character, label)
         if derived is not None and (ends or on_end):
@@ -2806,8 +2927,171 @@ def _load_conditions(
             ends=tuple(ends),
             on_end=on_end,
             derived=derived,
+            modifies=_load_modifies(d.data.get("modifies", {}), character, label),
+            dying=_flag_default(d.data, "dying", label, False),
+            fatal=_flag_default(d.data, "fatal", label, False),
         )
     return conditions
+
+
+def _load_modifies(value: object, character: CharacterSpec, label: str) -> dict[str, int]:
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label}: 'modifies' must be an object")
+    for stat, amount in value.items():
+        if stat != ALL_STATS and stat not in character.stats:
+            raise ContentError(f"{label}: 'modifies' names no stat ({stat!r})")
+        if not isinstance(amount, int) or isinstance(amount, bool):
+            raise ContentError(f"{label}: 'modifies' {stat!r} must be a whole number")
+    return dict(value)
+
+
+def _check_template_grants(character: CharacterSpec, template: str) -> None:
+    """A template's stat bonuses and counter starts must name stats and counters the rule set
+    defines."""
+    for item in character.templates.values():
+        label = f"{template}: template {item.id}"
+        for stat in item.stats:
+            if stat not in character.stats:
+                raise ContentError(f"{label}: unknown stat {stat!r} in 'stats'")
+        for counter in item.counters:
+            if counter not in character.counters:
+                raise ContentError(f"{label}: unknown counter {counter!r} in 'counters'")
+
+
+def _load_counters(
+    definitions: list[Definition],
+    character: CharacterSpec,
+    conditions: frozenset[str],
+    template: str,
+) -> dict[str, CounterRules]:
+    """Counters by id. A counter's `full` effects may name any counter, so the ids are read first."""
+    ids = frozenset(d.id for d in definitions if d.type == "counter")
+    counters: dict[str, CounterRules] = {}
+    for d in definitions:
+        if d.type != "counter":
+            continue
+        label = f"{template}: counter {d.id}"
+        if d.id in counters:
+            raise ContentError(f"{template}: duplicate counter {d.id!r}")
+        minimum = _optional_whole(d.data, "min", label)
+        maximum = _whole(d.data, "max", label, minimum) if "max" in d.data else None
+        initial = _whole(d.data, "initial", label, minimum) if "initial" in d.data else minimum
+        if maximum is not None and initial > maximum:
+            raise ContentError(f"{label}: 'initial' is above 'max'")
+        full, _ = _check_effects(
+            d.data.get("full", []), label, character, conditions, False, counters=ids
+        )
+        if full and maximum is None:
+            raise ContentError(f"{label}: 'full' needs a 'max'")
+        counters[d.id] = CounterRules(
+            id=d.id,
+            label=required_text(d.data, "label", label),
+            minimum=minimum,
+            maximum=maximum,
+            initial=initial,
+            full=full,
+        )
+    return counters
+
+
+def _load_moves(
+    definitions: list[Definition],
+    character: CharacterSpec,
+    counters: frozenset[str],
+    template: str,
+) -> dict[str, MoveRules]:
+    stored = frozenset(
+        d.id for d in definitions if d.type == "condition" and d.data.get("derived") is None
+    )
+    moves: dict[str, MoveRules] = {}
+    for d in definitions:
+        if d.type != "move":
+            continue
+        label = f"{template}: move {d.id}"
+        if d.id in moves:
+            raise ContentError(f"{template}: duplicate move {d.id!r}")
+        dice = required_text(d.data, "dice", label)
+        if not is_formula(dice):
+            raise ContentError(f"{label}: 'dice' is not a formula ({dice!r})")
+        stat = d.data.get("stat")
+        if stat is not None and (not isinstance(stat, str) or stat not in character.stats):
+            raise ContentError(f"{label}: 'stat' names no stat ({stat!r})")
+        stat_choice = _load_stat_choice(d.data, stat, character, label)
+        needs_all = _flag_default(d.data, "needs_all_conditions", label, False)
+        if needs_all and not stored:
+            raise ContentError(f"{label}: needs_all_conditions, but the rule set has no conditions")
+        moves[d.id] = MoveRules(
+            id=d.id,
+            label=required_text(d.data, "label", label),
+            description=required_text(d.data, "description", label),
+            dice=dice,
+            stat=stat,
+            bands=_load_bands(d.data.get("bands"), character, stored, counters, label),
+            stat_choice=stat_choice,
+            needs_all_conditions=needs_all,
+        )
+    return moves
+
+
+def _load_stat_choice(
+    data: Mapping[str, Any], stat: str | None, character: CharacterSpec, label: str
+) -> tuple[str, ...]:
+    """The optional `stat_choice` of a move: the stats the player picks from, when the move has
+    no fixed `stat`. The player must pick one of them when rolling."""
+    if "stat_choice" not in data:
+        return ()
+    if stat is not None:
+        raise ContentError(f"{label}: 'stat_choice' cannot be given with a fixed 'stat'")
+    choice = data["stat_choice"]
+    if not isinstance(choice, list) or not choice:
+        raise ContentError(f"{label}: 'stat_choice' must be a non-empty list of stats")
+    for option in choice:
+        if not isinstance(option, str) or option not in character.stats:
+            raise ContentError(f"{label}: 'stat_choice' names no stat ({option!r})")
+    if len(set(choice)) != len(choice):
+        raise ContentError(f"{label}: 'stat_choice' repeats a stat")
+    return tuple(choice)
+
+
+def _load_bands(
+    value: object,
+    character: CharacterSpec,
+    conditions: frozenset[str],
+    counters: frozenset[str],
+    label: str,
+) -> tuple[MoveBand, ...]:
+    if not isinstance(value, list) or not value:
+        raise ContentError(f"{label}: 'bands' must be a non-empty list")
+    bands: list[MoveBand] = []
+    previous: int | None = None
+    for index, band in enumerate(value):
+        if not isinstance(band, Mapping):
+            raise ContentError(f"{label}: each band must be an object")
+        last = index == len(value) - 1
+        minimum = band.get("min")
+        if last and minimum is not None:
+            raise ContentError(f"{label}: the last band must have no 'min'")
+        if not last:
+            if not isinstance(minimum, int) or isinstance(minimum, bool):
+                raise ContentError(f"{label}: every band but the last needs an integer 'min'")
+            if previous is not None and minimum >= previous:
+                raise ContentError(f"{label}: bands must run from the highest 'min' down")
+        previous = minimum
+        effects, _ = _check_effects(
+            band.get("effects", []), label, character, conditions, False, counters=counters
+        )
+        text = band.get("text", "")
+        if not isinstance(text, str):
+            raise ContentError(f"{label}: band 'text' must be text")
+        bands.append(
+            MoveBand(
+                label=required_text(band, "label", label),
+                text=text,
+                min=minimum,
+                effects=effects,
+            )
+        )
+    return tuple(bands)
 
 
 def _load_derived(value: object, character: CharacterSpec, label: str) -> DerivedRule | None:
@@ -2862,9 +3146,12 @@ def _check_effects(
     character: CharacterSpec,
     conditions: frozenset[str],
     picked: bool,
+    *,
+    counters: frozenset[str] | None = None,
 ) -> tuple[tuple[Mapping[str, Any], ...], bool]:
     """Validate a list of effect ops, in order. `picked` says whether a `pick_stat` came before,
-    so `$picked` may be used. Returns the ops and whether a stat has been picked by the end."""
+    so `$picked` may be used. Returns the ops and whether a stat has been picked by the end.
+    `counters` is the ids of the rule set's counters, given only where move-only ops are allowed."""
     if not isinstance(ops, list):
         raise ContentError(f"{label}: effects must be a list")
     checked: list[Mapping[str, Any]] = []
@@ -2874,6 +3161,8 @@ def _check_effects(
         name = required_text(op, "op", label)
         if name not in EFFECT_OPS:
             raise ContentError(f"{label}: effect op {name!r} is not one of {EFFECT_OPS}")
+        if name in MOVE_ONLY_EFFECT_OPS and counters is None:
+            raise ContentError(f"{label}: effect op {name!r} is only allowed in moves and counters")
         if name == "note":
             required_text(op, "text", label)
         elif name == "set_max":
@@ -2895,12 +3184,31 @@ def _check_effects(
                 raise ContentError(
                     f"{label}: condition op names no stored condition ({condition!r})"
                 )
+        elif name == "counter":
+            counter = required_text(op, "id", label)
+            if counter not in (counters or frozenset()):
+                raise ContentError(f"{label}: counter op names no counter ({counter!r})")
+            if ("delta" in op) == ("set" in op):
+                raise ContentError(f"{label}: counter op needs exactly one of 'delta' or 'set'")
+            amount = op.get("delta", op.get("set"))
+            if not isinstance(amount, int) or isinstance(amount, bool):
+                raise ContentError(f"{label}: counter op amount must be a whole number")
+        elif name == "end_condition":
+            condition = required_text(op, "id", label)
+            if condition not in (*conditions, ALL_CONDITIONS):
+                raise ContentError(
+                    f"{label}: end_condition names no stored condition ({condition!r})"
+                )
         elif name == "save":
             stat = required_text(op, "stat", label)
             if stat not in character.stats:
                 raise ContentError(f"{label}: save names no stat ({stat!r})")
-            _, picked = _check_effects(op.get("pass", []), label, character, conditions, picked)
-            _, picked = _check_effects(op.get("fail", []), label, character, conditions, picked)
+            _, picked = _check_effects(
+                op.get("pass", []), label, character, conditions, picked, counters=counters
+            )
+            _, picked = _check_effects(
+                op.get("fail", []), label, character, conditions, picked, counters=counters
+            )
         elif name == "pick_stat":
             options = op.get("options")
             if not isinstance(options, list) or not options:
@@ -3019,6 +3327,7 @@ def _load_tool_call(
     template: str,
     npc_hp: Mapping[str, int],
     travel: Travel | None = None,
+    moves: Mapping[str, MoveRules] | None = None,
 ) -> ToolCall:
     label = f"{template}: tool_call {definition.id}"
     data = definition.data
@@ -3032,7 +3341,11 @@ def _load_tool_call(
     name = required_text(data, "name", label)
     if not TOOL_NAME.fullmatch(name):
         raise ContentError(f"{label}: 'name' must be 1 to 64 letters, digits, '_' or '-'")
-    parameters = _check_parameters(data.get("parameters"), label)
+    parameters = _with_enum_from(
+        _check_parameters(data.get("parameters"), label),
+        {"moves": sorted(moves or {}), "stats": sorted(character.stats)},
+        label,
+    )
     if _flag(data, "character_options", label):
         parameters = _with_character(parameters, character, label)
     if _flag(data, "npc_hp_tier", label) and npc_hp:
@@ -3109,6 +3422,27 @@ def _with_npc_hp_tier(
         "description": "The HP tier of an NPC with no statblock, set to the tier their role in the story calls for.",
     }
     properties = {**parameters["properties"], NPC_HP_TIER_ARGUMENT: tier}
+    return {**parameters, "properties": properties}
+
+
+def _with_enum_from(
+    parameters: dict[str, Any], sources: Mapping[str, list[str]], label: str
+) -> dict[str, Any]:
+    """Fill in the enum of each property that names a source list, such as the rule set's moves."""
+    properties: dict[str, Any] = {}
+    for name, prop in parameters["properties"].items():
+        source = prop.get(ENUM_FROM_KEY) if isinstance(prop, dict) else None
+        if source is None:
+            properties[name] = prop
+            continue
+        if source not in sources:
+            raise ContentError(
+                f"{label}: {name!r} has enum_from {source!r}, which is not one of {sorted(sources)}"
+            )
+        properties[name] = {
+            **{k: v for k, v in prop.items() if k != ENUM_FROM_KEY},
+            "enum": sources[source],
+        }
     return {**parameters, "properties": properties}
 
 

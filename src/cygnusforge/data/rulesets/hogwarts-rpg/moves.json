@@ -1,0 +1,472 @@
+[
+  {
+    "type": "move",
+    "id": "stand_in_face_of_danger",
+    "label": "Stand in the Face of Danger",
+    "description": "When you stand in the face of danger, physical or otherwise, roll +Bravery.",
+    "dice": "2d6",
+    "stat": "bravery",
+    "bands": [
+      {
+        "label": "Firm",
+        "min": 10,
+        "text": "Pick one: you stand firm and nobody gets hurt; or you aren't hurt, and you hurt the threat right back."
+      },
+      {
+        "label": "Mixed",
+        "min": 7,
+        "text": "Pick one: you hurt the threat, but it hurts you as well; you aren't able to act, but the threat backs off; you flee, but suffer no Serious Consequences; you avoid Serious Consequences, but someone else suffers them instead."
+      },
+      {
+        "label": "Failure",
+        "text": "You aren't able to face the danger. The Narrator may tell you a Serious Consequence that happens as a result.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "experience",
+            "delta": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "help_or_hinder",
+    "label": "Help or Hinder Someone",
+    "description": "When you assist, defend, or otherwise help someone, or trip up, interfere with, or otherwise hinder someone, roll +Loyalty. If they are a Friend or a Rival, add +1.",
+    "dice": "2d6",
+    "stat": "loyalty",
+    "bands": [
+      {
+        "label": "Success",
+        "min": 10,
+        "text": "For another main character, pick one: give them +1 or -1 to their roll; prevent them from taking a Condition; or offer them 1 Experience to stop what they're doing. For a Narrator character, help or hinder them as you want."
+      },
+      {
+        "label": "Mixed",
+        "min": 7,
+        "text": "Pick one of the 10+ options, but take a Condition as a result of your efforts. For a Narrator character, you help or hinder them, but pick one: you take a Condition; they're accidentally hurt; they are upset with you; or they are suspicious of your motives."
+      },
+      {
+        "label": "Failure",
+        "text": "You aren't able to help or hinder them. The Narrator may tell you a Serious Consequence that happens as a result.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "experience",
+            "delta": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "hide_and_sneak",
+    "label": "Hide & Sneak",
+    "description": "When you hide yourself or something else, try to move around unnoticed, or otherwise hide and sneak about, roll +Cunning.",
+    "dice": "2d6",
+    "stat": "cunning",
+    "bands": [
+      {
+        "label": "Undetected",
+        "min": 10,
+        "text": "You or whatever you're hiding aren't detected."
+      },
+      {
+        "label": "Partly found",
+        "min": 7,
+        "text": "Pick one: someone or something is looking for you or what you've hidden; someone or something knows you're here or hidden something, but not where; or you leave some kind of trace or evidence behind."
+      },
+      {
+        "label": "Failure",
+        "text": "You or whatever you're hiding are found. The Narrator may tell you a Serious Consequence that happens as a result.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "experience",
+            "delta": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "get_what_you_seek",
+    "label": "Get What You Seek",
+    "description": "When you want to get an object, or persuade someone to do or think something, roll +Bravery for honesty, negotiation, charisma, or humility, or +Cunning for trickery, cheating, underhandedness, or theft.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "Got it",
+        "min": 10,
+        "text": "You get what you wanted, no problem."
+      },
+      {
+        "label": "Got it, at a price",
+        "min": 7,
+        "text": "You get what you wanted, but pick one: the person you got it from is suspicious; you must give or promise something in return; or the person changes their attitude towards you."
+      },
+      {
+        "label": "Failure",
+        "text": "You don't get what you wanted. The Narrator may tell you a Serious Consequence that happens as a result.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "experience",
+            "delta": 1
+          }
+        ]
+      }
+    ],
+    "stat_choice": [
+      "bravery",
+      "cunning"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "gain_knowledge",
+    "label": "Gain Knowledge",
+    "description": "When you want to gain knowledge about a person, object, situation, or place, from a conversation, book, newspaper, or other document, or from your own memory, roll +Intellect.",
+    "dice": "2d6",
+    "stat": "intellect",
+    "bands": [
+      {
+        "label": "Knowledge",
+        "min": 10,
+        "text": "You gain the knowledge you wanted. You may ask the Narrator a question and they must give a true answer, such as: what here isn't what it seems; where is the thing I'm looking for; what's the history of this; how do I make this useful; are they telling the truth; what do they really want; what do I remember about this."
+      },
+      {
+        "label": "Some knowledge",
+        "min": 7,
+        "text": "You get some of the knowledge you wanted. You may ask the Narrator a question. They must give a true answer, but not a full one."
+      },
+      {
+        "label": "Failure",
+        "text": "You're not sure if you got the knowledge you wanted. You may ask a question, but the Narrator doesn't have to give a full answer, or a true one. The Narrator may tell you a Serious Consequence that happens as a result.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "experience",
+            "delta": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "roll_trait",
+    "label": "Roll +One of Your Traits",
+    "description": "When you do something that has a chance of failing, and no other move applies, roll +one of your traits. Choose the trait that best matches what you're doing.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "Success",
+        "min": 10,
+        "text": "You do it without a problem."
+      },
+      {
+        "label": "Cost",
+        "min": 7,
+        "text": "You do it, but there's a cost."
+      },
+      {
+        "label": "Failure",
+        "text": "You don't manage it, and the Narrator tells you how things get worse.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "experience",
+            "delta": 1
+          }
+        ]
+      }
+    ],
+    "stat_choice": [
+      "bravery",
+      "cunning",
+      "intellect",
+      "loyalty",
+      "magic"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "approach_magical_creature",
+    "label": "Approach a Magical Creature",
+    "description": "When you try to tame, help, get help from, or otherwise approach a magical creature, roll +Loyalty.",
+    "dice": "2d6",
+    "stat": "loyalty",
+    "bands": [
+      {
+        "label": "Willing",
+        "min": 10,
+        "text": "The creature acts as you want."
+      },
+      {
+        "label": "Willing, at a cost",
+        "min": 7,
+        "text": "Pick one: the creature acts as you want, but you take a Condition for your efforts; the creature acts as you want, but it attracts unwanted attention; or the creature doesn't act as you want, but does something else helpful."
+      },
+      {
+        "label": "Failure",
+        "text": "The creature goes wild. The Narrator may tell you a Serious Consequence that happens as a result.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "experience",
+            "delta": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "cast_a_spell",
+    "label": "Cast a Spell",
+    "description": "When you cast a spell you know, first say the incantation and wave a wand, then roll +Magic. If you don't know the spell, don't say the incantation, or don't wave a wand, mark a point of Luck first, then roll +Magic. You can cast a spell two or more years below your current year, unless the situation is stressful.",
+    "dice": "2d6",
+    "stat": "magic",
+    "bands": [
+      {
+        "label": "Cast",
+        "min": 10,
+        "text": "You successfully cast the spell the way you wanted."
+      },
+      {
+        "label": "Cast, with a cost",
+        "min": 7,
+        "text": "You successfully cast the spell, but pick one: the effect isn't as powerful as it should be; the effect doesn't last as long as it should; or you attract unwanted attention."
+      },
+      {
+        "label": "Failure",
+        "text": "You fail to cast the spell. The Narrator may tell you a Serious Consequence that happens as a result.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "experience",
+            "delta": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "duel",
+    "label": "Duel",
+    "description": "When you get into a wizard's duel, roll +Magic to cast a spell. A hit on an attacking spell hits the other witch or wizard; a healing or defensive spell that hits blocks or succeeds. The duel ends when a witch or wizard yields or can no longer cast spells. Before the first turn, each duelling main character rolls +Bravery; the higher result takes the first turn.",
+    "dice": "2d6",
+    "stat": "magic",
+    "bands": [
+      {
+        "label": "Hit",
+        "min": 10,
+        "text": "Your spell hits the other witch or wizard, and theirs misses."
+      },
+      {
+        "label": "Clash",
+        "min": 7,
+        "text": "Pick one: your spells collide in midair; your spell misses, but so does theirs; or both spells hit."
+      },
+      {
+        "label": "Failure",
+        "text": "Your spell misses, and theirs hits. The Narrator tells you a Serious Consequence that happens to you as a result.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "experience",
+            "delta": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "concoct_a_potion",
+    "label": "Concoct a Potion",
+    "description": "When you mix, brew, or otherwise concoct a potion you know, roll +Magic. You must have the proper ingredients, a way to assemble them, and a wand. If you don't know the potion, mark a point of Luck first, then roll +Magic.",
+    "dice": "2d6",
+    "stat": "magic",
+    "bands": [
+      {
+        "label": "Potion",
+        "min": 10,
+        "text": "You correctly create the potion you wanted."
+      },
+      {
+        "label": "Potion, with a cost",
+        "min": 7,
+        "text": "You create the potion, but pick one: it has some unintended side effect; the process goes wonky and you take a Condition; or you accidentally make a different potion, which the Narrator names."
+      },
+      {
+        "label": "Failure",
+        "text": "You don't create the potion successfully. The Narrator may tell you a Serious Consequence that happens as a result.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "experience",
+            "delta": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "use_a_magical_object",
+    "label": "Use a Magical Object",
+    "description": "When you use a magical object, roll +Magic.",
+    "dice": "2d6",
+    "stat": "magic",
+    "bands": [
+      {
+        "label": "Works",
+        "min": 10,
+        "text": "The object works exactly as expected, and you make full use of it."
+      },
+      {
+        "label": "Works, with a cost",
+        "min": 7,
+        "text": "Pick one: the object does something unexpected but helpful; its effect isn't as powerful as it should be; it works as expected, but you take a Condition from using it; or it works, but breaks in the process."
+      },
+      {
+        "label": "Failure",
+        "text": "The magical object doesn't work correctly. The Narrator may tell you a Serious Consequence that happens as a result.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "experience",
+            "delta": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "exit_the_story",
+    "label": "Exit the Story",
+    "description": "When all 8 Conditions are marked, roll +your highest trait to see if you exit the story.",
+    "dice": "2d6",
+    "stat_choice": [
+      "bravery",
+      "cunning",
+      "intellect",
+      "loyalty",
+      "magic"
+    ],
+    "needs_all_conditions": true,
+    "bands": [
+      {
+        "label": "Return with everything cleared",
+        "min": 10,
+        "text": "You come back with all Conditions cleared.",
+        "effects": [
+          {
+            "op": "end_condition",
+            "id": "*"
+          }
+        ]
+      },
+      {
+        "label": "Return, Unconscious cleared",
+        "min": 7,
+        "text": "You come back with only Unconscious cleared. Your other Conditions remain.",
+        "effects": [
+          {
+            "op": "end_condition",
+            "id": "unconscious"
+          }
+        ]
+      },
+      {
+        "label": "Exit the story",
+        "text": "You exit the story. Create a new witch or wizard. If you come back later, you have a physical or mental scar: write it on your sheet.",
+        "effects": [
+          {
+            "op": "retire"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "play_a_quidditch_match",
+    "label": "Play a Quidditch Match",
+    "description": "When you have control of a Quidditch match, describe the match up until your team is about to make a risky play, then roll +Bravery if your team is playing boldly, +Cunning if it is playing dirty, +Intellect if it is playing tactically, or +Loyalty if it is playing with great teamwork. Pass control of the match to the person on your left unless you keep it.",
+    "dice": "2d6",
+    "stat_choice": [
+      "bravery",
+      "cunning",
+      "intellect",
+      "loyalty"
+    ],
+    "bands": [
+      {
+        "label": "Keep control",
+        "min": 10,
+        "text": "You keep control of the match and your team scores 10 points."
+      },
+      {
+        "label": "Pass control",
+        "min": 7,
+        "text": "Neither team scores and you pass control of the match and this sheet to your left. Pick one: someone on your team misses a throw or a catch; someone on your team is hit by a Bludger; your team's play doesn't go as planned; or the other team pulls a trick play."
+      },
+      {
+        "label": "Lose control",
+        "text": "Your team doesn't score and passes control to the person on your left. The Narrator describes how the other team scores 10 points, and may tell you a Serious Consequence that occurs as a result of your attempt.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "experience",
+            "delta": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "catch_the_golden_snitch",
+    "label": "Catch the Golden Snitch",
+    "description": "When the Narrator announces that someone has spotted the Golden Snitch and you have control of the match, your team's Seeker can try to catch it. Describe the match up until your Seeker is about to catch the Snitch, then roll +Bravery for a daring maneuver, +Cunning to sabotage the other Seeker, +Intellect to outwit them, or +Loyalty if a teammate helps.",
+    "dice": "2d6",
+    "stat_choice": [
+      "bravery",
+      "cunning",
+      "intellect",
+      "loyalty"
+    ],
+    "bands": [
+      {
+        "label": "Caught it",
+        "min": 10,
+        "text": "Your team catches the Golden Snitch and ends the match, giving your team 150 points."
+      },
+      {
+        "label": "Nobody caught it",
+        "min": 7,
+        "text": "Your team isn't able to catch the Golden Snitch, but neither is the other team. Pass control of the match and this sheet to the person on your left."
+      },
+      {
+        "label": "Lost it",
+        "text": "Your team fails to catch the Golden Snitch, and the other team gets it for 150 points. The Narrator may also tell you a Serious Consequence that occurs as a result of your attempt.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "experience",
+            "delta": 1
+          }
+        ]
+      }
+    ]
+  }
+]

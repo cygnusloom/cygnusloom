@@ -297,10 +297,13 @@ def test_combat_modifiers_are_read_optionally_and_lowercased():
         {"cairn2e": cairn2e},
         CAIRN.character,
         {},
+        {},
         "cairn2e",
     )
     assert combat.modifiers == {"impaired": "1d4"}
-    plain = _load_combat(_combat_definition(), {"cairn2e": cairn2e}, CAIRN.character, {}, "cairn2e")
+    plain = _load_combat(
+        _combat_definition(), {"cairn2e": cairn2e}, CAIRN.character, {}, {}, "cairn2e"
+    )
     assert plain.modifiers == {}
 
 
@@ -321,6 +324,7 @@ def test_a_bad_modifier_is_rejected_when_the_rule_set_loads(modifiers, message):
             _combat_definition(modifiers=modifiers),
             {"cairn2e": cairn2e},
             CAIRN.character,
+            {},
             {},
             "cairn2e",
         )

@@ -1,0 +1,23 @@
+[
+  {
+    "type": "counter",
+    "id": "luck",
+    "label": "Luck",
+    "min": 0,
+    "max": 3,
+    "initial": 3,
+    "description": "Marked to do something you normally couldn't, or to change a roll to a 10+. Regained in full when a school year ends."
+  },
+  {
+    "type": "counter",
+    "id": "experience",
+    "label": "Experience",
+    "min": 0,
+    "max": 4,
+    "initial": 0,
+    "full": [
+      {"op": "note", "text": "The witch or wizard has 4 Experience: they take an Advancement now, and this Experience is cleared."},
+      {"op": "counter", "id": "experience", "set": 0}
+    ]
+  }
+]

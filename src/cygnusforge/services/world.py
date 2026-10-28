@@ -35,6 +35,7 @@ from cygnusforge.content.library import (
     ClockRules,
     CombatRules,
     ConditionRules,
+    CounterRules,
     DiceTable,
     EncounterGrid,
     EncounterObject,
@@ -45,6 +46,7 @@ from cygnusforge.content.library import (
     MagicRules,
     Marketplace,
     MonsterTemplate,
+    MoveRules,
     NeedRules,
     RestLength,
     ShopItem,
@@ -58,9 +60,11 @@ from cygnusforge.rules.dice import is_formula
 from cygnusforge.services import aid, combat, encounters, morale
 from cygnusforge.services import attacks as attack_modifiers
 from cygnusforge.services import clock as clock_service
+from cygnusforge.services import counters as counters_service
 from cygnusforge.services import inventory as inventory_service
 from cygnusforge.services import magic as magic_service
 from cygnusforge.services import market as market_service
+from cygnusforge.services import moves as moves_service
 from cygnusforge.services import needs as needs_service
 from cygnusforge.services import objects as objects_service
 from cygnusforge.services import wilderness as wilderness_service
@@ -71,7 +75,7 @@ from cygnusforge.services.common import (
     session_scope,
     whole_number,
 )
-from cygnusforge.services.conditions import active_conditions, end_condition
+from cygnusforge.services.conditions import active_conditions, add_condition, end_condition
 from cygnusforge.services.dice_tables import roll_tables as roll_dice_tables
 from cygnusforge.services.dungeon import dungeon_cycle as dungeon_cycle_service
 from cygnusforge.services.dungeon import roll_reaction as roll_reaction_service
@@ -270,6 +274,10 @@ class WorldTools:
     # The rule set's conditions by id.
     conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
     dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
+    # The rule set's moves by id.
+    moves: Mapping[str, MoveRules] = field(default_factory=dict)
+    # The rule set's counters by id, such as Experience or Luck.
+    counters: Mapping[str, CounterRules] = field(default_factory=dict)
     # Time, rest, and needs. Each is None or empty when the rule set does not track them.
     clock_rules: ClockRules | None = None
     rests: Mapping[str, RestLength] = field(default_factory=dict)
@@ -284,6 +292,7 @@ class WorldTools:
     plus: str = field(kw_only=True)
     # The rule set's HP tiers for NPCs without a statblock, by tier name.
     npc_hp: Mapping[str, int] = field(default_factory=dict)
+    npc_hp_stat: str | None = None
     # The rule set's travel modes and default leg, or None when it does not charge travel time.
     travel: Travel | None = None
     # The rule set's wilderness calendar, weather, and Wilderness Actions, or None when it has none.
@@ -607,6 +616,44 @@ class WorldTools:
                 spell,
             )
 
+    def roll_move(
+        self, move: str, character: str, modifier: int = 0, stat: str | None = None
+    ) -> dict[str, Any]:
+        rules = self.moves.get(move)
+        if rules is None:
+            raise InvalidInput(
+                f"there is no move named {move!r}; choose one of {sorted(self.moves)}"
+            )
+        with session_scope(self.engine) as db:
+            return moves_service.make_move(
+                db,
+                self.campaign_id,
+                character,
+                rules,
+                self.rng,
+                plus=self.plus,
+                combat=self.combat,
+                conditions=self.conditions,
+                counters=self.counters,
+                modifier=modifier,
+                stat=stat,
+            )
+
+    def adjust_counter(self, character: str, counter: str, change: int) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return counters_service.adjust_counter(
+                db,
+                self.campaign_id,
+                character,
+                counter,
+                change,
+                counters=self.counters,
+                conditions=self.conditions,
+                combat=self.combat,
+                rng=self.rng,
+                plus=self.plus,
+            )
+
     def use_charge(self, name: str, item: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return magic_service.use_charge(
@@ -747,6 +794,7 @@ class WorldTools:
                 force=force,
                 plus=self.plus,
                 npc_hp=self.npc_hp,
+                npc_hp_stat=self.npc_hp_stat,
                 hp_tier=hp_tier,
                 pronouns=pronouns,
             )
@@ -1185,6 +1233,12 @@ class WorldTools:
                 db, self.campaign_id, name, stat, amount, cause, self._rules()
             )
 
+    def add_condition(self, name: str, condition: str, cause: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return add_condition(
+                db, self.campaign_id, name, condition, cause, self.conditions, self.combat
+            )
+
     def end_condition(self, name: str, condition: str, how: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return end_condition(
@@ -1292,6 +1346,7 @@ class WorldTools:
                 self.conditions,
                 self.inventory,
                 self.need,
+                self.counters,
             )
 
     def character_options(self, field: str | None = None) -> dict[str, Any]:
@@ -1321,6 +1376,7 @@ def seed_campaign(
     monsters: Mapping[str, MonsterTemplate],
     plus: str,
     npc_hp: Mapping[str, int],
+    npc_hp_stat: str | None,
     wilderness: Wilderness | None = None,
 ) -> None:
     """Record a campaign's places and the world's NPCs as events. The player character is made
@@ -1363,8 +1419,8 @@ def seed_campaign(
         base = None if npc.monster is None else monsters[npc.monster]
         if base is not None:
             character: dict[str, Any] | None = {"stats": dict(base.stats)}
-        elif npc.hp_tier is not None:
-            character = {"stats": {"hp": npc_hp[npc.hp_tier]}}
+        elif npc.hp_tier is not None and npc_hp_stat is not None:
+            character = {"stats": {npc_hp_stat: npc_hp[npc.hp_tier]}}
         else:
             character = None
         event = _npc_event(
@@ -1635,6 +1691,7 @@ def create_npc(
     force: bool = False,
     plus: str,
     npc_hp: Mapping[str, int],
+    npc_hp_stat: str | None,
     hp_tier: str | None = None,
     pronouns: str | None = None,
 ) -> dict[str, Any]:
@@ -1652,7 +1709,9 @@ def create_npc(
             raise InvalidInput(_statblock_conflict(base, spec))
         character = {**(character or {}), "stats": dict(base.stats)}
     if hp_tier is not None:
-        character = _with_hp_tier(character, hp_tier, npc_hp, statblock=base is not None)
+        character = _with_hp_tier(
+            character, hp_tier, npc_hp, npc_hp_stat, statblock=base is not None
+        )
     event = _npc_event(
         tables,
         rng,
@@ -1962,12 +2021,13 @@ def _with_hp_tier(
     character: Mapping[str, Any] | None,
     hp_tier: str,
     npc_hp: Mapping[str, int],
+    stat: str | None,
     *,
     statblock: bool,
 ) -> dict[str, Any]:
     """The character with the HP of a tier. A tier is for an NPC with no statblock, and it sets
-    HP outright, so it cannot be combined with HP given another way."""
-    if hp_tier not in npc_hp:
+    the rule set's HP stat outright, so it cannot be combined with that stat given another way."""
+    if stat is None or hp_tier not in npc_hp:
         choices = ", ".join(sorted(npc_hp)) or "none"
         raise InvalidInput(f"Unknown HP tier {hp_tier!r}; choose one of: {choices}")
     if statblock:
@@ -1975,9 +2035,9 @@ def _with_hp_tier(
             "A creature with a statblock takes its HP from the statblock; leave out hp_tier"
         )
     stats = dict((character or {}).get("stats") or {})
-    if "hp" in stats:
-        raise InvalidInput("Give either hp_tier or hp, not both")
-    return {**(character or {}), "stats": {**stats, "hp": npc_hp[hp_tier]}}
+    if stat in stats:
+        raise InvalidInput(f"Give either hp_tier or {stat}, not both")
+    return {**(character or {}), "stats": {**stats, stat: npc_hp[hp_tier]}}
 
 
 def _statblock_named(monsters: Mapping[str, MonsterTemplate], name: str) -> MonsterTemplate | None:
@@ -2552,17 +2612,18 @@ def get_statblock(
     conditions: Mapping[str, ConditionRules] | None = None,
     inventory: InventoryRules | None = None,
     need: NeedRules | None = None,
+    counters: Mapping[str, CounterRules] | None = None,
 ) -> dict[str, Any]:
     """A character's stats, template, features, and fields, one line each. Works for the player
     character and for NPCs. With a rule set's `combat`, the armor, attacks, harm, and status follow.
-    With its `conditions`, `inventory`, and `need`, the conditions, injuries, deprivation, and items
-    follow."""
+    With its `conditions`, `inventory`, `need`, and `counters`, the conditions, injuries,
+    deprivation, items, and counter values follow."""
     character = _character_named(state, name)
     kind = "player character" if character.kind == PC_KIND else "npc"
     lines = describe(spec, _sheet_of(character)).splitlines()
     if combat is not None:
         lines += _combat_lines(character, spec, combat)
-    lines += _status_lines(character, conditions, inventory, need)
+    lines += _status_lines(character, conditions, inventory, need, counters)
     return {
         "name": character.name,
         "kind": kind,
@@ -2616,13 +2677,21 @@ def _status_lines(
     conditions: Mapping[str, ConditionRules] | None,
     inventory: InventoryRules | None,
     need: NeedRules | None,
+    counters: Mapping[str, CounterRules] | None = None,
 ) -> list[str]:
-    """The character's conditions, injuries, deprivation, and what they carry. Each part shows only
-    when the rule set has it, or when the character has something to report."""
+    """The character's conditions, counters, injuries, deprivation, and what they carry. Each part
+    shows only when the rule set has it, or when the character has something to report."""
     lines: list[str] = []
     if conditions is not None:
         held = [rules.label for rules in active_conditions(character, conditions)]
         lines.append(f"Conditions: {', '.join(held) if held else 'none'}")
+    if counters:
+        shown = [
+            f"{rules.label} {character.counters.get(rules.id, rules.initial)}"
+            + (f" of {rules.maximum}" if rules.maximum is not None else "")
+            for rules in counters.values()
+        ]
+        lines.append(f"Counters: {', '.join(shown)}")
     if character.injuries:
         lines.append(f"Injuries: {'; '.join(character.injuries)}")
     if need is not None and character.unmet_since is not None:
@@ -2864,6 +2933,7 @@ def world_state_text(
     terrain: Mapping[str, EncounterTerrain] | None = None,
     encounter_objects: Mapping[str, EncounterObject] | None = None,
     need: NeedRules | None = None,
+    counters: Mapping[str, CounterRules] | None = None,
 ) -> str:
     """The GM's orientation at the start of a turn: the campaign options, the day, the player
     character and where they are, the NPCs there, and any encounter in progress. The rest is looked
@@ -2930,7 +3000,7 @@ def world_state_text(
     wind = _npcs_in_the_wind(state)
     if wind:
         lines.append(f"NPCs in the wind, at no location: {', '.join(wind)}.")
-    lines.extend(_status_lines(pc, conditions, inventory, need))
+    lines.extend(_status_lines(pc, conditions, inventory, need, counters))
     lines.extend(_encounter_lines(state, grid, combat, terrain, encounter_objects))
     return "\n".join(lines)
 
@@ -3121,6 +3191,7 @@ def _sheet_fields(sheet: Sheet) -> dict[str, Any]:
         "templates": dict(sheet.templates),
         "features": dict(sheet.features),
         "fields": dict(sheet.fields),
+        "counters": dict(sheet.counters),
     }
 
 
@@ -3130,6 +3201,7 @@ def _sheet_of(character: Character) -> Sheet:
         templates=character.templates,
         features=character.features,
         fields=character.fields,
+        counters=character.counters,
     )
 
 

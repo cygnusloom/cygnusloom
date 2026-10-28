@@ -228,7 +228,7 @@ def _combat(**changes: Any) -> Definition:
 
 
 def test_a_combat_definition_is_read_with_its_module_and_stats():
-    combat = _load_combat(_combat(), {"cairn2e": cairn2e}, CAIRN.character, {}, "cairn2e")
+    combat = _load_combat(_combat(), {"cairn2e": cairn2e}, CAIRN.character, {}, {}, "cairn2e")
     assert combat.damage == (
         DamageStep("absorb", None),
         DamageStep("harm", "hp"),
@@ -244,6 +244,7 @@ def test_a_harm_only_combat_definition_is_accepted():
         _combat(damage=[{"kind": "harm", "stat": "hp"}], check_die="1d12"),
         {"cairn2e": cairn2e},
         CAIRN.character,
+        {},
         {},
         "cairn2e",
     )
@@ -286,18 +287,18 @@ def test_a_harm_only_combat_definition_is_accepted():
 )
 def test_a_bad_combat_definition_is_rejected(changes, message):
     with pytest.raises(ContentError, match=message):
-        _load_combat(_combat(**changes), {"cairn2e": cairn2e}, CAIRN.character, {}, "cairn2e")
+        _load_combat(_combat(**changes), {"cairn2e": cairn2e}, CAIRN.character, {}, {}, "cairn2e")
 
 
 def test_apply_damage_takes_armor_then_harm_then_overflow():
-    steps = _load_combat(_combat(), {"cairn2e": cairn2e}, CAIRN.character, {}, "cairn2e").damage
+    steps = _load_combat(_combat(), {"cairn2e": cairn2e}, CAIRN.character, {}, {}, "cairn2e").damage
     stats = {"hp": 4, "str": 10}
     result = apply_damage(steps, armor=2, current_of=stats.__getitem__, raw=9)
     assert result == Damage(absorbed=2, harm={"hp": 4, "str": 3}, save="str")
 
 
 def test_apply_damage_without_overflow_leaves_no_save():
-    steps = _load_combat(_combat(), {"cairn2e": cairn2e}, CAIRN.character, {}, "cairn2e").damage
+    steps = _load_combat(_combat(), {"cairn2e": cairn2e}, CAIRN.character, {}, {}, "cairn2e").damage
     stats = {"hp": 4, "str": 10}
     result = apply_damage(steps, armor=0, current_of=stats.__getitem__, raw=3)
     assert result == Damage(absorbed=0, harm={"hp": 3}, save=None)
@@ -317,6 +318,7 @@ def test_a_combat_module_needs_the_save_and_initiative_functions():
             {"bare": ModuleType("bare")},
             CAIRN.character,
             {},
+            {},
             "cairn2e",
         )
 
@@ -329,7 +331,7 @@ def _declarative_combat(**changes: Any) -> Definition:
 
 
 def _declarative(**changes: Any):
-    return _load_combat(_declarative_combat(**changes), {}, CAIRN.character, {}, "cairn2e")
+    return _load_combat(_declarative_combat(**changes), {}, CAIRN.character, {}, {}, "cairn2e")
 
 
 @pytest.mark.parametrize(

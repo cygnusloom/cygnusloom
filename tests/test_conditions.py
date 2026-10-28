@@ -73,7 +73,7 @@ def test_an_unlisted_way_of_ending_a_condition_is_refused(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _add_condition(app, campaign_id, "walloped")
 
-    with pytest.raises(InvalidInput, match="how must be one of"):
+    with pytest.raises(InvalidInput, match="ends by rest, not by magic"):
         tools.end_condition(PC, "walloped", "magic")
 
 
@@ -190,3 +190,38 @@ def test_outside_harm_to_a_defeated_character_is_refused(client_factory):
 
     with pytest.raises(InvalidInput, match=f"{PC} is in critical damage"):
         tools.harm_character(PC, "dex", 1, "a fall")
+
+
+def test_add_condition_gives_a_stored_condition_with_its_cause(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+
+    result = tools.add_condition(PC, "deafened", "a thunderclap")
+
+    assert result == {"character": PC, "condition": "deafened"}
+    assert _character(app, campaign_id, PC).conditions == ["deafened"]
+
+
+def test_add_condition_leaves_a_held_condition_as_it_is(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools.add_condition(PC, "deafened", "a thunderclap")
+
+    tools.add_condition(PC, "deafened", "another thunderclap")
+
+    assert _character(app, campaign_id, PC).conditions == ["deafened"]
+
+
+def test_add_condition_refuses_a_derived_condition(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+
+    with pytest.raises(InvalidInput, match="cannot be added"):
+        tools.add_condition(PC, "paralyzed", "a spell")
+    assert _character(app, campaign_id, PC).conditions == []
+
+
+def test_add_condition_refuses_an_unknown_condition_or_character(client_factory):
+    _, _, tools = _fight(client_factory)
+
+    with pytest.raises(InvalidInput, match="no condition named"):
+        tools.add_condition(PC, "not_a_condition", "a test")
+    with pytest.raises(InvalidInput, match="no character named"):
+        tools.add_condition("Nobody", "deafened", "a test")

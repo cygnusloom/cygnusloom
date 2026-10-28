@@ -1,0 +1,127 @@
+[
+  {
+    "type": "location",
+    "id": "hogwarts-castle",
+    "icon": "castle",
+    "name": "Hogwarts Castle",
+    "description": "A vast, drafty castle of towers, staircases that move, and portraits that gossip. Its four houses each keep a common room, and most of the school's life happens in its corridors.",
+    "routes": {
+      "hogsmeade": {
+        "path": "roads",
+        "distance": "short",
+        "terrain": "easy"
+      },
+      "forbidden-forest": {
+        "path": "trails",
+        "distance": "short",
+        "terrain": "tough"
+      },
+      "great-lake": {
+        "path": "trails",
+        "distance": "short",
+        "terrain": "easy"
+      },
+      "quidditch-pitch": {
+        "path": "trails",
+        "distance": "short",
+        "terrain": "easy"
+      }
+    }
+  },
+  {
+    "type": "location",
+    "id": "great-hall",
+    "parent": "hogwarts-castle",
+    "icon": "castle",
+    "name": "Great Hall",
+    "description": "Four long house tables under an enchanted ceiling that mirrors the sky outside. Meals, the Sorting, and school announcements all happen here."
+  },
+  {
+    "type": "location",
+    "id": "grand-staircase",
+    "parent": "hogwarts-castle",
+    "icon": "castle",
+    "name": "Grand Staircase",
+    "description": "A set of staircases that rearrange themselves while you climb them. Some doors open only when you are not looking at them."
+  },
+  {
+    "type": "location",
+    "id": "library",
+    "parent": "hogwarts-castle",
+    "icon": "ruins",
+    "name": "Library",
+    "description": "Tall shelves, quiet study tables, and books that bite. The restricted section is kept locked, and the librarian is strict about it."
+  },
+  {
+    "type": "location",
+    "id": "hospital-wing",
+    "parent": "hogwarts-castle",
+    "icon": "castle",
+    "name": "Hospital Wing",
+    "description": "Beds behind curtains, and Madam Pomfrey, who can mend most injuries and has opinions about how they were got."
+  },
+  {
+    "type": "location",
+    "id": "quidditch-pitch",
+    "icon": "fen",
+    "name": "Quidditch Pitch",
+    "description": "A great oval of grass with three goal hoops at each end and stands for the spectators. Practices and matches are held here whatever the weather.",
+    "routes": {
+      "hogwarts-castle": {
+        "path": "trails",
+        "distance": "short",
+        "terrain": "easy"
+      }
+    }
+  },
+  {
+    "type": "location",
+    "id": "great-lake",
+    "icon": "fen",
+    "name": "Great Lake",
+    "description": "Cold, dark water at the foot of the castle grounds. A giant squid is said to live beneath it, and the boathouse sits on its shore.",
+    "routes": {
+      "hogwarts-castle": {
+        "path": "trails",
+        "distance": "short",
+        "terrain": "easy"
+      }
+    }
+  },
+  {
+    "type": "location",
+    "id": "forbidden-forest",
+    "icon": "forest",
+    "name": "Forbidden Forest",
+    "description": "Ancient trees that block out the sky, and creatures that are not all friendly. Students are forbidden to enter it without permission, and most of them find a reason to try anyway.",
+    "routes": {
+      "hogwarts-castle": {
+        "path": "trails",
+        "distance": "short",
+        "terrain": "tough"
+      }
+    }
+  },
+  {
+    "type": "location",
+    "id": "hogsmeade",
+    "icon": "town",
+    "name": "Hogsmeade",
+    "description": "The only all-wizard village in Britain, just beyond the school gates. Shops along a single cobbled street sell sweets, robes, joke products, and books, and the village is open to older students on weekends.",
+    "routes": {
+      "hogwarts-castle": {
+        "path": "roads",
+        "distance": "short",
+        "terrain": "easy"
+      }
+    }
+  },
+  {
+    "type": "location",
+    "id": "three-broomsticks",
+    "parent": "hogsmeade",
+    "icon": "town",
+    "name": "The Three Broomsticks",
+    "description": "A busy pub with a fire, butterbeer, and a mix of students and locals. Its regulars hear everything that happens in the village, and some of it is true."
+  }
+]

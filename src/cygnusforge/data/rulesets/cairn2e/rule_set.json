@@ -4,6 +4,8 @@
     "id": "cairn2e",
     "name": "Cairn 2e",
     "plus": "highest",
+    "condition_ends": ["rest", "extended_rest", "aid", "time"],
+    "npc_hp_stat": "hp",
     "npc_hp": {
       "average": 3,
       "hardier": 6,

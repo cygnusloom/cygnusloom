@@ -41,9 +41,11 @@ STATLESS = (
 
 def _rule_set_with_tiers(tiers: Any = None) -> list[dict[str, Any]]:
     head = {"type": "rule_set", "id": "testset", "name": "Test set", "description": "For tests."}
-    if tiers is not None:
-        head["npc_hp"] = tiers
-    return [head]
+    if tiers is None:
+        return [head]
+    head["npc_hp"] = tiers
+    head["npc_hp_stat"] = "hp"
+    return [head, {"type": "stat", "id": "hp", "name": "Hit Protection", "formula": "1d6"}]
 
 
 def _world_with_npc(**npc: Any) -> list[dict[str, Any]]:
@@ -279,3 +281,57 @@ def test_a_tier_with_force_sets_the_hp_of_a_creature_without_its_statblock(
         npc = load_state(db, campaign_id).named("Blink Dog")
     assert npc is not None
     assert npc.stats["hp"] == 10
+
+
+def test_hp_tiers_need_the_stat_they_set(tmp_path: Path):
+    head = _rule_set_with_tiers({"average": 3})
+    del head[0]["npc_hp_stat"]
+    _write(
+        tmp_path,
+        {
+            "worlds/testland/world.json": _world(),
+            "rulesets/core/rule_set.json": _core(),
+            "rulesets/testset/rule_set.json": head,
+        },
+    )
+    with pytest.raises(ContentError, match="needs 'npc_hp_stat'"):
+        ContentLibrary.load(tmp_path)
+
+
+def test_hp_tiers_must_set_a_stat_the_rule_set_has(tmp_path: Path):
+    head = _rule_set_with_tiers({"average": 3})
+    head[0]["npc_hp_stat"] = "vigor"
+    _write(
+        tmp_path,
+        {
+            "worlds/testland/world.json": _world(),
+            "rulesets/core/rule_set.json": _core(),
+            "rulesets/testset/rule_set.json": head,
+        },
+    )
+    with pytest.raises(ContentError, match="is not a stat of this rule set"):
+        ContentLibrary.load(tmp_path)
+
+
+def test_a_condition_may_only_end_by_a_trigger_its_rule_set_declares(tmp_path: Path):
+    head = _rule_set_with_tiers()
+    head[0]["condition_ends"] = ["rest"]
+    head.append(
+        {
+            "type": "condition",
+            "id": "winded",
+            "label": "Winded",
+            "description": "Out of breath.",
+            "ends": ["aid"],
+        }
+    )
+    _write(
+        tmp_path,
+        {
+            "worlds/testland/world.json": _world(),
+            "rulesets/core/rule_set.json": _core(),
+            "rulesets/testset/rule_set.json": head,
+        },
+    )
+    with pytest.raises(ContentError, match="'ends' must list only"):
+        ContentLibrary.load(tmp_path)

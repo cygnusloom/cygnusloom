@@ -11,6 +11,7 @@ from cygnusforge.content.character import (
     Field,
     Sheet,
     TableOption,
+    build_character,
     character_schema,
     check_choices,
     check_swaps,
@@ -19,6 +20,7 @@ from cygnusforge.content.character import (
     resolve,
     roll_stats,
 )
+from cygnusforge.content.definitions import ContentError, Definition
 from cygnusforge.content.library import ContentLibrary
 from cygnusforge.services.tools import check_arguments
 
@@ -36,6 +38,85 @@ def test_roll_stats_stay_within_their_range():
     assert set(rolled) == set(SPEC.stats)
     for stat in SPEC.stats.values():
         assert stat.low <= rolled[stat.id] <= stat.high
+
+
+def _assigned_spec(*stats: dict) -> CharacterSpec:
+    definitions = [Definition("stat", d["id"], {"type": "stat", **d}) for d in stats]
+    return build_character(definitions, {}, {}, "test")
+
+
+POOL = [-1, 0, 1, 1, 2]
+TRAITS = [
+    {"id": t, "name": t.title(), "values": POOL, "swap_group": "traits"}
+    for t in ("bravery", "cunning", "intellect", "loyalty", "magic")
+]
+
+
+def test_assigned_stats_start_from_their_pool_in_order():
+    spec = _assigned_spec(*TRAITS)
+    assert roll_stats(spec, random.Random(0), plus="sum") == {
+        "bravery": -1,
+        "cunning": 0,
+        "intellect": 1,
+        "loyalty": 1,
+        "magic": 2,
+    }
+
+
+def test_assigned_group_allows_any_order():
+    spec = _assigned_spec(*TRAITS)
+    rolled = roll_stats(spec, random.Random(0), plus="sum")
+    chosen = {"bravery": 2, "cunning": 1, "intellect": 0, "loyalty": -1, "magic": 1}
+    check_swaps(spec, rolled, chosen)
+
+
+def test_assigned_group_must_keep_its_pool():
+    spec = _assigned_spec(*TRAITS)
+    rolled = roll_stats(spec, random.Random(0), plus="sum")
+    chosen = dict(rolled, bravery=3)
+    with pytest.raises(CharacterError, match="reordered"):
+        check_swaps(spec, rolled, chosen)
+
+
+def test_resolve_assigns_missing_traits_from_the_pool():
+    spec = _assigned_spec(*TRAITS)
+    sheet = resolve(spec, {}, random.Random(0), plus="sum")
+    assert sheet.stats == roll_stats(spec, random.Random(0), plus="sum")
+
+
+@pytest.mark.parametrize(
+    "stats, message",
+    [
+        (
+            [{"id": "a", "name": "A", "values": [1, 2], "formula": "1d6", "swap_group": "g"}],
+            "not both",
+        ),
+        ([{"id": "a", "name": "A", "values": [1, 2]}], "needs a 'swap_group'"),
+        ([{"id": "a", "name": "A", "values": []}], "non-empty list"),
+        ([{"id": "a", "name": "A", "values": [1, True]}], "whole numbers"),
+        (
+            [
+                {"id": "a", "name": "A", "values": [1, 2], "swap_group": "g"},
+                {"id": "b", "name": "B", "values": [1, 3], "swap_group": "g"},
+            ],
+            "share one pool",
+        ),
+        (
+            [
+                {"id": "a", "name": "A", "values": [1, 2], "swap_group": "g"},
+                {"id": "b", "name": "B", "formula": "1d6", "swap_group": "g"},
+            ],
+            "mix rolled and assigned",
+        ),
+        (
+            [{"id": "a", "name": "A", "values": [1, 2, 3], "swap_group": "g"}],
+            "1 stats for 3 values",
+        ),
+    ],
+)
+def test_bad_assigned_stats_are_rejected(stats, message):
+    with pytest.raises(ContentError, match=message):
+        _assigned_spec(*stats)
 
 
 def test_one_swap_within_a_group_is_allowed():

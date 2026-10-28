@@ -33,8 +33,6 @@
     "unarmed": {"damage": "1d4", "names": ["unarmed", "fists", "bare hands"]},
     "armor_max": 3,
     "dying_hours": 1,
-    "dying_conditions": ["mortal_wound"],
-    "fatal_conditions": ["doomed"],
     "aid_items": ["Bandages"],
     "hit_mode": "auto",
     "multi_attack": "highest",

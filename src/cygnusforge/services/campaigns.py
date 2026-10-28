@@ -381,6 +381,7 @@ def create_campaign(
             monsters={**library.rule_sets[rule_set].monsters, **content.monsters},
             plus=library.rule_sets[rule_set].plus,
             npc_hp=library.rule_sets[rule_set].npc_hp,
+            npc_hp_stat=library.rule_sets[rule_set].npc_hp_stat,
             wilderness=library.rule_sets[rule_set].wilderness,
         )
         db.refresh(campaign)
@@ -752,6 +753,7 @@ def context_usage(
                 clock_rules=rule_set.clock if rule_set else None,
                 inventory=rule_set.inventory if rule_set else None,
                 need=rule_set.need if rule_set else None,
+                counters=rule_set.counters if rule_set else None,
             ),
             present_rules_text(state, all_rules),
         )
@@ -1076,6 +1078,8 @@ def _tool_context(
         monsters={**rule_set.monsters, **world.monsters},
         features={**world.features},
         conditions=rule_set.conditions,
+        moves=rule_set.moves,
+        counters=rule_set.counters,
         dice_tables={**rule_set.dice_tables, **world.dice_tables},
         clock_rules=rule_set.clock,
         rests=rule_set.rests,
@@ -1088,6 +1092,7 @@ def _tool_context(
         marketplace=rule_set.marketplace,
         plus=rule_set.plus,
         npc_hp=rule_set.npc_hp,
+        npc_hp_stat=rule_set.npc_hp_stat,
         travel=rule_set.travel,
         wilderness=rule_set.wilderness,
         world_terrain=rule_set.world_terrain,
@@ -1184,6 +1189,7 @@ def _world_text(run: _Run, state: CampaignState) -> str:
         clock_rules=rule_set.clock,
         inventory=rule_set.inventory,
         need=rule_set.need,
+        counters=rule_set.counters,
     )
 
 
@@ -1680,8 +1686,11 @@ async def stream_message(
         player = _state(engine, campaign.id).pc()
         if player is None:
             raise InvalidInput("create your character before playing")
-        if player.dead:
-            raise InvalidInput("your character is dead: choose a new character or a hireling first")
+        if player.out_of_play:
+            state = "is dead" if player.dead else "has left the story"
+            raise InvalidInput(
+                f"your character {state}: choose a new character or a hireling first"
+            )
         run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
         speaker = speaker_name(_state(engine, campaign.id))
         _record(engine, campaign.id, ChatPlayer(content=text, speaker=speaker))

@@ -1,0 +1,81 @@
+[
+  {
+    "type": "character_field",
+    "id": "complexion",
+    "name": "Complexion",
+    "table": "complexion"
+  },
+  {
+    "type": "character_field",
+    "id": "hair",
+    "name": "Hair",
+    "table": "hair"
+  },
+  {
+    "type": "character_field",
+    "id": "look",
+    "name": "Look",
+    "table": "build"
+  },
+  {
+    "type": "character_field",
+    "id": "wand-look",
+    "name": "Wand look",
+    "table": "wand-look"
+  },
+  {
+    "type": "character_field",
+    "id": "wand-core",
+    "name": "Wand core",
+    "table": "wand-core"
+  },
+  {
+    "type": "character_field",
+    "id": "ambition",
+    "name": "Ambition",
+    "table": "ambition"
+  },
+  {
+    "type": "character_field",
+    "id": "pet",
+    "name": "Pet",
+    "table": "pet"
+  },
+  {
+    "type": "character_field",
+    "id": "year",
+    "name": "Year",
+    "table": "year"
+  },
+  {
+    "type": "character_field",
+    "id": "favourite-subject",
+    "name": "Favourite subject",
+    "table": "favourite-subject"
+  },
+  {
+    "type": "character_field",
+    "id": "patronus",
+    "name": "Patronus",
+    "table": "patronus",
+    "description": "Roll 2d6 for the kind of animal and the animal. You may pick it at the start; you can only cast the Patronus Charm once you learn it, usually in Year 5."
+  },
+  {
+    "type": "character_field",
+    "id": "surname",
+    "name": "Surname",
+    "table": "surnames"
+  },
+  {
+    "type": "character_field",
+    "id": "friends-and-rivals",
+    "name": "Friends & Rivals",
+    "description": "Up to 2 Friends and 1 Rival, written as the names of the characters who answered the creation questions."
+  },
+  {
+    "type": "character_field",
+    "id": "scars",
+    "name": "Scars",
+    "description": "The physical or mental scars from returning to the story after an exit roll."
+  }
+]

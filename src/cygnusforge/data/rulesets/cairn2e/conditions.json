@@ -87,6 +87,7 @@
     "ends": [
       "aid"
     ],
+    "dying": true,
     "on_end": [
       {
         "op": "set_max",
@@ -104,6 +105,7 @@
     "ends": [
       "gm"
     ],
+    "fatal": true,
     "on_end": [
       {
         "op": "set_max",

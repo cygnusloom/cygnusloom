@@ -9,7 +9,7 @@ from collections.abc import Mapping
 
 from sqlmodel import Session
 
-from cygnusforge.content.library import CONDITION_ENDS, CombatRules, ConditionRules
+from cygnusforge.content.library import ALWAYS_CONDITION_END, CombatRules, ConditionRules
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
     Character,
@@ -19,7 +19,7 @@ from cygnusforge.services.events import (
     name_key,
     record,
 )
-from cygnusforge.services.injuries import EffectContext, run_effects
+from cygnusforge.services.injuries import EffectContext, gain_condition, run_effects
 
 
 def derived_holds(character: Character, rules: ConditionRules) -> bool:
@@ -44,6 +44,31 @@ def active_conditions(
         if rules.derived is not None and derived_holds(character, rules)
     ]
     return stored + derived
+
+
+def add_condition(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    condition: str,
+    cause: str,
+    conditions: Mapping[str, ConditionRules],
+    combat: CombatRules | None,
+) -> dict[str, object]:
+    """Give a character a stored condition, recording `cause`. A condition that is already held is
+    left as it is."""
+    state = load_state(db, campaign_id)
+    character = state.characters.get(name_key(name))
+    if character is None:
+        raise InvalidInput(f"there is no character named {name!r}")
+    rules = conditions.get(condition)
+    if rules is None:
+        raise InvalidInput(f"there is no condition named {condition!r}")
+    if rules.derived is not None:
+        raise InvalidInput(f"{rules.label} holds while the stats say so and cannot be added")
+    gain_condition(db, campaign_id, character.name, condition, cause, combat)
+    db.commit()
+    return {"character": character.name, "condition": condition}
 
 
 def end_condition(
@@ -71,9 +96,7 @@ def end_condition(
         raise InvalidInput(f"{rules.label} holds while the stats say so and cannot be ended")
     if condition not in character.conditions:
         raise InvalidInput(f"{character.name} does not have the condition {rules.label}")
-    if how not in CONDITION_ENDS:
-        raise InvalidInput(f"how must be one of {', '.join(CONDITION_ENDS)}")
-    if how != "gm" and how not in rules.ends:
+    if how != ALWAYS_CONDITION_END and how not in rules.ends:
         allowed = ", ".join(rules.ends) or "none"
         raise InvalidInput(f"{rules.label} ends by {allowed}, not by {how}")
     record(db, campaign_id, ConditionEnded(name=character.name, condition=condition, how=how))

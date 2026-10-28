@@ -1,0 +1,76 @@
+[
+  {
+    "type": "template",
+    "id": "gryffindor",
+    "kind": "house",
+    "name": "Gryffindor",
+    "description": "Gryffindor house. Courage: +1 to Bravery.",
+    "names": "given-names",
+    "stats": {
+      "bravery": 1
+    }
+  },
+  {
+    "type": "template",
+    "id": "ravenclaw",
+    "kind": "house",
+    "name": "Ravenclaw",
+    "description": "Ravenclaw house. Wisdom: +1 to Intellect.",
+    "names": "given-names",
+    "stats": {
+      "intellect": 1
+    }
+  },
+  {
+    "type": "template",
+    "id": "hufflepuff",
+    "kind": "house",
+    "name": "Hufflepuff",
+    "description": "Hufflepuff house. Loyalty: +1 to Loyalty.",
+    "names": "given-names",
+    "stats": {
+      "loyalty": 1
+    }
+  },
+  {
+    "type": "template",
+    "id": "slytherin",
+    "kind": "house",
+    "name": "Slytherin",
+    "description": "Slytherin house. Ambition: +1 to Cunning.",
+    "names": "given-names",
+    "stats": {
+      "cunning": 1
+    }
+  },
+  {
+    "type": "template",
+    "id": "muggle-born",
+    "kind": "blood",
+    "name": "Muggle-born",
+    "description": "Start with 1 spell from your Year and 3 Experience.",
+    "counters": {
+      "experience": 3
+    }
+  },
+  {
+    "type": "template",
+    "id": "half-blood",
+    "kind": "blood",
+    "name": "Half-blood",
+    "description": "Start with 2 spells from your Year and 2 Experience.",
+    "counters": {
+      "experience": 2
+    }
+  },
+  {
+    "type": "template",
+    "id": "pure-blood",
+    "kind": "blood",
+    "name": "Pure-blood",
+    "description": "Start with 3 spells from your Year and 1 Experience.",
+    "counters": {
+      "experience": 1
+    }
+  }
+]

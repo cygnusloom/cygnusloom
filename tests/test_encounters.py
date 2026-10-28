@@ -29,7 +29,8 @@ from cygnusforge.services.events import (
 )
 from cygnusforge.services.tools import ToolRun, run_tool
 from tests.conftest import content_library, csrf_token
-from tests.test_campaigns import _campaign_id, _place_pc, _send
+from tests.test_campaigns import _answer, _campaign_id, _create_character, _place_pc, _send
+from tests.test_character_creation import _cairn_campaign, _complete_form
 from tests.test_tools import _script
 from tests.test_world import TOOLS, _ctx, _db, _state
 
@@ -56,11 +57,23 @@ def _call(
 
 
 def _encounter_with(
-    client_factory: Callable[[], TestClient], columns: int = 20, rows: int = 20
+    client_factory: Callable[[], TestClient], columns: int = 20, rows: int = 20, cairn: bool = False
 ) -> tuple[TestClient, int]:
     """A campaign with Ada placed in town, a map there, an encounter started, and Pip (an NPC)
-    and Ada joined in that order."""
-    client, campaign_id = _campaign_id(client_factory)
+    and Ada joined in that order. The Cairn option gives a Cairn campaign, whose GM has the
+    encounter tools in its own table; the test campaign has none of them."""
+    if cairn:
+        client, campaign_id = _cairn_campaign(client_factory)
+        created = _create_character(
+            client, campaign_id, name="Ada", fields=_complete_form(client, campaign_id)
+        )
+        assert created.status_code == 303
+        _answer(client, campaign_id, "continue")
+        _call(
+            client.app, campaign_id, "create_location", {"name": TOWN, "description": "A square."}
+        )
+    else:
+        client, campaign_id = _campaign_id(client_factory)
     app = client.app
     _place_pc(client, campaign_id, TOWN)
     created = _call(
@@ -328,7 +341,7 @@ def _encounter_post(client: TestClient, campaign_id: int, action: str, name: str
 def test_npc_turn_is_played_out_and_the_gm_ends_it(
     client_factory: Callable[[], TestClient], monkeypatch: pytest.MonkeyPatch
 ):
-    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
+    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10, cairn=True)
     app = client.app
     fallback = _spy_on_fallback_close(monkeypatch, app, campaign_id)
     # The directive's turn is the GM's reply to the player's message; the NPC's turn is the next.
@@ -354,7 +367,7 @@ def test_npc_turn_is_played_out_and_the_gm_ends_it(
 def test_npc_turn_closes_even_when_the_gm_forgets_end_turn(
     client_factory: Callable[[], TestClient], monkeypatch: pytest.MonkeyPatch
 ):
-    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
+    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10, cairn=True)
     app = client.app
     fallback = _spy_on_fallback_close(monkeypatch, app, campaign_id)
     script = _script({"text": "Pip waits."}, {"text": "Pip shrugs and does nothing."})
