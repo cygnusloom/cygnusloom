@@ -43,7 +43,7 @@
       },
       "make_camp": {
         "name": "Make Camp",
-        "hooks": {"resolve": [{"do": "consume", "item": "rations", "per": "member", "meal": true}, {"do": "clear", "item": "fatigue"}]},
+        "hooks": {"resolve": [{"do": "consume", "item": "rations", "per": "member", "track": true}, {"do": "clear", "item": "fatigue"}]},
         "text": "The party sets up camp. Each member and mount consumes a Ration. A lookout rotation is set. Members who rest remove all Fatigue."
       },
       "resupply": {
@@ -87,7 +87,7 @@
         "perilous": 2
       },
       "vast_max": 2,
-      "deprived_terrain_steps": 1,
+      "held_back_terrain_steps": 1,
       "weather": {
         "Unpleasant": {
           "choice": true,

@@ -14,6 +14,7 @@ from tests.test_combat import (
     YARD,
     _character,
     _fight,
+    _set_condition,
     _set_stat,
     _state,
 )
@@ -150,11 +151,11 @@ def test_a_night_rest_notice_says_the_rest_is_over_not_a_day_passed(client_facto
 
 def test_a_deprived_character_recovers_nothing_on_a_rest(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    tools.set_condition(PC, True, cause="no food")
+    _set_condition(tools, PC, True, cause="no food")
     wound = _wound(app, campaign_id)
     result = tools.rest("night", reason="camp")
     assert _character(app, campaign_id, PC).harm.get("hp", 0) == wound
-    assert PC in result["deprived"]
+    assert PC in result["held_back"]
     assert PC not in result["recovered"]
 
 
@@ -169,7 +170,7 @@ def test_an_interrupted_night_rest_becomes_a_moments_rest(client_factory):
 
 def test_deprivation_costs_one_fatigue_each_day_after_its_first(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    tools.set_condition(PC, True, cause="no food")
+    _set_condition(tools, PC, True, cause="no food")
     tools.advance_time(days=1)
     assert not [i for i in _character(app, campaign_id, PC).items if i.kind == "fatigue"]
     tools.advance_time(days=1)
@@ -178,8 +179,11 @@ def test_deprivation_costs_one_fatigue_each_day_after_its_first(client_factory):
 
 def test_a_deprived_character_is_refused_manual_fatigue_unless_forced(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    tools.set_condition(PC, True, cause="no food")
-    with pytest.raises(InvalidInput, match="the engine adds their Fatigue each day"):
+    _set_condition(tools, PC, True, cause="no food")
+    with pytest.raises(
+        InvalidInput,
+        match="is held back by no food, so set force only if something besides that causes this Fatigue",
+    ):
         tools.add_penalty(PC, "a shock")
     assert not [i for i in _character(app, campaign_id, PC).items if i.kind == "fatigue"]
     tools.add_penalty(PC, "a shock", force=True)
@@ -197,14 +201,14 @@ def test_a_night_rest_clears_fatigue_from_a_character_who_is_not_deprived(client
 def test_deprivation_needs_a_cause(client_factory):
     _, _, tools = _fight(client_factory)
     with pytest.raises(InvalidInput):
-        tools.set_condition(PC, True)
+        _set_condition(tools, PC, True)
 
 
 def test_setting_deprivation_again_keeps_the_first_day(client_factory):
     _, _, tools = _fight(client_factory)
-    first = tools.set_condition(PC, True, cause="no food")
+    first = _set_condition(tools, PC, True, cause="no food")
     tools.advance_time(days=1)
-    again = tools.set_condition(PC, True, cause="thirst")
+    again = _set_condition(tools, PC, True, cause="thirst")
     assert first["since_day"] == 1
     assert again["since_day"] == 1
 

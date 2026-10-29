@@ -84,11 +84,10 @@ def _tools(app: FastAPI, campaign_id: int, rng: Any = None) -> WorldTools:
         clock_rules=HOGWARTS.clock,
         rests=HOGWARTS.rests,
         interrupted_rest=HOGWARTS.interrupted_rest,
-        need=HOGWARTS.need,
         inventory=HOGWARTS.inventory,
         item_sizes=HOGWARTS.item_sizes,
         magic=HOGWARTS.magic,
-        food=HOGWARTS.food,
+        hooks=HOGWARTS.hooks,
         marketplace=HOGWARTS.marketplace,
         plus=HOGWARTS.plus,
         npc_hp=HOGWARTS.npc_hp,
@@ -393,3 +392,11 @@ def test_creation_needs_a_house_a_blood_status_and_every_table_field(client_fact
     assert _create_character(client, campaign_id, name=HARRY, fields=no_patronus).status_code == 400
     created = _create_character(client, campaign_id, name=HARRY, fields=TRAITS)
     assert created.status_code == 303
+
+
+def test_hogwarts_has_no_hooks(client_factory):
+    assert HOGWARTS.hooks is None
+    app, campaign_id = _campaign(client_factory)
+    tools = _tools(app, campaign_id)
+    with pytest.raises(InvalidInput):
+        tools.rest("night", reason="camp")

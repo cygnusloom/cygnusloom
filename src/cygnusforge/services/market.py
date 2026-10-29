@@ -9,7 +9,7 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusforge.content.library import InventoryRules, Marketplace, ShopItem, ShopService
+from cygnusforge.content.library import Hooks, InventoryRules, Marketplace, ShopItem, ShopService
 from cygnusforge.services.common import InvalidInput, whole_number
 from cygnusforge.services.events import (
     ArmorSet,
@@ -18,12 +18,12 @@ from cygnusforge.services.events import (
     CurrencyChanged,
     Item,
     RestRecovered,
-    ShelterSet,
     load_state,
     name_key,
     record,
     same_item_name,
 )
+from cygnusforge.services.hooks import HookContext, call_hook
 from cygnusforge.services.inventory import carry_item, character_named, used_slots
 
 MAX_PRICE = 100_000
@@ -144,9 +144,11 @@ def buy_service(
     marketplace: Marketplace,
     names: Sequence[str],
     service: str,
+    hooks: Hooks | None = None,
 ) -> dict[str, Any]:
     """The named characters buy a service, and the first of them pays for all of it. Shelter
-    covers the whole party a night, with a room for each `fits` characters. Restoring treats each
+    covers the whole party a night, with a room for each `fits` characters; the rule set's lodge
+    hook records it. Restoring treats each
     named character who has lost any of the attributes it restores, at the price per patient."""
     listed = _find_service(marketplace, service)
     if listed.effect == "deferred":
@@ -164,8 +166,13 @@ def buy_service(
         rooms = math.ceil(len(buyers) / listed.fits)
         total = listed.price * rooms
         left = _pay(db, campaign_id, marketplace, payer, total, cause=listed.name)
-        for buyer in buyers:
-            record(db, campaign_id, ShelterSet(name=buyer.name, sheltered=True))
+        call_hook(
+            hooks,
+            "lodge",
+            HookContext(db, campaign_id, hooks, None),
+            [buyer.name for buyer in buyers],
+            default=None,
+        )
         served = [buyer.name for buyer in buyers]
     else:
         patients = [

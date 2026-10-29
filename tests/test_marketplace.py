@@ -193,8 +193,8 @@ def test_shelter_for_a_group_takes_a_room_for_each_fits_characters(client_factor
     result = tools.buy_service([PC, BRAN], "private_room")
     assert result["price"] == 35
     assert _gold(app, campaign_id) == before - 35
-    assert _character(app, campaign_id, PC).sheltered
-    assert _character(app, campaign_id, BRAN).sheltered
+    assert _character(app, campaign_id, PC).marks.get("sheltered")
+    assert _character(app, campaign_id, BRAN).marks.get("sheltered")
 
 
 def test_shelter_without_enough_gold_is_refused_and_nobody_is_sheltered(client_factory):
@@ -203,8 +203,8 @@ def test_shelter_without_enough_gold_is_refused_and_nobody_is_sheltered(client_f
     assert _gold(app, campaign_id) < 35
     with pytest.raises(InvalidInput):
         tools.buy_service([PC, BRAN], "private_room")
-    assert not _character(app, campaign_id, PC).sheltered
-    assert not _character(app, campaign_id, BRAN).sheltered
+    assert not _character(app, campaign_id, PC).marks.get("sheltered")
+    assert not _character(app, campaign_id, BRAN).marks.get("sheltered")
 
 
 def test_medical_healing_restores_only_the_patients_and_the_payer_pays_once(client_factory):
@@ -271,7 +271,7 @@ def test_a_rest_with_no_food_leaves_the_character_deprived(client_factory):
     app, campaign_id, tools = _pcs(client_factory)
     _set_rations(app, campaign_id, uses=0)
     tools.rest("night", reason="camp")
-    assert _character(app, campaign_id, PC).unmet_since is not None
+    assert "deprived" in _character(app, campaign_id, PC).marks
 
 
 def test_a_sheltered_character_eats_nothing_and_the_bed_is_used_up(client_factory):
@@ -281,7 +281,7 @@ def test_a_sheltered_character_eats_nothing_and_the_bed_is_used_up(client_factor
     before = _rations(app, campaign_id)[0].uses
     tools.rest("night", reason="camp")
     assert _rations(app, campaign_id)[0].uses == before
-    assert not _character(app, campaign_id, PC).sheltered
+    assert not _character(app, campaign_id, PC).marks.get("sheltered")
 
 
 def test_a_moments_rest_eats_nothing(client_factory):
@@ -302,7 +302,7 @@ def test_the_starting_pack_is_an_item_with_its_uses(client_factory):
     app, campaign_id, _ = _pcs(client_factory)
     packs = _rations(app, campaign_id)
     assert len(packs) == 1
-    assert packs[0].uses == CAIRN.character.features[CAIRN.food.feature].uses
+    assert packs[0].uses == CAIRN.character.features[CAIRN.hooks.options["feature"]].uses
 
 
 def test_search_needs_every_word_to_match(client_factory):

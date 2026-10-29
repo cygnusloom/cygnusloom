@@ -72,7 +72,7 @@ def test_the_real_cairn_actions_declare_their_hooks(wilderness):
         ),
         "make_camp": WildernessHooks(
             resolve=(
-                WildernessEffect(do="consume", item="rations", per="member", meal=True),
+                WildernessEffect(do="consume", item="rations", per="member", track=True),
                 WildernessEffect(do="clear", item="fatigue"),
             )
         ),
@@ -104,7 +104,7 @@ def test_the_real_cairn_wilderness_travel_values(wilderness):
     assert dict(travel.distance) == {"short": 1, "medium": 2, "long": 3}
     assert list(travel.terrain.keys()) == ["easy", "tough", "perilous"]
     assert travel.vast_max == 2
-    assert travel.deprived_terrain_steps == 1
+    assert travel.held_back_terrain_steps == 1
     assert travel.weather["Catastrophic"].travel is False
     assert travel.weather["Inclement"].terrain_steps == 1
     assert travel.weather["Extreme"].fatigue == 1
@@ -238,19 +238,19 @@ def test_consume_without_per_raises_content_error():
         _load_wilderness([_definition(actions=actions)], _tables(), "t")
 
 
-def test_a_meal_consume_must_be_per_member_raises_content_error():
+def test_a_tracked_consume_must_be_per_member_raises_content_error():
     actions = _travel_with_resolve(
-        {"do": "consume", "item": "rations", "per": "party", "meal": True}
+        {"do": "consume", "item": "rations", "per": "party", "track": True}
     )
     with pytest.raises(ContentError, match="must be per member"):
         _load_wilderness([_definition(actions=actions)], _tables(), "t")
 
 
-def test_a_meal_flag_must_be_true_or_false_raises_content_error():
+def test_a_track_flag_must_be_true_or_false_raises_content_error():
     actions = _travel_with_resolve(
-        {"do": "consume", "item": "rations", "per": "member", "meal": "yes"}
+        {"do": "consume", "item": "rations", "per": "member", "track": "yes"}
     )
-    with pytest.raises(ContentError, match="'meal' must be true or false"):
+    with pytest.raises(ContentError, match="'track' must be true or false"):
         _load_wilderness([_definition(actions=actions)], _tables(), "t")
 
 
@@ -285,7 +285,7 @@ def _travel(**overrides) -> dict:
         "distance": {"short": 1},
         "terrain": {"easy": 0},
         "vast_max": 2,
-        "deprived_terrain_steps": 1,
+        "held_back_terrain_steps": 1,
         "weather": {"Inclement": {"choice": True, "terrain_steps": 1}},
     }
     travel.update(overrides)

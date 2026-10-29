@@ -27,7 +27,7 @@ from cygnusforge.services.events import (
     ItemAdded,
     ItemRemoved,
     LostRolled,
-    MealSet,
+    MarkSet,
     WeatherRolled,
     WildernessEffectApplied,
     WildernessEventRolled,
@@ -89,7 +89,7 @@ def _wilderness(**overrides) -> Wilderness:
                 text="Rest.",
                 hooks=WildernessHooks(
                     resolve=(
-                        WildernessEffect(do="consume", item="rations", per="member", meal=True),
+                        WildernessEffect(do="consume", item="rations", per="member", track=True),
                         WildernessEffect(do="clear", item="fatigue"),
                     )
                 ),
@@ -639,7 +639,7 @@ def test_make_camp_with_no_rations_reports_the_shortage(client_factory: Callable
 
 def _pc_meal_at(app: FastAPI, campaign_id: int) -> int | None:
     with _db(app) as db:
-        return load_state(db, campaign_id).characters[PC.casefold()].meal_at
+        return load_state(db, campaign_id).characters[PC.casefold()].marks.get("meal_at")
 
 
 def test_make_camp_marks_the_camp_meal_for_the_member(client_factory: Callable[[], TestClient]):
@@ -647,7 +647,7 @@ def test_make_camp_marks_the_camp_meal_for_the_member(client_factory: Callable[[
     assert _pc_meal_at(app, campaign_id) is None
     tools.wilderness_action("make_camp", "a night's rest")
     assert _pc_meal_at(app, campaign_id) is not None
-    assert MealSet.kind in _kinds(app, campaign_id)
+    assert MarkSet.kind in _kinds(app, campaign_id)
 
 
 def test_a_rest_right_after_make_camp_eats_no_second_ration(
@@ -863,7 +863,7 @@ def test_make_camp_with_no_rations_leaves_the_member_deprived(
     tools.wilderness_action("make_camp", "a night's rest")
     with _db(app) as db:
         character = load_state(db, campaign_id).characters[PC.casefold()]
-    assert character.unmet_since is not None
+    assert "deprived" in character.marks
 
 
 def test_make_camp_does_not_clear_fatigue_from_a_deprived_member(

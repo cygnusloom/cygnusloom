@@ -5,8 +5,8 @@ import json
 import random
 from collections.abc import Callable
 from dataclasses import replace
-from types import ModuleType
-from typing import Any
+from types import ModuleType, SimpleNamespace
+from typing import Any, cast
 
 import pytest
 from fastapi import FastAPI
@@ -94,12 +94,18 @@ def _tools(app: FastAPI, campaign_id: int, rng: random.Random | None = None) -> 
         clock_rules=CAIRN.clock,
         rests=CAIRN.rests,
         interrupted_rest=CAIRN.interrupted_rest,
-        need=CAIRN.need,
         inventory=CAIRN.inventory,
         item_sizes=CAIRN.item_sizes,
         magic=CAIRN.magic,
-        food=CAIRN.food,
+        hooks=CAIRN.hooks,
         marketplace=CAIRN.marketplace,
+    )
+
+
+def _set_condition(tools: WorldTools, name: str, deprived: bool, cause: str = "") -> dict:
+    """Calls the Cairn set_condition tool against the tools' world."""
+    return cairn2e.set_condition(
+        name, deprived, cause, cast(ToolContext, SimpleNamespace(world=tools))
     )
 
 

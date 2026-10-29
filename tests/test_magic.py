@@ -9,7 +9,16 @@ from fastapi.testclient import TestClient
 
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import current
-from tests.test_combat import PC, Rolls, _character, _fight, _set_stat, _tools, save_succeeds
+from tests.test_combat import (
+    PC,
+    Rolls,
+    _character,
+    _fight,
+    _set_condition,
+    _set_stat,
+    _tools,
+    save_succeeds,
+)
 
 SPELL = "Magic Missile"
 TEXT = "Fires a bolt of force that never misses."
@@ -103,7 +112,7 @@ def test_a_spellbook_is_used_before_a_scroll_of_the_same_spell(client_factory):
 
 def test_a_deprived_character_can_still_cast_from_a_spellbook(client_factory):
     _app, _campaign_id, tools = _fight(client_factory)
-    tools.set_condition(PC, True, cause="no food")
+    _set_condition(tools, PC, True, cause="no food")
     tools.give_spellbook(PC, SPELL, TEXT)
     assert tools.cast_spell(PC, SPELL)["penalty"] is True
 

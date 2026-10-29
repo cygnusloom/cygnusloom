@@ -26,8 +26,9 @@ Reference: `Hogwarts RPG Full Game.pdf` (Hogwarts: An RPG, v1.2) in this directo
   moved to cairn2e (see Phase 2).
 - Worlds Without Number has only its PDF, so it is out of scope. The loader skips ruleset
   directories that have no JSON, with a warning, so the app and tests still run.
-- Morale, needs, and hirelings stay generic engine modules, not moved wholesale into cairn2e. The
-  user chose this in "Close the gaps". Each is enabled only when a ruleset's JSON turns it on.
+- Morale and hirelings stay generic engine modules, enabled only when a ruleset's JSON turns them
+  on. Needs (food, shelter, deprivation) were the Cairn-flavoured part, so they moved into cairn2e
+  as hooks (see "Needs move"). The user chose this after "Any other gaps?".
 - Friends and Rivals may only change at the end of a session, as the PDF says. The engine does not
   know when a session ends, so the `set_relation` tool description tells the GM to use it only then.
   This is GM-enforced.
@@ -100,7 +101,39 @@ Phase 3 (close the gaps) added:
   template, grouped by Year, as `pick-<template>-<n>` selects. The server rejects a pick from the
   wrong Year. Blank picks are rolled.
 - Renamed event kinds (save compatibility is not needed): `CampFedSet` to `MealSet`,
-  `LodgingSet` to `ShelterSet`, plus fields, marketplace effects, and prose.
+  `LodgingSet` to `ShelterSet`, plus fields, marketplace effects, and prose. The needs move (below)
+  later replaced `MealSet`, `ShelterSet`, and `NeedSet` with one generic `MarkSet`.
+
+### Needs move
+
+Cairn's needs logic left the engine and now runs through a `hooks` definition in JSON.
+
+- **Hooks** (`services/hooks.py`): a JSON `hooks` definition names a `python_module` and functions.
+  The engine calls only the functions it names. Cairn 2e names its functions in `cairn2e/need.json`.
+  Hogwarts has no hooks, so none run there. The hook functions are in `rules/cairn2e.py`:
+  - `new_day(hc, day)`: after each newly started day, a deprived character past `after_days`
+    gains the penalty item.
+  - `before_rest(hc, rest_id, start, hours_per_part)`: runs for a rest with `upkeep: true`. Feeds
+    the party, or uses up a bed or a meal, and deprives anyone with no ration.
+  - `held_back(hc, name) -> str`: the cause a character is held back by, or "". Used by rest
+    recovery, `_clear` eligibility, the held-back terrain penalty, the `add_penalty` refusal, and
+    status lines.
+  - `after_consume(hc, item, used, short, at, day) -> str`: runs for a consume with `track: true`.
+  - `lodge(hc, names)`: runs for a paid shelter service.
+  - `status(hc, character) -> list[str]`: status lines.
+- **Generic marks**: `CharacterState.marks` replaces `sheltered`, `meal_at`, `unmet_since`, and
+  `unmet_cause`. `MarkSet(name, key, value, text)` sets or clears (`value` None) a mark. Cairn's
+  marks are `deprived` ({since, cause}), `sheltered`, and `meal_at`.
+- **Services**: `services/rests.py` (rests and rest history) replaces `services/needs.py`.
+  `clock.advance_to` calls `new_day`, and `wilderness` and `market` call their hooks.
+- **Renames in JSON**: `rest.json` `food` to `upkeep`, the `food` block to the hooks options
+  (`feature`, resolved to `options.item`); `wilderness.json` `meal` to `track`;
+  `deprived_terrain_steps` to `held_back_terrain_steps`.
+- **Tools**: `set_condition` (Cairn) now lives in `rules/cairn2e.py` and records a `MarkSet`.
+- **Tests**: 1703 pass with the move. Cairn tests cover rests, feeding, shelter, meals,
+  deprivation, the daily penalty, and `set_condition`. Hogwarts's hooks are `None`.
+- **Live check**: not run for the needs move. Automated tests cover it. Run one before relying on
+  it in play.
 
 ## Hogwarts content (`src/cygnusforge/data/rulesets/hogwarts-rpg/`)
 
@@ -207,7 +240,7 @@ used there. The cairn2e code is tested through `tests/test_combat.py`, which hol
 
 ## Validation
 
-- Full suite: 1702 passed (`timeout 900 uv run pytest -n auto -q -p no:cacheprovider`), about 45 s.
+- Full suite: 1703 passed (`timeout 900 uv run pytest -n auto -q -p no:cacheprovider`), about 50 s.
 - Spell tests do not assume which starting spells a character holds. Creation rolls two random
   5th Year spells for Harry, so the tests pick unheld spells from `HOGWARTS.character.features`
   (`_unheld_spells` in `tests/test_hogwarts_progress.py`). Fixed spell ids made the tests flaky.
@@ -299,3 +332,6 @@ Observed in live play (not engine faults):
 - [x] Live checks (second pass): award key, House Points reset at school-year end, learn-spell.
 - [x] Award-key gap: the repeat-amount warning refuses a repeat, and `force: true` lets a genuinely
       new award through. The GM can still choose to use `force`, which is the accepted limit.
+- [x] Text gaps against the PDF: comfort/support wording and the returning-character scar.
+- [x] Needs move: Cairn needs now run through `cairn2e` hooks, and the engine uses generic marks.
+      Lint clean, 1703 tests pass. Live check still to do.

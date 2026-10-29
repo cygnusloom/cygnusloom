@@ -184,16 +184,10 @@ class Character:
     large_group: bool = False
     # A large group whose critical save failed. The GM must decide it is defeated or flees.
     critical_due: bool = False
-    # Paid for a bed for the night. The next rest that eats food feeds this character for free.
-    sheltered: bool = False
-    # The hour a wilderness action fed the character a meal. Cleared by the food rest that
-    # follows it. None when no meal is owed.
-    meal_at: int | None = None
+    # Marks the rule set's hooks set on the character, by key. A mark's value is any JSON value.
+    marks: dict[str, Any] = field(default_factory=dict)
     # What the character carries. The penalty item is an item of the rule set's penalty kind.
     items: list[Item] = field(default_factory=list)
-    # The campaign day a need began, or None while the character is not deprived.
-    unmet_since: int | None = None
-    unmet_cause: str = ""
     # A hireling is a player-controlled character a party member hired. Its employer pays its
     # wage each day. Empty and zero for everyone else.
     hireling: bool = False
@@ -2670,68 +2664,26 @@ class CurrencyChanged(GameEvent):
 
 
 @dataclass(frozen=True)
-class ShelterSet(GameEvent):
-    """A character has paid for a bed, or the bed is used up by the rest that ate food."""
+class MarkSet(GameEvent):
+    """A rule set's hook sets or clears a mark on a character. `value` is any JSON value, and None
+    clears the key. `text` is what the event says."""
 
-    kind: ClassVar[str] = "character.shelter_set"
-
-    name: str
-    sheltered: bool
-
-    def apply(self, state: CampaignState, event_id: int) -> None:
-        state.characters[name_key(self.name)].sheltered = self.sheltered
-
-    def render(self) -> str:
-        if self.sheltered:
-            return f"{self.name} has a bed for the night."
-        return f"{self.name}'s bed is used up."
-
-
-@dataclass(frozen=True)
-class MealSet(GameEvent):
-    """A wilderness action fed a character a meal, at the hour that action began. `at` is
-    None once the food rest that follows has used the meal up."""
-
-    kind: ClassVar[str] = "character.meal_set"
+    kind: ClassVar[str] = "character.mark_set"
 
     name: str
-    at: int | None
+    key: str
+    value: Any
+    text: str
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        state.characters[name_key(self.name)].meal_at = self.at
-
-    def render(self) -> str:
-        if self.at is None:
-            return f"{self.name}'s meal is used up."
-        return f"{self.name} has eaten a meal."
-
-
-@dataclass(frozen=True)
-class NeedSet(GameEvent):
-    """A character becomes deprived of a crucial need, or stops being deprived. A character who is
-    already deprived keeps the day the need began."""
-
-    kind: ClassVar[str] = "character.need_set"
-
-    name: str
-    deprived: bool
-    cause: str
-    day: int
-
-    def apply(self, state: CampaignState, event_id: int) -> None:
-        character = state.characters[name_key(self.name)]
-        if self.deprived:
-            if character.unmet_since is None:
-                character.unmet_since = self.day
-            character.unmet_cause = self.cause
+        marks = state.characters[name_key(self.name)].marks
+        if self.value is None:
+            marks.pop(self.key, None)
         else:
-            character.unmet_since = None
-            character.unmet_cause = ""
+            marks[self.key] = self.value
 
     def render(self) -> str:
-        if self.deprived:
-            return f"{self.name} is deprived: {self.cause}."
-        return f"{self.name} is no longer deprived."
+        return self.text
 
 
 @dataclass(frozen=True)
@@ -3011,9 +2963,7 @@ HIDDEN_KINDS: dict[str, bool] = {
     "period.ended": False,
     "character.feature_learned": False,
     "character.currency_changed": False,
-    "character.shelter_set": False,
-    "character.meal_set": True,
-    "character.need_set": False,
+    "character.mark_set": False,
     "character.item_added": False,
     "character.item_removed": False,
     "character.item_uses_set": False,

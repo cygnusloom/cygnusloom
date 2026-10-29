@@ -12,7 +12,7 @@ from sqlmodel import Session, select
 
 from cygnusforge.content.library import (
     DiceTable,
-    NeedRules,
+    Hooks,
     WeatherPenalty,
     Wilderness,
     WildernessEffect,
@@ -27,8 +27,6 @@ from cygnusforge.services.events import (
     ItemRemoved,
     ItemUsesSet,
     LostRolled,
-    MealSet,
-    NeedSet,
     WeatherRolled,
     WildernessEffectApplied,
     WildernessEventRolled,
@@ -37,6 +35,7 @@ from cygnusforge.services.events import (
     record,
     same_item_name,
 )
+from cygnusforge.services.hooks import HookContext, call_hook
 from cygnusforge.services.inventory import clear_items
 
 WEATHER_KIND = WeatherRolled.kind
@@ -169,8 +168,8 @@ class _Watch:
     give: GiveItem
     events: list[dict[str, Any]] = field(default_factory=list)
     effects: list[dict[str, Any]] = field(default_factory=list)
-    need: NeedRules | None = None
-    # The day the watch falls on. A meal the party goes without can leave a member deprived.
+    hooks: Hooks | None = None
+    # The day the watch falls on. The after_consume hook may use it.
     day: int = 1
     buy: Callable[[Session, str, str], dict[str, Any]] | None = None
     purchases: Sequence[Mapping[str, Any]] = ()
@@ -237,20 +236,24 @@ class _Watch:
             return self._consume_party(effect, state)
         used = [n for n in self.party if _spend_use(self.db, self.campaign_id, state, n, item)]
         short = [n for n in self.party if n not in used]
-        if effect.meal:
-            for name in used:
-                record(self.db, self.campaign_id, MealSet(name=name, at=self.at))
-            if short and self.need is not None:
-                for name in short:
-                    if state.characters[name_key(name)].unmet_since is None:
-                        record(
-                            self.db,
-                            self.campaign_id,
-                            NeedSet(name=name, deprived=True, cause=f"no {item}", day=self.day),
-                        )
         text = f"One {item} used by {_join(used)}." if used else f"No {item} used."
         if short:
             text += f" No {item} for {_join(short)}."
+        if effect.track:
+            hc = HookContext(self.db, self.campaign_id, self.hooks, None)
+            extra = call_hook(
+                self.hooks,
+                "after_consume",
+                hc,
+                item,
+                used,
+                short,
+                self.at,
+                self.day,
+                default="",
+            )
+            if extra:
+                text += f" {extra}"
         return text
 
     def _consume_party(self, effect: WildernessEffect, state: CampaignState) -> str:
@@ -339,8 +342,11 @@ class _Watch:
     def _clear(self, effect: WildernessEffect) -> str:
         item = effect.item or ""
         state = load_state(self.db, self.campaign_id)
-        # A deprived character cannot recover item slots from Fatigue, so their items stay.
-        eligible = [n for n in self.party if state.characters[name_key(n)].unmet_since is None]
+        # A character held back cannot recover item slots, so their items stay.
+        hc = HookContext(self.db, self.campaign_id, self.hooks, None)
+        eligible = [
+            n for n in self.party if not call_hook(self.hooks, "held_back", hc, n, default="")
+        ]
         had = [n for n in eligible if _has_kind(state, n, item)]
         if eligible:
             clear_items(self.db, self.campaign_id, eligible, [item])
@@ -401,7 +407,7 @@ def wilderness_action(
     night: bool,
     give: GiveItem,
     travel_watch: bool = False,
-    need: NeedRules | None = None,
+    hooks: Hooks | None = None,
     buy: Callable[[Session, str, str], dict[str, Any]] | None = None,
     purchases: Sequence[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
@@ -441,7 +447,7 @@ def wilderness_action(
         rng=rng,
         plus=plus,
         give=give,
-        need=need,
+        hooks=hooks,
         day=day,
         buy=buy,
         purchases=tuple(purchases or ()),
@@ -515,10 +521,10 @@ def _route_name(route: Mapping[str, Any], key: str, table: Mapping[str, int]) ->
 
 
 def plan_overland(
-    wilderness: Wilderness, route: Mapping[str, Any], weather: str, deprived: bool
+    wilderness: Wilderness, route: Mapping[str, Any], weather: str, held_back: bool
 ) -> TravelPlan:
     """Work out the watches of one overland move. The weather of the day it starts sets the
-    penalty for the whole journey. A deprived traveller makes the ground one step harder."""
+    penalty for the whole journey. A traveller held back makes the ground one step harder."""
     travel = wilderness.travel
     if travel is None:
         raise InvalidInput("this rule set has no overland travel; use the in_settlement mode")
@@ -545,7 +551,7 @@ def plan_overland(
         fatigue, watches = (penalty.fatigue, 0) if choice == "fatigue" else (0, penalty.watches)
 
     levels = tuple(travel.terrain)
-    steps = penalty.terrain_steps + (travel.deprived_terrain_steps if deprived else 0)
+    steps = penalty.terrain_steps + (travel.held_back_terrain_steps if held_back else 0)
     level = min(levels.index(terrain) + steps, len(levels) - 1)
     hardest = levels[level]
     watches += travel.path[path] + travel.distance[distance] + vast + travel.terrain[hardest]

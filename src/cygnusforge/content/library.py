@@ -231,8 +231,8 @@ class WildernessEffect:
     do: str
     item: str | None = None
     per: str | None = None  # "member" or "party", for consume only
-    # A consume that is the member's meal for the night. A food rest that follows it does not feed them again.
-    meal: bool = False
+    # A consume whose use the rule set tracks, such as a meal. Its hook may record the use.
+    track: bool = False
     count: DieGrowth | None = None  # for grant only
     times: int = 1  # for roll_events only
     # Items tried in order when a party consume has no `item`, such as a Lantern's oil.
@@ -255,7 +255,7 @@ WILDERNESS_DO = ("consume", "grant", "clear", "roll_events", "buy")
 WILDERNESS_PER = ("member", "party")
 # The keys each kind of effect takes, besides `do`.
 WILDERNESS_EFFECT_KEYS = {
-    "consume": ("item", "per", "meal", "alternatives", "on_shortage"),
+    "consume": ("item", "per", "track", "alternatives", "on_shortage"),
     "grant": ("item", "count"),
     "clear": ("item",),
     "roll_events": ("times",),
@@ -324,7 +324,7 @@ class WildernessTravel:
     # Watch penalty per terrain level, in difficulty order.
     terrain: Mapping[str, int]
     vast_max: int
-    deprived_terrain_steps: int
+    held_back_terrain_steps: int
     weather: Mapping[str, WeatherPenalty]
 
 
@@ -804,7 +804,7 @@ class ClockRules:
 class RestLength:
     """A rest the GM can call for. It passes `hours` hours, `parts` parts of a day, or `days`
     days, and `until_morning` runs on to the next morning. A full rest restores what `restores`
-    lists and clears the item kinds in `clears`. A deprived character recovers nothing."""
+    lists and clears the item kinds in `clears`. A character the hooks hold back recovers nothing."""
 
     id: str
     hours: int
@@ -814,20 +814,11 @@ class RestLength:
     full: bool
     restores: tuple[str, ...]
     clears: tuple[str, ...]
-    # Whether the party eats during this rest: each character who is not sheltered uses a food use.
-    food: bool = False
+    # Whether the rest has upkeep: the rule set's before_rest hook runs for it.
+    upkeep: bool = False
     # For a rest that runs until morning: a part it begins in maps to the part it ends at instead,
     # such as a night rest begun in the morning that stops at the night part.
     stop_at: dict[str, str] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
-class NeedRules:
-    """A character deprived of a crucial need gains one `penalty_item` a day once it has gone on
-    for more than `after_days` days."""
-
-    penalty_item: str
-    after_days: int
 
 
 @dataclass(frozen=True)
@@ -845,12 +836,19 @@ class InventoryRules:
 
 
 @dataclass(frozen=True)
-class FoodRules:
-    """The food a party eats on rests. `feature` is a consumable item feature; a character starts
-    with it as an inventory item named `item`, and each night's rest spends one of its uses."""
+class Hooks:
+    """Rule-set code the engine calls at fixed points. `module` holds the functions named by the
+    hook fields; each field is a function name, or None when the rule set does not use that hook.
+    `options` is the plain mapping from the hooks definition, for the functions to read."""
 
-    feature: str
-    item: str
+    module: ModuleType
+    new_day: str | None
+    before_rest: str | None
+    held_back: str | None
+    after_consume: str | None
+    lodge: str | None
+    status: str | None
+    options: Mapping[str, Any]
 
 
 @dataclass(frozen=True)
@@ -1000,19 +998,18 @@ class RuleSet:
     moves: Mapping[str, MoveRules] = field(default_factory=dict)
     # Tables rolled with dice, by id, such as the GM's reaction table.
     dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
-    # Time, rest, and needs. Each is None or empty when the rule set does not track them.
+    # Time and rests. Each is None or empty when the rule set does not track them.
     clock: ClockRules | None = None
     rests: Mapping[str, RestLength] = field(default_factory=dict)
     # The rest length an interrupted rest counts as, such as "moments".
     interrupted_rest: str = ""
-    need: NeedRules | None = None
     inventory: InventoryRules | None = None
     # Item sizes by id, as the slots an item of that size takes.
     item_sizes: Mapping[str, int] = field(default_factory=dict)
     # How magic uses items, or None when the rule set has no magic.
     magic: MagicRules | None = None
-    # The food a party eats on rests, or None when the rule set does not track food.
-    food: FoodRules | None = None
+    # The rule set's code hooks, or None when the rule set has none.
+    hooks: Hooks | None = None
     # What the marketplace sells, or None when the rule set has no marketplace.
     marketplace: Marketplace | None = None
     # Prompt fragments the GM prompt adds after its generic text, in file order.
@@ -1586,12 +1583,11 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     clock = _load_clock(definitions, template)
     rests = _load_rests(definitions, character, template, clock)
     interrupted_rest = _load_interrupted_rest(definitions, rests, template)
-    need = _load_need(definitions, template)
     inventory = _load_inventory(definitions, character, template)
     item_sizes = _load_item_sizes(definitions, template)
     _check_item_sizes(character, item_sizes, template)
     magic = _load_magic(definitions, item_sizes, template)
-    food = _load_food(definitions, rests, item_sizes, character, template)
+    hooks = _load_rule_hooks(definitions, modules, character, rests, template)
     marketplace = _load_marketplace(definitions, item_sizes, character, template)
     prompt_fragments = _load_prompts(definitions, template)
     sentence_cap = _load_sentence_cap(definitions, template)
@@ -1657,11 +1653,10 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         clock=clock,
         rests=rests,
         interrupted_rest=interrupted_rest,
-        need=need,
         inventory=inventory,
         item_sizes=item_sizes,
         magic=magic,
-        food=food,
+        hooks=hooks,
         marketplace=marketplace,
         prompt_fragments=prompt_fragments,
         sentence_cap=sentence_cap,
@@ -1804,7 +1799,7 @@ def _load_wilderness(
 
 
 TRAVEL_KEYS = frozenset(
-    {"path", "distance", "terrain", "vast_max", "deprived_terrain_steps", "weather"}
+    {"path", "distance", "terrain", "vast_max", "held_back_terrain_steps", "weather"}
 )
 WEATHER_PENALTY_KEYS = frozenset({"choice", "fatigue", "watches", "terrain_steps", "travel"})
 
@@ -1844,7 +1839,7 @@ def _load_wilderness_travel(
         distance=_whole_map(data, "distance", travel_label),
         terrain=_whole_map(data, "terrain", travel_label),
         vast_max=_whole(data, "vast_max", travel_label, 0),
-        deprived_terrain_steps=_whole(data, "deprived_terrain_steps", travel_label, 0),
+        held_back_terrain_steps=_whole(data, "held_back_terrain_steps", travel_label, 0),
         weather=weather,
     )
 
@@ -1904,16 +1899,16 @@ def _load_effect(entry: object, label: str) -> WildernessEffect:
         per = required_text(entry, "per", label)
         if per not in WILDERNESS_PER:
             raise ContentError(f"{label}: consume 'per' must be one of {', '.join(WILDERNESS_PER)}")
-        meal = entry.get("meal", False)
-        if not isinstance(meal, bool):
-            raise ContentError(f"{label}: consume 'meal' must be true or false")
-        if meal and per != "member":
-            raise ContentError(f"{label}: a consume that is a 'meal' must be per member")
+        track = entry.get("track", False)
+        if not isinstance(track, bool):
+            raise ContentError(f"{label}: consume 'track' must be true or false")
+        if track and per != "member":
+            raise ContentError(f"{label}: a consume that is 'track' must be per member")
         return WildernessEffect(
             do=do,
             item=required_text(entry, "item", label),
             per=per,
-            meal=meal,
+            track=track,
             alternatives=_load_alternatives(entry, label),
             on_shortage=_optional_nonempty_text(entry, "on_shortage", label),
         )
@@ -2751,9 +2746,9 @@ def _load_rests(
         for stat in restores:
             if stat not in character.stats:
                 raise ContentError(f"{length_label}: 'restores' names no stat ({stat!r})")
-        food = data.get("food", False)
-        if not isinstance(food, bool):
-            raise ContentError(f"{length_label}: 'food' must be true or false")
+        upkeep = data.get("upkeep", False)
+        if not isinstance(upkeep, bool):
+            raise ContentError(f"{length_label}: 'upkeep' must be true or false")
         loaded[length_id] = RestLength(
             id=length_id,
             hours=hours,
@@ -2763,7 +2758,7 @@ def _load_rests(
             full=full,
             restores=restores,
             clears=_names(data, "clears", length_label),
-            food=food,
+            upkeep=upkeep,
             stop_at=stop_at,
         )
     return loaded
@@ -2801,17 +2796,6 @@ def _load_interrupted_rest(
     if rests[name].full:
         raise ContentError(f"{label}: 'interrupted' must name a rest length that is not full")
     return name
-
-
-def _load_need(definitions: list[Definition], template: str) -> NeedRules | None:
-    definition = _single_optional(definitions, "need", template)
-    if definition is None:
-        return None
-    label = f"{template}: need {definition.id}"
-    return NeedRules(
-        penalty_item=required_text(definition.data, "penalty_item", label),
-        after_days=_whole(definition.data, "after_days", label, 0),
-    )
 
 
 def _load_inventory(
@@ -2882,30 +2866,56 @@ def _load_item_kind(
     return ItemKind(kind, size, icon)
 
 
-def _load_food(
+HOOK_FIELDS = ("new_day", "before_rest", "held_back", "after_consume", "lodge", "status")
+
+
+def _load_rule_hooks(
     definitions: list[Definition],
-    rests: Mapping[str, RestLength],
-    item_sizes: Mapping[str, int],
+    modules: Mapping[str, ModuleType],
     character: CharacterSpec,
+    rests: Mapping[str, RestLength],
     template: str,
-) -> FoodRules | None:
-    """The food block of the rule set's rest definition. A rest length with `food` needs it."""
-    definition = _single_optional(definitions, "rest", template)
-    if definition is None or "food" not in definition.data:
-        if any(length.food for length in rests.values()):
-            raise ContentError(f"{template}: a rest eats food, so the rest needs a 'food' block")
+) -> Hooks | None:
+    """The rule set's hooks definition: the module whose functions the engine calls at fixed points,
+    and the options those functions read. A rest with upkeep needs the before_rest hook."""
+    definition = _single_optional(definitions, "hooks", template)
+    if definition is None:
+        if any(length.upkeep for length in rests.values()):
+            raise ContentError(
+                f"{template}: a rest has upkeep, so the rule set needs a 'hooks' definition"
+            )
         return None
-    label = f"{template}: rest {definition.id} food"
-    data = definition.data["food"]
-    if not isinstance(data, Mapping):
-        raise ContentError(f"{label} must be an object")
-    feature = required_text(data, "feature", label)
-    if feature not in character.features:
-        raise ContentError(f"{label}: 'feature' names no character feature ({feature!r})")
-    food = character.features[feature]
-    if food.feature_type != "item" or food.uses < 1:
-        raise ContentError(f"{label}: 'feature' must be a consumable item with uses ({feature!r})")
-    return FoodRules(feature=feature, item=food.name)
+    label = f"{template}: hooks {definition.id}"
+    data = definition.data
+    module_id = required_text(data, "python_module", label)
+    if module_id not in modules:
+        raise ContentError(f"{label}: unknown python_module {module_id!r}")
+    module = modules[module_id]
+    names: dict[str, str | None] = {}
+    for field_name in HOOK_FIELDS:
+        function_name = _optional_nonempty_text(data, field_name, label)
+        if function_name is not None and not callable(getattr(module, function_name, None)):
+            raise ContentError(f"{label}: {function_name!r} is not a function in {module_id!r}")
+        names[field_name] = function_name
+    if any(length.upkeep for length in rests.values()) and names["before_rest"] is None:
+        raise ContentError(
+            f"{label}: a rest has upkeep, so the hooks need a 'before_rest' function"
+        )
+    options = data.get("options", {})
+    if not isinstance(options, Mapping):
+        raise ContentError(f"{label}: 'options' must be an object")
+    options = dict(options)
+    if "feature" in options:
+        feature = required_text(options, "feature", f"{label}: options")
+        if feature not in character.features:
+            raise ContentError(f"{label}: 'feature' names no character feature ({feature!r})")
+        item = character.features[feature]
+        if item.feature_type != "item" or item.uses < 1:
+            raise ContentError(
+                f"{label}: 'feature' must be a consumable item with uses ({feature!r})"
+            )
+        options["item"] = item.name
+    return Hooks(module=module, options=options, **names)
 
 
 def _check_item_sizes(character: CharacterSpec, item_sizes: Mapping[str, int], template: str):

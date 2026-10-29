@@ -9,10 +9,10 @@ from __future__ import annotations
 import math
 import random
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from difflib import get_close_matches
-from typing import Any
+from typing import Any, TypeVar
 
 from sqlalchemy import Engine
 from sqlmodel import Session
@@ -42,13 +42,12 @@ from cygnusforge.content.library import (
     EncounterObject,
     EncounterTemplate,
     EncounterTerrain,
-    FoodRules,
+    Hooks,
     InventoryRules,
     MagicRules,
     Marketplace,
     MonsterTemplate,
     MoveRules,
-    NeedRules,
     PeriodRules,
     RelationRules,
     RestLength,
@@ -70,10 +69,10 @@ from cygnusforge.services import inventory as inventory_service
 from cygnusforge.services import magic as magic_service
 from cygnusforge.services import market as market_service
 from cygnusforge.services import moves as moves_service
-from cygnusforge.services import needs as needs_service
 from cygnusforge.services import objects as objects_service
 from cygnusforge.services import periods as periods_service
 from cygnusforge.services import relations as relations_service
+from cygnusforge.services import rests as rests_service
 from cygnusforge.services import tallies as tallies_service
 from cygnusforge.services import wilderness as wilderness_service
 from cygnusforge.services.attacks import ATTACK_FLAGS
@@ -131,9 +130,11 @@ from cygnusforge.services.events import (
     token_labels,
 )
 from cygnusforge.services.geometry import clearance, contains, overlaps, polygon_problem
+from cygnusforge.services.hooks import HookContext, call_hook
 from cygnusforge.services.objects import visible_objects
 from cygnusforge.services.tools import check_arguments
 
+T = TypeVar("T")
 MAX_NAME = 120
 MAX_STAT = 999
 MAX_TEXT = 2000
@@ -290,15 +291,14 @@ class WorldTools:
     periods: Mapping[str, PeriodRules] = field(default_factory=dict)
     tallies: Mapping[str, TallyRules] = field(default_factory=dict)
     relations: Mapping[str, RelationRules] = field(default_factory=dict)
-    # Time, rest, and needs. Each is None or empty when the rule set does not track them.
+    # Time, rest, and the rule set's hooks. Each is None or empty when the rule set does not use it.
     clock_rules: ClockRules | None = None
     rests: Mapping[str, RestLength] = field(default_factory=dict)
     interrupted_rest: str = ""
-    need: NeedRules | None = None
+    hooks: Hooks | None = None
     inventory: InventoryRules | None = None
     item_sizes: Mapping[str, int] = field(default_factory=dict)
     magic: MagicRules | None = None
-    food: FoodRules | None = None
     marketplace: Marketplace | None = None
     # What "+" between dice terms means in this rule set: "sum" or "highest".
     plus: str = field(kw_only=True)
@@ -344,7 +344,7 @@ class WorldTools:
                 db,
                 self.campaign_id,
                 _required(self.clock_rules, "time"),
-                self.need,
+                self.hooks,
                 self.inventory,
                 days,
                 parts,
@@ -353,15 +353,14 @@ class WorldTools:
 
     def rest(self, length: str, interrupted: bool = False, reason: str = "") -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return needs_service.take_rest(
+            return rests_service.take_rest(
                 db,
                 self.campaign_id,
                 _required(self.clock_rules, "time"),
                 self.rests,
                 self.interrupted_rest,
-                self.need,
+                self.hooks,
                 self.inventory,
-                self.food,
                 length,
                 interrupted,
                 reason,
@@ -373,26 +372,25 @@ class WorldTools:
 
     def rest_history(self) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return needs_service.rest_history(db, self.campaign_id)
+            return rests_service.rest_history(db, self.campaign_id)
 
-    def set_condition(self, name: str, deprived: bool, cause: str = "") -> dict[str, Any]:
+    def with_hook_context(self, action: Callable[[HookContext], T]) -> T:
         with session_scope(self.engine) as db:
-            return needs_service.set_condition(
-                db, self.campaign_id, self.need, name, deprived, cause
-            )
+            result = action(HookContext(db, self.campaign_id, self.hooks, self.inventory))
+            db.commit()
+            return result
 
     def add_penalty(self, name: str, cause: str, force: bool = False) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            if not force and self.need is not None:
-                character = inventory_service.character_named(
-                    load_state(db, self.campaign_id), name
-                )
-                if character.unmet_since is not None:
+            if not force and self.hooks is not None:
+                hc = HookContext(db, self.campaign_id, self.hooks, self.inventory)
+                character = inventory_service.character_named(hc.state(), name)
+                reason = call_hook(self.hooks, "held_back", hc, character.name, default="")
+                if reason:
                     penalty = _required(self.inventory, "inventory").penalty_name
                     raise InvalidInput(
-                        f"{character.name} is deprived, so the engine adds their {penalty} each day "
-                        f"and none was added here; set force only if something besides the "
-                        f"need causes this {penalty}"
+                        f"{character.name} is held back by {reason}, so set force only if "
+                        f"something besides that causes this {penalty}"
                     )
             return inventory_service.add_penalty(
                 db, self.campaign_id, _required(self.inventory, "inventory"), name, cause
@@ -473,6 +471,7 @@ class WorldTools:
                 _required(self.marketplace, "a marketplace"),
                 names,
                 service,
+                self.hooks,
             )
 
     def _give_catalogue_item(self, db: Session, name: str, item: str) -> bool:
@@ -793,13 +792,13 @@ class WorldTools:
                 party=[c.name for c in party],
                 night=night,
                 give=self._give_catalogue_item,
-                need=self.need,
+                hooks=self.hooks,
                 buy=self._buy_catalogue_item,
                 purchases=purchases,
             )
         with session_scope(self.engine) as db:
             result["clock"] = clock_service.advance_time(
-                db, self.campaign_id, clock_rules, self.need, self.inventory, days=0, parts=1
+                db, self.campaign_id, clock_rules, self.hooks, self.inventory, days=0, parts=1
             )
         return result
 
@@ -948,7 +947,7 @@ class WorldTools:
                 speed=travel,
                 mode=mode,
                 clock_rules=self.clock_rules,
-                need=self.need,
+                hooks=self.hooks,
                 inventory=self.inventory,
             )
 
@@ -985,7 +984,8 @@ class WorldTools:
             season = wilderness_service.season_for_day(
                 wilderness, state.start_season or wilderness.start_season, start.day
             )
-            deprived = any(c.unmet_since is not None for c in party)
+            hc = HookContext(db, self.campaign_id, self.hooks, self.inventory)
+            held = any(call_hook(self.hooks, "held_back", hc, c.name, default="") for c in party)
             weather = wilderness_service.roll_weather(
                 db,
                 self.campaign_id,
@@ -996,7 +996,7 @@ class WorldTools:
                 day=start.day,
                 season=season,
             )
-            plan = wilderness_service.plan_overland(wilderness, route, weather["weather"], deprived)
+            plan = wilderness_service.plan_overland(wilderness, route, weather["weather"], held)
             if plan.fatigue:
                 for member in party:
                     inventory_service.add_penalty(
@@ -1042,7 +1042,7 @@ class WorldTools:
                 )
             with session_scope(self.engine) as db:
                 clock_now = clock_service.advance_time(
-                    db, self.campaign_id, clock_rules, self.need, self.inventory, days=0, parts=1
+                    db, self.campaign_id, clock_rules, self.hooks, self.inventory, days=0, parts=1
                 )
             made_progress = not recovering
             if made_progress:
@@ -1068,7 +1068,7 @@ class WorldTools:
                 travel=self.travel,
                 mode=OVERLAND,
                 clock_rules=self.clock_rules,
-                need=self.need,
+                hooks=self.hooks,
                 inventory=self.inventory,
             )
         result.update(
@@ -1429,7 +1429,7 @@ class WorldTools:
                 self.combat,
                 self.conditions,
                 self.inventory,
-                self.need,
+                self.hooks,
                 self.counters,
             )
 
@@ -2348,7 +2348,7 @@ def move_actor(
     speed: str | None = None,
     mode: str = IN_SETTLEMENT,
     clock_rules: ClockRules | None = None,
-    need: NeedRules | None = None,
+    hooks: Hooks | None = None,
     inventory: InventoryRules | None = None,
 ) -> dict[str, Any]:
     """Move a character to a place. With no place, an NPC goes into the wind: it is nowhere
@@ -2386,7 +2386,7 @@ def move_actor(
     result: dict[str, Any] = {"moved": actor.name, "location": where.name}
     if minutes is not None and clock_rules is not None:
         result.update(
-            _charge_travel(db, campaign_id, state, minutes, clock_rules, need, inventory, speed)
+            _charge_travel(db, campaign_id, state, minutes, clock_rules, hooks, inventory, speed)
         )
     db.commit()
     return result
@@ -2461,7 +2461,7 @@ def _charge_travel(
     state: CampaignState,
     minutes: int,
     clock_rules: ClockRules,
-    need: NeedRules | None,
+    hooks: Hooks | None,
     inventory: InventoryRules | None,
     mode: str,
 ) -> dict[str, Any]:
@@ -2474,7 +2474,7 @@ def _charge_travel(
             state.clock, len(clock_rules.parts), clock_rules.hours_per_part
         )
         clock = clock_service.advance_to(
-            db, campaign_id, clock_rules, start + hours, need, inventory
+            db, campaign_id, clock_rules, start + hours, hooks, inventory
         )
         result["clock"] = clock
     return result
@@ -2695,19 +2695,19 @@ def get_statblock(
     combat: CombatRules | None = None,
     conditions: Mapping[str, ConditionRules] | None = None,
     inventory: InventoryRules | None = None,
-    need: NeedRules | None = None,
+    hooks: Hooks | None = None,
     counters: Mapping[str, CounterRules] | None = None,
 ) -> dict[str, Any]:
     """A character's stats, template, features, and fields, one line each. Works for the player
     character and for NPCs. With a rule set's `combat`, the armor, attacks, harm, and status follow.
-    With its `conditions`, `inventory`, `need`, and `counters`, the conditions, injuries,
-    deprivation, items, and counter values follow."""
+    With its `conditions`, `inventory`, `hooks`, and `counters`, the conditions, injuries,
+    hooks-driven holds, items, and counter values follow."""
     character = _character_named(state, name)
     kind = "player character" if character.kind == PC_KIND else "npc"
     lines = describe(spec, _sheet_of(character)).splitlines()
     if combat is not None:
         lines += _combat_lines(character, spec, combat)
-    lines += _status_lines(character, conditions, inventory, need, counters)
+    lines += _status_lines(character, conditions, inventory, hooks, counters)
     return {
         "name": character.name,
         "kind": kind,
@@ -2760,10 +2760,10 @@ def _status_lines(
     character: Character,
     conditions: Mapping[str, ConditionRules] | None,
     inventory: InventoryRules | None,
-    need: NeedRules | None,
+    hooks: Hooks | None,
     counters: Mapping[str, CounterRules] | None = None,
 ) -> list[str]:
-    """The character's conditions, counters, injuries, deprivation, and what they carry. Each part
+    """The character's conditions, counters, injuries, the rule set's status lines, and what they carry. Each part
     shows only when the rule set has it, or when the character has something to report."""
     lines: list[str] = []
     if conditions is not None:
@@ -2778,8 +2778,11 @@ def _status_lines(
         lines.append(f"Counters: {', '.join(shown)}")
     if character.injuries:
         lines.append(f"Injuries: {'; '.join(character.injuries)}")
-    if need is not None and character.unmet_since is not None:
-        lines.append(f"Deprived: {character.unmet_cause} (since day {character.unmet_since})")
+    lines.extend(
+        call_hook(
+            hooks, "status", HookContext.for_rendering(hooks, inventory), character, default=[]
+        )
+    )
     if inventory is not None:
         used = inventory_service.used_slots(character)
         flag = " (over capacity)" if used > inventory.capacity else ""
@@ -3016,7 +3019,7 @@ def world_state_text(
     inventory: InventoryRules | None = None,
     terrain: Mapping[str, EncounterTerrain] | None = None,
     encounter_objects: Mapping[str, EncounterObject] | None = None,
-    need: NeedRules | None = None,
+    hooks: Hooks | None = None,
     counters: Mapping[str, CounterRules] | None = None,
 ) -> str:
     """The GM's orientation at the start of a turn: the campaign options, the day, the player
@@ -3084,7 +3087,7 @@ def world_state_text(
     wind = _npcs_in_the_wind(state)
     if wind:
         lines.append(f"NPCs in the wind, at no location: {', '.join(wind)}.")
-    lines.extend(_status_lines(pc, conditions, inventory, need, counters))
+    lines.extend(_status_lines(pc, conditions, inventory, hooks, counters))
     lines.extend(_encounter_lines(state, grid, combat, terrain, encounter_objects))
     return "\n".join(lines)
 

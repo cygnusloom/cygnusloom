@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Protocol, TypeVar
+
+T = TypeVar("T")
 
 
 class CoreWorld(Protocol):
@@ -253,12 +255,14 @@ class World(CoreWorld, Protocol):
 
     def rest_history(self) -> dict[str, Any]: ...
 
-    def set_condition(self, name: str, deprived: bool, cause: str = "") -> dict[str, Any]:
-        """Mark or clear the ruleset's need condition on a character, recording `cause`."""
+    def with_hook_context(self, action: Callable[[Any], T]) -> T:
+        """Run `action` with the rule set's hook context in one session, and commit its changes.
+        The context is a services.hooks.HookContext, which gives the character state and records
+        character marks. Rule-set tools use it to keep their own state in marks."""
 
     def add_penalty(self, name: str, cause: str, force: bool = False) -> dict[str, Any]:
-        """Add the ruleset's penalty item to a character's inventory. A deprived character is
-        refused unless `force` is true."""
+        """Add the ruleset's penalty item to a character's inventory. A character the hooks hold
+        back is refused unless `force` is true."""
 
     def search_marketplace(self, query: str) -> dict[str, Any]: ...
 

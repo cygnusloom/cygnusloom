@@ -5,7 +5,12 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from cygnusforge.content.library import InventoryRules
 from cygnusforge.rules.context import ToolContext
+from cygnusforge.services.common import InvalidInput
+from cygnusforge.services.events import Item, ItemRemoved, ItemUsesSet, name_key, record
+from cygnusforge.services.hooks import HookContext
+from cygnusforge.services.inventory import carry_item
 
 
 def search_monster(query: str, ctx: ToolContext) -> dict[str, list[dict[str, Any]]]:
@@ -99,7 +104,29 @@ def rest_history(ctx: ToolContext) -> dict[str, Any]:
 
 
 def set_condition(name: str, deprived: bool, cause: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.set_condition(name, deprived, cause=cause)
+    """Mark a character deprived, with the cause, or clear the mark. Returns the day the
+    deprivation began, or None when the character is not deprived."""
+
+    def action(hc: HookContext) -> dict[str, Any]:
+        state = hc.state()
+        character = state.characters.get(name_key(name))
+        if character is None:
+            raise InvalidInput(f"there is no character named {name!r}")
+        if deprived and not cause.strip():
+            raise InvalidInput("say what the character is deprived of")
+        if deprived:
+            since = _deprived_since(character.marks, state.clock.day)
+            hc.set_mark(
+                character.name,
+                DEPRIVED,
+                {"since": since, "cause": cause.strip()},
+                f"{character.name} is deprived: {cause.strip()}.",
+            )
+            return {"name": character.name, "deprived": True, "since_day": since}
+        hc.set_mark(character.name, DEPRIVED, None, f"{character.name} is no longer deprived.")
+        return {"name": character.name, "deprived": False, "since_day": None}
+
+    return ctx.world.with_hook_context(action)
 
 
 def add_penalty(name: str, cause: str, ctx: ToolContext, force: bool = False) -> dict[str, Any]:
@@ -291,3 +318,128 @@ def place_participant(name: str, column: int, row: int, ctx: ToolContext) -> dic
 
 def end_npc_turn(name: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.end_npc_turn(name)
+
+
+# The character mark that records deprivation: {"since": day, "cause": text}.
+DEPRIVED = "deprived"
+# The character mark that records a bed for the night.
+SHELTERED = "sheltered"
+# The character mark that records the hour of the last meal, in hours since day 1.
+MEAL_AT = "meal_at"
+
+
+def _deprived_since(marks: Mapping[str, Any], day: int) -> int:
+    held = marks.get(DEPRIVED)
+    return int(held["since"]) if held else day
+
+
+def _deprived_cause(marks: Mapping[str, Any]) -> str:
+    held = marks.get(DEPRIVED)
+    return str(held["cause"]) if held else ""
+
+
+def _options(hc: HookContext) -> Mapping[str, Any]:
+    return hc.hooks.options if hc.hooks is not None else {}
+
+
+def _held_ration(character: Any, item: str) -> Any:
+    return next((i for i in character.items if name_key(i.name) == name_key(item)), None)
+
+
+def _spend_ration(hc: HookContext, character: Any, held: Any) -> None:
+    db, campaign_id = hc.session()
+    if held.max_uses and held.uses > 1:
+        record(
+            db,
+            campaign_id,
+            ItemUsesSet(name=character.name, item=held.name, uses=held.uses - 1, cause="eaten"),
+        )
+    else:
+        record(db, campaign_id, ItemRemoved(name=character.name, item=held.name))
+
+
+def new_day(hc: HookContext, day: int) -> None:
+    """Called once for each newly started day. A deprived character who has gone more than
+    `after_days` days without what they need gains the penalty item, once per day."""
+    options = _options(hc)
+    inventory: InventoryRules | None = hc.inventory
+    if inventory is None:
+        return
+    after_days = int(options.get("after_days", 1))
+    db, campaign_id = hc.session()
+    for character in hc.state().characters.values():
+        if DEPRIVED not in character.marks:
+            continue
+        since = _deprived_since(character.marks, day)
+        if day - since <= after_days:
+            continue
+        penalty = Item(
+            inventory.penalty_name, "", inventory.penalty_slots, kind=inventory.penalty_item
+        )
+        carry_item(db, campaign_id, inventory, character.name, penalty, cause="need")
+
+
+def before_rest(hc: HookContext, rest_id: str, start: int, hours_per_part: int) -> None:
+    """Called before time passes on an upkeep rest that starts `start` hours into the campaign.
+    Each party member who is not sheltered eats one ration. A sheltered member's bed is used up
+    instead. A member who ate a meal one part before this rest is fed by that meal. A member with
+    no ration is deprived, unless they already are."""
+    options = _options(hc)
+    state = hc.state()
+    for character in list(state.characters.values()):
+        meal_at = character.marks.get(MEAL_AT)
+        if meal_at is not None:
+            hc.set_mark(character.name, MEAL_AT, None, f"{character.name}'s meal is used up.")
+        if character.marks.get(SHELTERED):
+            hc.set_mark(character.name, SHELTERED, None, f"{character.name}'s bed is used up.")
+            continue
+        if meal_at is not None and start - int(meal_at) == hours_per_part:
+            continue
+        held = _held_ration(character, options["item"])
+        if held is None:
+            if DEPRIVED not in character.marks:
+                hc.set_mark(
+                    character.name,
+                    DEPRIVED,
+                    {"since": state.clock.day, "cause": "no food"},
+                    f"{character.name} is deprived: no food.",
+                )
+            continue
+        _spend_ration(hc, character, held)
+
+
+def held_back(hc: HookContext, name: str) -> str:
+    """The cause a character is held back by, or "" when they are not held back."""
+    return _deprived_cause(hc.marks(name))
+
+
+def after_consume(
+    hc: HookContext, item: str, used: list[str], short: list[str], at: int, day: int
+) -> str:
+    """Called when a tracked wilderness item is consumed. Members who used one have eaten a meal
+    at `at`. Members who had none become deprived, unless they already are."""
+    for name in used:
+        hc.set_mark(name, MEAL_AT, at, f"{name} has eaten a meal.")
+    for name in short:
+        if DEPRIVED not in hc.marks(name):
+            hc.set_mark(
+                name,
+                DEPRIVED,
+                {"since": day, "cause": f"no {item}"},
+                f"{name} is deprived: no {item}.",
+            )
+    return ""
+
+
+def lodge(hc: HookContext, names: list[str]) -> None:
+    """Called after a paid lodging. Each buyer has a bed for the night."""
+    for name in names:
+        hc.set_mark(name, SHELTERED, True, f"{name} has a bed for the night.")
+
+
+def status(hc: HookContext, character: Any) -> list[str]:
+    """Status lines for a character: the deprivation, if any."""
+    held = character.marks.get(DEPRIVED)
+    if not held:
+        return []
+    return [f"Deprived: {held['cause']} (since day {held['since']})"]

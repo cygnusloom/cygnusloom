@@ -44,7 +44,7 @@ def test_a_night_rest_ends_walloped_and_adds_a_die_to_max_hp(client_factory):
 
     result = rest_tools.rest("night", reason="sleep")
 
-    assert PC not in result["deprived"]
+    assert PC not in result["held_back"]
     character = _character(app, campaign_id, PC)
     assert character.conditions == []
     assert character.stats["hp"] == before + 4
@@ -56,7 +56,7 @@ def test_a_week_of_rest_ends_hamstrung_by_extended_rest(client_factory):
 
     result = tools.rest("week", reason="recover")
 
-    assert PC not in result["deprived"]
+    assert PC not in result["held_back"]
     assert _character(app, campaign_id, PC).conditions == []
 
 
