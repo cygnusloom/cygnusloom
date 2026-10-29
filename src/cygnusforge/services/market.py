@@ -162,7 +162,7 @@ def buy_service(
         seen.setdefault(character.name, character)
     buyers = list(seen.values())
     payer = buyers[0]
-    if listed.effect == "shelter":
+    if listed.effect == "lodge":
         rooms = math.ceil(len(buyers) / listed.fits)
         total = listed.price * rooms
         left = _pay(db, campaign_id, marketplace, payer, total, cause=listed.name)

@@ -869,7 +869,7 @@ class ShopItem:
 
 @dataclass(frozen=True)
 class ShopService:
-    """A service the marketplace sells. `effect` is "shelter", "restore", or "deferred". A shelter
+    """A service the marketplace sells. `effect` is "lodge", "restore", or "deferred". A lodge
     covers `fits` characters a night. A restore gives back the attributes in `restores`."""
 
     id: str
@@ -2969,8 +2969,8 @@ def _load_marketplace(
     for d in services:
         label = f"{template}: service {d.id}"
         effect = required_text(d.data, "effect", label)
-        if effect not in ("shelter", "restore", "deferred"):
-            raise ContentError(f"{label}: 'effect' must be shelter, restore, or deferred")
+        if effect not in ("lodge", "restore", "deferred"):
+            raise ContentError(f"{label}: 'effect' must be lodge, restore, or deferred")
         restores = _names(d.data, "restores", label)
         for stat in restores:
             if stat not in character.stats:

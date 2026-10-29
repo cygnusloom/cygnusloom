@@ -119,7 +119,7 @@ Cairn's needs logic left the engine and now runs through a `hooks` definition in
     recovery, `_clear` eligibility, the held-back terrain penalty, the `add_penalty` refusal, and
     status lines.
   - `after_consume(hc, item, used, short, at, day) -> str`: runs for a consume with `track: true`.
-  - `lodge(hc, names)`: runs for a paid shelter service.
+  - `lodge(hc, names)`: runs for a paid marketplace service whose `effect` is `"lodge"`. The engine no longer names shelter.
   - `status(hc, character) -> list[str]`: status lines.
 - **Generic marks**: `CharacterState.marks` replaces `sheltered`, `meal_at`, `unmet_since`, and
   `unmet_cause`. `MarkSet(name, key, value, text)` sets or clears (`value` None) a mark. Cairn's
