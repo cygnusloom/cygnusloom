@@ -19,10 +19,12 @@ def adjust_tally(
     *,
     reason: str = "",
     award: str = "",
+    force: bool = False,
 ) -> dict[str, object]:
     """Add `change` to one entry of a tally. A negative change deducts from it. `award` is a key for
     the event being paid out; a tally refuses an award key it has already paid, so one event is not
-    counted twice."""
+    counted twice. A gain equal to one the entry already paid this period is refused as a likely
+    repeat, unless `force` is set."""
     if tally is None:
         raise InvalidInput("this rule set keeps no tallies")
     label = tally.entries.get(entry)
@@ -35,6 +37,11 @@ def adjust_tally(
     if key and key in state.tally_awards.get(tally.id, set()):
         raise InvalidInput(
             f"{tally.label} has already paid the award {key!r}; do not award it twice"
+        )
+    if change > 0 and not force and change in state.tally_gains.get(tally.id, {}).get(entry, set()):
+        raise InvalidInput(
+            f"{label} already gained {change} {tally.label} this period. If this is a new award, "
+            "call again with force=true; otherwise do not award it again."
         )
     before = state.tallies.get(tally.id, {}).get(entry, 0)
     after = before + change

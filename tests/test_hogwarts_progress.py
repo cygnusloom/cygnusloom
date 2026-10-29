@@ -11,6 +11,7 @@ from cygnusforge.services.events import (
 )
 from tests.test_hogwarts import (
     HARRY,
+    HOGWARTS,
     _campaign,
     _counter,
     _harry,
@@ -22,6 +23,26 @@ from tests.test_hogwarts import (
 
 def _grant_advancements(tools, count: int) -> None:
     tools.adjust_counter(HARRY, "advancements", count)
+
+
+def _spell_name(spell_id: str) -> str:
+    return HOGWARTS.character.features[spell_id].name
+
+
+def _unheld_spells(app, campaign_id: int, count: int) -> list[str]:
+    """Spells from Harry's year that she does not know. Creation rolls her starting spells, so the
+    tests ask for ones she lacks rather than naming fixed ones."""
+    harry = _harry(app, campaign_id)
+    features = HOGWARTS.character.features
+    pool = sorted(
+        f.id
+        for f in features.values()
+        if f.feature_type == "spell"
+        and f.tag == harry.fields["year"]
+        and f.id not in harry.features
+    )
+    assert len(pool) >= count
+    return pool[:count]
 
 
 def test_a_trait_advancement_raises_the_chosen_stat(client_factory):
@@ -207,12 +228,13 @@ def test_learning_a_spell_adds_it_from_the_characters_year(client_factory):
     app, campaign_id = _campaign(client_factory)
     tools = _tools(app, campaign_id)
     _grant_advancements(tools, 1)
-    result = tools.take_advancement(HARRY, "spell", None, "aperio")
-    assert result["feature"] == "Aperio"
-    assert "aperio" in _harry(app, campaign_id).features
+    [spell] = _unheld_spells(app, campaign_id, 1)
+    result = tools.take_advancement(HARRY, "spell", None, spell)
+    assert result["feature"] == _spell_name(spell)
+    assert spell in _harry(app, campaign_id).features
     assert _counter(app, campaign_id, "advancements") == 0
     learned = _events_of(app, campaign_id, FeatureLearned.kind)
-    assert [(e.feature, e.name) for e in learned] == [("aperio", HARRY)]
+    assert [(e.feature, e.name) for e in learned] == [(spell, HARRY)]
 
 
 def test_a_spell_from_another_year_cannot_be_learned_as_an_advancement(client_factory):
@@ -229,9 +251,10 @@ def test_a_spell_already_known_cannot_be_learned_again(client_factory):
     app, campaign_id = _campaign(client_factory)
     tools = _tools(app, campaign_id)
     _grant_advancements(tools, 2)
-    tools.take_advancement(HARRY, "spell", None, "aperio")
-    with pytest.raises(InvalidInput, match="already has Aperio"):
-        tools.take_advancement(HARRY, "spell", None, "aperio")
+    [spell] = _unheld_spells(app, campaign_id, 1)
+    tools.take_advancement(HARRY, "spell", None, spell)
+    with pytest.raises(InvalidInput, match=f"already has {_spell_name(spell)}"):
+        tools.take_advancement(HARRY, "spell", None, spell)
     assert _counter(app, campaign_id, "advancements") == 1
 
 
@@ -239,9 +262,10 @@ def test_learning_spells_has_no_limit(client_factory):
     app, campaign_id = _campaign(client_factory)
     tools = _tools(app, campaign_id)
     _grant_advancements(tools, 2)
-    tools.take_advancement(HARRY, "spell", None, "aperio")
-    tools.take_advancement(HARRY, "spell", None, "oppugno")
-    assert {"aperio", "oppugno"} <= set(_harry(app, campaign_id).features)
+    first, second = _unheld_spells(app, campaign_id, 2)
+    tools.take_advancement(HARRY, "spell", None, first)
+    tools.take_advancement(HARRY, "spell", None, second)
+    assert {first, second} <= set(_harry(app, campaign_id).features)
 
 
 def test_a_learn_spell_advancement_needs_a_spell_to_be_named(client_factory):
@@ -284,12 +308,20 @@ def test_an_award_key_cannot_be_paid_twice_on_a_tally(client_factory):
     assert _state(app, campaign_id).tallies["house-points"]["gryffindor"] == 50
 
 
-def test_changes_without_an_award_key_are_not_guarded(client_factory):
+def test_changes_without_an_award_key_are_not_guarded_by_key(client_factory):
     app, campaign_id = _campaign(client_factory)
     tools = _tools(app, campaign_id)
     tools.adjust_tally("house-points", "gryffindor", 10, "a")
-    tools.adjust_tally("house-points", "gryffindor", 10, "b")
-    assert _state(app, campaign_id).tallies["house-points"]["gryffindor"] == 20
+    tools.adjust_tally("house-points", "gryffindor", 20, "b")
+    assert _state(app, campaign_id).tallies["house-points"]["gryffindor"] == 30
+
+
+def test_a_keyless_repeat_of_an_earlier_gain_is_still_refused(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _tools(app, campaign_id)
+    tools.adjust_tally("house-points", "gryffindor", 10, "a")
+    with pytest.raises(InvalidInput, match="force=true"):
+        tools.adjust_tally("house-points", "gryffindor", 10, "b")
 
 
 def test_a_period_end_clears_the_award_keys_so_a_new_year_can_reuse_them(client_factory):
@@ -299,3 +331,53 @@ def test_a_period_end_clears_the_award_keys_so_a_new_year_can_reuse_them(client_
     tools.end_period("school-year")
     tools.adjust_tally("house-points", "gryffindor", 5, "won", award="match-1")
     assert _state(app, campaign_id).tallies["house-points"]["gryffindor"] == 5
+
+
+def test_a_repeated_gain_of_the_same_amount_is_refused_without_force(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _tools(app, campaign_id)
+    tools.adjust_tally("house-points", "gryffindor", 50, "won", award="match-1")
+    with pytest.raises(InvalidInput, match="force=true"):
+        tools.adjust_tally("house-points", "gryffindor", 50, "won again", award="match-2")
+    assert _state(app, campaign_id).tallies["house-points"]["gryffindor"] == 50
+
+
+def test_a_repeated_gain_is_allowed_with_force(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _tools(app, campaign_id)
+    tools.adjust_tally("house-points", "gryffindor", 50, "won", award="match-1")
+    tools.adjust_tally("house-points", "gryffindor", 50, "won again", award="match-2", force=True)
+    assert _state(app, campaign_id).tallies["house-points"]["gryffindor"] == 100
+
+
+def test_a_gain_of_a_different_amount_is_not_a_repeat(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _tools(app, campaign_id)
+    tools.adjust_tally("house-points", "gryffindor", 50, "won", award="match-1")
+    tools.adjust_tally("house-points", "gryffindor", 10, "house cup", award="match-2")
+    assert _state(app, campaign_id).tallies["house-points"]["gryffindor"] == 60
+
+
+def test_a_gain_matching_another_entrys_gain_is_not_a_repeat(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _tools(app, campaign_id)
+    tools.adjust_tally("house-points", "gryffindor", 50, "won", award="match-1")
+    tools.adjust_tally("house-points", "slytherin", 50, "won", award="match-2")
+    assert _state(app, campaign_id).tallies["house-points"]["slytherin"] == 50
+
+
+def test_a_deduction_matching_an_earlier_gain_is_not_refused(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _tools(app, campaign_id)
+    tools.adjust_tally("house-points", "gryffindor", 50, "won", award="match-1")
+    tools.adjust_tally("house-points", "gryffindor", -50, "corrected")
+    assert _state(app, campaign_id).tallies["house-points"]["gryffindor"] == 0
+
+
+def test_a_period_end_clears_the_repeat_check_for_a_new_year(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _tools(app, campaign_id)
+    tools.adjust_tally("house-points", "gryffindor", 50, "won", award="match-1")
+    tools.end_period("school-year")
+    tools.adjust_tally("house-points", "gryffindor", 50, "won", award="match-2")
+    assert _state(app, campaign_id).tallies["house-points"]["gryffindor"] == 50

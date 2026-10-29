@@ -206,9 +206,15 @@ def end_period(period: str, ctx: ToolContext) -> dict[str, Any]:
 
 
 def adjust_tally(
-    tally: str, entry: str, change: int, ctx: ToolContext, reason: str = "", award: str = ""
+    tally: str,
+    entry: str,
+    change: int,
+    ctx: ToolContext,
+    reason: str = "",
+    award: str = "",
+    force: bool = False,
 ) -> dict[str, Any]:
-    return ctx.world.adjust_tally(tally, entry, change, reason, award)
+    return ctx.world.adjust_tally(tally, entry, change, reason, award, force)
 
 
 def set_relation(

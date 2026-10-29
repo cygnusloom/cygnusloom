@@ -705,7 +705,13 @@ class WorldTools:
             )
 
     def adjust_tally(
-        self, tally: str, entry: str, change: int, reason: str = "", award: str = ""
+        self,
+        tally: str,
+        entry: str,
+        change: int,
+        reason: str = "",
+        award: str = "",
+        force: bool = False,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return tallies_service.adjust_tally(
@@ -716,6 +722,7 @@ class WorldTools:
                 change,
                 reason=reason,
                 award=award,
+                force=force,
             )
 
     def set_relation(

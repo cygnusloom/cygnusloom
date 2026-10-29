@@ -128,7 +128,7 @@
     "name": "adjust_tally",
     "python_module": "core",
     "function": "adjust_tally",
-    "description": "Add points to, or deduct points from, a running tally such as a House's points. Use a negative change to deduct. Give every award an award key, such as the match and date; a key already used on this tally is refused, so a repeated award cannot be counted twice.",
+    "description": "Add points to, or deduct points from, a running tally such as a House's points. Use a negative change to deduct. Give every award an award key, such as the match and date; a key already used on this tally is refused, so a repeated award cannot be counted twice. A gain equal to one this entry already received this school year is refused as a likely repeat; call again with force=true only if it is genuinely a new award.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -153,6 +153,10 @@
         "award": {
           "type": "string",
           "description": "A key for this award, such as 'quidditch-2024-03-02-gryffindor-vs-slytherin'. Each award needs its own key."
+        },
+        "force": {
+          "type": "boolean",
+          "description": "Set to true only when a gain equal to an earlier one is a genuinely new award, not a repeat."
         }
       },
       "required": [

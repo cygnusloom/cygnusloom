@@ -418,6 +418,8 @@ class CampaignState:
     tallies: dict[str, dict[str, int]] = field(default_factory=dict)
     # The award keys each tally has already paid out, so an award is never paid twice.
     tally_awards: dict[str, set[str]] = field(default_factory=dict)
+    # The positive gains each tally entry has paid since its last reset, so a repeated gain is noticed.
+    tally_gains: dict[str, dict[str, set[int]]] = field(default_factory=dict)
 
     def named(self, name: str) -> Place | Character | None:
         key = name_key(name)
@@ -2306,6 +2308,9 @@ class TallyChanged(GameEvent):
         state.tallies.setdefault(self.tally, {})[self.entry] = self.after
         if self.award:
             state.tally_awards.setdefault(self.tally, set()).add(self.award)
+        if self.after > self.before:
+            gains = state.tally_gains.setdefault(self.tally, {}).setdefault(self.entry, set())
+            gains.add(self.after - self.before)
 
     def render(self) -> str:
         text = f"{self.entry_label} {self.label} goes from {self.before} to {self.after}"
@@ -2327,6 +2332,7 @@ class TallyReset(GameEvent):
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.tallies[self.tally] = {}
         state.tally_awards.pop(self.tally, None)
+        state.tally_gains.pop(self.tally, None)
 
     def render(self) -> str:
         totals = ", ".join(f"{self.labels[e]} {v}" for e, v in self.final.items())

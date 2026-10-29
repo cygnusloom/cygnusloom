@@ -165,6 +165,10 @@ Encoded:
   (`tallies` in `periods.json`, `TallyReset` event). This was the user's choice.
 - Award keys: an optional `award` on `adjust_tally` is refused when reused on the same tally, which
   stops a repeat award from counting twice. Keys are cleared at a reset.
+- Repeat-amount warning: a positive change whose amount an entry already gained this period is
+  refused, with or without a key. The GM must pass `force: true` for a genuinely new award. Gains
+  are recorded in `tally_gains` on `CampaignState` and cleared at a reset. Deductions are never
+  refused.
 - Conditions with their modifiers, and the exit roll (`needs_all_conditions`, `retire`).
 - Houses, blood statuses, creation tables, spells per blood status, and Favourite Subject Core and
   Elective groups.
@@ -179,8 +183,9 @@ Not encoded (rule text only, or left to the GM):
 - The House table's "last year's winner" bonus. This is a GM-side roll.
 - Casting a spell the character does not know costs a Luck point and a roll. The engine does not
   enforce this. The GM reads it from the `describe` knowledge line.
-- The "award key" is optional. A GM who omits it has no guard against a double count. The tool
-  description tells the GM to give every award a key.
+- The "award key" is optional. An award without a key is still checked by the repeat-amount warning,
+  but the GM can pass `force: true` to bypass either check. The GM chooses the key and the force
+  flag, so a GM can still double-count if it judges a repeat to be a new award.
 - Potion descriptions were inferred where the PDF's print layout was hard to read. Not re-checked
   against the PDF in this pass.
 - Hair, complexion, and look groupings follow the print layout. Not re-checked in this pass.
@@ -202,7 +207,10 @@ used there. The cairn2e code is tested through `tests/test_combat.py`, which hol
 
 ## Validation
 
-- Full suite: 1695 passed (`timeout 900 uv run pytest -n auto -q -p no:cacheprovider`), about 45 s.
+- Full suite: 1702 passed (`timeout 900 uv run pytest -n auto -q -p no:cacheprovider`), about 45 s.
+- Spell tests do not assume which starting spells a character holds. Creation rolls two random
+  5th Year spells for Harry, so the tests pick unheld spells from `HOGWARTS.character.features`
+  (`_unheld_spells` in `tests/test_hogwarts_progress.py`). Fixed spell ids made the tests flaky.
 - Lint: `uv run ruff format --check src tests` and `uv run ruff check src tests`: clean.
 - Hogwarts tests: `tests/test_hogwarts.py`, `tests/test_hogwarts_creation.py`,
   `tests/test_hogwarts_progress.py` (advancements, periods, tallies, relations), and
@@ -240,7 +248,16 @@ Observed in live play (not engine faults):
 - Award-key gap, found in a live test: asked to repeat the same award "with the same key", the GM
   did not reuse the key. It sent a new one (`quidditch-ravenclaw-vs-gryffindor`), so the guard
   did not fire, and Ravenclaw went 50 to 100. The guard blocks only an exact repeat of a key. The
-  GM chooses the key, so it can avoid the guard. Not fixed yet.
+  GM chooses the key, so it can avoid the guard. Fixed by the repeat-amount warning above.
+- Repeat-amount warning, live recheck (fresh database, uvicorn on 8766, DeepSeek):
+  - Gryffindor +50 under key `quidditch-gryffindor-vs-ravenclaw-50`: 0 to 50. Passed.
+  - Second +50 under a new key (`quidditch-gryffindor-vs-hufflepuff-50`): the engine refused it with
+    "Gryffindor already gained 50 House Points this period. If this is a new award, call again with
+    force=true". The GM then retried with `force: true`, and the total went to 100. The GM judged
+    it a genuinely new match. This is the intended escape hatch, and it is the remaining limit.
+  - The transcript shows the refusal in the tool result, as designed.
+- Setup note: the login page had no "Log in as test user" button in this build. A throwaway account
+  was registered through `/register` instead.
 - DeepSeek timed out twice (`ConnectTimeout`), which left the GM turn "stopped". "Continue" retried
   the turn and worked. The connect timeout was 5 s, so it is now 30 s (`llm/openai_compat.py`).
   The connect timeout is the likely cause, but this is not confirmed by a live run.
@@ -280,4 +297,5 @@ Observed in live play (not engine faults):
 - [x] Gap fixes: House Points reset each school year, learn-spell with the Year rule, the
       spell-knowledge rule, the award key, and the connect timeout (30 s).
 - [x] Live checks (second pass): award key, House Points reset at school-year end, learn-spell.
-- [ ] Open: the award key is chosen by the GM and can be avoided (see Live testing).
+- [x] Award-key gap: the repeat-amount warning refuses a repeat, and `force: true` lets a genuinely
+      new award through. The GM can still choose to use `force`, which is the accepted limit.
