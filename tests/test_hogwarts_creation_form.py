@@ -80,7 +80,6 @@ def test_the_hogwarts_creation_page_offers_spell_picks_for_blood_statuses(
     assert '<optgroup label="3rd Year" data-tag="3rd Year">' in page
     assert "data-randomize-spells" in page
     assert 'data-tag-field="field-year"' in page
-    assert "data-tag-order='" in page
 
 
 def test_pool_stats_are_marked_assigned_within_their_swap_group():

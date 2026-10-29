@@ -125,7 +125,7 @@
                 {{ choice_panel("field-" ~ table.id, table.label, table.options) }}
               {% endfor %}
               {% if template.picks %}
-                <fieldset class="creation-panel spell-picks" data-spell-picks="{{ template.id }}" data-tag-field="field-{{ template.picks.tag_field }}" data-tag-order='{{ template.picks.tag_order|tojson }}'>
+                <fieldset class="creation-panel spell-picks" data-spell-picks="{{ template.id }}" data-tag-field="field-{{ template.picks.tag_field }}">
                   <div class="panel-heading">
                     <h3>Spells</h3>
                     <button type="button" class="secondary" data-randomize-spells>Randomize spells</button>

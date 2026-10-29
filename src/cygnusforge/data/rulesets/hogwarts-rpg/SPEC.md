@@ -95,13 +95,14 @@ Phase 3 (close the gaps) added:
   the options a restriction rules out, and clears a pick of one when its gate changes.
 - **Spell picks** (`Template.choose`, `Feature.tag`, `check_choices`): a template can require
   `count` picks (1, 2, or 3 by blood status) from features whose `tag` matches a field's value
-  (`tag_field`, here the Year). A pick may come from the chosen Year or any earlier one, since a
-  character knows every spell from Years they have completed. A pick with no Year is rejected. A
-  pick from a later Year is rejected. `resolve` keeps the given picks and rolls the rest from the
-  knowable tags, skipping features the character already has. Graduates know every Year's spells.
+  (`tag_field`, here the Year). A pick must come from the chosen Year: spells from earlier Years
+  are known already (`knows` on the Year field), so they are not picked. A pick with no Year is
+  rejected, and so is a pick from any other Year. `resolve` keeps the given picks and rolls the
+  rest from the chosen Year, skipping features the character already has. No spell is tagged
+  Graduate, so a Graduate picks none.
 - **Web creation form** (`web/character_form.py`, `creation.html`): spell picks are shown per
   template, grouped by Year, as `pick-<template>-<n>` selects. The options are filtered to the
-  chosen Year and earlier ones (`creation.js`). The server rejects a pick from a later Year. Blank
+  chosen Year (`creation.js`). The server rejects a pick from any other Year. Blank
   picks are rolled, and "Randomize spells" rolls the picks in the browser.
 - Renamed event kinds (save compatibility is not needed): `CampFedSet` to `MealSet`,
   `LodgingSet` to `ShelterSet`, plus fields, marketplace effects, and prose. The needs move (below)

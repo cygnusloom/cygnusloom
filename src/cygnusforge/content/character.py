@@ -84,8 +84,8 @@ class Granted:
 @dataclass(frozen=True)
 class Choose:
     """Features a template lets the character pick: `count` of `feature_type` whose tag is the
-    value of the field `tag_field` or an earlier option of that field's table. A pick left out is
-    rolled from the same pool."""
+    value of the field `tag_field`. Spells from earlier Years are known, not picked. A pick left
+    out is rolled from the same pool."""
 
     count: int
     feature_type: str
@@ -634,11 +634,10 @@ def _check_picks(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
         if not fields.get(tag_field):
             raise CharacterError(f"give {tag_field!r} to pick the {kind}s for {template.name}")
         tag = fields[tag_field]
-        known = knowable_tags(spec, tag_field, tag)
         for feature in picks:
-            if spec.features[feature].tag not in known:
+            if spec.features[feature].tag != tag:
                 raise CharacterError(
-                    f"{spec.features[feature].name!r} is not a {kind} from {tag!r} or earlier"
+                    f"{spec.features[feature].name!r} is not a {kind} from {tag!r}"
                 )
         if len(picks) > template.choose.count:
             raise CharacterError(
@@ -886,20 +885,20 @@ def _pick_features(
     rng: random.Random,
 ) -> None:
     """Roll the picks a template's `choose` leaves to chance: features of its type whose tag is
-    knowable from the value of the gate field, skipping any the character already has. An empty
-    pool yields no picks."""
+    the value of the gate field, skipping any the character already has. An empty pool yields no
+    picks."""
     held = [
         feature
         for feature in features
         if spec.features[feature].feature_type == choose.feature_type
     ]
     needed = max(0, choose.count - len(held))
-    known = knowable_tags(spec, choose.tag_field, fields.get(choose.tag_field, ""))
+    tag = fields.get(choose.tag_field, "")
     pool = sorted(
         feature.id
         for feature in spec.features.values()
         if feature.feature_type == choose.feature_type
-        and feature.tag in known
+        and feature.tag == tag
         and feature.id not in features
     )
     for feature in rng.sample(pool, min(needed, len(pool))):
@@ -934,21 +933,6 @@ def _within(counter: CounterRef, value: int) -> int:
     if counter.maximum is not None:
         value = min(counter.maximum, value)
     return value
-
-
-def tag_order(spec: CharacterSpec, tag_field: str) -> tuple[str, ...]:
-    """The options of the table field `tag_field`, in table order: the tags a pick can be from."""
-    table = spec.fields[tag_field].table
-    return () if table is None else tuple(option.value for option in spec.tables[table])
-
-
-def knowable_tags(spec: CharacterSpec, tag_field: str, value: str) -> tuple[str, ...]:
-    """The tags a character knows by a value of `tag_field`: that value and every option before it
-    in table order. Empty when the value is not one of the options."""
-    order = tag_order(spec, tag_field)
-    if value not in order:
-        return ()
-    return order[: order.index(value) + 1]
 
 
 def _known_features(spec: CharacterSpec, field_id: str, value: str) -> tuple[str, str, str] | None:

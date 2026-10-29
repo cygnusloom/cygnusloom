@@ -26,15 +26,14 @@
   );
   for (const kind of kinds) revealTables(kind);
 
-  // A spell pick offers the spells of the chosen Year and of every Year before it. With no Year
-  // chosen it offers none. A pick whose spell is no longer offered goes back to Roll.
+  // A spell pick offers the spells of the chosen Year only: spells from earlier Years are known,
+  // not picked. With no Year chosen it offers none. A pick whose spell is no longer offered goes
+  // back to Roll.
   const refreshSpellPicks = () => {
     for (const fieldset of document.querySelectorAll("[data-tag-field]")) {
       const year = document.querySelector(`input[type="radio"][name="${fieldset.dataset.tagField}"]:checked`);
-      const order = JSON.parse(fieldset.dataset.tagOrder);
-      const known = year ? order.slice(0, order.indexOf(year.value) + 1) : [];
       for (const group of fieldset.querySelectorAll("optgroup")) {
-        const offered = known.includes(group.dataset.tag);
+        const offered = year !== null && group.dataset.tag === year.value;
         group.hidden = !offered;
         for (const option of group.children) option.disabled = !offered;
       }
