@@ -305,6 +305,8 @@ Observed in live play (not engine faults):
 - "Dragon Phoenix Unicorn" appears in the PDF text after the Quidditch subject. It is probably a
   wand-core list, but the text extraction does not confirm which table it belongs to.
 - Whether a Worlds Without Number ruleset should be added later, once its JSON exists.
+- Friends and Rivals session-end timing: decided to stay GM-enforced (the engine has no session
+  end). Revisit only if the GM is seen to change them mid-session in play.
 
 ## Commands
 
