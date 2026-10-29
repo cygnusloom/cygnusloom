@@ -147,6 +147,7 @@ CORE_TOOL_NAMES = {
     "ooc",
     "lookup_rule",
     "list_lookups",
+    "roll_creative",
 }
 
 SOCIAL_ARGUMENTS = '{"prompt": "Roll to persuade.", "relationship": 2, "circumstance": -1}'

@@ -108,6 +108,7 @@ CORE_TOOLS = {
     "add_condition",
     "end_condition",
     "list_lookups",
+    "roll_creative",
 }
 
 

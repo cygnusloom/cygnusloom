@@ -83,6 +83,7 @@ from cygnusforge.services.common import (
     whole_number,
 )
 from cygnusforge.services.conditions import active_conditions, add_condition, end_condition
+from cygnusforge.services.dice_tables import roll_creative as roll_creative_tables
 from cygnusforge.services.dice_tables import roll_tables as roll_dice_tables
 from cygnusforge.services.dungeon import dungeon_cycle as dungeon_cycle_service
 from cygnusforge.services.dungeon import roll_reaction as roll_reaction_service
@@ -335,6 +336,12 @@ class WorldTools:
     def roll_tables(self, tables: list[str]) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return roll_dice_tables(
+                db, self.campaign_id, tables, self.dice_tables, self.rng, plus=self.plus
+            )
+
+    def roll_creative(self, tables: list[str] | None) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return roll_creative_tables(
                 db, self.campaign_id, tables, self.dice_tables, self.rng, plus=self.plus
             )
 

@@ -191,6 +191,10 @@ def adjust_counter(character: str, counter: str, change: int, ctx: ToolContext) 
     return ctx.world.adjust_counter(character, counter, change)
 
 
+def roll_creative(ctx: ToolContext, tables: list[str] | None = None) -> dict[str, Any]:
+    return ctx.world.roll_creative(tables)
+
+
 def take_advancement(
     character: str,
     option: str,

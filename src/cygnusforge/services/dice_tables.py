@@ -44,3 +44,26 @@ def roll_tables(
     record(db, campaign_id, TablesRolled(rolls=rolls))
     db.commit()
     return {"rolls": rolls}
+
+
+def roll_creative(
+    db: Session,
+    campaign_id: int,
+    table_ids: Sequence[str] | None,
+    tables: Mapping[str, DiceTable],
+    rng: random.Random,
+    *,
+    plus: str,
+) -> dict[str, Any]:
+    """Roll on the named creative tables, or on every creative table when none are named."""
+    creative = [table.id for table in tables.values() if table.creative]
+    if table_ids:
+        for table_id in table_ids:
+            if table_id not in creative:
+                raise InvalidInput(f"there is no creative table named {table_id!r}")
+        chosen = list(table_ids)
+    else:
+        chosen = creative
+    if not chosen:
+        raise InvalidInput("no creative tables are defined")
+    return roll_tables(db, campaign_id, chosen, tables, rng, plus=plus)

@@ -445,6 +445,7 @@ class DiceTable:
     name: str
     dice: str
     rows: tuple[DiceRow, ...]
+    creative: bool = False
 
     def row_for(self, roll: int) -> DiceRow:
         return next(row for row in self.rows if row.low <= roll <= row.high)
@@ -1100,7 +1101,7 @@ def _check_directory_id(template: str, ident: str) -> None:
         raise ContentError(f"{template}: id must match the directory name, got {ident!r}")
 
 
-WORLD_TYPES = ("monster", "table", "dice_table", "feature", "rule")
+WORLD_TYPES = ("monster", "table", "dice_table", "creative_table", "feature", "rule")
 STATBLOCK_KEYS = ("stats", "armor", "attacks")
 
 
@@ -1308,15 +1309,95 @@ def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldCon
 
 
 def _load_dice_tables(definitions: Sequence[Definition], template: str) -> dict[str, DiceTable]:
-    """The dice tables among the definitions, by id. An id may be defined only once."""
+    """The dice tables among the definitions, by id, including creative tables. An id may be
+    defined only once."""
     dice_tables: dict[str, DiceTable] = {}
     for d in definitions:
-        if d.type != "dice_table":
+        if d.type == "dice_table":
+            table = _load_dice_table(d, template)
+        elif d.type == "creative_table":
+            table = _load_creative_table(d, template)
+        else:
             continue
         if d.id in dice_tables:
             raise ContentError(f"{template}: duplicate dice table {d.id!r}")
-        dice_tables[d.id] = _load_dice_table(d, template)
+        dice_tables[d.id] = table
     return dice_tables
+
+
+def _load_creative_table(definition: Definition, template: str) -> DiceTable:
+    """A creative table is a list of `entries`, one per roll, rolled as 1dN. The AI GM rolls on
+    these when it needs an idea. A rule set changes a core table with `add` and `remove`, which
+    `_patch_creative_table` applies before this runs. `source` credits where the entries came
+    from and is checked here but not shown to the GM."""
+    label = f"{template}: creative table {definition.id}"
+    extra = set(definition.data) - {"type", "id", "name", "entries", "source"}
+    if extra:
+        raise ContentError(f"{label}: unknown keys {sorted(extra)}")
+    if "source" in definition.data:
+        _text_list([definition.data["source"]], f"{label}: 'source'")
+    name = _table_label(definition, template)
+    entries = _creative_entries(definition.data.get("entries"), label)
+    return DiceTable(
+        id=definition.id,
+        name=name,
+        dice=f"1d{len(entries)}",
+        rows=tuple(DiceRow(index, index, text) for index, text in enumerate(entries, 1)),
+        creative=True,
+    )
+
+
+def _creative_entries(value: Any, label: str) -> list[str]:
+    if not isinstance(value, list) or not value:
+        raise ContentError(f"{label}: 'entries' must be a non-empty list of text")
+    _text_list(value, f"{label}: 'entries'")
+    if len(set(value)) != len(value):
+        raise ContentError(f"{label}: 'entries' repeats an entry")
+    return value
+
+
+def _text_list(value: Any, label: str) -> list[str]:
+    if not isinstance(value, list) or not all(isinstance(v, str) and v.strip() for v in value):
+        raise ContentError(f"{label} must be a list of non-empty text")
+    return value
+
+
+def _patch_creative_table(
+    definition: Definition, core: Mapping[str, Definition], template: str
+) -> Definition:
+    """A rule set's creative table with `add` and `remove` changes the core table of the same id:
+    the core entries, less `remove`, then `add` appended. Every removed entry must exist, and no
+    added entry may already be there. A rule set table with `entries` replaces the core table
+    outright, as any definition does."""
+    label = f"{template}: creative table {definition.id}"
+    if not {"add", "remove"} & set(definition.data):
+        return definition
+    extra = set(definition.data) - {"type", "id", "name", "add", "remove", "source"}
+    if extra:
+        raise ContentError(f"{label}: unknown keys {sorted(extra)} with 'add' or 'remove'")
+    base = core.get(definition.id)
+    if base is None:
+        raise ContentError(f"{label}: 'add' and 'remove' need a core creative table of this id")
+    entries = list(
+        _creative_entries(base.data.get("entries"), f"core creative table {definition.id}")
+    )
+    for entry in _text_list(definition.data.get("remove", []), f"{label}: 'remove'"):
+        if entry not in entries:
+            raise ContentError(f"{label}: 'remove' names {entry!r}, which the core table lacks")
+        entries.remove(entry)
+    for entry in _text_list(definition.data.get("add", []), f"{label}: 'add'"):
+        if entry in entries:
+            raise ContentError(f"{label}: 'add' repeats {entry!r}, which the table already has")
+        entries.append(entry)
+    data = {
+        "type": "creative_table",
+        "id": definition.id,
+        "name": definition.data.get("name", base.data.get("name", definition.id)),
+        "entries": entries,
+    }
+    if "source" in definition.data or "source" in base.data:
+        data["source"] = definition.data.get("source", base.data.get("source"))
+    return Definition(type="creative_table", id=definition.id, data=data)
 
 
 def _check_authored_routes(spot: LocationTemplate, rule_set: RuleSet, template: str) -> None:
@@ -1485,7 +1566,11 @@ def _check_unique_names(entries: list[LocationTemplate | NpcTemplate], template:
 def _load_rule_set(directory: Path, core_definitions: list[Definition]) -> RuleSet:
     """A rule set is its own definitions plus every core definition it does not replace."""
     template = directory.name
-    own = read_definitions(directory)
+    core_creative = {d.id: d for d in core_definitions if d.type == "creative_table"}
+    own = [
+        _patch_creative_table(d, core_creative, template) if d.type == "creative_table" else d
+        for d in read_definitions(directory)
+    ]
     own_keys = {(d.type, d.id) for d in own}
     inherited = [
         d for d in core_definitions if d.type != "rule_set" and (d.type, d.id) not in own_keys
