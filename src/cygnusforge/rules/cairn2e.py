@@ -8,7 +8,14 @@ from typing import Any
 from cygnusforge.content.library import InventoryRules
 from cygnusforge.rules.context import ToolContext
 from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import Item, ItemRemoved, ItemUsesSet, name_key, record
+from cygnusforge.services.events import (
+    PC_KIND,
+    Item,
+    ItemRemoved,
+    ItemUsesSet,
+    name_key,
+    record,
+)
 from cygnusforge.services.hooks import HookContext
 from cygnusforge.services.inventory import carry_item
 
@@ -386,7 +393,8 @@ def before_rest(hc: HookContext, rest_id: str, start: int, hours_per_part: int) 
     no ration is deprived, unless they already are."""
     options = _options(hc)
     state = hc.state()
-    for character in list(state.characters.values()):
+    party = [c for c in state.characters.values() if c.kind == PC_KIND]
+    for character in party:
         meal_at = character.marks.get(MEAL_AT)
         if meal_at is not None:
             hc.set_mark(character.name, MEAL_AT, None, f"{character.name}'s meal is used up.")

@@ -130,10 +130,14 @@ Cairn's needs logic left the engine and now runs through a `hooks` definition in
   (`feature`, resolved to `options.item`); `wilderness.json` `meal` to `track`;
   `deprived_terrain_steps` to `held_back_terrain_steps`.
 - **Tools**: `set_condition` (Cairn) now lives in `rules/cairn2e.py` and records a `MarkSet`.
-- **Tests**: 1703 pass with the move. Cairn tests cover rests, feeding, shelter, meals,
-  deprivation, the daily penalty, and `set_condition`. Hogwarts's hooks are `None`.
-- **Live check**: not run for the needs move. Automated tests cover it. Run one before relying on
-  it in play.
+- **Tests**: 1704 pass. Cairn tests cover rests, feeding, shelter, meals, deprivation, the daily
+  penalty, and `set_condition`. Hogwarts's hooks are `None`.
+- **Regression fixed**: the moved `before_rest` hook fed and marked every character, NPCs
+  included. The old code fed only PCs. Fixed, with a regression test
+  (`test_a_night_rest_does_not_feed_or_deprive_an_npc`). Found in a live run.
+- **Live check** (fresh DB, uvicorn on 8773, DeepSeek, Cairn 2e): a night rest ate one ration and
+  left NPCs alone; a Room & Board purchase (`effect: "lodge"`, 10 gold) gave a bed, and the next
+  rest used the bed and ate nothing. Deprivation's daily penalty is still unit-tested only.
 
 ## Hogwarts content (`src/cygnusforge/data/rulesets/hogwarts-rpg/`)
 
@@ -336,4 +340,4 @@ Observed in live play (not engine faults):
       new award through. The GM can still choose to use `force`, which is the accepted limit.
 - [x] Text gaps against the PDF: comfort/support wording and the returning-character scar.
 - [x] Needs move: Cairn needs now run through `cairn2e` hooks, and the engine uses generic marks.
-      Lint clean, 1703 tests pass. Live check still to do.
+      Lint clean. Live check run; it found the NPC regression above, now fixed.

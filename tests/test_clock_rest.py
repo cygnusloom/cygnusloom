@@ -254,3 +254,12 @@ def test_a_place_a_character_stays_in_is_not_stale(client_factory):
     _, _, tools = _fight(client_factory)
     tools.discover_location(YARD)
     assert "stale_places" not in tools.advance_time(days=5)
+
+
+def test_a_night_rest_does_not_feed_or_deprive_an_npc(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools.create_npc("Blink Dog", YARD, "A beast.")
+    tools.rest("night", reason="camp")
+    npc = _character(app, campaign_id, "blink dog")
+    assert "deprived" not in npc.marks
+    assert not [i for i in npc.items if i.name.lower() == "rations"]
