@@ -130,7 +130,7 @@ from cygnusforge.services.events import (
     same_item_name,
     token_labels,
 )
-from cygnusforge.services.geometry import clearance, contains, overlaps, polygon_problem
+from cygnusforge.services.geometry import clearance, contains, overlaps, polygon_problem, uncovered
 from cygnusforge.services.hooks import HookContext, call_hook
 from cygnusforge.services.objects import visible_objects
 from cygnusforge.services.tools import check_arguments
@@ -1726,13 +1726,34 @@ def create_region(
         raise InvalidInput("force must be true or false")
     if not isinstance(discovered, bool):
         raise InvalidInput("discovered must be true or false")
+    result: dict[str, Any] = {
+        "created": "region",
+        "name": name,
+        "terrain": terrain,
+        "discovered": discovered,
+    }
     if not force:
-        for other in state.regions.values():
-            if overlaps(corners, other.points):
+        covering = [region for region in state.regions.values() if overlaps(corners, region.points)]
+        if covering:
+            # Ground already there is taken away, so the new region covers only open ground.
+            cut = uncovered(corners, [region.points for region in state.regions.values()])
+            if not cut.parts:
+                names = ", ".join(repr(region.name) for region in covering)
+                if cut.holed:
+                    raise InvalidInput(
+                        f"cutting {name!r} to fit the ground already there would leave a hole in "
+                        f"it, because {names} lies wholly inside the outline. Draw around that "
+                        "ground, or pass force=true to overlap it."
+                    )
                 raise InvalidInput(
-                    f"it overlaps {other.name!r}. Choose other corners, or pass force=true to "
-                    "overlap it."
+                    f"{name!r} lies entirely on ground that is already covered, by {names}. Give "
+                    "an outline that reaches open ground, or pass force=true to overlap it."
                 )
+            corners = cut.parts[0]
+            result["points"] = [[x, y] for x, y in corners]
+            left_out = len(cut.parts) - 1 + cut.holed
+            if left_out:
+                result["left_out"] = left_out
     record(
         db,
         campaign_id,
@@ -1744,7 +1765,7 @@ def create_region(
         ),
     )
     db.commit()
-    return {"created": "region", "name": name, "terrain": terrain, "discovered": discovered}
+    return result
 
 
 def _region_corners(points: Sequence[Sequence[float]]) -> list[tuple[float, float]]:

@@ -153,11 +153,20 @@ def test_hogwarts_world_has_a_map_the_gm_can_grow():
     assert top_level
     assert all(place.x is not None and place.y is not None for place in top_level)
     assert world.regions
+    # The ground reads as land, not as rectangles: every region has several uneven sides.
+    assert all(len(region.points) >= 6 for region in world.regions)
     kinds = library.rule_sets["hogwarts-rpg"].world_terrain
     assert kinds
     assert {region.terrain for region in world.regions} <= set(kinds)
     # Both bundled rule sets define ground kinds, so create_region works in either world.
     assert all(rule_set.world_terrain for rule_set in library.rule_sets.values())
+
+
+def test_create_region_asks_for_varied_shapes_cut_to_the_ground():
+    tool = ContentLibrary.load().core.tool_calls["create_region"]
+    assert "six or more corners" in tool.description
+    assert "uneven" in tool.description
+    assert "cut to fit" in tool.description
 
 
 def test_twin_lakes_map_matches_the_module_map():

@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from cygnusforge.services import world
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import HIDDEN_KINDS, Region
-from cygnusforge.services.geometry import clearance, overlaps
+from cygnusforge.services.geometry import clearance, contains, overlaps
 from tests.conftest import content_library
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
 from tests.test_character_creation import _cairn_campaign, _complete_form
@@ -184,13 +184,56 @@ def test_unknown_terrain_is_refused_and_lists_the_kinds(
         _tools(app, campaign_id).create_region("Fen", "bog", SQUARE_OFF_THE_MAP)
 
 
-def test_a_region_that_overlaps_another_is_refused(
+def test_an_overlapping_region_is_cut_to_the_open_ground(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     campaign_id = _twin_lakes(client_factory)
-    with pytest.raises(InvalidInput, match="overlaps 'West Lake'.*force=true"):
+    tools = _tools(app, campaign_id)
+    tools.create_region("Far Mere", "lake", [[20, 20], [24, 20], [24, 24], [20, 24]])
+    result = tools.create_region("West Field", "open", [[22, 18], [28, 18], [28, 22], [22, 22]])
+    field = _state(app, campaign_id).regions["west field"]
+    mere = _state(app, campaign_id).regions["far mere"]
+    assert result["points"] == [[x, y] for x, y in field.points]
+    assert not overlaps(field.points, mere.points)
+    assert contains((26.0, 20.5), field.points)
+    assert not contains((23.0, 21.0), field.points)
+    # The cut follows the other region's edges, so the outline gains corners.
+    assert len(field.points) == 6
+
+
+def test_a_region_wholly_over_covered_ground_is_refused(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    campaign_id = _twin_lakes(client_factory)
+    with pytest.raises(InvalidInput, match="already covered, by 'West Lake'"):
         _tools(app, campaign_id).create_region("Second Pool", "lake", INSIDE_WEST_LAKE)
     assert "second pool" not in _state(app, campaign_id).regions
+
+
+def test_a_region_that_would_keep_an_island_of_other_ground_is_refused(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    campaign_id = _twin_lakes(client_factory)
+    tools = _tools(app, campaign_id)
+    tools.create_region("Sluice", "lake", [[22, 22], [23, 22], [23, 23], [22, 23]])
+    with pytest.raises(InvalidInput, match="hole"):
+        tools.create_region("Big Mere", "lake", [[20, 20], [26, 20], [26, 26], [20, 26]])
+    assert "big mere" not in _state(app, campaign_id).regions
+
+
+def test_a_cut_that_splits_keeps_the_largest_piece(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    campaign_id = _twin_lakes(client_factory)
+    tools = _tools(app, campaign_id)
+    tools.create_region("Far Mere", "lake", [[22, 20], [24, 20], [24, 24], [22, 24]])
+    result = tools.create_region(
+        "Long Field", "open", [[18, 20.5], [26, 20.5], [26, 21.5], [18, 21.5]]
+    )
+    field = _state(app, campaign_id).regions["long field"]
+    assert result["left_out"] == 1
+    assert contains((20.0, 21.0), field.points)
+    assert not contains((25.0, 21.0), field.points)
 
 
 def test_force_lets_a_region_overlap_another(

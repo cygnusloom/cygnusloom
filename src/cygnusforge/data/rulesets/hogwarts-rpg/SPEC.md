@@ -160,6 +160,23 @@ In a live DeepSeek run the GM then created a region ("North Woods") and a place 
 Boundary", with an NPC) in a Hogwarts campaign, and a placed place ("West Lake Shore") in Twin
 Lakes; all appeared on the map at the right positions, and the map rescaled to fit them.
 
+### Regions cut to fit, and shaped like land
+
+The live run above showed the GM drawing a plain four-corner rectangle and passing `force` to lay it
+over the authored grounds. Two changes followed:
+
+- `create_region` no longer refuses an overlapping outline, and no longer needs `force` for the
+  common case. The ground already there is taken away (`geometry.uncovered`, a shapely polygon
+  difference), so the new region fills only open ground. The result carries the `points` actually
+  used. If the cut leaves separate pieces, the largest is kept and the result says how many were
+  left out; if nothing is left, or the remainder would have a hole (an existing region wholly
+  inside the outline), the call is refused with that reason. `force` still keeps the whole shape
+  for a deliberate overlap, such as a marsh over a lake.
+- The `create_region` tool description, its `points` and `force` parameter descriptions, and the
+  core `locations` rule now ask for six or more corners with uneven sides and angles, and explain
+  the cut. The authored Hogwarts regions were redrawn with eleven or twelve corners each instead of
+  rectangles.
+
 ## Hogwarts content (`src/cygnusforge/data/rulesets/hogwarts-rpg/`)
 
 | File | Contents |

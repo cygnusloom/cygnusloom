@@ -6,6 +6,7 @@ from cygnusforge.services.geometry import (
     overlaps,
     polygon_problem,
     signed_area,
+    uncovered,
 )
 
 SQUARE = [(0.0, 0.0), (2.0, 0.0), (2.0, 2.0), (0.0, 2.0)]
@@ -98,3 +99,42 @@ def test_neighbours_sharing_an_edge_are_not_an_end_of_ground():
     east = shifted(SQUARE, 2.0, 0.0)
     assert clearance((1.0, 1.0), [SQUARE, east]) == pytest.approx(1.0)
     assert clearance((1.9, 0.5), [SQUARE, east]) == pytest.approx(0.5)
+
+
+def test_with_no_other_ground_the_whole_outline_is_open():
+    cut = uncovered(SQUARE, [])
+    assert cut.holed == 0
+    assert len(cut.parts) == 1
+    assert signed_area(cut.parts[0]) == pytest.approx(4.0)
+
+
+def test_uncovered_keeps_only_the_ground_no_other_outline_covers():
+    overlap = shifted(SQUARE, 1.0, 1.0)
+    cut = uncovered(SQUARE, [overlap])
+    assert cut.holed == 0
+    assert len(cut.parts) == 1
+    part = cut.parts[0]
+    assert not overlaps(part, overlap)
+    assert contains((0.5, 0.5), part)
+    assert not contains((2.5, 2.5), part)
+    assert abs(signed_area(part)) == pytest.approx(3.0)
+    # The cut follows the other outline's edges, so it gains corners.
+    assert len(part) > len(SQUARE)
+
+
+def test_an_outline_inside_another_leaves_a_hole_and_no_open_part():
+    inner = [(0.5, 0.5), (1.0, 0.5), (1.0, 1.0), (0.5, 1.0)]
+    cut = uncovered(SQUARE, [inner])
+    assert cut.parts == []
+    assert cut.holed == 1
+
+
+def test_a_cut_across_the_outline_returns_the_largest_part_first():
+    band = [(0.5, 0.0), (0.9, 0.0), (0.9, 2.0), (0.5, 2.0)]
+    cut = uncovered(SQUARE, [band])
+    assert cut.holed == 0
+    assert len(cut.parts) == 2
+    assert contains((1.5, 1.0), cut.parts[0])
+    assert contains((0.25, 1.0), cut.parts[1])
+    assert abs(signed_area(cut.parts[0])) == pytest.approx(2.2)
+    assert abs(signed_area(cut.parts[1])) == pytest.approx(1.0)

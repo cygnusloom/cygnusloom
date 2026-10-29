@@ -649,9 +649,9 @@ class LocationAdded(GameEvent):
 
 @dataclass(frozen=True)
 class RegionAdded(GameEvent):
-    """An area of ground on the world map. The GM can add one the world's data lacks. It may not
-    overlap a region already there unless forced, and it is drawn on the player's map once it is
-    discovered or a discovered place lies inside it."""
+    """An area of ground on the world map. The GM can add one the world's data lacks. Unless it is
+    forced, the ground already there is cut away, so regions do not overlap; it is drawn on the
+    player's map once it is discovered or a discovered place lies inside it."""
 
     kind: ClassVar[str] = "region.added"
 

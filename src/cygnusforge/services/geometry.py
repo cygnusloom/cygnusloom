@@ -1,4 +1,5 @@
-"""Plane geometry for map regions: whether an outline is usable, and whether two outlines overlap.
+"""Plane geometry for map regions: whether an outline is usable, whether two outlines overlap, and
+what open ground an outline leaves.
 
 Outlines are closed polygons given as points in order around the edge. Points are (x, y) pairs of
 kilometers from the map's center. Touching along an edge or at a corner is not overlap.
@@ -8,6 +9,10 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterator, Sequence
+from dataclasses import dataclass
+
+from shapely.geometry import Polygon
+from shapely.ops import unary_union
 
 Point = tuple[float, float]
 
@@ -22,6 +27,10 @@ _FLAT = 1e-9
 # How far either side of an outline edge is probed, in km, to tell whether the edge is a seam
 # between two covered areas or the end of the covered ground.
 _SEAM_KM = 0.01
+# A cut part with less area than this, in square kilometers, is an artifact of the arithmetic.
+_EMPTY_KM2 = 1e-6
+# Cut corners are kept to this many decimals, 0.1 m, so the values stay readable.
+_PRECISION = 4
 
 
 def polygon_problem(points: Sequence[Point]) -> str | None:
@@ -63,6 +72,40 @@ def signed_area(points: Sequence[Point]) -> float:
     for (x1, y1), (x2, y2) in _edges(points):
         total += x1 * y2 - x2 * y1
     return total / 2
+
+
+@dataclass(frozen=True)
+class Cut:
+    """What is left of an outline once the ground other outlines cover is taken away."""
+
+    # Simple outlines with no holes in them, mostly open ground first.
+    parts: list[list[Point]]
+    # How many parts were left out because they have a hole, which a region cannot draw.
+    holed: int = 0
+
+
+def uncovered(points: Sequence[Point], others: Sequence[Sequence[Point]]) -> Cut:
+    """The parts of an outline that lie on ground no other outline covers. Parts with no area are
+    dropped, and parts with a hole in them are counted in `holed` instead of returned."""
+    shape = Polygon(points)
+    if others:
+        shape = shape.difference(unary_union([Polygon(other) for other in others]))
+    pieces = list(shape.geoms) if hasattr(shape, "geoms") else [shape]
+    parts: list[list[Point]] = []
+    holed = 0
+    for piece in pieces:
+        if piece.geom_type != "Polygon" or piece.area <= _EMPTY_KM2:
+            continue
+        if piece.interiors:
+            holed += 1
+            continue
+        outline = [
+            (round(float(x), _PRECISION), round(float(y), _PRECISION))
+            for x, y in piece.exterior.coords[:-1]
+        ]
+        parts.append(outline)
+    parts.sort(key=lambda part: abs(signed_area(part)), reverse=True)
+    return Cut(parts=parts, holed=holed)
 
 
 def _edges(points: Sequence[Point]) -> Iterator[tuple[Point, Point]]:
