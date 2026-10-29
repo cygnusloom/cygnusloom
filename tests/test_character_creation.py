@@ -14,7 +14,7 @@ from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import load_state
 from tests.test_campaigns import _create_character, _new_campaign, _send, _signed_in
 
-STAT_SELECT_RE = re.compile(r'<select name="stat-(\w+)">(.*?)</select>', re.DOTALL)
+STAT_SELECT_RE = re.compile(r'<select name="stat-(\w+)"[^>]*>(.*?)</select>', re.DOTALL)
 STAT_HIDDEN_RE = re.compile(r'<input type="hidden" name="stat-(\w+)" value="(\d+)">')
 RADIO_RE = re.compile(r'<input type="radio" name="((?:template|field)-[\w-]+)" value="([^"]*)"')
 CAMPAIGN_RADIO_RE = re.compile(r'<input type="radio" name="(campaign-[\w-]+)" value="([^"]*)"')
@@ -160,6 +160,17 @@ def test_creation_page_offers_radio_cards_with_dice_and_no_random(
     assert '<option value="">' not in page
     assert 'data-randomize="all"' in page
     assert 'data-randomize="unchosen"' in page
+
+
+def test_stats_have_their_own_randomize_button_and_rolled_swap_groups(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _cairn_campaign(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert page.count("data-randomize-stats") == 1
+    assert 'data-stat-group="attributes"' in page
+    assert "data-stat-rolled=" in page
+    assert "data-stat-assigned" not in page
 
 
 def test_name_dice_draws_on_the_suggested_names_of_the_backgrounds(

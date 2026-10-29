@@ -89,12 +89,15 @@
         </fieldset>
         {% if character.stats %}
           <section class="creation-panel" aria-labelledby="panel-stats">
-            <h3 id="panel-stats">Stats</h3>
+            <div class="panel-heading">
+              <h3 id="panel-stats">Stats</h3>
+              <button type="button" class="secondary" data-randomize-stats>Randomize stats</button>
+            </div>
             {% for stat in character.stats %}
               <label>
                 {{ stat.name }}
                 {% if stat.options|length > 1 %}
-                  <select name="stat-{{ stat.id }}">
+                  <select name="stat-{{ stat.id }}" data-stat-group="{{ stat.group }}" data-stat-rolled="{{ stat.value }}"{% if stat.assigned %} data-stat-assigned{% endif %}>
                     {% for value in stat.options %}
                       <option value="{{ value }}"{% if value == stat.value %} selected{% endif %}>{{ value }}</option>
                     {% endfor %}
@@ -122,8 +125,11 @@
                 {{ choice_panel("field-" ~ table.id, table.label, table.options) }}
               {% endfor %}
               {% if template.picks %}
-                <fieldset class="creation-panel spell-picks" data-spell-picks="{{ template.id }}">
-                  <h3>Spells</h3>
+                <fieldset class="creation-panel spell-picks" data-spell-picks="{{ template.id }}" data-tag-field="field-{{ template.picks.tag_field }}" data-tag-order='{{ template.picks.tag_order|tojson }}'>
+                  <div class="panel-heading">
+                    <h3>Spells</h3>
+                    <button type="button" class="secondary" data-randomize-spells>Randomize spells</button>
+                  </div>
                   <p>{{ template.picks.hint }}</p>
                   {% for index in range(template.picks.count) %}
                     <label>
@@ -131,7 +137,7 @@
                       <select name="pick-{{ template.id }}-{{ index }}">
                         <option value="">Roll</option>
                         {% for group in template.picks.groups %}
-                          <optgroup label="{{ group.tag }}">
+                          <optgroup label="{{ group.tag }}" data-tag="{{ group.tag }}">
                             {% for feature in group.features %}
                               <option value="{{ feature.id }}">{{ feature.name }}</option>
                             {% endfor %}
@@ -146,7 +152,7 @@
           {% endfor %}
         {% endfor %}
         {% for field in character.choice_fields %}
-          {{ choice_panel("field-" ~ field.id, field.name, field.options, field.description) }}
+          {{ choice_panel("field-" ~ field.id, field.name, field.options, field.description, field.restriction) }}
         {% endfor %}
         {% for field in character.text_fields %}
           {{ text_panel("field-" ~ field.id, field.name, field.description) }}

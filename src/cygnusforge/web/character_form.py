@@ -8,7 +8,14 @@ from typing import Any
 
 from starlette.datastructures import FormData
 
-from cygnusforge.content.character import CampaignSpec, CharacterSpec, TableOption, Template
+from cygnusforge.content.character import (
+    CampaignSpec,
+    CharacterSpec,
+    Restriction,
+    TableOption,
+    Template,
+    tag_order,
+)
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.web.forms import form_text
 
@@ -35,6 +42,8 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
             "id": stat.id,
             "name": stat.name,
             "value": rolled[stat.id],
+            "group": stat.swap_group,
+            "assigned": stat.formula is None,
             "options": sorted(group_values[stat.swap_group])
             if stat.swap_group is not None
             else [rolled[stat.id]],
@@ -66,6 +75,7 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
             "id": field.id,
             "name": field.name,
             "description": field.description,
+            "restriction": _restriction_view(field.restriction),
             "options": _option_views(spec.tables[field.table]),
         }
         for field in spec.fields.values()
@@ -192,8 +202,9 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
 
 
 def _picks_view(spec: CharacterSpec, template: Template) -> dict[str, Any] | None:
-    """The spells a template lets the player pick, grouped by the tag they share (a Year). A blank
-    pick is rolled from the same group."""
+    """The spells a template lets the player pick, grouped by the tag they share (a Year), with
+    the tags in table order so the page can offer only those a chosen Year knows. A blank pick is
+    rolled from the same spells."""
     if template.choose is None:
         return None
     tag_field = spec.fields[template.choose.tag_field]
@@ -204,7 +215,12 @@ def _picks_view(spec: CharacterSpec, template: Template) -> dict[str, Any] | Non
     return {
         "count": template.choose.count,
         "feature_type": template.choose.feature_type,
-        "hint": f"Pick from the spells of your {tag_field.name}, or leave a pick blank to roll it.",
+        "tag_field": tag_field.id,
+        "tag_order": list(tag_order(spec, tag_field.id)),
+        "hint": (
+            f"Pick from the spells of your {tag_field.name} or an earlier one, or leave a pick "
+            "blank to roll it."
+        ),
         "groups": [{"tag": tag, "features": items} for tag, items in groups.items()],
     }
 
@@ -217,6 +233,17 @@ def _table_view(spec: CharacterSpec, table: str) -> dict[str, Any]:
     }
 
 
+def _restriction_view(restriction: Restriction | None) -> dict[str, Any] | None:
+    """The gate a choice's options are restricted by. The page disables the options it rules out."""
+    if restriction is None:
+        return None
+    return {
+        "field": restriction.field_id,
+        "values": list(restriction.values),
+        "groups": list(restriction.groups),
+    }
+
+
 def _option_views(options: tuple[TableOption, ...]) -> list[dict[str, Any]]:
     """A named option shows its name as the title and its description beneath, as a background
     does. Other options show their description as the title."""
@@ -225,6 +252,7 @@ def _option_views(options: tuple[TableOption, ...]) -> list[dict[str, Any]]:
             "value": option.value,
             "title": option.value,
             "detail": option.description if option.name is not None else None,
+            "group": option.group,
         }
         for option in options
     ]

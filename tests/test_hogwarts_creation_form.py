@@ -77,4 +77,42 @@ def test_the_hogwarts_creation_page_offers_spell_picks_for_blood_statuses(
     assert 'name="pick-pure-blood-2"' in page
     assert 'name="pick-muggle-born-0"' in page
     assert 'name="pick-muggle-born-1"' not in page
-    assert '<optgroup label="3rd Year">' in page
+    assert '<optgroup label="3rd Year" data-tag="3rd Year">' in page
+    assert "data-randomize-spells" in page
+    assert 'data-tag-field="field-year"' in page
+    assert "data-tag-order='" in page
+
+
+def test_pool_stats_are_marked_assigned_within_their_swap_group():
+    view = creation_view(SPEC, {stat: 0 for stat in SPEC.stats})
+    assert view["stats"]
+    for stat in view["stats"]:
+        assert stat["group"] == "traits"
+        assert stat["assigned"] is True
+
+
+def test_the_favourite_subject_view_restricts_elective_options_by_year():
+    view = creation_view(SPEC, {stat: 0 for stat in SPEC.stats})
+    field = next(f for f in view["choice_fields"] if f["id"] == "favourite-subject")
+    assert field["restriction"] == {
+        "field": "year",
+        "values": ["1st Year", "2nd Year"],
+        "groups": ["core"],
+    }
+    assert {option["group"] for option in field["options"]} == {"core", "elective"}
+    assert next(f for f in view["choice_fields"] if f["id"] == "year")["restriction"] is None
+
+
+def test_the_favourite_subject_page_marks_its_restriction_and_option_groups(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, world_template="hogwarts", rule_set="hogwarts-rpg")
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert 'data-restrict-field="field-year"' in page
+    assert 'data-restrict-values=\'["1st Year", "2nd Year"]\'' in page
+    assert "data-restrict-groups='[\"core\"]'" in page
+    assert 'name="field-favourite-subject" value="Potions"' in page
+    assert 'data-group="core"' in page
+    assert 'data-group="elective"' in page

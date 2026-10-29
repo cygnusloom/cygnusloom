@@ -26,10 +26,50 @@
   );
   for (const kind of kinds) revealTables(kind);
 
+  // A spell pick offers the spells of the chosen Year and of every Year before it. With no Year
+  // chosen it offers none. A pick whose spell is no longer offered goes back to Roll.
+  const refreshSpellPicks = () => {
+    for (const fieldset of document.querySelectorAll("[data-tag-field]")) {
+      const year = document.querySelector(`input[type="radio"][name="${fieldset.dataset.tagField}"]:checked`);
+      const order = JSON.parse(fieldset.dataset.tagOrder);
+      const known = year ? order.slice(0, order.indexOf(year.value) + 1) : [];
+      for (const group of fieldset.querySelectorAll("optgroup")) {
+        const offered = known.includes(group.dataset.tag);
+        group.hidden = !offered;
+        for (const option of group.children) option.disabled = !offered;
+      }
+      for (const select of fieldset.querySelectorAll("select")) {
+        if (select.selectedOptions[0]?.disabled) select.value = "";
+      }
+    }
+  };
+  // A restricted choice offers only its options in the allowed groups while its gate is unchosen
+  // or takes one of the gate's values. An option it rules out is disabled, and a pick of it is
+  // cleared.
+  const refreshRestrictions = () => {
+    for (const panel of document.querySelectorAll("[data-restrict-field]")) {
+      const gate = document.querySelector(`input[type="radio"][name="${panel.dataset.restrictField}"]:checked`);
+      const values = JSON.parse(panel.dataset.restrictValues);
+      const groups = JSON.parse(panel.dataset.restrictGroups);
+      const active = gate === null || values.includes(gate.value);
+      for (const radio of panel.querySelectorAll('input[type="radio"]')) {
+        radio.disabled = active && !groups.includes(radio.dataset.group);
+        if (radio.disabled && radio.checked) {
+          radio.checked = false;
+          refreshSummary(panel.dataset.choicePanel);
+        }
+      }
+    }
+  };
+  refreshRestrictions();
+  refreshSpellPicks();
+
   document.addEventListener("change", (event) => {
     const radio = event.target;
     if (!(radio instanceof HTMLInputElement) || radio.type !== "radio") return;
     refreshSummary(radio.name);
+    refreshRestrictions();
+    refreshSpellPicks();
     radio.closest("[data-choice-panel]")?.classList.remove("is-missing");
     if (radio.dataset.templateSelect) revealTables(radio.dataset.templateSelect);
   });
@@ -45,7 +85,7 @@
 
   const rollChoice = (name) => {
     const options = [...document.querySelectorAll(`input[type="radio"][name="${name}"]`)].filter(
-      (radio) => !radio.closest("[hidden]") && !radio.hasAttribute("data-freeform"),
+      (radio) => !radio.closest("[hidden]") && !radio.disabled && !radio.hasAttribute("data-freeform"),
     );
     if (options.length === 0) return;
     const pick = options[Math.floor(Math.random() * options.length)];
@@ -69,26 +109,89 @@
     input.value = names[Math.floor(Math.random() * names.length)];
   };
 
-  // Rolls the visible choices in page order. A template comes before its tables, so rolling it
-  // first reveals the tables it needs, and those are rolled in the same pass.
+  // Rolls the visible choices. A template comes before its tables, so rolling it first reveals the
+  // tables it needs, and those are rolled in the same pass. A restricted choice is rolled after the
+  // unrestricted ones, so its roll uses its gate's final value.
   const randomizeChoices = (onlyUnchosen) => {
     const rolled = new Set();
     for (;;) {
-      const next = [...document.querySelectorAll("[data-dice-for]")].find((dice) => {
+      const pending = [...document.querySelectorAll("[data-dice-for]")].filter((dice) => {
         if (rolled.has(dice) || dice.closest("[hidden]")) return false;
         const name = dice.dataset.diceFor;
         return !onlyUnchosen || document.querySelector(`input[type="radio"][name="${name}"]:checked`) === null;
       });
+      const next = pending.find((dice) => !dice.closest("[data-restrict-field]")) ?? pending[0];
       if (!next) return;
       rolled.add(next);
       rollChoice(next.dataset.diceFor);
     }
   };
 
-  // The name is rolled last, so it draws on the background that the choices just rolled. In the
-  // unchosen mode a name already typed counts as chosen and is kept.
+  const shuffle = (items) => {
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [items[i], items[j]] = [items[j], items[i]];
+    }
+    return items;
+  };
+
+  // Each swap group is rerolled within the rules the server checks. A group assigned from a pool
+  // takes its values in any order. A rolled group keeps its roll, or swaps one pair of its values.
+  const randomizeStats = () => {
+    const groups = new Map();
+    for (const select of document.querySelectorAll("select[data-stat-group]")) {
+      const members = groups.get(select.dataset.statGroup) ?? [];
+      members.push(select);
+      groups.set(select.dataset.statGroup, members);
+    }
+    for (const members of groups.values()) {
+      const rolled = members.map((select) => select.dataset.statRolled);
+      let values;
+      if (members[0].hasAttribute("data-stat-assigned")) {
+        values = shuffle([...rolled]);
+      } else {
+        const pairs = [];
+        for (let i = 0; i < rolled.length; i++) {
+          for (let j = i + 1; j < rolled.length; j++) pairs.push([i, j]);
+        }
+        values = [...rolled];
+        const pick = Math.floor(Math.random() * (pairs.length + 1));
+        if (pick < pairs.length) {
+          const [i, j] = pairs[pick];
+          [values[i], values[j]] = [values[j], values[i]];
+        }
+      }
+      members.forEach((select, index) => {
+        select.value = values[index];
+      });
+    }
+  };
+
+  // Each spell pick takes a spell it offers, and no two picks of a template take the same spell.
+  // In the unchosen mode a pick the player already set is kept, and its spell is not taken again.
+  const randomizeSpells = (fieldset, onlyUnchosen) => {
+    const selects = [...fieldset.querySelectorAll("select")];
+    const taken = new Set(onlyUnchosen ? selects.map((select) => select.value).filter(Boolean) : []);
+    for (const select of selects) {
+      if (onlyUnchosen && select.value !== "") continue;
+      const offered = [...select.options]
+        .filter((option) => option.value !== "" && !option.disabled && !taken.has(option.value))
+        .map((option) => option.value);
+      select.value = offered.length > 0 ? offered[Math.floor(Math.random() * offered.length)] : "";
+      if (select.value !== "") taken.add(select.value);
+    }
+  };
+
+  // The name is rolled last, so it draws on the background that the choices just rolled. The
+  // Year is rolled with the choices, so the spells are rolled after it, from the Year's spells. In
+  // the unchosen mode a name already typed counts as chosen and is kept, and the stats are always
+  // chosen (they are rolled), so they are left alone too.
   const randomizeAll = (onlyUnchosen) => {
     randomizeChoices(onlyUnchosen);
+    if (!onlyUnchosen) randomizeStats();
+    for (const fieldset of document.querySelectorAll("[data-spell-picks]")) {
+      if (!fieldset.closest("[hidden]")) randomizeSpells(fieldset, onlyUnchosen);
+    }
     const input = form?.querySelector('input[name="name"]');
     if (onlyUnchosen && input?.value.trim()) return;
     rollName();
@@ -132,6 +235,17 @@
 
     if (target.closest("[data-name-dice]")) {
       rollName();
+      return;
+    }
+
+    if (target.closest("[data-randomize-stats]")) {
+      randomizeStats();
+      return;
+    }
+
+    const spellPicks = target.closest("[data-randomize-spells]")?.closest("[data-spell-picks]");
+    if (spellPicks) {
+      randomizeSpells(spellPicks, false);
       return;
     }
 

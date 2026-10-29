@@ -91,15 +91,18 @@ Phase 3 (close the gaps) added:
   a removal of someone who is not a relation.
 - **Restrictions** (`content/character.py`): a Favourite Subject group (Core or Elective), and a
   restriction on a field that depends on another field's value. Restricted fields resolve after
-  unrestricted ones. Favourite Subject is Core only in 1st and 2nd Year.
+  unrestricted ones. Favourite Subject is Core only in 1st and 2nd Year. The creation form disables
+  the options a restriction rules out, and clears a pick of one when its gate changes.
 - **Spell picks** (`Template.choose`, `Feature.tag`, `check_choices`): a template can require
   `count` picks (1, 2, or 3 by blood status) from features whose `tag` matches a field's value
-  (`tag_field`, here the Year). A pick with no Year is rejected. `resolve` keeps the given picks and
-  rolls the rest from the matching tag, skipping features the character already has. Graduate
-  yields none.
+  (`tag_field`, here the Year). A pick may come from the chosen Year or any earlier one, since a
+  character knows every spell from Years they have completed. A pick with no Year is rejected. A
+  pick from a later Year is rejected. `resolve` keeps the given picks and rolls the rest from the
+  knowable tags, skipping features the character already has. Graduates know every Year's spells.
 - **Web creation form** (`web/character_form.py`, `creation.html`): spell picks are shown per
-  template, grouped by Year, as `pick-<template>-<n>` selects. The server rejects a pick from the
-  wrong Year. Blank picks are rolled.
+  template, grouped by Year, as `pick-<template>-<n>` selects. The options are filtered to the
+  chosen Year and earlier ones (`creation.js`). The server rejects a pick from a later Year. Blank
+  picks are rolled, and "Randomize spells" rolls the picks in the browser.
 - Renamed event kinds (save compatibility is not needed): `CampFedSet` to `MealSet`,
   `LodgingSet` to `ShelterSet`, plus fields, marketplace effects, and prose. The needs move (below)
   later replaced `MealSet`, `ShelterSet`, and `NeedSet` with one generic `MarkSet`.

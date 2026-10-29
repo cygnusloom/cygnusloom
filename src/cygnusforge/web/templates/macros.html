@@ -112,9 +112,9 @@
   {% endfor %}
 {%- endmacro %}
 
-{% macro choice(name, value, title, detail=None, data_select=None, freeform=False) -%}
+{% macro choice(name, value, title, detail=None, data_select=None, freeform=False, group=None) -%}
   <label class="choice">
-    <input type="radio" name="{{ name }}" value="{{ value }}" data-title="{{ title }}"{% if data_select %} data-template-select="{{ data_select }}"{% endif %}{% if freeform %} data-freeform{% endif %}>
+    <input type="radio" name="{{ name }}" value="{{ value }}" data-title="{{ title }}"{% if data_select %} data-template-select="{{ data_select }}"{% endif %}{% if freeform %} data-freeform{% endif %}{% if group %} data-group="{{ group }}"{% endif %}>
     <span>{{ title }}</span>
     {% if detail %}<span class="muted choice-detail">{{ detail }}</span>{% endif %}
   </label>
@@ -138,12 +138,13 @@
 {%- endmacro %}
 
 {# A choice from a table, as a panel in the creation grid. The options open in a dialog. #}
-{% macro choice_panel(name, label, options, description=None) -%}
-  <fieldset class="creation-panel" data-choice-panel="{{ name }}" data-choice-label="{{ label }}" aria-labelledby="panel-{{ name }}">
+{# A restriction is {field, values, groups}: while the field takes one of the values, only options in the groups can be chosen. #}
+{% macro choice_panel(name, label, options, description=None, restriction=None) -%}
+  <fieldset class="creation-panel" data-choice-panel="{{ name }}" data-choice-label="{{ label }}" aria-labelledby="panel-{{ name }}"{% if restriction %} data-restrict-field="field-{{ restriction.field }}" data-restrict-values='{{ restriction['values']|tojson }}' data-restrict-groups='{{ restriction['groups']|tojson }}'{% endif %}>
     <h3 id="panel-{{ name }}">{{ label }}</h3>
     {% call choice_picker(name, label, description) %}
       {% for option in options %}
-        {{ choice(name, option.value, option.title, option.detail) }}
+        {{ choice(name, option.value, option.title, option.detail, group=option.group) }}
       {% endfor %}
     {% endcall %}
   </fieldset>

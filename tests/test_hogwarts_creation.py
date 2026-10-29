@@ -289,7 +289,11 @@ def test_each_blood_status_rolls_its_spells_from_the_year(blood, count):
         )
         spells = _spells_of(sheet)
         assert len(spells) == count
-        assert {SPEC.features[spell].tag for spell in spells} == {"3rd Year"}
+        assert {SPEC.features[spell].tag for spell in spells} <= {
+            "1st Year",
+            "2nd Year",
+            "3rd Year",
+        }
 
 
 def test_given_spell_picks_are_kept_and_the_rest_are_rolled():
@@ -306,17 +310,31 @@ def test_given_spell_picks_are_kept_and_the_rest_are_rolled():
     )
     spells = _spells_of(sheet)
     assert len(spells) == 3 and kept in spells
-    assert {SPEC.features[spell].tag for spell in spells} == {"3rd Year"}
+    assert {SPEC.features[spell].tag for spell in spells} <= {"1st Year", "2nd Year", "3rd Year"}
 
 
-def test_a_spell_from_another_year_is_refused():
-    with pytest.raises(CharacterError, match="is not a spell for '3rd Year'"):
+def test_a_spell_from_an_earlier_year_is_accepted():
+    check_choices(
+        SPEC,
+        {
+            "templates": {"blood": "half-blood"},
+            "fields": {"year": "3rd Year"},
+            "features": [
+                _spell_for("1st Year"),
+                _spell_for("3rd Year", skip={_spell_for("1st Year")}),
+            ],
+        },
+    )
+
+
+def test_a_spell_from_a_later_year_is_refused():
+    with pytest.raises(CharacterError, match="is not a spell from '3rd Year' or earlier"):
         check_choices(
             SPEC,
             {
                 "templates": {"blood": "half-blood"},
                 "fields": {"year": "3rd Year"},
-                "features": [_spell_for("1st Year")],
+                "features": [_spell_for("4th Year")],
             },
         )
 
@@ -347,11 +365,11 @@ def test_spell_picks_without_a_year_are_refused():
         )
 
 
-def test_a_graduate_with_a_blood_status_picks_no_spells():
+def test_a_graduate_with_a_blood_status_picks_from_any_year():
     submitted = {"templates": {"blood": "pure-blood"}, "fields": {"year": "Graduate"}}
     check_choices(SPEC, submitted)
     sheet = resolve(SPEC, submitted, random.Random(5), plus=HOGWARTS.plus)
-    assert _spells_of(sheet) == set()
+    assert len(_spells_of(sheet)) == 3
 
 
 def test_a_pick_tag_field_that_is_not_a_table_field_is_refused_at_load():
