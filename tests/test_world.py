@@ -1892,6 +1892,34 @@ def test_discover_location_marks_a_place_once(client_factory: Callable[[], TestC
     assert _event_kinds(app, campaign_id).count("location.discovered") == 1
 
 
+def test_moving_into_a_place_inside_another_discovers_the_place_that_holds_it(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _give_the_map_ground(app, campaign_id)
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Ashen Ford", "description": "A ford.", "x": 2, "y": 3},
+    )
+    _tool(
+        app,
+        campaign_id,
+        "create_location",
+        {"name": "Ferry Post", "description": "A post.", "parent": "Ashen Ford"},
+    )
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Ferry Post"},
+    )
+    state = _state(app, campaign_id)
+    assert state.named("Ferry Post").discovered is True
+    assert state.named("Ashen Ford").discovered is True
+
+
 def test_discover_location_needs_a_known_location(client_factory: Callable[[], TestClient], app):
     _, campaign_id = _campaign_id(client_factory)
     refused = _tool(app, campaign_id, "discover_location", {"name": "Nowhere"})
@@ -2175,9 +2203,14 @@ def test_map_centers_on_the_nearest_placed_ancestor(client_factory: Callable[[],
     )
     view = world.map_view(_state(app, campaign_id))
     assert view.where["Ferry Post"] == "Inside Ashen Ford"
+    assert view.where["Ashen Ford"] == "You are here"
     assert view.where["Mossbell Hollow"] == "2 km west, 3 km south"
+    assert "0 km east, 0 km north" not in view.where.values()
     markers = {m.name: m for m in view.markers}
     assert (markers["Ashen Ford"].left, markers["Ashen Ford"].top) == (50.0, 50.0)
+    # The player is inside the building, so the place on the map stands for them.
+    assert markers["Ashen Ford"].here is True
+    assert markers["Mossbell Hollow"].here is False
 
 
 def test_map_without_a_placed_ancestor_has_no_distance_labels(

@@ -143,11 +143,29 @@ Cairn's needs logic left the engine and now runs through a `hooks` definition in
   left NPCs alone; a Room & Board purchase (`effect: "lodge"`, 10 gold) gave a bed, and the next
   rest used the bed and ate nothing. Deprivation's daily penalty is still unit-tested only.
 
+### World map fixes (live spot check)
+
+A browser spot check of both worlds found two map bugs, both fixed with tests:
+
+- A character inside a place inside another (a room in a building) was not marked on the world
+  map: no marker was theirs, and the enclosing place's Places line read "0 km east, 0 km north".
+  `map_view` now marks the nearest place that holds theirs and has a position, which is also the
+  map's center.
+- Moving into such a place did not discover the places that hold it, so the Hogwarts opening in the
+  Great Hall left Hogwarts Castle undiscovered and the map empty. `move_actor` now discovers every
+  undiscovered place above the destination.
+
+The Hogwarts world also gained map points, ground regions, and `world_terrain` kinds (see below).
+In a live DeepSeek run the GM then created a region ("North Woods") and a place ("The Old
+Boundary", with an NPC) in a Hogwarts campaign, and a placed place ("West Lake Shore") in Twin
+Lakes; all appeared on the map at the right positions, and the map rescaled to fit them.
+
 ## Hogwarts content (`src/cygnusforge/data/rulesets/hogwarts-rpg/`)
 
 | File | Contents |
 | --- | --- |
 | `rule_set.json` | Name, description |
+| `world_terrain.json` | Ground kinds for the world map: open grounds, lake, forest, and village streets |
 | `stats.json` | Five traits: Bravery, Cunning, Intellect, Loyalty, Magic. Values -1, 0, +1, +1, +2 in one swap group (`traits`), so any order |
 | `counters.json` | Luck (0 to 3, starts at 3). Experience (0 to 4). At 4 Experience, a `full` effect clears it and notes the Advancement. Advancements (earned count) |
 | `conditions.json` | Scared, Angry, Stressed, Jealous, Embarrassed (-2 to one trait each), Injured (-1 all), Hexed (-1 to a trait the Narrator picks), Unconscious (cannot act). Each has its ends and effects |
@@ -167,7 +185,11 @@ These files were generated once from the PDF text by a script that is not kept i
 are now maintained by hand. Edit the JSON directly.
 
 The world template `src/cygnusforge/data/worlds/hogwarts/` (locations and a start with hooks) gives
-a campaign the Great Hall and the grounds.
+a campaign the Great Hall and the grounds. Every top-level place has an `x` and `y`, so the world
+map shows it once discovered, and `regions.json` draws the grounds, the Great Lake, the Forbidden
+Forest, and Hogsmeade from the kinds in this rule set's `world_terrain.json` (open grounds, lake,
+forest, and village streets). The kinds let the GM add ground with `create_region` when the story
+leaves the authored map, which `create_location` requires before it will place a new map point.
 
 ### Rules the GM reads (`rules.json`)
 

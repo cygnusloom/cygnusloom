@@ -5,6 +5,8 @@
     "icon": "castle",
     "name": "Hogwarts Castle",
     "description": "A vast, drafty castle of towers, staircases that move, and portraits that gossip. Its four houses each keep a common room, and most of the school's life happens in its corridors.",
+    "x": -0.6,
+    "y": 0.4,
     "routes": {
       "hogsmeade": {
         "path": "roads",
@@ -63,9 +65,11 @@
   {
     "type": "location",
     "id": "quidditch-pitch",
-    "icon": "fen",
+    "icon": "plains",
     "name": "Quidditch Pitch",
     "description": "A great oval of grass with three goal hoops at each end and stands for the spectators. Practices and matches are held here whatever the weather.",
+    "x": -1.5,
+    "y": 0.9,
     "routes": {
       "hogwarts-castle": {
         "path": "trails",
@@ -77,9 +81,11 @@
   {
     "type": "location",
     "id": "great-lake",
-    "icon": "fen",
+    "icon": "water",
     "name": "Great Lake",
     "description": "Cold, dark water at the foot of the castle grounds. A giant squid is said to live beneath it, and the boathouse sits on its shore.",
+    "x": 0.9,
+    "y": -1.3,
     "routes": {
       "hogwarts-castle": {
         "path": "trails",
@@ -94,6 +100,8 @@
     "icon": "forest",
     "name": "Forbidden Forest",
     "description": "Ancient trees that block out the sky, and creatures that are not all friendly. Students are forbidden to enter it without permission, and most of them find a reason to try anyway.",
+    "x": 1.5,
+    "y": 1.5,
     "routes": {
       "hogwarts-castle": {
         "path": "trails",
@@ -108,6 +116,8 @@
     "icon": "town",
     "name": "Hogsmeade",
     "description": "The only all-wizard village in Britain, just beyond the school gates. Shops along a single cobbled street sell sweets, robes, joke products, and books, and the village is open to older students on weekends.",
+    "x": -0.9,
+    "y": -1.9,
     "routes": {
       "hogwarts-castle": {
         "path": "roads",

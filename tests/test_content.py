@@ -144,6 +144,22 @@ def test_bundled_content_loads():
     assert library.world_content("twin-lakes", "cairn2e").monsters
 
 
+def test_hogwarts_world_has_a_map_the_gm_can_grow():
+    """Every top-level place in the Hogwarts world has a map point, and its ground is drawn from
+    kinds the rule set defines, so the world map shows the grounds and the GM can add regions."""
+    library = ContentLibrary.load()
+    world = library.world_templates["hogwarts"]
+    top_level = [place for place in world.locations if place.parent is None]
+    assert top_level
+    assert all(place.x is not None and place.y is not None for place in top_level)
+    assert world.regions
+    kinds = library.rule_sets["hogwarts-rpg"].world_terrain
+    assert kinds
+    assert {region.terrain for region in world.regions} <= set(kinds)
+    # Both bundled rule sets define ground kinds, so create_region works in either world.
+    assert all(rule_set.world_terrain for rule_set in library.rule_sets.values())
+
+
 def test_twin_lakes_map_matches_the_module_map():
     """The module's map has no scale bar. It gives travel times instead: Dunston is one hour
     from Isthmus Town, and the White Tower Fens are two hours from either. At four kilometres

@@ -2382,9 +2382,12 @@ def move_actor(
     if travel is not None and actor.kind == PC_KIND and mode == IN_SETTLEMENT:
         minutes = _travel_minutes(state, actor, where, travel, speed)
     record(db, campaign_id, ActorMoved(name=actor.name, location=where.name))
-    # Going somewhere in person means the player character knows the place in detail.
-    if actor.kind == PC_KIND and not where.discovered:
-        record(db, campaign_id, LocationDiscovered(name=where.name))
+    # Going somewhere in person means the player character knows the place in detail, and every
+    # place that holds it: anyone inside the great hall is inside the castle too.
+    if actor.kind == PC_KIND:
+        for place in _enclosing_places(state, where):
+            if not place.discovered:
+                record(db, campaign_id, LocationDiscovered(name=place.name))
     # Hirelings travel with the player character who employs them.
     if actor.kind == PC_KIND and not actor.hireling:
         for hireling in state.characters.values():
@@ -2824,9 +2827,10 @@ def speaker_profile(state: CampaignState, name: str, spec: CharacterSpec) -> str
     return "\n".join(lines)
 
 
-def _map_center(state: CampaignState) -> tuple[float, float] | None:
-    """The position the map centers on: the player character's place, or the nearest place above it
-    that has a position. None when there is no player character or no placed place above it."""
+def _map_place(state: CampaignState) -> Place | None:
+    """The place the map marks as the player's: the player character's own place, or the nearest
+    place above it that has a position. None when there is no player character or no placed place
+    above it."""
     pc = state.pc()
     name = pc.location if pc is not None else None
     seen: set[str] = set()
@@ -2836,7 +2840,7 @@ def _map_center(state: CampaignState) -> tuple[float, float] | None:
         if not isinstance(place, Place):
             return None
         if place.position is not None:
-            return place.position.x, place.position.y
+            return place
         name = place.parent
     return None
 
@@ -2867,13 +2871,18 @@ def map_view(state: CampaignState, terrain: Mapping[str, WorldTerrain] | None = 
     """The player's map. Only discovered places appear on it. Every region is drawn, but only known
     regions are named, and only they set the map's reach. Each marker is placed on a square centered
     on the player character's place, sized to fit the farthest discovered place or known region
-    corner plus a margin. `terrain` gives the colour and texture of each region's kind."""
+    corner plus a margin. The player's place is marked as theirs, or, when it is inside another
+    place, the nearest place above it that has a position. `terrain` gives the colour and texture of
+    each region's kind."""
     places = sorted(
         (place for place in state.places.values() if place.discovered),
         key=lambda place: name_key(place.name),
     )
-    center = _map_center(state)
-    cx, cy = center if center is not None else (0.0, 0.0)
+    # The map centers on the player's place, and marks it as theirs.
+    marked = _map_place(state)
+    marked_name = marked.name if marked is not None else None
+    center = None if marked is None or marked.position is None else marked.position
+    cx, cy = (center.x, center.y) if center is not None else (0.0, 0.0)
     placed = [(place, place.position) for place in places if place.position is not None]
     known = [region for region in state.regions.values() if _region_known(state, region)]
     corners = [point for region in known for point in region.points]
@@ -2884,7 +2893,7 @@ def map_view(state: CampaignState, terrain: Mapping[str, WorldTerrain] | None = 
     )
     radius = reach * MAP_MARGIN
     pc = state.pc()
-    here = pc.location if pc is not None else None
+    at = pc.location if pc is not None else None
     labels = token_labels(place.name for place in places)
     markers = [
         MapMarker(
@@ -2892,7 +2901,7 @@ def map_view(state: CampaignState, terrain: Mapping[str, WorldTerrain] | None = 
             label=labels[place.name],
             left=round(50 + (pos.x - cx) / radius * 50, 2),
             top=round(50 - (pos.y - cy) / radius * 50, 2),
-            here=place.name == here,
+            here=place.name == marked_name,
             icon=place.icon,
         )
         for place, pos in placed
@@ -2901,7 +2910,7 @@ def map_view(state: CampaignState, terrain: Mapping[str, WorldTerrain] | None = 
     for place in places:
         if place.parent:
             where[place.name] = f"Inside {place.parent}"
-        elif place.name == here:
+        elif place.name == at or place.name == marked_name:
             where[place.name] = "You are here"
         elif place.position is not None and center is not None:
             where[place.name] = _offset_text(place.position.x - cx, place.position.y - cy)
@@ -3336,6 +3345,19 @@ def _place_named(state: CampaignState, name: str) -> Place:
 
 def _children_of(state: CampaignState, name: str) -> list[str]:
     return sorted(p.name for p in state.places.values() if p.parent == name)
+
+
+def _enclosing_places(state: CampaignState, place: Place) -> list[Place]:
+    """The place and the places that enclose it, nearest first."""
+    chain = [place]
+    parent = place.parent
+    while parent is not None:
+        outer = state.named(parent)
+        if not isinstance(outer, Place) or any(outer is seen for seen in chain):
+            break
+        chain.append(outer)
+        parent = outer.parent
+    return chain
 
 
 def _parent_for_new_place(
