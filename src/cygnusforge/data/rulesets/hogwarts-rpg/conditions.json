@@ -3,7 +3,7 @@
     "type": "condition",
     "id": "scared",
     "label": "Scared",
-    "description": "-2 to Bravery until they avoid something difficult. Cleared when they give in to the fear, or when a friend comforts them.",
+    "description": "-2 to Bravery until they avoid something difficult. Cleared when they give in to the fear, or when another character comforts them.",
     "ends": ["gm"],
     "modifies": {"bravery": -2}
   },
@@ -19,7 +19,7 @@
     "type": "condition",
     "id": "stressed",
     "label": "Stressed",
-    "description": "-2 to Intellect until they say something hurtful to someone. Cleared when they give in to the stress, or when a friend supports them.",
+    "description": "-2 to Intellect until they say something hurtful to someone. Cleared when they give in to the stress, or when another character supports them.",
     "ends": ["gm"],
     "modifies": {"intellect": -2}
   },
@@ -27,7 +27,7 @@
     "type": "condition",
     "id": "jealous",
     "label": "Jealous",
-    "description": "-2 to Loyalty until they betray a friend. Cleared when they give in to the jealousy, or when a friend comforts them.",
+    "description": "-2 to Loyalty until they betray a friend. Cleared when they give in to the jealousy, or when another character comforts them.",
     "ends": ["gm"],
     "modifies": {"loyalty": -2}
   },
@@ -35,7 +35,7 @@
     "type": "condition",
     "id": "embarrassed",
     "label": "Embarrassed",
-    "description": "-2 to Magic until they take a comment the wrong way. Cleared when they give in to the embarrassment, or when a friend supports them.",
+    "description": "-2 to Magic until they take a comment the wrong way. Cleared when they give in to the embarrassment, or when another character supports them.",
     "ends": ["gm"],
     "modifies": {"magic": -2}
   },
