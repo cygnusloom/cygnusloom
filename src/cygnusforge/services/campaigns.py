@@ -146,7 +146,7 @@ STATE_INSTRUCTION = (
 # Closes the state step after the ruleset's fragments.
 STATE_CLOSING = "When nothing else needs to change, reply with one short sentence saying so."
 NARRATE_INSTRUCTION = (
-    "Narration step. Write the next beat in the present tense, as a good editor would: specific, "
+    "Narration step. Write the next beat as a good editor would: specific, "
     "in character, and free of filler. Keep it minimal: a routine beat — including arriving at or "
     "discovering a place, a short walk, an uneventful look around, or a brief exchange of dialogue — "
     "takes two or three sentences (under 60 words). When a place or NPC first comes into view, give only "

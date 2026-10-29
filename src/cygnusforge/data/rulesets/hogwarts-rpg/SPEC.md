@@ -304,6 +304,13 @@ Observed in live play (not engine faults):
   async httpx client keeps connections from an earlier loop. This is a harness artifact. Use a real
   uvicorn server with a browser or HTTP client instead.
 
+## Narration tense
+
+- Present tense is a core rule (`narration` in `core/rule_set.json`, marked important), so every
+  rule set gets it in full. The step prompt no longer repeats it. The journal stays past tense.
+- Live check (DeepSeek, both rule sets): the Hogwarts intro and a player turn, and the Cairn intro,
+  all read in present tense. Earlier events stay in the past tense.
+
 ## Open questions
 
 - "Dragon Phoenix Unicorn" appears in the PDF text after the Quidditch subject. It is probably a
@@ -341,3 +348,4 @@ Observed in live play (not engine faults):
 - [x] Text gaps against the PDF: comfort/support wording and the returning-character scar.
 - [x] Needs move: Cairn needs now run through `cairn2e` hooks, and the engine uses generic marks.
       Lint clean. Live check run; it found the NPC regression above, now fixed.
+- [x] Present-tense narration made a core rule (`narration`). Live check on both rule sets.

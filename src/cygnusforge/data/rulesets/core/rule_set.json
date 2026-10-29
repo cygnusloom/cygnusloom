@@ -3,12 +3,18 @@
     "type": "rule_set",
     "id": "core",
     "name": "Core",
-    "description": "Rules every campaign uses: locations, NPCs, notes, and speech. A campaign's own rule set can replace any of these by using the same id."
+    "description": "Rules every campaign uses: narration, locations, NPCs, notes, and speech. A campaign's own rule set can replace any of these by using the same id."
   },
   {
     "type": "python_module",
     "id": "core",
     "module": "cygnusforge.rules.core"
+  },
+  {
+    "type": "rule",
+    "id": "narration",
+    "important": true,
+    "text": "Narrate in the present tense, as the story unfolds: \"Brann pushes the door open\", not \"Brann pushed the door open\". This holds for every beat, including the introduction and every fight. Use the past tense only for events that happened before the current scene, such as a memory or a rumour the characters hear."
   },
   {
     "type": "rule",
