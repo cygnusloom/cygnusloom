@@ -4,6 +4,7 @@ import json
 from collections.abc import Iterable
 
 from sqlalchemy import Engine
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from cygnusforge.auth.claims import IdentityClaims
@@ -75,7 +76,26 @@ def provision_user(engine: Engine, claims: IdentityClaims) -> User:
             user.roles = encode_roles(claims.roles)
         user.last_login_at = utcnow()
         db.add(user)
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            # Two tabs can finish the authorization code flow at the same time. The
+            # (issuer, subject) constraint lets one win; this one refreshes that row.
+            db.rollback()
+            user = db.exec(
+                select(User).where(User.issuer == issuer, User.subject == subject)
+            ).first()
+            if user is None:
+                raise
+            if user.disabled:
+                raise AccountDisabled("this account has been disabled")
+            user.email = claims.email[:255]
+            user.email_verified = claims.email_verified
+            user.display_name = claims.display_name[:120]
+            user.roles = encode_roles(claims.roles)
+            user.last_login_at = utcnow()
+            db.add(user)
+            db.commit()
         db.refresh(user)
         return user
 

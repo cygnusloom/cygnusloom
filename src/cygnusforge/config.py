@@ -131,6 +131,10 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
             )
         if not base_url.startswith("https://"):
             raise RuntimeError("CYGNUSFORGE_BASE_URL must use https in production")
+        if not secure_cookies:
+            raise RuntimeError("secure cookies must be on in production")
+        if not oidc_issuer.startswith("https://"):
+            raise RuntimeError("CYGNUSFORGE_OIDC_ISSUER must use https in production")
     auto_create = env.get(
         "CYGNUSFORGE_AUTO_CREATE_SCHEMA", "1" if environment == "development" else "0"
     )

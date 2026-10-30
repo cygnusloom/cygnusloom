@@ -56,7 +56,9 @@ is not reachable from the public internet.
 If the blueprint does not match your Authentik version, create:
 
 - A confidential OAuth2/OpenID provider with client ID `CYGNUSFORGE_OIDC_CLIENT_ID`, the client
-  secret from `.env`, and redirect URI `https://<CYGNUSFORGE_DOMAIN>/auth/callback`.
+  secret from `.env`, authorization redirect URI `https://<CYGNUSFORGE_DOMAIN>/auth/callback`,
+  and logout redirect URI `https://<CYGNUSFORGE_DOMAIN>/login` (select the matching redirect
+  URI type for each in Authentik 2026.5 and later).
 - Scopes `openid`, `email`, `profile`, and `groups`.
 - A scope mapping named `groups` with:
 

@@ -133,6 +133,30 @@ def test_production_requires_https():
         )
 
 
+def test_production_requires_an_https_issuer():
+    with pytest.raises(RuntimeError, match="OIDC_ISSUER must use https"):
+        load_settings(
+            {
+                **BASE,
+                **OIDC,
+                "CYGNUSFORGE_ENVIRONMENT": "production",
+                "CYGNUSFORGE_OIDC_ISSUER": "http://idp.example.com",
+            }
+        )
+
+
+def test_production_requires_secure_cookies():
+    with pytest.raises(RuntimeError, match="secure cookies"):
+        load_settings(
+            {
+                **BASE,
+                **OIDC,
+                "CYGNUSFORGE_ENVIRONMENT": "production",
+                "CYGNUSFORGE_SECURE_COOKIES": "0",
+            }
+        )
+
+
 def test_test_login_admin_requires_test_login():
     with pytest.raises(RuntimeError, match="TEST_LOGIN_ADMIN"):
         load_settings({**BASE, "CYGNUSFORGE_TEST_LOGIN_ADMIN": "1"})
