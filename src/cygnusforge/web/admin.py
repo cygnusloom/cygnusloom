@@ -165,7 +165,7 @@ def campaign_page(request: Request, campaign_id: int) -> Response:
         "admin/campaign.html",
         admin=admin,
         detail=detail,
-        models=request.app.state.settings.llm_models,
+        models=request.app.state.catalog.model_ids(),
     )
 
 
@@ -199,7 +199,7 @@ async def set_campaign_model(request: Request, campaign_id: int) -> Response:
             admin,
             campaign_id,
             form_text(form, "model"),
-            request.app.state.settings.llm_models,
+            request.app.state.catalog.model_ids(),
             ip=client_ip(request),
         )
     except (Conflict, InvalidInput, NotFound) as exc:
@@ -247,6 +247,150 @@ async def delete_campaign(request: Request, campaign_id: int) -> Response:
         return _error(request, f"/admin/campaigns/{campaign_id}", exc)
     _flash(request, "Campaign deleted.")
     return _back("/admin/campaigns")
+
+
+@router.get("/models")
+def models_page(request: Request) -> Response:
+    admin = admin_user(request)
+    catalog = request.app.state.catalog
+    return render(
+        request,
+        "admin/models.html",
+        admin=admin,
+        rows=catalog.all_specs(),
+        source=catalog.source(),
+    )
+
+
+@router.post("/models")
+async def add_model(request: Request) -> Response:
+    admin = admin_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    try:
+        spec = request.app.state.catalog.add(
+            form_text(form, "provider"),
+            form_text(form, "model"),
+            form_text(form, "base_url"),
+            form_text(form, "api_key"),
+            is_default=form_text(form, "is_default") == "1",
+        )
+    except (Conflict, InvalidInput, NotFound) as exc:
+        return _error(request, "/admin/models", exc)
+    service.record_audit(
+        request.app.state.engine,
+        actor=admin,
+        action="model.added",
+        target_type="model",
+        target_id=spec.model_id,
+        details={"default": spec.is_default},
+        ip=client_ip(request),
+    )
+    _flash(request, f"Added {spec.model_id}.")
+    return _back("/admin/models")
+
+
+@router.post("/models/{row_id}/update")
+async def update_model(request: Request, row_id: int) -> Response:
+    admin = admin_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    raw_key = form_text(form, "api_key").strip()
+    api_key: str | None = raw_key or None
+    if form_text(form, "clear_api_key") == "1":
+        api_key = ""
+    try:
+        spec = request.app.state.catalog.get(row_id)
+        updated = request.app.state.catalog.update(
+            row_id,
+            base_url=form_text(form, "base_url"),
+            api_key=api_key,
+            enabled=form_text(form, "enabled") == "1",
+            make_default=form_text(form, "is_default") == "1",
+        )
+    except (Conflict, InvalidInput, NotFound) as exc:
+        return _error(request, "/admin/models", exc)
+    service.record_audit(
+        request.app.state.engine,
+        actor=admin,
+        action="model.updated",
+        target_type="model",
+        target_id=updated.model_id,
+        details={"enabled": updated.enabled, "default": updated.is_default},
+        ip=client_ip(request),
+    )
+    _flash(request, f"Saved {spec.model_id}.")
+    return _back("/admin/models")
+
+
+@router.post("/models/{row_id}/default")
+async def default_model(request: Request, row_id: int) -> Response:
+    admin = admin_user(request)
+    await verify_csrf(request)
+    try:
+        spec = request.app.state.catalog.set_default(row_id)
+    except (Conflict, InvalidInput, NotFound) as exc:
+        return _error(request, "/admin/models", exc)
+    service.record_audit(
+        request.app.state.engine,
+        actor=admin,
+        action="model.default_changed",
+        target_type="model",
+        target_id=spec.model_id,
+        ip=client_ip(request),
+    )
+    _flash(request, f"{spec.model_id} is now the default.")
+    return _back("/admin/models")
+
+
+@router.post("/models/{row_id}/toggle")
+async def toggle_model(request: Request, row_id: int) -> Response:
+    admin = admin_user(request)
+    await verify_csrf(request)
+    try:
+        spec = request.app.state.catalog.get(row_id)
+        updated = request.app.state.catalog.set_enabled(row_id, not spec.enabled)
+    except (Conflict, InvalidInput, NotFound) as exc:
+        return _error(request, "/admin/models", exc)
+    service.record_audit(
+        request.app.state.engine,
+        actor=admin,
+        action="model.enabled" if updated.enabled else "model.disabled",
+        target_type="model",
+        target_id=updated.model_id,
+        ip=client_ip(request),
+    )
+    _flash(request, f"{updated.model_id} is now {'enabled' if updated.enabled else 'disabled'}.")
+    return _back("/admin/models")
+
+
+@router.post("/models/{row_id}/delete")
+async def delete_model(request: Request, row_id: int) -> Response:
+    admin = admin_user(request)
+    require_recent_auth(request, "/admin/models")
+    await verify_csrf(request)
+    form = await request.form()
+    try:
+        spec = request.app.state.catalog.get(row_id)
+    except (Conflict, InvalidInput, NotFound) as exc:
+        return _error(request, "/admin/models", exc)
+    if form_text(form, "confirm").strip() != spec.model_id:
+        _flash(request, "Type the model id exactly to confirm deletion.", "error")
+        return _back("/admin/models")
+    try:
+        request.app.state.catalog.delete(row_id)
+    except (Conflict, InvalidInput, NotFound) as exc:
+        return _error(request, "/admin/models", exc)
+    service.record_audit(
+        request.app.state.engine,
+        actor=admin,
+        action="model.deleted",
+        target_type="model",
+        target_id=spec.model_id,
+        ip=client_ip(request),
+    )
+    _flash(request, f"Deleted {spec.model_id}.")
+    return _back("/admin/models")
 
 
 @router.get("/audit")

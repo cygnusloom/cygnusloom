@@ -4,7 +4,8 @@ A web chat over an LLM, growing into an RPG. Accounts and roles are owned by an 
 
 ## Run with Docker
 
-The repository ships a compose stack with Cygnus Forge, Postgres, Authentik, and Caddy:
+The repository ships a compose stack with Cygnus Forge, Postgres, Authentik, and Caddy. It does
+not include or provide a language model:
 
 ```sh
 # Writes .env with generated secrets and your domain names
@@ -17,8 +18,9 @@ Without Python on the host, copy `.env.example` to `.env` and fill in the values
 Authentik creates the initial `akadmin` account from `AUTHENTIK_BOOTSTRAP_EMAIL` and
 `AUTHENTIK_BOOTSTRAP_PASSWORD`. Sign in at `https://<AUTHENTIK_DOMAIN>/`, add `akadmin` to the
 `cygnusforge-admins` group, then open `https://<CYGNUSFORGE_DOMAIN>/login` and sign in with the
-same local account. See [deploy/authentik/README.md](deploy/authentik/README.md) for local user
-setup and troubleshooting.
+same local account. Open **Admin → Models** and add at least one model; Cygnus Forge ships with
+none. See [deploy/authentik/README.md](deploy/authentik/README.md) for local user setup and
+troubleshooting.
 
 ### Local test server (no DNS)
 
@@ -29,8 +31,9 @@ docker compose -f compose.yaml -f compose.local.yaml up -d --build
 
 Open http://localhost:8000. Authentik is at http://idp.localhost:9000; sign in as `akadmin`
 with the password in `.env`, then add `akadmin` to `cygnusforge-admins` as described in
-[deploy/authentik/README.md](deploy/authentik/README.md). This path uses plain HTTP and is for a
-local machine or a trusted network only.
+[deploy/authentik/README.md](deploy/authentik/README.md). After signing in to Cygnus Forge, open
+**Admin → Models** and add a model. This path uses plain HTTP and is for a local machine or a
+trusted network only.
 
 ## Run locally
 
@@ -45,8 +48,10 @@ The dev container (`.devcontainer/`) uses the uv image and reads `.devcontainer/
 For local development without an identity provider, set `CYGNUSFORGE_TEST_LOGIN=1` and use the
 development login button. Open http://127.0.0.1:8000 and create a campaign. To change its model,
 use the Settings button beside Send; the campaign header shows the current model.
-`CYGNUSFORGE_SECRET_KEY` is required. The default model is `ollama/gemma4:e2b`, so Ollama should
-be serving at `http://localhost:11434`. To try the app without a model, pick `fake/scripted`.
+`CYGNUSFORGE_SECRET_KEY` is required. No model is bundled: add one in **Admin → Models**, or seed
+the catalog from the environment, for example `CYGNUSFORGE_LLM_PROVIDERS=fake/scripted` and
+`CYGNUSFORGE_LLM_DEFAULT_MODEL=fake/scripted`. A local Ollama can be added as provider `ollama`,
+model `gemma4:e2b`, base URL `http://localhost:11434/v1`.
 
 ## Accounts, single sign-on, and administration
 
@@ -70,8 +75,50 @@ works immediately. A disabled account cannot sign in, and its existing sessions 
 Destructive administrator actions require a sign-in inside `CYGNUSFORGE_STEP_UP_MINUTES`.
 
 Administrators see `/admin`: account and campaign search, metadata-only campaign lookup, account
-disable/enable, session revocation, campaign rename/model change/transfer/delete, and an
-append-only audit log. Campaign transcripts are not exposed to administrators.
+disable/enable, session revocation, campaign rename/model change/transfer/delete, model
+configuration, and an append-only audit log. Campaign transcripts are not exposed to
+administrators.
+
+## Language models
+
+Cygnus Forge does not provide a model. An administrator adds models in **Admin → Models**: pick a
+provider, model name, optional base URL, and optional API key. The model id is
+`provider/model`, such as `ollama/gemma4:e2b` or `openai/gpt-4o-mini`. One enabled model is the
+default for new campaigns.
+
+API keys are encrypted in the database with `CYGNUSFORGE_SECRET_KEY`; the admin page only shows
+whether a key is configured. Environment variables such as `CYGNUSFORGE_LLM_PROVIDERS` and
+`CYGNUSFORGE_LLM_<NAME>_BASE_URL` are a development seed: they are copied into the database on
+first start if it has no models, and are not used to overwrite administrator changes.
+
+## Upgrade and backups
+
+Back up both databases before changing versions:
+
+```sh
+mkdir -p backups
+docker compose exec -T db pg_dump -U cygnusforge cygnusforge > backups/cygnusforge-$(date +%F).sql
+docker compose exec -T authentik-db pg_dump -U authentik authentik > backups/authentik-$(date +%F).sql
+```
+
+Normal application upgrade:
+
+```sh
+git pull
+docker compose pull
+docker compose up -d --build
+```
+
+The app container runs `alembic upgrade head` before starting Uvicorn, so database changes apply
+automatically. After changing `.env`, recreate the affected service with `docker compose up -d app`;
+`docker compose restart` does not reload environment values.
+
+For an Authentik upgrade, change `AUTHENTIK_IMAGE` in `.env`, back up, then run
+`docker compose pull authentik-server authentik-worker` and `docker compose up -d`. Upgrade one
+major version at a time, as Authentik requires.
+
+Never run `docker compose down -v`: it deletes the database and Authentik volumes. If you use the
+local override, put `-f compose.yaml -f compose.local.yaml` before the compose subcommand.
 
 ## Content: world templates and rule sets
 
@@ -177,8 +224,8 @@ For a throwaway database, run the "Cygnus Forge: web server (temp database)" lau
 | `CYGNUSFORGE_STEP_UP_MINUTES` | `15` | How recently an administrator must have signed in for destructive actions; `0` disables the check |
 | `CYGNUSFORGE_SECURE_COOKIES` | follows `BASE_URL` | Set to `1` behind HTTPS; uses the `__Host-` cookie prefix |
 | `CYGNUSFORGE_AUTO_CREATE_SCHEMA` | on in development, off in production | Create missing tables at startup. The Docker entrypoint runs Alembic instead |
-| `CYGNUSFORGE_LLM_PROVIDERS` | `ollama/gemma4:e2b,fake/scripted` | Comma-separated `provider/model` ids offered to users |
-| `CYGNUSFORGE_LLM_DEFAULT_MODEL` | `ollama/gemma4:e2b` | Pre-selected model; always offered, even if not in the list above |
+| `CYGNUSFORGE_LLM_PROVIDERS` | none | Development seed for the model catalog; after first start, use Admin → Models |
+| `CYGNUSFORGE_LLM_DEFAULT_MODEL` | none | Development seed for the default model; the first listed model is used when omitted |
 | `CYGNUSFORGE_LLM_CONTEXT_TOKENS` | `32768` | Context window used to estimate prompt size. At 50% the older chat is summarized, keeping the newest messages worth about 10% of the window verbatim |
 | `CYGNUSFORGE_LLM_<NAME>_BASE_URL` | `ollama` has a default | OpenAI-compatible base URL for provider `<name>` |
 | `CYGNUSFORGE_LLM_<NAME>_API_KEY` | none | API key for provider `<name>` |
@@ -202,7 +249,7 @@ Each AI reply has a gear button. It opens a "Reply details" dialog with two tabs
 
 Test-only content lives in [tests/fixtures/](tests/fixtures/): the `rolltest` rule set (a `social_roll` tool that asks the player for a d20 roll, backed by [tests/rolls.py](tests/rolls.py)) and the `testhollow` world. Tests merge it into the app's content; the app does not show it.
 
-Model ids take the form `provider/model`, for example `ollama/gemma4:e2b` or `openai/gpt-4o-mini` with `CYGNUSFORGE_LLM_OPENAI_BASE_URL` set.
+Model ids take the form `provider/model`, for example `ollama/gemma4:e2b` or `openai/gpt-4o-mini`. Configure them in **Admin → Models**; the `CYGNUSFORGE_LLM_*` variables only seed the catalog on first start in development.
 
 ## Scripted fake model (for tests)
 

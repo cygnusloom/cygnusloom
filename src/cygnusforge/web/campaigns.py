@@ -84,6 +84,12 @@ def campaigns_page(request: Request) -> Response:
 @router.get("/new")
 def new_campaign_page(request: Request) -> Response:
     user = page_user(request)
+    if not request.app.state.catalog.model_ids():
+        return _new_form(
+            request,
+            status_code=503,
+            error="No language model is configured. An administrator must add one under Admin → Models.",
+        )
     if is_test_user(user):
         return _new_form(request, name=random_campaign_name(random.Random()))
     return _new_form(request)
@@ -97,17 +103,24 @@ async def create(request: Request) -> Response:
     name = form_text(form, "name")
     world_template = form_text(form, "world_template")
     rule_set = form_text(form, "rule_set")
-    settings = request.app.state.settings
+    catalog = request.app.state.catalog
+    models = catalog.model_ids()
+    if not models:
+        return _new_form(
+            request,
+            status_code=503,
+            error="No language model is configured. An administrator must add one under Admin → Models.",
+        )
     try:
         campaign = create_campaign(
             request.app.state.engine,
             request.app.state.content,
-            settings.llm_models,
+            models,
             user.id,
             name,
             world_template,
             rule_set,
-            settings.llm_default_model,
+            catalog.default_model_id(),
         )
     except InvalidInput as exc:
         return _new_form(
@@ -213,10 +226,13 @@ async def change_model(request: Request, campaign_id: int) -> Response:
     await verify_csrf(request)
     form = await request.form()
     model = form_text(form, "model")
-    settings = request.app.state.settings
     try:
         set_campaign_model(
-            request.app.state.engine, settings.llm_models, user.id, campaign_id, model
+            request.app.state.engine,
+            request.app.state.catalog.model_ids(),
+            user.id,
+            campaign_id,
+            model,
         )
     except InvalidInput as exc:
         return _campaign_page(request, user, campaign_id, 400, str(exc))
@@ -337,7 +353,7 @@ async def post_message(request: Request, campaign_id: int) -> Response:
         await send_message(
             request.app.state.engine,
             request.app.state.providers,
-            settings.llm_models,
+            request.app.state.catalog.model_ids(),
             request.app.state.content,
             settings.llm_context_tokens,
             user.id,
@@ -365,7 +381,7 @@ async def post_message_stream(request: Request, campaign_id: int) -> Response:
     events = stream_message(
         request.app.state.engine,
         request.app.state.providers,
-        settings.llm_models,
+        request.app.state.catalog.model_ids(),
         request.app.state.content,
         settings.llm_context_tokens,
         user.id,
@@ -405,7 +421,7 @@ async def post_pending_stream(request: Request, campaign_id: int) -> Response:
     events = resume_turn(
         request.app.state.engine,
         request.app.state.providers,
-        settings.llm_models,
+        request.app.state.catalog.model_ids(),
         request.app.state.content,
         settings.llm_context_tokens,
         user.id,
@@ -431,7 +447,7 @@ async def post_encounter_turn_stream(request: Request, campaign_id: int) -> Resp
     events = start_encounter_turn(
         request.app.state.engine,
         request.app.state.providers,
-        settings.llm_models,
+        request.app.state.catalog.model_ids(),
         request.app.state.content,
         settings.llm_context_tokens,
         user.id,
@@ -609,7 +625,7 @@ def _campaign_page(
         error=error,
         draft=draft,
         pending=pending_turn(engine, user.id, campaign.id),
-        models=settings.llm_models,
+        models=request.app.state.catalog.model_ids(),
         encounter=encounter,
         encounter_rows=_encounter_rows(encounter) if encounter is not None else [],
         debug_panel=settings.debug_panel,

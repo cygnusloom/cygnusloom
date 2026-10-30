@@ -4,8 +4,8 @@ import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
-DEFAULT_MODELS = ("ollama/gemma4:e2b", "fake/scripted")
-DEFAULT_MODEL = "ollama/gemma4:e2b"
+DEFAULT_MODELS: tuple[str, ...] = ()
+DEFAULT_MODEL = ""
 DEFAULT_BASE_URL = "http://127.0.0.1:8000"
 DEFAULT_OIDC_SCOPES = "openid email profile groups"
 DEFAULT_ADMIN_VALUES = ("cygnusforge-admins",)
@@ -84,9 +84,12 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         raise RuntimeError("CYGNUSFORGE_SECRET_KEY is required")
     default_model = env.get("CYGNUSFORGE_LLM_DEFAULT_MODEL", DEFAULT_MODEL).strip()
     models = _csv(env.get("CYGNUSFORGE_LLM_PROVIDERS", ",".join(DEFAULT_MODELS)))
-    # The default is always offered, so it never has to be listed twice.
-    if default_model not in models:
+    # The default is always offered, so it never has to be listed twice. A development
+    # setup that lists models but no default uses the first one.
+    if default_model and default_model not in models:
         models = (default_model, *models)
+    if not default_model and models:
+        default_model = models[0]
     log_level = env.get("CYGNUSFORGE_LOG_LEVEL", "INFO").strip().upper()
     if log_level not in _LOG_LEVELS:
         raise RuntimeError(f"CYGNUSFORGE_LOG_LEVEL must be one of {', '.join(_LOG_LEVELS)}")

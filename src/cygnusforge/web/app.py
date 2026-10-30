@@ -18,6 +18,7 @@ from cygnusforge.auth.ratelimit import RateLimiter
 from cygnusforge.config import Settings, load_settings
 from cygnusforge.content.library import ContentLibrary
 from cygnusforge.db.session import create_schema, make_engine
+from cygnusforge.llm.catalog import ModelCatalog
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.llm.registry import ProviderFactory
 from cygnusforge.services.common import NotFound
@@ -58,7 +59,9 @@ def create_app(
     app.state.content = content if content is not None else ContentLibrary.load()
     app.state.limiter = RateLimiter()
     app.state.oidc = oidc_provider if oidc_provider is not None else build_oidc_provider(settings)
-    app.state.providers = ProviderFactory(settings, fake=fake_provider)
+    app.state.catalog = ModelCatalog(app.state.engine, settings)
+    app.state.catalog.seed_from_env()
+    app.state.providers = ProviderFactory(settings, fake=fake_provider, catalog=app.state.catalog)
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.secret_key,

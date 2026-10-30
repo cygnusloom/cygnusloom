@@ -1,18 +1,20 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from cygnusforge.config import Settings
-from cygnusforge.db.models import Campaign, Event, User
+from cygnusforge.db.models import Campaign, Event, LlmModel, User
 from cygnusforge.db.session import create_schema, make_engine
 from cygnusforge.services import admin as service
 from cygnusforge.services.accounts import encode_roles, get_or_create_test_user
 from cygnusforge.services.common import Conflict
 from cygnusforge.services.sessions import create_session
-from tests.conftest import csrf_token, register
+from tests.conftest import csrf_token, make_app, register
 
 
 def _engine(settings: Settings):
@@ -253,3 +255,93 @@ def test_audit_page_shows_admin_actions(settings: Settings):
     page = client.get("/admin/audit")
     assert page.status_code == 200
     assert "user.disabled" in page.text
+
+
+def test_admin_model_page_lists_and_adds_models(settings: Settings):
+    client = _admin_client(settings)
+    register(client, "admin@example.com")
+    page = client.get("/admin/models")
+    assert page.status_code == 200
+    assert "fake/scripted" in page.text
+    assert "ollama/test-model" in page.text
+
+    token = csrf_token(client, "/admin/models")
+    response = client.post(
+        "/admin/models",
+        data={
+            "csrf_token": token,
+            "provider": "openai",
+            "model": "gpt-4o-mini",
+            "base_url": "https://api.openai.com/v1",
+            "api_key": "sk-test",
+            "is_default": "1",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    page = client.get("/admin/models")
+    assert "openai/gpt-4o-mini" in page.text
+    assert "sk-test" not in page.text
+
+    engine = _engine(settings)
+    with Session(engine) as db:
+        row = db.exec(select(LlmModel).where(LlmModel.provider == "openai")).one()
+    assert row.is_default is True
+    assert row.api_key != "sk-test"
+
+    audit = client.get("/admin/audit")
+    assert "model.added" in audit.text
+
+
+def test_admin_model_page_requires_confirmation_to_delete(settings: Settings):
+    client = _admin_client(settings)
+    register(client, "admin@example.com")
+    engine = _engine(settings)
+    with Session(engine) as db:
+        row = db.exec(select(LlmModel).where(LlmModel.model == "scripted")).one()
+    token = csrf_token(client, "/admin/models")
+
+    response = client.post(
+        f"/admin/models/{row.id}/delete",
+        data={"csrf_token": token, "confirm": "wrong"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    with Session(engine) as db:
+        assert db.get(LlmModel, row.id) is not None
+
+    token = csrf_token(client, "/admin/models")
+    response = client.post(
+        f"/admin/models/{row.id}/delete",
+        data={"csrf_token": token, "confirm": "fake/scripted"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    with Session(engine) as db:
+        assert db.get(LlmModel, row.id) is None
+    assert "model.deleted" in client.get("/admin/audit").text
+
+
+def test_no_models_blocks_campaign_creation_until_one_is_added(settings: Settings):
+    empty = replace(settings, llm_models=(), llm_default_model="", test_login_admin=True)
+    client = TestClient(make_app(empty))
+    register(client, "admin@example.com")
+
+    page = client.get("/campaigns/new")
+    assert page.status_code == 503
+    assert "No language model is configured" in page.text
+
+    token = csrf_token(client, "/admin/models")
+    response = client.post(
+        "/admin/models",
+        data={
+            "csrf_token": token,
+            "provider": "fake",
+            "model": "scripted",
+            "base_url": "",
+            "is_default": "1",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert client.get("/campaigns/new").status_code == 200

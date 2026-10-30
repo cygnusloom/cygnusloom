@@ -29,6 +29,23 @@ class User(SQLModel, table=True):
     last_login_at: datetime | None = Field(default=None)
 
 
+class LlmModel(SQLModel, table=True):
+    """A language model an administrator made available. `provider` and `model` form the id
+    `provider/model` used by campaigns. API keys are encrypted with the application secret."""
+
+    __tablename__ = "llm_model"
+    __table_args__ = (UniqueConstraint("provider", "model"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    provider: str = Field(index=True, max_length=64)
+    model: str = Field(max_length=120)
+    base_url: str = Field(default="", max_length=500)
+    api_key: str = Field(default="", sa_column=Column(Text, nullable=False))
+    enabled: bool = Field(default=True)
+    is_default: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=utcnow)
+
+
 class UserSession(SQLModel, table=True):
     """A server-side login session. The cookie holds only this opaque id, so an administrator
     can revoke it and sign-in state survives without trusting a large signed cookie."""

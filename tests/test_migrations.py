@@ -19,7 +19,7 @@ def test_migrations_create_the_full_schema(tmp_path, monkeypatch):
     command.upgrade(config, "head")
 
     tables = set(inspect(make_engine(url)).get_table_names())
-    assert {"user", "campaign", "event", "user_session", "admin_audit"} <= tables
+    assert {"user", "campaign", "event", "user_session", "admin_audit", "llm_model"} <= tables
 
 
 def test_migrations_can_be_reversed(tmp_path, monkeypatch):

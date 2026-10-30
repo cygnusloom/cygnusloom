@@ -25,6 +25,18 @@ def test_default_model_alone_is_enough():
     assert settings.llm_default_model == "deepseek/deepseek-flash"
 
 
+def test_no_models_are_configured_by_default():
+    settings = load_settings(BASE)
+    assert settings.llm_models == ()
+    assert settings.llm_default_model == ""
+
+
+def test_first_environment_model_is_the_default_when_none_is_named():
+    settings = load_settings({**BASE, "CYGNUSFORGE_LLM_PROVIDERS": "ollama/one, openai/two"})
+    assert settings.llm_models == ("ollama/one", "openai/two")
+    assert settings.llm_default_model == "ollama/one"
+
+
 def test_secret_key_is_required():
     with pytest.raises(RuntimeError, match="CYGNUSFORGE_SECRET_KEY"):
         load_settings({})

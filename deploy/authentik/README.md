@@ -22,6 +22,8 @@ configure. Users sign in with a username and password stored in Authentik.
    Users → Add existing user → akadmin**. A user who is not in this group is a normal player.
 7. Open `https://<CYGNUSFORGE_DOMAIN>/login` and continue with the identity provider. You are
    signed in as `akadmin` and see the Admin link.
+8. Open **Admin → Models** and add at least one language model. Cygnus Forge ships with none,
+   so players cannot create campaigns until this is done.
 
 The bundled blueprint creates the `cygnusforge-admins` group, the OIDC provider, and the Cygnus
 Forge application. Role changes take effect at the next Cygnus Forge sign-in.
@@ -52,9 +54,10 @@ python3 scripts/setup_env.py --domain localhost --idp-domain idp.localhost
 docker compose -f compose.yaml -f compose.local.yaml up -d --build
 ```
 
-Open http://localhost:8000. Authentik is at http://idp.localhost:9000. The override exposes only
-ports 8000 and 9000, skips Caddy, and turns off secure cookies. Use it for a local machine or a
-trusted network, not for an internet-facing deployment.
+Open http://localhost:8000. Authentik is at http://idp.localhost:9000. Add `akadmin` to the
+administrator group, then add a model under **Admin → Models**. The override exposes only ports
+8000 and 9000, skips Caddy, and turns off secure cookies. Use it for a local machine or a trusted
+network, not for an internet-facing deployment.
 
 For a LAN deployment with real hostnames, use the normal compose file and point both names at the
 server in local DNS. Caddy obtains certificates, and the identity provider does not need to be
