@@ -50,3 +50,9 @@ def test_nginx_sample_proxies_to_the_stack() -> None:
     assert "proxy_pass http://127.0.0.1:21872;" in config
     assert "proxy_pass http://127.0.0.1:21873;" in config
     assert "proxy_buffering off;" in config
+
+
+def test_local_mode_makes_the_idp_reachable_from_the_app() -> None:
+    local = (ROOT / "compose.local.yaml").read_text()
+    assert "ports: !override" in local
+    assert "0.0.0.0:${AUTHENTIK_PORT:-21873}:9000" in local

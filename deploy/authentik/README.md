@@ -58,8 +58,10 @@ docker compose -f compose.yaml -f compose.local.yaml up -d --build
 
 Open http://localhost:21872. Authentik is at http://idp.localhost:21873. Add `akadmin` to the
 administrator group, then add a model under **Admin → Models**. The base compose file publishes
-both services on `127.0.0.1`; the local override switches to plain HTTP and turns off secure
-cookies. Use it for a local machine or a trusted network, not for an internet-facing deployment.
+both services on `127.0.0.1`; the local override switches to plain HTTP, turns off secure
+cookies, and publishes Authentik on all interfaces so the app container can resolve
+`idp.localhost` through Docker's host gateway. Use it for a local machine or a trusted network,
+not for an internet-facing deployment.
 
 For a LAN deployment with real hostnames, point both names at the server in local DNS and use
 the nginx sample. The identity provider does not need to be reachable from the public internet.

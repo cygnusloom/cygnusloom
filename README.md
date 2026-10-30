@@ -50,8 +50,10 @@ docker compose -f compose.yaml -f compose.local.yaml up -d --build
 Open http://localhost:21872. Authentik is at http://idp.localhost:21873; sign in as `akadmin`
 with the password in `.env`, then add `akadmin` to `cygnusforge-admins` as described in
 [deploy/authentik/README.md](deploy/authentik/README.md). After signing in to Cygnus Forge, open
-**Admin → Models** and add a model. This path uses plain HTTP and is for a local machine or a
-trusted network only.
+**Admin → Models** and add a model. This path uses plain HTTP, requires no domain names, and is
+for a local machine or a trusted network only. The override publishes Authentik on all
+interfaces so the app container can reach `idp.localhost` through Docker's host gateway; keep
+that in mind if the machine is on an untrusted network.
 
 ## Run locally
 

@@ -10,6 +10,7 @@
 # The base compose file publishes both services on 127.0.0.1, so no extra
 # ports are needed here. Modern browsers resolve *.localhost to the loopback
 # address. If yours does not, add `127.0.0.1 idp.localhost` to your hosts file.
+# The `ports: !override` tag below needs Docker Compose 2.24 or newer.
 services:
   app:
     extra_hosts:
@@ -21,6 +22,11 @@ services:
       CYGNUSFORGE_OIDC_ISSUER: http://idp.localhost:${AUTHENTIK_PORT:-21873}/application/o/cygnusforge/
 
   authentik-server:
+    # The app container reaches the IdP through Docker's host gateway, so the
+    # local IdP port must be reachable on the host's non-loopback address too.
+    # Use this override only on a trusted machine or network.
+    ports: !override
+      - "0.0.0.0:${AUTHENTIK_PORT:-21873}:9000"
     environment:
       CYGNUSFORGE_OIDC_REDIRECT_URI: http://localhost:${CYGNUSFORGE_APP_PORT:-21872}/auth/callback
       CYGNUSFORGE_OIDC_POST_LOGOUT_URI: http://localhost:${CYGNUSFORGE_APP_PORT:-21872}/login
