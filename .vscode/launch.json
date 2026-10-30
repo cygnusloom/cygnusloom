@@ -12,7 +12,11 @@
                 "--reload"
             ],
             "python": "${workspaceFolder}/.venv/bin/python",
-            "envFile": "${workspaceFolder}/.env",
+            "envFile": "${workspaceFolder}/.devcontainer/devcontainer.env",
+            "env": {
+                "CYGNUSFORGE_TEST_LOGIN": "1",
+                "CYGNUSFORGE_TEST_LOGIN_ADMIN": "1"
+            },
             "console": "integratedTerminal",
             "jinja": true,
             "justMyCode": false
@@ -23,7 +27,11 @@
             "request": "launch",
             "program": "${workspaceFolder}/scripts/temp_server.py",
             "python": "${workspaceFolder}/.venv/bin/python",
-            "envFile": "${workspaceFolder}/.env",
+            "envFile": "${workspaceFolder}/.devcontainer/devcontainer.env",
+            "env": {
+                "CYGNUSFORGE_TEST_LOGIN": "1",
+                "CYGNUSFORGE_TEST_LOGIN_ADMIN": "1"
+            },
             "console": "integratedTerminal",
             "jinja": true,
             "justMyCode": false

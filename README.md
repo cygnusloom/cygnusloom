@@ -43,7 +43,7 @@ uv sync
 uv run --env-file .env uvicorn --factory cygnusforge.web.app:app_from_env --reload
 ```
 
-The dev container (`.devcontainer/`) uses the uv image and reads `.devcontainer/devcontainer.env` as its env file. That file is gitignored, so keep your own copy of it.
+The dev container (`.devcontainer/`) uses the uv image and reads `.devcontainer/devcontainer.env` as its env file. That file is gitignored, so keep your own copy of it. Both VS Code launch configurations load that file and set `CYGNUSFORGE_TEST_LOGIN` and `CYGNUSFORGE_TEST_LOGIN_ADMIN`, so the development login button appears.
 
 For local development without an identity provider, set `CYGNUSFORGE_TEST_LOGIN=1` and use the
 development login button. Open http://127.0.0.1:8000 and create a campaign. To change its model,
