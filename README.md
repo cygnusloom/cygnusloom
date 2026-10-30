@@ -4,8 +4,9 @@ A web chat over an LLM, growing into an RPG. Accounts and roles are owned by an 
 
 ## Run with Docker
 
-The repository ships a compose stack with Cygnus Forge, Postgres, Authentik, and Caddy. It does
-not include or provide a language model:
+The repository ships a compose stack with Cygnus Forge, Postgres, and Authentik. It does not
+include a language model or a TLS proxy: put it behind nginx. The stack publishes only loopback
+ports for the proxy.
 
 ```sh
 # Checks Docker, writes .env, builds, and starts everything
@@ -17,6 +18,17 @@ not include or provide a language model:
 
 Without the script, copy `.env.example` to `.env`, fill in the values, and run
 `docker compose up -d --build`.
+
+### Reverse proxy
+
+The app listens on `127.0.0.1:8000` and Authentik listens on `127.0.0.1:9000`. It publishes no
+public ports. Copy [deploy/nginx/cygnusforge.conf](deploy/nginx/cygnusforge.conf) into your
+nginx configuration, replace the two example hostnames and certificate paths, then reload
+nginx. The full steps, including a certbot example, are in
+[deploy/nginx/README.md](deploy/nginx/README.md).
+
+Both hostnames are required: the app redirects sign-in to Authentik, and Authentik redirects
+back to the app. Forwarding only the app hostname leaves sign-in broken.
 
 Authentik creates the initial `akadmin` account from `AUTHENTIK_BOOTSTRAP_EMAIL` and
 `AUTHENTIK_BOOTSTRAP_PASSWORD`. Sign in at `https://<AUTHENTIK_DOMAIN>/`, add `akadmin` to the
@@ -105,6 +117,9 @@ runs a health check:
 
 Use `./scripts/update.sh --no-pull` if you deploy by copying files instead of `git pull`. To back up
 without updating, run `./scripts/backup.sh`; backups go in `backups/`.
+
+The update command uses `--remove-orphans`, so the old bundled Caddy container is removed on the
+first upgrade and nginx can bind public ports 80 and 443.
 
 The app container runs `alembic upgrade head` before starting Uvicorn, so database changes apply
 automatically. After changing `.env`, recreate the affected service with `docker compose up -d app`;

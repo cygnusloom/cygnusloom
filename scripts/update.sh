@@ -37,13 +37,18 @@ if [ "$DO_PULL" -eq 1 ]; then
 fi
 
 docker compose pull
-docker compose up -d --build
+docker compose up -d --build --remove-orphans
 docker compose ps
+
+echo "Local health check:"
+curl -fsS "http://127.0.0.1:8000/healthz" ||
+  echo "App is still starting; check docker compose logs app."
 
 DOMAIN="$(sed -n 's/^CYGNUSFORGE_DOMAIN=//p' .env | head -n 1)"
 if [ -n "$DOMAIN" ]; then
-  echo "Health check:"
-  curl -fsS "https://$DOMAIN/healthz" || echo "App is still starting; check docker compose logs app."
+  echo "Public health check:"
+  curl -fsS "https://$DOMAIN/healthz" ||
+    echo "The app is not reachable through nginx yet; check the proxy configuration."
 fi
 
 echo "Update complete. Database migrations run automatically on app start."

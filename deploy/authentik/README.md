@@ -11,10 +11,12 @@ configure. Users sign in with a username and password stored in Authentik.
 1. Run `python3 scripts/setup_env.py --domain <app-host> --idp-domain <idp-host> --email <you@example.com>`.
    It writes `.env` with generated secrets. Without Python, copy `.env.example` to `.env` and
    replace every `change-me` value with `openssl rand -hex 32` output.
-2. The two domain names must point at this host. Caddy obtains certificates automatically.
+2. The two domain names must point at this host, and your nginx must terminate TLS for both.
+   See [../nginx/README.md](../nginx/README.md) for a sample config and certificate steps.
 3. Set `AUTHENTIK_BOOTSTRAP_EMAIL` and `AUTHENTIK_BOOTSTRAP_PASSWORD`. These create the initial
    `akadmin` account on the first start and skip the Authentik setup wizard.
-4. Run `docker compose up -d --build`.
+4. Run `./scripts/install.sh ...` or `docker compose up -d --build`. The stack publishes the
+   app on `127.0.0.1:8000` and Authentik on `127.0.0.1:9000`; nginx forwards to those ports.
 5. Open `https://<AUTHENTIK_DOMAIN>/` and sign in as `akadmin` with the bootstrap password.
    Change that password in Authentik after signing in; the environment variable is only read on
    the first start.
@@ -55,13 +57,12 @@ docker compose -f compose.yaml -f compose.local.yaml up -d --build
 ```
 
 Open http://localhost:8000. Authentik is at http://idp.localhost:9000. Add `akadmin` to the
-administrator group, then add a model under **Admin → Models**. The override exposes only ports
-8000 and 9000, skips Caddy, and turns off secure cookies. Use it for a local machine or a trusted
-network, not for an internet-facing deployment.
+administrator group, then add a model under **Admin → Models**. The base compose file publishes
+both services on `127.0.0.1`; the local override switches to plain HTTP and turns off secure
+cookies. Use it for a local machine or a trusted network, not for an internet-facing deployment.
 
-For a LAN deployment with real hostnames, use the normal compose file and point both names at the
-server in local DNS. Caddy obtains certificates, and the identity provider does not need to be
-reachable from the public internet.
+For a LAN deployment with real hostnames, point both names at the server in local DNS and use
+the nginx sample. The identity provider does not need to be reachable from the public internet.
 
 ## Manual OIDC provider
 

@@ -1,4 +1,4 @@
-# Local-only settings: plain HTTP, no Caddy, no DNS certificates.
+# Local-only settings: plain HTTP, no DNS certificates.
 #
 #   python3 scripts/setup_env.py --domain localhost --idp-domain idp.localhost
 #   docker compose -f compose.yaml -f compose.local.yaml up -d --build
@@ -7,12 +7,11 @@
 #   app:      http://localhost:8000
 #   Authentik http://idp.localhost:9000
 #
-# Modern browsers resolve *.localhost to the loopback address. If yours does not,
-# add `127.0.0.1 idp.localhost` to your hosts file.
+# The base compose file publishes both services on 127.0.0.1, so no extra
+# ports are needed here. Modern browsers resolve *.localhost to the loopback
+# address. If yours does not, add `127.0.0.1 idp.localhost` to your hosts file.
 services:
   app:
-    ports:
-      - "8000:8000"
     extra_hosts:
       - "idp.localhost:host-gateway"
     environment:
@@ -22,8 +21,6 @@ services:
       CYGNUSFORGE_OIDC_ISSUER: http://idp.localhost:9000/application/o/cygnusforge/
 
   authentik-server:
-    ports:
-      - "9000:9000"
     environment:
       CYGNUSFORGE_OIDC_REDIRECT_URI: http://localhost:8000/auth/callback
       CYGNUSFORGE_OIDC_POST_LOGOUT_URI: http://localhost:8000/login
@@ -32,7 +29,3 @@ services:
     environment:
       CYGNUSFORGE_OIDC_REDIRECT_URI: http://localhost:8000/auth/callback
       CYGNUSFORGE_OIDC_POST_LOGOUT_URI: http://localhost:8000/login
-
-  caddy:
-    profiles:
-      - proxy

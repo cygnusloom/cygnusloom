@@ -59,7 +59,7 @@ fi
 
 python3 scripts/setup_env.py --domain "$DOMAIN" --idp-domain "$IDP_DOMAIN" --email "$EMAIL"
 docker compose config --quiet
-docker compose up -d --build
+docker compose up -d --build --remove-orphans
 docker compose ps
 
 cat <<EOF
@@ -67,6 +67,13 @@ cat <<EOF
 Started.
   App:       https://$DOMAIN
   Authentik: https://$IDP_DOMAIN
+
+The stack listens only on loopback:
+  app:       http://127.0.0.1:8000
+  Authentik: http://127.0.0.1:9000
+
+Configure your nginx from deploy/nginx/cygnusforge.conf, then reload it. The app will not
+be reachable at the HTTPS URLs until the proxy is configured.
 
 Initial Authentik login: akadmin
 Password: grep AUTHENTIK_BOOTSTRAP_PASSWORD .env

@@ -1,3 +1,5 @@
+# TLS is terminated outside this stack. The app and Authentik publish on loopback
+# only so a host reverse proxy (normally nginx) can reach them.
 services:
   db:
     image: postgres:17-alpine
@@ -18,6 +20,8 @@ services:
     build:
       context: .
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
     env_file:
       - .env
     environment:
@@ -80,6 +84,8 @@ services:
     image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server:2026.5.3}
     restart: unless-stopped
     command: server
+    ports:
+      - "127.0.0.1:9000:9000"
     environment: &authentik-env
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
       AUTHENTIK_REDIS__HOST: authentik-redis
@@ -131,31 +137,9 @@ services:
       authentik-redis:
         condition: service_healthy
 
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      CYGNUSFORGE_DOMAIN: ${CYGNUSFORGE_DOMAIN}
-      AUTHENTIK_DOMAIN: ${AUTHENTIK_DOMAIN}
-      ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
-    volumes:
-      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
-    depends_on:
-      app:
-        condition: service_healthy
-      authentik-server:
-        condition: service_started
-
 volumes:
   app-db:
   authentik-db:
   authentik-redis:
   authentik-media:
   authentik-certs:
-  caddy-data:
-  caddy-config:

@@ -33,3 +33,17 @@ def test_deploy_scripts_have_help() -> None:
         )
         assert result.returncode == 0, result.stderr
         assert "Usage:" in result.stdout
+
+
+def test_compose_publishes_only_loopback_ports() -> None:
+    compose = (ROOT / "compose.yaml").read_text()
+    assert "caddy" not in compose.lower()
+    assert '"127.0.0.1:8000:8000"' in compose
+    assert '"127.0.0.1:9000:9000"' in compose
+
+
+def test_nginx_sample_proxies_to_the_stack() -> None:
+    config = (ROOT / "deploy" / "nginx" / "cygnusforge.conf").read_text()
+    assert "proxy_pass http://127.0.0.1:8000;" in config
+    assert "proxy_pass http://127.0.0.1:9000;" in config
+    assert "proxy_buffering off;" in config
