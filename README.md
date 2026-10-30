@@ -7,15 +7,30 @@ A web chat over an LLM, growing into an RPG. Accounts and roles are owned by an 
 The repository ships a compose stack with Cygnus Forge, Postgres, Authentik, and Caddy:
 
 ```sh
-cp .env.example .env
-# Replace every change-me value in .env, including three openssl rand -hex 32 secrets
+# Writes .env with generated secrets and your domain names
+python3 scripts/setup_env.py --domain forge.example.com --idp-domain idp.example.com --email you@example.com
 docker compose up -d --build
 ```
 
-Open `https://<CYGNUSFORGE_DOMAIN>/login` and continue with the identity provider. The first
-Authentik administrator is created at `https://<AUTHENTIK_DOMAIN>/if/flow/initial-setup/`.
-See [deploy/authentik/README.md](deploy/authentik/README.md) for the initial setup, the
-`cygnusforge-admins` group, and Google/Microsoft sign-in.
+Without Python on the host, copy `.env.example` to `.env` and fill in the values manually.
+
+Authentik creates the initial `akadmin` account from `AUTHENTIK_BOOTSTRAP_EMAIL` and
+`AUTHENTIK_BOOTSTRAP_PASSWORD`. Sign in at `https://<AUTHENTIK_DOMAIN>/`, add `akadmin` to the
+`cygnusforge-admins` group, then open `https://<CYGNUSFORGE_DOMAIN>/login` and sign in with the
+same local account. See [deploy/authentik/README.md](deploy/authentik/README.md) for local user
+setup and troubleshooting.
+
+### Local test server (no DNS)
+
+```sh
+python3 scripts/setup_env.py --domain localhost --idp-domain idp.localhost
+docker compose -f compose.yaml -f compose.local.yaml up -d --build
+```
+
+Open http://localhost:8000. Authentik is at http://idp.localhost:9000; sign in as `akadmin`
+with the password in `.env`, then add `akadmin` to `cygnusforge-admins` as described in
+[deploy/authentik/README.md](deploy/authentik/README.md). This path uses plain HTTP and is for a
+local machine or a trusted network only.
 
 ## Run locally
 
@@ -39,6 +54,11 @@ Cygnus Forge is an OIDC relying party. It has no registration form, password sto
 reset, or MFA setup. Sign-in redirects to the configured provider; the account is created or
 refreshed on the first successful sign-in. A user's profile page shows the identity and active
 sessions, with a link to manage the account at the provider.
+
+The bundled deployment uses Authentik local accounts: username/password accounts created in
+Authentik, with no Google or Microsoft dependency. Additional users are created under
+**Directory → Users** in Authentik; only users in `cygnusforge-admins` get the Cygnus Forge
+administrator role.
 
 Roles come from the provider claim named by `CYGNUSFORGE_OIDC_ADMIN_CLAIM` (default `groups`)
 and are compared with `CYGNUSFORGE_OIDC_ADMIN_VALUES` (default `cygnusforge-admins`).

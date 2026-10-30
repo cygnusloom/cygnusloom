@@ -117,7 +117,10 @@ services:
     image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server:2026.5.3}
     restart: unless-stopped
     command: worker
-    environment: *authentik-env
+    environment:
+      <<: *authentik-env
+      AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL:?set AUTHENTIK_BOOTSTRAP_EMAIL in .env}
+      AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD:?set AUTHENTIK_BOOTSTRAP_PASSWORD in .env}
     volumes:
       - ./deploy/authentik/blueprints:/blueprints/custom:ro
       - authentik-media:/media
