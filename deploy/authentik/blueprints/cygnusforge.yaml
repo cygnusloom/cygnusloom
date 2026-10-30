@@ -48,3 +48,4 @@ entries:
       name: Cygnus Forge
       slug: cygnusforge
       provider: !KeyOf cygnusforge-provider
+      meta_launch_url: !Env CYGNUSFORGE_BASE_URL

@@ -58,6 +58,11 @@ def test_local_mode_makes_the_idp_reachable_from_the_app() -> None:
     assert "0.0.0.0:${AUTHENTIK_PORT:-21873}:9000" in local
 
 
+def test_authentik_application_has_a_launch_url() -> None:
+    blueprint = (ROOT / "deploy" / "authentik" / "blueprints" / "cygnusforge.yaml").read_text()
+    assert "meta_launch_url: !Env CYGNUSFORGE_BASE_URL" in blueprint
+
+
 def test_entrypoint_waits_for_database_dns() -> None:
     entrypoint = ROOT / "deploy" / "entrypoint.sh"
     subprocess.run(["sh", "-n", str(entrypoint)], check=True, capture_output=True, text=True)

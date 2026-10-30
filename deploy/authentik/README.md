@@ -30,9 +30,15 @@ configure. Users sign in with a username and password stored in Authentik.
 The bundled blueprint creates the `cygnusforge-admins` group, the OIDC provider, and the Cygnus
 Forge application. Role changes take effect at the next Cygnus Forge sign-in.
 
-The blueprint lives at `deploy/authentik/blueprints/cygnusforge.yaml`. Check
-`docker compose logs authentik-worker` if it did not apply; the blueprint schema can differ
-between Authentik releases. The manual equivalent is below.
+The blueprint lives at `deploy/authentik/blueprints/cygnusforge.yaml`. It sets the application's
+Launch URL to `CYGNUSFORGE_BASE_URL`, which makes Cygnus Forge appear on the Authentik user
+dashboard. Check `docker compose logs authentik-worker` if it did not apply; the blueprint schema
+can differ between Authentik releases. The manual equivalent is below.
+
+If Cygnus Forge is missing from **Applications → Applications**, the blueprint was not applied;
+check **System → Blueprints** for the error and the worker logs. If it exists in the admin list
+but not on your user dashboard, open the application and set **Launch URL** to the app URL
+(`http://localhost:21872` locally, or `https://<CYGNUSFORGE_DOMAIN>` in production).
 
 ## Add a player
 
