@@ -8,12 +8,15 @@ The repository ships a compose stack with Cygnus Forge, Postgres, Authentik, and
 not include or provide a language model:
 
 ```sh
-# Writes .env with generated secrets and your domain names
-python3 scripts/setup_env.py --domain forge.example.com --idp-domain idp.example.com --email you@example.com
-docker compose up -d --build
+# Checks Docker, writes .env, builds, and starts everything
+./scripts/install.sh \
+  --domain forge.example.com \
+  --idp-domain idp.example.com \
+  --email you@example.com
 ```
 
-Without Python on the host, copy `.env.example` to `.env` and fill in the values manually.
+Without the script, copy `.env.example` to `.env`, fill in the values, and run
+`docker compose up -d --build`.
 
 Authentik creates the initial `akadmin` account from `AUTHENTIK_BOOTSTRAP_EMAIL` and
 `AUTHENTIK_BOOTSTRAP_PASSWORD`. Sign in at `https://<AUTHENTIK_DOMAIN>/`, add `akadmin` to the
@@ -93,25 +96,22 @@ first start if it has no models, and are not used to overwrite administrator cha
 
 ## Upgrade and backups
 
-Back up both databases before changing versions:
+One command backs up both databases, pulls the latest code, rebuilds the app, applies migrations, and
+runs a health check:
 
 ```sh
-mkdir -p backups
-docker compose exec -T db pg_dump -U cygnusforge cygnusforge > backups/cygnusforge-$(date +%F).sql
-docker compose exec -T authentik-db pg_dump -U authentik authentik > backups/authentik-$(date +%F).sql
+./scripts/update.sh
 ```
 
-Normal application upgrade:
-
-```sh
-git pull
-docker compose pull
-docker compose up -d --build
-```
+Use `./scripts/update.sh --no-pull` if you deploy by copying files instead of `git pull`. To back up
+without updating, run `./scripts/backup.sh`; backups go in `backups/`.
 
 The app container runs `alembic upgrade head` before starting Uvicorn, so database changes apply
 automatically. After changing `.env`, recreate the affected service with `docker compose up -d app`;
 `docker compose restart` does not reload environment values.
+
+These scripts run on the host. Cygnus Forge deliberately does not mount the Docker socket into the
+app: an in-app update button would let a compromised web process control the host.
 
 For an Authentik upgrade, change `AUTHENTIK_IMAGE` in `.env`, back up, then run
 `docker compose pull authentik-server authentik-worker` and `docker compose up -d`. Upgrade one
