@@ -12,17 +12,20 @@
     <nav>
       {% if user %}
         <a href="/campaigns">Campaigns</a>
+        <a href="/account">Account</a>
+        {% if is_admin %}<a href="/admin">Admin</a>{% endif %}
         <form method="post" action="/logout" class="inline">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <button type="submit">Log out</button>
         </form>
       {% else %}
         <a href="/login">Log in</a>
-        <a href="/register">Register</a>
       {% endif %}
     </nav>
   </header>
   <main>
+    {% if step_up_done %}<p role="status">Re-authenticated. Repeat the action you were taking.</p>{% endif %}
+    {% if flash %}<p role="{{ 'alert' if flash.kind == 'error' else 'status' }}">{{ flash.message }}</p>{% endif %}
     {% if error %}<p role="alert">{{ error }}</p>{% endif %}
     {% block content %}{% endblock %}
   </main>

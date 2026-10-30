@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Account{% endblock %}
+{% block content %}
+  <section class="card narrow">
+    <h1>Your account</h1>
+    <dl class="details">
+      <dt>Name</dt>
+      <dd>{{ user.display_name or user.email or user.subject }}</dd>
+      <dt>Email</dt>
+      <dd>{{ user.email or "not provided" }}{% if user.email_verified %} (verified){% endif %}</dd>
+      <dt>Identity</dt>
+      <dd>{{ user.issuer }}</dd>
+      <dt>Roles</dt>
+      <dd>
+        {% if roles %}
+          {% for role in roles %}<span class="tag">{{ role }}</span>{% endfor %}
+        {% else %}
+          none
+        {% endif %}
+      </dd>
+      <dt>Campaigns</dt>
+      <dd>{{ campaign_count }}</dd>
+    </dl>
+    <p>Roles come from your identity provider. Change them there, then sign in again.</p>
+    {% if oidc_account_url %}
+      <p><a href="{{ oidc_account_url }}">Manage your account at the identity provider</a></p>
+    {% endif %}
+  </section>
+
+  <section class="card narrow">
+    <h2>Signed-in devices</h2>
+    <table>
+      <thead><tr><th>Signed in</th><th>Last seen</th><th>Expires</th><th>Address</th></tr></thead>
+      <tbody>
+        {% for session in sessions %}
+          <tr>
+            <td>{{ session.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+            <td>{{ session.last_seen_at.strftime("%Y-%m-%d %H:%M") }}</td>
+            <td>{{ session.expires_at.strftime("%Y-%m-%d %H:%M") }}</td>
+            <td>{{ session.ip or "unknown" }}{% if session.id == current_session_id %} (this device){% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <form method="post" action="/account/sessions/revoke">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit">Sign out everywhere</button>
+    </form>
+  </section>
+{% endblock %}

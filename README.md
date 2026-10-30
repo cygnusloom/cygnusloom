@@ -1,8 +1,23 @@
 # Cygnus Forge
 
-A web chat over an LLM, growing into an RPG. It has accounts (email and password) and campaigns (named chats). Each campaign has a world template, a rule set, and a model, all picked when it is created. The model can be changed later from the campaign's settings, and the next message uses the new model. Campaigns also have structured role-play: locations, characters (the player character and NPCs), and notes.
+A web chat over an LLM, growing into an RPG. Accounts and roles are owned by an external OpenID Connect provider; campaigns are named chats with a world template, a rule set, and a model. The model can be changed later from the campaign's settings, and the next message uses the new model. Campaigns also have structured role-play: locations, characters (the player character and NPCs), and notes.
 
-## Run
+## Run with Docker
+
+The repository ships a compose stack with Cygnus Forge, Postgres, Authentik, and Caddy:
+
+```sh
+cp .env.example .env
+# Replace every change-me value in .env, including three openssl rand -hex 32 secrets
+docker compose up -d --build
+```
+
+Open `https://<CYGNUSFORGE_DOMAIN>/login` and continue with the identity provider. The first
+Authentik administrator is created at `https://<AUTHENTIK_DOMAIN>/if/flow/initial-setup/`.
+See [deploy/authentik/README.md](deploy/authentik/README.md) for the initial setup, the
+`cygnusforge-admins` group, and Google/Microsoft sign-in.
+
+## Run locally
 
 ```sh
 uv sync
@@ -12,7 +27,31 @@ uv run --env-file .env uvicorn --factory cygnusforge.web.app:app_from_env --relo
 
 The dev container (`.devcontainer/`) uses the uv image and reads `.devcontainer/devcontainer.env` as its env file. That file is gitignored, so keep your own copy of it.
 
-Open http://127.0.0.1:8000, register, and create a campaign. To change its model, use the Settings button beside Send; the campaign header shows the current model. `CYGNUSFORGE_SECRET_KEY` is required, so set it in `.env` or your shell. The default model is `ollama/gemma4:e2b`, so Ollama should be serving at `http://localhost:11434`. To try the app without a model, pick `fake/scripted`.
+For local development without an identity provider, set `CYGNUSFORGE_TEST_LOGIN=1` and use the
+development login button. Open http://127.0.0.1:8000 and create a campaign. To change its model,
+use the Settings button beside Send; the campaign header shows the current model.
+`CYGNUSFORGE_SECRET_KEY` is required. The default model is `ollama/gemma4:e2b`, so Ollama should
+be serving at `http://localhost:11434`. To try the app without a model, pick `fake/scripted`.
+
+## Accounts, single sign-on, and administration
+
+Cygnus Forge is an OIDC relying party. It has no registration form, password store, password
+reset, or MFA setup. Sign-in redirects to the configured provider; the account is created or
+refreshed on the first successful sign-in. A user's profile page shows the identity and active
+sessions, with a link to manage the account at the provider.
+
+Roles come from the provider claim named by `CYGNUSFORGE_OIDC_ADMIN_CLAIM` (default `groups`)
+and are compared with `CYGNUSFORGE_OIDC_ADMIN_VALUES` (default `cygnusforge-admins`).
+Cygnus Forge never edits roles. Removing a user from the group takes effect at their next
+sign-in. The bundled Authentik blueprint creates the group and the OIDC client.
+
+Sessions are stored server-side, so an administrator can revoke them and "sign out everywhere"
+works immediately. A disabled account cannot sign in, and its existing sessions are revoked.
+Destructive administrator actions require a sign-in inside `CYGNUSFORGE_STEP_UP_MINUTES`.
+
+Administrators see `/admin`: account and campaign search, metadata-only campaign lookup, account
+disable/enable, session revocation, campaign rename/model change/transfer/delete, and an
+append-only audit log. Campaign transcripts are not exposed to administrators.
 
 ## Content: world templates and rule sets
 
@@ -92,7 +131,9 @@ NPC traits (personality, accent, and quirks) are picked at random from the core 
 
 Speech: the GM does not write dialogue in its narration. To have an NPC speak, it calls `speak` with the NPC's name and the intent. The engine then makes a separate speech step with the same model as the turn. That step gets the NPC's details (who they are, personality, accent, quirks, and location) and the intent, and returns the dialogue. The dialogue reaches the narration as JSON, `{"queued_dialogue": [{"speaker": ..., "dialogue": ...}]}`, in the order it was said, and the narration copies each `dialogue` value exactly. Each line of dialogue is saved as soon as it is written, so it survives a failed narration; the narration is saved when the reply finishes. An NPC should be at the PC's location to speak. If it is not, `speak` writes nothing and returns a warning, and the GM can call it again with `force` true when the NPC is speaking from elsewhere, such as across a wall; the narration then says where they are speaking from.
 
-Settings are fixed when a campaign is created. The schema changed, so databases from earlier versions need a new one: delete `cygnusforge.db` or point `CYGNUSFORGE_DATABASE_URL` somewhere new.
+Settings are fixed when a campaign is created. There is no backwards compatibility at version 0:
+databases from earlier versions need a new one. Run `python -m cygnusforge.cli migrate` for a new
+database, or delete `cygnusforge.db` and let the development app create it.
 
 For a throwaway database, run the "Cygnus Forge: web server (temp database)" launch configuration in VS Code. It runs `scripts/temp_server.py`, which creates a new SQLite database in a temp directory on each start and deletes it when the server stops. It does not reload on code changes, so restart it after editing code.
 
@@ -100,15 +141,30 @@ For a throwaway database, run the "Cygnus Forge: web server (temp database)" lau
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `CYGNUSFORGE_SECRET_KEY` | (required) | Signs session cookies |
-| `CYGNUSFORGE_DATABASE_URL` | `sqlite:///./cygnusforge.db` | SQLAlchemy URL |
+| `CYGNUSFORGE_SECRET_KEY` | (required) | Signs the session cookie and the transient OIDC state |
+| `CYGNUSFORGE_ENVIRONMENT` | `development` | `development` or `production`. Production requires OIDC settings, HTTPS, and test login off |
+| `CYGNUSFORGE_BASE_URL` | `http://127.0.0.1:8000` | Public origin; the OIDC redirect URI is `<base_url>/auth/callback` |
+| `CYGNUSFORGE_DATABASE_URL` | `sqlite:///./cygnusforge.db` | SQLAlchemy URL; Postgres uses `postgresql+psycopg://...` |
+| `CYGNUSFORGE_OIDC_ISSUER` | none | Provider issuer URL, for example `https://idp.example.com/application/o/cygnusforge/` |
+| `CYGNUSFORGE_OIDC_CLIENT_ID` | none | OIDC client id |
+| `CYGNUSFORGE_OIDC_CLIENT_SECRET` | none | OIDC client secret |
+| `CYGNUSFORGE_OIDC_SCOPES` | `openid email profile groups` | Requested scopes; `openid` is always added |
+| `CYGNUSFORGE_OIDC_NAME` | `Single sign-on` | Login button label and provider name |
+| `CYGNUSFORGE_OIDC_ADMIN_CLAIM` | `groups` | Claim that holds roles; dotted paths such as `realm_access.roles` work |
+| `CYGNUSFORGE_OIDC_ADMIN_VALUES` | `cygnusforge-admins` | Comma-separated role values that grant administrator access |
+| `CYGNUSFORGE_OIDC_ACCOUNT_URL` | none | Optional link to the provider's profile page |
+| `CYGNUSFORGE_SESSION_HOURS` | `168` | Server-side session lifetime |
+| `CYGNUSFORGE_STEP_UP_MINUTES` | `15` | How recently an administrator must have signed in for destructive actions; `0` disables the check |
+| `CYGNUSFORGE_SECURE_COOKIES` | follows `BASE_URL` | Set to `1` behind HTTPS; uses the `__Host-` cookie prefix |
+| `CYGNUSFORGE_AUTO_CREATE_SCHEMA` | on in development, off in production | Create missing tables at startup. The Docker entrypoint runs Alembic instead |
 | `CYGNUSFORGE_LLM_PROVIDERS` | `ollama/gemma4:e2b,fake/scripted` | Comma-separated `provider/model` ids offered to users |
 | `CYGNUSFORGE_LLM_DEFAULT_MODEL` | `ollama/gemma4:e2b` | Pre-selected model; always offered, even if not in the list above |
 | `CYGNUSFORGE_LLM_CONTEXT_TOKENS` | `32768` | Context window used to estimate prompt size. At 50% the older chat is summarized, keeping the newest messages worth about 10% of the window verbatim |
 | `CYGNUSFORGE_LLM_<NAME>_BASE_URL` | `ollama` has a default | OpenAI-compatible base URL for provider `<name>` |
 | `CYGNUSFORGE_LLM_<NAME>_API_KEY` | none | API key for provider `<name>` |
 | `CYGNUSFORGE_LOG_LEVEL` | `INFO` | Log level |
-| `CYGNUSFORGE_TEST_LOGIN` | off | Set to `1`, `true`, `yes`, or `on` to show a "Log in as test user" button on the login page. It signs in a fixed `test-user@example.com` account with a random password. For local testing only; do not enable on a shared server |
+| `CYGNUSFORGE_TEST_LOGIN` | off | Development-only button that signs in a test account by email. It is refused in production |
+| `CYGNUSFORGE_TEST_LOGIN_ADMIN` | off | Development-only: the test account gets the administrator role. Requires `TEST_LOGIN` |
 
 Token counts are estimates (about four characters per token). The campaign page shows the estimated prompt size next to the settings button. The full transcript is always kept; only the prompt sent to the model is summarized. A summary is asked to stay within about 25% of the window, and if it still runs longer, its oldest text is dropped.
 
@@ -151,11 +207,27 @@ __FAKE__:{"turns": [
 ## Operations
 
 ```sh
-uv run python -m cygnusforge.cli reset-password you@example.com
+uv run python -m cygnusforge.cli migrate
+uv run python -m cygnusforge.cli list-users
 uv run pytest -n auto
 uv run ruff check
 ```
 
-`-n auto` runs the tests on all CPUs with pytest-xdist and takes about 25 seconds. A plain `uv run pytest` is refused at startup, because a serial run takes about 90 seconds. For a serial run with readable output or a debugger, set `CYGNUSFORGE_SERIAL_TESTS=1` (`--pdb` does not work with `-n`).
+`migrate` applies Alembic migrations. The Docker entrypoint runs it before starting Uvicorn.
+`list-users` prints accounts read-only, for operators who cannot reach the admin panel.
 
-Rate limiting is in memory and per process, so run a single worker.
+```sh
+docker compose logs -f app
+docker compose exec db pg_dump -U cygnusforge cygnusforge > cygnusforge.sql
+docker compose pull && docker compose up -d --build
+```
+
+Back up both Postgres databases and the Authentik media volume before an upgrade. The app has no
+uploads yet; campaign content lives entirely in the app database.
+
+`-n auto` runs the tests on all CPUs with pytest-xdist and takes under a minute. A plain
+`uv run pytest` is refused at startup. For a serial run with readable output or a debugger, set
+`CYGNUSFORGE_SERIAL_TESTS=1` (`--pdb` does not work with `-n`).
+
+Rate limiting is in memory and per process, so run a single app worker, or move the limiter to
+the proxy before scaling out.

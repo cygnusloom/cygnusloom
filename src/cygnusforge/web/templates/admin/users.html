@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Accounts · Administration{% endblock %}
+{% block content %}
+  {% include "admin/nav.html" %}
+  <section class="card">
+    <div class="heading">
+      <h1>Accounts</h1>
+      <span class="muted">{{ total }} account(s)</span>
+    </div>
+    <form method="get" action="/admin/users" class="admin-search">
+      <input type="search" name="q" value="{{ query }}" placeholder="Email, name, or subject">
+      <select name="status">
+        <option value="" {% if not status %}selected{% endif %}>All statuses</option>
+        <option value="active" {% if status == "active" %}selected{% endif %}>Active</option>
+        <option value="disabled" {% if status == "disabled" %}selected{% endif %}>Disabled</option>
+      </select>
+      <button type="submit">Search</button>
+    </form>
+    {% if rows %}
+      <table>
+        <thead>
+          <tr><th>Account</th><th>Roles</th><th>Status</th><th>Campaigns</th><th>Sessions</th><th>Last sign-in</th><th>Created</th></tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              <td>
+                <a href="/admin/users/{{ row.user.id }}">{{ row.user.email or row.user.subject }}</a>
+                {% if row.user.display_name %}<div class="muted">{{ row.user.display_name }}</div>{% endif %}
+              </td>
+              <td>{% for role in row.user.roles|roles %}<span class="tag">{{ role }}</span>{% endfor %}</td>
+              <td>{{ "disabled" if row.user.disabled else "active" }}</td>
+              <td>{{ row.campaign_count }}</td>
+              <td>{{ row.active_sessions }}</td>
+              <td>{{ row.user.last_login_at.strftime("%Y-%m-%d %H:%M") if row.user.last_login_at else "never" }}</td>
+              <td>{{ row.user.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="pager">
+        {% if page > 1 %}<a href="/admin/users?q={{ query|urlencode }}&status={{ status|urlencode }}&page={{ page - 1 }}">Previous</a>{% endif %}
+        <span>Page {{ page }} of {{ pages }}</span>
+        {% if page < pages %}<a href="/admin/users?q={{ query|urlencode }}&status={{ status|urlencode }}&page={{ page + 1 }}">Next</a>{% endif %}
+      </p>
+    {% else %}
+      <p class="muted">No accounts match.</p>
+    {% endif %}
+  </section>
+{% endblock %}

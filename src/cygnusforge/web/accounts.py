@@ -1,20 +1,36 @@
-"""Account pages: register, log in, and log out."""
+"""Account pages: sign in through the identity provider, sign out, and account details."""
 
 from __future__ import annotations
+
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 from starlette.responses import Response
 
-from cygnusforge.auth.deps import USER_KEY, current_user, verify_csrf
-from cygnusforge.services.accounts import authenticate, get_or_create_test_user, register_user
-from cygnusforge.services.common import Conflict, InvalidInput, NotFound
+from cygnusforge.auth.claims import OIDCError
+from cygnusforge.auth.deps import (
+    current_session,
+    current_user,
+    page_user,
+    sign_in,
+    sign_out,
+    verify_csrf,
+)
+from cygnusforge.services.accounts import (
+    TEST_USER_EMAIL,
+    AccountDisabled,
+    get_or_create_test_user,
+    provision_user,
+    user_roles,
+)
+from cygnusforge.services.campaigns import list_campaigns
+from cygnusforge.services.common import InvalidInput, NotFound
+from cygnusforge.services.sessions import active_sessions, revoke_user_sessions
 from cygnusforge.web.forms import form_text
 from cygnusforge.web.rendering import render
 
 router = APIRouter()
-
-AUTH_PAGES = {"register": ("Register", "/register"), "login": ("Log in", "/login")}
 
 
 def _too_many(request: Request) -> bool:
@@ -22,34 +38,51 @@ def _too_many(request: Request) -> bool:
     return not request.app.state.limiter.allow(key)
 
 
-@router.get("/")
-def home() -> Response:
-    return RedirectResponse("/campaigns", status_code=303)
+def _redirect_uri(request: Request) -> str:
+    return f"{request.app.state.settings.base_url}/auth/callback"
 
 
-@router.get("/register")
-def register_page(request: Request) -> Response:
-    if current_user(request) is not None:
-        return RedirectResponse("/campaigns", status_code=303)
+def _provider(request: Request):
+    provider = request.app.state.oidc
+    if provider is None:
+        raise NotFound("single sign-on is not configured")
+    return provider
+
+
+def _safe_next(value: object) -> str:
+    """Only same-site absolute paths are accepted as a post-login destination."""
+    if not isinstance(value, str) or not value.startswith("/") or value.startswith("//"):
+        return "/campaigns"
+    if "\\" in value or "\n" in value or "\r" in value:
+        return "/campaigns"
+    return value
+
+
+def _login_page(
+    request: Request,
+    *,
+    status_code: int = 200,
+    error: str | None = None,
+    email: str = "",
+) -> Response:
+    settings = request.app.state.settings
+    provider = request.app.state.oidc
     return render(
-        request, "auth_form.html", mode="register", heading="Register", action="/register"
+        request,
+        "auth_form.html",
+        status_code=status_code,
+        heading="Log in",
+        oidc_enabled=provider is not None,
+        oidc_name=provider.name if provider is not None else settings.oidc_name,
+        oidc_account_url=settings.oidc_account_url,
+        test_login=settings.test_login,
+        error=error,
+        email=email,
     )
 
 
-@router.post("/register")
-async def register(request: Request) -> Response:
-    if _too_many(request):
-        return _form_error(request, "register", 429, "Too many attempts. Try again later.")
-    await verify_csrf(request)
-    form = await request.form()
-    email = form_text(form, "email")
-    try:
-        user = register_user(request.app.state.engine, email, form_text(form, "password"))
-    except InvalidInput as exc:
-        return _form_error(request, "register", 400, str(exc), email)
-    except Conflict as exc:
-        return _form_error(request, "register", 409, str(exc), email)
-    _sign_in(request, user.id)
+@router.get("/")
+def home() -> Response:
     return RedirectResponse("/campaigns", status_code=303)
 
 
@@ -57,65 +90,117 @@ async def register(request: Request) -> Response:
 def login_page(request: Request) -> Response:
     if current_user(request) is not None:
         return RedirectResponse("/campaigns", status_code=303)
-    return render(
-        request,
-        "auth_form.html",
-        mode="login",
-        heading="Log in",
-        action="/login",
-        test_login=request.app.state.settings.test_login,
+    return _login_page(request)
+
+
+@router.get("/auth/login")
+async def auth_login(request: Request) -> Response:
+    provider = _provider(request)
+    next_path = _safe_next(request.query_params.get("next"))
+    step_up = request.query_params.get("step_up") == "1"
+    if current_user(request) is not None and not step_up:
+        return RedirectResponse(next_path, status_code=303)
+    request.session["oidc_next"] = next_path
+    request.session["oidc_step_up"] = step_up
+    return await provider.authorize_redirect(
+        request, _redirect_uri(request), max_age=0 if step_up else None
     )
 
 
-@router.post("/login")
-async def login(request: Request) -> Response:
+@router.get("/auth/callback")
+async def auth_callback(request: Request) -> Response:
+    provider = _provider(request)
     if _too_many(request):
-        return _form_error(request, "login", 429, "Too many attempts. Try again later.")
-    await verify_csrf(request)
-    form = await request.form()
-    email = form_text(form, "email")
-    user = authenticate(request.app.state.engine, email, form_text(form, "password"))
-    if user is None:
-        return _form_error(request, "login", 401, "Email or password is incorrect.", email)
-    _sign_in(request, user.id)
-    return RedirectResponse("/campaigns", status_code=303)
+        return _login_page(request, status_code=429, error="Too many attempts. Try again later.")
+    try:
+        claims = await provider.fetch_claims(request, _redirect_uri(request))
+    except OIDCError as exc:
+        return _login_page(request, status_code=401, error=str(exc))
+    try:
+        user = provision_user(request.app.state.engine, claims)
+    except AccountDisabled as exc:
+        return _login_page(request, status_code=403, error=str(exc))
+    except InvalidInput as exc:
+        return _login_page(request, status_code=401, error=str(exc))
+    next_path = _safe_next(request.session.get("oidc_next"))
+    step_up = bool(request.session.get("oidc_step_up"))
+    sign_in(request, user, claims.auth_time)
+    if step_up:
+        request.session["step_up_done"] = True
+    return RedirectResponse(next_path, status_code=303)
+
+
+@router.get("/auth/step-up")
+async def step_up(request: Request) -> Response:
+    """Ask the provider to re-authenticate before a destructive admin action."""
+    user = page_user(request)
+    next_path = _safe_next(request.query_params.get("next") or "/admin")
+    provider = request.app.state.oidc
+    if provider is None:
+        # Development without an identity provider: refresh the local session in place.
+        sign_in(request, user, datetime.now(UTC))
+        request.session["step_up_done"] = True
+        return RedirectResponse(next_path, status_code=303)
+    request.session["oidc_next"] = next_path
+    request.session["oidc_step_up"] = True
+    return await provider.authorize_redirect(request, _redirect_uri(request), max_age=0)
 
 
 @router.post("/login/test-user")
 async def login_as_test_user(request: Request) -> Response:
-    if not request.app.state.settings.test_login:
+    settings = request.app.state.settings
+    if not settings.test_login:
         raise NotFound("not found")
+    if _too_many(request):
+        return _login_page(request, status_code=429, error="Too many attempts. Try again later.")
     await verify_csrf(request)
-    user = get_or_create_test_user(request.app.state.engine)
-    _sign_in(request, user.id)
+    form = await request.form()
+    email = form_text(form, "email") or TEST_USER_EMAIL
+    try:
+        user = get_or_create_test_user(
+            request.app.state.engine,
+            email,
+            roles=settings.oidc_admin_values if settings.test_login_admin else None,
+        )
+    except InvalidInput as exc:
+        return _login_page(request, status_code=400, error=str(exc), email=email)
+    sign_in(request, user, datetime.now(UTC))
     return RedirectResponse("/campaigns", status_code=303)
 
 
 @router.post("/logout")
 async def logout(request: Request) -> Response:
     await verify_csrf(request)
-    request.session.clear()
+    sign_out(request)
+    provider = request.app.state.oidc
+    if provider is not None:
+        url = await provider.logout_url(request, f"{request.app.state.settings.base_url}/login")
+        if url:
+            return RedirectResponse(url, status_code=303)
     return RedirectResponse("/login", status_code=303)
 
 
-def _sign_in(request: Request, user_id: int | None) -> None:
-    # Clearing first drops any pre-login state; the CSRF token is issued again on the next page.
-    request.session.clear()
-    request.session[USER_KEY] = user_id
-
-
-def _form_error(
-    request: Request, mode: str, status: int, message: str, email: str = ""
-) -> Response:
-    heading, action = AUTH_PAGES[mode]
+@router.get("/account")
+def account_page(request: Request) -> Response:
+    user = page_user(request)
+    engine = request.app.state.engine
+    found = current_session(request)
     return render(
         request,
-        "auth_form.html",
-        status_code=status,
-        mode=mode,
-        heading=heading,
-        action=action,
-        error=message,
-        email=email,
-        test_login=request.app.state.settings.test_login,
+        "account.html",
+        user=user,
+        roles=user_roles(user),
+        sessions=active_sessions(engine, user.id or 0),
+        campaign_count=len(list_campaigns(engine, user.id)),
+        current_session_id=found[1].id if found is not None else "",
+        oidc_account_url=request.app.state.settings.oidc_account_url,
     )
+
+
+@router.post("/account/sessions/revoke")
+async def revoke_sessions(request: Request) -> Response:
+    user = page_user(request)
+    await verify_csrf(request)
+    revoke_user_sessions(request.app.state.engine, user.id or 0)
+    sign_out(request)
+    return RedirectResponse("/login", status_code=303)

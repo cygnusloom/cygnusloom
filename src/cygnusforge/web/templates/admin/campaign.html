@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}{{ detail.campaign.name }} · Administration{% endblock %}
+{% block content %}
+  {% include "admin/nav.html" %}
+  <section class="card">
+    <div class="heading">
+      <h1>{{ detail.campaign.name }}</h1>
+      <span class="muted">Campaign #{{ detail.campaign.id }}</span>
+    </div>
+    <dl class="details">
+      <dt>Owner</dt>
+      <dd><a href="/admin/users/{{ detail.owner.id }}">{{ detail.owner.email or detail.owner.subject }}</a></dd>
+      <dt>World template</dt>
+      <dd>{{ detail.campaign.world_template }}</dd>
+      <dt>Rule set</dt>
+      <dd>{{ detail.campaign.rule_set }}</dd>
+      <dt>Model</dt>
+      <dd>{{ detail.campaign.model }}</dd>
+      <dt>Created</dt>
+      <dd>{{ detail.campaign.created_at.strftime("%Y-%m-%d %H:%M") }}</dd>
+      <dt>Events</dt>
+      <dd>{{ detail.event_count }}</dd>
+      <dt>Last activity</dt>
+      <dd>{{ detail.last_event_at.strftime("%Y-%m-%d %H:%M") if detail.last_event_at else "—" }}</dd>
+    </dl>
+    <p class="muted">Campaign content is private. This panel shows metadata only.</p>
+  </section>
+
+  <div class="admin-grid">
+    <section class="card">
+      <h2>Events by channel</h2>
+      {% if detail.events_by_channel %}
+        <table>
+          <thead><tr><th>Channel</th><th>Events</th></tr></thead>
+          <tbody>
+            {% for channel, count in detail.events_by_channel %}
+              <tr><td>{{ channel }}</td><td>{{ count }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="muted">No events.</p>
+      {% endif %}
+    </section>
+    <section class="card">
+      <h2>Events by kind</h2>
+      {% if detail.events_by_kind %}
+        <table>
+          <thead><tr><th>Kind</th><th>Events</th></tr></thead>
+          <tbody>
+            {% for kind, count in detail.events_by_kind %}
+              <tr><td>{{ kind }}</td><td>{{ count }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="muted">No events.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Manage</h2>
+    <form method="post" action="/admin/campaigns/{{ detail.campaign.id }}/rename" class="admin-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Name <input type="text" name="name" value="{{ detail.campaign.name }}" maxlength="120" required></label>
+      <button type="submit">Rename</button>
+    </form>
+    <form method="post" action="/admin/campaigns/{{ detail.campaign.id }}/model" class="admin-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Model
+        <select name="model">
+          {% for model in models %}
+            <option value="{{ model }}" {% if model == detail.campaign.model %}selected{% endif %}>{{ model }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit">Change model</button>
+    </form>
+    <form method="post" action="/admin/campaigns/{{ detail.campaign.id }}/transfer" class="admin-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>New owner's email <input type="email" name="owner_email" required></label>
+      <button type="submit">Transfer</button>
+    </form>
+    <details class="danger-zone">
+      <summary>Delete this campaign</summary>
+      <p>This deletes every event in the campaign. Type <strong>{{ detail.campaign.name }}</strong> to confirm.</p>
+      <form method="post" action="/admin/campaigns/{{ detail.campaign.id }}/delete">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label>Campaign name <input type="text" name="confirm" required autocomplete="off"></label>
+        <button type="submit" class="danger">Delete campaign</button>
+      </form>
+    </details>
+  </section>
+{% endblock %}

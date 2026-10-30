@@ -71,3 +71,84 @@ def test_debug_panel_can_be_enabled(value: str):
 @pytest.mark.parametrize("value", ["0", "false", "no", "off", ""])
 def test_debug_panel_stays_off_for_other_values(value: str):
     assert load_settings({**BASE, "CYGNUSFORGE_DEBUG_PANEL": value}).debug_panel is False
+
+
+OIDC = {
+    "CYGNUSFORGE_BASE_URL": "https://forge.example.com",
+    "CYGNUSFORGE_OIDC_ISSUER": "https://idp.example.com/application/o/cygnusforge/",
+    "CYGNUSFORGE_OIDC_CLIENT_ID": "cygnusforge",
+    "CYGNUSFORGE_OIDC_CLIENT_SECRET": "secret",
+}
+
+
+def test_oidc_settings_are_read():
+    settings = load_settings(
+        {
+            **BASE,
+            **OIDC,
+            "CYGNUSFORGE_OIDC_ADMIN_CLAIM": "realm_access.roles",
+            "CYGNUSFORGE_OIDC_ADMIN_VALUES": "forge-admin, forge-owner",
+        }
+    )
+    assert settings.oidc_issuer == "https://idp.example.com/application/o/cygnusforge"
+    assert settings.oidc_admin_claim == "realm_access.roles"
+    assert settings.oidc_admin_values == ("forge-admin", "forge-owner")
+    assert settings.base_url == "https://forge.example.com"
+
+
+def test_secure_cookies_follow_the_base_url():
+    assert load_settings({**BASE, **OIDC}).secure_cookies is True
+    assert (
+        load_settings({**BASE, "CYGNUSFORGE_BASE_URL": "http://localhost:8000"}).secure_cookies
+        is False
+    )
+
+
+def test_openid_scope_is_always_requested():
+    settings = load_settings({**BASE, **OIDC, "CYGNUSFORGE_OIDC_SCOPES": "email profile"})
+    assert settings.oidc_scopes.split()[0] == "openid"
+
+
+def test_production_requires_oidc():
+    with pytest.raises(RuntimeError, match="CYGNUSFORGE_OIDC_ISSUER"):
+        load_settings({**BASE, "CYGNUSFORGE_ENVIRONMENT": "production"})
+
+
+def test_production_rejects_test_login():
+    with pytest.raises(RuntimeError, match="test login"):
+        load_settings(
+            {**BASE, **OIDC, "CYGNUSFORGE_ENVIRONMENT": "production", "CYGNUSFORGE_TEST_LOGIN": "1"}
+        )
+
+
+def test_production_requires_https():
+    with pytest.raises(RuntimeError, match="https"):
+        load_settings(
+            {
+                **BASE,
+                **OIDC,
+                "CYGNUSFORGE_BASE_URL": "http://forge.example.com",
+                "CYGNUSFORGE_ENVIRONMENT": "production",
+            }
+        )
+
+
+def test_test_login_admin_requires_test_login():
+    with pytest.raises(RuntimeError, match="TEST_LOGIN_ADMIN"):
+        load_settings({**BASE, "CYGNUSFORGE_TEST_LOGIN_ADMIN": "1"})
+
+
+def test_unknown_environment_is_rejected():
+    with pytest.raises(RuntimeError, match="CYGNUSFORGE_ENVIRONMENT"):
+        load_settings({**BASE, "CYGNUSFORGE_ENVIRONMENT": "staging"})
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "lots"])
+def test_session_hours_must_be_positive(value: str):
+    with pytest.raises(RuntimeError, match="CYGNUSFORGE_SESSION_HOURS"):
+        load_settings({**BASE, "CYGNUSFORGE_SESSION_HOURS": value})
+
+
+def test_auto_create_schema_defaults_off_in_production():
+    settings = load_settings({**BASE, **OIDC, "CYGNUSFORGE_ENVIRONMENT": "production"})
+    assert settings.auto_create_schema is False

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Audit log · Administration{% endblock %}
+{% block content %}
+  {% include "admin/nav.html" %}
+  <section class="card">
+    <div class="heading">
+      <h1>Audit log</h1>
+      <span class="muted">{{ total }} action(s)</span>
+    </div>
+    {% if rows %}
+      <table>
+        <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Target</th><th>Details</th><th>Address</th></tr></thead>
+        <tbody>
+          {% for entry in rows %}
+            <tr>
+              <td>{{ entry.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+              <td>{{ entry.actor_email }}</td>
+              <td>{{ entry.action }}</td>
+              <td>{{ entry.target_type }} #{{ entry.target_id }}</td>
+              <td class="mono">{{ entry.details }}</td>
+              <td class="mono">{{ entry.ip }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="pager">
+        {% if page > 1 %}<a href="/admin/audit?page={{ page - 1 }}">Previous</a>{% endif %}
+        <span>Page {{ page }} of {{ pages }}</span>
+        {% if page < pages %}<a href="/admin/audit?page={{ page + 1 }}">Next</a>{% endif %}
+      </p>
+    {% else %}
+      <p class="muted">No admin actions recorded.</p>
+    {% endif %}
+  </section>
+{% endblock %}

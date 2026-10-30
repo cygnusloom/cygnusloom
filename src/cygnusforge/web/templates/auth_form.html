@@ -3,28 +3,29 @@
 {% block content %}
   <section class="card narrow">
     <h1>{{ heading }}</h1>
-    <form method="post" action="{{ action }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <label>
-        Email
-        <input type="email" name="email" value="{{ email }}" required autocomplete="email">
-      </label>
-      <label>
-        Password
-        <input type="password" name="password" required autocomplete="{{ 'new-password' if mode == 'register' else 'current-password' }}">
-      </label>
-      <button type="submit">{{ heading }}</button>
-    </form>
-    {% if mode == "register" %}
-      <p>Already registered? <a href="/login">Log in</a></p>
-    {% else %}
-      <p>No account? <a href="/register">Register</a></p>
-      {% if test_login %}
-        <form method="post" action="/login/test-user">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <button type="submit">Log in as test user</button>
-        </form>
+    {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+    {% if oidc_enabled %}
+      <form method="get" action="/auth/login">
+        <button type="submit">Continue with {{ oidc_name }}</button>
+      </form>
+      <p>Accounts, passwords, multi-factor authentication, and roles are managed by {{ oidc_name }}.</p>
+      {% if oidc_account_url %}
+        <p><a href="{{ oidc_account_url }}">Manage your account</a></p>
       {% endif %}
+    {% else %}
+      <p role="alert">Single sign-on is not configured. An administrator must set the identity provider settings.</p>
+    {% endif %}
+    {% if test_login %}
+      <hr>
+      <p><strong>Development login</strong></p>
+      <form method="post" action="/login/test-user">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label>
+          Test account email
+          <input type="email" name="email" value="{{ email }}" placeholder="test-user@example.com">
+        </label>
+        <button type="submit">Log in as test user</button>
+      </form>
     {% endif %}
   </section>
 {% endblock %}

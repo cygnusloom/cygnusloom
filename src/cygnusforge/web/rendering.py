@@ -9,7 +9,8 @@ from markupsafe import Markup
 from starlette.responses import Response
 from starlette.templating import Jinja2Templates
 
-from cygnusforge.auth.deps import current_user, get_csrf
+from cygnusforge.auth.deps import current_user, get_csrf, is_admin_user
+from cygnusforge.services.accounts import decode_roles
 from cygnusforge.web.icons import icon_path, item_icon_id, place_icon_path
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
@@ -28,9 +29,19 @@ def render_markdown(text: str) -> Markup:
 
 
 templates.env.filters["markdown"] = render_markdown
+templates.env.filters["roles"] = decode_roles
 
 
 def render(request: Request, name: str, status_code: int = 200, **context: Any) -> Response:
-    """Render a page with the signed-in user (if any) and the CSRF token for its forms."""
-    values = {"user": current_user(request), "csrf_token": get_csrf(request), **context}
+    """Render a page with the signed-in user (if any), its role check, and the CSRF token."""
+    user = current_user(request)
+    values = {
+        "user": user,
+        "csrf_token": get_csrf(request),
+        "is_admin": is_admin_user(request, user),
+        "flash": request.session.pop("flash", None),
+        "step_up_done": request.session.pop("step_up_done", False),
+        "oidc_account_url": request.app.state.settings.oidc_account_url,
+        **context,
+    }
     return templates.TemplateResponse(request, name, values, status_code=status_code)

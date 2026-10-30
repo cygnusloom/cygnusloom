@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import FastAPI, Request
-from fastapi.responses import PlainTextResponse, RedirectResponse, Response
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 from starlette.middleware.sessions import SessionMiddleware
 
-from cygnusforge.auth.deps import LoginRequired
+from cygnusforge.auth.deps import AdminRequired, LoginRequired, StepUpRequired
+from cygnusforge.auth.oidc import OIDCProvider, build_oidc_provider
 from cygnusforge.auth.ratelimit import RateLimiter
 from cygnusforge.config import Settings, load_settings
 from cygnusforge.content.library import ContentLibrary
@@ -19,10 +22,11 @@ from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.llm.registry import ProviderFactory
 from cygnusforge.services.common import NotFound
 from cygnusforge.web.accounts import router as accounts_router
+from cygnusforge.web.admin import router as admin_router
 from cygnusforge.web.campaigns import router as campaigns_router
 
 SESSION_COOKIE = "cygnusforge_session"
-SESSION_SECONDS = 14 * 24 * 60 * 60
+SECURE_SESSION_COOKIE = "__Host-cygnusforge_session"
 STATIC_DIR = Path(__file__).parent / "static"
 
 
@@ -40,31 +44,56 @@ def create_app(
     settings: Settings,
     fake_provider: FakeProvider | None = None,
     content: ContentLibrary | None = None,
+    oidc_provider: OIDCProvider | None = None,
 ) -> FastAPI:
-    """Build the app. Pass `fake_provider` to script the `fake/` models in tests, and `content`
-    to reuse an already-loaded library instead of reading the bundled content again."""
+    """Build the app. Pass `fake_provider` to script the `fake/` models in tests, `content`
+    to reuse an already-loaded library, and `oidc_provider` to bypass a live identity provider."""
     if not settings.secret_key:
         raise RuntimeError("CYGNUSFORGE_SECRET_KEY is required")
     app = FastAPI(title="Cygnus Forge")
     app.state.settings = settings
     app.state.engine = make_engine(settings.database_url)
-    create_schema(app.state.engine)
+    if settings.auto_create_schema:
+        create_schema(app.state.engine)
     app.state.content = content if content is not None else ContentLibrary.load()
     app.state.limiter = RateLimiter()
+    app.state.oidc = oidc_provider if oidc_provider is not None else build_oidc_provider(settings)
     app.state.providers = ProviderFactory(settings, fake=fake_provider)
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.secret_key,
-        session_cookie=SESSION_COOKIE,
-        max_age=SESSION_SECONDS,
+        session_cookie=SECURE_SESSION_COOKIE if settings.secure_cookies else SESSION_COOKIE,
+        max_age=settings.session_hours * 60 * 60,
         same_site="lax",
-        https_only=False,
+        https_only=settings.secure_cookies,
     )
+
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "same-origin")
+        return response
+
+    @app.get("/healthz", include_in_schema=False)
+    def healthz() -> JSONResponse:
+        try:
+            with app.state.engine.connect() as connection:
+                connection.execute(text("SELECT 1"))
+        except Exception:
+            logging.getLogger(__name__).exception("health check failed")
+            return JSONResponse({"status": "error"}, status_code=503)
+        return JSONResponse({"status": "ok"})
+
     app.add_exception_handler(LoginRequired, _login_redirect)
+    app.add_exception_handler(AdminRequired, _forbidden)
+    app.add_exception_handler(StepUpRequired, _step_up_redirect)
     app.add_exception_handler(NotFound, _not_found)
     app.mount("/static", RevalidatingStaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(accounts_router)
     app.include_router(campaigns_router)
+    app.include_router(admin_router)
     return app
 
 
@@ -81,6 +110,16 @@ def app_from_env() -> FastAPI:
 
 async def _login_redirect(request: Request, exc: LoginRequired) -> RedirectResponse:
     return RedirectResponse("/login", status_code=303)
+
+
+async def _forbidden(request: Request, exc: AdminRequired) -> Response:
+    from cygnusforge.web.rendering import render
+
+    return render(request, "error.html", status_code=403, message="Administrator access required.")
+
+
+async def _step_up_redirect(request: Request, exc: StepUpRequired) -> RedirectResponse:
+    return RedirectResponse(f"/auth/step-up?next={quote(exc.next_path)}", status_code=303)
 
 
 async def _not_found(request: Request, exc: NotFound) -> PlainTextResponse:

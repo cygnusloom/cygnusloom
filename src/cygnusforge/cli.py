@@ -1,36 +1,53 @@
-"""Operator commands: `python -m cygnusforge.cli reset-password EMAIL`."""
+"""Operator commands: schema migration and read-only account inspection."""
 
 from __future__ import annotations
 
 import argparse
-import getpass
-import sys
+from pathlib import Path
 
+from alembic.config import Config as AlembicConfig
+from sqlmodel import select
+
+from alembic import command as alembic_command
 from cygnusforge.config import load_settings
+from cygnusforge.db.models import User
 from cygnusforge.db.session import make_engine
-from cygnusforge.services.accounts import reset_password
-from cygnusforge.services.common import InvalidInput, NotFound
+from cygnusforge.services.common import session_scope
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def _migrate() -> int:
+    settings = load_settings()
+    config = AlembicConfig(str(ROOT / "alembic.ini"))
+    config.set_main_option("sqlalchemy.url", settings.database_url)
+    alembic_command.upgrade(config, "head")
+    print("database is at the latest migration")
+    return 0
+
+
+def _list_users() -> int:
+    engine = make_engine(load_settings().database_url)
+    with session_scope(engine) as db:
+        users = db.exec(select(User).order_by(User.created_at)).all()
+    if not users:
+        print("no accounts")
+        return 0
+    for user in users:
+        status = "disabled" if user.disabled else "active"
+        print(f"{user.id}\t{user.email or user.subject}\t{status}\t{user.issuer}\t{user.roles}")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="cygnusforge")
     sub = parser.add_subparsers(dest="command", required=True)
-    reset = sub.add_parser("reset-password", help="set a new password for an account")
-    reset.add_argument("email")
+    sub.add_parser("migrate", help="apply database migrations")
+    sub.add_parser("list-users", help="print accounts without changing them")
     args = parser.parse_args(argv)
-
-    engine = make_engine(load_settings().database_url)
-    password = getpass.getpass("New password: ")
-    if password != getpass.getpass("Repeat password: "):
-        print("passwords do not match", file=sys.stderr)
-        return 1
-    try:
-        reset_password(engine, args.email, password)
-    except (InvalidInput, NotFound) as exc:
-        print(exc, file=sys.stderr)
-        return 1
-    print(f"password updated for {args.email.strip().lower()}")
-    return 0
+    if args.command == "migrate":
+        return _migrate()
+    return _list_users()
 
 
 if __name__ == "__main__":

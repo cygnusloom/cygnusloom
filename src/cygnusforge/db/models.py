@@ -9,12 +9,57 @@ def utcnow() -> datetime:
 
 
 class User(SQLModel, table=True):
+    """An account mirrored from the identity provider. Cygnusforge never stores credentials.
+
+    The provider's issuer and subject identify the account; email is only a label and can
+    change. `roles` is a JSON list snapshotted from the ID token at the last sign-in."""
+
     __tablename__ = "user"
+    __table_args__ = (UniqueConstraint("issuer", "subject"),)
 
     id: int | None = Field(default=None, primary_key=True)
-    email: str = Field(index=True, unique=True, max_length=255)
-    password_hash: str = Field(max_length=255)
+    issuer: str = Field(default="", index=True, max_length=255)
+    subject: str = Field(default="", max_length=255)
+    email: str = Field(default="", index=True, max_length=255)
+    email_verified: bool = Field(default=False)
+    display_name: str = Field(default="", max_length=120)
+    roles: str = Field(default="[]", sa_column=Column(Text, nullable=False))
+    disabled: bool = Field(default=False)
     created_at: datetime = Field(default_factory=utcnow)
+    last_login_at: datetime | None = Field(default=None)
+
+
+class UserSession(SQLModel, table=True):
+    """A server-side login session. The cookie holds only this opaque id, so an administrator
+    can revoke it and sign-in state survives without trusting a large signed cookie."""
+
+    __tablename__ = "user_session"
+
+    id: str = Field(primary_key=True, max_length=64)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    created_at: datetime = Field(default_factory=utcnow)
+    last_seen_at: datetime = Field(default_factory=utcnow)
+    expires_at: datetime
+    auth_time: datetime = Field(default_factory=utcnow)
+    ip: str = Field(default="", max_length=64)
+    user_agent: str = Field(default="", max_length=255)
+
+
+class AdminAudit(SQLModel, table=True):
+    """One administrator action. Actor and target are snapshots, so the record survives a
+    deleted account. This table is append-only: there is no update or delete route."""
+
+    __tablename__ = "admin_audit"
+
+    id: int | None = Field(default=None, primary_key=True)
+    actor_id: int = Field(index=True)
+    actor_email: str = Field(default="", max_length=255)
+    action: str = Field(max_length=80)
+    target_type: str = Field(max_length=32)
+    target_id: str = Field(default="", max_length=64)
+    details: str = Field(default="{}", sa_column=Column(Text, nullable=False))
+    created_at: datetime = Field(default_factory=utcnow)
+    ip: str = Field(default="", max_length=64)
 
 
 class Campaign(SQLModel, table=True):

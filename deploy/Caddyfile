@@ -1,0 +1,25 @@
+{
+  email {$ACME_EMAIL:admin@example.com}
+}
+
+{$CYGNUSFORGE_DOMAIN} {
+  encode gzip
+  reverse_proxy app:8000
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    Referrer-Policy "same-origin"
+    -Server
+  }
+}
+
+{$AUTHENTIK_DOMAIN} {
+  encode gzip
+  reverse_proxy authentik-server:9000
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    X-Content-Type-Options "nosniff"
+    -Server
+  }
+}

@@ -12,12 +12,10 @@ from typing import Any
 
 import httpx
 import pytest
-from argon2 import PasswordHasher
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, event
 
-from cygnusforge.auth import passwords
 from cygnusforge.config import Settings
 from cygnusforge.content.library import DATA_DIR, ContentLibrary
 from cygnusforge.db.session import make_engine
@@ -27,7 +25,6 @@ from cygnusforge.web import app as web_app
 from cygnusforge.web.app import create_app
 
 SECRET = "test-secret-key-0123456789abcdef"
-PASSWORD = "correct-horse-battery"
 TOKEN_RE = re.compile(r'name="csrf_token" value="([^"]+)"')
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -52,9 +49,18 @@ def content_library() -> ContentLibrary:
 NARRATE_TEXT = narrate_instruction(content_library().rule_sets["rolltest"])
 
 
-def make_app(settings: Settings, fake_provider: FakeProvider | None = None) -> FastAPI:
+def make_app(
+    settings: Settings,
+    fake_provider: FakeProvider | None = None,
+    oidc_provider=None,
+) -> FastAPI:
     """An app whose content includes the test-only fixtures."""
-    return create_app(settings, fake_provider=fake_provider, content=content_library())
+    return create_app(
+        settings,
+        fake_provider=fake_provider,
+        content=content_library(),
+        oidc_provider=oidc_provider,
+    )
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -99,13 +105,6 @@ def block_live_models(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     yield
 
 
-@pytest.fixture(autouse=True)
-def fast_password_hashing(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        passwords, "_hasher", PasswordHasher(time_cost=1, memory_cost=1024, parallelism=1)
-    )
-
-
 @pytest.fixture
 def settings(tmp_path) -> Settings:
     return Settings(
@@ -113,6 +112,8 @@ def settings(tmp_path) -> Settings:
         secret_key=SECRET,
         llm_models=("fake/scripted", "ollama/test-model"),
         llm_default_model="fake/scripted",
+        test_login=True,
+        base_url="http://testserver",
     )
 
 
@@ -154,19 +155,16 @@ def csrf_token(client: TestClient, path: str) -> str:
     return match.group(1)
 
 
-def register(client: TestClient, email: str = "ada@example.com", password: str = PASSWORD):
-    token = csrf_token(client, "/register")
-    return client.post(
-        "/register",
-        data={"csrf_token": token, "email": email, "password": password},
-        follow_redirects=False,
-    )
-
-
-def login(client: TestClient, email: str = "ada@example.com", password: str = PASSWORD):
+def register(client: TestClient, email: str = "ada@example.com", password: str | None = None):
+    """Sign in a development account. The password argument is accepted and ignored so older
+    call sites keep reading naturally while credentials live in the identity provider."""
     token = csrf_token(client, "/login")
     return client.post(
-        "/login",
-        data={"csrf_token": token, "email": email, "password": password},
+        "/login/test-user",
+        data={"csrf_token": token, "email": email},
         follow_redirects=False,
     )
+
+
+def login(client: TestClient, email: str = "ada@example.com", password: str | None = None):
+    return register(client, email, password)
