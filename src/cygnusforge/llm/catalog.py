@@ -139,13 +139,10 @@ class ModelCatalog:
         )
 
     def source(self) -> str:
-        if self._rows():
-            return "database"
-        return "environment" if self._env_specs() else "none"
+        return "database" if self._rows() else "none"
 
     def all_specs(self) -> tuple[ModelSpec, ...]:
-        rows = self._rows()
-        return tuple(self._spec(row) for row in rows) if rows else self._env_specs()
+        return tuple(self._spec(row) for row in self._rows())
 
     def get(self, row_id: int) -> ModelSpec:
         with session_scope(self.engine) as db:
@@ -155,9 +152,7 @@ class ModelCatalog:
             return self._spec(row)
 
     def specs(self) -> tuple[ModelSpec, ...]:
-        rows = self._rows()
-        specs = tuple(self._spec(row) for row in rows) if rows else self._env_specs()
-        return tuple(spec for spec in specs if spec.enabled)
+        return tuple(spec for spec in self.all_specs() if spec.enabled)
 
     def model_ids(self) -> tuple[str, ...]:
         return tuple(spec.model_id for spec in self.specs())

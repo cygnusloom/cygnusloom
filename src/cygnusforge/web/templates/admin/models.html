@@ -5,9 +5,7 @@
   <section class="card">
     <div class="heading">
       <h1>Language models</h1>
-      <span class="muted">
-        {% if source == "database" %}database{% elif source == "environment" %}environment{% else %}not configured{% endif %}
-      </span>
+      <span class="muted">{{ "database" if source == "database" else "not configured" }}</span>
     </div>
     <p class="muted">
       Cygnus Forge does not provide a model. Add at least one model here before players create
@@ -17,12 +15,7 @@
     {% if not rows %}
       <p role="alert">No models are configured, so new campaigns cannot be created.</p>
     {% endif %}
-    {% if source == "environment" and rows %}
-      <p role="alert">
-        These models came from development environment variables. Adding or editing a model
-        writes the list to the database.
-      </p>
-    {% endif %}
+
   </section>
 
   {% for row in rows %}

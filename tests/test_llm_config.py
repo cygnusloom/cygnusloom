@@ -31,9 +31,12 @@ def test_environment_models_seed_the_catalog_once(settings: Settings):
     assert sum(row.is_default for row in rows) == 1
 
 
-def test_environment_list_is_used_before_the_first_database_change(settings: Settings):
+def test_environment_list_is_the_seed_for_an_empty_catalog(settings: Settings):
     catalog, _ = _catalog(settings)
-    assert catalog.source() == "environment"
+    assert catalog.source() == "none"
+    assert catalog.model_ids() == ()
+    catalog.seed_from_env()
+    assert catalog.source() == "database"
     assert catalog.model_ids() == ("fake/scripted", "ollama/test-model")
     assert catalog.default_model_id() == "fake/scripted"
 
