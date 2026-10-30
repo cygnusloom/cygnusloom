@@ -56,3 +56,9 @@ def test_local_mode_makes_the_idp_reachable_from_the_app() -> None:
     local = (ROOT / "compose.local.yaml").read_text()
     assert "ports: !override" in local
     assert "0.0.0.0:${AUTHENTIK_PORT:-21873}:9000" in local
+
+
+def test_entrypoint_waits_for_database_dns() -> None:
+    entrypoint = ROOT / "deploy" / "entrypoint.sh"
+    subprocess.run(["sh", "-n", str(entrypoint)], check=True, capture_output=True, text=True)
+    assert "retrying migrations" in entrypoint.read_text()
