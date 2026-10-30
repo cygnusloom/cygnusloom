@@ -77,7 +77,7 @@ services:
       retries: 20
 
   authentik-server:
-    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server:2025.6.3}
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server:2026.5.3}
     restart: unless-stopped
     command: server
     environment: &authentik-env
@@ -114,7 +114,7 @@ services:
       retries: 5
 
   authentik-worker:
-    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server:2025.6.3}
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server:2026.5.3}
     restart: unless-stopped
     command: worker
     environment: *authentik-env
