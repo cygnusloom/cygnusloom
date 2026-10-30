@@ -16,7 +16,7 @@ configure. Users sign in with a username and password stored in Authentik.
 3. Set `AUTHENTIK_BOOTSTRAP_EMAIL` and `AUTHENTIK_BOOTSTRAP_PASSWORD`. These create the initial
    `akadmin` account on the first start and skip the Authentik setup wizard.
 4. Run `./scripts/install.sh ...` or `docker compose up -d --build`. The stack publishes the
-   app on `127.0.0.1:8000` and Authentik on `127.0.0.1:9000`; nginx forwards to those ports.
+   app on `127.0.0.1:21872` and Authentik on `127.0.0.1:21873`; nginx forwards to those ports.
 5. Open `https://<AUTHENTIK_DOMAIN>/` and sign in as `akadmin` with the bootstrap password.
    Change that password in Authentik after signing in; the environment variable is only read on
    the first start.
@@ -56,7 +56,7 @@ python3 scripts/setup_env.py --domain localhost --idp-domain idp.localhost
 docker compose -f compose.yaml -f compose.local.yaml up -d --build
 ```
 
-Open http://localhost:8000. Authentik is at http://idp.localhost:9000. Add `akadmin` to the
+Open http://localhost:21872. Authentik is at http://idp.localhost:21873. Add `akadmin` to the
 administrator group, then add a model under **Admin → Models**. The base compose file publishes
 both services on `127.0.0.1`; the local override switches to plain HTTP and turns off secure
 cookies. Use it for a local machine or a trusted network, not for an internet-facing deployment.

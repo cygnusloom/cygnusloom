@@ -4,8 +4,8 @@
 #   docker compose -f compose.yaml -f compose.local.yaml up -d --build
 #
 # Browser URLs:
-#   app:      http://localhost:8000
-#   Authentik http://idp.localhost:9000
+#   app:      http://localhost:21872
+#   Authentik http://idp.localhost:21873
 #
 # The base compose file publishes both services on 127.0.0.1, so no extra
 # ports are needed here. Modern browsers resolve *.localhost to the loopback
@@ -16,16 +16,16 @@ services:
       - "idp.localhost:host-gateway"
     environment:
       CYGNUSFORGE_ENVIRONMENT: development
-      CYGNUSFORGE_BASE_URL: http://localhost:8000
+      CYGNUSFORGE_BASE_URL: http://localhost:${CYGNUSFORGE_APP_PORT:-21872}
       CYGNUSFORGE_SECURE_COOKIES: "0"
-      CYGNUSFORGE_OIDC_ISSUER: http://idp.localhost:9000/application/o/cygnusforge/
+      CYGNUSFORGE_OIDC_ISSUER: http://idp.localhost:${AUTHENTIK_PORT:-21873}/application/o/cygnusforge/
 
   authentik-server:
     environment:
-      CYGNUSFORGE_OIDC_REDIRECT_URI: http://localhost:8000/auth/callback
-      CYGNUSFORGE_OIDC_POST_LOGOUT_URI: http://localhost:8000/login
+      CYGNUSFORGE_OIDC_REDIRECT_URI: http://localhost:${CYGNUSFORGE_APP_PORT:-21872}/auth/callback
+      CYGNUSFORGE_OIDC_POST_LOGOUT_URI: http://localhost:${CYGNUSFORGE_APP_PORT:-21872}/login
 
   authentik-worker:
     environment:
-      CYGNUSFORGE_OIDC_REDIRECT_URI: http://localhost:8000/auth/callback
-      CYGNUSFORGE_OIDC_POST_LOGOUT_URI: http://localhost:8000/login
+      CYGNUSFORGE_OIDC_REDIRECT_URI: http://localhost:${CYGNUSFORGE_APP_PORT:-21872}/auth/callback
+      CYGNUSFORGE_OIDC_POST_LOGOUT_URI: http://localhost:${CYGNUSFORGE_APP_PORT:-21872}/login

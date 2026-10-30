@@ -21,11 +21,14 @@ Without the script, copy `.env.example` to `.env`, fill in the values, and run
 
 ### Reverse proxy
 
-The app listens on `127.0.0.1:8000` and Authentik listens on `127.0.0.1:9000`. It publishes no
+The app listens on `127.0.0.1:21872` and Authentik listens on `127.0.0.1:21873`. It publishes no
 public ports. Copy [deploy/nginx/cygnusforge.conf](deploy/nginx/cygnusforge.conf) into your
 nginx configuration, replace the two example hostnames and certificate paths, then reload
 nginx. The full steps, including a certbot example, are in
 [deploy/nginx/README.md](deploy/nginx/README.md).
+
+To use different loopback ports, set `CYGNUSFORGE_APP_PORT` and `AUTHENTIK_PORT` in `.env` and
+update the two `proxy_pass` lines in the nginx config.
 
 Both hostnames are required: the app redirects sign-in to Authentik, and Authentik redirects
 back to the app. Forwarding only the app hostname leaves sign-in broken.
@@ -44,7 +47,7 @@ python3 scripts/setup_env.py --domain localhost --idp-domain idp.localhost
 docker compose -f compose.yaml -f compose.local.yaml up -d --build
 ```
 
-Open http://localhost:8000. Authentik is at http://idp.localhost:9000; sign in as `akadmin`
+Open http://localhost:21872. Authentik is at http://idp.localhost:21873; sign in as `akadmin`
 with the password in `.env`, then add `akadmin` to `cygnusforge-admins` as described in
 [deploy/authentik/README.md](deploy/authentik/README.md). After signing in to Cygnus Forge, open
 **Admin → Models** and add a model. This path uses plain HTTP and is for a local machine or a

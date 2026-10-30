@@ -62,6 +62,11 @@ docker compose config --quiet
 docker compose up -d --build --remove-orphans
 docker compose ps
 
+APP_PORT="$(sed -n 's/^CYGNUSFORGE_APP_PORT=//p' .env | head -n 1)"
+APP_PORT="${APP_PORT:-21872}"
+IDP_PORT="$(sed -n 's/^AUTHENTIK_PORT=//p' .env | head -n 1)"
+IDP_PORT="${IDP_PORT:-21873}"
+
 cat <<EOF
 
 Started.
@@ -69,8 +74,8 @@ Started.
   Authentik: https://$IDP_DOMAIN
 
 The stack listens only on loopback:
-  app:       http://127.0.0.1:8000
-  Authentik: http://127.0.0.1:9000
+  app:       http://127.0.0.1:$APP_PORT
+  Authentik: http://127.0.0.1:$IDP_PORT
 
 Configure your nginx from deploy/nginx/cygnusforge.conf, then reload it. The app will not
 be reachable at the HTTPS URLs until the proxy is configured.

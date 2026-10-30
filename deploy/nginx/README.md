@@ -2,11 +2,12 @@
 
 The compose stack deliberately contains no TLS proxy. It publishes only:
 
-- `127.0.0.1:8000` — Cygnus Forge
-- `127.0.0.1:9000` — Authentik
+- `127.0.0.1:21872` — Cygnus Forge
+- `127.0.0.1:21873` — Authentik
 
 Your existing nginx terminates TLS and forwards to those loopback ports. Do not expose
-8000 or 9000 publicly.
+21872 or 21873 publicly. To use different host ports, set `CYGNUSFORGE_APP_PORT` and
+`AUTHENTIK_PORT` in `.env` and update the two `proxy_pass` lines.
 
 If this host previously ran the bundled Caddy proxy, run `./scripts/update.sh` once. It uses
 `docker compose up --remove-orphans`, which removes the old Caddy container and frees ports 80

@@ -37,13 +37,16 @@ def test_deploy_scripts_have_help() -> None:
 
 def test_compose_publishes_only_loopback_ports() -> None:
     compose = (ROOT / "compose.yaml").read_text()
+    env_example = (ROOT / ".env.example").read_text()
     assert "caddy" not in compose.lower()
-    assert '"127.0.0.1:8000:8000"' in compose
-    assert '"127.0.0.1:9000:9000"' in compose
+    assert "127.0.0.1:${CYGNUSFORGE_APP_PORT:-21872}:8000" in compose
+    assert "127.0.0.1:${AUTHENTIK_PORT:-21873}:9000" in compose
+    assert "CYGNUSFORGE_APP_PORT=21872" in env_example
+    assert "AUTHENTIK_PORT=21873" in env_example
 
 
 def test_nginx_sample_proxies_to_the_stack() -> None:
     config = (ROOT / "deploy" / "nginx" / "cygnusforge.conf").read_text()
-    assert "proxy_pass http://127.0.0.1:8000;" in config
-    assert "proxy_pass http://127.0.0.1:9000;" in config
+    assert "proxy_pass http://127.0.0.1:21872;" in config
+    assert "proxy_pass http://127.0.0.1:21873;" in config
     assert "proxy_buffering off;" in config
