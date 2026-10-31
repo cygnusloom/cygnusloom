@@ -9,7 +9,20 @@
     {% if campaigns %}
       <ul class="campaigns">
         {% for campaign in campaigns %}
-          <li><a href="/campaigns/{{ campaign.id }}">{{ campaign.name }}</a></li>
+          <li>
+            <details class="campaign-delete">
+              <summary>
+                <a href="/campaigns/{{ campaign.id }}">{{ campaign.name }}</a>
+                <span class="campaign-delete-label">Delete</span>
+              </summary>
+              <form method="post" action="/campaigns/{{ campaign.id }}/delete" class="campaign-delete-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <p class="muted">This permanently deletes the campaign and everything in it. Type <strong>{{ campaign.name }}</strong> to confirm.</p>
+                <label>Campaign name <input type="text" name="confirm" required autocomplete="off"></label>
+                <button type="submit" class="danger">Delete campaign</button>
+              </form>
+            </details>
+          </li>
         {% endfor %}
       </ul>
     {% else %}

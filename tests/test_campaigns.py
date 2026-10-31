@@ -7,9 +7,10 @@ from dataclasses import replace
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from cygnusforge.config import Settings
+from cygnusforge.db.models import Campaign, Event
 from cygnusforge.llm.base import ChatReply, LLMError
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.services import world
@@ -96,6 +97,15 @@ def _set_model(client: TestClient, campaign_id: int, model: str):
     )
 
 
+def _delete_campaign(client: TestClient, campaign_id: int, confirm: str):
+    token = csrf_token(client, "/campaigns")
+    return client.post(
+        f"/campaigns/{campaign_id}/delete",
+        data={"csrf_token": token, "confirm": confirm},
+        follow_redirects=False,
+    )
+
+
 def _set_invincibility(client: TestClient, campaign_id: int, name: str, active: bool):
     token = csrf_token(client, "/campaigns")
     return client.post(
@@ -137,6 +147,41 @@ def test_create_campaign_and_list_it(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
     assert _new_campaign(client, name="Sandbox").status_code == 303
     assert "Sandbox" in client.get("/campaigns").text
+
+
+def test_delete_campaign_removes_it_and_its_events(client_factory: Callable[[], TestClient]):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, name="Doomed")
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    assert _delete_campaign(client, campaign_id, "Doomed").status_code == 303
+    page = client.get("/campaigns")
+    assert "Doomed" not in page.text
+    assert "Campaign deleted." in page.text
+    with Session(client.app.state.engine) as db:
+        assert db.get(Campaign, campaign_id) is None
+        assert db.exec(select(Event).where(Event.campaign_id == campaign_id)).first() is None
+
+
+def test_delete_campaign_requires_the_exact_name(client_factory: Callable[[], TestClient]):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, name="Kept")
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    assert _delete_campaign(client, campaign_id, "kept").status_code == 303
+    page = client.get("/campaigns")
+    assert "Type the campaign name exactly to confirm deletion." in page.text
+    assert "Kept" in page.text
+    with Session(client.app.state.engine) as db:
+        assert db.get(Campaign, campaign_id) is not None
+
+
+def test_other_accounts_cannot_delete_a_campaign(client_factory: Callable[[], TestClient]):
+    owner = _signed_in(client_factory)
+    response = _new_campaign(owner, name="Owner's chat")
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    intruder = _signed_in(client_factory, "intruder@example.com")
+    assert _delete_campaign(intruder, campaign_id, "Owner's chat").status_code == 404
+    with Session(owner.app.state.engine) as db:
+        assert db.get(Campaign, campaign_id) is not None
 
 
 def test_model_change_rejects_unknown_model(client_factory: Callable[[], TestClient]):

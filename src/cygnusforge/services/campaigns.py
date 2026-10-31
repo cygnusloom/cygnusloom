@@ -521,6 +521,18 @@ def _exclusive(campaign_id: int) -> Iterator[None]:
             _busy_campaigns.discard(campaign_id)
 
 
+def delete_campaign(engine: Engine, owner_id: int, campaign_id: int) -> None:
+    """Delete a campaign and its log. Another account's campaign looks the same as a missing
+    one. Refused while the GM is still writing a reply."""
+    with _exclusive(campaign_id), session_scope(engine) as db:
+        campaign = db.get(Campaign, campaign_id)
+        if campaign is None or campaign.owner_id != owner_id:
+            raise NotFound("campaign not found")
+        db.execute(Event.__table__.delete().where(Event.campaign_id == campaign_id))
+        db.delete(campaign)
+        db.commit()
+
+
 def set_campaign_model(
     engine: Engine,
     allowed_models: Iterable[str],

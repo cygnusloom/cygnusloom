@@ -53,6 +53,9 @@ from cygnusforge.services.campaigns import (
     stream_message,
 )
 from cygnusforge.services.campaigns import (
+    delete_campaign as delete_campaign_service,
+)
+from cygnusforge.services.campaigns import (
     discard_pending as discard_pending_turn,
 )
 from cygnusforge.services.common import Conflict, InvalidInput, NotFound
@@ -132,6 +135,25 @@ async def create(request: Request) -> Response:
             rule_set=rule_set,
         )
     return RedirectResponse(f"/campaigns/{campaign.id}", status_code=303)
+
+
+@router.post("/{campaign_id}/delete")
+async def delete_campaign(request: Request, campaign_id: int) -> Response:
+    """Delete one of the player's own campaigns after they type its name to confirm."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    campaign = get_campaign(request.app.state.engine, user.id, campaign_id)
+    if form_text(form, "confirm").strip() != campaign.name:
+        _flash(request, "Type the campaign name exactly to confirm deletion.", "error")
+        return RedirectResponse("/campaigns", status_code=303)
+    try:
+        delete_campaign_service(request.app.state.engine, user.id, campaign_id)
+    except Conflict as exc:
+        _flash(request, str(exc), "error")
+        return RedirectResponse("/campaigns", status_code=303)
+    _flash(request, "Campaign deleted.")
+    return RedirectResponse("/campaigns", status_code=303)
 
 
 @router.post("/{campaign_id}/character/reroll")
@@ -513,6 +535,10 @@ def _line(event: TurnEvent | TurnError) -> str:
         case TurnError(status, message):
             payload = {"type": "error", "status": status, "message": message}
     return json.dumps(payload)
+
+
+def _flash(request: Request, message: str, kind: str = "info") -> None:
+    request.session["flash"] = {"message": message, "kind": kind}
 
 
 def _new_form(
