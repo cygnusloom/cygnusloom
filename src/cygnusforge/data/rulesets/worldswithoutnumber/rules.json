@@ -1,0 +1,244 @@
+[
+  {
+    "type": "rule",
+    "id": "attributes",
+    "text": "Roll 3d6 for each attribute, then swap any two results. Scores run from 3 to 18; the modifier is -2 at 3, -1 at 4-7, 0 at 8-13, +1 at 14-17, and +2 at 18. Attribute modifiers apply to skill checks, saving throws, attack rolls, damage, and Shock."
+  },
+  {
+    "type": "rule",
+    "id": "skill-checks",
+    "important": true,
+    "text": "Roll 2d6 + skill level + the relevant attribute modifier against a difficulty: 6 is simple, 8 significant, 10 an expert's task, 12 a master's, and 14 or more is only a master's long chance. A character with no level in the skill takes -1, and situational modifiers never exceed +2 or -2 in total. An aide who succeeds on the same check gives +1, once no matter how many help."
+  },
+  {
+    "type": "rule",
+    "id": "saving-throws",
+    "important": true,
+    "text": "Roll 1d20 and succeed on a result equal to or above the save score. Physical is 16 - level - the better of the Str or Con modifier (poison, disease, exhaustion); Evasion uses the better of Int or Dex (dodging, pits, explosions); Mental uses the better of Wis or Cha (mind magic, illusions); Luck is 16 - level with no attribute modifier. Saving throws are a last resort: an ordinary melee hit is never avoided with a save. Monsters and NPCs save at 15 - half their hit dice, rounded down."
+  },
+  {
+    "type": "rule",
+    "id": "initiative",
+    "important": true,
+    "text": "At the start of each fight each side rolls 1d8 and adds the best Dex modifier on that side; the higher result acts first and ties go to the PCs. The GM may instead have each combatant roll 1d8 + their own Dex modifier. A side acts in whatever order its members choose."
+  },
+  {
+    "type": "rule",
+    "id": "surprise",
+    "text": "Surprise is an opposed check: the ambushers' Dex/Sneak against the defenders' Wis/Notice. If the attackers win, they take a full round of actions before initiative is rolled. On a site, a sudden burst-in can also stun the defenders for one round at an X-in-6 chance the GM sets."
+  },
+  {
+    "type": "rule",
+    "id": "combat-actions",
+    "text": "Each round a combatant has one Main action and one Move; Instant actions are unlimited and On Turn actions are limited only by the GM's sense of what is reasonable. A Move cannot be split around a Main, though a Main may be spent for a second Move. Common actions include attacking, casting, charging, total defense, fighting withdrawal, screening an ally, readying or stowing, standing up, and holding or delaying an action."
+  },
+  {
+    "type": "rule",
+    "id": "attack-rolls",
+    "important": true,
+    "text": "Roll 1d20 + combat skill level + class attack bonus + the weapon's attribute modifier; a total equal to or above the target's AC hits. Melee uses the better of Str or Dex when the weapon allows both, and a character with no level in the combat skill takes -2 (crossbows excepted). A natural 1 always misses and a natural 20 always hits. Cover gives -2 or -4 to hit, long range -2, and attacking while prone -4."
+  },
+  {
+    "type": "rule",
+    "id": "damage",
+    "important": true,
+    "text": "Damage is the weapon die + attribute modifier + any magic or Focus bonus; Punch attacks also add Punch skill. At 0 HP ordinary NPCs die and PCs or named NPCs become mortally wounded. Unarmed attacks and clubs or staves may be declared non-lethal, leaving the target unconscious for 10 minutes and then awake at 1 HP."
+  },
+  {
+    "type": "rule",
+    "id": "shock",
+    "important": true,
+    "text": "Shock is damage on a miss: Shock X/AC Y deals X damage to a target whose AC is Y or less, while better armor takes nothing. Add the weapon's attribute modifier and any bonus that explicitly applies to Shock, but not other damage bonuses. A hit never deals less than the Shock would have; a shield absorbs the first Shock each round, and thrown weapons never inflict Shock."
+  },
+  {
+    "type": "rule",
+    "id": "dual-wielding",
+    "text": "Two one-handed melee weapons and Stab-1 are needed to dual-wield. The character attacks with only one weapon each round, at -1 to hit and +2 damage; the damage bonus does not add to Shock. Unarmed attacks cannot be used for dual-wielding."
+  },
+  {
+    "type": "rule",
+    "id": "shoving-grappling",
+    "text": "A shove is an unarmed hit for no damage followed by an opposed Str/Punch or Str/Exert check; success pushes the target up to 10 ft or knocks it prone. A grapple is an unarmed hit followed by an opposed Str/Punch check; neither side can move, only unarmed attacks are possible, and each round the defender takes unarmed damage from each grappler. Escaping or moving a grappled target costs a Main action and a new opposed check, and a larger humanoid gives the attacker -2."
+  },
+  {
+    "type": "rule",
+    "id": "execution-attacks",
+    "text": "An execution attack takes a full minute of preparation against an unaware target and is lost if the target is spooked. A melee execution hits automatically; a ranged one needs a Dex/Shoot check at difficulty 6 point-blank, 8 at normal range, or 10 at extreme range. The target then makes a Physical save with a penalty equal to the attacker's combat skill level: failure means mortally wounded (or unconscious with a non-lethal weapon), while success still takes maximum weapon damage. A Precisely Murderous weapon adds -1 to the save and doubles damage even on a success."
+  },
+  {
+    "type": "rule",
+    "id": "morale",
+    "text": "NPCs check Morale by rolling 2d6 against their Morale score when the first ally falls, when half the group is down, or after a great reverse; a result above the score means they rout, retreat, or surrender. PCs never check Morale. Even a successful check does not keep NPCs fighting when the fight is clearly hopeless."
+  },
+  {
+    "type": "rule",
+    "id": "injury-healing",
+    "important": true,
+    "text": "A night's rest with food and decent shelter restores HP equal to the character's level, or hit dice for a creature, and removes 1 point of System Strain. Magical healing removes Mortal Wounds and Frail at once. Frail characters gain nothing from natural healing."
+  },
+  {
+    "type": "rule",
+    "id": "mortal-wounds",
+    "important": true,
+    "text": "A PC or named NPC at 0 HP is mortally wounded: helpless, and dead at the end of the sixth round unless stabilized. An ally may spend a Main action to stabilize with Int/Heal or Dex/Heal at difficulty 8 + the number of full rounds since the fall, +2 without healer's tools. A stabilized character recovers 1 HP after 10 minutes, can act, and becomes Frail. The engine counts one hour of dying time for these six rounds."
+  },
+  {
+    "type": "rule",
+    "id": "frail",
+    "text": "Frail lasts until a week of bed rest or any magical healing. A Frail character gains no natural healing, loses no System Strain at night, and dies immediately on reaching 0 HP again. A physician can remove Frail with an hour of work and a Heal check at difficulty 10, once per Frailty."
+  },
+  {
+    "type": "rule",
+    "id": "first-aid",
+    "important": true,
+    "text": "First aid takes a few minutes and restores 1d6 + Heal skill HP to an ally, or 1d6 - 1 with no Heal skill. Each application adds 1 System Strain to the target, and no healing works on a target already at maximum Strain. First aid can be repeated as long as the target's Strain allows."
+  },
+  {
+    "type": "rule",
+    "id": "system-strain",
+    "important": true,
+    "text": "System Strain measures how much healing and hardship a body can take; its maximum equals the Constitution score. A good night's sleep removes 1 point. Healing magic and first aid add Strain, and a target at maximum gains nothing from further healing. A victim forced above maximum collapses and dies in minutes unless the poison or effect is neutralized."
+  },
+  {
+    "type": "rule",
+    "id": "poisons-diseases",
+    "text": "Poison calls for a Physical save, with up to -4 for potent toxins or +4 for weak ones; a typical trap poison costs half the victim's maximum HP on a failure, and an antidote revives a dying victim at 1 HP. Disease also calls for a Physical save, repeated weekly; a fatal disease kills after 3 or 4 failures. A patient tended with Heal adds +2 per Heal level to these saves, or +1 from a Heal-0 nurse."
+  },
+  {
+    "type": "rule",
+    "id": "encumbrance",
+    "text": "Items are the unit of encumbrance: a one-handed object is 1, a two-handed or heavy object is 2 or more, and 100 coins count as 1. A character can keep floor(Str/2) items Readied and Str items Stowed. Each 2 extra Readied or 4 extra Stowed items lower Move to 20 ft, and a further 2 or 4 lower it to 15 ft."
+  },
+  {
+    "type": "rule",
+    "id": "readied-stowed",
+    "text": "Readied items are worn, held, or close to hand and can be used as part of an action; Stowed items are in a pack and take a Main action to retrieve. Armor counts only while worn Readied, and a shield only while held. Bundles of three small items, such as torches or oil flasks, count as one item until broken apart."
+  },
+  {
+    "type": "rule",
+    "id": "travel",
+    "important": true,
+    "text": "A party travels about ten hours a day. Base speed is 3 miles per hour on plains, 2 in light forest or desert, 1.5 in dense forest or rugged hills, 1 in swamp, and 0.5 in mountains or arratu. A road doubles the pace; foul weather halves it, and deep snow reduces it to a tenth."
+  },
+  {
+    "type": "rule",
+    "id": "supplies",
+    "text": "Each person needs a day's food and water (1 item each) and a night's firewood (4 items); a week of packed food is 4 items. Foraging takes half a day and a Wis/Survive check (difficulty 8 in woodland, 9 in scrub or savanna, 12 in desert, 14 in arratu), yielding 1d6 units plus the group's Survive levels, minimum 1. Without the Survive skill the total is -1, with a minimum of 1 unit. A full day of foraging adds -2 to the difficulty, and each further day in the same hex adds +1."
+  },
+  {
+    "type": "rule",
+    "id": "privation",
+    "text": "A first day without food costs no Strain, but each consecutive day adds 1; a first day without water adds 2 and each further day adds 3. A harsh night without shelter or fire adds 1 Strain. Gaining Strain above the maximum calls for a Physical save or death by dawn, and no healing, spell recovery, or nightly Strain loss occurs until a full day with food, water, and warm sleep."
+  },
+  {
+    "type": "rule",
+    "id": "site-exploration",
+    "text": "Exploring a site runs in 10-minute turns: moving to the next room of interest, searching a room, fighting, or looting and giving first aid each cost 1 turn. A torch burns 6 turns and a lantern 24, lighting a 30-ft radius. Roll 1d6 for wandering encounters every 1 to 6 turns depending on how alert the site is, and place first contact 1d8 x 10 ft away in corridors."
+  },
+  {
+    "type": "rule",
+    "id": "equipment-currency",
+    "text": "The silver piece is the currency of record: 1 gp = 10 sp and 1 sp = 10 cp. Prices in the equipment tables are adventurer retail, and natives commonly pay about half. Items costing thousands of silver may need contacts or a wait."
+  },
+  {
+    "type": "rule",
+    "id": "armor",
+    "text": "AC starts at 10 + Dex modifier, and armor must be worn Readied to help. A shield gives AC 13 or 14 when worn without armor, or +1 when worn with equal or better armor, and absorbs the first Shock each round. Medium armor applies its Encumbrance as a penalty to Sneak, heavy armor to Sneak and Exert, and Grand Plate ignores non-magical weapons unless they are two-handed, have Shock AC 16 or more, or the wearer is grappled."
+  },
+  {
+    "type": "rule",
+    "id": "weapons",
+    "text": "Weapons list damage, Shock, attribute, range, and traits; use the better of two listed attributes. Melee without the skill is at -2 to hit, and ranged without the skill is also -2 except for crossbows. Two-handed ranged weapons cannot be fired with an enemy in melee, and a crossbow reloads with a Main action."
+  },
+  {
+    "type": "rule",
+    "id": "weapon-traits",
+    "text": "2H needs two hands; AP ignores non-magical armor and shields on the hit roll; FX needs a fixed position and 5 minutes; L reaches targets 10 ft away; LL lets the wielder leave foes alive at 0 HP; N counts five as one Readied item; PM improves execution attacks; R reloads with a Move (Shoot-1 makes it On Turn); S hides easily; SR reloads with a Main; SS takes ten rounds and is spoiled by melee; T can be thrown with no Shock and -4 to hit while meleed."
+  },
+  {
+    "type": "rule",
+    "id": "magic",
+    "text": "Magic comes from three traditions: High Magic, Necromancy, and Elementalism. A mage knows spells and arts of their tradition, prepares a limited number after rest, and spends castings to cast; arts and some spells also commit Effort. Magic is rare and feared, and magicians are usually treated as dangerous specialists."
+  },
+  {
+    "type": "rule",
+    "id": "preparing-spells",
+    "text": "After a night's rest a caster prepares spells from those they know, up to the number allowed by class, level, and tradition. Only prepared spells can be cast. Preparing is a quiet task of study or meditation and can be done once per rest."
+  },
+  {
+    "type": "rule",
+    "id": "casting-spells",
+    "text": "Casting a spell is a Main action and spends one casting from the caster's daily supply. A caster who is damaged, grappled, or severely jostled in the round cannot cast; if damaged while casting, the spell fizzles and the casting is still lost. A night's rest restores all castings."
+  },
+  {
+    "type": "rule",
+    "id": "effort",
+    "text": "Effort is the stamina of magic. Maximum Effort is 1 + Magic skill + the better of the Int or Cha modifier, minus 1 for a partial mage, and never less than 1. Effort is committed for a scene, a day, or indefinitely; committed Effort returns after a rest of the appropriate length."
+  },
+  {
+    "type": "rule",
+    "id": "arts",
+    "text": "Arts are the small, innate magics of a tradition. They are learned like features, cost no castings, and usually commit Effort for a scene or a day. Their effects are descriptive; use the Effort tools to commit and recover the cost."
+  },
+  {
+    "type": "rule",
+    "id": "high-magic",
+    "text": "High Magic is the learned sorcery of the Academies: versatile spells of protection, insight, travel, and battle, ranked 1 to 5. High Mages prepare spells and spend castings, and many also use arts that commit Effort."
+  },
+  {
+    "type": "rule",
+    "id": "necromancy",
+    "text": "Necromancy deals with death, the dead, and the forces that linger. Its spells can drain life, speak with the dead, or bind undead, and its arts often commit Effort. Practitioners are widely feared and often hunted."
+  },
+  {
+    "type": "rule",
+    "id": "elementalist",
+    "text": "Elementalists command fire, water, earth, and air. Their spells deal direct damage and shape the battlefield, and their arts call small elemental effects at the cost of Effort. They are common among the wild and the desperate."
+  },
+  {
+    "type": "rule",
+    "id": "spell-research",
+    "text": "Researching a new spell requires a laboratory or library, at least a week of work, rare materials, and the GM's approval. Use the existing spells as a guide to rank, damage, and scope. A failed project may produce a flawed or dangerous version."
+  },
+  {
+    "type": "rule",
+    "id": "magic-workings",
+    "text": "A Working is a great ritual that changes the world: weather, land, a bloodline, or a whole region. Workings require many casters or a mighty relic, months of preparation, and rare components, and they are beyond casual player use. Their decayed remnants are common sources of adventure."
+  },
+  {
+    "type": "rule",
+    "id": "magic-items",
+    "text": "Magic items are relics or the products of a Working, not ordinary shop goods. Creating one needs rare materials, a suitable Working or ancient artifice, and the GM's approval; most found items are old, partial, or dangerous to use. An item's power should be specific and limited rather than a flat bonus."
+  },
+  {
+    "type": "rule",
+    "id": "experience",
+    "text": "Award each PC 3 XP for a session of genuine adventure, or use goals, missions, or spending as the group prefers. XP is cumulative and never resets. The fast progression needs 3, 6, 12, 18, 27, 39, 54, 72, and 93 XP for levels 2 to 10."
+  },
+  {
+    "type": "rule",
+    "id": "leveling",
+    "text": "When a character reaches the XP threshold for the next level, they advance after a day or two of downtime. Raise level by 1, roll the class hit die + Con (minimum 1) for new HP, set attack bonus from the class table, gain a skill point, gain any focus picks, and raise castings for spellcasters."
+  },
+  {
+    "type": "rule",
+    "id": "skill-points",
+    "text": "Each level grants 1 skill point, or 2 for Experts and partial Experts. Spend a point to raise one skill by one level, to a maximum of level 4. Skills gained at level-up need no training time; saving points to spend later requires a teacher or an explanation."
+  },
+  {
+    "type": "rule",
+    "id": "focus-picks",
+    "text": "A focus is a special talent or training. Each class grants focus picks at set levels; spend a pick to learn one focus of the allowed kind. A rank-2 focus requires its rank-1 version first."
+  },
+  {
+    "type": "rule",
+    "id": "new-spells",
+    "text": "A spellcasting character learns one new spell of their tradition each level, of a rank they can cast. The spell is added to their known spells and may be prepared after the next rest. The GM may substitute a rare or researched spell."
+  },
+  {
+    "type": "rule",
+    "id": "narration",
+    "important": true,
+    "text": "Narration stays in the present tense. In the Latter Earth, show age and loss: ruins older than the nations around them, strange skies and weather, and common folk who treat sorcery as a dangerous fact of life. Describe what the characters see and do, and leave the players room to act."
+  }
+]

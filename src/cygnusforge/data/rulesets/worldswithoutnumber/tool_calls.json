@@ -1,0 +1,533 @@
+[
+  {
+    "type": "tool_call",
+    "id": "roll_check",
+    "name": "roll_check",
+    "python_module": "wwn",
+    "function": "roll_check",
+    "description": "Roll a skill check for a character: 2d6 plus the skill's level plus the attribute's modifier against a difficulty, 8 by default. An untrained skill counts as -1. Call it whenever an action is uncertain and a skill applies, such as climbing (Exert), spotting an ambush (Notice), or casting a spell under pressure (Magic). Higher difficulties mean harder tasks: 10 is skilled work and 12 or more is formidable. A total equal to or above the difficulty succeeds.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character making the check."
+        },
+        "skill": {
+          "type": "string",
+          "description": "The skill id used, such as notice, sneak, heal, exert, or magic. A skill the character lacks counts as -1."
+        },
+        "stat": {
+          "type": "string",
+          "enum": [
+            "str",
+            "dex",
+            "con",
+            "int",
+            "wis",
+            "cha"
+          ],
+          "description": "The attribute whose modifier is added, such as int for an Int/Magic check or wis for a Wis/Notice check."
+        },
+        "difficulty": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 30,
+          "default": 8,
+          "description": "The target number. 8 is routine, 10 is skilled work, and 12 or more is hard."
+        },
+        "modifier": {
+          "type": "integer",
+          "minimum": -10,
+          "maximum": 10,
+          "default": 0,
+          "description": "A situational bonus or penalty, such as -1 for poor tools or +2 for good preparation. Use 0 when none applies."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What the check is for, in a few words, so the roll is recorded in the journal."
+        }
+      },
+      "required": [
+        "character",
+        "skill",
+        "stat"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "check_morale",
+    "name": "check_morale",
+    "python_module": "wwn",
+    "function": "check_morale",
+    "description": "Roll 2d6 against an NPC's Morale score to see whether they hold or break. Call it when an ally of the NPC is first downed, when half their side is down, or after a great reverse or a terrifying foe. A total higher than the Morale score means the NPC routs, retreats, or surrenders; a total equal to or lower means they stand. Player characters never check Morale.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the NPC whose nerve is tested."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What prompted the check, such as a companion falling or a monstrous foe appearing."
+        }
+      },
+      "required": [
+        "name",
+        "cause"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "gain_xp",
+    "name": "gain_xp",
+    "python_module": "wwn",
+    "function": "gain_xp",
+    "description": "Add Experience Points to a character's XP total. Award about 3 XP for a successful session, more for great achievements. The engine uses the fast thresholds: level 2 needs 3 XP, level 3 needs 6, level 4 needs 12, level 5 needs 18, level 6 needs 27, level 7 needs 39, level 8 needs 54, level 9 needs 72, and level 10 needs 93. When the total reaches the next threshold the tool records a note that the character may level up; it does not raise the level itself.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character who earns the XP."
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "How many Experience Points to award, usually 3 for a successful session."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What earned the award, such as surviving an adventure or achieving a goal."
+        }
+      },
+      "required": [
+        "character",
+        "amount",
+        "cause"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "level_up",
+    "name": "level_up",
+    "python_module": "wwn",
+    "function": "level_up",
+    "description": "Raise a character from their current level to the next, once their XP total has reached that level's threshold (see gain_xp) and the level counter is below 10. Call it during downtime, and narrate the training or revelation it represents. The character gains their class hit die plus Constitution modifier in maximum HP (at least 1), the class attack bonus for the new level, one skill point (two for an Expert or partial Expert), any focus pick due at levels 2, 5, 7, and 10, and a larger daily casting limit if they cast spells.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character who advances."
+        }
+      },
+      "required": [
+        "character"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "spend_skill_point",
+    "name": "spend_skill_point",
+    "python_module": "wwn",
+    "function": "spend_skill_point",
+    "description": "Spend one banked skill point to raise a skill by one level. The character must have a skill point available, the skill must be below level 4, and the point is spent when the new level is applied. Call it during downtime when the character trains or practices. Level 1 is ordinary competence, level 2 is the best in a city, and level 4 is the best in the world.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character spending the point."
+        },
+        "skill": {
+          "type": "string",
+          "description": "The skill id to raise, such as notice or stab. It must be a skill of this rule set."
+        }
+      },
+      "required": [
+        "character",
+        "skill"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "learn_focus",
+    "name": "learn_focus",
+    "python_module": "wwn",
+    "function": "learn_focus",
+    "description": "Spend one focus pick to learn a Focus at rank 1 or 2. The focus id must be a feature tagged focus; rank 2 requires the character to already have the rank-1 focus of the same name. Call it at creation or during advancement when a focus pick is due. Any permanent bonus the focus grants is applied when it is learned.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character who learns the focus."
+        },
+        "focus": {
+          "type": "string",
+          "description": "The id of a focus feature from the rule set, such as focus_alert or focus_alert_2. Use only ids tagged focus."
+        }
+      },
+      "required": [
+        "character",
+        "focus"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "learn_spell",
+    "name": "learn_spell",
+    "python_module": "wwn",
+    "function": "learn_spell",
+    "description": "Add a spell to a spellcaster's spellbook. The spell must be tagged high, necromancer, or elementalist to match the character's tradition, and its rank (1 to 5) must not exceed the maximum spell level their class and level allow. Call it at creation or when a level-up grants a new spell. Learning takes 7 days per difference between the spell's level and the learner's Magic skill, with a minimum of 1 day, and needs a written copy or teacher; the grimoire must be kept to prepare the spell later.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character learning the spell."
+        },
+        "spell": {
+          "type": "string",
+          "description": "The id of a spell feature from spells.json, such as spell_coruscating_coffin. Use only spell ids from the character's own tradition."
+        }
+      },
+      "required": [
+        "character",
+        "spell"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "grant_package",
+    "name": "grant_package",
+    "python_module": "wwn",
+    "function": "grant_package",
+    "description": "Give a character a starting equipment package, once at creation. Packages are better value than rolling starting silver and each bundles the gear a role needs. Give each character one package and do not grant it again.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character receiving the package."
+        },
+        "package": {
+          "type": "string",
+          "description": "The id of a starting equipment package defined by the rule set, such as a warrior or mage package."
+        }
+      },
+      "required": [
+        "character",
+        "package"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "set_ac",
+    "name": "set_ac",
+    "python_module": "wwn",
+    "function": "set_ac",
+    "description": "Set the total Armor Class of a character or NPC. Armor sets the base AC and the Dexterity modifier is then applied; a shield gives base AC 13 or 14 without armor or +1 with equal or better armor. Call it when armor or a shield is put on or taken off, when an art or spell changes AC, or when a monster's printed AC differs. Hit rolls and Shock compare against this number; armor does not subtract from damage.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character or NPC whose AC changes."
+        },
+        "ac": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 30,
+          "description": "The new total Armor Class, normally between 10 (unarmored) and 19 (great armor)."
+        }
+      },
+      "required": [
+        "name",
+        "ac"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "recover_after_rest",
+    "name": "recover_after_rest",
+    "python_module": "wwn",
+    "function": "recover_after_rest",
+    "description": "Apply the benefits of a good night's rest to a character: restore lost HP equal to the character's level, remove 1 System Strain, restore the day's spent castings, and return Effort committed for the scene or the day. Call it once after the party makes camp and sleeps. Injuries, Strain, and indefinite Effort beyond those amounts remain until healed or reclaimed by other means.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character who rested."
+        }
+      },
+      "required": [
+        "character"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "prepare_spells",
+    "name": "prepare_spells",
+    "python_module": "wwn_magic",
+    "function": "prepare_spells",
+    "description": "Prepare a spellcaster's set of spells for the day, taking 1 hour after a good night's rest. Each spell must already be known, and the number prepared is limited by class, tradition, and level: a full mage prepares 3 at level 1 and up to 12 at level 10, a partial mage prepares 2 at level 1 and up to 9 at level 10, and a dual partial mage uses the dual table with 3 at level 1 and up to 15 at level 10. Prepared spells stay prepared until a new set replaces them and are not lost when cast.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character preparing spells."
+        },
+        "spells": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 15,
+          "items": {
+            "type": "string"
+          },
+          "description": "The spell ids to prepare, from the spells the character knows and, for specialist traditions, from their own tradition."
+        }
+      },
+      "required": [
+        "character",
+        "spells"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "cast_spell",
+    "name": "cast_spell",
+    "python_module": "wwn_magic",
+    "function": "cast_spell",
+    "description": "Cast a spell the character prepared. The spell must be in the prepared set and the character must have at least one casting left for the day; the cast spends one. Casting takes a Main Action, a free hand, and speech at conversational volume, and taking damage in the round prevents it. Full mages have 1 casting per day at level 1 and 6 at level 10; partial mages have 1 at level 1 and 4 at level 10. A good night's rest restores all castings.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character casting the spell."
+        },
+        "spell": {
+          "type": "string",
+          "description": "The id of a prepared spell feature from spells.json, such as spell_coruscating_coffin."
+        }
+      },
+      "required": [
+        "character",
+        "spell"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "commit_effort",
+    "name": "commit_effort",
+    "python_module": "wwn_magic",
+    "function": "commit_effort",
+    "description": "Commit points of one tradition's Effort to a lasting art. Each tradition has its own pool and Effort from one cannot fuel another. Duration is scene (returns when the scene ends), day (returns the next morning after a good night's rest), or indefinite (returns only when reclaimed as an Instant action, and the art ends at once if the mage is knocked unconscious or killed). Each commit costs 1 point unless the art says otherwise. Maximum Effort is 1 + Magic skill + the best Int or Cha modifier, minus 1 for a partial mage, with a minimum of 1.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character committing Effort."
+        },
+        "tradition": {
+          "type": "string",
+          "enum": [
+            "high",
+            "necromancer",
+            "elementalist"
+          ],
+          "description": "The tradition whose Effort pool is spent: high, necromancer, or elementalist."
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "How many Effort points to commit, normally 1."
+        },
+        "duration": {
+          "type": "string",
+          "enum": [
+            "scene",
+            "day",
+            "indefinite"
+          ],
+          "description": "When the Effort returns: at the end of the scene, the next morning, or only when reclaimed."
+        }
+      },
+      "required": [
+        "character",
+        "tradition",
+        "amount",
+        "duration"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "recover_effort",
+    "name": "recover_effort",
+    "python_module": "wwn_magic",
+    "function": "recover_effort",
+    "description": "Return Effort committed for one duration: when a scene ends, after a good night's rest, or when the mage reclaims an indefinite commitment as an Instant action. Give the same tradition and duration used when the Effort was committed so exactly the marked points are refunded. It does not restore Effort spent in any other way.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character recovering Effort."
+        },
+        "tradition": {
+          "type": "string",
+          "enum": [
+            "high",
+            "necromancer",
+            "elementalist"
+          ],
+          "description": "The tradition whose Effort returns: high, necromancer, or elementalist."
+        },
+        "duration": {
+          "type": "string",
+          "enum": [
+            "scene",
+            "day",
+            "indefinite"
+          ],
+          "description": "The duration of the commitment being released: scene, day, or indefinite."
+        }
+      },
+      "required": [
+        "character",
+        "tradition",
+        "duration"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "add_strain",
+    "name": "add_strain",
+    "python_module": "wwn_magic",
+    "function": "add_strain",
+    "description": "Add System Strain to a character. Strain is the body's toll from healing, magic, and hardship, and its maximum is the character's Constitution score. Call it after first aid, magical healing, or an exhausting effect, and say what caused it. A character at maximum Strain can take no more healing until some Strain is removed.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character gaining Strain."
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "description": "How many points of System Strain to add, usually 1."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What caused the Strain, such as first aid, a healing spell, or a hard march."
+        }
+      },
+      "required": [
+        "character",
+        "amount",
+        "cause"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "heal_strain",
+    "name": "heal_strain",
+    "python_module": "wwn_magic",
+    "function": "heal_strain",
+    "description": "Remove System Strain from a character, such as 1 point after a good night's rest or more from a restorative effect. Give the cause so the change is recorded. Strain cannot fall below 0.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character losing Strain."
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "description": "How many points of System Strain to remove, usually 1 per night's rest."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What removed the Strain, such as a night's rest or a restorative draught."
+        }
+      },
+      "required": [
+        "character",
+        "amount",
+        "cause"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "first_aid",
+    "name": "first_aid",
+    "python_module": "wwn_magic",
+    "function": "first_aid",
+    "description": "Treat a wounded ally after a fight. The healer rolls 1d6 plus their Heal skill (an untrained healer counts -1) and restores that many HP to the target, up to its maximum; the target then gains 1 System Strain, which counts against a maximum equal to its Constitution score. Call it once the fighting stops and the healer has a moment to work.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "healer": {
+          "type": "string",
+          "description": "The name of the character giving first aid."
+        },
+        "target": {
+          "type": "string",
+          "description": "The name of the character being treated, who may be the healer."
+        }
+      },
+      "required": [
+        "healer",
+        "target"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "restore_spell_slots",
+    "name": "restore_spell_slots",
+    "python_module": "wwn_magic",
+    "function": "restore_spell_slots",
+    "description": "Clear a spellcaster's spent castings after a full night's rest, making the whole daily casting limit available again. It does not restore HP, System Strain, or Effort; use recover_after_rest for those.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character whose castings are restored."
+        }
+      },
+      "required": [
+        "character"
+      ]
+    }
+  }
+]

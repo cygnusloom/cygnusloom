@@ -14,6 +14,7 @@ from types import ModuleType
 from typing import Any
 
 from cygnusforge.content.character import (
+    FEATURE_TYPES,
     CampaignSpec,
     CharacterSpec,
     CounterRef,
@@ -459,7 +460,8 @@ class DiceTable:
 class MonsterTemplate:
     """A statblock a GM can base a monster on. `stats` has every stat of the rule set's character,
     and `attacks` maps each attack's name to its dice formula. `attack_flags` gives the flags of
-    the attacks that have any, such as blast. A large group is a group the GM fights as one
+    the attacks that have any, such as blast, and `attack_shock` gives the Shock of the attacks
+    that have any, as (shock, shock_ac) pairs. A large group is a group the GM fights as one
     unit. `rules` are the ids of the rules attached to the monster; `rule_text` holds the text of
     those written in the statblock itself."""
 
@@ -472,6 +474,7 @@ class MonsterTemplate:
     large_group: bool = False
     rules: tuple[str, ...] = ()
     attack_flags: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+    attack_shock: Mapping[str, tuple[int, int]] = field(default_factory=dict)
     rule_text: Mapping[str, str] = field(default_factory=dict)
 
 
@@ -653,6 +656,8 @@ class MoveRules:
     bands: tuple[MoveBand, ...]
     # The stats the player picks from, or that a HIGHEST move takes the best of. Empty otherwise.
     stat_choice: tuple[str, ...] = ()
+    # The skill the move is made with, added at its level. Empty when the move has no skill.
+    skill: str = ""
     # The move is only open once the character holds every stored condition.
     needs_all_conditions: bool = False
 
@@ -713,6 +718,35 @@ class GroupRules:
 
 
 @dataclass(frozen=True)
+class CheckRules:
+    """A check a rule set resolves with dice, such as a skill check. A character adds their level
+    in the skill, or `unskilled` when they have none, and the roll must reach a difficulty that
+    is kept within `minimum_difficulty` and `maximum_difficulty`. A missing difficulty is
+    `default_difficulty`."""
+
+    id: str
+    label: str
+    dice: str
+    unskilled: int = -1
+    default_difficulty: int = 8
+    minimum_difficulty: int = 2
+    maximum_difficulty: int = 30
+
+
+@dataclass(frozen=True)
+class InitiativeRules:
+    """How a rule set rolls initiative for whole sides rather than for each character. Each side
+    rolls `die` once and adds the best modifier of `bonus_stat` among its members. `tie` names the
+    side that acts first when two totals are equal, "party" or "foes". A rule set with `side`
+    false keeps its `initiative_mode` instead."""
+
+    die: str = "1d8"
+    bonus_stat: str = "dex"
+    side: bool = True
+    tie: str = "party"
+
+
+@dataclass(frozen=True)
 class CombatRules:
     """How a rule set resolves combat. `damage` is the order a hit's damage goes through. `check_die`
     is the die a save or initiative roll is made with, and `check_sides` its number of sides.
@@ -728,7 +762,19 @@ class CombatRules:
     armor, which is its defense ("roll_vs_defense"; an attack that ignores armor has none).
     `multi_attack` says whether several attacks on one target apply only the highest roll
     ("highest") or each in turn ("each").
-    `groups` is None when the rule set has no large groups."""
+    `groups` is None when the rule set has no large groups.
+
+    `hit_bonus_stat` is the stat added to an attack roll, such as attack_bonus, and
+    `unskilled_attack_penalty` is how much is taken off when the attacker has no level in the
+    weapon's skill. `damage_bonus_stat` is the stat added to damage, and `attribute_damage` adds
+    the weapon's own attribute modifiers. `shock_on_miss` lets a miss still deal the weapon's
+    Shock when the target's defense is at most the weapon's shock_ac, and `minimum_shock_damage`
+    keeps a hit's damage at least the Shock. `defeat_at_zero` are the stats whose reaching 0
+    defeats a character.
+
+    `initiative` is None when initiative is rolled for each character as `initiative_mode` says.
+    When it names a side-based roll, the engine rolls once for each side instead of asking each
+    player character for a save."""
 
     id: str
     damage: tuple[DamageStep, ...]
@@ -751,6 +797,8 @@ class CombatRules:
     # The dice an unarmed attack rolls, and the names that mean unarmed, such as "fists".
     unarmed_damage: str = ""
     unarmed_names: frozenset[str] = frozenset()
+    # The attributes an unarmed attack may use for its modifier.
+    unarmed_attributes: tuple[str, ...] = ()
     # The items a character can use on a dying character to stop the clock, by name.
     aid_items: tuple[str, ...] = ()
     # The most armor a character can have. Zero means armor has no cap.
@@ -760,6 +808,22 @@ class CombatRules:
     save: SaveRules = field(default_factory=SaveRules)
     initiative_mode: str = "pass_npcs_fail"
     groups: GroupRules | None = None
+    # The stat added to an attack roll, such as attack_bonus. Empty when none is.
+    hit_bonus_stat: str = ""
+    # What an attack takes off when the attacker has no level in the weapon's skill.
+    unskilled_attack_penalty: int = 0
+    # The stat added to a weapon's damage. Empty when none is.
+    damage_bonus_stat: str = ""
+    # True when a weapon adds the modifier of each of its attributes to its damage.
+    attribute_damage: bool = False
+    # True when a miss still deals the weapon's Shock to a target whose defense is low enough.
+    shock_on_miss: bool = False
+    # True when a hit's damage is at least the weapon's Shock.
+    minimum_shock_damage: bool = False
+    # The stats whose reaching 0 defeats a character.
+    defeat_at_zero: tuple[str, ...] = ()
+    # The side-based initiative roll, or None when each character rolls instead.
+    initiative: InitiativeRules | None = None
     # The rule set's Python functions, when it names a python_module. Each function, when present,
     # overrides the declarative save and initiative rules above.
     module: ModuleType | None = None
@@ -829,7 +893,11 @@ class RestLength:
 @dataclass(frozen=True)
 class InventoryRules:
     """How many slots a character's inventory has, what the penalty costs, and which stat takes harm
-    when the inventory fills. `item_sizes` is in `RuleSet`."""
+    when the inventory fills. `item_sizes` is in `RuleSet`.
+
+    A rule set may leave `capacity_stat` empty and use the fixed `capacity`, or name a stat and let
+    each character's raw score in it set their capacity, times `capacity_multiplier`. `full_stat`
+    is empty when a full inventory drains nothing."""
 
     capacity: int
     penalty_name: str
@@ -837,7 +905,12 @@ class InventoryRules:
     penalty_lasts: str
     penalty_item: str
     penalty_slots: int
-    full_stat: str
+    # The stat that takes harm when the inventory fills. Empty when filling it drains no stat.
+    full_stat: str = ""
+    # The stat whose raw score is a character's capacity. Empty when `capacity` is used instead.
+    capacity_stat: str = ""
+    # What a character's score in `capacity_stat` is multiplied by. One means the score itself.
+    capacity_multiplier: int = 1
 
 
 @dataclass(frozen=True)
@@ -858,8 +931,9 @@ class Hooks:
 
 @dataclass(frozen=True)
 class ShopItem:
-    """A catalogue item. `price` is in gold. `armor` is added to the buyer's armor. `damage` is the
-    attack die the item gives, as text for the GM."""
+    """A catalogue item. `price` is in the rule set's currency. `armor` changes the buyer's armor as
+    `armor_mode` says: "add" adds it, "set" replaces the armor with it, and "max" keeps the higher
+    of the two. `damage` is the attack die the item gives, as text for the GM."""
 
     id: str
     name: str
@@ -870,6 +944,7 @@ class ShopItem:
     damage: str
     uses: int
     description: str
+    armor_mode: str = "add"
 
 
 @dataclass(frozen=True)
@@ -1001,6 +1076,8 @@ class RuleSet:
     relations: Mapping[str, RelationRules] = field(default_factory=dict)
     # Moves a player or GM can make, by id.
     moves: Mapping[str, MoveRules] = field(default_factory=dict)
+    # Checks a character may make with dice, by id, such as a skill check.
+    checks: Mapping[str, CheckRules] = field(default_factory=dict)
     # Tables rolled with dice, by id, such as the GM's reaction table.
     dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
     # Time and rests. Each is None or empty when the rule set does not track them.
@@ -1033,6 +1110,8 @@ class RuleSet:
     world_terrain: Mapping[str, WorldTerrain] = field(default_factory=dict)
     # A short line shown when choosing the rule set on the create campaign page.
     blurb: str | None = None
+    # Template kinds a character may leave unchosen, such as a tradition only mages need.
+    optional_templates: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -1612,6 +1691,8 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
             raise ContentError(f"{template}: missing table {name!r}")
     table_names = {d.id: _table_label(d, template) for d in definitions if d.type == "table"}
     character = build_character(definitions, tables, table_names, template)
+    optional_templates = _names(head.data, "optional_templates", label)
+    character = replace(character, optional_kinds=optional_templates)
     campaign = build_campaign(definitions, tables, table_names, template)
     grids = [d for d in definitions if d.type == "encounter_grid"]
     if len(grids) > 1:
@@ -1639,6 +1720,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     )
     _check_template_grants(character, template)
     moves = _load_moves(definitions, character, frozenset(counters), template)
+    checks = _load_checks(definitions, template)
     advancements = _load_advancements(
         definitions, character, counters, frozenset(conditions), template
     )
@@ -1703,6 +1785,8 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     enum_sources = {
         "moves": sorted(moves),
         "stats": sorted(character.stats),
+        "skills": sorted(character.skills),
+        "checks": sorted(checks),
         "counters": sorted(counters),
         "periods": sorted(periods),
         "tallies": sorted(tallies),
@@ -1746,6 +1830,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         conditions=conditions,
         counters=counters,
         moves=moves,
+        checks=checks,
         dice_tables=dice_tables,
         clock=clock,
         rests=rests,
@@ -1763,6 +1848,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         encounter_templates=encounter_templates,
         world_terrain=world_terrain,
         wilderness=wilderness,
+        optional_templates=optional_templates,
     )
 
 
@@ -2121,6 +2207,17 @@ def _load_combat(
     injury_table = _load_injury_table_ref(data, character, injury_tables, label)
     outside_harm = _load_outside_harm(data, character, label)
     unarmed_damage, unarmed_names = _load_unarmed(data, label)
+    unarmed_attributes = _names(data.get("unarmed", {}), "attributes", f"{label}: unarmed")
+    for stat_id in unarmed_attributes:
+        if stat_id not in character.stats:
+            raise ContentError(f"{label}: unarmed attribute {stat_id!r} names no stat")
+    for key in ("hit_bonus_stat", "damage_bonus_stat"):
+        value = _optional_text(data, key, label)
+        if value is not None and value not in character.stats:
+            raise ContentError(f"{label}: {key!r} names no stat ({value!r})")
+    for stat_id in _names(data, "defeat_at_zero", label):
+        if stat_id not in character.stats:
+            raise ContentError(f"{label}: 'defeat_at_zero' names no stat ({stat_id!r})")
     return CombatRules(
         id=definition.id,
         damage=damage,
@@ -2139,6 +2236,7 @@ def _load_combat(
         aid_items=_names(data, "aid_items", label),
         unarmed_damage=unarmed_damage,
         unarmed_names=unarmed_names,
+        unarmed_attributes=unarmed_attributes,
         hit_mode=_choice(data, "hit_mode", ("auto", "roll_vs_defense"), "auto", label),
         multi_attack=_choice(data, "multi_attack", ("highest", "each"), "highest", label),
         save=_load_save(data, check_sides, label),
@@ -2147,7 +2245,49 @@ def _load_combat(
         ),
         groups=_load_groups(data, label),
         module=module,
+        hit_bonus_stat=_optional_text(data, "hit_bonus_stat", label) or "",
+        unskilled_attack_penalty=_optional_whole(data, "unskilled_attack_penalty", label) or 0,
+        damage_bonus_stat=_optional_text(data, "damage_bonus_stat", label) or "",
+        attribute_damage=_flag_default(data, "attribute_damage", label, False),
+        shock_on_miss=_flag_default(data, "shock_on_miss", label, False),
+        minimum_shock_damage=_flag_default(data, "minimum_shock_damage", label, False),
+        defeat_at_zero=_names(data, "defeat_at_zero", label),
+        initiative=_load_initiative(data, character, label),
     )
+
+
+INITIATIVE_KEYS = frozenset({"die", "bonus_stat", "side", "tie"})
+
+
+def _load_initiative(
+    data: Mapping[str, Any], character: CharacterSpec, label: str
+) -> InitiativeRules | None:
+    """The optional side-based initiative block. Absent means each character rolls as
+    `initiative_mode` says."""
+    block = data.get("initiative")
+    if block is None:
+        return None
+    if not isinstance(block, Mapping):
+        raise ContentError(f"{label}: 'initiative' must be an object")
+    initiative_label = f"{label}: initiative"
+    unknown = set(block) - INITIATIVE_KEYS
+    if unknown:
+        raise ContentError(f"{initiative_label} has unknown keys {sorted(unknown)}")
+    die = block.get("die", "1d8")
+    if not isinstance(die, str) or not re.fullmatch(r"1d[0-9]+", die) or int(die[2:]) < 2:
+        raise ContentError(f"{initiative_label}: 'die' must be a single die such as '1d8'")
+    bonus_stat = block.get("bonus_stat", "dex")
+    if not isinstance(bonus_stat, str):
+        raise ContentError(f"{initiative_label}: 'bonus_stat' must be a stat id")
+    if bonus_stat and bonus_stat not in character.stats:
+        raise ContentError(f"{initiative_label}: 'bonus_stat' names no stat ({bonus_stat!r})")
+    side = block.get("side", True)
+    if not isinstance(side, bool):
+        raise ContentError(f"{initiative_label}: 'side' must be true or false")
+    tie = block.get("tie", "party")
+    if tie not in ("party", "foes"):
+        raise ContentError(f"{initiative_label}: 'tie' must be party or foes")
+    return InitiativeRules(die=die, bonus_stat=bonus_stat, side=side, tie=tie)
 
 
 def _choice(
@@ -2375,6 +2515,7 @@ def _load_monster(
     armor = data.get("armor", 0)
     _check_whole(armor, f"{label}: 'armor'")
     attacks, attack_flags = _statblock_attacks(data.get("attacks", {}), label)
+    attack_shock = _statblock_shock(data.get("attacks", {}), attacks, label)
     large_group = data.get("large_group", False)
     if not isinstance(large_group, bool):
         raise ContentError(f"{label}: 'large_group' must be true or false")
@@ -2389,6 +2530,7 @@ def _load_monster(
         large_group=large_group,
         rules=rules,
         attack_flags=attack_flags,
+        attack_shock=attack_shock,
         rule_text=rule_text,
     )
 
@@ -2408,7 +2550,17 @@ def _statblock_attacks(
             raise ContentError(f"{label}: attack names must be non-empty text")
         if isinstance(entry, str):
             formula, flags = entry, []
-        elif isinstance(entry, dict) and "dice" in entry and set(entry) <= {"dice", "flags"}:
+        elif (
+            isinstance(entry, dict)
+            and "dice" in entry
+            and set(entry)
+            <= {
+                "dice",
+                "flags",
+                "shock",
+                "shock_ac",
+            }
+        ):
             formula, flags = entry["dice"], entry.get("flags", [])
         else:
             raise ContentError(
@@ -2432,6 +2584,31 @@ def _statblock_attacks(
         if flags:
             flags_by_attack[attack_name] = tuple(flags)
     return attacks, flags_by_attack
+
+
+def _statblock_shock(
+    raw: object, attacks: Mapping[str, str], label: str
+) -> dict[str, tuple[int, int]]:
+    """The Shock of a statblock's attacks: the damage done on a miss and the highest armor class
+    it reaches. Only attacks written as objects can have it."""
+    if not isinstance(raw, dict):
+        return {}
+    shock: dict[str, tuple[int, int]] = {}
+    for attack_name, entry in raw.items():
+        if not isinstance(entry, dict) or ("shock" not in entry and "shock_ac" not in entry):
+            continue
+        value, reaches = entry.get("shock", 0), entry.get("shock_ac", 0)
+        for key, amount in (("shock", value), ("shock_ac", reaches)):
+            if isinstance(amount, bool) or not isinstance(amount, int) or amount < 0:
+                raise ContentError(
+                    f"{label}: attack {attack_name!r} {key!r} must be a whole number, 0 or more"
+                )
+        if value and not reaches:
+            raise ContentError(
+                f"{label}: attack {attack_name!r} 'shock' needs the 'shock_ac' it reaches"
+            )
+        shock[attack_name] = (value, reaches)
+    return shock
 
 
 def _statblock_rules(data: Mapping[str, Any], label: str) -> tuple[tuple[str, ...], dict[str, str]]:
@@ -2902,9 +3079,12 @@ def _load_inventory(
     if definition is None:
         return None
     label = f"{template}: inventory {definition.id}"
-    full_stat = required_text(definition.data, "full_stat", label)
-    if full_stat not in character.stats:
+    full_stat = _optional_text(definition.data, "full_stat", label) or ""
+    if full_stat and full_stat not in character.stats:
         raise ContentError(f"{label}: 'full_stat' names no stat ({full_stat!r})")
+    capacity_stat = _optional_text(definition.data, "capacity_stat", label) or ""
+    if capacity_stat and capacity_stat not in character.stats:
+        raise ContentError(f"{label}: 'capacity_stat' names no stat ({capacity_stat!r})")
     return InventoryRules(
         capacity=_whole(definition.data, "capacity", label, 1),
         penalty_name=required_text(definition.data, "penalty_name", label),
@@ -2912,6 +3092,10 @@ def _load_inventory(
         penalty_item=required_text(definition.data, "penalty_item", label),
         penalty_slots=_whole(definition.data, "penalty_slots", label, 0),
         full_stat=full_stat,
+        capacity_stat=capacity_stat,
+        capacity_multiplier=_whole(definition.data, "capacity_multiplier", label, 1)
+        if "capacity_multiplier" in definition.data
+        else 1,
     )
 
 
@@ -3057,6 +3241,7 @@ def _load_marketplace(
                 price=_whole(d.data, "price", label, 0),
                 size=size,
                 armor=_whole(d.data, "armor", label, 0),
+                armor_mode=_choice(d.data, "armor_mode", ("add", "set", "max"), "add", label),
                 damage=str(d.data.get("damage", "")),
                 uses=_whole(d.data, "uses", label, 0),
                 description=str(d.data.get("description", "")),
@@ -3359,6 +3544,43 @@ def _optional_limit(data: Mapping[str, Any], label: str) -> int | None:
     return _whole(data, "limit", label, 1)
 
 
+def _load_checks(definitions: list[Definition], template: str) -> dict[str, CheckRules]:
+    """The `check` definitions, by id: the dice a check rolls against a difficulty."""
+    checks: dict[str, CheckRules] = {}
+    for d in definitions:
+        if d.type != "check":
+            continue
+        label = f"{template}: check {d.id}"
+        dice = required_text(d.data, "dice", label)
+        if not is_formula(dice):
+            raise ContentError(f"{label}: 'dice' is not a formula ({dice!r})")
+        minimum = _integer(d.data, "minimum_difficulty", label, 2)
+        maximum = _integer(d.data, "maximum_difficulty", label, 30)
+        default = _integer(d.data, "default_difficulty", label, 8)
+        if maximum < minimum:
+            raise ContentError(f"{label}: 'maximum_difficulty' is below 'minimum_difficulty'")
+        if not minimum <= default <= maximum:
+            raise ContentError(f"{label}: 'default_difficulty' is outside the difficulty bounds")
+        checks[d.id] = CheckRules(
+            id=d.id,
+            label=required_text(d.data, "label", label),
+            dice=dice,
+            unskilled=_integer(d.data, "unskilled", label, -1),
+            default_difficulty=default,
+            minimum_difficulty=minimum,
+            maximum_difficulty=maximum,
+        )
+    return checks
+
+
+def _integer(data: Mapping[str, Any], key: str, label: str, default: int) -> int:
+    """A whole number of any sign, or `default` when the key is missing."""
+    value = data.get(key, default)
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ContentError(f"{label}: {key!r} must be a whole number")
+    return value
+
+
 def _load_moves(
     definitions: list[Definition],
     character: CharacterSpec,
@@ -3392,6 +3614,11 @@ def _load_moves(
         needs_all = _flag_default(d.data, "needs_all_conditions", label, False)
         if needs_all and not stored:
             raise ContentError(f"{label}: needs_all_conditions, but the rule set has no conditions")
+        skill = d.data.get("skill", "")
+        if not isinstance(skill, str) or (skill and not skill.strip()):
+            raise ContentError(f"{label}: 'skill' must be the id of a skill")
+        if skill and skill not in character.skills:
+            raise ContentError(f"{label}: 'skill' names no skill ({skill!r})")
         moves[d.id] = MoveRules(
             id=d.id,
             label=required_text(d.data, "label", label),
@@ -3400,6 +3627,7 @@ def _load_moves(
             stat=stat,
             bands=_load_bands(d.data.get("bands"), character, stored, counters, label),
             stat_choice=stat_choice,
+            skill=skill,
             needs_all_conditions=needs_all,
         )
     return moves
@@ -3722,7 +3950,7 @@ def _load_tool_call(
     template: str,
     npc_hp: Mapping[str, int],
     travel: Travel | None = None,
-    enum_sources: Mapping[str, list[str]] | None = None,
+    enum_sources: Mapping[str, Sequence[str]] | None = None,
 ) -> ToolCall:
     label = f"{template}: tool_call {definition.id}"
     data = definition.data
@@ -3739,6 +3967,7 @@ def _load_tool_call(
     parameters = _with_enum_from(
         _check_parameters(data.get("parameters"), label),
         enum_sources or {"stats": sorted(character.stats)},
+        character,
         label,
     )
     if _flag(data, "character_options", label):
@@ -3821,24 +4050,84 @@ def _with_npc_hp_tier(
 
 
 def _with_enum_from(
-    parameters: dict[str, Any], sources: Mapping[str, list[str]], label: str
+    parameters: dict[str, Any],
+    sources: Mapping[str, Sequence[str]],
+    character: CharacterSpec,
+    label: str,
 ) -> dict[str, Any]:
-    """Fill in the enum of each property that names a source list, such as the rule set's moves."""
+    """Fill in the enum of each property that names a source list, such as the rule set's moves.
+    A property may name the source as text, or as an object whose `source` is narrowed by
+    `feature_type`, `tag`, and `max_rank` when the source is `features`."""
     properties: dict[str, Any] = {}
     for name, prop in parameters["properties"].items():
         source = prop.get(ENUM_FROM_KEY) if isinstance(prop, dict) else None
         if source is None:
             properties[name] = prop
             continue
-        if source not in sources:
-            raise ContentError(
-                f"{label}: {name!r} has enum_from {source!r}, which is not one of {sorted(sources)}"
-            )
         properties[name] = {
             **{k: v for k, v in prop.items() if k != ENUM_FROM_KEY},
-            "enum": sources[source],
+            "enum": _enum_options(name, source, sources, character, label),
         }
     return {**parameters, "properties": properties}
+
+
+# The keys an `enum_from` object may take besides `source`.
+ENUM_FROM_FILTERS = frozenset({"feature_type", "tag", "max_rank"})
+
+
+def _enum_options(
+    name: str,
+    source: object,
+    sources: Mapping[str, Sequence[str]],
+    character: CharacterSpec,
+    label: str,
+) -> list[str]:
+    """The ids an `enum_from` names, filtered when it is an object."""
+    where = f"{label}: {name!r}"
+    if isinstance(source, str):
+        return _enum_source(source, sources, where)
+    if not isinstance(source, Mapping):
+        raise ContentError(f"{where} has enum_from that must be a source name or an object")
+    unknown = set(source) - ENUM_FROM_FILTERS - {"source"}
+    if unknown:
+        raise ContentError(f"{where}: enum_from does not take {', '.join(sorted(unknown))}")
+    source_name = required_text(source, "source", f"{where}: enum_from")
+    options = _enum_source(source_name, sources, where)
+    filters = set(source) - {"source"}
+    if not filters:
+        return options
+    if source_name != "features":
+        raise ContentError(f"{where}: only a 'features' enum_from may be filtered")
+    feature_type = _optional_nonempty_text(source, "feature_type", f"{where}: enum_from")
+    if feature_type is not None and feature_type not in FEATURE_TYPES:
+        raise ContentError(
+            f"{where}: enum_from 'feature_type' must be one of {', '.join(FEATURE_TYPES)}"
+        )
+    tag = _optional_nonempty_text(source, "tag", f"{where}: enum_from")
+    max_rank = source.get("max_rank")
+    if "max_rank" in source and (
+        isinstance(max_rank, bool) or not isinstance(max_rank, int) or max_rank < 0
+    ):
+        raise ContentError(f"{where}: enum_from 'max_rank' must be a whole number, 0 or more")
+    chosen = []
+    for feature_id in options:
+        feature = character.features[feature_id]
+        if feature_type is not None and feature.feature_type != feature_type:
+            continue
+        if tag is not None and feature.tag != tag:
+            continue
+        if max_rank is not None and feature.rank > max_rank:
+            continue
+        chosen.append(feature_id)
+    return chosen
+
+
+def _enum_source(source: str, sources: Mapping[str, Sequence[str]], label: str) -> list[str]:
+    if source not in sources:
+        raise ContentError(
+            f"{label} has enum_from {source!r}, which is not one of {sorted(sources)}"
+        )
+    return list(sources[source])
 
 
 def _with_travel(parameters: dict[str, Any], travel: Travel, label: str) -> dict[str, Any]:

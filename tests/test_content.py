@@ -136,12 +136,14 @@ def tree(tmp_path: Path) -> Path:
 
 def test_bundled_content_loads():
     library = ContentLibrary.load()
-    assert set(library.world_templates) == {"twin-lakes", "hogwarts"}
+    assert set(library.world_templates) == {"twin-lakes", "hogwarts", "latter-earth"}
     assert library.world_templates["twin-lakes"].name == "Twin Lakes"
     twin_lakes = library.world_templates["twin-lakes"]
     assert twin_lakes.locations
-    assert set(library.rule_sets) == {"cairn2e", "hogwarts-rpg"}
+    assert set(library.rule_sets) == {"cairn2e", "hogwarts-rpg", "worldswithoutnumber"}
     assert library.world_content("twin-lakes", "cairn2e").monsters
+    assert library.rule_sets["worldswithoutnumber"].character.skills
+    assert library.rule_sets["worldswithoutnumber"].monsters
 
 
 def test_bundled_worlds_say_which_rule_set_they_use():

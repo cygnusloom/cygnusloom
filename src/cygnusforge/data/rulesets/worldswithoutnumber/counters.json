@@ -1,0 +1,35 @@
+[
+  {
+    "type": "counter",
+    "id": "level",
+    "label": "Level",
+    "min": 1,
+    "max": 10,
+    "initial": 1,
+    "description": "The character's experience level, from 1 to 10. Level lowers saving throws and sets the class hit die, attack bonus, skill points, focus picks, and castings gained on advancement."
+  },
+  {
+    "type": "counter",
+    "id": "xp",
+    "label": "Experience",
+    "min": 0,
+    "initial": 0,
+    "description": "Cumulative experience points. XP never resets; reaching the next level's threshold allows the character to advance after a day or two of downtime."
+  },
+  {
+    "type": "counter",
+    "id": "skill_points",
+    "label": "Skill Points",
+    "min": 0,
+    "initial": 0,
+    "description": "Unspent skill points. One point raises one skill by a level, to a maximum of level 4. Experts and partial Experts gain an extra point each level."
+  },
+  {
+    "type": "counter",
+    "id": "focus_picks",
+    "label": "Focus Picks",
+    "min": 0,
+    "initial": 0,
+    "description": "Unspent focus picks granted by the character's class at certain levels. A pick learns one focus; a rank-2 focus needs its rank-1 version first."
+  }
+]

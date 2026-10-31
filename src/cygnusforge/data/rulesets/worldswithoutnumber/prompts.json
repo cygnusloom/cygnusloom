@@ -1,0 +1,22 @@
+[
+  {
+    "type": "prompt",
+    "id": "shock_narration",
+    "text": "A Shock result is a miss that still hurts. Describe a blow that batters armor, drives the target back, or grinds them down, never a clean hit; if the target's armor is too heavy, describe the attack turning aside with no harm."
+  },
+  {
+    "type": "prompt",
+    "id": "mortal_wounds_clock",
+    "text": "When a PC or named NPC is mortally wounded, say plainly that they have six rounds. The engine's one hour of dying time stands for those six rounds, so do not advance the clock with advance_time for the death timer."
+  },
+  {
+    "type": "prompt",
+    "id": "execution_setup",
+    "text": "An execution attack needs a full minute of preparation and an unaware target. Once weapons are drawn or the target is alert, do not allow one; resolve it as an ordinary attack instead."
+  },
+  {
+    "type": "prompt",
+    "id": "npc_morale_groups",
+    "text": "PCs never check Morale. Call the morale tool only for NPCs and monsters, at the first ally down, when half the group is down, or after a great reverse; on a failure, narrate rout, retreat, or surrender."
+  }
+]

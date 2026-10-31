@@ -111,9 +111,12 @@
           </section>
         {% endif %}
         {% for group in character.kinds %}
-          <fieldset class="creation-panel" data-choice-panel="template-{{ group.kind }}" data-choice-label="{{ group.label }}" aria-labelledby="panel-kind-{{ group.kind }}">
+          <fieldset class="creation-panel" data-choice-panel="template-{{ group.kind }}" data-choice-label="{{ group.label }}"{% if group.optional %} data-optional="true"{% endif %} aria-labelledby="panel-kind-{{ group.kind }}">
             <h3 id="panel-kind-{{ group.kind }}">{{ group.label }}</h3>
             {% call choice_picker("template-" ~ group.kind, group.label) %}
+              {% if group.optional %}
+                {{ choice("template-" ~ group.kind, "", "None", "Leave this unchosen.") }}
+              {% endif %}
               {% for template in group.templates %}
                 {{ choice("template-" ~ group.kind, template.id, template.name, template.description, data_select=group.kind) }}
               {% endfor %}
@@ -148,6 +151,46 @@
                   {% endfor %}
                 </fieldset>
               {% endif %}
+              {% for pick in template.skill_picks %}
+                <fieldset class="creation-panel skill-picks" data-pick-selects="{{ pick.id }}" data-pick-kind="skill" data-pick-template="{{ template.id }}">
+                  <div class="panel-heading">
+                    <h3>Skills</h3>
+                    <button type="button" class="secondary" data-randomize-picks>Randomize skills</button>
+                  </div>
+                  <p>{{ pick.hint }}</p>
+                  {% for index in range(pick.count) %}
+                    <label>
+                      Skill {{ index + 1 }}
+                      <select name="pick-skill-{{ template.id }}-{{ pick.id }}-{{ index }}">
+                        <option value="">Roll</option>
+                        {% for option in pick.options %}
+                          <option value="{{ option.value }}">{{ option.title }}</option>
+                        {% endfor %}
+                      </select>
+                    </label>
+                  {% endfor %}
+                </fieldset>
+              {% endfor %}
+              {% for pick in template.feat_picks %}
+                <fieldset class="creation-panel feat-picks" data-pick-selects="{{ pick.id }}" data-pick-kind="feature" data-pick-template="{{ template.id }}">
+                  <div class="panel-heading">
+                    <h3>{{ pick.tag|capitalize }}</h3>
+                    <button type="button" class="secondary" data-randomize-picks>Randomize {{ pick.tag }}</button>
+                  </div>
+                  <p>{{ pick.hint }}</p>
+                  {% for index in range(pick.count) %}
+                    <label>
+                      {{ pick.tag|capitalize }} {{ index + 1 }}
+                      <select name="pick-feature-{{ template.id }}-{{ pick.id }}-{{ index }}">
+                        <option value="">Roll</option>
+                        {% for option in pick.options %}
+                          <option value="{{ option.value }}">{{ option.title }}{% if option.rank %} (rank {{ option.rank }}){% endif %}</option>
+                        {% endfor %}
+                      </select>
+                    </label>
+                  {% endfor %}
+                </fieldset>
+              {% endfor %}
             </div>
           {% endfor %}
         {% endfor %}

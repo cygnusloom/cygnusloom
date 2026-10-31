@@ -1,0 +1,27 @@
+[
+  {"type": "python_module", "id": "wwn", "module": "cygnusforge.rules.wwn"},
+  {"type": "python_module", "id": "wwn_magic", "module": "cygnusforge.rules.wwn_magic"},
+  {
+    "type": "combat",
+    "id": "wwn",
+    "damage": [{"kind": "harm", "stat": "hp"}],
+    "check_die": "1d20",
+    "initiative_stat": "dex",
+    "defeat": {"player_character": "mortally wounded", "npc": "dead"},
+    "outside_harm": ["hp"],
+    "hit_mode": "roll_vs_defense",
+    "hit_bonus_stat": "attack_bonus",
+    "unskilled_attack_penalty": 2,
+    "attribute_damage": true,
+    "shock_on_miss": true,
+    "minimum_shock_damage": true,
+    "defeat_at_zero": ["hp"],
+    "dying_hours": 1,
+    "armor_max": 0,
+    "multi_attack": "each",
+    "unarmed": {"damage": "1d2", "names": ["unarmed", "fist", "fists", "punch", "kick"],
+                "attributes": ["str", "dex"]},
+    "save": {"mode": "roll_over", "auto_success": null, "auto_fail": null},
+    "initiative_mode": "roll_order"
+  }
+]

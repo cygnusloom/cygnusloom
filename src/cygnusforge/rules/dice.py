@@ -10,7 +10,10 @@ import re
 # A single term such as "3d6". Stats and other ranges need exactly one term.
 FORMULA = re.compile(r"([1-9][0-9]?)d([1-9][0-9]*)")
 TERM = r"[1-9][0-9]?d[1-9][0-9]*"
-ROLL = re.compile(rf"{TERM}(?:\+{TERM})*")
+# A formula starts with a die. Later terms are dice or flat bonuses and penalties, such as
+# "2d6+1d4+2" or "1d6-1".
+ROLL = re.compile(rf"{TERM}(?:(?:[+-]{TERM})|(?:[+-][0-9]+))*")
+TERM_PATTERN = re.compile(r"([+-]?)(?:([1-9][0-9]?)d([1-9][0-9]*)|([0-9]+))")
 PLUS_MODES = ("sum", "highest")
 
 
@@ -20,21 +23,36 @@ def is_formula(text: object) -> bool:
 
 def roll_total(formula: str, rng: random.Random | None = None, *, plus: str | None = None) -> int:
     """Roll a formula. A single term is the same in every rule set. A formula with several terms
-    needs the rule set's `plus` mode, which says whether "+" sums the terms or keeps the highest."""
+    needs the rule set's `plus` mode, which says whether "+" sums the terms or keeps the highest.
+    Flat bonuses and penalties always add, whatever the mode."""
     if not is_formula(formula):
         raise ValueError(f"not a dice formula: {formula!r}")
     generator = rng or random.Random()
-    terms = formula.split("+")
-    if len(terms) == 1:
-        return _roll_term(terms[0], generator)
+    dice, flat = _terms(formula)
+    if len(dice) == 1:
+        return _roll_term(dice[0], generator) + flat
     if plus is None:
         raise ValueError(f"{formula!r} has several terms, so the rule set's plus mode is needed")
     if plus not in PLUS_MODES:
         raise ValueError(f"unknown plus mode: {plus!r}")
-    totals = [_roll_term(term, generator) for term in terms]
-    return max(totals) if plus == "highest" else sum(totals)
+    totals = [_roll_term(term, generator) for term in dice]
+    kept = max(totals) if plus == "highest" else sum(totals)
+    return kept + flat
 
 
-def _roll_term(term: str, generator: random.Random) -> int:
-    count, sides = (int(part) for part in term.split("d"))
+def _terms(formula: str) -> tuple[list[tuple[int, int]], int]:
+    """The dice terms of a formula as (count, sides), and the flat total of its bonuses."""
+    dice: list[tuple[int, int]] = []
+    flat = 0
+    for sign, count, sides, number in TERM_PATTERN.findall(formula):
+        amount = -1 if sign == "-" else 1
+        if number:
+            flat += amount * int(number)
+        else:
+            dice.append((int(count), int(sides)))
+    return dice, flat
+
+
+def _roll_term(term: tuple[int, int], generator: random.Random) -> int:
+    count, sides = term
     return sum(generator.randint(1, sides) for _ in range(count))

@@ -1,0 +1,12 @@
+[
+  {
+    "type": "check",
+    "id": "skill",
+    "label": "Skill Check",
+    "dice": "2d6",
+    "unskilled": -1,
+    "default_difficulty": 8,
+    "minimum_difficulty": 2,
+    "maximum_difficulty": 30
+  }
+]

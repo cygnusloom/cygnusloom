@@ -7,18 +7,22 @@ change, records its events, and commits."""
 from __future__ import annotations
 
 import heapq
+import random
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from sqlmodel import Session
 
+from cygnusforge.content.character import CharacterSpec
 from cygnusforge.content.library import (
     CombatRules,
     EncounterGrid,
     EncounterObject,
     EncounterTemplate,
     EncounterTerrain,
+    InitiativeRules,
 )
+from cygnusforge.rules.dice import roll_total
 from cygnusforge.services.common import InvalidInput, bounded_text
 from cygnusforge.services.events import (
     FOES_SIDE,
@@ -401,26 +405,149 @@ def delete_map(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
 
 
 def start_encounter(
-    db: Session, campaign_id: int, name: str, rolls_initiative: bool = False
+    db: Session,
+    campaign_id: int,
+    name: str,
+    rolls_initiative: bool = False,
+    *,
+    combat: CombatRules | None = None,
+    character: CharacterSpec | None = None,
+    rng: random.Random | None = None,
 ) -> dict[str, Any]:
     """Start an encounter on a map. With `rolls_initiative`, round one waits for each player
-    character to roll for initiative before anyone acts."""
+    character to roll for initiative before anyone acts.
+
+    A rule set whose combat names side initiative never waits for individual rolls: `combat`
+    tells this function so, and the side roll is made with `roll_side_initiative` once the
+    participants have joined. Until then the order is the order they joined, and nobody is
+    blocked from acting."""
     state = load_state(db, campaign_id)
     if state.encounter is not None:
         raise InvalidInput(
             f"an encounter is already in progress at {state.encounter.map}; end it first"
         )
     entry = _map_named(state, name)
+    sides = side_initiative(combat)
     record(
         db,
         campaign_id,
         EncounterStarted(
-            map=entry.name, location=entry.location, rolls_initiative=rolls_initiative
+            map=entry.name,
+            location=entry.location,
+            rolls_initiative=rolls_initiative and sides is None,
         ),
     )
     db.commit()
+    if sides is not None and load_state(db, campaign_id).encounter.order:
+        roll_side_initiative(db, campaign_id, combat, character, rng)
     _open_player_turn(db, campaign_id)
-    return {"started": "encounter", "map": entry.name, "location": entry.location}
+    result: dict[str, Any] = {
+        "started": "encounter",
+        "map": entry.name,
+        "location": entry.location,
+    }
+    if sides is not None:
+        result["initiative"] = "sides"
+    return result
+
+
+def side_initiative(combat: CombatRules | None) -> InitiativeRules | None:
+    """The rule set's side-based initiative, or None when each character rolls for themselves."""
+    if combat is None or combat.initiative is None or not combat.initiative.side:
+        return None
+    return combat.initiative
+
+
+def _initiative_bonus(member: Character, rules: InitiativeRules, spec: CharacterSpec | None) -> int:
+    """A character's modifier in the initiative stat, using the rule set's bands. Zero when the
+    rule set was not given or the character has no score in the stat."""
+    if spec is None or not rules.bonus_stat:
+        return 0
+    stat = spec.stats.get(rules.bonus_stat)
+    score = member.stats.get(rules.bonus_stat)
+    if stat is None or score is None:
+        return 0
+    return stat.modifier(score)
+
+
+def _side_of(encounter: Encounter, member: Character) -> str:
+    """The side a participant fights on, or the default for their kind when they joined without one."""
+    side = encounter.sides.get(name_key(member.name))
+    if side:
+        return side
+    return PARTY_SIDE if member.kind == PC_KIND else FOES_SIDE
+
+
+def _side_rolls(
+    state: CampaignState,
+    encounter: Encounter,
+    rules: InitiativeRules,
+    spec: CharacterSpec | None,
+    rng: random.Random | None,
+) -> list[dict[str, Any]]:
+    """One roll for each side, in the order its first member joined. A side's bonus is the best
+    `bonus_stat` modifier among its members."""
+    sides: dict[str, list[Character]] = {}
+    for name in encounter.order:
+        member = state.characters[name_key(name)]
+        sides.setdefault(_side_of(encounter, member), []).append(member)
+    rolls = []
+    for side, members in sides.items():
+        bonus = max((_initiative_bonus(member, rules, spec) for member in members), default=0)
+        roll = roll_total(rules.die, rng)
+        rolls.append(
+            {
+                "side": side,
+                "roll": roll,
+                "bonus": bonus,
+                "total": roll + bonus,
+                "members": [member.name for member in members],
+            }
+        )
+    return rolls
+
+
+def _roll_order(rolls: list[dict[str, Any]], tie: str) -> list[dict[str, Any]]:
+    """The sides from highest total to lowest. A tie goes to the party when `tie` is "party",
+    and to the other side when it is "foes"; otherwise the order they joined breaks it."""
+    party_first = tie == "party"
+
+    def key(entry: tuple[int, dict[str, Any]]) -> tuple[int, int, int]:
+        index, roll = entry
+        party = roll["side"] == PARTY_SIDE
+        return (-roll["total"], 0 if party == party_first else 1, index)
+
+    return [roll for _, roll in sorted(enumerate(rolls), key=key)]
+
+
+def roll_side_initiative(
+    db: Session,
+    campaign_id: int,
+    combat: CombatRules | None,
+    character: CharacterSpec | None = None,
+    rng: random.Random | None = None,
+) -> dict[str, Any]:
+    """Roll once for each side and set round one's order. The side with the highest total acts
+    first, ties go the way the rule set says, and each side adds the best `bonus_stat` modifier
+    among its members. No player character rolls a save of their own. Call it once the
+    participants have joined; until then they act in the order they joined."""
+    rules = side_initiative(combat)
+    if rules is None:
+        raise InvalidInput("this rule set rolls initiative for each character, not for sides")
+    state = load_state(db, campaign_id)
+    encounter = _encounter(state)
+    if not encounter.order:
+        raise InvalidInput("there is no one in the encounter to roll initiative")
+    if encounter.settled:
+        raise InvalidInput("initiative is already set for this encounter")
+    if encounter.round > 1:
+        raise InvalidInput("initiative is rolled only at the start of an encounter")
+    rolls = _side_rolls(state, encounter, rules, character, rng)
+    order = [name for entry in _roll_order(rolls, rules.tie) for name in entry["members"]]
+    record(db, campaign_id, InitiativeSettled(order=order))
+    db.commit()
+    _open_player_turn(db, campaign_id)
+    return {"initiative": "sides", "rolls": rolls, "order": order}
 
 
 def end_encounter(db: Session, campaign_id: int) -> dict[str, Any]:

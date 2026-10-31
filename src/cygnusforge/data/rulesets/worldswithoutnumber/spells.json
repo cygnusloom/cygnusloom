@@ -1,0 +1,749 @@
+[
+  {
+    "type": "feature",
+    "id": "spell_apprehending_arcane_form",
+    "name": "Apprehending the Arcane Form",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 1,
+    "description": "Range: self. Duration: 15 minutes per caster level. Magic appears to the caster as coloured auras and patterns, and a magic item's purpose can be read in one sentence. The caster can tell that others nearby have spells prepared, though not which, and sees normally in perfect darkness by the spell's dim light. A Wis/Magic check against 8+ answers deeper questions about what is seen."
+  },
+  {
+    "type": "feature",
+    "id": "spell_cognitive_supersession_inferior_orders",
+    "name": "Cognitive Supersession of the Inferior Orders",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 1,
+    "description": "Range: one visible normal animal or insect; magical creatures are not affected. Duration: until released, dispelled, or recast. The creature obeys the caster's telepathic commands, will not fight, and shares its senses. Directing it takes the caster's Main Action each round, and the caster cannot physically act while doing so."
+  },
+  {
+    "type": "feature",
+    "id": "spell_coruscating_coffin",
+    "name": "The Coruscating Coffin",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 1,
+    "description": "Range: a visible creature within 100 ft per caster level. Duration: instant. The target takes 1d8 damage per caster level, with a Physical save for half. An NPC with only 1 HD dies outright. Non-magical barriers do not stop the spell when the caster can see the target unaided."
+  },
+  {
+    "type": "feature",
+    "id": "spell_damnation_of_the_sense",
+    "name": "Damnation of the Sense",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 1,
+    "description": "Range: a visible creature within 200 ft. Duration: the scene on a failed Mental save, or 1 round on a success. One sense of the caster's choice is controlled by the caster: it can give false impressions, hide truths, blind, or deafen. A distracted sense of touch requires a Physical save each round to act. A blinded victim cannot make ranged attacks and rolls melee hit rolls twice, keeping the worse. A victim in mortal peril may repeat the Mental save each round to break free."
+  },
+  {
+    "type": "feature",
+    "id": "spell_decree_ligneous_dissolution",
+    "name": "Decree of Ligneous Dissolution",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 1,
+    "description": "Range: a point within 100 ft per caster level, affecting up to one contiguous 10-ft cube per caster level. Duration: instant. Non-magical plant matter falls to dust; enchanted plant objects are untouched. Plant monsters take 1d10 damage per caster level, with a Physical save for half."
+  },
+  {
+    "type": "feature",
+    "id": "spell_excellent_transpicuous_transformation",
+    "name": "The Excellent Transpicuous Transformation",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 1,
+    "description": "Range: up to one willing visible creature per caster level within 100 ft. Duration: up to 1 hour per caster level. Targets and their gear turn invisible. Missile attacks against them are largely impossible, and melee attacks against them take -4 to hit. The spell ends for everyone if any subject runs, attacks, casts, or is violently moved."
+  },
+  {
+    "type": "feature",
+    "id": "spell_imperceptible_cerebral_divulgence",
+    "name": "Imperceptible Cerebral Divulgence",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 1,
+    "description": "Range: a visible living creature within 100 ft per caster level. Duration: the scene. The spell is silent and needs no gestures. The caster reads the target's surface thoughts and interests in any language, and may ask one question about its memories per caster level; each answer needs a failed Mental save from the target, and a success ends the spell. Only memories come through, not judgments or opinions."
+  },
+  {
+    "type": "feature",
+    "id": "spell_ineluctable_shackles_volition",
+    "name": "Ineluctable Shackles of Volition",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 1,
+    "description": "Range: a visible living creature within 100 ft. Duration: until dispelled, released, or the caster dies. The target saves on Mental with a penalty equal to the caster's Magic skill. On a failure it is enthralled, fights for the caster, and obeys physical commands except suicidal or murderous ones. It cannot be made to answer questions, give judgments, or use non-physical abilities or spells. A new casting lets earlier subjects save without penalty, and a subject with more HD than the caster has levels saves without penalty the first time each day it is ordered to do something it strongly objects to."
+  },
+  {
+    "type": "feature",
+    "id": "spell_long_amber_moment",
+    "name": "The Long Amber Moment",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 1,
+    "description": "Range: touch; one willing or helpless creature. Duration: up to 1 day per caster level. This is an On Turn spell, usable only in a round in which no other spell was cast. The subject and the items it carries are frozen in stasis and immune to non-magical harm; an enchanted creature counts as 4 Encumbrance items. If the caster casts it on themself they cannot end it early, but otherwise they may release the subject whenever they choose."
+  },
+  {
+    "type": "feature",
+    "id": "spell_phantasmal_mimesis",
+    "name": "Phantasmal Mimesis",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 1,
+    "description": "Range: a point within 100 ft per caster level. Duration: until dispelled, dropped, recast, or until the illusion moves more than 100 ft from where it was made. The illusion fills up to one 10-ft cube per caster level and appeals to several senses. Illusory monsters use the caster's hit bonus, deal 1d8 damage, have AC 10, and vanish when struck, with at most one such attacker per 2 caster levels. A foe brought to 0 HP falls unconscious and wakes after 10 minutes at 1 HP. Anyone who disbelieves may make a Mental save each round to become immune."
+  },
+  {
+    "type": "feature",
+    "id": "spell_velocitous_imbuement",
+    "name": "Velocitous Imbuement",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 1,
+    "description": "Range: up to one visible willing creature per caster level within 100 ft. Duration: the rest of the scene. This is an On Turn spell. Subjects double their ground movement, can run up walls or across ceilings if they end upright on a usable surface, leave melee without a Fighting Withdrawal, and slip past armed foes who do not fully block the way. Each subject that uses the spell gains 1 System Strain."
+  },
+  {
+    "type": "feature",
+    "id": "spell_wardpact_invocation",
+    "name": "Wardpact Invocation",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 1,
+    "description": "Range: up to 200 ft. Duration: Form A lasts 1 round per 2 caster levels, rounded up; Form B lasts the rest of the scene. Form A targets a creature other than the caster; each weapon hit on the target requires the attacker to pass a Physical save or the hit is negated. Form B targets a visible weapon and makes it harmless with no save. Each creature or weapon can be targeted only once per scene, and natural body weapons are unaffected."
+  },
+  {
+    "type": "feature",
+    "id": "spell_wind_final_repose",
+    "name": "The Wind of the Final Repose",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 1,
+    "description": "Range: a point within 200 ft, in a 20-ft radius burst. Duration: until roused or the end of the scene. The effect is silent and invisible. Living creatures of 4 HD or less in the area fall unconscious at once. Damage or a Main Action kick rouses a victim; otherwise all wake when the scene ends. Creatures that do not sleep are immune."
+  },
+  {
+    "type": "feature",
+    "id": "spell_calculation_evoked_servitor",
+    "name": "Calculation of the Evoked Servitor",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 2,
+    "description": "Range: conjured beside the caster. Duration: until dawn or until dismissed. The servant has HP equal to the caster's level, AC 14, ground movement of 30 ft per action, the caster's saves, a +0 skill bonus, and no attack. Its shape is fixed by the first casting and is no larger than a small human. The caster has a telepathic link to it and it obeys any order, even a suicidal one, performing anything a competent servant could. If slain it fades and can be recalled by casting the spell again."
+  },
+  {
+    "type": "feature",
+    "id": "spell_casting_forth_inner_eye",
+    "name": "Casting Forth the Inner Eye",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 2,
+    "description": "Range: a reflective or luminous surface, viewing a location within 100 ft per caster level or one the caster has occupied before. Duration: until the caster takes any action other than scrying. The caster sees and hears the place as if present. Warded places cannot be scried, and the same area cannot be scried twice in a week. A target with more HD than the caster has levels may make a Mental save to sense the watching."
+  },
+  {
+    "type": "feature",
+    "id": "spell_conjunction_inexorable_step",
+    "name": "Conjunction of the Inexorable Step",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 2,
+    "description": "Range: a visible target within 100 ft; the destination must be visible, solid, and within half a mile. Duration: instant. The target is moved to a resting point that is not in immediate peril. Unattended objects up to horse size may be moved. An unwilling target may make a Mental save; if it succeeds, the caster is moved instead."
+  },
+  {
+    "type": "feature",
+    "id": "spell_decree_lithic_dissolution",
+    "name": "Decree of Lithic Dissolution",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 2,
+    "description": "Range: up to one 10-ft cube per caster level in a visible area within 100 ft per caster level. Duration: instant. Stone, earth, sand, and minerals vanish; metal and enchanted objects are untouched. Large structures may collapse. Rock monsters take 1d10 damage per caster level, with a Physical save for half."
+  },
+  {
+    "type": "feature",
+    "id": "spell_extirpate_arcana",
+    "name": "Extirpate Arcana",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 2,
+    "description": "Range: a 20-ft radius at a visible point within 100 ft per caster level. Duration: negated effects are suppressed for 1d6 rounds. Effects from creatures whose HD or levels are no greater than the caster's are negated automatically. Otherwise make an opposed Int/Magic or Cha/Magic check; the higher-level caster adds +2 and the dispeller wins ties. Standing magic cannot be permanently suppressed, and only part of a very large enchantment is affected."
+  },
+  {
+    "type": "feature",
+    "id": "spell_inexorable_imputation",
+    "name": "The Inexorable Imputation",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 2,
+    "description": "Range: listeners within 40 ft who understand the caster's language. Duration: 1 hour per caster level. The caster states one sentence, and each listener must make a Mental save or believe it, unless the claim is physically impossible or emotionally intolerable. Up to 2 targets per caster level may be exempted."
+  },
+  {
+    "type": "feature",
+    "id": "spell_jade_palanquin_faceless_god",
+    "name": "The Jade Palanquin of the Faceless God",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 2,
+    "description": "Range: the caster. Duration: until dusk, dawn, or until the statue is struck or insulted. The spell creates a floating palanquin 12 by 8 ft at shoulder height, pulled by one human-sized bearer. It carries up to 2,000 lb; heavier loads sink it to the ground."
+  },
+  {
+    "type": "feature",
+    "id": "spell_mantle_disjecting_dissection",
+    "name": "Mantle of Disjecting Dissection",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 2,
+    "description": "Range: a visible willing creature within 30 ft. Duration: at most one scene, and the target must spend a Move action each round. Anyone who touches the target or attacks it in melee must make an Evasion save or take 1d6 + caster level damage before the attack resolves. This affects allies as well."
+  },
+  {
+    "type": "feature",
+    "id": "spell_prudentially_transient_abnegation_life",
+    "name": "Prudentially Transient Abnegation of Life",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 2,
+    "description": "Range: the caster or a visible willing creature. Duration: revival up to 2 hours later. Cast as an Instant action, even in a round when another spell was cast, in response to an injury that would reduce the target to 0 HP. The target appears dead to examination but is aware of its surroundings, then revives with 2 HP per caster level and +2 System Strain. If the body is scattered, incinerated, or eaten, it cannot revive."
+  },
+  {
+    "type": "feature",
+    "id": "spell_resounding_temporal_echo",
+    "name": "Resounding Temporal Echo",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 2,
+    "description": "Range: up to one visible ally per caster level. Duration: 1d4+1 rounds. Each subject gains an extra Main Action each round. The extra action cannot be used to cast spells or use arts, and each round it is used adds 1 System Strain to that subject."
+  },
+  {
+    "type": "feature",
+    "id": "spell_verdant_vallation",
+    "name": "The Verdant Vallation",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 2,
+    "description": "Range: a point within 100 ft per caster level. Duration: until dispelled or the caster dies; on infertile ground it withers at the end of the scene. The wall is contiguous, up to 20 ft high, 3 ft thick, and 20 ft of width per caster level, and may lie horizontally. Cutting a man-sized hole takes 5 HP of damage per caster level with cutting weapons. Thorns can be added to deal 2d6 to climbers."
+  },
+  {
+    "type": "feature",
+    "id": "spell_visitation_clement_clime",
+    "name": "Visitation of the Clement Clime",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 2,
+    "description": "Range: the caster and up to 3 visible allies per caster level. Duration: 1 hour per caster level. Subjects are immune to mundane heat, cold, natural acid, and electricity. Against magical versions of those forces they take half damage, or none on a successful Physical save."
+  },
+  {
+    "type": "feature",
+    "id": "spell_adopt_simulacular_visage",
+    "name": "Adopt the Simulacular Visage",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 3,
+    "description": "Range: up to one visible willing creature per caster level. Duration: until the next dawn. The subject becomes a simulacrum of a humanoid the caster has seen, with matching voice and scent, and clothing adjusting to fit. It gains the ability to speak the mimicked creature's native tongue, but no special abilities."
+  },
+  {
+    "type": "feature",
+    "id": "spell_conjunct_vital_viscera",
+    "name": "Conjunct the Vital Viscera",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 3,
+    "description": "Range: up to one visible subject per caster level. Duration: until dispelled, released, or 1 hour per caster level. Hit points, poisons, and diseases may be moved between willing or bound creatures, healing the recipient up to its maximum. Body parts can be exchanged as long as each creature keeps at least half. A willing subject can be absorbed into a carrier, which holds up to 5 human-sized subjects. Moved harm never returns, and the parts of a killed borrower are lost."
+  },
+  {
+    "type": "feature",
+    "id": "spell_exhalation_congelating_cold",
+    "name": "Exhalation of Congelating Cold",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 3,
+    "description": "Range: a point within 100 ft per caster level; radius 10 ft per caster level. Duration: instant, though the ice thaws at the surrounding rate. Liquids freeze to a depth of 2 ft. Living non-arctic creatures take 1d6 damage per 2 caster levels, with a Physical save for half, and those who fail lose their Move action for 1d4 rounds."
+  },
+  {
+    "type": "feature",
+    "id": "spell_foresightful_apprehension",
+    "name": "Foresightful Apprehension",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 3,
+    "description": "Range: the caster. Duration: instant. The caster names an action and learns the most likely outcome during the first 5 minutes after it. The topic may be consulted only once per week."
+  },
+  {
+    "type": "feature",
+    "id": "spell_glass_chimes_bamboo_terrace",
+    "name": "The Glass Chimes of the Bamboo Terrace",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 3,
+    "description": "Range: the chimes can be called up to 10 miles per caster level away. Duration: until shattered or the end of the scene. Only the caster can strike them, and the caster chooses who hears. Striking them violently as a Main Action shatters them, dealing 3d6 damage to every non-deaf creature within 40 ft except the caster."
+  },
+  {
+    "type": "feature",
+    "id": "spell_howl_of_light",
+    "name": "The Howl of Light",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 3,
+    "description": "Range: a visible point within 50 ft per caster level, in a 20-ft radius and 8 ft tall. Duration: instant. The blast of flame, concussion, and sound deals 1d8 damage per caster level, with an Evasion save for half. If the area is less than 40 ft wide, add 1d6 x 10 ft of blast into adjacent spaces."
+  },
+  {
+    "type": "feature",
+    "id": "spell_phobic_storm",
+    "name": "Phobic Storm",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 3,
+    "description": "Range: enemies within 40 ft. Duration: instant. Each target makes a Morale check at -1. Those who fail flee; those who succeed take 1 damage per caster level. A creature reduced to 0 HP regains 1 HP and flees instead. Creatures with no fear or Morale 12 are unaffected."
+  },
+  {
+    "type": "feature",
+    "id": "spell_scorn_fetters_earth",
+    "name": "Scorn the Fetters of Earth",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 3,
+    "description": "Range: the caster plus up to one visible ally per caster level; or one visible flying creature per caster level. Duration: the rest of the scene. The caster's group moves freely in three dimensions, can run upward or stand suspended, and floats gently down when the spell ends. The flying version forces each target to pass a Physical save with a penalty equal to the caster's Magic skill or land, falling half the distance, and stay grounded for the scene."
+  },
+  {
+    "type": "feature",
+    "id": "spell_torment_tumefaction",
+    "name": "The Torment of Tumefaction",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 3,
+    "description": "Range: a visible living creature. Duration: the scene; if the target has fewer HD than the caster has levels and fails a save, it lasts until dispelled or released. Any vigorous action other than movement deals 2 damage per caster level, at most once per round. A Main Action and a Physical save can throw the spell off."
+  },
+  {
+    "type": "feature",
+    "id": "spell_touch_elucidating_intangibility",
+    "name": "Touch of Elucidating Intangibility",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 3,
+    "description": "Range: a non-magical barrier the caster touches. Duration: while the caster keeps touching it, or immediately after the insubstantial option. A 10-ft cube becomes transparent from the caster's side. The caster may instead make it insubstantial for 1 round per caster level, passable from both sides. A creature inside when it turns solid is pushed to the nearest clear side and takes 2d10 damage."
+  },
+  {
+    "type": "feature",
+    "id": "spell_vallation_specified_exclusion",
+    "name": "Vallation of Specified Exclusion",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 3,
+    "description": "Range: a line up to 20 ft per caster level, drawn during casting as part of a Move action. Duration: until dispelled, dropped, or 1 hour per caster level. A chosen category of creature, recognizable without reading minds, cannot cross the line or affect anything through it; the barrier reaches 100 ft up and 10 ft down. It shatters if warded creatures are attacked or targeted from the far side."
+  },
+  {
+    "type": "feature",
+    "id": "spell_calculation_phantasmal_eidolon",
+    "name": "Calculation of the Phantasmal Eidolon",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 4,
+    "description": "Range: summoned beside the caster. Duration: until destroyed or dawn. The servitor is no larger than an ox and has 4 HD, 20 HP, AC 15, ground movement 30 ft per action, a +1 skill bonus, saves of 13+, and a melee attack of +6 for 1d8 damage with Shock 2 against AC 15. Its damage cannot kill: a victim falls unconscious for an hour and wakes at 1 HP. Choose one quality for it: fly at 30 ft per move, perfectly duplicate a person the caster has seen, speak telepathically, or use ordinary weapons and armor."
+  },
+  {
+    "type": "feature",
+    "id": "spell_contingent_excision_arcana",
+    "name": "Contingent Excision of Arcana",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 4,
+    "description": "Range: the caster. Duration: until the next dawn. The caster may trigger an Extirpate Arcana effect once as an Instant action; the spell ends when it is triggered."
+  },
+  {
+    "type": "feature",
+    "id": "spell_disjunctive_temporal_reversion",
+    "name": "Disjunctive Temporal Reversion",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 4,
+    "description": "Range: a single creature within 100 ft. Duration: instant. The target's current round is replayed as if it had never happened, which is useful only while the target is acting in its round. Cast as an Instant action. An unwilling target may make a Mental save to resist."
+  },
+  {
+    "type": "feature",
+    "id": "spell_evert_inwardness",
+    "name": "Evert the Inwardness",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 4,
+    "description": "Range: a single visible target. Duration: instant. The spell empties containers up to armoire size, or a creature's innards. A creature with HD no greater than the caster's levels must make a Physical save or die instantly; either way it takes 1d10 damage per caster level, with a Physical save for half."
+  },
+  {
+    "type": "feature",
+    "id": "spell_grinding_geas",
+    "name": "The Grinding Geas",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 4,
+    "description": "Range: a single visible living creature. Duration: until dispelled or lifted. The caster gives one command in a single sentence, not suicidal, hopelessly imprecise, or physically impossible. A target able to act may make a Mental save to resist. Defiance or unreasonable delay brings a wasting disease that kills in 1d6 weeks, imposing -2 to hit rolls and -1 to skill checks per week and halving maximum HP. The damage reverses at the same rate if the target complies or the curse is lifted."
+  },
+  {
+    "type": "feature",
+    "id": "spell_obnubilation_of_the_will",
+    "name": "Obnubilation of the Will",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 4,
+    "description": "Range: a helpless or restrained living victim. Duration: until dispelled or released. The victim makes a Mental save; success makes it immune forever. On a failure it obeys the caster's instructions to the best of its ability and initiative, and needs another Mental save to resist a suicidal act. The caster may hold at most 2 thralls per caster level, or that many HD, with the oldest freed first. An observer with Magic-0 who watches for an hour notices the compulsion."
+  },
+  {
+    "type": "feature",
+    "id": "spell_ochre_sigil_juxtaposition",
+    "name": "The Ochre Sigil of Juxtaposition",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 4,
+    "description": "Range: two castings within a mile of each other. Duration: an unused sigil fades within a day. Both castings count as one prepared slot. The first casting sets a palm-sized sigil on the ground. The second swaps the caster and every creature and object within 10 ft with those within 10 ft of the sigil; only portable objects move. Unwilling targets of 4 HD or less get no save, while others may make a Mental save."
+  },
+  {
+    "type": "feature",
+    "id": "spell_pierce_pallid_gate",
+    "name": "Pierce the Pallid Gate",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 4,
+    "description": "Range: two points within 100 ft per caster level that the caster has seen or occupied, at least 20 ft apart. Duration: up to 1 round per caster level, and the caster may close the gate as an Instant action. Opens a cart-sized gate. Creatures and deliberately carried objects pass through, but atmosphere does not. A creature cannot pass again until its next turn. Anything partly inside when the gate closes is pushed out on the far side."
+  },
+  {
+    "type": "feature",
+    "id": "spell_sigil_aeolian_auctoritas",
+    "name": "Sigil of Aeolian Auctoritas",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 4,
+    "description": "Range: a 100 ft by 30 ft line of wind, or a quarter mile of outdoor weather. Duration: the gust is instant; a weather change lasts 1 hour per caster level. Man-sized or smaller creatures must pass a Physical save or be bowled over, blown back 30 ft, lose their next round's Main Action, and take 1d6 damage. Light wooden structures are flattened. The weather can be any normal climate for the place, including flood-causing rain, but no tornadoes or extreme weather."
+  },
+  {
+    "type": "feature",
+    "id": "spell_abdication_temporal_presence",
+    "name": "Abdication of Temporal Presence",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 5,
+    "description": "Range: the caster and up to one visible ally per caster level. Duration: 1d4+1 rounds of frozen time. The subjects act freely while time is stopped. They cannot physically affect the world or move objects they were not carrying when the spell was cast, and spells they cast affect only the group."
+  },
+  {
+    "type": "feature",
+    "id": "spell_banishment_black_glass_labyrinth",
+    "name": "Banishment to the Black Glass Labyrinth",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 5,
+    "description": "Range: a point within 300 ft, affecting a 10-ft radius. Duration: until escape or imprisonment forever. Every creature except the caster in the area is sent to an extradimensional maze. A Mental save ends the spell for a creature and returns it one round after the casting, and those who fail may save again each hour. Creatures with 5 HD or less get no save and are trapped until the caster dies or ends the spell. Time passes normally, and an escapee appears in the nearest clear space to where it vanished."
+  },
+  {
+    "type": "feature",
+    "id": "spell_dazzling_prismatic_hemicycle",
+    "name": "The Dazzling Prismatic Hemicycle",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 5,
+    "description": "Range: a cone 100 ft long and 100 ft wide at its end, in front of the caster. Duration: varies by the result. Each creature makes a Physical save; a success leaves it unharmed. A failure rolls 1d6: 1 it is unharmed; 2 it dies and crumbles to dust; 3 it falls unconscious for an hour; 4 it is insane for an hour and attacks everything nearby; 5 it turns to stone; 6 it is enthralled to the caster for an hour as by Ineluctable Shackles of Volition."
+  },
+  {
+    "type": "feature",
+    "id": "spell_deluge_of_hell",
+    "name": "Deluge of Hell",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 5,
+    "description": "Range: a point within 3,000 ft, in a radius of up to 200 ft per caster level (minimum 20 ft). Duration: instant, and the spell cannot be cast indoors. Targets take 1d8 damage per caster level, with a Physical save for half, and targets with 4 HD or less die automatically. Wooden and light stone structures are destroyed and fortifications damaged. There is no selectivity, and the caster must pass a Mental save or take a quarter of the damage, rounded up."
+  },
+  {
+    "type": "feature",
+    "id": "spell_earth_as_clay",
+    "name": "The Earth as Clay",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 5,
+    "description": "Range: land within 300 ft per caster level. Duration: 1 hour of shaping. The caster molds stone and earth, digging tunnels or caves up to 50 ft deep or raising hills up to 200 ft above grade. The spell cannot work within 1,000 ft of significantly worked stone or earth, though the same caster's earlier casting does not count as worked earth."
+  },
+  {
+    "type": "feature",
+    "id": "spell_invocation_invincible_citadel",
+    "name": "Invocation of the Invincible Citadel",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 5,
+    "description": "Range: the caster, in a 20-ft radius force bubble. Duration: until the caster leaves. Cast as an Instant action. The bubble is impervious to hostile forces, most magic, and material harm, and its interior is warm and breathable. Occupants may leave but cannot re-enter. Appropriate magic can dispel it."
+  },
+  {
+    "type": "feature",
+    "id": "spell_open_high_road",
+    "name": "Open the High Road",
+    "feature_type": "spell",
+    "tag": "high",
+    "rank": 5,
+    "description": "Range: a destination up to 100 miles per caster level away, attuned with 1 hour of work. Duration: up to 1 minute per caster level or until the caster passes through. Opens an opaque, one-way gate large enough for a cart or wagon. Living creatures, vehicles, and carried objects pass, but atmosphere does not. Each casting has a 1-in-10 chance that the true destination is 1d100 miles in a random direction, discovered only after use."
+  },
+  {
+    "type": "feature",
+    "id": "spell_command_the_dead",
+    "name": "Command the Dead",
+    "feature_type": "spell",
+    "tag": "necromancer",
+    "rank": 1,
+    "description": "Range: undead visible within 100 ft. Duration: until the caster releases them. The spell binds undead whose total HD is up to twice the caster's level; each target may make a Mental save with a penalty equal to the caster's Magic skill. Undead beyond the HD cap are merely dazed for 1 round. Bound undead are suicidally loyal. At most twice the caster's level in HD can be bound at once, and the oldest binding is released first."
+  },
+  {
+    "type": "feature",
+    "id": "spell_query_the_skull",
+    "name": "Query the Skull",
+    "feature_type": "spell",
+    "tag": "necromancer",
+    "rank": 1,
+    "description": "Range: a corpse dead for no more than 1 day per caster level, with its organs of speech mostly intact. Duration: instant. The skull answers up to one question per caster level. Answers are truthful, literal, and one or two sentences, never hypotheses or judgments. A corpse can be questioned only once."
+  },
+  {
+    "type": "feature",
+    "id": "spell_smite_the_dead",
+    "name": "Smite the Dead",
+    "feature_type": "spell",
+    "tag": "necromancer",
+    "rank": 1,
+    "description": "Range: a point within 100 ft per caster level, in a 20-ft radius. Duration: instant. Hostile undead in the area take 1d10 damage per caster level. Undead with HD no greater than the caster's level must pass a Physical save or be destroyed outright. The caster may Commit Effort for the day before casting so the spell uses no prepared slot."
+  },
+  {
+    "type": "feature",
+    "id": "spell_terrible_liveliness",
+    "name": "Terrible Liveliness",
+    "feature_type": "spell",
+    "tag": "necromancer",
+    "rank": 1,
+    "description": "Range: an undead creature. Duration: until dispelled or the caster drops it. The undead appears to be alive as it was at any point in its life, and the disguise is tangible. One disguise per caster level. It does not work on a sentient unwilling target."
+  },
+  {
+    "type": "feature",
+    "id": "spell_augment_mortal_vitality",
+    "name": "Augment Mortal Vitality",
+    "feature_type": "spell",
+    "tag": "necromancer",
+    "rank": 2,
+    "description": "Range: a willing visible creature. Duration: the rest of the scene. The target's Physical saves gain a bonus equal to the caster's Magic skill, and it stabilizes automatically when Mortally Wounded. Once per scene, as an Instant action, the caster may heal all damage from a non-mortal injury the target has taken; the target gains 1 System Strain."
+  },
+  {
+    "type": "feature",
+    "id": "spell_enfeebling_wave",
+    "name": "Enfeebling Wave",
+    "feature_type": "spell",
+    "tag": "necromancer",
+    "rank": 2,
+    "description": "Range: a point within 100 ft, in a 20-ft radius. Duration: the rest of the scene, or the target's next turn if it saves. Living creatures in the area must make a Physical save or have their movement halved and make all attack and damage rolls twice, keeping the worse. On a success these penalties apply only to the next turn."
+  },
+  {
+    "type": "feature",
+    "id": "spell_final_death",
+    "name": "Final Death",
+    "feature_type": "spell",
+    "tag": "necromancer",
+    "rank": 2,
+    "description": "Range: up to one visible target per caster level. Duration: the rest of the scene. Targets cannot recover or gain HP, and they die instantly if Mortally Wounded. Each time healing is attempted on a target, it may make a Physical save to throw the spell off."
+  },
+  {
+    "type": "feature",
+    "id": "spell_raise_corpse",
+    "name": "Raise Corpse",
+    "feature_type": "spell",
+    "tag": "necromancer",
+    "rank": 2,
+    "description": "Range: a mostly intact skeleton or corpse. Duration: until the risen creature reaches 0 HP or is released. It has 1 HD, AC 13, movement 30 ft per round, a +0 skill bonus, saves of 15+, an unarmed attack of +1 for 1d6, Instinct 0, and Morale 12. It is suicidally loyal, can use equipment, obeys commands, and answers only the simplest questions. Its damage is repaired only by recasting. The caster may have at most one such subject per level."
+  },
+  {
+    "type": "feature",
+    "id": "spell_compel_flesh",
+    "name": "Compel Flesh",
+    "feature_type": "spell",
+    "tag": "necromancer",
+    "rank": 3,
+    "description": "Range: a visible living creature or physically embodied undead within 100 ft. Duration: until the end of the scene. The target is paralyzed unless given a command, which the caster gives as an On Turn action and the target carries out on its next turn. The target's mind remains its own. At the start of each of its turns it may make a Physical save to throw the spell off; each attempt costs it 1 damage per caster level."
+  },
+  {
+    "type": "feature",
+    "id": "spell_festering_curse",
+    "name": "Festering Curse",
+    "feature_type": "spell",
+    "tag": "necromancer",
+    "rank": 3,
+    "description": "Range: a visible living target. Duration: until dispelled or lifted. The target's body rots: food tastes of ashes, water does not quench thirst, and physical pleasure fades, imposing -2 on all social skill checks. The curse causes no physical injury. A creature with more HD than the caster has levels may make a Physical save to resist."
+  },
+  {
+    "type": "feature",
+    "id": "spell_forgetting_the_grave",
+    "name": "Forgetting the Grave",
+    "feature_type": "spell",
+    "tag": "necromancer",
+    "rank": 3,
+    "description": "Range: a willing target within sight. Duration: 1 round per Necromancer level. The target cannot die. At 0 HP it loses its Move action each turn, and further damage requires a Physical save or it is incapacitated until healed. When the spell ends, a target at 0 HP becomes Mortally Wounded, and one that is dismembered or hopelessly injured dies instantly."
+  },
+  {
+    "type": "feature",
+    "id": "spell_merge_souls",
+    "name": "Merge Souls",
+    "feature_type": "spell",
+    "tag": "necromancer",
+    "rank": 3,
+    "description": "Range: two willing or helpless targets within touch. Duration: until daybreak. Their HP are pooled, so injury subtracts from the pool and neither dies until the pool reaches 0, at which point both become Mortally Wounded. They can speak telepathically at will. If the spell is dispelled early, the remaining pool is split proportionally."
+  },
+  {
+    "type": "feature",
+    "id": "spell_boneshaper",
+    "name": "Boneshaper",
+    "feature_type": "spell",
+    "tag": "necromancer",
+    "rank": 4,
+    "description": "Range: a willing or helpless living or undead target. Duration: until lifted or dispelled. With an hour of work the caster reshapes the target into a roughly equivalent form; a perfect imitation requires a Dex/Magic check against 10. The caster may add +1 to Charisma or a physical attribute at the cost of -1 to another, to a maximum of +2 and -2."
+  },
+  {
+    "type": "feature",
+    "id": "spell_raise_grave_knight",
+    "name": "Raise Grave Knight",
+    "feature_type": "spell",
+    "tag": "necromancer",
+    "rank": 4,
+    "description": "Range: the corpse of a creature with at least 4 HD or levels. Duration: until destroyed; the knight regains all HP at dusk each day. It has 4 HD, AC 15, movement 40 ft per action, a +1 skill bonus, saves of 13+, Instinct 0, Morale 12, and a melee attack of +6 for 1d10 unless it uses a weapon. It is fully intelligent and devoted. The caster may have one at a time; at 0 HP it is destroyed, and rebuilding it takes a month."
+  },
+  {
+    "type": "feature",
+    "id": "spell_call_of_the_tomb",
+    "name": "Call of the Tomb",
+    "feature_type": "spell",
+    "tag": "necromancer",
+    "rank": 5,
+    "description": "Range: enemy creatures within 40 ft. Duration: 1 round on a successful Physical save, otherwise 1 round per caster level. While affected, every attack against a victim hits automatically, all damage dice against it are maximized, and its special defenses against mundane weapons are negated."
+  },
+  {
+    "type": "feature",
+    "id": "spell_everlasting",
+    "name": "Everlasting",
+    "feature_type": "spell",
+    "tag": "necromancer",
+    "rank": 5,
+    "description": "Range: allied creatures within 50 ft, triggered as an Instant action. Duration: 5 rounds. Affected allies cannot drop below 1 HP while it lasts. The caster drops to 1 HP when it ends. Each creature can benefit once per day."
+  },
+  {
+    "type": "feature",
+    "id": "spell_aqueous_harmony",
+    "name": "Aqueous Harmony",
+    "feature_type": "spell",
+    "tag": "elementalist",
+    "rank": 1,
+    "description": "Range: the Elementalist and up to 12 allies. Duration: 1 hour per caster level, and it does not end while a subject is partly submerged. Subjects breathe water, endure pressure and cold, see clearly through water, move at their normal rate in water, attack and shoot without hindrance, and keep their possessions dry."
+  },
+  {
+    "type": "feature",
+    "id": "spell_flame_scrying",
+    "name": "Flame Scrying",
+    "feature_type": "spell",
+    "tag": "elementalist",
+    "rank": 1,
+    "description": "Range: all open flames within 30 ft per caster level. Duration: while the caster stays motionless. The caster is aware of every flame in range and may choose one as a focus to see and hear everything around it, switching among flames in range."
+  },
+  {
+    "type": "feature",
+    "id": "spell_elemental_favor",
+    "name": "Elemental Favor",
+    "feature_type": "spell",
+    "tag": "elementalist",
+    "rank": 1,
+    "description": "Range: a non-magical mass of up to a 10-ft cube of earth, stone, water, flame, or air. Duration: until the end of the scene, and a stable shape remains afterward. The mass moves or reshapes as the caster requests at the end of each round."
+  },
+  {
+    "type": "feature",
+    "id": "spell_elemental_spy",
+    "name": "Elemental Spy",
+    "feature_type": "spell",
+    "tag": "elementalist",
+    "rank": 1,
+    "description": "Range: a stone, an ounce of liquid, a flame at least the size of a candle, or a plume of smoke or incense. Duration: 1 day per level, while the object remains intact. As a Main Action the caster sees and hears everything around the object as if standing there."
+  },
+  {
+    "type": "feature",
+    "id": "spell_boreal_wings",
+    "name": "Boreal Wings",
+    "feature_type": "spell",
+    "tag": "elementalist",
+    "rank": 2,
+    "description": "Range: a visible ally within 100 ft. Duration: the scene; 1 hour at caster level 5 or higher, and until dawn or dusk at caster level 8 or higher. The target flies at twice its usual movement rate. If the spell ends while the target is aloft, it descends gently."
+  },
+  {
+    "type": "feature",
+    "id": "spell_burrower_below",
+    "name": "The Burrower Below",
+    "feature_type": "spell",
+    "tag": "elementalist",
+    "rank": 2,
+    "description": "Range: natural stone or earth. Duration: permanent tunnel. The caster clears a passage up to 20 ft per caster level long and up to 10 ft wide and tall, or only 2 ft per level in worked stone. Magical stone or earth is unaffected. The caster directs the path and may form stairs."
+  },
+  {
+    "type": "feature",
+    "id": "spell_flame_without_end",
+    "name": "Flame Without End",
+    "feature_type": "spell",
+    "tag": "elementalist",
+    "rank": 2,
+    "description": "Range: a flame no larger than the caster. Duration: until dispelled, extinguished, or released. The flame no longer consumes its fuel and can be put out at will. The caster may maintain one flame per level; each beyond that costs 500 sp. As a weapon the flame adds +2 damage on a hit and has no Shock."
+  },
+  {
+    "type": "feature",
+    "id": "spell_pact_stone_and_sea",
+    "name": "Pact of Stone and Sea",
+    "feature_type": "spell",
+    "tag": "elementalist",
+    "rank": 2,
+    "description": "Range: a visible target. Duration: the rest of the scene. The caster names earth, water, fire, or wind. The target is immune to injury from that mundane element, including its secondary effects: a fire-pacted creature cannot be boiled, and an earth-pacted one cannot be suffocated by burial."
+  },
+  {
+    "type": "feature",
+    "id": "spell_elemental_vallation",
+    "name": "Elemental Vallation",
+    "feature_type": "spell",
+    "tag": "elementalist",
+    "rank": 3,
+    "description": "Range: a wall 10 ft long per character level, 10 ft high, and 1 ft thick within 200 ft, resting on solid ground. Duration: until the end of the scene. An earth wall needs 20 HP of damage to open a man-sized hole. A fire wall deals 3d6 + level to anyone passing through. A water wall hurls creatures of ox size or less to a random far point for 2d6 damage. An air wall is invisible and inaudible, 20 ft tall, and deals 1d6 + level electrical damage."
+  },
+  {
+    "type": "feature",
+    "id": "spell_like_the_stones",
+    "name": "Like the Stones",
+    "feature_type": "spell",
+    "tag": "elementalist",
+    "rank": 3,
+    "description": "Range: the caster. Duration: the rest of the scene. Choose an element; the caster needs no air and is immune to poisons and diseases not already present. Stone: stabilize at 0 HP and ignore the first 3 damage from any source. Water: pass through any mouse-sized gap. Air: fly at movement rate with +4 AC against ranged attacks. Fire: deal 1d6 to everything in melee range at the start of each turn and ignore heat."
+  },
+  {
+    "type": "feature",
+    "id": "spell_wind_walking",
+    "name": "Wind Walking",
+    "feature_type": "spell",
+    "tag": "elementalist",
+    "rank": 3,
+    "description": "Range: a visible creature and its possessions. Duration: until the end of the scene or until the caster or target ends it. The target becomes a misty cloud that only harm able to disrupt mist can injure. It moves in three dimensions at its normal rate, passes anywhere vapor could reach, and cannot manipulate objects."
+  },
+  {
+    "type": "feature",
+    "id": "spell_calcifying_scourge",
+    "name": "Calcifying Scourge",
+    "feature_type": "spell",
+    "tag": "elementalist",
+    "rank": 4,
+    "description": "Range: a visible target within 100 ft. Duration: until dispelled or undone. The target must make a Physical save or turn to stone; living creatures of any size can be affected, but inanimate objects larger than a cart cannot. Held or worn objects may save through their user. Damage taken while stone may harm or kill on restoration. A successful save leaves the target slowed, losing its Move action for 1d6 rounds."
+  },
+  {
+    "type": "feature",
+    "id": "spell_elemental_guardian",
+    "name": "Elemental Guardian",
+    "feature_type": "spell",
+    "tag": "elementalist",
+    "rank": 4,
+    "description": "Range: summoned beside the caster. Duration: until destroyed or the dawn after summoning. The guardian is a human-sized mass of earth, water, fire, or air. Base: 4 HD, AC 15, movement 40 ft per action, +1 skill, saves 13+, Instinct 0, Morale 12, and a melee attack of +6 for 1d10 with no Shock. Earth guardians have 6 HD, fire guardians gain Shock 5, water guardians have AC 18, and air guardians fly at their usual movement rate. It has human intelligence and serves with suicidal devotion. Only one may exist at a time; if it is destroyed, no guardian can be called that scene."
+  },
+  {
+    "type": "feature",
+    "id": "spell_fury_of_the_elements",
+    "name": "Fury of the Elements",
+    "feature_type": "spell",
+    "tag": "elementalist",
+    "rank": 5,
+    "description": "Range: a target point within 200 ft per caster level. Duration: the zone wanders for 1d6 rounds, and molten remnants last the rest of the day. The spell deals 10d6 damage to everything within 30 ft and destroys conventional structures. At the start of the next round the zone moves 1d6 x 10 ft in a random direction, repeating for 1d6 rounds in total."
+  },
+  {
+    "type": "feature",
+    "id": "spell_tremors_of_the_depths",
+    "name": "Tremors of the Depths",
+    "feature_type": "spell",
+    "tag": "elementalist",
+    "rank": 5,
+    "description": "Range: a visible point, with a radius of up to 500 ft. Duration: the tremors take 5 minutes to manifest. They topple or destroy structures, tunnels, and caves unless these are magically reinforced. The spell is negated if dispelled within one minute of casting."
+  }
+]

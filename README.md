@@ -63,5 +63,6 @@ Configuration examples are in [.env.example](.env.example). Worlds and rule sets
 ## Content credits
 
 - Cairn 2e by Yochai Gal, licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/): https://cairnrpg.com/second-edition/.
+- Worlds Without Number by Kevin Crawford (Sine Nomine Publishing, 2021), free edition: https://www.sinenomine-pub.com/.
 - Creative tables from the Ironsworn Rulebook by Shawn Tomkin, licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), via the Datasworn transcription by rsek: https://ironswornrpg.com.
 - The Twin Lakes world uses content from the CAS-1 module *Trouble in Twin Lakes*.

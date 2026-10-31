@@ -116,6 +116,8 @@
     for (;;) {
       const pending = [...document.querySelectorAll("[data-dice-for]")].filter((dice) => {
         if (rolled.has(dice) || dice.closest("[hidden]")) return false;
+        const panel = dice.closest("[data-choice-panel]");
+        if (panel?.dataset.optional === "true") return false;
         const name = dice.dataset.diceFor;
         return !onlyUnchosen || document.querySelector(`input[type="radio"][name="${name}"]:checked`) === null;
       });
@@ -181,6 +183,24 @@
     }
   };
 
+  // Each skill or feature pick takes a value it offers. Feature picks of one pick do not repeat a
+  // feature; skill picks may repeat when the pool is smaller than the number of picks. In the
+  // unchosen mode a pick the player already set is kept, and its value is not taken again.
+  const randomizePicks = (fieldset, onlyUnchosen) => {
+    const selects = [...fieldset.querySelectorAll("select")];
+    const taken = new Set(onlyUnchosen ? selects.map((select) => select.value).filter(Boolean) : []);
+    for (const select of selects) {
+      if (onlyUnchosen && select.value !== "") continue;
+      const offered = [...select.options]
+        .filter((option) => option.value !== "" && !option.disabled)
+        .map((option) => option.value);
+      const fresh = offered.filter((value) => !taken.has(value));
+      const pool = fresh.length > 0 ? fresh : offered;
+      select.value = pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : "";
+      if (select.value !== "") taken.add(select.value);
+    }
+  };
+
   // The name is rolled last, so it draws on the background that the choices just rolled. The
   // Year is rolled with the choices, so the spells are rolled after it, from the Year's spells. In
   // the unchosen mode a name already typed counts as chosen and is kept, and the stats are always
@@ -190,6 +210,9 @@
     if (!onlyUnchosen) randomizeStats();
     for (const fieldset of document.querySelectorAll("[data-spell-picks]")) {
       if (!fieldset.closest("[hidden]")) randomizeSpells(fieldset, onlyUnchosen);
+    }
+    for (const fieldset of document.querySelectorAll("[data-pick-selects]")) {
+      if (!fieldset.closest("[hidden]")) randomizePicks(fieldset, onlyUnchosen);
     }
     const input = form?.querySelector('input[name="name"]');
     if (onlyUnchosen && input?.value.trim()) return;
@@ -245,6 +268,12 @@
     const spellPicks = target.closest("[data-randomize-spells]")?.closest("[data-spell-picks]");
     if (spellPicks) {
       randomizeSpells(spellPicks, false);
+      return;
+    }
+
+    const picks = target.closest("[data-randomize-picks]")?.closest("[data-pick-selects]");
+    if (picks) {
+      randomizePicks(picks, false);
       return;
     }
 

@@ -24,9 +24,23 @@ from cygnusforge.services.events import (
     same_item_name,
 )
 from cygnusforge.services.hooks import HookContext, call_hook
-from cygnusforge.services.inventory import carry_item, character_named, used_slots
+from cygnusforge.services.inventory import (
+    capacity_of,
+    carry_item,
+    character_named,
+    used_slots,
+)
 
 MAX_PRICE = 100_000
+
+
+def _armor_after(current: int, listed: int, mode: str) -> int:
+    """The armor a buyer has after taking a catalogue item, as the item's `armor_mode` says."""
+    if mode == "set":
+        return listed
+    if mode == "max":
+        return max(current, listed)
+    return current + listed
 
 
 def listed_item(marketplace: Marketplace, item: str) -> ShopItem | None:
@@ -95,7 +109,7 @@ def buy_item(
     if size not in item_sizes:
         raise InvalidInput(f"there is no item size named {size!r}")
     slots = item_sizes[size]
-    free = inventory.capacity - used_slots(buyer)
+    free = capacity_of(buyer, inventory) - used_slots(buyer)
     if slots > free:
         raise InvalidInput(
             f"{buyer.name} has room for {max(free, 0)} slots, and {item} takes {slots}"
@@ -118,8 +132,8 @@ def buy_item(
         ),
         cause="bought",
     )
-    if listed is not None and listed.armor > 0:
-        armor = buyer.armor + listed.armor
+    if listed is not None and (listed.armor > 0 or listed.armor_mode != "add"):
+        armor = _armor_after(buyer.armor, listed.armor, listed.armor_mode)
         if armor_max > 0:
             armor = min(armor_max, armor)
         record(db, campaign_id, ArmorSet(name=buyer.name, armor=armor))

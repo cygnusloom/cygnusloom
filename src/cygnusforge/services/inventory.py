@@ -9,6 +9,7 @@ from typing import Any
 
 from sqlmodel import Session
 
+from cygnusforge.content.character import CharacterSpec
 from cygnusforge.content.library import InventoryRules, ShopItem
 from cygnusforge.rules.dice import is_formula
 from cygnusforge.services.common import InvalidInput
@@ -20,11 +21,26 @@ from cygnusforge.services.events import (
     ItemAdded,
     ItemRemoved,
     ItemUsesSet,
+    current,
     load_state,
     name_key,
     record,
     same_item_name,
 )
+
+
+def capacity_of(
+    character: Character, rules: InventoryRules, spec: CharacterSpec | None = None
+) -> int:
+    """The slots a character's inventory holds. A rule set with no `capacity_stat` gives every
+    character its fixed `capacity`. One that names a stat uses the character's raw score in it,
+    times `capacity_multiplier`: no stat modifier is applied. `spec` is the rule set's character
+    spec; it is optional because the score is read from the character, not the bands."""
+    if not rules.capacity_stat:
+        return rules.capacity
+    if spec is not None and rules.capacity_stat not in spec.stats:
+        raise InvalidInput(f"{rules.capacity_stat!r} is no stat of this rule set")
+    return max(0, current(character, rules.capacity_stat) * rules.capacity_multiplier)
 
 
 def used_slots(character: Character) -> int:
@@ -49,6 +65,7 @@ def carry_item(
     """Add an item and drain the full stat if this fills the inventory. The item is added even
     when that takes the inventory over capacity, and the result says so."""
     character = character_named(load_state(db, campaign_id), name)
+    capacity = capacity_of(character, rules)
     before = used_slots(character)
     after = before + item.slots
     record(
@@ -72,9 +89,9 @@ def carry_item(
         "name": character.name,
         "item": item.name,
         "slots_used": after,
-        "capacity": rules.capacity,
+        "capacity": capacity,
     }
-    if before < rules.capacity <= after:
+    if rules.full_stat and before < capacity <= after:
         record(
             db,
             campaign_id,
@@ -83,7 +100,7 @@ def carry_item(
             ),
         )
         result["drained"] = rules.full_stat
-    if after > rules.capacity:
+    if after > capacity:
         result["over_capacity"] = True
     return result
 
@@ -164,7 +181,7 @@ def fits_listed(
     if listed.size not in item_sizes:
         raise InvalidInput(f"there is no item size named {listed.size!r}")
     character = character_named(load_state(db, campaign_id), name)
-    return used_slots(character) + item_sizes[listed.size] <= rules.capacity
+    return used_slots(character) + item_sizes[listed.size] <= capacity_of(character, rules)
 
 
 def add_penalty(
@@ -196,7 +213,7 @@ def drop_item(
         "name": character.name,
         "item": held.name,
         "slots_used": used_slots(character) - held.slots,
-        "capacity": rules.capacity,
+        "capacity": capacity_of(character, rules),
     }
 
 
@@ -241,7 +258,7 @@ def use_item(
         "uses_left": left,
         "used_up": left == 0,
         "slots_used": used_slots(character) - (held.slots if left == 0 else 0),
-        "capacity": rules.capacity,
+        "capacity": capacity_of(character, rules),
     }
 
 

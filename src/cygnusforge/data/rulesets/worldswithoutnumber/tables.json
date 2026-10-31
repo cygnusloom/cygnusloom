@@ -1,0 +1,334 @@
+[
+  {
+    "type": "table",
+    "id": "personality",
+    "options": [
+      "cheerful and talkative",
+      "gruff and suspicious",
+      "patient and gentle",
+      "anxious and easily startled",
+      "proud and quick to take offense",
+      "curious and full of questions",
+      "dry and sarcastic",
+      "warm and protective",
+      "greedy but honest",
+      "solemn and careful with words",
+      "boisterous and generous",
+      "shy and eager to please"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "accent",
+    "options": [
+      "soft and lilting",
+      "clipped and blunt",
+      "drawling and slow",
+      "rolling with long vowels",
+      "sing-song",
+      "rough and rural",
+      "precise and formal",
+      "whispery",
+      "heavy with a hill-country burr",
+      "quick and slurred"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "quirk",
+    "options": [
+      "taps a finger against their lips when thinking",
+      "hums under their breath",
+      "always eats something while talking",
+      "refers to everyone as 'friend'",
+      "counts things under their breath",
+      "never makes eye contact",
+      "speaks in proverbs",
+      "adjusts their clothes constantly",
+      "ends sentences with a question",
+      "keeps glancing at the sky",
+      "collects small bits of carved stone",
+      "tells the same joke twice"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "look",
+    "options": [
+      "weathered and sun-darkened",
+      "pale and bookish",
+      "broad-shouldered and slow-moving",
+      "wiry and quick",
+      "neatly dressed despite the road",
+      "patched clothes and careful mending",
+      "scarred hands and a steady gaze",
+      "youthful face, older eyes",
+      "gaunt and watchful",
+      "well-fed and confident",
+      "dusty travelling gear and a battered hat",
+      "finery gone threadbare"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "names",
+    "options": [
+      "Alder",
+      "Beren",
+      "Cassia",
+      "Dain",
+      "Eira",
+      "Fen",
+      "Galen",
+      "Hesta",
+      "Ivo",
+      "Jora",
+      "Kestrel",
+      "Liora",
+      "Marek",
+      "Nessa",
+      "Orin",
+      "Perrin",
+      "Quilla",
+      "Rhea",
+      "Sable",
+      "Taron",
+      "Ulla",
+      "Varek",
+      "Wren",
+      "Yara",
+      "Zeph",
+      "Brannoc",
+      "Cael",
+      "Dessa",
+      "Ewan",
+      "Sera"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "background_index",
+    "options": [
+      { "name": "Artisan", "description": "d20 roll 1. Free skill: craft. Quick skills: trade, connect." },
+      { "name": "Barbarian", "description": "d20 roll 2. Free skill: survive. Quick skills: any combat skill, notice." },
+      { "name": "Carter", "description": "d20 roll 3. Free skill: ride. Quick skills: connect, any combat skill." },
+      { "name": "Courtesan", "description": "d20 roll 4. Free skill: perform. Quick skills: notice, connect." },
+      { "name": "Criminal", "description": "d20 roll 5. Free skill: sneak. Quick skills: connect, convince." },
+      { "name": "Hunter", "description": "d20 roll 6. Free skill: shoot. Quick skills: survive, sneak." },
+      { "name": "Laborer", "description": "d20 roll 7. Free skill: work. Quick skills: connect, exert." },
+      { "name": "Merchant", "description": "d20 roll 8. Free skill: trade. Quick skills: convince, connect." },
+      { "name": "Noble", "description": "d20 roll 9. Free skill: lead. Quick skills: connect, administer." },
+      { "name": "Nomad", "description": "d20 roll 10. Free skill: ride. Quick skills: survive, any combat skill." },
+      { "name": "Peasant", "description": "d20 roll 11. Free skill: exert. Quick skills: sneak, survive." },
+      { "name": "Performer", "description": "d20 roll 12. Free skill: perform. Quick skills: convince, connect." },
+      { "name": "Physician", "description": "d20 roll 13. Free skill: heal. Quick skills: know, notice." },
+      { "name": "Priest", "description": "d20 roll 14. Free skill: pray. Quick skills: convince, know." },
+      { "name": "Sailor", "description": "d20 roll 15. Free skill: sail. Quick skills: exert, notice." },
+      { "name": "Scholar", "description": "d20 roll 16. Free skill: know. Quick skills: heal, administer." },
+      { "name": "Slave", "description": "d20 roll 17. Free skill: sneak. Quick skills: survive, exert." },
+      { "name": "Soldier", "description": "d20 roll 18. Free skill: any combat skill. Quick skills: exert, survive." },
+      { "name": "Thug", "description": "d20 roll 19. Free skill: any combat skill. Quick skills: convince, connect." },
+      { "name": "Wanderer", "description": "d20 roll 20. Free skill: survive. Quick skills: sneak, notice." }
+    ]
+  },
+  {
+    "type": "table",
+    "id": "growth_artisan",
+    "options": ["+1 Any Stat", "+2 Physical", "+2 Mental", "exert", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_artisan",
+    "options": ["connect", "convince", "craft", "exert", "know", "notice", "trade"]
+  },
+  {
+    "type": "table",
+    "id": "growth_barbarian",
+    "options": ["+1 Any Stat", "+2 Physical", "+2 Mental", "exert", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_barbarian",
+    "options": ["stab", "shoot", "punch", "connect", "exert", "lead", "notice", "sneak", "survive"]
+  },
+  {
+    "type": "table",
+    "id": "growth_carter",
+    "options": ["+1 Any Stat", "+2 Physical", "+2 Mental", "connect", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_carter",
+    "options": ["stab", "shoot", "punch", "connect", "craft", "exert", "notice", "ride", "survive", "trade"]
+  },
+  {
+    "type": "table",
+    "id": "growth_courtesan",
+    "options": ["+1 Any Stat", "+2 Mental", "+2 Physical", "connect", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_courtesan",
+    "options": ["stab", "shoot", "punch", "connect", "convince", "exert", "notice", "perform", "survive", "trade"]
+  },
+  {
+    "type": "table",
+    "id": "growth_criminal",
+    "options": ["+1 Any Stat", "+2 Mental", "+2 Physical", "connect", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_criminal",
+    "options": ["administer", "stab", "shoot", "punch", "connect", "convince", "exert", "notice", "sneak", "trade"]
+  },
+  {
+    "type": "table",
+    "id": "growth_hunter",
+    "options": ["+1 Any Stat", "+2 Physical", "+2 Mental", "exert", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_hunter",
+    "options": ["stab", "shoot", "punch", "exert", "heal", "notice", "ride", "sneak", "survive"]
+  },
+  {
+    "type": "table",
+    "id": "growth_laborer",
+    "options": ["+1 Any Stat", "exert", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_laborer",
+    "options": ["administer", "any_skill", "connect", "convince", "craft", "exert", "ride", "work"]
+  },
+  {
+    "type": "table",
+    "id": "growth_merchant",
+    "options": ["+1 Any Stat", "+2 Mental", "connect", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_merchant",
+    "options": ["administer", "stab", "shoot", "punch", "connect", "convince", "craft", "know", "notice", "trade"]
+  },
+  {
+    "type": "table",
+    "id": "growth_noble",
+    "options": ["+1 Any Stat", "+2 Mental", "connect", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_noble",
+    "options": ["administer", "stab", "shoot", "punch", "connect", "convince", "know", "lead", "notice", "ride"]
+  },
+  {
+    "type": "table",
+    "id": "growth_nomad",
+    "options": ["+1 Any Stat", "+2 Physical", "+2 Mental", "exert", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_nomad",
+    "options": ["stab", "shoot", "punch", "connect", "exert", "lead", "notice", "ride", "survive", "trade"]
+  },
+  {
+    "type": "table",
+    "id": "growth_peasant",
+    "options": ["+1 Any Stat", "+2 Physical", "exert", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_peasant",
+    "options": ["connect", "exert", "craft", "notice", "sneak", "survive", "trade", "work"]
+  },
+  {
+    "type": "table",
+    "id": "growth_performer",
+    "options": ["+1 Any Stat", "+2 Mental", "+2 Physical", "connect", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_performer",
+    "options": ["stab", "shoot", "punch", "connect", "exert", "notice", "perform", "sneak", "convince"]
+  },
+  {
+    "type": "table",
+    "id": "growth_physician",
+    "options": ["+1 Any Stat", "+2 Physical", "+2 Mental", "connect", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_physician",
+    "options": ["administer", "connect", "craft", "heal", "know", "notice", "convince", "trade"]
+  },
+  {
+    "type": "table",
+    "id": "growth_priest",
+    "options": ["+1 Any Stat", "+2 Mental", "+2 Physical", "connect", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_priest",
+    "options": ["administer", "connect", "know", "lead", "heal", "convince", "pray"]
+  },
+  {
+    "type": "table",
+    "id": "growth_sailor",
+    "options": ["+1 Any Stat", "+2 Physical", "+2 Mental", "exert", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_sailor",
+    "options": ["stab", "shoot", "punch", "connect", "craft", "exert", "heal", "notice", "perform", "sail"]
+  },
+  {
+    "type": "table",
+    "id": "growth_scholar",
+    "options": ["+1 Any Stat", "+2 Mental", "connect", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_scholar",
+    "options": ["administer", "heal", "craft", "know", "notice", "perform", "pray", "convince"]
+  },
+  {
+    "type": "table",
+    "id": "growth_slave",
+    "options": ["+1 Any Stat", "+2 Mental", "+2 Physical", "exert", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_slave",
+    "options": ["administer", "stab", "shoot", "punch", "any_skill", "convince", "exert", "sneak", "survive", "work"]
+  },
+  {
+    "type": "table",
+    "id": "growth_soldier",
+    "options": ["+1 Any Stat", "+2 Physical", "exert", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_soldier",
+    "options": ["stab", "shoot", "punch", "exert", "lead", "notice", "ride", "sneak", "survive"]
+  },
+  {
+    "type": "table",
+    "id": "growth_thug",
+    "options": ["+1 Any Stat", "+2 Mental", "+2 Physical", "connect", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_thug",
+    "options": ["stab", "shoot", "punch", "connect", "convince", "exert", "notice", "sneak", "survive"]
+  },
+  {
+    "type": "table",
+    "id": "growth_wanderer",
+    "options": ["+1 Any Stat", "+2 Physical", "+2 Mental", "exert", "Any Skill"]
+  },
+  {
+    "type": "table",
+    "id": "learning_wanderer",
+    "options": ["stab", "shoot", "punch", "connect", "notice", "perform", "ride", "sneak", "survive", "work"]
+  }
+]

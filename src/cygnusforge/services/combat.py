@@ -14,6 +14,7 @@ from typing import Any
 
 from sqlmodel import Session
 
+from cygnusforge.content.character import CharacterSpec, Feature
 from cygnusforge.content.library import CombatRules, ConditionRules, DamageStep, GroupRules
 from cygnusforge.rules.dice import roll_total
 from cygnusforge.services import death
@@ -66,6 +67,19 @@ MAX_DAMAGE = 1000
 UNCAPPED_ARMOR = 1000
 MAX_RECOVERY_TEXT = 600
 MAX_CAUSE_TEXT = 200
+# The skill an unarmed strike rolls, for a rule set whose weapons have no feature for it.
+UNARMED_ATTACK_SKILL = "punch"
+
+
+@dataclass(frozen=True)
+class WeaponBonuses:
+    """What a player character's weapon adds to an attack: `to_hit` to the hit roll, `damage` to
+    the hit's own damage, and the `shock` a miss does through armor of `shock_ac` or less."""
+
+    to_hit: int = 0
+    damage: int = 0
+    shock: int = 0
+    shock_ac: int = 0
 
 
 @dataclass(frozen=True)
@@ -137,6 +151,101 @@ def _require_impaired(target: Character, modifier: str, combat: CombatRules) -> 
         raise InvalidInput(f"{target.name} is a group; attacks on it must be {required}")
 
 
+def _stat_bonus(combat: CombatRules, character: Character, stat: str) -> int:
+    """What one of the rule set's attack stats adds, such as a hit or damage bonus. A rule set
+    that names no stat adds nothing."""
+    return current(character, stat) if stat else 0
+
+
+def _attribute_modifier(
+    spec: CharacterSpec | None, character: Character, attributes: Sequence[str]
+) -> int:
+    """The best of the weapon's attribute modifiers, or 0 when the rule set has no attributes."""
+    if spec is None:
+        return 0
+    scores = [
+        spec.modifier(character.stats, stat) for stat in attributes if stat in character.stats
+    ]
+    return max(scores) if scores else 0
+
+
+def _weapon_skill(combat: CombatRules, weapon: str, feature: Feature | None) -> str:
+    """The skill an attack with `weapon` rolls: the weapon's own when it has one, the unarmed
+    skill for an unarmed strike, and no skill for a rule set with neither."""
+    if feature is not None and feature.skill:
+        return feature.skill
+    if name_key(weapon) in combat.unarmed_names:
+        return UNARMED_ATTACK_SKILL
+    return ""
+
+
+def _player_bonuses(
+    combat: CombatRules,
+    character: Character,
+    weapon: str,
+    spec: CharacterSpec | None,
+    feature: Feature | None,
+) -> WeaponBonuses:
+    """What a player character's attack with `weapon` adds, from the rule set's combat fields, the
+    weapon's skill and attributes, and the character's skills. A rule set with no spec adds
+    nothing, so its attacks stay exactly as they were."""
+    if spec is None:
+        return WeaponBonuses()
+    unarmed = name_key(weapon) in combat.unarmed_names
+    attributes = (
+        feature.attributes
+        if feature is not None and feature.attributes
+        else combat.unarmed_attributes
+        if unarmed
+        else ()
+    )
+    attribute = _attribute_modifier(spec, character, attributes)
+    damage_bonus = _stat_bonus(combat, character, combat.damage_bonus_stat)
+    to_hit = _stat_bonus(combat, character, combat.hit_bonus_stat) + attribute
+    damage = damage_bonus
+    skill = _weapon_skill(combat, weapon, feature)
+    if skill:
+        level = spec.skill_level(character.skills, skill)
+        to_hit += level if level >= 0 else -combat.unskilled_attack_penalty
+        if unarmed:
+            damage += max(0, level)
+    if combat.attribute_damage and attributes:
+        damage += attribute
+    shock = 0
+    shock_ac = 0
+    if feature is not None and feature.shock:
+        shock = feature.shock + attribute + damage_bonus
+        shock_ac = feature.shock_ac
+    return WeaponBonuses(to_hit=to_hit, damage=damage, shock=shock, shock_ac=shock_ac)
+
+
+def _attack_shock(source: Character, name: str) -> tuple[int, int]:
+    """The shock one of a character's attacks does, and the armor it shocks through, or zeros when
+    the attack has none."""
+    pair = source.attack_shock.get(name) or ()
+    if len(pair) < 2:
+        return 0, 0
+    return int(pair[0]), int(pair[1])
+
+
+def _harm_stat(combat: CombatRules) -> str | None:
+    """The first stat a hit harms, which is the one shock and defeat are read from."""
+    return next((step.stat for step in combat.damage if step.kind == "harm"), None)
+
+
+def _defeat_after_harm(
+    combat: CombatRules, target: Character, harm: Mapping[str, int]
+) -> tuple[bool, str]:
+    """Whether this harm took a stat the rule set leaves a character defeated at 0 down to 0, and
+    where that defeat leaves the character."""
+    if target.invincible:
+        return False, ""
+    for stat in combat.defeat_at_zero:
+        if current(target, stat) - harm.get(stat, 0) <= 0:
+            return True, defeat_status(target, combat.defeat)
+    return False, ""
+
+
 def _strike(
     db: Session,
     campaign_id: int,
@@ -151,21 +260,44 @@ def _strike(
     *,
     plus: str,
     ignores_armor: bool = False,
+    to_hit: int | None = None,
+    hit_bonus: int = 0,
+    shock: int = 0,
+    shock_ac: int = 0,
 ) -> dict[str, Any]:
     """Apply a hit through the rule set's damage steps. A target that owes a save takes no more
     hits. An NPC saves at once; a player character saves when the player rolls. A hit on an NPC
     may also bring its side's morale check. An attack that ignores armor skips the target's armor.
 
-    Under the "auto" hit mode the blow always lands. Under "roll_vs_defense" the check die is rolled
-    against the target's armor as its defense (none when the attack ignores armor), and a roll below
-    the defense misses: the miss is logged and no harm is done."""
+    Under the "auto" hit mode the blow always lands. Under "roll_vs_defense" a roll below the
+    target's armor, which is its defense (none when the attack ignores armor), misses: the miss is
+    logged and no damage is rolled. `to_hit` is a hit roll the caller already made, with its own
+    bonuses; when it is None the check die is rolled here and `hit_bonus` is added to it.
+
+    A rule set whose shock does harm on a miss (`shock_on_miss`) harms the first harm stat by
+    `shock` when the defense is at most `shock_ac`, and no armor stops it. One whose hits never do
+    less than their shock (`minimum_shock_damage`) raises the damage to `shock` when it applies.
+    Harm that takes a stat in `defeat_at_zero` to 0 defeats the target, with the rule set's status."""
     if target.save_due is not None:
         raise InvalidInput(f"{target.name} must make their {target.save_due} save first")
-    to_hit: int | None = None
+    defense = 0 if ignores_armor else target.armor
+    shock_applies = bool(shock) and defense <= shock_ac
     if combat.hit_mode == "roll_vs_defense":
-        to_hit = roll_total(combat.check_die, rng, plus=plus)
-        defense = 0 if ignores_armor else target.armor
+        if to_hit is None:
+            to_hit = roll_total(combat.check_die, rng, plus=plus) + hit_bonus
         if to_hit < defense:
+            harm: dict[str, int] = {}
+            shock_taken = 0
+            stat = _harm_stat(combat)
+            if (
+                combat.shock_on_miss
+                and shock_applies
+                and stat is not None
+                and not target.invincible
+            ):
+                harm[stat] = shock
+                shock_taken = shock
+            defeats, status = _defeat_after_harm(combat, target, harm)
             record(
                 db,
                 campaign_id,
@@ -175,29 +307,38 @@ def _strike(
                     weapon=weapon,
                     raw=raw,
                     armor=0,
-                    harm={},
+                    harm=harm,
                     modifier=modifier,
-                    rolled=rolled,
                     hit=False,
                     to_hit=to_hit,
+                    shock=shock_taken,
+                    defeats=defeats,
+                    status=status,
                 ),
             )
             db.commit()
+            if defeats:
+                if target.kind == PC_KIND:
+                    death.begin_dying(db, campaign_id, combat, target.name)
+                _end_if_one_side_left(db, campaign_id)
             return {
                 "target": target.name,
                 "raw": raw,
                 "armor": 0,
-                "harm": {},
+                "harm": harm,
                 "save_due": None,
                 "hit": False,
                 "to_hit": to_hit,
-                "defeated": target.defeated,
+                "defeated": load_state(db, campaign_id).characters[name_key(target.name)].defeated,
             }
     armor = 0 if ignores_armor else target.armor
+    if shock_applies and combat.minimum_shock_damage:
+        raw = max(raw, shock)
     damage = apply_damage(combat.damage, armor, lambda stat: current(target, stat), raw)
     if target.invincible:
         # The whole hit is absorbed, so the log reads as a blow turned aside rather than a miss.
         damage = Damage(absorbed=raw, harm={}, save=None)
+    defeats, status = _defeat_after_harm(combat, target, damage.harm)
     record(
         db,
         campaign_id,
@@ -212,9 +353,13 @@ def _strike(
             modifier=modifier,
             rolled=rolled,
             to_hit=to_hit,
+            defeats=defeats,
+            status=status,
         ),
     )
     db.commit()
+    if defeats and target.kind == PC_KIND:
+        death.begin_dying(db, campaign_id, combat, target.name)
     result: dict[str, Any] = {
         "target": target.name,
         "raw": raw,
@@ -410,6 +555,8 @@ def attack(
     _require_impaired(struck, modifier_name(modifier), combat)
     dice = modifier_dice(combat.modifiers, modifier)
     raw = roll_total(dice or source.attacks[name], rng, plus=plus)
+    raw += _stat_bonus(combat, source, combat.damage_bonus_stat)
+    shock, shock_ac = _attack_shock(source, name)
     return _strike(
         db,
         campaign_id,
@@ -422,6 +569,9 @@ def attack(
         modifier=modifier_name(modifier),
         plus=plus,
         ignores_armor=IGNORES_ARMOR in flags,
+        hit_bonus=_stat_bonus(combat, source, combat.hit_bonus_stat),
+        shock=shock,
+        shock_ac=shock_ac,
     )
 
 
@@ -459,13 +609,16 @@ def _blast_attack(
     if owed:
         raise InvalidInput(f"{', '.join(owed)} must make their save first")
     dice = modifier_dice(combat.modifiers, modifier) or source.attacks[name]
+    damage_bonus = _stat_bonus(combat, source, combat.damage_bonus_stat)
+    hit_bonus = _stat_bonus(combat, source, combat.hit_bonus_stat)
+    shock, shock_ac = _attack_shock(source, name)
     results = []
     for target in chosen:
         # An earlier hit in the blast can break a later target's side, so each is checked as it comes up.
         current_target = load_state(db, campaign_id).characters[name_key(target.name)]
         if out_of_fight(current_target):
             continue
-        raw = roll_total(dice, rng, plus=plus)
+        raw = roll_total(dice, rng, plus=plus) + damage_bonus
         results.append(
             _strike(
                 db,
@@ -479,6 +632,9 @@ def _blast_attack(
                 modifier=modifier_name(modifier),
                 plus=plus,
                 ignores_armor=IGNORES_ARMOR in source.attack_flags.get(name, []),
+                hit_bonus=hit_bonus,
+                shock=shock,
+                shock_ac=shock_ac,
             )
         )
     return {"attacker": source.name, "attack": name, "blast": True, "targets": results}
@@ -532,13 +688,16 @@ def _blast(
     if owed:
         raise InvalidInput(f"{', '.join(owed)} must make their save first")
     dice = modifier_dice(combat.modifiers, groups.blast_modifier) or source.attacks[name]
+    damage_bonus = _stat_bonus(combat, source, combat.damage_bonus_stat)
+    hit_bonus = _stat_bonus(combat, source, combat.hit_bonus_stat)
+    shock, shock_ac = _attack_shock(source, name)
     results = []
     for target in targets:
         # An earlier hit in the blast can break another target's side, so each is checked as it comes up.
         current_target = load_state(db, campaign_id).characters[name_key(target.name)]
         if out_of_fight(current_target):
             continue
-        raw = roll_total(dice, rng, plus=plus)
+        raw = roll_total(dice, rng, plus=plus) + damage_bonus
         results.append(
             _strike(
                 db,
@@ -552,6 +711,9 @@ def _blast(
                 modifier=groups.blast_modifier,
                 plus=plus,
                 ignores_armor=IGNORES_ARMOR in source.attack_flags.get(name, []),
+                hit_bonus=hit_bonus,
+                shock=shock,
+                shock_ac=shock_ac,
             )
         )
     return {"attacker": source.name, "attack": name, "blast": True, "targets": results}
@@ -603,24 +765,32 @@ def resolve_attacks(
                 "attack with targets instead"
             )
         dice = modifier_dice(combat.modifiers, entry.get("modifier"))
+        shock, shock_ac = _attack_shock(source, name)
         planned.append(
-            (
-                source.name,
-                name,
-                modifier_name(entry.get("modifier")),
-                dice or source.attacks[name],
-                IGNORES_ARMOR in flags,
+            PlannedAttack(
+                attacker=source.name,
+                weapon=name,
+                modifier=modifier_name(entry.get("modifier")),
+                dice=dice or source.attacks[name],
+                ignores_armor=IGNORES_ARMOR in flags,
+                hit_bonus=_stat_bonus(combat, source, combat.hit_bonus_stat),
+                damage_bonus=_stat_bonus(combat, source, combat.damage_bonus_stat),
+                shock=shock,
+                shock_ac=shock_ac,
             )
         )
-    rolls = [roll_total(dice, rng, plus=plus) for *_, dice, _ in planned]
+    rolls = [roll_total(attack.dice, rng, plus=plus) + attack.damage_bonus for attack in planned]
     if combat.multi_attack == "each":
         return _strike_each(db, campaign_id, combat, rng, struck.name, planned, rolls, plus=plus)
     best = highest_index(rolls)
-    attacker, weapon, modifier, _, ignores_armor = planned[best]
+    chosen = planned[best]
     rolled = ""
     if len(planned) > 1:
         rolled = rolls_text(
-            [(who, what, mod, roll) for (who, what, mod, _, _), roll in zip(planned, rolls)]
+            [
+                (attack.attacker, attack.weapon, attack.modifier, roll)
+                for attack, roll in zip(planned, rolls)
+            ]
         )
     return _strike(
         db,
@@ -628,14 +798,32 @@ def resolve_attacks(
         combat,
         rng,
         struck,
-        attacker,
-        weapon,
+        chosen.attacker,
+        chosen.weapon,
         rolls[best],
-        modifier=modifier,
+        modifier=chosen.modifier,
         rolled=rolled,
         plus=plus,
-        ignores_armor=ignores_armor,
+        ignores_armor=chosen.ignores_armor,
+        hit_bonus=chosen.hit_bonus,
+        shock=chosen.shock,
+        shock_ac=chosen.shock_ac,
     )
+
+
+@dataclass(frozen=True)
+class PlannedAttack:
+    """One of several NPC attacks on the same target, before any of its dice are rolled."""
+
+    attacker: str
+    weapon: str
+    modifier: str
+    dice: str
+    ignores_armor: bool = False
+    hit_bonus: int = 0
+    damage_bonus: int = 0
+    shock: int = 0
+    shock_ac: int = 0
 
 
 def _strike_each(
@@ -644,7 +832,7 @@ def _strike_each(
     combat: CombatRules,
     rng: random.Random,
     target: str,
-    planned: Sequence[tuple[str, str, str, str, bool]],
+    planned: Sequence[PlannedAttack],
     rolls: Sequence[int],
     *,
     plus: str,
@@ -653,7 +841,7 @@ def _strike_each(
     the target is out of the fight or owes a save, and the result is the last hit, with every hit
     under "attacks"."""
     results = []
-    for (attacker, weapon, modifier, _, ignores_armor), raw in zip(planned, rolls):
+    for attack, raw in zip(planned, rolls):
         current_target = load_state(db, campaign_id).characters[name_key(target)]
         blocked = out_of_fight(current_target) or current_target.critical_due
         if blocked or current_target.save_due is not None:
@@ -665,12 +853,15 @@ def _strike_each(
                 combat,
                 rng,
                 current_target,
-                attacker,
-                weapon,
+                attack.attacker,
+                attack.weapon,
                 raw,
-                modifier=modifier,
+                modifier=attack.modifier,
                 plus=plus,
-                ignores_armor=ignores_armor,
+                ignores_armor=attack.ignores_armor,
+                hit_bonus=attack.hit_bonus,
+                shock=attack.shock,
+                shock_ac=attack.shock_ac,
             )
         )
     return {**results[-1], "attacks": results}
@@ -695,10 +886,18 @@ def player_attack(
     modifier: str = "",
     *,
     plus: str,
+    spec: CharacterSpec | None = None,
+    weapon_feature: Feature | None = None,
 ) -> dict[str, Any]:
     """A player character's hit. The engine rolls the attack's dice, so the damage is never typed
     in: the modifier's dice when there is one, else the weapon's. The hit mode decides whether it
-    lands. A group takes only impaired attacks."""
+    lands. A group takes only impaired attacks.
+
+    A rule set with modifier bands and skills passes its `spec` and the weapon's `feature`. The
+    hit roll then adds the rule set's hit bonus stat, the weapon skill (or its unskilled penalty),
+    and the weapon's best attribute modifier; the damage adds the rule set's damage bonus stat,
+    the attribute modifier when the rule set uses attribute damage, and the unarmed skill for an
+    unarmed strike; and shock comes from the weapon plus the attribute and damage bonuses."""
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     pc = _player_character(state)
@@ -709,6 +908,13 @@ def player_attack(
     dice = _attack_dice(pc, name, modifier, combat)
     _require_impaired(struck, modifier_name(modifier), combat)
     raw = roll_total(dice, rng, plus=plus)
+    bonuses = _player_bonuses(combat, pc, name, spec, weapon_feature)
+    raw += bonuses.damage
+    # The hit is rolled after the damage, so a roll_vs_defense rule set draws its dice in the same
+    # order it always has.
+    to_hit: int | None = None
+    if combat.hit_mode == "roll_vs_defense":
+        to_hit = roll_total(combat.check_die, rng, plus=plus) + bonuses.to_hit
     return _strike(
         db,
         campaign_id,
@@ -720,6 +926,9 @@ def player_attack(
         raw,
         modifier=modifier_name(modifier),
         plus=plus,
+        to_hit=to_hit,
+        shock=bonuses.shock,
+        shock_ac=bonuses.shock_ac,
     )
 
 
@@ -981,7 +1190,8 @@ def harm_character(
         raise InvalidInput(f"{character.name} has no {stat.upper()} left to lose")
     taken = min(value, before)
     overflow = [step.stat for step in combat.damage if step.kind == "overflow"]
-    defeats = stat in overflow and taken == before
+    at_zero = stat in combat.defeat_at_zero and taken == before
+    defeats = (stat in overflow and taken == before) or at_zero
     record(
         db,
         campaign_id,
@@ -991,15 +1201,24 @@ def harm_character(
             taken=taken,
             cause=bounded_text(cause, "cause", MAX_CAUSE_TEXT),
             defeats=defeats,
-            status=defeat_status(character, combat.defeat, killed=True) if defeats else "",
+            status=defeat_status(
+                character, combat.defeat, killed=True if not at_zero else character.kind == NPC_KIND
+            )
+            if defeats
+            else "",
         ),
     )
     if defeats and character.kind == PC_KIND:
-        record(
-            db,
-            campaign_id,
-            CharacterDied(name=character.name, cause=f"outside combat, with {stat} at 0"),
-        )
+        if at_zero:
+            death.begin_dying(
+                db, campaign_id, combat, character.name, cause=f"outside combat, with {stat} at 0"
+            )
+        else:
+            record(
+                db,
+                campaign_id,
+                CharacterDied(name=character.name, cause=f"outside combat, with {stat} at 0"),
+            )
     db.commit()
     return {
         "character": character.name,

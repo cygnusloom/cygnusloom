@@ -2,16 +2,30 @@
 
 from __future__ import annotations
 
+import random
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol, TypeVar
+
+from cygnusforge.content.character import CharacterSpec
+from cygnusforge.content.library import CheckRules
 
 T = TypeVar("T")
 
 
 class CoreWorld(Protocol):
     """The campaign's world as the system-agnostic core tools may change and read it. Every
-    rule set has these, whatever its game system."""
+    rule set has these, whatever its game system.
+
+    `character`, `checks`, and `rng` let a rule set's Python module read the character spec, the
+    rule set's checks, and the campaign's dice without opening the campaign itself."""
+
+    # The rule set's character spec, in case a module needs its features, skills, or stats.
+    character: CharacterSpec
+    # The rule set's checks by id, such as its skill check.
+    checks: Mapping[str, CheckRules]
+    # The campaign's dice. A module rolls through this so replays and tests stay reproducible.
+    rng: random.Random
 
     def create_location(
         self,
@@ -194,6 +208,31 @@ class CoreWorld(Protocol):
     def add_condition(self, name: str, condition: str, cause: str) -> dict[str, Any]: ...
 
     def end_condition(self, name: str, condition: str, how: str) -> dict[str, Any]: ...
+
+    def roll_check(
+        self,
+        check: str,
+        character: str,
+        skill: str,
+        stat: str,
+        difficulty: int | None = None,
+        modifier: int = 0,
+        cause: str = "",
+    ) -> dict[str, Any]:
+        """Roll one of the rule set's checks for a character: the check's dice plus the skill's
+        level, the stat's modifier, and `modifier`, against `difficulty` or the check's default.
+        Records the check in the log and returns its fields."""
+
+    def raise_skill(self, name: str, skill: str, level: int, cause: str = "") -> dict[str, Any]:
+        """Set a character's level in one skill to `level`, recording the change. A rule set's
+        tool decides the cap it enforces."""
+
+    def restore_stat(self, name: str, stat: str, amount: int, cause: str = "") -> dict[str, Any]:
+        """Give a character back `amount` of what it lost from one stat, such as hit points,
+        never below none, recording the restoration."""
+
+    def set_stat_max(self, name: str, stat: str, value: int, cause: str = "") -> dict[str, Any]:
+        """Set a character's maximum score for one stat to `value`, recording the change."""
 
 
 class World(CoreWorld, Protocol):

@@ -1,0 +1,36 @@
+[
+  {
+    "type": "character_field",
+    "id": "look",
+    "name": "Look",
+    "description": "The first thing people notice about the character's build, face, and manner of dress.",
+    "table": "look"
+  },
+  {
+    "type": "character_field",
+    "id": "personality",
+    "name": "Personality",
+    "description": "The manner that shows through in conversation and under pressure.",
+    "table": "personality"
+  },
+  {
+    "type": "character_field",
+    "id": "accent",
+    "name": "Accent",
+    "description": "How the character sounds, and what that suggests about where they come from.",
+    "table": "accent"
+  },
+  {
+    "type": "character_field",
+    "id": "quirk",
+    "name": "Quirk",
+    "description": "A small habit that makes the character easy to picture and remember.",
+    "table": "quirk"
+  },
+  {
+    "type": "character_field",
+    "id": "goal",
+    "name": "Goal",
+    "description": "What the character wants badly enough to risk danger for. Write one or two sentences."
+  }
+]

@@ -1,0 +1,128 @@
+[
+  {
+    "type": "skill",
+    "id": "administer",
+    "name": "Administer",
+    "description": "Run an organization, keep its records straight, and spot staff who are incompetent or crooked."
+  },
+  {
+    "type": "skill",
+    "id": "connect",
+    "name": "Connect",
+    "description": "Know useful people, make new contacts, and call in favors from individuals or organizations."
+  },
+  {
+    "type": "skill",
+    "id": "convince",
+    "name": "Convince",
+    "description": "Persuade a listener that a claim is true, with harder lies meeting a higher difficulty."
+  },
+  {
+    "type": "skill",
+    "id": "craft",
+    "name": "Craft",
+    "description": "Build, repair, and maintain the goods and technology of a chosen trade."
+  },
+  {
+    "type": "skill",
+    "id": "exert",
+    "name": "Exert",
+    "description": "Run, swim, climb, jump, lift, throw, and otherwise push the body to its limit."
+  },
+  {
+    "type": "skill",
+    "id": "heal",
+    "name": "Heal",
+    "description": "Treat wounds, disease, poison, and mental harm, and keep a dying person alive; it does not restore lost hit points by itself."
+  },
+  {
+    "type": "skill",
+    "id": "know",
+    "name": "Know",
+    "description": "Recall history, geography, natural science, zoology, and other learned facts."
+  },
+  {
+    "type": "skill",
+    "id": "lead",
+    "name": "Lead",
+    "description": "Inspire followers, keep them steady under pressure, and make a group work as one."
+  },
+  {
+    "type": "skill",
+    "id": "magic",
+    "name": "Magic",
+    "description": "Work or analyze magic and recall the deeds and lore of famous spellcasters; non-casters use it only as scholarship."
+  },
+  {
+    "type": "skill",
+    "id": "notice",
+    "name": "Notice",
+    "description": "Catch small details, ambushes, hidden features, and anything else that rewards a keen sense."
+  },
+  {
+    "type": "skill",
+    "id": "perform",
+    "name": "Perform",
+    "description": "Sing, act, dance, orate, and compose works that hold an audience."
+  },
+  {
+    "type": "skill",
+    "id": "pray",
+    "name": "Pray",
+    "description": "Conduct religious rites and know the gods, taboos, symbols, and hierarchies of faith."
+  },
+  {
+    "type": "skill",
+    "id": "punch",
+    "name": "Punch",
+    "description": "Fight unarmed or with natural weapons, and reliably leave a beaten foe alive."
+  },
+  {
+    "type": "skill",
+    "id": "ride",
+    "name": "Ride",
+    "description": "Handle riding animals, drive carts and carriages, care for mounts, and judge horseflesh."
+  },
+  {
+    "type": "skill",
+    "id": "sail",
+    "name": "Sail",
+    "description": "Handle and repair ships and small craft, navigate, read sea weather, and manage a crew."
+  },
+  {
+    "type": "skill",
+    "id": "shoot",
+    "name": "Shoot",
+    "description": "Use bows, crossbows, hurlants, and thrown weapons, and keep them in working order."
+  },
+  {
+    "type": "skill",
+    "id": "sneak",
+    "name": "Sneak",
+    "description": "Move quietly, hide, pick pockets and locks, disguise yourself, and defeat traps and security."
+  },
+  {
+    "type": "skill",
+    "id": "stab",
+    "name": "Stab",
+    "description": "Fight with melee weapons and thrown weapons, and maintain or identify them."
+  },
+  {
+    "type": "skill",
+    "id": "survive",
+    "name": "Survive",
+    "description": "Hunt, fish, forage, navigate, endure harsh country, and find or build shelter."
+  },
+  {
+    "type": "skill",
+    "id": "trade",
+    "name": "Trade",
+    "description": "Buy and sell, appraise goods, find black-market wares, and know the law on contraband."
+  },
+  {
+    "type": "skill",
+    "id": "work",
+    "name": "Work",
+    "description": "Practise the ordinary trade named by your background, such as farming, painting, law, or herding."
+  }
+]

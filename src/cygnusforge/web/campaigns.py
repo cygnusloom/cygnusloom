@@ -630,7 +630,8 @@ def _campaign_page(
         character = None
         if character_pending and rule_set is not None:
             rolled = request.session.get(_roll_key(campaign.id))
-            if not isinstance(rolled, dict) or set(rolled) != set(spec.stats):
+            rolled_stats = {s.id for s in spec.stats.values() if s.derived is None}
+            if not isinstance(rolled, dict) or set(rolled) != rolled_stats:
                 rolled = _roll_stats(request, user, campaign.id)
             character = creation_view(spec, rolled)
         return render(

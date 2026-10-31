@@ -14,6 +14,8 @@ from cygnusforge.content.character import (
     Restriction,
     TableOption,
     Template,
+    feature_pick_options,
+    skill_pick_options,
 )
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.web.forms import form_text
@@ -22,6 +24,8 @@ STAT_PREFIX = "stat-"
 TEMPLATE_PREFIX = "template-"
 FIELD_PREFIX = "field-"
 PICK_PREFIX = "pick-"
+SKILL_PICK_PREFIX = PICK_PREFIX + "skill-"
+FEATURE_PICK_PREFIX = PICK_PREFIX + "feature-"
 CAMPAIGN_PREFIX = "campaign-"
 PRONOUNS_FIELD = "pronouns"
 PRONOUNS_OTHER_FIELD = "pronouns-other"
@@ -31,10 +35,10 @@ OTHER_PRONOUNS = "other"
 
 def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]:
     """What the creation form shows. A stat in a swap group may take any value rolled for its
-    group; other stats keep their roll."""
+    group; other stats keep their roll. A derived stat is computed, so it is not shown."""
     group_values: dict[str, list[int]] = {}
     for stat in spec.stats.values():
-        if stat.swap_group is not None:
+        if stat.derived is None and stat.swap_group is not None:
             group_values.setdefault(stat.swap_group, []).append(rolled[stat.id])
     stats = [
         {
@@ -48,6 +52,7 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
             else [rolled[stat.id]],
         }
         for stat in spec.stats.values()
+        if stat.derived is None
     ]
     templates = [
         {
@@ -58,6 +63,8 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
             "tables": [_table_view(spec, table) for table in template.tables],
             "names": list(template.names),
             "picks": _picks_view(spec, template),
+            "skill_picks": _skill_picks_view(spec, template),
+            "feat_picks": _feat_picks_view(spec, template),
         }
         for template in spec.templates.values()
     ]
@@ -65,6 +72,7 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
         {
             "kind": kind,
             "label": kind.capitalize(),
+            "optional": kind in spec.optional_kinds,
             "templates": [t for t in templates if t["kind"] == kind],
         }
         for kind in spec.kinds()
@@ -154,9 +162,11 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
     """The arguments a player's form stands for. Every template, table, and choice must be
     given: the player picks each one or rolls it with a dice button. Text fields may be blank.
     Groups the rule set does not define are left out, since the schema does not allow them.
-    Values are checked against the schema by the caller."""
+    A blank skill or feature pick is left out, so `resolve` rolls it."""
     stats: dict[str, Any] = {}
     for stat in spec.stats.values():
+        if stat.derived is not None:
+            continue
         raw = form_text(form, STAT_PREFIX + stat.id)
         try:
             stats[stat.id] = int(raw)
@@ -166,6 +176,8 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
     for kind in spec.kinds():
         template_id = form_text(form, TEMPLATE_PREFIX + kind)
         if not template_id:
+            if kind in spec.optional_kinds:
+                continue
             raise InvalidInput(f"Choose a {kind} for your character")
         templates[kind] = template_id
     fields = {}
@@ -176,6 +188,8 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
         elif field.table is not None:
             raise InvalidInput(f"Choose {field.name}")
     features: list[str] = []
+    skill_picks: dict[str, list[str]] = {}
+    feature_picks: dict[str, list[str]] = {}
     for template_id in templates.values():
         template = spec.templates.get(template_id)
         if template is None:
@@ -190,6 +204,34 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
                 value = form_text(form, f"{PICK_PREFIX}{template.id}-{index}")
                 if value:
                     features.append(value)
+        for pick in template.skill_picks:
+            chosen = [
+                value
+                for index in range(pick.count)
+                if (
+                    value := form_text(
+                        form,
+                        f"{SKILL_PICK_PREFIX}{template.id}-{pick.id}-{index}",
+                    )
+                    or form_text(form, f"{SKILL_PICK_PREFIX}{pick.id}-{index}")
+                )
+            ]
+            if chosen:
+                skill_picks[pick.id] = chosen
+        for pick in template.feat_picks:
+            chosen = [
+                value
+                for index in range(pick.count)
+                if (
+                    value := form_text(
+                        form,
+                        f"{FEATURE_PICK_PREFIX}{template.id}-{pick.id}-{index}",
+                    )
+                    or form_text(form, f"{FEATURE_PICK_PREFIX}{pick.id}-{index}")
+                )
+            ]
+            if chosen:
+                feature_picks[pick.id] = chosen
     submitted: dict[str, Any] = {"fields": fields}
     if spec.stats:
         submitted["stats"] = stats
@@ -197,6 +239,10 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
         submitted["templates"] = templates
     if features:
         submitted["features"] = features
+    if skill_picks:
+        submitted["skill_picks"] = skill_picks
+    if feature_picks:
+        submitted["feature_picks"] = feature_picks
     return submitted
 
 
@@ -217,6 +263,53 @@ def _picks_view(spec: CharacterSpec, template: Template) -> dict[str, Any] | Non
         "hint": f"Pick from the spells of your {tag_field.name}, or leave a pick blank to roll it.",
         "groups": [{"tag": tag, "features": items} for tag, items in groups.items()],
     }
+
+
+def _skill_picks_view(spec: CharacterSpec, template: Template) -> list[dict[str, Any]]:
+    """The skill picks a template lets the player choose, each with its offered skills."""
+    return [
+        {
+            "id": pick.id,
+            "count": pick.count,
+            "hint": (
+                f"Pick {pick.count} skill{'s' if pick.count != 1 else ''} "
+                f"({spec.table_names.get(pick.table, pick.table)}), or leave a pick blank to roll it."
+            ),
+            "options": [
+                {"value": skill_id, "title": label}
+                for skill_id, label in skill_pick_options(spec, pick)
+            ],
+        }
+        for pick in template.skill_picks
+    ]
+
+
+def _feat_picks_view(spec: CharacterSpec, template: Template) -> list[dict[str, Any]]:
+    """The feature picks a template lets the player choose, each with its offered features. A
+    pick's options are filtered by the pick's tag and highest rank."""
+    return [
+        {
+            "id": pick.id,
+            "count": pick.count,
+            "tag": pick.tag,
+            "max_rank": pick.max_rank,
+            "hint": (
+                f"Pick {pick.count} {pick.tag}{'s' if pick.count != 1 else ''}"
+                + (f" of rank {pick.max_rank} or less" if pick.max_rank not in (None, 0) else "")
+                + ", or leave a pick blank to roll it."
+            ),
+            "options": [
+                {
+                    "value": feature.id,
+                    "title": feature.name,
+                    "detail": feature.description or None,
+                    "rank": feature.rank,
+                }
+                for feature in feature_pick_options(spec, pick)
+            ],
+        }
+        for pick in template.feat_picks
+    ]
 
 
 def _table_view(spec: CharacterSpec, table: str) -> dict[str, Any]:

@@ -1,0 +1,74 @@
+[
+  {
+    "type": "world_terrain",
+    "id": "plains",
+    "name": "Plains",
+    "color": "#cfc89a",
+    "rule": "Open plains and savanna. Travel is 3 miles per hour on foot, and a road through the terrain doubles that.",
+    "pattern": "tufts",
+    "ink": "#8f8752"
+  },
+  {
+    "type": "world_terrain",
+    "id": "hills",
+    "name": "Hills",
+    "color": "#9a8456",
+    "rule": "Rolling or rugged hills. Travel is 1.5 miles per hour, or 2 miles per hour through the gentlest rolling country.",
+    "pattern": "ridges",
+    "ink": "#5b4a2a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "forest",
+    "name": "Forest",
+    "color": "#4d7a3c",
+    "rule": "Woodland. Light forest allows 2 miles per hour; dense, trackless forest slows travel to 1.5.",
+    "pattern": "trees",
+    "ink": "#24421f"
+  },
+  {
+    "type": "world_terrain",
+    "id": "desert",
+    "name": "Desert",
+    "color": "#d9c58a",
+    "rule": "Sand or scrub desert. Travel is 2 miles per hour, and foraging is difficulty 12 or worse.",
+    "pattern": "tufts",
+    "ink": "#a08a4e"
+  },
+  {
+    "type": "world_terrain",
+    "id": "swamp",
+    "name": "Swamp",
+    "color": "#5f7d55",
+    "rule": "Marsh and bog. Travel is 1 mile per hour; the ground is difficult and conceals ruins and hidden paths.",
+    "pattern": "reeds",
+    "ink": "#2f4a2c"
+  },
+  {
+    "type": "world_terrain",
+    "id": "mountains",
+    "name": "Mountains",
+    "color": "#8b8078",
+    "rule": "Mountain country and arratu. Travel is 0.5 miles per hour; passes are few and defended.",
+    "pattern": "ridges",
+    "ink": "#4f4741"
+  },
+  {
+    "type": "world_terrain",
+    "id": "coast",
+    "name": "Coast",
+    "color": "#4a8fae",
+    "rule": "Shoreline and coastal water. A coastal road allows 3 miles per hour; a sailing ship makes about 6 miles per hour and can travel around the clock offshore.",
+    "pattern": "waves",
+    "ink": "#a9d4ea"
+  },
+  {
+    "type": "world_terrain",
+    "id": "ruins",
+    "name": "Ruins",
+    "color": "#7f7465",
+    "rule": "Broken ancient ground. Travel is 1.5 miles per hour, and the rubble hides site entrances; exploring a site runs in 10-minute turns.",
+    "pattern": "ridges",
+    "ink": "#3f382f"
+  }
+]

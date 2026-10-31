@@ -1,0 +1,2308 @@
+[
+  {
+    "type": "monster",
+    "id": "ashcrawler",
+    "name": "Ashcrawler",
+    "description": "A fungal centipede at least ten feet long and half a man's height. Its bite forces a Physical save against the spores; a victim who fails is infected, and within a week becomes an Ashcrawler Slave unless potent healing magic intervenes. Clothing can conceal the growing infection. (HD 6; MV 50 ft; Inst 4; Skill +1; 2 attacks per action.)",
+    "stats": {
+      "str": 12,
+      "dex": 14,
+      "con": 14,
+      "int": 3,
+      "wis": 10,
+      "cha": 3,
+      "hp": 27,
+      "attack_bonus": 8,
+      "castings": 0,
+      "morale": 10,
+      "strain": 14,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 12,
+      "save_evasion": 12,
+      "save_mental": 12,
+      "save_luck": 12
+    },
+    "armor": 13,
+    "attacks": {
+      "bite": {
+        "dice": "1d6"
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "ashcrawler_slave",
+    "name": "Ashcrawler Slave",
+    "description": "An ordinary person claimed by an ashcrawler's infection and driven to herd prey back to its master. It fights with whatever weapon it carried in life; unusually strong victims are said to make stronger slaves. (HD 1; MV 30 ft; Inst 5; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 10,
+      "dex": 10,
+      "con": 11,
+      "int": 9,
+      "wis": 9,
+      "cha": 7,
+      "hp": 5,
+      "attack_bonus": 2,
+      "castings": 0,
+      "morale": 12,
+      "strain": 11,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 15,
+      "save_evasion": 15,
+      "save_mental": 15,
+      "save_luck": 15
+    },
+    "armor": 13,
+    "attacks": {
+      "blade": {
+        "dice": "1d8",
+        "shock": 2,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "anak_courser",
+    "name": "Anak Courser",
+    "description": "A horse-sized, hairless and mottled lion used as a mount by elite Anak. It can spring thirty feet as a Main Action even with a rider, fights independently, and prefers meat though it will eat plants when necessary. (HD 4; MV 60 ft; Inst 6; Skill +1; 2 attacks per action.)",
+    "stats": {
+      "str": 16,
+      "dex": 16,
+      "con": 14,
+      "int": 4,
+      "wis": 11,
+      "cha": 5,
+      "hp": 18,
+      "attack_bonus": 5,
+      "castings": 0,
+      "morale": 9,
+      "strain": 14,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 13,
+      "save_evasion": 13,
+      "save_mental": 13,
+      "save_luck": 13
+    },
+    "armor": 15,
+    "attacks": {
+      "claw": {
+        "dice": "1d8"
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "betrayer_bird",
+    "name": "Betrayer Bird",
+    "description": "A vulture-like bird with a six-foot wingspan, met in flocks of 1d6+1. It shadows small or wounded groups and guides predators toward them. Once attacked directly it fights as a mere animal. (HD 1; MV 40 ft (fly); Inst 5; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 8,
+      "dex": 14,
+      "con": 10,
+      "int": 4,
+      "wis": 12,
+      "cha": 6,
+      "hp": 5,
+      "attack_bonus": 2,
+      "castings": 0,
+      "morale": 8,
+      "strain": 10,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 15,
+      "save_evasion": 15,
+      "save_mental": 15,
+      "save_luck": 15
+    },
+    "armor": 13,
+    "attacks": {
+      "beak": {
+        "dice": "1d6"
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "bull_pig",
+    "name": "Bull Pig",
+    "description": "A thick-skinned, long-tusked boar. Wild specimens are savage and prone to blind charges, but the beast can be trained as a mount. (HD 2; MV 40 ft; Inst 6; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 15,
+      "dex": 10,
+      "con": 14,
+      "int": 3,
+      "wis": 10,
+      "cha": 4,
+      "hp": 9,
+      "attack_bonus": 3,
+      "castings": 0,
+      "morale": 9,
+      "strain": 14,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 14,
+      "save_evasion": 14,
+      "save_mental": 14,
+      "save_luck": 14
+    },
+    "armor": 13,
+    "attacks": {
+      "tusk": {
+        "dice": "1d8"
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "dunecrawler",
+    "name": "Dunecrawler",
+    "description": "A dog-sized hybrid of scorpion and beetle. Nests hold 3d6 of them and they hunt alone or in bands of 1d6. Their periodic mass swarms end in cannibalistic mating. (HD 1; MV 30 ft; Inst 6; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 8,
+      "dex": 12,
+      "con": 10,
+      "int": 3,
+      "wis": 10,
+      "cha": 3,
+      "hp": 5,
+      "attack_bonus": 1,
+      "castings": 0,
+      "morale": 9,
+      "strain": 10,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 15,
+      "save_evasion": 15,
+      "save_mental": 15,
+      "save_luck": 15
+    },
+    "armor": 13,
+    "attacks": {
+      "sting": {
+        "dice": "1d4"
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "fleshbeast",
+    "name": "Fleshbeast",
+    "description": "A blind, pig-sized slug that cannot attack. It repeats fragments of local speech at random. Its flesh can be eaten, though few find the experience pleasant. (HD 1; MV 30 ft; Inst 5; Skill +0; no attacks.)",
+    "stats": {
+      "str": 6,
+      "dex": 6,
+      "con": 10,
+      "int": 5,
+      "wis": 8,
+      "cha": 4,
+      "hp": 5,
+      "attack_bonus": 0,
+      "castings": 0,
+      "morale": 2,
+      "strain": 10,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 15,
+      "save_evasion": 15,
+      "save_mental": 15,
+      "save_luck": 15
+    },
+    "armor": 10,
+    "attacks": {},
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "horse_lizard",
+    "name": "Horse Lizard",
+    "description": "A feathered raptor that hunts in packs of 1d4+1. For an animal it is unusually clever and disciplined. (HD 3; MV 50 ft; Inst 3; Skill +2; 1 attack per action.)",
+    "stats": {
+      "str": 14,
+      "dex": 16,
+      "con": 12,
+      "int": 5,
+      "wis": 12,
+      "cha": 6,
+      "hp": 14,
+      "attack_bonus": 5,
+      "castings": 0,
+      "morale": 8,
+      "strain": 12,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 14,
+      "save_evasion": 14,
+      "save_mental": 14,
+      "save_luck": 14
+    },
+    "armor": 13,
+    "attacks": {
+      "bite": {
+        "dice": "1d10"
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "judas_goat",
+    "name": "Judas Goat",
+    "description": "A cow-sized browser with a broad fan of horns that feeds on arratu plants. Its flesh is toxic to predators, and it turns aggressive when its flock is threatened. (HD 2; MV 40 ft; Inst 5; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 13,
+      "dex": 11,
+      "con": 13,
+      "int": 4,
+      "wis": 10,
+      "cha": 5,
+      "hp": 9,
+      "attack_bonus": 3,
+      "castings": 0,
+      "morale": 9,
+      "strain": 13,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 14,
+      "save_evasion": 14,
+      "save_mental": 14,
+      "save_luck": 14
+    },
+    "armor": 12,
+    "attacks": {
+      "horn": {
+        "dice": "1d6"
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "mountain_crab",
+    "name": "Mountain Crab",
+    "description": "A rubbery crab at least eight feet tall and twice as wide, with pincers and legs edged in glassy mineral. It keeps mostly to shallow water and strikes twice each action. (HD 8; MV 40 ft; Inst 6; Skill +1; 2 attacks per action.)",
+    "stats": {
+      "str": 18,
+      "dex": 12,
+      "con": 16,
+      "int": 3,
+      "wis": 10,
+      "cha": 4,
+      "hp": 36,
+      "attack_bonus": 10,
+      "castings": 0,
+      "morale": 9,
+      "strain": 16,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 11,
+      "save_evasion": 11,
+      "save_mental": 11,
+      "save_luck": 11
+    },
+    "armor": 18,
+    "attacks": {
+      "pincer": {
+        "dice": "2d6+4",
+        "shock": 4,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "razorhorn",
+    "name": "Razorhorn",
+    "description": "An aurochs-sized solitary beast whose steel horns hone themselves against one another. Its flesh is highly prized. (HD 4; MV 40 ft; Inst 4; Skill +1; 2 attacks per action.)",
+    "stats": {
+      "str": 17,
+      "dex": 12,
+      "con": 14,
+      "int": 3,
+      "wis": 10,
+      "cha": 4,
+      "hp": 18,
+      "attack_bonus": 6,
+      "castings": 0,
+      "morale": 10,
+      "strain": 14,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 13,
+      "save_evasion": 13,
+      "save_mental": 13,
+      "save_luck": 13
+    },
+    "armor": 13,
+    "attacks": {
+      "gore": {
+        "dice": "2d6",
+        "shock": 3,
+        "shock_ac": 15
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "salt_devil",
+    "name": "Salt Devil",
+    "description": "A pony-sized mantis-shrimp creature in a rainbow shell, nearly transparent when submerged. Two forelimbs carry blades, and it strikes twice. It haunts brackish or befouled water. (HD 4; MV 40 ft; Inst 5; Skill +2; 2 attacks per action.)",
+    "stats": {
+      "str": 14,
+      "dex": 18,
+      "con": 13,
+      "int": 4,
+      "wis": 11,
+      "cha": 5,
+      "hp": 18,
+      "attack_bonus": 6,
+      "castings": 0,
+      "morale": 10,
+      "strain": 13,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 13,
+      "save_evasion": 13,
+      "save_mental": 13,
+      "save_luck": 13
+    },
+    "armor": 15,
+    "attacks": {
+      "blade": {
+        "dice": "1d10",
+        "shock": 4,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "wailer_crane",
+    "name": "Wailer Crane",
+    "description": "A man-tall crane that gathers in choirs of 2d4. As a Main Action it can loose a sonic cry: creatures within ten feet must make a Physical save or take 1d4 damage. It attacks anyone who comes too close. The bird wearing the most jewelry leads the choir. (HD 1; MV 40 ft (fly); Inst 6; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 8,
+      "dex": 14,
+      "con": 10,
+      "int": 4,
+      "wis": 12,
+      "cha": 6,
+      "hp": 5,
+      "attack_bonus": 2,
+      "castings": 0,
+      "morale": 8,
+      "strain": 10,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 15,
+      "save_evasion": 15,
+      "save_mental": 15,
+      "save_luck": 15
+    },
+    "armor": 12,
+    "attacks": {
+      "beak": {
+        "dice": "1d6"
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "brass_scytheman",
+    "name": "Brass Scytheman",
+    "description": "A Black Brass Legion line soldier bearing a great bronze scythe or an iron crossbow. It neither eats, drinks, nor breathes, and recharges for six hours each day. Like all legion automatons it is immune to non-magical weapons and minor environmental harm. (HD 3; MV 30 ft; Inst 4; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 15,
+      "dex": 12,
+      "con": 16,
+      "int": 4,
+      "wis": 10,
+      "cha": 3,
+      "hp": 14,
+      "attack_bonus": 5,
+      "castings": 0,
+      "morale": 12,
+      "strain": 16,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 14,
+      "save_evasion": 14,
+      "save_mental": 14,
+      "save_luck": 14
+    },
+    "armor": 18,
+    "attacks": {
+      "scythe": {
+        "dice": "1d10+2",
+        "shock": 5,
+        "shock_ac": 15
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "brass_cataphract",
+    "name": "Brass Cataphract",
+    "description": "A centauroid legion automaton built for hauling carts and for shock action on the battlefield. It strikes twice, is immune to non-magical weapons, and needs no food, air, or sleep beyond its daily recharge. (HD 6; MV 60 ft; Inst 3; Skill +1; 2 attacks per action.)",
+    "stats": {
+      "str": 17,
+      "dex": 14,
+      "con": 17,
+      "int": 4,
+      "wis": 10,
+      "cha": 3,
+      "hp": 27,
+      "attack_bonus": 6,
+      "castings": 0,
+      "morale": 12,
+      "strain": 17,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 12,
+      "save_evasion": 12,
+      "save_mental": 12,
+      "save_luck": 12
+    },
+    "armor": 18,
+    "attacks": {
+      "scythe": {
+        "dice": "1d10+3",
+        "shock": 5,
+        "shock_ac": 15
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "brass_hulk",
+    "name": "Brass Hulk",
+    "description": "A twelve-foot legion laborer with spade-like hands and ploughshare fingers. Slow, but able to raise or tear down walls. It strikes twice and shrugs off non-magical weapons. (HD 10; MV 20 ft; Inst 4; Skill +1; 2 attacks per action.)",
+    "stats": {
+      "str": 20,
+      "dex": 8,
+      "con": 20,
+      "int": 3,
+      "wis": 8,
+      "cha": 3,
+      "hp": 45,
+      "attack_bonus": 10,
+      "castings": 0,
+      "morale": 12,
+      "strain": 20,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 10,
+      "save_evasion": 10,
+      "save_mental": 10,
+      "save_luck": 10
+    },
+    "armor": 16,
+    "attacks": {
+      "slam": {
+        "dice": "2d8+5",
+        "shock": 8,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "brass_reeve",
+    "name": "Brass Reeve",
+    "description": "One of the rare sentient legion automatons. It commands lesser units and translates a handler's orders. It strikes twice, is immune to non-magical weapons, and its will is difficult to break. (HD 10; MV 30 ft; Inst 2; Skill +2; 2 attacks per action.)",
+    "stats": {
+      "str": 18,
+      "dex": 12,
+      "con": 18,
+      "int": 12,
+      "wis": 12,
+      "cha": 8,
+      "hp": 45,
+      "attack_bonus": 10,
+      "castings": 0,
+      "morale": 10,
+      "strain": 18,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 9,
+      "save_evasion": 9,
+      "save_mental": 9,
+      "save_luck": 9
+    },
+    "armor": 20,
+    "attacks": {
+      "blade": {
+        "dice": "1d12+5",
+        "shock": 8,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "relic_servitor",
+    "name": "Relic Servitor",
+    "description": "An ancient servitor found in Deeps and ruined citadels. It carries out orders with near-human competence but generalizes poorly, and rarely leaves its site. Communication, and even negotiation, may be possible. (HD 2; MV 30 ft; Inst 5; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 12,
+      "dex": 12,
+      "con": 13,
+      "int": 5,
+      "wis": 10,
+      "cha": 3,
+      "hp": 9,
+      "attack_bonus": 2,
+      "castings": 0,
+      "morale": 12,
+      "strain": 13,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 14,
+      "save_evasion": 14,
+      "save_mental": 14,
+      "save_luck": 14
+    },
+    "armor": 13,
+    "attacks": {
+      "tool": {
+        "dice": "1d6",
+        "shock": 2,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "relic_lesser_guardian",
+    "name": "Relic Lesser Guardian",
+    "description": "A relic guardian still holding an old posting. It understands its orders narrowly, strikes with a heavy blade, and may sometimes be talked with rather than fought. (HD 4; MV 30 ft; Inst 4; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 15,
+      "dex": 12,
+      "con": 15,
+      "int": 5,
+      "wis": 10,
+      "cha": 3,
+      "hp": 18,
+      "attack_bonus": 5,
+      "castings": 0,
+      "morale": 12,
+      "strain": 15,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 13,
+      "save_evasion": 13,
+      "save_mental": 13,
+      "save_luck": 13
+    },
+    "armor": 15,
+    "attacks": {
+      "blade": {
+        "dice": "1d10+2",
+        "shock": 2,
+        "shock_ac": 15
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "relic_guardian_commander",
+    "name": "Relic Guardian Commander",
+    "description": "A relic commander that directs lesser guardians. It strikes twice and holds its site with patient, literal-minded zeal. (HD 8; MV 40 ft; Inst 3; Skill +2; 2 attacks per action.)",
+    "stats": {
+      "str": 17,
+      "dex": 12,
+      "con": 16,
+      "int": 10,
+      "wis": 12,
+      "cha": 4,
+      "hp": 36,
+      "attack_bonus": 9,
+      "castings": 0,
+      "morale": 12,
+      "strain": 16,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 11,
+      "save_evasion": 11,
+      "save_mental": 11,
+      "save_luck": 11
+    },
+    "armor": 18,
+    "attacks": {
+      "blade": {
+        "dice": "1d10+4",
+        "shock": 6,
+        "shock_ac": 18
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "relic_ancient_warbot",
+    "name": "Relic Ancient Warbot",
+    "description": "A flying relic war machine with three attacks per action and a strike whose Shock ignores armor. It is among the deadliest things left in the Deeps. (HD 14; MV 60 ft (fly); Inst 2; Skill +2; 3 attacks per action.)",
+    "stats": {
+      "str": 20,
+      "dex": 14,
+      "con": 20,
+      "int": 8,
+      "wis": 12,
+      "cha": 3,
+      "hp": 63,
+      "attack_bonus": 15,
+      "castings": 0,
+      "morale": 12,
+      "strain": 20,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 8,
+      "save_evasion": 8,
+      "save_mental": 8,
+      "save_luck": 8
+    },
+    "armor": 20,
+    "attacks": {
+      "cannon": {
+        "dice": "2d6+5",
+        "shock": 10,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "lesser_anak_warrior",
+    "name": "Lesser Anak Warrior",
+    "description": "A Lesser Anak filled with hatred of baseline humans and most demihumans. Anakim fight only when they expect to win, and a failed Morale check sends them fleeing or grovelling for their lives. (HD 1; MV 20 ft; Inst 4; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 14,
+      "dex": 10,
+      "con": 13,
+      "int": 8,
+      "wis": 9,
+      "cha": 7,
+      "hp": 5,
+      "attack_bonus": 1,
+      "castings": 0,
+      "morale": 7,
+      "strain": 13,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 15,
+      "save_evasion": 15,
+      "save_mental": 15,
+      "save_luck": 15
+    },
+    "armor": 13,
+    "attacks": {
+      "blade": {
+        "dice": "1d8+1",
+        "shock": 3,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "lesser_anak_witch",
+    "name": "Lesser Anak Witch",
+    "description": "A Lesser Anak spellcaster, the tribe's equivalent of an Elementalist or Necromancer. She carries a blade and shares her people's contempt for humans. (HD 3; MV 20 ft; Inst 4; Skill +1; 1 attack per action; spells as a 1st or 2nd level caster.)",
+    "stats": {
+      "str": 10,
+      "dex": 12,
+      "con": 12,
+      "int": 14,
+      "wis": 12,
+      "cha": 10,
+      "hp": 14,
+      "attack_bonus": 1,
+      "castings": 1,
+      "morale": 8,
+      "strain": 12,
+      "effort_high": 1,
+      "effort_necromancer": 1,
+      "effort_elemental": 1,
+      "save_physical": 14,
+      "save_evasion": 14,
+      "save_mental": 14,
+      "save_luck": 14
+    },
+    "armor": 12,
+    "attacks": {
+      "blade": {
+        "dice": "1d8+1",
+        "shock": 3,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "lesser_anak_chief",
+    "name": "Lesser Anak Chief",
+    "description": "A Lesser Anak war leader who may parley in Trade Cant. He strikes once but hard, and commands a raiding band. (HD 4; MV 30 ft; Inst 3; Skill +2; 1 attack per action.)",
+    "stats": {
+      "str": 16,
+      "dex": 12,
+      "con": 14,
+      "int": 10,
+      "wis": 10,
+      "cha": 10,
+      "hp": 18,
+      "attack_bonus": 5,
+      "castings": 0,
+      "morale": 9,
+      "strain": 14,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 13,
+      "save_evasion": 13,
+      "save_mental": 13,
+      "save_luck": 13
+    },
+    "armor": 15,
+    "attacks": {
+      "blade": {
+        "dice": "1d8+2",
+        "shock": 4,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "great_anak_warrior",
+    "name": "Great Anak Warrior",
+    "description": "A Great Anak fighter, larger than the Lesser Anak and equally hostile to humans. It fights only when victory looks likely. (HD 2; MV 30 ft; Inst 4; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 16,
+      "dex": 11,
+      "con": 14,
+      "int": 8,
+      "wis": 9,
+      "cha": 7,
+      "hp": 9,
+      "attack_bonus": 3,
+      "castings": 0,
+      "morale": 8,
+      "strain": 14,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 14,
+      "save_evasion": 14,
+      "save_mental": 14,
+      "save_luck": 14
+    },
+    "armor": 14,
+    "attacks": {
+      "blade": {
+        "dice": "1d8+1",
+        "shock": 3,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "great_anak_warlock",
+    "name": "Great Anak Warlock",
+    "description": "A Great Anak sorcerer of the Necromancer or Elementalist kind. It wields a blade and leads its kin in dark rites. (HD 4; MV 30 ft; Inst 3; Skill +1; 1 attack per action; spellcaster.)",
+    "stats": {
+      "str": 12,
+      "dex": 12,
+      "con": 13,
+      "int": 15,
+      "wis": 12,
+      "cha": 10,
+      "hp": 18,
+      "attack_bonus": 3,
+      "castings": 1,
+      "morale": 9,
+      "strain": 13,
+      "effort_high": 1,
+      "effort_necromancer": 1,
+      "effort_elemental": 1,
+      "save_physical": 13,
+      "save_evasion": 13,
+      "save_mental": 13,
+      "save_luck": 13
+    },
+    "armor": 13,
+    "attacks": {
+      "blade": {
+        "dice": "1d8+1",
+        "shock": 3,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "great_anak_warchief",
+    "name": "Great Anak Warchief",
+    "description": "A Great Anak war chief who strikes twice and whose blows carry Shock against any armor. His warband follows him until his weakness shows. (HD 8; MV 40 ft; Inst 3; Skill +2; 2 attacks per action.)",
+    "stats": {
+      "str": 18,
+      "dex": 13,
+      "con": 16,
+      "int": 11,
+      "wis": 11,
+      "cha": 12,
+      "hp": 36,
+      "attack_bonus": 8,
+      "castings": 0,
+      "morale": 10,
+      "strain": 16,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 12,
+      "save_evasion": 12,
+      "save_mental": 12,
+      "save_luck": 12
+    },
+    "armor": 18,
+    "attacks": {
+      "blade": {
+        "dice": "1d8+4",
+        "shock": 6,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "anak_hulk",
+    "name": "Anak Hulk",
+    "description": "An Anak of up to nine feet with the mind of a child. It is enormously strong, strikes once with a club, and breeds true, though its numbers stay small. (HD 5; MV 30 ft; Inst 5; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 19,
+      "dex": 9,
+      "con": 17,
+      "int": 5,
+      "wis": 8,
+      "cha": 5,
+      "hp": 23,
+      "attack_bonus": 6,
+      "castings": 0,
+      "morale": 8,
+      "strain": 17,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 13,
+      "save_evasion": 13,
+      "save_mental": 13,
+      "save_luck": 13
+    },
+    "armor": 15,
+    "attacks": {
+      "club": {
+        "dice": "1d8+4",
+        "shock": 6,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "anak_king",
+    "name": "Anak King",
+    "description": "An Anak king of ten Hit Dice who strikes twice with a blade whose Shock ignores armor. He rules by strength and by the favour of his dark gods. (HD 10; MV 40 ft; Inst 2; Skill +3; 2 attacks per action.)",
+    "stats": {
+      "str": 19,
+      "dex": 12,
+      "con": 17,
+      "int": 12,
+      "wis": 12,
+      "cha": 14,
+      "hp": 45,
+      "attack_bonus": 12,
+      "castings": 0,
+      "morale": 11,
+      "strain": 17,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 10,
+      "save_evasion": 10,
+      "save_mental": 10,
+      "save_luck": 10
+    },
+    "armor": 20,
+    "attacks": {
+      "blade": {
+        "dice": "1d8+5",
+        "shock": 7,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "anak_high_priest",
+    "name": "Anak High Priest",
+    "description": "A Great Anak high priest of the dark gods, able to work magic as a Mage of the sixth or seventh level. He strikes once and commands the tribe's faith. (HD 8; MV 30 ft; Inst 2; Skill +2; 1 attack per action; spellcaster.)",
+    "stats": {
+      "str": 14,
+      "dex": 11,
+      "con": 14,
+      "int": 14,
+      "wis": 16,
+      "cha": 14,
+      "hp": 36,
+      "attack_bonus": 7,
+      "castings": 1,
+      "morale": 10,
+      "strain": 14,
+      "effort_high": 1,
+      "effort_necromancer": 1,
+      "effort_elemental": 1,
+      "save_physical": 11,
+      "save_evasion": 11,
+      "save_mental": 11,
+      "save_luck": 11
+    },
+    "armor": 15,
+    "attacks": {
+      "blade": {
+        "dice": "1d8+2",
+        "shock": 4,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "drudge_laborer",
+    "name": "Drudge Laborer",
+    "description": "A seven-foot drudge with the mind of an eight-year-old. Docile by nature, it works and fights poorly, but its club still hits hard. (HD 3; MV 30 ft; Inst 7; Skill +0; 1 attack per action.)",
+    "stats": {
+      "str": 16,
+      "dex": 10,
+      "con": 15,
+      "int": 6,
+      "wis": 9,
+      "cha": 6,
+      "hp": 14,
+      "attack_bonus": 1,
+      "castings": 0,
+      "morale": 7,
+      "strain": 15,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 14,
+      "save_evasion": 14,
+      "save_mental": 14,
+      "save_luck": 14
+    },
+    "armor": 10,
+    "attacks": {
+      "club": {
+        "dice": "1d8+2",
+        "shock": 4,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "war_drudge",
+    "name": "War Drudge",
+    "description": "A drudge broken into a soldier through abuse. It wears armor and strikes once with a heavy club. (HD 5; MV 30 ft; Inst 5; Skill +0; 1 attack per action.)",
+    "stats": {
+      "str": 17,
+      "dex": 10,
+      "con": 16,
+      "int": 6,
+      "wis": 10,
+      "cha": 6,
+      "hp": 23,
+      "attack_bonus": 4,
+      "castings": 0,
+      "morale": 8,
+      "strain": 16,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 13,
+      "save_evasion": 13,
+      "save_mental": 13,
+      "save_luck": 13
+    },
+    "armor": 15,
+    "attacks": {
+      "club": {
+        "dice": "1d8+3",
+        "shock": 5,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "halfman_grazer",
+    "name": "Halfman Grazer",
+    "description": "A cattle-minded herd creature that grazes with its teeth. Herds of ten to thirty follow a dominant male. Separated from the herd, a halfman slowly gains human intelligence over months. (HD 1; MV 30 ft; Inst 7; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 10,
+      "dex": 10,
+      "con": 12,
+      "int": 5,
+      "wis": 9,
+      "cha": 6,
+      "hp": 5,
+      "attack_bonus": 1,
+      "castings": 0,
+      "morale": 7,
+      "strain": 12,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 15,
+      "save_evasion": 15,
+      "save_mental": 15,
+      "save_luck": 15
+    },
+    "armor": 10,
+    "attacks": {
+      "bite": {
+        "dice": "1d2+1"
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "halfman_bull",
+    "name": "Halfman Bull",
+    "description": "The dominant male of a halfman herd, larger and more aggressive than the grazers. Its bite is weak, but it defends the herd without hesitation. (HD 3; MV 30 ft; Inst 6; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 15,
+      "dex": 10,
+      "con": 14,
+      "int": 5,
+      "wis": 9,
+      "cha": 6,
+      "hp": 14,
+      "attack_bonus": 4,
+      "castings": 0,
+      "morale": 9,
+      "strain": 14,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 14,
+      "save_evasion": 14,
+      "save_mental": 14,
+      "save_luck": 14
+    },
+    "armor": 11,
+    "attacks": {
+      "bite": {
+        "dice": "1d2+3"
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "houri_concubine",
+    "name": "Houri Concubine",
+    "description": "A houri whose obedience brings overwhelming, addictive happiness. It is no warrior, but it is persuasive and skilled at performance. (HD 1; MV 30 ft; Inst 8; Skill +2; 1 attack per action.)",
+    "stats": {
+      "str": 8,
+      "dex": 11,
+      "con": 10,
+      "int": 10,
+      "wis": 11,
+      "cha": 16,
+      "hp": 5,
+      "attack_bonus": 0,
+      "castings": 0,
+      "morale": 7,
+      "strain": 10,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 15,
+      "save_evasion": 15,
+      "save_mental": 15,
+      "save_luck": 15
+    },
+    "armor": 10,
+    "attacks": {
+      "blade": {
+        "dice": "1d8",
+        "shock": 2,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "dispassionate_one",
+    "name": "Dispassionate One",
+    "description": "A houri champion in whom obedience has burned away every hesitation. It never checks Morale, and its blade's Shock ignores armor. (HD 6; MV 30 ft; Inst 0; Skill +3; 1 attack per action.)",
+    "stats": {
+      "str": 13,
+      "dex": 13,
+      "con": 13,
+      "int": 12,
+      "wis": 14,
+      "cha": 16,
+      "hp": 27,
+      "attack_bonus": 6,
+      "castings": 0,
+      "morale": 12,
+      "strain": 13,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 12,
+      "save_evasion": 12,
+      "save_mental": 12,
+      "save_luck": 12
+    },
+    "armor": 11,
+    "attacks": {
+      "blade": {
+        "dice": "1d8",
+        "shock": 2,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "dwarven_laborer",
+    "name": "Dwarven Laborer",
+    "description": "A dwarf worker with monochrome dwarfsight to twenty feet, able to aim in any direction as an On Turn action. Dwarves need half the food, water, and air of humans. (HD 1; MV 30 ft; Inst 4; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 13,
+      "dex": 10,
+      "con": 14,
+      "int": 10,
+      "wis": 10,
+      "cha": 8,
+      "hp": 5,
+      "attack_bonus": 1,
+      "castings": 0,
+      "morale": 9,
+      "strain": 14,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 15,
+      "save_evasion": 15,
+      "save_mental": 15,
+      "save_luck": 15
+    },
+    "armor": 13,
+    "attacks": {
+      "blade": {
+        "dice": "1d8",
+        "shock": 2,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "dwarven_veteran",
+    "name": "Dwarven Veteran",
+    "description": "An armored dwarf soldier. Dwarves of more than two Hit Dice can, once a day, negate a sensed magical effect within a hundred feet by accepting a point of System Strain. (HD 2; MV 30 ft; Inst 3; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 14,
+      "dex": 11,
+      "con": 15,
+      "int": 10,
+      "wis": 11,
+      "cha": 8,
+      "hp": 9,
+      "attack_bonus": 3,
+      "castings": 0,
+      "morale": 9,
+      "strain": 15,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 14,
+      "save_evasion": 14,
+      "save_mental": 14,
+      "save_luck": 14
+    },
+    "armor": 16,
+    "attacks": {
+      "blade": {
+        "dice": "1d8+1",
+        "shock": 3,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "dwarven_artificer",
+    "name": "Dwarven Artificer",
+    "description": "A dwarf who builds and operates magical devices, working them as a Mage of the second or third level. Dwarfsight and the usual dwarven resilience apply. (HD 6; MV 30 ft; Inst 4; Skill +2; 1 attack per action; spellcaster through devices.)",
+    "stats": {
+      "str": 11,
+      "dex": 12,
+      "con": 13,
+      "int": 16,
+      "wis": 12,
+      "cha": 9,
+      "hp": 27,
+      "attack_bonus": 5,
+      "castings": 1,
+      "morale": 9,
+      "strain": 13,
+      "effort_high": 1,
+      "effort_necromancer": 1,
+      "effort_elemental": 1,
+      "save_physical": 12,
+      "save_evasion": 12,
+      "save_mental": 12,
+      "save_luck": 12
+    },
+    "armor": 11,
+    "attacks": {
+      "blade": {
+        "dice": "1d8",
+        "shock": 2,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "dwarven_lord",
+    "name": "Dwarven Lord",
+    "description": "A dwarven lord in heavy armor who strikes twice, with Shock that ignores armor, and can negate magic once a day at the cost of a Strain point. (HD 10; MV 30 ft; Inst 2; Skill +2; 2 attacks per action.)",
+    "stats": {
+      "str": 17,
+      "dex": 12,
+      "con": 16,
+      "int": 12,
+      "wis": 13,
+      "cha": 12,
+      "hp": 45,
+      "attack_bonus": 11,
+      "castings": 0,
+      "morale": 10,
+      "strain": 16,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 10,
+      "save_evasion": 10,
+      "save_mental": 10,
+      "save_luck": 10
+    },
+    "armor": 20,
+    "attacks": {
+      "blade": {
+        "dice": "1d8+5",
+        "shock": 7,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "dwarven_king",
+    "name": "Dwarven King",
+    "description": "An ancient dwarven king, slow but superbly armored at AC 22. He strikes twice and his blows carry Shock against any armor. (HD 12; MV 20 ft; Inst 1; Skill +2; 2 attacks per action.)",
+    "stats": {
+      "str": 17,
+      "dex": 10,
+      "con": 17,
+      "int": 13,
+      "wis": 14,
+      "cha": 14,
+      "hp": 54,
+      "attack_bonus": 12,
+      "castings": 0,
+      "morale": 12,
+      "strain": 17,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 9,
+      "save_evasion": 9,
+      "save_mental": 9,
+      "save_luck": 9
+    },
+    "armor": 22,
+    "attacks": {
+      "blade": {
+        "dice": "1d8+5",
+        "shock": 7,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "elven_villager",
+    "name": "Elven Villager",
+    "description": "An elf of the retreats, immortal by reincarnation and free of physical aging. Its senses are finer than a human's, and it carries a blade. (HD 1; MV 30 ft; Inst 2; Skill +2; 1 attack per action.)",
+    "stats": {
+      "str": 11,
+      "dex": 14,
+      "con": 11,
+      "int": 13,
+      "wis": 12,
+      "cha": 12,
+      "hp": 5,
+      "attack_bonus": 1,
+      "castings": 0,
+      "morale": 9,
+      "strain": 11,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 15,
+      "save_evasion": 15,
+      "save_mental": 15,
+      "save_luck": 15
+    },
+    "armor": 13,
+    "attacks": {
+      "blade": {
+        "dice": "1d8",
+        "shock": 2,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "elven_adventurer",
+    "name": "Elven Adventurer",
+    "description": "An elf warrior who has left the retreats. It strikes once with a blade and moves with an elf's grace. (HD 3; MV 30 ft; Inst 2; Skill +2; 1 attack per action.)",
+    "stats": {
+      "str": 12,
+      "dex": 16,
+      "con": 12,
+      "int": 13,
+      "wis": 12,
+      "cha": 12,
+      "hp": 14,
+      "attack_bonus": 5,
+      "castings": 0,
+      "morale": 10,
+      "strain": 12,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 14,
+      "save_evasion": 14,
+      "save_mental": 14,
+      "save_luck": 14
+    },
+    "armor": 15,
+    "attacks": {
+      "blade": {
+        "dice": "1d8+2",
+        "shock": 4,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "elven_sorcerer",
+    "name": "Elven Sorcerer",
+    "description": "An elf who casts as a High Mage of the third or fourth level. It carries a blade but relies on magic. (HD 5; MV 30 ft; Inst 1; Skill +2; 1 attack per action; spellcaster.)",
+    "stats": {
+      "str": 9,
+      "dex": 14,
+      "con": 11,
+      "int": 17,
+      "wis": 13,
+      "cha": 13,
+      "hp": 23,
+      "attack_bonus": 3,
+      "castings": 1,
+      "morale": 9,
+      "strain": 11,
+      "effort_high": 1,
+      "effort_necromancer": 1,
+      "effort_elemental": 1,
+      "save_physical": 13,
+      "save_evasion": 13,
+      "save_mental": 13,
+      "save_luck": 13
+    },
+    "armor": 10,
+    "attacks": {
+      "blade": {
+        "dice": "1d8",
+        "shock": 2,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "elven_lord",
+    "name": "Elven Lord",
+    "description": "An elven lord in fine armor, striking twice with Shock that ignores armor. It has seen centuries of war. (HD 10; MV 30 ft; Inst 1; Skill +3; 2 attacks per action.)",
+    "stats": {
+      "str": 14,
+      "dex": 17,
+      "con": 13,
+      "int": 15,
+      "wis": 14,
+      "cha": 15,
+      "hp": 45,
+      "attack_bonus": 11,
+      "castings": 0,
+      "morale": 10,
+      "strain": 13,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 10,
+      "save_evasion": 10,
+      "save_mental": 10,
+      "save_luck": 10
+    },
+    "armor": 20,
+    "attacks": {
+      "blade": {
+        "dice": "1d8+5",
+        "shock": 7,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "elven_arch_memorist",
+    "name": "Elven Arch-Memorist",
+    "description": "An elf who casts as a High Mage of the eighth to tenth level, with a +4 skill bonus. Its blade strikes once and its Shock ignores armor. (HD 10; MV 30 ft; Inst 0; Skill +4; 1 attack per action; spellcaster.)",
+    "stats": {
+      "str": 9,
+      "dex": 15,
+      "con": 11,
+      "int": 18,
+      "wis": 15,
+      "cha": 14,
+      "hp": 45,
+      "attack_bonus": 8,
+      "castings": 1,
+      "morale": 10,
+      "strain": 11,
+      "effort_high": 1,
+      "effort_necromancer": 1,
+      "effort_elemental": 1,
+      "save_physical": 10,
+      "save_evasion": 10,
+      "save_mental": 10,
+      "save_luck": 10
+    },
+    "armor": 13,
+    "attacks": {
+      "blade": {
+        "dice": "1d8+3",
+        "shock": 5,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "jikegida_beastborn",
+    "name": "Jikegida Beastborn",
+    "description": "The frail, animal-featured kind of Jikegida, slightly below human intellect. Its pellet thrower and crackler mace are non-lethal and work only in Jikegida hands. Hunting parties number at least 2d4. (HD 1; MV 30 ft; Inst 5; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 10,
+      "dex": 14,
+      "con": 10,
+      "int": 7,
+      "wis": 10,
+      "cha": 6,
+      "hp": 5,
+      "attack_bonus": 2,
+      "castings": 0,
+      "morale": 8,
+      "strain": 10,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 15,
+      "save_evasion": 15,
+      "save_mental": 15,
+      "save_luck": 15
+    },
+    "armor": 13,
+    "attacks": {
+      "blade": {
+        "dice": "1d8-1",
+        "shock": 1,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "jikegida_manborn",
+    "name": "Jikegida Manborn",
+    "description": "The taller, cleverer Jikegida kind, usually a leader and sometimes a wizard-like caster. Its weapons are non-lethal and work only for its own species. (HD 2; MV 30 ft; Inst 4; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 11,
+      "dex": 14,
+      "con": 11,
+      "int": 9,
+      "wis": 11,
+      "cha": 8,
+      "hp": 9,
+      "attack_bonus": 3,
+      "castings": 0,
+      "morale": 9,
+      "strain": 11,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 14,
+      "save_evasion": 14,
+      "save_mental": 14,
+      "save_luck": 14
+    },
+    "armor": 13,
+    "attacks": {
+      "blade": {
+        "dice": "1d8",
+        "shock": 2,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "jikegida_hive_leader",
+    "name": "Jikegida Hive Leader",
+    "description": "An armored Jikegida hive leader who strikes twice. Many wear a construction exoskeleton worth +20 HP, +2 to hit, and +2 to damage and Shock. (HD 6; MV 30 ft; Inst 3; Skill +2; 2 attacks per action.)",
+    "stats": {
+      "str": 14,
+      "dex": 14,
+      "con": 14,
+      "int": 13,
+      "wis": 12,
+      "cha": 12,
+      "hp": 27,
+      "attack_bonus": 7,
+      "castings": 0,
+      "morale": 10,
+      "strain": 14,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 13,
+      "save_evasion": 13,
+      "save_mental": 13,
+      "save_luck": 13
+    },
+    "armor": 18,
+    "attacks": {
+      "blade": {
+        "dice": "1d8+2",
+        "shock": 4,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "jikegida_city_lord",
+    "name": "Jikegida City Lord",
+    "description": "A Jikegida city lord of fourteen Hit Dice, striking twice with a blade whose Shock is 8 against any armor. (HD 14; MV 30 ft; Inst 3; Skill +2; 2 attacks per action.)",
+    "stats": {
+      "str": 16,
+      "dex": 15,
+      "con": 15,
+      "int": 15,
+      "wis": 14,
+      "cha": 16,
+      "hp": 63,
+      "attack_bonus": 14,
+      "castings": 0,
+      "morale": 10,
+      "strain": 15,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 8,
+      "save_evasion": 8,
+      "save_mental": 8,
+      "save_luck": 8
+    },
+    "armor": 20,
+    "attacks": {
+      "blade": {
+        "dice": "1d8+4",
+        "shock": 8,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "polop_hunter",
+    "name": "Polop Hunter",
+    "description": "A crab-eel Polop raider with a coral spear. A leader's weapon sweats venom: a struck victim must make a Physical save or lose its next Main Action, and two failed saves in one scene mean paralysis for the rest of it. (HD 3; MV 30 ft; Inst 4; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 13,
+      "dex": 15,
+      "con": 13,
+      "int": 9,
+      "wis": 10,
+      "cha": 7,
+      "hp": 14,
+      "attack_bonus": 5,
+      "castings": 0,
+      "morale": 8,
+      "strain": 13,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 14,
+      "save_evasion": 14,
+      "save_mental": 14,
+      "save_luck": 14
+    },
+    "armor": 10,
+    "attacks": {
+      "spear": {
+        "dice": "1d8+2",
+        "shock": 4,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "polop_slaver",
+    "name": "Polop Slaver",
+    "description": "A Polop slaver who strikes twice. Prisoners are coated in a gel that lets them breathe water and ignore cold for a day, then penned for the deep cities. (HD 7; MV 30 ft; Inst 3; Skill +1; 2 attacks per action.)",
+    "stats": {
+      "str": 14,
+      "dex": 14,
+      "con": 14,
+      "int": 11,
+      "wis": 11,
+      "cha": 9,
+      "hp": 32,
+      "attack_bonus": 6,
+      "castings": 0,
+      "morale": 9,
+      "strain": 14,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 12,
+      "save_evasion": 12,
+      "save_mental": 12,
+      "save_luck": 12
+    },
+    "armor": 12,
+    "attacks": {
+      "spear": {
+        "dice": "1d8+3",
+        "shock": 5,
+        "shock_ac": 13
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "polop_hellsquid",
+    "name": "Polop Hellsquid",
+    "description": "A claw-tentacled, octopodal Polop that can operate on land and strikes four times. It sometimes accompanies hunting parties. (HD 5; MV 40 ft; Inst 5; Skill +1; 4 attacks per action.)",
+    "stats": {
+      "str": 14,
+      "dex": 16,
+      "con": 13,
+      "int": 5,
+      "wis": 10,
+      "cha": 5,
+      "hp": 23,
+      "attack_bonus": 5,
+      "castings": 0,
+      "morale": 8,
+      "strain": 13,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 13,
+      "save_evasion": 13,
+      "save_mental": 13,
+      "save_luck": 13
+    },
+    "armor": 13,
+    "attacks": {
+      "tentacle": {
+        "dice": "1d8+2"
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "polop_great_devourer",
+    "name": "Polop Great Devourer",
+    "description": "A Polop grown to twice the usual size, cunning and patient. It strikes three times, and its Shock reaches any armor. (HD 20; MV 40 ft; Inst 7; Skill +2; 3 attacks per action.)",
+    "stats": {
+      "str": 20,
+      "dex": 14,
+      "con": 18,
+      "int": 12,
+      "wis": 12,
+      "cha": 10,
+      "hp": 90,
+      "attack_bonus": 20,
+      "castings": 0,
+      "morale": 11,
+      "strain": 18,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 5,
+      "save_evasion": 5,
+      "save_mental": 5,
+      "save_luck": 5
+    },
+    "armor": 15,
+    "attacks": {
+      "tentacle": {
+        "dice": "2d8+5",
+        "shock": 10,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "tuhulot_manipulator",
+    "name": "Tuhulot Manipulator",
+    "description": "A cowardly, cunning Tuhulot that works through catspaws and avoids direct danger. Three times a day each it can use its scrying gaze, blandishing voice, sidewards step, and soul consumption. In battle it lashes with slivers of warped space and time at up to a hundred feet, striking twice. (HD 10; MV 50 ft; Inst 3; Skill +2; 2 attacks per action.)",
+    "stats": {
+      "str": 8,
+      "dex": 16,
+      "con": 13,
+      "int": 16,
+      "wis": 15,
+      "cha": 16,
+      "hp": 45,
+      "attack_bonus": 12,
+      "castings": 0,
+      "morale": 7,
+      "strain": 13,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 10,
+      "save_evasion": 10,
+      "save_mental": 10,
+      "save_luck": 10
+    },
+    "armor": 15,
+    "attacks": {
+      "sliver": {
+        "dice": "2d8",
+        "shock": 4,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "animated_skeleton",
+    "name": "Animated Skeleton",
+    "description": "Bones held together by old magic. It is mindless and fearless, needs no air or food, and cannot be poisoned, diseased, or put to sleep. (HD 1; MV 30 ft; Inst 5; Skill +0; 1 attack per action.)",
+    "stats": {
+      "str": 11,
+      "dex": 12,
+      "con": 12,
+      "int": 3,
+      "wis": 8,
+      "cha": 3,
+      "hp": 5,
+      "attack_bonus": 1,
+      "castings": 0,
+      "morale": 12,
+      "strain": 12,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 15,
+      "save_evasion": 15,
+      "save_mental": 15,
+      "save_luck": 15
+    },
+    "armor": 13,
+    "attacks": {
+      "blade": {
+        "dice": "1d6"
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "shambling_corpse",
+    "name": "Shambling Corpse",
+    "description": "A slow, mindless corpse that attacks the living. It needs no air or food and is immune to poison, disease, and sleep. (HD 2; MV 20 ft; Inst 6; Skill +0; 1 attack per action.)",
+    "stats": {
+      "str": 14,
+      "dex": 8,
+      "con": 13,
+      "int": 3,
+      "wis": 7,
+      "cha": 3,
+      "hp": 9,
+      "attack_bonus": 2,
+      "castings": 0,
+      "morale": 12,
+      "strain": 13,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 14,
+      "save_evasion": 14,
+      "save_mental": 14,
+      "save_luck": 14
+    },
+    "armor": 10,
+    "attacks": {
+      "slam": {
+        "dice": "1d8"
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "ravenous_husk",
+    "name": "Ravenous Husk",
+    "description": "A corpse driven by hunger rather than thought. It moves faster than a shambler and bites once. (HD 3; MV 30 ft; Inst 6; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 14,
+      "dex": 11,
+      "con": 13,
+      "int": 3,
+      "wis": 8,
+      "cha": 3,
+      "hp": 14,
+      "attack_bonus": 4,
+      "castings": 0,
+      "morale": 12,
+      "strain": 13,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 14,
+      "save_evasion": 14,
+      "save_mental": 14,
+      "save_luck": 14
+    },
+    "armor": 13,
+    "attacks": {
+      "bite": {
+        "dice": "1d8"
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "sentient_carcass",
+    "name": "Sentient Carcass",
+    "description": "A corpse that still thinks. It strikes twice and its claws carry Shock against AC 15 or less. It can pass for human only poorly. (HD 5; MV 30 ft; Inst 4; Skill +1; 2 attacks per action.)",
+    "stats": {
+      "str": 14,
+      "dex": 12,
+      "con": 14,
+      "int": 11,
+      "wis": 10,
+      "cha": 5,
+      "hp": 23,
+      "attack_bonus": 4,
+      "castings": 0,
+      "morale": 10,
+      "strain": 14,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 13,
+      "save_evasion": 13,
+      "save_mental": 13,
+      "save_luck": 13
+    },
+    "armor": 15,
+    "attacks": {
+      "claw": {
+        "dice": "1d8",
+        "shock": 2,
+        "shock_ac": 15
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "angry_shade",
+    "name": "Angry Shade",
+    "description": "An immaterial imprint of a violent death. Non-magical objects pass through it, and its icy touch carries Shock against any armor. (HD 4; MV 30 ft; Inst 6; Skill +1; 1 attack per action.)",
+    "stats": {
+      "str": 6,
+      "dex": 14,
+      "con": 10,
+      "int": 8,
+      "wis": 10,
+      "cha": 10,
+      "hp": 18,
+      "attack_bonus": 5,
+      "castings": 0,
+      "morale": 12,
+      "strain": 10,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 13,
+      "save_evasion": 13,
+      "save_mental": 13,
+      "save_luck": 13
+    },
+    "armor": 20,
+    "attacks": {
+      "icy_touch": {
+        "dice": "1d6",
+        "shock": 2,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "wraith_lord",
+    "name": "Wraith Lord",
+    "description": "A powerful, hateful wraith in the shape of a lord. It strikes twice with a grave blade; both hit and Shock are terrible. (HD 10; MV 30 ft; Inst 4; Skill +2; 2 attacks per action.)",
+    "stats": {
+      "str": 12,
+      "dex": 14,
+      "con": 14,
+      "int": 14,
+      "wis": 13,
+      "cha": 14,
+      "hp": 45,
+      "attack_bonus": 10,
+      "castings": 0,
+      "morale": 10,
+      "strain": 14,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 10,
+      "save_evasion": 10,
+      "save_mental": 10,
+      "save_luck": 10
+    },
+    "armor": 20,
+    "attacks": {
+      "grave_blade": {
+        "dice": "1d12+5",
+        "shock": 10,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "hungry_revenant",
+    "name": "Hungry Revenant",
+    "description": "A material, sentient revenant that can pass for a living person. It strikes twice, its Shock reaches any armor, and it must feed on flesh or blood. (HD 8; MV 30 ft; Inst 5; Skill +2; 2 attacks per action.)",
+    "stats": {
+      "str": 15,
+      "dex": 12,
+      "con": 14,
+      "int": 11,
+      "wis": 11,
+      "cha": 8,
+      "hp": 36,
+      "attack_bonus": 10,
+      "castings": 0,
+      "morale": 10,
+      "strain": 14,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 11,
+      "save_evasion": 11,
+      "save_mental": 11,
+      "save_luck": 11
+    },
+    "armor": 13,
+    "attacks": {
+      "claw": {
+        "dice": "1d8",
+        "shock": 2,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "undead_mage",
+    "name": "Undead Mage",
+    "description": "A corpse that still works Necromancy. It has spell slots as a Necromancer of half its Hit Dice but casts at its full Hit Dice, up to effective level 10. (HD 8; MV 30 ft; Inst 4; Skill +2; 1 attack per action; spellcaster.)",
+    "stats": {
+      "str": 9,
+      "dex": 11,
+      "con": 12,
+      "int": 16,
+      "wis": 13,
+      "cha": 10,
+      "hp": 36,
+      "attack_bonus": 10,
+      "castings": 1,
+      "morale": 9,
+      "strain": 12,
+      "effort_high": 1,
+      "effort_necromancer": 1,
+      "effort_elemental": 1,
+      "save_physical": 11,
+      "save_evasion": 11,
+      "save_mental": 11,
+      "save_luck": 11
+    },
+    "armor": 10,
+    "attacks": {
+      "staff": {
+        "dice": "1d8",
+        "shock": 2,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "revenant_king",
+    "name": "Revenant King",
+    "description": "A crowned revenant of twelve Hit Dice. It strikes twice with a grave blade that carries Shock 10 against any armor. (HD 12; MV 30 ft; Inst 3; Skill +2; 2 attacks per action.)",
+    "stats": {
+      "str": 17,
+      "dex": 12,
+      "con": 16,
+      "int": 13,
+      "wis": 13,
+      "cha": 14,
+      "hp": 54,
+      "attack_bonus": 14,
+      "castings": 0,
+      "morale": 11,
+      "strain": 16,
+      "effort_high": 0,
+      "effort_necromancer": 0,
+      "effort_elemental": 0,
+      "save_physical": 9,
+      "save_evasion": 9,
+      "save_mental": 9,
+      "save_luck": 9
+    },
+    "armor": 18,
+    "attacks": {
+      "grave_blade": {
+        "dice": "1d12+5",
+        "shock": 10,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  },
+  {
+    "type": "monster",
+    "id": "unending_one",
+    "name": "Unending One",
+    "description": "A demigod who completed the rite that severs a Legacy. It strikes three times, its Shock reaches any armor, and it cannot be killed by ordinary violence; only the right act or object ends it. (HD 20; MV 40 ft; Inst 1; Skill +3; 3 attacks per action; spellcaster.)",
+    "stats": {
+      "str": 16,
+      "dex": 14,
+      "con": 16,
+      "int": 16,
+      "wis": 16,
+      "cha": 18,
+      "hp": 90,
+      "attack_bonus": 20,
+      "castings": 1,
+      "morale": 10,
+      "strain": 16,
+      "effort_high": 1,
+      "effort_necromancer": 1,
+      "effort_elemental": 1,
+      "save_physical": 5,
+      "save_evasion": 5,
+      "save_mental": 5,
+      "save_luck": 5
+    },
+    "armor": 20,
+    "attacks": {
+      "sliver": {
+        "dice": "2d8",
+        "shock": 5,
+        "shock_ac": 99
+      }
+    },
+    "large_group": false,
+    "rules": []
+  }
+]

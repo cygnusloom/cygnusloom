@@ -9,6 +9,7 @@ from collections.abc import Mapping, Sequence
 
 from sqlmodel import Session
 
+from cygnusforge.content.character import CharacterSpec
 from cygnusforge.content.library import (
     ALL_STATS,
     HIGHEST,
@@ -62,10 +63,15 @@ def make_move(
     modifier: int = 0,
     stat: str | None = None,
     cause: str = "",
+    spec: CharacterSpec | None = None,
 ) -> dict[str, object]:
     """Roll `move` for the character, record the result, and run the band's effects. The effects
     carry their own events, so the outcome shows up in the campaign's history either way. A move
-    with no stat of its own takes the `stat` the player names; a move with one ignores any other."""
+    with no stat of its own takes the `stat` the player names; a move with one ignores any other.
+
+    A rule set with modifier bands and skills passes its `spec`: the stat's contribution is its
+    modifier rather than its score, and a move with a `skill` adds that skill's level. Without a
+    spec, the stat's score is added, as a rule set with no modifier bands expects."""
     state = load_state(db, campaign_id)
     character = state.characters.get(name_key(name))
     if character is None:
@@ -102,8 +108,13 @@ def make_move(
     roll = roll_total(move.dice, rng, plus=plus)
     stat_bonus = 0
     if rolled_stat is not None:
-        stat_bonus = modifier_value(character, rolled_stat)
+        if spec is not None:
+            stat_bonus = spec.modifier(character.stats, rolled_stat)
+        else:
+            stat_bonus = modifier_value(character, rolled_stat)
         stat_bonus += condition_bonus(character, conditions, rolled_stat)
+    if spec is not None and move.skill:
+        stat_bonus += max(0, spec.skill_level(character.skills, move.skill))
     bonus = stat_bonus + modifier
     total = roll + bonus
     band = band_for(move, total)

@@ -148,12 +148,17 @@ class Character:
     templates: dict[str, str] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
     fields: dict[str, str] = field(default_factory=dict)
+    # Skill levels by skill id, for the rule sets that have skills. A skill not listed has no level.
+    skills: dict[str, int] = field(default_factory=dict)
     # What each hit absorbs. Monsters have it in their statblock; player characters get it from gear.
     armor: int = 0
     # A monster's attacks, by name, as dice formulas such as "1d8+1d8". Empty for player characters.
     attacks: dict[str, str] = field(default_factory=dict)
     # The flags of the attacks that have any, by attack name, such as ["blast"].
     attack_flags: dict[str, list[str]] = field(default_factory=dict)
+    # Each attack's shock and the armor it shocks through, by attack name, such as [2, 13]. Empty
+    # for characters whose rule set has no shock.
+    attack_shock: dict[str, list[int]] = field(default_factory=dict)
     # The name of the bestiary statblock a monster was built from, such as "Wolf". Empty if none.
     creature: str = ""
     # A story-only NPC has no stats yet. It cannot fight, make saves, or be attacked until given stats.
@@ -684,6 +689,8 @@ class PcAdded(GameEvent):
     features: dict[str, int] = field(default_factory=dict)
     fields: dict[str, str] = field(default_factory=dict)
     counters: dict[str, int] = field(default_factory=dict)
+    skills: dict[str, int] = field(default_factory=dict)
+    attack_shock: dict[str, list[int]] = field(default_factory=dict)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.characters[name_key(self.name)] = Character(
@@ -700,6 +707,8 @@ class PcAdded(GameEvent):
             features=dict(self.features),
             fields=dict(self.fields),
             counters=dict(self.counters),
+            skills=dict(self.skills),
+            attack_shock={name: list(pair) for name, pair in self.attack_shock.items()},
         )
 
     def render(self) -> str:
@@ -741,10 +750,12 @@ class NpcAdded(GameEvent):
     armor: int = 0
     attacks: dict[str, str] = field(default_factory=dict)
     attack_flags: dict[str, list[str]] = field(default_factory=dict)
+    attack_shock: dict[str, list[int]] = field(default_factory=dict)
     creature: str = ""
     large_group: bool = False
     story_only: bool = False
     rules: list[str] = field(default_factory=list)
+    skills: dict[str, int] = field(default_factory=dict)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.characters[name_key(self.name)] = Character(
@@ -764,10 +775,12 @@ class NpcAdded(GameEvent):
             armor=self.armor,
             attacks=dict(self.attacks),
             attack_flags={name: list(flags) for name, flags in self.attack_flags.items()},
+            attack_shock={name: list(pair) for name, pair in self.attack_shock.items()},
             creature=self.creature,
             large_group=self.large_group,
             story_only=self.story_only,
             rules=list(self.rules),
+            skills=dict(self.skills),
         )
 
     def render(self) -> str:
@@ -788,7 +801,9 @@ class NpcStatted(GameEvent):
     armor: int
     attacks: dict[str, str]
     attack_flags: dict[str, list[str]] = field(default_factory=dict)
+    attack_shock: dict[str, list[int]] = field(default_factory=dict)
     counters: dict[str, int] = field(default_factory=dict)
+    skills: dict[str, int] = field(default_factory=dict)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         npc = state.characters[name_key(self.name)]
@@ -800,6 +815,8 @@ class NpcStatted(GameEvent):
         npc.armor = self.armor
         npc.attacks = dict(self.attacks)
         npc.attack_flags = {name: list(flags) for name, flags in self.attack_flags.items()}
+        npc.attack_shock = {name: list(pair) for name, pair in self.attack_shock.items()}
+        npc.skills = dict(self.skills)
         npc.story_only = False
 
     def render(self) -> str:
@@ -826,6 +843,8 @@ class HirelingAdded(GameEvent):
     templates: dict[str, str] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
     fields: dict[str, str] = field(default_factory=dict)
+    skills: dict[str, int] = field(default_factory=dict)
+    attack_shock: dict[str, list[int]] = field(default_factory=dict)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.characters[name_key(self.name)] = Character(
@@ -841,6 +860,8 @@ class HirelingAdded(GameEvent):
             templates=dict(self.templates),
             features=dict(self.features),
             fields=dict(self.fields),
+            skills=dict(self.skills),
+            attack_shock={name: list(pair) for name, pair in self.attack_shock.items()},
             hireling=True,
             employer=self.employer,
             wage=self.wage,
@@ -1771,7 +1792,9 @@ class Struck(GameEvent):
     """A hit on a character after armor. `harm` is what each stat loses: hit points take what they
     can, and any overflow comes off the stat named by `save`, which the target must then save
     against. Under the "roll_vs_defense" hit mode a blow that fails to reach the target's defense
-    is a miss: `hit` is false, `to_hit` is the attack roll, and no harm is done."""
+    is a miss: `hit` is false, `to_hit` is the attack roll, and no harm is done, unless the rule
+    set's shock does harm on a miss, which `shock` is. `defeats` is set when the harm took the
+    stat that decides defeat to 0; `status` is where that leaves the character."""
 
     kind: ClassVar[str] = "combat.struck"
 
@@ -1786,6 +1809,10 @@ class Struck(GameEvent):
     rolled: str = ""
     hit: bool = True
     to_hit: int | None = None
+    # The shock a miss still did, which is part of `harm` above.
+    shock: int = 0
+    defeats: bool = False
+    status: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
@@ -1793,6 +1820,8 @@ class Struck(GameEvent):
             character.harm[stat] = character.harm.get(stat, 0) + amount
         if self.save is not None:
             character.save_due = self.save
+        if self.defeats:
+            character.defeated = True
 
     def render(self) -> str:
         taken = sum(self.harm.values())
@@ -1801,7 +1830,16 @@ class Struck(GameEvent):
             text = f"{self.attacker} swings the {weapon} at {self.name} and misses"
             if self.to_hit is not None:
                 text += f" (rolled {self.to_hit})"
-            return text + "."
+            text += "."
+            if self.shock:
+                text += f" The shock still does {taken} harm"
+                stats = ", ".join(stat.upper() for stat in self.harm)
+                if stats:
+                    text += f" to {stats}"
+                text += "."
+            if self.defeats:
+                text += f" {self.name} is {self.status}."
+            return text
         text = f"{self.attacker} strikes {self.name} with the {weapon} for {self.raw}"
         if self.armor:
             text += f", {self.armor} absorbed by armor"
@@ -1810,6 +1848,8 @@ class Struck(GameEvent):
             text += f" {self.rolled}"
         if self.save is not None:
             text += f" A {self.save.upper()} save is due."
+        if self.defeats:
+            text += f" {self.name} is {self.status}."
         return text
 
 
@@ -2473,6 +2513,92 @@ class MoveMade(GameEvent):
 
 
 @dataclass(frozen=True)
+class CheckMade(GameEvent):
+    """A check rolled outside a move, such as a skill check. `check` is the check's label, and
+    `skill`/`skill_name`/`skill_level` and `stat`/`stat_name` say what was added to the roll.
+    `bonus` is the whole bonus the roll got, and `success` is whether it reached the difficulty."""
+
+    kind: ClassVar[str] = "check.made"
+
+    name: str
+    check: str
+    skill: str = ""
+    skill_name: str = ""
+    skill_level: int = 0
+    stat: str = ""
+    stat_name: str = ""
+    roll: int = 0
+    bonus: int = 0
+    total: int = 0
+    difficulty: int = 0
+    success: bool = False
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        return None
+
+    def render(self) -> str:
+        sign = f"{self.bonus:+d}" if self.bonus else ""
+        used = []
+        if self.skill_name:
+            used.append(f"{self.skill_name} {self.skill_level:+d}")
+        if self.stat_name:
+            used.append(self.stat_name)
+        with_used = f" ({', '.join(used)})" if used else ""
+        result = "succeeds" if self.success else "fails"
+        text = (
+            f"{self.name} makes a {self.check or 'check'}{with_used}: rolls {self.roll}{sign} "
+            f"for {self.total} against difficulty {self.difficulty} and {result}"
+        )
+        if self.cause:
+            text = f"{text} ({self.cause})"
+        return f"{text}."
+
+
+@dataclass(frozen=True)
+class SkillChanged(GameEvent):
+    """A character's level in one skill changed from `before` to `after`."""
+
+    kind: ClassVar[str] = "character.skill_changed"
+
+    name: str
+    skill: str
+    skill_name: str
+    before: int
+    after: int
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].skills[self.skill] = self.after
+
+    def render(self) -> str:
+        text = f"{self.name}'s {self.skill_name} goes from {self.before} to {self.after}"
+        return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
+class StatRestored(GameEvent):
+    """A character recovers `amount` of what it lost from one stat, such as lost hit points. The
+    harm never goes below none."""
+
+    kind: ClassVar[str] = "character.stat_restored"
+
+    name: str
+    stat: str
+    amount: int
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        before = character.harm.get(self.stat, 0)
+        character.harm[self.stat] = max(0, before - self.amount)
+
+    def render(self) -> str:
+        text = f"{self.name} recovers {self.amount} {self.stat.upper()}"
+        return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
 class ClockAdvanced(GameEvent):
     """The campaign clock moved to a new day and part. A player character in a place is there
     at the new time, so the place counts as visited."""
@@ -2944,6 +3070,7 @@ HIDDEN_KINDS: dict[str, bool] = {
     "combat.save_rolled": False,
     "combat.group_break_resolved": False,
     "combat.armor_set": False,
+    "check.made": False,
     "morale.checked": False,
     "retreat.rolled": False,
     "character.fled": False,
@@ -2956,6 +3083,8 @@ HIDDEN_KINDS: dict[str, bool] = {
     "character.retired": False,
     "character.drained": False,
     "character.max_changed": False,
+    "character.skill_changed": False,
+    "character.stat_restored": False,
     "character.advancement_taken": False,
     "character.relation_changed": False,
     "tally.changed": False,

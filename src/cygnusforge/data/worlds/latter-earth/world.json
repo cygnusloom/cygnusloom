@@ -1,0 +1,10 @@
+[
+  {
+    "type": "world",
+    "id": "latter-earth",
+    "name": "Latter Earth",
+    "rule_set": "worldswithoutnumber",
+    "blurb": "A far-future Earth of fallen empires, ancient sorcery, and ruins older than the nations that squat among them.",
+    "description": "The Latter Earth is the far future of a world worn down by ages of empire and sorcery. Broken Works still hum beneath the soil, the descendants of ancient peoples farm the bones of dead megastructures, and the frontier is a patchwork of small kingdoms, cults, and wilderness. This is an empty template: the GM builds the region, kingdom, and starting places with the world-generation tables, then fills the map with locations, NPCs, and adventure hooks."
+  }
+]

@@ -33,6 +33,7 @@ from cygnusforge.content.character import (
 )
 from cygnusforge.content.library import (
     AdvancementRules,
+    CheckRules,
     ClockRules,
     CombatRules,
     ConditionRules,
@@ -63,6 +64,7 @@ from cygnusforge.rules.dice import is_formula
 from cygnusforge.services import advancements as advancements_service
 from cygnusforge.services import aid, combat, encounters, morale
 from cygnusforge.services import attacks as attack_modifiers
+from cygnusforge.services import checks as checks_service
 from cygnusforge.services import clock as clock_service
 from cygnusforge.services import counters as counters_service
 from cygnusforge.services import inventory as inventory_service
@@ -107,6 +109,7 @@ from cygnusforge.services.events import (
     LocationRemoved,
     LocationSummarized,
     LocationUpdated,
+    MaxChanged,
     Note,
     NoteAdded,
     NoteRemoved,
@@ -121,6 +124,8 @@ from cygnusforge.services.events import (
     Region,
     RegionAdded,
     SeasonSet,
+    SkillChanged,
+    StatRestored,
     TravelCharged,
     WorldObject,
     defeat_status,
@@ -138,6 +143,8 @@ from cygnusforge.services.tools import check_arguments
 T = TypeVar("T")
 MAX_NAME = 120
 MAX_STAT = 999
+# The highest level a skill may reach once a character is no longer being created.
+MAX_SKILL = 4
 MAX_TEXT = 2000
 # A player-facing summary of a place: a sentence or two, not the place's full description.
 MAX_SUMMARY = 300
@@ -281,6 +288,8 @@ class WorldTools:
     monsters: Mapping[str, MonsterTemplate] = field(default_factory=dict)
     # The world's own features by id. give_item finds them by name.
     features: Mapping[str, Feature] = field(default_factory=dict)
+    # The rule set's checks by id, such as its skill check.
+    checks: Mapping[str, CheckRules] = field(default_factory=dict)
     # The rule set's conditions by id.
     conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
     dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
@@ -655,7 +664,159 @@ class WorldTools:
                 counters=self.counters,
                 modifier=modifier,
                 stat=stat,
+                spec=self.character,
             )
+
+    def _weapon_feature(self, name: str) -> Feature | None:
+        """The feature a player character's attack with `name` uses: the rule set's weapon feature
+        of that name that deals damage, looked up among the character's features first and then
+        the world's own catalogue."""
+        wanted = name.strip()
+        if not wanted:
+            return None
+        held = next(
+            (
+                feature
+                for feature in self.character.features.values()
+                if same_item_name(feature.name, wanted) and feature.damage
+            ),
+            None,
+        )
+        if held is not None:
+            return held
+        return next(
+            (
+                feature
+                for feature in self.features.values()
+                if same_item_name(feature.name, wanted) and feature.damage
+            ),
+            None,
+        )
+
+    def roll_check(
+        self,
+        check: str,
+        character: str,
+        skill: str = "",
+        stat: str = "",
+        difficulty: int | None = None,
+        modifier: int = 0,
+        cause: str = "",
+    ) -> dict[str, Any]:
+        rules = self.checks.get(check)
+        if rules is None:
+            options = ", ".join(sorted(self.checks)) or "none"
+            raise InvalidInput(f"there is no check named {check!r}; the checks are: {options}")
+        with session_scope(self.engine) as db:
+            return checks_service.roll_check(
+                db,
+                self.campaign_id,
+                character,
+                rules,
+                self.character,
+                self.rng,
+                plus=self.plus,
+                skill=skill,
+                stat=stat,
+                difficulty=difficulty,
+                modifier=modifier,
+                cause=cause,
+            )
+
+    def raise_skill(self, name: str, skill: str, level: int, cause: str = "") -> dict[str, Any]:
+        found = self.character.skills.get(skill)
+        if found is None:
+            options = ", ".join(sorted(self.character.skills)) or "none"
+            raise InvalidInput(
+                f"there is no skill named {skill!r}; the rule set's skills are: {options}"
+            )
+        new_level = whole_number(level, "level", 0, MAX_SKILL)
+        with session_scope(self.engine) as db:
+            character = _character_named(load_state(db, self.campaign_id), name)
+            before = self.character.skill_level(character.skills, skill)
+            if new_level <= before:
+                raise InvalidInput(
+                    f"{character.name}'s {found.name} is already at level {before}; "
+                    "raise_skill only raises a skill"
+                )
+            record(
+                db,
+                self.campaign_id,
+                SkillChanged(
+                    name=character.name,
+                    skill=skill,
+                    skill_name=found.name,
+                    before=before,
+                    after=new_level,
+                    cause=bounded_text(cause, "cause", MAX_TEXT),
+                ),
+            )
+            db.commit()
+            return {
+                "character": character.name,
+                "skill": skill,
+                "skill_name": found.name,
+                "before": before,
+                "level": new_level,
+            }
+
+    def restore_stat(self, name: str, stat: str, amount: int, cause: str = "") -> dict[str, Any]:
+        value = whole_number(amount, "amount", 1, MAX_STAT)
+        with session_scope(self.engine) as db:
+            character = _character_named(load_state(db, self.campaign_id), name)
+            if stat not in character.stats:
+                options = ", ".join(sorted(character.stats)) or "none"
+                raise InvalidInput(
+                    f"{character.name} has no stat {stat!r}; the stats are: {options}"
+                )
+            before = character.harm.get(stat, 0)
+            record(
+                db,
+                self.campaign_id,
+                StatRestored(
+                    name=character.name,
+                    stat=stat,
+                    amount=value,
+                    cause=bounded_text(cause, "cause", MAX_TEXT),
+                ),
+            )
+            db.commit()
+            restored = min(value, before)
+            return {
+                "character": character.name,
+                "stat": stat,
+                "restored": restored,
+                "current": character.stats.get(stat, 0) - max(0, before - value),
+            }
+
+    def set_stat_max(self, name: str, stat: str, value: int, cause: str = "") -> dict[str, Any]:
+        new_value = whole_number(value, "value", 0, MAX_STAT)
+        with session_scope(self.engine) as db:
+            character = _character_named(load_state(db, self.campaign_id), name)
+            if stat not in character.stats:
+                options = ", ".join(sorted(character.stats)) or "none"
+                raise InvalidInput(
+                    f"{character.name} has no stat {stat!r}; the stats are: {options}"
+                )
+            before = character.stats[stat]
+            record(
+                db,
+                self.campaign_id,
+                MaxChanged(
+                    name=character.name,
+                    stat=stat,
+                    before=before,
+                    after=new_value,
+                    cause=bounded_text(cause, "cause", MAX_TEXT),
+                ),
+            )
+            db.commit()
+            return {
+                "character": character.name,
+                "stat": stat,
+                "before": before,
+                "maximum": new_value,
+            }
 
     def adjust_counter(self, character: str, counter: str, change: int) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -1187,7 +1348,13 @@ class WorldTools:
     def start_encounter(self, map: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return encounters.start_encounter(
-                db, self.campaign_id, map, rolls_initiative=self.combat is not None
+                db,
+                self.campaign_id,
+                map,
+                rolls_initiative=self.combat is not None,
+                combat=self.combat,
+                character=self.character,
+                rng=self.rng,
             )
 
     def end_encounter(self) -> dict[str, Any]:
@@ -1279,6 +1446,8 @@ class WorldTools:
                 self.rng,
                 modifier,
                 plus=self.plus,
+                spec=self.character,
+                weapon_feature=self._weapon_feature(weapon),
             )
 
     def attack_dice(self, weapon: str, modifier: str = "") -> str:
@@ -1323,6 +1492,11 @@ class WorldTools:
             return combat.harm_character(
                 db, self.campaign_id, name, stat, amount, cause, self._rules()
             )
+
+    def set_debug_stat(self, name: str, stat: str, remaining: int) -> dict[str, Any]:
+        """Set a player character's current score for one stat, for testing damage rules."""
+        with session_scope(self.engine) as db:
+            return combat.set_debug_stat(db, self.campaign_id, name, stat, remaining)
 
     def add_condition(self, name: str, condition: str, cause: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -1606,7 +1780,8 @@ def create_player_character(
     pronouns = bounded_text(pronouns, "pronouns", MAX_NAME)
     _ensure_free_name(state, name)
     chosen = submitted.get("stats", {})
-    if set(chosen) != set(spec.stats):
+    rolled_stats = {s.id for s in spec.stats.values() if s.derived is None}
+    if set(chosen) != rolled_stats:
         raise InvalidInput("every stat needs a value")
     try:
         check_swaps(spec, rolled, chosen)
@@ -1628,7 +1803,8 @@ def create_player_character(
             ):
                 carried.append((feature, starting.pop(feature_id)))
     record(db, campaign_id, PcAdded(name=name, pronouns=pronouns, **fields))
-    armor = 0
+    # Focus and other feature effects add to the armor the carried features give.
+    armor = sheet.armor
     for feature, count in carried:
         for _ in range(count):
             inventory_service.carry_item(
@@ -1920,6 +2096,7 @@ def hire_hireling(
             templates=dict(event.templates),
             features=dict(event.features),
             fields=dict(event.fields),
+            skills=dict(event.skills),
         ),
     )
     db.commit()
@@ -2021,7 +2198,7 @@ def create_monster(
         0,
         armor_max or combat.UNCAPPED_ARMOR,
     )
-    attack_map, flag_map = _attack_table(attacks, base)
+    attack_map, flag_map, shock_map = _attack_table(attacks, base)
     event = NpcAdded(
         name=name,
         location=where.name,
@@ -2033,6 +2210,7 @@ def create_monster(
         armor=armor_value,
         attacks=attack_map,
         attack_flags=flag_map,
+        attack_shock=shock_map,
         creature=base.name if base else "",
         large_group=(detachment if detachment is not None else bool(base and base.large_group)),
         rules=list(base.rules) if base else [],
@@ -2048,35 +2226,46 @@ def create_monster(
         "armor": armor_value,
         "attacks": attack_map,
         "attack_flags": flag_map,
+        "attack_shock": shock_map,
         "detachment": event.large_group,
     }
 
 
 def _attack_table(
     attacks: Sequence[Mapping[str, Any]] | None, base: MonsterTemplate | None
-) -> tuple[dict[str, str], dict[str, list[str]]]:
+) -> tuple[dict[str, str], dict[str, list[str]], dict[str, list[int]]]:
     """The attacks an NPC gets: the given ones, else the statblock's, else none. Returns the dice by
-    attack name and the flags of the attacks that have any."""
+    attack name, the flags of the attacks that have any, and the Shock and the armor it shocks
+    through, by attack name."""
     if attacks is not None:
         return _attacks(attacks)
     if base is None:
-        return {}, {}
-    return dict(base.attacks), {name: list(flags) for name, flags in base.attack_flags.items()}
+        return {}, {}, {}
+    return (
+        dict(base.attacks),
+        {name: list(flags) for name, flags in base.attack_flags.items()},
+        {name: list(pair) for name, pair in base.attack_shock.items()},
+    )
 
 
 def _attacks(
     attacks: Sequence[Mapping[str, Any]],
-) -> tuple[dict[str, str], dict[str, list[str]]]:
-    """Each attack is {"name", "dice", "flags"}. Its dice must be a formula such as '1d8' or
-    '1d6+1d6', and flags is an optional list of names from ATTACK_FLAGS, each listed once. Returns
-    the dice by attack name and the flags of the attacks that have any."""
+) -> tuple[dict[str, str], dict[str, list[str]], dict[str, list[int]]]:
+    """Each attack is {"name", "dice", "flags", "shock", "shock_ac"}. Its dice must be a formula
+    such as '1d8' or '1d6+1d6'; flags is an optional list of names from ATTACK_FLAGS, each listed
+    once; and shock and shock_ac say what it does to a target it misses whose armor is low enough.
+    A Shock value needs a shock_ac. Returns the dice, the flags, and the shock of the attacks that
+    have any."""
     checked: dict[str, str] = {}
     flags_by_attack: dict[str, list[str]] = {}
+    shock_by_attack: dict[str, list[int]] = {}
     seen: set[str] = set()
     for attack in attacks:
         label = bounded_text(attack.get("name", ""), "attack name", MAX_NAME)
         dice = attack.get("dice", "")
         flags = attack.get("flags", [])
+        shock = attack.get("shock", 0)
+        shock_ac = attack.get("shock_ac", 0)
         if label.casefold() in seen:
             raise InvalidInput(f"attack {label!r} is listed twice")
         if not isinstance(dice, str) or not is_formula(dice):
@@ -2087,11 +2276,19 @@ def _attacks(
         if unknown or len(set(flags)) != len(flags):
             options = ", ".join(ATTACK_FLAGS)
             raise InvalidInput(f"attack {label!r} flags must each be listed once, from: {options}")
+        shock_value = whole_number(shock, f"attack {label!r} shock", 0, MAX_STAT)
+        shock_ac_value = whole_number(shock_ac, f"attack {label!r} shock_ac", 0, MAX_STAT)
+        if shock_value and not shock_ac_value:
+            raise InvalidInput(
+                f"attack {label!r} gives Shock, so it needs the AC it shocks through"
+            )
         seen.add(label.casefold())
         checked[label] = dice
         if flags:
             flags_by_attack[label] = list(flags)
-    return checked, flags_by_attack
+        if shock_value:
+            shock_by_attack[label] = [shock_value, shock_ac_value]
+    return checked, flags_by_attack, shock_by_attack
 
 
 def _flag_text(flags: Sequence[str]) -> str:
@@ -2123,6 +2320,7 @@ def _with_statblock(event: NpcAdded, base: MonsterTemplate) -> NpcAdded:
         armor=base.armor,
         attacks=dict(base.attacks),
         attack_flags={name: list(flags) for name, flags in base.attack_flags.items()},
+        attack_shock={name: list(pair) for name, pair in base.attack_shock.items()},
         creature=base.name,
         large_group=base.large_group,
         rules=list(dict.fromkeys([*event.rules, *base.rules])),
@@ -2177,6 +2375,7 @@ def search_monster(
             "armor": monster.armor,
             "attacks": dict(monster.attacks),
             "attack_flags": {name: list(flags) for name, flags in monster.attack_flags.items()},
+            "attack_shock": {name: list(pair) for name, pair in monster.attack_shock.items()},
         }
         for monster in monsters.values()
         if _has_words(words, monster.id, monster.name, monster.description)
@@ -2324,7 +2523,7 @@ def update_npc(
             raise InvalidInput(str(error)) from error
         sheet = resolve(spec, character or {}, rng, plus=plus)
         _check_sheet_text(sheet)
-        attack_map, attack_flags = _attacks(attacks or [])
+        attack_map, attack_flags, attack_shock = _attacks(attacks or [])
         statted = NpcStatted(
             name=npc.name,
             armor=0
@@ -2332,6 +2531,7 @@ def update_npc(
             else whole_number(armor, "armor", 0, armor_max or combat.UNCAPPED_ARMOR),
             attacks=attack_map,
             attack_flags=attack_flags,
+            attack_shock=attack_shock,
             **_sheet_fields(sheet),
         )
     if text_given:
@@ -2759,7 +2959,7 @@ def _combat_lines(character: Character, spec: CharacterSpec, combat: CombatRules
             )
     if character.attacks:
         attacks = ", ".join(
-            f"{name} {formula}{_flag_text(character.attack_flags.get(name, ()))}"
+            f"{name} {formula}{_flag_text(character.attack_flags.get(name, ()))}{_shock_text(character, name)}"
             for name, formula in character.attacks.items()
         )
         lines.append(f"Attacks: {attacks}")
@@ -2785,6 +2985,14 @@ def _required[T](value: T | None, what: str) -> T:
     if value is None:
         raise InvalidInput(f"this rule set does not track {what}")
     return value
+
+
+def _shock_text(character: Character, attack: str) -> str:
+    """An attack's Shock as a suffix for the record, such as " (Shock 2 / AC 13)", or ""."""
+    pair = character.attack_shock.get(attack) or ()
+    if len(pair) < 2 or not pair[0]:
+        return ""
+    return f" (Shock {pair[0]} / AC {pair[1]})"
 
 
 def _status_lines(
@@ -3295,6 +3503,7 @@ def _npc_event(
         sheet = resolve(spec, character or {}, rng, plus=plus)
         _check_sheet_text(sheet)
         sheet_fields = _sheet_fields(sheet)
+        sheet_fields["armor"] = sheet.armor
     return NpcAdded(
         name=name,
         location=location,
@@ -3316,6 +3525,7 @@ def _sheet_fields(sheet: Sheet) -> dict[str, Any]:
         "features": dict(sheet.features),
         "fields": dict(sheet.fields),
         "counters": dict(sheet.counters),
+        "skills": dict(sheet.skills),
     }
 
 
@@ -3326,6 +3536,7 @@ def _sheet_of(character: Character) -> Sheet:
         features=character.features,
         fields=character.fields,
         counters=character.counters,
+        skills=character.skills,
     )
 
 

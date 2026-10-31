@@ -91,7 +91,7 @@ def test_character_creation_keeps_the_sidebar_but_not_the_chat(
     assert 'class="view creation"' in page
     assert 'class="sidebar"' in page
     assert 'data-view-target="journal"' in page
-    assert 'data-side-toggle' not in page
+    assert "data-side-toggle" not in page
     assert 'class="workspace"' not in page
     assert 'class="chat"' not in page
     assert 'class="side"' not in page

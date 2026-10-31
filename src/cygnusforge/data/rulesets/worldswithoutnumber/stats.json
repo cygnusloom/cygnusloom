@@ -1,0 +1,171 @@
+[
+  {
+    "type": "stat",
+    "id": "str",
+    "name": "Strength",
+    "formula": "3d6",
+    "swap_group": "attributes",
+    "modifier": [
+      { "min": 3, "modifier": -2 },
+      { "min": 4, "modifier": -1 },
+      { "min": 8, "modifier": 0 },
+      { "min": 14, "modifier": 1 },
+      { "min": 18, "modifier": 2 }
+    ]
+  },
+  {
+    "type": "stat",
+    "id": "dex",
+    "name": "Dexterity",
+    "formula": "3d6",
+    "swap_group": "attributes",
+    "modifier": [
+      { "min": 3, "modifier": -2 },
+      { "min": 4, "modifier": -1 },
+      { "min": 8, "modifier": 0 },
+      { "min": 14, "modifier": 1 },
+      { "min": 18, "modifier": 2 }
+    ]
+  },
+  {
+    "type": "stat",
+    "id": "con",
+    "name": "Constitution",
+    "formula": "3d6",
+    "swap_group": "attributes",
+    "modifier": [
+      { "min": 3, "modifier": -2 },
+      { "min": 4, "modifier": -1 },
+      { "min": 8, "modifier": 0 },
+      { "min": 14, "modifier": 1 },
+      { "min": 18, "modifier": 2 }
+    ]
+  },
+  {
+    "type": "stat",
+    "id": "int",
+    "name": "Intelligence",
+    "formula": "3d6",
+    "swap_group": "attributes",
+    "modifier": [
+      { "min": 3, "modifier": -2 },
+      { "min": 4, "modifier": -1 },
+      { "min": 8, "modifier": 0 },
+      { "min": 14, "modifier": 1 },
+      { "min": 18, "modifier": 2 }
+    ]
+  },
+  {
+    "type": "stat",
+    "id": "wis",
+    "name": "Wisdom",
+    "formula": "3d6",
+    "swap_group": "attributes",
+    "modifier": [
+      { "min": 3, "modifier": -2 },
+      { "min": 4, "modifier": -1 },
+      { "min": 8, "modifier": 0 },
+      { "min": 14, "modifier": 1 },
+      { "min": 18, "modifier": 2 }
+    ]
+  },
+  {
+    "type": "stat",
+    "id": "cha",
+    "name": "Charisma",
+    "formula": "3d6",
+    "swap_group": "attributes",
+    "modifier": [
+      { "min": 3, "modifier": -2 },
+      { "min": 4, "modifier": -1 },
+      { "min": 8, "modifier": 0 },
+      { "min": 14, "modifier": 1 },
+      { "min": 18, "modifier": 2 }
+    ]
+  },
+  {
+    "type": "stat",
+    "id": "hp",
+    "name": "Hit Points",
+    "formula": "1d6",
+    "plus_modifier": "con"
+  },
+  {
+    "type": "stat",
+    "id": "attack_bonus",
+    "name": "Attack Bonus",
+    "formula": "1d1"
+  },
+  {
+    "type": "stat",
+    "id": "castings",
+    "name": "Castings",
+    "formula": "1d1"
+  },
+  {
+    "type": "stat",
+    "id": "morale",
+    "name": "Morale",
+    "formula": "1d1"
+  },
+  {
+    "type": "stat",
+    "id": "strain",
+    "name": "System Strain",
+    "derived": { "base": 0, "best_score": ["con"] }
+  },
+  {
+    "type": "stat",
+    "id": "effort_high",
+    "name": "High Magic Effort",
+    "derived": { "base": 1, "best_modifier": ["int", "cha"], "plus_skills": ["magic"] }
+  },
+  {
+    "type": "stat",
+    "id": "effort_necromancer",
+    "name": "Necromantic Effort",
+    "derived": { "base": 1, "best_modifier": ["int", "cha"], "plus_skills": ["magic"] }
+  },
+  {
+    "type": "stat",
+    "id": "effort_elemental",
+    "name": "Elementalist Effort",
+    "derived": { "base": 1, "best_modifier": ["int", "cha"], "plus_skills": ["magic"] }
+  },
+  {
+    "type": "stat",
+    "id": "save_physical",
+    "name": "Physical Save",
+    "derived": {
+      "base": 16,
+      "minus_counters": ["level"],
+      "best_modifier": ["str", "con"]
+    }
+  },
+  {
+    "type": "stat",
+    "id": "save_evasion",
+    "name": "Evasion Save",
+    "derived": {
+      "base": 16,
+      "minus_counters": ["level"],
+      "best_modifier": ["int", "dex"]
+    }
+  },
+  {
+    "type": "stat",
+    "id": "save_mental",
+    "name": "Mental Save",
+    "derived": {
+      "base": 16,
+      "minus_counters": ["level"],
+      "best_modifier": ["wis", "cha"]
+    }
+  },
+  {
+    "type": "stat",
+    "id": "save_luck",
+    "name": "Luck Save",
+    "derived": { "base": 16, "minus_counters": ["level"] }
+  }
+]

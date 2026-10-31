@@ -228,12 +228,12 @@ def test_the_player_roll_uses_the_given_generator(
     assert activity.startswith(f"You rolled {expected} ")
 
 
-@pytest.mark.parametrize("formula", ["1d20", "2d6", "10d100"])
+@pytest.mark.parametrize("formula", ["1d20", "2d6", "10d100", "2d6+1", "1d6-1", "2d8+1d6+3"])
 def test_valid_formulas(formula: str):
     assert is_formula(formula)
 
 
-@pytest.mark.parametrize("formula", ["d20", "1d", "0d6", "1d0", "2d6+1", "", None, 20])
+@pytest.mark.parametrize("formula", ["d20", "1d", "0d6", "1d0", "+1", "", None, 20])
 def test_invalid_formulas(formula: object):
     assert not is_formula(formula)
 
