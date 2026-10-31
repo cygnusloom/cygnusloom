@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 from dataclasses import replace
 
@@ -192,10 +193,25 @@ def test_create_rejects_blank_name(client_factory: Callable[[], TestClient]):
 def test_new_campaign_form_offers_world_and_rule_set(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
     page = client.get("/campaigns/new").text
-    assert '<select name="world_template" required>' in page
-    assert '<option value="testhollow">Test Hollow</option>' in page
     assert '<select name="rule_set" required>' in page
-    assert '<option value="rolltest">Roll Test</option>' in page
+    assert '<select name="world_template" required>' in page
+    assert '<option value="testhollow"' in page
+    assert '<option value="rolltest"' in page
+
+
+def test_new_campaign_form_asks_for_the_rule_set_first(client_factory: Callable[[], TestClient]):
+    client = _signed_in(client_factory)
+    page = client.get("/campaigns/new").text
+    assert page.index('name="rule_set"') < page.index('name="world_template"')
+
+
+def test_new_campaign_form_shows_a_blurb_for_each_rule_set_and_world(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    page = client.get("/campaigns/new").text
+    assert 'data-blurb="Test-only rule set with a player roll.' in page
+    assert 'data-blurb="A magical forest of mushroom gnomes.' in page
 
 
 def test_campaign_shows_the_world_and_rule_set_it_was_created_with(
@@ -218,6 +234,33 @@ def test_create_rejects_unknown_rule_set(client_factory: Callable[[], TestClient
     response = _new_campaign(client, rule_set="d20-everything")
     assert response.status_code == 400
     assert "rule set is not available" in response.text
+
+
+def test_create_rejects_a_rule_set_the_world_is_not_played_with(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, world_template="twin-lakes", rule_set="hogwarts-rpg")
+    assert response.status_code == 400
+    assert "only works with the Cairn 2e rule set" in response.text
+
+
+def test_new_campaign_form_marks_a_world_that_names_its_rule_set(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    page = client.get("/campaigns/new").text
+    assert '<option value="twin-lakes" data-rule-set="cairn2e"' in page
+    assert "/static/new_campaign.js" in page
+
+
+def test_new_campaign_form_starts_on_a_rule_set_and_a_world_that_fits(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    page = client.get("/campaigns/new").text
+    assert re.search(r'<option value="cairn2e"[^>]* selected', page)
+    assert re.search(r'<option value="testhollow"[^>]* selected', page)
 
 
 def test_create_stores_the_chosen_settings(client_factory: Callable[[], TestClient]):

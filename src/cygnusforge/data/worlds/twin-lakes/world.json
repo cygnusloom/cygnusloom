@@ -3,6 +3,8 @@
     "type": "world",
     "id": "twin-lakes",
     "name": "Twin Lakes",
+    "rule_set": "cairn2e",
+    "blurb": "A mystery around the Twin Lakes: a butcher has vanished, and a tithingman is overdue with the tithe.",
     "description": "The Twin Lakes region near Isthmus Town in Vald, where a butcher has vanished without a trace and a tithingman has not come home with the tithe.",
     "start": {
       "location": "isthmus-town",

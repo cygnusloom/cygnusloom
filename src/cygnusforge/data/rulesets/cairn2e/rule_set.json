@@ -3,6 +3,7 @@
     "type": "rule_set",
     "id": "cairn2e",
     "name": "Cairn 2e",
+    "blurb": "A rules-light game of desperate survival in a dark, weird wilderness. Roll 3d6 for your attributes and see how long you last.",
     "plus": "highest",
     "condition_ends": ["rest", "extended_rest", "aid", "time"],
     "npc_hp_stat": "hp",

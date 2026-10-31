@@ -355,11 +355,15 @@ def create_campaign(
         raise InvalidInput("that rule set is not available")
     if model not in allowed_models:
         raise InvalidInput("that model is not available")
+    template = library.world_templates[world_template]
+    if template.rule_set is not None and rule_set != template.rule_set:
+        raise InvalidInput(
+            f"that world only works with the {library.rule_sets[template.rule_set].name} rule set"
+        )
     try:
         content = library.world_content(world_template, rule_set)
     except ContentError as error:
         raise InvalidInput(f"that world does not work with that rule set: {error}") from error
-    template = library.world_templates[world_template]
     with session_scope(engine) as db:
         campaign = Campaign(
             owner_id=owner_id,

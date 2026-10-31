@@ -144,6 +144,16 @@ def test_bundled_content_loads():
     assert library.world_content("twin-lakes", "cairn2e").monsters
 
 
+def test_bundled_worlds_say_which_rule_set_they_use():
+    library = ContentLibrary.load()
+    assert library.world_templates["twin-lakes"].rule_set == "cairn2e"
+    assert library.world_templates["hogwarts"].rule_set == "hogwarts-rpg"
+    assert library.world_templates["twin-lakes"].blurb
+    assert library.world_templates["hogwarts"].blurb
+    assert library.rule_sets["cairn2e"].blurb
+    assert library.rule_sets["hogwarts-rpg"].blurb
+
+
 def test_hogwarts_world_has_a_map_the_gm_can_grow():
     """Every top-level place in the Hogwarts world has a map point, and its ground is drawn from
     kinds the rule set defines, so the world map shows the grounds and the GM can add regions."""
@@ -411,6 +421,12 @@ def test_world_needs_a_name(tree: Path):
         ContentLibrary.load(tree)
 
 
+def test_rule_set_blurb_is_read(tree: Path):
+    rule_set = [{**_rule_set()[0], "blurb": "A short line."}]
+    _write(tree, {"rulesets/testset/rule_set.json": rule_set})
+    assert ContentLibrary.load(tree).rule_sets["testset"].blurb == "A short line."
+
+
 def test_rule_set_id_must_match_its_directory(tree: Path):
     _write(tree, {"rulesets/testset/rule_set.json": _rule_set(ident="other")})
     with pytest.raises(ContentError, match="must match the directory name"):
@@ -640,6 +656,25 @@ def test_world_needs_no_locations_or_npcs(tree: Path):
     world = ContentLibrary.load(tree).world_templates["testland"]
     assert world.locations == ()
     assert world.npcs == ()
+
+
+def test_world_reads_the_rule_set_it_is_played_with(tree: Path):
+    world = [{**_world()[0], "rule_set": "testset", "blurb": "A short line."}]
+    _write(tree, {"worlds/testland/world.json": world})
+    loaded = ContentLibrary.load(tree).world_templates["testland"]
+    assert loaded.rule_set == "testset"
+    assert loaded.blurb == "A short line."
+
+
+def test_world_may_name_no_rule_set(tree: Path):
+    assert ContentLibrary.load(tree).world_templates["testland"].rule_set is None
+
+
+def test_world_rule_set_must_be_available(tree: Path):
+    world = [{**_world()[0], "rule_set": "nowhere"}]
+    _write(tree, {"worlds/testland/world.json": world})
+    with pytest.raises(ContentError, match="world names unknown rule set 'nowhere'"):
+        ContentLibrary.load(tree)
 
 
 def test_npc_must_be_in_a_declared_location(tree: Path):

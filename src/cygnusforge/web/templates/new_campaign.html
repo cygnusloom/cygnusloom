@@ -10,22 +10,28 @@
         <input type="text" name="name" value="{{ campaign_name }}" required maxlength="120">
       </label>
       <label>
-        World
-        <select name="world_template" required>
-          {% for world in world_templates %}
-            <option value="{{ world.id }}"{% if world.id == selected_world %} selected{% endif %}>{{ world.name }}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <label>
         Rule set
         <select name="rule_set" required>
           {% for rule_set in rule_sets %}
-            <option value="{{ rule_set.id }}"{% if rule_set.id == selected_rule_set %} selected{% endif %}>{{ rule_set.name }}</option>
+            <option value="{{ rule_set.id }}" data-blurb="{{ rule_set.blurb or rule_set.description }}"{% if rule_set.id == selected_rule_set %} selected{% endif %}>{{ rule_set.name }}</option>
           {% endfor %}
         </select>
       </label>
+      <p class="muted" data-blurb-for="rule_set">{{ selected_rule_set_blurb }}</p>
+      <label>
+        World
+        <select name="world_template" required>
+          {% for world in world_templates %}
+            <option value="{{ world.id }}"{% if world.rule_set %} data-rule-set="{{ world.rule_set }}"{% endif %} data-blurb="{{ world.blurb or world.description }}"{% if world.id == selected_world %} selected{% endif %}>{{ world.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <p class="muted" data-blurb-for="world_template">{{ selected_world_blurb }}</p>
       <button type="submit">Create</button>
     </form>
   </section>
+{% endblock %}
+{% block scripts %}
+  {{ super() }}
+  <script src="/static/new_campaign.js"></script>
 {% endblock %}

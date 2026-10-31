@@ -3,6 +3,8 @@
     "type": "world",
     "id": "hogwarts",
     "name": "Hogwarts & Grounds",
+    "rule_set": "hogwarts-rpg",
+    "blurb": "The castle, the lake, the Forbidden Forest, and Hogsmeade village, seen through a student's eyes.",
     "description": "Hogwarts School of Witchcraft and Wizardry and the grounds around it: the castle, the lake, the Forbidden Forest, and the village of Hogsmeade just beyond the gates.",
     "start": {
       "location": "great-hall",

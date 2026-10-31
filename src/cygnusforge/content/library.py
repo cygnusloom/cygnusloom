@@ -121,6 +121,10 @@ class WorldTemplate:
     description: str
     locations: tuple[LocationTemplate, ...]
     npcs: tuple[NpcTemplate, ...]
+    # The rule set the world is built for, or None when it may be played with any.
+    rule_set: str | None = None
+    # A short line shown when choosing the world on the create campaign page.
+    blurb: str | None = None
     # The world's monsters, tables, features, and rules, as definitions. They are checked against
     # each rule set in WorldContent, since a monster's stats depend on the rule set.
     definitions: tuple[Definition, ...] = ()
@@ -1027,6 +1031,8 @@ class RuleSet:
     encounter_templates: Mapping[str, EncounterTemplate] = field(default_factory=dict)
     # Kinds of ground a world map can be divided into, by id.
     world_terrain: Mapping[str, WorldTerrain] = field(default_factory=dict)
+    # A short line shown when choosing the rule set on the create campaign page.
+    blurb: str | None = None
 
 
 @dataclass(frozen=True)
@@ -1069,6 +1075,9 @@ class ContentLibrary:
             for d in rule_set_dirs
             if d.name != CORE_RULE_SET and _has_definitions(d)
         }
+        for world in worlds.values():
+            if world.rule_set is not None and world.rule_set not in rule_sets:
+                raise ContentError(f"{world.id}: world names unknown rule set {world.rule_set!r}")
         return cls(world_templates=worlds, rule_sets=rule_sets, core=core)
 
 
@@ -1136,6 +1145,8 @@ def _load_world(directory: Path) -> WorldTemplate:
         id=world.id,
         name=required_text(world.data, "name", label),
         description=required_text(world.data, "description", label),
+        rule_set=_optional_text(world.data, "rule_set", label),
+        blurb=_optional_text(world.data, "blurb", label),
         locations=locations,
         npcs=npcs,
         definitions=(*own, *statblocks),
@@ -1714,6 +1725,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         id=head.id,
         name=required_text(head.data, "name", label),
         description=required_text(head.data, "description", label),
+        blurb=_optional_text(head.data, "blurb", label),
         rules=rules,
         attached_rules=written,
         important=important,

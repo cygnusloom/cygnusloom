@@ -3,6 +3,7 @@
     "type": "rule_set",
     "id": "hogwarts-rpg",
     "name": "Hogwarts RPG",
+    "blurb": "Students at Hogwarts: lessons, houses, friendships, and the Narrator's serious consequences.",
     "description": "A Hogwarts RPG campaign: students at the school, its houses, magic, and the Narrator's Serious Consequences, played with the Powered by the Apocalypse engine.",
     "plus": "sum"
   }
