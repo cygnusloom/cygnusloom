@@ -9,6 +9,7 @@ from markupsafe import Markup
 from starlette.responses import Response
 from starlette.templating import Jinja2Templates
 
+from cygnusforge import __version__
 from cygnusforge.auth.deps import current_user, get_csrf, is_admin_user
 from cygnusforge.services.accounts import decode_roles
 from cygnusforge.web.icons import icon_path, item_icon_id, place_icon_path
@@ -42,6 +43,7 @@ def render(request: Request, name: str, status_code: int = 200, **context: Any) 
         "flash": request.session.pop("flash", None),
         "step_up_done": request.session.pop("step_up_done", False),
         "oidc_account_url": request.app.state.settings.oidc_account_url,
+        "app_version": __version__,
         **context,
     }
     return templates.TemplateResponse(request, name, values, status_code=status_code)

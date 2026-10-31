@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlmodel import Session, select
 
+import cygnusforge
 from cygnusforge.config import Settings
 from cygnusforge.db.models import Campaign, Event, LlmModel, User
 from cygnusforge.db.session import create_schema, make_engine
@@ -90,6 +91,15 @@ def test_dashboard_counts_accounts_campaigns_and_events(settings: Settings):
     assert data.campaigns_by_model == (("fake/scripted", 1),)
     assert data.recent_users[0].email == "ada@example.com"
     assert data.recent_campaigns[0].campaign.name == "The Long Road"
+
+
+def test_dashboard_shows_version(settings: Settings):
+    client = _admin_client(settings)
+    register(client, "admin@example.com")
+
+    page = client.get("/admin")
+    assert page.status_code == 200
+    assert f"Cygnus Forge version {cygnusforge.__version__}" in page.text
 
 
 def test_search_users_matches_email_name_and_status(settings: Settings):
