@@ -13,4 +13,4 @@ Review the `cygnusforge-philosophy` skill before starting any development task.
 4. Review the change to ensure it meets the design and quality standards, test after making any improvements.
 5. Commit once the change is tested. Check ISSUE_TRACKER.md to ensure all related issues are updated or removed.
 6. If you changed anything affecting the database, remove the existing cygnusforge.db file to ensure a fresh state for manual testing.
-7. THERE IS NO BACKWARDS COMPATIBILITY; we are still Version 0 at this point, so breaking changes are acceptable.
+7. From 1.0.0 on, keep changes backwards compatible; breaking changes need a major version bump.
