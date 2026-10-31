@@ -6,10 +6,6 @@
     <form method="post" action="/campaigns/new">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <label>
-        Name
-        <input type="text" name="name" value="{{ campaign_name }}" required maxlength="120">
-      </label>
-      <label>
         Rule set
         <select name="rule_set" required>
           {% for rule_set in rule_sets %}
@@ -22,11 +18,15 @@
         World
         <select name="world_template" required>
           {% for world in world_templates %}
-            <option value="{{ world.id }}"{% if world.rule_set %} data-rule-set="{{ world.rule_set }}"{% endif %} data-blurb="{{ world.blurb or world.description }}"{% if world.id == selected_world %} selected{% endif %}>{{ world.name }}</option>
+            <option value="{{ world.id }}"{% if world.rule_set %} data-rule-set="{{ world.rule_set }}"{% endif %} data-label="{{ world_labels.get(world.id, '') }}" data-blurb="{{ world.blurb or world.description }}"{% if world.id == selected_world %} selected{% endif %}>{{ world.name }}</option>
           {% endfor %}
         </select>
       </label>
       <p class="muted" data-blurb-for="world_template">{{ selected_world_blurb }}</p>
+      <label>
+        Label
+        <input type="text" name="label" value="{{ campaign_label }}" maxlength="120">
+      </label>
       <button type="submit">Create</button>
     </form>
   </section>

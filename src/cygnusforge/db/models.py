@@ -82,8 +82,9 @@ class AdminAudit(SQLModel, table=True):
 
 
 class Campaign(SQLModel, table=True):
-    """A chat owned by one account. `model` is the LLM every reply in the chat uses, and it can
-    be switched at any time. It is configuration, not part of the log.
+    """A chat owned by one account. `name` is the campaign's label: the name the campaign list
+    shows, which the player can change. `model` is the LLM every reply in the chat uses, and it
+    can be switched at any time. It is configuration, not part of the log.
 
     `world_template` and `rule_set` name directories under the bundled content."""
 

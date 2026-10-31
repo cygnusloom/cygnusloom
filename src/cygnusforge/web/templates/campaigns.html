@@ -10,18 +10,26 @@
       <ul class="campaigns">
         {% for campaign in campaigns %}
           <li>
-            <details class="campaign-delete">
-              <summary>
-                <a href="/campaigns/{{ campaign.id }}">{{ campaign.name }}</a>
-                <span class="campaign-delete-label">Delete</span>
-              </summary>
-              <form method="post" action="/campaigns/{{ campaign.id }}/delete" class="campaign-delete-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <p class="muted">This permanently deletes the campaign and everything in it. Type <strong>{{ campaign.name }}</strong> to confirm.</p>
-                <label>Campaign name <input type="text" name="confirm" required autocomplete="off"></label>
-                <button type="submit" class="danger">Delete campaign</button>
-              </form>
-            </details>
+            <div class="campaign-row">
+              <a href="/campaigns/{{ campaign.id }}">{{ campaign.name }}</a>
+              <details class="campaign-label">
+                <summary aria-label="Edit label for {{ campaign.name }}">Edit label</summary>
+                <form method="post" action="/campaigns/{{ campaign.id }}/label" class="campaign-label-form">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <label>Label <input type="text" name="label" value="{{ campaign.name }}" required maxlength="120"></label>
+                  <button type="submit" class="secondary">Save</button>
+                </form>
+              </details>
+              <details class="campaign-delete">
+                <summary class="campaign-delete-label" aria-label="Delete {{ campaign.name }}">Delete</summary>
+                <form method="post" action="/campaigns/{{ campaign.id }}/delete" class="campaign-delete-form">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <p class="muted">This permanently deletes the campaign and everything in it. Type <strong>{{ campaign.name }}</strong> to confirm.</p>
+                  <label>Campaign label <input type="text" name="confirm" required autocomplete="off"></label>
+                  <button type="submit" class="danger">Delete campaign</button>
+                </form>
+              </details>
+            </div>
           </li>
         {% endfor %}
       </ul>

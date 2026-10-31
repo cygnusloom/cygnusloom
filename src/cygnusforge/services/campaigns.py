@@ -4,6 +4,7 @@ import json
 import random
 import re
 import threading
+from collections import defaultdict
 from collections.abc import AsyncIterator, Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
@@ -65,6 +66,7 @@ from cygnusforge.services.events import (
     speaker_name,
     truncate,
 )
+from cygnusforge.services.names import next_campaign_label
 from cygnusforge.services.tools import (
     Ask,
     RollAnswer,
@@ -347,8 +349,8 @@ def create_campaign(
     rng: random.Random | None = None,
 ) -> Campaign:
     name = (name or "").strip()
-    if not name or len(name) > MAX_NAME:
-        raise InvalidInput(f"name must be 1 to {MAX_NAME} characters")
+    if len(name) > MAX_NAME:
+        raise InvalidInput(f"label must be 1 to {MAX_NAME} characters")
     if world_template not in library.world_templates:
         raise InvalidInput("that world template is not available")
     if rule_set not in library.rule_sets:
@@ -365,6 +367,15 @@ def create_campaign(
     except ContentError as error:
         raise InvalidInput(f"that world does not work with that rule set: {error}") from error
     with session_scope(engine) as db:
+        if not name:
+            # A blank label gets the world's next default: "Twin Lakes #1", "Twin Lakes #2"...
+            existing = db.exec(
+                select(Campaign.name).where(
+                    Campaign.owner_id == owner_id,
+                    Campaign.world_template == world_template,
+                )
+            ).all()
+            name = next_campaign_label(template.name, existing)
         campaign = Campaign(
             owner_id=owner_id,
             name=name,
@@ -500,6 +511,23 @@ def get_campaign(engine: Engine, owner_id: int, campaign_id: int) -> Campaign:
         return campaign
 
 
+def default_campaign_labels(
+    engine: Engine, library: ContentLibrary, owner_id: int
+) -> dict[str, str]:
+    """The label a new campaign of each world would get by default."""
+    with session_scope(engine) as db:
+        rows = db.exec(
+            select(Campaign.world_template, Campaign.name).where(Campaign.owner_id == owner_id)
+        ).all()
+    existing: dict[str, list[str]] = defaultdict(list)
+    for world_template, name in rows:
+        existing[world_template].append(name)
+    return {
+        world_id: next_campaign_label(template.name, existing.get(world_id, ()))
+        for world_id, template in library.world_templates.items()
+    }
+
+
 # Campaigns with a turn, answer, rollback, or model change in progress. Only one of those may run
 # per campaign at a time, so a second request is refused with Conflict instead of interleaving
 # its writes. The set is guarded by a lock only for the moment it is read or changed, so a turn
@@ -549,6 +577,23 @@ def set_campaign_model(
         campaign = db.get(Campaign, campaign_id)
         assert campaign is not None
         campaign.model = model
+        db.add(campaign)
+        db.commit()
+        db.refresh(campaign)
+        return campaign
+
+
+def set_campaign_label(engine: Engine, owner_id: int, campaign_id: int, label: str) -> Campaign:
+    """Change the label the campaign list shows. The label is only the player's name for the
+    campaign; it is not part of the log."""
+    label = (label or "").strip()
+    if not label or len(label) > MAX_NAME:
+        raise InvalidInput(f"label must be 1 to {MAX_NAME} characters")
+    get_campaign(engine, owner_id, campaign_id)
+    with session_scope(engine) as db:
+        campaign = db.get(Campaign, campaign_id)
+        assert campaign is not None
+        campaign.name = label
         db.add(campaign)
         db.commit()
         db.refresh(campaign)

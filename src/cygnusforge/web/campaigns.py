@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import random
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
@@ -16,7 +15,6 @@ from cygnusforge.auth.deps import page_user, verify_csrf
 from cygnusforge.content.character import NO_CAMPAIGN, NO_CHARACTER, character_schema
 from cygnusforge.db.models import User
 from cygnusforge.llm.base import LLMError
-from cygnusforge.services.accounts import is_test_user
 from cygnusforge.services.campaigns import (
     Delta,
     Logged,
@@ -32,6 +30,7 @@ from cygnusforge.services.campaigns import (
     character_spec,
     context_usage,
     create_campaign,
+    default_campaign_labels,
     end_player_turn,
     get_campaign,
     get_turn_context,
@@ -45,6 +44,7 @@ from cygnusforge.services.campaigns import (
     rollback_to,
     save_creation,
     send_message,
+    set_campaign_label,
     set_campaign_model,
     set_debug_currency,
     set_debug_invincibility,
@@ -61,7 +61,6 @@ from cygnusforge.services.campaigns import (
 from cygnusforge.services.common import Conflict, InvalidInput, NotFound
 from cygnusforge.services.encounters import encounter_view
 from cygnusforge.services.events import speaker_name
-from cygnusforge.services.names import random_campaign_name
 from cygnusforge.services.tools import check_arguments
 from cygnusforge.services.world import map_view, scene_view, time_view
 from cygnusforge.web.character_form import (
@@ -90,12 +89,11 @@ def new_campaign_page(request: Request) -> Response:
     if not request.app.state.catalog.model_ids():
         return _new_form(
             request,
+            user,
             status_code=503,
             error="No language model is configured. An administrator must add one under Admin → Models.",
         )
-    if is_test_user(user):
-        return _new_form(request, name=random_campaign_name(random.Random()))
-    return _new_form(request)
+    return _new_form(request, user)
 
 
 @router.post("/new")
@@ -103,7 +101,7 @@ async def create(request: Request) -> Response:
     user = page_user(request)
     await verify_csrf(request)
     form = await request.form()
-    name = form_text(form, "name")
+    label = form_text(form, "label")
     world_template = form_text(form, "world_template")
     rule_set = form_text(form, "rule_set")
     catalog = request.app.state.catalog
@@ -111,6 +109,7 @@ async def create(request: Request) -> Response:
     if not models:
         return _new_form(
             request,
+            user,
             status_code=503,
             error="No language model is configured. An administrator must add one under Admin → Models.",
         )
@@ -120,7 +119,7 @@ async def create(request: Request) -> Response:
             request.app.state.content,
             models,
             user.id,
-            name,
+            label,
             world_template,
             rule_set,
             catalog.default_model_id(),
@@ -128,24 +127,40 @@ async def create(request: Request) -> Response:
     except InvalidInput as exc:
         return _new_form(
             request,
+            user,
             status_code=400,
             error=str(exc),
-            name=name,
+            label=label,
             world_template=world_template,
             rule_set=rule_set,
         )
     return RedirectResponse(f"/campaigns/{campaign.id}", status_code=303)
 
 
+@router.post("/{campaign_id}/label")
+async def change_campaign_label(request: Request, campaign_id: int) -> Response:
+    """Change the label the campaign list shows."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    try:
+        set_campaign_label(request.app.state.engine, user.id, campaign_id, form_text(form, "label"))
+    except InvalidInput as exc:
+        _flash(request, str(exc), "error")
+        return RedirectResponse("/campaigns", status_code=303)
+    _flash(request, "Label saved.")
+    return RedirectResponse("/campaigns", status_code=303)
+
+
 @router.post("/{campaign_id}/delete")
 async def delete_campaign(request: Request, campaign_id: int) -> Response:
-    """Delete one of the player's own campaigns after they type its name to confirm."""
+    """Delete one of the player's own campaigns after they type its label to confirm."""
     user = page_user(request)
     await verify_csrf(request)
     form = await request.form()
     campaign = get_campaign(request.app.state.engine, user.id, campaign_id)
     if form_text(form, "confirm").strip() != campaign.name:
-        _flash(request, "Type the campaign name exactly to confirm deletion.", "error")
+        _flash(request, "Type the campaign label exactly to confirm deletion.", "error")
         return RedirectResponse("/campaigns", status_code=303)
     try:
         delete_campaign_service(request.app.state.engine, user.id, campaign_id)
@@ -543,9 +558,10 @@ def _flash(request: Request, message: str, kind: str = "info") -> None:
 
 def _new_form(
     request: Request,
+    user: User,
     status_code: int = 200,
     error: str = "",
-    name: str = "",
+    label: str = "",
     world_template: str = "",
     rule_set: str = "",
 ) -> Response:
@@ -563,12 +579,14 @@ def _new_form(
         world_template = worlds[0].id if worlds else ""
     chosen_rule_set = library.rule_sets.get(rule_set)
     chosen_world = library.world_templates.get(world_template)
+    default_labels = default_campaign_labels(request.app.state.engine, library, user.id)
     return render(
         request,
         "new_campaign.html",
         status_code=status_code,
         error=error,
-        campaign_name=name,
+        campaign_label=label or default_labels.get(world_template, ""),
+        world_labels=default_labels,
         world_templates=library.world_templates.values(),
         rule_sets=library.rule_sets.values(),
         selected_world=world_template,

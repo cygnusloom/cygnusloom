@@ -82,12 +82,21 @@ button.secondary:hover, button.secondary:focus-visible {
 
 .campaigns { list-style: none; padding: 0; }
 .campaigns li { padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
-.campaign-delete summary { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; cursor: pointer; }
-.campaign-delete-label { flex: none; color: var(--danger); font-size: 0.9rem; }
-.campaign-delete[open] summary { margin-bottom: 0.5rem; }
+.campaign-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 1rem; }
+.campaign-row > a { flex: 1 1 auto; }
+.campaign-row > details { flex: none; }
+.campaign-row > details[open] { flex: 1 1 100%; }
+.campaign-row summary { cursor: pointer; }
+.campaign-label summary { color: var(--muted); font-size: 0.9rem; }
+.campaign-delete-label { color: var(--danger); font-size: 0.9rem; }
+.campaign-delete[open] > summary { margin-bottom: 0.5rem; }
 .campaign-delete-form { padding: 0.75rem; border: 1px solid var(--danger); border-radius: 6px; }
 .campaign-delete-form p { margin-top: 0; }
 .campaign-delete-form label { display: block; margin-bottom: 0.5rem; }
+.campaign-label-form { display: flex; align-items: flex-end; gap: 0.5rem; margin-top: 0.5rem; }
+.campaign-label-form label { flex: 1 1 auto; margin: 0; font-size: 0.85rem; color: var(--muted); }
+.campaign-label-form input { margin-top: 0.15rem; }
+.campaign-label-form button { flex: none; }
 
 .transcript { display: flex; flex-direction: column; gap: 0.75rem; margin: 1rem 0; }
 .message { padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--field); }

@@ -26,7 +26,7 @@ def _signed_in(client_factory: Callable[[], TestClient], email: str = "ada@examp
 
 def _new_campaign(
     client: TestClient,
-    name: str = "Test chat",
+    label: str = "Test chat",
     world_template: str = "testhollow",
     rule_set: str = "rolltest",
 ):
@@ -35,7 +35,7 @@ def _new_campaign(
         "/campaigns/new",
         data={
             "csrf_token": token,
-            "name": name,
+            "label": label,
             "world_template": world_template,
             "rule_set": rule_set,
         },
@@ -106,6 +106,26 @@ def _delete_campaign(client: TestClient, campaign_id: int, confirm: str):
     )
 
 
+def _set_label(client: TestClient, campaign_id: int, label: str):
+    token = csrf_token(client, "/campaigns")
+    return client.post(
+        f"/campaigns/{campaign_id}/label",
+        data={"csrf_token": token, "label": label},
+        follow_redirects=False,
+    )
+
+
+def _label_of(client: TestClient, campaign_id: int) -> str:
+    with Session(client.app.state.engine) as db:
+        campaign = db.get(Campaign, campaign_id)
+        assert campaign is not None
+        return campaign.name
+
+
+def _created_campaign_id(response) -> int:
+    return int(response.headers["location"].rsplit("/", 1)[1])
+
+
 def _set_invincibility(client: TestClient, campaign_id: int, name: str, active: bool):
     token = csrf_token(client, "/campaigns")
     return client.post(
@@ -145,13 +165,13 @@ def _pending(app: FastAPI, campaign_id: int) -> Turn | None:
 
 def test_create_campaign_and_list_it(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
-    assert _new_campaign(client, name="Sandbox").status_code == 303
+    assert _new_campaign(client, label="Sandbox").status_code == 303
     assert "Sandbox" in client.get("/campaigns").text
 
 
 def test_delete_campaign_removes_it_and_its_events(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, name="Doomed")
+    response = _new_campaign(client, label="Doomed")
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     assert _delete_campaign(client, campaign_id, "Doomed").status_code == 303
     page = client.get("/campaigns")
@@ -162,13 +182,13 @@ def test_delete_campaign_removes_it_and_its_events(client_factory: Callable[[], 
         assert db.exec(select(Event).where(Event.campaign_id == campaign_id)).first() is None
 
 
-def test_delete_campaign_requires_the_exact_name(client_factory: Callable[[], TestClient]):
+def test_delete_campaign_requires_the_exact_label(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, name="Kept")
+    response = _new_campaign(client, label="Kept")
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     assert _delete_campaign(client, campaign_id, "kept").status_code == 303
     page = client.get("/campaigns")
-    assert "Type the campaign name exactly to confirm deletion." in page.text
+    assert "Type the campaign label exactly to confirm deletion." in page.text
     assert "Kept" in page.text
     with Session(client.app.state.engine) as db:
         assert db.get(Campaign, campaign_id) is not None
@@ -176,7 +196,7 @@ def test_delete_campaign_requires_the_exact_name(client_factory: Callable[[], Te
 
 def test_other_accounts_cannot_delete_a_campaign(client_factory: Callable[[], TestClient]):
     owner = _signed_in(client_factory)
-    response = _new_campaign(owner, name="Owner's chat")
+    response = _new_campaign(owner, label="Owner's chat")
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     intruder = _signed_in(client_factory, "intruder@example.com")
     assert _delete_campaign(intruder, campaign_id, "Owner's chat").status_code == 404
@@ -230,9 +250,86 @@ def test_model_change_is_saved_on_the_campaign(
     assert "· ollama/test-model" in page
 
 
-def test_create_rejects_blank_name(client_factory: Callable[[], TestClient]):
+def test_blank_label_gets_the_worlds_next_default(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
-    assert _new_campaign(client, name="   ").status_code == 400
+    first = _new_campaign(client, label="")
+    second = _new_campaign(client, label="   ")
+    assert first.status_code == second.status_code == 303
+    assert _label_of(client, _created_campaign_id(first)) == "Test Hollow #1"
+    assert _label_of(client, _created_campaign_id(second)) == "Test Hollow #2"
+
+
+def test_default_labels_number_each_world_separately(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    _new_campaign(client, label="")
+    twin_lakes = _new_campaign(client, label="", world_template="twin-lakes", rule_set="cairn2e")
+    assert twin_lakes.status_code == 303
+    assert _label_of(client, _created_campaign_id(twin_lakes)) == "Twin Lakes #1"
+
+
+def test_new_campaign_form_prefills_the_default_label(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    page = client.get("/campaigns/new").text
+    assert 'name="label" value="Test Hollow #1"' in page
+
+
+def test_new_campaign_form_asks_for_the_label_last(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    page = client.get("/campaigns/new").text
+    assert page.index('name="rule_set"') < page.index('name="world_template"')
+    assert page.index('name="world_template"') < page.index('name="label"')
+
+
+def test_campaign_list_keeps_the_label_editor_behind_a_toggle(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    _new_campaign(client, label="Twin Lakes #1")
+    page = client.get("/campaigns").text
+    details = page.index('<details class="campaign-label">')
+    form = page.index('class="campaign-label-form"')
+    assert details < form < page.index("</details>", details)
+    assert '<summary aria-label="Edit label for Twin Lakes #1">Edit label</summary>' in page
+
+
+def test_change_campaign_label_from_the_list(client_factory: Callable[[], TestClient]):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, label="Old label")
+    campaign_id = _created_campaign_id(response)
+    assert _set_label(client, campaign_id, "New label").status_code == 303
+    page = client.get("/campaigns").text
+    assert "New label" in page
+    assert "Old label" not in page
+    assert "Label saved." in page
+
+
+def test_change_campaign_label_rejects_a_blank_label(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, label="Kept")
+    campaign_id = _created_campaign_id(response)
+    assert _set_label(client, campaign_id, "   ").status_code == 303
+    page = client.get("/campaigns").text
+    assert "label must be 1 to 120 characters" in page
+    assert _label_of(client, campaign_id) == "Kept"
+
+
+def test_other_accounts_cannot_change_a_campaign_label(
+    client_factory: Callable[[], TestClient],
+):
+    owner = _signed_in(client_factory)
+    response = _new_campaign(owner, label="Owner's chat")
+    campaign_id = _created_campaign_id(response)
+    intruder = _signed_in(client_factory, "intruder@example.com")
+    assert _set_label(intruder, campaign_id, "Mine").status_code == 404
+    assert _label_of(owner, campaign_id) == "Owner's chat"
 
 
 def test_new_campaign_form_offers_world_and_rule_set(client_factory: Callable[[], TestClient]):
@@ -310,7 +407,7 @@ def test_new_campaign_form_starts_on_a_rule_set_and_a_world_that_fits(
 
 def test_create_stores_the_chosen_settings(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, name="Mushroom court")
+    response = _new_campaign(client, label="Mushroom court")
     assert response.status_code == 303
     campaign_id = response.headers["location"].rsplit("/", 1)[1]
     page = client.get(f"/campaigns/{campaign_id}").text
@@ -464,7 +561,7 @@ def test_campaign_page_has_sidebar_controls(client_factory: Callable[[], TestCli
     assert 'data-view-target="journal"' in page
     assert 'data-view="journal" aria-label="Journal" hidden' in page
     assert 'data-dialog-target="dialog-characters"' in page
-    assert 'data-side-toggle' in page
+    assert "data-side-toggle" in page
     assert '<dialog id="dialog-characters"' in page
     assert 'data-drawer-target="drawer-notes"' not in page
     assert '<aside class="drawer" id="drawer-notes"' not in page

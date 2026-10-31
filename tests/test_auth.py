@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
@@ -253,18 +252,18 @@ def test_admin_step_up_refreshes_a_stale_session(settings: Settings):
         assert updated is not None and updated.disabled is True
 
 
-def test_test_user_new_campaign_form_gets_random_names(client: TestClient):
+def test_test_user_new_campaign_form_gets_the_default_label(client: TestClient):
     register(client)
     page = client.get("/campaigns/new").text
-    assert re.search(r'name="name" value="The [A-Za-z]+ [A-Za-z]+"', page)
+    assert 'name="label" value="Test Hollow #1"' in page
     assert 'name="character_name"' not in page
 
 
-def test_oidc_user_gets_a_blank_new_campaign_form(settings: Settings):
+def test_oidc_user_new_campaign_form_gets_the_default_label(settings: Settings):
     client = _client(settings, FakeOIDC(identity=claims()))
     client.get("/auth/callback")
     page = client.get("/campaigns/new").text
-    assert 'name="name" value=""' in page
+    assert 'name="label" value="Test Hollow #1"' in page
     assert 'name="character_name"' not in page
 
 

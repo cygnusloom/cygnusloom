@@ -1,47 +1,20 @@
-"""Random campaign titles."""
+"""Default campaign labels."""
 
 from __future__ import annotations
 
-import random
+import re
+from collections.abc import Iterable
 
-CAMPAIGN_ADJECTIVES = (
-    "Ashen",
-    "Brass",
-    "Crooked",
-    "Drowned",
-    "Emerald",
-    "Foxglove",
-    "Gilded",
-    "Hollow",
-    "Ivory",
-    "Juniper",
-    "Lantern",
-    "Moonlit",
-    "Rusted",
-    "Silent",
-    "Thistle",
-    "Umber",
-    "Velvet",
-    "Winter",
-)
-CAMPAIGN_NOUNS = (
-    "Archive",
-    "Bridge",
-    "Crossing",
-    "Ferry",
-    "Garden",
-    "Harbor",
-    "Lighthouse",
-    "Market",
-    "Orchard",
-    "Road",
-    "Shrine",
-    "Tower",
-    "Vale",
-    "Warren",
-    "Well",
-)
+NUMBERED_LABEL = re.compile(r"#(\d+)\s*$")
 
 
-def random_campaign_name(rng: random.Random) -> str:
-    return f"The {rng.choice(CAMPAIGN_ADJECTIVES)} {rng.choice(CAMPAIGN_NOUNS)}"
+def next_campaign_label(world_name: str, existing: Iterable[str]) -> str:
+    """The default label for a new campaign in a world: the world's name and the next number,
+    so campaigns of the same world are told apart ("Twin Lakes #1", "Twin Lakes #2")."""
+    labels = list(existing)
+    numbers = [int(match.group(1)) for label in labels if (match := NUMBERED_LABEL.search(label))]
+    number = max(numbers, default=0) + 1
+    taken = set(labels)
+    while f"{world_name} #{number}" in taken:
+        number += 1
+    return f"{world_name} #{number}"
