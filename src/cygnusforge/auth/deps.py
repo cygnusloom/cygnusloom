@@ -89,7 +89,13 @@ def require_recent_auth(request: Request, next_path: str) -> None:
         raise StepUpRequired(next_path)
 
 
-def sign_in(request: Request, user: User, auth_time: datetime) -> None:
+def sign_in(
+    request: Request,
+    user: User,
+    auth_time: datetime,
+    *,
+    id_token: str | None = None,
+) -> None:
     """Start a new server-side session. Any old cookie state is discarded."""
     request.session.clear()
     if user.id is None:
@@ -101,6 +107,7 @@ def sign_in(request: Request, user: User, auth_time: datetime) -> None:
         hours=request.app.state.settings.session_hours,
         ip=client_ip(request),
         user_agent=request.headers.get("user-agent", ""),
+        id_token=id_token,
     )
     request.session[SESSION_KEY] = row.id
 

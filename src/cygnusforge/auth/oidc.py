@@ -6,6 +6,7 @@ Cygnusforge only validates the authorization-code response and reads standard cl
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Protocol
 from urllib.parse import urlencode
 
@@ -28,7 +29,13 @@ class OIDCProvider(Protocol):
 
     async def fetch_claims(self, request: Request, redirect_uri: str) -> IdentityClaims: ...
 
-    async def logout_url(self, request: Request, post_logout_redirect_uri: str) -> str | None: ...
+    async def logout_url(
+        self,
+        request: Request,
+        post_logout_redirect_uri: str,
+        *,
+        id_token_hint: str | None = None,
+    ) -> str | None: ...
 
 
 class AuthlibOIDC:
@@ -82,8 +89,9 @@ class AuthlibOIDC:
             userinfo = None
         if userinfo:
             claims.update(dict(userinfo))
+        id_token = token.get("id_token")
         try:
-            return claims_from_mapping(
+            validated = claims_from_mapping(
                 claims,
                 issuer=self.issuer,
                 admin_claim=self.settings.oidc_admin_claim,
@@ -92,8 +100,15 @@ class AuthlibOIDC:
             raise
         except Exception as exc:
             raise OIDCError("the identity provider returned unusable claims") from exc
+        return replace(validated, id_token=id_token if isinstance(id_token, str) else None)
 
-    async def logout_url(self, request: Request, post_logout_redirect_uri: str) -> str | None:
+    async def logout_url(
+        self,
+        request: Request,
+        post_logout_redirect_uri: str,
+        *,
+        id_token_hint: str | None = None,
+    ) -> str | None:
         try:
             metadata = await self._client().load_server_metadata()
         except Exception:  # noqa: BLE001 (logout is best effort)
@@ -101,12 +116,13 @@ class AuthlibOIDC:
         endpoint = metadata.get("end_session_endpoint")
         if not endpoint:
             return None
-        query = urlencode(
-            {
-                "client_id": self.settings.oidc_client_id,
-                "post_logout_redirect_uri": post_logout_redirect_uri,
-            }
-        )
+        params = {
+            "client_id": self.settings.oidc_client_id,
+            "post_logout_redirect_uri": post_logout_redirect_uri,
+        }
+        if id_token_hint:
+            params["id_token_hint"] = id_token_hint
+        query = urlencode(params)
         separator = "&" if "?" in endpoint else "?"
         return f"{endpoint}{separator}{query}"
 

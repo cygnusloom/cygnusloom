@@ -87,13 +87,17 @@ def test_logout_requires_csrf(client: TestClient):
 
 
 def test_logout_uses_provider_logout_url(settings: Settings):
-    oidc = FakeOIDC(identity=claims(), logout="https://idp.example.com/bye")
+    oidc = FakeOIDC(
+        identity=claims(id_token="raw-id-token"),
+        logout="https://idp.example.com/bye",
+    )
     client = _client(settings, oidc)
     client.get("/auth/callback")
     token = csrf_token(client, "/campaigns")
     response = client.post("/logout", data={"csrf_token": token}, follow_redirects=False)
     assert response.status_code == 303
     assert response.headers["location"] == "https://idp.example.com/bye"
+    assert oidc.logout_hint == "raw-id-token"
 
 
 def test_login_after_logout(client: TestClient):

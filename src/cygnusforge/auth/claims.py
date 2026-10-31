@@ -30,6 +30,8 @@ class IdentityClaims:
     roles: tuple[str, ...]
     auth_time: datetime
     raw: Mapping[str, Any] = field(default_factory=dict, repr=False, compare=False)
+    # The raw ID token is kept so sign-out can present it to the provider as id_token_hint.
+    id_token: str | None = field(default=None, repr=False, compare=False)
 
 
 def _truthy(value: Any) -> bool:

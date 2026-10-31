@@ -4,11 +4,15 @@ metadata:
 entries:
   - model: authentik_core.group
     id: cygnusforge-admins
+    identifiers:
+      name: !Env CYGNUSFORGE_ADMIN_GROUP
     attrs:
       name: !Env CYGNUSFORGE_ADMIN_GROUP
 
   - model: authentik_providers_oauth2.scopemapping
     id: cygnusforge-groups
+    identifiers:
+      name: Cygnus Forge groups
     attrs:
       name: Cygnus Forge groups
       scope_name: groups
@@ -17,6 +21,8 @@ entries:
 
   - model: authentik_providers_oauth2.oauth2provider
     id: cygnusforge-provider
+    identifiers:
+      name: Cygnus Forge
     attrs:
       name: Cygnus Forge
       authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
@@ -44,6 +50,8 @@ entries:
 
   - model: authentik_core.application
     id: cygnusforge-app
+    identifiers:
+      slug: cygnusforge
     attrs:
       name: Cygnus Forge
       slug: cygnusforge

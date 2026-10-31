@@ -22,6 +22,7 @@ def create_session(
     hours: int,
     ip: str = "",
     user_agent: str = "",
+    id_token: str | None = None,
 ) -> UserSession:
     now = utcnow()
     row = UserSession(
@@ -33,6 +34,7 @@ def create_session(
         auth_time=as_utc(auth_time),
         ip=ip[:64],
         user_agent=user_agent[:255],
+        oidc_id_token=id_token,
     )
     with session_scope(engine) as db:
         # Expired rows for this account are bookkeeping, not history.

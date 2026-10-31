@@ -124,7 +124,7 @@ async def auth_callback(request: Request) -> Response:
         return _login_page(request, status_code=401, error=str(exc))
     next_path = _safe_next(request.session.get("oidc_next"))
     step_up = bool(request.session.get("oidc_step_up"))
-    sign_in(request, user, claims.auth_time)
+    sign_in(request, user, claims.auth_time, id_token=claims.id_token)
     if step_up:
         request.session["step_up_done"] = True
     return RedirectResponse(next_path, status_code=303)
@@ -171,10 +171,16 @@ async def login_as_test_user(request: Request) -> Response:
 @router.post("/logout")
 async def logout(request: Request) -> Response:
     await verify_csrf(request)
+    found = current_session(request)
+    id_token_hint = found[1].oidc_id_token if found is not None else None
     sign_out(request)
     provider = request.app.state.oidc
     if provider is not None:
-        url = await provider.logout_url(request, f"{request.app.state.settings.base_url}/login")
+        url = await provider.logout_url(
+            request,
+            f"{request.app.state.settings.base_url}/login",
+            id_token_hint=id_token_hint,
+        )
         if url:
             return RedirectResponse(url, status_code=303)
     return RedirectResponse("/login", status_code=303)

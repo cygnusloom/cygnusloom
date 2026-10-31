@@ -60,6 +60,8 @@ class UserSession(SQLModel, table=True):
     auth_time: datetime = Field(default_factory=utcnow)
     ip: str = Field(default="", max_length=64)
     user_agent: str = Field(default="", max_length=255)
+    # Presented to the identity provider as id_token_hint when this session signs out.
+    oidc_id_token: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
 
 
 class AdminAudit(SQLModel, table=True):

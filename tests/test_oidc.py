@@ -69,12 +69,13 @@ def test_authorize_redirect_requests_fresh_authentication_for_step_up():
 def test_fetch_claims_merges_id_token_and_userinfo():
     fake = FakeClient(
         token={
+            "id_token": "raw-id-token",
             "userinfo": {
                 "iss": ISSUER,
                 "sub": "abc",
                 "email": "ada@example.com",
                 "email_verified": True,
-            }
+            },
         },
         userinfo={"groups": ["cygnusforge-admins"]},
     )
@@ -84,6 +85,7 @@ def test_fetch_claims_merges_id_token_and_userinfo():
     assert claims.subject == "abc"
     assert claims.email == "ada@example.com"
     assert claims.roles == ("cygnusforge-admins",)
+    assert claims.id_token == "raw-id-token"
 
 
 def test_fetch_claims_reports_a_rejected_token():
@@ -112,13 +114,20 @@ def test_fetch_claims_works_when_userinfo_is_unavailable():
 
 def test_logout_url_uses_discovery_metadata():
     fake = FakeClient(metadata={"end_session_endpoint": "https://idp.example.com/logout"})
-    url = asyncio.run(_provider(fake).logout_url(None, "https://app.example.com/login"))
+    url = asyncio.run(
+        _provider(fake).logout_url(
+            None,
+            "https://app.example.com/login",
+            id_token_hint="raw-id-token",
+        )
+    )
     assert url is not None
     parsed = urlparse(url)
     assert f"{parsed.scheme}://{parsed.netloc}{parsed.path}" == "https://idp.example.com/logout"
     assert parse_qs(parsed.query) == {
         "client_id": ["cygnusforge"],
         "post_logout_redirect_uri": ["https://app.example.com/login"],
+        "id_token_hint": ["raw-id-token"],
     }
 
 

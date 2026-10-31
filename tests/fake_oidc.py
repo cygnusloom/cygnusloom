@@ -16,6 +16,7 @@ def claims(
     roles: tuple[str, ...] = (),
     issuer: str = "https://idp.example.com",
     auth_time: datetime | None = None,
+    id_token: str | None = None,
 ) -> IdentityClaims:
     return IdentityClaims(
         issuer=issuer,
@@ -25,6 +26,7 @@ def claims(
         display_name=email.split("@", 1)[0],
         roles=roles,
         auth_time=auth_time or datetime.now(UTC),
+        id_token=id_token,
     )
 
 
@@ -36,6 +38,7 @@ class FakeOIDC:
     error: OIDCError | None = None
     name: str = "Test SSO"
     logout: str | None = None
+    logout_hint: str | None = None
 
     async def authorize_redirect(
         self, request: Request, redirect_uri: str, *, max_age: int | None = None
@@ -49,5 +52,12 @@ class FakeOIDC:
             raise OIDCError("no identity scripted")
         return self.identity
 
-    async def logout_url(self, request: Request, post_logout_redirect_uri: str) -> str | None:
+    async def logout_url(
+        self,
+        request: Request,
+        post_logout_redirect_uri: str,
+        *,
+        id_token_hint: str | None = None,
+    ) -> str | None:
+        self.logout_hint = id_token_hint
         return self.logout
