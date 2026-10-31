@@ -66,6 +66,15 @@ button, .button {
   cursor: pointer;
   text-decoration: none;
 }
+button.secondary {
+  background: var(--field);
+  color: var(--text);
+  border-color: var(--border);
+}
+button.secondary:hover, button.secondary:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+}
 .button { display: inline-block; }
 
 [role="alert"] { color: var(--danger); }
@@ -120,12 +129,12 @@ button, .button {
 .show-hidden-option input[type="checkbox"] { width: auto; margin: 0; padding: 0; }
 
 /* Campaign workspace: full-height split view. */
-body.workspace-page { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+body.workspace-page { height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; }
 
 .chat { display: flex; flex-direction: column; min-height: 0; padding: 1rem 1.25rem; border-right: 1px solid var(--border); }
-.chat-title { margin: 0; font-size: 1.25rem; }
+.chat-title { margin: 0; font-size: 1.25rem; overflow-wrap: anywhere; }
 .chat .transcript { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .chat .composer { flex-shrink: 0; }
 
@@ -268,6 +277,8 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .sidebar-item:hover { color: var(--text); }
 .sidebar-item[aria-pressed="true"], .sidebar-item[aria-expanded="true"] { color: var(--accent); border-color: var(--border); background: var(--field); }
 .sidebar-item svg { width: 1.25rem; height: 1.25rem; }
+/* The details panel is always visible on wide screens; only phones need the drawer toggle. */
+.sidebar [data-side-toggle] { display: none; }
 .views { position: relative; flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .views > .workspace, .views > .view { flex: 1; min-height: 0; }
 [data-view][hidden] { display: none; }
@@ -345,3 +356,83 @@ th { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-s
 .danger-zone { margin-top: 1.25rem; padding: 0.75rem 0; border-top: 1px solid var(--border); }
 .danger-zone summary { cursor: pointer; color: var(--danger); }
 main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { margin-top: 1rem; }
+
+/* Dialogs stay inside the viewport; long context and transcript panes scroll inside them. */
+.app-dialog { max-height: calc(100dvh - 2rem); overflow-y: auto; }
+.turn-context-dialog form { display: flex; flex-direction: column; }
+
+/* Tablets and phones: the workspace becomes one column with a bottom bar, and the details
+   panel opens over the chat from the sidebar instead of sharing the width. */
+@media (max-width: 900px) {
+  .shell { flex-direction: column-reverse; }
+  .sidebar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+    gap: 0.25rem;
+    padding: 0.3rem 0.5rem calc(0.3rem + env(safe-area-inset-bottom));
+    border-right: 0;
+    border-top: 1px solid var(--border);
+  }
+  .sidebar-item { width: 3rem; height: 2.75rem; }
+  .sidebar [data-side-toggle] { display: grid; }
+  .workspace { grid-template-columns: minmax(0, 1fr); }
+  .chat { border-right: 0; padding: 0.75rem 1rem; }
+  .side { display: none; }
+  .shell.show-side .side {
+    display: grid;
+    position: fixed;
+    inset: 0 0 calc(3.4rem + env(safe-area-inset-bottom)) 0;
+    z-index: 5;
+    background: var(--bg);
+    grid-template-rows: 42% minmax(0, 1fr);
+  }
+  .shell.show-side .side.in-encounter { grid-template-rows: 55% minmax(0, 1fr); }
+}
+
+/* Phones: compact chrome, single-column details, scrollable data tables, touch-sized forms. */
+@media (max-width: 700px) {
+  .topbar { flex-wrap: wrap; gap: 0.5rem; padding: 0.5rem 0.75rem; }
+  .brand { white-space: nowrap; }
+  nav { flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem 0.7rem; font-size: 0.875rem; }
+  nav a, nav button { white-space: nowrap; }
+  nav button { padding: 0.3rem 0.55rem; }
+
+  main { margin: 1rem auto; padding: 0 1rem; }
+  .card { padding: 1rem; overflow-x: auto; }
+  .narrow { margin: 1rem auto; }
+  .heading h1, .heading h2 { overflow-wrap: anywhere; }
+
+  /* A wide table scrolls inside its card instead of stretching the page. */
+  table { width: max-content; min-width: 100%; }
+  th, td { white-space: nowrap; }
+  td.mono { max-width: 16rem; white-space: normal; }
+
+  .details { grid-template-columns: minmax(0, 1fr); gap: 0.1rem; }
+  .details dt { margin-top: 0.55rem; }
+  .details dt:first-child { margin-top: 0; }
+
+  .admin-search { flex-wrap: wrap; align-items: stretch; }
+  .admin-search input { flex: 1 1 100%; }
+  .admin-search select { flex: 1 1 auto; min-width: 0; }
+  .pager { flex-wrap: wrap; gap: 0.5rem 1rem; }
+
+  .stats { grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); gap: 0.5rem; }
+  .stats div { padding: 0.6rem 0.75rem; }
+  .stats strong { font-size: 1.25rem; }
+
+  /* 16px or larger stops iOS Safari from zooming when a field gets focus. */
+  input, select, textarea { font-size: 16px; }
+  .composer textarea { flex: none; font-size: 16px; min-height: 5.5rem; }
+
+  .composer { flex-direction: column; align-items: stretch; }
+  .composer-actions { flex-direction: row; align-items: center; justify-content: space-between; }
+  .composer-tools { flex: 1 1 auto; }
+  .composer-actions button[type="submit"] { flex: 0 0 auto; min-width: 6rem; padding-block: 0.65rem; }
+  .pending-prompt form { flex-wrap: wrap; }
+  .pending-prompt textarea { flex-basis: 100%; }
+
+  .tab-list { overflow-x: auto; scrollbar-width: none; }
+  .tab-list::-webkit-scrollbar { display: none; }
+  .tab { flex: 0 0 auto; }
+}

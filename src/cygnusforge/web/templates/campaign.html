@@ -1,6 +1,9 @@
 {% extends "campaign_base.html" %}
 {% from "macros.html" import map_board, encounter_board, time_strip %}
 {% block title %}{{ campaign.name }}{% endblock %}
+{% block sidebar_extra %}
+    <button type="button" class="sidebar-item" data-side-toggle aria-pressed="false" aria-label="Details" title="Details"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg></button>
+{% endblock %}
 {% block play %}
     <div class="workspace" data-view="play">
       <section class="chat" aria-label="Chat">

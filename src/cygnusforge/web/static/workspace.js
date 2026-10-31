@@ -4,6 +4,30 @@
     transcript.scrollTop = transcript.scrollHeight;
   }
 
+  // On phones the details panel is a drawer opened from the bottom bar.
+  const shell = document.querySelector(".shell");
+  const side = document.querySelector(".side");
+  const sideToggle = document.querySelector("[data-side-toggle]");
+  const setSide = (open, focus = true) => {
+    if (!shell || !side || !sideToggle) return;
+    shell.classList.toggle("show-side", open);
+    sideToggle.setAttribute("aria-pressed", String(open));
+    if (!focus) return;
+    if (open) side.querySelector('[role="tab"]')?.focus();
+    else sideToggle.focus();
+  };
+  if (side && sideToggle) {
+    sideToggle.addEventListener("click", () => setSide(!shell.classList.contains("show-side")));
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || document.querySelector("dialog[open]")) return;
+      if (shell.classList.contains("show-side")) setSide(false);
+    });
+    const wide = window.matchMedia("(min-width: 901px)");
+    wide.addEventListener("change", (event) => {
+      if (event.matches) setSide(false, false);
+    });
+  }
+
   document.querySelectorAll('[role="tablist"]').forEach((list) => {
     const tabs = Array.from(list.querySelectorAll('[role="tab"]'));
     const select = (tab) => {
@@ -47,12 +71,24 @@
     }
   };
   document.querySelectorAll("[data-view-target]").forEach((button) => {
-    button.addEventListener("click", () => showView(button.dataset.viewTarget));
+    button.addEventListener("click", () => {
+      showView(button.dataset.viewTarget);
+      setSide(false, false);
+    });
   });
 
   document.querySelectorAll("[data-dialog-target]").forEach((button) => {
     const dialog = document.getElementById(button.dataset.dialogTarget);
-    button.addEventListener("click", () => dialog.showModal());
+    button.addEventListener("click", () => {
+      dialog.showModal();
+      // The browser focuses the first control, which can be at the bottom of a long dialog.
+      const title = dialog.querySelector("h2");
+      if (title) {
+        title.tabIndex = -1;
+        title.focus();
+      }
+      dialog.scrollTop = 0;
+    });
     dialog.addEventListener("close", () => button.focus());
     closeOnBackdropClick(dialog);
   });
