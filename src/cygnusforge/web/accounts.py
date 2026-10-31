@@ -74,7 +74,6 @@ def _login_page(
         heading="Log in",
         oidc_enabled=provider is not None,
         oidc_name=provider.name if provider is not None else settings.oidc_name,
-        oidc_account_url=settings.oidc_account_url,
         test_login=settings.test_login,
         error=error,
         email=email,
@@ -199,7 +198,6 @@ def account_page(request: Request) -> Response:
         sessions=active_sessions(engine, user.id or 0),
         campaign_count=len(list_campaigns(engine, user.id)),
         current_session_id=found[1].id if found is not None else "",
-        oidc_account_url=request.app.state.settings.oidc_account_url,
     )
 
 

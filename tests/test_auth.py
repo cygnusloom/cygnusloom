@@ -276,6 +276,45 @@ def test_account_page_shows_identity_and_sessions(client: TestClient):
     assert "test" in page.text
 
 
+def test_account_page_links_to_the_authentik_user_interface(settings: Settings):
+    client = _client(
+        replace(settings, oidc_issuer="https://idp.example.com/application/o/cygnusforge/")
+    )
+    register(client)
+    page = client.get("/account").text
+    assert 'href="https://idp.example.com/if/user/"' in page
+    assert "Manage your account at the identity provider" in page
+
+
+def test_account_page_prefers_a_configured_account_url(settings: Settings):
+    client = _client(
+        replace(
+            settings,
+            oidc_issuer="https://idp.example.com/application/o/cygnusforge/",
+            oidc_account_url="https://idp.example.com/custom/account",
+        )
+    )
+    register(client)
+    page = client.get("/account").text
+    assert 'href="https://idp.example.com/custom/account"' in page
+    assert "if/user" not in page
+
+
+def test_account_page_has_no_provider_link_for_an_unknown_issuer(settings: Settings):
+    client = _client(replace(settings, oidc_issuer="https://accounts.example.com"))
+    register(client)
+    assert "Manage your account at the identity provider" not in client.get("/account").text
+
+
+def test_login_page_links_to_the_authentik_user_interface(settings: Settings):
+    client = _client(
+        replace(settings, oidc_issuer="https://idp.example.com/application/o/cygnusforge/"),
+        FakeOIDC(),
+    )
+    page = client.get("/login").text
+    assert 'href="https://idp.example.com/if/user/"' in page
+
+
 def test_sign_out_everywhere_revokes_all_clients(settings: Settings):
     first = _client(settings)
     second = _client(settings)

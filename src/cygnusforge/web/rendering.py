@@ -11,6 +11,7 @@ from starlette.templating import Jinja2Templates
 
 from cygnusforge import __version__
 from cygnusforge.auth.deps import current_user, get_csrf, is_admin_user
+from cygnusforge.auth.oidc import account_management_url
 from cygnusforge.services.accounts import decode_roles
 from cygnusforge.web.icons import icon_path, item_icon_id, place_icon_path
 
@@ -36,13 +37,15 @@ templates.env.filters["roles"] = decode_roles
 def render(request: Request, name: str, status_code: int = 200, **context: Any) -> Response:
     """Render a page with the signed-in user (if any), its role check, and the CSRF token."""
     user = current_user(request)
+    settings = request.app.state.settings
     values = {
         "user": user,
         "csrf_token": get_csrf(request),
         "is_admin": is_admin_user(request, user),
         "flash": request.session.pop("flash", None),
         "step_up_done": request.session.pop("step_up_done", False),
-        "oidc_account_url": request.app.state.settings.oidc_account_url,
+        "oidc_account_url": settings.oidc_account_url
+        or account_management_url(settings.oidc_issuer),
         "app_version": __version__,
         **context,
     }

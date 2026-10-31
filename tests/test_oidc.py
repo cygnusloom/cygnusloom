@@ -7,7 +7,7 @@ import pytest
 from starlette.responses import Response
 
 from cygnusforge.auth.claims import OIDCError
-from cygnusforge.auth.oidc import AuthlibOIDC, build_oidc_provider
+from cygnusforge.auth.oidc import AuthlibOIDC, account_management_url, build_oidc_provider
 from cygnusforge.config import Settings
 
 ISSUER = "https://idp.example.com/application/o/cygnusforge"
@@ -134,3 +134,22 @@ def test_logout_url_uses_discovery_metadata():
 def test_provider_is_absent_until_oidc_is_configured():
     assert build_oidc_provider(Settings(secret_key="test")) is None
     assert build_oidc_provider(_settings()) is not None
+
+
+def test_account_management_url_finds_the_authentik_user_interface():
+    assert (
+        account_management_url("https://idp.example.com/application/o/cygnusforge/")
+        == "https://idp.example.com/if/user/"
+    )
+
+
+def test_account_management_url_finds_the_keycloak_account_console():
+    assert (
+        account_management_url("https://idp.example.com/realms/cygnusforge")
+        == "https://idp.example.com/realms/cygnusforge/account/"
+    )
+
+
+@pytest.mark.parametrize("issuer", ["", "not a url", "https://accounts.example.com"])
+def test_account_management_url_ignores_unknown_issuers(issuer: str):
+    assert account_management_url(issuer) is None

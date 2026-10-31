@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from typing import Protocol
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 from authlib.integrations.starlette_client import OAuth
 from fastapi import Request
@@ -125,6 +125,27 @@ class AuthlibOIDC:
         query = urlencode(params)
         separator = "&" if "?" in endpoint else "?"
         return f"{endpoint}{separator}{query}"
+
+
+def account_management_url(issuer: str) -> str | None:
+    """The provider's own account page, when the issuer alone locates it.
+
+    OIDC discovery advertises no account-management endpoint. Authentik serves its user
+    interface next to the application issuer, and Keycloak serves the account console under
+    the realm, so both can be linked without extra configuration. Other providers need
+    ``CYGNUSFORGE_OIDC_ACCOUNT_URL``.
+    """
+    parts = urlsplit(issuer)
+    if not parts.scheme or not parts.hostname:
+        return None
+    origin = f"{parts.scheme}://{parts.netloc}"
+    path = parts.path.rstrip("/")
+    application = path.find("/application/o/")
+    if application != -1:  # Authentik: https://idp.example.com/application/o/<slug>/
+        return f"{origin}{path[:application]}/if/user/"
+    if "/realms/" in path:  # Keycloak: https://idp.example.com/realms/<realm>
+        return f"{origin}{path}/account/"
+    return None
 
 
 def build_oidc_provider(settings: Settings) -> AuthlibOIDC | None:

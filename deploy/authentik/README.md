@@ -23,7 +23,8 @@ configure. Users sign in with a username and password stored in Authentik.
 6. Grant the Cygnus Forge administrator role: **Directory → Groups → cygnusforge-admins →
    Users → Add existing user → akadmin**. A user who is not in this group is a normal player.
 7. Open `https://<CYGNUSFORGE_DOMAIN>/login` and continue with the identity provider. You are
-   signed in as `akadmin` and see the Admin link.
+   signed in as `akadmin` and see the Admin link. The account page links back to Authentik's
+   user interface for changing your password or MFA.
 8. Open **Admin → Models** and add at least one language model. Cygnus Forge ships with none,
    so players cannot create campaigns until this is done.
 
