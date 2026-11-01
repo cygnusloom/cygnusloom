@@ -118,7 +118,7 @@
                 {{ choice("template-" ~ group.kind, "", "None", "Leave this unchosen.") }}
               {% endif %}
               {% for template in group.templates %}
-                {{ choice("template-" ~ group.kind, template.id, template.name, template.description, data_select=group.kind, data_classes=template.classes) }}
+                {{ choice("template-" ~ group.kind, template.id, template.name, template.description, data_select=group.kind, data_compatible_with=template.compatible_with, data_template_requirements=template.template_requirements, data_choice_key=template.choice_key) }}
               {% endfor %}
             {% endcall %}
           </fieldset>

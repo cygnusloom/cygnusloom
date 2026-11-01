@@ -1,42 +1,136 @@
 (() => {
   const form = document.querySelector(".creation-form");
+  const templateRadios = [...document.querySelectorAll("input[type=radio][data-template-select]")];
 
   // Only the tables of the chosen template are shown. Hidden tables are skipped on submit.
   const revealTables = (kind) => {
-    const chosen = document.querySelector(`input[name="template-${kind}"]:checked`);
-    for (const group of document.querySelectorAll(`[data-template-group="${kind}"]`)) {
-      group.hidden = chosen === null || group.dataset.template !== chosen.value;
+    const chosen = templateRadios.find(
+      (radio) => radio.checked && radio.dataset.templateSelect === kind,
+    );
+    for (const group of document.querySelectorAll("[data-template-group]")) {
+      if (group.dataset.templateGroup === kind) {
+        group.hidden = !chosen || group.dataset.template !== chosen.value;
+      }
     }
   };
 
   const refreshSummary = (name) => {
-    const output = document.querySelector(`[data-summary-for="${name}"]`);
+    const output = [...document.querySelectorAll("[data-summary-for]")].find(
+      (item) => item.dataset.summaryFor === name,
+    );
     if (!output) return;
-    const chosen = document.querySelector(`input[type="radio"][name="${name}"]:checked`);
+    const chosen = [...document.querySelectorAll('input[type="radio"]')].find(
+      (radio) => radio.name === name && radio.checked,
+    );
     output.textContent = chosen ? chosen.dataset.title : "Not chosen";
-    output.classList.toggle("is-chosen", chosen !== null);
+    output.classList.toggle("is-chosen", Boolean(chosen));
   };
 
-  // A template that names classes is offered only to those classes. A kind with nothing left to
-  // offer is hidden, so a Warrior never sees a magical tradition at all.
-  const refreshTemplateChoices = () => {
-    const cls = document.querySelector('input[name="template-class"]:checked');
-    const chosenClass = cls ? cls.value : "";
-    for (const panel of document.querySelectorAll('[data-choice-panel^="template-"]')) {
-      const kind = panel.dataset.choicePanel.slice("template-".length);
-      if (kind === "class") continue;
-      let offered = false;
-      for (const label of panel.querySelectorAll("label.choice")) {
-        const radio = label.querySelector('input[type="radio"]');
-        if (!radio) continue;
-        const classes = JSON.parse(label.dataset.classes ?? "[]");
-        const allowed = classes.length === 0 || classes.includes(chosenClass);
-        label.hidden = !allowed;
-        if (!allowed && radio.checked) {
-          radio.checked = false;
-          refreshSummary(radio.name);
-          revealTables(kind);
+  const selectedTemplates = () => {
+    const selected = new Map();
+    for (const radio of templateRadios) {
+      if (radio.checked) selected.set(radio.dataset.templateSelect, radio);
+    }
+    return selected;
+  };
+
+  const templateData = (radio, name, fallback) => {
+    const value = radio.closest("label.choice")?.dataset[name];
+    return value ? JSON.parse(value) : fallback;
+  };
+
+  const compatible = (radio, selected) => {
+    const restrictions = templateData(radio, "compatibleWith", {});
+    return Object.entries(restrictions).every(([kind, allowed]) => {
+      const gate = selected.get(kind);
+      return gate !== undefined && allowed.includes(gate.value);
+    });
+  };
+
+  const activeRequirements = (selected) =>
+    [...selected.values()].flatMap((radio) =>
+      templateData(radio, "templateRequirements", []),
+    );
+
+  const choiceKey = (radio) => radio.dataset.choiceKey || radio.value;
+
+  const clearTemplateChoice = (radio) => {
+    radio.checked = false;
+    refreshSummary(radio.name);
+    if (radio.dataset.templateSelect) revealTables(radio.dataset.templateSelect);
+  };
+
+  const refreshTemplateChoices = (changedRadio = null) => {
+    for (let pass = 0; pass <= templateRadios.length; pass++) {
+      let cleared = false;
+      let selected = selectedTemplates();
+
+      for (const radio of selected.values()) {
+        if (!radio.checked) continue;
+        if (compatible(radio, selected)) continue;
+        clearTemplateChoice(radio);
+        cleared = true;
+        selected = selectedTemplates();
+      }
+
+      selected = selectedTemplates();
+      for (const requirement of activeRequirements(selected)) {
+        if (!requirement.distinct) continue;
+        const byKey = new Map();
+        for (const kind of requirement.kinds) {
+          const radio = selected.get(kind);
+          if (!radio) continue;
+          const key = choiceKey(radio);
+          const matches = byKey.get(key) ?? [];
+          matches.push(radio);
+          byKey.set(key, matches);
         }
+        for (const matches of byKey.values()) {
+          if (matches.length < 2) continue;
+          const keep = matches.includes(changedRadio) ? changedRadio : matches[0];
+          for (const radio of matches) {
+            if (radio === keep) continue;
+            clearTemplateChoice(radio);
+            cleared = true;
+          }
+        }
+        if (cleared) selected = selectedTemplates();
+      }
+
+      if (!cleared) break;
+    }
+
+    const selected = selectedTemplates();
+    const requirements = activeRequirements(selected);
+    const requiredKinds = new Set(requirements.flatMap((requirement) => requirement.kinds));
+    const panels = [...document.querySelectorAll('[data-choice-panel^="template-"]')];
+
+    for (const panel of panels) {
+      const kind = panel.dataset.choicePanel.slice("template-".length);
+      const required = requiredKinds.has(kind);
+      panel.dataset.required = String(required);
+
+      const none = panel.querySelector('input[type="radio"][value=""]');
+      if (none) {
+        none.closest("label.choice").hidden = required;
+        if (required && none.checked) clearTemplateChoice(none);
+      }
+
+      let offered = Boolean(none && !required);
+      for (const radio of templateRadios) {
+        if (radio.dataset.templateSelect !== kind) continue;
+        const duplicate = requirements.some(
+          (requirement) =>
+            requirement.distinct &&
+            requirement.kinds.includes(kind) &&
+            requirement.kinds.some((otherKind) => {
+              const other = selected.get(otherKind);
+              return otherKind !== kind && other && choiceKey(other) === choiceKey(radio);
+            }),
+        );
+        const allowed = compatible(radio, selected) && !duplicate;
+        radio.closest("label.choice").hidden = !allowed;
+        if (!allowed && radio.checked) clearTemplateChoice(radio);
         if (allowed) offered = true;
       }
       panel.hidden = !offered;
@@ -94,7 +188,7 @@
     const radio = event.target;
     if (!(radio instanceof HTMLInputElement) || radio.type !== "radio") return;
     refreshSummary(radio.name);
-    refreshTemplateChoices();
+    refreshTemplateChoices(radio);
     refreshRestrictions();
     refreshSpellPicks();
     radio.closest("[data-choice-panel]")?.classList.remove("is-missing");
@@ -111,8 +205,12 @@
   };
 
   const rollChoice = (name) => {
-    const options = [...document.querySelectorAll(`input[type="radio"][name="${name}"]`)].filter(
-      (radio) => !radio.closest("[hidden]") && !radio.disabled && !radio.hasAttribute("data-freeform"),
+    const options = [...document.querySelectorAll('input[type="radio"]')].filter(
+      (radio) =>
+        radio.name === name &&
+        !radio.closest("[hidden]") &&
+        !radio.disabled &&
+        !radio.hasAttribute("data-freeform"),
     );
     if (options.length === 0) return;
     const pick = options[Math.floor(Math.random() * options.length)];
@@ -136,18 +234,63 @@
     input.value = names[Math.floor(Math.random() * names.length)];
   };
 
+  const templateKindOrder = () => {
+    const kinds = [...new Set(templateRadios.map((radio) => radio.dataset.templateSelect))];
+    const dependencies = new Map(kinds.map((kind) => [kind, new Set()]));
+    for (const radio of templateRadios) {
+      const kind = radio.dataset.templateSelect;
+      const dependents = dependencies.get(kind);
+      for (const gate of Object.keys(templateData(radio, "compatibleWith", {}))) {
+        if (gate !== kind && dependencies.has(gate)) dependents.add(gate);
+      }
+      for (const requirement of templateData(radio, "templateRequirements", [])) {
+        for (const requiredKind of requirement.kinds) {
+          if (requiredKind !== kind && dependencies.has(requiredKind)) {
+            dependencies.get(requiredKind).add(kind);
+          }
+        }
+      }
+    }
+
+    const remaining = new Set(kinds);
+    const ordered = [];
+    while (remaining.size > 0) {
+      const ready = [...remaining].filter((kind) =>
+        [...dependencies.get(kind)].every((gate) => !remaining.has(gate)),
+      );
+      const next = ready.length > 0 ? ready : [remaining.values().next().value];
+      for (const kind of next) {
+        ordered.push(kind);
+        remaining.delete(kind);
+      }
+    }
+    return new Map(ordered.map((kind, index) => [kind, index]));
+  };
+
   // Rolls the visible choices. A template comes before its tables, so rolling it first reveals the
-  // tables it needs, and those are rolled in the same pass. A restricted choice is rolled after the
-  // unrestricted ones, so its roll uses its gate's final value.
+  // tables it needs, and dependent template kinds follow their gates. A restricted choice is rolled
+  // after unrestricted ones, so its roll uses its gate's final value.
   const randomizeChoices = (onlyUnchosen) => {
     const rolled = new Set();
+    const order = templateKindOrder();
     for (;;) {
       const pending = [...document.querySelectorAll("[data-dice-for]")].filter((dice) => {
         if (rolled.has(dice) || dice.closest("[hidden]")) return false;
         const panel = dice.closest("[data-choice-panel]");
-        if (panel?.dataset.optional === "true") return false;
+        if (panel?.dataset.optional === "true" && panel.dataset.required !== "true") return false;
         const name = dice.dataset.diceFor;
-        return !onlyUnchosen || document.querySelector(`input[type="radio"][name="${name}"]:checked`) === null;
+        const chosen = [...document.querySelectorAll('input[type="radio"]')].some(
+          (radio) => radio.name === name && radio.checked,
+        );
+        return !onlyUnchosen || !chosen;
+      });
+      pending.sort((left, right) => {
+        const rank = (dice) => {
+          const name = dice.dataset.diceFor;
+          if (!name.startsWith("template-")) return -1;
+          return order.get(name.slice("template-".length)) ?? 0;
+        };
+        return rank(left) - rank(right);
       });
       const next = pending.find((dice) => !dice.closest("[data-restrict-field]")) ?? pending[0];
       if (!next) return;
@@ -328,8 +471,21 @@
     event.preventDefault();
     for (const panel of missing) panel.classList.add("is-missing");
     if (error) {
-      const labels = missing.map((panel) => panel.dataset.choiceLabel).join(", ");
-      error.textContent = `Choose an option for: ${labels}.`;
+      const missingKinds = new Set(
+        missing
+          .map((panel) => panel.dataset.choicePanel)
+          .filter((name) => name.startsWith("template-"))
+          .map((name) => name.slice("template-".length)),
+      );
+      const requirementMessage = activeRequirements(selectedTemplates()).find((requirement) =>
+        requirement.kinds.some((kind) => missingKinds.has(kind)),
+      )?.missing_message;
+      if (requirementMessage) {
+        error.textContent = requirementMessage;
+      } else {
+        const labels = missing.map((panel) => panel.dataset.choiceLabel).join(", ");
+        error.textContent = `Choose an option for: ${labels}.`;
+      }
       error.hidden = false;
     }
     const first = missing[0];

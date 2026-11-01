@@ -65,7 +65,20 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
             "picks": _picks_view(spec, template),
             "skill_picks": _skill_picks_view(spec, template),
             "feat_picks": _feat_picks_view(spec, template),
-            "classes": list(template.classes),
+            "compatible_with": {
+                kind: list(template_ids)
+                for kind, template_ids in template.compatible_with.items()
+            },
+            "template_requirements": [
+                {
+                    "kinds": list(requirement.kinds),
+                    "distinct": requirement.distinct,
+                    "missing_message": requirement.missing_message,
+                    "duplicate_message": requirement.duplicate_message,
+                }
+                for requirement in template.template_requirements
+            ],
+            "choice_key": template.choice_key or template.id,
         }
         for template in spec.templates.values()
     ]
@@ -174,12 +187,15 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
         except ValueError:
             raise InvalidInput(f"{stat.name} must be a number") from None
     templates = {}
-    class_id = form_text(form, TEMPLATE_PREFIX + "class")
+    selected_template_ids = {
+        kind: form_text(form, TEMPLATE_PREFIX + kind) for kind in spec.kinds()
+    }
     for kind in spec.kinds():
         offered = [
             template
             for template in spec.templates.values()
-            if template.kind == kind and (not template.classes or class_id in template.classes)
+            if template.kind == kind
+            and _template_is_compatible(template, selected_template_ids)
         ]
         if not offered:
             continue
@@ -191,10 +207,8 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
         if template_id not in {template.id for template in offered}:
             if kind in spec.optional_kinds:
                 continue
-            raise InvalidInput(f"That {kind} cannot be chosen by this class")
+            raise InvalidInput(f"That {kind} cannot be chosen with your other choices")
         templates[kind] = template_id
-    if class_id == "adventurer_mage_mage" and "tradition2" not in templates:
-        raise InvalidInput("Choose a second tradition for your Mage/Mage Adventurer")
     fields = {}
     for field in spec.fields.values():
         value = form_text(form, FIELD_PREFIX + field.id)
@@ -259,6 +273,14 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
     if feature_picks:
         submitted["feature_picks"] = feature_picks
     return submitted
+
+
+def _template_is_compatible(template: Template, selected: dict[str, str]) -> bool:
+    """A template is offered only when every template kind it names has an allowed selection."""
+    return all(
+        selected.get(kind) in allowed
+        for kind, allowed in template.compatible_with.items()
+    )
 
 
 def _picks_view(spec: CharacterSpec, template: Template) -> dict[str, Any] | None:
