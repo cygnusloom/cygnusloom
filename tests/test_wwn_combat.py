@@ -834,3 +834,26 @@ def test_healing_restores_harm_and_never_goes_below_zero(client_factory):
     assert _pc(app, campaign_id).harm.get("hp", 0) == 0
     [event] = _events(app, campaign_id, CharacterHealed.kind)
     assert (event.amount, event.restored) == (5, 2)
+
+
+def test_a_project_tracks_progress_to_completion(client_factory):
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+
+    started = tools.start_project("Map the Vault", "research", "Find the sealed gallery.", 10)
+    assert (started["progress"], started["completed"]) == (0, False)
+    with pytest.raises(InvalidInput, match="already a project"):
+        tools.start_project("Map the Vault", "research", "Again.", 5)
+
+    tools.advance_project("Map the Vault", 4, note="A week in the archive.")
+    half = tools.advance_project("Map the Vault", 6, note="The last rubbing.")
+    assert (half["progress"], half["completed"]) == (10, True)
+    with pytest.raises(InvalidInput, match="already complete"):
+        tools.advance_project("Map the Vault", 1)
+
+    with Session(client.app.state.engine) as db:
+        state = load_state(db, campaign_id)
+        assert state.projects[name_key("Map the Vault")].notes == [
+            "A week in the archive.",
+            "The last rubbing.",
+        ]
+    assert [p["name"] for p in tools.list_projects()] == ["Map the Vault"]

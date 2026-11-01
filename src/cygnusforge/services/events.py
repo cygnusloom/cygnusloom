@@ -253,6 +253,21 @@ def out_of_fight(character: Character) -> bool:
     return character.defeated or character.fled or character.surrendered
 
 
+@dataclass
+class Project:
+    """A long-running effort: a project, a piece of research, a magic working, or a faction
+    turn. `progress` counts toward `target`; a free-form `kind` keeps the tracker generic."""
+
+    name: str
+    kind: str
+    goal: str
+    target: int
+    progress: int = 0
+    notes: list[str] = field(default_factory=list)
+    completed: bool = False
+    abandoned: bool = False
+
+
 @dataclass(frozen=True)
 class Note:
     # The id of the note.added event that wrote it, so it stays the same across replays.
@@ -413,6 +428,8 @@ class CampaignState:
     journal_through: int = 0
     # Options shared by the whole campaign, keyed by field id. Empty until they are chosen.
     options: dict[str, str] = field(default_factory=dict)
+    # Long-running efforts by name without case, such as projects, research, and faction turns.
+    projects: dict[str, Project] = field(default_factory=dict)
     summary: str = ""
     through: int = 0
     turn: Turn | None = None
@@ -1625,6 +1642,71 @@ class RetreatRolled(GameEvent):
         return (
             f"{self.name} rolls {self.roll} on a {self.stat.upper()} save of {self.score} {outcome}"
         )
+
+
+@dataclass(frozen=True)
+class ProjectStarted(GameEvent):
+    """A project, research effort, magic working, or faction turn begins."""
+
+    kind: ClassVar[str] = "project.started"
+
+    name: str
+    project_kind: str
+    goal: str
+    target: int
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.projects[name_key(self.name)] = Project(
+            name=self.name,
+            kind=self.project_kind,
+            goal=self.goal,
+            target=self.target,
+        )
+
+    def render(self) -> str:
+        return f"{self.name} begins ({self.project_kind}): {self.goal}, {self.target} points."
+
+
+@dataclass(frozen=True)
+class ProjectAdvanced(GameEvent):
+    """Progress on a project. A note records what the time, money, or roll bought."""
+
+    kind: ClassVar[str] = "project.advanced"
+
+    name: str
+    amount: int
+    note: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        project = state.projects.get(name_key(self.name))
+        if project is None:
+            return
+        project.progress = min(project.target, project.progress + self.amount)
+        if self.note:
+            project.notes.append(self.note)
+        if project.progress >= project.target:
+            project.completed = True
+
+    def render(self) -> str:
+        text = f"{self.name} advances by {self.amount}"
+        return f"{text} ({self.note})." if self.note else f"{text}."
+
+
+@dataclass(frozen=True)
+class ProjectAbandoned(GameEvent):
+    kind: ClassVar[str] = "project.abandoned"
+
+    name: str
+    reason: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        project = state.projects.get(name_key(self.name))
+        if project is not None:
+            project.abandoned = True
+
+    def render(self) -> str:
+        text = f"{self.name} is abandoned"
+        return f"{text} ({self.reason})." if self.reason else f"{text}."
 
 
 @dataclass(frozen=True)
@@ -3179,6 +3261,9 @@ HIDDEN_KINDS: dict[str, bool] = {
     "retreat.rolled": False,
     "character.fled": False,
     "character.surrendered": False,
+    "project.started": False,
+    "project.advanced": False,
+    "project.abandoned": False,
     "character.healed": False,
     "character.recovered": False,
     "character.saved": False,

@@ -90,5 +90,11 @@
     "id": "healing",
     "step": "narration",
     "text": "When a spell, art, or item heals, call heal_character with the amount it rolls; the tool caps the healing at the harm actually taken. Healing Touch heals 2d6 plus the Healer's Heal skill and adds 1 System Strain with add_strain. A mortally wounded character must be stabilized before healing can bring them back, and a cure that ends Frail must call end_condition with \"magic\". Never simply narrate lost hit points back."
+  },
+  {
+    "type": "prompt",
+    "id": "projects_and_factions",
+    "step": "state",
+    "text": "Track Projects, Magic Workings, spell research, and faction turns with start_project, advance_project, and list_projects. Pick a target that matches the book's difficulty, then advance the tracker only when the time, silver, and rolls are actually spent; put what the advance bought in the note. Never leave a long effort only in prose."
   }
 ]

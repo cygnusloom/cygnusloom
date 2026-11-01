@@ -78,6 +78,7 @@ All defaults preserve the old behaviour, so Cairn 2e and Hogwarts JSON need no c
 | Feature rank and effects | `feature.rank`, `feature.effects` | Spell/Focus rank; `stat`, `skill`, `counter`, `armor`, `note` at creation |
 | Weapon data | `feature.skill`, `attributes`, `shock`, `shock_ac`, `flags` | What a weapon rolls, what it does on a miss, and engine flags such as `no_unskilled_penalty` |
 | Checks | `type: check` | `{dice, unskilled, default_difficulty, minimum_difficulty, maximum_difficulty}` |
+| Projects | `project.started`, `project.advanced`, `project.abandoned` | Generic progress tracker for projects, research, magic workings, and faction turns |
 | Hit and damage bonuses | `combat.hit_bonus_stat`, `damage_bonus_stat`, `attribute_damage`, `level_damage_classes`, `level_damage_divisor` | Add a stat and the class's half-level damage (Killing Blow) |
 | Shock | `combat.shock_on_miss`, `minimum_shock_damage` | Shock on a miss, and a hit never below Shock |
 | Defeat | `combat.defeat_at_zero` | A stat reaching 0 defeats the character; PCs may become dying |
@@ -231,8 +232,8 @@ tables to create the first location and its people.
 
 ## Validation
 
-- Full suite: `timeout 900 uv run pytest -n auto -q -p no:cacheprovider`: 1963 passed in about
-  40 seconds, with the Worlds Without Number tests across `test_wwn.py`,
+- Full suite: `timeout 900 uv run pytest -n auto -q -p no:cacheprovider`: 1964 passed in about
+  44 seconds, with the Worlds Without Number tests across `test_wwn.py`,
   `test_wwn_combat.py`, `test_wwn_advancement.py`, `test_wwn_magic.py`, and
   `test_wwn_refactor.py`.
 - Lint: `uv run ruff format src tests` and `uv run ruff check src tests`: clean.

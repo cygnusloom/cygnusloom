@@ -262,6 +262,31 @@ def character_options(ctx: ToolContext, field: str | None = None) -> dict[str, A
     return ctx.world.character_options(field)
 
 
+def start_project(
+    name: str,
+    kind: str,
+    goal: str,
+    target: int,
+    ctx: ToolContext,
+    force: bool = False,
+) -> dict[str, Any]:
+    """Begin a long-running effort and track its points toward a target."""
+    return ctx.world.start_project(name, kind, goal, target, force)
+
+
+def advance_project(name: str, amount: int, ctx: ToolContext, note: str = "") -> dict[str, Any]:
+    """Add progress to a project, research effort, magic working, or faction turn."""
+    return ctx.world.advance_project(name, amount, note)
+
+
+def abandon_project(name: str, ctx: ToolContext, reason: str = "") -> dict[str, Any]:
+    return ctx.world.abandon_project(name, reason)
+
+
+def list_projects(ctx: ToolContext) -> dict[str, Any]:
+    return {"projects": ctx.world.list_projects()}
+
+
 def heal_character(
     name: str,
     amount: int,

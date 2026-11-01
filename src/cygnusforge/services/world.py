@@ -121,6 +121,9 @@ from cygnusforge.services.events import (
     OpeningStarted,
     PcAdded,
     Place,
+    ProjectAbandoned,
+    ProjectAdvanced,
+    ProjectStarted,
     Region,
     RegionAdded,
     SeasonSet,
@@ -1738,6 +1741,83 @@ class WorldTools:
 
     def character_options(self, field: str | None = None) -> dict[str, Any]:
         return choice_options(self.character, field)
+
+    def start_project(
+        self,
+        name: str,
+        kind: str,
+        goal: str,
+        target: int,
+        force: bool = False,
+    ) -> dict[str, Any]:
+        """Begin a project, research effort, magic working, or faction turn."""
+        name = name.strip()
+        kind = kind.strip()
+        goal = goal.strip()
+        if not name or not kind or not goal:
+            raise InvalidInput("a project needs a name, a kind, and a goal")
+        if isinstance(target, bool) or not isinstance(target, int) or target < 1:
+            raise InvalidInput("a project's target must be a whole number, 1 or more")
+        with session_scope(self.engine) as db:
+            existing = load_state(db, self.campaign_id).projects.get(name_key(name))
+            if existing is not None and not force:
+                raise InvalidInput(f"there is already a project named {name!r}")
+            record(
+                db,
+                self.campaign_id,
+                ProjectStarted(name=name, project_kind=kind, goal=goal, target=target),
+            )
+            db.commit()
+            return self._project_view(db, name)
+
+    def advance_project(self, name: str, amount: int, note: str = "") -> dict[str, Any]:
+        """Add progress to a project, completing it when it reaches its target."""
+        if isinstance(amount, bool) or not isinstance(amount, int) or amount < 1:
+            raise InvalidInput("progress must be a whole number, 1 or more")
+        with session_scope(self.engine) as db:
+            project = load_state(db, self.campaign_id).projects.get(name_key(name))
+            if project is None:
+                raise InvalidInput(f"there is no project named {name!r}")
+            if project.completed:
+                raise InvalidInput(f"{project.name} is already complete")
+            if project.abandoned:
+                raise InvalidInput(f"{project.name} was abandoned")
+            record(
+                db,
+                self.campaign_id,
+                ProjectAdvanced(name=project.name, amount=amount, note=note.strip()),
+            )
+            db.commit()
+            return self._project_view(db, project.name)
+
+    def abandon_project(self, name: str, reason: str = "") -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            project = load_state(db, self.campaign_id).projects.get(name_key(name))
+            if project is None:
+                raise InvalidInput(f"there is no project named {name!r}")
+            record(db, self.campaign_id, ProjectAbandoned(name=project.name, reason=reason.strip()))
+            db.commit()
+            return self._project_view(db, project.name)
+
+    def list_projects(self) -> list[dict[str, Any]]:
+        with session_scope(self.engine) as db:
+            return [
+                self._project_view(db, project.name)
+                for project in load_state(db, self.campaign_id).projects.values()
+            ]
+
+    def _project_view(self, db: Any, name: str) -> dict[str, Any]:
+        project = load_state(db, self.campaign_id).projects[name_key(name)]
+        return {
+            "name": project.name,
+            "kind": project.kind,
+            "goal": project.goal,
+            "progress": project.progress,
+            "target": project.target,
+            "completed": project.completed,
+            "abandoned": project.abandoned,
+            "notes": list(project.notes),
+        }
 
     def campaign_options(self) -> dict[str, Any]:
         """The options chosen once for the campaign, such as its experience track."""
