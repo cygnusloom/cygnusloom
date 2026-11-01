@@ -6,6 +6,7 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
 
 1. Change the characters panel to be searchable and organized better, and be a full page like the map instead of a dialog. It should have only information that the player knows about. It should be updated as the player continues to interact with NPCs, and have information like personality, relationship with the player, and last know location.
 2. Add svg icons to everything that can have icons (monsters, items, location types, etc.). Also add looks_like fields to definitions so that things without icons can inheirit their looks.
+3. Make the branding generic. "cygnusforge" is the generic internal name of the software; but the user-facing branding should be configurable. "Cygnus Forge" should be changeable to whatever is needed, by environment variable.
 
 # Triaged Issues
 
