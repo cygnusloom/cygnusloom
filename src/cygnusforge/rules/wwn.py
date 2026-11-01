@@ -72,6 +72,10 @@ CLASS_TABLES: Mapping[str, ClassTable] = {
     "warrior": ClassTable(6, 2, (1, 2, 3, 4, 5, 6, 7, 8, 9, 10), FOCUS_LEVELS),
     "expert": ClassTable(6, 0, (0, 1, 1, 2, 2, 3, 3, 4, 4, 5), FOCUS_LEVELS, quick_learner=True),
     "mage": ClassTable(6, -1, (0, 0, 0, 0, 1, 1, 1, 1, 1, 2), FOCUS_LEVELS),
+    # The Healer and Vowed are partial classes in the book. They are offered as full classes
+    # here so a player can take them alone; their arts still use the partial art chart.
+    "healer": ClassTable(6, -1, (0, 0, 0, 0, 1, 1, 1, 1, 1, 2), FOCUS_LEVELS),
+    "vowed": ClassTable(6, 0, (0, 1, 1, 2, 2, 3, 3, 4, 4, 5), FOCUS_LEVELS, quick_learner=True),
     # The class ids the WWN JSON uses.
     "adventurer_expert_warrior": ClassTable(
         6, 2, (1, 2, 2, 3, 4, 5, 5, 6, 6, 7), FOCUS_LEVELS, quick_learner=True
@@ -199,11 +203,15 @@ TRADITION_TAGS: Mapping[str, str] = {
     "necromancer_partial": "necromancer",
     "elementalist": "elementalist",
     "elementalist_partial": "elementalist",
+    "healer": "healer",
+    "vowed": "vowed",
 }
 TRADITION_EFFORT: Mapping[str, str] = {
     "high": "effort_high",
     "necromancer": "effort_necromancer",
     "elementalist": "effort_elemental",
+    "healer": "effort_healer",
+    "vowed": "effort_vowed",
 }
 # The levels at which a full or partial mage's class chart grants another art.
 ART_LEVELS_FULL: Mapping[str, frozenset[int]] = {
@@ -215,6 +223,8 @@ ART_LEVELS_PARTIAL: Mapping[str, frozenset[int]] = {
     "high": frozenset({2, 3, 6, 9}),
     "necromancer": frozenset({3, 6, 9}),
     "elementalist": frozenset({3, 6, 9}),
+    "healer": frozenset({2, 4, 5, 6, 8, 10}),
+    "vowed": frozenset({2, 4, 5, 6, 8, 10}),
 }
 
 
@@ -381,6 +391,24 @@ def tradition_tag(tradition: str) -> str:
     """The spell tag a tradition template grants, such as `high` for `high_mage`."""
     key = tradition.strip().casefold()
     return TRADITION_TAGS.get(key, key)
+
+
+def tradition_ids(found: Any) -> list[str]:
+    """Every art tradition a character has. A Mage/Mage Adventurer has two, and a Healer or
+    Vowed has one from its class rather than a tradition template."""
+    ids = [
+        str(found.templates[kind])
+        for kind in ("tradition", "tradition2")
+        if found.templates.get(kind)
+    ]
+    class_id = str(found.templates.get("class", "")).strip().casefold()
+    if class_id in {"healer", "vowed"}:
+        ids.append(class_id)
+    return ids
+
+
+def tradition_tags(found: Any) -> list[str]:
+    return [tradition_tag(tradition) for tradition in tradition_ids(found)]
 
 
 def tradition_effort_stat(tradition: str) -> str:
@@ -567,11 +595,17 @@ def instinct_check(name: str, instinct: int, cause: str, ctx: ToolContext) -> di
 
 
 def roll_tables(tables: list[str], ctx: ToolContext) -> dict[str, Any]:
-    """Roll on one or more of the rule set's dice tables and log the results. The world-generation
-    tables include significant_terrain, terrain_quirk, nation_disputes, ruling_class,
-    government_struggle, historical_event, and the four tag tables; dungeon_reaction (2d6) gives
-    an NPC's first reaction to the party."""
+    """Roll on one or more of the rule set's dice tables and log the results. World generation
+    uses significant_terrain, terrain_quirk, terrain_antagonists, nation_disputes_with_neighbor,
+    ruler_class, government_struggle, history_event, community_tags, court_tags, ruin_tags, and
+    wilderness_tags; dungeon_reaction (2d6) gives an NPC's first reaction to the party."""
     return ctx.world.roll_tables(tables)
+
+
+def gain_growth(character: str, ctx: ToolContext) -> dict[str, Any]:
+    """Roll the character's background Growth table for a level's growth. Apply the result with
+    improve_attribute, spend_skill_point, or the appropriate counter."""
+    return ctx.world.roll_growth(character)
 
 
 def roll_reaction(
@@ -634,20 +668,40 @@ def attack(
     ctx: ToolContext,
     modifier: str = "",
     targets: list[str] | None = None,
+    hit_modifier: int = 0,
+    count: int = 0,
 ) -> dict[str, Any]:
     """Make an NPC's attack: d20 plus its attack bonus against the target's Armor Class, with
-    natural 1 always missing and natural 20 always hitting. The engine rolls damage and Shock."""
-    return ctx.world.attack(attacker, attack, target, modifier, targets)
+    natural 1 always missing and natural 20 always hitting. The engine rolls damage and Shock.
+    A statblock with several attacks per action resolves all of them; set `count` to 1 to make
+    only one. `hit_modifier` carries cover, range, or another situational penalty or bonus."""
+    return ctx.world.attack(
+        attacker,
+        attack,
+        target,
+        modifier,
+        targets,
+        hit_modifier=hit_modifier,
+        count=count,
+    )
 
 
 def player_attack(
-    target: str, weapon: str, ctx: ToolContext, modifier: str = "", roll: int = 0
+    target: str,
+    weapon: str,
+    ctx: ToolContext,
+    modifier: str = "",
+    roll: int = 0,
+    hit_modifier: int = 0,
 ) -> dict[str, Any]:
     """Record the player character's attack with a carried weapon, or unarmed, using the d20 the
-    player rolled. The engine rolls damage; Shock applies on a miss."""
+    player rolled. The engine rolls damage; Shock applies on a miss. `hit_modifier` carries cover,
+    range, dual wielding, or another situational penalty or bonus."""
     if not 1 <= roll <= 20:
         raise InvalidInput("the player's attack roll must be 1 to 20")
-    return ctx.world.player_attack(target, weapon, modifier, attack_roll=roll)
+    return ctx.world.player_attack(
+        target, weapon, modifier, attack_roll=roll, hit_modifier=hit_modifier
+    )
 
 
 def resolve_attacks(target: str, attacks: list[dict[str, str]], ctx: ToolContext) -> dict[str, Any]:
@@ -734,6 +788,43 @@ def drop_item(name: str, item: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.drop_item(name, item)
 
 
+def ready_item(name: str, item: str, ctx: ToolContext, ready: bool = True) -> dict[str, Any]:
+    """Ready an item for use, or stow it so it takes an action to retrieve. A character can keep
+    only half their Strength in slots readied."""
+    return ctx.world.ready_item(name, item, ready)
+
+
+def hire_hireling(
+    name: str,
+    employer: str,
+    wage: int,
+    description: str,
+    ctx: ToolContext,
+    personality: str | None = None,
+    accent: str | None = None,
+    quirks: list[str] | None = None,
+    character: Mapping[str, Any] | None = None,
+    pronouns: str | None = None,
+) -> dict[str, Any]:
+    """Hire a retainer into a player character's company, paid in silver each day."""
+    return ctx.world.hire_hireling(
+        name=name,
+        employer=employer,
+        wage=wage,
+        description=description,
+        personality=personality,
+        accent=accent,
+        quirks=quirks,
+        character=character,
+        pronouns=pronouns,
+    )
+
+
+def dismiss_hireling(name: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
+    """Remove a retainer from its employer's company."""
+    return ctx.world.dismiss_hireling(name, cause)
+
+
 def buy_item(
     name: str, item: str, ctx: ToolContext, price: int | None = None, size: str = ""
 ) -> dict[str, Any]:
@@ -756,10 +847,19 @@ def create_monster(
     armor: int | None = None,
     attacks: list[dict[str, Any]] | None = None,
     force: bool = False,
+    rules: list[str] | None = None,
 ) -> dict[str, Any]:
     """Create a creature from the bestiary and place it at a location."""
     return ctx.world.create_monster(
-        name, location, description, template, stats, armor, attacks, force
+        name,
+        location,
+        description,
+        template,
+        stats,
+        armor,
+        attacks,
+        force,
+        rules=rules,
     )
 
 
@@ -783,7 +883,8 @@ def stabilize(name: str, explanation: str, ctx: ToolContext) -> dict[str, Any]:
 def recover_character(
     name: str, explanation: str, consequence: str, ctx: ToolContext
 ) -> dict[str, Any]:
-    """Recover a character who was mortally wounded, as magical healing does."""
+    """Clear a mortally wounded character's dying state, as magical healing does. Use
+    `heal_character` for the hit points the healing restores."""
     return ctx.world.recover_character(name, explanation, consequence)
 
 
@@ -802,20 +903,27 @@ def retreat(name: str, safe: bool, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.retreat(name, safe)
 
 
+def _xp_rate(ctx: ToolContext, rate: str = "") -> str:
+    """The campaign's experience track, or the explicit override the GM gave."""
+    chosen = rate or str(ctx.world.campaign_options().get("xp_rate", "fast"))
+    if chosen not in ("fast", "slow"):
+        raise InvalidInput("the experience track must be 'fast' or 'slow'")
+    return chosen
+
+
 def gain_xp(
     character: str,
     amount: int,
     cause: str,
     ctx: ToolContext,
     *,
-    rate: str = "fast",
+    rate: str = "",
 ) -> dict[str, Any]:
     """Add experience to a character's `xp` counter. When the total reaches the next level's
     threshold, note that the GM may call `level_up`; experience never levels a character by
     itself."""
     value = whole_number(amount, "amount", 0, 1_000_000)
-    if rate not in ("fast", "slow"):
-        raise InvalidInput("rate must be 'fast' or 'slow'")
+    rate = _xp_rate(ctx, rate)
     table = WWN_XP_SLOW if rate == "slow" else WWN_XP
     changed = ctx.world.adjust_counter(character, "xp", value)
     total = int(changed["value"])
@@ -851,13 +959,12 @@ def gain_xp(
     return ctx.world.with_hook_context(action)
 
 
-def level_up(character: str, ctx: ToolContext, rate: str = "fast") -> dict[str, Any]:
+def level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str, Any]:
     """Raise a character one level, if their experience reaches the next threshold. Rolls the
     class hit dice for the new level's HP as the book says, sets the class attack bonus, adds
     three skill points (four for an Expert or partial Expert), grants any focus or art pick due,
     raises a spellcaster's castings, and recomputes the derived stats (saves, Strain, Effort)."""
-    if rate not in ("fast", "slow"):
-        raise InvalidInput("rate must be 'fast' or 'slow'")
+    rate = _xp_rate(ctx, rate)
     spec = ctx.world.character
 
     def read(hc: HookContext) -> dict[str, Any]:
@@ -879,7 +986,7 @@ def level_up(character: str, ctx: ToolContext, rate: str = "fast") -> dict[str, 
         return {
             "level": level,
             "class_id": class_id,
-            "tradition": found.templates.get("tradition", ""),
+            "traditions": tradition_ids(found),
             "hp": found.stats.get("hp", 0),
             "con": spec.modifier(found.stats, "con"),
             "stats": dict(found.stats),
@@ -907,7 +1014,10 @@ def level_up(character: str, ctx: ToolContext, rate: str = "fast") -> dict[str, 
     focus_picks = 1 if new_level in table.focus_levels else 0
     if focus_picks:
         ctx.world.adjust_counter(character, "focus_picks", focus_picks)
-    art_picks = _art_picks(str(found["class_id"]), str(found["tradition"]), new_level)
+    art_picks = sum(
+        _art_picks(str(found["class_id"]), tradition, new_level)
+        for tradition in found["traditions"]
+    )
     if art_picks:
         ctx.world.adjust_counter(character, "art_picks", art_picks)
     casting = casting_row(str(found["class_id"]), new_level)
@@ -1115,7 +1225,7 @@ def learn_focus(character: str, focus: str, ctx: ToolContext) -> dict[str, Any]:
 
 
 # The feature tags that mark an art of one of the three traditions.
-ART_TAGS = ("high", "necromancer", "elementalist")
+ART_TAGS = ("high", "necromancer", "elementalist", "healer", "vowed")
 
 
 def learn_art(character: str, art: str, ctx: ToolContext) -> dict[str, Any]:
@@ -1131,13 +1241,13 @@ def learn_art(character: str, art: str, ctx: ToolContext) -> dict[str, Any]:
 
     def read(hc: HookContext) -> dict[str, Any]:
         _, found = _character(hc, character)
-        tradition = found.templates.get("tradition", "")
-        if not tradition:
+        tags = tradition_tags(found)
+        if not tags:
             raise InvalidInput(f"{found.name} has no magical tradition, so cannot learn arts")
-        if feature.tag != tradition_tag(tradition):
+        if feature.tag not in tags:
             raise InvalidInput(
                 f"{feature.name} is an art of the {feature.tag} tradition, not "
-                f"{found.name}'s {tradition_tag(tradition)}"
+                f"{found.name}'s {', '.join(tags)}"
             )
         if found.counters.get("art_picks", 0) < 1:
             raise InvalidInput(f"{found.name} has no art picks to spend")
@@ -1170,14 +1280,13 @@ def learn_spell(character: str, spell: str, ctx: ToolContext) -> dict[str, Any]:
 
     def read(hc: HookContext) -> dict[str, Any]:
         _, found = _character(hc, character)
-        tradition = found.templates.get("tradition", "")
-        if not tradition:
+        tags = tradition_tags(found)
+        if not tags:
             raise InvalidInput(f"{found.name} has no magical tradition, so cannot learn spells")
-        tag = tradition_tag(tradition)
-        if feature.tag not in {tag, "high"}:
+        if feature.tag not in {*tags, "high"}:
             raise InvalidInput(
                 f"{feature.name} is not a High Magic spell or a spell of {found.name}'s "
-                f"tradition, {tag}"
+                f"traditions, {', '.join(tags)}"
             )
         class_id = found.templates.get("class", "")
         row = casting_row(class_id, found.counters.get("level", 1))
@@ -1317,12 +1426,15 @@ def _rest_recovery(
             )
             restored[stat] = restored.get(stat, 0) + amount
 
-        if length == "night" and not interrupted:
-            if "frail" not in found.conditions:
-                recover("hp", found.counters.get("level", 1), f"a {length}'s rest")
-                recover("strain", 1, f"a {length}'s rest")
+        if length in ("night", "extended") and not interrupted:
+            nights = 7 if length == "extended" else 1
+            if length == "extended" or "frail" not in found.conditions:
+                recover("hp", found.counters.get("level", 1) * nights, f"a {length}'s rest")
+                recover("strain", nights, f"a {length}'s rest")
             recover("castings", found.harm.get("castings", 0), f"a {length}'s rest")
-        durations = ("scene", "day") if length == "night" and not interrupted else ("scene",)
+        durations = (
+            ("scene", "day") if length in ("night", "extended") and not interrupted else ("scene",)
+        )
         marks = found.marks.get(EFFORT_MARK) or {}
         kept = {duration: dict(held) for duration, held in marks.items()}
         for duration in durations:

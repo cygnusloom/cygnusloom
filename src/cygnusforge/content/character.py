@@ -1226,6 +1226,13 @@ def _check_templates(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
     if not isinstance(chosen, Mapping):
         raise CharacterError("'templates' must map kinds to template ids")
     class_id = chosen.get("class", "")
+    if class_id == "adventurer_mage_mage":
+        first = chosen.get("tradition", "")
+        second = chosen.get("tradition2", "")
+        if not first or not second:
+            raise CharacterError("a Mage/Mage Adventurer must choose two partial traditions")
+        if first == second:
+            raise CharacterError("a Mage/Mage Adventurer must choose two different traditions")
     for kind, template_id in chosen.items():
         template = spec.templates.get(str(template_id))
         if template is None:
@@ -1915,8 +1922,16 @@ def describe(spec: CharacterSpec, sheet: Sheet) -> str:
     if sheet.features:
         parts = []
         for feature, count in sheet.features.items():
-            name = spec.features[feature].name
-            parts.append(name if count == 1 else f"{name} x{count}")
+            found = spec.features[feature]
+            name = found.name if count == 1 else f"{found.name} x{count}"
+            notes = [
+                str(effect["text"])
+                for effect in found.effects
+                if effect.get("op") == "note" and effect.get("text")
+            ]
+            if notes:
+                name += f" ({'; '.join(notes)})"
+            parts.append(name)
         lines.append("Features: " + ", ".join(parts))
     for field_id, value in sheet.fields.items():
         if not value:

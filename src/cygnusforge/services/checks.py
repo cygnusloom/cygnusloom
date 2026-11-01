@@ -6,14 +6,16 @@ here names a particular game."""
 from __future__ import annotations
 
 import random
+from collections.abc import Mapping
 from typing import Any
 
 from sqlmodel import Session
 
 from cygnusforge.content.character import CharacterSpec
-from cygnusforge.content.library import CheckRules
+from cygnusforge.content.library import ALL_STATS, CheckRules, ConditionRules
 from cygnusforge.rules.dice import roll_total
 from cygnusforge.services.common import InvalidInput, whole_number
+from cygnusforge.services.conditions import active_conditions
 from cygnusforge.services.events import CheckMade, load_state, name_key, record
 
 
@@ -31,11 +33,13 @@ def roll_check(
     difficulty: int | None = None,
     modifier: int = 0,
     cause: str = "",
+    conditions: Mapping[str, ConditionRules] | None = None,
 ) -> dict[str, Any]:
     """Roll `check` for a character and record what it made. The roll is the check's dice plus the
     skill's level (or the check's untrained penalty when the character has no level in it), the
-    stat's modifier, and `modifier`; it succeeds at or over the difficulty. A missing difficulty is
-    the check's default, and any difficulty is clamped to the check's bounds.
+    stat's modifier, `modifier`, and any penalty or bonus the character's conditions add to a
+    check; it succeeds at or over the difficulty. A missing difficulty is the check's default,
+    and any difficulty is clamped to the check's bounds.
 
     `skill` or `stat` may be empty for a roll that adds neither."""
     found = load_state(db, campaign_id).characters.get(name_key(character))
@@ -76,8 +80,12 @@ def roll_check(
     modifier = whole_number(
         modifier, "modifier", -check.maximum_difficulty, check.maximum_difficulty
     )
+    condition_modifier = sum(
+        rules.modifies.get("check", 0) + rules.modifies.get(ALL_STATS, 0)
+        for rules in active_conditions(found, conditions or {})
+    )
     roll = roll_total(check.dice, rng, plus=plus)
-    bonus = skill_bonus + stat_bonus + modifier
+    bonus = skill_bonus + stat_bonus + modifier + condition_modifier
     total = roll + bonus
     success = total >= target
     record(

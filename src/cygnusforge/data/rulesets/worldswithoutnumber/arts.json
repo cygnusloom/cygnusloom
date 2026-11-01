@@ -349,5 +349,275 @@
     "tag": "elementalist",
     "rank": 0,
     "description": "Commit Effort for the scene as an Instant action to negate one instance of fire or frost damage dealt to a single visible ally or object."
+  },
+  {
+    "type": "feature",
+    "id": "art_healing_touch",
+    "name": "Healing Touch",
+    "feature_type": "feat",
+    "tag": "healer",
+    "rank": 0,
+    "description": "Commit Effort for the scene as an Instant action; for the rest of the scene, you may heal 2d6 damage plus your Heal skill to a touched ally as a Main Action. This healing adds 1 System Strain to the target each time it is applied."
+  },
+  {
+    "type": "feature",
+    "id": "art_empowered_healer",
+    "name": "Empowered Healer",
+    "feature_type": "feat",
+    "tag": "healer",
+    "rank": 0,
+    "description": "Your Healing Touch becomes more powerful, adding your level to any healing."
+  },
+  {
+    "type": "feature",
+    "id": "art_facile_healer",
+    "name": "Facile Healer",
+    "feature_type": "feat",
+    "tag": "healer",
+    "rank": 0,
+    "description": "Your Healing Touch ability is improved, and you no longer need to Commit Effort to activate it."
+  },
+  {
+    "type": "feature",
+    "id": "art_far_healer",
+    "name": "Far Healer",
+    "feature_type": "feat",
+    "tag": "healer",
+    "rank": 0,
+    "description": "Your Healing Touch ability is improved, and may be used on a visible target within ten feet per character level."
+  },
+  {
+    "type": "feature",
+    "id": "art_final_repose",
+    "name": "Final Repose",
+    "feature_type": "feat",
+    "tag": "healer",
+    "rank": 0,
+    "description": "Target a visible living creature and Commit Effort for the day as an Instant action. For the rest of the scene, they take a Physical saving throw penalty equal to your Heal skill. If they are reduced to zero hit points before the end of the scene, they die with no chance for stabilization or revival."
+  },
+  {
+    "type": "feature",
+    "id": "art_healers_eye",
+    "name": "Healer's Eye",
+    "feature_type": "feat",
+    "tag": "healer",
+    "rank": 0,
+    "description": "Commit Effort as an On Turn action; while the Effort remains committed, you can use a Main Action to visually detect diseases and poisons, diagnose creatures flawlessly, perceive their physiology, and learn their current hit point totals. You can also detect living creatures by sight regardless of available light or obscuring mists."
+  },
+  {
+    "type": "feature",
+    "id": "art_limb_restoration",
+    "name": "Limb Restoration",
+    "feature_type": "feat",
+    "tag": "healer",
+    "rank": 0,
+    "description": "Only expert healers can master this art, which cannot be learned earlier than 8th level. Commit all remaining Effort for the day, a minimum of one point, to regenerate a missing limb or organ for a target you are touching, or efface some dramatic scar or other physical debility. The target's System Strain is automatically maximized."
+  },
+  {
+    "type": "feature",
+    "id": "art_purge_ailment",
+    "name": "Purge Ailment",
+    "feature_type": "feat",
+    "tag": "healer",
+    "rank": 0,
+    "description": "Commit Effort for the day as a Main Action. An ally you are touching is cured of one poison or disease. Creatures killed by poison can be revived by this art if it is used within six minutes of death. At seventh level, you need only Commit Effort for the scene to use this ability."
+  },
+  {
+    "type": "feature",
+    "id": "art_refined_restoration",
+    "name": "Refined Restoration",
+    "feature_type": "feat",
+    "tag": "healer",
+    "rank": 0,
+    "description": "You and up to a dozen allies you tend before they sleep will all lose 2 System Strain from a good night's rest instead of 1."
+  },
+  {
+    "type": "feature",
+    "id": "art_revive_the_fallen",
+    "name": "Revive the Fallen",
+    "feature_type": "feat",
+    "tag": "healer",
+    "rank": 0,
+    "description": "Only expert healers are capable of mastering this art, which cannot be learned earlier than 8th level. Commit Effort for the day as a Main Action to revive a recently-slain living creature you are touching, within one minute per caster level of death. The target's System Strain is automatically maximized and they are unconscious for twenty-four hours before awakening with 1 hit point."
+  },
+  {
+    "type": "feature",
+    "id": "art_swift_healer",
+    "name": "Swift Healer",
+    "feature_type": "feat",
+    "tag": "healer",
+    "rank": 0,
+    "description": "Your Healing Touch ability is improved, and may be used as an On Turn action once per day per character level, though not more than once per scene on any given target."
+  },
+  {
+    "type": "feature",
+    "id": "art_healers_knife",
+    "name": "The Healer's Knife",
+    "feature_type": "feat",
+    "tag": "healer",
+    "rank": 0,
+    "description": "Your Healing Touch ability is altered, and may be used to inflict damage to a living target instead of healing it. The damage equals the healing that would normally be done, though you receive 1 System Strain instead of the target. Using this power in melee requires a successful Punch attack with a hit bonus equal to your Heal skill, with the damage added to any done by the blow, or simply touching an unwary target."
+  },
+  {
+    "type": "feature",
+    "id": "art_tireless_vigor",
+    "name": "Tireless Vigor",
+    "feature_type": "feat",
+    "tag": "healer",
+    "rank": 0,
+    "description": "Commit Effort; while it remains Committed your need to eat, drink, breathe, or sleep does not grow further. You may exert yourself tirelessly and regenerate 1 lost hit point per hour."
+  },
+  {
+    "type": "feature",
+    "id": "art_vital_furnace",
+    "name": "Vital Furnace",
+    "feature_type": "feat",
+    "tag": "healer",
+    "rank": 0,
+    "description": "Your tremendous life energy can instantly regenerate any non-mortal wound you have received. Commit Effort for the day as an Instant action to negate the damage from an injury you just received that did not reduce you to zero hit points. You also automatically stabilize if reduced to zero hit points and awaken ten minutes later with 1 hit point."
+  },
+  {
+    "type": "feature",
+    "id": "art_martial_style",
+    "name": "Martial Style",
+    "feature_type": "feat",
+    "tag": "vowed",
+    "rank": 0,
+    "description": "Regardless of class, your hit die can't be worse than 1d6 per level. When attacking with the Punch skill, your class hit bonus can be no worse than that of an Expert of your same character level. At third level, any attack using the Punch skill counts as a magic weapon."
+  },
+  {
+    "type": "feature",
+    "id": "art_unarmed_might",
+    "name": "Unarmed Might",
+    "feature_type": "feat",
+    "tag": "vowed",
+    "rank": 0,
+    "description": "Your unarmed attack damage increases as you gain levels, as noted on the Vowed chart. You may add your Punch skill to the damage done by these attacks as usual, but Foci such as Unarmed Combatant that replace or improve your usual Punch damage do not apply to you."
+  },
+  {
+    "type": "feature",
+    "id": "art_unarmored_defense",
+    "name": "Unarmored Defense",
+    "feature_type": "feat",
+    "tag": "vowed",
+    "rank": 0,
+    "description": "When not wearing armor or using a shield, your base Armor Class is equal to 13 plus half your character level, rounded down."
+  },
+  {
+    "type": "feature",
+    "id": "art_brutal_counter",
+    "name": "Brutal Counter",
+    "feature_type": "feat",
+    "tag": "vowed",
+    "rank": 0,
+    "description": "Commit Effort for the scene as an Instant action after resolving an enemy melee attack against you, whether it hits or misses. You may make a free physical attack against your assailant. You cannot use this art more than once per round against a single foe, but you may use it while performing a Total Defense."
+  },
+  {
+    "type": "feature",
+    "id": "art_faultless_awareness",
+    "name": "Faultless Awareness",
+    "feature_type": "feat",
+    "tag": "vowed",
+    "rank": 0,
+    "description": "Your awareness is such that you cannot be surprised, and will even wake from a sound sleep in time to respond normally to some imminent peril."
+  },
+  {
+    "type": "feature",
+    "id": "art_hurling_throw",
+    "name": "Hurling Throw",
+    "feature_type": "feat",
+    "tag": "vowed",
+    "rank": 0,
+    "description": "After you make a successful attack, you may Commit Effort for the scene as an Instant action. The target must make a Physical saving throw or be thrown up to ten feet in any direction, falling prone on landing and suffering the damage rolled for your attack."
+  },
+  {
+    "type": "feature",
+    "id": "art_inward_eye",
+    "name": "The Inward Eye",
+    "feature_type": "feat",
+    "tag": "vowed",
+    "rank": 0,
+    "description": "Commit Effort as an On Turn action. For as long as it remains Committed, you are mystically aware of your surroundings with a sense equivalent to normal eyesight regardless of darkness, obscuring mists, or your actual eyes being closed or blinded."
+  },
+  {
+    "type": "feature",
+    "id": "art_leap_of_the_heavens",
+    "name": "Leap of the Heavens",
+    "feature_type": "feat",
+    "tag": "vowed",
+    "rank": 0,
+    "description": "Commit Effort for the scene as a Move action to leap up to your full Move action horizontally or half that vertically. You may also Commit Effort for the scene as an Instant action to negate falling damage, no matter the distance."
+  },
+  {
+    "type": "feature",
+    "id": "art_masters_vigor",
+    "name": "Master's Vigor",
+    "feature_type": "feat",
+    "tag": "vowed",
+    "rank": 0,
+    "description": "Your body retains its vigor and youthful vitality to the full normal span of your life. You regain two lost hit points per hour due to your natural restorative powers."
+  },
+  {
+    "type": "feature",
+    "id": "art_mob_justice",
+    "name": "Mob Justice",
+    "feature_type": "feat",
+    "tag": "vowed",
+    "rank": 0,
+    "description": "As an Instant action, Commit Effort for the day to become impervious to the Make a Swarm Attack maneuver for the rest of the scene, and immune to Shock while in melee with at least two foes."
+  },
+  {
+    "type": "feature",
+    "id": "art_nimble_ascent",
+    "name": "Nimble Ascent",
+    "feature_type": "feat",
+    "tag": "vowed",
+    "rank": 0,
+    "description": "Commit Effort for the scene as an On Turn action. For the remainder of the scene you may move up vertical and overhanging surfaces and across difficult terrain at your full movement rate with no chance of slipping or falling, provided the surface is not glass-smooth or enchanted."
+  },
+  {
+    "type": "feature",
+    "id": "art_purified_body",
+    "name": "Purified Body",
+    "feature_type": "feat",
+    "tag": "vowed",
+    "rank": 0,
+    "description": "You may Commit Effort for the day as an Instant action to cure any disease or poison currently affecting you, or instead to negate any need for sleep, food, water, or air for the next 24 hours."
+  },
+  {
+    "type": "feature",
+    "id": "art_revivifying_breath",
+    "name": "Revivifying Breath",
+    "feature_type": "feat",
+    "tag": "vowed",
+    "rank": 0,
+    "description": "Commit Effort for the day as an On Turn action to heal yourself for 1d6 hit points plus your level. This healing does not increase System Strain. This ability may be used on your turn even when you are at zero hit points, but then Commits all your remaining Effort for the day. Once per scene."
+  },
+  {
+    "type": "feature",
+    "id": "art_shattering_strike",
+    "name": "Shattering Strike",
+    "feature_type": "feat",
+    "tag": "vowed",
+    "rank": 0,
+    "description": "Commit Effort for the day and take a full round of motionlessness to prepare. On the next round, as a Main Action, your unarmed attack can shatter a wooden door, wall, or similar object. At fourth level it affects stone, and at seventh metal. Against an immobilized creature the attack does 1d12 damage per character level."
+  },
+  {
+    "type": "feature",
+    "id": "art_style_weaponry",
+    "name": "Style Weaponry",
+    "feature_type": "feat",
+    "tag": "vowed",
+    "rank": 0,
+    "description": "Pick three general classes of weapons, such as swords, bows, axes, or daggers. When using weapons of those classes, you may use Punch for hit rolls instead of Stab or Shoot. Your Punch skill does not add to the damage done by these weapons, though Martial Style applies to their hit rolls."
+  },
+  {
+    "type": "feature",
+    "id": "art_unobtrusive_step",
+    "name": "Unobtrusive Step",
+    "feature_type": "feat",
+    "tag": "vowed",
+    "rank": 0,
+    "description": "Once per scene, you may Commit Effort for the day as an Instant action to reroll a failed Sneak skill check or a skill check related to impersonating someone else."
   }
 ]

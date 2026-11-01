@@ -105,6 +105,8 @@ CORE_TOOLS = {
     "speak",
     "ooc",
     "lookup_rule",
+    "lookup_feature",
+    "lookup_condition",
     "add_condition",
     "end_condition",
     "list_lookups",
@@ -1018,6 +1020,9 @@ def test_bundled_cairn_prompts_and_cap_are_read():
         "overland_weather",
         "encounter_start",
         "player_rolls",
+        "conditions",
+        "hirelings",
+        "monster_abilities",
     ]
     assert ContentLibrary.load().core.prompt_fragments == ()
 

@@ -1495,6 +1495,8 @@ LOOKUP_TOOL_NAMES = {
     "get_statblock",
     "character_options",
     "lookup_rule",
+    "lookup_feature",
+    "lookup_condition",
 }
 
 

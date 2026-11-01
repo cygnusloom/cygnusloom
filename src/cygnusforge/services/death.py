@@ -25,7 +25,9 @@ def begin_dying(
     `combat.dying_rounds` encounter rounds when the rule set gives that clock, unless aided. A
     character already dying or dead is left as it is."""
     character = load_state(db, campaign_id).characters.get(name_key(name))
-    if character is None or character.kind != PC_KIND or character.dead:
+    if character is None or character.dead:
+        return
+    if character.kind != PC_KIND and not character.important:
         return
     if character.dying_hours is not None or character.dying_rounds is not None:
         return
@@ -69,7 +71,7 @@ def on_critical_save_failed(db: Session, campaign_id: int, combat: CombatRules, 
     """A player character failed its critical save. A character with a fatal condition dies at once;
     anyone else starts the dying clock, as set by the rule set."""
     character = load_state(db, campaign_id).characters.get(name_key(name))
-    if character is None or character.kind != PC_KIND:
+    if character is None or (character.kind != PC_KIND and not character.important):
         return
     if any(cid in combat.fatal_conditions for cid in character.conditions):
         record(

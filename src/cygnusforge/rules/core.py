@@ -48,6 +48,7 @@ def create_npc(
     force: bool = False,
     hp_tier: str | None = None,
     pronouns: str | None = None,
+    important: bool = False,
 ) -> dict[str, Any]:
     return ctx.world.create_npc(
         name=name,
@@ -60,6 +61,7 @@ def create_npc(
         force=force,
         hp_tier=hp_tier,
         pronouns=pronouns,
+        important=important,
     )
 
 
@@ -181,6 +183,11 @@ def view_journal(
     return ctx.world.view_journal(start_line, end_line)
 
 
+def lookup_move(move: str, ctx: ToolContext) -> dict[str, Any]:
+    """Read a move's trigger, stat, and outcome bands before rolling it."""
+    return ctx.world.lookup_move(move)
+
+
 def roll_move(
     move: str, character: str, ctx: ToolContext, modifier: int = 0, stat: str | None = None
 ) -> dict[str, Any]:
@@ -253,6 +260,27 @@ def get_statblock(name: str, ctx: ToolContext) -> dict[str, Any]:
 
 def character_options(ctx: ToolContext, field: str | None = None) -> dict[str, Any]:
     return ctx.world.character_options(field)
+
+
+def heal_character(
+    name: str,
+    amount: int,
+    ctx: ToolContext,
+    stat: str = "hp",
+    cause: str = "",
+) -> dict[str, Any]:
+    """Restore lost points of a stat, such as hit points from a healing spell or art."""
+    return ctx.world.heal_character(name, amount, stat, cause)
+
+
+def lookup_condition(condition: str, ctx: ToolContext) -> dict[str, Any]:
+    """Read a condition's effects and the ways it ends."""
+    return ctx.world.lookup_condition(condition)
+
+
+def lookup_feature(feature: str, ctx: ToolContext) -> dict[str, Any]:
+    """Read a feature's full text, such as a spell, art, Focus, or class ability."""
+    return ctx.world.lookup_feature(feature)
 
 
 def lookup_rule(rule: str, ctx: ToolContext) -> dict[str, str]:

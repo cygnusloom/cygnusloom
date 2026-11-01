@@ -32,5 +32,12 @@
     "id": "goal",
     "name": "Goal",
     "description": "What the character wants badly enough to risk danger for. Write one or two sentences."
+  },
+  {
+    "type": "campaign_field",
+    "id": "xp_rate",
+    "name": "Experience Track",
+    "description": "The track every character in this campaign uses for experience and levelling.",
+    "table": "xp_rate"
   }
 ]

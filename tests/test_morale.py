@@ -170,6 +170,7 @@ def test_a_fled_foe_is_skipped_when_its_turn_comes_round(client_factory):
     replace(tools, rng=Rolls(10)).retreat("Bo", True)
     _finish_gm_reply(app, campaign_id)
     with _db(app) as db:
+        encounters.begin_turn(db, campaign_id, PC)
         encounters.end_turn(db, campaign_id, PC, by_player=True)
         encounters.begin_turn(db, campaign_id, "Grave Thing")
         encounters.end_turn(db, campaign_id, "Grave Thing", by_player=False)

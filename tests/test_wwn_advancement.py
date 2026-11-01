@@ -54,7 +54,7 @@ FIXED_STATS = {
     "hp": 6,
     "attack_bonus": 1,
     "castings": 1,
-    "morale": 1,
+    "morale": 7,
 }
 
 
@@ -92,6 +92,29 @@ CLASS_PICKS: dict[str, dict[str, str]] = {
     },
     "adventurer_mage_mage": {
         "pick-feature-class_focus_any-0": "focus_die_hard",
+    },
+    "healer": {
+        "pick-feature-class_art_healer-0": "art_empowered_healer",
+    },
+    "vowed": {
+        "pick-feature-class_art_vowed-0": "art_brutal_counter",
+    },
+}
+TRADITION2_PICKS: dict[str, dict[str, str]] = {
+    "high_mage_partial_2": {
+        "pick-feature-tradition2_art_high-0": "art_arcane_lexicon",
+        "pick-feature-tradition2_spells_high-0": "spell_long_amber_moment",
+        "pick-feature-tradition2_spells_high-1": "spell_wardpact_invocation",
+    },
+    "necromancer_partial_2": {
+        "pick-feature-tradition2_art_necromancer-0": "art_bonetalker",
+        "pick-feature-tradition2_spells_necromancer-0": "spell_long_amber_moment",
+        "pick-feature-tradition2_spells_necromancer-1": "spell_wardpact_invocation",
+    },
+    "elementalist_partial_2": {
+        "pick-feature-tradition2_art_elementalist-0": "art_elemental_blast",
+        "pick-feature-tradition2_spells_elementalist-0": "spell_long_amber_moment",
+        "pick-feature-tradition2_spells_elementalist-1": "spell_wardpact_invocation",
     },
 }
 TRADITION_PICKS: dict[str, dict[str, str]] = {
@@ -141,6 +164,8 @@ def _campaign(
     *,
     class_id: str = "warrior",
     tradition: str | None = None,
+    tradition2: str | None = None,
+    options: dict[str, str] | None = None,
     name: str = NAME,
 ) -> tuple[FastAPI, int]:
     """A campaign with one player character of the chosen class, created through the form."""
@@ -153,6 +178,7 @@ def _campaign(
         page = client.get(f"/campaigns/{campaign_id}").text
         fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
         fields.update(_choices(page))
+        fields.update(options or {})
         fields["template-class"] = class_id
         fields.update(CLASS_PICKS[class_id])
         fields["pick-skill-class_free_skill-0"] = "notice"
@@ -163,6 +189,9 @@ def _campaign(
             fields.update(TRADITION_PICKS[tradition])
         else:
             fields["template-tradition"] = "no_tradition"
+        if tradition2 is not None:
+            fields["template-tradition2"] = tradition2
+            fields.update(TRADITION2_PICKS[tradition2])
         created = _create_character(client, campaign_id, name=name, fields=fields)
     error = re.search(r'<p class="form-error"[^>]*>(.*?)</p>', created.text, re.DOTALL)
     assert created.status_code == 303, error.group(1) if error else created.text[:500]
@@ -677,3 +706,64 @@ def test_a_frail_character_recovers_no_hit_points_or_strain(
     assert "hp" not in result["restored"]
     assert "strain" not in result["restored"]
     assert _pc(app, campaign_id).harm["hp"] == 5
+
+
+def test_a_dual_mage_takes_two_partial_traditions(client_factory):
+    app, campaign_id = _campaign(
+        client_factory,
+        class_id="adventurer_mage_mage",
+        tradition="high_mage_partial",
+        tradition2="necromancer_partial_2",
+    )
+    pc = _pc(app, campaign_id)
+    assert pc.templates["tradition"] == "high_mage_partial"
+    assert pc.templates["tradition2"] == "necromancer_partial_2"
+    assert "art_arcane_lexicon" in pc.features
+    assert "art_bonetalker" in pc.features
+    assert "spell_coruscating_coffin" in pc.features
+    assert "spell_long_amber_moment" in pc.features
+    assert pc.stats["effort_high"] >= 1
+    assert pc.stats["effort_necromancer"] >= 1
+
+
+def test_a_healer_starts_with_healing_touch_and_an_art(client_factory):
+    app, campaign_id = _campaign(client_factory, class_id="healer")
+    pc = _pc(app, campaign_id)
+    assert pc.skills.get("heal", 0) == 0
+    assert "art_healing_touch" in pc.features
+    assert "art_empowered_healer" in pc.features
+    assert pc.stats["effort_healer"] >= 1
+
+
+def test_a_vowed_starts_with_the_three_basic_arts_and_another(client_factory):
+    app, campaign_id = _campaign(client_factory, class_id="vowed")
+    pc = _pc(app, campaign_id)
+    assert {"art_martial_style", "art_unarmed_might", "art_unarmored_defense"} <= set(pc.features)
+    assert "art_brutal_counter" in pc.features
+    assert pc.stats["effort_vowed"] >= 1
+
+
+def test_the_experience_track_chosen_at_creation_guides_advancement(client_factory):
+    app, campaign_id = _campaign(client_factory, options={"campaign-xp_rate": "slow"})
+    ctx = _ctx(_world_tools(app, campaign_id))
+
+    below = wwn.gain_xp(NAME, 5, "a session", ctx)
+    assert below["next_threshold"] == wwn.WWN_XP_SLOW[1] == 6
+    assert below["ready"] is False
+
+    at = wwn.gain_xp(NAME, 1, "another session", ctx)
+    assert at["ready"] is True
+    assert wwn.level_up(NAME, ctx)["level"] == 2
+
+
+def test_a_healer_learns_another_healer_art_at_second_level(client_factory):
+    app, campaign_id = _campaign(client_factory, class_id="healer")
+    tools = _world_tools(app, campaign_id)
+    ctx = _ctx(tools)
+
+    wwn.gain_xp(NAME, 3, "a session", ctx)
+    result = wwn.level_up(NAME, ctx)
+    assert result["art_picks"] == 1
+    learned = wwn.learn_art(NAME, "art_facile_healer", ctx)
+    assert learned["art"] == "art_facile_healer"
+    assert "art_facile_healer" in _pc(app, campaign_id).features

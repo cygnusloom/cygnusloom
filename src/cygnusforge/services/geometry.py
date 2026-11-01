@@ -10,7 +10,9 @@ from __future__ import annotations
 import math
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
+from functools import lru_cache
 
+from shapely.geometry import Point as ShapePoint
 from shapely.geometry import Polygon
 from shapely.ops import unary_union
 
@@ -24,9 +26,6 @@ _INSET = 1e-7
 _ON_LINE = 1e-9
 # An outline whose area is this small a fraction of its size has no area.
 _FLAT = 1e-9
-# How far either side of an outline edge is probed, in km, to tell whether the edge is a seam
-# between two covered areas or the end of the covered ground.
-_SEAM_KM = 0.01
 # A cut part with less area than this, in square kilometers, is an artifact of the arithmetic.
 _EMPTY_KM2 = 1e-6
 # Cut corners are kept to this many decimals, 0.1 m, so the values stay readable.
@@ -135,40 +134,20 @@ def clearance(point: Point, polygons: Sequence[Sequence[Point]]) -> float:
     """How far the point is from the nearest place where the covered ground ends: the edge of
     the map, or an outline bordering blank ground. Outlines that touch each other are not ends.
     0.0 if the point is not covered at all."""
-    if not _covered(point, polygons):
+    if not polygons:
         return 0.0
-    ends = [
-        (start, end)
-        for polygon in polygons
-        for start, end in _edges(polygon)
-        if _ends_coverage(start, end, polygons)
-    ]
-    return min((_distance_to_segment(point, start, end) for start, end in ends), default=math.inf)
+    shape = _coverage_shape(tuple(tuple(polygon) for polygon in polygons))
+    target = ShapePoint(point)
+    if not shape.covers(target):
+        return 0.0
+    return float(target.distance(shape.boundary))
 
 
-def _covered(point: Point, polygons: Sequence[Sequence[Point]]) -> bool:
-    return any(contains(point, polygon) for polygon in polygons)
-
-
-def _ends_coverage(start: Point, end: Point, polygons: Sequence[Sequence[Point]]) -> bool:
-    """True if one side of the edge is covered and the other side is not."""
-    (x1, y1), (x2, y2) = start, end
-    length = math.hypot(x2 - x1, y2 - y1)
-    if length == 0:
-        return False
-    normal_x, normal_y = -(y2 - y1) / length * _SEAM_KM, (x2 - x1) / length * _SEAM_KM
-    mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
-    left = _covered((mid_x + normal_x, mid_y + normal_y), polygons)
-    right = _covered((mid_x - normal_x, mid_y - normal_y), polygons)
-    return left != right
-
-
-def _distance_to_segment(point: Point, start: Point, end: Point) -> float:
-    (px, py), (x1, y1), (x2, y2) = point, start, end
-    dx, dy = x2 - x1, y2 - y1
-    length_sq = dx * dx + dy * dy
-    t = 0.0 if length_sq == 0 else max(0.0, min(1.0, ((px - x1) * dx + (py - y1) * dy) / length_sq))
-    return math.hypot(px - (x1 + t * dx), py - (y1 + t * dy))
+@lru_cache(maxsize=8)
+def _coverage_shape(polygons: tuple[tuple[Point, ...], ...]) -> Polygon:
+    """The union of the covered outlines. Cached because a map checks clearance for many points
+    against the same ground, and the union is the expensive part."""
+    return unary_union([Polygon(polygon) for polygon in polygons])
 
 
 def _pokes_into(outline: Sequence[Point], other: Sequence[Point]) -> bool:

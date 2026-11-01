@@ -2,6 +2,7 @@
   {
     "type": "prompt",
     "id": "shock_narration",
+    "step": "narration",
     "text": "A Shock result is a miss that still hurts. Describe a blow that batters armor, drives the target back, or grinds them down, never a clean hit; if the target's armor is too heavy, describe the attack turning aside with no harm."
   },
   {
@@ -22,11 +23,72 @@
   {
     "type": "prompt",
     "id": "encounter_start",
-    "text": "When a fight or other tactical action starts, set it up yourself without asking the player whether to use the encounter system: create or choose a map, start the encounter, add every combatant, and settle initiative. WWN rolls initiative for each side as soon as both sides have joined, so call roll_initiative only if it is still unset. The encounter is how turns, positions, and attacks are tracked. Do not start a later NPC turn on your own; the player presses Start that NPC's turn, and the acting side's turn ends only when the player presses End turn. Never take a player character's turn for them."
+    "text": "When a fight or other tactical action starts, set it up yourself without asking the player whether to use the encounter system: create or choose a map, start the encounter, add every combatant, and settle initiative. WWN rolls initiative for each side as soon as both sides have joined, so call roll_initiative only if it is still unset. The encounter is how turns, positions, and attacks are tracked. Do not start a later turn on your own: the player presses Start for every turn, including their own. An NPC's turn ends automatically when your reply finishes; the player presses End only for their own character's turn. Never take a player character's turn for them."
   },
   {
     "type": "prompt",
     "id": "player_rolls",
     "text": "The player rolls their own character's attacks and saves. Call player_attack for an attack and player_roll_save for a save so the player presses the roll button; never roll their d20 yourself. The engine rolls damage and applies Shock. Use these tools in and out of an encounter, and call roll_save only for NPCs."
+  },
+  {
+    "type": "prompt",
+    "id": "feature_text",
+    "text": "Before you resolve a spell, art, Focus, origin, or class ability, read it with lookup_feature. The statblock names the character's features and prints their short notes; the full text is the rule. Never invent an effect a feature does not state."
+  },
+  {
+    "type": "prompt",
+    "id": "combat_actions",
+    "text": "Use the combat tools for the book's actions. Pass hit_modifier to attack or player_attack for cover (-2 or -4), long range (-2), firing while meleed or attacking prone (-4), dual wielding (-1 to hit and +2 damage), and total defence (-2 to attackers). A charge, fighting withdrawal, screen, or delay is narrated and recorded with movement, set_ac, or add_condition. A shove or grapple is an unarmed hit followed by an opposed Str/Punch or Str/Exert roll_check, then add_condition grappled or prone. An execution attack needs a full minute, an unaware target, and a physical save at -the attacker's combat skill."
+  },
+  {
+    "type": "prompt",
+    "id": "surprise_round",
+    "text": "When an ambush is possible, roll the ambushers' Dex/Sneak against the defenders' Wis/Notice with roll_check before the encounter begins. If the ambushers win, they take one full round before initiative is rolled; do not also roll initiative for that round."
+  },
+  {
+    "type": "prompt",
+    "id": "condition_tools",
+    "text": "Record lasting states with add_condition and end_condition rather than leaving them in prose: grappled or prone after a shove or grapple, unconscious after a non-lethal takedown, and frail after a mortal wound. Read a condition with lookup_condition when you need its exact modifier or ending. End a condition with the trigger it lists, or with \"gm\" when the story ends it another way. Never narrate a condition the tools do not record."
+  },
+  {
+    "type": "prompt",
+    "id": "rest_and_recovery",
+    "text": "When the party camps or sleeps through a night, call rest for each character with length \"night\". A short breather is \"moments\" and returns only scene Effort. A week of bed rest is \"extended\" and ends Frail. Never add advance_time for the same time, and do not also call recover_after_rest or restore_spell_slots for the same night. A night restores HP equal to level, one System Strain, all castings, and scene and day Effort; Frail characters gain no HP or Strain from a single night."
+  },
+  {
+    "type": "prompt",
+    "id": "instinct_and_reaction",
+    "text": "Before the party's first exchange with a group, when bloodshed is not certain, call roll_reaction with the character who greets them and describe the mood before the players act. When an NPC might act on impulse, call instinct_check with the Instinct score from its statblock; a roll no higher than the score follows the impulse. Player characters never check Instinct or Morale."
+  },
+  {
+    "type": "prompt",
+    "id": "site_turns",
+    "text": "Exploring a site runs in 10-minute turns. Move the clock with advance_time for each turn, and roll the site's wandering check with roll_tables dungeon_event every 1 to 6 turns, as alert as the site is. A torch burns 6 turns and a lantern 24. For foraging, privation, and travel, call roll_check for foraging and harm_character for hunger, thirst, and exposure."
+  },
+  {
+    "type": "prompt",
+    "id": "world_generation",
+    "text": "Before the opening narration, build the starting region with roll_tables: significant_terrain, terrain_quirk, terrain_antagonists, nation_disputes_with_neighbor, ruler_class, government_struggle, history_event, community_tags, court_tags, ruin_tags, and wilderness_tags. Then place the first settlement with create_location and its people with create_npc."
+  },
+  {
+    "type": "prompt",
+    "id": "magic_loop",
+    "text": "A caster prepares spells with prepare_spells after a rest, casts with cast_spell, and commits Effort with commit_effort for arts. Recover scene Effort when the scene ends and day Effort on a night's rest with recover_effort. Read the spell or art with lookup_feature before you resolve it, and apply its healing with heal_character rather than narrating hit points back."
+  },
+  {
+    "type": "prompt",
+    "id": "advancement_loop",
+    "text": "Award gain_xp once per session or great achievement; it uses the campaign's experience track unless you override it. At a threshold call level_up during downtime, then call gain_growth for the background's Growth roll. Spend skill points with spend_skill_point, Focus picks with learn_focus, art picks with learn_art, spells with learn_spell, and attribute boosts with improve_attribute. Never raise a level or skill by narration alone."
+  },
+  {
+    "type": "prompt",
+    "id": "monster_abilities",
+    "text": "A statblock's description and attached rules are binding. Read a monster with search_monster before you use it; its attack count, immunities, saves, and special abilities are part of the statblock. Use attack for its attack (it resolves the statblock's attacks per action), resolve_attacks for several different attacks, and harm_character, roll_save, or add_condition for a special effect. Use create_monster with rules for a custom creature's special abilities."
+  },
+  {
+    "type": "prompt",
+    "id": "healing",
+    "step": "narration",
+    "text": "When a spell, art, or item heals, call heal_character with the amount it rolls; the tool caps the healing at the harm actually taken. Healing Touch heals 2d6 plus the Healer's Heal skill and adds 1 System Strain with add_strain. A mortally wounded character must be stabilized before healing can bring them back, and a cure that ends Frail must call end_condition with \"magic\". Never simply narrate lost hit points back."
   }
 ]

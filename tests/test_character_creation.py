@@ -16,7 +16,9 @@ from tests.test_campaigns import _create_character, _new_campaign, _send, _signe
 
 STAT_SELECT_RE = re.compile(r'<select name="stat-(\w+)"[^>]*>(.*?)</select>', re.DOTALL)
 STAT_HIDDEN_RE = re.compile(r'<input type="hidden" name="stat-(\w+)" value="(\d+)">')
-RADIO_RE = re.compile(r'<input type="radio" name="((?:template|field)-[\w-]+)" value="([^"]*)"')
+RADIO_RE = re.compile(
+    r'<input type="radio" name="((?:template|field|campaign)-[\w-]+)" value="([^"]*)"'
+)
 CAMPAIGN_RADIO_RE = re.compile(r'<input type="radio" name="(campaign-[\w-]+)" value="([^"]*)"')
 
 
@@ -309,9 +311,12 @@ def test_cairn_campaign_asks_for_its_options_and_character_on_one_page(
 def test_the_campaign_options_must_all_be_chosen(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
     campaign_id = _new_cairn_campaign(client)
-    response = _create_character(
-        client, campaign_id, name="Mara", fields=_complete_form(client, campaign_id)
-    )
+    fields = {
+        key: value
+        for key, value in _complete_form(client, campaign_id).items()
+        if not key.startswith("campaign-")
+    }
+    response = _create_character(client, campaign_id, name="Mara", fields=fields)
     assert response.status_code == 400
     assert "Choose Omen" in response.text
     with Session(client.app.state.engine) as db:

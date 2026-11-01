@@ -146,6 +146,8 @@ CORE_TOOL_NAMES = {
     "speak",
     "ooc",
     "lookup_rule",
+    "lookup_feature",
+    "lookup_condition",
     "list_lookups",
     "roll_creative",
 }

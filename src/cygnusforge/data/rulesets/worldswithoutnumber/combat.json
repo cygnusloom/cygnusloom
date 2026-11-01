@@ -7,7 +7,12 @@
     "damage": [{"kind": "harm", "stat": "hp"}],
     "check_die": "1d20",
     "initiative_stat": "dex",
-    "defeat": {"player_character": "mortally wounded", "npc": "dead"},
+    "defeat": {
+      "player_character": "mortally wounded",
+      "player_character_dead": "dead",
+      "important_npc": "mortally wounded",
+      "npc": "dead"
+    },
     "outside_harm": ["hp"],
     "hit_mode": "roll_vs_defense",
     "hit_bonus_stat": "attack_bonus",

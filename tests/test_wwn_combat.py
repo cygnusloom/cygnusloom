@@ -21,6 +21,7 @@ from sqlmodel import Session
 from cygnusforge.content.character import Feature
 from cygnusforge.content.library import CombatRules, ContentLibrary
 from cygnusforge.services import death, encounters
+from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
     CharacterDying,
     CharacterSaved,
@@ -73,6 +74,8 @@ BASE_STATS: dict[str, int] = {
     "effort_high": 1,
     "effort_necromancer": 1,
     "effort_elemental": 1,
+    "effort_healer": 1,
+    "effort_vowed": 1,
     "save_physical": 15,
     "save_evasion": 15,
     "save_mental": 15,
@@ -99,6 +102,9 @@ def _wwn_tools(
         conditions=WWN.conditions,
         counters=WWN.counters,
         moves=WWN.moves,
+        clock_rules=WWN.clock,
+        rests=WWN.rests,
+        interrupted_rest=WWN.interrupted_rest,
         inventory=WWN.inventory,
         item_sizes=WWN.item_sizes,
         plus=WWN.plus,
@@ -119,6 +125,10 @@ def _wwn_campaign(client_factory: Callable[[], TestClient]) -> tuple[TestClient,
     created = _create_character(client, campaign_id, name=PC, fields=fields)
     error = re.search(r'<p class="form-error"[^>]*>(.*?)</p>', created.text, re.DOTALL)
     assert created.status_code == 303, error.group(1) if error else "no error"
+    # Close the opening reply so an encounter turn can start from a clean state.
+    with Session(client.app.state.engine) as db:
+        record(db, campaign_id, ChatGM(content="The opening plays out.", model="test"))
+        db.commit()
     return client, campaign_id, _wwn_tools(client.app, campaign_id)
 
 
@@ -601,9 +611,10 @@ def test_wwn_player_attack_and_save_prompt_for_the_players_own_dice(client_facto
     assert (event.roll, event.passed, event.cause) == (1, False, "poison")
 
 
-def test_wwn_npc_turn_waits_for_the_end_turn_button(client_factory):
-    """Starting a foe's turn runs the GM's reply, but the order does not advance until the
-    player presses End turn. WWN rolls side initiative as soon as both sides have joined."""
+def test_wwn_npc_turn_ends_when_the_gm_reply_finishes(client_factory):
+    """Starting a foe's turn runs the GM's reply, and the engine ends the turn when that reply
+    finishes. The player only presses Start for the next actor. WWN rolls side initiative as soon
+    as both sides have joined."""
     client, campaign_id, tools = _wwn_campaign(client_factory)
     with Session(tools.engine) as db:
         record(db, campaign_id, ChatGM(content="The opening plays out.", model="test"))
@@ -618,11 +629,13 @@ def test_wwn_npc_turn_waits_for_the_end_turn_button(client_factory):
         encounter = load_state(db, tools.campaign_id).encounter
         assert encounter is not None and encounter.settled
         assert FOE in encounter.order
-        if encounter.acting == PC:
-            encounters.end_turn(db, tools.campaign_id, PC, by_player=True)
+        assert encounter.acting is None
+        if encounter.order[encounter.up] == PC:
+            encounters.begin_turn(db, campaign_id, PC)
+            encounters.end_turn(db, campaign_id, PC, by_player=True)
     with Session(tools.engine) as db:
-        encounter = load_state(db, tools.campaign_id).encounter
-        assert encounter.acting != PC
+        encounter = load_state(db, campaign_id).encounter
+        assert encounter.order[encounter.up] == FOE
 
     token = csrf_token(client, "/campaigns")
     response = client.post(
@@ -635,18 +648,11 @@ def test_wwn_npc_turn_waits_for_the_end_turn_button(client_factory):
     with Session(tools.engine) as db:
         state = load_state(db, tools.campaign_id)
         assert state.turn is None
-        assert state.encounter.acting == FOE
+        assert state.encounter.acting is None
+        assert state.encounter.order[state.encounter.up] == PC
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert f"End {FOE}'s turn" in page
-
-    ended = client.post(
-        f"/campaigns/{campaign_id}/encounter/turn/end",
-        data={"csrf_token": token, "name": FOE},
-        follow_redirects=False,
-    )
-    assert ended.status_code == 303
-    with Session(tools.engine) as db:
-        assert load_state(db, tools.campaign_id).encounter.acting == PC
+    assert f"End {FOE}'s turn" not in page
+    assert f"Start {PC}'s turn" in page
 
 
 def test_wwn_player_save_prompt_works_outside_an_encounter(client_factory):
@@ -687,3 +693,144 @@ def test_wwn_mortal_wounds_count_six_rounds(client_factory):
         death.tick_dying_rounds(db, campaign_id)
         pc = load_state(db, campaign_id).characters[name_key(PC)]
         assert (pc.dying_rounds, pc.dead) == (None, True)
+
+
+def _player_turn(app: FastAPI, campaign_id: int) -> None:
+    """Make the player character the acting one, playing through any NPC turns first."""
+    with Session(app.state.engine) as db:
+        state = load_state(db, campaign_id)
+        encounter = state.encounter
+        assert encounter is not None
+        for _ in range(len(encounter.order)):
+            state = load_state(db, campaign_id)
+            encounter = state.encounter
+            assert encounter is not None
+            if encounter.acting is not None:
+                if encounter.acting == PC:
+                    return
+                encounters.end_turn(db, campaign_id, encounter.acting, by_player=False)
+                continue
+            next_name = encounter.order[encounter.up]
+            encounters.begin_turn(db, campaign_id, next_name)
+            if next_name == PC:
+                return
+            record(db, campaign_id, ChatGM(content="The NPC turn plays out.", model="test"))
+            db.commit()
+            encounters.end_turn(db, campaign_id, next_name, by_player=False)
+    raise AssertionError(f"{PC} could not be made the acting character")
+
+
+def test_a_stowed_weapon_must_be_readied_before_it_can_strike(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=20)
+    tools.give_item(PC, WAR_AXE, damage="1d10")
+    tools.ready_item(PC, WAR_AXE, ready=False)
+    assert next(i for i in _pc(app, campaign_id).items if i.name == WAR_AXE).ready is False
+    _player_turn(app, campaign_id)
+
+    with pytest.raises(InvalidInput, match="stowed; ready it with ready_item"):
+        tools.player_attack(FOE, WAR_AXE, attack_roll=20)
+
+    tools.ready_item(PC, WAR_AXE, ready=True)
+    assert next(i for i in _pc(app, campaign_id).items if i.name == WAR_AXE).ready is True
+    result = tools.player_attack(FOE, WAR_AXE, attack_roll=20, damage_roll=4)
+    assert result["harm"]["hp"] > 0
+
+
+def test_a_statblocks_attack_count_is_resolved_in_one_action(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=30)
+    tools.create_monster("Ashcrawler", YARD, template="ashcrawler")
+    tools.add_participant("Ashcrawler")
+    tools.set_stat_max(PC, "hp", 30, "for a long test fight")
+
+    before = len(_struck(app, campaign_id))
+    tools.attack("Ashcrawler", "bite", PC)
+    assert len(_struck(app, campaign_id)) - before == 2
+
+
+def test_an_important_npc_is_mortally_wounded_rather_than_killed(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools.create_npc(
+        "Elder Marrow",
+        YARD,
+        "A named elder of the village.",
+        important=True,
+    )
+
+    tools.harm_character("Elder Marrow", "hp", 99, "a test wound")
+
+    with Session(app.state.engine) as db:
+        npc = load_state(db, campaign_id).characters[name_key("Elder Marrow")]
+        assert npc.important is True
+        assert (npc.dying_rounds, npc.dead) == (6, False)
+
+
+def test_a_week_of_bed_rest_ends_frail(client_factory):
+    from cygnusforge.services.events import ConditionAdded, record
+
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    app = client.app
+    with Session(app.state.engine) as db:
+        record(db, campaign_id, ConditionAdded(name=PC, condition="frail", cause="a mortal wound"))
+        db.commit()
+
+    result = tools.rest("extended", reason="recover from a mortal wound")
+
+    assert PC not in result["held_back"]
+    with Session(app.state.engine) as db:
+        assert load_state(db, campaign_id).characters[name_key(PC)].conditions == []
+
+
+def test_a_shield_turns_aside_only_the_first_shock_in_a_round(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=20, shock=2, shock_ac=20, attack_bonus=0)
+    from cygnusforge.services.events import Item
+    from cygnusforge.services.inventory import carry_item
+
+    with Session(app.state.engine) as db:
+        carry_item(
+            db,
+            campaign_id,
+            WWN.inventory,
+            PC,
+            Item("Large Shield", "normal", 1, flags=("shield",)),
+            cause="a test shield",
+        )
+        db.commit()
+    pc = _pc(app, campaign_id)
+    assert any("shield" in item.flags for item in pc.items)
+
+    replace(tools, rng=Rolls(1, 1, 1, 1, 1, 1)).attack(FOE, "Claw", PC)
+    first = _struck(app, campaign_id)[-1]
+    assert (first.hit, first.shock, first.shield_round) == (False, 0, 1)
+
+    replace(tools, rng=Rolls(1, 1, 1, 1, 1, 1)).attack(FOE, "Claw", PC)
+    second = _struck(app, campaign_id)[-1]
+    assert (second.hit, second.shock, second.shield_round) == (False, 2, 0)
+
+
+def test_lookup_condition_returns_its_effects_and_triggers(client_factory):
+    _, _, tools = _wwn_campaign(client_factory)
+
+    found = tools.lookup_condition("frail")
+    assert found["label"] == "Frail"
+    assert found["ends"] == ["extended_rest", "magic"]
+
+    with pytest.raises(InvalidInput, match="there is no condition named 'nope'"):
+        tools.lookup_condition("nope")
+
+
+def test_healing_restores_harm_and_never_goes_below_zero(client_factory):
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    app = client.app
+    from cygnusforge.services.events import CharacterHealed
+
+    tools.harm_character(PC, "hp", 2, "a test wound")
+    healed = tools.heal_character(PC, 5, cause="a healing art")
+
+    assert healed["restored"] == 2
+    assert healed["harm"] == 0
+    assert _pc(app, campaign_id).harm.get("hp", 0) == 0
+    [event] = _events(app, campaign_id, CharacterHealed.kind)
+    assert (event.amount, event.restored) == (5, 2)

@@ -12,6 +12,7 @@
   {
     "type": "prompt",
     "id": "armor_glancing_blows",
+    "step": "narration",
     "text": "A hit that armor absorbs entirely, with no harm, is a blow turned aside or glancing off, never a miss."
   },
   {
@@ -72,11 +73,26 @@
   {
     "type": "prompt",
     "id": "encounter_start",
-    "text": "When a fight or other tactical action starts, set it up yourself without asking the player whether to use the encounter system: create or choose a map, start the encounter, add every combatant, then call player_initiative so the player rolls their initiative save. The encounter is how turns, positions, and attacks are tracked. Do not start a later NPC turn on your own; the player presses Start that NPC's turn, and the acting side's turn ends only when the player presses End turn. Never take a player character's turn for them."
+    "text": "When a fight or other tactical action starts, set it up yourself without asking the player whether to use the encounter system: create or choose a map, start the encounter, add every combatant, then call player_initiative so the player rolls their initiative save. The encounter is how turns, positions, and attacks are tracked. Do not start a later turn on your own: the player presses Start for every turn, including their own. An NPC's turn ends automatically when your reply finishes; the player presses End only for their own character's turn. Never take a player character's turn for them."
   },
   {
     "type": "prompt",
     "id": "player_rolls",
-    "text": "The player rolls their own character's attacks and owed saves. Call player_attack for an attack and player_save for a save so the player presses the roll button; never call attack for the player character. The engine rolls damage. Use these tools in and out of an encounter."
+    "text": "The player rolls their own character's attacks and owed saves. Call player_attack for an attack so the player rolls the weapon's damage dice, and player_save for a save so the player rolls the d20; never call attack for the player character. Use these tools in and out of an encounter."
+  },
+  {
+    "type": "prompt",
+    "id": "conditions",
+    "text": "Record lasting harm and states with the condition tools: add_condition for a condition the fiction gives, and end_condition with the trigger it lists (rest, extended_rest, aid, time, or gm). Injuries from critical damage are applied by the engine; do not add them twice."
+  },
+  {
+    "type": "prompt",
+    "id": "hirelings",
+    "text": "When the party hires help, call hire_hireling with the employer, a daily wage, and who the hireling is; give the hireling gear with give_item and rations each night. Its wage is paid from the employer each new day, and an employer who cannot pay is reported unpaid. When a hireling leaves, call dismiss_hireling with the cause."
+  },
+  {
+    "type": "prompt",
+    "id": "monster_abilities",
+    "text": "A statblock's attached rules are shown in your context while the monster is present; follow them as written. Find a statblock with search_monster and create it with create_monster; resolve its attacks with attack or resolve_attacks, and apply special effects with harm_character, roll_save, or add_condition."
   }
 ]

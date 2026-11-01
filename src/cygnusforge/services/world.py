@@ -354,6 +354,27 @@ class WorldTools:
                 db, self.campaign_id, tables, self.dice_tables, self.rng, plus=self.plus
             )
 
+    def roll_growth(self, character: str) -> dict[str, Any]:
+        """Roll the character's background Growth table. The GM applies the result with the
+        normal skill, attribute, and counter tools."""
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            found = state.characters.get(name_key(character))
+            if found is None:
+                raise InvalidInput(f"there is no character named {character!r}")
+            background = found.templates.get("background", "")
+            table = f"growth_{background}"
+            options = self.tables.get(table)
+            if not options:
+                raise InvalidInput(f"{found.name} has no background Growth table")
+            chosen = self.rng.choice(options)
+            return {
+                "character": found.name,
+                "background": background,
+                "table": table,
+                "growth": chosen.value,
+            }
+
     def advance_time(self, days: int = 0, parts: int = 0, hours: int = 0) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return clock_service.advance_time(
@@ -537,6 +558,7 @@ class WorldTools:
             damage=relic.damage,
             uses=relic.uses,
             description=relic.description,
+            armor_mode="shield" if "shield" in relic.flags else "add",
         )
 
     def give_item(
@@ -562,6 +584,17 @@ class WorldTools:
         with session_scope(self.engine) as db:
             return inventory_service.drop_item(
                 db, self.campaign_id, _required(self.inventory, "inventory"), name, item
+            )
+
+    def ready_item(self, name: str, item: str, ready: bool = True) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return inventory_service.set_ready(
+                db,
+                self.campaign_id,
+                _required(self.inventory, "inventory"),
+                name,
+                item,
+                ready,
             )
 
     def use_item(self, name: str, item: str, target: str | None = None) -> dict[str, Any]:
@@ -725,6 +758,7 @@ class WorldTools:
                 difficulty=difficulty,
                 modifier=modifier,
                 cause=cause,
+                conditions=self.conditions,
             )
 
     def raise_skill(self, name: str, skill: str, level: int, cause: str = "") -> dict[str, Any]:
@@ -1033,6 +1067,7 @@ class WorldTools:
         force: bool = False,
         hp_tier: str | None = None,
         pronouns: str | None = None,
+        important: bool = False,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return create_npc(
@@ -1055,6 +1090,7 @@ class WorldTools:
                 npc_hp_stat=self.npc_hp_stat,
                 hp_tier=hp_tier,
                 pronouns=pronouns,
+                important=important,
             )
 
     def hire_hireling(
@@ -1402,6 +1438,7 @@ class WorldTools:
         attacks: Sequence[Mapping[str, Any]] | None = None,
         force: bool = False,
         detachment: bool | None = None,
+        rules: Sequence[str] | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return create_monster(
@@ -1419,6 +1456,7 @@ class WorldTools:
                 armor_max=self.combat.armor_max if self.combat else 0,
                 force=force,
                 detachment=detachment,
+                rules=rules,
             )
 
     def search_monster(self, query: str) -> dict[str, list[dict[str, Any]]]:
@@ -1434,7 +1472,21 @@ class WorldTools:
         target: str,
         modifier: str = "",
         targets: Sequence[str] | None = None,
+        hit_modifier: int = 0,
+        count: int = 0,
     ) -> dict[str, Any]:
+        attacks = count or self.attacks_per_action(attacker)
+        if attacks > 1 and targets is None:
+            entries = [
+                {
+                    "attacker": attacker,
+                    "attack": attack,
+                    "modifier": modifier,
+                    "hit_modifier": hit_modifier,
+                }
+                for _ in range(attacks)
+            ]
+            return self.resolve_attacks(target, entries)
         with session_scope(self.engine) as db:
             return combat.attack(
                 db,
@@ -1447,12 +1499,37 @@ class WorldTools:
                 modifier,
                 plus=self.plus,
                 targets=targets,
+                hit_modifier=hit_modifier,
+                conditions=self.conditions,
             )
+
+    def attacks_per_action(self, name: str) -> int:
+        """The number of attacks a statblock makes in one action, or 1 for a custom NPC."""
+        with session_scope(self.engine) as db:
+            character = load_state(db, self.campaign_id).characters.get(name_key(name))
+            if character is None:
+                return 1
+            template = next(
+                (
+                    monster
+                    for monster in self.monsters.values()
+                    if monster.name.casefold() == character.creature.casefold()
+                ),
+                None,
+            )
+            return template.attacks_per_action if template is not None else 1
 
     def resolve_attacks(self, target: str, attacks: Sequence[Mapping[str, str]]) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.resolve_attacks(
-                db, self.campaign_id, target, attacks, self._rules(), self.rng, plus=self.plus
+                db,
+                self.campaign_id,
+                target,
+                attacks,
+                self._rules(),
+                self.rng,
+                plus=self.plus,
+                conditions=self.conditions,
             )
 
     def player_attack(
@@ -1462,6 +1539,7 @@ class WorldTools:
         modifier: str = "",
         attack_roll: int | None = None,
         damage_roll: int | None = None,
+        hit_modifier: int = 0,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.player_attack(
@@ -1477,6 +1555,8 @@ class WorldTools:
                 weapon_feature=self._weapon_feature(weapon),
                 attack_roll=attack_roll,
                 damage_roll=damage_roll,
+                hit_modifier=hit_modifier,
+                conditions=self.conditions,
             )
 
     def attack_dice(self, weapon: str, modifier: str = "") -> str:
@@ -1523,6 +1603,12 @@ class WorldTools:
                 db, self.campaign_id, name, explanation, consequence, self._rules()
             )
 
+    def heal_character(
+        self, name: str, amount: int, stat: str = "hp", cause: str = ""
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return combat.heal_character(db, self.campaign_id, name, stat, amount, cause)
+
     def harm_character(self, name: str, stat: str, amount: int, cause: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.harm_character(
@@ -1548,7 +1634,7 @@ class WorldTools:
                 name,
                 condition,
                 how,
-                self._rules(),
+                self.combat,
                 self.conditions,
                 self.rng,
                 plus=self.plus,
@@ -1652,6 +1738,101 @@ class WorldTools:
 
     def character_options(self, field: str | None = None) -> dict[str, Any]:
         return choice_options(self.character, field)
+
+    def campaign_options(self) -> dict[str, Any]:
+        """The options chosen once for the campaign, such as its experience track."""
+        with session_scope(self.engine) as db:
+            return dict(load_state(db, self.campaign_id).options)
+
+    def lookup_move(self, move: str) -> dict[str, Any]:
+        """A move's full definition, so the GM can see when it triggers and what its bands do."""
+        found = self.moves.get(move.strip())
+        if found is None:
+            found = next(
+                (
+                    candidate
+                    for candidate in self.moves.values()
+                    if candidate.label.casefold() == move.strip().casefold()
+                ),
+                None,
+            )
+        if found is None:
+            raise InvalidInput(f"there is no move named {move!r}")
+        return {
+            "id": found.id,
+            "label": found.label,
+            "description": found.description,
+            "dice": found.dice,
+            "stat": found.stat,
+            "stat_choice": list(found.stat_choice),
+            "skill": found.skill,
+            "bands": [
+                {
+                    "label": band.label,
+                    "min": band.min,
+                    "text": band.text,
+                }
+                for band in found.bands
+            ],
+        }
+
+    def lookup_condition(self, condition: str) -> dict[str, Any]:
+        """A condition's full definition, so the GM can read what it does and how it ends."""
+        wanted = condition.strip()
+        found = self.conditions.get(wanted)
+        if found is None:
+            found = next(
+                (
+                    candidate
+                    for candidate in self.conditions.values()
+                    if candidate.label.casefold() == wanted.casefold()
+                ),
+                None,
+            )
+        if found is None:
+            raise InvalidInput(f"there is no condition named {condition!r}")
+        return {
+            "id": found.id,
+            "label": found.label,
+            "description": found.description,
+            "ends": list(found.ends),
+            "on_end": [dict(effect) for effect in found.on_end],
+            "modifies": dict(found.modifies),
+            "dying": found.dying,
+            "fatal": found.fatal,
+        }
+
+    def lookup_feature(self, feature: str) -> dict[str, Any]:
+        """A feature's full definition, by id or name, so the GM can read a spell, art, Focus,
+        or class ability before resolving it."""
+        wanted = feature.strip()
+        found = self.character.features.get(wanted)
+        if found is None:
+            found = next(
+                (
+                    candidate
+                    for candidate in self.character.features.values()
+                    if candidate.name.casefold() == wanted.casefold()
+                ),
+                None,
+            )
+        if found is None:
+            raise InvalidInput(f"there is no feature named {feature!r}")
+        return {
+            "id": found.id,
+            "name": found.name,
+            "feature_type": found.feature_type,
+            "tag": found.tag,
+            "rank": found.rank,
+            "description": found.description,
+            "effects": [dict(effect) for effect in found.effects],
+            "skill": found.skill,
+            "attributes": list(found.attributes),
+            "shock": found.shock,
+            "shock_ac": found.shock_ac,
+            "flags": list(found.flags),
+            "rules": list(found.rules),
+        }
 
     def lookup_index(self) -> dict[str, list[dict[str, Any]]]:
         with session_scope(self.engine) as db:
@@ -2024,6 +2205,7 @@ def create_npc(
     npc_hp_stat: str | None,
     hp_tier: str | None = None,
     pronouns: str | None = None,
+    important: bool = False,
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_NAME)
@@ -2055,6 +2237,7 @@ def create_npc(
         character=character,
         plus=plus,
         pronouns=_optional_text(pronouns, "pronouns"),
+        important=important,
     )
     if base is not None:
         event = _with_statblock(event, base)
@@ -2198,6 +2381,7 @@ def create_monster(
     armor_max: int = 0,
     force: bool = False,
     detachment: bool | None = None,
+    rules: Sequence[str] | None = None,
 ) -> dict[str, Any]:
     """An NPC built from a statblock. A template gives the starting values, and any value given
     replaces it. Without a template, a name that matches a statblock uses it and takes no values
@@ -2223,7 +2407,11 @@ def create_monster(
     unknown = [key for key in merged if key not in spec.stats]
     if unknown:
         raise InvalidInput("unknown stats: " + ", ".join(unknown))
-    missing = [spec.stats[key].name for key in spec.stats if key not in merged]
+    missing = [
+        spec.stats[key].name
+        for key in spec.stats
+        if key not in merged and spec.stats[key].derived is None
+    ]
     if missing:
         raise InvalidInput("missing stats: " + ", ".join(missing))
     for key, value in merged.items():
@@ -2254,8 +2442,8 @@ def create_monster(
         attack_flags=flag_map,
         attack_shock=shock_map,
         creature=base.name if base else "",
+        rules=list(rules) if rules is not None else (list(base.rules) if base else []),
         large_group=(detachment if detachment is not None else bool(base and base.large_group)),
-        rules=list(base.rules) if base else [],
     )
     record(db, campaign_id, event)
     db.commit()
@@ -2978,6 +3166,8 @@ def get_statblock(
     character = _character_named(state, name)
     kind = "player character" if character.kind == PC_KIND else "npc"
     lines = describe(spec, _sheet_of(character)).splitlines()
+    if character.description:
+        lines.insert(0, f"Description: {character.description}")
     if combat is not None:
         lines += _combat_lines(character, spec, combat)
     lines += _status_lines(character, conditions, inventory, hooks, counters)
@@ -3527,6 +3717,7 @@ def _npc_event(
     character: Mapping[str, Any] | None = None,
     plus: str,
     story_only: bool = False,
+    important: bool = False,
     rules: Sequence[str] = (),
     pronouns: str | None = None,
 ) -> NpcAdded:
@@ -3554,6 +3745,7 @@ def _npc_event(
         accent=trait_accent,
         quirks=trait_quirks,
         story_only=story_only,
+        important=important,
         rules=list(rules),
         pronouns=pronouns,
         **sheet_fields,

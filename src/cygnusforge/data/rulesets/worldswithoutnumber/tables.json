@@ -357,5 +357,13 @@
       "trade",
       "work"
     ]
+  },
+  {
+    "type": "table",
+    "id": "xp_rate",
+    "options": [
+      {"name": "fast", "description": "Fast: level at 3 XP, then 6, 12, 18, 27, 39, 54, 72, and 93."},
+      {"name": "slow", "description": "Slow: level at 6 XP, then 15, 24, 36, 51, 69, 87, 105, and 139."}
+    ]
   }
 ]

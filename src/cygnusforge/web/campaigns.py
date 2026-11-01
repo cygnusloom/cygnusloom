@@ -24,6 +24,7 @@ from cygnusforge.services.campaigns import (
     Saved,
     Status,
     TurnEvent,
+    begin_encounter_turn,
     campaign_spec,
     campaign_transcript,
     campaign_world,
@@ -496,6 +497,22 @@ async def post_encounter_turn_stream(request: Request, campaign_id: int) -> Resp
         media_type="application/x-ndjson",
         headers={"Cache-Control": "no-cache"},
     )
+
+
+@router.post("/{campaign_id}/encounter/turn/begin")
+async def post_encounter_turn_begin(request: Request, campaign_id: int) -> Response:
+    """Start a player character's turn. The player then acts and ends it themselves."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    name = form_text(form, "name")
+    try:
+        begin_encounter_turn(request.app.state.engine, user.id, campaign_id, name)
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
 @router.post("/{campaign_id}/encounter/turn/end")

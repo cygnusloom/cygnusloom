@@ -480,6 +480,12 @@ class MonsterTemplate:
     attack_shock: Mapping[str, tuple[int, int]] = field(default_factory=dict)
     rule_text: Mapping[str, str] = field(default_factory=dict)
 
+    @property
+    def attacks_per_action(self) -> int:
+        """How many attacks the statblock's action makes, from its "N attacks per action" text."""
+        match = re.search(r"(\d+) attacks? per action", self.description, re.IGNORECASE)
+        return max(1, int(match.group(1))) if match else 1
+
 
 DAMAGE_KINDS = ("absorb", "harm", "overflow")
 # When a condition can end: by a rest, extended rest, aid from someone else, the passing of time,
@@ -503,6 +509,8 @@ EFFECT_OPS = (
 MOVE_ONLY_EFFECT_OPS = ("counter", "end_condition")
 # The key of a condition's `modifies` that applies to every stat.
 ALL_STATS = "*"
+# Situational keys a condition may modify besides the rule set's stats: attack rolls and checks.
+SITUATIONAL_MODIFIERS = ("attack", "check")
 # The `end_condition` id that ends every condition the character holds.
 ALL_CONDITIONS = "*"
 # `if_higher` compares the roll with the maximum; `if_above_current` compares it with the current score.
@@ -931,6 +939,10 @@ class InventoryRules:
     capacity_stat: str = ""
     # What a character's score in `capacity_stat` is multiplied by. One means the score itself.
     capacity_multiplier: float = 1.0
+    # A second pool for items the character can use without spending an action. Empty when the
+    # rule set has no Readied pool; `readied_divisor` divides the stat's score.
+    readied_stat: str = ""
+    readied_divisor: int = 1
 
 
 @dataclass(frozen=True)
@@ -1046,10 +1058,12 @@ class MagicRules:
 
 @dataclass(frozen=True)
 class PromptFragment:
-    """A rule-set sentence group for the GM prompt, such as how armor absorbs a blow."""
+    """A rule-set sentence group for the GM prompt, such as how armor absorbs a blow. `step` is
+    "state" for the state step, "narration" for the narration step, or "all" for both."""
 
     id: str
     text: str
+    step: str = "state"
 
 
 @dataclass(frozen=True)
@@ -2532,8 +2546,10 @@ def _load_monster(
     label = f"{template}: monster {definition.id}"
     data = definition.data
     stats = data.get("stats")
-    if not isinstance(stats, dict) or set(stats) != set(character.stats):
-        names = ", ".join(sorted(character.stats))
+    allowed = set(character.stats)
+    required = {stat_id for stat_id, stat in character.stats.items() if stat.derived is None}
+    if not isinstance(stats, dict) or not required <= set(stats) or not set(stats) <= allowed:
+        names = ", ".join(sorted(required))
         raise ContentError(f"{label}: 'stats' must give a whole number for each of: {names}")
     for key, value in stats.items():
         _check_whole(value, f"{label}: stat {key!r}")
@@ -2959,7 +2975,12 @@ def _load_prompts(definitions: list[Definition], template: str) -> tuple[PromptF
         if d.id in ids:
             raise ContentError(f"{template}: duplicate prompt {d.id!r}")
         ids.add(d.id)
-        fragments.append(PromptFragment(id=d.id, text=required_text(d.data, "text", label)))
+        step = d.data.get("step", "state")
+        if step not in ("state", "narration", "all"):
+            raise ContentError(f"{label}: 'step' must be state, narration, or all")
+        fragments.append(
+            PromptFragment(id=d.id, text=required_text(d.data, "text", label), step=step)
+        )
     return tuple(fragments)
 
 
@@ -3130,6 +3151,10 @@ def _load_inventory(
         capacity_multiplier=_number(definition.data, "capacity_multiplier", label, 1.0)
         if "capacity_multiplier" in definition.data
         else 1.0,
+        readied_stat=_optional_nonempty_text(definition.data, "readied_stat", label) or "",
+        readied_divisor=_whole(definition.data, "readied_divisor", label, 1)
+        if "readied_divisor" in definition.data
+        else 1,
     )
 
 
@@ -3366,7 +3391,7 @@ def _load_modifies(value: object, character: CharacterSpec, label: str) -> dict[
     if not isinstance(value, Mapping):
         raise ContentError(f"{label}: 'modifies' must be an object")
     for stat, amount in value.items():
-        if stat != ALL_STATS and stat not in character.stats:
+        if stat != ALL_STATS and stat not in character.stats and stat not in SITUATIONAL_MODIFIERS:
             raise ContentError(f"{label}: 'modifies' names no stat ({stat!r})")
         if not isinstance(amount, int) or isinstance(amount, bool):
             raise ContentError(f"{label}: 'modifies' {stat!r} must be a whole number")

@@ -17,6 +17,12 @@
         "full": true,
         "restores": [],
         "clears": []
+      },
+      "extended": {
+        "days": 7,
+        "full": true,
+        "restores": [],
+        "clears": []
       }
     },
     "interrupted": "moments"

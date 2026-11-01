@@ -6,6 +6,7 @@ import os
 import re
 import shutil
 import tempfile
+import weakref
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
@@ -34,7 +35,12 @@ def content_tree() -> Path:
     """The bundled content with the test-only fixtures added. The product never loads it."""
     root = Path(tempfile.mkdtemp(prefix="cygnusforge-content-"))
     atexit.register(shutil.rmtree, root, ignore_errors=True)
-    shutil.copytree(DATA_DIR, root, dirs_exist_ok=True)
+    shutil.copytree(
+        DATA_DIR,
+        root,
+        dirs_exist_ok=True,
+        ignore=shutil.ignore_patterns("*.pdf", "*.md"),
+    )
     shutil.copytree(FIXTURES, root, dirs_exist_ok=True)
     return root
 
@@ -83,6 +89,8 @@ def no_fsync_databases(monkeypatch: pytest.MonkeyPatch) -> None:
 
         @event.listens_for(engine, "connect")
         def _relax_sync(dbapi_connection, _record) -> None:
+            dbapi_connection.execute("PRAGMA journal_mode=MEMORY")
+            dbapi_connection.execute("PRAGMA temp_store=MEMORY")
             dbapi_connection.execute("PRAGMA synchronous=OFF")
 
         return engine
@@ -149,9 +157,25 @@ def without_journal(calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [call for call in calls if not is_journal_messages(call["messages"])]
 
 
+_CSRF_TOKENS: weakref.WeakKeyDictionary[TestClient, tuple[str, str]] = weakref.WeakKeyDictionary()
+
+
+def _session_cookie(client: TestClient) -> str:
+    """The session cookie value. It changes on login and logout, which is when the CSRF token
+    must be read again."""
+    return "; ".join(f"{name}={value}" for name, value in sorted(client.cookies.items()))
+
+
 def csrf_token(client: TestClient, path: str) -> str:
+    """The session's CSRF token, cached until the session cookie changes. The product keeps one
+    token for the session, so fetching it from a full page on every POST only slows the tests."""
+    cookie = _session_cookie(client)
+    cached = _CSRF_TOKENS.get(client)
+    if cached is not None and cached[0] == cookie:
+        return cached[1]
     match = TOKEN_RE.search(client.get(path).text)
     assert match, f"no csrf token on {path}"
+    _CSRF_TOKENS[client] = (cookie, match.group(1))
     return match.group(1)
 
 

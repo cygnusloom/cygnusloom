@@ -126,6 +126,10 @@ class Item:
     damage: str = ""
     # The ids of rules attached to the item. Their text reaches the GM while the item is carried.
     rules: tuple[str, ...] = ()
+    # Engine flags the item carries, such as "shield".
+    flags: tuple[str, ...] = ()
+    # True when the item is readied, false when it is stowed and needs an action to retrieve.
+    ready: bool = True
 
 
 def _position(x: float | None, y: float | None) -> Position | None:
@@ -163,6 +167,8 @@ class Character:
     creature: str = ""
     # A story-only NPC has no stats yet. It cannot fight, make saves, or be attacked until given stats.
     story_only: bool = False
+    # A named NPC the story treats as important: at 0 HP it is mortally wounded, not dead.
+    important: bool = False
     # The ids of rules attached to the NPC. Their text reaches the GM while the NPC is here.
     rules: list[str] = field(default_factory=list)
     # Harm taken so far, by stat id. A stat's current value is its score less its harm, at least 0.
@@ -202,6 +208,9 @@ class Character:
     dying_hours: int | None = None
     # Rounds left in an encounter before a dying character dies. None when no round clock runs.
     dying_rounds: int | None = None
+    # The encounter round in which a shield last turned aside Shock, so it can stop only the
+    # first Shock in each round.
+    shock_blocked_round: int = 0
     # The character is dead. The body stays where the character fell, with its gear.
     dead: bool = False
     # The character has left the story, and the player plays someone else. It can come back later.
@@ -230,7 +239,12 @@ def defeat_status(character: Character, defeat: Mapping[str, str], *, killed: bo
     outright. A character with no label in `defeat` reads as just defeated."""
     if killed and character.kind == PC_KIND and "player_character_dead" in defeat:
         return defeat["player_character_dead"]
-    key = "player_character" if character.kind == PC_KIND else "npc"
+    if character.kind == PC_KIND:
+        key = "player_character"
+    elif character.important and "important_npc" in defeat:
+        key = "important_npc"
+    else:
+        key = "npc"
     return defeat.get(key, "defeated")
 
 
@@ -756,6 +770,8 @@ class NpcAdded(GameEvent):
     creature: str = ""
     large_group: bool = False
     story_only: bool = False
+    # A named NPC the story treats as important: at 0 HP it is mortally wounded, not dead.
+    important: bool = False
     rules: list[str] = field(default_factory=list)
     skills: dict[str, int] = field(default_factory=dict)
 
@@ -781,6 +797,7 @@ class NpcAdded(GameEvent):
             creature=self.creature,
             large_group=self.large_group,
             story_only=self.story_only,
+            important=self.important,
             rules=list(self.rules),
             skills=dict(self.skills),
         )
@@ -1611,6 +1628,28 @@ class RetreatRolled(GameEvent):
 
 
 @dataclass(frozen=True)
+class CharacterHealed(GameEvent):
+    """Healing reduces a character's harm in a stat, never below zero. `restored` is the harm
+    actually removed, which is less than `amount` when the character had taken less harm."""
+
+    kind: ClassVar[str] = "character.healed"
+
+    name: str
+    stat: str
+    amount: int
+    restored: int
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.harm[self.stat] = max(0, character.harm.get(self.stat, 0) - self.restored)
+
+    def render(self) -> str:
+        text = f"{self.name} recovers {self.restored} {self.stat.upper()}"
+        return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
 class CharacterRecovered(GameEvent):
     """A player character brought back from a dying condition. The GM says how they survived and
     what it cost them."""
@@ -1820,6 +1859,8 @@ class Struck(GameEvent):
     to_hit: int | None = None
     # The shock a miss still did, which is part of `harm` above.
     shock: int = 0
+    # The encounter round in which a shield turned this blow's Shock aside.
+    shield_round: int = 0
     defeats: bool = False
     status: str = ""
 
@@ -1829,6 +1870,8 @@ class Struck(GameEvent):
             character.harm[stat] = character.harm.get(stat, 0) + amount
         if self.save is not None:
             character.save_due = self.save
+        if self.shield_round:
+            character.shock_blocked_round = self.shield_round
         if self.defeats:
             character.defeated = True
 
@@ -1840,6 +1883,8 @@ class Struck(GameEvent):
             if self.to_hit is not None:
                 text += f" (rolled {self.to_hit})"
             text += "."
+            if self.shield_round:
+                text += " A shield turns the shock aside."
             if self.shock:
                 text += f" The shock still does {taken} harm"
                 stats = ", ".join(stat.upper() for stat in self.harm)
@@ -2861,6 +2906,8 @@ class ItemAdded(GameEvent):
     max_uses: int = 0
     damage: str = ""
     rules: list[str] = field(default_factory=list)
+    flags: list[str] = field(default_factory=list)
+    ready: bool = True
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
@@ -2875,6 +2922,8 @@ class ItemAdded(GameEvent):
                 uses=self.uses,
                 max_uses=self.max_uses,
                 rules=tuple(self.rules),
+                flags=tuple(self.flags),
+                ready=self.ready,
             )
         )
 
@@ -2979,6 +3028,27 @@ class SpellCast(GameEvent):
 
     def render(self) -> str:
         return f"{self.name} casts {self.spell} from a {self.source}."
+
+
+@dataclass(frozen=True)
+class ItemReadied(GameEvent):
+    """An item is readied or stowed. A stowed item cannot be used until it is readied again."""
+
+    kind: ClassVar[str] = "character.item_readied"
+
+    name: str
+    item: str
+    ready: bool
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        for index, held in enumerate(character.items):
+            if name_key(held.name) == name_key(self.item):
+                character.items[index] = replace(held, ready=self.ready)
+                return
+
+    def render(self) -> str:
+        return f"{self.name} {'readies' if self.ready else 'stows'} {self.item}."
 
 
 @dataclass(frozen=True)
@@ -3109,6 +3179,7 @@ HIDDEN_KINDS: dict[str, bool] = {
     "retreat.rolled": False,
     "character.fled": False,
     "character.surrendered": False,
+    "character.healed": False,
     "character.recovered": False,
     "character.saved": False,
     "character.dying": False,
@@ -3129,6 +3200,7 @@ HIDDEN_KINDS: dict[str, bool] = {
     "character.currency_changed": False,
     "character.mark_set": False,
     "character.item_added": False,
+    "character.item_readied": False,
     "character.item_removed": False,
     "character.item_uses_set": False,
     "condition.added": False,

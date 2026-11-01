@@ -77,7 +77,7 @@ def end_condition(
     name: str,
     condition: str,
     how: str,
-    combat: CombatRules,
+    combat: CombatRules | None,
     conditions: Mapping[str, ConditionRules],
     rng: random.Random,
     *,

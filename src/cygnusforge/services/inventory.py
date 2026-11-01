@@ -19,6 +19,7 @@ from cygnusforge.services.events import (
     CharacterDrained,
     Item,
     ItemAdded,
+    ItemReadied,
     ItemRemoved,
     ItemUsesSet,
     current,
@@ -45,6 +46,49 @@ def capacity_of(
 
 def used_slots(character: Character) -> int:
     return sum(item.slots for item in character.items)
+
+
+def readied_slots(character: Character) -> int:
+    return sum(item.slots for item in character.items if item.ready)
+
+
+def readied_capacity(character: Character, rules: InventoryRules) -> int:
+    """How many slots the character may keep readied. Zero when the rule set has no readied pool."""
+    if not rules.readied_stat:
+        return 0
+    return max(0, current(character, rules.readied_stat) // rules.readied_divisor)
+
+
+def set_ready(
+    db: Session,
+    campaign_id: int,
+    rules: InventoryRules,
+    name: str,
+    item: str,
+    ready: bool,
+) -> dict[str, Any]:
+    """Ready or stow one carried item. Readying is refused when the readied pool has no room."""
+    character = character_named(load_state(db, campaign_id), name)
+    held = next((i for i in character.items if same_item_name(i.name, item)), None)
+    if held is None:
+        raise InvalidInput(f"{character.name} carries no {item!r}")
+    if ready and not held.ready:
+        capacity = readied_capacity(character, rules)
+        if rules.readied_stat and readied_slots(character) + held.slots > capacity:
+            raise InvalidInput(
+                f"{character.name} can keep {capacity} slots readied, and {held.name} "
+                f"takes {held.slots}; stow another item first"
+            )
+    record(db, campaign_id, ItemReadied(name=character.name, item=held.name, ready=ready))
+    db.commit()
+    changed = character_named(load_state(db, campaign_id), name)
+    return {
+        "character": changed.name,
+        "item": held.name,
+        "ready": ready,
+        "readied_slots": readied_slots(changed),
+        "readied_capacity": readied_capacity(changed, rules),
+    }
 
 
 def character_named(state: CampaignState, name: str) -> Character:
@@ -82,6 +126,8 @@ def carry_item(
             max_uses=item.max_uses,
             damage=item.damage,
             rules=list(item.rules),
+            flags=list(item.flags),
+            ready=item.ready,
             cause=cause,
         ),
     )
@@ -138,6 +184,7 @@ def give_item(
         damage=(listed.damage or "") if listed is not None else damage,
         uses=uses,
         max_uses=uses,
+        flags=("shield",) if listed is not None and listed.armor_mode == "shield" else (),
     )
     result = carry_item(db, campaign_id, rules, name, given, cause="")
     db.commit()
@@ -164,6 +211,7 @@ def carry_listed(
         damage=listed.damage or "",
         uses=listed.uses,
         max_uses=listed.uses,
+        flags=("shield",) if listed.armor_mode == "shield" else (),
     )
     return carry_item(db, campaign_id, rules, name, item, cause="")
 

@@ -107,8 +107,7 @@
         "rate": {
           "type": "string",
           "enum": ["fast", "slow"],
-          "default": "fast",
-          "description": "The campaign's experience track. Use one track for every character in the campaign."
+          "description": "An explicit track override. Leave it out to use the track chosen for the campaign."
         }
       },
       "required": [
@@ -116,6 +115,21 @@
         "amount",
         "cause"
       ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "gain_growth",
+    "name": "gain_growth",
+    "python_module": "wwn",
+    "function": "gain_growth",
+    "description": "Roll the character's background Growth table for a level's growth. Apply the result with improve_attribute, spend_skill_point, adjust_counter, or the appropriate skill or stat tool. Call it after level_up, once per new level.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {"type": "string", "description": "The player character who grows."}
+      },
+      "required": ["character"]
     }
   },
   {
@@ -135,8 +149,7 @@
         "rate": {
           "type": "string",
           "enum": ["fast", "slow"],
-          "default": "fast",
-          "description": "The campaign's experience track, which sets the threshold. Use the same track as gain_xp."
+          "description": "An explicit track override. Leave it out to use the track chosen for the campaign."
         }
       },
       "required": [

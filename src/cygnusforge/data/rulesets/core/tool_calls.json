@@ -944,5 +944,47 @@
         }
       }
     }
+  },
+  {
+    "type": "tool_call",
+    "id": "lookup_feature",
+    "name": "lookup_feature",
+    "python_module": "core",
+    "function": "lookup_feature",
+    "lookup": true,
+    "description": "Read a feature's full text by id or name: a spell, art, Focus, origin, class ability, or item feature. The statblock names features and lists their short notes; read the full text before you resolve a spell, art, or exception.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "feature": {
+          "type": "string",
+          "description": "The feature's id or name, such as a spell or Focus."
+        }
+      },
+      "required": [
+        "feature"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "lookup_condition",
+    "name": "lookup_condition",
+    "python_module": "core",
+    "function": "lookup_condition",
+    "lookup": true,
+    "description": "Read a condition's full text: what it modifies, how it ends, and whether it is dying or fatal. Use it before you apply or end a condition so its rules reach the table.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "condition": {
+          "type": "string",
+          "description": "The condition's id or label, such as frail or Frail."
+        }
+      },
+      "required": [
+        "condition"
+      ]
+    }
   }
 ]

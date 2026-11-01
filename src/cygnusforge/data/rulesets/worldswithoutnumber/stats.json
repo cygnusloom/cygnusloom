@@ -197,7 +197,7 @@
     "type": "stat",
     "id": "morale",
     "name": "Morale",
-    "formula": "1d1"
+    "formula": "2d6"
   },
   {
     "type": "stat",
@@ -327,6 +327,28 @@
       "minus_counters": [
         "level"
       ]
+    }
+  },
+  {
+    "type": "stat",
+    "id": "effort_healer",
+    "name": "Healer Effort",
+    "derived": {
+      "base": 1,
+      "best_modifier": ["int", "cha"],
+      "plus_skills": ["heal"],
+      "minimum": 1
+    }
+  },
+  {
+    "type": "stat",
+    "id": "effort_vowed",
+    "name": "Vowed Effort",
+    "derived": {
+      "base": 1,
+      "best_modifier": ["str", "dex", "con", "int", "wis", "cha"],
+      "plus_skills": ["exert"],
+      "minimum": 1
     }
   }
 ]

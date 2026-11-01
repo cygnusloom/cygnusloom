@@ -5,6 +5,8 @@
     "capacity": 10,
     "capacity_stat": "str",
     "capacity_multiplier": 1.5,
+    "readied_stat": "str",
+    "readied_divisor": 2,
     "penalty_name": "Overloaded",
     "penalty_lasts": "until you drop enough gear and rest",
     "penalty_item": "overload",
@@ -177,6 +179,7 @@
     "feature_type": "item",
     "size": "normal",
     "armor": 3,
+    "flags": ["shield"],
     "description": "Shield: AC 13 when no better armor is worn; with armor of equal or better AC it adds +1 instead. Encumbrance 1. It also stops the first Shock each round."
   },
   {
@@ -186,6 +189,7 @@
     "feature_type": "item",
     "size": "normal",
     "armor": 4,
+    "flags": ["shield"],
     "description": "Shield: AC 14 when no better armor is worn; with armor of equal or better AC it adds +1 instead. Encumbrance 1. It also stops the first Shock each round."
   },
   {

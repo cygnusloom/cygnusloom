@@ -61,9 +61,14 @@ def prepare_spells(character: str, spells: Sequence[str], ctx: ToolContext) -> d
             feature = _spell(spec, spell)
             if spell not in found.features:
                 raise InvalidInput(f"{found.name} does not know {feature.name}")
-        tradition = found.templates.get("tradition", "")
-        if not tradition:
+        traditions = [
+            found.templates[kind]
+            for kind in ("tradition", "tradition2")
+            if found.templates.get(kind)
+        ]
+        if not traditions:
             raise InvalidInput(f"{found.name} has no magical tradition")
+        tradition = ", ".join(traditions)
         row = casting_row(found.templates.get("class", ""), found.counters.get("level", 1))
         if row is None:
             raise InvalidInput(f"{found.name}'s class cannot cast spells")

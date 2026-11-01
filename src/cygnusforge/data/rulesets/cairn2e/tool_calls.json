@@ -413,6 +413,25 @@
       ]
     }
   },
+
+  {
+    "type": "tool_call",
+    "id": "heal_character",
+    "name": "heal_character",
+    "python_module": "core",
+    "function": "heal_character",
+    "description": "Restore lost points of a stat, usually hit points, from a healing spell, art, or item. It never restores more than the character has lost.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string", "description": "The character to heal."},
+        "amount": {"type": "integer", "minimum": 1, "description": "How many points the healing restores before the cap."},
+        "stat": {"type": "string", "description": "The stat to restore. Defaults to hp."},
+        "cause": {"type": "string", "description": "What did the healing, such as a spell or art."}
+      },
+      "required": ["name", "amount"]
+    }
+  },
   {
     "type": "tool_call",
     "id": "stabilize",

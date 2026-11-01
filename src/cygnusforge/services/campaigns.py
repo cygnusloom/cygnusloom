@@ -272,17 +272,32 @@ JOURNAL_INSTRUCTION = (
 
 
 def narrate_instruction(rule_set: RuleSet) -> str:
-    """The narration step's prompt, naming the ruleset's penalty item among what to narrate."""
+    """The narration step's prompt, naming the ruleset's penalty item among what to narrate and
+    adding the fragments meant for narration."""
     penalty = f"{rule_set.inventory.penalty_name}, " if rule_set.inventory else ""
-    return NARRATE_INSTRUCTION.format(penalty_clause=penalty)
+    return " ".join(
+        [
+            NARRATE_INSTRUCTION.format(penalty_clause=penalty),
+            *(
+                fragment.text
+                for fragment in rule_set.prompt_fragments
+                if fragment.step in ("narration", "all")
+            ),
+        ]
+    )
 
 
 def state_instruction(rule_set: RuleSet) -> str:
-    """The state step's prompt: the generic loop text, then the ruleset's prompt fragments in order."""
+    """The state step's prompt: the generic loop text, then the ruleset's state prompt fragments
+    in order."""
     return " ".join(
         [
             STATE_INSTRUCTION,
-            *(fragment.text for fragment in rule_set.prompt_fragments),
+            *(
+                fragment.text
+                for fragment in rule_set.prompt_fragments
+                if fragment.step in ("state", "all")
+            ),
             STATE_CLOSING,
         ]
     )
@@ -1827,8 +1842,8 @@ async def start_encounter_turn(
     rng: random.Random | None = None,
 ) -> AsyncIterator[TurnEvent]:
     """Start the NPC whose turn is next in the encounter order. The GM plays it out and it is
-    streamed like a reply. A player character's turn starts on its own and ends with
-    `end_player_turn`."""
+    streamed like a reply. The engine ends the NPC's turn when the reply finishes, so the player
+    only presses Start for another actor's turn."""
     campaign = get_campaign(engine, owner_id, campaign_id)
     if campaign.model not in allowed_models:
         raise InvalidInput("that model is not available")
@@ -1837,10 +1852,41 @@ async def start_encounter_turn(
         if rule_set is None:
             raise InvalidInput("that campaign's rule set is no longer available")
         with session_scope(engine) as db:
-            encounters.begin_turn(db, campaign.id, name)
+            character = encounters.begin_turn(db, campaign.id, name)
+        if character.kind == PC_KIND:
+            raise InvalidInput(
+                f"{character.name} is a player character; press Start on the page instead"
+            )
         run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
         async for event in _guarded(run, _carry_on(run)):
             yield event
+        # A reply that finished normally leaves no open turn, so the NPC's turn is over. A reply
+        # waiting on the player's roll keeps the turn open until that answer is resolved.
+        with session_scope(engine) as db:
+            state = load_state(db, campaign_id)
+            encounter = state.encounter
+            if (
+                state.turn is None
+                and encounter is not None
+                and encounter.acting is not None
+                and name_key(encounter.acting) == name_key(character.name)
+            ):
+                encounters.end_turn(db, campaign_id, character.name, by_player=False)
+
+
+def begin_encounter_turn(engine: Engine, owner_id: int, campaign_id: int, name: str) -> None:
+    """Start a player character's turn from the encounter controls. The player then acts in chat
+    and presses End your turn. Refused while the GM's reply is still open."""
+    get_campaign(engine, owner_id, campaign_id)
+    with _exclusive(campaign_id):
+        if _state(engine, campaign_id).turn is not None:
+            raise InvalidInput("the GM's reply is unfinished; finish it before starting a turn")
+        with session_scope(engine) as db:
+            character = encounters.begin_turn(db, campaign_id, name)
+        if character.kind != PC_KIND:
+            raise InvalidInput(
+                f"{character.name} is not a player character; start their turn from the page"
+            )
 
 
 def end_encounter_turn(engine: Engine, owner_id: int, campaign_id: int, name: str) -> None:

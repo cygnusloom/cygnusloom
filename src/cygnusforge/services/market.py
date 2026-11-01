@@ -164,6 +164,7 @@ def buy_item(
             text=text,
             uses=uses,
             max_uses=uses,
+            flags=("shield",) if listed is not None and listed.armor_mode == "shield" else (),
         ),
         cause="bought",
     )

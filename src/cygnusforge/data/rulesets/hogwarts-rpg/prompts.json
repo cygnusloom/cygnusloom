@@ -1,0 +1,47 @@
+[
+  {
+    "type": "prompt",
+    "id": "move_rolls",
+    "text": "Whenever a player character does something that triggers a move, call roll_move with that move and the trait it names. Read the move's description and bands with lookup_move if you are unsure. Narrate the band the tool returns exactly, and let the player choose among the options it offers."
+  },
+  {
+    "type": "prompt",
+    "id": "serious_consequences",
+    "text": "On a roll of 6 or less, make a Narrator move. A Serious Consequence may give a Condition: call add_condition with scared, angry, stressed, jealous, embarrassed, injured, hexed, or unconscious, whichever fits the fiction. Clear a Condition with end_condition once its ending happens, such as a hospital-wing healing for injured, hexed, or unconscious."
+  },
+  {
+    "type": "prompt",
+    "id": "house_points",
+    "text": "Use adjust_tally on house-points for every award or deduction a teacher, prefect, or student earns, with the reason and a unique award key. Use the rule's guide: 5 for trivial, 10 for minor, 20 for notable, 50 for major. Never track House Points in prose."
+  },
+  {
+    "type": "prompt",
+    "id": "luck_and_experience",
+    "text": "When a player spends Luck, call adjust_counter luck -1. A move's failure band already marks Experience, so never add Experience again by hand. When a character has an Advancement, call take_advancement with the option the player chooses."
+  },
+  {
+    "type": "prompt",
+    "id": "school_year",
+    "text": "When a school year ends, call end_period school-year once. It restores all Luck, grants an Advancement to every player character, and resets House Points after logging their final totals. Do not reset counters by hand."
+  },
+  {
+    "type": "prompt",
+    "id": "friends_and_rivals",
+    "text": "Change Friends and Rivals only at the end of a session, with set_relation. A character may have two Friends and one Rival; pass the +1 to help or hinder them as roll_move's modifier."
+  },
+  {
+    "type": "prompt",
+    "id": "spells_and_potions",
+    "text": "Casting a spell or brewing a potion is a move like any other. Ask for the move the spell or potion names, call roll_move, and let the tool's band decide the result. A spell or potion the character has not learned does nothing; read its text with lookup_feature before you resolve it."
+  },
+  {
+    "type": "prompt",
+    "id": "duels",
+    "text": "A duel is a series of opposed rolls. Call roll_move for each exchange, compare the bands, and narrate the advantage changing hands. Do not decide a duel with one roll unless the story makes it a single decisive moment."
+  },
+  {
+    "type": "prompt",
+    "id": "exiting_the_story",
+    "text": "When all eight Conditions are marked, offer the player Exit the Story (2d6 plus their highest trait). On a 10+ they return with every Condition cleared; on 7 to 9 only Unconscious clears; on 6 or less they leave the story and the player makes a new character. Record the outcome with the condition tools and the Scar field."
+  }
+]

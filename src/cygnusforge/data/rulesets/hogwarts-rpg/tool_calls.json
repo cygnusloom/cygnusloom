@@ -1,6 +1,26 @@
 [
   {
     "type": "tool_call",
+    "id": "lookup_move",
+    "name": "lookup_move",
+    "python_module": "core",
+    "function": "lookup_move",
+    "lookup": true,
+    "description": "Read a move's trigger, description, stat, and every outcome band by id or name. Read it before you decide whether a move applies.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "move": {
+          "type": "string",
+          "enum_from": "moves",
+          "description": "The move to read."
+        }
+      },
+      "required": ["move"]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "roll_move",
     "name": "roll_move",
     "python_module": "core",

@@ -4,27 +4,30 @@
     "id": "frail",
     "label": "Frail",
     "description": "Recovering from a mortal wound. You get no natural healing and no nightly System Strain recovery, and another drop to 0 HP kills you. A week of bed rest or magical healing ends it.",
-    "ends": ["rest"]
+    "ends": ["extended_rest", "magic"]
   },
   {
     "type": "condition",
     "id": "prone",
     "label": "Prone",
     "description": "On the ground. You must spend movement to stand, can only crawl at half speed, take -4 on melee attacks, and are easier to hit in melee and harder to hit at range.",
-    "ends": ["scene"]
+    "ends": ["scene"],
+    "modifies": { "attack": -4, "check": -2 }
   },
   {
     "type": "condition",
     "id": "grappled",
     "label": "Grappled",
     "description": "Held by another creature. Neither of you can move away, only unarmed attacks are possible, and each round the holder may hurt you. A successful opposed check breaks free.",
-    "ends": ["scene"]
+    "ends": ["scene"],
+    "modifies": { "attack": -2, "check": -2 }
   },
   {
     "type": "condition",
     "id": "unconscious",
     "label": "Unconscious",
     "description": "Insensible and helpless. You cannot act or perceive, and an attacker may treat you as a defenseless target. Rousing you takes damage, a Main Action, or time.",
-    "ends": ["scene"]
+    "ends": ["scene"],
+    "modifies": { "attack": -4, "check": -4 }
   }
 ]

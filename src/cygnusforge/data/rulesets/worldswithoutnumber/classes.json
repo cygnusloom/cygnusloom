@@ -84,6 +84,50 @@
   },
   {
     "type": "template",
+    "id": "healer",
+    "kind": "class",
+    "name": "Healer",
+    "description": "A spellcaster of curative arts. All Healers gain Heal as a bonus skill, the Healing Touch art, and one more art of their choice, and learn more arts as they advance. The book presents the Healer as a partial class; this engine offers it as a full class for play.",
+    "stats": { "hp": -1, "attack_bonus": -1 },
+    "skills": { "heal": 0 },
+    "features": [{ "feature": "art_healing_touch" }],
+    "feat_picks": [
+      {
+        "id": "class_art_healer",
+        "count": 1,
+        "tag": "healer",
+        "max_rank": 0,
+        "exclude": ["art_healing_touch", "art_limb_restoration", "art_revive_the_fallen"]
+      }
+    ],
+    "names": "names"
+  },
+  {
+    "type": "template",
+    "id": "vowed",
+    "kind": "class",
+    "name": "Vowed",
+    "description": "A bodily adept who refines inner power into supernatural martial arts. All Vowed gain Martial Style, Unarmed Might, and Unarmored Defense, plus one more art of their choice, and learn more arts as they advance. The book presents the Vowed as a partial class; this engine offers it as a full class for play.",
+    "stats": { "hp": 0, "attack_bonus": 0 },
+    "skills": { "punch": 0, "exert": 0 },
+    "features": [
+      { "feature": "art_martial_style" },
+      { "feature": "art_unarmed_might" },
+      { "feature": "art_unarmored_defense" }
+    ],
+    "feat_picks": [
+      {
+        "id": "class_art_vowed",
+        "count": 1,
+        "tag": "vowed",
+        "max_rank": 0,
+        "exclude": ["art_martial_style", "art_unarmed_might", "art_unarmored_defense"]
+      }
+    ],
+    "names": "names"
+  },
+  {
+    "type": "template",
     "id": "mage",
     "kind": "class",
     "name": "Mage",
@@ -397,6 +441,67 @@
       { "id": "tradition_art_elementalist", "count": 1, "tag": "elementalist", "max_rank": 0 },
       {
         "id": "tradition_spells_elementalist",
+        "count": 2,
+        "tags": ["high", "elementalist"],
+        "feature_type": "spell",
+        "max_rank": 1
+      }
+    ],
+    "names": "names"
+  },
+  {
+    "type": "template",
+    "id": "high_mage_partial_2",
+    "kind": "tradition2",
+    "name": "Second Tradition: High Mage, Partial",
+    "description": "The second partial tradition of a Mage/Mage Adventurer. It grants one art and two first-level spells, and one more art at levels 2, 3, 6, and 9.",
+    "classes": ["adventurer_mage_mage"],
+    "feat_picks": [
+      { "id": "tradition2_art_high", "count": 1, "tag": "high", "max_rank": 0 },
+      {
+        "id": "tradition2_spells_high",
+        "count": 2,
+        "tags": ["high"],
+        "feature_type": "spell",
+        "max_rank": 1
+      }
+    ],
+    "names": "names"
+  },
+  {
+    "type": "template",
+    "id": "necromancer_partial_2",
+    "kind": "tradition2",
+    "name": "Second Tradition: Necromancer, Partial",
+    "description": "The second partial tradition of a Mage/Mage Adventurer. It grants one art and two first-level spells, and one more art at levels 3, 6, and 9.",
+    "classes": ["adventurer_mage_mage"],
+    "feat_picks": [
+      { "id": "tradition2_art_necromancer", "count": 1, "tag": "necromancer", "max_rank": 0 },
+      {
+        "id": "tradition2_spells_necromancer",
+        "count": 2,
+        "tags": ["high", "necromancer"],
+        "feature_type": "spell",
+        "max_rank": 1
+      }
+    ],
+    "names": "names"
+  },
+  {
+    "type": "template",
+    "id": "elementalist_partial_2",
+    "kind": "tradition2",
+    "name": "Second Tradition: Elementalist, Partial",
+    "description": "The second partial tradition of a Mage/Mage Adventurer. It grants Elemental Resilience, Elemental Sparks, one more art, and two first-level spells, and one more art at levels 3, 6, and 9.",
+    "classes": ["adventurer_mage_mage"],
+    "features": [
+      { "feature": "art_elemental_resilience", "quantity": "1" },
+      { "feature": "art_elemental_sparks", "quantity": "1" }
+    ],
+    "feat_picks": [
+      { "id": "tradition2_art_elementalist", "count": 1, "tag": "elementalist", "max_rank": 0 },
+      {
+        "id": "tradition2_spells_elementalist",
         "count": 2,
         "tags": ["high", "elementalist"],
         "feature_type": "spell",

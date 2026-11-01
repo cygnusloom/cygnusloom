@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from cygnusforge.content.library import ContentLibrary, RuleSet
-from cygnusforge.services.campaigns import STATE_INSTRUCTION, speech_instruction, state_instruction
+from cygnusforge.services.campaigns import (
+    STATE_INSTRUCTION,
+    narrate_instruction,
+    speech_instruction,
+    state_instruction,
+)
 
 
 def _cairn() -> RuleSet:
@@ -24,11 +29,25 @@ def test_core_state_prompt_is_the_generic_loop_text_alone():
 
 def test_cairn_state_prompt_keeps_its_fragments_in_order():
     prompt = state_instruction(_cairn())
-    positions = [prompt.index(fragment.text) for fragment in _cairn().prompt_fragments]
+    fragments = [
+        fragment for fragment in _cairn().prompt_fragments if fragment.step in ("state", "all")
+    ]
+    positions = [prompt.index(fragment.text) for fragment in fragments]
     assert positions == sorted(positions)
     assert prompt.startswith(STATE_INSTRUCTION)
     assert "recharge_charged_item" in prompt
     assert "resolve_group_break" in prompt
+
+
+def test_narration_advice_stays_out_of_the_state_prompt():
+    rule_set = _cairn()
+    narration = [fragment for fragment in rule_set.prompt_fragments if fragment.step == "narration"]
+    assert narration
+    state = state_instruction(rule_set)
+    told = narrate_instruction(rule_set)
+    for fragment in narration:
+        assert fragment.text not in state
+        assert fragment.text in told
 
 
 def test_speech_instruction_without_a_cap_has_no_numeric_limit():

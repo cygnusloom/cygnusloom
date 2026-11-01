@@ -57,10 +57,10 @@ directory. The rules text here and in `rules.json` is paraphrased; the books are
 - The player rolls their own attacks and saves. `player_attack` asks for a d20 and uses that
   natural roll for hit, miss, and natural 1/20; the engine rolls damage and Shock. `player_roll_save`
   asks for the d20 for any save the player's character makes, in or out of an encounter.
-  `roll_save` remains the engine roll for NPCs. The engine never takes the player's turn: a player
-  character's turn opens on its own, but it ends only when the player presses End your turn, and
-  an NPC turn starts only with Start [NPC]'s turn and ends only with End [NPC]'s turn. The GM's
-  `end_npc_turn` tool is not offered.
+  `roll_save` remains the engine roll for NPCs. The engine never takes the player's turn. Every
+  turn starts when the player presses Start, including their own; the player ends only their own
+  character's turn with End your turn. An NPC's turn ends automatically when the GM's reply
+  finishes, and the next actor waits for Start. The GM's `end_npc_turn` tool is not offered.
 
 ## Generic engine primitives added
 
@@ -185,8 +185,8 @@ tables to create the first location and its people.
   turns over, and the character dies at zero. A one-hour hourly clock remains as the fallback
   between fights, so a dying character outside an encounter still has a clock.
 - Encounters are button-driven. The GM sets the encounter up without asking, but never advances
-  the order after a reply: the player presses Start [NPC]'s turn and End [NPC]'s turn, or End
-  your turn for their own character.
+  the order after a reply: the player presses Start for every turn, and End your turn only for
+  their own character. An NPC's turn ends by itself when the GM's reply finishes.
 - Saves are d20 at or above the derived save score (16 - level - the best pair modifier; Luck is
   16 - level), so a better attribute lowers the target number. Monsters use their statblock saves.
 - Side initiative is 1d8 + the best Dexterity modifier, ties to the party. It rolls on its own
@@ -214,25 +214,27 @@ tables to create the first location and its people.
 
 ## Known simplifications
 
-- A dual-mage Adventurer has one tradition template, not two. The dual-mage casting table is
-  used, but the character picks a single partial tradition; the book lets the two traditions
-  differ. The class-gated partial template gives the right art and spell counts for one.
+- A dual-mage Adventurer picks two partial traditions, each with its own art and spell picks and
+  its own Effort pool. The Healer and Vowed are offered as full classes, although the book
+  presents them as partial classes, because the class-pairing system does not yet combine two
+  arbitrary partial classes.
 - Readied and Stowed are approximated by one inventory pool of 1.5 x Strength (half Readied plus
   full Stowed); the armor-encumbrance penalty on Sneak/Exert is rule text the GM applies.
 - Surprise, grappling, execution attacks, total defense, dual wielding, range bands, and many
   combat actions are rule text plus the relevant check/attack tools, not dedicated states.
 - Magic Workings, spell research, magic item creation, hirelings, projects, and faction turns are
   rule text; the engine has no subsystem for them.
-- Bestiary multi-attacks (x2, x3, x4) are described in each statblock; the GM repeats the
-  attack or uses `resolve_attacks`, since the data stores one attack entry.
+- Bestiary multi-attacks are parsed from the statblock text (`N attacks per action`), so one
+  `attack` call resolves every attack the creature makes.
 - Monster special abilities are prose in the statblocks; they are not machine-readable rules.
 - PCs have a Morale stat for uniformity, but the Morale and Instinct tools refuse PCs.
 
 ## Validation
 
-- Full suite: `timeout 900 uv run pytest -n auto -q -p no:cacheprovider`: 1950 passed, with 92
-  Worlds Without Number tests across `test_wwn.py`, `test_wwn_combat.py`,
-  `test_wwn_advancement.py`, `test_wwn_magic.py`, and `test_wwn_refactor.py`.
+- Full suite: `timeout 900 uv run pytest -n auto -q -p no:cacheprovider`: 1963 passed in about
+  40 seconds, with the Worlds Without Number tests across `test_wwn.py`,
+  `test_wwn_combat.py`, `test_wwn_advancement.py`, `test_wwn_magic.py`, and
+  `test_wwn_refactor.py`.
 - Lint: `uv run ruff format src tests` and `uv run ruff check src tests`: clean.
 - WWN tests: `tests/test_wwn.py` (content, modifiers, derived stats, creation, spell picks),
   `tests/test_wwn_combat.py` (AC, Shock, hit/damage bonuses, defeat, outside harm, natural
@@ -251,6 +253,11 @@ tables to create the first location and its people.
   the PC's unarmed attack (1 damage), and the hound's bite (4 damage). The run exposed that
   spell picks were offering High Magic arts; the pick now filters by `feature_type: "spell"`,
   with a test.
+- Live run 3 (real DeepSeek, SQLite on port 8913): the randomizer picked the new Healer class;
+  the opening generated Ammat's Door with NPCs. A hound attack started an encounter, added both
+  sides, and settled side initiative. The player pressed Start Jora's turn, End your turn, then
+  Start Alley Hound's turn; the hound acted and its turn ended automatically, leaving Start
+  Jora's turn for round two.
 
 ## Commands
 
@@ -275,3 +282,7 @@ tables to create the first location and its people.
       attribute costs, HP rerolls, slow XP, arts, starting spells, first aid, Frail rest,
       tradition gating, origin Foci, gear, reaction/Instinct, map and combat tools, and 47
       world-generation tables. Found and fixed the spell-pick filter in a live run.
+- [x] Parity pass 2: Healer and Vowed classes and arts, dual-mage second traditions, readied and
+      stowed items, shield Shock, multi-attack statblocks, named NPC mortal wounds, generic
+      `heal_character` and `lookup_condition`, explicit Start/End turn flow with automatic NPC
+      turn endings, and a faster suite.

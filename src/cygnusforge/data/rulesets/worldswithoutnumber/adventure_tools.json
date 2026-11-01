@@ -123,7 +123,7 @@
     "name": "roll_tables",
     "python_module": "wwn",
     "function": "roll_tables",
-    "description": "Roll on one or more of the rule set's dice tables and log every result. Use the world-generation tables (significant_terrain, terrain_quirk, terrain_antagonists, nation_disputes, ruling_class, government_struggle, historical_event, community_tags, court_tags, ruin_tags, wilderness_tags) to build the starting region. Use dungeon_reaction (2d6) for a quick reaction, or roll_reaction to add Charisma. The engine returns the results; you decide what they mean.",
+    "description": "Roll on one or more of the rule set's dice tables and log every result. Use the world-generation tables (significant_terrain, terrain_quirk, terrain_antagonists, nation_disputes_with_neighbor, ruler_class, government_struggle, history_event, community_tags, court_tags, ruin_tags, wilderness_tags) to build the starting region. Also available: site_type, site_feature, site_hazard, site_enigma, site_treasure, deeps_type, ruin_characteristic, ruin_encounter_human, ruin_encounter_beast, ruin_encounter_sapient, encounter_template, wilderness_event, dungeon_event, monster_shape, monster_drive, and monster_twist. Use dungeon_reaction (2d6) for a quick reaction, or roll_reaction to add Charisma. The engine returns the results; you decide what they mean.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -233,6 +233,20 @@
         "target": {
           "type": "string",
           "description": "The name of the character being attacked."
+        },
+        "hit_modifier": {
+          "type": "integer",
+          "minimum": -10,
+          "maximum": 10,
+          "default": 0,
+          "description": "A situational bonus or penalty to the hit roll: -2 long range, -4 firing while meleed or attacking prone, -1 dual wielding, -2 or -4 cover, -2 for total defence."
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 0,
+          "description": "How many attacks to resolve. Leave it out to use the statblock's attacks per action, or set 1 for a single attack."
         }
       },
       "required": ["attacker", "attack", "target"]
@@ -260,6 +274,13 @@
         "weapon": {
           "type": "string",
           "description": "The carried weapon's name, as given, or unarmed."
+        },
+        "hit_modifier": {
+          "type": "integer",
+          "minimum": -10,
+          "maximum": 10,
+          "default": 0,
+          "description": "A situational bonus or penalty to the hit roll: -2 long range, -4 firing while meleed or attacking prone, -1 dual wielding, -2 or -4 cover, -2 for total defence."
         },
         "prompt": {
           "type": "string",
@@ -290,7 +311,8 @@
             "type": "object",
             "properties": {
               "attacker": {"type": "string"},
-              "attack": {"type": "string"}
+              "attack": {"type": "string"},
+              "hit_modifier": {"type": "integer", "minimum": -10, "maximum": 10, "default": 0}
             },
             "required": ["attacker", "attack"]
           }
@@ -345,6 +367,25 @@
       "required": ["name", "stat", "amount", "cause"]
     }
   },
+
+  {
+    "type": "tool_call",
+    "id": "heal_character",
+    "name": "heal_character",
+    "python_module": "core",
+    "function": "heal_character",
+    "description": "Restore lost points of a stat, usually hit points, from a healing spell, art, or item. It never restores more than the character has lost. Recovering a mortally wounded character is a separate act.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string", "description": "The character to heal."},
+        "amount": {"type": "integer", "minimum": 1, "description": "How many points the healing restores before the cap."},
+        "stat": {"type": "string", "description": "The stat to restore. Defaults to hp."},
+        "cause": {"type": "string", "description": "What did the healing, such as a spell or art."}
+      },
+      "required": ["name", "amount"]
+    }
+  },
   {
     "type": "tool_call",
     "id": "stabilize",
@@ -370,7 +411,7 @@
     "name": "recover_character",
     "python_module": "wwn",
     "function": "recover_character",
-    "description": "Recover a character as magical healing does: it clears Mortal Wounds and Frail immediately and restores the hit points the healing rolled. Use it with a healing spell or art.",
+    "description": "Clear a mortally wounded character's dying state as magical healing does, leaving the harm they took for heal_character to restore. Use it after the character is stabilized and the healing magic reaches them.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -423,15 +464,15 @@
     "name": "rest",
     "python_module": "wwn",
     "function": "rest",
-    "description": "Record a rest for one character. A night's rest restores hit points equal to their level, one point of System Strain, all spell castings, and scene and day Effort. A few moments restores scene Effort only. The rest moves the clock itself. Frail characters recover no hit points or Strain.",
+    "description": "Record a rest for one character. A night's rest restores hit points equal to their level, one point of System Strain, all spell castings, and scene and day Effort. A few moments restores scene Effort only. A week of bed rest restores all hit points and Strain and ends Frail. The rest moves the clock itself. Frail characters recover no hit points or Strain from a single night.",
     "parameters": {
       "type": "object",
       "properties": {
         "character": {"type": "string"},
         "length": {
           "type": "string",
-          "enum": ["moments", "night"],
-          "description": "moments for a short break, night for a full night's rest."
+          "enum": ["moments", "night", "extended"],
+          "description": "moments for a short break, night for a full night's rest, extended for a week of bed rest."
         },
         "reason": {"type": "string"},
         "interrupted": {
@@ -458,6 +499,45 @@
         "hours": {"type": "integer", "minimum": 0, "maximum": 72, "default": 0}
       },
       "required": []
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "hire_hireling",
+    "name": "hire_hireling",
+    "python_module": "wwn",
+    "function": "hire_hireling",
+    "character_options": true,
+    "description": "Hire a retainer into a player character's company. The retainer has a rolled sheet like an NPC's and is controlled by the player. Its wage is paid in silver from the employer each new day, and an employer who cannot pay is reported as unpaid. Leave personality, accent, or quirks out to have them rolled. Names must be unique among locations and characters.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "employer": {"type": "string", "description": "The player character paying the wage."},
+        "wage": {"type": "integer", "description": "Silver per day, zero or more."},
+        "description": {"type": "string"},
+        "personality": {"type": "string"},
+        "accent": {"type": "string"},
+        "quirks": {"type": "array", "items": {"type": "string"}},
+        "pronouns": {"type": "string"}
+      },
+      "required": ["name", "employer", "wage", "description"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "dismiss_hireling",
+    "name": "dismiss_hireling",
+    "python_module": "wwn",
+    "function": "dismiss_hireling",
+    "description": "Remove a retainer from its employer's company. It stays where it is and becomes an ordinary NPC.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "cause": {"type": "string", "description": "Why the retainer leaves, in a few words."}
+      },
+      "required": ["name", "cause"]
     }
   },
   {
@@ -497,6 +577,23 @@
       "properties": {
         "name": {"type": "string"},
         "item": {"type": "string"}
+      },
+      "required": ["name", "item"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "ready_item",
+    "name": "ready_item",
+    "python_module": "wwn",
+    "function": "ready_item",
+    "description": "Ready a carried item for use, or stow it. A character can keep only half their Strength in slots readied; readied weapons can attack, and readied armor counts as worn. Retreiving a stowed item takes a Main action.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string", "description": "The character carrying the item."},
+        "item": {"type": "string", "description": "The carried item's name."},
+        "ready": {"type": "boolean", "default": true, "description": "True to ready it, false to stow it."}
       },
       "required": ["name", "item"]
     }
@@ -569,7 +666,12 @@
             }
           }
         },
-        "force": {"type": "boolean", "default": false}
+        "force": {"type": "boolean", "default": false},
+        "rules": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Rule ids attached to the creature, whose text the GM sees while it is present."
+        }
       },
       "required": ["name", "location", "template"]
     }

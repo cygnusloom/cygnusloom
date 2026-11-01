@@ -84,7 +84,7 @@
           {% if encounter %}
           {% set actor = encounter.participants | selectattr("acting") | first %}
           {% set next = encounter.participants | selectattr("next") | first %}
-          {% if actor or (next and not next.is_pc) %}
+          {% if actor or next %}
           <div class="encounter-turn">
             {% if actor and actor.is_pc %}
               <p>It is your turn. Send a message to act, then end your turn.{% if encounter.moves_left is not none %} {{ encounter.moves_left }} of {{ encounter.move_cells }} cells of movement left.{% endif %}</p>
@@ -94,14 +94,9 @@
                 <button type="submit"{% if pending %} disabled{% endif %}>End your turn</button>
               </form>
             {% elif actor %}
-              <p class="muted">{{ actor.name }} is taking their turn.</p>
-              <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/end">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <input type="hidden" name="name" value="{{ actor.name }}">
-                <button type="submit"{% if pending %} disabled{% endif %}>End {{ actor.name }}'s turn</button>
-              </form>
+              <p class="muted">{{ actor.name }} is taking their turn. The turn ends when the GM finishes it.</p>
             {% else %}
-              <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/stream" data-encounter-turn>
+              <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/{{ 'begin' if next.is_pc else 'stream' }}"{% if not next.is_pc %} data-encounter-turn{% endif %}>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="name" value="{{ next.name }}">
                 <button type="submit"{% if pending %} disabled{% endif %}>Start {{ next.name }}'s turn</button>

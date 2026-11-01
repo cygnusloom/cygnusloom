@@ -15,7 +15,13 @@ from typing import Any
 from sqlmodel import Session
 
 from cygnusforge.content.character import CharacterSpec, Feature
-from cygnusforge.content.library import CombatRules, ConditionRules, DamageStep, GroupRules
+from cygnusforge.content.library import (
+    ALL_STATS,
+    CombatRules,
+    ConditionRules,
+    DamageStep,
+    GroupRules,
+)
 from cygnusforge.rules.dice import roll_total
 from cygnusforge.services import death
 from cygnusforge.services.attacks import (
@@ -27,7 +33,7 @@ from cygnusforge.services.attacks import (
     rolls_text,
 )
 from cygnusforge.services.common import InvalidInput, bounded_text, whole_number
-from cygnusforge.services.conditions import end_condition
+from cygnusforge.services.conditions import active_conditions, end_condition
 from cygnusforge.services.encounters import (
     _participant,
     awaiting_initiative,
@@ -41,6 +47,7 @@ from cygnusforge.services.events import (
     CampaignState,
     Character,
     CharacterDied,
+    CharacterHealed,
     CharacterRecovered,
     CharacterSurrendered,
     DebugCurrencyAdded,
@@ -313,6 +320,7 @@ def _strike(
         if not hit:
             harm: dict[str, int] = {}
             shock_taken = 0
+            shield_round = 0
             stat = _harm_stat(combat)
             if (
                 combat.shock_on_miss
@@ -320,8 +328,13 @@ def _strike(
                 and stat is not None
                 and not target.invincible
             ):
-                harm[stat] = shock
-                shock_taken = shock
+                shield_round = _shield_round(db, campaign_id, target)
+                if shield_round:
+                    # The shield stops this Shock, and cannot stop another until the next round.
+                    pass
+                else:
+                    harm[stat] = shock
+                    shock_taken = shock
             defeats, status = _defeat_after_harm(combat, target, harm)
             record(
                 db,
@@ -337,13 +350,14 @@ def _strike(
                     hit=False,
                     to_hit=to_hit,
                     shock=shock_taken,
+                    shield_round=shield_round,
                     defeats=defeats,
                     status=status,
                 ),
             )
             db.commit()
             if defeats:
-                if target.kind == PC_KIND:
+                if target.kind == PC_KIND or target.important:
                     death.begin_dying(db, campaign_id, combat, target.name)
                 _end_if_one_side_left(db, campaign_id)
             return {
@@ -383,7 +397,7 @@ def _strike(
         ),
     )
     db.commit()
-    if defeats and target.kind == PC_KIND:
+    if defeats and (target.kind == PC_KIND or target.important):
         death.begin_dying(db, campaign_id, combat, target.name)
     result: dict[str, Any] = {
         "target": target.name,
@@ -546,6 +560,8 @@ def attack(
     *,
     plus: str,
     targets: Sequence[str] | None = None,
+    hit_modifier: int = 0,
+    conditions: Mapping[str, ConditionRules] | None = None,
 ) -> dict[str, Any]:
     """An NPC's attack. Under the auto hit mode it always hits, so the attack's damage is the roll.
     A modifier rolls its own dice instead of the attack's. An attack with Blast hits every target in
@@ -594,7 +610,9 @@ def attack(
         modifier=modifier_name(modifier),
         plus=plus,
         ignores_armor=IGNORES_ARMOR in flags,
-        hit_bonus=_stat_bonus(combat, source, combat.hit_bonus_stat),
+        hit_bonus=_stat_bonus(combat, source, combat.hit_bonus_stat)
+        + hit_modifier
+        + _condition_attack_modifier(source, conditions),
         shock=shock,
         shock_ac=shock_ac,
     )
@@ -753,6 +771,7 @@ def resolve_attacks(
     rng: random.Random,
     *,
     plus: str,
+    conditions: Mapping[str, ConditionRules] | None = None,
 ) -> dict[str, Any]:
     """Several NPC attacks on one character, such as two NPCs of the foe side or one NPC's two
     weapons. Every attack rolls its own dice. Under the rule set's "highest" multi-attack the
@@ -798,7 +817,9 @@ def resolve_attacks(
                 modifier=modifier_name(entry.get("modifier")),
                 dice=dice or source.attacks[name],
                 ignores_armor=IGNORES_ARMOR in flags,
-                hit_bonus=_stat_bonus(combat, source, combat.hit_bonus_stat),
+                hit_bonus=_stat_bonus(combat, source, combat.hit_bonus_stat)
+                + int(entry.get("hit_modifier", 0))
+                + _condition_attack_modifier(source, conditions),
                 damage_bonus=_stat_bonus(combat, source, combat.damage_bonus_stat),
                 shock=shock,
                 shock_ac=shock_ac,
@@ -915,6 +936,8 @@ def player_attack(
     weapon_feature: Feature | None = None,
     attack_roll: int | None = None,
     damage_roll: int | None = None,
+    hit_modifier: int = 0,
+    conditions: Mapping[str, ConditionRules] | None = None,
 ) -> dict[str, Any]:
     """A player character's hit. The engine rolls the damage unless the player's roll is passed as
     `damage_roll`. The hit mode decides whether it lands. A group takes only impaired attacks.
@@ -948,7 +971,9 @@ def player_attack(
         natural = (
             attack_roll if attack_roll is not None else roll_total(combat.check_die, rng, plus=plus)
         )
-        to_hit = natural + bonuses.to_hit
+        to_hit = (
+            natural + bonuses.to_hit + hit_modifier + _condition_attack_modifier(pc, conditions)
+        )
     return _strike(
         db,
         campaign_id,
@@ -965,6 +990,32 @@ def player_attack(
         shock=bonuses.shock,
         shock_ac=bonuses.shock_ac,
     )
+
+
+def _condition_attack_modifier(
+    character: Character, conditions: Mapping[str, ConditionRules] | None
+) -> int:
+    """What the character's conditions add to an attack roll, using their `attack` and wildcard
+    modifiers."""
+    if not conditions:
+        return 0
+    return sum(
+        rules.modifies.get("attack", 0) + rules.modifies.get(ALL_STATS, 0)
+        for rules in active_conditions(character, conditions)
+    )
+
+
+def _shield_round(db: Session, campaign_id: int, target: Character) -> int:
+    """The round a shield can turn Shock aside, or 0 when the target has no shield or already
+    used it this round."""
+    encounter = load_state(db, campaign_id).encounter
+    if encounter is None:
+        return 0
+    if target.shock_blocked_round == encounter.round:
+        return 0
+    if not any("shield" in item.flags for item in target.items):
+        return 0
+    return encounter.round
 
 
 def _player_character(state: CampaignState) -> Character:
@@ -986,6 +1037,8 @@ def _attack_dice(pc: Character, weapon: str, modifier: str, combat: CombatRules)
     if held is not None:
         if not held.damage:
             raise InvalidInput(f"{held.name} is not a weapon: it has no damage dice")
+        if not held.ready:
+            raise InvalidInput(f"{held.name} is stowed; ready it with ready_item before attacking")
         weapon_dice = held.damage
     elif name_key(weapon) in combat.unarmed_names:
         weapon_dice = combat.unarmed_damage
@@ -1192,6 +1245,48 @@ def recover_character(
     return {"character": character.name, "recovered": True}
 
 
+def heal_character(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    stat: str,
+    amount: int,
+    cause: str,
+) -> dict[str, Any]:
+    """Restore harm in one stat, never below zero. Healing is separate from recovering a
+    mortally wounded character: it reduces harm, while `recover_character` clears the dying
+    state."""
+    state = load_state(db, campaign_id)
+    character = state.characters.get(name_key(name))
+    if character is None:
+        raise InvalidInput(f"there is no character named {name!r}")
+    if stat not in character.stats:
+        options = ", ".join(sorted(character.stats)) or "none"
+        raise InvalidInput(f"{character.name} has no stat {stat!r}; the stats are: {options}")
+    if isinstance(amount, bool) or not isinstance(amount, int) or amount < 1:
+        raise InvalidInput("healing must restore a whole number of points, 1 or more")
+    taken = character.harm.get(stat, 0)
+    restored = min(amount, taken)
+    record(
+        db,
+        campaign_id,
+        CharacterHealed(
+            name=character.name,
+            stat=stat,
+            amount=amount,
+            restored=restored,
+            cause=cause,
+        ),
+    )
+    db.commit()
+    return {
+        "character": character.name,
+        "stat": stat,
+        "restored": restored,
+        "harm": max(0, taken - restored),
+    }
+
+
 def harm_character(
     db: Session,
     campaign_id: int,
@@ -1243,7 +1338,7 @@ def harm_character(
             else "",
         ),
     )
-    if defeats and character.kind == PC_KIND:
+    if defeats and (character.kind == PC_KIND or character.important):
         if at_zero:
             death.begin_dying(
                 db, campaign_id, combat, character.name, cause=f"outside combat, with {stat} at 0"

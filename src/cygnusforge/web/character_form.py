@@ -189,8 +189,12 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
                 continue
             raise InvalidInput(f"Choose a {kind} for your character")
         if template_id not in {template.id for template in offered}:
+            if kind in spec.optional_kinds:
+                continue
             raise InvalidInput(f"That {kind} cannot be chosen by this class")
         templates[kind] = template_id
+    if class_id == "adventurer_mage_mage" and "tradition2" not in templates:
+        raise InvalidInput("Choose a second tradition for your Mage/Mage Adventurer")
     fields = {}
     for field in spec.fields.values():
         value = form_text(form, FIELD_PREFIX + field.id)
