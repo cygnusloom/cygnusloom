@@ -16,4 +16,4 @@ Encounters are scenes within the game where simulated time slows down so actions
 The engine should support various rulesets. It should not be a hodgepodge of spaghetti code as new rulesets pile on. Instead, ruleset behavior should be defined in the ruleset JSON. The engine itself must remain clean. Use modular systems with hooks, parameters, and customizable behavior so each ruleset can define how the engine behaves. If custom code is absolutely necessary, it can be contained within each ruleset's python module. However, most RPG concepts are similar enough that they can live within the generic core engine and just be parameterized in the JSON ruleset.
 
 # Unit tests
-The game has many unit tests. These must be regularly optimized and evaluated, as they can take a significant amount of time to run.
+The game has many unit tests. These must be regularly optimized and evaluated, as they can take a significant amount of time to run. They should also be evaluated to ensure that useless unit tests are removed or never written.
