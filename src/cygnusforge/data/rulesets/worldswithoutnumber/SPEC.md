@@ -232,8 +232,8 @@ tables to create the first location and its people.
 
 ## Validation
 
-- Full suite: `timeout 900 uv run pytest -n auto -q -p no:cacheprovider`: 1964 passed in about
-  44 seconds, with the Worlds Without Number tests across `test_wwn.py`,
+- Full suite: `timeout 900 uv run pytest -n auto -q -p no:cacheprovider`: 1965 passed in about
+  41 seconds, with the Worlds Without Number tests across `test_wwn.py`,
   `test_wwn_combat.py`, `test_wwn_advancement.py`, `test_wwn_magic.py`, and
   `test_wwn_refactor.py`.
 - Lint: `uv run ruff format src tests` and `uv run ruff check src tests`: clean.
@@ -286,4 +286,5 @@ tables to create the first location and its people.
 - [x] Parity pass 2: Healer and Vowed classes and arts, dual-mage second traditions, readied and
       stowed items, shield Shock, multi-attack statblocks, named NPC mortal wounds, generic
       `heal_character` and `lookup_condition`, explicit Start/End turn flow with automatic NPC
-      turn endings, and a faster suite.
+      turn endings, project/research/faction tracking, Die Hard and Impervious Defense, and a
+      faster suite.

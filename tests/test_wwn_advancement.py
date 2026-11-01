@@ -286,14 +286,14 @@ def test_the_submitted_warrior_and_mage_keep_their_class_and_tradition(
     warrior = _pc(warrior_app, warrior_campaign)
     assert warrior.templates["class"] == "warrior"
     assert warrior.templates["tradition"] == "no_tradition"
-    assert warrior.stats["hp"] == 8  # 6 rolled + a Warrior's +2
+    assert warrior.stats["hp"] == 10  # 6 rolled + a Warrior's +2 + Die Hard's +2
     assert warrior.stats["attack_bonus"] == 1
 
     mage_app, mage_campaign = _campaign(client_factory, class_id="mage", tradition="high_mage")
     mage = _pc(mage_app, mage_campaign)
     assert mage.templates["class"] == "mage"
     assert mage.templates["tradition"] == "high_mage"
-    assert mage.stats["hp"] == 5  # 6 rolled - a Mage's -1
+    assert mage.stats["hp"] == 7  # 6 rolled - a Mage's -1 + Die Hard's +2
     assert mage.stats["attack_bonus"] == 0
     assert mage.skills.get("magic") == 0  # the tradition's free skill
     assert "art_arcane_lexicon" in mage.features
@@ -336,10 +336,10 @@ def test_level_up_raises_hp_attack_bonus_skill_points_and_focus_picks(
     wwn.gain_xp(NAME, 3, "a session", ctx)
     result = wwn.level_up(NAME, ctx)
 
-    # random.Random(0) rolls 4 and 4 on the two d6; a Warrior adds +2 a level, so the rerolled
-    # total is 8 + 4 = 12, better than the old 8.
+    # random.Random(0) rolls 4 and 4 on the two d6; a Warrior adds +2 a level and Die Hard
+    # adds 2 more, so the rerolled total is 8 + 4 + 2 = 14, better than the old 10.
     assert result["level"] == 2
-    assert result["hp"] == 12
+    assert result["hp"] == 14
     assert result["attack_bonus"] == 2
     assert result["skill_points"] == 3
     assert result["focus_picks"] == 1
@@ -347,7 +347,7 @@ def test_level_up_raises_hp_attack_bonus_skill_points_and_focus_picks(
 
     character = _pc(app, campaign_id)
     assert character.counters["level"] == 2
-    assert character.stats["hp"] == 12
+    assert character.stats["hp"] == 14
     assert character.stats["attack_bonus"] == 2
     assert character.counters["skill_points"] == 3
     assert character.counters["focus_picks"] == 1
@@ -394,7 +394,8 @@ def test_a_mage_with_a_poor_constitution_gains_at_least_one_hit_point(
     client_factory: Callable[[], TestClient],
 ) -> None:
     app, campaign_id = _campaign(client_factory, class_id="mage", tradition="high_mage")
-    # Seed 2 rolls 1 on the first d6. A Mage adds -1 a level, and Constitution 3 adds -2.
+    # Seed 2 rolls 1 on the first d6. A Mage adds -1 a level, Constitution 3 adds -2, and
+    # Die Hard adds +2.
     tools = _world_tools(app, campaign_id, seed=2)
     ctx = _ctx(tools)
     _set_stat(tools, "con", 3)
@@ -403,8 +404,8 @@ def test_a_mage_with_a_poor_constitution_gains_at_least_one_hit_point(
     wwn.gain_xp(NAME, 3, "a session", ctx)
     result = wwn.level_up(NAME, ctx)
 
-    assert result["hp"] == 6
-    assert _stat(app, campaign_id, "hp") == 6
+    assert result["hp"] == 8
+    assert _stat(app, campaign_id, "hp") == 8
 
 
 def test_spend_skill_point_raises_a_skill_and_spends_one_point(
@@ -621,8 +622,9 @@ def test_level_up_keeps_the_old_hit_points_plus_one_when_the_reroll_is_worse(
     wwn.gain_xp(NAME, 3, "a session", ctx)
     result = wwn.level_up(NAME, ctx)
 
-    assert result["hp"] == 21
-    assert _stat(app, campaign_id, "hp") == 21
+    # The old 20 plus one, plus Die Hard's 2.
+    assert result["hp"] == 23
+    assert _stat(app, campaign_id, "hp") == 23
 
 
 def test_a_full_mage_starts_with_four_spells_and_two_arts(
@@ -767,3 +769,18 @@ def test_a_healer_learns_another_healer_art_at_second_level(client_factory):
     learned = wwn.learn_art(NAME, "art_facile_healer", ctx)
     assert learned["art"] == "art_facile_healer"
     assert "art_facile_healer" in _pc(app, campaign_id).features
+
+
+def test_impervious_defense_sets_an_innate_armor_floor(client_factory):
+    app, campaign_id = _campaign(client_factory, class_id="warrior")
+    tools = _world_tools(app, campaign_id)
+    ctx = _ctx(tools)
+    tools.adjust_counter(NAME, "focus_picks", 1)
+    wwn.learn_focus(NAME, "focus_impervious_defense", ctx)
+
+    base = wwn.set_ac(name=NAME, base_armor=0, ctx=ctx)
+    dexterity = WWN.character.modifier(_pc(app, campaign_id).stats, "dex")
+    assert base["armor"] == 15 + dexterity
+
+    shield = wwn.set_ac(name=NAME, base_armor=4, ctx=ctx)
+    assert shield["armor"] == 19 + dexterity

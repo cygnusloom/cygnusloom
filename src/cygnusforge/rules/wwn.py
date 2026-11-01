@@ -991,6 +991,7 @@ def level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str, Any]
             "con": spec.modifier(found.stats, "con"),
             "stats": dict(found.stats),
             "skills": dict(found.skills),
+            "features": set(found.features),
         }
 
     found = ctx.world.with_hook_context(read)
@@ -1005,6 +1006,8 @@ def level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str, Any]
     gained = max(1, new_hp)
     if gained <= int(found["hp"]):
         gained = int(found["hp"]) + 1
+    if "focus_die_hard" in found["features"]:
+        gained += 2
     ctx.world.set_stat_max(character, "hp", gained, cause=f"level {new_level}")
     ctx.world.set_stat_max(
         character, "attack_bonus", table.attack[new_level - 1], cause=f"level {new_level}"
@@ -1368,6 +1371,11 @@ def set_ac(
         dexterity = ctx.world.character.modifier(found.stats, "dex")
         if base is not None:
             armor = 10 + dexterity + base
+            # Impervious Defense gives an innate AC of 15 plus half level. It replaces worn
+            # body armor but still adds Dexterity and a shield (a base of 4 or less).
+            if "focus_impervious_defense" in found.features and base <= 4:
+                level = found.counters.get("level", 1)
+                armor = max(armor, 15 + level // 2 + dexterity + base)
             armor_value = base
         else:
             armor = int(total)

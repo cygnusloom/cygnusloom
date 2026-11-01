@@ -231,6 +231,7 @@
     "rank": 1,
     "description": "You gain +2 maximum HP per level and automatically stabilize when Mortally Wounded, unless the injury leaves nothing to save.",
     "effects": [
+      { "op": "stat", "id": "hp", "delta": 2 },
       { "op": "note", "text": "Add +2 maximum HP per character level, retroactively. Automatically stabilize when Mortally Wounded unless incinerated, dismembered, or similarly destroyed." }
     ]
   },
