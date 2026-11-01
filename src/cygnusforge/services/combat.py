@@ -69,6 +69,9 @@ MAX_RECOVERY_TEXT = 600
 MAX_CAUSE_TEXT = 200
 # The skill an unarmed strike rolls, for a rule set whose weapons have no feature for it.
 UNARMED_ATTACK_SKILL = "punch"
+# A weapon feature flag: the weapon can be used without the unskilled attack penalty, as the free
+# Worlds Without Number rules say of crossbows.
+NO_UNSKILLED_PENALTY = "no_unskilled_penalty"
 
 
 @dataclass(frozen=True)
@@ -203,20 +206,35 @@ def _player_bonuses(
     damage_bonus = _stat_bonus(combat, character, combat.damage_bonus_stat)
     to_hit = _stat_bonus(combat, character, combat.hit_bonus_stat) + attribute
     damage = damage_bonus
+    class_bonus = _class_damage_bonus(combat, character)
+    damage += class_bonus
     skill = _weapon_skill(combat, weapon, feature)
     if skill:
         level = spec.skill_level(character.skills, skill)
-        to_hit += level if level >= 0 else -combat.unskilled_attack_penalty
-        if unarmed:
-            damage += max(0, level)
+        if level >= 0:
+            to_hit += level
+            if unarmed:
+                damage += level
+        elif not (feature is not None and NO_UNSKILLED_PENALTY in feature.flags):
+            to_hit -= combat.unskilled_attack_penalty
     if combat.attribute_damage and attributes:
         damage += attribute
     shock = 0
     shock_ac = 0
     if feature is not None and feature.shock:
-        shock = feature.shock + attribute + damage_bonus
+        shock = feature.shock + attribute + damage_bonus + class_bonus
         shock_ac = feature.shock_ac
     return WeaponBonuses(to_hit=to_hit, damage=damage, shock=shock, shock_ac=shock_ac)
+
+
+def _class_damage_bonus(combat: CombatRules, character: Character) -> int:
+    """The damage a class's level adds, rounded up, such as a Warrior's half level."""
+    if not combat.level_damage_divisor or not combat.level_damage_classes:
+        return 0
+    if character.templates.get("class", "") not in combat.level_damage_classes:
+        return 0
+    level = character.counters.get("level", 1)
+    return -(-level // combat.level_damage_divisor)
 
 
 def _attack_shock(source: Character, name: str) -> tuple[int, int]:
@@ -261,6 +279,7 @@ def _strike(
     plus: str,
     ignores_armor: bool = False,
     to_hit: int | None = None,
+    natural: int | None = None,
     hit_bonus: int = 0,
     shock: int = 0,
     shock_ac: int = 0,
@@ -284,8 +303,14 @@ def _strike(
     shock_applies = bool(shock) and defense <= shock_ac
     if combat.hit_mode == "roll_vs_defense":
         if to_hit is None:
-            to_hit = roll_total(combat.check_die, rng, plus=plus) + hit_bonus
-        if to_hit < defense:
+            natural = roll_total(combat.check_die, rng, plus=plus)
+            to_hit = natural + hit_bonus
+        hit = to_hit >= defense
+        if natural == 1 and combat.natural_one_misses:
+            hit = False
+        elif natural == combat.check_sides and combat.natural_max_hits:
+            hit = True
+        if not hit:
             harm: dict[str, int] = {}
             shock_taken = 0
             stat = _harm_stat(combat)
@@ -913,8 +938,10 @@ def player_attack(
     # The hit is rolled after the damage, so a roll_vs_defense rule set draws its dice in the same
     # order it always has.
     to_hit: int | None = None
+    natural: int | None = None
     if combat.hit_mode == "roll_vs_defense":
-        to_hit = roll_total(combat.check_die, rng, plus=plus) + bonuses.to_hit
+        natural = roll_total(combat.check_die, rng, plus=plus)
+        to_hit = natural + bonuses.to_hit
     return _strike(
         db,
         campaign_id,
@@ -927,6 +954,7 @@ def player_attack(
         modifier=modifier_name(modifier),
         plus=plus,
         to_hit=to_hit,
+        natural=natural,
         shock=bonuses.shock,
         shock_ac=bonuses.shock_ac,
     )

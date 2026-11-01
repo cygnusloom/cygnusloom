@@ -112,8 +112,8 @@
   {% endfor %}
 {%- endmacro %}
 
-{% macro choice(name, value, title, detail=None, data_select=None, freeform=False, group=None) -%}
-  <label class="choice">
+{% macro choice(name, value, title, detail=None, data_select=None, freeform=False, group=None, data_classes=None) -%}
+  <label class="choice"{% if data_classes is not none %} data-classes='{{ data_classes|tojson }}'{% endif %}>
     <input type="radio" name="{{ name }}" value="{{ value }}" data-title="{{ title }}"{% if data_select %} data-template-select="{{ data_select }}"{% endif %}{% if freeform %} data-freeform{% endif %}{% if group %} data-group="{{ group }}"{% endif %}>
     <span>{{ title }}</span>
     {% if detail %}<span class="muted choice-detail">{{ detail }}</span>{% endif %}

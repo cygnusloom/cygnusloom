@@ -40,7 +40,7 @@ def capacity_of(
         return rules.capacity
     if spec is not None and rules.capacity_stat not in spec.stats:
         raise InvalidInput(f"{rules.capacity_stat!r} is no stat of this rule set")
-    return max(0, current(character, rules.capacity_stat) * rules.capacity_multiplier)
+    return max(0, int(current(character, rules.capacity_stat) * rules.capacity_multiplier))
 
 
 def used_slots(character: Character) -> int:

@@ -58,8 +58,9 @@ class Skill:
 class DerivedStat:
     """A stat whose value comes from the other stats, the counters, and the skills rather than
     from a roll. Its value is `base` + `plus`, minus the values of `minus_counters`, plus the
-    best modifier among `best_modifier`, plus the best raw score among `best_score`, plus the
-    levels of `plus_skills`."""
+    best modifier among `best_modifier`, minus the best modifier among `minus_best_modifier`,
+    plus the best raw score among `best_score`, plus the levels of `plus_skills`, and minus one
+    when any template in `minus_templates` was chosen."""
 
     base: int = 0
     plus: int = 0
@@ -67,6 +68,13 @@ class DerivedStat:
     best_modifier: tuple[str, ...] = ()
     best_score: tuple[str, ...] = ()
     plus_skills: tuple[str, ...] = ()
+    # Modifiers subtracted from the value, such as a saving throw that improves with an
+    # attribute modifier. The best of them is used.
+    minus_best_modifier: tuple[str, ...] = ()
+    # Template ids that each make the value one lower, such as a partial class's Effort penalty.
+    minus_templates: tuple[str, ...] = ()
+    # The lowest value the stat may take, when it has one.
+    minimum: int | None = None
 
 
 @dataclass(frozen=True)
@@ -89,6 +97,8 @@ class Stat:
     # The stat whose modifier is added to a rolled or given value, such as Constitution to a hit
     # die. Empty when the value is used as it stands.
     plus_modifier: str = ""
+    # The lowest value the stat may take after it is rolled or given, such as 1 hit point.
+    minimum: int | None = None
     # The parts of the stat, when it is computed from the others rather than rolled. Such a stat
     # takes no formula, values, swap group, or modifier of its own.
     derived: DerivedStat | None = None
@@ -134,6 +144,8 @@ class Feature:
     # The Shock a weapon deals to a target it misses whose armor is at most `shock_ac`.
     shock: int = 0
     shock_ac: int = 0
+    # Engine flags the weapon or item carries, such as "no_unskilled_penalty".
+    flags: tuple[str, ...] = ()
     # The effects run when the feature is granted while a character is created, in the order
     # they are given. See FEATURE_EFFECT_OPS.
     effects: tuple[Mapping[str, Any], ...] = ()
@@ -173,15 +185,19 @@ class SkillPick:
 
 @dataclass(frozen=True)
 class FeatPick:
-    """Features a template lets the character pick: `count` of the features whose tag is `tag`
-    and whose rank is at most `max_rank` when one is given, save the ones in `exclude`. A pick
-    left out is rolled from the same pool."""
+    """Features a template lets the character pick: `count` of the features whose tag is one of
+    `tags` (any tag when it is empty) and whose rank is at most `max_rank` when one is given, save
+    the ones in `exclude`. A pick left out is rolled from the same pool."""
 
     id: str
     count: int
-    tag: str
+    tag: str = ""
     max_rank: int | None = None
     exclude: tuple[str, ...] = ()
+    # Every tag the pick accepts. Empty means any tag; `tag` is kept for older content.
+    tags: tuple[str, ...] = ()
+    # The feature type the pick offers, such as "spell" or "feat". Empty means any type.
+    feature_type: str = ""
 
 
 @dataclass(frozen=True)
@@ -206,6 +222,8 @@ class Template:
     skill_picks: tuple[SkillPick, ...] = ()
     # Features the character picks by tag when the template is chosen.
     feat_picks: tuple[FeatPick, ...] = ()
+    # The class template ids this template may be chosen with. Empty means any class.
+    classes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -281,6 +299,8 @@ class CharacterSpec:
         modifier that stat can give."""
         rules = self.stats[stat]
         low, high = rules.low, rules.high
+        if rules.minimum is not None:
+            low = max(low, rules.minimum)
         source = self.stats.get(rules.plus_modifier) if rules.plus_modifier else None
         if source is not None:
             modifiers = [modifier for _, modifier in source.modifier_bands] or [0]
@@ -312,6 +332,20 @@ def build_character(
         definitions, "template", lambda d: _template(d, features, tables, skills, template)
     )
     _check_stat_links(stats, skills, counter_ids, template)
+    for item in templates.values():
+        for class_id in item.classes:
+            if class_id not in templates:
+                raise ContentError(
+                    f"{template}: template {item.id!r} names no class template ({class_id!r})"
+                )
+    for stat in stats.values():
+        if stat.derived is None:
+            continue
+        for name in stat.derived.minus_templates:
+            if name not in templates:
+                raise ContentError(
+                    f"{template}: stat {stat.id!r} 'derived' names no template ({name!r})"
+                )
     field_ids = set(fields)
     for item in templates.values():
         for table in item.tables:
@@ -392,8 +426,11 @@ def _stat(definition: Definition, template: str) -> Stat:
     plus_modifier = definition.data.get("plus_modifier", "")
     if not isinstance(plus_modifier, str) or (plus_modifier and not plus_modifier.strip()):
         raise ContentError(f"{label}: 'plus_modifier' must be the id of a stat")
+    minimum = definition.data.get("minimum")
+    if minimum is not None and (isinstance(minimum, bool) or not isinstance(minimum, int)):
+        raise ContentError(f"{label}: 'minimum' must be a whole number")
     if "values" in definition.data:
-        return _assigned_stat(definition, label, name, swap, bands, plus_modifier)
+        return _assigned_stat(definition, label, name, swap, bands, plus_modifier, minimum)
     formula = required_text(definition.data, "formula", label)
     match = FORMULA.fullmatch(formula)
     if match is None:
@@ -408,6 +445,7 @@ def _stat(definition: Definition, template: str) -> Stat:
         high=count * sides,
         modifier_bands=bands,
         plus_modifier=plus_modifier,
+        minimum=minimum,
     )
 
 
@@ -459,6 +497,9 @@ def _derived(value: object, label: str) -> DerivedStat:
         "best_modifier",
         "best_score",
         "plus_skills",
+        "minus_best_modifier",
+        "minus_templates",
+        "minimum",
     }
     if unknown:
         raise ContentError(f"{label}: 'derived' has unknown keys {sorted(unknown)}")
@@ -469,6 +510,11 @@ def _derived(value: object, label: str) -> DerivedStat:
         best_modifier=_id_list(value.get("best_modifier", []), "best_modifier", label),
         best_score=_id_list(value.get("best_score", []), "best_score", label),
         plus_skills=_id_list(value.get("plus_skills", []), "plus_skills", label),
+        minus_best_modifier=_id_list(
+            value.get("minus_best_modifier", []), "minus_best_modifier", label
+        ),
+        minus_templates=_id_list(value.get("minus_templates", []), "minus_templates", label),
+        minimum=None if "minimum" not in value else _whole_number(value, "minimum", label, 0),
     )
 
 
@@ -506,7 +552,7 @@ def _check_stat_links(
         derived = stat.derived
         if derived is None:
             continue
-        for name in (*derived.best_modifier, *derived.best_score):
+        for name in (*derived.best_modifier, *derived.best_score, *derived.minus_best_modifier):
             if name not in stats:
                 raise ContentError(f"{label}: 'derived' names no stat ({name!r})")
         for name in derived.plus_skills:
@@ -536,6 +582,7 @@ def _assigned_stat(
     swap: str | None,
     bands: tuple[tuple[int, int], ...],
     plus_modifier: str,
+    minimum: int | None = None,
 ) -> Stat:
     if "formula" in definition.data:
         raise ContentError(f"{label}: give 'formula' or 'values', not both")
@@ -558,6 +605,7 @@ def _assigned_stat(
         values=tuple(values),
         modifier_bands=bands,
         plus_modifier=plus_modifier,
+        minimum=minimum,
     )
 
 
@@ -644,8 +692,18 @@ def load_feature(
         attributes=_stat_ids(data.get("attributes", []), "attributes", stats, label),
         shock=shock,
         shock_ac=shock_ac,
+        flags=_text_list(data.get("flags", []), "flags", label),
         effects=_feature_effects(data.get("effects", []), label, stats, skills, counters),
     )
+
+
+def _text_list(value: object, key: str, label: str) -> tuple[str, ...]:
+    """A list of short names, with no repeats."""
+    if not isinstance(value, list) or not all(isinstance(v, str) and v.strip() for v in value):
+        raise ContentError(f"{label}: {key!r} must be a list of names")
+    if len(set(value)) != len(value):
+        raise ContentError(f"{label}: {key!r} repeats a name")
+    return tuple(value)
 
 
 def _amount(data: Mapping[str, Any], key: str, label: str) -> int:
@@ -798,6 +856,7 @@ def _template(
         skills=_skill_grants(data.get("skills", {}), skills, label),
         skill_picks=_skill_picks(data.get("skill_picks", []), tables, skills, label),
         feat_picks=_feat_picks(data.get("feat_picks", []), label),
+        classes=_text_ids(data.get("classes", []), "classes", label),
     )
 
 
@@ -878,7 +937,17 @@ def _feat_picks(value: object, label: str) -> tuple[FeatPick, ...]:
         count = item.get("count")
         if isinstance(count, bool) or not isinstance(count, int) or count < 1:
             raise ContentError(f"{pick_label} {ident!r}: 'count' must be a whole number, 1 or more")
-        tag = required_text(item, "tag", pick_label)
+        tag = item.get("tag", "")
+        if not isinstance(tag, str):
+            raise ContentError(f"{pick_label} {ident!r}: 'tag' must be text")
+        tags = _text_ids(item.get("tags", []), "tags", pick_label)
+        if not tag and not tags:
+            raise ContentError(f"{pick_label} {ident!r}: give a 'tag' or 'tags'")
+        if tag and tags:
+            raise ContentError(f"{pick_label} {ident!r}: give 'tag' or 'tags', not both")
+        feature_type = item.get("feature_type", "")
+        if not isinstance(feature_type, str):
+            raise ContentError(f"{pick_label} {ident!r}: 'feature_type' must be text")
         max_rank = item.get("max_rank")
         if max_rank is not None and (
             isinstance(max_rank, bool) or not isinstance(max_rank, int) or max_rank < 0
@@ -893,6 +962,8 @@ def _feat_picks(value: object, label: str) -> tuple[FeatPick, ...]:
                 tag=tag,
                 max_rank=max_rank,
                 exclude=_text_ids(item.get("exclude", []), "exclude", pick_label),
+                tags=tags,
+                feature_type=feature_type,
             )
         )
     return tuple(picks)
@@ -1146,6 +1217,26 @@ def check_choices(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
     _check_picks(spec, submitted)
     _check_skill_picks(spec, submitted)
     _check_feature_picks(spec, submitted)
+    _check_templates(spec, submitted)
+
+
+def _check_templates(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
+    """A chosen template must be allowed for the chosen class, when it names any classes."""
+    chosen = submitted.get("templates", {})
+    if not isinstance(chosen, Mapping):
+        raise CharacterError("'templates' must map kinds to template ids")
+    class_id = chosen.get("class", "")
+    for kind, template_id in chosen.items():
+        template = spec.templates.get(str(template_id))
+        if template is None:
+            raise CharacterError(f"there is no template {template_id!r}")
+        if template.kind != kind:
+            raise CharacterError(f"{template.name!r} is not a {kind}")
+        if template.classes and class_id not in template.classes:
+            class_name = (
+                spec.templates[class_id].name if class_id in spec.templates else str(class_id)
+            )
+            raise CharacterError(f"{template.name} cannot be chosen by a {class_name} character")
 
 
 def _check_picks(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
@@ -1243,7 +1334,10 @@ def _not_offered(spec: CharacterSpec, pick: FeatPick, feature_id: str) -> str:
     if feature is None:
         return f"no feature {feature_id!r}"
     rank = f"rank {pick.max_rank} or less" if pick.max_rank is not None else "any rank"
-    return f"{feature.name!r} is no feature tagged {pick.tag!r} of {rank}"
+    tags = pick.tags or ((pick.tag,) if pick.tag else ())
+    names = ", ".join(repr(tag) for tag in tags) or "any tag"
+    kind = f" {pick.feature_type}" if pick.feature_type else " feature"
+    return f"{feature.name!r} is no{kind} tagged {names} of {rank}"
 
 
 def _check_field_values(spec: CharacterSpec, fields: Mapping[str, Any]) -> None:
@@ -1403,10 +1497,13 @@ def roll_stats(spec: CharacterSpec, rng: random.Random, *, plus: str) -> dict[st
 
 
 def _apply_plus_modifiers(spec: CharacterSpec, stats: dict[str, int]) -> None:
-    """Add the modifier of the stat a stat names to its value, such as Constitution to hit points."""
+    """Add the modifier of the stat a stat names to its value, such as Constitution to hit points,
+    then lift every stat to its minimum."""
     for stat in spec.stats.values():
         if stat.plus_modifier:
             stats[stat.id] += spec.modifier(stats, stat.plus_modifier)
+        if stat.minimum is not None:
+            stats[stat.id] = max(stat.minimum, stats[stat.id])
 
 
 def check_swaps(spec: CharacterSpec, rolled: Mapping[str, int], chosen: Mapping[str, int]) -> None:
@@ -1504,13 +1601,13 @@ def resolve(
         counter_id: _within(spec.counters[counter_id], spec.counters[counter_id].initial + amount)
         for counter_id, amount in counter_amounts.items()
     }
-    stats.update(derived_stats(spec, stats, counters, _final_skills(increments)))
+    stats.update(derived_stats(spec, stats, counters, _final_skills(increments), templates))
     armor = 0
     for feature_id in list(features):
         for effect in spec.features[feature_id].effects:
             armor += _run_effect(spec, effect, stats, increments, counters)
     skills = _final_skills(increments)
-    stats.update(derived_stats(spec, stats, counters, skills))
+    stats.update(derived_stats(spec, stats, counters, skills, templates))
     return Sheet(
         stats=stats,
         templates=templates,
@@ -1657,17 +1754,19 @@ def derived_stats(
     stats: Mapping[str, int],
     counters: Mapping[str, int],
     skills: Mapping[str, int],
+    templates: Mapping[str, str] | None = None,
 ) -> dict[str, int]:
     """The value of every derived stat the spec has, by stat id. A derived stat earlier in the
     spec may be used by a later one. Any value the mapping already holds for a derived stat is
-    ignored, so the result is the same however often it is computed."""
+    ignored, so the result is the same however often it is computed. `templates` are the chosen
+    templates by kind, for a derived stat that depends on one."""
     derived_ids = {stat.id for stat in spec.stats.values() if stat.derived is not None}
     scores = {key: value for key, value in stats.items() if key not in derived_ids}
     found: dict[str, int] = {}
     for stat in spec.stats.values():
         if stat.derived is None:
             continue
-        found[stat.id] = _derived_value(spec, stat.derived, scores, counters, skills)
+        found[stat.id] = _derived_value(spec, stat.derived, scores, counters, skills, templates)
         scores[stat.id] = found[stat.id]
     return found
 
@@ -1678,12 +1777,18 @@ def _derived_value(
     stats: Mapping[str, int],
     counters: Mapping[str, int],
     skills: Mapping[str, int],
+    templates: Mapping[str, str] | None,
 ) -> int:
     value = derived.base + derived.plus
     value -= sum(_counter_start(spec, counters, name) for name in derived.minus_counters)
     value += max((spec.modifier(stats, name) for name in derived.best_modifier), default=0)
+    value -= max((spec.modifier(stats, name) for name in derived.minus_best_modifier), default=0)
     value += max((_score(stats, name) for name in derived.best_score), default=0)
     value += sum(spec.skill_level(skills, name) for name in derived.plus_skills)
+    if templates is not None and any(t in templates.values() for t in derived.minus_templates):
+        value -= 1
+    if derived.minimum is not None:
+        value = max(derived.minimum, value)
     return value
 
 
@@ -1714,12 +1819,14 @@ def skill_pick_options(spec: CharacterSpec, pick: SkillPick) -> tuple[tuple[str,
 
 
 def feature_pick_options(spec: CharacterSpec, pick: FeatPick) -> tuple[Feature, ...]:
-    """The features a pick offers: those whose tag is the pick's, whose rank is at most its
-    `max_rank` when one is given, and that it does not exclude."""
+    """The features a pick offers: those whose tag is one of the pick's, whose rank is at most
+    its `max_rank` when one is given, and that it does not exclude."""
+    tags = pick.tags or ((pick.tag,) if pick.tag else ())
     return tuple(
         feature
         for feature in spec.features.values()
-        if feature.tag == pick.tag
+        if (not tags or feature.tag in tags)
+        and (not pick.feature_type or feature.feature_type == pick.feature_type)
         and (pick.max_rank is None or feature.rank <= pick.max_rank)
         and feature.id not in pick.exclude
     )

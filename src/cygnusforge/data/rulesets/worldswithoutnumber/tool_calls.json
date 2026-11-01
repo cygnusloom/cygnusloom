@@ -86,7 +86,7 @@
     "name": "gain_xp",
     "python_module": "wwn",
     "function": "gain_xp",
-    "description": "Add Experience Points to a character's XP total. Award about 3 XP for a successful session, more for great achievements. The engine uses the fast thresholds: level 2 needs 3 XP, level 3 needs 6, level 4 needs 12, level 5 needs 18, level 6 needs 27, level 7 needs 39, level 8 needs 54, level 9 needs 72, and level 10 needs 93. When the total reaches the next threshold the tool records a note that the character may level up; it does not raise the level itself.",
+    "description": "Add Experience Points to a character's XP total. Award about 3 XP for a successful session on the fast track, or 6 on the slow track. Fast thresholds are 3, 6, 12, 18, 27, 39, 54, 72, and 93; slow thresholds are 6, 15, 24, 36, 51, 69, 87, 105, and 139. When the total reaches the next threshold the tool records a note that the character may level up; it does not raise the level itself.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -103,6 +103,12 @@
         "cause": {
           "type": "string",
           "description": "What earned the award, such as surviving an adventure or achieving a goal."
+        },
+        "rate": {
+          "type": "string",
+          "enum": ["fast", "slow"],
+          "default": "fast",
+          "description": "The campaign's experience track. Use one track for every character in the campaign."
         }
       },
       "required": [
@@ -118,13 +124,19 @@
     "name": "level_up",
     "python_module": "wwn",
     "function": "level_up",
-    "description": "Raise a character from their current level to the next, once their XP total has reached that level's threshold (see gain_xp) and the level counter is below 10. Call it during downtime, and narrate the training or revelation it represents. The character gains their class hit die plus Constitution modifier in maximum HP (at least 1), the class attack bonus for the new level, one skill point (two for an Expert or partial Expert), any focus pick due at levels 2, 5, 7, and 10, and a larger daily casting limit if they cast spells.",
+    "description": "Raise a character from their current level to the next, once their XP total has reached that level's threshold (see gain_xp) and the level counter is below 10. Call it during downtime, and narrate the training or revelation it represents. Hit points are rerolled for the whole new level (level d6 plus the class constant and Constitution each level); if the total is no better than the old, the old total rises by one. The character also gains the class attack bonus for the new level, three skill points (four for an Expert or partial Expert, the extra one for non-combat skills or attributes), any focus pick due at levels 2, 5, 7, and 10, any art pick due on their class chart, and a larger daily casting limit if they cast spells.",
     "parameters": {
       "type": "object",
       "properties": {
         "character": {
           "type": "string",
           "description": "The name of the player character who advances."
+        },
+        "rate": {
+          "type": "string",
+          "enum": ["fast", "slow"],
+          "default": "fast",
+          "description": "The campaign's experience track, which sets the threshold. Use the same track as gain_xp."
         }
       },
       "required": [
@@ -138,7 +150,7 @@
     "name": "spend_skill_point",
     "python_module": "wwn",
     "function": "spend_skill_point",
-    "description": "Spend one banked skill point to raise a skill by one level. The character must have a skill point available, the skill must be below level 4, and the point is spent when the new level is applied. Call it during downtime when the character trains or practices. Level 1 is ordinary competence, level 2 is the best in a city, and level 4 is the best in the world.",
+    "description": "Spend banked skill points to raise a skill by one level. The cost rises with the level: 1 point for level 0, then 2, 3, 4, and 5 points for levels 1 to 4. Level 2 needs character level 3, level 3 needs level 6, and level 4 needs level 9. Call it during downtime when the character trains or practices. Level 1 is ordinary competence, level 2 is the best in a city, and level 4 is the best in the world.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -163,7 +175,7 @@
     "name": "learn_focus",
     "python_module": "wwn",
     "function": "learn_focus",
-    "description": "Spend one focus pick to learn a Focus at rank 1 or 2. The focus id must be a feature tagged focus; rank 2 requires the character to already have the rank-1 focus of the same name. Call it at creation or during advancement when a focus pick is due. Any permanent bonus the focus grants is applied when it is learned.",
+    "description": "Spend one focus pick to learn a Focus at rank 1 or 2, or a nonhuman origin Focus with the GM's permission. The focus id must be a feature tagged focus or origin; rank 2 requires the character to already have the rank-1 focus of the same name. Call it at creation or during advancement when a focus pick is due. Any permanent bonus the focus grants is applied when it is learned.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -188,7 +200,7 @@
     "name": "learn_spell",
     "python_module": "wwn",
     "function": "learn_spell",
-    "description": "Add a spell to a spellcaster's spellbook. The spell must be tagged high, necromancer, or elementalist to match the character's tradition, and its rank (1 to 5) must not exceed the maximum spell level their class and level allow. Call it at creation or when a level-up grants a new spell. Learning takes 7 days per difference between the spell's level and the learner's Magic skill, with a minimum of 1 day, and needs a written copy or teacher; the grimoire must be kept to prepare the spell later.",
+    "description": "Add a spell to a spellcaster's spellbook. A High Mage learns High Magic spells; a Necromancer or Elementalist may learn High Magic or a spell of their own New Magic. The spell's rank (1 to 5) must not exceed the maximum spell level their class and level allow. Call it at creation or when a level-up grants a new spell. Learning takes 7 days minus the learner's Magic skill in days, with a minimum of 1 day, and needs a written copy or teacher.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -198,7 +210,7 @@
         },
         "spell": {
           "type": "string",
-          "description": "The id of a spell feature from spells.json, such as spell_coruscating_coffin. Use only spell ids from the character's own tradition."
+          "description": "The id of a spell feature from spells.json, such as spell_coruscating_coffin. Use a High Magic spell or one of the character's own tradition."
         }
       },
       "required": [
@@ -491,7 +503,7 @@
     "name": "first_aid",
     "python_module": "wwn_magic",
     "function": "first_aid",
-    "description": "Treat a wounded ally after a fight. The healer rolls 1d6 plus their Heal skill (an untrained healer counts -1) and restores that many HP to the target, up to its maximum; the target then gains 1 System Strain, which counts against a maximum equal to its Constitution score. Call it once the fighting stops and the healer has a moment to work.",
+    "description": "Treat a wounded ally after a fight. The healer rolls 1d6 plus their Heal skill (an untrained healer counts -1) and restores that many HP to the target, up to its maximum; the target then gains 1 System Strain, which counts against a maximum equal to its Constitution score. A target already at maximum System Strain gets no benefit from first aid.",
     "parameters": {
       "type": "object",
       "properties": {

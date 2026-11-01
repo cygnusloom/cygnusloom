@@ -301,12 +301,33 @@ def first_aid(healer: str, target: str, ctx: ToolContext) -> dict[str, Any]:
             raise InvalidInput(f"{patient.name} is dead and cannot be helped by first aid")
         if "hp" not in patient.stats:
             raise InvalidInput(f"{patient.name} has no hit points")
+        db, campaign_id = hc.session()
+        if "strain" in patient.stats and current(patient, "strain") <= 0:
+            record(
+                db,
+                campaign_id,
+                EffectNoted(
+                    name=patient.name,
+                    text=(
+                        f"{patient.name} is already at maximum System Strain, so "
+                        f"{doctor.name}'s first aid does nothing."
+                    ),
+                ),
+            )
+            return {
+                "healer": doctor.name,
+                "target": patient.name,
+                "roll": None,
+                "bonus": 0,
+                "total": 0,
+                "healed": 0,
+                "strain": 0,
+            }
         level = spec.skill_level(doctor.skills, "heal")
         bonus = level if level >= 0 else -1
         roll = roll_total("1d6", ctx.world.rng)
         total = roll + bonus
         healed = min(max(0, total), patient.harm.get("hp", 0))
-        db, campaign_id = hc.session()
         record(
             db,
             campaign_id,

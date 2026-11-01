@@ -33,6 +33,7 @@ from cygnusforge.rules.context import ToolContext
 from cygnusforge.rules.dice import roll_total
 from cygnusforge.services.common import InvalidInput, whole_number
 from cygnusforge.services.events import (
+    PC_KIND,
     ArmorSet,
     CheckMade,
     EffectNoted,
@@ -193,25 +194,41 @@ EFFORT_DURATIONS = ("scene", "day", "indefinite")
 TRADITION_TAGS: Mapping[str, str] = {
     "high": "high",
     "high_mage": "high",
+    "high_mage_partial": "high",
     "necromancer": "necromancer",
+    "necromancer_partial": "necromancer",
     "elementalist": "elementalist",
+    "elementalist_partial": "elementalist",
 }
 TRADITION_EFFORT: Mapping[str, str] = {
     "high": "effort_high",
     "necromancer": "effort_necromancer",
-    "elementalist": "effort_elementalist",
+    "elementalist": "effort_elemental",
+}
+# The levels at which a full or partial mage's class chart grants another art.
+ART_LEVELS_FULL: Mapping[str, frozenset[int]] = {
+    "high": frozenset({2, 4, 6, 8, 10}),
+    "necromancer": frozenset({2, 4, 6, 8, 10}),
+    "elementalist": frozenset({2, 4, 6, 8, 10}),
+}
+ART_LEVELS_PARTIAL: Mapping[str, frozenset[int]] = {
+    "high": frozenset({2, 3, 6, 9}),
+    "necromancer": frozenset({3, 6, 9}),
+    "elementalist": frozenset({3, 6, 9}),
 }
 
 
 @dataclass(frozen=True)
 class StartingPackage:
     """One of the book's starting equipment packages. Items are named as the equipment list
-    names them, so `give_item` finds them in the rule set's catalogue."""
+    names them, so `give_item` finds them in the rule set's catalogue. `base_armor` is the
+    Armor Class bonus the package's armor and shield give over 10 + Dexterity."""
 
     id: str
     name: str
     items: tuple[str, ...]
     silver: int = 0
+    base_armor: int = 0
 
 
 STARTING_PACKAGES: Mapping[str, StartingPackage] = {
@@ -228,6 +245,7 @@ STARTING_PACKAGES: Mapping[str, StartingPackage] = {
                 "Backpack",
                 "Tinder box and 3 torches",
             ),
+            base_armor=5,
         ),
         StartingPackage(
             "pkg_mage_healer_scholar",
@@ -265,6 +283,7 @@ STARTING_PACKAGES: Mapping[str, StartingPackage] = {
                 "Tinder box and 3 torches",
             ),
             silver=20,
+            base_armor=2,
         ),
         StartingPackage(
             "pkg_roguish_wanderer",
@@ -285,6 +304,7 @@ STARTING_PACKAGES: Mapping[str, StartingPackage] = {
                 "Grappling hook",
                 "Rope, 50 ft",
             ),
+            base_armor=3,
         ),
         StartingPackage(
             "pkg_adventuring_peasant",
@@ -299,6 +319,7 @@ STARTING_PACKAGES: Mapping[str, StartingPackage] = {
                 "Mule and small cart",
                 "Tinder box and 3 torches",
             ),
+            base_armor=4,
         ),
         StartingPackage(
             "pkg_gentry_wayfarer",
@@ -315,6 +336,7 @@ STARTING_PACKAGES: Mapping[str, StartingPackage] = {
                 "Paper, 20 sheets",
             ),
             silver=20,
+            base_armor=3,
         ),
     )
 }
@@ -406,6 +428,8 @@ def check_morale(name: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
 
     def action(hc: HookContext) -> dict[str, Any]:
         _, character = _character(hc, name)
+        if character.kind == PC_KIND:
+            raise InvalidInput("player characters never make Morale checks")
         morale = character.stats.get("morale")
         db, campaign_id = hc.session()
         if morale is None:
@@ -458,6 +482,307 @@ def check_morale(name: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.with_hook_context(action)
 
 
+# The saving throw names the GM says, and the stats they read.
+SAVE_STATS: Mapping[str, str] = {
+    "physical": "save_physical",
+    "evasion": "save_evasion",
+    "mental": "save_mental",
+    "luck": "save_luck",
+}
+
+
+def roll_save(character: str, save: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
+    """Roll a saving throw: d20 against the character's Physical, Evasion, Mental, or Luck save,
+    succeeding on a roll equal to or above the score. A failure only reports the result; what it
+    costs is the GM's to apply."""
+    key = save.strip().casefold().replace("save_", "")
+    stat = SAVE_STATS.get(key, save if save in SAVE_STATS.values() else "")
+    if not stat:
+        options = ", ".join(SAVE_STATS)
+        raise InvalidInput(f"there is no save named {save!r}; the saves are: {options}")
+    return ctx.world.roll_save(character, stat, cause)
+
+
+def roll_initiative(ctx: ToolContext) -> dict[str, Any]:
+    """Roll once for each side of an encounter, adding the best Dexterity modifier in each, and
+    set the order. Call it after the participants have joined, before the first round. Ties go
+    to the party."""
+    return ctx.world.roll_side_initiative()
+
+
+def instinct_check(name: str, instinct: int, cause: str, ctx: ToolContext) -> dict[str, Any]:
+    """Check an NPC's Instinct: roll 1d10 and compare it to the score in the statblock. A roll no
+    higher than the Instinct means the creature acts on impulse. Player characters never check
+    Instinct."""
+    value = whole_number(instinct, "instinct", 0, 10)
+
+    def action(hc: HookContext) -> dict[str, Any]:
+        _, character = _character(hc, name)
+        if character.kind == PC_KIND:
+            raise InvalidInput("player characters never check Instinct")
+        roll = roll_total("1d10", ctx.world.rng)
+        impulsive = roll <= value
+        db, campaign_id = hc.session()
+        record(
+            db,
+            campaign_id,
+            CheckMade(
+                name=character.name,
+                check="Instinct",
+                stat="instinct",
+                stat_name="Instinct",
+                roll=roll,
+                bonus=0,
+                total=roll,
+                difficulty=value,
+                success=impulsive,
+                cause=cause,
+            ),
+        )
+        return {
+            "character": character.name,
+            "check": "Instinct",
+            "instinct": value,
+            "roll": roll,
+            "impulsive": impulsive,
+            "cause": cause,
+        }
+
+    return ctx.world.with_hook_context(action)
+
+
+def roll_tables(tables: list[str], ctx: ToolContext) -> dict[str, Any]:
+    """Roll on one or more of the rule set's dice tables and log the results. The world-generation
+    tables include significant_terrain, terrain_quirk, nation_disputes, ruling_class,
+    government_struggle, historical_event, and the four tag tables; dungeon_reaction (2d6) gives
+    an NPC's first reaction to the party."""
+    return ctx.world.roll_tables(tables)
+
+
+def roll_reaction(
+    character: str, cause: str, ctx: ToolContext, greeting: bool = True
+) -> dict[str, Any]:
+    """Roll 2d6 for an NPC group's first reaction, adding the greeting character's Charisma
+    modifier when a player character is in a position to greet them. The higher the total, the
+    friendlier the reaction: 2 or less is as hostile as the situation allows, 3 to 5 is unfriendly,
+    6 to 8 is as expected, 9 to 11 is friendlier than expected, and 12 or more is as helpful as
+    their nature permits."""
+    bonus = 0
+    if greeting:
+        spec = ctx.world.character
+
+        def read(hc: HookContext) -> dict[str, int]:
+            _, found = _character(hc, character)
+            return {"bonus": spec.modifier(found.stats, "cha")}
+
+        bonus = int(ctx.world.with_hook_context(read)["bonus"])
+    roll = roll_total("2d6", ctx.world.rng)
+    total = roll + bonus
+
+    def action(hc: HookContext) -> dict[str, Any]:
+        _, found = _character(hc, character)
+        if total <= 2:
+            reaction = "as aggressively hostile as the situation allows"
+        elif total <= 5:
+            reaction = "more unfriendly and hostile than expected"
+        elif total <= 8:
+            reaction = "as hostile or friendly as they would usually be"
+        elif total <= 11:
+            reaction = "friendlier and more benign than expected"
+        else:
+            reaction = "as friendly and helpful as their nature and the situation permit"
+        db, campaign_id = hc.session()
+        record(
+            db,
+            campaign_id,
+            EffectNoted(
+                name=found.name,
+                text=f"Reaction roll {total} ({reaction}; {cause}).",
+            ),
+        )
+        return {
+            "character": found.name,
+            "roll": roll,
+            "bonus": bonus,
+            "total": total,
+            "reaction": reaction,
+            "cause": cause,
+        }
+
+    return ctx.world.with_hook_context(action)
+
+
+def attack(
+    attacker: str,
+    attack: str,
+    target: str,
+    ctx: ToolContext,
+    modifier: str = "",
+    targets: list[str] | None = None,
+) -> dict[str, Any]:
+    """Make an NPC's attack: d20 plus its attack bonus against the target's Armor Class, with
+    natural 1 always missing and natural 20 always hitting. The engine rolls damage and Shock."""
+    return ctx.world.attack(attacker, attack, target, modifier, targets)
+
+
+def player_attack(target: str, weapon: str, ctx: ToolContext, modifier: str = "") -> dict[str, Any]:
+    """Record the player character's attack with a carried weapon, or unarmed. The engine rolls
+    the attack die and the damage; Shock applies on a miss."""
+    return ctx.world.player_attack(target, weapon, modifier)
+
+
+def resolve_attacks(target: str, attacks: list[dict[str, str]], ctx: ToolContext) -> dict[str, Any]:
+    """Resolve several NPC attacks on one character at once, such as a monster's several attacks
+    or several foes striking the same target. Each rolls to hit in turn."""
+    return ctx.world.resolve_attacks(target, attacks)
+
+
+def start_encounter(map: str, ctx: ToolContext) -> dict[str, Any]:
+    """Start an encounter on a map. Add the participants with add_participant, then call
+    roll_initiative before the first round."""
+    return ctx.world.start_encounter(map)
+
+
+def create_encounter_map(
+    name: str,
+    location: str,
+    description: str,
+    ctx: ToolContext,
+    columns: int | None = None,
+    rows: int | None = None,
+    template: str = "",
+) -> dict[str, Any]:
+    """Make a grid map for an encounter at a location, such as the ford, a room, or a yard."""
+    return ctx.world.create_encounter_map(name, location, columns, rows, description, template)
+
+
+def update_encounter_map(
+    name: str,
+    columns: int,
+    rows: int,
+    description: str,
+    ctx: ToolContext,
+) -> dict[str, Any]:
+    """Change an encounter map's description or size."""
+    return ctx.world.update_encounter_map(name, columns, rows, description)
+
+
+def delete_encounter_map(name: str, ctx: ToolContext) -> dict[str, Any]:
+    """Delete an encounter map that is no longer needed."""
+    return ctx.world.delete_encounter_map(name)
+
+
+def place_participant(name: str, column: int, row: int, ctx: ToolContext) -> dict[str, Any]:
+    """Put an encounter participant on a cell of the map grid."""
+    return ctx.world.place_participant(name, column, row)
+
+
+def end_encounter(ctx: ToolContext) -> dict[str, Any]:
+    """End the encounter in progress."""
+    return ctx.world.end_encounter()
+
+
+def add_participant(name: str, ctx: ToolContext, side: str | None = None) -> dict[str, Any]:
+    """Add a character to the encounter on a side, the party or the foes by default."""
+    return ctx.world.add_participant(name, side)
+
+
+def remove_participant(name: str, ctx: ToolContext) -> dict[str, Any]:
+    """Take a character out of the encounter."""
+    return ctx.world.remove_participant(name)
+
+
+def end_npc_turn(name: str, ctx: ToolContext) -> dict[str, Any]:
+    """End an NPC's turn once its actions are resolved."""
+    return ctx.world.end_npc_turn(name)
+
+
+def advance_time(ctx: ToolContext, days: int = 0, parts: int = 0, hours: int = 0) -> dict[str, Any]:
+    """Move the campaign clock forward, such as the hour a mortally wounded character has left to
+    live or the days of downtime an advancement needs."""
+    return ctx.world.advance_time(days, parts, hours)
+
+
+def give_item(
+    name: str, item: str, ctx: ToolContext, size: str = "", damage: str = ""
+) -> dict[str, Any]:
+    """Give a character an item, naming a catalogue item or a new one with its size and damage."""
+    return ctx.world.give_item(name, item, size or "normal", damage)
+
+
+def drop_item(name: str, item: str, ctx: ToolContext) -> dict[str, Any]:
+    """Remove an item from a character's inventory."""
+    return ctx.world.drop_item(name, item)
+
+
+def buy_item(
+    name: str, item: str, ctx: ToolContext, price: int | None = None, size: str = ""
+) -> dict[str, Any]:
+    """Buy a catalogue item, or price an item the catalogue does not list."""
+    return ctx.world.buy_item(name, item, price, size)
+
+
+def search_marketplace(query: str, ctx: ToolContext) -> dict[str, Any]:
+    """Find items and services the marketplace sells."""
+    return ctx.world.search_marketplace(query)
+
+
+def create_monster(
+    name: str,
+    location: str,
+    ctx: ToolContext,
+    description: str | None = None,
+    template: str | None = None,
+    stats: dict[str, int | None] | None = None,
+    armor: int | None = None,
+    attacks: list[dict[str, Any]] | None = None,
+    force: bool = False,
+) -> dict[str, Any]:
+    """Create a creature from the bestiary and place it at a location."""
+    return ctx.world.create_monster(
+        name, location, description, template, stats, armor, attacks, force
+    )
+
+
+def search_monster(query: str, ctx: ToolContext) -> dict[str, Any]:
+    """Find a bestiary statblock by name."""
+    return ctx.world.search_monster(query)
+
+
+def harm_character(
+    name: str, stat: str, amount: int, cause: str, ctx: ToolContext
+) -> dict[str, Any]:
+    """Harm a character outside combat, such as a fall, poison, or privation."""
+    return ctx.world.harm_character(name, stat, amount, cause)
+
+
+def stabilize(name: str, explanation: str, ctx: ToolContext) -> dict[str, Any]:
+    """Stop a mortally wounded character's dying clock, leaving them Frail."""
+    return ctx.world.stabilize(name, explanation)
+
+
+def recover_character(
+    name: str, explanation: str, consequence: str, ctx: ToolContext
+) -> dict[str, Any]:
+    """Recover a character who was mortally wounded, as magical healing does."""
+    return ctx.world.recover_character(name, explanation, consequence)
+
+
+def player_save(ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
+    """Pass the player's own d20 roll for a save the engine has marked due."""
+    return ctx.world.player_save(roll)
+
+
+def set_armor(name: str, armor: int, ctx: ToolContext) -> dict[str, Any]:
+    """Set a character's total Armor Class."""
+    return ctx.world.set_armor(name, armor)
+
+
+def retreat(name: str, safe: bool, ctx: ToolContext) -> dict[str, Any]:
+    """Take a character out of the fight, safely when they have a clear route."""
+    return ctx.world.retreat(name, safe)
+
+
 def gain_xp(
     character: str,
     amount: int,
@@ -507,11 +832,13 @@ def gain_xp(
     return ctx.world.with_hook_context(action)
 
 
-def level_up(character: str, ctx: ToolContext) -> dict[str, Any]:
+def level_up(character: str, ctx: ToolContext, rate: str = "fast") -> dict[str, Any]:
     """Raise a character one level, if their experience reaches the next threshold. Rolls the
-    class hit die for the new level's HP, sets the class attack bonus, adds skill points and any
-    focus pick, raises a spellcaster's castings, and recomputes the derived stats (saves, Strain,
-    Effort) for the new level."""
+    class hit dice for the new level's HP as the book says, sets the class attack bonus, adds
+    three skill points (four for an Expert or partial Expert), grants any focus or art pick due,
+    raises a spellcaster's castings, and recomputes the derived stats (saves, Strain, Effort)."""
+    if rate not in ("fast", "slow"):
+        raise InvalidInput("rate must be 'fast' or 'slow'")
     spec = ctx.world.character
 
     def read(hc: HookContext) -> dict[str, Any]:
@@ -520,10 +847,12 @@ def level_up(character: str, ctx: ToolContext) -> dict[str, Any]:
         xp = found.counters.get("xp", 0)
         if level >= MAX_LEVEL:
             raise InvalidInput(f"{found.name} is already at the highest level, {MAX_LEVEL}")
-        threshold = WWN_XP[level]
+        table_xp = WWN_XP_SLOW if rate == "slow" else WWN_XP
+        threshold = table_xp[level]
         if xp < threshold:
             raise InvalidInput(
-                f"{found.name} has {xp} experience; level {level + 1} needs {threshold}"
+                f"{found.name} has {xp} experience; level {level + 1} needs {threshold} on the "
+                f"{rate} track"
             )
         class_id = found.templates.get("class", "")
         if not class_id:
@@ -543,17 +872,25 @@ def level_up(character: str, ctx: ToolContext) -> dict[str, Any]:
     new_level = level + 1
     table = class_table(str(found["class_id"]))
     ctx.world.adjust_counter(character, "level", 1)
-    rolled = roll_total(f"1d{table.hit_die}", ctx.world.rng)
-    gained = max(1, rolled + table.hp_constant + int(found["con"]))
-    ctx.world.set_stat_max(character, "hp", int(found["hp"]) + gained, cause=f"level {new_level}")
+    # The book rerolls the class hit dice for the new level, adding Constitution to each die,
+    # and keeps the old total plus one when the reroll is no better.
+    rolled = roll_total(f"{new_level}d{table.hit_die}", ctx.world.rng)
+    new_hp = rolled + new_level * (table.hp_constant + int(found["con"]))
+    gained = max(1, new_hp)
+    if gained <= int(found["hp"]):
+        gained = int(found["hp"]) + 1
+    ctx.world.set_stat_max(character, "hp", gained, cause=f"level {new_level}")
     ctx.world.set_stat_max(
         character, "attack_bonus", table.attack[new_level - 1], cause=f"level {new_level}"
     )
-    points = 2 if table.quick_learner else 1
+    points = 4 if table.quick_learner else 3
     ctx.world.adjust_counter(character, "skill_points", points)
     focus_picks = 1 if new_level in table.focus_levels else 0
     if focus_picks:
         ctx.world.adjust_counter(character, "focus_picks", focus_picks)
+    art_picks = _art_picks(str(found["class_id"]), str(found["tradition"]), new_level)
+    if art_picks:
+        ctx.world.adjust_counter(character, "art_picks", art_picks)
     casting = casting_row(str(found["class_id"]), new_level)
     if casting is not None:
         ctx.world.set_stat_max(character, "castings", casting.casts, cause=f"level {new_level}")
@@ -561,16 +898,31 @@ def level_up(character: str, ctx: ToolContext) -> dict[str, Any]:
     return {
         "character": character,
         "level": new_level,
-        "hp_gained": gained,
+        "hp": gained,
         "attack_bonus": table.attack[new_level - 1],
         "skill_points": points,
         "focus_picks": focus_picks,
+        "art_picks": art_picks,
         "castings": casting.casts if casting is not None else None,
+        "rate": rate,
     }
 
 
+def _art_picks(class_id: str, tradition: str, level: int) -> int:
+    """The art picks a class chart grants at a level: a single arcane tradition uses the full
+    chart, while an Adventurer's partial mage uses the partial chart. A dual mage counts as a
+    partial mage for both traditions."""
+    tag = tradition_tag(tradition)
+    if not tag:
+        return 0
+    levels = ART_LEVELS_FULL if class_id.strip().casefold() == "mage" else ART_LEVELS_PARTIAL
+    return 1 if level in levels.get(tag, frozenset()) else 0
+
+
 def spend_skill_point(character: str, skill: str, ctx: ToolContext) -> dict[str, Any]:
-    """Spend one skill point to raise one skill by a level, up to level 4."""
+    """Spend skill points to raise one skill by a level. The cost rises with the level, as the
+    book's table says (1, 2, 3, 4, 5 points for levels 0 to 4), and a character must be high
+    enough level for levels 2 and above (levels 3, 6, and 9)."""
     spec = ctx.world.character
     if skill not in spec.skills:
         options = ", ".join(sorted(spec.skills)) or "none"
@@ -579,25 +931,96 @@ def spend_skill_point(character: str, skill: str, ctx: ToolContext) -> dict[str,
     def read(hc: HookContext) -> dict[str, int]:
         _, found = _character(hc, character)
         points = found.counters.get("skill_points", 0)
-        if points < 1:
-            raise InvalidInput(f"{found.name} has no skill points to spend")
         before = spec.skill_level(found.skills, skill)
         if before >= MAX_SKILL_LEVEL:
             raise InvalidInput(
                 f"{found.name}'s {spec.skills[skill].name} is already at level {MAX_SKILL_LEVEL}"
             )
-        return {"points": points, "before": before}
+        new_level = before + 1
+        cost = new_level + 1
+        needs_level = SKILL_LEVEL_MINIMUMS[new_level]
+        level = found.counters.get("level", 1)
+        if level < needs_level:
+            raise InvalidInput(
+                f"{spec.skills[skill].name} level {new_level} needs character level "
+                f"{needs_level}; {found.name} is level {level}"
+            )
+        if points < cost:
+            unit = "point" if cost == 1 else "points"
+            raise InvalidInput(
+                f"{spec.skills[skill].name} level {new_level} costs {cost} skill {unit}; "
+                f"{found.name} has {points}"
+            )
+        return {"points": points, "before": before, "cost": cost}
 
     found = ctx.world.with_hook_context(read)
     new_level = int(found["before"]) + 1
-    ctx.world.raise_skill(character, skill, new_level, cause="a skill point")
-    ctx.world.adjust_counter(character, "skill_points", -1)
+    ctx.world.raise_skill(character, skill, new_level, cause="skill points")
+    remaining = ctx.world.adjust_counter(character, "skill_points", -int(found["cost"]))
+    _recompute_derived(ctx, character, spec, cause=f"{spec.skills[skill].name} {new_level}")
     return {
         "character": character,
         "skill": skill,
         "skill_name": spec.skills[skill].name,
         "level": new_level,
-        "remaining": int(found["points"]) - 1,
+        "cost": found["cost"],
+        "remaining": remaining["value"],
+    }
+
+
+# The minimum character level for each skill level, and the cost in skill points to buy it.
+SKILL_LEVEL_MINIMUMS: Mapping[int, int] = {0: 1, 1: 1, 2: 3, 3: 6, 4: 9}
+# The minimum character level for each attribute boost, in the order they are bought.
+ATTRIBUTE_BOOST_MINIMUMS: tuple[int, ...] = (2, 2, 3, 6, 9)
+
+
+def improve_attribute(character: str, stat: str, ctx: ToolContext) -> dict[str, Any]:
+    """Spend skill points on a permanent +1 to one of the six attributes. The first boost costs
+    one point, the second two, and so on to five, and each has its own minimum character level.
+    A character can buy five boosts in total."""
+    spec = ctx.world.character
+    if stat not in spec.stats or spec.stats[stat].derived is not None:
+        options = ", ".join(s for s in spec.stats if spec.stats[s].derived is None)
+        raise InvalidInput(f"there is no attribute named {stat!r}; the attributes are: {options}")
+
+    def read(hc: HookContext) -> dict[str, int]:
+        _, found = _character(hc, character)
+        boosts = found.counters.get("attribute_boosts", 0)
+        if boosts >= len(ATTRIBUTE_BOOST_MINIMUMS):
+            raise InvalidInput(f"{found.name} has already bought all five attribute boosts")
+        cost = boosts + 1
+        needs_level = ATTRIBUTE_BOOST_MINIMUMS[boosts]
+        level = found.counters.get("level", 1)
+        if level < needs_level:
+            raise InvalidInput(
+                f"the next attribute boost needs character level {needs_level}; "
+                f"{found.name} is level {level}"
+            )
+        points = found.counters.get("skill_points", 0)
+        if points < cost:
+            raise InvalidInput(
+                f"the next attribute boost costs {cost} skill points; {found.name} has {points}"
+            )
+        value = found.stats.get(stat, 0)
+        if value >= MAX_ATTRIBUTE:
+            raise InvalidInput(
+                f"{found.name}'s {spec.stats[stat].name} is already at {MAX_ATTRIBUTE}"
+            )
+        return {"boosts": boosts, "cost": cost, "value": value}
+
+    found = ctx.world.with_hook_context(read)
+    value = int(found["value"]) + 1
+    ctx.world.set_stat_max(character, stat, value, cause="an attribute boost")
+    ctx.world.adjust_counter(character, "attribute_boosts", 1)
+    remaining = ctx.world.adjust_counter(character, "skill_points", -int(found["cost"]))
+    _recompute_derived(ctx, character, spec, cause=f"{spec.stats[stat].name} boost")
+    return {
+        "character": character,
+        "stat": stat,
+        "value": value,
+        "boosts": int(found["boosts"]) + 1,
+        "cost": found["cost"],
+        "remaining": remaining["value"],
     }
 
 
@@ -608,7 +1031,7 @@ def learn_focus(character: str, focus: str, ctx: ToolContext) -> dict[str, Any]:
     feature = spec.features.get(focus)
     if feature is None:
         raise InvalidInput(f"there is no feature named {focus!r}")
-    if feature.tag != "focus":
+    if feature.tag not in ("focus", "origin"):
         raise InvalidInput(f"{feature.name} is not a focus")
     required = _prior_focus(feature)
     if required is not None and required not in spec.features:
@@ -662,6 +1085,7 @@ def learn_focus(character: str, focus: str, ctx: ToolContext) -> dict[str, Any]:
             raise InvalidInput(f"{feature.name} has an unknown effect {op!r}")
     _learn_feature(ctx, character, feature, notes, cause="a focus pick")
     remaining = ctx.world.adjust_counter(character, "focus_picks", -1)
+    _recompute_derived(ctx, character, spec, cause=f"the focus {feature.name}")
     return {
         "character": character,
         "focus": focus,
@@ -671,9 +1095,53 @@ def learn_focus(character: str, focus: str, ctx: ToolContext) -> dict[str, Any]:
     }
 
 
+# The feature tags that mark an art of one of the three traditions.
+ART_TAGS = ("high", "necromancer", "elementalist")
+
+
+def learn_art(character: str, art: str, ctx: ToolContext) -> dict[str, Any]:
+    """Spend an art pick on an art of the character's own tradition. The class chart grants art
+    picks at levels 2, 4, 6, 8, and 10 for a full mage, and at levels 2, 3, 6, and 9 for a partial
+    mage (3, 6, and 9 for a partial Necromancer or Elementalist)."""
+    spec = ctx.world.character
+    feature = spec.features.get(art)
+    if feature is None:
+        raise InvalidInput(f"there is no feature named {art!r}")
+    if feature.feature_type != "feat" or feature.tag not in ART_TAGS:
+        raise InvalidInput(f"{feature.name} is not an art")
+
+    def read(hc: HookContext) -> dict[str, Any]:
+        _, found = _character(hc, character)
+        tradition = found.templates.get("tradition", "")
+        if not tradition:
+            raise InvalidInput(f"{found.name} has no magical tradition, so cannot learn arts")
+        if feature.tag != tradition_tag(tradition):
+            raise InvalidInput(
+                f"{feature.name} is an art of the {feature.tag} tradition, not "
+                f"{found.name}'s {tradition_tag(tradition)}"
+            )
+        if found.counters.get("art_picks", 0) < 1:
+            raise InvalidInput(f"{found.name} has no art picks to spend")
+        if art in found.features:
+            raise InvalidInput(f"{found.name} already has {feature.name}")
+        return {}
+
+    ctx.world.with_hook_context(read)
+    _learn_feature(ctx, character, feature, (), cause="an art pick")
+    remaining = ctx.world.adjust_counter(character, "art_picks", -1)
+    return {
+        "character": character,
+        "art": art,
+        "name": feature.name,
+        "tradition": feature.tag,
+        "art_picks": remaining["value"],
+    }
+
+
 def learn_spell(character: str, spell: str, ctx: ToolContext) -> dict[str, Any]:
-    """Teach a spell to a spellcaster: it must be a spell feature of their tradition, no higher
-    than the highest spell level their class and level can cast."""
+    """Teach a spell to a spellcaster. A High Mage learns High Magic; a Necromancer or
+    Elementalist may learn High Magic or a spell of their own New Magic. The spell's level must
+    be one the character can cast."""
     spec = ctx.world.character
     feature = spec.features.get(spell)
     if feature is None:
@@ -686,9 +1154,11 @@ def learn_spell(character: str, spell: str, ctx: ToolContext) -> dict[str, Any]:
         tradition = found.templates.get("tradition", "")
         if not tradition:
             raise InvalidInput(f"{found.name} has no magical tradition, so cannot learn spells")
-        if feature.tag != tradition_tag(tradition):
+        tag = tradition_tag(tradition)
+        if feature.tag not in {tag, "high"}:
             raise InvalidInput(
-                f"{feature.name} is not a spell of {found.name}'s tradition, {tradition}"
+                f"{feature.name} is not a High Magic spell or a spell of {found.name}'s "
+                f"tradition, {tag}"
             )
         class_id = found.templates.get("class", "")
         row = casting_row(class_id, found.counters.get("level", 1))
@@ -714,6 +1184,13 @@ def learn_spell(character: str, spell: str, ctx: ToolContext) -> dict[str, Any]:
     }
 
 
+def roll_starting_silver(character: str, ctx: ToolContext) -> dict[str, Any]:
+    """Give a character the book's alternative to a starting package: 3d6 x 10 silver pieces."""
+    amount = roll_total("3d6", ctx.world.rng) * 10
+    ctx.world.change_currency(character, amount, cause="starting silver")
+    return {"character": character, "silver": amount}
+
+
 def grant_package(character: str, package: str, ctx: ToolContext) -> dict[str, Any]:
     """Give a character the items and starting silver of one of the book's equipment packages."""
     found = STARTING_PACKAGES.get(package.strip().casefold())
@@ -726,6 +1203,7 @@ def grant_package(character: str, package: str, ctx: ToolContext) -> dict[str, A
         given.append(item)
     if found.silver:
         ctx.world.change_currency(character, found.silver, cause=f"the {found.name} package")
+    set_ac(character, base_armor=found.base_armor, ctx=ctx)
     return {
         "character": character,
         "package": found.id,
@@ -789,17 +1267,19 @@ def rest(
     points equal to the character's level, one point of System Strain, all spell castings, and
     scene and day Effort. A shorter rest restores scene Effort only."""
     result = ctx.world.rest(length, interrupted=interrupted, reason=reason)
-    return {**result, **_rest_recovery(character, ctx, length)}
+    return {**result, **_rest_recovery(character, ctx, length, interrupted)}
 
 
 def recover_after_rest(character: str, ctx: ToolContext) -> dict[str, Any]:
     """Apply a night's recovery without advancing the clock, for a rest the GM tracked elsewhere.
     A night restores hit points equal to the character's level, one System Strain, every spell
     casting, and the Effort committed for a scene or a day."""
-    return _rest_recovery(character, ctx, "night")
+    return _rest_recovery(character, ctx, "night", False)
 
 
-def _rest_recovery(character: str, ctx: ToolContext, length: str) -> dict[str, Any]:
+def _rest_recovery(
+    character: str, ctx: ToolContext, length: str, interrupted: bool = False
+) -> dict[str, Any]:
     """Record a rest's recovery: the night's hit points, Strain, and castings, and the Effort
     whose duration ends with the rest."""
 
@@ -818,11 +1298,12 @@ def _rest_recovery(character: str, ctx: ToolContext, length: str) -> dict[str, A
             )
             restored[stat] = restored.get(stat, 0) + amount
 
-        if length == "night":
-            recover("hp", found.counters.get("level", 1), f"a {length}'s rest")
-            recover("strain", 1, f"a {length}'s rest")
+        if length == "night" and not interrupted:
+            if "frail" not in found.conditions:
+                recover("hp", found.counters.get("level", 1), f"a {length}'s rest")
+                recover("strain", 1, f"a {length}'s rest")
             recover("castings", found.harm.get("castings", 0), f"a {length}'s rest")
-        durations = ("scene", "day") if length == "night" else ("scene",)
+        durations = ("scene", "day") if length == "night" and not interrupted else ("scene",)
         marks = found.marks.get(EFFORT_MARK) or {}
         kept = {duration: dict(held) for duration, held in marks.items()}
         for duration in durations:
@@ -859,7 +1340,7 @@ def _recompute_derived(
     def action(hc: HookContext) -> None:
         _, found = _character(hc, character)
         try:
-            values = derived_stats(spec, found.stats, found.counters, found.skills)
+            values = derived_stats(spec, found.stats, found.counters, found.skills, found.templates)
         except ValueError as error:
             raise InvalidInput(str(error)) from error
         db, campaign_id = hc.session()

@@ -213,27 +213,57 @@
   {
     "type": "rule",
     "id": "experience",
-    "text": "Award each PC 3 XP for a session of genuine adventure, or use goals, missions, or spending as the group prefers. XP is cumulative and never resets. The fast progression needs 3, 6, 12, 18, 27, 39, 54, 72, and 93 XP for levels 2 to 10."
+    "text": "Choose a fast or slow experience track for the whole campaign. Award about 3 XP per session on the fast track, or 6 on the slow one, plus more for great achievements. The fast thresholds for levels 2 to 10 are 3, 6, 12, 18, 27, 39, 54, 72, and 93; the slow thresholds are 6, 15, 24, 36, 51, 69, 87, 105, and 139. XP is cumulative and never resets."
   },
   {
     "type": "rule",
     "id": "leveling",
-    "text": "When a character reaches the XP threshold for the next level, they advance after a day or two of downtime. Raise level by 1, roll the class hit die + Con (minimum 1) for new HP, set attack bonus from the class table, gain a skill point, gain any focus picks, and raise castings for spellcasters."
+    "text": "When a character reaches the next level's XP threshold, they advance after a day or two of downtime. Raise level by 1; reroll the class hit dice for the whole new level, adding the class constant and Constitution modifier to each level, and if the total is no better than the old, record the old total plus one. Set the attack bonus from the class table, gain three skill points (four for an Expert or partial Expert, the extra point for non-combat skills or attributes), gain any focus pick due at levels 2, 5, 7, and 10, gain any art pick on the class chart, and raise castings for spellcasters. Saving throws improve by one each level."
   },
   {
     "type": "rule",
     "id": "skill-points",
-    "text": "Each level grants 1 skill point, or 2 for Experts and partial Experts. Spend a point to raise one skill by one level, to a maximum of level 4. Skills gained at level-up need no training time; saving points to spend later requires a teacher or an explanation."
+    "text": "Each level grants three skill points, plus one more for Experts and partial Experts. Raising a skill costs more at each level: 1 point for level 0, then 2, 3, 4, and 5 for levels 1 to 4. Level 2 needs character level 3, level 3 needs level 6, and level 4 needs level 9. Skills gained at level-up need no training time; saving points to spend later requires a teacher or an explanation."
   },
   {
     "type": "rule",
     "id": "focus-picks",
-    "text": "A focus is a special talent or training. Each class grants focus picks at set levels; spend a pick to learn one focus of the allowed kind. A rank-2 focus requires its rank-1 version first."
+    "text": "A focus is a special talent or training. Each class grants focus picks at set levels; spend a pick to learn one focus of the allowed kind. A rank-2 focus requires its rank-1 version first. A nonhuman origin Focus may be taken with the GM's permission, using a focus pick, in place of a normal Focus."
   },
   {
     "type": "rule",
     "id": "new-spells",
-    "text": "A spellcasting character learns one new spell of their tradition each level, of a rank they can cast. The spell is added to their known spells and may be prepared after the next rest. The GM may substitute a rare or researched spell."
+    "text": "A full High Mage picks any two High Magic spells they can cast each level. A Necromancer or Elementalist picks one spell, from High Magic or their own New Magic. A dual-tradition Adventurer picks from one of their traditions each level. The class chart also grants new arts: a full mage at levels 2, 4, 6, 8, and 10; a partial High Mage at 2, 3, 6, and 9; a partial Necromancer or Elementalist at 3, 6, and 9. Learning a spell outside level-up takes a week per level minus Magic skill in days, at least one day, with a teacher or text."
+  },
+  {
+    "type": "rule",
+    "id": "opposed-checks",
+    "text": "When two characters work against each other, both roll the relevant skill check at the same difficulty; the highest total wins, and a tie goes to the player character. An NPC adds any skill bonus the statblock lists, or nothing. Helping an ally: each helper makes the same check and a success gives the leader +1, but the total bonus from helpers never exceeds +1. Using a skill outside its obvious purpose usually raises the difficulty by 2."
+  },
+  {
+    "type": "rule",
+    "id": "attribute-boosts",
+    "text": "Skill points may buy permanent attribute increases. The first costs 1 point and adds +1 to one attribute; the second costs 2, the third 3, the fourth 4, and the fifth 5, with minimum character levels 2, 2, 3, 6, and 9. No character may buy more than five boosts in total."
+  },
+  {
+    "type": "rule",
+    "id": "reaction",
+    "text": "When the party meets an NPC or creature and bloodshed is not certain, roll 2d6 for its first reaction, adding the greeting PC's Charisma modifier if one can greet them. 2 or less is as hostile as the situation allows, 3-5 is hostile, 6-8 is as expected, 9-11 is friendly, and 12 or more is as helpful as their nature permits. Tell the players what the mood looks like before they act."
+  },
+  {
+    "type": "rule",
+    "id": "instinct",
+    "text": "An NPC's Instinct score runs from 0 to 10. When the GM wonders whether it acts on impulse, roll 1d10; a roll no higher than the Instinct means it follows its immediate urges rather than its best judgment. Player characters never make Instinct checks."
+  },
+  {
+    "type": "rule",
+    "id": "falling-suffocation",
+    "text": "A fall does 1d6 damage per 10 feet, to a maximum of 20d6. A controlled fall allows a Dex/Exert or Str/Exert check at difficulty 7 plus 1 per 10 feet to halve the distance. A character can hold their breath for one round per point of Constitution (10 rounds for an NPC), four times as long if still, then must make a Physical save each round or lose 1 HP per hit die or level."
+  },
+  {
+    "type": "rule",
+    "id": "ranged-combat",
+    "text": "Bows, crossbows, and hurlants fire at short range without penalty and at long range with -2 to hit. A two-handed ranged weapon cannot be fired while in melee; a one-handed or thrown one can be used at -4. Firing a bow needs an On Turn action with a readied quiver and Shoot-1, otherwise a Move; reloading a crossbow takes a Main action."
   },
   {
     "type": "rule",

@@ -330,5 +330,32 @@
     "type": "table",
     "id": "learning_wanderer",
     "options": ["stab", "shoot", "punch", "connect", "notice", "perform", "ride", "sneak", "survive", "work"]
+  },
+  {
+    "type": "table",
+    "id": "all_skills",
+    "options": [
+      "administer",
+      "connect",
+      "convince",
+      "craft",
+      "exert",
+      "heal",
+      "know",
+      "lead",
+      "magic",
+      "notice",
+      "perform",
+      "pray",
+      "punch",
+      "ride",
+      "sail",
+      "shoot",
+      "sneak",
+      "stab",
+      "survive",
+      "trade",
+      "work"
+    ]
   }
 ]

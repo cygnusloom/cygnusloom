@@ -9,7 +9,15 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusforge.content.library import Hooks, InventoryRules, Marketplace, ShopItem, ShopService
+from cygnusforge.content.character import CharacterSpec
+from cygnusforge.content.library import (
+    CombatRules,
+    Hooks,
+    InventoryRules,
+    Marketplace,
+    ShopItem,
+    ShopService,
+)
 from cygnusforge.services.common import InvalidInput, whole_number
 from cygnusforge.services.events import (
     ArmorSet,
@@ -34,13 +42,37 @@ from cygnusforge.services.inventory import (
 MAX_PRICE = 100_000
 
 
-def _armor_after(current: int, listed: int, mode: str) -> int:
-    """The armor a buyer has after taking a catalogue item, as the item's `armor_mode` says."""
+def _armor_after(current: int, listed: int, mode: str, defense: int = 0) -> int:
+    """The armor a buyer has after taking a catalogue item, as the item's `armor_mode` says.
+    `defense` is the rule set's base Armor Class plus the buyer's defense modifier, such as
+    10 + Dexterity. A "shield" either sets that defense plus its own value or adds one to
+    armor that is already as good."""
     if mode == "set":
-        return listed
+        return defense + listed
     if mode == "max":
-        return max(current, listed)
+        return max(current, defense + listed)
+    if mode == "shield":
+        if current <= defense:
+            return defense + listed
+        return max(current + 1, defense + listed)
     return current + listed
+
+
+def _defense_of(
+    combat: CombatRules | None, character: CharacterSpec | None, buyer: Character
+) -> int:
+    """A character's bare Armor Class before any armor: the rule set's base defense plus the
+    buyer's modifier in its defense stat, such as 10 + Dexterity. Zero when the rule set keeps
+    no such defense."""
+    if combat is None or not combat.defense_base:
+        return 0
+    bonus = 0
+    if character is not None and combat.defense_modifier:
+        stat = character.stats.get(combat.defense_modifier)
+        score = buyer.stats.get(combat.defense_modifier)
+        if stat is not None and score is not None:
+            bonus = stat.modifier(score)
+    return combat.defense_base + bonus
 
 
 def listed_item(marketplace: Marketplace, item: str) -> ShopItem | None:
@@ -84,11 +116,14 @@ def buy_item(
     price: int | None = None,
     size: str = "",
     armor_max: int = 0,
+    combat: CombatRules | None = None,
+    character: CharacterSpec | None = None,
 ) -> dict[str, Any]:
     """A character buys an item. A catalogue item costs its listed price and takes its listed
     size, and a price or size that disagrees with the listing is refused. Any other item needs a
-    price. Armor adds to the buyer's armor, up to armor_max (0 means no cap). A purchase that
-    would not fit in the inventory is refused, and nothing is paid."""
+    price. Armor changes the buyer's Armor Class as its `armor_mode` says, up to armor_max (0
+    means no cap), using the rule set's base defense and defense modifier. A purchase that would
+    not fit in the inventory is refused, and nothing is paid."""
     state = load_state(db, campaign_id)
     buyer = character_named(state, name)
     listed = listed_item(marketplace, item)
@@ -133,7 +168,8 @@ def buy_item(
         cause="bought",
     )
     if listed is not None and (listed.armor > 0 or listed.armor_mode != "add"):
-        armor = _armor_after(buyer.armor, listed.armor, listed.armor_mode)
+        defense = _defense_of(combat, character, buyer)
+        armor = _armor_after(buyer.armor, listed.armor, listed.armor_mode, defense)
         if armor_max > 0:
             armor = min(armor_max, armor)
         record(db, campaign_id, ArmorSet(name=buyer.name, armor=armor))

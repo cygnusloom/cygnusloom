@@ -6,11 +6,26 @@
     "formula": "3d6",
     "swap_group": "attributes",
     "modifier": [
-      { "min": 3, "modifier": -2 },
-      { "min": 4, "modifier": -1 },
-      { "min": 8, "modifier": 0 },
-      { "min": 14, "modifier": 1 },
-      { "min": 18, "modifier": 2 }
+      {
+        "min": 3,
+        "modifier": -2
+      },
+      {
+        "min": 4,
+        "modifier": -1
+      },
+      {
+        "min": 8,
+        "modifier": 0
+      },
+      {
+        "min": 14,
+        "modifier": 1
+      },
+      {
+        "min": 18,
+        "modifier": 2
+      }
     ]
   },
   {
@@ -20,11 +35,26 @@
     "formula": "3d6",
     "swap_group": "attributes",
     "modifier": [
-      { "min": 3, "modifier": -2 },
-      { "min": 4, "modifier": -1 },
-      { "min": 8, "modifier": 0 },
-      { "min": 14, "modifier": 1 },
-      { "min": 18, "modifier": 2 }
+      {
+        "min": 3,
+        "modifier": -2
+      },
+      {
+        "min": 4,
+        "modifier": -1
+      },
+      {
+        "min": 8,
+        "modifier": 0
+      },
+      {
+        "min": 14,
+        "modifier": 1
+      },
+      {
+        "min": 18,
+        "modifier": 2
+      }
     ]
   },
   {
@@ -34,11 +64,26 @@
     "formula": "3d6",
     "swap_group": "attributes",
     "modifier": [
-      { "min": 3, "modifier": -2 },
-      { "min": 4, "modifier": -1 },
-      { "min": 8, "modifier": 0 },
-      { "min": 14, "modifier": 1 },
-      { "min": 18, "modifier": 2 }
+      {
+        "min": 3,
+        "modifier": -2
+      },
+      {
+        "min": 4,
+        "modifier": -1
+      },
+      {
+        "min": 8,
+        "modifier": 0
+      },
+      {
+        "min": 14,
+        "modifier": 1
+      },
+      {
+        "min": 18,
+        "modifier": 2
+      }
     ]
   },
   {
@@ -48,11 +93,26 @@
     "formula": "3d6",
     "swap_group": "attributes",
     "modifier": [
-      { "min": 3, "modifier": -2 },
-      { "min": 4, "modifier": -1 },
-      { "min": 8, "modifier": 0 },
-      { "min": 14, "modifier": 1 },
-      { "min": 18, "modifier": 2 }
+      {
+        "min": 3,
+        "modifier": -2
+      },
+      {
+        "min": 4,
+        "modifier": -1
+      },
+      {
+        "min": 8,
+        "modifier": 0
+      },
+      {
+        "min": 14,
+        "modifier": 1
+      },
+      {
+        "min": 18,
+        "modifier": 2
+      }
     ]
   },
   {
@@ -62,11 +122,26 @@
     "formula": "3d6",
     "swap_group": "attributes",
     "modifier": [
-      { "min": 3, "modifier": -2 },
-      { "min": 4, "modifier": -1 },
-      { "min": 8, "modifier": 0 },
-      { "min": 14, "modifier": 1 },
-      { "min": 18, "modifier": 2 }
+      {
+        "min": 3,
+        "modifier": -2
+      },
+      {
+        "min": 4,
+        "modifier": -1
+      },
+      {
+        "min": 8,
+        "modifier": 0
+      },
+      {
+        "min": 14,
+        "modifier": 1
+      },
+      {
+        "min": 18,
+        "modifier": 2
+      }
     ]
   },
   {
@@ -76,11 +151,26 @@
     "formula": "3d6",
     "swap_group": "attributes",
     "modifier": [
-      { "min": 3, "modifier": -2 },
-      { "min": 4, "modifier": -1 },
-      { "min": 8, "modifier": 0 },
-      { "min": 14, "modifier": 1 },
-      { "min": 18, "modifier": 2 }
+      {
+        "min": 3,
+        "modifier": -2
+      },
+      {
+        "min": 4,
+        "modifier": -1
+      },
+      {
+        "min": 8,
+        "modifier": 0
+      },
+      {
+        "min": 14,
+        "modifier": 1
+      },
+      {
+        "min": 18,
+        "modifier": 2
+      }
     ]
   },
   {
@@ -88,7 +178,8 @@
     "id": "hp",
     "name": "Hit Points",
     "formula": "1d6",
-    "plus_modifier": "con"
+    "plus_modifier": "con",
+    "minimum": 1
   },
   {
     "type": "stat",
@@ -112,25 +203,75 @@
     "type": "stat",
     "id": "strain",
     "name": "System Strain",
-    "derived": { "base": 0, "best_score": ["con"] }
+    "derived": {
+      "base": 0,
+      "best_score": [
+        "con"
+      ]
+    }
   },
   {
     "type": "stat",
     "id": "effort_high",
     "name": "High Magic Effort",
-    "derived": { "base": 1, "best_modifier": ["int", "cha"], "plus_skills": ["magic"] }
+    "derived": {
+      "base": 1,
+      "best_modifier": [
+        "int",
+        "cha"
+      ],
+      "plus_skills": [
+        "magic"
+      ],
+      "minus_templates": [
+        "adventurer_expert_mage",
+        "adventurer_warrior_mage",
+        "adventurer_mage_mage"
+      ],
+      "minimum": 1
+    }
   },
   {
     "type": "stat",
     "id": "effort_necromancer",
     "name": "Necromantic Effort",
-    "derived": { "base": 1, "best_modifier": ["int", "cha"], "plus_skills": ["magic"] }
+    "derived": {
+      "base": 1,
+      "best_modifier": [
+        "int",
+        "cha"
+      ],
+      "plus_skills": [
+        "magic"
+      ],
+      "minus_templates": [
+        "adventurer_expert_mage",
+        "adventurer_warrior_mage",
+        "adventurer_mage_mage"
+      ],
+      "minimum": 1
+    }
   },
   {
     "type": "stat",
     "id": "effort_elemental",
     "name": "Elementalist Effort",
-    "derived": { "base": 1, "best_modifier": ["int", "cha"], "plus_skills": ["magic"] }
+    "derived": {
+      "base": 1,
+      "best_modifier": [
+        "int",
+        "cha"
+      ],
+      "plus_skills": [
+        "magic"
+      ],
+      "minus_templates": [
+        "adventurer_expert_mage",
+        "adventurer_warrior_mage",
+        "adventurer_mage_mage"
+      ],
+      "minimum": 1
+    }
   },
   {
     "type": "stat",
@@ -138,8 +279,13 @@
     "name": "Physical Save",
     "derived": {
       "base": 16,
-      "minus_counters": ["level"],
-      "best_modifier": ["str", "con"]
+      "minus_counters": [
+        "level"
+      ],
+      "minus_best_modifier": [
+        "str",
+        "con"
+      ]
     }
   },
   {
@@ -148,8 +294,13 @@
     "name": "Evasion Save",
     "derived": {
       "base": 16,
-      "minus_counters": ["level"],
-      "best_modifier": ["int", "dex"]
+      "minus_counters": [
+        "level"
+      ],
+      "minus_best_modifier": [
+        "int",
+        "dex"
+      ]
     }
   },
   {
@@ -158,14 +309,24 @@
     "name": "Mental Save",
     "derived": {
       "base": 16,
-      "minus_counters": ["level"],
-      "best_modifier": ["wis", "cha"]
+      "minus_counters": [
+        "level"
+      ],
+      "minus_best_modifier": [
+        "wis",
+        "cha"
+      ]
     }
   },
   {
     "type": "stat",
     "id": "save_luck",
     "name": "Luck Save",
-    "derived": { "base": 16, "minus_counters": ["level"] }
+    "derived": {
+      "base": 16,
+      "minus_counters": [
+        "level"
+      ]
+    }
   }
 ]

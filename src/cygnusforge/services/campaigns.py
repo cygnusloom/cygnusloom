@@ -463,6 +463,8 @@ def save_creation(
                 magic=rule_set.magic,
                 currency=rule_set.marketplace.currency if rule_set.marketplace else "",
                 armor_max=rule_set.combat.armor_max if rule_set.combat else 0,
+                defense_base=rule_set.combat.defense_base if rule_set.combat else 0,
+                defense_modifier=rule_set.combat.defense_modifier if rule_set.combat else "",
                 pronouns=character.pronouns,
                 plus=rule_set.plus,
             )

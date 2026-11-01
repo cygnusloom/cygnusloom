@@ -31,5 +31,22 @@
     "min": 0,
     "initial": 0,
     "description": "Unspent focus picks granted by the character's class at certain levels. A pick learns one focus; a rank-2 focus needs its rank-1 version first."
+  },
+  {
+    "type": "counter",
+    "id": "art_picks",
+    "label": "Art Picks",
+    "min": 0,
+    "initial": 0,
+    "description": "Unspent art picks granted to spellcasters at the levels their class chart lists. A pick learns one art of the character's own tradition."
+  },
+  {
+    "type": "counter",
+    "id": "attribute_boosts",
+    "label": "Attribute Boosts",
+    "min": 0,
+    "max": 5,
+    "initial": 0,
+    "description": "Attribute boosts bought with skill points. The first costs one point and the fifth five, and a character may buy five in total, each at its own minimum level."
   }
 ]

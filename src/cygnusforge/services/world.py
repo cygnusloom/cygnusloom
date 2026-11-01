@@ -427,6 +427,8 @@ class WorldTools:
                 price,
                 size,
                 armor_max=self.combat.armor_max if self.combat else 0,
+                combat=self.combat,
+                character=self.character,
             )
 
     def change_currency(self, name: str, amount: int, cause: str) -> dict[str, Any]:
@@ -513,6 +515,8 @@ class WorldTools:
             name,
             item,
             armor_max=self.combat.armor_max if self.combat else 0,
+            combat=self.combat,
+            character=self.character,
         )
 
     def _listed(self, item: str) -> ShopItem | None:
@@ -1363,7 +1367,20 @@ class WorldTools:
 
     def add_participant(self, name: str, side: str | None = None) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return encounters.add_participant(db, self.campaign_id, name, side)
+            result = encounters.add_participant(db, self.campaign_id, name, side)
+        if self.combat is not None and self.combat.initiative is not None:
+            with session_scope(self.engine) as db:
+                state = load_state(db, self.campaign_id)
+                encounter = state.encounter
+                if (
+                    encounter is not None
+                    and not encounter.settled
+                    and len({encounter.sides.get(name_key(n), "") for n in encounter.order}) > 1
+                ):
+                    result["initiative"] = encounters.roll_side_initiative(
+                        db, self.campaign_id, self.combat, self.character, self.rng
+                    )
+        return result
 
     def remove_participant(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -1476,6 +1493,13 @@ class WorldTools:
     def player_initiative(self, roll: int) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.player_initiative(db, self.campaign_id, roll, self._rules())
+
+    def roll_side_initiative(self) -> dict[str, Any]:
+        """Roll once for each side of the encounter, once its participants have joined."""
+        with session_scope(self.engine) as db:
+            return encounters.roll_side_initiative(
+                db, self.campaign_id, self.combat, self.character, self.rng
+            )
 
     def set_armor(self, name: str, armor: int) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -1762,6 +1786,8 @@ def create_player_character(
     magic: MagicRules | None = None,
     currency: str = "",
     armor_max: int = 0,
+    defense_base: int = 0,
+    defense_modifier: str = "",
     *,
     pronouns: str,
     plus: str,
@@ -1803,8 +1829,12 @@ def create_player_character(
             ):
                 carried.append((feature, starting.pop(feature_id)))
     record(db, campaign_id, PcAdded(name=name, pronouns=pronouns, **fields))
-    # Focus and other feature effects add to the armor the carried features give.
-    armor = sheet.armor
+    # A rule set whose armor is its defense gives an unarmored character a base AC, such as
+    # 10 + Dexterity. Focus and other feature effects add to the armor the carried features give.
+    armor = defense_base
+    if defense_modifier:
+        armor += spec.modifier(sheet.stats, defense_modifier)
+    armor += sheet.armor
     for feature, count in carried:
         for _ in range(count):
             inventory_service.carry_item(

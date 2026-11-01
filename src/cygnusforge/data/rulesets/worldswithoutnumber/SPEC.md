@@ -42,13 +42,16 @@ directory. The rules text here and in `rules.json` is paraphrased; the books are
 - Magic state (prepared spells and committed Effort) lives in character `marks`, the way Cairn
   keeps deprivation, so it replays from the log. Daily castings and Effort use harm on ordinary
   stats, so `current(castings)` and `current(effort_high)` are what is left.
-- The tradition kind is optional (`optional_templates`), because only mage classes need one. The
-  creation form shows a None choice and the randomizer never selects an optional kind.
-- Morale is a 2d6 check in `rules/wwn.py` (`check_morale`), not the engine's Cairn morale module.
-- Initiative uses `initiative_mode: roll_order`; the GM rolls side initiative (1d8 + the best Dex
-  modifier) and sets the order. The generic side-initiative engine support exists and is tested
-  with a synthetic combat, but is not enabled here because participants usually join after the
-  encounter starts.
+- The tradition kind is required, but each tradition template names the classes that may take it.
+  A Mage's tradition is the full template, an Adventurer mage takes the partial template, and
+  Warriors, Experts, and non-mage Adventurers take `no_tradition`. The form hides templates the
+  chosen class cannot take, and the server refuses them. The full and partial templates carry
+  the book's different starting art and spell counts.
+- Morale is a 2d6 check in `rules/wwn.py` (`check_morale`); Instinct is 1d10 against the score
+  in a statblock (`instinct_check`). Player characters make neither check.
+- Initiative is the book's side roll: `combat.initiative` has 1d8 + the best Dexterity modifier,
+  with ties to the party. Adding the first participant of the second side rolls it automatically,
+  and `roll_initiative` exposes it to the GM. No player rolls individual initiative.
 
 ## Generic engine primitives added
 
@@ -58,23 +61,26 @@ All defaults preserve the old behaviour, so Cairn 2e and Hogwarts JSON need no c
 | --- | --- | --- |
 | Attribute modifiers | `stat.modifier` | Bands of `{min, modifier}`; `Stat.modifier(score)`, `CharacterSpec.modifier` |
 | Rolled stat plus modifier | `stat.plus_modifier` | `hp` adds the Constitution modifier to its roll |
-| Derived stats | `stat.derived` | `base`, `plus`, `minus_counters`, `best_modifier`, `best_score`, `plus_skills` |
+| Derived stats | `stat.derived` | `base`, `plus`, `minus_counters`, `best_modifier`, `minus_best_modifier`, `best_score`, `plus_skills`, `minus_templates`, `minimum` |
 | Skills | `type: skill`, `template.skills` | Skill definitions and level grants; absent is untrained |
-| Skill picks | `template.skill_picks` | `{id, count, table, exclude, max_level}`; `submitted["skill_picks"]` |
-| Feature picks | `template.feat_picks` | `{id, count, tag, max_rank, exclude}`; `submitted["feature_picks"]` |
+| Skill picks | `template.skill_picks` | `{id, count, table, exclude, max_level}`; the free class skill is one |
+| Feature picks | `template.feat_picks` | `{id, count, tag, tags, feature_type, max_rank, exclude}`; `submitted["feature_picks"]` |
+| Template classes | `template.classes` | The class template ids that may take it; empty means any |
 | Feature rank and effects | `feature.rank`, `feature.effects` | Spell/Focus rank; `stat`, `skill`, `counter`, `armor`, `note` at creation |
-| Weapon data | `feature.skill`, `attributes`, `shock`, `shock_ac` | What a weapon rolls and what it does on a miss |
+| Weapon data | `feature.skill`, `attributes`, `shock`, `shock_ac`, `flags` | What a weapon rolls, what it does on a miss, and engine flags such as `no_unskilled_penalty` |
 | Checks | `type: check` | `{dice, unskilled, default_difficulty, minimum_difficulty, maximum_difficulty}` |
-| Hit and damage bonuses | `combat.hit_bonus_stat`, `damage_bonus_stat`, `attribute_damage` | Add a stat, the weapon's attribute, and the damage stat |
+| Hit and damage bonuses | `combat.hit_bonus_stat`, `damage_bonus_stat`, `attribute_damage`, `level_damage_classes`, `level_damage_divisor` | Add a stat and the class's half-level damage (Killing Blow) |
 | Shock | `combat.shock_on_miss`, `minimum_shock_damage` | Shock on a miss, and a hit never below Shock |
 | Defeat | `combat.defeat_at_zero` | A stat reaching 0 defeats the character; PCs may become dying |
 | Monster Shock | statblock attack `shock`/`shock_ac` | Per-attack Shock in the bestiary |
 | Unarmed | `combat.unarmed.attributes` | The attributes an unarmed strike may use |
 | Flat dice | `rules/dice.py` | Formulas may carry flat bonuses and penalties, such as `1d10+2` |
-| Optional kinds | `rule_set.optional_templates` | A template kind a character may leave unchosen |
-| Inventory capacity | `inventory.capacity_stat`, `capacity_multiplier` | Capacity from a stat, e.g. Strength x2 |
+| Optional kinds | `rule_set.optional_templates` | A template kind a character may leave unchosen (kept for other rule sets) |
+| Inventory capacity | `inventory.capacity_stat`, `capacity_multiplier` | Capacity from a stat; WWN uses 1.5 x Strength (Readied half plus Stowed full) |
 | Side initiative | `combat.initiative` | `{die, bonus_stat, side, tie}`; `encounters.roll_side_initiative` |
-| Armor mode | `shop_item.armor_mode` | `add`, `set`, or `max`, so armor need not stack |
+| Armor mode | `shop_item.armor_mode` | `add`, `set`, `max`, or `shield`, so armor need not stack |
+| Base defense | `combat.defense_base`, `defense_modifier` | Unarmored AC, such as 10 + Dexterity |
+| Natural hits | `combat.natural_one_misses`, `natural_max_hits` | A natural 1 always misses and a natural 20 always hits |
 | Filtered enums | `enum_from` object form | `{source, feature_type, tag, max_rank}`, plus `skills` and `checks` |
 
 ## Refactors of Cairn/Hogwarts assumptions
@@ -109,27 +115,30 @@ All defaults preserve the old behaviour, so Cairn 2e and Hogwarts JSON need no c
 
 | File | Contents |
 | --- | --- |
-| `rule_set.json` | Head, NPC HP tiers, optional `tradition` kind, encounter grid |
+| `rule_set.json` | Head, NPC HP tiers, encounter grid |
 | `stats.json` | Six attributes with modifier bands; hp, attack bonus, castings, morale; derived strain, three Effort pools, four saves |
 | `skills.json` | The 21 skills |
 | `backgrounds.json` | 20 background templates with a free skill and two Learning picks |
-| `classes.json` | Warrior, Expert, Mage, four Adventurer pairings, three traditions |
-| `foci.json` | Every free-book Focus, level 1 and 2, with mechanical `effects` |
-| `equipment.json` | Weapons, armor, gear, item sizes, inventory rules, marketplace, silver currency |
+| `classes.json` | Warrior, Expert, Mage, four Adventurer pairings, and full and partial traditions with class gating |
+| `foci.json` | Every free-book Focus, level 1 and 2, plus the nine nonhuman origin Foci |
+| `equipment.json` | Weapons, armor, adventuring gear, item sizes, inventory rules, marketplace, silver currency |
 | `character_fields.json` | Look, Goal, Appearance, Biography |
-| `tables.json` | Appearance, personality, accent, quirk, names, and 20 Growth/Learning table pairs |
+| `tables.json` | Appearance, personality, accent, quirk, names, 20 Growth/Learning table pairs, and the all-skills table |
 | `checks.json` | The 2d6 skill check |
 | `conditions.json` | Frail, prone, grappled, unconscious |
 | `combat.json` | The WWN combat rules and the two module declarations |
-| `counters.json` | Level, XP, skill points, Focus picks |
+| `counters.json` | Level, XP, skill points, Focus picks, art picks, attribute boosts |
 | `spells.json` | High Magic, Necromancer, and Elementalist spells as ranked features |
 | `arts.json` | The three traditions' arts as features |
 | `monsters.json` | The free-book bestiary with AC, Shock, saves, and Morale |
-| `rules.json` | Paraphrased GM rules, with the core ones marked important |
-| `dice_tables.json` | World-generation tables for terrain, nations, rulers, history, and tags |
+| `rules.json` | 52 paraphrased GM rules, with the core ones marked important |
+| `dice_tables.json` | Terrain, nation, ruler, government, history, and tag tables |
+| `worldgen_tables.json` | Reaction, culture, religion, community, site, ruin, event, and monster tables |
 | `world_terrain.json` | Ground kinds for a Latter Earth map |
 | `prompts.json` | Four WWN-specific GM prompt fragments |
-| `tool_calls.json` | 18 GM tools for checks, morale, advancement, gear, and magic |
+| `tool_calls.json` | Checks, morale, advancement, gear, and magic tools |
+| `adventure_tools.json` | Combat, encounter, map, save, reaction, Instinct, rest, travel, and market tools |
+| `rest.json`, `clock.json` | A night or a few moments of rest and the four parts of a day |
 
 The world template `src/cygnusforge/data/worlds/latter-earth/world.json` is deliberately empty: it
 names the rule set and gives a blurb, with no locations, NPCs, or start. The live GM uses the dice
@@ -141,71 +150,94 @@ tables to create the first location and its people.
   group (the book's clement option) and one swap, as the engine's swap rule allows.
 - Backgrounds grant the free skill at level 0 and two picks from the Learning table (the quick
   skills are also in that table, so the quick option is covered by the same picks).
-- Classes grant their level-1 HP constant, attack bonus, skill, and Focus picks. The tradition is
-  optional and grants Magic plus one art pick.
+- Classes grant their level-1 HP constant, attack bonus, one free skill pick from all 21 skills,
+  and Focus picks. The tradition is required and class-gated: a full mage takes the full
+  tradition template (two High Magic arts, four spells; three Elementalist arts, four spells),
+  and a partial mage takes the partial template (one High or Necromancer art and two spells;
+  three Elementalist arts and two spells). Non-casters take `no_tradition`.
 - Foci, starting spells, and arts are `feature_picks`; each Focus's fixed bonuses are applied at
-  creation through `effects`.
-- `resolve` caps creation skills at level 1 and computes derived stats last.
+  creation through `effects`. A starting equipment package or 3d6 x 10 silver may follow.
+- `resolve` caps creation skills at level 1, keeps HP at 1 or more, and computes derived stats
+  last. A partial mage's Effort is one lower, never below 1.
 
 ## Combat
 
-- Attack roll: d20 + attack bonus + weapon skill (or -2 untrained) + best weapon attribute.
-- Damage: weapon dice + best attribute + `damage_bonus_stat` + Punch for unarmed.
+- Attack roll: d20 + attack bonus + weapon skill (or -2 untrained) + best weapon attribute. A
+  natural 1 always misses and a natural 20 always hits. Crossbows ignore the unskilled penalty.
+- Damage: weapon dice + best attribute + `damage_bonus_stat` + Punch for unarmed, with a
+  Warrior's half level (rounded up) added as Killing Blow to damage and Shock.
 - Shock: on a miss, if AC is at most `shock_ac`, the target takes Shock + attribute + damage
   bonus; a hit does at least that much.
-- AC is the `armor` value. `set_ac` computes 10 + Dex modifier + worn armor; the marketplace can
-  set or keep the higher armor with `armor_mode`.
+- AC is the `armor` value: 10 + Dex modifier + one suit of armor + a shield. Creation records it,
+  `set_ac` recomputes it, and purchases use `armor_mode` (`max` for body armor, `shield` for
+  shields) so suits do not stack.
 - A hit that takes hp to 0 defeats the target. An NPC is dead; a player character is mortally
   wounded and starts a one-hour dying clock. The clock stands in for the book's six rounds
   because the engine's clock counts hours; the `mortal-wounds` rule says so.
 - Saves are d20 at or above the derived save score (16 - level - the best pair modifier; Luck is
-  16 - level). Monsters use their statblock save values.
+  16 - level), so a better attribute lowers the target number. Monsters use their statblock saves.
+- Side initiative is 1d8 + the best Dexterity modifier, ties to the party. It rolls on its own
+  once both sides have joined the encounter.
 
 ## Advancement and magic
 
-- `gain_xp` adds to `xp` (fast or slow track) and tells the GM when a level is due. `level_up`
-  raises the level, HP, attack bonus, skill points, Focus picks, and casting limits.
-- `spend_skill_point` raises a skill to at most level 4. `learn_focus`, `learn_spell`,
-  `grant_package`, and `set_ac` are the other advancement/gear tools.
+- `gain_xp` adds to `xp` on the fast or slow track and tells the GM when a level is due.
+  `level_up` rerolls the class hit dice for the whole new level (old +1 if no better), raises the
+  attack bonus, grants three skill points (four for Quick Learner), Focus and art picks, and
+  casting limits.
+- `spend_skill_point` charges 1, 2, 3, 4, or 5 points for levels 0 to 4 and enforces the minimum
+  character levels 1, 1, 3, 6, and 9. `improve_attribute` buys the five attribute boosts at 1 to
+  5 points.
+- `learn_focus` also accepts a nonhuman origin Focus; `learn_art` spends an art pick on the
+  character's tradition; `learn_spell` lets Necromancers and Elementalists learn High Magic.
 - `prepare_spells` replaces the prepared list, limited by the class/level casting table.
   `cast_spell` spends one `castings` point. `restore_spell_slots` clears them.
 - `commit_effort` harms the tradition's Effort stat and records the duration in the
   `effort_committed` mark; `recover_effort` refunds the matching duration only. `add_strain` and
-  `heal_strain` use the `strain` stat, and `first_aid` heals 1d6 + Heal for 1 Strain.
-- `recover_after_rest` restores HP by level, 1 Strain, castings, and scene Effort.
+  `heal_strain` use the `strain` stat, and `first_aid` heals 1d6 + Heal for 1 Strain, but not at
+  maximum Strain.
+- `recover_after_rest` restores HP by level, 1 Strain, castings, scene and day Effort; Frail and
+  interrupted rests recover no HP or Strain.
 
 ## Known simplifications
 
-- A dual-mage Adventurer has one tradition, because the form has one optional tradition kind. The
-  dual-mage casting table is used for the class, but both partial traditions are the same one.
-- Skill points are one per level (two for Quick Learner), and one point buys one skill level. The
-  book's escalating 3-point costs are not modelled.
+- A dual-mage Adventurer has one tradition template, not two. The dual-mage casting table is
+  used, but the character picks a single partial tradition; the book lets the two traditions
+  differ. The class-gated partial template gives the right art and spell counts for one.
+- Readied and Stowed are approximated by one inventory pool of 1.5 x Strength (half Readied plus
+  full Stowed); the armor-encumbrance penalty on Sneak/Exert is rule text the GM applies.
 - The dying clock is one hour instead of six rounds (the engine's clock is hourly).
-- Readied and Stowed are approximated by item slots and a Strength x2 total capacity; the
-  armor-encumbrance penalty on Sneak/Exert is rule text the GM applies as a check modifier.
-- Side initiative is supported by the engine but not enabled; the GM rolls 1d8 + best Dex for
-  each side and sets the order.
-- Morale, surprise, grappling, execution attacks, and many combat actions are rule text plus the
-  relevant check/attack tools, not dedicated engine states.
-- Magic Workings, spell research, and magic item creation are rule text; there is no crafting
-  subsystem.
+- Surprise, grappling, execution attacks, total defense, dual wielding, range bands, and many
+  combat actions are rule text plus the relevant check/attack tools, not dedicated states.
+- Magic Workings, spell research, magic item creation, hirelings, projects, and faction turns are
+  rule text; the engine has no subsystem for them.
+- Bestiary multi-attacks (x2, x3, x4) are described in each statblock; the GM repeats the
+  attack or uses `resolve_attacks`, since the data stores one attack entry.
+- Monster special abilities are prose in the statblocks; they are not machine-readable rules.
+- PCs have a Morale stat for uniformity, but the Morale and Instinct tools refuse PCs.
 
 ## Validation
 
-- Full suite: `timeout 900 uv run pytest -n auto -q -p no:cacheprovider`: 1934 passed at the time
-  of writing (before the last test additions); the WWN files add 74 tests.
+- Full suite: `timeout 900 uv run pytest -n auto -q -p no:cacheprovider`: 1946 passed, with 86
+  Worlds Without Number tests across `test_wwn.py`, `test_wwn_combat.py`,
+  `test_wwn_advancement.py`, `test_wwn_magic.py`, and `test_wwn_refactor.py`.
 - Lint: `uv run ruff format src tests` and `uv run ruff check src tests`: clean.
-- WWN tests: `tests/test_wwn.py` (content, modifiers, derived stats, creation),
-  `tests/test_wwn_combat.py` (AC, Shock, hit/damage bonuses, defeat, outside harm),
-  `tests/test_wwn_advancement.py` (XP, levels, skills, Foci, spells, AC), and
-  `tests/test_wwn_magic.py` (preparation, castings, Effort, Strain, first aid),
-  `tests/test_wwn_refactor.py` (capacity, side initiative, enums, armor modes).
-- Live run (real DeepSeek, fresh SQLite database, uvicorn on port 8903): created a Warrior from
-  the creation form, the GM used the world-generation tables to build Greywater Ford with two
-  NPCs, moved the character there, and narrated the opening. A second turn rolled a real 2d6
-  Notice check (`check.made`) and narrated the failure. The character sheet showed the six
-  attributes, HP, attack bonus, castings, Strain, three Effort pools, four saves, skills, and
-  Foci.
+- WWN tests: `tests/test_wwn.py` (content, modifiers, derived stats, creation, spell picks),
+  `tests/test_wwn_combat.py` (AC, Shock, hit/damage bonuses, defeat, outside harm, natural
+  1/20, side initiative), `tests/test_wwn_advancement.py` (XP tracks, levels, skills,
+  attributes, Foci, origins, arts, spells, AC, Frail rest), and `tests/test_wwn_magic.py`
+  (preparation, castings, Effort, Strain, first aid), `tests/test_wwn_refactor.py` (capacity,
+  side initiative, enums, armor modes).
+- Live run 1 (real DeepSeek, SQLite on port 8903): created a Warrior from the creation form,
+  the GM used the world-generation tables to build Greywater Ford with two NPCs, moved the
+  character there, and narrated the opening. A second turn rolled a real 2d6 Notice check
+  (`check.made`).
+- Live run 2 (real DeepSeek, SQLite on port 8910): created a partial Elementalist Adventurer,
+  generated Vetch's Ford from the tables, then ran a real encounter: `create_encounter_map`,
+  `start_encounter`, `add_participant`, automatic side initiative, `place_participant` moves,
+  the PC's unarmed attack (1 damage), and the hound's bite (4 damage). The run exposed that
+  spell picks were offering High Magic arts; the pick now filters by `feature_type: "spell"`,
+  with a test.
 
 ## Commands
 
@@ -226,3 +258,7 @@ tables to create the first location and its people.
 - [x] Empty Latter Earth world template.
 - [x] Tests for creation, checks, combat, advancement, magic, and the refactors.
 - [x] Live DeepSeek run: creation, world generation, narration, and a skill check.
+- [x] Fidelity pass: corrected saving throws, AC, natural 1/20, Killing Blow, skill and
+      attribute costs, HP rerolls, slow XP, arts, starting spells, first aid, Frail rest,
+      tradition gating, origin Foci, gear, reaction/Instinct, map and combat tools, and 47
+      world-generation tables. Found and fixed the spell-pick filter in a live run.

@@ -19,9 +19,20 @@
     "dying_hours": 1,
     "armor_max": 0,
     "multi_attack": "each",
+    "defense_base": 10,
+    "defense_modifier": "dex",
+    "natural_one_misses": true,
+    "natural_max_hits": true,
+    "level_damage_classes": [
+      "warrior",
+      "adventurer_expert_warrior",
+      "adventurer_warrior_mage"
+    ],
+    "level_damage_divisor": 2,
     "unarmed": {"damage": "1d2", "names": ["unarmed", "fist", "fists", "punch", "kick"],
                 "attributes": ["str", "dex"]},
     "save": {"mode": "roll_over", "auto_success": null, "auto_fail": null},
+    "initiative": {"die": "1d8", "bonus_stat": "dex", "side": true, "tie": "party"},
     "initiative_mode": "roll_order"
   }
 ]

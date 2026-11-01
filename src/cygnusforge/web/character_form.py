@@ -65,6 +65,7 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
             "picks": _picks_view(spec, template),
             "skill_picks": _skill_picks_view(spec, template),
             "feat_picks": _feat_picks_view(spec, template),
+            "classes": list(template.classes),
         }
         for template in spec.templates.values()
     ]
@@ -173,12 +174,22 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
         except ValueError:
             raise InvalidInput(f"{stat.name} must be a number") from None
     templates = {}
+    class_id = form_text(form, TEMPLATE_PREFIX + "class")
     for kind in spec.kinds():
+        offered = [
+            template
+            for template in spec.templates.values()
+            if template.kind == kind and (not template.classes or class_id in template.classes)
+        ]
+        if not offered:
+            continue
         template_id = form_text(form, TEMPLATE_PREFIX + kind)
         if not template_id:
             if kind in spec.optional_kinds:
                 continue
             raise InvalidInput(f"Choose a {kind} for your character")
+        if template_id not in {template.id for template in offered}:
+            raise InvalidInput(f"That {kind} cannot be chosen by this class")
         templates[kind] = template_id
     fields = {}
     for field in spec.fields.values():

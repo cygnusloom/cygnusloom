@@ -17,6 +17,32 @@
     output.classList.toggle("is-chosen", chosen !== null);
   };
 
+  // A template that names classes is offered only to those classes. A kind with nothing left to
+  // offer is hidden, so a Warrior never sees a magical tradition at all.
+  const refreshTemplateChoices = () => {
+    const cls = document.querySelector('input[name="template-class"]:checked');
+    const chosenClass = cls ? cls.value : "";
+    for (const panel of document.querySelectorAll('[data-choice-panel^="template-"]')) {
+      const kind = panel.dataset.choicePanel.slice("template-".length);
+      if (kind === "class") continue;
+      let offered = false;
+      for (const label of panel.querySelectorAll("label.choice")) {
+        const radio = label.querySelector('input[type="radio"]');
+        if (!radio) continue;
+        const classes = JSON.parse(label.dataset.classes ?? "[]");
+        const allowed = classes.length === 0 || classes.includes(chosenClass);
+        label.hidden = !allowed;
+        if (!allowed && radio.checked) {
+          radio.checked = false;
+          refreshSummary(radio.name);
+          revealTables(kind);
+        }
+        if (allowed) offered = true;
+      }
+      panel.hidden = !offered;
+    }
+  };
+
   // Firefox can restore radio state on reload, so summaries are rebuilt from the DOM at load.
   for (const output of document.querySelectorAll("[data-summary-for]")) {
     refreshSummary(output.dataset.summaryFor);
@@ -25,6 +51,7 @@
     [...document.querySelectorAll("[data-template-select]")].map((radio) => radio.dataset.templateSelect),
   );
   for (const kind of kinds) revealTables(kind);
+  refreshTemplateChoices();
 
   // A spell pick offers the spells of the chosen Year only: spells from earlier Years are known,
   // not picked. With no Year chosen it offers none. A pick whose spell is no longer offered goes
@@ -67,6 +94,7 @@
     const radio = event.target;
     if (!(radio instanceof HTMLInputElement) || radio.type !== "radio") return;
     refreshSummary(radio.name);
+    refreshTemplateChoices();
     refreshRestrictions();
     refreshSpellPicks();
     radio.closest("[data-choice-panel]")?.classList.remove("is-missing");

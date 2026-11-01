@@ -115,16 +115,14 @@ def _wwn_campaign(client_factory: Callable[[], TestClient]) -> tuple[TestClient,
 
 
 def _fight(client_factory: Callable[[], TestClient]) -> tuple[FastAPI, int, WorldTools]:
-    """A WWN campaign with a mapped yard, an encounter, and the player character's initiative
-    rolled. WWN still asks a player character to roll initiative, so the test rolls it; the rule
-    set's `roll_order` keeps the order the characters joined in."""
+    """A WWN campaign with a mapped yard, an encounter, and the player character joined. WWN
+    rolls initiative for each side as soon as both sides have a member, so no player rolls."""
     client, campaign_id, tools = _wwn_campaign(client_factory)
     tools.create_location(YARD, "Cobbles around a dry well.")
     tools.move_actor(PC, YARD)
     tools.create_encounter_map(MAP, YARD, 10, 10, "Open cobbles.")
     tools.start_encounter(MAP)
     tools.add_participant(PC)
-    tools.player_initiative(1)
     return client.app, campaign_id, tools
 
 
@@ -244,7 +242,7 @@ def test_an_attack_below_ac_misses_and_one_at_ac_hits(client_factory):
 
     hit = replace(tools, rng=Rolls(4, _roll_for_total(13, bonus))).player_attack(FOE, BOW)
     assert hit["armor"] == 0
-    assert hit["harm"] == {"hp": 4 + _modifier(pc, "dex")}
+    assert hit["harm"] == {"hp": 4 + _modifier(pc, "dex") + 1}
     assert _character(app, campaign_id, FOE).harm == hit["harm"]
 
     miss_event, hit_event = _struck(app, campaign_id)
@@ -258,7 +256,7 @@ def test_a_miss_still_does_shock_to_a_low_ac_target(client_factory):
     tools.give_item(PC, WAR_AXE, damage="1d10")
     pc = _pc(app, campaign_id)
     feature = _feature(WAR_AXE)
-    shock = feature.shock + _modifier(pc, "str")
+    shock = feature.shock + _modifier(pc, "str") + 1
     assert shock >= 1
     bonus = _to_hit_bonus(pc, WAR_AXE, feature)
 
@@ -296,7 +294,7 @@ def test_a_hit_does_at_least_its_shock(client_factory):
     tools.give_item(PC, WAR_AXE, damage="1d10")
     pc = _pc(app, campaign_id)
     feature = _feature(WAR_AXE)
-    shock = feature.shock + _modifier(pc, "str")
+    shock = feature.shock + _modifier(pc, "str") + 1
     bonus = _to_hit_bonus(pc, WAR_AXE, feature)
 
     # A damage roll of 1 plus the Strength modifier is below the Shock, so Shock is the damage.
@@ -359,7 +357,7 @@ def test_damage_adds_the_weapon_attribute_and_damage_bonus_stat(client_factory):
     tools.give_item(PC, LONG_SWORD, damage="1d8")
     pc = _pc(app, campaign_id)
     feature = _feature(LONG_SWORD)
-    expected = 5 + _best_attribute(pc, feature) + current(pc, "attack_bonus")
+    expected = 5 + _best_attribute(pc, feature) + current(pc, "attack_bonus") + 1
 
     result = replace(tools, rng=Rolls(5, 20)).player_attack(FOE, LONG_SWORD)
     assert result["raw"] == expected
@@ -373,7 +371,7 @@ def test_damage_bonus_stat_adds_to_shock(client_factory):
     tools.give_item(PC, WAR_AXE, damage="1d10")
     pc = _pc(app, campaign_id)
     feature = _feature(WAR_AXE)
-    shock = feature.shock + _modifier(pc, "str") + current(pc, "attack_bonus")
+    shock = feature.shock + _modifier(pc, "str") + current(pc, "attack_bonus") + 1
     bonus = _to_hit_bonus(pc, WAR_AXE, feature)
 
     result = replace(tools, rng=Rolls(5, _roll_for_total(12, bonus))).player_attack(FOE, WAR_AXE)
@@ -387,7 +385,7 @@ def test_an_unarmed_strike_adds_punch_skill_and_attribute_to_damage(client_facto
     level = _raise(tools, "punch")
     pc = _pc(app, campaign_id)
     attribute = max(WWN.character.modifier(pc.stats, stat) for stat in ("str", "dex"))
-    expected = 2 + attribute + level
+    expected = 2 + attribute + level + 1
 
     result = replace(tools, rng=Rolls(2, 20)).player_attack(FOE, UNARMED)
     assert result["raw"] == expected
@@ -517,3 +515,32 @@ def test_npc_attack_damage_uses_its_statblock_dice(client_factory):
 
     [event] = _struck(app, campaign_id)
     assert (event.hit, event.to_hit) == (True, 20)
+
+
+def test_a_natural_one_always_misses_and_a_natural_twenty_always_hits(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=50, armor=30)
+    tools.set_armor(FOE, 0)
+
+    missed = replace(tools, rng=Rolls(1, 1)).player_attack(FOE, UNARMED)
+    assert missed["hit"] is False
+    assert missed["harm"] == {}
+
+    tools.set_armor(FOE, 30)
+    hit = replace(tools, rng=Rolls(1, 20)).player_attack(FOE, UNARMED)
+    pc = _pc(app, campaign_id)
+    punch = max(0, WWN.character.skill_level(pc.skills, "punch"))
+    attribute = max(WWN.character.modifier(pc.stats, stat) for stat in ("str", "dex"))
+    assert hit["harm"] == {"hp": 1 + attribute + punch + 1}
+
+
+def test_side_initiative_is_rolled_once_both_sides_have_joined(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=20)
+
+    with Session(app.state.engine) as db:
+        encounter = load_state(db, campaign_id).encounter
+    assert encounter is not None
+    assert encounter.settled
+    assert set(encounter.sides.values()) == {"party", "foes"}
+    assert {name_key(name) for name in encounter.order} == {name_key(PC), name_key(FOE)}

@@ -95,9 +95,44 @@ CLASS_PICKS: dict[str, dict[str, str]] = {
     },
 }
 TRADITION_PICKS: dict[str, dict[str, str]] = {
-    "high_mage": {"pick-feature-tradition_art_high-0": "art_arcane_lexicon"},
-    "necromancer": {"pick-feature-tradition_art_necromancer-0": "art_bonetalker"},
-    "elementalist": {"pick-feature-tradition_art_elementalist-0": "art_ele_elemental_resilience"},
+    "no_tradition": {},
+    "high_mage": {
+        "pick-feature-tradition_art_high-0": "art_arcane_lexicon",
+        "pick-feature-tradition_art_high-1": "art_counter_magic",
+        "pick-feature-tradition_spells_high-0": "spell_coruscating_coffin",
+        "pick-feature-tradition_spells_high-1": "spell_damnation_of_the_sense",
+        "pick-feature-tradition_spells_high-2": "spell_long_amber_moment",
+        "pick-feature-tradition_spells_high-3": "spell_wardpact_invocation",
+    },
+    "high_mage_partial": {
+        "pick-feature-tradition_art_high-0": "art_arcane_lexicon",
+        "pick-feature-tradition_spells_high-0": "spell_coruscating_coffin",
+        "pick-feature-tradition_spells_high-1": "spell_damnation_of_the_sense",
+    },
+    "necromancer": {
+        "pick-feature-tradition_art_necromancer-0": "art_bonetalker",
+        "pick-feature-tradition_spells_necromancer-0": "spell_coruscating_coffin",
+        "pick-feature-tradition_spells_necromancer-1": "spell_damnation_of_the_sense",
+        "pick-feature-tradition_spells_necromancer-2": "spell_long_amber_moment",
+        "pick-feature-tradition_spells_necromancer-3": "spell_wardpact_invocation",
+    },
+    "necromancer_partial": {
+        "pick-feature-tradition_art_necromancer-0": "art_bonetalker",
+        "pick-feature-tradition_spells_necromancer-0": "spell_coruscating_coffin",
+        "pick-feature-tradition_spells_necromancer-1": "spell_damnation_of_the_sense",
+    },
+    "elementalist": {
+        "pick-feature-tradition_art_elementalist-0": "art_elemental_blast",
+        "pick-feature-tradition_spells_elementalist-0": "spell_coruscating_coffin",
+        "pick-feature-tradition_spells_elementalist-1": "spell_damnation_of_the_sense",
+        "pick-feature-tradition_spells_elementalist-2": "spell_long_amber_moment",
+        "pick-feature-tradition_spells_elementalist-3": "spell_wardpact_invocation",
+    },
+    "elementalist_partial": {
+        "pick-feature-tradition_art_elementalist-0": "art_elemental_blast",
+        "pick-feature-tradition_spells_elementalist-0": "spell_coruscating_coffin",
+        "pick-feature-tradition_spells_elementalist-1": "spell_damnation_of_the_sense",
+    },
 }
 
 
@@ -120,9 +155,14 @@ def _campaign(
         fields.update(_choices(page))
         fields["template-class"] = class_id
         fields.update(CLASS_PICKS[class_id])
+        fields["pick-skill-class_free_skill-0"] = "notice"
         if tradition is not None:
+            if class_id != "mage" and tradition in {"high_mage", "necromancer", "elementalist"}:
+                tradition = f"{tradition}_partial"
             fields["template-tradition"] = tradition
             fields.update(TRADITION_PICKS[tradition])
+        else:
+            fields["template-tradition"] = "no_tradition"
         created = _create_character(client, campaign_id, name=name, fields=fields)
     error = re.search(r'<p class="form-error"[^>]*>(.*?)</p>', created.text, re.DOTALL)
     assert created.status_code == 303, error.group(1) if error else created.text[:500]
@@ -216,7 +256,7 @@ def test_the_submitted_warrior_and_mage_keep_their_class_and_tradition(
     warrior_app, warrior_campaign = _campaign(client_factory, class_id="warrior")
     warrior = _pc(warrior_app, warrior_campaign)
     assert warrior.templates["class"] == "warrior"
-    assert "tradition" not in warrior.templates
+    assert warrior.templates["tradition"] == "no_tradition"
     assert warrior.stats["hp"] == 8  # 6 rolled + a Warrior's +2
     assert warrior.stats["attack_bonus"] == 1
 
@@ -228,6 +268,7 @@ def test_the_submitted_warrior_and_mage_keep_their_class_and_tradition(
     assert mage.stats["attack_bonus"] == 0
     assert mage.skills.get("magic") == 0  # the tradition's free skill
     assert "art_arcane_lexicon" in mage.features
+    assert "spell_coruscating_coffin" in mage.features
 
 
 def test_gain_xp_accumulates_and_marks_the_next_level_threshold(
@@ -266,19 +307,20 @@ def test_level_up_raises_hp_attack_bonus_skill_points_and_focus_picks(
     wwn.gain_xp(NAME, 3, "a session", ctx)
     result = wwn.level_up(NAME, ctx)
 
-    # random.Random(0) rolls 4 on the first d6; a Warrior adds +2 a level.
+    # random.Random(0) rolls 4 and 4 on the two d6; a Warrior adds +2 a level, so the rerolled
+    # total is 8 + 4 = 12, better than the old 8.
     assert result["level"] == 2
-    assert result["hp_gained"] == 6
+    assert result["hp"] == 12
     assert result["attack_bonus"] == 2
-    assert result["skill_points"] == 1
+    assert result["skill_points"] == 3
     assert result["focus_picks"] == 1
     assert result["castings"] is None
 
     character = _pc(app, campaign_id)
     assert character.counters["level"] == 2
-    assert character.stats["hp"] == before.stats["hp"] + 6
+    assert character.stats["hp"] == 12
     assert character.stats["attack_bonus"] == 2
-    assert character.counters["skill_points"] == 1
+    assert character.counters["skill_points"] == 3
     assert character.counters["focus_picks"] == 1
     # The saves lose one point a level.
     assert character.stats["save_luck"] == before.stats["save_luck"] - 1
@@ -294,8 +336,8 @@ def test_an_expert_pairing_gains_two_skill_points_on_level_up(
     result = wwn.level_up(NAME, ctx)
 
     # Quick Learner gives the Expert and partial Expert an extra point each level.
-    assert result["skill_points"] == 2
-    assert _counter(app, campaign_id, "skill_points") == 2
+    assert result["skill_points"] == 4
+    assert _counter(app, campaign_id, "skill_points") == 4
 
 
 def test_a_caster_raises_castings_from_the_class_table_on_level_up(
@@ -332,7 +374,7 @@ def test_a_mage_with_a_poor_constitution_gains_at_least_one_hit_point(
     wwn.gain_xp(NAME, 3, "a session", ctx)
     result = wwn.level_up(NAME, ctx)
 
-    assert result["hp_gained"] == 1
+    assert result["hp"] == 6
     assert _stat(app, campaign_id, "hp") == 6
 
 
@@ -342,15 +384,17 @@ def test_spend_skill_point_raises_a_skill_and_spends_one_point(
     app, campaign_id = _campaign(client_factory)
     tools = _world_tools(app, campaign_id)
     ctx = _ctx(tools)
-    _give_pick(tools, "skill_points", 2)
+    _give_pick(tools, "skill_points", 3)
     before = _pc(app, campaign_id).skills.get("sneak", -1)
+    cost = before + 2
 
     result = wwn.spend_skill_point(NAME, "sneak", ctx)
 
     assert result["level"] == before + 1
-    assert result["remaining"] == 1
+    assert result["cost"] == cost
+    assert result["remaining"] == 3 - cost
     assert _pc(app, campaign_id).skills["sneak"] == before + 1
-    assert _counter(app, campaign_id, "skill_points") == 1
+    assert _counter(app, campaign_id, "skill_points") == 3 - cost
     (changed,) = _events_of(app, campaign_id, SkillChanged.kind)
     assert (changed.skill, changed.after) == ("sneak", before + 1)
 
@@ -359,7 +403,8 @@ def test_spend_skill_point_caps_a_skill_at_four(client_factory: Callable[[], Tes
     app, campaign_id = _campaign(client_factory)
     tools = _world_tools(app, campaign_id)
     ctx = _ctx(tools)
-    _give_pick(tools, "skill_points", 10)
+    tools.adjust_counter(NAME, "level", 8)
+    _give_pick(tools, "skill_points", 20)
 
     for _ in range(10):
         if _pc(app, campaign_id).skills.get("sneak", -1) >= 4:
@@ -380,7 +425,7 @@ def test_spend_skill_point_refuses_without_a_point_or_a_skill(
     ctx = _ctx(_world_tools(app, campaign_id))
     assert _counter(app, campaign_id, "skill_points") == 0
 
-    with pytest.raises(InvalidInput, match="no skill points to spend"):
+    with pytest.raises(InvalidInput, match="costs 1 skill point"):
         wwn.spend_skill_point(NAME, "sneak", ctx)
     with pytest.raises(InvalidInput, match="there is no skill named 'wizardry'"):
         wwn.spend_skill_point(NAME, "wizardry", ctx)
@@ -415,6 +460,7 @@ def test_learn_focus_spends_a_pick_and_applies_skill_stat_and_armor_effects(
     _give_pick(tools, "focus_picks", 1)
     _set_stat(tools, "str", 10)
     _set_stat(tools, "dex", 10)
+    tools.set_armor(NAME, 10)
     before = _pc(app, campaign_id)
 
     result = wwn.learn_focus(NAME, synthetic.id, ctx)
@@ -463,20 +509,20 @@ def test_learn_spell_adds_a_tradition_spell_of_a_legal_level(
     tools = _world_tools(app, campaign_id)
     ctx = _ctx(tools)
 
-    result = wwn.learn_spell(NAME, "spell_coruscating_coffin", ctx)
+    result = wwn.learn_spell(NAME, "spell_apprehending_arcane_form", ctx)
 
     assert result["rank"] == 1
     assert result["tradition"] == "high"
-    assert "spell_coruscating_coffin" in _pc(app, campaign_id).features
+    assert "spell_apprehending_arcane_form" in _pc(app, campaign_id).features
 
     with pytest.raises(InvalidInput, match="can cast spells of level 1 at most"):
         wwn.learn_spell(NAME, "spell_calculation_evoked_servitor", ctx)
-    with pytest.raises(InvalidInput, match="not a spell of"):
+    with pytest.raises(InvalidInput, match="not a High Magic spell"):
         wwn.learn_spell(NAME, "spell_command_the_dead", ctx)
     with pytest.raises(InvalidInput, match="is not a spell"):
         wwn.learn_spell(NAME, "focus_alert", ctx)
     with pytest.raises(InvalidInput, match="already knows"):
-        wwn.learn_spell(NAME, "spell_coruscating_coffin", ctx)
+        wwn.learn_spell(NAME, "spell_apprehending_arcane_form", ctx)
 
 
 def test_set_ac_adds_dexterity_and_base_armor_and_records_it(
@@ -493,5 +539,141 @@ def test_set_ac_adds_dexterity_and_base_armor_and_records_it(
     assert result["base_armor"] == 2
     assert result["armor"] == 13
     assert _pc(app, campaign_id).armor == 13
-    (armor,) = _events_of(app, campaign_id, ArmorSet.kind)
+    armor = _events_of(app, campaign_id, ArmorSet.kind)[-1]
     assert (armor.name, armor.armor) == (NAME, 13)
+
+
+def test_the_slow_experience_track_uses_its_own_thresholds(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory)
+    ctx = _ctx(_world_tools(app, campaign_id))
+
+    below = wwn.gain_xp(NAME, 5, "a session", ctx, rate="slow")
+    assert below["next_threshold"] == wwn.WWN_XP_SLOW[1] == 6
+    assert below["ready"] is False
+    with pytest.raises(InvalidInput, match="on the slow track"):
+        wwn.level_up(NAME, ctx, rate="slow")
+
+    at = wwn.gain_xp(NAME, 1, "another session", ctx, rate="slow")
+    assert at["ready"] is True
+    assert wwn.level_up(NAME, ctx, rate="slow")["level"] == 2
+
+
+def test_an_attribute_boost_costs_more_each_time_and_needs_a_level(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory)
+    tools = _world_tools(app, campaign_id)
+    ctx = _ctx(tools)
+    _give_pick(tools, "skill_points", 20)
+
+    with pytest.raises(InvalidInput, match="needs character level 2"):
+        wwn.improve_attribute(NAME, "str", ctx)
+
+    tools.adjust_counter(NAME, "level", 1)
+    first = wwn.improve_attribute(NAME, "str", ctx)
+    assert (first["boosts"], first["cost"], first["remaining"]) == (1, 1, 19)
+    second = wwn.improve_attribute(NAME, "str", ctx)
+    assert (second["boosts"], second["cost"], second["remaining"]) == (2, 2, 17)
+
+    with pytest.raises(InvalidInput, match="needs character level 3"):
+        wwn.improve_attribute(NAME, "str", ctx)
+
+
+def test_level_up_keeps_the_old_hit_points_plus_one_when_the_reroll_is_worse(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory)
+    tools = _world_tools(app, campaign_id, seed=2)
+    ctx = _ctx(tools)
+    tools.set_stat_max(NAME, "hp", 20, cause="a test")
+
+    wwn.gain_xp(NAME, 3, "a session", ctx)
+    result = wwn.level_up(NAME, ctx)
+
+    assert result["hp"] == 21
+    assert _stat(app, campaign_id, "hp") == 21
+
+
+def test_a_full_mage_starts_with_four_spells_and_two_arts(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    _app, _campaign_id = _campaign(client_factory, class_id="mage", tradition="high_mage")
+    character = _pc(_app, _campaign_id)
+    spells = [f for f in character.features if f.startswith("spell_")]
+    arts = [f for f in character.features if f in {"art_arcane_lexicon", "art_counter_magic"}]
+    assert len(spells) == 4
+    assert len(arts) == 2
+
+
+def test_art_picks_come_from_the_class_chart_and_buy_arts(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory, class_id="mage", tradition="high_mage")
+    tools = _world_tools(app, campaign_id)
+    ctx = _ctx(tools)
+    wwn.gain_xp(NAME, 3, "a session", ctx)
+    result = wwn.level_up(NAME, ctx)
+    assert result["art_picks"] == 1
+    assert _counter(app, campaign_id, "art_picks") == 1
+
+    learned = wwn.learn_art(NAME, "art_empowered_sorcery", ctx)
+    assert learned["art_picks"] == 0
+    assert "art_empowered_sorcery" in _pc(app, campaign_id).features
+
+    with pytest.raises(InvalidInput, match="no art picks to spend"):
+        wwn.learn_art(NAME, "art_hang_sorcery", ctx)
+
+
+def test_a_focus_pick_can_buy_a_nonhuman_origin(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory)
+    tools = _world_tools(app, campaign_id)
+    ctx = _ctx(tools)
+    _give_pick(tools, "focus_picks", 1)
+    before = _pc(app, campaign_id)
+
+    wwn.learn_focus(NAME, "focus_origin_dwarf", ctx)
+
+    character = _pc(app, campaign_id)
+    assert "focus_origin_dwarf" in character.features
+    assert character.skills["craft"] == min(4, before.skills.get("craft", -1) + 1)
+
+
+def test_a_warrior_cannot_take_a_magical_tradition(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    page = client.get(f"/campaigns/{campaign_id}").text
+    fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
+    fields.update(_choices(page))
+    fields["template-class"] = "warrior"
+    fields["template-tradition"] = "high_mage"
+
+    created = _create_character(client, campaign_id, name="Wren", fields=fields)
+
+    error = re.search(r'<p class="form-error"[^>]*>(.*?)</p>', created.text, re.DOTALL)
+    assert created.status_code == 400
+    assert error is not None and "cannot be chosen" in error.group(1)
+
+
+def test_a_frail_character_recovers_no_hit_points_or_strain(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory, class_id="mage", tradition="high_mage")
+    tools = _world_tools(app, campaign_id)
+    ctx = _ctx(tools)
+    tools.set_stat_max(NAME, "hp", 20, cause="a test")
+    tools.set_stat_max(NAME, "strain", 10, cause="a test")
+    tools.harm_character(NAME, "hp", 5, "a test")
+    tools.add_condition(NAME, "frail", "a test")
+
+    result = wwn.recover_after_rest(NAME, ctx)
+
+    assert "hp" not in result["restored"]
+    assert "strain" not in result["restored"]
+    assert _pc(app, campaign_id).harm["hp"] == 5

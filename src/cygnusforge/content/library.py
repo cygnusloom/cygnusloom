@@ -803,6 +803,15 @@ class CombatRules:
     aid_items: tuple[str, ...] = ()
     # The most armor a character can have. Zero means armor has no cap.
     armor_max: int = 0
+    # The Armor Class an unarmored character has before their `defense_modifier`, such as 10 in
+    # Worlds Without Number. Zero means armor is the only defense.
+    defense_base: int = 0
+    # The stat whose modifier adds to a character's Armor Class, such as dexterity.
+    defense_modifier: str = ""
+    # True when a natural 1 on the attack die always misses.
+    natural_one_misses: bool = False
+    # True when a natural roll of the check die's highest face always hits.
+    natural_max_hits: bool = False
     hit_mode: str = "auto"
     multi_attack: str = "highest"
     save: SaveRules = field(default_factory=SaveRules)
@@ -814,6 +823,10 @@ class CombatRules:
     unskilled_attack_penalty: int = 0
     # The stat added to a weapon's damage. Empty when none is.
     damage_bonus_stat: str = ""
+    # Class template ids whose level adds to their damage and Shock, and the divisor of that
+    # bonus rounded up, such as a Warrior's half level. Zero disables the bonus.
+    level_damage_classes: tuple[str, ...] = ()
+    level_damage_divisor: int = 0
     # True when a weapon adds the modifier of each of its attributes to its damage.
     attribute_damage: bool = False
     # True when a miss still deals the weapon's Shock to a target whose defense is low enough.
@@ -910,7 +923,7 @@ class InventoryRules:
     # The stat whose raw score is a character's capacity. Empty when `capacity` is used instead.
     capacity_stat: str = ""
     # What a character's score in `capacity_stat` is multiplied by. One means the score itself.
-    capacity_multiplier: int = 1
+    capacity_multiplier: float = 1.0
 
 
 @dataclass(frozen=True)
@@ -2211,7 +2224,7 @@ def _load_combat(
     for stat_id in unarmed_attributes:
         if stat_id not in character.stats:
             raise ContentError(f"{label}: unarmed attribute {stat_id!r} names no stat")
-    for key in ("hit_bonus_stat", "damage_bonus_stat"):
+    for key in ("hit_bonus_stat", "damage_bonus_stat", "defense_modifier"):
         value = _optional_text(data, key, label)
         if value is not None and value not in character.stats:
             raise ContentError(f"{label}: {key!r} names no stat ({value!r})")
@@ -2239,6 +2252,10 @@ def _load_combat(
         unarmed_attributes=unarmed_attributes,
         hit_mode=_choice(data, "hit_mode", ("auto", "roll_vs_defense"), "auto", label),
         multi_attack=_choice(data, "multi_attack", ("highest", "each"), "highest", label),
+        defense_base=_optional_whole(data, "defense_base", label),
+        defense_modifier=_optional_text(data, "defense_modifier", label) or "",
+        natural_one_misses=_flag_default(data, "natural_one_misses", label, False),
+        natural_max_hits=_flag_default(data, "natural_max_hits", label, False),
         save=_load_save(data, check_sides, label),
         initiative_mode=_choice(
             data, "initiative_mode", ("pass_npcs_fail", "roll_order"), "pass_npcs_fail", label
@@ -2248,6 +2265,8 @@ def _load_combat(
         hit_bonus_stat=_optional_text(data, "hit_bonus_stat", label) or "",
         unskilled_attack_penalty=_optional_whole(data, "unskilled_attack_penalty", label) or 0,
         damage_bonus_stat=_optional_text(data, "damage_bonus_stat", label) or "",
+        level_damage_classes=_names(data, "level_damage_classes", label),
+        level_damage_divisor=_optional_whole(data, "level_damage_divisor", label),
         attribute_damage=_flag_default(data, "attribute_damage", label, False),
         shock_on_miss=_flag_default(data, "shock_on_miss", label, False),
         minimum_shock_damage=_flag_default(data, "minimum_shock_damage", label, False),
@@ -2951,6 +2970,13 @@ def _whole(data: Mapping[str, Any], key: str, label: str, minimum: int) -> int:
     return value
 
 
+def _number(data: Mapping[str, Any], key: str, label: str, minimum: float) -> float:
+    value = data.get(key)
+    if not isinstance(value, (int, float)) or isinstance(value, bool) or value < minimum:
+        raise ContentError(f"{label}: {key!r} must be a number, at least {minimum}")
+    return float(value)
+
+
 def _names(data: Mapping[str, Any], key: str, label: str) -> tuple[str, ...]:
     value = data.get(key, [])
     if not isinstance(value, list) or not all(isinstance(v, str) and v.strip() for v in value):
@@ -3093,9 +3119,9 @@ def _load_inventory(
         penalty_slots=_whole(definition.data, "penalty_slots", label, 0),
         full_stat=full_stat,
         capacity_stat=capacity_stat,
-        capacity_multiplier=_whole(definition.data, "capacity_multiplier", label, 1)
+        capacity_multiplier=_number(definition.data, "capacity_multiplier", label, 1.0)
         if "capacity_multiplier" in definition.data
-        else 1,
+        else 1.0,
     )
 
 
@@ -3241,7 +3267,9 @@ def _load_marketplace(
                 price=_whole(d.data, "price", label, 0),
                 size=size,
                 armor=_whole(d.data, "armor", label, 0),
-                armor_mode=_choice(d.data, "armor_mode", ("add", "set", "max"), "add", label),
+                armor_mode=_choice(
+                    d.data, "armor_mode", ("add", "set", "max", "shield"), "add", label
+                ),
                 damage=str(d.data.get("damage", "")),
                 uses=_whole(d.data, "uses", label, 0),
                 description=str(d.data.get("description", "")),

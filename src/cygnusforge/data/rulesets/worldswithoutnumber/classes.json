@@ -6,6 +6,9 @@
     "name": "Warrior",
     "description": "A fighter trained to end battles. You roll a d6 for hit points with a +2 class bonus at first level, add +1 to attack rolls, and gain one free combat-related Focus, one free Focus of any kind, and the Killing Blow and Veteran's Luck abilities.",
     "stats": { "hp": 2, "attack_bonus": 0 },
+    "skill_picks": [
+      { "id": "class_free_skill", "count": 1, "table": "all_skills", "max_level": 1 }
+    ],
     "feat_picks": [
       { "id": "class_focus_any", "count": 1, "tag": "focus", "max_rank": 1, "exclude": ["focus_special_origin", "focus_armored_magic", "focus_polymath"] },
       {
@@ -48,6 +51,9 @@
     "name": "Expert",
     "description": "A skilled professional who solves problems with training and nerve. You roll a d6 for hit points each level, gain one free non-combat Focus, one free Focus of any kind, and the Masterful Expertise and Quick Learner abilities.",
     "stats": { "attack_bonus": -1 },
+    "skill_picks": [
+      { "id": "class_free_skill", "count": 1, "table": "all_skills", "max_level": 1 }
+    ],
     "feat_picks": [
       { "id": "class_focus_any", "count": 1, "tag": "focus", "max_rank": 1, "exclude": ["focus_special_origin", "focus_armored_magic"] },
       {
@@ -83,6 +89,9 @@
     "name": "Mage",
     "description": "A spellcaster bound to one magical tradition. You roll a d6 for hit points with a -1 class penalty at first level, gain one free Focus of any kind, and learn the arts and spells of your tradition.",
     "stats": { "hp": -1, "attack_bonus": -1 },
+    "skill_picks": [
+      { "id": "class_free_skill", "count": 1, "table": "all_skills", "max_level": 1 }
+    ],
     "feat_picks": [
       { "id": "class_focus_any", "count": 1, "tag": "focus", "max_rank": 1, "exclude": ["focus_special_origin", "focus_developed_attribute", "focus_nullifier", "focus_polymath"] }
     ],
@@ -95,6 +104,9 @@
     "name": "Adventurer: Expert and Warrior",
     "description": "A dabbler who combines the Expert's training with the Warrior's fighting edge. You roll a d6 with a +2 class bonus at first level, add +1 to attack rolls, and gain one free Expert Focus, one free Warrior Focus, and one free Focus of any kind.",
     "stats": { "hp": 2, "attack_bonus": 0 },
+    "skill_picks": [
+      { "id": "class_free_skill", "count": 1, "table": "all_skills", "max_level": 1 }
+    ],
     "feat_picks": [
       { "id": "class_focus_any", "count": 1, "tag": "focus", "max_rank": 1, "exclude": ["focus_special_origin", "focus_armored_magic"] },
       {
@@ -160,6 +172,9 @@
     "name": "Adventurer: Expert and Mage",
     "description": "A seeker who pairs practical training with spellcraft from one tradition. You roll a d6 for hit points, gain one free non-combat Focus and one free Focus of any kind, and learn the arts and spells of your tradition.",
     "stats": { "attack_bonus": -1 },
+    "skill_picks": [
+      { "id": "class_free_skill", "count": 1, "table": "all_skills", "max_level": 1 }
+    ],
     "feat_picks": [
       { "id": "class_focus_any", "count": 1, "tag": "focus", "max_rank": 1, "exclude": ["focus_special_origin", "focus_developed_attribute", "focus_nullifier"] },
       {
@@ -194,6 +209,9 @@
     "name": "Adventurer: Warrior and Mage",
     "description": "A fighter who also wields one tradition's magic. You roll a d6 with a +2 class bonus at first level, add +1 to attack rolls, gain one free Warrior Focus and one free Focus of any kind, and learn the arts and spells of your tradition.",
     "stats": { "hp": 2, "attack_bonus": 0 },
+    "skill_picks": [
+      { "id": "class_free_skill", "count": 1, "table": "all_skills", "max_level": 1 }
+    ],
     "feat_picks": [
       { "id": "class_focus_any", "count": 1, "tag": "focus", "max_rank": 1, "exclude": ["focus_special_origin", "focus_developed_attribute", "focus_nullifier", "focus_polymath"] },
       {
@@ -236,6 +254,9 @@
     "name": "Adventurer: Mage and Mage",
     "description": "A spellcaster who follows two traditions at once, trading depth for range. You roll a d6 with a -1 class penalty at first level, gain one free Focus of any kind, and learn the arts and spells of both traditions.",
     "stats": { "hp": -1, "attack_bonus": -1 },
+    "skill_picks": [
+      { "id": "class_free_skill", "count": 1, "table": "all_skills", "max_level": 1 }
+    ],
     "feat_picks": [
       { "id": "class_focus_any", "count": 1, "tag": "focus", "max_rank": 1, "exclude": ["focus_special_origin", "focus_developed_attribute", "focus_nullifier", "focus_polymath"] }
     ],
@@ -243,13 +264,48 @@
   },
   {
     "type": "template",
+    "id": "no_tradition",
+    "kind": "tradition",
+    "name": "No Tradition",
+    "description": "A character with no magical training. Warriors, Experts, and Adventurers without a spellcasting partial class choose this.",
+    "classes": ["warrior", "expert", "adventurer_expert_warrior"],
+    "names": "names"
+  },
+  {
+    "type": "template",
     "id": "high_mage",
     "kind": "tradition",
     "name": "High Mage",
-    "description": "The classical tradition of formal spells, sigils, and disciplined study. High Magic rewards preparation and broad knowledge, and its practitioners learn the Magic skill.",
+    "description": "The classical tradition of formal spells, sigils, and disciplined study. A full High Mage picks two arts and four first-level spells, and learns two more spells each level.",
+    "classes": ["mage"],
     "skills": { "magic": 1 },
     "feat_picks": [
-      { "id": "tradition_art_high", "count": 2, "tag": "high", "max_rank": 0 }
+      { "id": "tradition_art_high", "count": 2, "tag": "high", "max_rank": 0 },
+      {
+        "id": "tradition_spells_high",
+        "count": 4,
+        "tags": ["high"],
+        "feature_type": "spell",
+        "max_rank": 1
+      }
+    ],
+    "names": "names"
+  },
+  {
+    "type": "template",
+    "id": "high_mage_partial",
+    "kind": "tradition",
+    "name": "High Mage, Partial",
+    "description": "Formal High Magic learned alongside another trade. A partial High Mage picks one art and two first-level spells, and learns one more art at levels 2, 3, 6, and 9.",
+    "classes": [
+      "adventurer_expert_mage",
+      "adventurer_warrior_mage",
+      "adventurer_mage_mage"
+    ],
+    "skills": { "magic": 1 },
+    "feat_picks": [
+      { "id": "tradition_art_high", "count": 1, "tag": "high", "max_rank": 0 },
+      { "id": "tradition_spells_high", "count": 2, "tags": ["high"], "feature_type": "spell", "max_rank": 1 }
     ],
     "names": "names"
   },
@@ -258,10 +314,42 @@
     "id": "necromancer",
     "kind": "tradition",
     "name": "Necromancer",
-    "description": "A tradition concerned with death, the body's remains, and the powers that linger around them. Necromancers learn the Magic skill and work through grim rites and bound spirits.",
+    "description": "A tradition concerned with death, the body's remains, and the powers that linger around them. A full Necromancer picks one art and four first-level spells, and may learn High Magic or Necromancer spells.",
+    "classes": ["mage"],
     "skills": { "magic": 1 },
     "feat_picks": [
-      { "id": "tradition_art_necromancer", "count": 1, "tag": "necromancer", "max_rank": 0 }
+      { "id": "tradition_art_necromancer", "count": 1, "tag": "necromancer", "max_rank": 0 },
+      {
+        "id": "tradition_spells_necromancer",
+        "count": 4,
+        "tags": ["high", "necromancer"],
+        "feature_type": "spell",
+        "max_rank": 1
+      }
+    ],
+    "names": "names"
+  },
+  {
+    "type": "template",
+    "id": "necromancer_partial",
+    "kind": "tradition",
+    "name": "Necromancer, Partial",
+    "description": "Necromancy studied alongside another trade. A partial Necromancer picks one art and two first-level spells, and learns one more art at levels 3, 6, and 9.",
+    "classes": [
+      "adventurer_expert_mage",
+      "adventurer_warrior_mage",
+      "adventurer_mage_mage"
+    ],
+    "skills": { "magic": 1 },
+    "feat_picks": [
+      { "id": "tradition_art_necromancer", "count": 1, "tag": "necromancer", "max_rank": 0 },
+      {
+        "id": "tradition_spells_necromancer",
+        "count": 2,
+        "tags": ["high", "necromancer"],
+        "feature_type": "spell",
+        "max_rank": 1
+      }
     ],
     "names": "names"
   },
@@ -270,14 +358,50 @@
     "id": "elementalist",
     "kind": "tradition",
     "name": "Elementalist",
-    "description": "A tradition that treats the raw elements as living forces to be courted and commanded. Elementalists learn the Magic skill and shape fire, water, earth, and air through their arts.",
+    "description": "A tradition that treats the raw elements as living forces to be courted and commanded. A full Elementalist gains Elemental Resilience and Elemental Sparks, picks one more art and four first-level spells, and may learn High Magic or Elementalist spells.",
+    "classes": ["mage"],
     "skills": { "magic": 1 },
     "features": [
       { "feature": "art_elemental_resilience", "quantity": "1" },
       { "feature": "art_elemental_sparks", "quantity": "1" }
     ],
     "feat_picks": [
-      { "id": "tradition_art_elementalist", "count": 1, "tag": "elementalist", "max_rank": 0 }
+      { "id": "tradition_art_elementalist", "count": 1, "tag": "elementalist", "max_rank": 0 },
+      {
+        "id": "tradition_spells_elementalist",
+        "count": 4,
+        "tags": ["high", "elementalist"],
+        "feature_type": "spell",
+        "max_rank": 1
+      }
+    ],
+    "names": "names"
+  },
+  {
+    "type": "template",
+    "id": "elementalist_partial",
+    "kind": "tradition",
+    "name": "Elementalist, Partial",
+    "description": "Elemental mastery studied alongside another trade. A partial Elementalist gains Elemental Resilience and Elemental Sparks, picks one more art and two first-level spells, and learns one more art at levels 3, 6, and 9.",
+    "classes": [
+      "adventurer_expert_mage",
+      "adventurer_warrior_mage",
+      "adventurer_mage_mage"
+    ],
+    "skills": { "magic": 1 },
+    "features": [
+      { "feature": "art_elemental_resilience", "quantity": "1" },
+      { "feature": "art_elemental_sparks", "quantity": "1" }
+    ],
+    "feat_picks": [
+      { "id": "tradition_art_elementalist", "count": 1, "tag": "elementalist", "max_rank": 0 },
+      {
+        "id": "tradition_spells_elementalist",
+        "count": 2,
+        "tags": ["high", "elementalist"],
+        "feature_type": "spell",
+        "max_rank": 1
+      }
     ],
     "names": "names"
   }

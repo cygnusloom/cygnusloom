@@ -1,0 +1,9 @@
+[
+  {
+    "type": "clock",
+    "id": "wwn",
+    "parts": ["morning", "afternoon", "evening", "night"],
+    "stale_days": 7,
+    "hours_per_part": 6
+  }
+]

@@ -481,6 +481,127 @@
   },
   {
     "type": "feature",
+    "id": "focus_origin_automaton",
+    "name": "Automaton",
+    "feature_type": "feat",
+    "tag": "origin",
+    "rank": 1,
+    "description": "You are a self-willed automaton, probably humanoid and possibly human enough to pass inspection. You need no food, drink, or breath, are immune to disease, poison, and natural temperature extremes, and recharge instead of sleeping, but long ages have degraded one attribute.",
+    "effects": [
+      { "op": "note", "text": "Automaton traits: you do not need to eat, drink, or breathe, and are immune to disease, poison, and natural climatic extremes of temperature. You recharge for six hours a day in place of sleep. Healing and similar effects work on you and cost System Strain as usual. At zero hit points you are mortally wounded and can still be stabilized by someone who knows how to repair you; if you die, you are broken beyond conventional repair." },
+      { "op": "note", "text": "Choose one attribute; its modifier decreases by 1, to a minimum of -2. Your form is humanoid, and at your option human-like enough that only close inspection reveals your nature. This origin needs the GM's permission." }
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "focus_origin_drudge",
+    "name": "Drudge",
+    "feature_type": "feat",
+    "tag": "origin",
+    "rank": 1,
+    "description": "You are a Drudge of unusual intellect and capacity for violence. You gain Exert, gain +1 Strength and Constitution modifiers, take -1 Intelligence and Charisma modifiers, and take -2 on all Mental saving throws.",
+    "effects": [
+      { "op": "skill", "id": "exert", "delta": 1 },
+      { "op": "note", "text": "Your Strength and Constitution modifiers increase by 1, up to a maximum of +2; your Intelligence and Charisma modifiers decrease by 1, to a minimum of -2. You suffer a -2 penalty on all Mental saving throws." }
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "focus_origin_dwarf",
+    "name": "Dwarf",
+    "feature_type": "feat",
+    "tag": "origin",
+    "rank": 1,
+    "description": "You are a dwarf, a demihuman weapon-race of the ancient Outsiders. You gain Craft, sense solid objects within 20 feet as if by sight, add +2 to saves against hostile magic, need only half the usual food, water, and air, and gain +1 to your hit point die each level.",
+    "effects": [
+      { "op": "skill", "id": "craft", "delta": 1 },
+      { "op": "note", "text": "Surrounding-sense out to 20 feet: you distinguish solid objects as if using your sense of sight. You gain +2 on all saves against hostile magical effects, need only half the usual food, water, and air, and gain +1 to your hit point die at each level." }
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "focus_origin_elf",
+    "name": "Elf",
+    "feature_type": "feat",
+    "tag": "origin",
+    "rank": 1,
+    "description": "You are a reincarnated transhuman drawing on fragments of past lives. You gain Notice, a bonus skill of your choice with a daily reroll, and clear sight in anything short of complete darkness; no attribute score stays below 9.",
+    "effects": [
+      { "op": "skill", "id": "notice", "delta": 1 },
+      { "op": "note", "text": "Choose any skill as a bonus skill reflecting your past memories; once per day you may reroll a failed check with it. You see clearly in anything short of complete darkness." },
+      { "op": "note", "text": "Any attribute score below 9 must be raised to 9 by moving points from your other attributes; afflictions gained after play begins can still lower a score below that floor." }
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "focus_origin_great_anak",
+    "name": "Great Anak",
+    "feature_type": "feat",
+    "tag": "origin",
+    "rank": 1,
+    "description": "You are an unusually human-tolerant Great Anak who can function in human society if your nature is hidden. You gain Stab and Punch, gain +1 Strength and Constitution modifiers, and take -1 Dexterity and Charisma modifiers.",
+    "effects": [
+      { "op": "skill", "id": "stab", "delta": 1 },
+      { "op": "skill", "id": "punch", "delta": 1 },
+      { "op": "note", "text": "Your Strength and Constitution modifiers increase by 1, up to a maximum of +2; your Dexterity and Charisma modifiers decrease by 1, to a minimum of -2. Unless you look unusually human, life in human lands is extremely difficult." }
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "focus_origin_halfman",
+    "name": "Halfman",
+    "feature_type": "feat",
+    "tag": "origin",
+    "rank": 1,
+    "description": "You were separated from your herd and grew to human intellect. You gain Survive, gain +1 Constitution modifier, are immune to natural extremes of heat and cold, can eat any plant matter a ruminant could, and take -2 on all Mental saves.",
+    "effects": [
+      { "op": "skill", "id": "survive", "delta": 1 },
+      { "op": "note", "text": "Your Constitution modifier increases by 1, up to a maximum of +2. You are immune to natural extremes of heat and cold and can digest any plant matter a normal ruminant could. Your isolation from the herd inflicts a -2 penalty on all Mental saving throws." }
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "focus_origin_houri",
+    "name": "Houri",
+    "feature_type": "feat",
+    "tag": "origin",
+    "rank": 1,
+    "description": "You are a Houri who has broken the lure of enforced happiness. You gain Convince and Perform, gain +1 Charisma modifier, but take -2 on all Mental saving throws.",
+    "effects": [
+      { "op": "skill", "id": "convince", "delta": 1 },
+      { "op": "skill", "id": "perform", "delta": 1 },
+      { "op": "note", "text": "Your Charisma modifier increases by 1, up to a maximum of +2. You are innately susceptible to mental influence, taking a -2 penalty on all Mental saving throws. Obeying orders still gives you an emotional rush, but it does not control your decisions." }
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "focus_origin_lesser_anak",
+    "name": "Lesser Anak",
+    "feature_type": "feat",
+    "tag": "origin",
+    "rank": 1,
+    "description": "You are a humane Lesser Anak, smaller and spindlier than the Great Anak. You gain Stab and Sneak, gain +1 Dexterity modifier, and take -1 Constitution modifier.",
+    "effects": [
+      { "op": "skill", "id": "stab", "delta": 1 },
+      { "op": "skill", "id": "sneak", "delta": 1 },
+      { "op": "note", "text": "Your Dexterity modifier increases by 1, up to a maximum of +2; your Constitution modifier decreases by 1, to a minimum of -2. You function in human society only if your nature is hidden." }
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "focus_origin_undead",
+    "name": "Undead",
+    "feature_type": "feat",
+    "tag": "origin",
+    "rank": 1,
+    "description": "You are a sentient undead able to pass as human. You need not eat, drink, or breathe; you are immune to poison, disease, sleep, and unconsciousness and indifferent to natural heat and cold; healing needs your own or a Necromancer's aid; and one attribute modifier is reduced by 1.",
+    "effects": [
+      { "op": "note", "text": "Undead qualities: you cannot be poisoned, diseased, or made to sleep or fall unconscious, and you need not eat, drink, or breathe. You are indifferent to normal extremes of heat or cold, do not decay further, and self-repair at normal healing rates. Conventional healing fails on you unless you use it yourself, a Necromancer does, or another person skilled in maintaining dead flesh does. Ordinary undead are destroyed at zero hit points, but as a PC you automatically stabilize instead." },
+      { "op": "note", "text": "Choose one attribute; its modifier decreases by 1, to a minimum of -2. You can teach allies how to use healing effects on you. You can masquerade as a normal human unless closely inspected; if you can pass perfectly, choose one debility or vulnerability from the undead qualities. This origin needs the GM's permission." }
+    ]
+  },
+  {
+    "type": "feature",
     "id": "focus_poisoner",
     "name": "Poisoner",
     "feature_type": "feat",

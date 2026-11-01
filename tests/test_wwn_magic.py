@@ -12,10 +12,11 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlmodel import Session
 
 from cygnusforge.rules import wwn, wwn_magic
 from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import CheckMade, SpellCast
+from cygnusforge.services.events import CheckMade, SpellCast, load_state
 from tests.test_wwn_advancement import (
     NAME,
     WWN,
@@ -49,8 +50,11 @@ def _mage(
 
 def _learn(tools: Any, *spells: str) -> None:
     ctx = _ctx(tools)
+    with Session(tools.engine) as db:
+        known = set(load_state(db, tools.campaign_id).pc().features)
     for spell in spells:
-        wwn.learn_spell(NAME, spell, ctx)
+        if spell not in known:
+            wwn.learn_spell(NAME, spell, ctx)
 
 
 def test_prepare_spells_enforces_the_prepared_limit_and_stores_the_mark(
@@ -72,11 +76,10 @@ def test_prepare_spells_enforces_the_prepared_limit_and_stores_the_mark(
 def test_prepare_spells_refuses_unknown_duplicate_and_non_spell_features(
     client_factory: Callable[[], TestClient],
 ) -> None:
-    app, campaign_id, tools, ctx = _mage(client_factory)
-    _learn(tools, HIGH_SPELLS[0])
+    app, campaign_id, _tools, ctx = _mage(client_factory)
 
     with pytest.raises(InvalidInput, match="does not know"):
-        wwn_magic.prepare_spells(NAME, HIGH_SPELLS[1:2], ctx)
+        wwn_magic.prepare_spells(NAME, ["spell_apprehending_arcane_form"], ctx)
     with pytest.raises(InvalidInput, match="may not be listed twice"):
         wwn_magic.prepare_spells(NAME, [HIGH_SPELLS[0], HIGH_SPELLS[0]], ctx)
     with pytest.raises(InvalidInput, match="is not a spell"):
@@ -308,6 +311,8 @@ def test_every_wwn_tool_loads_and_binds_its_declared_required_parameters() -> No
         "spend_skill_point",
         "learn_focus",
         "learn_spell",
+        "learn_art",
+        "improve_attribute",
         "grant_package",
         "set_ac",
         "recover_after_rest",
@@ -319,6 +324,38 @@ def test_every_wwn_tool_loads_and_binds_its_declared_required_parameters() -> No
         "heal_strain",
         "first_aid",
         "restore_spell_slots",
+        "roll_save",
+        "roll_reaction",
+        "instinct_check",
+        "roll_tables",
+        "roll_initiative",
+        "start_encounter",
+        "end_encounter",
+        "add_participant",
+        "remove_participant",
+        "end_npc_turn",
+        "attack",
+        "player_attack",
+        "resolve_attacks",
+        "set_armor",
+        "harm_character",
+        "stabilize",
+        "recover_character",
+        "player_save",
+        "retreat",
+        "rest",
+        "advance_time",
+        "give_item",
+        "drop_item",
+        "buy_item",
+        "search_marketplace",
+        "create_monster",
+        "search_monster",
+        "roll_starting_silver",
+        "create_encounter_map",
+        "update_encounter_map",
+        "delete_encounter_map",
+        "place_participant",
     }
     for call in calls:
         module = wwn if call.function.__module__ == "cygnusforge.rules.wwn" else wwn_magic
@@ -326,7 +363,22 @@ def test_every_wwn_tool_loads_and_binds_its_declared_required_parameters() -> No
         assert call.takes_context
         properties = call.parameters["properties"]
         required = call.parameters.get("required", [])
-        assert required, f"{call.id} declares no required arguments"
         arguments = {name: _placeholder(properties[name]) for name in required}
         arguments["ctx"] = object()
         inspect.signature(call.function).bind(**arguments)
+
+
+def test_first_aid_gives_no_benefit_at_maximum_system_strain(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id, tools, ctx = _mage(client_factory)
+    tools.set_stat_max(NAME, "hp", 20, cause="a test")
+    tools.set_stat_max(NAME, "strain", 10, cause="a test")
+    tools.harm_character(NAME, "hp", 5, "a test")
+    wwn_magic.add_strain(NAME, 10, "a test", ctx)
+
+    result = wwn_magic.first_aid(NAME, NAME, ctx)
+
+    assert result["healed"] == 0
+    assert result["roll"] is None
+    assert _pc(app, campaign_id).harm["hp"] == 5

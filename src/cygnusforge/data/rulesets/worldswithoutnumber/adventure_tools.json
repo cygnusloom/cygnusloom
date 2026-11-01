@@ -1,0 +1,681 @@
+[
+  {
+    "type": "tool_call",
+    "id": "roll_save",
+    "name": "roll_save",
+    "python_module": "wwn",
+    "function": "roll_save",
+    "description": "Roll a saving throw: d20 against the character's Physical, Evasion, Mental, or Luck save, succeeding on a roll equal to or above the score. Call it when an effect threatens the character and the rules allow a save. A failure is recorded; apply what it costs yourself.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the character making the save."
+        },
+        "save": {
+          "type": "string",
+          "enum": ["physical", "evasion", "mental", "luck"],
+          "description": "Which save: physical for bodily harm, evasion for dodging, mental for willpower, luck for blind chance."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What the save is against, in a few words."
+        }
+      },
+      "required": ["character", "save", "cause"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "roll_reaction",
+    "name": "roll_reaction",
+    "python_module": "wwn",
+    "function": "roll_reaction",
+    "description": "Roll 2d6 for the first reaction of an NPC or group the party meets, adding the greeting character's Charisma modifier when a player character can greet them. The higher the total, the friendlier the reaction. Use it whenever the party meets a creature or group unless bloodshed is certain, and describe the mood to the players before they act.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The player character greeting the NPC, for the Charisma modifier. Any player character if none greets them."
+        },
+        "greeting": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether a player character is in a position to greet the targets, which adds their Charisma modifier."
+        },
+        "cause": {
+          "type": "string",
+          "description": "Who or what the party has met."
+        }
+      },
+      "required": ["character", "cause"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "instinct_check",
+    "name": "instinct_check",
+    "python_module": "wwn",
+    "function": "instinct_check",
+    "description": "Check an NPC's Instinct: roll 1d10 against the Instinct score printed in its statblock. A roll no higher than the score means the creature acts on impulse rather than its best judgment. Player characters never check Instinct.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the NPC whose instincts are tested."
+        },
+        "instinct": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "The creature's Instinct score from its statblock."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What tempts the creature to act on impulse."
+        }
+      },
+      "required": ["name", "instinct", "cause"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "roll_tables",
+    "name": "roll_tables",
+    "python_module": "wwn",
+    "function": "roll_tables",
+    "description": "Roll on one or more of the rule set's dice tables and log every result. Use the world-generation tables (significant_terrain, terrain_quirk, terrain_antagonists, nation_disputes, ruling_class, government_struggle, historical_event, community_tags, court_tags, ruin_tags, wilderness_tags) to build the starting region. Use dungeon_reaction (2d6) for a quick reaction, or roll_reaction to add Charisma. The engine returns the results; you decide what they mean.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "tables": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "The ids of the tables to roll on, in order. Each is rolled once."
+        }
+      },
+      "required": ["tables"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "roll_initiative",
+    "name": "roll_initiative",
+    "python_module": "wwn",
+    "function": "roll_initiative",
+    "description": "Roll initiative for each side of the encounter: 1d8 plus the best Dexterity modifier in the side, with ties going to the party. Call it once the participants have joined the encounter and before the first round. No player character makes an individual initiative roll.",
+    "parameters": {"type": "object", "properties": {}, "required": []}
+  },
+  {
+    "type": "tool_call",
+    "id": "start_encounter",
+    "name": "start_encounter",
+    "python_module": "wwn",
+    "function": "start_encounter",
+    "description": "Start an encounter on a map. Create the map first if the place has none. Add the participants, then call roll_initiative before anyone acts.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "map": {
+          "type": "string",
+          "description": "The name of the encounter map where the fight happens."
+        }
+      },
+      "required": ["map"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "end_encounter",
+    "name": "end_encounter",
+    "python_module": "wwn",
+    "function": "end_encounter",
+    "description": "End the encounter in progress once the fight, chase, or parley is over.",
+    "parameters": {"type": "object", "properties": {}, "required": []}
+  },
+  {
+    "type": "tool_call",
+    "id": "add_participant",
+    "name": "add_participant",
+    "python_module": "wwn",
+    "function": "add_participant",
+    "description": "Add a character to the encounter on a side. Player characters default to the party and NPCs to the foes.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character joining the encounter."
+        },
+        "side": {
+          "type": "string",
+          "description": "The side they fight on, such as party or foes. Leave it out for the usual side."
+        }
+      },
+      "required": ["name"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "remove_participant",
+    "name": "remove_participant",
+    "python_module": "wwn",
+    "function": "remove_participant",
+    "description": "Take a character out of the encounter, such as one who flees or is left behind.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character leaving the encounter."
+        }
+      },
+      "required": ["name"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "end_npc_turn",
+    "name": "end_npc_turn",
+    "python_module": "wwn",
+    "function": "end_npc_turn",
+    "description": "End an NPC's turn once its actions are resolved, and move to the next participant.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the NPC whose turn ends."
+        }
+      },
+      "required": ["name"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "attack",
+    "name": "attack",
+    "python_module": "wwn",
+    "function": "attack",
+    "description": "Make an NPC's attack: d20 plus its attack bonus against the target's Armor Class, with a natural 1 always missing and a natural 20 always hitting. The engine rolls the damage; on a miss it still applies the attack's Shock when the target's AC is low enough. Call it only when the NPC's side is acting.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "attacker": {
+          "type": "string",
+          "description": "The name of the NPC attacking."
+        },
+        "attack": {
+          "type": "string",
+          "description": "The name of one of its attacks, as the statblock lists it."
+        },
+        "target": {
+          "type": "string",
+          "description": "The name of the character being attacked."
+        }
+      },
+      "required": ["attacker", "attack", "target"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "player_attack",
+    "name": "player_attack",
+    "python_module": "wwn",
+    "function": "player_attack",
+    "description": "Record the player character's attack with a carried weapon or unarmed. The engine rolls the attack die and the damage, adding the weapon skill, the best weapon attribute, the attack bonus, and a Warrior's Killing Blow. On a miss it applies Shock when the target's AC is low enough.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "string",
+          "description": "The name of the character being attacked."
+        },
+        "weapon": {
+          "type": "string",
+          "description": "The carried weapon's name, as given, or unarmed."
+        }
+      },
+      "required": ["target", "weapon"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "resolve_attacks",
+    "name": "resolve_attacks",
+    "python_module": "wwn",
+    "function": "resolve_attacks",
+    "description": "Resolve several NPC attacks on one character at once, such as a creature's several attacks per action or several foes striking the same target. Each attack rolls its own attack die and applies its own damage in turn.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "string",
+          "description": "The name of the character being attacked."
+        },
+        "attacks": {
+          "type": "array",
+          "description": "The attacks to resolve, one entry per attack.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "attacker": {"type": "string"},
+              "attack": {"type": "string"}
+            },
+            "required": ["attacker", "attack"]
+          }
+        }
+      },
+      "required": ["target", "attacks"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "set_armor",
+    "name": "set_armor",
+    "python_module": "wwn",
+    "function": "set_armor",
+    "description": "Set a character's total Armor Class when their gear changes, such as 10 plus Dexterity plus armor and shield.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character or NPC."
+        },
+        "armor": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 30,
+          "description": "The new total Armor Class."
+        }
+      },
+      "required": ["name", "armor"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "harm_character",
+    "name": "harm_character",
+    "python_module": "wwn",
+    "function": "harm_character",
+    "description": "Harm a character outside combat, from a fall, poison, exposure, or privation. Use harm from an attack only through attack or player_attack. A PC brought to 0 HP is mortally wounded; an NPC is dead.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "stat": {
+          "type": "string",
+          "enum": ["hp", "str", "dex", "con", "int", "wis", "cha"],
+          "description": "The stat harmed. Outside combat, usually hp."
+        },
+        "amount": {"type": "integer", "minimum": 1, "maximum": 1000},
+        "cause": {"type": "string"}
+      },
+      "required": ["name", "stat", "amount", "cause"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "stabilize",
+    "name": "stabilize",
+    "python_module": "wwn",
+    "function": "stabilize",
+    "description": "Stop a mortally wounded character's dying clock. The character wakes with 1 hit point after ten minutes and gains the Frail condition. In the book this needs an Int/Heal or Dex/Heal check at difficulty 8 plus the rounds since they fell; call roll_check first and stabilize only on a success.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "explanation": {
+          "type": "string",
+          "description": "How they were stabilized, such as a tourniquet or a healer's care."
+        }
+      },
+      "required": ["name", "explanation"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "recover_character",
+    "name": "recover_character",
+    "python_module": "wwn",
+    "function": "recover_character",
+    "description": "Recover a character as magical healing does: it clears Mortal Wounds and Frail immediately and restores the hit points the healing rolled. Use it with a healing spell or art.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "explanation": {"type": "string"},
+        "consequence": {"type": "string"}
+      },
+      "required": ["name", "explanation", "consequence"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "player_save",
+    "name": "player_save",
+    "python_module": "wwn",
+    "function": "player_save",
+    "description": "Pass the player's own d20 roll for a save the engine has marked due after harm. Use it only when a save is owed.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "roll": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "description": "The player's d20 roll."
+        }
+      },
+      "required": ["roll"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "retreat",
+    "name": "retreat",
+    "python_module": "wwn",
+    "function": "retreat",
+    "description": "Take a character out of the fight. Set safe to true only when the character has a clear route away.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "safe": {"type": "boolean"}
+      },
+      "required": ["name", "safe"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "rest",
+    "name": "rest",
+    "python_module": "wwn",
+    "function": "rest",
+    "description": "Record a rest for one character. A night's rest restores hit points equal to their level, one point of System Strain, all spell castings, and scene and day Effort. A few moments restores scene Effort only. The rest moves the clock itself. Frail characters recover no hit points or Strain.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {"type": "string"},
+        "length": {
+          "type": "string",
+          "enum": ["moments", "night"],
+          "description": "moments for a short break, night for a full night's rest."
+        },
+        "reason": {"type": "string"},
+        "interrupted": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when something breaks the rest, which then counts as moments only."
+        }
+      },
+      "required": ["character", "length", "reason"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "advance_time",
+    "name": "advance_time",
+    "python_module": "wwn",
+    "function": "advance_time",
+    "description": "Move the campaign clock forward. Use it for downtime, travel you track yourself, or the hour a mortally wounded character has left to live.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "days": {"type": "integer", "minimum": 0, "maximum": 365, "default": 0},
+        "parts": {"type": "integer", "minimum": 0, "maximum": 12, "default": 0},
+        "hours": {"type": "integer", "minimum": 0, "maximum": 72, "default": 0}
+      },
+      "required": []
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "give_item",
+    "name": "give_item",
+    "python_module": "wwn",
+    "function": "give_item",
+    "description": "Give a character an item. A catalogue item takes its listed size; a new item needs its size and, for a weapon, its damage dice.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "item": {"type": "string"},
+        "size": {
+          "type": "string",
+          "enum": ["tiny", "small", "normal", "large", "huge", "bulky", "massive"],
+          "description": "How much of the inventory it fills. Leave it out for a catalogue item."
+        },
+        "damage": {
+          "type": "string",
+          "description": "The weapon's damage dice, such as 1d8. Leave it out for gear."
+        }
+      },
+      "required": ["name", "item"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "drop_item",
+    "name": "drop_item",
+    "python_module": "wwn",
+    "function": "drop_item",
+    "description": "Remove an item from a character's inventory.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "item": {"type": "string"}
+      },
+      "required": ["name", "item"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "buy_item",
+    "name": "buy_item",
+    "python_module": "wwn",
+    "function": "buy_item",
+    "description": "Buy a catalogue item with silver, or price an item the catalogue does not list. Armor updates the buyer's Armor Class automatically.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "item": {"type": "string"},
+        "price": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The price in silver for an item not in the catalogue."
+        },
+        "size": {
+          "type": "string",
+          "enum": ["tiny", "small", "normal", "large", "huge", "bulky", "massive"]
+        }
+      },
+      "required": ["name", "item"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "search_marketplace",
+    "name": "search_marketplace",
+    "python_module": "wwn",
+    "function": "search_marketplace",
+    "description": "Find items and services the marketplace sells, by name or category.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {"type": "string"}
+      },
+      "required": ["query"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "create_monster",
+    "name": "create_monster",
+    "python_module": "wwn",
+    "function": "create_monster",
+    "description": "Create a creature from the bestiary and place it at a location. Give the template id (use search_monster to find it) and any changes to its stats, armor, or attacks.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "location": {"type": "string"},
+        "description": {"type": "string"},
+        "template": {"type": "string"},
+        "stats": {"type": "object", "additionalProperties": {"type": "integer"}},
+        "armor": {"type": "integer", "minimum": 0, "maximum": 30},
+        "attacks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {"type": "string"},
+              "dice": {"type": "string"},
+              "shock": {"type": "integer"},
+              "shock_ac": {"type": "integer"}
+            }
+          }
+        },
+        "force": {"type": "boolean", "default": false}
+      },
+      "required": ["name", "location", "template"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "search_monster",
+    "name": "search_monster",
+    "python_module": "wwn",
+    "function": "search_monster",
+    "description": "Find bestiary statblocks by name or description.",
+    "parameters": {
+      "type": "object",
+      "properties": {"query": {"type": "string"}},
+      "required": ["query"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "learn_art",
+    "name": "learn_art",
+    "python_module": "wwn",
+    "function": "learn_art",
+    "description": "Spend an art pick on an art of the character's own tradition. Class charts grant art picks at levels 2, 4, 6, 8, and 10 for a full mage, and at levels 2, 3, 6, and 9 for a partial mage (3, 6, and 9 for a partial Necromancer or Elementalist).",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {"type": "string"},
+        "art": {"type": "string", "description": "The feature id of the art."}
+      },
+      "required": ["character", "art"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "improve_attribute",
+    "name": "improve_attribute",
+    "python_module": "wwn",
+    "function": "improve_attribute",
+    "description": "Spend skill points on a permanent +1 to one attribute. The first boost costs 1 point, the second 2, and so on to 5, at minimum character levels 2, 2, 3, 6, and 9; a character may buy five in total.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {"type": "string"},
+        "stat": {
+          "type": "string",
+          "enum": ["str", "dex", "con", "int", "wis", "cha"]
+        }
+      },
+      "required": ["character", "stat"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "roll_starting_silver",
+    "name": "roll_starting_silver",
+    "python_module": "wwn",
+    "function": "roll_starting_silver",
+    "description": "Give a character starting money instead of an equipment package: roll 3d6 and multiply by 10 silver pieces, as the book allows. Use it once at creation and do not also grant a package.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {"type": "string"}
+      },
+      "required": ["character"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "create_encounter_map",
+    "name": "create_encounter_map",
+    "python_module": "wwn",
+    "function": "create_encounter_map",
+    "description": "Make a square grid map for an encounter at a location, such as a ford, room, or yard. A map is needed before start_encounter can be used.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "location": {"type": "string"},
+        "description": {"type": "string"},
+        "columns": {"type": "integer", "minimum": 1, "maximum": 50},
+        "rows": {"type": "integer", "minimum": 1, "maximum": 50},
+        "template": {"type": "string", "description": "An optional encounter map template id."}
+      },
+      "required": ["name", "location", "description"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "update_encounter_map",
+    "name": "update_encounter_map",
+    "python_module": "wwn",
+    "function": "update_encounter_map",
+    "description": "Change an encounter map's description, columns, or rows.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "columns": {"type": "integer", "minimum": 1, "maximum": 50},
+        "rows": {"type": "integer", "minimum": 1, "maximum": 50},
+        "description": {"type": "string"}
+      },
+      "required": ["name", "columns", "rows", "description"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "delete_encounter_map",
+    "name": "delete_encounter_map",
+    "python_module": "wwn",
+    "function": "delete_encounter_map",
+    "description": "Delete an encounter map that is no longer needed.",
+    "parameters": {
+      "type": "object",
+      "properties": {"name": {"type": "string"}},
+      "required": ["name"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "place_participant",
+    "name": "place_participant",
+    "python_module": "wwn",
+    "function": "place_participant",
+    "description": "Put an encounter participant on a cell of the map grid.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "column": {"type": "integer", "minimum": 0},
+        "row": {"type": "integer", "minimum": 0}
+      },
+      "required": ["name", "column", "row"]
+    }
+  }
+]

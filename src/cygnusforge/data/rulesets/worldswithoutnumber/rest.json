@@ -1,0 +1,24 @@
+[
+  {
+    "type": "rest",
+    "id": "wwn",
+    "lengths": {
+      "moments": {
+        "hours": 1,
+        "full": false,
+        "restores": [],
+        "clears": []
+      },
+      "night": {
+        "until": "morning",
+        "stop_at": {
+          "morning": "night"
+        },
+        "full": true,
+        "restores": [],
+        "clears": []
+      }
+    },
+    "interrupted": "moments"
+  }
+]
