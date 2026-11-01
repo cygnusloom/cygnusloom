@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 
 from fastapi.testclient import TestClient
 from starlette.datastructures import FormData
@@ -73,13 +74,53 @@ def test_the_hogwarts_creation_page_offers_spell_picks_for_blood_statuses(
     response = _new_campaign(client, world_template="hogwarts", rule_set="hogwarts-rpg")
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'data-spell-picks="pure-blood"' in page
+    assert 'data-tagged-picks="pure-blood"' in page
     assert 'name="pick-pure-blood-2"' in page
     assert 'name="pick-muggle-born-0"' in page
     assert 'name="pick-muggle-born-1"' not in page
     assert '<optgroup label="3rd Year" data-tag="3rd Year">' in page
-    assert "data-randomize-spells" in page
+    assert "data-randomize-tagged-picks" in page
     assert 'data-tag-field="field-year"' in page
+    assert "<h3>Spells</h3>" in page
+    assert "Randomize spells" in page
+    assert "Spell 1" in page
+
+
+def test_tagged_feature_picks_use_the_configured_feature_type(
+    client_factory: Callable[[], TestClient],
+):
+    template = SPEC.templates["pure-blood"]
+    assert template.choose is not None
+    source = SPEC.features[_spell_of(YEAR_3)]
+    feat = replace(source, id="test-feat", name="Test Feat", feature_type="feat")
+    spec = replace(
+        SPEC,
+        features={**SPEC.features, feat.id: feat},
+        templates={
+            **SPEC.templates,
+            template.id: replace(template, choose=replace(template.choose, feature_type="feat")),
+        },
+    )
+    client = _signed_in(client_factory)
+    library = client.app.state.content
+    rule_set = library.rule_sets["hogwarts-rpg"]
+    client.app.state.content = replace(
+        library,
+        rule_sets={
+            **library.rule_sets,
+            rule_set.id: replace(rule_set, character=spec),
+        },
+    )
+    response = _new_campaign(client, world_template="hogwarts", rule_set=rule_set.id)
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    page = client.get(f"/campaigns/{campaign_id}").text
+    picks = page.split('data-tagged-picks="pure-blood"', 1)[1].split("</fieldset>", 1)[0]
+
+    assert "<h3>Feats</h3>" in picks
+    assert "Randomize feats" in picks
+    assert "Pick from the feats of your Year" in picks
+    assert "Feat 1" in picks
+    assert '<option value="test-feat">Test Feat</option>' in picks
 
 
 def test_pool_stats_are_marked_assigned_within_their_swap_group():

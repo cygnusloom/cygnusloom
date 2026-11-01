@@ -36,7 +36,7 @@
     <button type="button" class="secondary" data-randomize="all">Randomize all</button>
     <button type="button" class="secondary" data-randomize="unchosen">Randomize all not chosen</button>
   </div>
-  <form method="post" action="/campaigns/{{ campaign.id }}/creation" class="creation-form">
+  <form method="post" action="/campaigns/{{ campaign.id }}/creation" class="creation-form"{% if character.skill_progression %} data-skill-first-level="{{ character.skill_progression.first_level }}" data-skill-creation-maximum="{{ character.skill_progression.creation_maximum }}"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     {% if show_options %}
     <section class="creation-section" aria-labelledby="options-title">
@@ -123,20 +123,20 @@
             {% endcall %}
           </fieldset>
           {% for template in group.templates %}
-            <div class="template-tables" data-template-group="{{ group.kind }}" data-template="{{ template.id }}" hidden>
+            <div class="template-tables" data-template-group="{{ group.kind }}" data-template="{{ template.id }}" data-skill-grants='{{ template.skill_grants|tojson }}' hidden>
               {% for table in template.tables %}
                 {{ choice_panel("field-" ~ table.id, table.label, table.options) }}
               {% endfor %}
               {% if template.picks %}
-                <fieldset class="creation-panel spell-picks" data-spell-picks="{{ template.id }}" data-tag-field="field-{{ template.picks.tag_field }}">
+                <fieldset class="creation-panel tagged-feature-picks" data-tagged-picks="{{ template.id }}" data-tag-field="field-{{ template.picks.tag_field }}">
                   <div class="panel-heading">
-                    <h3>Spells</h3>
-                    <button type="button" class="secondary" data-randomize-spells>Randomize spells</button>
+                    <h3>{{ template.picks.feature_type|capitalize }}s</h3>
+                    <button type="button" class="secondary" data-randomize-tagged-picks>Randomize {{ template.picks.feature_type }}s</button>
                   </div>
                   <p>{{ template.picks.hint }}</p>
                   {% for index in range(template.picks.count) %}
                     <label>
-                      Spell {{ index + 1 }}
+                      {{ template.picks.feature_type|capitalize }} {{ index + 1 }}
                       <select name="pick-{{ template.id }}-{{ index }}">
                         <option value="">Roll</option>
                         {% for group in template.picks.groups %}
@@ -152,7 +152,7 @@
                 </fieldset>
               {% endif %}
               {% for pick in template.skill_picks %}
-                <fieldset class="creation-panel skill-picks" data-pick-selects="{{ pick.id }}" data-pick-kind="skill" data-pick-template="{{ template.id }}">
+                <fieldset class="creation-panel skill-picks" data-pick-selects="{{ pick.id }}" data-pick-kind="skill" data-pick-template="{{ template.id }}" data-pick-max-level="{{ pick.max_level }}">
                   <div class="panel-heading">
                     <h3>Skills</h3>
                     <button type="button" class="secondary" data-randomize-picks>Randomize skills</button>

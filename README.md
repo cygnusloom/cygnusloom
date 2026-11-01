@@ -22,6 +22,55 @@ Open http://127.0.0.1:8000, use the development login, and create a campaign. Th
 
 Run checks with `uv run pytest -n auto` and `uv run ruff check`.
 
+## Ruleset design
+
+Rulesets are collections of JSON definitions in `src/cygnusforge/data/rulesets`. They inherit
+the shared `core` definitions and can replace a definition by type and ID. Game systems are
+enabled by their definitions; ruleset-specific Python is an escape hatch, not a requirement for
+new rules. Definitions and their references are checked when the content library loads.
+
+Character templates can restrict combinations without naming a particular RPG concept:
+
+- `compatible_with` maps another template kind to the template IDs allowed alongside it.
+- `template_requirements` lists kinds that must be selected when the template is chosen.
+  Set `distinct` to require different choices. Templates in different kinds can use the same
+  `choice_key` when they represent the same choice. Optional `missing_message` and
+  `duplicate_message` provide ruleset-specific explanations.
+- A ruleset with skills defines `skill_progression` on its `rule_set` definition, with integer
+  `untrained`, `first_level`, `creation_maximum`, and `maximum` values. Training is tracked
+  separately from its level, so a trained level can equal the untrained value. A skill pick's
+  optional `max_level` limits both chosen and randomly selected skills. A move's optional
+  `skill_floor` defaults to zero; use `null` to apply negative skill levels without a floor.
+
+Hooks may name a `configure` callable in their ruleset module to validate and normalize their
+`options` at load time. The callable receives the options, character specification, and definition
+label, and returns a mapping. Without a configurator, options are passed through unchanged.
+For ruleset-specific algorithms that need structured data, a `rule_data` definition names a
+`python_module` and `configure` callable. The callable validates the definition against the
+character specification and returns a value available to tools through `ctx.world.rule_data`.
+These values belong to the loaded ruleset, rather than global module state.
+
+Combat can name an `unarmed.skill` and a `level_damage` object with `template_kind`, `templates`,
+`counter`, and `divisor`. Their references are checked at load time; neither mechanic depends on
+particular class, skill, or counter names. An `injuries` object specifies its `table`, `stat`,
+`trigger` (`depleted` or `damage`), and the affected `target_kinds` (`pc` and/or `npc`).
+The optional `healing_stat` names the stat healed when a tool call does not specify one; without
+it, healing calls must name a stat.
+
+The optional `dungeon` rule data uses `cygnusforge.services.dungeon.configure_dungeon` to configure
+an `event_table`, a `reaction_table`, or both. Its `triggers` list and result-to-text `notes`
+mapping apply to event rolls. Table IDs can refer to ruleset or world tables and are resolved when
+rolled.
+
+Magic item rules name distinct `reusable`, `single_use`, and `charged` kinds. Casting results and
+events use those configured kind names.
+
+In the 2.0 ruleset format, replace a template's old `classes` list with
+`"compatible_with": {"class": [...]}`, define `skill_progression` for any ruleset with skills,
+and configure the injury trigger and targets explicitly. Configure `healing_stat` if healing calls
+may omit the stat. The loader rejects the old template field rather than silently ignoring a
+restriction.
+
 ## Using DeepSeek
 
 DeepSeek serves an OpenAI-compatible chat completions API, so it plugs in as a normal provider. Create an API key at [platform.deepseek.com](https://platform.deepseek.com) and export it in your shell (or put the export in your shell profile); never commit your key to the repository or paste it into [.env.example](.env.example).

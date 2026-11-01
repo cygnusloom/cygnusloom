@@ -12,7 +12,13 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusforge.content.library import CharacterSpec, CombatRules, InventoryRules, MagicRules
+from cygnusforge.content.library import (
+    CharacterSpec,
+    CombatRules,
+    InventoryRules,
+    ItemKind,
+    MagicRules,
+)
 from cygnusforge.rules.dice import roll_total
 from cygnusforge.services import inventory as inventory_service
 from cygnusforge.services.common import InvalidInput
@@ -46,10 +52,10 @@ def _held(state: CampaignState, name: str, item: str, kinds: tuple[str, ...]) ->
     raise InvalidInput(f"{character.name} carries no {item!r}")
 
 
-def give_spellbook(
+def give_spell_item(
     db: Session,
     campaign_id: int,
-    magic: MagicRules,
+    item_kind: ItemKind,
     inventory: InventoryRules,
     item_sizes: Mapping[str, int],
     name: str,
@@ -58,37 +64,13 @@ def give_spellbook(
 ) -> dict[str, Any]:
     item = Item(
         spell,
-        magic.spellbook_size,
-        _slots(item_sizes, magic.spellbook_size),
-        kind=magic.spellbook_kind,
+        item_kind.size,
+        _slots(item_sizes, item_kind.size),
+        kind=item_kind.kind,
         text=description,
     )
     result = inventory_service.carry_item(
-        db, campaign_id, inventory, name, item, cause=f"a {magic.spellbook_kind}"
-    )
-    db.commit()
-    return result
-
-
-def give_scroll(
-    db: Session,
-    campaign_id: int,
-    magic: MagicRules,
-    inventory: InventoryRules,
-    item_sizes: Mapping[str, int],
-    name: str,
-    spell: str,
-    description: str,
-) -> dict[str, Any]:
-    item = Item(
-        spell,
-        magic.scroll_size,
-        _slots(item_sizes, magic.scroll_size),
-        kind=magic.scroll_kind,
-        text=description,
-    )
-    result = inventory_service.carry_item(
-        db, campaign_id, inventory, name, item, cause=f"a {magic.scroll_kind}"
+        db, campaign_id, inventory, name, item, cause=f"a {item_kind.kind}"
     )
     db.commit()
     return result
@@ -112,13 +94,13 @@ def give_charged_item(
         item,
         size,
         _slots(item_sizes, size),
-        kind=magic.charged_kind,
+        kind=magic.charged.kind,
         text=recharge,
         uses=uses,
         max_uses=uses,
     )
     result = inventory_service.carry_item(
-        db, campaign_id, inventory, name, charged, cause=f"a {magic.charged_kind}"
+        db, campaign_id, inventory, name, charged, cause=f"a {magic.charged.kind}"
     )
     db.commit()
     return result
@@ -132,25 +114,31 @@ def cast_spell(
     name: str,
     spell: str,
 ) -> dict[str, Any]:
-    """Cast from a spellbook when one is held, or else from a scroll, which is then spent. Only a
-    spellbook cast pays the penalty item."""
+    """Cast from a reusable item when held, or else from a single-use item."""
     state = load_state(db, campaign_id)
-    character_name, held = _held(state, name, spell, (magic.spellbook_kind, magic.scroll_kind))
-    if held.kind == magic.scroll_kind:
+    character_name, held = _held(state, name, spell, (magic.reusable.kind, magic.single_use.kind))
+    if held.kind == magic.single_use.kind:
         record(
             db,
             campaign_id,
-            SpellCast(name=character_name, spell=held.name, source="scroll"),
+            SpellCast(name=character_name, spell=held.name, source=magic.single_use.kind),
         )
         record(
             db,
             campaign_id,
-            ItemRemoved(name=character_name, item=held.name, kind_of_item=magic.scroll_kind),
+            ItemRemoved(name=character_name, item=held.name, kind_of_item=magic.single_use.kind),
         )
         db.commit()
-        return {"name": character_name, "spell": held.name, "source": "scroll", "penalty": False}
+        return {
+            "name": character_name,
+            "spell": held.name,
+            "source": magic.single_use.kind,
+            "penalty": False,
+        }
 
-    record(db, campaign_id, SpellCast(name=character_name, spell=held.name, source="spellbook"))
+    record(
+        db, campaign_id, SpellCast(name=character_name, spell=held.name, source=magic.reusable.kind)
+    )
     penalty = Item(
         inventory.penalty_name,
         "",
@@ -167,7 +155,7 @@ def cast_spell(
         **result,
         "name": character_name,
         "spell": held.name,
-        "source": "spellbook",
+        "source": magic.reusable.kind,
         "penalty": magic.cast_penalty > 0,
     }
 
@@ -176,7 +164,7 @@ def use_charge(
     db: Session, campaign_id: int, magic: MagicRules, name: str, item: str
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
-    character_name, held = _held(state, name, item, (magic.charged_kind,))
+    character_name, held = _held(state, name, item, (magic.charged.kind,))
     if held.uses < 1:
         raise InvalidInput(
             f"{character_name}'s {held.name} has no uses left and must recharge first"
@@ -194,7 +182,7 @@ def recharge_charged_item(
     db: Session, campaign_id: int, magic: MagicRules, name: str, item: str
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
-    character_name, held = _held(state, name, item, (magic.charged_kind,))
+    character_name, held = _held(state, name, item, (magic.charged.kind,))
     if held.uses == held.max_uses:
         raise InvalidInput(f"{held.name} is already fully charged")
     if held.spent_on == state.clock:
@@ -226,8 +214,12 @@ def roll_save(
     costs."""
     if stat not in spec.stats:
         raise InvalidInput(f"there is no stat named {stat!r}")
-    if natural is not None and not 1 <= natural <= 20:
-        raise InvalidInput("the player's save roll must be 1 to 20")
+    if natural is not None and (
+        isinstance(natural, bool)
+        or not isinstance(natural, int)
+        or not 1 <= natural <= combat.check_sides
+    ):
+        raise InvalidInput(f"the player's save roll must be 1 to {combat.check_sides}")
     state = load_state(db, campaign_id)
     character = inventory_service.character_named(state, name)
     if character.story_only:

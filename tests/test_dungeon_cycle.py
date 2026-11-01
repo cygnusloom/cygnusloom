@@ -8,6 +8,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from cygnusforge.content.definitions import ContentError
 from cygnusforge.content.library import CONTEXT_ARGUMENT
 from cygnusforge.rules import cairn2e
 from cygnusforge.rules.context import ToolContext
@@ -65,7 +66,9 @@ REACTION_BANDS = {
 
 def _live_tools(client_factory: Callable[[], TestClient], seed: int = 0):
     client, campaign_id, tools = _fight_client(client_factory)
-    tools = replace(tools, dice_tables=CAIRN.dice_tables, rng=random.Random(seed))
+    tools = replace(
+        tools, dice_tables=CAIRN.dice_tables, rule_data=CAIRN.rule_data, rng=random.Random(seed)
+    )
     return client.app, campaign_id, tools
 
 
@@ -147,6 +150,100 @@ def test_roll_reaction_returns_and_logs_the_band(client_factory: Callable[[], Te
     assert out["band"] == REACTION_BANDS[out["roll"]]
     assert out["reason"] == "The guard eyes the party."
     assert _logged_kinds(app, campaign_id)[len(before) :] == ["reaction.rolled"]
+
+
+def test_dungeon_settings_change_tables_triggers_and_notes(
+    client_factory: Callable[[], TestClient], monkeypatch: pytest.MonkeyPatch
+):
+    _, _, tools = _live_tools(client_factory)
+    rules = dungeon.configure_dungeon(
+        {
+            "event_table": "events",
+            "reaction_table": "reactions",
+            "triggers": ["alarm"],
+            "notes": {"Quiet": "Keep watch."},
+        },
+        CAIRN.character,
+        "custom dungeon",
+    )
+    tools = replace(
+        tools,
+        rule_data={"dungeon": rules},
+        dice_tables={
+            "events": CAIRN.dice_tables["dungeon_events"],
+            "reactions": CAIRN.dice_tables["dungeon_reaction"],
+        },
+    )
+    monkeypatch.setattr(dungeon, "roll_total", lambda formula, rng=None, plus=None: 6)
+    assert tools.dungeon_cycle(["alarm"], "A new danger.")["note"] == "Keep watch."
+    assert tools.roll_reaction("A meeting.")["band"] == "Curious"
+    with pytest.raises(InvalidInput, match="unknown trigger 'loud'"):
+        tools.dungeon_cycle(["loud"], "Old trigger.")
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("event_table", ""),
+        ("reaction_table", None),
+        ("triggers", ["alarm", "alarm"]),
+        ("triggers", ["alarm", 1]),
+        ("notes", {"Quiet": ""}),
+    ],
+)
+def test_dungeon_settings_reject_invalid_configuration(field: str, value: object):
+    data: dict[str, object] = {
+        "event_table": "events",
+        "reaction_table": "reactions",
+        "triggers": ["alarm"],
+        "notes": {"Quiet": "Keep watch."},
+    }
+    data[field] = value
+    with pytest.raises(ContentError, match=field):
+        dungeon.configure_dungeon(data, CAIRN.character, "custom dungeon")
+
+
+def test_dungeon_settings_reject_unknown_fields():
+    with pytest.raises(ContentError, match="unknown settings.*note"):
+        dungeon.configure_dungeon(
+            {"event_table": "events", "note": "Misspelled"},
+            CAIRN.character,
+            "custom dungeon",
+        )
+
+
+def test_reaction_table_does_not_require_a_dungeon_event_table(
+    client_factory: Callable[[], TestClient], monkeypatch: pytest.MonkeyPatch
+):
+    _, _, tools = _live_tools(client_factory)
+    rules = dungeon.configure_dungeon(
+        {"reaction_table": "reactions"}, CAIRN.character, "reaction only"
+    )
+    tools = replace(
+        tools,
+        rule_data={"dungeon": rules},
+        dice_tables={"reactions": CAIRN.dice_tables["dungeon_reaction"]},
+    )
+    monkeypatch.setattr(dungeon, "roll_total", lambda formula, rng=None, plus=None: 6)
+    assert tools.roll_reaction("A meeting.")["band"] == "Curious"
+    with pytest.raises(InvalidInput, match="no dungeon event table"):
+        tools.dungeon_cycle([], "Not available.")
+
+
+def test_dungeon_event_table_does_not_require_a_reaction_table(
+    client_factory: Callable[[], TestClient], monkeypatch: pytest.MonkeyPatch
+):
+    _, _, tools = _live_tools(client_factory)
+    rules = dungeon.configure_dungeon({"event_table": "events"}, CAIRN.character, "event only")
+    tools = replace(
+        tools,
+        rule_data={"dungeon": rules},
+        dice_tables={"events": CAIRN.dice_tables["dungeon_events"]},
+    )
+    monkeypatch.setattr(dungeon, "roll_total", lambda formula, rng=None, plus=None: 6)
+    assert tools.dungeon_cycle([], "A quiet moment.")["event"] == "Quiet"
+    with pytest.raises(InvalidInput, match="no reaction table"):
+        tools.roll_reaction("Not available.")
 
 
 def test_the_tools_are_in_the_tool_list_and_wired_to_python():

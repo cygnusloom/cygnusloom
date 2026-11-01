@@ -1,25 +1,7 @@
 """Python side of the Worlds Without Number rule set: checks, morale, advancement, and gear.
 
-The class, XP, and casting tables below are ruleset-specific data. They are Python rather than
-JSON because they drive arithmetic (hit dice, attack bonuses, focus picks, castings, prepared
-spells), not lookups the GM makes. The values are from the free book, paraphrased into numbers:
-
-- Hit dice are ``level d6 + constant x level``: Warrior +2, Expert +0, Mage -1, and the
-  Adventurer pairings use the constant of their partial Warrior (+2) or partial Mage (-1) side.
-- Attack bonuses and focus-pick levels are the printed class tables (focus picks at 2, 5, 7, 10).
-- Fast XP is 0, 3, 6, 12, 18, 27, 39, 54, 72, 93; slow XP is 0, 6, 15, 24, 36, 51, 69, 87,
-  105, 139. Fast is the default; `gain_xp` takes ``rate="slow"`` for the other.
-- Full-mage castings per day are 1, 1, 2, 2, 3, 3, 4, 4, 5, 6 and prepared spells 3, 3, 4, 5,
-  6, 7, 8, 9, 10, 12.
-- Partial-mage castings are 1, 1, 1, 2, 2, 3, 3, 3, 4, 4 and prepared 2, 3, 3, 4, 5, 6, 7, 7,
-  8, 9.
-- Dual partial-mage castings are 1, 1, 2, 2, 2, 3, 3, 4, 4, 5 and prepared 3, 4, 5, 6, 8, 9,
-  10, 12, 13, 15.
-- Highest spell levels are 1, 1, 2, 2, 3, 3, 4, 4, 5, 5 for a full mage and 1, 1, 1, 1, 2, 2,
-  2, 2, 3, 3 for a partial mage. A dual partial mage uses 1, 1, 1, 2, 2, 2, 3, 3, 3, 4.
-
-The design's effort rule is 1 + Magic skill + the better of the Int and Cha modifiers, minus 1
-for a partial mage, and never less than 1.
+Numeric class, XP, casting, art, tradition, and skill-prerequisite charts are loaded from the
+ruleset's validated ``progression`` data. Remaining rule-specific behavior is kept here.
 """
 
 from __future__ import annotations
@@ -31,6 +13,12 @@ from typing import Any
 from cygnusforge.content.character import CharacterSpec, derived_stats
 from cygnusforge.rules.context import ToolContext
 from cygnusforge.rules.dice import roll_total
+from cygnusforge.rules.wwn_progression import (
+    CastingRow,
+    ClassTable,
+    WWNProgression,
+    require_wwn_progression,
+)
 from cygnusforge.services.common import InvalidInput, whole_number
 from cygnusforge.services.events import (
     PC_KIND,
@@ -45,187 +33,14 @@ from cygnusforge.services.events import (
 )
 from cygnusforge.services.hooks import HookContext
 
-MAX_LEVEL = 10
-MAX_SKILL_LEVEL = 4
 MAX_BASE_ARMOR = 100
 MAX_ATTRIBUTE = 18
 
-
-# The size of the die each class rolls for a level's hit points, and the flat constant it adds to
-# every level's roll.
-@dataclass(frozen=True)
-class ClassTable:
-    """One class's advancement table. `hp_constant` is added to each level's hit die, `attack`
-    holds the attack bonus for levels 1 to 10, and `focus_levels` are the levels that grant a
-    focus pick. `quick_learner` adds a second skill point each level."""
-
-    hit_die: int
-    hp_constant: int
-    attack: tuple[int, ...]
-    focus_levels: frozenset[int]
-    quick_learner: bool = False
-
-
-FOCUS_LEVELS = frozenset({2, 5, 7, 10})
-
-CLASS_TABLES: Mapping[str, ClassTable] = {
-    "warrior": ClassTable(6, 2, (1, 2, 3, 4, 5, 6, 7, 8, 9, 10), FOCUS_LEVELS),
-    "expert": ClassTable(6, 0, (0, 1, 1, 2, 2, 3, 3, 4, 4, 5), FOCUS_LEVELS, quick_learner=True),
-    "mage": ClassTable(6, -1, (0, 0, 0, 0, 1, 1, 1, 1, 1, 2), FOCUS_LEVELS),
-    # The Healer and Vowed are partial classes in the book. They are offered as full classes
-    # here so a player can take them alone; their arts still use the partial art chart.
-    "healer": ClassTable(6, -1, (0, 0, 0, 0, 1, 1, 1, 1, 1, 2), FOCUS_LEVELS),
-    "vowed": ClassTable(6, 0, (0, 1, 1, 2, 2, 3, 3, 4, 4, 5), FOCUS_LEVELS, quick_learner=True),
-    # The class ids the WWN JSON uses.
-    "adventurer_expert_warrior": ClassTable(
-        6, 2, (1, 2, 2, 3, 4, 5, 5, 6, 6, 7), FOCUS_LEVELS, quick_learner=True
-    ),
-    "adventurer_expert_mage": ClassTable(
-        6, 0, (0, 1, 1, 2, 2, 3, 3, 4, 4, 5), FOCUS_LEVELS, quick_learner=True
-    ),
-    "adventurer_warrior_mage": ClassTable(6, 2, (1, 2, 2, 3, 4, 5, 5, 6, 6, 7), FOCUS_LEVELS),
-    "adventurer_mage_mage": ClassTable(6, -1, (0, 0, 0, 0, 1, 1, 1, 1, 1, 2), FOCUS_LEVELS),
-    # The longer names from the design document, kept as aliases.
-    "adventurer_partial_expert_partial_warrior": ClassTable(
-        6, 2, (1, 2, 2, 3, 4, 5, 5, 6, 6, 7), FOCUS_LEVELS, quick_learner=True
-    ),
-    "adventurer_partial_expert_partial_mage": ClassTable(
-        6, 0, (0, 1, 1, 2, 2, 3, 3, 4, 4, 5), FOCUS_LEVELS, quick_learner=True
-    ),
-    "adventurer_partial_mage_partial_warrior": ClassTable(
-        6, 2, (1, 2, 2, 3, 4, 5, 5, 6, 6, 7), FOCUS_LEVELS
-    ),
-    "adventurer_partial_mage_partial_mage": ClassTable(
-        6, -1, (0, 0, 0, 0, 1, 1, 1, 1, 1, 2), FOCUS_LEVELS
-    ),
-}
-
-# Class ids whose spellcasting uses the single partial-mage table, and those that use the dual
-# partial-mage table.
-PARTIAL_MAGE_CLASSES = frozenset(
-    {
-        "adventurer_expert_mage",
-        "adventurer_warrior_mage",
-        "adventurer_partial_expert_partial_mage",
-        "adventurer_partial_mage_partial_warrior",
-    }
-)
-DUAL_MAGE_CLASSES = frozenset(
-    {
-        "adventurer_mage_mage",
-        "adventurer_partial_mage_partial_mage",
-    }
-)
-
-# Cumulative experience needed for each level, indexed from level 1.
-WWN_XP: tuple[int, ...] = (0, 3, 6, 12, 18, 27, 39, 54, 72, 93)
-WWN_XP_SLOW: tuple[int, ...] = (0, 6, 15, 24, 36, 51, 69, 87, 105, 139)
-
-
-@dataclass(frozen=True)
-class CastingRow:
-    """A spellcaster's spell limits at one level."""
-
-    max_spell_level: int
-    casts: int
-    prepared: int
-
-
-FULL_MAGE_CASTING: Mapping[int, CastingRow] = {
-    level: CastingRow(max_level, casts, prepared)
-    for level, (max_level, casts, prepared) in enumerate(
-        (
-            (1, 1, 3),
-            (1, 1, 3),
-            (2, 2, 4),
-            (2, 2, 5),
-            (3, 3, 6),
-            (3, 3, 7),
-            (4, 4, 8),
-            (4, 4, 9),
-            (5, 5, 10),
-            (5, 6, 12),
-        ),
-        start=1,
-    )
-}
-
-PARTIAL_MAGE_CASTING: Mapping[int, CastingRow] = {
-    level: CastingRow(max_level, casts, prepared)
-    for level, (max_level, casts, prepared) in enumerate(
-        (
-            (1, 1, 2),
-            (1, 1, 3),
-            (1, 1, 3),
-            (1, 2, 4),
-            (2, 2, 5),
-            (2, 3, 6),
-            (2, 3, 7),
-            (2, 3, 7),
-            (3, 4, 8),
-            (3, 4, 9),
-        ),
-        start=1,
-    )
-}
-
-DUAL_MAGE_CASTING: Mapping[int, CastingRow] = {
-    level: CastingRow(max_level, casts, prepared)
-    for level, (max_level, casts, prepared) in enumerate(
-        (
-            (1, 1, 3),
-            (1, 1, 4),
-            (1, 2, 5),
-            (2, 2, 6),
-            (2, 2, 8),
-            (2, 3, 9),
-            (3, 3, 10),
-            (3, 4, 12),
-            (3, 4, 13),
-            (4, 5, 15),
-        ),
-        start=1,
-    )
-}
 
 # The character mark that records committed Effort, keyed by duration and then tradition:
 # {"scene": {"high": 1}, "day": {"necromancer": 2}}.
 EFFORT_MARK = "effort_committed"
 EFFORT_DURATIONS = ("scene", "day", "indefinite")
-
-# A tradition's spell tag and its Effort stat. The class templates are named `high_mage`,
-# `necromancer`, and `elementalist`; spells are tagged `high`, `necromancer`, and `elementalist`.
-TRADITION_TAGS: Mapping[str, str] = {
-    "high": "high",
-    "high_mage": "high",
-    "high_mage_partial": "high",
-    "necromancer": "necromancer",
-    "necromancer_partial": "necromancer",
-    "elementalist": "elementalist",
-    "elementalist_partial": "elementalist",
-    "healer": "healer",
-    "vowed": "vowed",
-}
-TRADITION_EFFORT: Mapping[str, str] = {
-    "high": "effort_high",
-    "necromancer": "effort_necromancer",
-    "elementalist": "effort_elemental",
-    "healer": "effort_healer",
-    "vowed": "effort_vowed",
-}
-# The levels at which a full or partial mage's class chart grants another art.
-ART_LEVELS_FULL: Mapping[str, frozenset[int]] = {
-    "high": frozenset({2, 4, 6, 8, 10}),
-    "necromancer": frozenset({2, 4, 6, 8, 10}),
-    "elementalist": frozenset({2, 4, 6, 8, 10}),
-}
-ART_LEVELS_PARTIAL: Mapping[str, frozenset[int]] = {
-    "high": frozenset({2, 3, 6, 9}),
-    "necromancer": frozenset({3, 6, 9}),
-    "elementalist": frozenset({3, 6, 9}),
-    "healer": frozenset({2, 4, 5, 6, 8, 10}),
-    "vowed": frozenset({2, 4, 5, 6, 8, 10}),
-}
 
 
 @dataclass(frozen=True)
@@ -352,45 +167,51 @@ STARTING_PACKAGES: Mapping[str, StartingPackage] = {
 }
 
 
-def class_table(class_id: str) -> ClassTable:
+def class_table(class_id: str, progression: WWNProgression) -> ClassTable:
     """The advancement table for a class id. Raises InvalidInput for an unknown class."""
-    found = CLASS_TABLES.get(class_id.strip().casefold())
+    found = progression.class_tables.get(class_id.strip().casefold())
     if found is None:
-        options = ", ".join(sorted(CLASS_TABLES))
+        options = ", ".join(sorted(progression.class_tables))
         raise InvalidInput(f"there is no class table for {class_id!r}; the classes are: {options}")
     return found
 
 
-def casting_row(class_id: str, level: int) -> CastingRow | None:
-    """The spellcasting limits for a class at a level, or None when the class cannot cast spells.
-    A full mage uses the full table; a single partial mage uses the partial table; two partial
-    mage classes use the dual table."""
-    if not 1 <= level <= MAX_LEVEL:
+def _chart_level(level: Any, progression: WWNProgression, character: str, chart: str) -> int:
+    if type(level) is not int or not 1 <= level <= progression.max_level:
+        raise InvalidInput(
+            f"{character} is level {level!r}; the {chart} chart supports levels "
+            f"1 through {progression.max_level}"
+        )
+    return level
+
+
+def casting_row(class_id: str, level: int, progression: WWNProgression) -> CastingRow | None:
+    """Return a class's casting row, or None if its class has no casting chart."""
+    class_id = class_id.strip().casefold()
+    table_id = progression.casting_class_tables.get(class_id)
+    if table_id is None:
         return None
-    class_id = class_id.strip().casefold()
-    if class_id == "mage":
-        return FULL_MAGE_CASTING[level]
-    if class_id in DUAL_MAGE_CLASSES:
-        return DUAL_MAGE_CASTING[level]
-    if class_id in PARTIAL_MAGE_CLASSES or "partial_mage" in class_id:
-        return PARTIAL_MAGE_CASTING[level]
-    return None
+    if type(level) is not int or not 1 <= level <= progression.max_level:
+        raise InvalidInput(
+            f"{class_id}'s {table_id} casting chart supports levels 1 through "
+            f"{progression.max_level}; got level {level}"
+        )
+    row = progression.casting_tables[table_id].get(level)
+    if row is None:
+        raise InvalidInput(f"{class_id}'s {table_id} casting chart has no row for level {level}")
+    return row
 
 
-def is_partial_mage(class_id: str) -> bool:
-    """Whether a class is a partial spellcaster, whose Effort maximum is one lower."""
-    class_id = class_id.strip().casefold()
-    return (
-        class_id in PARTIAL_MAGE_CLASSES
-        or class_id in DUAL_MAGE_CLASSES
-        or ("partial_mage" in class_id)
-    )
-
-
-def tradition_tag(tradition: str) -> str:
-    """The spell tag a tradition template grants, such as `high` for `high_mage`."""
+def tradition_data(tradition: str, progression: WWNProgression) -> tuple[str, str]:
+    """Return a tradition's normalized spell tag and configured Effort stat."""
     key = tradition.strip().casefold()
-    return TRADITION_TAGS.get(key, key)
+    tag = progression.tradition_tags.get(key, key)
+    return tag, progression.tradition_effort_stats.get(tag, "")
+
+
+def tradition_tag(tradition: str, progression: WWNProgression) -> str:
+    """The spell tag a tradition template grants, such as `high` for `high_mage`."""
+    return tradition_data(tradition, progression)[0]
 
 
 def tradition_ids(found: Any) -> list[str]:
@@ -407,26 +228,13 @@ def tradition_ids(found: Any) -> list[str]:
     return ids
 
 
-def tradition_tags(found: Any) -> list[str]:
-    return [tradition_tag(tradition) for tradition in tradition_ids(found)]
+def tradition_tags(found: Any, progression: WWNProgression) -> list[str]:
+    return [tradition_tag(tradition, progression) for tradition in tradition_ids(found)]
 
 
-def tradition_effort_stat(tradition: str) -> str:
+def tradition_effort_stat(tradition: str, progression: WWNProgression) -> str:
     """The Effort stat a tradition uses, or "" when the tradition is unknown."""
-    return TRADITION_EFFORT.get(tradition_tag(tradition), "")
-
-
-def max_effort(
-    spec: CharacterSpec, stats: Mapping[str, int], skills: Mapping[str, int], class_id: str
-) -> int:
-    """The maximum Effort a spellcaster has: 1 + Magic skill + the better Int or Cha modifier,
-    less 1 for a partial mage, and never below 1."""
-    magic = max(0, spec.skill_level(skills, "magic"))
-    best = max(spec.modifier(stats, "int"), spec.modifier(stats, "cha"))
-    value = 1 + magic + best
-    if is_partial_mage(class_id):
-        value -= 1
-    return max(1, value)
+    return tradition_data(tradition, progression)[1]
 
 
 def roll_check(
@@ -605,7 +413,22 @@ def roll_tables(tables: list[str], ctx: ToolContext) -> dict[str, Any]:
 def gain_growth(character: str, ctx: ToolContext) -> dict[str, Any]:
     """Roll the character's background Growth table for a level's growth. Apply the result with
     improve_attribute, spend_skill_point, or the appropriate counter."""
-    return ctx.world.roll_growth(character)
+
+    def identify(hc: HookContext) -> dict[str, str]:
+        _, found = _character(hc, character)
+        background = found.templates.get("background", "")
+        return {
+            "character": found.name,
+            "background": background,
+            "table": f"growth_{background}",
+        }
+
+    result = ctx.world.with_hook_context(identify)
+    try:
+        growth = ctx.world.draw_character_table(result["table"])
+    except InvalidInput as error:
+        raise InvalidInput(f"{result['character']} has no background Growth table") from error
+    return {**result, "growth": growth}
 
 
 def roll_reaction(
@@ -924,14 +747,23 @@ def gain_xp(
     itself."""
     value = whole_number(amount, "amount", 0, 1_000_000)
     rate = _xp_rate(ctx, rate)
-    table = WWN_XP_SLOW if rate == "slow" else WWN_XP
+    progression = require_wwn_progression(ctx.world)
+    table = progression.xp_slow if rate == "slow" else progression.xp_fast
+
+    def validate_level(hc: HookContext) -> int:
+        _, found = _character(hc, character)
+        level = found.counters.get("level", 1)
+        return _chart_level(level, progression, found.name, "experience")
+
+    ctx.world.with_hook_context(validate_level)
     changed = ctx.world.adjust_counter(character, "xp", value)
     total = int(changed["value"])
 
     def action(hc: HookContext) -> dict[str, Any]:
         _, found = _character(hc, character)
         level = found.counters.get("level", 1)
-        threshold = table[level] if level < MAX_LEVEL else None
+        level = _chart_level(level, progression, found.name, "experience")
+        threshold = table[level] if level < progression.max_level else None
         ready = threshold is not None and total >= threshold
         if ready:
             db, campaign_id = hc.session()
@@ -966,14 +798,18 @@ def level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str, Any]
     raises a spellcaster's castings, and recomputes the derived stats (saves, Strain, Effort)."""
     rate = _xp_rate(ctx, rate)
     spec = ctx.world.character
+    progression = require_wwn_progression(ctx.world)
+    table_xp = progression.xp_slow if rate == "slow" else progression.xp_fast
 
     def read(hc: HookContext) -> dict[str, Any]:
         _, found = _character(hc, character)
         level = found.counters.get("level", 1)
+        level = _chart_level(level, progression, found.name, "experience")
         xp = found.counters.get("xp", 0)
-        if level >= MAX_LEVEL:
-            raise InvalidInput(f"{found.name} is already at the highest level, {MAX_LEVEL}")
-        table_xp = WWN_XP_SLOW if rate == "slow" else WWN_XP
+        if level >= progression.max_level:
+            raise InvalidInput(
+                f"{found.name} is already at the highest level, {progression.max_level}"
+            )
         threshold = table_xp[level]
         if xp < threshold:
             raise InvalidInput(
@@ -997,7 +833,7 @@ def level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str, Any]
     found = ctx.world.with_hook_context(read)
     level = int(found["level"])
     new_level = level + 1
-    table = class_table(str(found["class_id"]))
+    table = class_table(str(found["class_id"]), progression)
     ctx.world.adjust_counter(character, "level", 1)
     # The book rerolls the class hit dice for the new level, adding Constitution to each die,
     # and keeps the old total plus one when the reroll is no better.
@@ -1018,12 +854,12 @@ def level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str, Any]
     if focus_picks:
         ctx.world.adjust_counter(character, "focus_picks", focus_picks)
     art_picks = sum(
-        _art_picks(str(found["class_id"]), tradition, new_level)
+        _art_picks(str(found["class_id"]), tradition, new_level, progression)
         for tradition in found["traditions"]
     )
     if art_picks:
         ctx.world.adjust_counter(character, "art_picks", art_picks)
-    casting = casting_row(str(found["class_id"]), new_level)
+    casting = casting_row(str(found["class_id"]), new_level, progression)
     if casting is not None:
         ctx.world.set_stat_max(character, "castings", casting.casts, cause=f"level {new_level}")
     _recompute_derived(ctx, character, spec, cause=f"level {new_level}")
@@ -1040,22 +876,27 @@ def level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str, Any]
     }
 
 
-def _art_picks(class_id: str, tradition: str, level: int) -> int:
+def _art_picks(class_id: str, tradition: str, level: int, progression: WWNProgression) -> int:
     """The art picks a class chart grants at a level: a single arcane tradition uses the full
     chart, while an Adventurer's partial mage uses the partial chart. A dual mage counts as a
     partial mage for both traditions."""
-    tag = tradition_tag(tradition)
+    tag = tradition_tag(tradition, progression)
     if not tag:
         return 0
-    levels = ART_LEVELS_FULL if class_id.strip().casefold() == "mage" else ART_LEVELS_PARTIAL
+    levels = (
+        progression.art_levels_full
+        if class_id.strip().casefold() == "mage"
+        else progression.art_levels_partial
+    )
     return 1 if level in levels.get(tag, frozenset()) else 0
 
 
 def spend_skill_point(character: str, skill: str, ctx: ToolContext) -> dict[str, Any]:
     """Spend skill points to raise one skill by a level. The cost rises with the level, as the
-    book's table says (1, 2, 3, 4, 5 points for levels 0 to 4), and a character must be high
-    enough level for levels 2 and above (levels 3, 6, and 9)."""
+    book's table says (1, 2, 3, 4, 5 points for levels 0 to 4), and the progression chart sets
+    the character-level prerequisite for each skill level."""
     spec = ctx.world.character
+    progression = require_wwn_progression(ctx.world)
     if skill not in spec.skills:
         options = ", ".join(sorted(spec.skills)) or "none"
         raise InvalidInput(f"there is no skill named {skill!r}; the skills are: {options}")
@@ -1063,15 +904,31 @@ def spend_skill_point(character: str, skill: str, ctx: ToolContext) -> dict[str,
     def read(hc: HookContext) -> dict[str, int]:
         _, found = _character(hc, character)
         points = found.counters.get("skill_points", 0)
+        skill_progression = spec.skill_progression
+        if skill_progression is None:
+            raise InvalidInput("the rule set has no skill progression")
         before = spec.skill_level(found.skills, skill)
-        if before >= MAX_SKILL_LEVEL:
+        if spec.skill_trained(found.skills, skill) and before >= skill_progression.maximum:
             raise InvalidInput(
-                f"{found.name}'s {spec.skills[skill].name} is already at level {MAX_SKILL_LEVEL}"
+                f"{found.name}'s {spec.skills[skill].name} is already at level "
+                f"{skill_progression.maximum}"
             )
-        new_level = before + 1
-        cost = new_level + 1
-        needs_level = SKILL_LEVEL_MINIMUMS[new_level]
-        level = found.counters.get("level", 1)
+        new_level = (
+            before + 1 if spec.skill_trained(found.skills, skill) else skill_progression.first_level
+        )
+        cost = SKILL_LEVEL_COSTS.get(new_level)
+        needs_level = progression.skill_level_minimums.get(new_level)
+        if (
+            new_level > skill_progression.maximum
+            or new_level > progression.max_skill_level
+            or cost is None
+            or needs_level is None
+        ):
+            raise InvalidInput(
+                f"the Worlds Without Number skill advancement chart does not support "
+                f"level {new_level}"
+            )
+        level = _chart_level(found.counters.get("level", 1), progression, found.name, "experience")
         if level < needs_level:
             raise InvalidInput(
                 f"{spec.skills[skill].name} level {new_level} needs character level "
@@ -1083,10 +940,10 @@ def spend_skill_point(character: str, skill: str, ctx: ToolContext) -> dict[str,
                 f"{spec.skills[skill].name} level {new_level} costs {cost} skill {unit}; "
                 f"{found.name} has {points}"
             )
-        return {"points": points, "before": before, "cost": cost}
+        return {"points": points, "before": before, "new_level": new_level, "cost": cost}
 
     found = ctx.world.with_hook_context(read)
-    new_level = int(found["before"]) + 1
+    new_level = int(found["new_level"])
     ctx.world.raise_skill(character, skill, new_level, cause="skill points")
     remaining = ctx.world.adjust_counter(character, "skill_points", -int(found["cost"]))
     _recompute_derived(ctx, character, spec, cause=f"{spec.skills[skill].name} {new_level}")
@@ -1100,8 +957,8 @@ def spend_skill_point(character: str, skill: str, ctx: ToolContext) -> dict[str,
     }
 
 
-# The minimum character level for each skill level, and the cost in skill points to buy it.
-SKILL_LEVEL_MINIMUMS: Mapping[int, int] = {0: 1, 1: 1, 2: 3, 3: 6, 4: 9}
+# Skill-point costs by target skill level.
+SKILL_LEVEL_COSTS: Mapping[int, int] = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5}
 # The minimum character level for each attribute boost, in the order they are bought.
 ATTRIBUTE_BOOST_MINIMUMS: tuple[int, ...] = (2, 2, 3, 6, 9)
 
@@ -1200,8 +1057,16 @@ def learn_focus(character: str, focus: str, ctx: ToolContext) -> dict[str, Any]:
             skill = str(effect["id"])
             if skill not in spec.skills:
                 raise InvalidInput(f"{feature.name} names no skill {skill!r}")
+            progression = spec.skill_progression
+            if progression is None:
+                raise InvalidInput("the rule set has no skill progression")
             before = spec.skill_level(skills, skill)
-            value = min(MAX_SKILL_LEVEL, before + delta)
+            if spec.skill_trained(skills, skill):
+                value = min(progression.maximum, before + delta)
+            elif delta > 0:
+                value = min(progression.maximum, progression.first_level + delta - 1)
+            else:
+                value = before + delta
             if value > before:
                 ctx.world.raise_skill(character, skill, value, cause=f"the focus {feature.name}")
                 skills[skill] = value
@@ -1227,24 +1092,19 @@ def learn_focus(character: str, focus: str, ctx: ToolContext) -> dict[str, Any]:
     }
 
 
-# The feature tags that mark an art of one of the three traditions.
-ART_TAGS = ("high", "necromancer", "elementalist", "healer", "vowed")
-
-
 def learn_art(character: str, art: str, ctx: ToolContext) -> dict[str, Any]:
-    """Spend an art pick on an art of the character's own tradition. The class chart grants art
-    picks at levels 2, 4, 6, 8, and 10 for a full mage, and at levels 2, 3, 6, and 9 for a partial
-    mage (3, 6, and 9 for a partial Necromancer or Elementalist)."""
+    """Spend an art pick on an art of the character's own configured tradition."""
     spec = ctx.world.character
+    progression = require_wwn_progression(ctx.world)
     feature = spec.features.get(art)
     if feature is None:
         raise InvalidInput(f"there is no feature named {art!r}")
-    if feature.feature_type != "feat" or feature.tag not in ART_TAGS:
+    if feature.feature_type != "feat" or feature.tag not in progression.art_levels_partial:
         raise InvalidInput(f"{feature.name} is not an art")
 
     def read(hc: HookContext) -> dict[str, Any]:
         _, found = _character(hc, character)
-        tags = tradition_tags(found)
+        tags = tradition_tags(found, progression)
         if not tags:
             raise InvalidInput(f"{found.name} has no magical tradition, so cannot learn arts")
         if feature.tag not in tags:
@@ -1275,6 +1135,7 @@ def learn_spell(character: str, spell: str, ctx: ToolContext) -> dict[str, Any]:
     Elementalist may learn High Magic or a spell of their own New Magic. The spell's level must
     be one the character can cast."""
     spec = ctx.world.character
+    progression = require_wwn_progression(ctx.world)
     feature = spec.features.get(spell)
     if feature is None:
         raise InvalidInput(f"there is no feature named {spell!r}")
@@ -1283,7 +1144,7 @@ def learn_spell(character: str, spell: str, ctx: ToolContext) -> dict[str, Any]:
 
     def read(hc: HookContext) -> dict[str, Any]:
         _, found = _character(hc, character)
-        tags = tradition_tags(found)
+        tags = tradition_tags(found, progression)
         if not tags:
             raise InvalidInput(f"{found.name} has no magical tradition, so cannot learn spells")
         if feature.tag not in {*tags, "high"}:
@@ -1292,7 +1153,7 @@ def learn_spell(character: str, spell: str, ctx: ToolContext) -> dict[str, Any]:
                 f"traditions, {', '.join(tags)}"
             )
         class_id = found.templates.get("class", "")
-        row = casting_row(class_id, found.counters.get("level", 1))
+        row = casting_row(class_id, found.counters.get("level", 1), progression)
         if row is None:
             raise InvalidInput(f"{found.name}'s class cannot cast spells")
         if feature.rank > row.max_spell_level:
@@ -1402,19 +1263,28 @@ def rest(
     """Take a rest through the world, then apply the rule set's recovery: a night restores hit
     points equal to the character's level, one point of System Strain, all spell castings, and
     scene and day Effort. A shorter rest restores scene Effort only."""
+    progression = require_wwn_progression(ctx.world)
     result = ctx.world.rest(length, interrupted=interrupted, reason=reason)
-    return {**result, **_rest_recovery(character, ctx, length, interrupted)}
+    return {
+        **result,
+        **_rest_recovery(character, ctx, length, interrupted, progression),
+    }
 
 
 def recover_after_rest(character: str, ctx: ToolContext) -> dict[str, Any]:
     """Apply a night's recovery without advancing the clock, for a rest the GM tracked elsewhere.
     A night restores hit points equal to the character's level, one System Strain, every spell
     casting, and the Effort committed for a scene or a day."""
-    return _rest_recovery(character, ctx, "night", False)
+    progression = require_wwn_progression(ctx.world)
+    return _rest_recovery(character, ctx, "night", False, progression)
 
 
 def _rest_recovery(
-    character: str, ctx: ToolContext, length: str, interrupted: bool = False
+    character: str,
+    ctx: ToolContext,
+    length: str,
+    interrupted: bool,
+    progression: WWNProgression,
 ) -> dict[str, Any]:
     """Record a rest's recovery: the night's hit points, Strain, and castings, and the Effort
     whose duration ends with the rest."""
@@ -1434,22 +1304,30 @@ def _rest_recovery(
             )
             restored[stat] = restored.get(stat, 0) + amount
 
+        durations = (
+            ("scene", "day") if length in ("night", "extended") and not interrupted else ("scene",)
+        )
+        marks = found.marks.get(EFFORT_MARK) or {}
+        effort_recoveries: list[tuple[str, str, int]] = []
+        for duration in durations:
+            for tradition, amount in (marks.get(duration) or {}).items():
+                stat = tradition_effort_stat(str(tradition), progression)
+                if not stat:
+                    raise InvalidInput(f"there is no Effort pool for the tradition {tradition!r}")
+                if stat not in found.stats:
+                    raise InvalidInput(f"{found.name} has no {stat} stat")
+                effort_recoveries.append((duration, stat, int(amount)))
+        kept = {duration: dict(held) for duration, held in marks.items()}
+
         if length in ("night", "extended") and not interrupted:
             nights = 7 if length == "extended" else 1
             if length == "extended" or "frail" not in found.conditions:
                 recover("hp", found.counters.get("level", 1) * nights, f"a {length}'s rest")
                 recover("strain", nights, f"a {length}'s rest")
             recover("castings", found.harm.get("castings", 0), f"a {length}'s rest")
-        durations = (
-            ("scene", "day") if length in ("night", "extended") and not interrupted else ("scene",)
-        )
-        marks = found.marks.get(EFFORT_MARK) or {}
-        kept = {duration: dict(held) for duration, held in marks.items()}
+        for duration, stat, amount in effort_recoveries:
+            recover(stat, amount, f"{duration} Effort after a {length}'s rest")
         for duration in durations:
-            for tradition, amount in (marks.get(duration) or {}).items():
-                stat = tradition_effort_stat(str(tradition))
-                if stat:
-                    recover(stat, int(amount), f"{duration} Effort after a {length}'s rest")
             kept.pop(duration, None)
         if kept != marks:
             hc.set_mark(

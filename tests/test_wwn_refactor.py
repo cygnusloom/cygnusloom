@@ -23,6 +23,8 @@ from cygnusforge.content.library import (
     _load_marketplace,
     _load_tool_call,
 )
+from cygnusforge.llm.fake import FakeProvider
+from cygnusforge.services import campaigns as campaigns_service
 from cygnusforge.services import encounters, inventory, market
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
@@ -33,7 +35,7 @@ from cygnusforge.services.events import (
     load_state,
     record,
 )
-from cygnusforge.services.world import WorldTools
+from cygnusforge.services.world import WorldTools, scene_view, world_state_text
 from tests.conftest import content_library
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
 from tests.test_character_creation import _cairn_campaign, _choices, _complete_form, _rolled_stats
@@ -73,6 +75,7 @@ def _wwn_tools(app: FastAPI, campaign_id: int, rules=None) -> WorldTools:
         tables=LIBRARY.core.tables,
         rng=random.Random(0),
         character=WWN.character,
+        rule_data=WWN.rule_data,
         plus=WWN.plus,
         inventory=rules or WWN.inventory,
         item_sizes=WWN.item_sizes,
@@ -161,6 +164,69 @@ def test_cairn_keeps_its_fixed_capacity(client_factory: Callable[[], TestClient]
     assert inventory.capacity_of(pc, CAIRN.inventory, CAIRN.character) == CAIRN.inventory.capacity
     result = tools.give_item(PC, "Lantern")
     assert result["capacity"] == CAIRN.inventory.capacity
+
+
+def test_taking_an_object_uses_stat_based_capacity(client_factory: Callable[[], TestClient]):
+    client, campaign_id = _wwn_campaign(client_factory)
+    rules = replace(
+        WWN.inventory,
+        capacity=0,
+        capacity_stat="str",
+        capacity_multiplier=100,
+    )
+    tools = _wwn_tools(client.app, campaign_id, rules)
+    location = "Capacity Yard"
+    tools.create_location(location, "A test yard.")
+    tools.move_actor(WREN, location=location)
+
+    tools.place_object(location, "a rope", False, "a test", item="Rope")
+    result = tools.take_object("a rope", WREN, "a test")
+
+    assert result["item"] == "Rope"
+    assert any(item.name == "Rope" for item in _wwn_pc(client, campaign_id).items)
+
+
+def test_world_and_pack_displays_use_stat_based_capacity(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _wwn_campaign(client_factory)
+    rules = replace(WWN.inventory, capacity_stat="str", capacity_multiplier=1)
+    state = _state(client.app, campaign_id)
+    pc = state.pc()
+    assert pc is not None
+    capacity = inventory.capacity_of(pc, rules, WWN.character)
+    used = inventory.used_slots(pc)
+
+    world = world_state_text(state, WWN.campaign, inventory=rules)
+    pack = scene_view(state, WWN.character, rules).pack
+
+    expected_line = f"Inventory: {used} of {capacity} slots"
+    if used > capacity:
+        expected_line += " (over capacity)"
+    assert expected_line in world
+    assert pack is not None
+    assert pack.capacity == capacity
+
+
+def test_non_wwn_rule_set_can_draw_a_character_table(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id, _ = _fight_client(client_factory)
+    library = client.app.state.content
+    rule_set = library.rule_sets["cairn2e"]
+    context = campaigns_service._tool_context(
+        client.app.state.engine,
+        random.Random(0),
+        FakeProvider(),
+        "fake/scripted",
+        campaign_id,
+        rule_set,
+        library.world_content("twin-lakes", rule_set.id),
+    )
+    table = next(iter(sorted(rule_set.tables)))
+    expected = random.Random(0).choice(context.world.tables[table]).value
+
+    assert context.world.draw_character_table(table) == expected
 
 
 def test_a_full_inventory_drains_nothing_when_the_rule_set_names_no_full_stat(

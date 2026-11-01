@@ -65,9 +65,9 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
             "picks": _picks_view(spec, template),
             "skill_picks": _skill_picks_view(spec, template),
             "feat_picks": _feat_picks_view(spec, template),
+            "skill_grants": dict(template.skills),
             "compatible_with": {
-                kind: list(template_ids)
-                for kind, template_ids in template.compatible_with.items()
+                kind: list(template_ids) for kind, template_ids in template.compatible_with.items()
             },
             "template_requirements": [
                 {
@@ -112,6 +112,14 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
         "kinds": kinds,
         "choice_fields": choice_fields,
         "text_fields": text_fields,
+        "skill_progression": (
+            {
+                "first_level": spec.skill_progression.first_level,
+                "creation_maximum": spec.skill_progression.creation_maximum,
+            }
+            if spec.skill_progression is not None
+            else None
+        ),
         "name_suggestions": any(template.names for template in spec.templates.values()),
         "pronoun_options": _pronoun_options(),
     }
@@ -187,15 +195,12 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
         except ValueError:
             raise InvalidInput(f"{stat.name} must be a number") from None
     templates = {}
-    selected_template_ids = {
-        kind: form_text(form, TEMPLATE_PREFIX + kind) for kind in spec.kinds()
-    }
+    selected_template_ids = {kind: form_text(form, TEMPLATE_PREFIX + kind) for kind in spec.kinds()}
     for kind in spec.kinds():
         offered = [
             template
             for template in spec.templates.values()
-            if template.kind == kind
-            and _template_is_compatible(template, selected_template_ids)
+            if template.kind == kind and _template_is_compatible(template, selected_template_ids)
         ]
         if not offered:
             continue
@@ -277,15 +282,11 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
 
 def _template_is_compatible(template: Template, selected: dict[str, str]) -> bool:
     """A template is offered only when every template kind it names has an allowed selection."""
-    return all(
-        selected.get(kind) in allowed
-        for kind, allowed in template.compatible_with.items()
-    )
+    return all(selected.get(kind) in allowed for kind, allowed in template.compatible_with.items())
 
 
 def _picks_view(spec: CharacterSpec, template: Template) -> dict[str, Any] | None:
-    """The spells a template lets the player pick, grouped by the tag they share (a Year). A blank
-    pick is rolled from the same spells."""
+    """The features a template lets the player pick, grouped by their tag."""
     if template.choose is None:
         return None
     tag_field = spec.fields[template.choose.tag_field]
@@ -297,7 +298,10 @@ def _picks_view(spec: CharacterSpec, template: Template) -> dict[str, Any] | Non
         "count": template.choose.count,
         "feature_type": template.choose.feature_type,
         "tag_field": tag_field.id,
-        "hint": f"Pick from the spells of your {tag_field.name}, or leave a pick blank to roll it.",
+        "hint": (
+            f"Pick from the {template.choose.feature_type}s of your {tag_field.name}, "
+            "or leave a pick blank to roll it."
+        ),
         "groups": [{"tag": tag, "features": items} for tag, items in groups.items()],
     }
 
@@ -308,6 +312,7 @@ def _skill_picks_view(spec: CharacterSpec, template: Template) -> list[dict[str,
         {
             "id": pick.id,
             "count": pick.count,
+            "max_level": pick.max_level,
             "hint": (
                 f"Pick {pick.count} skill{'s' if pick.count != 1 else ''} "
                 f"({spec.table_names.get(pick.table, pick.table)}), or leave a pick blank to roll it."
@@ -324,29 +329,36 @@ def _skill_picks_view(spec: CharacterSpec, template: Template) -> list[dict[str,
 def _feat_picks_view(spec: CharacterSpec, template: Template) -> list[dict[str, Any]]:
     """The feature picks a template lets the player choose, each with its offered features. A
     pick's options are filtered by the pick's tag and highest rank."""
-    return [
-        {
-            "id": pick.id,
-            "count": pick.count,
-            "tag": pick.tag,
-            "max_rank": pick.max_rank,
-            "hint": (
-                f"Pick {pick.count} {pick.tag}{'s' if pick.count != 1 else ''}"
-                + (f" of rank {pick.max_rank} or less" if pick.max_rank not in (None, 0) else "")
-                + ", or leave a pick blank to roll it."
-            ),
-            "options": [
-                {
-                    "value": feature.id,
-                    "title": feature.name,
-                    "detail": feature.description or None,
-                    "rank": feature.rank,
-                }
-                for feature in feature_pick_options(spec, pick)
-            ],
-        }
-        for pick in template.feat_picks
-    ]
+    picks = []
+    for pick in template.feat_picks:
+        label = pick.tag or pick.feature_type or "feature"
+        picks.append(
+            {
+                "id": pick.id,
+                "count": pick.count,
+                "tag": label,
+                "max_rank": pick.max_rank,
+                "hint": (
+                    f"Pick {pick.count} {label}{'s' if pick.count != 1 else ''}"
+                    + (
+                        f" of rank {pick.max_rank} or less"
+                        if pick.max_rank not in (None, 0)
+                        else ""
+                    )
+                    + ", or leave a pick blank to roll it."
+                ),
+                "options": [
+                    {
+                        "value": feature.id,
+                        "title": feature.name,
+                        "detail": feature.description or None,
+                        "rank": feature.rank,
+                    }
+                    for feature in feature_pick_options(spec, pick)
+                ],
+            }
+        )
+    return picks
 
 
 def _table_view(spec: CharacterSpec, table: str) -> dict[str, Any]:

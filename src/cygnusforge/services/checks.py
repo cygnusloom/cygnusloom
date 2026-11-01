@@ -58,7 +58,7 @@ def roll_check(
             )
         skill_name = skill_rules.name
         skill_level = spec.skill_level(found.skills, skill_id)
-        skill_bonus = skill_level if skill_level >= 0 else check.unskilled
+        skill_bonus = skill_level if spec.skill_trained(found.skills, skill_id) else check.unskilled
     stat_id = stat.strip()
     stat_name = ""
     stat_bonus = 0
@@ -97,6 +97,7 @@ def roll_check(
             skill=skill_id,
             skill_name=skill_name,
             skill_level=skill_level,
+            skill_bonus=skill_bonus,
             stat=stat_id,
             stat_name=stat_name,
             roll=roll,

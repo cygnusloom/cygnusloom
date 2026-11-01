@@ -36,13 +36,14 @@ directory. The rules text here and in `rules.json` is paraphrased; the books are
   defeat at zero HP. Cairn's armor-as-absorption and Hogwarts' no-combat setup are unchanged.
 - Foci, starting spells, and arts are picked with `feature_picks`; each feature may carry `rank`
   (spell level or Focus level) and creation `effects` (stat, skill, counter, armor, note).
-- Advancement, the class tables, the casting tables, and the starting packages live in
-  `src/cygnusforge/rules/wwn.py`. These are ruleset-specific arithmetic, not lookups the GM
-  makes, so they are isolated Python data rather than JSON.
+- Advancement arithmetic and starting packages live in the isolated
+  [WWN module](../../../rules/wwn.py). Class, experience, casting, art, and skill-prerequisite
+  charts live in [progression.json](./progression.json) and are validated for each loaded ruleset.
 - Magic state (prepared spells and committed Effort) lives in character `marks`, the way Cairn
   keeps deprivation, so it replays from the log. Daily castings and Effort use harm on ordinary
   stats, so `current(castings)` and `current(effort_high)` are what is left.
-- The tradition kind is required, but each tradition template names the classes that may take it.
+- The tradition kind is required, but each tradition template names the classes that may take it
+  through the generic `compatible_with` template restriction.
   A Mage's tradition is the full template, an Adventurer mage takes the partial template, and
   Warriors, Experts, and non-mage Adventurers take `no_tradition`. The form hides templates the
   chosen class cannot take, and the server refuses them. The full and partial templates carry
@@ -64,24 +65,28 @@ directory. The rules text here and in `rules.json` is paraphrased; the books are
 
 ## Generic engine primitives added
 
-All defaults preserve the old behaviour, so Cairn 2e and Hogwarts JSON need no changes.
+The 2.0 ruleset format is intentionally breaking; the bundled rulesets are migrated while preserving
+their player-facing behaviour.
 
 | Area | JSON | Behaviour |
 | --- | --- | --- |
 | Attribute modifiers | `stat.modifier` | Bands of `{min, modifier}`; `Stat.modifier(score)`, `CharacterSpec.modifier` |
 | Rolled stat plus modifier | `stat.plus_modifier` | `hp` adds the Constitution modifier to its roll |
 | Derived stats | `stat.derived` | `base`, `plus`, `minus_counters`, `best_modifier`, `minus_best_modifier`, `best_score`, `plus_skills`, `minus_templates`, `minimum` |
-| Skills | `type: skill`, `template.skills` | Skill definitions and level grants; absent is untrained |
-| Skill picks | `template.skill_picks` | `{id, count, table, exclude, max_level}`; the free class skill is one |
+| Skills | `type: skill`, `template.skills`, `rule_set.skill_progression` | Skill definitions, level grants, and configured untrained, first, creation maximum, and advancement maximum levels |
+| Skill picks | `template.skill_picks` | `{id, count, table, exclude, max_level}`; repeated skills respect the cap, and blank picks are rolled |
 | Feature picks | `template.feat_picks` | `{id, count, tag, tags, feature_type, max_rank, exclude}`; `submitted["feature_picks"]` |
-| Template classes | `template.classes` | The class template ids that may take it; empty means any |
+| Template compatibility | `template.compatible_with` | Allowed choices in any other template kind |
+| Required selections | `template.template_requirements`, `template.choice_key` | Required and distinct choices across template kinds |
+| Ruleset data | `type: rule_data` | Validated structured data passed to ruleset tools without global state |
 | Feature rank and effects | `feature.rank`, `feature.effects` | Spell/Focus rank; `stat`, `skill`, `counter`, `armor`, `note` at creation |
 | Weapon data | `feature.skill`, `attributes`, `shock`, `shock_ac`, `flags` | What a weapon rolls, what it does on a miss, and engine flags such as `no_unskilled_penalty` |
 | Checks | `type: check` | `{dice, unskilled, default_difficulty, minimum_difficulty, maximum_difficulty}` |
 | Projects | `project.started`, `project.advanced`, `project.abandoned` | Generic progress tracker for projects, research, magic workings, and faction turns |
-| Hit and damage bonuses | `combat.hit_bonus_stat`, `damage_bonus_stat`, `attribute_damage`, `level_damage_classes`, `level_damage_divisor` | Add a stat and the class's half-level damage (Killing Blow) |
+| Hit and damage bonuses | `combat.hit_bonus_stat`, `damage_bonus_stat`, `attribute_damage`, `level_damage` | Add a stat and the class's half-level damage (Killing Blow) |
 | Shock | `combat.shock_on_miss`, `minimum_shock_damage` | Shock on a miss, and a hit never below Shock |
 | Defeat | `combat.defeat_at_zero` | A stat reaching 0 defeats the character; PCs may become dying |
+| Injuries | `combat.injuries` | Configured harm trigger, affected target kinds, and injury table |
 | Monster Shock | statblock attack `shock`/`shock_ac` | Per-attack Shock in the bestiary |
 | Unarmed | `combat.unarmed.attributes` | The attributes an unarmed strike may use |
 | Flat dice | `rules/dice.py` | Formulas may carry flat bonuses and penalties, such as `1d10+2` |

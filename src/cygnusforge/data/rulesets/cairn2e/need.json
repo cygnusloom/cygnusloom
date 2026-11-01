@@ -3,6 +3,7 @@
     "type": "hooks",
     "id": "cairn",
     "python_module": "cairn2e",
+    "configure": "configure_hooks",
     "new_day": "new_day",
     "before_rest": "before_rest",
     "held_back": "held_back",

@@ -5,7 +5,7 @@ from __future__ import annotations
 import random
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Protocol, TypeVar
+from typing import Any, Literal, Protocol, TypeVar
 
 from cygnusforge.content.character import CharacterSpec
 from cygnusforge.content.library import CheckRules
@@ -17,15 +17,28 @@ class CoreWorld(Protocol):
     """The campaign's world as the system-agnostic core tools may change and read it. Every
     rule set has these, whatever its game system.
 
-    `character`, `checks`, and `rng` let a rule set's Python module read the character spec, the
-    rule set's checks, and the campaign's dice without opening the campaign itself."""
+    `character`, `checks`, `rule_data`, and `rng` let a rule set's Python module read the character
+    spec, its structured rule data and checks, and the campaign's dice without opening the campaign
+    itself."""
 
-    # The rule set's character spec, in case a module needs its features, skills, or stats.
-    character: CharacterSpec
-    # The rule set's checks by id, such as its skill check.
-    checks: Mapping[str, CheckRules]
-    # The campaign's dice. A module rolls through this so replays and tests stay reproducible.
-    rng: random.Random
+    @property
+    def character(self) -> CharacterSpec:
+        """The rule set's character specification."""
+
+    @property
+    def rule_data(self) -> Mapping[str, object]:
+        """The rule set's structured JSON data, indexed by definition id."""
+
+    @property
+    def checks(self) -> Mapping[str, CheckRules]:
+        """The rule set's checks, indexed by id."""
+
+    @property
+    def rng(self) -> random.Random:
+        """The campaign's dice, shared by modules so rolls remain reproducible."""
+
+    def draw_character_table(self, table: str) -> str:
+        """Choose one option from a character table without recording a campaign event."""
 
     def create_location(
         self,
@@ -225,7 +238,7 @@ class CoreWorld(Protocol):
 
     def raise_skill(self, name: str, skill: str, level: int, cause: str = "") -> dict[str, Any]:
         """Set a character's level in one skill to `level`, recording the change. A rule set's
-        tool decides the cap it enforces."""
+        skill progression defines its allowed levels."""
 
     def restore_stat(self, name: str, stat: str, amount: int, cause: str = "") -> dict[str, Any]:
         """Give a character back `amount` of what it lost from one stat, such as hit points,
@@ -323,9 +336,9 @@ class World(CoreWorld, Protocol):
 
     def stabilize(self, name: str, explanation: str) -> dict[str, Any]: ...
 
-    def give_spellbook(self, name: str, spell: str, description: str) -> dict[str, Any]: ...
-
-    def give_scroll(self, name: str, spell: str, description: str) -> dict[str, Any]: ...
+    def give_spell_item(
+        self, name: str, spell: str, description: str, *, role: Literal["reusable", "single_use"]
+    ) -> dict[str, Any]: ...
 
     def give_charged_item(
         self, name: str, item: str, uses: int, recharge: str, size: str = "normal"
@@ -349,6 +362,10 @@ class World(CoreWorld, Protocol):
 
     def recover_character(
         self, name: str, explanation: str, consequence: str
+    ) -> dict[str, Any]: ...
+
+    def heal_character(
+        self, name: str, amount: int, stat: str | None = None, cause: str = ""
     ) -> dict[str, Any]: ...
 
     def harm_character(self, name: str, stat: str, amount: int, cause: str) -> dict[str, Any]: ...

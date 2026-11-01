@@ -291,7 +291,7 @@ def heal_character(
     name: str,
     amount: int,
     ctx: ToolContext,
-    stat: str = "hp",
+    stat: str | None = None,
     cause: str = "",
 ) -> dict[str, Any]:
     """Restore lost points of a stat, such as hit points from a healing spell or art."""

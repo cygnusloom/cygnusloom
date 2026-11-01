@@ -6,8 +6,15 @@ from typing import Any
 import pytest
 
 from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.content.library import _load_injury_entries
-from cygnusforge.services.events import MaxChanged, current, record
+from cygnusforge.content.library import _load_combat, _load_injury_entries
+from cygnusforge.services.events import (
+    InjuryGained,
+    MaxChanged,
+    current,
+    decode,
+    events_since,
+    record,
+)
 from cygnusforge.services.injuries import EffectContext, run_effects
 from tests.test_combat import CAIRN, PC, Rolls, _character, _fight, _foe, _hit
 from tests.test_world import _db
@@ -24,6 +31,36 @@ def _swapped() -> list[dict[str, Any]]:
     entries = _entries(12)
     entries[0], entries[1] = entries[1], entries[0]
     return entries
+
+
+def _injury_combat(injuries: Any):
+    entries = _load_injury_entries(
+        Definition(type="injury_table", id="synthetic", data={"entries": _entries(4)}),
+        CAIRN.character,
+        CAIRN.conditions,
+        "synthetic",
+    )
+    return _load_combat(
+        Definition(
+            type="combat",
+            id="synthetic",
+            data={
+                "type": "combat",
+                "id": "synthetic",
+                "damage": [{"kind": "harm", "stat": "hp"}],
+                "check_die": "1d20",
+                "initiative_stat": "dex",
+                "defeat": {"player_character": "down", "npc": "dead"},
+                "armor_max": 0,
+                "injuries": injuries,
+            },
+        ),
+        {},
+        CAIRN.character,
+        CAIRN.conditions,
+        {"synthetic": entries},
+        "synthetic",
+    )
 
 
 def _run(app, campaign_id: int, ops: list[dict[str, Any]], *dice: int) -> None:
@@ -96,6 +133,31 @@ def test_a_foe_brought_to_zero_gains_no_scar(client_factory):
     result = replace(tools, rng=Rolls(2, 1)).player_attack("Bo", "Sword")
 
     assert "injury" not in result
+
+
+def test_damage_trigger_can_injure_an_npc_without_depleting_the_selected_stat(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    injuries = {
+        "table": "synthetic",
+        "stat": "hp",
+        "trigger": "damage",
+        "target_kinds": ["npc"],
+    }
+    tools = replace(tools, combat=_injury_combat(injuries))
+    _foe(tools, "Bo", hp=10)
+
+    result = replace(tools, rng=Rolls(1)).player_attack("Bo", "Sword")
+
+    assert result["harm"] == {"hp": 1}
+    assert result["injury"] == "Injury 1"
+    npc = _character(app, campaign_id, "Bo")
+    assert current(npc, "hp") == 9
+    assert npc.injuries == ["Injury 1"]
+    with _db(app) as db:
+        [event] = [
+            decode(row) for row in events_since(db, campaign_id) if row.kind == InjuryGained.kind
+        ]
+    assert event.render() == "Bo gains the injury Injury 1 (Injuries table 1). An injury."
 
 
 def test_the_statblock_names_the_conditions_and_scars_a_character_has(client_factory):
@@ -219,9 +281,15 @@ def test_a_note_changes_no_stat_or_condition(client_factory):
     assert (dict(after.stats), list(after.conditions)) == snapshot
 
 
-def test_a_scar_table_of_the_wrong_length_is_rejected():
-    definition = Definition(type="injury_table", id="injuries", data={"entries": _entries(11)})
-    with pytest.raises(ContentError, match="'entries' must list exactly 12 entries"):
+def test_a_non_12_scar_table_loads_contiguous_rolls():
+    definition = Definition(type="injury_table", id="injuries", data={"entries": _entries(7)})
+    table = _load_injury_entries(definition, CAIRN.character, CAIRN.conditions, "cairn2e")
+    assert [entry.roll for entry in table] == list(range(1, 8))
+
+
+def test_an_empty_scar_table_is_rejected():
+    definition = Definition(type="injury_table", id="injuries", data={"entries": []})
+    with pytest.raises(ContentError, match="'entries' must be a non-empty list"):
         _load_injury_entries(definition, CAIRN.character, CAIRN.conditions, "cairn2e")
 
 
@@ -243,6 +311,8 @@ def test_the_loaded_scar_table_has_twelve_entries_in_order():
     table = CAIRN.combat.injury_table
     assert table is not None
     assert table.stat == "hp"
+    assert table.trigger == "depleted"
+    assert table.target_kinds == ("pc",)
     assert [entry.roll for entry in table.entries] == list(range(1, 13))
     assert [entry.name for entry in table.entries][:3] == [
         "Lasting Scar",
@@ -250,6 +320,84 @@ def test_the_loaded_scar_table_has_twelve_entries_in_order():
         "Walloped",
     ]
     assert table.entries[-1].name == "Doomed"
+
+
+@pytest.mark.parametrize(
+    ("injuries", "message"),
+    [
+        ("not an object", "'injuries' must be an object"),
+        (
+            {"stat": "hp", "trigger": "depleted", "target_kinds": ["pc"]},
+            "'table' must be a non-empty string",
+        ),
+        (
+            {"table": "missing", "stat": "hp", "trigger": "depleted", "target_kinds": ["pc"]},
+            "names no injury table",
+        ),
+        (
+            {
+                "table": "synthetic",
+                "stat": "luck",
+                "trigger": "depleted",
+                "target_kinds": ["pc"],
+            },
+            "names no stat",
+        ),
+        (
+            {"table": "synthetic", "stat": "hp", "target_kinds": ["pc"]},
+            "'trigger' must be one of",
+        ),
+        (
+            {
+                "table": "synthetic",
+                "stat": "hp",
+                "trigger": "always",
+                "target_kinds": ["pc"],
+            },
+            "'trigger' must be one of",
+        ),
+        (
+            {
+                "table": "synthetic",
+                "stat": "hp",
+                "trigger": "damage",
+                "target_kinds": [],
+            },
+            "'target_kinds' must be a non-empty list",
+        ),
+        (
+            {
+                "table": "synthetic",
+                "stat": "hp",
+                "trigger": "damage",
+                "target_kinds": ["monster"],
+            },
+            "names no character kind",
+        ),
+        (
+            {
+                "table": "synthetic",
+                "stat": "hp",
+                "trigger": "damage",
+                "target_kinds": ["npc", "npc"],
+            },
+            "must not list a kind twice",
+        ),
+        (
+            {
+                "table": "synthetic",
+                "stat": "hp",
+                "trigger": "damage",
+                "target_kinds": ["npc"],
+                "effect": "unsupported",
+            },
+            "unexpected field",
+        ),
+    ],
+)
+def test_malformed_injury_trigger_configuration_is_rejected(injuries, message):
+    with pytest.raises(ContentError, match=message):
+        _injury_combat(injuries)
 
 
 def test_the_scar_text_is_the_books_text():

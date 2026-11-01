@@ -222,7 +222,7 @@ def test_use_item_refuses_an_item_not_carried(client_factory):
 
 def test_use_item_refuses_a_relic(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _add_consumable(app, campaign_id, "Sun Charm", 3, kind=CAIRN.magic.charged_kind)
+    _add_consumable(app, campaign_id, "Sun Charm", 3, kind=CAIRN.magic.charged.kind)
     with pytest.raises(InvalidInput, match="use_charge"):
         tools.use_item(PC, "Sun Charm")
 

@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from cygnusforge.content.definitions import ContentError, required_text
 from cygnusforge.content.library import InventoryRules
 from cygnusforge.rules.context import ToolContext
 from cygnusforge.services.common import InvalidInput
@@ -18,6 +19,29 @@ from cygnusforge.services.events import (
 )
 from cygnusforge.services.hooks import HookContext
 from cygnusforge.services.inventory import carry_item
+
+if TYPE_CHECKING:
+    from cygnusforge.content.character import CharacterSpec
+
+
+def configure_hooks(
+    options: Mapping[str, Any], character: CharacterSpec, label: str
+) -> Mapping[str, Any]:
+    """Resolve Cairn's configured ration feature to the item name used by its rest hook."""
+    configured = dict(options)
+    if "feature" not in configured:
+        return configured
+
+    feature_id = required_text(configured, "feature", f"{label}: options")
+    if feature_id not in character.features:
+        raise ContentError(f"{label}: 'feature' names no character feature ({feature_id!r})")
+    feature = character.features[feature_id]
+    if feature.feature_type != "item" or feature.uses < 1:
+        raise ContentError(
+            f"{label}: 'feature' must be a consumable item with uses ({feature_id!r})"
+        )
+    configured["item"] = feature.name
+    return configured
 
 
 def search_monster(query: str, ctx: ToolContext) -> dict[str, list[dict[str, Any]]]:
@@ -175,11 +199,11 @@ def stabilize(name: str, explanation: str, ctx: ToolContext) -> dict[str, Any]:
 
 
 def give_spellbook(name: str, spell: str, description: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.give_spellbook(name, spell, description)
+    return ctx.world.give_spell_item(name, spell, description, role="reusable")
 
 
 def give_scroll(name: str, spell: str, description: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.give_scroll(name, spell, description)
+    return ctx.world.give_spell_item(name, spell, description, role="single_use")
 
 
 def give_charged_item(

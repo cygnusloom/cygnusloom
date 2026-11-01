@@ -1,24 +1,27 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from dataclasses import replace
+from typing import Any, Literal
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import current
+from cygnusforge.services.events import SpellCast, current, decode, events_since
 from tests.test_combat import (
     PC,
     Rolls,
     _character,
+    _declarative,
     _fight,
     _set_condition,
     _set_stat,
     _tools,
     save_succeeds,
 )
+from tests.test_world import _db
 
 SPELL = "Magic Missile"
 TEXT = "Fires a bolt of force that never misses."
@@ -41,7 +44,7 @@ def test_a_spellbook_holds_one_spell_for_one_slot_with_its_text(
 ):
     app, campaign_id, tools = _fight(client_factory)
     before = _used(app, campaign_id)
-    result = tools.give_spellbook(PC, SPELL, TEXT)
+    result = tools.give_spell_item(PC, SPELL, TEXT, role="reusable")
     assert result["slots_used"] == before + 1
     book = _named(app, campaign_id, SPELL)
     assert [(i.kind, i.size, i.slots, i.text) for i in book] == [("spellbook", "normal", 1, TEXT)]
@@ -49,7 +52,7 @@ def test_a_spellbook_holds_one_spell_for_one_slot_with_its_text(
 
 def test_casting_from_a_spellbook_adds_exactly_one_fatigue(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    tools.give_spellbook(PC, SPELL, TEXT)
+    tools.give_spell_item(PC, SPELL, TEXT, role="reusable")
     assert not _fatigue(app, campaign_id)
     result = tools.cast_spell(PC, SPELL)
     assert result["source"] == "spellbook"
@@ -60,7 +63,7 @@ def test_casting_from_a_spellbook_adds_exactly_one_fatigue(client_factory):
 
 def test_a_spellbook_is_matched_by_spell_name_regardless_of_case(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    tools.give_spellbook(PC, SPELL, TEXT)
+    tools.give_spell_item(PC, SPELL, TEXT, role="reusable")
     result = tools.cast_spell(PC, SPELL.upper())
     assert result["source"] == "spellbook"
     assert len(_fatigue(app, campaign_id)) == 1
@@ -76,7 +79,7 @@ def test_casting_a_spell_not_held_is_refused_and_names_the_spell(client_factory)
 def test_a_scroll_is_petty_and_takes_no_slots(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     before = _used(app, campaign_id)
-    result = tools.give_scroll(PC, SPELL, TEXT)
+    result = tools.give_spell_item(PC, SPELL, TEXT, role="single_use")
     assert result["slots_used"] == before
     scroll = _named(app, campaign_id, SPELL)
     assert [(i.kind, i.size, i.slots) for i in scroll] == [("scroll", "petty", 0)]
@@ -84,7 +87,7 @@ def test_a_scroll_is_petty_and_takes_no_slots(client_factory):
 
 def test_casting_a_scroll_uses_it_up_and_adds_no_fatigue(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    tools.give_scroll(PC, SPELL, TEXT)
+    tools.give_spell_item(PC, SPELL, TEXT, role="single_use")
     result = tools.cast_spell(PC, SPELL)
     assert result["source"] == "scroll"
     assert result["penalty"] is False
@@ -94,7 +97,7 @@ def test_casting_a_scroll_uses_it_up_and_adds_no_fatigue(client_factory):
 
 def test_a_scroll_cannot_be_cast_twice(client_factory):
     _app, _campaign_id, tools = _fight(client_factory)
-    tools.give_scroll(PC, SPELL, TEXT)
+    tools.give_spell_item(PC, SPELL, TEXT, role="single_use")
     tools.cast_spell(PC, SPELL)
     with pytest.raises(InvalidInput, match=SPELL):
         tools.cast_spell(PC, SPELL)
@@ -102,18 +105,44 @@ def test_a_scroll_cannot_be_cast_twice(client_factory):
 
 def test_a_spellbook_is_used_before_a_scroll_of_the_same_spell(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    tools.give_spellbook(PC, SPELL, TEXT)
-    tools.give_scroll(PC, SPELL, TEXT)
+    tools.give_spell_item(PC, SPELL, TEXT, role="reusable")
+    tools.give_spell_item(PC, SPELL, TEXT, role="single_use")
     result = tools.cast_spell(PC, SPELL)
     assert result["source"] == "spellbook"
     assert _named(app, campaign_id, SPELL), "the scroll is still held"
     assert len(_fatigue(app, campaign_id)) == 1
 
 
+@pytest.mark.parametrize(("role", "source"), [("reusable", "grimoire"), ("single_use", "sigil")])
+def test_spell_item_kinds_determine_cast_results_and_events(
+    client_factory, role: Literal["reusable", "single_use"], source: str
+):
+    app, campaign_id, tools = _fight(client_factory)
+    assert tools.magic is not None
+    rules = replace(
+        tools.magic,
+        reusable=replace(tools.magic.reusable, kind="grimoire"),
+        single_use=replace(tools.magic.single_use, kind="sigil"),
+    )
+    tools = replace(tools, magic=rules)
+    tools.give_spell_item(PC, SPELL, TEXT, role=role)
+
+    result = tools.cast_spell(PC, SPELL)
+
+    assert result["source"] == source
+    assert bool(_named(app, campaign_id, SPELL)) is (role == "reusable")
+    with _db(app) as db:
+        casts = [decode(row) for row in events_since(db, campaign_id) if row.kind == SpellCast.kind]
+    assert len(casts) == 1
+    assert isinstance(casts[0], SpellCast)
+    assert casts[0].source == source
+    assert casts[0].render() == f"{PC} casts {SPELL} from a {source}."
+
+
 def test_a_deprived_character_can_still_cast_from_a_spellbook(client_factory):
     _app, _campaign_id, tools = _fight(client_factory)
     _set_condition(tools, PC, True, cause="no food")
-    tools.give_spellbook(PC, SPELL, TEXT)
+    tools.give_spell_item(PC, SPELL, TEXT, role="reusable")
     assert tools.cast_spell(PC, SPELL)["penalty"] is True
 
 
@@ -206,6 +235,17 @@ def test_a_roll_of_one_always_passes_a_save_and_a_twenty_always_fails(client_fac
     unlucky = _tools(app, campaign_id, rng=Rolls(20)).roll_save(PC, "str", "resist")
     assert lucky["passed"] is True
     assert unlucky["passed"] is False
+
+
+def test_player_save_bounds_and_engine_rolls_follow_a_non_d20_die(client_factory):
+    _, _, tools = _fight(client_factory)
+    tools = replace(tools, combat=_declarative(check_die="1d12"))
+
+    with pytest.raises(InvalidInput, match="1 to 12"):
+        tools.roll_save(PC, "str", "resist", natural=13)
+    assert tools.roll_save(PC, "str", "resist", natural=12)["roll"] == 12
+    rolled = replace(tools, rng=Rolls(12)).roll_save(PC, "str", "resist")
+    assert rolled["roll"] == 12
 
 
 def test_a_save_on_an_unknown_stat_is_refused(client_factory):

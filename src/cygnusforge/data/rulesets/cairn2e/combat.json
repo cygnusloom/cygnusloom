@@ -19,8 +19,14 @@
       "player_character_dead": "dead",
       "npc": "dead"
     },
-    "injuries": {"table": "injuries", "stat": "hp"},
+    "injuries": {
+      "table": "injuries",
+      "stat": "hp",
+      "trigger": "depleted",
+      "target_kinds": ["pc"]
+    },
     "outside_harm": ["str", "dex", "wil"],
+    "healing_stat": "hp",
     "morale": {
       "save_stat": "wil",
       "first_casualty": true,

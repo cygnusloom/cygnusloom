@@ -8,7 +8,7 @@ import asyncio
 import json
 import random
 import re
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from dataclasses import replace
 from types import SimpleNamespace
 from typing import Any
@@ -95,6 +95,7 @@ def _wwn_tools(
         tables=LIBRARY.core.tables,
         rng=rng or random.Random(0),
         character=WWN.character,
+        rule_data=WWN.rule_data,
         grid=WWN.grid,
         combat=combat or WWN.combat,
         monsters=WWN.monsters,
@@ -113,7 +114,9 @@ def _wwn_tools(
     )
 
 
-def _wwn_campaign(client_factory: Callable[[], TestClient]) -> tuple[TestClient, int, WorldTools]:
+def _wwn_campaign(
+    client_factory: Callable[[], TestClient], choices: dict[str, str] | None = None
+) -> tuple[TestClient, int, WorldTools]:
     """A latter-earth campaign with a newly created player character and the WWN world tools."""
     client = _signed_in(client_factory)
     response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
@@ -122,6 +125,7 @@ def _wwn_campaign(client_factory: Callable[[], TestClient]) -> tuple[TestClient,
     page = client.get(f"/campaigns/{campaign_id}").text
     fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
     fields.update(_choices(page))
+    fields.update(choices or {})
     created = _create_character(client, campaign_id, name=PC, fields=fields)
     error = re.search(r'<p class="form-error"[^>]*>(.*?)</p>', created.text, re.DOTALL)
     assert created.status_code == 303, error.group(1) if error else "no error"
@@ -132,10 +136,12 @@ def _wwn_campaign(client_factory: Callable[[], TestClient]) -> tuple[TestClient,
     return client, campaign_id, _wwn_tools(client.app, campaign_id)
 
 
-def _fight(client_factory: Callable[[], TestClient]) -> tuple[FastAPI, int, WorldTools]:
+def _fight(
+    client_factory: Callable[[], TestClient], choices: dict[str, str] | None = None
+) -> tuple[FastAPI, int, WorldTools]:
     """A WWN campaign with a mapped yard, an encounter, and the player character joined. WWN
     rolls initiative for each side as soon as both sides have a member, so no player rolls."""
-    client, campaign_id, tools = _wwn_campaign(client_factory)
+    client, campaign_id, tools = _wwn_campaign(client_factory, choices)
     tools.create_location(YARD, "Cobbles around a dry well.")
     tools.move_actor(PC, YARD)
     tools.create_encounter_map(MAP, YARD, 10, 10, "Open cobbles.")
@@ -194,9 +200,7 @@ def _modifier(character, stat: str) -> int:
     return WWN.character.modifier(character.stats, stat)
 
 
-def _best_attribute(character, feature: Feature | None) -> int:
-    if feature is None:
-        return 0
+def _best_attribute(character, feature: Feature) -> int:
     scores = [_modifier(character, stat) for stat in feature.attributes if stat in character.stats]
     return max(scores) if scores else 0
 
@@ -205,11 +209,11 @@ def _attack_skill(weapon: str, feature: Feature | None) -> str:
     if feature is not None and feature.skill:
         return feature.skill
     if name_key(weapon) in WWN.combat.unarmed_names:
-        return "punch"
+        return WWN.combat.unarmed_skill
     return ""
 
 
-def _to_hit_bonus(character, weapon: str, feature: Feature | None) -> int:
+def _to_hit_bonus(character, weapon: str, feature: Feature) -> int:
     """The bonus a WWN player attack adds to its d20, computed from the character's actual sheet."""
     bonus = current(character, "attack_bonus") + _best_attribute(character, feature)
     skill = _attack_skill(weapon, feature)
@@ -353,15 +357,33 @@ def test_hit_roll_adds_attack_bonus_skill_and_best_attribute(client_factory):
     assert event.to_hit == 10 + expected
 
 
-def test_an_unskilled_attack_takes_the_penalty(client_factory):
-    app, campaign_id, tools = _fight(client_factory)
+@pytest.mark.parametrize(
+    ("weapon", "skill", "attribute"),
+    [(LONG_SWORD, "stab", 2), (BOW, "shoot", 1), (UNARMED, "punch", 2)],
+)
+def test_an_unskilled_attack_takes_the_penalty(client_factory, weapon, skill, attribute):
+    app, campaign_id, tools = _fight(
+        client_factory,
+        choices={
+            "template-background": "artisan",
+            "template-class": "warrior",
+            "template-tradition": "no_tradition",
+            "pick-skill-background_learning-0": "connect",
+            "pick-skill-background_learning-1": "craft",
+            "pick-skill-class_free_skill-0": "notice",
+            "pick-feature-class_focus_any-0": "focus_die_hard",
+            "pick-feature-class_focus_warrior-0": "focus_alert",
+        },
+    )
     _foe(tools, hp=20, armor=10)
+    tools.set_stat_max(PC, "str", 18, "test the attack attribute")
+    tools.set_stat_max(PC, "dex", 14, "test the attack attribute")
     pc = _pc(app, campaign_id)
-    weapon, feature = _unskilled_weapon(pc)
+    assert skill not in pc.skills
     if weapon != UNARMED:
+        feature = _feature(weapon)
         tools.give_item(PC, weapon, damage=feature.damage)
-    attribute = _best_attribute(pc, feature)
-    expected = current(pc, "attack_bonus") + attribute - WWN.combat.unskilled_attack_penalty
+    expected = current(pc, "attack_bonus") + attribute - 2
 
     replace(tools, rng=Rolls(1, 10)).player_attack(FOE, weapon)
     [event] = _struck(app, campaign_id)
@@ -421,20 +443,6 @@ def test_an_unarmed_strike_uses_the_best_attribute_on_the_hit_roll(client_factor
     replace(tools, rng=Rolls(2, 10)).player_attack(FOE, UNARMED)
     [event] = _struck(app, campaign_id)
     assert event.to_hit == 10 + expected
-
-
-def _unskilled_weapon(character) -> tuple[str, Feature | None]:
-    """A weapon whose combat skill the character does not have, preferring a weapon feature."""
-    options: Sequence[tuple[str, Feature | None]] = (
-        (LONG_SWORD, _feature(LONG_SWORD)),
-        (BOW, _feature(BOW)),
-        (UNARMED, None),
-    )
-    for weapon, feature in options:
-        skill = _attack_skill(weapon, feature)
-        if WWN.character.skill_level(character.skills, skill) < 0:
-            return weapon, feature
-    pytest.skip("the created character has every combat skill")
 
 
 def test_a_hit_that_takes_an_npc_to_zero_defeats_it_as_dead(client_factory):
@@ -834,6 +842,29 @@ def test_healing_restores_harm_and_never_goes_below_zero(client_factory):
     assert _pc(app, campaign_id).harm.get("hp", 0) == 0
     [event] = _events(app, campaign_id, CharacterHealed.kind)
     assert (event.amount, event.restored) == (5, 2)
+
+
+def test_default_healing_stat_is_ruleset_configurable(client_factory):
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    assert tools.combat is not None
+    rules = replace(tools.combat, healing_stat="str", outside_harm=("hp", "str"))
+    tools = replace(tools, combat=rules)
+    tools.harm_character(PC, "str", 2, "a test wound")
+
+    healed = tools.heal_character(PC, 1)
+
+    assert healed["stat"] == "str"
+    assert healed["restored"] == 1
+    assert _pc(client.app, campaign_id).harm["str"] == 1
+
+
+def test_healing_without_a_default_requires_an_explicit_stat(client_factory):
+    _, _, tools = _wwn_campaign(client_factory)
+    assert tools.combat is not None
+    tools = replace(tools, combat=replace(tools.combat, healing_stat=None))
+    with pytest.raises(InvalidInput, match="no default healing stat"):
+        tools.heal_character(PC, 1)
+    assert tools.heal_character(PC, 1, stat="hp")["stat"] == "hp"
 
 
 def test_a_project_tracks_progress_to_completion(client_factory):

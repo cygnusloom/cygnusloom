@@ -14,17 +14,11 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from cygnusforge.content.character import CharacterSpec
+from cygnusforge.content.character import CharacterSpec, derived_stats
 from cygnusforge.rules.context import ToolContext
 from cygnusforge.rules.dice import roll_total
-from cygnusforge.rules.wwn import (
-    EFFORT_DURATIONS,
-    EFFORT_MARK,
-    casting_row,
-    max_effort,
-    tradition_effort_stat,
-    tradition_tag,
-)
+from cygnusforge.rules.wwn import EFFORT_DURATIONS, EFFORT_MARK, tradition_data
+from cygnusforge.rules.wwn_progression import require_wwn_progression
 from cygnusforge.services.common import InvalidInput, whole_number
 from cygnusforge.services.events import (
     CheckMade,
@@ -54,6 +48,7 @@ def prepare_spells(character: str, spells: Sequence[str], ctx: ToolContext) -> d
         raise InvalidInput("a prepared spell may not be listed twice")
     if len(chosen) > MAX_SPELLS:
         raise InvalidInput(f"prepare at most {MAX_SPELLS} spells")
+    progression = require_wwn_progression(ctx.world)
 
     def check(hc: HookContext) -> dict[str, Any]:
         _, found = _character(hc, character)
@@ -69,9 +64,17 @@ def prepare_spells(character: str, spells: Sequence[str], ctx: ToolContext) -> d
         if not traditions:
             raise InvalidInput(f"{found.name} has no magical tradition")
         tradition = ", ".join(traditions)
-        row = casting_row(found.templates.get("class", ""), found.counters.get("level", 1))
-        if row is None:
+        class_id = str(found.templates.get("class", "")).strip().casefold()
+        table_id = progression.casting_class_tables.get(class_id)
+        if table_id is None:
             raise InvalidInput(f"{found.name}'s class cannot cast spells")
+        level = found.counters.get("level", 1)
+        row = progression.casting_tables[table_id].get(level) if type(level) is int else None
+        if row is None:
+            raise InvalidInput(
+                f"{found.name} is level {level}; the {table_id} casting chart supports "
+                f"levels 1 through {progression.max_level}"
+            )
         if len(chosen) > row.prepared:
             raise InvalidInput(
                 f"{found.name} may prepare {row.prepared} spells at level "
@@ -148,16 +151,21 @@ def commit_effort(
     spec = ctx.world.character
     value = whole_number(amount, "amount", 1, MAX_EFFORT_COMMIT)
     duration = _duration(duration)
-    stat = tradition_effort_stat(tradition)
+    progression = require_wwn_progression(ctx.world)
+    tag, stat = tradition_data(tradition, progression)
     if not stat:
         raise InvalidInput(f"there is no Effort pool for the tradition {tradition!r}")
-    tag = tradition_tag(tradition)
 
     def action(hc: HookContext) -> dict[str, Any]:
         _, found = _character(hc, character)
         if stat not in found.stats:
             raise InvalidInput(f"{found.name} has no {stat} stat")
-        maximum = max_effort(spec, found.stats, found.skills, found.templates.get("class", ""))
+        try:
+            maximum = derived_stats(
+                spec, found.stats, found.counters, found.skills, found.templates
+            ).get(stat, found.stats[stat])
+        except ValueError as exc:
+            raise InvalidInput(str(exc)) from exc
         marks = found.marks.get(EFFORT_MARK) or {}
         committed = sum(
             int(held.get(tag, 0)) for held in marks.values() if isinstance(held, Mapping)
@@ -209,10 +217,10 @@ def recover_effort(
 ) -> dict[str, Any]:
     """Reclaim the Effort committed to one tradition for one duration."""
     duration = _duration(duration)
-    stat = tradition_effort_stat(tradition)
+    progression = require_wwn_progression(ctx.world)
+    tag, stat = tradition_data(tradition, progression)
     if not stat:
         raise InvalidInput(f"there is no Effort pool for the tradition {tradition!r}")
-    tag = tradition_tag(tradition)
 
     def action(hc: HookContext) -> dict[str, Any]:
         _, found = _character(hc, character)
@@ -329,7 +337,7 @@ def first_aid(healer: str, target: str, ctx: ToolContext) -> dict[str, Any]:
                 "strain": 0,
             }
         level = spec.skill_level(doctor.skills, "heal")
-        bonus = level if level >= 0 else -1
+        bonus = level if spec.skill_trained(doctor.skills, "heal") else -1
         roll = roll_total("1d6", ctx.world.rng)
         total = roll + bonus
         healed = min(max(0, total), patient.harm.get("hp", 0))
@@ -342,6 +350,7 @@ def first_aid(healer: str, target: str, ctx: ToolContext) -> dict[str, Any]:
                 skill="heal",
                 skill_name="Heal",
                 skill_level=level,
+                skill_bonus=bonus,
                 roll=roll,
                 bonus=bonus,
                 total=total,
@@ -456,7 +465,6 @@ def _duration(duration: str) -> str:
     return value
 
 
-# Keep the level cap importable from this module too, so a tool description can name it.
 __all__ = [
     "PREPARED_MARK",
     "add_strain",

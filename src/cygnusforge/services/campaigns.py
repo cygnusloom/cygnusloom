@@ -1119,7 +1119,6 @@ class _Run:
 
 def _tool_context(
     engine: Engine,
-    library: ContentLibrary,
     rng: random.Random,
     provider: Provider,
     model_name: str,
@@ -1146,9 +1145,10 @@ def _tool_context(
     world_tools = WorldTools(
         engine,
         campaign_id,
-        {**library.core.tables, **world.tables},
+        {**rule_set.tables, **world.tables},
         rng,
         rule_set.character,
+        rule_data=rule_set.rule_data,
         grid=rule_set.grid,
         terrain=rule_set.terrain,
         encounter_objects=rule_set.encounter_objects,
@@ -1223,7 +1223,6 @@ def _start_run(
         model_name=model_name,
         ctx=_tool_context(
             engine,
-            library,
             rng if rng is not None else random.Random(),
             provider,
             model_name,

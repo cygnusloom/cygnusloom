@@ -113,8 +113,13 @@ def make_move(
         else:
             stat_bonus = modifier_value(character, rolled_stat)
         stat_bonus += condition_bonus(character, conditions, rolled_stat)
-    if spec is not None and move.skill:
-        stat_bonus += max(0, spec.skill_level(character.skills, move.skill))
+    if move.skill:
+        if spec is None:
+            raise InvalidInput(f"{move.label} needs the rule set's skill rules")
+        skill_bonus = spec.skill_level(character.skills, move.skill)
+        if move.skill_floor is not None:
+            skill_bonus = max(move.skill_floor, skill_bonus)
+        stat_bonus += skill_bonus
     bonus = stat_bonus + modifier
     total = roll + bonus
     band = band_for(move, total)

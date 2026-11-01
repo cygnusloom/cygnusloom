@@ -22,7 +22,7 @@ from cygnusforge.services.events import (
     name_key,
     record,
 )
-from cygnusforge.services.inventory import carry_item, character_named, used_slots
+from cygnusforge.services.inventory import capacity_of, carry_item, character_named, used_slots
 from cygnusforge.services.market import MAX_PRICE
 
 
@@ -127,7 +127,7 @@ def take_object(
     if obj.item:
         if inventory is None:
             raise InvalidInput("this rule set has no inventory to carry an item")
-        free = inventory.capacity - used_slots(taker)
+        free = capacity_of(taker, inventory) - used_slots(taker)
         if obj.item_slots > free:
             raise InvalidInput(
                 f"{taker.name} has room for {max(free, 0)} slots, and {obj.item} takes "

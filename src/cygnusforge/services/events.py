@@ -2651,8 +2651,9 @@ class MoveMade(GameEvent):
 @dataclass(frozen=True)
 class CheckMade(GameEvent):
     """A check rolled outside a move, such as a skill check. `check` is the check's label, and
-    `skill`/`skill_name`/`skill_level` and `stat`/`stat_name` say what was added to the roll.
-    `bonus` is the whole bonus the roll got, and `success` is whether it reached the difficulty."""
+    `skill`/`skill_name`/`skill_level` identify the skill and its level. `skill_bonus` is what the
+    skill added, and `stat`/`stat_name` identify the stat. `bonus` is the whole bonus the roll got,
+    and `success` is whether it reached the difficulty."""
 
     kind: ClassVar[str] = "check.made"
 
@@ -2661,6 +2662,7 @@ class CheckMade(GameEvent):
     skill: str = ""
     skill_name: str = ""
     skill_level: int = 0
+    skill_bonus: int | None = None
     stat: str = ""
     stat_name: str = ""
     roll: int = 0
@@ -2677,7 +2679,8 @@ class CheckMade(GameEvent):
         sign = f"{self.bonus:+d}" if self.bonus else ""
         used = []
         if self.skill_name:
-            used.append(f"{self.skill_name} {self.skill_level:+d}")
+            skill_bonus = self.skill_level if self.skill_bonus is None else self.skill_bonus
+            used.append(f"{self.skill_name} {skill_bonus:+d}")
         if self.stat_name:
             used.append(self.stat_name)
         with_used = f" ({', '.join(used)})" if used else ""
@@ -2708,7 +2711,10 @@ class SkillChanged(GameEvent):
         state.characters[name_key(self.name)].skills[self.skill] = self.after
 
     def render(self) -> str:
-        text = f"{self.name}'s {self.skill_name} goes from {self.before} to {self.after}"
+        if self.before == self.after:
+            text = f"{self.name} becomes trained in {self.skill_name} at level {self.after}"
+        else:
+            text = f"{self.name}'s {self.skill_name} goes from {self.before} to {self.after}"
         return f"{text} ({self.cause})." if self.cause else f"{text}."
 
 

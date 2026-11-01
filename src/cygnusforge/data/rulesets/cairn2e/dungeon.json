@@ -1,5 +1,22 @@
 [
   {
+    "type": "python_module",
+    "id": "dungeon",
+    "module": "cygnusforge.services.dungeon"
+  },
+  {
+    "type": "rule_data",
+    "id": "dungeon",
+    "python_module": "dungeon",
+    "configure": "configure_dungeon",
+    "event_table": "dungeon_events",
+    "reaction_table": "dungeon_reaction",
+    "triggers": ["new_area", "loud", "hasty", "lingering"],
+    "notes": {
+      "Encounter": "Roll the location's encounter table with roll_tables, then roll_reaction if needed."
+    }
+  },
+  {
     "type": "dice_table",
     "id": "dungeon_events",
     "name": "Dungeon Events",

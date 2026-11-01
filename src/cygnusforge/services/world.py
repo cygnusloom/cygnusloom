@@ -12,7 +12,7 @@ import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from difflib import get_close_matches
-from typing import Any, TypeVar
+from typing import Any, Literal, TypeVar
 
 from sqlalchemy import Engine
 from sqlmodel import Session
@@ -88,6 +88,7 @@ from cygnusforge.services.conditions import active_conditions, add_condition, en
 from cygnusforge.services.dice_tables import roll_creative as roll_creative_tables
 from cygnusforge.services.dice_tables import roll_tables as roll_dice_tables
 from cygnusforge.services.dungeon import dungeon_cycle as dungeon_cycle_service
+from cygnusforge.services.dungeon import dungeon_rules
 from cygnusforge.services.dungeon import roll_reaction as roll_reaction_service
 from cygnusforge.services.events import (
     CAMPAIGN_WIDE,
@@ -146,8 +147,6 @@ from cygnusforge.services.tools import check_arguments
 T = TypeVar("T")
 MAX_NAME = 120
 MAX_STAT = 999
-# The highest level a skill may reach once a character is no longer being created.
-MAX_SKILL = 4
 MAX_TEXT = 2000
 # A player-facing summary of a place: a sentence or two, not the place's full description.
 MAX_SUMMARY = 300
@@ -280,6 +279,8 @@ class WorldTools:
     tables: Mapping[str, Sequence[TableOption]]
     rng: random.Random
     character: CharacterSpec
+    # The rule set's structured JSON data, indexed by definition id.
+    rule_data: Mapping[str, object] = field(default_factory=dict, kw_only=True)
     # The rule set's encounter grid, or None when its encounters have no movement limit.
     grid: EncounterGrid | None = None
     # The rule set's encounter terrain, objects, and map templates by id.
@@ -351,32 +352,18 @@ class WorldTools:
                 db, self.campaign_id, tables, self.dice_tables, self.rng, plus=self.plus
             )
 
+    def draw_character_table(self, table: str) -> str:
+        """Choose one option from a character table, without recording a campaign event."""
+        options = self.tables.get(table)
+        if not options:
+            raise InvalidInput(f"there is no character table named {table!r}")
+        return self.rng.choice(options).value
+
     def roll_creative(self, tables: list[str] | None) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return roll_creative_tables(
                 db, self.campaign_id, tables, self.dice_tables, self.rng, plus=self.plus
             )
-
-    def roll_growth(self, character: str) -> dict[str, Any]:
-        """Roll the character's background Growth table. The GM applies the result with the
-        normal skill, attribute, and counter tools."""
-        with session_scope(self.engine) as db:
-            state = load_state(db, self.campaign_id)
-            found = state.characters.get(name_key(character))
-            if found is None:
-                raise InvalidInput(f"there is no character named {character!r}")
-            background = found.templates.get("background", "")
-            table = f"growth_{background}"
-            options = self.tables.get(table)
-            if not options:
-                raise InvalidInput(f"{found.name} has no background Growth table")
-            chosen = self.rng.choice(options)
-            return {
-                "character": found.name,
-                "background": background,
-                "table": table,
-                "growth": chosen.value,
-            }
 
     def advance_time(self, days: int = 0, parts: int = 0, hours: int = 0) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -612,7 +599,7 @@ class WorldTools:
                 name,
                 item,
                 target,
-                self.magic.charged_kind if self.magic is not None else "",
+                self.magic.charged.kind if self.magic is not None else "",
                 plus=self.plus,
             )
 
@@ -629,25 +616,21 @@ class WorldTools:
                 plus=self.plus,
             )
 
-    def give_spellbook(self, name: str, spell: str, description: str) -> dict[str, Any]:
+    def give_spell_item(
+        self, name: str, spell: str, description: str, *, role: Literal["reusable", "single_use"]
+    ) -> dict[str, Any]:
+        magic = _required(self.magic, "magic")
+        if role == "reusable":
+            item_kind = magic.reusable
+        elif role == "single_use":
+            item_kind = magic.single_use
+        else:
+            raise InvalidInput(f"unknown spell item role {role!r}")
         with session_scope(self.engine) as db:
-            return magic_service.give_spellbook(
+            return magic_service.give_spell_item(
                 db,
                 self.campaign_id,
-                _required(self.magic, "magic"),
-                _required(self.inventory, "inventory"),
-                self.item_sizes,
-                name,
-                spell,
-                description,
-            )
-
-    def give_scroll(self, name: str, spell: str, description: str) -> dict[str, Any]:
-        with session_scope(self.engine) as db:
-            return magic_service.give_scroll(
-                db,
-                self.campaign_id,
-                _required(self.magic, "magic"),
+                item_kind,
                 _required(self.inventory, "inventory"),
                 self.item_sizes,
                 name,
@@ -771,11 +754,14 @@ class WorldTools:
             raise InvalidInput(
                 f"there is no skill named {skill!r}; the rule set's skills are: {options}"
             )
-        new_level = whole_number(level, "level", 0, MAX_SKILL)
+        progression = self.character.skill_progression
+        if progression is None:
+            raise InvalidInput("the rule set has no skill progression")
+        new_level = whole_number(level, "level", progression.first_level, progression.maximum)
         with session_scope(self.engine) as db:
             character = _character_named(load_state(db, self.campaign_id), name)
             before = self.character.skill_level(character.skills, skill)
-            if new_level <= before:
+            if self.character.skill_trained(character.skills, skill) and new_level <= before:
                 raise InvalidInput(
                     f"{character.name}'s {found.name} is already at level {before}; "
                     "raise_skill only raises a skill"
@@ -961,7 +947,14 @@ class WorldTools:
     def dungeon_cycle(self, triggers: list[str], reason: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return dungeon_cycle_service(
-                db, self.campaign_id, triggers, reason, self.dice_tables, self.rng, plus=self.plus
+                db,
+                self.campaign_id,
+                triggers,
+                reason,
+                self.dice_tables,
+                self.rng,
+                plus=self.plus,
+                rules=dungeon_rules(self.rule_data),
             )
 
     def wilderness_action(
@@ -1014,7 +1007,13 @@ class WorldTools:
     def roll_reaction(self, reason: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return roll_reaction_service(
-                db, self.campaign_id, reason, self.dice_tables, self.rng, plus=self.plus
+                db,
+                self.campaign_id,
+                reason,
+                self.dice_tables,
+                self.rng,
+                plus=self.plus,
+                rules=dungeon_rules(self.rule_data),
             )
 
     def roll_save(
@@ -1607,8 +1606,12 @@ class WorldTools:
             )
 
     def heal_character(
-        self, name: str, amount: int, stat: str = "hp", cause: str = ""
+        self, name: str, amount: int, stat: str | None = None, cause: str = ""
     ) -> dict[str, Any]:
+        if stat is None:
+            if self.combat is None or self.combat.healing_stat is None:
+                raise InvalidInput("this rule set has no default healing stat")
+            stat = self.combat.healing_stat
         with session_scope(self.engine) as db:
             return combat.heal_character(db, self.campaign_id, name, stat, amount, cause)
 
@@ -2029,9 +2032,9 @@ def _starting_item(feature: Feature, magic: MagicRules | None, item_sizes: Mappi
         assert magic is not None
         return Item(
             feature.name,
-            magic.spellbook_size,
-            item_sizes[magic.spellbook_size],
-            kind=magic.spellbook_kind,
+            magic.reusable.size,
+            item_sizes[magic.reusable.size],
+            kind=magic.reusable.kind,
             text=feature.description,
         )
     return Item(
@@ -2085,9 +2088,9 @@ def create_player_character(
     try:
         check_swaps(spec, rolled, chosen)
         check_choices(spec, submitted)
+        sheet = resolve(spec, submitted, rng, plus=plus)
     except CharacterError as error:
         raise InvalidInput(str(error)) from error
-    sheet = resolve(spec, submitted, rng, plus=plus)
     _check_sheet_text(sheet)
     fields = _sheet_fields(sheet)
     starting = fields["features"]
@@ -2829,9 +2832,9 @@ def update_npc(
             )
         try:
             check_choices(spec, character or {})
+            sheet = resolve(spec, character or {}, rng, plus=plus)
         except CharacterError as error:
             raise InvalidInput(str(error)) from error
-        sheet = resolve(spec, character or {}, rng, plus=plus)
         _check_sheet_text(sheet)
         attack_map, attack_flags, attack_shock = _attacks(attacks or [])
         statted = NpcStatted(
@@ -3336,8 +3339,9 @@ def _status_lines(
     )
     if inventory is not None:
         used = inventory_service.used_slots(character)
-        flag = " (over capacity)" if used > inventory.capacity else ""
-        lines.append(f"Inventory: {used} of {inventory.capacity} slots{flag}")
+        capacity = inventory_service.capacity_of(character, inventory)
+        flag = " (over capacity)" if used > capacity else ""
+        lines.append(f"Inventory: {used} of {capacity} slots{flag}")
         carried = ", ".join(item.name for item in character.items)
         lines.append(f"Carrying: {carried or 'nothing'}")
     return lines
@@ -3546,7 +3550,7 @@ def scene_view(
                 for item in pc.items
             ],
             used=inventory_service.used_slots(pc),
-            capacity=inventory.capacity,
+            capacity=inventory_service.capacity_of(pc, inventory, spec),
         )
     hirelings = tuple(
         c
@@ -3813,7 +3817,10 @@ def _npc_event(
         trait_quirks = list(quirks)
     sheet_fields: dict[str, Any] = {}
     if not story_only:
-        sheet = resolve(spec, character or {}, rng, plus=plus)
+        try:
+            sheet = resolve(spec, character or {}, rng, plus=plus)
+        except CharacterError as error:
+            raise InvalidInput(str(error)) from error
         _check_sheet_text(sheet)
         sheet_fields = _sheet_fields(sheet)
         sheet_fields["armor"] = sheet.armor

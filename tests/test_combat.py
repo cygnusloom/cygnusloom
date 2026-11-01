@@ -12,6 +12,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from cygnusforge.content.character import CounterRef, Skill, Template
 from cygnusforge.content.definitions import ContentError, Definition
 from cygnusforge.content.library import (
     DamageStep,
@@ -26,6 +27,8 @@ from cygnusforge.rules.context import ToolContext
 from cygnusforge.services import encounters
 from cygnusforge.services.combat import (
     Damage,
+    _level_damage_bonus,
+    _weapon_skill,
     apply_damage,
     player_save,
     set_debug_stat,
@@ -52,6 +55,7 @@ from tests.test_world import _db, _state
 
 LIBRARY = content_library()
 CAIRN = LIBRARY.rule_sets["cairn2e"]
+WWN = LIBRARY.rule_sets["worldswithoutnumber"]
 
 
 def save_succeeds(roll: int, score: int) -> bool:
@@ -265,6 +269,13 @@ def test_a_harm_only_combat_definition_is_accepted():
     assert combat.check_sides == 12
 
 
+def test_combat_loads_a_configured_healing_stat():
+    combat = _load_combat(
+        _combat(healing_stat="str"), {"cairn2e": cairn2e}, CAIRN.character, {}, {}, "cairn2e"
+    )
+    assert combat.healing_stat == "str"
+
+
 @pytest.mark.parametrize(
     ("changes", "message"),
     [
@@ -294,6 +305,7 @@ def test_a_harm_only_combat_definition_is_accepted():
         ({"check_die": "d20"}, "'check_die' must be a single die"),
         ({"check_die": "1d1"}, "'check_die' must be a single die"),
         ({"initiative_stat": "luck"}, "'initiative_stat' names no stat"),
+        ({"healing_stat": "luck"}, "'healing_stat' names no stat"),
         ({"defeat": "dead"}, "'defeat' must be an object"),
         ({"defeat": {"player_character": "down"}}, "'npc' must be a non-empty string"),
     ],
@@ -350,6 +362,183 @@ def _declarative(**changes: Any):
     return _load_combat(_declarative_combat(**changes), {}, CAIRN.character, {}, {}, "cairn2e")
 
 
+def _synthetic_character_spec():
+    template = Template(
+        id="vanguard",
+        kind="profession",
+        name="Vanguard",
+        description="",
+        features=(),
+        tables=(),
+        names=(),
+    )
+    counter = CounterRef(
+        id="renown",
+        label="Renown",
+        initial=8,
+        minimum=0,
+        maximum=None,
+    )
+    return replace(
+        CAIRN.character,
+        templates={"vanguard": template},
+        counters={"renown": counter},
+        skills={"brawl": Skill(id="brawl", name="Brawl", description="")},
+    )
+
+
+def test_combat_configures_unarmed_and_level_damage_with_synthetic_ids():
+    spec = _synthetic_character_spec()
+    combat = _load_combat(
+        _combat(
+            unarmed={"damage": "1d4", "names": ["bare hands"], "skill": "brawl"},
+            level_damage={
+                "template_kind": "profession",
+                "templates": ["vanguard"],
+                "counter": "renown",
+                "divisor": 3,
+            },
+        ),
+        {"cairn2e": cairn2e},
+        spec,
+        {},
+        {},
+        "synthetic",
+    )
+
+    assert combat.unarmed_skill == "brawl"
+    assert _weapon_skill(combat, "bare hands", None) == "brawl"
+    assert _weapon_skill(combat, "bare hands", SimpleNamespace(skill="knife")) == "knife"
+    character = SimpleNamespace(
+        templates={"profession": "vanguard"},
+        counters={"renown": 5},
+    )
+    assert _level_damage_bonus(combat, character, spec) == 2
+    character.counters.clear()
+    assert _level_damage_bonus(combat, character, spec) == 3
+
+
+def test_combat_rejects_an_unknown_unarmed_skill():
+    spec = _synthetic_character_spec()
+    with pytest.raises(ContentError, match="'unarmed.skill' names no skill"):
+        _load_combat(
+            _combat(unarmed={"damage": "1d4", "names": ["bare hands"], "skill": "grappling"}),
+            {"cairn2e": cairn2e},
+            spec,
+            {},
+            {},
+            "synthetic",
+        )
+
+
+@pytest.mark.parametrize(
+    ("changes", "message"),
+    [
+        (
+            {
+                "level_damage": {
+                    "templates": ["vanguard"],
+                    "counter": "renown",
+                    "divisor": 2,
+                },
+            },
+            "'template_kind' must be a non-empty string",
+        ),
+        (
+            {
+                "level_damage": {
+                    "template_kind": "profession",
+                    "templates": ["vanguard"],
+                    "divisor": 2,
+                },
+            },
+            "'counter' must be a non-empty string",
+        ),
+        (
+            {
+                "level_damage": {
+                    "template_kind": "calling",
+                    "templates": ["vanguard"],
+                    "counter": "renown",
+                    "divisor": 2,
+                },
+            },
+            "names no template kind",
+        ),
+        (
+            {
+                "level_damage": {
+                    "template_kind": "profession",
+                    "templates": ["vanguard"],
+                    "counter": "level",
+                    "divisor": 2,
+                },
+            },
+            "names no counter",
+        ),
+        (
+            {
+                "level_damage": {
+                    "template_kind": "profession",
+                    "templates": ["scout"],
+                    "counter": "renown",
+                    "divisor": 2,
+                },
+            },
+            "names no profession template",
+        ),
+        (
+            {
+                "level_damage": {
+                    "template_kind": "profession",
+                    "templates": ["vanguard"],
+                    "counter": "renown",
+                    "divisor": 0,
+                },
+            },
+            "'divisor' must be a whole number, at least 1",
+        ),
+    ],
+)
+def test_combat_rejects_invalid_level_damage_rules(changes, message):
+    with pytest.raises(ContentError, match=message):
+        _load_combat(
+            _combat(**changes),
+            {"cairn2e": cairn2e},
+            _synthetic_character_spec(),
+            {},
+            {},
+            "synthetic",
+        )
+
+
+def test_bundled_combat_rules_keep_their_unarmed_and_level_damage_sources():
+    assert CAIRN.combat.unarmed_skill == ""
+    assert CAIRN.combat.save.auto_success == 1
+    assert CAIRN.combat.save.auto_fail == 20
+    assert WWN.combat.unarmed_skill == "punch"
+    assert WWN.combat.level_damage is not None
+    assert (
+        WWN.combat.level_damage.template_kind,
+        WWN.combat.level_damage.templates,
+        WWN.combat.level_damage.counter,
+        WWN.combat.level_damage.divisor,
+    ) == (
+        "class",
+        ("warrior", "adventurer_expert_warrior", "adventurer_warrior_mage"),
+        "level",
+        2,
+    )
+    assert (
+        _level_damage_bonus(
+            WWN.combat,
+            SimpleNamespace(templates={"class": "warrior"}, counters={"level": 3}),
+            WWN.character,
+        )
+        == 2
+    )
+
+
 @pytest.mark.parametrize(
     ("save", "roll", "score", "passed"),
     [
@@ -373,6 +562,13 @@ def test_without_a_save_block_a_one_always_passes_and_a_twenty_always_fails():
     combat = _declarative()
     assert combat.save_succeeds(1, 0) is True
     assert combat.save_succeeds(20, 20) is False
+
+
+def test_default_save_boundaries_follow_a_non_d20_check_die():
+    combat = _declarative(check_die="1d12")
+    assert (combat.save.auto_success, combat.save.auto_fail) == (1, 12)
+    assert combat.save_succeeds(1, 0) is True
+    assert combat.save_succeeds(12, 12) is False
 
 
 @pytest.mark.parametrize(

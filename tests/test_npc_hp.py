@@ -149,7 +149,6 @@ def _gm_create(app: Any, campaign_id: int, arguments: dict[str, Any]) -> dict[st
     arguments are the ones the model sees."""
     ctx = _tool_context(
         app.state.engine,
-        LIBRARY,
         random.Random(0),
         FakeProvider(),
         "test",

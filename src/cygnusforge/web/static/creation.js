@@ -1,6 +1,12 @@
 (() => {
   const form = document.querySelector(".creation-form");
   const templateRadios = [...document.querySelectorAll("input[type=radio][data-template-select]")];
+  const templateChoicesByKind = new Map();
+  for (const radio of templateRadios) {
+    const choices = templateChoicesByKind.get(radio.dataset.templateSelect) ?? [];
+    choices.push(radio);
+    templateChoicesByKind.set(radio.dataset.templateSelect, choices);
+  }
 
   // Only the tables of the chosen template are shown. Hidden tables are skipped on submit.
   const revealTables = (kind) => {
@@ -39,13 +45,38 @@
     return value ? JSON.parse(value) : fallback;
   };
 
-  const compatible = (radio, selected) => {
-    const restrictions = templateData(radio, "compatibleWith", {});
-    return Object.entries(restrictions).every(([kind, allowed]) => {
-      const gate = selected.get(kind);
-      return gate !== undefined && allowed.includes(gate.value);
-    });
+  const compatibilityGraph = new Map(
+    [...templateChoicesByKind.keys()].map((kind) => [kind, new Set()]),
+  );
+  for (const radio of templateRadios) {
+    const gates = compatibilityGraph.get(radio.dataset.templateSelect);
+    for (const kind of Object.keys(templateData(radio, "compatibleWith", {}))) {
+      if (compatibilityGraph.has(kind)) gates.add(kind);
+    }
+  }
+  const reachableKinds = (start) => {
+    const reached = new Set([start]);
+    const pending = [start];
+    while (pending.length > 0) {
+      for (const kind of compatibilityGraph.get(pending.pop()) ?? []) {
+        if (reached.has(kind)) continue;
+        reached.add(kind);
+        pending.push(kind);
+      }
+    }
+    return reached;
   };
+  const compatibilityReachability = new Map(
+    [...compatibilityGraph.keys()].map((kind) => [kind, reachableKinds(kind)]),
+  );
+  const compatibilityComponent = (start) =>
+    new Set(
+      [...compatibilityGraph.keys()].filter(
+        (kind) =>
+          compatibilityReachability.get(start)?.has(kind) &&
+          compatibilityReachability.get(kind)?.has(start),
+      ),
+    );
 
   const activeRequirements = (selected) =>
     [...selected.values()].flatMap((radio) =>
@@ -53,6 +84,95 @@
     );
 
   const choiceKey = (radio) => radio.dataset.choiceKey || radio.value;
+
+  const hasFeasibleCompletion = (initial, blockedKinds = new Set()) => {
+    const memo = new Map();
+    const search = (selected) => {
+      const key = JSON.stringify(
+        [...selected]
+          .map(([kind, radio]) => [kind, radio.value])
+          .sort(([left], [right]) => left.localeCompare(right)),
+      );
+      if (memo.has(key)) return memo.get(key);
+
+      let pending = null;
+      for (const radio of selected.values()) {
+        const restrictions = templateData(radio, "compatibleWith", {});
+        for (const [kind, allowed] of Object.entries(restrictions)) {
+          const gate = selected.get(kind);
+          if (gate) {
+            if (!allowed.includes(gate.value)) {
+              memo.set(key, false);
+              return false;
+            }
+            continue;
+          }
+          if (blockedKinds.has(kind)) {
+            memo.set(key, false);
+            return false;
+          }
+          pending = {
+            kind,
+            choices: (templateChoicesByKind.get(kind) ?? []).filter((choice) =>
+              allowed.includes(choice.value),
+            ),
+          };
+          break;
+        }
+        if (pending) break;
+
+        for (const requirement of templateData(radio, "templateRequirements", [])) {
+          const chosen = requirement.kinds
+            .map((kind) => selected.get(kind))
+            .filter((choice) => choice !== undefined);
+          const keys = chosen.map(choiceKey);
+          if (requirement.distinct && new Set(keys).size !== keys.length) {
+            memo.set(key, false);
+            return false;
+          }
+          const kind = requirement.kinds.find((requiredKind) => !selected.has(requiredKind));
+          if (!kind) continue;
+          if (blockedKinds.has(kind)) {
+            memo.set(key, false);
+            return false;
+          }
+          const duplicateKeys = requirement.distinct ? new Set(keys) : null;
+          pending = {
+            kind,
+            choices: (templateChoicesByKind.get(kind) ?? []).filter(
+              (choice) => !duplicateKeys || !duplicateKeys.has(choiceKey(choice)),
+            ),
+          };
+          break;
+        }
+        if (pending) break;
+      }
+
+      if (!pending) {
+        memo.set(key, true);
+        return true;
+      }
+      for (const choice of pending.choices) {
+        const next = new Map(selected);
+        next.set(pending.kind, choice);
+        if (search(next)) {
+          memo.set(key, true);
+          return true;
+        }
+      }
+      memo.set(key, false);
+      return false;
+    };
+    return search(new Map(initial));
+  };
+
+  const compatible = (radio, selected) => {
+    const assignment = new Map(selected);
+    const kind = radio.dataset.templateSelect;
+    for (const cycleKind of compatibilityComponent(kind)) assignment.delete(cycleKind);
+    assignment.set(kind, radio);
+    return hasFeasibleCompletion(assignment);
+  };
 
   const clearTemplateChoice = (radio) => {
     radio.checked = false;
@@ -63,17 +183,35 @@
   const refreshTemplateChoices = (changedRadio = null) => {
     for (let pass = 0; pass <= templateRadios.length; pass++) {
       let cleared = false;
-      let selected = selectedTemplates();
-
-      for (const radio of selected.values()) {
-        if (!radio.checked) continue;
-        if (compatible(radio, selected)) continue;
-        clearTemplateChoice(radio);
-        cleared = true;
-        selected = selectedTemplates();
+      const selectedAtStart = selectedTemplates();
+      const changedKind = changedRadio?.dataset.templateSelect;
+      const ordered =
+        changedKind && selectedAtStart.get(changedKind) === changedRadio
+          ? [
+              changedRadio,
+              ...[...selectedAtStart.values()].filter((radio) => radio !== changedRadio),
+            ]
+          : [...selectedAtStart.values()];
+      const blockedKinds = new Set();
+      if (changedRadio && !changedKind && changedRadio.value === "") {
+        const panel = changedRadio.closest('[data-choice-panel^="template-"]');
+        if (panel) {
+          blockedKinds.add(panel.dataset.choicePanel.slice("template-".length));
+        }
+      }
+      const feasible = new Map();
+      for (const radio of ordered) {
+        const assignment = new Map(feasible);
+        assignment.set(radio.dataset.templateSelect, radio);
+        if (hasFeasibleCompletion(assignment, blockedKinds)) {
+          feasible.set(radio.dataset.templateSelect, radio);
+        } else {
+          clearTemplateChoice(radio);
+          cleared = true;
+        }
       }
 
-      selected = selectedTemplates();
+      let selected = selectedTemplates();
       for (const requirement of activeRequirements(selected)) {
         if (!requirement.distinct) continue;
         const byKey = new Map();
@@ -103,6 +241,11 @@
     const selected = selectedTemplates();
     const requirements = activeRequirements(selected);
     const requiredKinds = new Set(requirements.flatMap((requirement) => requirement.kinds));
+    for (const radio of selected.values()) {
+      for (const kind of Object.keys(templateData(radio, "compatibleWith", {}))) {
+        requiredKinds.add(kind);
+      }
+    }
     const panels = [...document.querySelectorAll('[data-choice-panel^="template-"]')];
 
     for (const panel of panels) {
@@ -147,19 +290,60 @@
   for (const kind of kinds) revealTables(kind);
   refreshTemplateChoices();
 
-  // A spell pick offers the spells of the chosen Year only: spells from earlier Years are known,
-  // not picked. With no Year chosen it offers none. A pick whose spell is no longer offered goes
-  // back to Roll.
-  const refreshSpellPicks = () => {
+  // Tagged feature picks offer only the group matching the selected field.
+  const refreshTaggedPicks = () => {
     for (const fieldset of document.querySelectorAll("[data-tag-field]")) {
-      const year = document.querySelector(`input[type="radio"][name="${fieldset.dataset.tagField}"]:checked`);
+      const selectedTag = document.querySelector(`input[type="radio"][name="${fieldset.dataset.tagField}"]:checked`);
       for (const group of fieldset.querySelectorAll("optgroup")) {
-        const offered = year !== null && group.dataset.tag === year.value;
+        const offered = selectedTag !== null && group.dataset.tag === selectedTag.value;
         group.hidden = !offered;
         for (const option of group.children) option.disabled = !offered;
       }
       for (const select of fieldset.querySelectorAll("select")) {
         if (select.selectedOptions[0]?.disabled) select.value = "";
+      }
+    }
+  };
+  const refreshSkillPickOptions = () => {
+    if (!form?.hasAttribute("data-skill-first-level")) return;
+    const firstLevel = Number(form.dataset.skillFirstLevel);
+    const creationMaximum = Number(form.dataset.skillCreationMaximum);
+    if (!Number.isFinite(firstLevel) || !Number.isFinite(creationMaximum)) return;
+
+    const increments = new Map();
+    for (const radio of selectedTemplates().values()) {
+      const tables = [...document.querySelectorAll("[data-template-group]")].find(
+        (group) =>
+          group.dataset.templateGroup === radio.dataset.templateSelect &&
+          group.dataset.template === radio.value,
+      );
+      if (!tables) continue;
+      const grants = JSON.parse(tables.dataset.skillGrants || "{}");
+      for (const [skill, amount] of Object.entries(grants)) {
+        increments.set(skill, (increments.get(skill) ?? 0) + Number(amount));
+      }
+    }
+
+    for (const fieldset of document.querySelectorAll('[data-pick-kind="skill"]')) {
+      if (fieldset.closest("[hidden]")) {
+        for (const select of fieldset.querySelectorAll("select")) select.value = "";
+        continue;
+      }
+      const maximum = Number(fieldset.dataset.pickMaxLevel);
+      for (const select of fieldset.querySelectorAll("select")) {
+        for (const option of select.options) {
+          if (!option.value) {
+            option.disabled = false;
+            continue;
+          }
+          const count = increments.get(option.value) ?? 0;
+          const level = Math.min(creationMaximum, firstLevel + count - 1);
+          option.disabled = count > 0 && level >= maximum;
+        }
+        if (select.selectedOptions[0]?.disabled) select.value = "";
+        if (select.value) {
+          increments.set(select.value, (increments.get(select.value) ?? 0) + 1);
+        }
       }
     }
   };
@@ -182,17 +366,24 @@
     }
   };
   refreshRestrictions();
-  refreshSpellPicks();
+  refreshTaggedPicks();
+  refreshSkillPickOptions();
 
   document.addEventListener("change", (event) => {
-    const radio = event.target;
+    const target = event.target;
+    if (target instanceof HTMLSelectElement) {
+      if (target.closest('[data-pick-kind="skill"]')) refreshSkillPickOptions();
+      return;
+    }
+    const radio = target;
     if (!(radio instanceof HTMLInputElement) || radio.type !== "radio") return;
     refreshSummary(radio.name);
     refreshTemplateChoices(radio);
     refreshRestrictions();
-    refreshSpellPicks();
-    radio.closest("[data-choice-panel]")?.classList.remove("is-missing");
+    refreshTaggedPicks();
     if (radio.dataset.templateSelect) revealTables(radio.dataset.templateSelect);
+    refreshSkillPickOptions();
+    radio.closest("[data-choice-panel]")?.classList.remove("is-missing");
   });
 
   // The list scrolls, so a chosen option is brought into view when the dialog opens.
@@ -339,9 +530,8 @@
     }
   };
 
-  // Each spell pick takes a spell it offers, and no two picks of a template take the same spell.
-  // In the unchosen mode a pick the player already set is kept, and its spell is not taken again.
-  const randomizeSpells = (fieldset, onlyUnchosen) => {
+  // Do not select the same tagged feature twice.
+  const randomizeTaggedPicks = (fieldset, onlyUnchosen) => {
     const selects = [...fieldset.querySelectorAll("select")];
     const taken = new Set(onlyUnchosen ? selects.map((select) => select.value).filter(Boolean) : []);
     for (const select of selects) {
@@ -359,6 +549,13 @@
   // unchosen mode a pick the player already set is kept, and its value is not taken again.
   const randomizePicks = (fieldset, onlyUnchosen) => {
     const selects = [...fieldset.querySelectorAll("select")];
+    const skillPicks = fieldset.dataset.pickKind === "skill";
+    if (skillPicks) {
+      if (!onlyUnchosen) {
+        for (const select of selects) select.value = "";
+      }
+      refreshSkillPickOptions();
+    }
     const taken = new Set(onlyUnchosen ? selects.map((select) => select.value).filter(Boolean) : []);
     for (const select of selects) {
       if (onlyUnchosen && select.value !== "") continue;
@@ -369,18 +566,16 @@
       const pool = fresh.length > 0 ? fresh : offered;
       select.value = pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : "";
       if (select.value !== "") taken.add(select.value);
+      if (skillPicks) refreshSkillPickOptions();
     }
   };
 
-  // The name is rolled last, so it draws on the background that the choices just rolled. The
-  // Year is rolled with the choices, so the spells are rolled after it, from the Year's spells. In
-  // the unchosen mode a name already typed counts as chosen and is kept, and the stats are always
-  // chosen (they are rolled), so they are left alone too.
+  // Tagged feature picks follow their fields; the name is rolled after all choices.
   const randomizeAll = (onlyUnchosen) => {
     randomizeChoices(onlyUnchosen);
     if (!onlyUnchosen) randomizeStats();
-    for (const fieldset of document.querySelectorAll("[data-spell-picks]")) {
-      if (!fieldset.closest("[hidden]")) randomizeSpells(fieldset, onlyUnchosen);
+    for (const fieldset of document.querySelectorAll("[data-tagged-picks]")) {
+      if (!fieldset.closest("[hidden]")) randomizeTaggedPicks(fieldset, onlyUnchosen);
     }
     for (const fieldset of document.querySelectorAll("[data-pick-selects]")) {
       if (!fieldset.closest("[hidden]")) randomizePicks(fieldset, onlyUnchosen);
@@ -436,9 +631,9 @@
       return;
     }
 
-    const spellPicks = target.closest("[data-randomize-spells]")?.closest("[data-spell-picks]");
-    if (spellPicks) {
-      randomizeSpells(spellPicks, false);
+    const taggedPicks = target.closest("[data-randomize-tagged-picks]")?.closest("[data-tagged-picks]");
+    if (taggedPicks) {
+      randomizeTaggedPicks(taggedPicks, false);
       return;
     }
 
@@ -459,7 +654,10 @@
   form?.addEventListener("submit", (event) => {
     const error = form.querySelector(".form-error");
     const missing = [...form.querySelectorAll("[data-choice-panel]")].filter(
-      (panel) => !panel.closest("[hidden]") && panel.querySelector('input[type="radio"]:checked') === null,
+      (panel) =>
+        !panel.closest("[hidden]") &&
+        panel.querySelector('input[type="radio"]:checked') === null &&
+        !(panel.dataset.optional === "true" && panel.dataset.required !== "true"),
     );
     for (const panel of form.querySelectorAll("[data-choice-panel].is-missing")) {
       if (!missing.includes(panel)) panel.classList.remove("is-missing");

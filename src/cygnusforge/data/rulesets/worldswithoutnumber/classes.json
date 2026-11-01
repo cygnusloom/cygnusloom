@@ -297,6 +297,14 @@
     "kind": "class",
     "name": "Adventurer: Mage and Mage",
     "description": "A spellcaster who follows two traditions at once, trading depth for range. You roll a d6 with a -1 class penalty at first level, gain one free Focus of any kind, and learn the arts and spells of both traditions.",
+    "template_requirements": [
+      {
+        "kinds": ["tradition", "tradition2"],
+        "distinct": true,
+        "missing_message": "a Mage/Mage Adventurer must choose two partial traditions",
+        "duplicate_message": "a Mage/Mage Adventurer must choose two different traditions"
+      }
+    ],
     "stats": { "hp": -1, "attack_bonus": -1 },
     "skill_picks": [
       { "id": "class_free_skill", "count": 1, "table": "all_skills", "max_level": 1 }
@@ -312,7 +320,7 @@
     "kind": "tradition",
     "name": "No Tradition",
     "description": "A character with no magical training. Warriors, Experts, and Adventurers without a spellcasting partial class choose this.",
-    "classes": ["warrior", "expert", "adventurer_expert_warrior"],
+    "compatible_with": { "class": ["warrior", "expert", "adventurer_expert_warrior"] },
     "names": "names"
   },
   {
@@ -321,7 +329,7 @@
     "kind": "tradition",
     "name": "High Mage",
     "description": "The classical tradition of formal spells, sigils, and disciplined study. A full High Mage picks two arts and four first-level spells, and learns two more spells each level.",
-    "classes": ["mage"],
+    "compatible_with": { "class": ["mage"] },
     "skills": { "magic": 1 },
     "feat_picks": [
       { "id": "tradition_art_high", "count": 2, "tag": "high", "max_rank": 0 },
@@ -339,13 +347,14 @@
     "type": "template",
     "id": "high_mage_partial",
     "kind": "tradition",
+    "choice_key": "high_mage",
     "name": "High Mage, Partial",
     "description": "Formal High Magic learned alongside another trade. A partial High Mage picks one art and two first-level spells, and learns one more art at levels 2, 3, 6, and 9.",
-    "classes": [
+    "compatible_with": { "class": [
       "adventurer_expert_mage",
       "adventurer_warrior_mage",
       "adventurer_mage_mage"
-    ],
+    ] },
     "skills": { "magic": 1 },
     "feat_picks": [
       { "id": "tradition_art_high", "count": 1, "tag": "high", "max_rank": 0 },
@@ -359,7 +368,7 @@
     "kind": "tradition",
     "name": "Necromancer",
     "description": "A tradition concerned with death, the body's remains, and the powers that linger around them. A full Necromancer picks one art and four first-level spells, and may learn High Magic or Necromancer spells.",
-    "classes": ["mage"],
+    "compatible_with": { "class": ["mage"] },
     "skills": { "magic": 1 },
     "feat_picks": [
       { "id": "tradition_art_necromancer", "count": 1, "tag": "necromancer", "max_rank": 0 },
@@ -377,13 +386,14 @@
     "type": "template",
     "id": "necromancer_partial",
     "kind": "tradition",
+    "choice_key": "necromancer",
     "name": "Necromancer, Partial",
     "description": "Necromancy studied alongside another trade. A partial Necromancer picks one art and two first-level spells, and learns one more art at levels 3, 6, and 9.",
-    "classes": [
+    "compatible_with": { "class": [
       "adventurer_expert_mage",
       "adventurer_warrior_mage",
       "adventurer_mage_mage"
-    ],
+    ] },
     "skills": { "magic": 1 },
     "feat_picks": [
       { "id": "tradition_art_necromancer", "count": 1, "tag": "necromancer", "max_rank": 0 },
@@ -403,7 +413,7 @@
     "kind": "tradition",
     "name": "Elementalist",
     "description": "A tradition that treats the raw elements as living forces to be courted and commanded. A full Elementalist gains Elemental Resilience and Elemental Sparks, picks one more art and four first-level spells, and may learn High Magic or Elementalist spells.",
-    "classes": ["mage"],
+    "compatible_with": { "class": ["mage"] },
     "skills": { "magic": 1 },
     "features": [
       { "feature": "art_elemental_resilience", "quantity": "1" },
@@ -425,13 +435,14 @@
     "type": "template",
     "id": "elementalist_partial",
     "kind": "tradition",
+    "choice_key": "elementalist",
     "name": "Elementalist, Partial",
     "description": "Elemental mastery studied alongside another trade. A partial Elementalist gains Elemental Resilience and Elemental Sparks, picks one more art and two first-level spells, and learns one more art at levels 3, 6, and 9.",
-    "classes": [
+    "compatible_with": { "class": [
       "adventurer_expert_mage",
       "adventurer_warrior_mage",
       "adventurer_mage_mage"
-    ],
+    ] },
     "skills": { "magic": 1 },
     "features": [
       { "feature": "art_elemental_resilience", "quantity": "1" },
@@ -453,9 +464,10 @@
     "type": "template",
     "id": "high_mage_partial_2",
     "kind": "tradition2",
+    "choice_key": "high_mage",
     "name": "Second Tradition: High Mage, Partial",
     "description": "The second partial tradition of a Mage/Mage Adventurer. It grants one art and two first-level spells, and one more art at levels 2, 3, 6, and 9.",
-    "classes": ["adventurer_mage_mage"],
+    "compatible_with": { "class": ["adventurer_mage_mage"] },
     "feat_picks": [
       { "id": "tradition2_art_high", "count": 1, "tag": "high", "max_rank": 0 },
       {
@@ -472,9 +484,10 @@
     "type": "template",
     "id": "necromancer_partial_2",
     "kind": "tradition2",
+    "choice_key": "necromancer",
     "name": "Second Tradition: Necromancer, Partial",
     "description": "The second partial tradition of a Mage/Mage Adventurer. It grants one art and two first-level spells, and one more art at levels 3, 6, and 9.",
-    "classes": ["adventurer_mage_mage"],
+    "compatible_with": { "class": ["adventurer_mage_mage"] },
     "feat_picks": [
       { "id": "tradition2_art_necromancer", "count": 1, "tag": "necromancer", "max_rank": 0 },
       {
@@ -491,9 +504,10 @@
     "type": "template",
     "id": "elementalist_partial_2",
     "kind": "tradition2",
+    "choice_key": "elementalist",
     "name": "Second Tradition: Elementalist, Partial",
     "description": "The second partial tradition of a Mage/Mage Adventurer. It grants Elemental Resilience, Elemental Sparks, one more art, and two first-level spells, and one more art at levels 3, 6, and 9.",
-    "classes": ["adventurer_mage_mage"],
+    "compatible_with": { "class": ["adventurer_mage_mage"] },
     "features": [
       { "feature": "art_elemental_resilience", "quantity": "1" },
       { "feature": "art_elemental_sparks", "quantity": "1" }

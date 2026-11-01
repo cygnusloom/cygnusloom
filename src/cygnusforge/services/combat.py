@@ -74,8 +74,6 @@ MAX_DAMAGE = 1000
 UNCAPPED_ARMOR = 1000
 MAX_RECOVERY_TEXT = 600
 MAX_CAUSE_TEXT = 200
-# The skill an unarmed strike rolls, for a rule set whose weapons have no feature for it.
-UNARMED_ATTACK_SKILL = "punch"
 # A weapon feature flag: the weapon can be used without the unskilled attack penalty, as the free
 # Worlds Without Number rules say of crossbows.
 NO_UNSKILLED_PENALTY = "no_unskilled_penalty"
@@ -185,7 +183,7 @@ def _weapon_skill(combat: CombatRules, weapon: str, feature: Feature | None) -> 
     if feature is not None and feature.skill:
         return feature.skill
     if name_key(weapon) in combat.unarmed_names:
-        return UNARMED_ATTACK_SKILL
+        return combat.unarmed_skill
     return ""
 
 
@@ -213,12 +211,12 @@ def _player_bonuses(
     damage_bonus = _stat_bonus(combat, character, combat.damage_bonus_stat)
     to_hit = _stat_bonus(combat, character, combat.hit_bonus_stat) + attribute
     damage = damage_bonus
-    class_bonus = _class_damage_bonus(combat, character)
+    class_bonus = _level_damage_bonus(combat, character, spec)
     damage += class_bonus
     skill = _weapon_skill(combat, weapon, feature)
-    if skill:
+    if skill and skill in spec.skills:
         level = spec.skill_level(character.skills, skill)
-        if level >= 0:
+        if spec.skill_trained(character.skills, skill):
             to_hit += level
             if unarmed:
                 damage += level
@@ -234,14 +232,18 @@ def _player_bonuses(
     return WeaponBonuses(to_hit=to_hit, damage=damage, shock=shock, shock_ac=shock_ac)
 
 
-def _class_damage_bonus(combat: CombatRules, character: Character) -> int:
-    """The damage a class's level adds, rounded up, such as a Warrior's half level."""
-    if not combat.level_damage_divisor or not combat.level_damage_classes:
+def _level_damage_bonus(combat: CombatRules, character: Character, spec: CharacterSpec) -> int:
+    """The damage the configured template's counter adds, rounded up by its divisor."""
+    rules = combat.level_damage
+    if rules is None:
         return 0
-    if character.templates.get("class", "") not in combat.level_damage_classes:
+    counter = spec.counters.get(rules.counter)
+    if counter is None:
         return 0
-    level = character.counters.get("level", 1)
-    return -(-level // combat.level_damage_divisor)
+    if character.templates.get(rules.template_kind, "") not in rules.templates:
+        return 0
+    level = character.counters.get(rules.counter, counter.initial)
+    return -(-level // rules.divisor)
 
 
 def _attack_shock(source: Character, name: str) -> tuple[int, int]:
@@ -435,9 +437,7 @@ def _injury_from_hit(
     *,
     plus: str,
 ) -> str | None:
-    """A player character hit to exactly 0 on the injury stat gains an injury. The injury is the table
-    entry numbered by the harm this hit did, capped at the table's last entry. Damage that
-    overflows onto another stat is separate: it owes a save, and the injury still applies."""
+    """Apply the configured injury trigger to eligible targets, using harm as the table index."""
     table = combat.injury_table
     if table is None:
         return None
@@ -445,7 +445,9 @@ def _injury_from_hit(
     if lost == 0:
         return None
     character = load_state(db, campaign_id).characters[name_key(name)]
-    if character.kind != PC_KIND or current(character, table.stat) != 0:
+    if character.kind not in table.target_kinds:
+        return None
+    if table.trigger == "depleted" and current(character, table.stat) != 0:
         return None
     roll = min(lost, len(table.entries))
     entry = gain_injury(

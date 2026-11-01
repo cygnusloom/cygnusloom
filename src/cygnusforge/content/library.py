@@ -520,8 +520,6 @@ PICKED = "$picked"
 # A move's `stat` of "highest" rolls the best of its `stat_choice`, without the player picking.
 HIGHEST = "highest"
 DICE_SIDES = re.compile(r"1d[0-9]+")
-# The Injuries table has one entry for each hit that takes exactly 0 HP, up to this many points.
-INJURY_ROLLS = 12
 
 
 @dataclass(frozen=True)
@@ -669,6 +667,8 @@ class MoveRules:
     stat_choice: tuple[str, ...] = ()
     # The skill the move is made with, added at its level. Empty when the move has no skill.
     skill: str = ""
+    # Minimum skill contribution, or None when a negative level applies without a floor.
+    skill_floor: int | None = 0
     # The move is only open once the character holds every stored condition.
     needs_all_conditions: bool = False
 
@@ -683,11 +683,13 @@ class InjuryEntry:
 
 @dataclass(frozen=True)
 class InjuryTable:
-    """The Injuries table, with the `stat` whose hit that reaches 0 rolls on it."""
+    """The injury table, its triggering stat, and the targets and hits that use it."""
 
     id: str
     stat: str
     entries: tuple[InjuryEntry, ...]
+    trigger: str
+    target_kinds: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -706,13 +708,23 @@ class MoraleRules:
 
 @dataclass(frozen=True)
 class SaveRules:
-    """How a d20-style save is decided. `mode` is "roll_under" (succeeds at or under the score) or
+    """How a save is decided. `mode` is "roll_under" (succeeds at or under the score) or
     "roll_over" (succeeds at or over it). `auto_success` and `auto_fail` are rolls that always pass
-    or always fail, or None for no such roll."""
+    or always fail, or None for no such roll. Missing rules are supplied by the combat die."""
 
     mode: str = "roll_under"
-    auto_success: int | None = 1
-    auto_fail: int | None = 20
+    auto_success: int | None = None
+    auto_fail: int | None = None
+
+
+@dataclass(frozen=True)
+class LevelDamageRules:
+    """The templates whose counter contributes to damage, rounded up by `divisor`."""
+
+    template_kind: str
+    templates: tuple[str, ...]
+    counter: str
+    divisor: int
 
 
 @dataclass(frozen=True)
@@ -796,6 +808,8 @@ class CombatRules:
     injury_table: InjuryTable | None = None
     # The stats outside combat harm can take, such as strength, dexterity, and willpower.
     outside_harm: tuple[str, ...] = ()
+    # The stat healed when a tool call does not name one.
+    healing_stat: str | None = None
     morale: MoraleRules | None = None
     modifiers: Mapping[str, str] = field(default_factory=dict)
     # A player character who is out of action and dying dies when this many hours pass unaided.
@@ -809,7 +823,7 @@ class CombatRules:
     # come from the conditions' `dying` and `fatal` flags.
     dying_conditions: tuple[str, ...] = ()
     fatal_conditions: tuple[str, ...] = ()
-    # The dice an unarmed attack rolls, and the names that mean unarmed, such as "fists".
+    # The dice an unarmed attack rolls, the names that mean unarmed, and its optional skill id.
     unarmed_damage: str = ""
     unarmed_names: frozenset[str] = frozenset()
     # The attributes an unarmed attack may use for its modifier.
@@ -838,10 +852,6 @@ class CombatRules:
     unskilled_attack_penalty: int = 0
     # The stat added to a weapon's damage. Empty when none is.
     damage_bonus_stat: str = ""
-    # Class template ids whose level adds to their damage and Shock, and the divisor of that
-    # bonus rounded up, such as a Warrior's half level. Zero disables the bonus.
-    level_damage_classes: tuple[str, ...] = ()
-    level_damage_divisor: int = 0
     # True when a weapon adds the modifier of each of its attributes to its damage.
     attribute_damage: bool = False
     # True when a miss still deals the weapon's Shock to a target whose defense is low enough.
@@ -855,6 +865,9 @@ class CombatRules:
     # The rule set's Python functions, when it names a python_module. Each function, when present,
     # overrides the declarative save and initiative rules above.
     module: ModuleType | None = None
+    # The skill an unarmed strike uses, when configured.
+    unarmed_skill: str = ""
+    level_damage: LevelDamageRules | None = None
 
     def save_succeeds(self, roll: int, score: int) -> bool:
         """Whether a save with this roll succeeds against a score."""
@@ -1030,30 +1043,10 @@ class MagicRules:
     cast_penalty: int
 
     @property
-    def spellbook_kind(self) -> str:
-        return self.reusable.kind
-
-    @property
-    def spellbook_size(self) -> str:
-        return self.reusable.size
-
-    @property
     def item_kind_icons(self) -> dict[str, str]:
         """The icon each item kind names in the rule set's data, by kind."""
         kinds = (self.reusable, self.single_use, self.charged)
         return {k.kind: k.icon for k in kinds if k.icon is not None}
-
-    @property
-    def scroll_kind(self) -> str:
-        return self.single_use.kind
-
-    @property
-    def scroll_size(self) -> str:
-        return self.single_use.size
-
-    @property
-    def charged_kind(self) -> str:
-        return self.charged.kind
 
 
 @dataclass(frozen=True)
@@ -1146,6 +1139,8 @@ class RuleSet:
     blurb: str | None = None
     # Template kinds a character may leave unchosen, such as a tradition only mages need.
     optional_templates: tuple[str, ...] = ()
+    # Rule-data values validated by the ruleset modules that declared them.
+    rule_data: Mapping[str, object] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -1724,7 +1719,13 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         if name not in tables:
             raise ContentError(f"{template}: missing table {name!r}")
     table_names = {d.id: _table_label(d, template) for d in definitions if d.type == "table"}
-    character = build_character(definitions, tables, table_names, template)
+    character = build_character(
+        definitions,
+        tables,
+        table_names,
+        template,
+        skill_progression=head.data.get("skill_progression"),
+    )
     optional_templates = _names(head.data, "optional_templates", label)
     character = replace(character, optional_kinds=optional_templates)
     campaign = build_campaign(definitions, tables, table_names, template)
@@ -1810,6 +1811,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         definitions, terrain, encounter_objects, template
     )
     world_terrain = _load_world_terrain(definitions, template)
+    rule_data = _load_rule_data(definitions, modules, character, template)
     npc_hp = _npc_hp(head.data, label)
     npc_hp_stat = _optional_text(head.data, "npc_hp_stat", label)
     if npc_hp and npc_hp_stat is None:
@@ -1883,6 +1885,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         world_terrain=world_terrain,
         wilderness=wilderness,
         optional_templates=optional_templates,
+        rule_data=rule_data,
     )
 
 
@@ -2240,18 +2243,19 @@ def _load_combat(
         )
     injury_table = _load_injury_table_ref(data, character, injury_tables, label)
     outside_harm = _load_outside_harm(data, character, label)
-    unarmed_damage, unarmed_names = _load_unarmed(data, label)
+    unarmed_damage, unarmed_names, unarmed_skill = _load_unarmed(data, character, label)
     unarmed_attributes = _names(data.get("unarmed", {}), "attributes", f"{label}: unarmed")
     for stat_id in unarmed_attributes:
         if stat_id not in character.stats:
             raise ContentError(f"{label}: unarmed attribute {stat_id!r} names no stat")
-    for key in ("hit_bonus_stat", "damage_bonus_stat", "defense_modifier"):
+    for key in ("hit_bonus_stat", "damage_bonus_stat", "defense_modifier", "healing_stat"):
         value = _optional_text(data, key, label)
         if value is not None and value not in character.stats:
             raise ContentError(f"{label}: {key!r} names no stat ({value!r})")
     for stat_id in _names(data, "defeat_at_zero", label):
         if stat_id not in character.stats:
             raise ContentError(f"{label}: 'defeat_at_zero' names no stat ({stat_id!r})")
+    level_damage = _load_level_damage(data, character, label)
     return CombatRules(
         id=definition.id,
         damage=damage,
@@ -2261,6 +2265,7 @@ def _load_combat(
         defeat=defeat,
         injury_table=injury_table,
         outside_harm=outside_harm,
+        healing_stat=_optional_text(data, "healing_stat", label),
         morale=_load_morale(data, character, label),
         modifiers=_load_modifiers(data, label),
         dying_hours=_whole(data, "dying_hours", label, 0) if "dying_hours" in data else 0,
@@ -2271,6 +2276,7 @@ def _load_combat(
         aid_items=_names(data, "aid_items", label),
         unarmed_damage=unarmed_damage,
         unarmed_names=unarmed_names,
+        unarmed_skill=unarmed_skill,
         unarmed_attributes=unarmed_attributes,
         hit_mode=_choice(data, "hit_mode", ("auto", "roll_vs_defense"), "auto", label),
         multi_attack=_choice(data, "multi_attack", ("highest", "each"), "highest", label),
@@ -2287,8 +2293,7 @@ def _load_combat(
         hit_bonus_stat=_optional_text(data, "hit_bonus_stat", label) or "",
         unskilled_attack_penalty=_optional_whole(data, "unskilled_attack_penalty", label) or 0,
         damage_bonus_stat=_optional_text(data, "damage_bonus_stat", label) or "",
-        level_damage_classes=_names(data, "level_damage_classes", label),
-        level_damage_divisor=_optional_whole(data, "level_damage_divisor", label),
+        level_damage=level_damage,
         attribute_damage=_flag_default(data, "attribute_damage", label, False),
         shock_on_miss=_flag_default(data, "shock_on_miss", label, False),
         minimum_shock_damage=_flag_default(data, "minimum_shock_damage", label, False),
@@ -2344,7 +2349,7 @@ def _load_save(data: Mapping[str, Any], check_sides: int, label: str) -> SaveRul
     """The declarative save rule. Optional; its rolls must be on the check die."""
     block = data.get("save")
     if block is None:
-        return SaveRules()
+        return SaveRules(auto_success=1, auto_fail=check_sides)
     if not isinstance(block, Mapping):
         raise ContentError(f"{label}: 'save' must be an object")
     mode = _choice(block, "mode", ("roll_under", "roll_over"), "roll_under", f"{label}: save")
@@ -2423,19 +2428,41 @@ def _load_injury_table_ref(
     injury_tables: Mapping[str, tuple[InjuryEntry, ...]],
     label: str,
 ) -> InjuryTable | None:
-    """The `injuries` key names the Injuries table to roll on and the stat whose hit to 0 rolls on it."""
+    """Load the injury table, trigger, and character kinds that can receive an injury."""
     if "injuries" not in data:
         return None
     ref = data["injuries"]
     if not isinstance(ref, Mapping):
         raise ContentError(f"{label}: 'injuries' must be an object")
-    table_id = required_text(ref, "table", f"{label}: injuries")
+    injury_label = f"{label}: injuries"
+    allowed = {"table", "stat", "trigger", "target_kinds"}
+    unknown = set(ref) - allowed
+    if unknown:
+        raise ContentError(
+            f"{injury_label}: unexpected field(s): {', '.join(sorted(map(str, unknown)))}"
+        )
+    table_id = required_text(ref, "table", injury_label)
     if table_id not in injury_tables:
         raise ContentError(f"{label}: 'injuries' names no injury table ({table_id!r})")
-    stat = required_text(ref, "stat", f"{label}: injuries")
+    stat = required_text(ref, "stat", injury_label)
     if stat not in character.stats:
         raise ContentError(f"{label}: 'injuries' names no stat ({stat!r})")
-    return InjuryTable(id=table_id, stat=stat, entries=injury_tables[table_id])
+    trigger = _choice(ref, "trigger", ("depleted", "damage"), "", injury_label)
+    target_kinds = _names(ref, "target_kinds", injury_label)
+    if not target_kinds:
+        raise ContentError(f"{injury_label}: 'target_kinds' must be a non-empty list")
+    if len(target_kinds) != len(set(target_kinds)):
+        raise ContentError(f"{injury_label}: 'target_kinds' must not list a kind twice")
+    for kind in target_kinds:
+        if kind not in ("pc", "npc"):
+            raise ContentError(f"{injury_label}: 'target_kinds' names no character kind ({kind!r})")
+    return InjuryTable(
+        id=table_id,
+        stat=stat,
+        entries=injury_tables[table_id],
+        trigger=trigger,
+        target_kinds=target_kinds,
+    )
 
 
 def _load_outside_harm(
@@ -2452,12 +2479,14 @@ def _load_outside_harm(
     return tuple(stats)
 
 
-def _load_unarmed(data: Mapping[str, Any], label: str) -> tuple[str, frozenset[str]]:
+def _load_unarmed(
+    data: Mapping[str, Any], character: CharacterSpec, label: str
+) -> tuple[str, frozenset[str], str]:
     """The dice an unarmed attack rolls and the names that mean unarmed. Optional; names are
-    compared without regard to case."""
+    compared without regard to case. Its optional skill must belong to the rule set."""
     block = data.get("unarmed")
     if block is None:
-        return "", frozenset()
+        return "", frozenset(), ""
     if not isinstance(block, Mapping):
         raise ContentError(f"{label}: 'unarmed' must be an object")
     damage = block.get("damage")
@@ -2466,7 +2495,56 @@ def _load_unarmed(data: Mapping[str, Any], label: str) -> tuple[str, frozenset[s
     names = _names(block, "names", f"{label}: unarmed")
     if not names:
         raise ContentError(f"{label}: 'unarmed.names' needs at least one name")
-    return damage, frozenset(name.strip().casefold() for name in names)
+    skill = _optional_text(block, "skill", f"{label}: unarmed") or ""
+    if skill and skill not in character.skills:
+        raise ContentError(f"{label}: 'unarmed.skill' names no skill ({skill!r})")
+    return damage, frozenset(name.strip().casefold() for name in names), skill
+
+
+def _load_level_damage(
+    data: Mapping[str, Any], character: CharacterSpec, label: str
+) -> LevelDamageRules | None:
+    """The optional source of template level damage. Every part is required when configured."""
+    block = data.get("level_damage")
+    if block is None:
+        return None
+    if not isinstance(block, Mapping):
+        raise ContentError(f"{label}: 'level_damage' must be an object")
+    level_label = f"{label}: level_damage"
+    allowed = {"template_kind", "templates", "counter", "divisor"}
+    unknown = set(block) - allowed
+    if unknown:
+        raise ContentError(
+            f"{level_label}: unexpected field(s): {', '.join(sorted(map(str, unknown)))}"
+        )
+    template_kind = required_text(block, "template_kind", level_label)
+    template_ids = _names(block, "templates", level_label)
+    if not template_ids:
+        raise ContentError(f"{level_label}: 'templates' must be a non-empty list")
+    counter = required_text(block, "counter", level_label)
+    divisor = _whole(block, "divisor", level_label, 1)
+    if len(template_ids) != len(set(template_ids)):
+        raise ContentError(f"{level_label}: 'templates' must not list an id twice")
+    kind_ids = {
+        template.id for template in character.templates.values() if template.kind == template_kind
+    }
+    if not kind_ids:
+        raise ContentError(
+            f"{level_label}: 'template_kind' names no template kind ({template_kind!r})"
+        )
+    if counter not in character.counters:
+        raise ContentError(f"{level_label}: 'counter' names no counter ({counter!r})")
+    for template_id in template_ids:
+        if template_id not in kind_ids:
+            raise ContentError(
+                f"{level_label}: 'templates' names no {template_kind} template ({template_id!r})"
+            )
+    return LevelDamageRules(
+        template_kind=template_kind,
+        templates=template_ids,
+        counter=counter,
+        divisor=divisor,
+    )
 
 
 def _load_modifiers(data: Mapping[str, Any], label: str) -> dict[str, str]:
@@ -3173,10 +3251,15 @@ def _load_magic(
     if definition is None:
         return None
     label = f"{template}: magic {definition.id}"
+    reusable = _load_item_kind(definition.data, "reusable", label, item_sizes, sized=True)
+    single_use = _load_item_kind(definition.data, "single_use", label, item_sizes, sized=True)
+    charged = _load_item_kind(definition.data, "charged", label, item_sizes, sized=False)
+    if len({reusable.kind, single_use.kind, charged.kind}) != 3:
+        raise ContentError(f"{label}: magic item roles must use distinct kinds")
     return MagicRules(
-        reusable=_load_item_kind(definition.data, "reusable", label, item_sizes, sized=True),
-        single_use=_load_item_kind(definition.data, "single_use", label, item_sizes, sized=True),
-        charged=_load_item_kind(definition.data, "charged", label, item_sizes, sized=False),
+        reusable=reusable,
+        single_use=single_use,
+        charged=charged,
         cast_penalty=_whole(definition.data, "cast_penalty", label, 0),
     )
 
@@ -3206,6 +3289,52 @@ def _load_item_kind(
     return ItemKind(kind, size, icon)
 
 
+def _load_rule_data(
+    definitions: list[Definition],
+    modules: Mapping[str, ModuleType],
+    character: CharacterSpec,
+    template: str,
+) -> dict[str, object]:
+    """Run each rule-data definition's module configurator and retain its validated value."""
+    configured: dict[str, object] = {}
+    for definition in definitions:
+        if definition.type != "rule_data":
+            continue
+        label = f"{template}: rule_data {definition.id}"
+        data = definition.data
+        if not isinstance(data, Mapping):
+            raise ContentError(f"{label}: definition data must be an object")
+        module_id = required_text(data, "python_module", label)
+        module = modules.get(module_id)
+        if module is None:
+            raise ContentError(f"{label}: unknown python_module {module_id!r}")
+        configure_name = required_text(data, "configure", label)
+        configurator = getattr(module, configure_name, None)
+        if not callable(configurator):
+            raise ContentError(
+                f"{label}: configurator {configure_name!r} "
+                f"is not callable in python_module {module_id!r}"
+            )
+        try:
+            result = configurator(data, character, label)
+        except ContentError:
+            raise
+        except (ValueError, TypeError, RuntimeError) as exc:
+            raise ContentError(
+                f"{label}: configurator {configure_name!r} "
+                f"in python_module {module_id!r} failed: {exc}"
+            ) from exc
+        if result is None:
+            raise ContentError(
+                f"{label}: configurator {configure_name!r} "
+                f"in python_module {module_id!r} returned None"
+            )
+        if definition.id in configured:
+            raise ContentError(f"{template}: duplicate rule_data id {definition.id!r}")
+        configured[definition.id] = result
+    return configured
+
+
 HOOK_FIELDS = ("new_day", "before_rest", "held_back", "after_consume", "lodge", "status")
 
 
@@ -3216,8 +3345,8 @@ def _load_rule_hooks(
     rests: Mapping[str, RestLength],
     template: str,
 ) -> Hooks | None:
-    """The rule set's hooks definition: the module whose functions the engine calls at fixed points,
-    and the options those functions read. A rest with upkeep needs the before_rest hook."""
+    """Load fixed-point hooks and their options. An optional `configure` callable can validate and
+    normalize those options. A rest with upkeep needs the before_rest hook."""
     definition = _single_optional(definitions, "hooks", template)
     if definition is None:
         if any(length.upkeep for length in rests.values()):
@@ -3245,16 +3374,31 @@ def _load_rule_hooks(
     if not isinstance(options, Mapping):
         raise ContentError(f"{label}: 'options' must be an object")
     options = dict(options)
-    if "feature" in options:
-        feature = required_text(options, "feature", f"{label}: options")
-        if feature not in character.features:
-            raise ContentError(f"{label}: 'feature' names no character feature ({feature!r})")
-        item = character.features[feature]
-        if item.feature_type != "item" or item.uses < 1:
+    configure_name = _optional_nonempty_text(data, "configure", label)
+    if configure_name is not None:
+        configurator = getattr(module, configure_name, None)
+        if not callable(configurator):
             raise ContentError(
-                f"{label}: 'feature' must be a consumable item with uses ({feature!r})"
+                f"{label}: hook configurator {configure_name!r} is not callable in {module_id!r}"
             )
-        options["item"] = item.name
+        try:
+            configured_options = configurator(options, character, label)
+        except ContentError:
+            raise
+        except (ValueError, TypeError, RuntimeError) as exc:
+            raise ContentError(
+                f"{label}: hook configurator {configure_name!r} failed: {exc}"
+            ) from exc
+        if not isinstance(configured_options, Mapping):
+            raise ContentError(
+                f"{label}: hook configurator {configure_name!r} must return a mapping"
+            )
+        if any(not isinstance(key, str) for key in configured_options):
+            raise ContentError(
+                f"{label}: hook configurator {configure_name!r} returned a mapping "
+                "with a non-string key"
+            )
+        options = dict(configured_options)
     return Hooks(module=module, options=options, **names)
 
 
@@ -3680,6 +3824,13 @@ def _load_moves(
             raise ContentError(f"{label}: 'skill' must be the id of a skill")
         if skill and skill not in character.skills:
             raise ContentError(f"{label}: 'skill' names no skill ({skill!r})")
+        skill_floor = d.data.get("skill_floor", 0)
+        if skill_floor is not None and (
+            isinstance(skill_floor, bool) or not isinstance(skill_floor, int)
+        ):
+            raise ContentError(f"{label}: 'skill_floor' must be a whole number or null")
+        if "skill_floor" in d.data and not skill:
+            raise ContentError(f"{label}: 'skill_floor' needs a 'skill'")
         moves[d.id] = MoveRules(
             id=d.id,
             label=required_text(d.data, "label", label),
@@ -3689,6 +3840,7 @@ def _load_moves(
             bands=_load_bands(d.data.get("bands"), character, stored, counters, label),
             stat_choice=stat_choice,
             skill=skill,
+            skill_floor=skill_floor,
             needs_all_conditions=needs_all,
         )
     return moves
@@ -3776,11 +3928,11 @@ def _load_injury_entries(
     conditions: Mapping[str, ConditionRules],
     template: str,
 ) -> tuple[InjuryEntry, ...]:
-    """An Injuries table: one entry for each roll from 1 to INJURY_ROLLS, in order."""
+    """An Injuries table: a non-empty, contiguous set of entries starting at roll 1."""
     label = f"{template}: injury table {definition.id}"
     entries = definition.data.get("entries")
-    if not isinstance(entries, list) or len(entries) != INJURY_ROLLS:
-        raise ContentError(f"{label}: 'entries' must list exactly {INJURY_ROLLS} entries")
+    if not isinstance(entries, list) or not entries:
+        raise ContentError(f"{label}: 'entries' must be a non-empty list")
     stored = frozenset(cid for cid, rules in conditions.items() if rules.derived is None)
     loaded = []
     for position, entry in enumerate(entries, start=1):

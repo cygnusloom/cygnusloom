@@ -18,10 +18,6 @@ from cygnusforge.content.definitions import ContentError, Definition, required_t
 from cygnusforge.rules.dice import FORMULA, is_formula, roll_total
 
 FEATURE_TYPES = ("item", "trait", "spell", "feat")
-# The level a character has in a skill they were never trained in.
-UNSKILLED = -1
-# The highest level a skill may reach while a character is being created.
-CREATION_SKILL_CAP = 1
 # The effects a feature may run when it is granted. A `stat`, `skill`, or `counter` effect adds
 # its `delta` to that stat's score, that skill's level, or that counter's starting value. An
 # `armor` effect adds its `delta` to the character's armor. A `note` effect only says something.
@@ -52,6 +48,16 @@ class Skill:
     id: str
     name: str
     description: str
+
+
+@dataclass(frozen=True)
+class SkillProgression:
+    """Untrained and trained skill levels, including the creation and advancement limits."""
+
+    untrained: int
+    first_level: int
+    creation_maximum: int
+    maximum: int
 
 
 @dataclass(frozen=True)
@@ -162,8 +168,7 @@ class Granted:
 @dataclass(frozen=True)
 class Choose:
     """Features a template lets the character pick: `count` of `feature_type` whose tag is the
-    value of the field `tag_field`. Spells from earlier Years are known, not picked. A pick left
-    out is rolled from the same pool."""
+    value of the field `tag_field`. A pick left out is rolled from the same pool."""
 
     count: int
     feature_type: str
@@ -179,8 +184,8 @@ class SkillPick:
     id: str
     count: int
     table: str
+    max_level: int
     exclude: tuple[str, ...] = ()
-    max_level: int = CREATION_SKILL_CAP
 
 
 @dataclass(frozen=True)
@@ -198,6 +203,16 @@ class FeatPick:
     tags: tuple[str, ...] = ()
     # The feature type the pick offers, such as "spell" or "feat". Empty means any type.
     feature_type: str = ""
+
+
+@dataclass(frozen=True)
+class TemplateRequirement:
+    """Selections required by a template, optionally distinct by their choice keys."""
+
+    kinds: tuple[str, ...]
+    distinct: bool = False
+    missing_message: str | None = None
+    duplicate_message: str | None = None
 
 
 @dataclass(frozen=True)
@@ -222,8 +237,11 @@ class Template:
     skill_picks: tuple[SkillPick, ...] = ()
     # Features the character picks by tag when the template is chosen.
     feat_picks: tuple[FeatPick, ...] = ()
-    # The class template ids this template may be chosen with. Empty means any class.
-    classes: tuple[str, ...] = ()
+    # Other template kinds and the choices this template can be combined with.
+    compatible_with: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+    template_requirements: tuple[TemplateRequirement, ...] = ()
+    # Selections with the same key represent the same choice across different kinds.
+    choice_key: str = ""
 
 
 @dataclass(frozen=True)
@@ -273,6 +291,7 @@ class CharacterSpec:
     counters: Mapping[str, CounterRef] = field(default_factory=dict)
     # The skills a character of this rule set may have a level in.
     skills: Mapping[str, Skill] = field(default_factory=dict)
+    skill_progression: SkillProgression | None = None
     # Template kinds a character may leave unchosen, such as a magical tradition only mages need.
     optional_kinds: tuple[str, ...] = ()
 
@@ -290,8 +309,14 @@ class CharacterSpec:
         return found.modifier(stats[stat])
 
     def skill_level(self, skills: Mapping[str, int], skill: str) -> int:
-        """A character's level in a skill: UNSKILLED when they have no level in it."""
-        return skills.get(skill, UNSKILLED)
+        """A character's level in a skill, including the ruleset's untrained value."""
+        if self.skill_progression is None:
+            raise CharacterError("the rule set has no skill progression")
+        return skills.get(skill, self.skill_progression.untrained)
+
+    def skill_trained(self, skills: Mapping[str, int], skill: str) -> bool:
+        """Training is stored separately from its level, which may equal the untrained value."""
+        return skill in skills
 
     def stat_bounds(self, stat: str) -> tuple[int, int]:
         """The lowest and highest a submitted score for a stat may be. A stat that adds another
@@ -314,11 +339,16 @@ def build_character(
     tables: Mapping[str, tuple[TableOption, ...]],
     table_names: Mapping[str, str],
     template: str,
+    *,
+    skill_progression: object = None,
 ) -> CharacterSpec:
     """Build the character spec from a rule set's definitions. `tables` are already loaded."""
     stats = _each(definitions, "stat", lambda d: _stat(d, template))
     _check_groups(stats, template)
     skills = _each(definitions, "skill", lambda d: _skill(d, template))
+    levels = _skill_progression(skill_progression, template)
+    if skills and levels is None:
+        raise ContentError(f"{template}: skills need a 'skill_progression' definition")
     counter_ids = frozenset(d.id for d in definitions if d.type == "counter")
     features = _each(
         definitions,
@@ -329,15 +359,25 @@ def build_character(
         definitions, "character_field", lambda d: _field(d, tables, "character_field", template)
     )
     templates = _each(
-        definitions, "template", lambda d: _template(d, features, tables, skills, template)
+        definitions, "template", lambda d: _template(d, features, tables, skills, levels, template)
     )
     _check_stat_links(stats, skills, counter_ids, template)
+    kinds = {item.kind for item in templates.values()}
     for item in templates.values():
-        for class_id in item.classes:
-            if class_id not in templates:
-                raise ContentError(
-                    f"{template}: template {item.id!r} names no class template ({class_id!r})"
-                )
+        label = f"{template}: template {item.id!r}"
+        for kind, allowed in item.compatible_with.items():
+            if kind not in kinds:
+                raise ContentError(f"{label}: 'compatible_with' names no kind ({kind!r})")
+            for ident in allowed:
+                target = templates.get(ident)
+                if target is None or target.kind != kind:
+                    raise ContentError(
+                        f"{label}: 'compatible_with' names no {kind!r} template ({ident!r})"
+                    )
+        for requirement in item.template_requirements:
+            for kind in requirement.kinds:
+                if kind not in kinds:
+                    raise ContentError(f"{label}: 'template_requirements' names no kind ({kind!r})")
     for stat in stats.values():
         if stat.derived is None:
             continue
@@ -370,6 +410,7 @@ def build_character(
         tables=tables,
         table_names=table_names,
         skills=skills,
+        skill_progression=levels,
     )
 
 
@@ -572,6 +613,31 @@ def _skill(definition: Definition, template: str) -> Skill:
         id=definition.id,
         name=required_text(definition.data, "name", label),
         description=description,
+    )
+
+
+def _skill_progression(value: object, template: str) -> SkillProgression | None:
+    if value is None:
+        return None
+    label = f"{template}: 'skill_progression'"
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label} must be an object")
+    keys = {"untrained", "first_level", "creation_maximum", "maximum"}
+    if set(value) != keys:
+        raise ContentError(f"{label} needs exactly {', '.join(sorted(keys))}")
+    levels: dict[str, int] = {}
+    for key in keys:
+        level = value[key]
+        if not isinstance(level, int) or isinstance(level, bool):
+            raise ContentError(f"{label} {key!r} must be a whole number")
+        levels[key] = level
+    if not levels["first_level"] <= levels["creation_maximum"] <= levels["maximum"]:
+        raise ContentError(f"{label} limits must be in increasing order")
+    return SkillProgression(
+        untrained=levels["untrained"],
+        first_level=levels["first_level"],
+        creation_maximum=levels["creation_maximum"],
+        maximum=levels["maximum"],
     )
 
 
@@ -827,10 +893,13 @@ def _template(
     features: Mapping[str, Feature],
     tables: Mapping[str, Sequence[TableOption]],
     skills: Mapping[str, Skill],
+    skill_progression: SkillProgression | None,
     template: str,
 ) -> Template:
     label = f"{template}: template {definition.id}"
     data = definition.data
+    if "classes" in data:
+        raise ContentError(f"{label}: use 'compatible_with' instead of 'classes'")
     granted = data.get("features", [])
     if not isinstance(granted, list):
         raise ContentError(f"{label}: 'features' must be a list")
@@ -842,6 +911,9 @@ def _template(
         if table not in tables:
             raise ContentError(f"{label}: unknown table {table!r}")
     names = _names(data.get("names"), tables, label)
+    choice_key = data.get("choice_key", definition.id)
+    if not isinstance(choice_key, str) or not choice_key.strip():
+        raise ContentError(f"{label}: 'choice_key' must be non-empty text")
     return Template(
         id=definition.id,
         kind=required_text(data, "kind", label),
@@ -854,10 +926,60 @@ def _template(
         counters=_amounts(data.get("counters", {}), "counters", label, minimum=0),
         choose=_choose(data.get("choose"), label),
         skills=_skill_grants(data.get("skills", {}), skills, label),
-        skill_picks=_skill_picks(data.get("skill_picks", []), tables, skills, label),
+        skill_picks=_skill_picks(
+            data.get("skill_picks", []), tables, skills, skill_progression, label
+        ),
         feat_picks=_feat_picks(data.get("feat_picks", []), label),
-        classes=_text_ids(data.get("classes", []), "classes", label),
+        compatible_with=_template_compatibility(data.get("compatible_with", {}), label),
+        template_requirements=_template_requirements(data.get("template_requirements", []), label),
+        choice_key=choice_key,
     )
+
+
+def _template_compatibility(value: object, label: str) -> dict[str, tuple[str, ...]]:
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label}: 'compatible_with' must map kinds to template ids")
+    result: dict[str, tuple[str, ...]] = {}
+    for kind, ids in value.items():
+        if not isinstance(kind, str) or not kind.strip():
+            raise ContentError(f"{label}: 'compatible_with' kinds must be non-empty text")
+        allowed = _text_ids(ids, "compatible_with", label)
+        if not allowed:
+            raise ContentError(f"{label}: 'compatible_with' needs at least one {kind!r} template")
+        result[kind] = allowed
+    return result
+
+
+def _template_requirements(value: object, label: str) -> tuple[TemplateRequirement, ...]:
+    if not isinstance(value, list):
+        raise ContentError(f"{label}: 'template_requirements' must be a list")
+    requirements: list[TemplateRequirement] = []
+    for entry in value:
+        if not isinstance(entry, Mapping):
+            raise ContentError(f"{label}: each template requirement must be an object")
+        unknown = set(entry) - {"kinds", "distinct", "missing_message", "duplicate_message"}
+        if unknown:
+            raise ContentError(f"{label}: unknown template requirement fields {sorted(unknown)}")
+        kinds = _text_ids(entry.get("kinds"), "kinds", label)
+        if not kinds:
+            raise ContentError(f"{label}: a template requirement needs at least one kind")
+        distinct = entry.get("distinct", False)
+        if not isinstance(distinct, bool):
+            raise ContentError(f"{label}: template requirement 'distinct' must be a boolean")
+        if distinct and len(kinds) < 2:
+            raise ContentError(f"{label}: distinct selections need at least two kinds")
+        messages = {}
+        for key in ("missing_message", "duplicate_message"):
+            messages[key] = required_text(entry, key, label) if key in entry else None
+        requirements.append(
+            TemplateRequirement(
+                kinds=kinds,
+                distinct=distinct,
+                missing_message=messages["missing_message"],
+                duplicate_message=messages["duplicate_message"],
+            )
+        )
+    return tuple(requirements)
 
 
 def _skill_grants(value: object, skills: Mapping[str, Skill], label: str) -> dict[str, int]:
@@ -873,6 +995,7 @@ def _skill_picks(
     value: object,
     tables: Mapping[str, Sequence[TableOption]],
     skills: Mapping[str, Skill],
+    progression: SkillProgression | None,
     label: str,
 ) -> tuple[SkillPick, ...]:
     """The skills a template lets the character pick from a table. Every option value the pick
@@ -883,6 +1006,8 @@ def _skill_picks(
     ids: set[str] = set()
     for item in value:
         pick_label = f"{label}: skill pick"
+        if progression is None:
+            raise ContentError(f"{pick_label}: the rule set has no skill progression")
         if not isinstance(item, Mapping):
             raise ContentError(f"{pick_label}: must be an object")
         ident = required_text(item, "id", pick_label)
@@ -896,10 +1021,15 @@ def _skill_picks(
         if table not in tables:
             raise ContentError(f"{pick_label} {ident!r}: unknown table {table!r}")
         exclude = _text_ids(item.get("exclude", []), "exclude", pick_label)
-        max_level = item.get("max_level", CREATION_SKILL_CAP)
-        if isinstance(max_level, bool) or not isinstance(max_level, int) or max_level < 0:
+        max_level = item.get("max_level", progression.creation_maximum)
+        if (
+            isinstance(max_level, bool)
+            or not isinstance(max_level, int)
+            or not progression.first_level <= max_level <= progression.creation_maximum
+        ):
             raise ContentError(
-                f"{pick_label} {ident!r}: 'max_level' must be a whole number, 0 or more"
+                f"{pick_label} {ident!r}: 'max_level' must be between "
+                f"{progression.first_level} and {progression.creation_maximum}"
             )
         for option in tables[table]:
             if option.value in exclude:
@@ -1140,8 +1270,10 @@ def _skill_pick_schemas(spec: CharacterSpec) -> dict[str, Any]:
             "type": "array",
             "items": {"type": "string", "enum": options},
             "maxItems": counts[pick_id],
-            "uniqueItems": True,
-            "description": f"Skills the character picks, up to {counts[pick_id]}",
+            "description": (
+                f"Skills the character picks, up to {counts[pick_id]}; "
+                "a skill may be picked again while its level stays within the pick's maximum"
+            ),
         }
         for pick_id, options in choices.items()
     }
@@ -1213,37 +1345,53 @@ def check_choices(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
     one of the table's options, or one a restriction rules out, or when a template's picks are
     not features of its tag, or when a skill or feature pick is not one the pick offers.
     `submitted` is the character as given: its fields, templates, features, and picks."""
+    _check_templates(spec, submitted)
     _check_field_values(spec, submitted.get("fields", {}))
     _check_picks(spec, submitted)
     _check_skill_picks(spec, submitted)
     _check_feature_picks(spec, submitted)
-    _check_templates(spec, submitted)
 
 
 def _check_templates(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
-    """A chosen template must be allowed for the chosen class, when it names any classes."""
-    chosen = submitted.get("templates", {})
-    if not isinstance(chosen, Mapping):
+    """Check template kinds, compatibility, and any required selections."""
+    given = submitted.get("templates", {})
+    if not isinstance(given, Mapping):
         raise CharacterError("'templates' must map kinds to template ids")
-    class_id = chosen.get("class", "")
-    if class_id == "adventurer_mage_mage":
-        first = chosen.get("tradition", "")
-        second = chosen.get("tradition2", "")
-        if not first or not second:
-            raise CharacterError("a Mage/Mage Adventurer must choose two partial traditions")
-        if first == second:
-            raise CharacterError("a Mage/Mage Adventurer must choose two different traditions")
-    for kind, template_id in chosen.items():
-        template = spec.templates.get(str(template_id))
+    chosen: dict[str, str] = {}
+    for kind, template_id in given.items():
+        if not isinstance(kind, str) or not isinstance(template_id, str):
+            raise CharacterError("'templates' must map kinds to template ids")
+        template = spec.templates.get(template_id)
         if template is None:
             raise CharacterError(f"there is no template {template_id!r}")
         if template.kind != kind:
             raise CharacterError(f"{template.name!r} is not a {kind}")
-        if template.classes and class_id not in template.classes:
-            class_name = (
-                spec.templates[class_id].name if class_id in spec.templates else str(class_id)
-            )
-            raise CharacterError(f"{template.name} cannot be chosen by a {class_name} character")
+        chosen[kind] = template_id
+    for template_id in chosen.values():
+        template = spec.templates[template_id]
+        for kind, allowed in template.compatible_with.items():
+            selected = chosen.get(kind, "")
+            if selected not in allowed:
+                selected_name = (
+                    spec.templates[selected].name if selected in spec.templates else selected
+                )
+                raise CharacterError(
+                    f"{template.name} cannot be chosen by a {selected_name} character"
+                )
+        for requirement in template.template_requirements:
+            selected = [chosen[kind] for kind in requirement.kinds if kind in chosen]
+            if len(selected) != len(requirement.kinds):
+                raise CharacterError(
+                    requirement.missing_message
+                    or f"{template.name} requires selections for {', '.join(requirement.kinds)}"
+                )
+            keys = [spec.templates[ident].choice_key for ident in selected]
+            if requirement.distinct and len(set(keys)) != len(keys):
+                raise CharacterError(
+                    requirement.duplicate_message
+                    or f"{template.name} requires different selections for "
+                    f"{', '.join(requirement.kinds)}"
+                )
 
 
 def _check_picks(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
@@ -1598,22 +1746,41 @@ def resolve(
         choose = spec.templates[template_id].choose
         if choose is not None:
             _pick_features(spec, choose, fields, features, rng)
+    skill_picks: list[tuple[SkillPick, list[str]]] = []
+    planned_increments = dict(increments)
+    for template_id in templates.values():
+        for pick in spec.templates[template_id].skill_picks:
+            chosen = _take_skill_pick(
+                spec, pick, planned_increments, given_skill_picks.get(pick.id, [])
+            )
+            skill_picks.append((pick, chosen))
+    skill_index = 0
     for template_id in templates.values():
         template = spec.templates[template_id]
         for pick in template.skill_picks:
-            _take_skill_pick(spec, pick, increments, given_skill_picks.get(pick.id), rng)
+            chosen = skill_picks[skill_index][1]
+            _take_skill_pick(spec, pick, increments, chosen)
+            _roll_skill_picks(
+                spec,
+                pick,
+                increments,
+                pick.count - len(chosen),
+                rng,
+                skill_picks[skill_index + 1 :],
+            )
+            skill_index += 1
         for feat in template.feat_picks:
             _take_feature_pick(spec, feat, features, given_feature_picks.get(feat.id), rng)
     counters = {
         counter_id: _within(spec.counters[counter_id], spec.counters[counter_id].initial + amount)
         for counter_id, amount in counter_amounts.items()
     }
-    stats.update(derived_stats(spec, stats, counters, _final_skills(increments), templates))
+    stats.update(derived_stats(spec, stats, counters, _final_skills(spec, increments), templates))
     armor = 0
     for feature_id in list(features):
         for effect in spec.features[feature_id].effects:
             armor += _run_effect(spec, effect, stats, increments, counters)
-    skills = _final_skills(increments)
+    skills = _final_skills(spec, increments)
     stats.update(derived_stats(spec, stats, counters, skills, templates))
     return Sheet(
         stats=stats,
@@ -1659,22 +1826,8 @@ def _take_skill_pick(
     pick: SkillPick,
     increments: dict[str, int],
     chosen: object,
-    rng: random.Random,
-) -> None:
-    """Add one level for each skill a pick takes. The skills given are used as they stand; a
-    missing list is rolled from the pick's options, skipping skills already at its `max_level`."""
-    if chosen is None:
-        for _ in range(pick.count):
-            pool = [
-                skill_id
-                for skill_id, _ in skill_pick_options(spec, pick)
-                if _skill_level_of(increments, skill_id) < pick.max_level
-            ]
-            if not pool:
-                return
-            skill_id = rng.choice(pool)
-            increments[skill_id] = increments.get(skill_id, 0) + 1
-        return
+) -> list[str]:
+    """Apply a pick's explicitly chosen skills, respecting its maximum."""
     if not isinstance(chosen, list) or not all(isinstance(s, str) for s in chosen):
         raise CharacterError(f"skill pick {pick.id!r} must be a list of skill ids")
     if len(chosen) > pick.count:
@@ -1683,7 +1836,53 @@ def _take_skill_pick(
     for skill_id in chosen:
         if skill_id not in offered:
             raise CharacterError(f"{skill_id!r} is not offered by the skill pick {pick.id!r}")
-    for skill_id in chosen:
+        if not _skill_pick_allows(spec, pick, increments, skill_id):
+            raise CharacterError(
+                f"skill pick {pick.id!r} cannot raise {skill_id!r} above level {pick.max_level}"
+            )
+        increments[skill_id] = increments.get(skill_id, 0) + 1
+    return chosen
+
+
+def _skill_pick_allows(
+    spec: CharacterSpec, pick: SkillPick, increments: Mapping[str, int], skill_id: str
+) -> bool:
+    return (
+        increments.get(skill_id, 0) <= 0
+        or _skill_level_of(spec, increments, skill_id) < pick.max_level
+    )
+
+
+def _roll_skill_picks(
+    spec: CharacterSpec,
+    pick: SkillPick,
+    increments: dict[str, int],
+    count: int,
+    rng: random.Random,
+    later: Sequence[tuple[SkillPick, list[str]]],
+) -> None:
+    """Roll remaining picks without making a later explicit choice invalid."""
+    for _ in range(count):
+        pool = []
+        for skill_id, _ in skill_pick_options(spec, pick):
+            if not _skill_pick_allows(spec, pick, increments, skill_id):
+                continue
+            trial = dict(increments)
+            trial[skill_id] = trial.get(skill_id, 0) + 1
+            valid = True
+            for future_pick, chosen in later:
+                for future_skill in chosen:
+                    if not _skill_pick_allows(spec, future_pick, trial, future_skill):
+                        valid = False
+                        break
+                    trial[future_skill] = trial.get(future_skill, 0) + 1
+                if not valid:
+                    break
+            if valid:
+                pool.append(skill_id)
+        if not pool:
+            return
+        skill_id = rng.choice(pool)
         increments[skill_id] = increments.get(skill_id, 0) + 1
 
 
@@ -1741,18 +1940,22 @@ def _run_effect(
     return 0
 
 
-def _skill_level_of(increments: Mapping[str, int], skill: str) -> int:
-    return min(CREATION_SKILL_CAP, UNSKILLED + increments.get(skill, 0))
+def _skill_level_of(spec: CharacterSpec, increments: Mapping[str, int], skill: str) -> int:
+    progression = spec.skill_progression
+    if progression is None:
+        raise CharacterError("the rule set has no skill progression")
+    count = increments.get(skill, 0)
+    if count <= 0:
+        return progression.untrained
+    return min(progression.creation_maximum, progression.first_level + count - 1)
 
 
-def _final_skills(increments: Mapping[str, int]) -> dict[str, int]:
-    """The skills a character ends creation with: each increment above none, capped at
-    CREATION_SKILL_CAP, with the skills still at UNSKILLED left out."""
+def _final_skills(spec: CharacterSpec, increments: Mapping[str, int]) -> dict[str, int]:
+    """Resolve trained skills, including those whose level equals the untrained value."""
     skills: dict[str, int] = {}
-    for skill_id in increments:
-        level = _skill_level_of(increments, skill_id)
-        if level > UNSKILLED:
-            skills[skill_id] = level
+    for skill_id, count in increments.items():
+        if count > 0:
+            skills[skill_id] = _skill_level_of(spec, increments, skill_id)
     return skills
 
 

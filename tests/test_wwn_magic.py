@@ -157,6 +157,12 @@ def test_commit_effort_enforces_the_maximum_and_tracks_durations(
 
     with pytest.raises(InvalidInput, match="no Effort pool"):
         wwn_magic.commit_effort(NAME, "wizard", 1, "scene", ctx)
+    with pytest.raises(InvalidInput, match="no Effort pool"):
+        wwn_magic.recover_effort(NAME, "wizard", "scene", ctx)
+    with pytest.raises(InvalidInput, match="no Effort pool"):
+        wwn_magic.commit_effort(NAME, "no_tradition", 1, "scene", ctx)
+    with pytest.raises(InvalidInput, match="no Effort pool"):
+        wwn_magic.recover_effort(NAME, "no_tradition", "scene", ctx)
     with pytest.raises(InvalidInput, match="duration must be one of"):
         wwn_magic.commit_effort(NAME, "high", 1, "week", ctx)
 
@@ -187,17 +193,8 @@ def test_a_partial_mage_has_one_less_effort_and_never_less_than_one(
     client_factory: Callable[[], TestClient],
 ) -> None:
     _app, _campaign_id, tools, ctx = _mage(client_factory, class_id="adventurer_expert_mage")
-    # Fixed stats: Int 18 (+2), Cha 8 (0), Magic 0; a partial mage has 1 + 2 - 1 = 2.
-    assert (
-        wwn.max_effort(WWN.character, {"int": 18, "cha": 8}, {"magic": 0}, "adventurer_expert_mage")
-        == 2
-    )
-    assert wwn.max_effort(WWN.character, {"int": 18, "cha": 8}, {"magic": 1}, "mage") == 4
-    assert (
-        wwn.max_effort(WWN.character, {"int": 3, "cha": 3}, {"magic": 0}, "adventurer_expert_mage")
-        == 1
-    )
 
+    # Fixed stats: Int 18 (+2), Cha 8 (0), Magic 0; a partial mage's derived pool is 2.
     wwn_magic.commit_effort(NAME, "high", 2, "scene", ctx)
     with pytest.raises(InvalidInput, match="limited to 2"):
         wwn_magic.commit_effort(NAME, "high", 1, "day", ctx)
@@ -229,6 +226,33 @@ def test_add_strain_and_heal_strain_stay_within_the_strain_score(
     assert _stat(app, campaign_id, "strain") - _pc(app, campaign_id).harm["strain"] == 1
     wwn_magic.heal_strain(NAME, 100, "a night's rest", ctx)
     assert _pc(app, campaign_id).harm.get("strain", 0) == 0
+
+
+@pytest.mark.parametrize(
+    ("class_id", "tradition", "skill", "stat"),
+    [
+        ("healer", "healer", "heal", "effort_healer"),
+        ("vowed", "vowed", "exert", "effort_vowed"),
+    ],
+)
+def test_effort_uses_the_configured_derived_pool(
+    client_factory: Callable[[], TestClient],
+    class_id: str,
+    tradition: str,
+    skill: str,
+    stat: str,
+) -> None:
+    app, campaign_id = _campaign(client_factory, class_id=class_id)
+    tools = _world_tools(app, campaign_id)
+    ctx = _ctx(tools)
+    tools.raise_skill(NAME, skill, 3, cause="a test")
+    wwn._recompute_derived(ctx, NAME, WWN.character, cause="a test")
+
+    result = wwn_magic.commit_effort(NAME, tradition, 2, "scene", ctx)
+
+    assert result["maximum"] == _stat(app, campaign_id, stat)
+    assert result["maximum"] >= 4
+    assert result["committed"] == 2
 
 
 def test_first_aid_rolls_a_d6_plus_heal_heals_and_adds_strain(
@@ -284,6 +308,23 @@ def test_recover_after_rest_restores_hp_strain_castings_and_effort(
     assert character.harm.get("castings", 0) == 0
     assert character.harm.get("effort_high", 0) == 0
     assert wwn.EFFORT_MARK not in character.marks
+
+
+@pytest.mark.parametrize("tradition", ["unconfigured_tradition", "no_tradition"])
+def test_rest_refuses_an_effort_mark_without_a_pool_and_keeps_the_mark(
+    client_factory: Callable[[], TestClient],
+    tradition: str,
+) -> None:
+    app, campaign_id, _tools, ctx = _mage(client_factory)
+    malformed = {"scene": {tradition: 1}}
+    ctx.world.with_hook_context(
+        lambda hc: hc.set_mark(NAME, wwn.EFFORT_MARK, malformed, "a malformed test mark")
+    )
+
+    with pytest.raises(InvalidInput, match="no Effort pool for the tradition"):
+        wwn.recover_after_rest(NAME, ctx)
+
+    assert _pc(app, campaign_id).marks[wwn.EFFORT_MARK] == malformed
 
 
 def _placeholder(schema: dict[str, Any]) -> Any:

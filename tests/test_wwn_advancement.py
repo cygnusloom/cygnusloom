@@ -11,6 +11,7 @@ import random
 import re
 from collections.abc import Callable
 from dataclasses import replace
+from html import unescape
 from types import SimpleNamespace
 from typing import Any
 
@@ -21,6 +22,7 @@ from sqlmodel import Session
 
 from cygnusforge.content.character import Feature
 from cygnusforge.content.library import ContentLibrary
+from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.rules import wwn
 from cygnusforge.services import campaigns as campaigns_service
 from cygnusforge.services.common import InvalidInput, session_scope
@@ -198,6 +200,27 @@ def _campaign(
     return client.app, campaign_id
 
 
+def _campaign_context(
+    app: FastAPI,
+    campaign_id: int,
+    *,
+    seed: int = 0,
+    rule_set=None,
+):
+    """Build the same rule-set tool context as a running campaign."""
+    rule_set = WWN if rule_set is None else rule_set
+    world = LIBRARY.world_content("latter-earth", rule_set.id)
+    return campaigns_service._tool_context(
+        app.state.engine,
+        random.Random(seed),
+        FakeProvider(),
+        "fake/scripted",
+        campaign_id,
+        rule_set,
+        world,
+    )
+
+
 def _world_tools(
     app: FastAPI,
     campaign_id: int,
@@ -206,44 +229,10 @@ def _world_tools(
     spec: Any = None,
 ) -> WorldTools:
     """The campaign's world tools, configured as `services/campaigns.py` configures them."""
-    world = LIBRARY.world_content("latter-earth", "worldswithoutnumber")
-    return WorldTools(
-        app.state.engine,
-        campaign_id,
-        {**LIBRARY.core.tables, **world.tables},
-        random.Random(seed),
-        spec or WWN.character,
-        grid=WWN.grid,
-        terrain=WWN.terrain,
-        encounter_objects=WWN.encounter_objects,
-        encounter_templates=WWN.encounter_templates,
-        combat=WWN.combat,
-        monsters={**WWN.monsters, **world.monsters},
-        features={**world.features},
-        checks=WWN.checks,
-        conditions=WWN.conditions,
-        moves=WWN.moves,
-        counters=WWN.counters,
-        advancements=WWN.advancements,
-        periods=WWN.periods,
-        tallies=WWN.tallies,
-        relations=WWN.relations,
-        dice_tables={**WWN.dice_tables, **world.dice_tables},
-        clock_rules=WWN.clock,
-        rests=WWN.rests,
-        interrupted_rest=WWN.interrupted_rest,
-        hooks=WWN.hooks,
-        inventory=WWN.inventory,
-        item_sizes=WWN.item_sizes,
-        magic=WWN.magic,
-        marketplace=WWN.marketplace,
-        plus=WWN.plus,
-        npc_hp=WWN.npc_hp,
-        npc_hp_stat=WWN.npc_hp_stat,
-        travel=WWN.travel,
-        wilderness=WWN.wilderness,
-        world_terrain=WWN.world_terrain,
-    )
+    rule_set = WWN if spec is None else replace(WWN, character=spec)
+    context = _campaign_context(app, campaign_id, seed=seed, rule_set=rule_set)
+    assert isinstance(context.world, WorldTools)
+    return context.world
 
 
 def _ctx(tools: WorldTools) -> Any:
@@ -310,7 +299,7 @@ def test_gain_xp_accumulates_and_marks_the_next_level_threshold(
     assert below["xp"] == 2
     assert below["level"] == 1
     assert below["next_level"] == 2
-    assert below["next_threshold"] == wwn.WWN_XP[1] == 3
+    assert below["next_threshold"] == 3
     assert below["ready"] is False
     assert _counter(app, campaign_id, "xp") == 2
 
@@ -322,6 +311,46 @@ def test_gain_xp_accumulates_and_marks_the_next_level_threshold(
     assert at["xp"] == 3
     assert at["ready"] is True
     assert _counter(app, campaign_id, "xp") == 3
+
+
+def test_gain_growth_draws_the_background_table_through_campaign_tools(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory)
+    ctx = _campaign_context(app, campaign_id, seed=7)
+    pc = _pc(app, campaign_id)
+    background = pc.templates["background"]
+    table = f"growth_{background}"
+    expected = random.Random(7).choice(ctx.world.tables[table]).value
+    with Session(app.state.engine) as db:
+        event_count = len(events_since(db, campaign_id))
+
+    result = wwn.gain_growth(NAME, ctx)
+
+    assert result == {
+        "character": NAME,
+        "background": background,
+        "table": table,
+        "growth": expected,
+    }
+    with Session(app.state.engine) as db:
+        assert len(events_since(db, campaign_id)) == event_count
+
+
+def test_gain_growth_reports_a_missing_background_table(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory)
+    background = _pc(app, campaign_id).templates["background"]
+    table = f"growth_{background}"
+    rule_set = replace(
+        WWN, tables={key: value for key, value in WWN.tables.items() if key != table}
+    )
+    ctx = _campaign_context(app, campaign_id, rule_set=rule_set)
+
+    assert table not in ctx.world.tables
+    with pytest.raises(InvalidInput, match="Wren has no background Growth table"):
+        wwn.gain_growth(NAME, ctx)
 
 
 def test_level_up_raises_hp_attack_bonus_skill_points_and_focus_picks(
@@ -387,7 +416,6 @@ def test_a_caster_raises_castings_from_the_class_table_on_level_up(
     assert third["level"] == 3
     assert third["castings"] == 2
     assert _stat(app, campaign_id, "castings") == 2
-    assert wwn.casting_row("mage", 3).casts == 2
 
 
 def test_a_mage_with_a_poor_constitution_gains_at_least_one_hit_point(
@@ -427,6 +455,68 @@ def test_spend_skill_point_raises_a_skill_and_spends_one_point(
     assert _counter(app, campaign_id, "skill_points") == 3 - cost
     (changed,) = _events_of(app, campaign_id, SkillChanged.kind)
     assert (changed.skill, changed.after) == ("sneak", before + 1)
+
+
+def test_spend_skill_point_uses_the_configured_first_level(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory)
+    progression = WWN.character.skill_progression
+    assert progression is not None
+    progression = replace(progression, first_level=1)
+    spec = replace(WWN.character, skill_progression=progression)
+    tools = _world_tools(app, campaign_id, spec=spec)
+    character = _pc(app, campaign_id)
+    skill = next(skill_id for skill_id in spec.skills if skill_id not in character.skills)
+    _give_pick(tools, "skill_points", 5)
+
+    result = wwn.spend_skill_point(NAME, skill, _ctx(tools))
+
+    assert result["level"] == progression.first_level
+    assert result["cost"] == 2
+    assert _pc(app, campaign_id).skills[skill] == progression.first_level
+
+
+def test_spend_skill_point_uses_the_spec_skill_maximum(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory)
+    progression = WWN.character.skill_progression
+    assert progression is not None
+    progression = replace(progression, creation_maximum=2, maximum=2)
+    spec = replace(WWN.character, skill_progression=progression)
+    tools = _world_tools(app, campaign_id, spec=spec)
+    character = _pc(app, campaign_id)
+    skill = next(skill_id for skill_id in spec.skills if skill_id not in character.skills)
+    tools.raise_skill(NAME, skill, progression.maximum, cause="a test")
+    _give_pick(tools, "skill_points", 20)
+
+    with pytest.raises(InvalidInput, match="already at level 2"):
+        wwn.spend_skill_point(NAME, skill, _ctx(tools))
+
+
+def test_spend_skill_point_rejects_levels_outside_the_wwn_chart(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory)
+    progression = WWN.character.skill_progression
+    assert progression is not None
+    spec = replace(
+        WWN.character,
+        skill_progression=replace(progression, maximum=5),
+    )
+    tools = _world_tools(app, campaign_id, spec=spec)
+    character = _pc(app, campaign_id)
+    skill = next(skill_id for skill_id in spec.skills if skill_id not in character.skills)
+    tools.raise_skill(NAME, skill, 4, cause="a test")
+    tools.adjust_counter(NAME, "level", 8)
+    _give_pick(tools, "skill_points", 20)
+
+    with pytest.raises(
+        InvalidInput,
+        match="Worlds Without Number skill advancement chart does not support level 5",
+    ):
+        wwn.spend_skill_point(NAME, skill, _ctx(tools))
 
 
 def test_spend_skill_point_caps_a_skill_at_four(client_factory: Callable[[], TestClient]) -> None:
@@ -507,6 +597,77 @@ def test_learn_focus_spends_a_pick_and_applies_skill_stat_and_armor_effects(
     assert (learned.feature, learned.name) == (synthetic.id, NAME)
 
 
+def test_learn_focus_uses_the_configured_first_level_for_an_untrained_skill(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory)
+    before = _pc(app, campaign_id)
+    skill = next(skill_id for skill_id in WWN.character.skills if skill_id not in before.skills)
+    progression = WWN.character.skill_progression
+    assert progression is not None
+    progression = replace(progression, first_level=1)
+    synthetic = Feature(
+        id="focus_test_first_skill_level",
+        name="First Skill Level",
+        feature_type="feat",
+        description="A focus that grants one untrained skill level.",
+        size="normal",
+        uses=0,
+        armor=0,
+        tag="focus",
+        rank=1,
+        effects=({"op": "skill", "id": skill, "delta": 1},),
+    )
+    spec = replace(
+        WWN.character,
+        features={**WWN.character.features, synthetic.id: synthetic},
+        skill_progression=progression,
+    )
+    tools = _world_tools(app, campaign_id, spec=spec)
+    _give_pick(tools, "focus_picks", 1)
+
+    wwn.learn_focus(NAME, synthetic.id, _ctx(tools))
+
+    assert _pc(app, campaign_id).skills[skill] == progression.first_level
+
+
+def test_learn_focus_uses_the_spec_skill_maximum(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory)
+    before = _pc(app, campaign_id)
+    skill = next(
+        skill_id for skill_id in WWN.character.skills if before.skills.get(skill_id, -1) < 2
+    )
+    _world_tools(app, campaign_id).raise_skill(NAME, skill, 2, cause="a test")
+    progression = WWN.character.skill_progression
+    assert progression is not None
+    progression = replace(progression, creation_maximum=2, maximum=2)
+    synthetic = Feature(
+        id="focus_test_skill_maximum",
+        name="Skill Maximum",
+        feature_type="feat",
+        description="A focus that tries to grant a skill above its configured maximum.",
+        size="normal",
+        uses=0,
+        armor=0,
+        tag="focus",
+        rank=1,
+        effects=({"op": "skill", "id": skill, "delta": 1},),
+    )
+    spec = replace(
+        WWN.character,
+        features={**WWN.character.features, synthetic.id: synthetic},
+        skill_progression=progression,
+    )
+    tools = _world_tools(app, campaign_id, spec=spec)
+    _give_pick(tools, "focus_picks", 1)
+
+    wwn.learn_focus(NAME, synthetic.id, _ctx(tools))
+
+    assert _pc(app, campaign_id).skills[skill] == progression.maximum
+
+
 def test_learn_focus_needs_a_pick_and_the_first_rank(
     client_factory: Callable[[], TestClient],
 ) -> None:
@@ -580,7 +741,7 @@ def test_the_slow_experience_track_uses_its_own_thresholds(
     ctx = _ctx(_world_tools(app, campaign_id))
 
     below = wwn.gain_xp(NAME, 5, "a session", ctx, rate="slow")
-    assert below["next_threshold"] == wwn.WWN_XP_SLOW[1] == 6
+    assert below["next_threshold"] == 6
     assert below["ready"] is False
     with pytest.raises(InvalidInput, match="on the slow track"):
         wwn.level_up(NAME, ctx, rate="slow")
@@ -692,6 +853,49 @@ def test_a_warrior_cannot_take_a_magical_tradition(
     assert error is not None and "cannot be chosen" in error.group(1)
 
 
+def test_invalid_manual_skill_cap_is_reported_on_the_creation_form(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    page = client.get(f"/campaigns/{campaign_id}").text
+    fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
+    fields.update(_choices(page))
+    fields.update(
+        {
+            "template-background": "hunter",
+            "template-class": "warrior",
+            "template-tradition": "no_tradition",
+            "pick-skill-background_learning-0": "notice",
+            "pick-skill-background_learning-1": "notice",
+            "pick-skill-class_free_skill-0": "notice",
+        }
+    )
+
+    created = _create_character(client, campaign_id, name="Wren", fields=fields)
+
+    assert created.status_code == 400
+    error = re.search(r'<p class="form-error"[^>]*>(.*?)</p>', created.text, re.DOTALL)
+    assert error is not None
+    assert "cannot raise 'notice' above level 1" in unescape(error.group(1))
+    app = client.app
+    assert isinstance(app, FastAPI)
+    with Session(app.state.engine) as db:
+        state = load_state(db, campaign_id)
+        assert state.pc() is None
+        assert not state.options
+
+    fields["pick-skill-class_free_skill-0"] = "craft"
+    accepted = _create_character(client, campaign_id, name="Wren", fields=fields)
+
+    assert accepted.status_code == 303
+    with Session(app.state.engine) as db:
+        pc = load_state(db, campaign_id).pc()
+        assert pc is not None
+        assert pc.skills["notice"] == 1
+
+
 def test_a_frail_character_recovers_no_hit_points_or_strain(
     client_factory: Callable[[], TestClient],
 ) -> None:
@@ -750,7 +954,7 @@ def test_the_experience_track_chosen_at_creation_guides_advancement(client_facto
     ctx = _ctx(_world_tools(app, campaign_id))
 
     below = wwn.gain_xp(NAME, 5, "a session", ctx)
-    assert below["next_threshold"] == wwn.WWN_XP_SLOW[1] == 6
+    assert below["next_threshold"] == 6
     assert below["ready"] is False
 
     at = wwn.gain_xp(NAME, 1, "another session", ctx)

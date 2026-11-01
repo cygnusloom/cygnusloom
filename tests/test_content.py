@@ -5,6 +5,7 @@ import random
 import re
 import shutil
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 import pytest
@@ -19,6 +20,7 @@ from cygnusforge.content.library import (
     PlayerInput,
     _load_magic,
     _load_monster,
+    _load_rule_hooks,
 )
 from tests.conftest import content_library
 from tests.rolls import SocialRoll, social_roll
@@ -146,6 +148,150 @@ def test_bundled_content_loads():
     assert library.world_content("twin-lakes", "cairn2e").monsters
     assert library.rule_sets["worldswithoutnumber"].character.skills
     assert library.rule_sets["worldswithoutnumber"].monsters
+
+
+def _load_test_hooks(module: ModuleType, **overrides: Any):
+    data = {
+        "type": "hooks",
+        "id": "test",
+        "python_module": "test",
+        **overrides,
+    }
+    return _load_rule_hooks(
+        [Definition("hooks", "test", data)],
+        {"test": module},
+        content_library().rule_sets["cairn2e"].character,
+        {},
+        "testset",
+    )
+
+
+def test_unconfigured_rule_hooks_leave_feature_options_uninterpreted():
+    module = ModuleType("test_rules")
+    options = {"feature": {"not": "a feature reference"}, "payload": [1, 2]}
+
+    hooks = _load_test_hooks(module, options=options)
+
+    assert hooks is not None
+    assert hooks.options == options
+
+
+@pytest.mark.parametrize(
+    "module_configurator",
+    [None, "not callable"],
+    ids=["missing", "non-callable"],
+)
+def test_rule_hooks_reject_missing_or_non_callable_configurators(module_configurator):
+    module = ModuleType("test_rules")
+    if module_configurator is not None:
+        module.configure_hooks = module_configurator
+
+    with pytest.raises(ContentError, match="hook configurator 'configure_hooks' is not callable"):
+        _load_test_hooks(
+            module,
+            configure="configure_hooks",
+            options={},
+        )
+
+
+@pytest.mark.parametrize(
+    ("configured_options", "message"),
+    [
+        (None, "must return a mapping"),
+        (["not", "a", "mapping"], "must return a mapping"),
+        ({1: "not a string key"}, "non-string key"),
+    ],
+)
+def test_rule_hooks_reject_invalid_configurator_results(configured_options, message):
+    module = ModuleType("test_rules")
+    module.configure_hooks = lambda options, character, label: configured_options
+
+    with pytest.raises(ContentError, match=message):
+        _load_test_hooks(
+            module,
+            configure="configure_hooks",
+            options={},
+        )
+
+
+def test_rule_hooks_preserve_configurator_content_errors():
+    module = ModuleType("test_rules")
+    expected = "testset: hooks test: invalid hook options"
+
+    def configure_hooks(options, character, label):
+        raise ContentError(expected)
+
+    module.configure_hooks = configure_hooks
+
+    with pytest.raises(ContentError) as exc_info:
+        _load_test_hooks(module, configure="configure_hooks", options={})
+
+    assert str(exc_info.value) == expected
+
+
+def test_rule_hooks_wrap_runtime_configurator_failures_with_cause():
+    module = ModuleType("test_rules")
+
+    def configure_hooks(options, character, label):
+        raise RuntimeError("invalid hook settings")
+
+    module.configure_hooks = configure_hooks
+
+    with pytest.raises(
+        ContentError,
+        match="testset: hooks test: hook configurator 'configure_hooks' failed: invalid hook settings",
+    ) as exc_info:
+        _load_test_hooks(module, configure="configure_hooks", options={})
+
+    assert isinstance(exc_info.value.__cause__, RuntimeError)
+    assert str(exc_info.value.__cause__) == "invalid hook settings"
+
+
+def test_rule_hooks_do_not_wrap_unexpected_configurator_errors():
+    module = ModuleType("test_rules")
+
+    def configure_hooks(options, character, label):
+        raise AssertionError("hook configurator invariant failed")
+
+    module.configure_hooks = configure_hooks
+
+    with pytest.raises(AssertionError, match="hook configurator invariant failed"):
+        _load_test_hooks(module, configure="configure_hooks", options={})
+
+
+def test_cairn_hooks_resolve_rations_and_keep_the_rest_hook():
+    hooks = content_library().rule_sets["cairn2e"].hooks
+
+    assert hooks is not None
+    assert hooks.before_rest == "before_rest"
+    assert hooks.options == {
+        "after_days": 1,
+        "feature": "rations",
+        "item": "Rations",
+    }
+
+
+@pytest.mark.parametrize(
+    ("feature", "message"),
+    [
+        ("not-a-feature", "'feature' names no character feature"),
+        ("spellbook-thicket", "'feature' must be a consumable item with uses"),
+        ("awl", "'feature' must be a consumable item with uses"),
+        ([], "'feature' must be a non-empty string"),
+    ],
+)
+def test_cairn_hook_configurator_validates_consumable_features(feature, message):
+    from cygnusforge.rules.cairn2e import configure_hooks
+
+    module = ModuleType("cairn2e")
+    module.configure_hooks = configure_hooks
+
+    with pytest.raises(ContentError, match=re.escape(message)):
+        _load_test_hooks(
+            module,
+            configure="configure_hooks",
+            options={"feature": feature},
+        )
 
 
 def test_bundled_worlds_say_which_rule_set_they_use():
@@ -1069,9 +1215,6 @@ def test_magic_roles_are_read_with_their_kinds_sizes_and_icons():
     assert magic.single_use == ItemKind("scroll", "petty", "scroll")
     assert magic.charged == ItemKind("relic")
     assert magic.item_kind_icons == {"spellbook": "book", "scroll": "scroll"}
-    assert (magic.spellbook_kind, magic.spellbook_size) == ("spellbook", "normal")
-    assert (magic.scroll_kind, magic.scroll_size) == ("scroll", "petty")
-    assert magic.charged_kind == "relic"
     assert magic.cast_penalty == 1
 
 
@@ -1101,6 +1244,11 @@ def test_no_magic_definition_means_no_magic():
         ({"charged": {}}, "'kind' must be a non-empty string"),
         ({"reusable": {"kind": "spellbook"}}, "'size' must be a non-empty string"),
         ({"single_use": {"kind": "scroll", "size": "huge"}}, "names no item size ('huge')"),
+        (
+            {"single_use": {"kind": "spellbook", "size": "petty"}},
+            "magic item roles must use distinct kinds",
+        ),
+        ({"charged": {"kind": "scroll"}}, "magic item roles must use distinct kinds"),
         ({"cast_penalty": -1}, "'cast_penalty' must be a whole number"),
     ],
 )
