@@ -1016,6 +1016,8 @@ def test_bundled_cairn_prompts_and_cap_are_read():
         "purchases",
         "attack_flags",
         "overland_weather",
+        "encounter_start",
+        "player_rolls",
     ]
     assert ContentLibrary.load().core.prompt_fragments == ()
 

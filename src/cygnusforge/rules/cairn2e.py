@@ -72,8 +72,10 @@ def resolve_attacks(target: str, attacks: list[dict[str, str]], ctx: ToolContext
     return ctx.world.resolve_attacks(target, attacks)
 
 
-def player_attack(target: str, weapon: str, ctx: ToolContext, modifier: str = "") -> dict[str, Any]:
-    return ctx.world.player_attack(target, weapon, modifier)
+def player_attack(
+    target: str, weapon: str, ctx: ToolContext, modifier: str = "", damage: int = 0
+) -> dict[str, Any]:
+    return ctx.world.player_attack(target, weapon, modifier, damage_roll=damage or None)
 
 
 def resolve_group_break(name: str, outcome: str, ctx: ToolContext) -> dict[str, Any]:

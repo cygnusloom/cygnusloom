@@ -17,6 +17,7 @@
     "minimum_shock_damage": true,
     "defeat_at_zero": ["hp"],
     "dying_hours": 1,
+    "dying_rounds": 6,
     "armor_max": 0,
     "multi_attack": "each",
     "defense_base": 10,

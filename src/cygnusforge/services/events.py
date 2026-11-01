@@ -200,6 +200,8 @@ class Character:
     wage: int = 0
     # Hours left before a dying character dies unless aided. None while the character is not dying.
     dying_hours: int | None = None
+    # Rounds left in an encounter before a dying character dies. None when no round clock runs.
+    dying_rounds: int | None = None
     # The character is dead. The body stays where the character fell, with its gear.
     dead: bool = False
     # The character has left the story, and the player plays someone else. It can come back later.
@@ -1620,7 +1622,10 @@ class CharacterRecovered(GameEvent):
     consequence: str
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        state.characters[name_key(self.name)].defeated = False
+        character = state.characters[name_key(self.name)]
+        character.defeated = False
+        character.dying_hours = None
+        character.dying_rounds = None
 
     def render(self) -> str:
         return f"{self.name} comes to. {self.explanation} {self.consequence}"
@@ -1782,6 +1787,10 @@ class InitiativeSettled(GameEvent):
         encounter.order = list(self.order)
         encounter.up = 0
         encounter.settled = True
+        # Settling can reorder the sides after a player character already joined and had a turn
+        # opened, so clear that provisional turn and let the settled order open the right one.
+        encounter.acting = None
+        encounter.moved = 0
 
     def render(self) -> str:
         return "Initiative is set: " + ", ".join(self.order) + "."
@@ -2646,21 +2655,43 @@ class TravelCharged(GameEvent):
 @dataclass(frozen=True)
 class CharacterDying(GameEvent):
     """A player character is out of action and bleeding out. It dies when `hours` pass unless it
-    is stabilized."""
+    is stabilized, or sooner when the rule set gives a `rounds` clock and turns pass."""
 
     kind: ClassVar[str] = "character.dying"
 
     name: str
     hours: int
+    rounds: int | None = None
     cause: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        state.characters[name_key(self.name)].dying_hours = self.hours
+        character = state.characters[name_key(self.name)]
+        character.dying_hours = self.hours
+        character.dying_rounds = self.rounds
 
     def render(self) -> str:
         source = f" {self.cause}" if self.cause else ""
+        if self.rounds is not None:
+            rounds = f"{self.rounds} round{'' if self.rounds == 1 else 's'}"
+            return f"{self.name} is dying{source}. Death comes within {rounds} unless aided."
         hours = f"{self.hours} hour{'' if self.hours == 1 else 's'}"
         return f"{self.name} is dying{source}. Death comes within {hours} unless aided."
+
+
+@dataclass(frozen=True)
+class DyingRoundsPassed(GameEvent):
+    """A round passed while a character was dying. At zero rounds the character dies."""
+
+    kind: ClassVar[str] = "character.dying_rounds"
+
+    name: str
+    rounds: int
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].dying_rounds = self.rounds
+
+    def render(self) -> str:
+        return f"{self.name} has {self.rounds} round{'' if self.rounds == 1 else 's'} left."
 
 
 @dataclass(frozen=True)
@@ -2674,7 +2705,9 @@ class CharacterStabilized(GameEvent):
     by: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        state.characters[name_key(self.name)].dying_hours = None
+        character = state.characters[name_key(self.name)]
+        character.dying_hours = None
+        character.dying_rounds = None
 
     def render(self) -> str:
         source = f" {self.by}." if self.by else ""
@@ -2695,6 +2728,7 @@ class CharacterDied(GameEvent):
         character.dead = True
         character.defeated = True
         character.dying_hours = None
+        character.dying_rounds = None
 
     def render(self) -> str:
         return f"{self.name} dies{f', {self.cause}' if self.cause else ''}."
@@ -3078,6 +3112,7 @@ HIDDEN_KINDS: dict[str, bool] = {
     "character.recovered": False,
     "character.saved": False,
     "character.dying": False,
+    "character.dying_rounds": False,
     "character.stabilized": False,
     "character.died": False,
     "character.retired": False,

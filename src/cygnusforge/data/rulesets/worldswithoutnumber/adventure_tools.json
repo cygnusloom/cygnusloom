@@ -28,6 +28,42 @@
   },
   {
     "type": "tool_call",
+    "id": "player_roll_save",
+    "name": "player_roll_save",
+    "python_module": "wwn",
+    "function": "player_roll_save",
+    "description": "Ask the player to roll a saving throw for their own character, then record the d20 they rolled against the character's Physical, Evasion, Mental, or Luck save. Use it instead of roll_save for the player character: the player presses the roll button and the result is final. A failure is recorded; apply what it costs yourself.",
+    "player_input": {
+      "dice": "1d20",
+      "param": "roll",
+      "details": "{save} save against {cause}: roll 1d20 and meet or beat your save score."
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character making the save."
+        },
+        "save": {
+          "type": "string",
+          "enum": ["physical", "evasion", "mental", "luck"],
+          "description": "Which save: physical for bodily harm, evasion for dodging, mental for willpower, luck for blind chance."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What the save is against, in a few words."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "What the player is asked to roll, such as 'Roll a Physical save against the poison.'"
+        }
+      },
+      "required": ["character", "save", "cause", "prompt"]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "roll_reaction",
     "name": "roll_reaction",
     "python_module": "wwn",
@@ -178,24 +214,6 @@
   },
   {
     "type": "tool_call",
-    "id": "end_npc_turn",
-    "name": "end_npc_turn",
-    "python_module": "wwn",
-    "function": "end_npc_turn",
-    "description": "End an NPC's turn once its actions are resolved, and move to the next participant.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the NPC whose turn ends."
-        }
-      },
-      "required": ["name"]
-    }
-  },
-  {
-    "type": "tool_call",
     "id": "attack",
     "name": "attack",
     "python_module": "wwn",
@@ -226,7 +244,12 @@
     "name": "player_attack",
     "python_module": "wwn",
     "function": "player_attack",
-    "description": "Record the player character's attack with a carried weapon or unarmed. The engine rolls the attack die and the damage, adding the weapon skill, the best weapon attribute, the attack bonus, and a Warrior's Killing Blow. On a miss it applies Shock when the target's AC is low enough.",
+    "description": "Ask the player to roll their attack with a carried weapon or unarmed, then record the d20. The engine adds the weapon skill, the best weapon attribute, the attack bonus, and a Warrior's Killing Blow, rolls damage, and applies Shock on a miss when the target's AC is low enough. Use it for the player character; the player presses the roll button and the result is final.",
+    "player_input": {
+      "dice": "1d20",
+      "param": "roll",
+      "details": "{weapon} against {target}: roll 1d20 and add your attack bonus. The engine rolls damage."
+    },
     "parameters": {
       "type": "object",
       "properties": {
@@ -237,9 +260,13 @@
         "weapon": {
           "type": "string",
           "description": "The carried weapon's name, as given, or unarmed."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "What the player is asked to roll, such as 'Roll your attack with the long sword.'"
         }
       },
-      "required": ["target", "weapon"]
+      "required": ["target", "weapon", "prompt"]
     }
   },
   {

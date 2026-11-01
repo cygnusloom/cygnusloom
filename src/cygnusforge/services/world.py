@@ -980,7 +980,9 @@ class WorldTools:
                 db, self.campaign_id, reason, self.dice_tables, self.rng, plus=self.plus
             )
 
-    def roll_save(self, name: str, stat: str, reason: str) -> dict[str, Any]:
+    def roll_save(
+        self, name: str, stat: str, reason: str, natural: int | None = None
+    ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return magic_service.roll_save(
                 db,
@@ -992,6 +994,7 @@ class WorldTools:
                 stat,
                 reason,
                 plus=self.plus,
+                natural=natural,
             )
 
     def place_names(self) -> list[str]:
@@ -1452,7 +1455,14 @@ class WorldTools:
                 db, self.campaign_id, target, attacks, self._rules(), self.rng, plus=self.plus
             )
 
-    def player_attack(self, target: str, weapon: str, modifier: str = "") -> dict[str, Any]:
+    def player_attack(
+        self,
+        target: str,
+        weapon: str,
+        modifier: str = "",
+        attack_roll: int | None = None,
+        damage_roll: int | None = None,
+    ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.player_attack(
                 db,
@@ -1465,6 +1475,8 @@ class WorldTools:
                 plus=self.plus,
                 spec=self.character,
                 weapon_feature=self._weapon_feature(weapon),
+                attack_roll=attack_roll,
+                damage_roll=damage_roll,
             )
 
     def attack_dice(self, weapon: str, modifier: str = "") -> str:
@@ -2163,7 +2175,7 @@ def promote_hireling(db: Session, campaign_id: int, name: str) -> dict[str, Any]
     hireling = state.characters.get(name_key(name))
     if hireling is None or not hireling.hireling:
         raise InvalidInput(f"{name} is not a hireling")
-    if hireling.dead or hireling.dying_hours is not None:
+    if hireling.dead or hireling.dying_hours is not None or hireling.dying_rounds is not None:
         raise InvalidInput(f"{hireling.name} cannot take up the part: they are not able to act")
     employer = hireling.employer
     record(db, campaign_id, HirelingPromoted(name=hireling.name, employer=employer))

@@ -4,10 +4,13 @@ would make them."""
 
 from __future__ import annotations
 
+import asyncio
+import json
 import random
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import replace
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -17,8 +20,11 @@ from sqlmodel import Session
 
 from cygnusforge.content.character import Feature
 from cygnusforge.content.library import CombatRules, ContentLibrary
+from cygnusforge.services import death, encounters
 from cygnusforge.services.events import (
     CharacterDying,
+    CharacterSaved,
+    ChatGM,
     Harmed,
     Struck,
     current,
@@ -26,9 +32,11 @@ from cygnusforge.services.events import (
     events_since,
     load_state,
     name_key,
+    record,
 )
+from cygnusforge.services.tools import Ask, RollAnswer, ToolRequest, run_tool
 from cygnusforge.services.world import WorldTools
-from tests.conftest import content_library
+from tests.conftest import content_library, csrf_token
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
 from tests.test_character_creation import _choices, _rolled_stats
 from tests.test_combat import Rolls, _character
@@ -345,7 +353,7 @@ def test_an_unskilled_attack_takes_the_penalty(client_factory):
     attribute = _best_attribute(pc, feature)
     expected = current(pc, "attack_bonus") + attribute - WWN.combat.unskilled_attack_penalty
 
-    replace(tools, rng=Rolls(3, 10)).player_attack(FOE, weapon)
+    replace(tools, rng=Rolls(1, 10)).player_attack(FOE, weapon)
     [event] = _struck(app, campaign_id)
     assert event.to_hit == 10 + expected
 
@@ -544,3 +552,138 @@ def test_side_initiative_is_rolled_once_both_sides_have_joined(client_factory):
     assert encounter.settled
     assert set(encounter.sides.values()) == {"party", "foes"}
     assert {name_key(name) for name in encounter.order} == {name_key(PC), name_key(FOE)}
+
+
+def test_wwn_player_attack_and_save_prompt_for_the_players_own_dice(client_factory):
+    """The player presses the roll button for their d20; the engine still rolls damage."""
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=20, armor=10)
+    tools.give_item(PC, LONG_SWORD, damage="1d8")
+    tools = replace(tools, rng=Rolls(4))
+    ctx = SimpleNamespace(world=tools)
+    attack = ToolRequest(
+        id="call_1",
+        name="player_attack",
+        arguments=json.dumps({"target": FOE, "weapon": LONG_SWORD, "prompt": "Roll your attack."}),
+    )
+    ask = asyncio.run(run_tool(WWN.tool_calls, attack, None, ctx=ctx))
+    assert isinstance(ask, Ask)
+    assert ask.dice == "1d20"
+    assert LONG_SWORD in (ask.details or "") and FOE in (ask.details or "")
+
+    run = asyncio.run(run_tool(WWN.tool_calls, attack, RollAnswer(20), ctx=ctx))
+    assert not isinstance(run, Ask)
+    result = json.loads(run.output)
+    pc = _pc(app, campaign_id)
+    assert result["harm"] == {"hp": result["raw"]}
+    assert result["raw"] >= 4
+    [struck] = _struck(app, campaign_id)
+    assert (struck.hit, struck.to_hit) == (
+        True,
+        20 + _to_hit_bonus(pc, LONG_SWORD, _feature(LONG_SWORD)),
+    )
+
+    save = ToolRequest(
+        id="call_2",
+        name="player_roll_save",
+        arguments=json.dumps(
+            {"character": PC, "save": "physical", "cause": "poison", "prompt": "Roll a save."}
+        ),
+    )
+    ask = asyncio.run(run_tool(WWN.tool_calls, save, None, ctx=ctx))
+    assert isinstance(ask, Ask)
+    assert ask.dice == "1d20"
+    run = asyncio.run(run_tool(WWN.tool_calls, save, RollAnswer(1), ctx=ctx))
+    assert not isinstance(run, Ask)
+    saved = json.loads(run.output)
+    assert (saved["roll"], saved["passed"]) == (1, False)
+    [event] = _events(app, campaign_id, CharacterSaved.kind)
+    assert (event.roll, event.passed, event.cause) == (1, False, "poison")
+
+
+def test_wwn_npc_turn_waits_for_the_end_turn_button(client_factory):
+    """Starting a foe's turn runs the GM's reply, but the order does not advance until the
+    player presses End turn. WWN rolls side initiative as soon as both sides have joined."""
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    with Session(tools.engine) as db:
+        record(db, campaign_id, ChatGM(content="The opening plays out.", model="test"))
+        db.commit()
+    tools.create_location(YARD, "Cobbles around a dry well.")
+    tools.move_actor(PC, YARD)
+    tools.create_encounter_map(MAP, YARD, 10, 10, "Open cobbles.")
+    tools.start_encounter(MAP)
+    tools.add_participant(PC)
+    _foe(tools, hp=20)
+    with Session(tools.engine) as db:
+        encounter = load_state(db, tools.campaign_id).encounter
+        assert encounter is not None and encounter.settled
+        assert FOE in encounter.order
+        if encounter.acting == PC:
+            encounters.end_turn(db, tools.campaign_id, PC, by_player=True)
+    with Session(tools.engine) as db:
+        encounter = load_state(db, tools.campaign_id).encounter
+        assert encounter.acting != PC
+
+    token = csrf_token(client, "/campaigns")
+    response = client.post(
+        f"/campaigns/{campaign_id}/encounter/turn/stream",
+        data={"csrf_token": token, "name": FOE},
+    )
+    assert response.status_code == 200
+    assert response.text.strip()
+
+    with Session(tools.engine) as db:
+        state = load_state(db, tools.campaign_id)
+        assert state.turn is None
+        assert state.encounter.acting == FOE
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert f"End {FOE}'s turn" in page
+
+    ended = client.post(
+        f"/campaigns/{campaign_id}/encounter/turn/end",
+        data={"csrf_token": token, "name": FOE},
+        follow_redirects=False,
+    )
+    assert ended.status_code == 303
+    with Session(tools.engine) as db:
+        assert load_state(db, tools.campaign_id).encounter.acting == PC
+
+
+def test_wwn_player_save_prompt_works_outside_an_encounter(client_factory):
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    ctx = SimpleNamespace(world=tools)
+    request = ToolRequest(
+        id="call_1",
+        name="player_roll_save",
+        arguments=json.dumps(
+            {"character": PC, "save": "luck", "cause": "a falling stone", "prompt": "Roll."}
+        ),
+    )
+    ask = asyncio.run(run_tool(WWN.tool_calls, request, None, ctx=ctx))
+    assert isinstance(ask, Ask)
+    run = asyncio.run(run_tool(WWN.tool_calls, request, RollAnswer(20), ctx=ctx))
+    assert not isinstance(run, Ask)
+    result = json.loads(run.output)
+    assert (result["roll"], result["passed"]) == (20, True)
+    [event] = _events(client.app, campaign_id, CharacterSaved.kind)
+    assert (event.roll, event.passed, event.cause) == (20, True, "a falling stone")
+
+
+def test_wwn_mortal_wounds_count_six_rounds(client_factory):
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    with Session(client.app.state.engine) as db:
+        pc = load_state(db, campaign_id).pc()
+        assert pc is not None
+    tools.harm_character(PC, "hp", 99, "a test wound")
+    with Session(client.app.state.engine) as db:
+        pc = load_state(db, campaign_id).characters[name_key(PC)]
+        assert (pc.dying_rounds, pc.dying_hours, pc.dead) == (6, 1, False)
+
+    with Session(client.app.state.engine) as db:
+        for _ in range(5):
+            death.tick_dying_rounds(db, campaign_id)
+        pc = load_state(db, campaign_id).characters[name_key(PC)]
+        assert (pc.dying_rounds, pc.dead) == (1, False)
+        death.tick_dying_rounds(db, campaign_id)
+        pc = load_state(db, campaign_id).characters[name_key(PC)]
+        assert (pc.dying_rounds, pc.dead) == (None, True)

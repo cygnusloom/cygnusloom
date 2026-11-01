@@ -913,10 +913,13 @@ def player_attack(
     plus: str,
     spec: CharacterSpec | None = None,
     weapon_feature: Feature | None = None,
+    attack_roll: int | None = None,
+    damage_roll: int | None = None,
 ) -> dict[str, Any]:
-    """A player character's hit. The engine rolls the attack's dice, so the damage is never typed
-    in: the modifier's dice when there is one, else the weapon's. The hit mode decides whether it
-    lands. A group takes only impaired attacks.
+    """A player character's hit. The engine rolls the damage unless the player's roll is passed as
+    `damage_roll`. The hit mode decides whether it lands. A group takes only impaired attacks.
+    When the player has already rolled the d20, pass it as `attack_roll`; the engine uses that
+    natural roll.
 
     A rule set with modifier bands and skills passes its `spec` and the weapon's `feature`. The
     hit roll then adds the rule set's hit bonus stat, the weapon skill (or its unskilled penalty),
@@ -927,12 +930,14 @@ def player_attack(
     _no_initiative_pending(state)
     pc = _player_character(state)
     _living(pc, combat)
+    if damage_roll is not None and damage_roll < 1:
+        raise InvalidInput("the player's damage roll must be at least 1")
     struck = _participant(state, target)
     _living(struck, combat)
     name = _weapon_name(weapon)
     dice = _attack_dice(pc, name, modifier, combat)
     _require_impaired(struck, modifier_name(modifier), combat)
-    raw = roll_total(dice, rng, plus=plus)
+    raw = damage_roll if damage_roll is not None else roll_total(dice, rng, plus=plus)
     bonuses = _player_bonuses(combat, pc, name, spec, weapon_feature)
     raw += bonuses.damage
     # The hit is rolled after the damage, so a roll_vs_defense rule set draws its dice in the same
@@ -940,7 +945,9 @@ def player_attack(
     to_hit: int | None = None
     natural: int | None = None
     if combat.hit_mode == "roll_vs_defense":
-        natural = roll_total(combat.check_die, rng, plus=plus)
+        natural = (
+            attack_roll if attack_roll is not None else roll_total(combat.check_die, rng, plus=plus)
+        )
         to_hit = natural + bonuses.to_hit
     return _strike(
         db,
@@ -1168,7 +1175,7 @@ def recover_character(
         raise InvalidInput(f"{character.name} is not a player character and cannot be recovered")
     if character.dead:
         raise InvalidInput(f"{character.name} is dead and cannot be recovered")
-    if character.dying_hours is not None:
+    if character.dying_hours is not None or character.dying_rounds is not None:
         raise InvalidInput(f"{character.name} is still dying; stabilize them first")
     if not character.defeated:
         raise InvalidInput(f"{character.name} is not {combat.defeat['player_character']}")

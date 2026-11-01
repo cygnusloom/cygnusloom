@@ -51,7 +51,16 @@ directory. The rules text here and in `rules.json` is paraphrased; the books are
   in a statblock (`instinct_check`). Player characters make neither check.
 - Initiative is the book's side roll: `combat.initiative` has 1d8 + the best Dexterity modifier,
   with ties to the party. Adding the first participant of the second side rolls it automatically,
-  and `roll_initiative` exposes it to the GM. No player rolls individual initiative.
+  and `roll_initiative` exposes it to the GM. No player rolls individual initiative. Settling the
+  sides clears any turn opened while the participants were still joining, so the first turn always
+  follows the settled order.
+- The player rolls their own attacks and saves. `player_attack` asks for a d20 and uses that
+  natural roll for hit, miss, and natural 1/20; the engine rolls damage and Shock. `player_roll_save`
+  asks for the d20 for any save the player's character makes, in or out of an encounter.
+  `roll_save` remains the engine roll for NPCs. The engine never takes the player's turn: a player
+  character's turn opens on its own, but it ends only when the player presses End your turn, and
+  an NPC turn starts only with Start [NPC]'s turn and ends only with End [NPC]'s turn. The GM's
+  `end_npc_turn` tool is not offered.
 
 ## Generic engine primitives added
 
@@ -135,7 +144,7 @@ All defaults preserve the old behaviour, so Cairn 2e and Hogwarts JSON need no c
 | `dice_tables.json` | Terrain, nation, ruler, government, history, and tag tables |
 | `worldgen_tables.json` | Reaction, culture, religion, community, site, ruin, event, and monster tables |
 | `world_terrain.json` | Ground kinds for a Latter Earth map |
-| `prompts.json` | Four WWN-specific GM prompt fragments |
+| `prompts.json` | Six WWN-specific GM prompt fragments, including encounter setup and player rolls |
 | `tool_calls.json` | Checks, morale, advancement, gear, and magic tools |
 | `adventure_tools.json` | Combat, encounter, map, save, reaction, Instinct, rest, travel, and market tools |
 | `rest.json`, `clock.json` | A night or a few moments of rest and the four parts of a day |
@@ -172,8 +181,12 @@ tables to create the first location and its people.
   `set_ac` recomputes it, and purchases use `armor_mode` (`max` for body armor, `shield` for
   shields) so suits do not stack.
 - A hit that takes hp to 0 defeats the target. An NPC is dead; a player character is mortally
-  wounded and starts a one-hour dying clock. The clock stands in for the book's six rounds
-  because the engine's clock counts hours; the `mortal-wounds` rule says so.
+  wounded and starts the book's six-round clock. `encounters.end_turn` ticks it whenever a round
+  turns over, and the character dies at zero. A one-hour hourly clock remains as the fallback
+  between fights, so a dying character outside an encounter still has a clock.
+- Encounters are button-driven. The GM sets the encounter up without asking, but never advances
+  the order after a reply: the player presses Start [NPC]'s turn and End [NPC]'s turn, or End
+  your turn for their own character.
 - Saves are d20 at or above the derived save score (16 - level - the best pair modifier; Luck is
   16 - level), so a better attribute lowers the target number. Monsters use their statblock saves.
 - Side initiative is 1d8 + the best Dexterity modifier, ties to the party. It rolls on its own
@@ -206,7 +219,6 @@ tables to create the first location and its people.
   differ. The class-gated partial template gives the right art and spell counts for one.
 - Readied and Stowed are approximated by one inventory pool of 1.5 x Strength (half Readied plus
   full Stowed); the armor-encumbrance penalty on Sneak/Exert is rule text the GM applies.
-- The dying clock is one hour instead of six rounds (the engine's clock is hourly).
 - Surprise, grappling, execution attacks, total defense, dual wielding, range bands, and many
   combat actions are rule text plus the relevant check/attack tools, not dedicated states.
 - Magic Workings, spell research, magic item creation, hirelings, projects, and faction turns are
@@ -218,13 +230,14 @@ tables to create the first location and its people.
 
 ## Validation
 
-- Full suite: `timeout 900 uv run pytest -n auto -q -p no:cacheprovider`: 1946 passed, with 86
+- Full suite: `timeout 900 uv run pytest -n auto -q -p no:cacheprovider`: 1950 passed, with 92
   Worlds Without Number tests across `test_wwn.py`, `test_wwn_combat.py`,
   `test_wwn_advancement.py`, `test_wwn_magic.py`, and `test_wwn_refactor.py`.
 - Lint: `uv run ruff format src tests` and `uv run ruff check src tests`: clean.
 - WWN tests: `tests/test_wwn.py` (content, modifiers, derived stats, creation, spell picks),
   `tests/test_wwn_combat.py` (AC, Shock, hit/damage bonuses, defeat, outside harm, natural
-  1/20, side initiative), `tests/test_wwn_advancement.py` (XP tracks, levels, skills,
+  1/20, side initiative, player-rolled attacks and saves, button-driven NPC turns, the six-round
+  dying clock), `tests/test_wwn_advancement.py` (XP tracks, levels, skills,
   attributes, Foci, origins, arts, spells, AC, Frail rest), and `tests/test_wwn_magic.py`
   (preparation, castings, Effort, Strain, first aid), `tests/test_wwn_refactor.py` (capacity,
   side initiative, enums, armor modes).

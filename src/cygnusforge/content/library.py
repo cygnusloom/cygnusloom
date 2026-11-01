@@ -163,9 +163,12 @@ class PlayerInput:
     param: str | None = None
     dice: str | None = None
     dice_param: str | None = None
-    # A string argument naming the weapon. The engine rolls that weapon's dice itself, so the
-    # player's roll is only for the table and no total is passed to the function.
+    # A string argument naming the weapon. The engine knows that weapon's dice and asks the player
+    # to roll them. With `weapon_roll_param`, that total is passed to the function.
     weapon_param: str | None = None
+    # The function parameter that receives the player's weapon roll. None when the roll is only
+    # for the table and the engine rolls damage itself.
+    weapon_roll_param: str | None = None
     details: str | None = None
     modifier_param: str | None = None
 
@@ -788,8 +791,12 @@ class CombatRules:
     morale: MoraleRules | None = None
     modifiers: Mapping[str, str] = field(default_factory=dict)
     # A player character who is out of action and dying dies when this many hours pass unaided.
-    # Zero means dying characters do not die on a clock.
+    # Zero means dying characters do not die on an hourly clock.
     dying_hours: int = 0
+    # A round-based clock, used when an encounter is running. Zero means no round clock. When both
+    # are set, the round clock runs in an encounter and the hourly one is the fallback between
+    # fights.
+    dying_rounds: int = 0
     # The conditions that leave a character dying, and the ones that make a failed save fatal. Both
     # come from the conditions' `dying` and `fatal` flags.
     dying_conditions: tuple[str, ...] = ()
@@ -2243,6 +2250,7 @@ def _load_combat(
         morale=_load_morale(data, character, label),
         modifiers=_load_modifiers(data, label),
         dying_hours=_whole(data, "dying_hours", label, 0) if "dying_hours" in data else 0,
+        dying_rounds=_whole(data, "dying_rounds", label, 0) if "dying_rounds" in data else 0,
         armor_max=_whole(data, "armor_max", label, 0),
         dying_conditions=tuple(c.id for c in conditions.values() if c.dying),
         fatal_conditions=tuple(c.id for c in conditions.values() if c.fatal),
@@ -4193,6 +4201,7 @@ def _check_player_input(
     dice = data.get("dice")
     dice_param = data.get("dice_param")
     weapon_param = data.get("weapon_param")
+    weapon_roll_param = None
     modifier_param = data.get("modifier_param")
     sources = [source for source in (dice, dice_param, weapon_param) if source is not None]
     if len(sources) != 1:
@@ -4230,6 +4239,22 @@ def _check_player_input(
                 f"{label}: 'player_input.param' cannot be set with 'weapon_param', "
                 "because the engine rolls the weapon's dice"
             )
+        weapon_roll_param = data.get("weapon_roll_param")
+        if weapon_roll_param is not None:
+            if not isinstance(weapon_roll_param, str) or not weapon_roll_param:
+                raise ContentError(
+                    f"{label}: 'player_input.weapon_roll_param' must name a function parameter"
+                )
+            if weapon_roll_param in parameters["properties"]:
+                raise ContentError(
+                    f"{label}: 'player_input.weapon_roll_param' must not be a schema parameter"
+                )
+            if weapon_roll_param not in inspect.signature(function).parameters:
+                raise ContentError(
+                    f"{label}: function does not accept parameter {weapon_roll_param!r}"
+                )
+    elif data.get("weapon_roll_param") is not None:
+        raise ContentError(f"{label}: 'player_input.weapon_roll_param' needs 'weapon_param'")
     elif not isinstance(param, str) or not param:
         raise ContentError(f"{label}: 'player_input.param' must name a function parameter")
     prompt = parameters["properties"].get(PROMPT_ARGUMENT)
@@ -4252,6 +4277,7 @@ def _check_player_input(
         dice=dice,
         dice_param=dice_param,
         weapon_param=weapon_param,
+        weapon_roll_param=weapon_roll_param,
         param=param,
         details=details,
         modifier_param=modifier_param,

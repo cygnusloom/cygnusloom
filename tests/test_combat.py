@@ -990,7 +990,7 @@ def test_player_attack_asks_for_damage_then_resolves_through_the_tool(client_fac
     _, _, tools = _fight(client_factory)
     _foe(tools, "Grave Thing", hp=6)
     ctx = ToolContext(
-        world=replace(tools, rng=Rolls(3)),
+        world=replace(tools, rng=Rolls(1)),
         speak=_no_speak,
         ooc=lambda narrate: None,
         rules={},

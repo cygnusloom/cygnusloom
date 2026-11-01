@@ -491,16 +491,31 @@ SAVE_STATS: Mapping[str, str] = {
 }
 
 
-def roll_save(character: str, save: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
-    """Roll a saving throw: d20 against the character's Physical, Evasion, Mental, or Luck save,
-    succeeding on a roll equal to or above the score. A failure only reports the result; what it
-    costs is the GM's to apply."""
+def _save_stat(save: str) -> str:
+    """The stat for a named save, accepting the short or full name."""
     key = save.strip().casefold().replace("save_", "")
     stat = SAVE_STATS.get(key, save if save in SAVE_STATS.values() else "")
     if not stat:
         options = ", ".join(SAVE_STATS)
         raise InvalidInput(f"there is no save named {save!r}; the saves are: {options}")
-    return ctx.world.roll_save(character, stat, cause)
+    return stat
+
+
+def roll_save(character: str, save: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
+    """Roll a saving throw: d20 against the character's Physical, Evasion, Mental, or Luck save,
+    succeeding on a roll equal to or above the score. A failure only reports the result; what it
+    costs is the GM's to apply."""
+    return ctx.world.roll_save(character, _save_stat(save), cause)
+
+
+def player_roll_save(
+    character: str, save: str, cause: str, ctx: ToolContext, roll: int = 0
+) -> dict[str, Any]:
+    """Ask the player to roll a saving throw, and record their d20. Use it instead of `roll_save`
+    whenever the save is for the player's own character; the player presses the roll button."""
+    if not 1 <= roll <= 20:
+        raise InvalidInput("the player's save roll must be 1 to 20")
+    return ctx.world.roll_save(character, _save_stat(save), cause, natural=roll)
 
 
 def roll_initiative(ctx: ToolContext) -> dict[str, Any]:
@@ -625,10 +640,14 @@ def attack(
     return ctx.world.attack(attacker, attack, target, modifier, targets)
 
 
-def player_attack(target: str, weapon: str, ctx: ToolContext, modifier: str = "") -> dict[str, Any]:
-    """Record the player character's attack with a carried weapon, or unarmed. The engine rolls
-    the attack die and the damage; Shock applies on a miss."""
-    return ctx.world.player_attack(target, weapon, modifier)
+def player_attack(
+    target: str, weapon: str, ctx: ToolContext, modifier: str = "", roll: int = 0
+) -> dict[str, Any]:
+    """Record the player character's attack with a carried weapon, or unarmed, using the d20 the
+    player rolled. The engine rolls damage; Shock applies on a miss."""
+    if not 1 <= roll <= 20:
+        raise InvalidInput("the player's attack roll must be 1 to 20")
+    return ctx.world.player_attack(target, weapon, modifier, attack_roll=roll)
 
 
 def resolve_attacks(target: str, attacks: list[dict[str, str]], ctx: ToolContext) -> dict[str, Any]:

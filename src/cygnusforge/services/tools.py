@@ -115,6 +115,8 @@ async def run_tool(
         arguments.pop(tool.player_input.dice_param, None)
     if tool.player_input.param is not None:
         arguments[tool.player_input.param] = answer.total
+    if tool.player_input.weapon_roll_param is not None:
+        arguments[tool.player_input.weapon_roll_param] = answer.total
     return await _call(tool, arguments, ctx)
 
 

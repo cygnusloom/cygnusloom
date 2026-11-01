@@ -38,6 +38,7 @@ from cygnusforge.services import combat, encounters
 from cygnusforge.services.common import Conflict, InvalidInput, NotFound, session_scope
 from cygnusforge.services.events import (
     CHARS_PER_TOKEN,
+    PC_KIND,
     CampaignState,
     Channel,
     ChatGM,
@@ -1809,24 +1810,9 @@ async def resume_turn(
             answer = TextAnswer(clean)
         else:
             raise InvalidInput("that action is not available")
-        actor = turn.actor
         run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
         async for event in _guarded(run, _answer(run, answer)):
             yield event
-        if actor is not None:
-            _close_npc_turn(engine, campaign.id, actor)
-
-
-def _close_npc_turn(engine: Engine, campaign_id: int, name: str) -> None:
-    """End an NPC's turn once the GM's reply has finished, if the GM did not call end_turn itself,
-    so the order can move on. A reply still waiting on a prompt keeps the turn open."""
-    state = _state(engine, campaign_id)
-    encounter = state.encounter
-    if state.turn is not None or encounter is None or encounter.acting is None:
-        return
-    if name_key(encounter.acting) == name_key(name):
-        with session_scope(engine) as db:
-            encounters.end_turn(db, campaign_id, name, by_player=False)
 
 
 async def start_encounter_turn(
@@ -1851,11 +1837,25 @@ async def start_encounter_turn(
         if rule_set is None:
             raise InvalidInput("that campaign's rule set is no longer available")
         with session_scope(engine) as db:
-            character = encounters.begin_turn(db, campaign.id, name)
+            encounters.begin_turn(db, campaign.id, name)
         run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
         async for event in _guarded(run, _carry_on(run)):
             yield event
-        _close_npc_turn(engine, campaign.id, character.name)
+
+
+def end_encounter_turn(engine: Engine, owner_id: int, campaign_id: int, name: str) -> None:
+    """End the acting character's turn from the encounter controls. The player ends their own
+    character's turn and the GM ends an NPC's, but both are button-driven: a reply ending does not
+    advance the order by itself. Refused while the GM's reply is still open."""
+    get_campaign(engine, owner_id, campaign_id)
+    with _exclusive(campaign_id):
+        if _state(engine, campaign_id).turn is not None:
+            raise InvalidInput("the GM's reply is unfinished; finish it before ending the turn")
+        with session_scope(engine) as db:
+            character = load_state(db, campaign_id).characters.get(name_key(name))
+            if character is None:
+                raise InvalidInput(f"there is no character named {name!r}")
+            encounters.end_turn(db, campaign_id, name, by_player=character.kind == PC_KIND)
 
 
 def end_player_turn(engine: Engine, owner_id: int, campaign_id: int, name: str) -> None:

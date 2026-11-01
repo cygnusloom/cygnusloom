@@ -325,6 +325,7 @@ def test_every_wwn_tool_loads_and_binds_its_declared_required_parameters() -> No
         "first_aid",
         "restore_spell_slots",
         "roll_save",
+        "player_roll_save",
         "roll_reaction",
         "instinct_check",
         "roll_tables",
@@ -333,7 +334,6 @@ def test_every_wwn_tool_loads_and_binds_its_declared_required_parameters() -> No
         "end_encounter",
         "add_participant",
         "remove_participant",
-        "end_npc_turn",
         "attack",
         "player_attack",
         "resolve_attacks",
@@ -363,7 +363,12 @@ def test_every_wwn_tool_loads_and_binds_its_declared_required_parameters() -> No
         assert call.takes_context
         properties = call.parameters["properties"]
         required = call.parameters.get("required", [])
-        arguments = {name: _placeholder(properties[name]) for name in required}
+        consumed = {"prompt"} if call.player_input is not None else set()
+        arguments = {
+            name: _placeholder(properties[name]) for name in required if name not in consumed
+        }
+        if call.player_input is not None and call.player_input.param is not None:
+            arguments[call.player_input.param] = 1
         arguments["ctx"] = object()
         inspect.signature(call.function).bind(**arguments)
 

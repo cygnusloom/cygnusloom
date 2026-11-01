@@ -23,6 +23,7 @@ from cygnusforge.content.library import (
     InitiativeRules,
 )
 from cygnusforge.rules.dice import roll_total
+from cygnusforge.services import death
 from cygnusforge.services.common import InvalidInput, bounded_text
 from cygnusforge.services.events import (
     FOES_SIDE,
@@ -782,9 +783,13 @@ def end_turn(db: Session, campaign_id: int, name: str, by_player: bool) -> dict[
     if (character.kind == PC_KIND) != by_player:
         owner = "the player" if character.kind == PC_KIND else "the GM"
         raise InvalidInput(f"{owner} ends {character.name}'s turn")
+    round_before = encounter.round
     record(db, campaign_id, EncounterTurnEnded(name=character.name))
     db.commit()
     _open_player_turn(db, campaign_id)
+    state = load_state(db, campaign_id)
+    if state.encounter is not None and state.encounter.round > round_before:
+        death.tick_dying_rounds(db, campaign_id)
     return {"ended_turn": character.name}
 
 

@@ -219,18 +219,22 @@ def roll_save(
     reason: str,
     *,
     plus: str,
+    natural: int | None = None,
 ) -> dict[str, Any]:
-    """An engine-rolled save against a stat, recorded with its reason. A failure only records the
-    result; the GM applies what it costs."""
+    """A save against a stat, recorded with its reason. The engine rolls unless the player's own
+    roll is passed as `natural`. A failure only records the result; the GM applies what it
+    costs."""
     if stat not in spec.stats:
         raise InvalidInput(f"there is no stat named {stat!r}")
+    if natural is not None and not 1 <= natural <= 20:
+        raise InvalidInput("the player's save roll must be 1 to 20")
     state = load_state(db, campaign_id)
     character = inventory_service.character_named(state, name)
     if character.story_only:
         raise InvalidInput(
             f"{character.name} has no stats yet; give them stats with update_npc first"
         )
-    roll = roll_total(combat.check_die, rng, plus=plus)
+    roll = natural if natural is not None else roll_total(combat.check_die, rng, plus=plus)
     score = current(character, stat)
     passed = combat.save_succeeds(roll, score)
     record(

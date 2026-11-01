@@ -68,5 +68,15 @@
     "type": "prompt",
     "id": "overland_weather",
     "text": "When today's weather is Unpleasant or Inclement, a move_actor overland move must set weather_choice to fatigue (each traveller takes Fatigue) or watch (the journey takes one more watch)."
+  },
+  {
+    "type": "prompt",
+    "id": "encounter_start",
+    "text": "When a fight or other tactical action starts, set it up yourself without asking the player whether to use the encounter system: create or choose a map, start the encounter, add every combatant, then call player_initiative so the player rolls their initiative save. The encounter is how turns, positions, and attacks are tracked. Do not start a later NPC turn on your own; the player presses Start that NPC's turn, and the acting side's turn ends only when the player presses End turn. Never take a player character's turn for them."
+  },
+  {
+    "type": "prompt",
+    "id": "player_rolls",
+    "text": "The player rolls their own character's attacks and owed saves. Call player_attack for an attack and player_save for a save so the player presses the roll button; never call attack for the player character. The engine rolls damage. Use these tools in and out of an encounter."
   }
 ]

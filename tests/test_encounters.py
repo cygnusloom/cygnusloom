@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from cygnusforge.content.library import EncounterGrid
 from cygnusforge.llm.base import ToolRequest
-from cygnusforge.services import campaigns, encounters
+from cygnusforge.services import encounters
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
     NPC_KIND,
@@ -237,7 +237,7 @@ def test_turns_follow_join_order_and_wrap_into_a_new_round(
     _begin(app, campaign_id, "Pip")
     with pytest.raises(InvalidInput, match="the GM ends Pip's turn"):
         _end(app, campaign_id, "Pip", by_player=True)
-    assert _call(app, campaign_id, "end_turn", {"name": "Pip"}) == {"ended_turn": "Pip"}
+    assert _end(app, campaign_id, "Pip", by_player=False) == {"ended_turn": "Pip"}
     _finish_gm_reply(app, campaign_id)
 
     assert _encounter(app, campaign_id).encounter.acting == "Ada"
@@ -304,21 +304,6 @@ def test_guards_protect_participants_maps_and_locations(client_factory: Callable
     )
 
 
-def _spy_on_fallback_close(monkeypatch: pytest.MonkeyPatch, app: FastAPI, campaign_id: int):
-    """Record who was acting when the fallback that closes NPC turns ran. The name of the NPC means
-    the fallback had to close it; the next participant means the GM had already ended it with
-    end_turn, so the fallback did nothing."""
-    seen: list[str | None] = []
-    original = campaigns._close_npc_turn
-
-    def spy(engine: Any, cid: int, name: str) -> None:
-        seen.append(_state(app, cid).encounter.acting)
-        original(engine, cid, name)
-
-    monkeypatch.setattr(campaigns, "_close_npc_turn", spy)
-    return seen
-
-
 def _npc_turn_stream(client: TestClient, campaign_id: int, name: str) -> list[dict[str, Any]]:
     token = csrf_token(client, "/campaigns")
     response = client.post(
@@ -338,19 +323,15 @@ def _encounter_post(client: TestClient, campaign_id: int, action: str, name: str
     )
 
 
-def test_npc_turn_is_played_out_and_the_gm_ends_it(
-    client_factory: Callable[[], TestClient], monkeypatch: pytest.MonkeyPatch
+def test_npc_turn_is_played_out_and_the_end_turn_button_moves_on(
+    client_factory: Callable[[], TestClient],
 ):
     client, campaign_id = _encounter_with(client_factory, columns=10, rows=10, cairn=True)
     app = client.app
-    fallback = _spy_on_fallback_close(monkeypatch, app, campaign_id)
     # The directive's turn is the GM's reply to the player's message; the NPC's turn is the next.
     script = _script(
         {"text": "Pip waits by the gate."},
-        {
-            "rounds": [[{"name": "end_turn", "arguments": {"name": "Pip"}}]],
-            "text": "Pip ducks behind the crate.",
-        },
+        {"text": "Pip ducks behind the crate."},
     )
     assert _send(client, campaign_id, script).status_code == 303
 
@@ -358,18 +339,20 @@ def test_npc_turn_is_played_out_and_the_gm_ends_it(
 
     assert lines[-1]["type"] == "saved"
     state = _state(app, campaign_id)
+    # The reply alone does not advance the order; the player presses End Pip's turn.
     assert state.turn is None
+    assert state.encounter.acting == "Pip"
+    assert _encounter_post(client, campaign_id, "end", "Pip").status_code == 303
+    state = _state(app, campaign_id)
     assert state.encounter.acting == "Ada"
     assert state.encounter.up == 1
-    assert fallback == ["Ada"]
 
 
-def test_npc_turn_closes_even_when_the_gm_forgets_end_turn(
-    client_factory: Callable[[], TestClient], monkeypatch: pytest.MonkeyPatch
+def test_npc_turn_stays_open_until_the_end_turn_button(
+    client_factory: Callable[[], TestClient],
 ):
     client, campaign_id = _encounter_with(client_factory, columns=10, rows=10, cairn=True)
     app = client.app
-    fallback = _spy_on_fallback_close(monkeypatch, app, campaign_id)
     script = _script({"text": "Pip waits."}, {"text": "Pip shrugs and does nothing."})
     assert _send(client, campaign_id, script).status_code == 303
 
@@ -378,9 +361,13 @@ def test_npc_turn_closes_even_when_the_gm_forgets_end_turn(
     assert lines[-1]["type"] == "saved"
     state = _state(app, campaign_id)
     assert state.turn is None
+    assert state.encounter.acting == "Pip"
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "End Pip's turn" in page
+    assert _encounter_post(client, campaign_id, "end", "Pip").status_code == 303
+    state = _state(app, campaign_id)
     assert state.encounter.acting == "Ada"
     assert state.encounter.up == 1
-    assert fallback == ["Pip"]
 
 
 def test_player_turn_starts_on_its_own_and_ends_by_button(
@@ -419,9 +406,9 @@ def test_turn_buttons_refuse_the_wrong_participant(client_factory: Callable[[], 
 
     _begin(app, campaign_id, "Pip")
     _finish_gm_reply(app, campaign_id)
-    wrong = _encounter_post(client, campaign_id, "end", "Pip")
+    wrong = _encounter_post(client, campaign_id, "end", "Ada")
     assert wrong.status_code == 400
-    assert "GM ends Pip" in wrong.text
+    assert "Ada is not taking a turn" in wrong.text
     assert _state(app, campaign_id).encounter.acting == "Pip"
 
 

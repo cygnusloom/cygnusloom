@@ -175,10 +175,11 @@
     "name": "player_attack",
     "python_module": "cairn2e",
     "function": "player_attack",
-    "description": "Record the player character's attack against a target. Attacks always hit. The engine rolls the damage from the weapon's dice, or from the modifier's dice when one is named; the player's roll is only for the table and does not set the damage. The weapon must be carried (give it with give_item first, naming its damage if it is not in the catalogue), or be 'unarmed' for fists. Use it when the player says what they attack with and the target is in the encounter. The target takes the damage through its armor, Hit Protection, and Strength, as with an NPC attack. A detachment can only be hit by an impaired attack.",
+    "description": "Ask the player to roll their attack against a target. Attacks always hit, so the player's weapon roll is the damage; the modifier's dice replace the weapon's when one is named. The weapon must be carried (give it with give_item first, naming its damage if it is not in the catalogue), or be 'unarmed' for fists. Use it when the player says what they attack with and the target is in the encounter. The target takes the damage through its armor, Hit Protection, and Strength, as with an NPC attack. A detachment can only be hit by an impaired attack.",
     "player_input": {
       "weapon_param": "weapon",
-      "details": "{weapon} against {target}: roll for the blow. The weapon's dice set the damage.",
+      "weapon_roll_param": "damage",
+      "details": "{weapon} against {target}: roll the weapon's damage dice. Attacks always hit.",
       "modifier_param": "modifier"
     },
     "parameters": {
@@ -1551,26 +1552,6 @@
       "required": [
         "map",
         "cells"
-      ]
-    }
-  },
-  {
-    "type": "tool_call",
-    "id": "end_turn",
-    "name": "end_turn",
-    "python_module": "cairn2e",
-    "function": "end_npc_turn",
-    "description": "End the turn of the NPC whose turn it is in the encounter. Call it once the NPC's action is resolved. Player characters end their own turns, so do not use this for them.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the NPC whose turn is ending."
-        }
-      },
-      "required": [
-        "name"
       ]
     }
   }

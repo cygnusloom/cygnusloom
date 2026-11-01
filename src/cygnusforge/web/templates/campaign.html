@@ -95,6 +95,11 @@
               </form>
             {% elif actor %}
               <p class="muted">{{ actor.name }} is taking their turn.</p>
+              <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/end">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="name" value="{{ actor.name }}">
+                <button type="submit"{% if pending %} disabled{% endif %}>End {{ actor.name }}'s turn</button>
+              </form>
             {% else %}
               <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/stream" data-encounter-turn>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

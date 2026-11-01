@@ -31,7 +31,7 @@ from cygnusforge.services.campaigns import (
     context_usage,
     create_campaign,
     default_campaign_labels,
-    end_player_turn,
+    end_encounter_turn,
     get_campaign,
     get_turn_context,
     get_turn_transcript,
@@ -499,13 +499,13 @@ async def post_encounter_turn_stream(request: Request, campaign_id: int) -> Resp
 
 
 @router.post("/{campaign_id}/encounter/turn/end")
-async def end_encounter_turn(request: Request, campaign_id: int) -> Response:
+async def post_encounter_turn_end(request: Request, campaign_id: int) -> Response:
     user = page_user(request)
     await verify_csrf(request)
     form = await request.form()
     name = form_text(form, "name")
     try:
-        end_player_turn(request.app.state.engine, user.id, campaign_id, name)
+        end_encounter_turn(request.app.state.engine, user.id, campaign_id, name)
     except InvalidInput as exc:
         return _campaign_page(request, user, campaign_id, 400, str(exc))
     except Conflict as exc:
@@ -625,7 +625,7 @@ def _campaign_page(
         promotable = [
             c
             for c in world.state.characters.values()
-            if c.hireling and not c.dead and c.dying_hours is None
+            if c.hireling and not c.dead and c.dying_hours is None and c.dying_rounds is None
         ]
         character = None
         if character_pending and rule_set is not None:

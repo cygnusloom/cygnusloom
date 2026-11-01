@@ -43,7 +43,7 @@ def stabilize(
         raise InvalidInput(f"{character.name} is not a player character")
     if character.dead:
         raise InvalidInput(f"{character.name} is dead and cannot be stabilized")
-    if character.dying_hours is None:
+    if character.dying_hours is None and character.dying_rounds is None:
         raise InvalidInput(f"{character.name} is not dying")
     record(db, campaign_id, CharacterStabilized(name=character.name, by=by))
     db.commit()
@@ -83,7 +83,7 @@ def use_item(
         patient = load_state(db, campaign_id).characters.get(name_key(target))
         if patient is None:
             raise InvalidInput(f"there is no character named {target!r}")
-        if patient.dying_hours is None:
+        if patient.dying_hours is None and patient.dying_rounds is None:
             raise InvalidInput(f"{patient.name} is not dying, so {item} has nothing to stop")
     result = inventory_service.use_item(db, campaign_id, inventory, name, item, charged_kind)
     if aid and combat is not None:
