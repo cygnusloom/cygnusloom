@@ -22,9 +22,10 @@ Open http://127.0.0.1:8000, use the development login, and create a campaign. Th
 
 Run checks with `uv run pytest -n auto` and `uv run ruff check`.
 
-Source distributions include only the project paths listed in `pyproject.toml`. Local environment
-files, logs, databases, and database sidecars are excluded; `.env.example` is included. Update the
-allowlist when adding release files, and inspect archives before publishing.
+Source distributions include only the project paths listed in `pyproject.toml`. Both source
+distributions and wheels exclude `.env`, `.env.*` (except `.env.example`), `*.env`, `*.log`, and
+common SQLite databases and sidecars. Untracked files within included directories can still be
+packaged; update the allowlist when adding release files and inspect archives before publishing.
 
 ## Ruleset design
 

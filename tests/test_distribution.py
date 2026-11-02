@@ -4,14 +4,15 @@ import shutil
 import subprocess
 import tarfile
 from pathlib import Path, PurePosixPath
+from zipfile import ZipFile
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-@pytest.mark.skipif(shutil.which("uv") is None, reason="uv is required to build the source archive")
-def test_sdist_excludes_untracked_runtime_and_private_files(tmp_path: Path) -> None:
+@pytest.mark.skipif(shutil.which("uv") is None, reason="uv is required to build distributions")
+def test_distributions_exclude_untracked_runtime_and_private_files(tmp_path: Path) -> None:
     project = tmp_path / "project"
     project.mkdir()
     for name in ("pyproject.toml", ".gitignore"):
@@ -20,12 +21,13 @@ def test_sdist_excludes_untracked_runtime_and_private_files(tmp_path: Path) -> N
         "README.md",
         ".env.example",
         "src/cygnusforge/__init__.py",
+        "src/cygnusforge/asset.txt",
         "tests/test_example.py",
     ):
         path = project / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("fixture\n", encoding="utf-8")
-    for name in (
+    excluded = (
         "runtime.log",
         "private-notes.txt",
         ".env",
@@ -34,21 +36,31 @@ def test_sdist_excludes_untracked_runtime_and_private_files(tmp_path: Path) -> N
         "session.db",
         "session.db-journal",
         "src/cygnusforge/runtime.log",
+        "src/cygnusforge/runtime/deep.log",
+        "src/cygnusforge/.env",
         "src/cygnusforge/.env.local",
+        "src/cygnusforge/private.env",
+        "src/cygnusforge/session.db",
+        "src/cygnusforge/session.db-wal",
         "src/cygnusforge/session.db-journal",
         "src/cygnusforge/session.sqlite3",
-    ):
-        (project / name).write_text("private fixture\n", encoding="utf-8")
+        "src/cygnusforge/session.sqlite3-wal",
+    )
+    for name in excluded:
+        path = project / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("private fixture\n", encoding="utf-8")
 
     dist = tmp_path / "dist"
-    result = subprocess.run(
-        ["uv", "build", "--offline", "--sdist", "--out-dir", str(dist)],
-        cwd=project,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
+    for target in ("sdist", "wheel"):
+        result = subprocess.run(
+            ["uv", "build", "--offline", f"--{target}", "--out-dir", str(dist)],
+            cwd=project,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
     (archive,) = dist.glob("*.tar.gz")
     with tarfile.open(archive, "r:gz") as source:
         paths = {PurePosixPath(*PurePosixPath(name).parts[1:]) for name in source.getnames()}
@@ -57,20 +69,19 @@ def test_sdist_excludes_untracked_runtime_and_private_files(tmp_path: Path) -> N
         PurePosixPath("README.md"),
         PurePosixPath(".env.example"),
         PurePosixPath("src/cygnusforge/__init__.py"),
+        PurePosixPath("src/cygnusforge/asset.txt"),
         PurePosixPath("tests/test_example.py"),
     } <= paths
-    assert not paths.intersection(
-        {
-            PurePosixPath("runtime.log"),
-            PurePosixPath("private-notes.txt"),
-            PurePosixPath(".env"),
-            PurePosixPath(".env.local"),
-            PurePosixPath(".copilot_testing"),
-            PurePosixPath("session.db"),
-            PurePosixPath("session.db-journal"),
-            PurePosixPath("src/cygnusforge/runtime.log"),
-            PurePosixPath("src/cygnusforge/.env.local"),
-            PurePosixPath("src/cygnusforge/session.db-journal"),
-            PurePosixPath("src/cygnusforge/session.sqlite3"),
-        }
-    )
+    assert not paths.intersection(PurePosixPath(name) for name in excluded)
+
+    (wheel,) = dist.glob("*.whl")
+    with ZipFile(wheel) as binary:
+        wheel_paths = {PurePosixPath(name) for name in binary.namelist()}
+    assert {
+        PurePosixPath("cygnusforge/__init__.py"),
+        PurePosixPath("cygnusforge/asset.txt"),
+    } <= wheel_paths
+    wheel_excluded = {
+        PurePosixPath(name).relative_to("src") for name in excluded if name.startswith("src/")
+    }
+    assert not wheel_paths.intersection(wheel_excluded)

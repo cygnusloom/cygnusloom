@@ -30,6 +30,21 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build]
+exclude = [
+    ".env",
+    ".env.*",
+    "!.env.example",
+    "*.env",
+    "*.log",
+    "*.db",
+    "*.db-*",
+    "*.sqlite",
+    "*.sqlite-*",
+    "*.sqlite3",
+    "*.sqlite3-*",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/cygnusforge"]
 
@@ -55,19 +70,6 @@ only-include = [
     "src",
     "tests",
     "uv.lock",
-]
-exclude = [
-    ".env",
-    ".env.*",
-    "!.env.example",
-    "*.env",
-    "*.log",
-    "*.db",
-    "*.db-*",
-    "*.sqlite",
-    "*.sqlite-*",
-    "*.sqlite3",
-    "*.sqlite3-*",
 ]
 
 [tool.pytest.ini_options]
