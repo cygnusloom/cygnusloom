@@ -114,7 +114,7 @@
     "kind": "class",
     "name": "Vowed",
     "description": "A bodily adept who refines inner power into supernatural martial arts. All Vowed gain a non-combat bonus skill appropriate to their order (subject to GM approval), a free Focus, Martial Style, Unarmed Might, and Unarmored Defense, plus one more art of their choice, and learn more arts as they advance. The book presents the Vowed as a partial class; this engine offers it as a full class for play.",
-    "stats": { "hp": 0, "attack_bonus": 0 },
+    "stats": { "hp": 0, "attack_bonus": -1 },
     "skill_picks": [
       { "id": "order_skill", "label": "Order skill", "count": 1, "table": "all_skills", "max_level": 1, "exclude": ["punch", "shoot", "stab"] },
       { "id": "class_free_skill", "label": "General skill", "count": 1, "table": "all_skills", "max_level": 1 }

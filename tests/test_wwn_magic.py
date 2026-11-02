@@ -14,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from cygnusforge.content.character import derived_stats
 from cygnusforge.rules import wwn, wwn_magic
 from cygnusforge.rules.wwn_progression import require_wwn_progression
 from cygnusforge.services.common import InvalidInput
@@ -207,6 +208,18 @@ def test_a_partial_mage_has_one_less_effort_and_never_less_than_one(
     with pytest.raises(InvalidInput, match="limited to 1"):
         wwn_magic.commit_effort(NAME, "high", 2, "scene", ctx)
     assert wwn_magic.commit_effort(NAME, "high", 1, "scene", ctx)["maximum"] == 1
+
+
+def test_every_arcane_class_gets_the_configured_partial_mage_effort_reduction() -> None:
+    progression = require_wwn_progression(WWN)
+    stats = {"str": 10, "dex": 10, "con": 10, "int": 14, "wis": 10, "cha": 10}
+    for class_id, casting_table in progression.casting_class_tables.items():
+        values = derived_stats(
+            WWN.character, stats, {"level": 1}, {"magic": 1}, {"class": class_id}
+        )
+        expected = 3 if casting_table == "full_mage" else 2
+        for stat in ("effort_high", "effort_necromancer", "effort_elemental"):
+            assert values[stat] == expected, (class_id, stat)
 
 
 @pytest.mark.parametrize(

@@ -33,6 +33,43 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/cygnusforge"]
 
+[tool.hatch.build.targets.sdist]
+only-include = [
+    ".devcontainer",
+    ".dockerignore",
+    ".env.example",
+    ".github",
+    ".gitignore",
+    ".vscode",
+    "Dockerfile",
+    "ISSUE_TRACKER.md",
+    "README.md",
+    "SPEC.md",
+    "alembic",
+    "alembic.ini",
+    "compose.local.yaml",
+    "compose.yaml",
+    "deploy",
+    "pyproject.toml",
+    "scripts",
+    "src",
+    "tests",
+    "uv.lock",
+]
+exclude = [
+    ".env",
+    ".env.*",
+    "!.env.example",
+    "*.env",
+    "*.log",
+    "*.db",
+    "*.db-*",
+    "*.sqlite",
+    "*.sqlite-*",
+    "*.sqlite3",
+    "*.sqlite3-*",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 

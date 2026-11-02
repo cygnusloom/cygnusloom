@@ -138,10 +138,6 @@ def test_shipped_progression_matches_existing_wwn_values(
         "adventurer_expert_mage",
         "adventurer_warrior_mage",
         "adventurer_mage_mage",
-        "adventurer_partial_expert_partial_warrior",
-        "adventurer_partial_expert_partial_mage",
-        "adventurer_partial_mage_partial_warrior",
-        "adventurer_partial_mage_partial_mage",
     }
 
     assert progression.class_tables["warrior"] == ClassTable(
@@ -163,22 +159,16 @@ def test_shipped_progression_matches_existing_wwn_values(
         6,
         7,
     )
-    assert (
-        progression.class_tables["adventurer_partial_mage_partial_warrior"].quick_learner is False
-    )
+    assert progression.class_tables["adventurer_warrior_mage"].quick_learner is False
 
     assert progression.full_mage_classes == frozenset({"mage"})
     assert progression.partial_mage_classes == frozenset(
         {
             "adventurer_expert_mage",
             "adventurer_warrior_mage",
-            "adventurer_partial_expert_partial_mage",
-            "adventurer_partial_mage_partial_warrior",
         }
     )
-    assert progression.dual_mage_classes == frozenset(
-        {"adventurer_mage_mage", "adventurer_partial_mage_partial_mage"}
-    )
+    assert progression.dual_mage_classes == frozenset({"adventurer_mage_mage"})
     assert progression.casting_tables["full_mage"][1] == CastingRow(1, 1, 3)
     assert progression.casting_tables["full_mage"][10] == CastingRow(5, 6, 12)
     assert progression.casting_tables["partial_mage"][5] == CastingRow(2, 2, 5)
@@ -250,6 +240,33 @@ def test_loader_adapter_delegates_to_the_pure_parser(
 
     assert isinstance(configured, WWNProgression)
     assert configured.xp_fast == (0, 3, 6, 12, 18, 27, 39, 54, 72, 93)
+
+
+def test_class_tables_match_the_ruleset_class_templates(
+    progression_definition: dict[str, Any],
+    character_spec: CharacterSpec,
+) -> None:
+    progression = parse_wwn_progression(progression_definition, "synthetic/classes")
+    class_ids = {
+        template.id for template in character_spec.templates.values() if template.kind == "class"
+    }
+
+    assert set(progression.class_tables) == class_ids
+
+
+def test_class_table_without_a_class_template_is_rejected(
+    progression_definition: dict[str, Any],
+    character_spec: CharacterSpec,
+) -> None:
+    malformed = copy.deepcopy(progression_definition)
+    extra = copy.deepcopy(malformed["classes"][0])
+    extra["id"] = "unavailable-class"
+    malformed["classes"].append(extra)
+
+    with pytest.raises(
+        ContentError, match="class tables have no class template.*unavailable-class"
+    ):
+        configure_progression(malformed, character_spec, "synthetic/unknown-class")
 
 
 def test_runtime_resolver_requires_a_valid_progression(

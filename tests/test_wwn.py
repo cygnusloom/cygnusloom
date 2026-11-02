@@ -16,6 +16,7 @@ from cygnusforge.content.character import (
     skill_pick_options,
 )
 from cygnusforge.content.library import ContentLibrary
+from cygnusforge.rules.wwn_progression import require_wwn_progression
 from cygnusforge.services.events import load_state
 from tests.conftest import content_library
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
@@ -84,6 +85,19 @@ def test_wwn_derived_saves_and_effort() -> None:
     assert values["save_luck"] == 16 - 3
     assert values["strain"] == 18
     assert values["effort_high"] == 1 + 1 + 0
+
+
+def test_starting_attack_bonus_matches_each_class_progression() -> None:
+    ruleset = _wwn().rule_sets["worldswithoutnumber"]
+    progression = require_wwn_progression(ruleset)
+    for class_id, chart in progression.class_tables.items():
+        sheet = resolve(
+            ruleset.character,
+            {"templates": {"class": class_id}},
+            random.Random(17),
+            plus=ruleset.plus,
+        )
+        assert sheet.stats["attack_bonus"] == chart.attack[0], class_id
 
 
 @pytest.mark.parametrize(("stat", "skill"), [("effort_healer", "heal"), ("effort_vowed", "exert")])

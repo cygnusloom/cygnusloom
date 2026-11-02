@@ -41,6 +41,8 @@ directory. The rules text here and in `rules.json` is paraphrased; the books are
 - Advancement arithmetic and starting packages live in the isolated
   [WWN module](../../../rules/wwn.py). Class, experience, casting, art, and skill-prerequisite
   charts live in [progression.json](./progression.json) and are validated for each loaded ruleset.
+  Class tables must correspond exactly to defined class templates; unsupported legacy aliases
+  are not loaded.
 - Magic state (prepared spells and committed Effort) lives in character `marks`, the way Cairn
   keeps deprivation, so it replays from the log. Daily castings and Effort use harm on ordinary
   stats, so `current(castings)` and `current(effort_high)` are what is left.
@@ -169,6 +171,7 @@ tables to create the first location and its people.
 - Backgrounds grant the free skill at level 0 and two picks from the Learning table (the quick
   skills are also in that table, so the quick option is covered by the same picks).
 - Classes grant their configured level-1 HP constant, attack bonus, skills, and Focus or art picks.
+  Their starting attack bonuses match the first row of their class progression charts.
   Every class also receives a general Focus and a free skill choice, including the standalone
   Healer and Vowed options.
   Healers gain Heal-0; Vowed choose a non-combat bonus skill appropriate to their order, subject to
@@ -268,7 +271,7 @@ tables to create the first location and its people.
 
 ## Validation
 
-- Full suite: `uv run --offline pytest -q -n 4`: 2361 passed in about 53 seconds, with the
+- Full suite: `uv run --offline pytest -q -n 4`: 2366 passed in about 52 seconds, with the
   Worlds Without Number tests across `test_wwn.py`,
   `test_wwn_combat.py`, `test_wwn_advancement.py`, `test_wwn_magic.py`, and
   `test_wwn_refactor.py`.

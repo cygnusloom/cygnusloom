@@ -81,38 +81,6 @@
         "attack": [0, 0, 0, 0, 1, 1, 1, 1, 1, 2],
         "focus_levels": [2, 5, 7, 10],
         "quick_learner": false
-      },
-      {
-        "id": "adventurer_partial_expert_partial_warrior",
-        "hit_die": 6,
-        "hp_constant": 2,
-        "attack": [1, 2, 2, 3, 4, 5, 5, 6, 6, 7],
-        "focus_levels": [2, 5, 7, 10],
-        "quick_learner": true
-      },
-      {
-        "id": "adventurer_partial_expert_partial_mage",
-        "hit_die": 6,
-        "hp_constant": 0,
-        "attack": [0, 1, 1, 2, 2, 3, 3, 4, 4, 5],
-        "focus_levels": [2, 5, 7, 10],
-        "quick_learner": true
-      },
-      {
-        "id": "adventurer_partial_mage_partial_warrior",
-        "hit_die": 6,
-        "hp_constant": 2,
-        "attack": [1, 2, 2, 3, 4, 5, 5, 6, 6, 7],
-        "focus_levels": [2, 5, 7, 10],
-        "quick_learner": false
-      },
-      {
-        "id": "adventurer_partial_mage_partial_mage",
-        "hit_die": 6,
-        "hp_constant": -1,
-        "attack": [0, 0, 0, 0, 1, 1, 1, 1, 1, 2],
-        "focus_levels": [2, 5, 7, 10],
-        "quick_learner": false
       }
     ],
     "xp": {
@@ -161,10 +129,7 @@
       "mage": "full_mage",
       "adventurer_expert_mage": "partial_mage",
       "adventurer_warrior_mage": "partial_mage",
-      "adventurer_mage_mage": "dual_mage",
-      "adventurer_partial_expert_partial_mage": "partial_mage",
-      "adventurer_partial_mage_partial_warrior": "partial_mage",
-      "adventurer_partial_mage_partial_mage": "dual_mage"
+      "adventurer_mage_mage": "dual_mage"
     },
     "traditions": {
       "tags": {

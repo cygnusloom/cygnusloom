@@ -359,6 +359,9 @@ def configure_progression(
         raise ContentError(
             f"{label}: class templates have no progression table: {missing_classes!r}"
         )
+    unknown_classes = sorted(set(progression.class_tables) - class_ids)
+    if unknown_classes:
+        raise ContentError(f"{label}: class tables have no class template: {unknown_classes!r}")
 
     tradition_ids = {
         template.id

@@ -22,6 +22,10 @@ Open http://127.0.0.1:8000, use the development login, and create a campaign. Th
 
 Run checks with `uv run pytest -n auto` and `uv run ruff check`.
 
+Source distributions include only the project paths listed in `pyproject.toml`. Local environment
+files, logs, databases, and database sidecars are excluded; `.env.example` is included. Update the
+allowlist when adding release files, and inspect archives before publishing.
+
 ## Ruleset design
 
 Rulesets are collections of JSON definitions in `src/cygnusforge/data/rulesets`. They inherit
