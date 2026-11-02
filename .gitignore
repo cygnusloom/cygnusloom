@@ -2,7 +2,10 @@
 __pycache__/
 .pytest_cache/
 .ruff_cache/
+.copilot_testing
 *.db
+*.db-shm
+*.db-wal
 .env
 .devcontainer/devcontainer.env
 backups/

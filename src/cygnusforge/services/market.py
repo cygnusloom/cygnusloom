@@ -18,6 +18,7 @@ from cygnusforge.content.library import (
     ShopItem,
     ShopService,
 )
+from cygnusforge.services.combat import armor_after, set_armor, set_defense_equipment
 from cygnusforge.services.common import InvalidInput, whole_number
 from cygnusforge.services.events import (
     ArmorSet,
@@ -40,22 +41,6 @@ from cygnusforge.services.inventory import (
 )
 
 MAX_PRICE = 100_000
-
-
-def _armor_after(current: int, listed: int, mode: str, defense: int = 0) -> int:
-    """The armor a buyer has after taking a catalogue item, as the item's `armor_mode` says.
-    `defense` is the rule set's base Armor Class plus the buyer's defense modifier, such as
-    10 + Dexterity. A "shield" either sets that defense plus its own value or adds one to
-    armor that is already as good."""
-    if mode == "set":
-        return defense + listed
-    if mode == "max":
-        return max(current, defense + listed)
-    if mode == "shield":
-        if current <= defense:
-            return defense + listed
-        return max(current + 1, defense + listed)
-    return current + listed
 
 
 def _defense_of(
@@ -169,11 +154,52 @@ def buy_item(
         cause="bought",
     )
     if listed is not None and (listed.armor > 0 or listed.armor_mode != "add"):
-        defense = _defense_of(combat, character, buyer)
-        armor = _armor_after(buyer.armor, listed.armor, listed.armor_mode, defense)
-        if armor_max > 0:
-            armor = min(armor_max, armor)
-        record(db, campaign_id, ArmorSet(name=buyer.name, armor=armor))
+        if (
+            combat is not None
+            and combat.defense_base
+            and listed.armor_mode in {"max", "set", "shield"}
+        ):
+            if character is None:
+                raise InvalidInput("equipped defense requires the character rules")
+            if listed.armor_mode == "shield":
+                slot = (
+                    (listed.name, listed.armor)
+                    if listed.armor > buyer.equipped_shield_value
+                    else None
+                )
+                armor = (
+                    set_defense_equipment(db, campaign_id, buyer, character, combat, shield=slot)
+                    if slot is not None
+                    else buyer.armor
+                )
+            else:
+                slot = (
+                    (listed.name, listed.armor)
+                    if listed.armor_mode == "set" or listed.armor > buyer.equipped_armor_value
+                    else None
+                )
+                armor = (
+                    set_defense_equipment(db, campaign_id, buyer, character, combat, armor=slot)
+                    if slot is not None
+                    else buyer.armor
+                )
+        else:
+            defense = _defense_of(combat, character, buyer)
+            armor = armor_after(buyer.armor, listed.armor, listed.armor_mode, defense)
+            if armor_max > 0:
+                armor = min(armor_max, armor)
+            if buyer.defense_tracked and combat is not None and combat.defense_base:
+                set_armor(
+                    db,
+                    campaign_id,
+                    buyer.name,
+                    armor,
+                    armor_max,
+                    spec=character,
+                    rules=combat,
+                )
+            else:
+                record(db, campaign_id, ArmorSet(name=buyer.name, armor=armor))
         result["armor"] = armor
     db.commit()
     result.update({"price": price, "currency_left": left, "currency": marketplace.currency})

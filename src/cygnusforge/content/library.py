@@ -593,7 +593,7 @@ class AdvancementOption:
 @dataclass(frozen=True)
 class LearnRules:
     """A feature an option lets a character learn: one of `feature_type` whose tag is the value of
-    the character field `tag_field`, which the character does not already have."""
+    the character field `tag_field`. Existing features may be learned again only if repeatable."""
 
     feature_type: str
     tag_field: str
@@ -1725,6 +1725,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         table_names,
         template,
         skill_progression=head.data.get("skill_progression"),
+        ordered_feature_tags=head.data.get("ordered_feature_tags", []),
     )
     optional_templates = _names(head.data, "optional_templates", label)
     character = replace(character, optional_kinds=optional_templates)

@@ -17,10 +17,12 @@ from typing import Any
 from cygnusforge.content.character import CharacterSpec, derived_stats
 from cygnusforge.rules.context import ToolContext
 from cygnusforge.rules.dice import roll_total
-from cygnusforge.rules.wwn import EFFORT_DURATIONS, EFFORT_MARK, tradition_data
+from cygnusforge.rules.wwn import EFFORT_DURATIONS, EFFORT_MARK, tradition_data, tradition_tags
 from cygnusforge.rules.wwn_progression import require_wwn_progression
 from cygnusforge.services.common import InvalidInput, whole_number
 from cygnusforge.services.events import (
+    CampaignState,
+    Character,
     CheckMade,
     EffectNoted,
     Harmed,
@@ -158,11 +160,18 @@ def commit_effort(
 
     def action(hc: HookContext) -> dict[str, Any]:
         _, found = _character(hc, character)
+        if tag not in tradition_tags(found, progression):
+            raise InvalidInput(f"{found.name} cannot commit {tag} Effort without that tradition")
         if stat not in found.stats:
             raise InvalidInput(f"{found.name} has no {stat} stat")
         try:
             maximum = derived_stats(
-                spec, found.stats, found.counters, found.skills, found.templates
+                spec,
+                found.stats,
+                found.counters,
+                found.skills,
+                found.templates,
+                fields=found.fields,
             ).get(stat, found.stats[stat])
         except ValueError as exc:
             raise InvalidInput(str(exc)) from exc
@@ -440,7 +449,7 @@ def restore_spell_slots(character: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.with_hook_context(action)
 
 
-def _character(hc: HookContext, name: str) -> tuple[Any, Any]:
+def _character(hc: HookContext, name: str) -> tuple[CampaignState, Character]:
     state = hc.state()
     character = state.characters.get(name_key(name))
     if character is None:

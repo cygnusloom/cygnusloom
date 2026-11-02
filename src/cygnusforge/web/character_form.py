@@ -14,6 +14,7 @@ from cygnusforge.content.character import (
     Restriction,
     TableOption,
     Template,
+    feature_next_ranks,
     feature_pick_options,
     skill_pick_options,
 )
@@ -26,6 +27,8 @@ FIELD_PREFIX = "field-"
 PICK_PREFIX = "pick-"
 SKILL_PICK_PREFIX = PICK_PREFIX + "skill-"
 FEATURE_PICK_PREFIX = PICK_PREFIX + "feature-"
+FEATURE_REPEAT_PREFIX = "repeat-feature-"
+SKILL_REPLACEMENT_PREFIX = "skill-replacement-"
 CAMPAIGN_PREFIX = "campaign-"
 PRONOUNS_FIELD = "pronouns"
 PRONOUNS_OTHER_FIELD = "pronouns-other"
@@ -120,6 +123,7 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
             if spec.skill_progression is not None
             else None
         ),
+        "skill_replacements": _skill_replacements_view(spec),
         "name_suggestions": any(template.names for template in spec.templates.values()),
         "pronoun_options": _pronoun_options(),
     }
@@ -224,6 +228,7 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
     features: list[str] = []
     skill_picks: dict[str, list[str]] = {}
     feature_picks: dict[str, list[str]] = {}
+    feature_repeats: dict[str, list[str]] = {}
     for template_id in templates.values():
         template = spec.templates.get(template_id)
         if template is None:
@@ -253,19 +258,25 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
             if chosen:
                 skill_picks[pick.id] = chosen
         for pick in template.feat_picks:
-            chosen = [
-                value
-                for index in range(pick.count)
-                if (
-                    value := form_text(
-                        form,
-                        f"{FEATURE_PICK_PREFIX}{template.id}-{pick.id}-{index}",
-                    )
-                    or form_text(form, f"{FEATURE_PICK_PREFIX}{pick.id}-{index}")
-                )
-            ]
+            chosen = []
+            repeats = []
+            for index in range(pick.count):
+                value = form_text(
+                    form, f"{FEATURE_PICK_PREFIX}{template.id}-{pick.id}-{index}"
+                ) or form_text(form, f"{FEATURE_PICK_PREFIX}{pick.id}-{index}")
+                mode = form_text(form, f"{FEATURE_REPEAT_PREFIX}{template.id}-{pick.id}-{index}")
+                if mode not in ("", "repeat"):
+                    raise InvalidInput(f"Invalid repeat choice for {pick.id}")
+                if mode == "repeat" and not value:
+                    raise InvalidInput(f"Choose a feature to repeat for {pick.id}")
+                if value:
+                    chosen.append(value)
+                    if mode == "repeat":
+                        repeats.append(value)
             if chosen:
                 feature_picks[pick.id] = chosen
+            if repeats:
+                feature_repeats[pick.id] = repeats
     submitted: dict[str, Any] = {"fields": fields}
     if spec.stats:
         submitted["stats"] = stats
@@ -277,6 +288,20 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
         submitted["skill_picks"] = skill_picks
     if feature_picks:
         submitted["feature_picks"] = feature_picks
+    if feature_repeats:
+        submitted["feature_repeats"] = feature_repeats
+    progression = spec.skill_progression
+    if progression is not None and progression.creation_replacements is not None:
+        replacements: dict[str, list[str]] = {}
+        for kind in ("roll", "feature"):
+            values = form.getlist(SKILL_REPLACEMENT_PREFIX + kind)
+            if not all(isinstance(value, str) for value in values):
+                raise InvalidInput(f"{kind.capitalize()} skill replacements must be text")
+            choices = [value for value in values if isinstance(value, str)]
+            if any(choices):
+                replacements[kind] = choices
+        if replacements:
+            submitted["skill_replacements"] = replacements
     return submitted
 
 
@@ -298,6 +323,7 @@ def _picks_view(spec: CharacterSpec, template: Template) -> dict[str, Any] | Non
         "count": template.choose.count,
         "feature_type": template.choose.feature_type,
         "tag_field": tag_field.id,
+        "skip_tags": list(template.choose.skip_tags),
         "hint": (
             f"Pick from the {template.choose.feature_type}s of your {tag_field.name}, "
             "or leave a pick blank to roll it."
@@ -311,6 +337,7 @@ def _skill_picks_view(spec: CharacterSpec, template: Template) -> list[dict[str,
     return [
         {
             "id": pick.id,
+            "label": pick.label,
             "count": pick.count,
             "max_level": pick.max_level,
             "hint": (
@@ -326,6 +353,29 @@ def _skill_picks_view(spec: CharacterSpec, template: Template) -> list[dict[str,
     ]
 
 
+def _skill_replacements_view(spec: CharacterSpec) -> list[dict[str, Any]]:
+    progression = spec.skill_progression
+    rules = progression.creation_replacements if progression is not None else None
+    if rules is None:
+        return []
+    return [
+        {
+            "kind": kind,
+            "label": label,
+            "options": [
+                {"value": skill.id, "title": skill.name}
+                for skill in spec.skills.values()
+                if skill.id not in excluded
+            ],
+            "excluded": [spec.skills[skill_id].name for skill_id in excluded],
+        }
+        for kind, label, excluded in (
+            ("roll", "Rolled or other grants", rules.roll_exclude),
+            ("feature", "Feature grants", rules.feature_exclude),
+        )
+    ]
+
+
 def _feat_picks_view(spec: CharacterSpec, template: Template) -> list[dict[str, Any]]:
     """The feature picks a template lets the player choose, each with its offered features. A
     pick's options are filtered by the pick's tag and highest rank."""
@@ -338,6 +388,7 @@ def _feat_picks_view(spec: CharacterSpec, template: Template) -> list[dict[str, 
                 "count": pick.count,
                 "tag": label,
                 "max_rank": pick.max_rank,
+                "advance_repeated_rank": pick.advance_repeated_rank,
                 "hint": (
                     f"Pick {pick.count} {label}{'s' if pick.count != 1 else ''}"
                     + (
@@ -346,6 +397,13 @@ def _feat_picks_view(spec: CharacterSpec, template: Template) -> list[dict[str, 
                         else ""
                     )
                     + ", or leave a pick blank to roll it."
+                    + (
+                        " Choosing the same ranked feature in another pick advances it "
+                        "to its next rank when available; repeatable features can instead "
+                        "start a new choice."
+                        if pick.advance_repeated_rank
+                        else ""
+                    )
                 ),
                 "options": [
                     {
@@ -353,6 +411,9 @@ def _feat_picks_view(spec: CharacterSpec, template: Template) -> list[dict[str, 
                         "title": feature.name,
                         "detail": feature.description or None,
                         "rank": feature.rank,
+                        "repeatable": feature.repeatable,
+                        "ordered": feature.tag in spec.ordered_feature_tags,
+                        "has_next_rank": bool(feature_next_ranks(spec, pick, feature)),
                     }
                     for feature in feature_pick_options(spec, pick)
                 ],

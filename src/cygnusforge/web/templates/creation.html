@@ -128,7 +128,7 @@
                 {{ choice_panel("field-" ~ table.id, table.label, table.options) }}
               {% endfor %}
               {% if template.picks %}
-                <fieldset class="creation-panel tagged-feature-picks" data-tagged-picks="{{ template.id }}" data-tag-field="field-{{ template.picks.tag_field }}">
+                <fieldset class="creation-panel tagged-feature-picks" data-tagged-picks="{{ template.id }}" data-tag-field="field-{{ template.picks.tag_field }}" data-skip-tags='{{ template.picks.skip_tags|tojson }}'>
                   <div class="panel-heading">
                     <h3>{{ template.picks.feature_type|capitalize }}s</h3>
                     <button type="button" class="secondary" data-randomize-tagged-picks>Randomize {{ template.picks.feature_type }}s</button>
@@ -154,7 +154,7 @@
               {% for pick in template.skill_picks %}
                 <fieldset class="creation-panel skill-picks" data-pick-selects="{{ pick.id }}" data-pick-kind="skill" data-pick-template="{{ template.id }}" data-pick-max-level="{{ pick.max_level }}">
                   <div class="panel-heading">
-                    <h3>Skills</h3>
+                    <h3>{{ pick.label }}</h3>
                     <button type="button" class="secondary" data-randomize-picks>Randomize skills</button>
                   </div>
                   <p>{{ pick.hint }}</p>
@@ -172,22 +172,32 @@
                 </fieldset>
               {% endfor %}
               {% for pick in template.feat_picks %}
-                <fieldset class="creation-panel feat-picks" data-pick-selects="{{ pick.id }}" data-pick-kind="feature" data-pick-template="{{ template.id }}">
+                <fieldset class="creation-panel feat-picks" data-pick-selects="{{ pick.id }}" data-pick-kind="feature" data-pick-template="{{ template.id }}" data-advance-repeated-rank="{{ 'true' if pick.advance_repeated_rank else 'false' }}">
                   <div class="panel-heading">
                     <h3>{{ pick.tag|capitalize }}</h3>
                     <button type="button" class="secondary" data-randomize-picks>Randomize {{ pick.tag }}</button>
                   </div>
                   <p>{{ pick.hint }}</p>
                   {% for index in range(pick.count) %}
-                    <label>
-                      {{ pick.tag|capitalize }} {{ index + 1 }}
-                      <select name="pick-feature-{{ template.id }}-{{ pick.id }}-{{ index }}">
-                        <option value="">Roll</option>
-                        {% for option in pick.options %}
-                          <option value="{{ option.value }}">{{ option.title }}{% if option.rank %} (rank {{ option.rank }}){% endif %}</option>
-                        {% endfor %}
-                      </select>
-                    </label>
+                    <div data-feature-pick-row>
+                      <label>
+                        {{ pick.tag|capitalize }} {{ index + 1 }}
+                        <select name="pick-feature-{{ template.id }}-{{ pick.id }}-{{ index }}" data-feature-choice>
+                          <option value="">Roll</option>
+                          {% for option in pick.options %}
+                            <option value="{{ option.value }}" data-description="{{ option.detail or '' }}" data-repeatable="{{ 'true' if option.repeatable else 'false' }}" data-ordered="{{ 'true' if option.ordered else 'false' }}" data-has-next-rank="{{ 'true' if option.has_next_rank else 'false' }}">{{ option.title }}{% if option.rank %} (rank {{ option.rank }}){% endif %}</option>
+                          {% endfor %}
+                        </select>
+                      </label>
+                      <p data-feature-description hidden></p>
+                      <label data-feature-repeat-mode hidden>
+                        Repeated {{ pick.tag }}
+                        <select name="repeat-feature-{{ template.id }}-{{ pick.id }}-{{ index }}" disabled>
+                          <option value="">Advance to the next rank</option>
+                          <option value="repeat">Take another distinct choice</option>
+                        </select>
+                      </label>
+                    </div>
                   {% endfor %}
                 </fieldset>
               {% endfor %}
@@ -200,6 +210,32 @@
         {% for field in character.text_fields %}
           {{ text_panel("field-" ~ field.id, field.name, field.description) }}
         {% endfor %}
+        {% if character.skill_replacements %}
+          <section class="creation-panel">
+            <details data-skill-replacements>
+              <summary>Excess skill replacements (optional)</summary>
+              <p>If a rolled or granted skill exceeds its starting limit, choose replacement skills in the order they will be needed. Leave a choice blank to roll an eligible replacement.</p>
+              {% for group in character.skill_replacements %}
+                <fieldset class="replacement-group">
+                  <legend>{{ group.label }}</legend>
+                  {% if group.excluded %}<p>Not eligible: {{ group.excluded|join(", ") }}.</p>{% endif %}
+                  <div class="replacement-rows" data-replacement-rows>
+                    <label data-replacement-row>
+                      <span>Replacement 1</span>
+                      <select name="skill-replacement-{{ group.kind }}">
+                        <option value="">Roll an eligible skill</option>
+                        {% for option in group.options %}
+                          <option value="{{ option.value }}">{{ option.title }}</option>
+                        {% endfor %}
+                      </select>
+                    </label>
+                  </div>
+                  <button type="button" class="secondary" data-add-skill-replacement>Add another replacement</button>
+                </fieldset>
+              {% endfor %}
+            </details>
+          </section>
+        {% endif %}
       </div>
     </section>
     {% endif %}

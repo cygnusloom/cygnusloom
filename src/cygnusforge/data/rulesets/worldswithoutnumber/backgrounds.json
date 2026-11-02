@@ -5,7 +5,7 @@
     "kind": "background",
     "name": "Artisan",
     "description": "You trained at a bench, forge, or loom, turning raw material into goods that other people need. Your hands know tools, and your eye knows good work from bad.",
-    "skills": { "craft": 0 },
+    "skills": { "craft": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_artisan", "exclude": ["any_skill"] }
     ],
@@ -17,7 +17,7 @@
     "kind": "background",
     "name": "Barbarian",
     "description": "You grew up beyond the settled lands, where weather and wild beasts set the terms of life. You can read a trail, find food, and fight when you must.",
-    "skills": { "survive": 0 },
+    "skills": { "survive": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_barbarian", "exclude": ["any_skill"] }
     ],
@@ -29,7 +29,7 @@
     "kind": "background",
     "name": "Carter",
     "description": "You moved goods along the roads with a cart, a team, and a healthy respect for broken axles and bandits. You know inns, tolls, and the people who work the routes.",
-    "skills": { "ride": 0 },
+    "skills": { "ride": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_carter", "exclude": ["any_skill"] }
     ],
@@ -41,7 +41,7 @@
     "kind": "background",
     "name": "Courtesan",
     "description": "You made your way by charm, performance, and careful attention to powerful people. You hear what is said in fine rooms and know how to be remembered for the right reasons.",
-    "skills": { "perform": 0 },
+    "skills": { "perform": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_courtesan", "exclude": ["any_skill"] }
     ],
@@ -53,7 +53,7 @@
     "kind": "background",
     "name": "Criminal",
     "description": "You learned to take what you wanted without being seen, and to talk your way out when you were. You know the underworld's rules and the people who bend them.",
-    "skills": { "sneak": 0 },
+    "skills": { "sneak": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_criminal", "exclude": ["any_skill"] }
     ],
@@ -65,7 +65,7 @@
     "kind": "background",
     "name": "Hunter",
     "description": "You spent your days tracking game and your nights reading the sounds of the dark. You know how to wait, where to aim, and when to leave a kill behind.",
-    "skills": { "shoot": 0 },
+    "skills": { "shoot": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_hunter", "exclude": ["any_skill"] }
     ],
@@ -77,7 +77,7 @@
     "kind": "background",
     "name": "Laborer",
     "description": "You worked with your back and hands for wages, hauling, digging, building, and carrying. You know what a body can do and how to make a hard job go faster.",
-    "skills": { "work": 0 },
+    "skills": { "work": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_laborer", "exclude": ["any_skill"] }
     ],
@@ -89,7 +89,7 @@
     "kind": "background",
     "name": "Merchant",
     "description": "You bought low, sold high, and learned which promises are worth a handshake. You can judge a cargo, a customer, and a road's likely troubles.",
-    "skills": { "trade": 0 },
+    "skills": { "trade": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_merchant", "exclude": ["any_skill"] }
     ],
@@ -101,7 +101,7 @@
     "kind": "background",
     "name": "Noble",
     "description": "You were raised to command, or at least to look as if you should. You know the courtesies of rank and how to turn a room of reluctant people into a following.",
-    "skills": { "lead": 0 },
+    "skills": { "lead": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_noble", "exclude": ["any_skill"] }
     ],
@@ -113,7 +113,7 @@
     "kind": "background",
     "name": "Nomad",
     "description": "You followed the herds and the seasons, living out of the saddle and moving on before trouble settled. You know open country and the customs of people who share it.",
-    "skills": { "ride": 0 },
+    "skills": { "ride": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_nomad", "exclude": ["any_skill"] }
     ],
@@ -125,7 +125,7 @@
     "kind": "background",
     "name": "Peasant",
     "description": "You worked land that was never quite yours, in a village where everyone knew your business. You know hard labour, thin seasons, and how to get by unseen.",
-    "skills": { "exert": 0 },
+    "skills": { "exert": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_peasant", "exclude": ["any_skill"] }
     ],
@@ -137,7 +137,7 @@
     "kind": "background",
     "name": "Performer",
     "description": "You earned your bread by holding a crowd's attention, whether with a song, a story, or a trick. You know how to read an audience and how to leave it wanting more.",
-    "skills": { "perform": 0 },
+    "skills": { "perform": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_performer", "exclude": ["any_skill"] }
     ],
@@ -149,7 +149,7 @@
     "kind": "background",
     "name": "Physician",
     "description": "You studied the body and the illnesses that trouble it, and you learned how much can be done with steady hands and clean cloth. People come to you when they are afraid.",
-    "skills": { "heal": 0 },
+    "skills": { "heal": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_physician", "exclude": ["any_skill"] }
     ],
@@ -161,7 +161,7 @@
     "kind": "background",
     "name": "Priest",
     "description": "You served a temple or a congregation, learning the rites and the politics that surround them. You know what people believe and how to speak to that belief.",
-    "skills": { "pray": 0 },
+    "skills": { "pray": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_priest", "exclude": ["any_skill"] }
     ],
@@ -173,7 +173,7 @@
     "kind": "background",
     "name": "Sailor",
     "description": "You worked a deck through weather and bad luck, learning ropes, currents, and the tempers of a crew. You can handle a boat and read the sky over open water.",
-    "skills": { "sail": 0 },
+    "skills": { "sail": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_sailor", "exclude": ["any_skill"] }
     ],
@@ -185,7 +185,7 @@
     "kind": "background",
     "name": "Scholar",
     "description": "You spent your time among books, teachers, and old records, learning what the world has written down. You know how to ask a useful question and where an answer might hide.",
-    "skills": { "know": 0 },
+    "skills": { "know": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_scholar", "exclude": ["any_skill"] }
     ],
@@ -197,7 +197,7 @@
     "kind": "background",
     "name": "Slave",
     "description": "You lived under another person's control, with little to call your own and every reason to be careful. You learned to move quietly, endure, and wait for a chance.",
-    "skills": { "sneak": 0 },
+    "skills": { "sneak": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_slave", "exclude": ["any_skill"] }
     ],
@@ -209,7 +209,7 @@
     "kind": "background",
     "name": "Soldier",
     "description": "You carried a weapon in someone else's war, holding a line and learning what orders cost. You know drill, camp life, and the habits that keep a fighter alive.",
-    "skills": { "stab": 0 },
+    "skills": { "stab": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_soldier", "exclude": ["any_skill"] }
     ],
@@ -221,7 +221,7 @@
     "kind": "background",
     "name": "Thug",
     "description": "You made a living by intimidation and violence, or by standing close to people who did. You know how to start a fight, how to finish one, and when to walk away.",
-    "skills": { "punch": 0 },
+    "skills": { "punch": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_thug", "exclude": ["any_skill"] }
     ],
@@ -233,7 +233,7 @@
     "kind": "background",
     "name": "Wanderer",
     "description": "You never stayed anywhere long enough to put down roots, moving from road to road and town to town. You know how to travel light, find shelter, and read a new place quickly.",
-    "skills": { "survive": 0 },
+    "skills": { "survive": 1 },
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_wanderer", "exclude": ["any_skill"] }
     ],

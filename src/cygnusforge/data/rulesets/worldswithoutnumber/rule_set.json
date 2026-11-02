@@ -6,11 +6,16 @@
     "blurb": "A d20 fantasy game of ruin-delving, strange magic, and hard-won competence in the Latter Earth.",
     "description": "Worlds Without Number is a fantasy roleplaying game built on rolling 3d6 for attributes, adding a background, a class, and Foci, and resolving uncertain action with 2d6 skill checks. Characters explore the remnants of the Latter Earth, where old works and stranger powers lie half buried. This rule set covers character creation, equipment, checks, conditions, and the foundations the advancement and magic modules build on.",
     "plus": "sum",
+    "ordered_feature_tags": ["focus"],
     "skill_progression": {
       "untrained": -1,
       "first_level": 0,
       "creation_maximum": 1,
-      "maximum": 4
+      "maximum": 4,
+      "creation_replacements": {
+        "roll_exclude": [],
+        "feature_exclude": ["magic"]
+      }
     },
     "optional_templates": ["tradition2"],
     "condition_ends": ["rest", "extended_rest", "scene", "day", "magic"],

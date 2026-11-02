@@ -1,13 +1,19 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
+from cygnusforge.content.character import DefenseFloor
+from cygnusforge.content.library import CombatRules
 from cygnusforge.services.common import InvalidInput, session_scope
 from cygnusforge.services.events import (
+    DefenseEquipmentSet,
     FeatureLearned,
     TallyReset,
     decode,
     events_since,
+    record,
 )
 from tests.test_hogwarts import (
     HARRY,
@@ -51,6 +57,7 @@ def test_a_trait_advancement_raises_the_chosen_stat(client_factory):
     _grant_advancements(tools, 1)
     result = tools.take_advancement(HARRY, "trait", "cunning")
     assert result["stat"] == "cunning"
+    assert result["remaining"] == 0
     assert _harry(app, campaign_id).stats["cunning"] == 2
     assert _counter(app, campaign_id, "advancements") == 0
 
@@ -231,10 +238,115 @@ def test_learning_a_spell_adds_it_from_the_characters_year(client_factory):
     [spell] = _unheld_spells(app, campaign_id, 1)
     result = tools.take_advancement(HARRY, "spell", None, spell)
     assert result["feature"] == _spell_name(spell)
+    assert result["remaining"] == 0
     assert spell in _harry(app, campaign_id).features
     assert _counter(app, campaign_id, "advancements") == 0
     learned = _events_of(app, campaign_id, FeatureLearned.kind)
     assert [(e.feature, e.name) for e in learned] == [(spell, HARRY)]
+    assert learned[0].repeat is False
+
+
+def test_repeatable_generic_advancement_persists_each_copy_and_option_effect(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    [spell] = _unheld_spells(app, campaign_id, 1)
+    feature = replace(
+        HOGWARTS.character.features[spell],
+        id="repeatable_spell",
+        name="Repeatable Spell",
+        repeatable=True,
+    )
+    spec = replace(
+        HOGWARTS.character,
+        features={**HOGWARTS.character.features, feature.id: feature},
+    )
+    rules = HOGWARTS.advancements["advancement"]
+    option = replace(rules.options["spell"], effects=({"op": "counter", "id": "luck", "delta": 1},))
+    rules = replace(rules, options={**rules.options, "spell": option})
+    tools = replace(_tools(app, campaign_id), character=spec, advancements={rules.id: rules})
+    tools.adjust_counter(HARRY, "luck", -2)
+    _grant_advancements(tools, 2)
+
+    tools.take_advancement(HARRY, "spell", None, feature.id)
+    tools.take_advancement(HARRY, "spell", None, feature.id)
+
+    assert _harry(app, campaign_id).features[feature.id] == 2
+    assert _counter(app, campaign_id, "advancements") == 0
+    assert _counter(app, campaign_id, "luck") == HOGWARTS.counters["luck"].initial
+    learned = _events_of(app, campaign_id, FeatureLearned.kind)
+    assert [(event.feature, event.repeat) for event in learned] == [
+        (feature.id, True),
+        (feature.id, True),
+    ]
+
+
+def test_generic_advancement_requires_the_prior_ordered_rank_before_repeating(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    [spell] = _unheld_spells(app, campaign_id, 1)
+    first = replace(
+        HOGWARTS.character.features[spell], id="ranked_spell", name="Ranked Spell", rank=1
+    )
+    second = replace(first, id="ranked_spell_2", rank=2, repeatable=True)
+    spec = replace(
+        HOGWARTS.character,
+        features={**HOGWARTS.character.features, first.id: first, second.id: second},
+        ordered_feature_tags=(first.tag,),
+    )
+    tools = replace(_tools(app, campaign_id), character=spec)
+    _grant_advancements(tools, 3)
+
+    with pytest.raises(InvalidInput, match="requires its previous rank"):
+        tools.take_advancement(HARRY, "spell", None, second.id)
+    assert _counter(app, campaign_id, "advancements") == 3
+
+    tools.take_advancement(HARRY, "spell", None, first.id)
+    tools.take_advancement(HARRY, "spell", None, second.id)
+    tools.take_advancement(HARRY, "spell", None, second.id)
+    features = _harry(app, campaign_id).features
+    assert features[first.id] == 1
+    assert features[second.id] == 2
+    assert _counter(app, campaign_id, "advancements") == 0
+
+
+def test_defense_feature_advancement_requires_tracked_equipment_before_spending(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    [spell] = _unheld_spells(app, campaign_id, 1)
+    feature = replace(
+        HOGWARTS.character.features[spell],
+        id="defense_spell",
+        name="Defense Spell",
+        defense_floor=DefenseFloor(base=15),
+    )
+    spec = replace(
+        HOGWARTS.character,
+        features={**HOGWARTS.character.features, feature.id: feature},
+    )
+    combat = CombatRules(
+        id="defense",
+        damage=(),
+        check_die="d20",
+        check_sides=20,
+        initiative_stat="",
+        defeat={},
+        defense_base=10,
+    )
+    tools = replace(_tools(app, campaign_id), character=spec, combat=combat)
+    _grant_advancements(tools, 1)
+
+    with pytest.raises(InvalidInput, match="requires equipped defense rules"):
+        replace(tools, combat=None).take_advancement(HARRY, "spell", None, feature.id)
+    with pytest.raises(InvalidInput, match="equipped defense has not been recorded"):
+        tools.take_advancement(HARRY, "spell", None, feature.id)
+    assert _counter(app, campaign_id, "advancements") == 1
+    assert feature.id not in _harry(app, campaign_id).features
+    assert _events_of(app, campaign_id, FeatureLearned.kind) == []
+
+    with session_scope(app.state.engine) as db:
+        record(db, campaign_id, DefenseEquipmentSet(name=HARRY))
+        db.commit()
+    tools.take_advancement(HARRY, "spell", None, feature.id)
+    assert _harry(app, campaign_id).features[feature.id] == 1
+    assert _harry(app, campaign_id).armor == 15
+    assert _counter(app, campaign_id, "advancements") == 0
 
 
 def test_a_spell_from_another_year_cannot_be_learned_as_an_advancement(client_factory):

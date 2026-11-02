@@ -39,8 +39,34 @@ Character templates can restrict combinations without naming a particular RPG co
 - A ruleset with skills defines `skill_progression` on its `rule_set` definition, with integer
   `untrained`, `first_level`, `creation_maximum`, and `maximum` values. Training is tracked
   separately from its level, so a trained level can equal the untrained value. A skill pick's
-  optional `max_level` limits both chosen and randomly selected skills. A move's optional
+  optional `max_level` limits both chosen and randomly selected skills, and its optional `label`
+  identifies the choice on the creation form. A move's optional
   `skill_floor` defaults to zero; use `null` to apply negative skill levels without a floor.
+  A template's `skills` map contains positive grant counts: one grant trains a skill at
+  `first_level`, and each additional grant raises it by one, up to the creation maximum.
+- A derived stat may name single-skill picks in `plus_skill_picks`. The chosen or rolled skill is
+  recorded on the character and its current level contributes while its template is selected.
+  Referenced picks must choose exactly one skill and cannot collide with character fields.
+- To replace excess creation skill grants instead of discarding them, configure
+  `skill_progression.creation_replacements` with optional `roll_exclude` and `feature_exclude`
+  skill-ID lists. Players can enter ordered `skill_replacements.roll` and
+  `skill_replacements.feature` choices; an empty or omitted choice rolls an eligible skill.
+  Excess rolled or template grants use the first list, and feature effects use the second.
+  An invalid choice or an exhausted eligible pool is an error. Creation effects run once for
+  each granted copy of a feature.
+- A template's tagged `choose` requires its full `count` of distinct features. If a tag has too
+  few options, creation reports an error. Add field values to `skip_tags` when the ruleset
+  explicitly requires no picks for those values.
+- A `feat_picks` entry also fills its complete `count`: blank slots are rolled from its available
+  features, and an insufficient pool is an error. Overlapping random pools are allocated together
+  so that one pick does not needlessly prevent another.
+- Set a feature pick's `advance_repeated_rank` to let a repeated ranked feature advance to the
+  unique feature with the same name, type, and tag at the next rank. A ruleset can list
+  `ordered_feature_tags` to require lower ranks and prevent repeated maximum ranks. A feature
+  marked `repeatable` can instead be taken again as a distinct choice; for a feature with a next
+  rank, `feature_repeats` selects that alternative for the corresponding pick. Advancement
+  preserves repeatable feature counts and enforces the same ordered-rank prerequisites.
+  Character descriptions show ordered ranks and repeat counts separately.
 
 Hooks may name a `configure` callable in their ruleset module to validate and normalize their
 `options` at load time. The callable receives the options, character specification, and definition
@@ -56,6 +82,16 @@ particular class, skill, or counter names. An `injuries` object specifies its `t
 `trigger` (`depleted` or `damage`), and the affected `target_kinds` (`pc` and/or `npc`).
 The optional `healing_stat` names the stat healed when a tool call does not specify one; without
 it, healing calls must name a stat.
+
+When combat defines a nonzero `defense_base`, defense uses the configured `defense_modifier` and
+explicitly equipped body armor and shield. Starting item features are carried and the best armor
+and shield are equipped; stowing, using up, or dropping equipment removes it from its slot.
+A feature can define `defense_floor` with a nonnegative `base` and, optionally, a `counter`,
+positive `divisor`, and `round_up` (default `true`). `requires_no_armor` and `requires_no_shield`
+can limit a floor to empty equipment slots. The highest applicable floor or worn armor applies
+before the modifier and shield. Defense recalculates as equipment, relevant stats, or counters change.
+Setting a tracked total records an adjustment that persists across those changes. An untracked
+statblock keeps its printed total; explicitly equipping it turns that total into an innate baseline.
 
 The optional `dungeon` rule data uses `cygnusforge.services.dungeon.configure_dungeon` to configure
 an `event_table`, a `reaction_table`, or both. Its `triggers` list and result-to-text `notes`

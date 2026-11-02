@@ -144,7 +144,7 @@ def make_move(
         campaign_id,
         name,
         band.effects,
-        EffectContext(rng=rng, combat=combat, counters=counters, conditions=conditions),
+        EffectContext(rng=rng, combat=combat, counters=counters, conditions=conditions, spec=spec),
         cause or move.label,
         plus=plus,
     )

@@ -501,7 +501,8 @@
     "feature_type": "feat",
     "tag": "vowed",
     "rank": 0,
-    "description": "When not wearing armor or using a shield, your base Armor Class is equal to 13 plus half your character level, rounded down."
+    "description": "When not wearing armor or using a shield, your base Armor Class is equal to 13 plus half your character level, rounded down.",
+    "defense_floor": { "base": 13, "counter": "level", "divisor": 2, "round_up": false, "requires_no_armor": true, "requires_no_shield": true }
   },
   {
     "type": "feature",

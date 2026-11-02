@@ -9,6 +9,7 @@ from typing import Any
 
 from sqlmodel import Session
 
+from cygnusforge.content.character import CharacterSpec
 from cygnusforge.content.library import (
     ClockRules,
     CombatRules,
@@ -46,9 +47,10 @@ def take_rest(
     reason: str,
     *,
     combat: CombatRules | None = None,
-    conditions: Mapping[str, ConditionRules] = (),
+    conditions: Mapping[str, ConditionRules] | None = None,
     rng: random.Random | None = None,
     plus: str = "sum",
+    spec: CharacterSpec | None = None,
 ) -> dict[str, Any]:
     """The party rests. An interrupted rest counts as the rule set's interrupted length. A rest
     with upkeep calls the before_rest hook first. Time passes, then each party member the rule set
@@ -127,6 +129,7 @@ def take_rest(
                         conditions,
                         rng,
                         plus=plus,
+                        spec=spec,
                     )
     result["recovered"] = [c.name for c in recovering]
     db.commit()

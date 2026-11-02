@@ -156,6 +156,19 @@ class Character:
     skills: dict[str, int] = field(default_factory=dict)
     # What each hit absorbs. Monsters have it in their statblock; player characters get it from gear.
     armor: int = 0
+    # The armor and shield equipped by explicit choice, and their values. Set by
+    # DefenseEquipmentSet. The armor total stays with ArmorSet.
+    equipped_armor: str = ""
+    equipped_armor_value: int = 0
+    equipped_shield: str = ""
+    equipped_shield_value: int = 0
+    # A statblock's printed AC, without the defense modifier, when equipment is later tracked.
+    innate_defense: int = 0
+    # An extra adjustment to defense from the equipped gear, set with it.
+    defense_adjustment: int = 0
+    # True once DefenseEquipmentSet has set the equipment. A character defended by a statblock's
+    # absolute AC, such as an NPC, stays False.
+    defense_tracked: bool = False
     # A monster's attacks, by name, as dice formulas such as "1d8+1d8". Empty for player characters.
     attacks: dict[str, str] = field(default_factory=dict)
     # The flags of the attacks that have any, by attack name, such as ["blast"].
@@ -881,6 +894,9 @@ class HirelingAdded(GameEvent):
     fields: dict[str, str] = field(default_factory=dict)
     skills: dict[str, int] = field(default_factory=dict)
     attack_shock: dict[str, list[int]] = field(default_factory=dict)
+    # Generated the way an NPC's are. The hireling's passive defense starts from these.
+    counters: dict[str, int] = field(default_factory=dict)
+    armor: int = 0
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.characters[name_key(self.name)] = Character(
@@ -896,6 +912,8 @@ class HirelingAdded(GameEvent):
             templates=dict(self.templates),
             features=dict(self.features),
             fields=dict(self.fields),
+            counters=dict(self.counters),
+            armor=self.armor,
             skills=dict(self.skills),
             attack_shock={name: list(pair) for name, pair in self.attack_shock.items()},
             hireling=True,
@@ -2260,6 +2278,33 @@ class ArmorSet(GameEvent):
 
 
 @dataclass(frozen=True)
+class DefenseEquipmentSet(GameEvent):
+    """The armor and shield a character has equipped by explicit choice. Internal, so it adds no
+    Log line of its own. `armor` is not changed here; ArmorSet still sets the armor total."""
+
+    kind: ClassVar[str] = "combat.defense_equipment_set"
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    name: str
+    equipped_armor: str = ""
+    equipped_armor_value: int = 0
+    equipped_shield: str = ""
+    equipped_shield_value: int = 0
+    innate_defense: int = 0
+    defense_adjustment: int = 0
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.equipped_armor = self.equipped_armor
+        character.equipped_armor_value = self.equipped_armor_value
+        character.equipped_shield = self.equipped_shield
+        character.equipped_shield_value = self.equipped_shield_value
+        character.innate_defense = self.innate_defense
+        character.defense_adjustment = self.defense_adjustment
+        character.defense_tracked = True
+
+
+@dataclass(frozen=True)
 class InvincibilitySet(GameEvent):
     """A debug buff on a player character. While it holds, no harm reaches the character. Turning
     it on cancels a save the character owes, since no harm can make it due."""
@@ -2519,14 +2564,33 @@ class FeatureLearned(GameEvent):
     feature: str
     feature_name: str
     cause: str = ""
+    repeat: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
-        character.features[self.feature] = 1
+        character.features[self.feature] = (
+            character.features.get(self.feature, 0) + 1 if self.repeat else 1
+        )
 
     def render(self) -> str:
         text = f"{self.name} learns {self.feature_name}"
         return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
+class StartingItemsTransferred(GameEvent):
+    """Move starting item features out of the sheet before adding their inventory items."""
+
+    kind: ClassVar[str] = "character.starting_items_transferred"
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    name: str
+    features: list[str]
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        for feature in self.features:
+            del character.features[feature]
 
 
 @dataclass(frozen=True)
@@ -3232,6 +3296,8 @@ HIDDEN_KINDS: dict[str, bool] = {
     "combat.debug_stat_set": True,
     "combat.invincibility_set": True,
     "character.debug_currency_added": True,
+    # Internal state with no Log line of its own.
+    "combat.defense_equipment_set": True,
     # Tool plumbing. The roll result a tool produces is shown to the player.
     "turn.failed": False,
     "tool.ran": False,
@@ -3288,6 +3354,7 @@ HIDDEN_KINDS: dict[str, bool] = {
     "tally.reset": False,
     "period.ended": False,
     "character.feature_learned": False,
+    "character.starting_items_transferred": True,
     "character.currency_changed": False,
     "character.mark_set": False,
     "character.item_added": False,

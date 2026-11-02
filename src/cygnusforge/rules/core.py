@@ -89,6 +89,10 @@ def change_currency(name: str, amount: int, cause: str, ctx: ToolContext) -> dic
     return ctx.world.change_currency(name, amount, cause)
 
 
+def equip_armor(name: str, item: str, ctx: ToolContext, equipped: bool = True) -> dict[str, Any]:
+    return ctx.world.equip_armor(name, item, equipped)
+
+
 def place_object(
     place: str,
     contents: str,

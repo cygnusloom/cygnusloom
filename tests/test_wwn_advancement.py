@@ -20,20 +20,29 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.content.character import Feature
-from cygnusforge.content.library import ContentLibrary
+from cygnusforge.content.character import Feature, Granted
+from cygnusforge.content.library import ContentLibrary, LocationTemplate, NpcTemplate
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.rules import wwn
 from cygnusforge.services import campaigns as campaigns_service
+from cygnusforge.services import world as world_service
 from cygnusforge.services.common import InvalidInput, session_scope
 from cygnusforge.services.events import (
     ArmorSet,
+    CharacterDying,
+    ConditionAdded,
     FeatureLearned,
+    ItemAdded,
+    NpcAdded,
     SkillChanged,
+    Struck,
     decode,
     events_since,
     load_state,
+    name_key,
+    record,
 )
+from cygnusforge.services.injuries import EffectContext, run_effects
 from cygnusforge.services.world import WorldTools
 from tests.conftest import content_library
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
@@ -96,9 +105,11 @@ CLASS_PICKS: dict[str, dict[str, str]] = {
         "pick-feature-class_focus_any-0": "focus_die_hard",
     },
     "healer": {
+        "pick-feature-class_focus_any-0": "focus_unique_gift",
         "pick-feature-class_art_healer-0": "art_empowered_healer",
     },
     "vowed": {
+        "pick-feature-class_focus_any-0": "focus_unique_gift",
         "pick-feature-class_art_vowed-0": "art_brutal_counter",
     },
 }
@@ -184,6 +195,8 @@ def _campaign(
         fields["template-class"] = class_id
         fields.update(CLASS_PICKS[class_id])
         fields["pick-skill-class_free_skill-0"] = "notice"
+        if class_id == "vowed":
+            fields.setdefault("pick-skill-order_skill-0", "exert")
         if tradition is not None:
             if class_id != "mage" and tradition in {"high_mage", "necromancer", "elementalist"}:
                 tradition = f"{tradition}_partial"
@@ -544,9 +557,12 @@ def test_spend_skill_point_refuses_without_a_point_or_a_skill(
     app, campaign_id = _campaign(client_factory)
     ctx = _ctx(_world_tools(app, campaign_id))
     assert _counter(app, campaign_id, "skill_points") == 0
+    untrained = next(
+        skill for skill in WWN.character.skills if skill not in _pc(app, campaign_id).skills
+    )
 
     with pytest.raises(InvalidInput, match="costs 1 skill point"):
-        wwn.spend_skill_point(NAME, "sneak", ctx)
+        wwn.spend_skill_point(NAME, untrained, ctx)
     with pytest.raises(InvalidInput, match="there is no skill named 'wizardry'"):
         wwn.spend_skill_point(NAME, "wizardry", ctx)
 
@@ -693,6 +709,163 @@ def test_learn_focus_needs_a_pick_and_the_first_rank(
         wwn.learn_focus(NAME, "focus_armsmaster", ctx)
 
 
+@pytest.mark.parametrize("focus", ["focus_developed_attribute", "focus_specialist"])
+def test_learn_focus_can_repeat_an_explicitly_repeatable_first_rank(
+    client_factory: Callable[[], TestClient], focus: str
+) -> None:
+    app, campaign_id = _campaign(client_factory)
+    tools = _world_tools(app, campaign_id)
+    _give_pick(tools, "focus_picks", 2)
+
+    wwn.learn_focus(NAME, focus, _ctx(tools))
+    wwn.learn_focus(NAME, focus, _ctx(tools))
+
+    assert _pc(app, campaign_id).features[focus] == 2
+    assert _counter(app, campaign_id, "focus_picks") == 0
+    assert [event.repeat for event in _events_of(app, campaign_id, FeatureLearned.kind)] == [
+        True,
+        True,
+    ]
+
+
+def test_learn_focus_repeats_spirit_familiar_second_rank_only_after_first_rank(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory)
+    tools = _world_tools(app, campaign_id)
+    ctx = _ctx(tools)
+    _give_pick(tools, "focus_picks", 3)
+
+    with pytest.raises(InvalidInput, match="needs Spirit Familiar first"):
+        wwn.learn_focus(NAME, "focus_spirit_familiar_2", ctx)
+    assert _counter(app, campaign_id, "focus_picks") == 3
+
+    wwn.learn_focus(NAME, "focus_spirit_familiar", ctx)
+    wwn.learn_focus(NAME, "focus_spirit_familiar_2", ctx)
+    wwn.learn_focus(NAME, "focus_spirit_familiar_2", ctx)
+
+    features = _pc(app, campaign_id).features
+    assert features["focus_spirit_familiar"] == 1
+    assert features["focus_spirit_familiar_2"] == 2
+    assert _counter(app, campaign_id, "focus_picks") == 0
+
+
+def test_learn_focus_applies_effects_again_for_each_repeatable_copy(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory)
+    synthetic = Feature(
+        id="focus_repeatable_effect",
+        name="Repeatable Effect",
+        feature_type="feat",
+        description="A repeatable focus with a measurable effect.",
+        size="normal",
+        uses=0,
+        armor=0,
+        tag="focus",
+        rank=1,
+        effects=({"op": "stat", "id": "str", "delta": 1},),
+        repeatable=True,
+    )
+    spec = replace(WWN.character, features={**WWN.character.features, synthetic.id: synthetic})
+    tools = _world_tools(app, campaign_id, spec=spec)
+    _set_stat(tools, "str", 10)
+    _give_pick(tools, "focus_picks", 2)
+
+    wwn.learn_focus(NAME, synthetic.id, _ctx(tools))
+    wwn.learn_focus(NAME, synthetic.id, _ctx(tools))
+
+    character = _pc(app, campaign_id)
+    assert character.features[synthetic.id] == 2
+    assert character.stats["str"] == 12
+
+
+@pytest.mark.parametrize("focus", ["focus_developed_attribute", "focus_nullifier"])
+@pytest.mark.parametrize(
+    ("class_id", "tradition", "tradition2"),
+    [
+        ("mage", "high_mage", None),
+        ("adventurer_expert_mage", "high_mage", None),
+        ("adventurer_warrior_mage", "high_mage", None),
+        ("adventurer_mage_mage", "high_mage", "necromancer_partial_2"),
+        ("healer", None, None),
+        ("vowed", None, None),
+    ],
+)
+def test_mage_classes_cannot_learn_forbidden_foci_during_advancement(
+    client_factory: Callable[[], TestClient],
+    class_id: str,
+    tradition: str | None,
+    tradition2: str | None,
+    focus: str,
+) -> None:
+    app, campaign_id = _campaign(
+        client_factory, class_id=class_id, tradition=tradition, tradition2=tradition2
+    )
+    tools = _world_tools(app, campaign_id)
+    _give_pick(tools, "focus_picks", 1)
+
+    with pytest.raises(InvalidInput, match="not available"):
+        wwn.learn_focus(NAME, focus, _ctx(tools))
+    assert _counter(app, campaign_id, "focus_picks") == 1
+    assert focus not in _pc(app, campaign_id).features
+
+
+@pytest.mark.parametrize(
+    ("class_id", "tradition", "focus", "allowed"),
+    [
+        ("warrior", None, "focus_armored_magic", False),
+        ("warrior", None, "focus_polymath", False),
+        ("warrior", None, "focus_specialist", True),
+        ("expert", None, "focus_polymath", True),
+        ("expert", None, "focus_alert", True),
+        ("mage", "high_mage", "focus_armored_magic", True),
+        ("adventurer_expert_mage", "high_mage", "focus_polymath", True),
+        ("healer", None, "focus_armored_magic", True),
+        ("vowed", None, "focus_armored_magic", True),
+    ],
+)
+def test_focus_advancement_uses_general_not_class_specific_pick_restrictions(
+    client_factory: Callable[[], TestClient],
+    class_id: str,
+    tradition: str | None,
+    focus: str,
+    allowed: bool,
+) -> None:
+    app, campaign_id = _campaign(client_factory, class_id=class_id, tradition=tradition)
+    tools = _world_tools(app, campaign_id)
+    _give_pick(tools, "focus_picks", 1)
+
+    if allowed:
+        wwn.learn_focus(NAME, focus, _ctx(tools))
+        assert _pc(app, campaign_id).features[focus] == 1
+        assert _counter(app, campaign_id, "focus_picks") == 0
+    else:
+        with pytest.raises(InvalidInput, match="not available"):
+            wwn.learn_focus(NAME, focus, _ctx(tools))
+        assert _counter(app, campaign_id, "focus_picks") == 1
+
+
+def test_focus_advancement_rechecks_class_eligibility_for_a_higher_rank(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory, class_id="mage", tradition="high_mage")
+    tools = _world_tools(app, campaign_id)
+    _give_pick(tools, "focus_picks", 1)
+    with Session(app.state.engine) as db:
+        record(
+            db,
+            campaign_id,
+            FeatureLearned(name=NAME, feature="focus_nullifier", feature_name="Nullifier"),
+        )
+        db.commit()
+
+    with pytest.raises(InvalidInput, match="not available"):
+        wwn.learn_focus(NAME, "focus_nullifier_2", _ctx(tools))
+    assert _counter(app, campaign_id, "focus_picks") == 1
+    assert "focus_nullifier_2" not in _pc(app, campaign_id).features
+
+
 def test_learn_spell_adds_a_tradition_spell_of_a_legal_level(
     client_factory: Callable[[], TestClient],
 ) -> None:
@@ -716,22 +889,36 @@ def test_learn_spell_adds_a_tradition_spell_of_a_legal_level(
         wwn.learn_spell(NAME, "spell_apprehending_arcane_form", ctx)
 
 
-def test_set_ac_adds_dexterity_and_base_armor_and_records_it(
+def test_set_ac_preserves_an_adjustment_when_equipment_changes(
     client_factory: Callable[[], TestClient],
 ) -> None:
     app, campaign_id = _campaign(client_factory)
     tools = _world_tools(app, campaign_id)
     ctx = _ctx(tools)
     _set_stat(tools, "dex", 14)  # a +1 modifier
+    tools.give_item(NAME, "Buff Coat")
+    tools.equip_armor(NAME, "Buff Coat")
 
-    result = wwn.set_ac(name=NAME, base_armor=2, ctx=ctx)
+    result = wwn.set_ac(name=NAME, ac=15, ctx=ctx)
 
-    assert result["dexterity"] == 1
-    assert result["base_armor"] == 2
-    assert result["armor"] == 13
-    assert _pc(app, campaign_id).armor == 13
+    assert result["armor"] == 15
+    assert _pc(app, campaign_id).defense_adjustment == 2
     armor = _events_of(app, campaign_id, ArmorSet.kind)[-1]
-    assert (armor.name, armor.armor) == (NAME, 13)
+    assert (armor.name, armor.armor) == (NAME, 15)
+    tools.equip_armor(NAME, "Buff Coat", equipped=False)
+    assert _pc(app, campaign_id).armor == 13
+
+
+def test_set_ac_requires_a_valid_total(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    ctx = _ctx(_world_tools(app, campaign_id))
+
+    with pytest.raises(InvalidInput, match="Armor Class"):
+        wwn.set_ac(name=NAME, ac=-1, ctx=ctx)
+    with pytest.raises(InvalidInput, match="Armor Class"):
+        wwn.set_ac(name=NAME, ac=31, ctx=ctx)
+
+    assert wwn.set_ac(name=NAME, ac=14, ctx=ctx)["armor"] == 14
 
 
 def test_the_slow_experience_track_uses_its_own_thresholds(
@@ -935,7 +1122,7 @@ def test_a_dual_mage_takes_two_partial_traditions(client_factory):
 def test_a_healer_starts_with_healing_touch_and_an_art(client_factory):
     app, campaign_id = _campaign(client_factory, class_id="healer")
     pc = _pc(app, campaign_id)
-    assert pc.skills.get("heal", 0) == 0
+    assert pc.skills.get("heal") == 0
     assert "art_healing_touch" in pc.features
     assert "art_empowered_healer" in pc.features
     assert pc.stats["effort_healer"] >= 1
@@ -944,9 +1131,34 @@ def test_a_healer_starts_with_healing_touch_and_an_art(client_factory):
 def test_a_vowed_starts_with_the_three_basic_arts_and_another(client_factory):
     app, campaign_id = _campaign(client_factory, class_id="vowed")
     pc = _pc(app, campaign_id)
+    assert pc.skills.get("exert", -1) >= 0
     assert {"art_martial_style", "art_unarmed_might", "art_unarmored_defense"} <= set(pc.features)
     assert "art_brutal_counter" in pc.features
     assert pc.stats["effort_vowed"] >= 1
+
+
+def test_vowed_unarmored_defense_tracks_equipment_and_level(client_factory):
+    app, campaign_id = _campaign(client_factory, class_id="vowed")
+    tools = _world_tools(app, campaign_id)
+    assert _pc(app, campaign_id).armor == 14  # 13 + level // 2 + Dexterity
+
+    tools.give_item(NAME, "Buff Coat")
+    tools.equip_armor(NAME, "Buff Coat")
+    assert _pc(app, campaign_id).armor == 13
+    tools.equip_armor(NAME, "Buff Coat", equipped=False)
+    assert _pc(app, campaign_id).armor == 14
+
+    tools.give_item(NAME, "Small Shield")
+    tools.equip_armor(NAME, "Small Shield")
+    assert _pc(app, campaign_id).armor == 14
+    tools.adjust_counter(NAME, "level", 1)
+    assert _pc(app, campaign_id).armor == 14
+    tools.equip_armor(NAME, "Small Shield", equipped=False)
+    assert _pc(app, campaign_id).armor == 15
+    tools.adjust_counter(NAME, "level", 1)
+    assert _pc(app, campaign_id).armor == 15
+    tools.adjust_counter(NAME, "level", 1)
+    assert _pc(app, campaign_id).armor == 16
 
 
 def test_the_experience_track_chosen_at_creation_guides_advancement(client_factory):
@@ -975,16 +1187,483 @@ def test_a_healer_learns_another_healer_art_at_second_level(client_factory):
     assert "art_facile_healer" in _pc(app, campaign_id).features
 
 
-def test_impervious_defense_sets_an_innate_armor_floor(client_factory):
+@pytest.mark.parametrize(
+    ("body_armor", "shield", "expected"),
+    [
+        ("", "", 16),
+        ("Buff Coat", "", 16),
+        ("", "Small Shield", 17),
+        ("", "Large Shield", 17),
+        ("Buff Coat", "Large Shield", 17),
+        ("Great Armor", "Large Shield", 20),
+    ],
+)
+def test_impervious_defense_combines_with_body_armor_and_shields(
+    client_factory, body_armor: str, shield: str, expected: int
+):
     app, campaign_id = _campaign(client_factory, class_id="warrior")
     tools = _world_tools(app, campaign_id)
     ctx = _ctx(tools)
     tools.adjust_counter(NAME, "focus_picks", 1)
     wwn.learn_focus(NAME, "focus_impervious_defense", ctx)
 
-    base = wwn.set_ac(name=NAME, base_armor=0, ctx=ctx)
+    for item in (body_armor, shield):
+        if item:
+            tools.give_item(NAME, item)
+            tools.equip_armor(NAME, item)
     dexterity = WWN.character.modifier(_pc(app, campaign_id).stats, "dex")
-    assert base["armor"] == 15 + dexterity
+    character = _pc(app, campaign_id)
+    assert character.armor == expected + dexterity
+    assert character.equipped_armor == body_armor
+    assert character.equipped_shield == shield
 
-    shield = wwn.set_ac(name=NAME, base_armor=4, ctx=ctx)
-    assert shield["armor"] == 19 + dexterity
+
+@pytest.mark.parametrize(("level", "bonus"), [(1, 1), (2, 1), (3, 2), (4, 2)])
+def test_impervious_defense_rounds_half_level_up(client_factory, level: int, bonus: int):
+    app, campaign_id = _campaign(client_factory, class_id="warrior")
+    tools = _world_tools(app, campaign_id)
+    if level > 1:
+        tools.adjust_counter(NAME, "level", level - 1)
+    tools.adjust_counter(NAME, "focus_picks", 1)
+    ctx = _ctx(tools)
+    wwn.learn_focus(NAME, "focus_impervious_defense", ctx)
+
+    character = _pc(app, campaign_id)
+    assert character.armor == 15 + bonus + WWN.character.modifier(character.stats, "dex")
+
+
+def test_impervious_defense_updates_on_level_and_dexterity_changes(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _world_tools(app, campaign_id)
+    ctx = _ctx(tools)
+    tools.adjust_counter(NAME, "focus_picks", 1)
+    wwn.learn_focus(NAME, "focus_impervious_defense", ctx)
+    assert _pc(app, campaign_id).armor == 17
+
+    wwn.gain_xp(NAME, 6, "two sessions", ctx)
+    wwn.level_up(NAME, ctx)
+    assert _pc(app, campaign_id).armor == 17
+    wwn.level_up(NAME, ctx)
+    assert _pc(app, campaign_id).armor == 18
+    _set_stat(tools, "dex", 3)
+    assert _pc(app, campaign_id).armor == 15
+
+
+def test_impervious_defense_applies_when_selected_at_creation(client_factory, monkeypatch):
+    picks = {**CLASS_PICKS["warrior"], "pick-feature-class_focus_any-0": "focus_impervious_defense"}
+    monkeypatch.setitem(CLASS_PICKS, "warrior", picks)
+    app, campaign_id = _campaign(client_factory)
+
+    character = _pc(app, campaign_id)
+    assert character.features["focus_impervious_defense"] == 1
+    assert character.armor == 17
+
+
+def test_a_warrior_can_start_with_both_ranks_of_a_focus(client_factory, monkeypatch):
+    picks = {
+        "pick-feature-class_focus_any-0": "focus_impervious_defense",
+        "pick-feature-class_focus_warrior-0": "focus_impervious_defense",
+    }
+    monkeypatch.setitem(CLASS_PICKS, "warrior", picks)
+    app, campaign_id = _campaign(client_factory)
+
+    character = _pc(app, campaign_id)
+    assert character.features["focus_impervious_defense"] == 1
+    assert character.features["focus_impervious_defense_2"] == 1
+    assert character.armor == 17
+
+
+def test_effect_operations_refresh_defense_after_counter_and_stat_changes(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _world_tools(app, campaign_id)
+    tools.adjust_counter(NAME, "focus_picks", 1)
+    wwn.learn_focus(NAME, "focus_impervious_defense", _ctx(tools))
+    assert _pc(app, campaign_id).armor == 17
+    effects = EffectContext(
+        rng=random.Random(0),
+        combat=WWN.combat,
+        counters=WWN.counters,
+        conditions=WWN.conditions,
+        spec=WWN.character,
+    )
+    with Session(app.state.engine) as db:
+        run_effects(
+            db,
+            campaign_id,
+            NAME,
+            [{"op": "counter", "id": "level", "delta": 2}],
+            effects,
+            "a test",
+            plus=WWN.plus,
+        )
+    assert _pc(app, campaign_id).armor == 18
+    with Session(app.state.engine) as db:
+        run_effects(
+            db,
+            campaign_id,
+            NAME,
+            [{"op": "raise_stat", "stat": "dex", "delta": 4, "cap": 18}],
+            effects,
+            "a test",
+            plus=WWN.plus,
+        )
+    assert _pc(app, campaign_id).armor == 19
+
+
+def test_generated_characters_and_hirelings_receive_passive_defense(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    warrior = WWN.character.templates["warrior"]
+    warrior = replace(
+        warrior,
+        features=(*warrior.features, Granted("buff_coat", "1"), Granted("large_shield", "1")),
+    )
+    spec = replace(WWN.character, templates={**WWN.character.templates, "warrior": warrior})
+    tools = _world_tools(app, campaign_id, spec=spec)
+    tools.create_location("Yard", "A quiet yard.")
+    tools.move_actor(NAME, "Yard")
+    choices = {
+        "templates": {"class": "warrior", "tradition": "no_tradition"},
+        "stats": {"dex": 14},
+        "feature_picks": {
+            "class_focus_any": ["focus_impervious_defense"],
+            "class_focus_warrior": ["focus_alert"],
+        },
+    }
+    tools.create_npc("Scout", "Yard", "A scout.", character=choices, force=True)
+    tools.hire_hireling("Guide", NAME, 1, "A guide.", character=choices)
+    with Session(app.state.engine) as db:
+        record(
+            db,
+            campaign_id,
+            NpcAdded(
+                name="Tale",
+                location="Yard",
+                description="A stranger.",
+                personality="",
+                accent="",
+                quirks=[],
+                story_only=True,
+            ),
+        )
+        db.commit()
+    tools.update_npc("Tale", character=choices)
+    with Session(app.state.engine) as db:
+        state = load_state(db, campaign_id)
+    for name in ("Scout", "Guide", "Tale"):
+        character = state.characters[name_key(name)]
+        assert character.defense_tracked
+        assert character.armor == 18
+        assert (character.equipped_armor, character.equipped_shield) == (
+            "Buff Coat",
+            "Large Shield",
+        )
+        assert {"Buff Coat", "Large Shield"} <= {item.name for item in character.items}
+        assert "buff_coat" not in character.features
+        assert "large_shield" not in character.features
+    tools.adjust_counter("Guide", "level", 2)
+    with Session(app.state.engine) as db:
+        guide = load_state(db, campaign_id).characters[name_key("Guide")]
+    assert guide.armor == 19
+
+
+@pytest.mark.parametrize("kind", ["npc", "hireling", "update"])
+def test_generated_character_creation_rolls_back_if_defense_initialization_fails(
+    client_factory, monkeypatch, kind
+):
+    app, campaign_id = _campaign(client_factory)
+    tools = _world_tools(app, campaign_id)
+    tools.create_location("Yard", "A quiet yard.")
+    tools.move_actor(NAME, "Yard")
+    if kind == "update":
+        with Session(app.state.engine) as db:
+            record(
+                db,
+                campaign_id,
+                NpcAdded(
+                    name="Unfinished",
+                    location="Yard",
+                    description="A scout.",
+                    personality="",
+                    accent="",
+                    quirks=[],
+                    story_only=True,
+                ),
+            )
+            db.commit()
+
+    def fail_initialization(*args, **kwargs):
+        raise InvalidInput("defense initialization failed")
+
+    monkeypatch.setattr(world_service, "_initialize_generated_defense", fail_initialization)
+    with pytest.raises(InvalidInput, match="defense initialization failed"):
+        if kind == "npc":
+            tools.create_npc("Unfinished", "Yard", "A scout.", force=True)
+        elif kind == "hireling":
+            tools.hire_hireling("Unfinished", NAME, 1, "A guide.")
+        else:
+            tools.update_npc("Unfinished", character={})
+    with Session(app.state.engine) as db:
+        characters = load_state(db, campaign_id).characters
+        if kind == "update":
+            assert characters[name_key("Unfinished")].story_only
+        else:
+            assert name_key("Unfinished") not in characters
+
+
+def test_world_seed_initializes_generated_defense_but_preserves_statblocks(
+    app: FastAPI, client_factory, monkeypatch
+):
+    template = app.state.content.world_templates["latter-earth"]
+    monster_id, monster = next(iter(WWN.monsters.items()))
+    people = (
+        NpcTemplate("scout", "Scout", "yard", "A scout.", None, None, None),
+        NpcTemplate("beast", "Beast", "yard", "A beast.", None, None, None, monster=monster_id),
+        NpcTemplate("story", "Story", "yard", "A stranger.", None, None, None, story_only=True),
+    )
+    monkeypatch.setitem(
+        app.state.content.world_templates,
+        "latter-earth",
+        replace(template, locations=(LocationTemplate("yard", "Yard", "A yard."),), npcs=people),
+    )
+    response = _new_campaign(
+        _signed_in(client_factory), world_template="latter-earth", rule_set="worldswithoutnumber"
+    )
+    assert response.status_code == 303
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    with Session(app.state.engine) as db:
+        state = load_state(db, campaign_id)
+    scout = state.characters["scout"]
+    assert scout.defense_tracked
+    assert scout.armor == 10 + WWN.character.modifier(scout.stats, "dex")
+    beast = state.characters["beast"]
+    assert (beast.armor, beast.defense_tracked) == (monster.armor, False)
+    assert state.characters["story"].story_only
+    assert not state.characters["story"].defense_tracked
+
+
+@pytest.mark.parametrize("ending", ["rest", "aid", "aid_item", "save"])
+def test_indirect_condition_end_effects_refresh_defense(client_factory, ending: str):
+    app, campaign_id = _campaign(client_factory)
+    tools = _world_tools(app, campaign_id)
+    tools.adjust_counter(NAME, "focus_picks", 1)
+    wwn.learn_focus(NAME, "focus_impervious_defense", _ctx(tools))
+    condition = replace(
+        WWN.conditions["frail"],
+        ends=("rest", "aid"),
+        on_end=({"op": "raise_stat", "stat": "dex", "delta": 4, "cap": 18},),
+    )
+    combat_rules = WWN.combat
+    assert combat_rules is not None
+    combat = replace(
+        combat_rules,
+        dying_conditions=("frail",),
+        fatal_conditions=("frail",),
+        aid_items=("Bandages",),
+    )
+    tools = replace(tools, combat=combat, conditions={"frail": condition})
+    with Session(app.state.engine) as db:
+        record(db, campaign_id, ConditionAdded(name=NAME, condition="frail", cause="a test"))
+        if ending in {"aid", "aid_item"}:
+            record(db, campaign_id, CharacterDying(name=NAME, hours=1))
+        if ending == "aid_item":
+            record(
+                db,
+                campaign_id,
+                ItemAdded(name=NAME, item="Bandages", size="normal", slots=1, uses=1, max_uses=1),
+            )
+        if ending == "save":
+            record(
+                db,
+                campaign_id,
+                Struck(
+                    name=NAME, attacker="Foe", weapon="Claw", raw=0, armor=0, harm={}, save="dex"
+                ),
+            )
+        db.commit()
+    assert _pc(app, campaign_id).armor == 17
+
+    if ending == "rest":
+        tools.rest("extended")
+    elif ending == "aid":
+        tools.stabilize(NAME, "A healer helps.")
+    elif ending == "aid_item":
+        tools.use_item(NAME, "Bandages")
+    else:
+        roll = 20 if combat.save_succeeds(20, 14) else 1
+        assert tools.player_save(roll)["passed"]
+
+    character = _pc(app, campaign_id)
+    assert character.conditions == []
+    assert (character.stats["dex"], character.armor) == (18, 18)
+
+
+def test_equipped_items_are_replaced_removed_or_stowed_explicitly(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _world_tools(app, campaign_id)
+    _set_stat(tools, "str", 18)
+    for item in ("Buff Coat", "Pieced Armor", "Small Shield", "Large Shield", "Dagger"):
+        tools.give_item(NAME, item)
+
+    with pytest.raises(InvalidInput, match="not equippable"):
+        tools.equip_armor(NAME, "Dagger")
+    with pytest.raises(InvalidInput, match="carries no"):
+        tools.equip_armor(NAME, "Plate Armor")
+    tools.equip_armor(NAME, "Buff Coat")
+    tools.equip_armor(NAME, "Small Shield")
+    assert _pc(app, campaign_id).armor == 14
+    tools.equip_armor(NAME, "Pieced Armor")
+    tools.equip_armor(NAME, "Large Shield")
+    character = _pc(app, campaign_id)
+    assert (character.armor, character.equipped_armor, character.equipped_shield) == (
+        16,
+        "Pieced Armor",
+        "Large Shield",
+    )
+    tools.ready_item(NAME, "Large Shield", False)
+    character = _pc(app, campaign_id)
+    assert (character.armor, character.equipped_shield) == (15, "")
+    with pytest.raises(InvalidInput, match="stowed"):
+        tools.equip_armor(NAME, "Large Shield")
+    tools.ready_item(NAME, "Large Shield", True)
+    assert _pc(app, campaign_id).equipped_shield == ""
+    tools.equip_armor(NAME, "Large Shield")
+    tools.drop_item(NAME, "Pieced Armor")
+    character = _pc(app, campaign_id)
+    assert (character.armor, character.equipped_armor, character.equipped_shield) == (
+        15,
+        "",
+        "Large Shield",
+    )
+
+
+@pytest.mark.parametrize("operation", ["drop", "stow", "use", "consume"])
+def test_removing_equipment_keeps_inventory_and_defense_in_one_transaction(
+    client_factory, monkeypatch, operation
+):
+    app, campaign_id = _campaign(client_factory)
+    marketplace = WWN.marketplace
+    assert marketplace is not None
+    original = next(item for item in marketplace.items if item.name == "Large Shield")
+    items = tuple(
+        replace(item, uses=1) if item.id == original.id else item for item in marketplace.items
+    )
+    tools = replace(
+        _world_tools(app, campaign_id),
+        marketplace=replace(marketplace, items=items),
+    )
+    _set_stat(tools, "str", 18)
+    tools.give_item(NAME, "Large Shield")
+    tools.equip_armor(NAME, "Large Shield")
+    assert _pc(app, campaign_id).armor == 15
+
+    def remove():
+        if operation == "drop":
+            tools.drop_item(NAME, "Large Shield")
+        elif operation == "stow":
+            tools.ready_item(NAME, "Large Shield", False)
+        else:
+            tools.use_item(NAME, "Large Shield")
+
+    if operation == "consume":
+        remove()
+        character = _pc(app, campaign_id)
+        assert character.armor == 11
+        assert character.equipped_shield == ""
+        assert all(item.name != "Large Shield" for item in character.items)
+    else:
+
+        def fail_equipment(*args, **kwargs):
+            raise InvalidInput("equipment update failed")
+
+        monkeypatch.setattr(world_service.combat, "set_defense_equipment", fail_equipment)
+        with pytest.raises(InvalidInput, match="equipment update failed"):
+            remove()
+        character = _pc(app, campaign_id)
+        shield = next(item for item in character.items if item.name == "Large Shield")
+        assert (character.armor, character.equipped_shield, shield.ready, shield.uses) == (
+            15,
+            "Large Shield",
+            True,
+            1,
+        )
+
+
+def test_buying_defense_equips_better_items_and_keeps_adjustments(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _world_tools(app, campaign_id)
+    _set_stat(tools, "str", 18)
+    tools.change_currency(NAME, 2000, cause="a test")
+
+    tools.buy_item(NAME, "War Shirt")
+    tools.buy_item(NAME, "Large Shield")
+    character = _pc(app, campaign_id)
+    assert (character.armor, character.equipped_armor, character.equipped_shield) == (
+        15,
+        "War Shirt",
+        "Large Shield",
+    )
+    tools.set_armor(NAME, 17)
+    tools.buy_item(NAME, "Buff Coat")
+    tools.buy_item(NAME, "Small Shield")
+    character = _pc(app, campaign_id)
+    assert character.armor == 17
+    assert character.defense_adjustment == 2
+    assert character.equipped_armor == "Buff Coat"
+    assert character.equipped_shield == "Large Shield"
+    tools.buy_item(NAME, "Pieced Armor")
+    assert _pc(app, campaign_id).armor == 18
+
+
+def test_buying_set_and_add_armor_updates_slots_and_persistent_adjustment(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    original_marketplace = WWN.marketplace
+    assert original_marketplace is not None
+    original = next(item for item in original_marketplace.items if item.name == "Buff Coat")
+    replacement = replace(original, id="test_armor", name="Test Armor", armor=2, armor_mode="set")
+    bonus = replace(original, id="ward", name="Ward", armor=2, armor_mode="add")
+    marketplace = replace(
+        original_marketplace, items=(*original_marketplace.items, replacement, bonus)
+    )
+    tools = replace(_world_tools(app, campaign_id), marketplace=marketplace)
+    _set_stat(tools, "str", 18)
+    tools.change_currency(NAME, 2000, cause="a test")
+
+    tools.buy_item(NAME, "Pieced Armor")
+    assert _pc(app, campaign_id).armor == 15
+    tools.buy_item(NAME, "Test Armor")
+    character = _pc(app, campaign_id)
+    assert (character.armor, character.equipped_armor) == (13, "Test Armor")
+    tools.buy_item(NAME, "Ward")
+    character = _pc(app, campaign_id)
+    assert (character.armor, character.defense_adjustment) == (15, 2)
+    tools.equip_armor(NAME, "Test Armor", equipped=False)
+    assert (_pc(app, campaign_id).armor, _pc(app, campaign_id).defense_adjustment) == (13, 2)
+
+
+@pytest.mark.parametrize(
+    ("package", "normal_ac", "focused_ac"),
+    [
+        ("pkg_armored_warrior", 15, 17),
+        ("pkg_mage_healer_scholar", 10, 16),
+        ("pkg_ranger_archer", 12, 16),
+        ("pkg_roguish_wanderer", 13, 17),
+        ("pkg_adventuring_peasant", 14, 17),
+        ("pkg_gentry_wayfarer", 13, 17),
+    ],
+)
+@pytest.mark.parametrize("focus", [False, True])
+def test_starting_package_armor_respects_the_innate_floor(
+    client_factory, package: str, normal_ac: int, focused_ac: int, focus: bool
+):
+    app, campaign_id = _campaign(client_factory, class_id="warrior")
+    tools = _world_tools(app, campaign_id)
+    ctx = _ctx(tools)
+    _set_stat(tools, "str", 18)
+    if focus:
+        tools.adjust_counter(NAME, "focus_picks", 1)
+        wwn.learn_focus(NAME, "focus_impervious_defense", ctx)
+
+    wwn.grant_package(NAME, package, ctx)
+
+    dexterity = WWN.character.modifier(_pc(app, campaign_id).stats, "dex")
+    assert _pc(app, campaign_id).armor == (focused_ac if focus else normal_ac) + dexterity

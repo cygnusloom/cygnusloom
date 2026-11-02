@@ -80,7 +80,6 @@ def set_ready(
                 f"takes {held.slots}; stow another item first"
             )
     record(db, campaign_id, ItemReadied(name=character.name, item=held.name, ready=ready))
-    db.commit()
     changed = character_named(load_state(db, campaign_id), name)
     return {
         "character": changed.name,
@@ -256,7 +255,6 @@ def drop_item(
         campaign_id,
         ItemRemoved(name=character.name, item=held.name, kind_of_item=held.kind),
     )
-    db.commit()
     return {
         "name": character.name,
         "item": held.name,
@@ -299,7 +297,6 @@ def use_item(
             campaign_id,
             ItemRemoved(name=character.name, item=held.name, kind_of_item=held.kind),
         )
-    db.commit()
     return {
         "name": character.name,
         "item": held.name,

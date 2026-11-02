@@ -9,6 +9,7 @@ from typing import Any
 
 from sqlmodel import Session
 
+from cygnusforge.content.character import CharacterSpec
 from cygnusforge.content.library import CombatRules, ConditionRules, InventoryRules
 from cygnusforge.services import inventory as inventory_service
 from cygnusforge.services.common import InvalidInput
@@ -33,6 +34,7 @@ def stabilize(
     rng: random.Random,
     *,
     plus: str,
+    spec: CharacterSpec | None = None,
 ) -> dict[str, Any]:
     """Stop a dying player character's clock. It stays out of action until the GM recovers it.
     A lasting condition held now ends by aid, which runs its on-end effects."""
@@ -52,7 +54,16 @@ def stabilize(
         rules = conditions.get(cid)
         if cid in character.conditions and rules is not None and "aid" in rules.ends:
             end_condition(
-                db, campaign_id, character.name, cid, "aid", combat, conditions, rng, plus=plus
+                db,
+                campaign_id,
+                character.name,
+                cid,
+                "aid",
+                combat,
+                conditions,
+                rng,
+                plus=plus,
+                spec=spec,
             )
             ended.append(cid)
     return {"character": character.name, "stabilized": True, "ended": ended}
@@ -71,6 +82,7 @@ def use_item(
     charged_kind: str = "",
     *,
     plus: str,
+    spec: CharacterSpec | None = None,
 ) -> dict[str, Any]:
     """Spend one use of a consumable the character carries. An aid item the rule set lists may be
     used on a dying character, and using it stabilizes them. Any other item is spent on the holder."""
@@ -96,5 +108,6 @@ def use_item(
             conditions,
             rng,
             plus=plus,
+            spec=spec,
         )
     return result

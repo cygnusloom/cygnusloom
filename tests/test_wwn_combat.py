@@ -19,7 +19,8 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from cygnusforge.content.character import Feature
-from cygnusforge.content.library import CombatRules, ContentLibrary
+from cygnusforge.content.library import CombatRules, ContentLibrary, InjuryEntry, InjuryTable
+from cygnusforge.rules import wwn
 from cygnusforge.services import death, encounters
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
@@ -125,6 +126,12 @@ def _wwn_campaign(
     page = client.get(f"/campaigns/{campaign_id}").text
     fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
     fields.update(_choices(page))
+    fields.update(
+        {
+            "pick-feature-class_focus_any-0": "focus_unique_gift",
+            "pick-feature-class_focus_warrior-0": "focus_valiant_defender",
+        }
+    )
     fields.update(choices or {})
     created = _create_character(client, campaign_id, name=PC, fields=fields)
     error = re.search(r'<p class="form-error"[^>]*>(.*?)</p>', created.text, re.DOTALL)
@@ -792,6 +799,7 @@ def test_a_week_of_bed_rest_ends_frail(client_factory):
 
 def test_a_shield_turns_aside_only_the_first_shock_in_a_round(client_factory):
     app, campaign_id, tools = _fight(client_factory)
+    tools = replace(tools, marketplace=WWN.marketplace)
     _foe(tools, hp=20, shock=2, shock_ac=20, attack_bonus=0)
     from cygnusforge.services.events import Item
     from cygnusforge.services.inventory import carry_item
@@ -808,6 +816,7 @@ def test_a_shield_turns_aside_only_the_first_shock_in_a_round(client_factory):
         db.commit()
     pc = _pc(app, campaign_id)
     assert any("shield" in item.flags for item in pc.items)
+    tools.equip_armor(PC, "Large Shield")
 
     replace(tools, rng=Rolls(1, 1, 1, 1, 1, 1)).attack(FOE, "Claw", PC)
     first = _struck(app, campaign_id)[-1]
@@ -816,6 +825,95 @@ def test_a_shield_turns_aside_only_the_first_shock_in_a_round(client_factory):
     replace(tools, rng=Rolls(1, 1, 1, 1, 1, 1)).attack(FOE, "Claw", PC)
     second = _struck(app, campaign_id)[-1]
     assert (second.hit, second.shock, second.shield_round) == (False, 2, 0)
+
+
+def test_a_carried_shield_only_blocks_shock_when_wielded(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools = replace(tools, marketplace=WWN.marketplace)
+    _foe(tools, hp=20, shock=2, shock_ac=20, attack_bonus=0)
+    tools.give_item(PC, "Large Shield")
+    tools.set_stat_max(PC, "hp", 20, cause="a test")
+    tools.set_armor(PC, 13)
+
+    replace(tools, rng=Rolls(1, 1, 1, 1, 1, 1)).attack(FOE, "Claw", PC)
+    carried = _struck(app, campaign_id)[-1]
+    assert (carried.hit, carried.shock, carried.shield_round) == (False, 2, 0)
+
+    tools.equip_armor(PC, "Large Shield")
+    replace(tools, rng=Rolls(1, 1, 1, 1, 1, 1)).attack(FOE, "Claw", PC)
+    wielded = _struck(app, campaign_id)[-1]
+    assert (wielded.hit, wielded.shock, wielded.shield_round) == (False, 0, 1)
+
+
+def test_equipping_a_shield_on_a_statblock_uses_its_printed_ac_as_the_baseline(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools = replace(tools, marketplace=WWN.marketplace)
+    _foe(tools, armor=18)
+    assert _character(app, campaign_id, FOE).defense_tracked is False
+    tools.give_item(FOE, "Large Shield")
+
+    tools.equip_armor(FOE, "Large Shield")
+    foe = _character(app, campaign_id, FOE)
+    assert (foe.armor, foe.innate_defense, foe.defense_adjustment) == (19, 18, 0)
+    tools.ready_item(FOE, "Large Shield", False)
+    assert _character(app, campaign_id, FOE).armor == 18
+
+
+@pytest.mark.parametrize("attacks", [1, 2])
+def test_injury_effects_refresh_defense_before_the_next_hit(client_factory, attacks: int):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=20)
+    tools.set_stat_max(PC, "dex", 14, cause="a test")
+    tools.set_stat_max(PC, "hp", 20, cause="a test")
+    tools.adjust_counter(PC, "focus_picks", 1)
+    wwn.learn_focus(PC, "focus_impervious_defense", SimpleNamespace(world=tools))
+    assert _pc(app, campaign_id).armor == 17
+    table = InjuryTable(
+        id="test",
+        stat="hp",
+        entries=(
+            InjuryEntry(
+                roll=1,
+                name="Inspiration",
+                text="A sudden insight.",
+                effects=({"op": "raise_stat", "stat": "dex", "delta": 4, "cap": 18},),
+            ),
+        ),
+        trigger="any",
+        target_kinds=("pc",),
+    )
+    combat = replace(WWN.combat, injury_table=table)
+    rolls = (1, 20) if attacks == 1 else (1, 1, 20, 17)
+    result = replace(tools, combat=combat, rng=Rolls(*rolls)).attack(FOE, "Claw", PC, count=attacks)
+
+    assert _pc(app, campaign_id).armor == 18
+    if attacks == 2:
+        assert result["attacks"][1]["hit"] is False
+
+
+def test_inventory_displays_worn_and_wielded_equipment(client_factory):
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    tools = replace(tools, marketplace=WWN.marketplace)
+    tools.give_item(PC, "Buff Coat")
+    tools.give_item(PC, "Large Shield")
+    tools.equip_armor(PC, "Buff Coat")
+    tools.equip_armor(PC, "Large Shield")
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+    start = page.index('id="panel-inventory"')
+    panel = page[start : page.index("</ul>", start)]
+    assert "Worn: Buff Coat" in panel
+    assert "Wielded shield: Large Shield" in panel
+    assert "· Readied" in panel
+    assert "· Worn" in panel
+    assert "· Wielded" in panel
+
+    tools.ready_item(PC, "Large Shield", False)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    start = page.index('id="panel-inventory"')
+    panel = page[start : page.index("</ul>", start)]
+    assert "Wielded shield: none" in panel
+    assert "· Stowed" in panel
 
 
 def test_lookup_condition_returns_its_effects_and_triggers(client_factory):

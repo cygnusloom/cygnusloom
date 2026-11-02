@@ -11,6 +11,7 @@ from typing import Any
 
 from sqlmodel import Session
 
+from cygnusforge.content.character import CharacterSpec
 from cygnusforge.content.library import (
     ALL_CONDITIONS,
     PICKED,
@@ -51,6 +52,18 @@ class EffectContext:
     # and conditions they reach, can use them.
     counters: Mapping[str, CounterRules] = field(default_factory=dict)
     conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
+    spec: CharacterSpec | None = None
+
+
+def _refresh_defense(db: Session, campaign_id: int, name: str, cx: EffectContext) -> None:
+    if cx.spec is None or cx.combat is None or not cx.combat.defense_base:
+        return
+    character = load_state(db, campaign_id).characters[name_key(name)]
+    if character.defense_tracked:
+        # Combat imports EffectContext, so this import must happen after the modules load.
+        from cygnusforge.services.combat import recalculate_defense
+
+        recalculate_defense(db, campaign_id, character.name, cx.spec, cx.combat)
 
 
 def gain_injury(
@@ -125,6 +138,8 @@ def run_effects(
                 _end_condition(db, campaign_id, name, op["id"], cx, cause, plus=plus)
         elif kind == "retire":
             record(db, campaign_id, CharacterRetired(name=name, cause=cause))
+        if kind in {"set_max", "raise_stat"}:
+            _refresh_defense(db, campaign_id, name, cx)
         db.commit()
 
 
@@ -169,6 +184,7 @@ def change_counter(
                 cause=cause,
             ),
         )
+        _refresh_defense(db, campaign_id, name, cx)
     db.commit()
     if rules.full and rules.maximum is not None and before < rules.maximum <= after:
         run_effects(db, campaign_id, name, rules.full, cx, f"{rules.label} filled", plus=plus)

@@ -209,6 +209,9 @@
             <div class="tab-panel" role="tabpanel" id="panel-inventory" aria-labelledby="tab-inventory" hidden>
               {% if scene.pack %}
               <p>Carrying {{ scene.pack.used }} of {{ scene.pack.capacity }} slots.</p>
+              {% if scene.pc and scene.pc.defense_tracked %}
+              <p>Armor: {{ scene.pc.armor }} · Worn: {{ scene.pc.equipped_armor or "none" }} · Wielded shield: {{ scene.pc.equipped_shield or "none" }}</p>
+              {% endif %}
               {% if scene.pack.items %}
               <ul data-inventory>
                 {% for item in scene.pack.items %}
@@ -217,6 +220,8 @@
                   {% if item.size %}{{ item.size }}, {% endif %}{% if item.slots %}{{ item.slots }} slot{{ "" if item.slots == 1 else "s" }}{% else %}no slots{% endif %}
                   {% if item.max_uses > 0 %}· {{ item.uses }} uses left{% endif %}
                   {% if item.kind %}<span class="muted">({{ item.kind|capitalize }})</span>{% endif %}
+                  {% if scene.pack.has_readied %}· {{ "Readied" if item.ready else "Stowed" }}{% endif %}
+                  {% if item.equipped %}· {{ item.equipped }}{% endif %}
                   {% if item.text %}<p class="muted">{{ item.text }}</p>{% endif %}
                 </li>
                 {% endfor %}

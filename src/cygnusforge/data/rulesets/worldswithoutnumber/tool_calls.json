@@ -188,7 +188,7 @@
     "name": "learn_focus",
     "python_module": "wwn",
     "function": "learn_focus",
-    "description": "Spend one focus pick to learn a Focus at rank 1 or 2, or a nonhuman origin Focus with the GM's permission. The focus id must be a feature tagged focus or origin; rank 2 requires the character to already have the rank-1 focus of the same name. Call it at creation or during advancement when a focus pick is due. Any permanent bonus the focus grants is applied when it is learned.",
+    "description": "Spend one focus pick to learn a Focus at rank 1 or 2, or a nonhuman origin Focus with the GM's permission. The focus id must be a feature tagged focus or origin; rank 2 requires the character to already have the rank-1 focus of the same name. The character's class must allow the Focus. Only explicitly repeatable ranks can be learned again, such as Developed Attribute, Specialist, or Spirit Familiar rank 2; guide the player through choosing their distinct benefits. Call it at creation or during advancement when a focus pick is due. Fixed automated effects are applied when it is learned; choice-dependent benefits may need GM guidance.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -263,7 +263,7 @@
     "name": "set_ac",
     "python_module": "wwn",
     "function": "set_ac",
-    "description": "Set the total Armor Class of a character or NPC. Armor sets the base AC and the Dexterity modifier is then applied; a shield gives base AC 13 or 14 without armor or +1 with equal or better armor. Call it when armor or a shield is put on or taken off, when an art or spell changes AC, or when a monster's printed AC differs. Hit rolls and Shock compare against this number; armor does not subtract from damage.",
+    "description": "Set a character or NPC's total Armor Class for an art, spell, special adjustment, or a monster's printed AC. For tracked equipment this preserves the difference from calculated AC as an adjustment when equipment, Dexterity, or level later changes. Use equip_armor rather than this tool when armor or a shield is put on or taken off.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -365,7 +365,7 @@
     "name": "commit_effort",
     "python_module": "wwn_magic",
     "function": "commit_effort",
-    "description": "Commit points of one tradition's Effort to a lasting art. Each tradition has its own pool and Effort from one cannot fuel another. Duration is scene (returns when the scene ends), day (returns the next morning after a good night's rest), or indefinite (returns only when reclaimed as an Instant action, and the art ends at once if the mage is knocked unconscious or killed). Each commit costs 1 point unless the art says otherwise. Maximum Effort is 1 + Magic skill + the best Int or Cha modifier, minus 1 for a partial mage, with a minimum of 1.",
+    "description": "Commit points of one tradition's Effort to a lasting art. Each tradition has its own pool and Effort from one cannot fuel another; only a character with that tradition or class can commit its Effort. Duration is scene (returns when the scene ends), day (returns the next morning after a good night's rest), or indefinite (returns only when reclaimed as an Instant action, and the art ends at once if the character is knocked unconscious or killed). Each commit costs 1 point unless the art says otherwise. High Magic, Necromancer, and Elementalist maximum Effort is 1 + Magic skill + the best Int or Cha modifier, minus 1 for a partial mage. Healer maximum Effort is Heal skill + the best Int or Cha modifier; Vowed maximum Effort is the chosen order skill + the best attribute modifier. All pools have a minimum of 1.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -378,9 +378,11 @@
           "enum": [
             "high",
             "necromancer",
-            "elementalist"
+            "elementalist",
+            "healer",
+            "vowed"
           ],
-          "description": "The tradition whose Effort pool is spent: high, necromancer, or elementalist."
+          "description": "The tradition whose Effort pool is spent: high, necromancer, elementalist, healer, or vowed."
         },
         "amount": {
           "type": "integer",
@@ -412,7 +414,7 @@
     "name": "recover_effort",
     "python_module": "wwn_magic",
     "function": "recover_effort",
-    "description": "Return Effort committed for one duration: when a scene ends, after a good night's rest, or when the mage reclaims an indefinite commitment as an Instant action. Give the same tradition and duration used when the Effort was committed so exactly the marked points are refunded. It does not restore Effort spent in any other way.",
+    "description": "Return Effort committed for one duration: when a scene ends, after a good night's rest, or when the character reclaims an indefinite commitment as an Instant action. Give the same tradition and duration used when the Effort was committed so exactly the marked points are refunded. It does not restore Effort spent in any other way.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -425,9 +427,11 @@
           "enum": [
             "high",
             "necromancer",
-            "elementalist"
+            "elementalist",
+            "healer",
+            "vowed"
           ],
-          "description": "The tradition whose Effort returns: high, necromancer, or elementalist."
+          "description": "The tradition whose Effort returns: high, necromancer, elementalist, healer, or vowed."
         },
         "duration": {
           "type": "string",

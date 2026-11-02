@@ -327,7 +327,7 @@
     "name": "set_armor",
     "python_module": "wwn",
     "function": "set_armor",
-    "description": "Set a character's total Armor Class when their gear changes, such as 10 plus Dexterity plus armor and shield.",
+    "description": "Set a character's total Armor Class for a special adjustment or a monster's printed AC. For tracked equipment the adjustment persists as equipment or other defense changes. Use equip_armor for equipment changes.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -571,7 +571,7 @@
     "name": "drop_item",
     "python_module": "wwn",
     "function": "drop_item",
-    "description": "Remove an item from a character's inventory.",
+    "description": "Remove an item from a character's inventory. Dropping equipped armor or a wielded shield also unequips it and recalculates Armor Class.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -587,13 +587,30 @@
     "name": "ready_item",
     "python_module": "wwn",
     "function": "ready_item",
-    "description": "Ready a carried item for use, or stow it. A character can keep only half their Strength in slots readied; readied weapons can attack, and readied armor counts as worn. Retreiving a stowed item takes a Main action.",
+    "description": "Ready a carried item for use, or stow it. A character can keep only half their Strength in slots readied; readied weapons can attack. Readying armor or a shield does not equip it; use equip_armor to wear or wield it. Stowing equipped defense also unequips it. Retrieving a stowed item takes a Main action.",
     "parameters": {
       "type": "object",
       "properties": {
         "name": {"type": "string", "description": "The character carrying the item."},
         "item": {"type": "string", "description": "The carried item's name."},
         "ready": {"type": "boolean", "default": true, "description": "True to ready it, false to stow it."}
+      },
+      "required": ["name", "item"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "equip_armor",
+    "name": "equip_armor",
+    "python_module": "core",
+    "function": "equip_armor",
+    "description": "Wear or remove a carried, readied suit of armor, or wield or stop wielding a carried, readied shield. Only one suit and one shield can be equipped; equipping another replaces that slot. Armor Class and shield protection against Shock update automatically. The returned Armor Class is authoritative: wearing armor or wielding a shield can lower it when a feature such as the Vowed's Unarmored Defense works only without that equipment. Consult the character's features before explaining a change.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string", "description": "The character carrying the item."},
+        "item": {"type": "string", "description": "The carried armor or shield's catalogue name."},
+        "equipped": {"type": "boolean", "default": true, "description": "True to wear or wield it, false to remove it."}
       },
       "required": ["name", "item"]
     }

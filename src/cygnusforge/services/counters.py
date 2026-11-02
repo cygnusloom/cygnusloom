@@ -8,6 +8,7 @@ from collections.abc import Mapping
 
 from sqlmodel import Session
 
+from cygnusforge.content.character import CharacterSpec
 from cygnusforge.content.library import CombatRules, ConditionRules, CounterRules
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import load_state, name_key
@@ -27,6 +28,7 @@ def adjust_counter(
     rng: random.Random,
     plus: str,
     reason: str = "",
+    spec: CharacterSpec | None = None,
 ) -> dict[str, object]:
     """Add `change` to a character's counter, within its bounds, and report its value after."""
     character = load_state(db, campaign_id).characters.get(name_key(name))
@@ -45,7 +47,9 @@ def adjust_counter(
         change,
         absolute=False,
         cause=reason or "the GM's adjustment",
-        cx=EffectContext(rng=rng, combat=combat, counters=counters, conditions=conditions),
+        cx=EffectContext(
+            rng=rng, combat=combat, counters=counters, conditions=conditions, spec=spec
+        ),
         plus=plus,
     )
     value = (

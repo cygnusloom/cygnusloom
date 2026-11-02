@@ -8,7 +8,12 @@ from collections.abc import Mapping
 
 from sqlmodel import Session
 
-from cygnusforge.content.character import Feature
+from cygnusforge.content.character import (
+    CharacterError,
+    CharacterSpec,
+    Feature,
+    check_ordered_feature_rank,
+)
 from cygnusforge.content.library import (
     AdvancementRules,
     CombatRules,
@@ -43,6 +48,7 @@ def take_advancement(
     stat: str | None = None,
     feature: str | None = None,
     features: Mapping[str, Feature] | None = None,
+    spec: CharacterSpec | None = None,
 ) -> dict[str, object]:
     """Spend one point of the Advancement counter on `option_id`, and run the option's effects. `stat`
     names the stat an option that picks one raises; other options take none. `feature` names the
@@ -68,6 +74,17 @@ def take_advancement(
     if points < 1:
         raise InvalidInput(f"{character.name} has no {advancements.label} to spend")
     learned = _learnable(option.label, option.learn, character, feature, features or {})
+    if learned is not None and learned.defense_floor is not None:
+        if combat is None or not combat.defense_base or spec is None:
+            raise InvalidInput("a defense feature requires equipped defense rules")
+        if not character.defense_tracked:
+            raise InvalidInput(f"{character.name}'s equipped defense has not been recorded")
+    if learned is not None and spec is not None:
+        held = {**character.features, learned.id: character.features.get(learned.id, 0) + 1}
+        try:
+            check_ordered_feature_rank(spec, learned, held)
+        except CharacterError as exc:
+            raise InvalidInput(str(exc)) from exc
 
     record(
         db,
@@ -85,10 +102,11 @@ def take_advancement(
                 feature=learned.id,
                 feature_name=learned.name,
                 cause=f"{character.name} takes {option.label}",
+                repeat=learned.repeatable,
             ),
         )
     cx = EffectContext(
-        rng=rng, combat=combat, picked=stat, counters=counters, conditions=conditions
+        rng=rng, combat=combat, picked=stat, counters=counters, conditions=conditions, spec=spec
     )
     change_counter(
         db,
@@ -133,7 +151,7 @@ def _learnable(
     features: Mapping[str, Feature],
 ) -> Feature | None:
     """The feature an option teaches, checked against the character: it must be of the option's
-    type, carry the tag of the character's field, and not be one the character already has."""
+    type and carry the tag of the character's field; nonrepeatable features must be new."""
     if learn is None:
         if feature is not None:
             raise InvalidInput(f"{label} does not take a feature")
@@ -142,13 +160,15 @@ def _learnable(
     candidates = sorted(
         f.name
         for f in features.values()
-        if f.feature_type == learn.feature_type and f.tag == tag and f.id not in character.features
+        if f.feature_type == learn.feature_type
+        and f.tag == tag
+        and (f.repeatable or f.id not in character.features)
     )
     chosen = features.get(feature or "")
     if chosen is None or chosen.feature_type != learn.feature_type or chosen.tag != tag:
         raise InvalidInput(
             f"{label} needs a {learn.feature_type} from {tag}; choose one of {candidates}"
         )
-    if chosen.id in character.features:
+    if chosen.id in character.features and not chosen.repeatable:
         raise InvalidInput(f"{character.name} already has {chosen.name}")
     return chosen

@@ -8,6 +8,7 @@ from collections.abc import Mapping
 
 from sqlmodel import Session
 
+from cygnusforge.content.character import CharacterSpec
 from cygnusforge.content.library import (
     CombatRules,
     ConditionRules,
@@ -31,6 +32,7 @@ def end_period(
     tallies: Mapping[str, TallyRules],
     rng: random.Random,
     plus: str,
+    spec: CharacterSpec | None = None,
 ) -> dict[str, object]:
     """End the period for every living player character, running its effects for each of them. The
     period's tallies start over first, and their final totals are logged."""
@@ -47,7 +49,7 @@ def end_period(
             campaign_id,
             TallyReset(tally=tally.id, label=tally.label, final=final, labels=dict(tally.entries)),
         )
-    cx = EffectContext(rng=rng, combat=combat, counters=counters, conditions=conditions)
+    cx = EffectContext(rng=rng, combat=combat, counters=counters, conditions=conditions, spec=spec)
     for character in pcs:
         run_effects(
             db,

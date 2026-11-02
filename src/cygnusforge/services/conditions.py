@@ -9,6 +9,7 @@ from collections.abc import Mapping
 
 from sqlmodel import Session
 
+from cygnusforge.content.character import CharacterSpec
 from cygnusforge.content.library import ALWAYS_CONDITION_END, CombatRules, ConditionRules
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
@@ -82,6 +83,7 @@ def end_condition(
     rng: random.Random,
     *,
     plus: str,
+    spec: CharacterSpec | None = None,
 ) -> dict[str, object]:
     """End a stored condition. `how` is the trigger that ends it, which must be one the condition
     lists, or `gm` for the GM ending it by decision. Then the condition's on-end effects run."""
@@ -106,7 +108,7 @@ def end_condition(
         campaign_id,
         character.name,
         rules.on_end,
-        EffectContext(rng=rng, combat=combat),
+        EffectContext(rng=rng, combat=combat, spec=spec),
         f"{rules.label} ended",
         plus=plus,
     )

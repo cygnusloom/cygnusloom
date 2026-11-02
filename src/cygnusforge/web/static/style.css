@@ -308,8 +308,13 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .template-tables { display: contents; }
 .template-tables[hidden] { display: none; }
 .creation-panel { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; margin: 0; padding: 0.9rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
+.creation-panel[hidden] { display: none; }
 .creation-panel h3 { margin: 0; font-size: 1rem; }
 .creation-panel label { margin: 0; }
+.feat-picks [data-feature-pick-row] { display: flex; flex-direction: column; gap: 0.5rem; }
+.feat-picks [data-feature-repeat-mode][hidden] { display: none; }
+.replacement-group { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.75rem 0 0; padding: 0; border: 0; }
+.replacement-rows { display: flex; flex-direction: column; gap: 0.5rem; }
 .panel-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; }
 .creation-panel.is-missing { border-color: var(--danger); }
 .choice-picker { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }

@@ -36,6 +36,8 @@ directory. The rules text here and in `rules.json` is paraphrased; the books are
   defeat at zero HP. Cairn's armor-as-absorption and Hogwarts' no-combat setup are unchanged.
 - Foci, starting spells, and arts are picked with `feature_picks`; each feature may carry `rank`
   (spell level or Focus level) and creation `effects` (stat, skill, counter, armor, note).
+  Selecting the same Focus for both eligible class picks grants its first and second ranks when
+  the Focus has a second rank.
 - Advancement arithmetic and starting packages live in the isolated
   [WWN module](../../../rules/wwn.py). Class, experience, casting, art, and skill-prerequisite
   charts live in [progression.json](./progression.json) and are validated for each loaded ruleset.
@@ -75,7 +77,7 @@ their player-facing behaviour.
 | Derived stats | `stat.derived` | `base`, `plus`, `minus_counters`, `best_modifier`, `minus_best_modifier`, `best_score`, `plus_skills`, `minus_templates`, `minimum` |
 | Skills | `type: skill`, `template.skills`, `rule_set.skill_progression` | Skill definitions, level grants, and configured untrained, first, creation maximum, and advancement maximum levels |
 | Skill picks | `template.skill_picks` | `{id, count, table, exclude, max_level}`; repeated skills respect the cap, and blank picks are rolled |
-| Feature picks | `template.feat_picks` | `{id, count, tag, tags, feature_type, max_rank, exclude}`; `submitted["feature_picks"]` |
+| Feature picks | `template.feat_picks` | `{id, count, tag, tags, feature_type, max_rank, exclude, advance_repeated_rank}`; `submitted["feature_picks"]` |
 | Template compatibility | `template.compatible_with` | Allowed choices in any other template kind |
 | Required selections | `template.template_requirements`, `template.choice_key` | Required and distinct choices across template kinds |
 | Ruleset data | `type: rule_data` | Validated structured data passed to ruleset tools without global state |
@@ -95,6 +97,7 @@ their player-facing behaviour.
 | Side initiative | `combat.initiative` | `{die, bonus_stat, side, tie}`; `encounters.roll_side_initiative` |
 | Armor mode | `shop_item.armor_mode` | `add`, `set`, `max`, or `shield`, so armor need not stack |
 | Base defense | `combat.defense_base`, `defense_modifier` | Unarmored AC, such as 10 + Dexterity |
+| Passive defense | `feature.defense_floor` | Base floor plus an optional divided counter, with optional armor and shield restrictions |
 | Natural hits | `combat.natural_one_misses`, `natural_max_hits` | A natural 1 always misses and a natural 20 always hits |
 | Filtered enums | `enum_from` object form | `{source, feature_type, tag, max_rank}`, plus `skills` and `checks` |
 
@@ -165,15 +168,34 @@ tables to create the first location and its people.
   group (the book's clement option) and one swap, as the engine's swap rule allows.
 - Backgrounds grant the free skill at level 0 and two picks from the Learning table (the quick
   skills are also in that table, so the quick option is covered by the same picks).
-- Classes grant their level-1 HP constant, attack bonus, one free skill pick from all 21 skills,
-  and Focus picks. The tradition is required and class-gated: a full mage takes the full
-  tradition template (two High Magic arts, four spells; three Elementalist arts, four spells),
+- Classes grant their configured level-1 HP constant, attack bonus, skills, and Focus or art picks.
+  Every class also receives a general Focus and a free skill choice, including the standalone
+  Healer and Vowed options.
+  Healers gain Heal-0; Vowed choose a non-combat bonus skill appropriate to their order, subject to
+  GM approval. The Vowed's chosen order skill also determines their Effort, including when that
+  skill improves. The tradition is required and class-gated:
+  a full mage takes the full tradition template (two High Magic arts, four spells; three
+  Elementalist arts, four spells),
   and a partial mage takes the partial template (one High or Necromancer art and two spells;
   three Elementalist arts and two spells). Non-casters take `no_tradition`.
 - Foci, starting spells, and arts are `feature_picks`; each Focus's fixed bonuses are applied at
   creation through `effects`. A starting equipment package or 3d6 x 10 silver may follow.
-- `resolve` caps creation skills at level 1, keeps HP at 1 or more, and computes derived stats
-  last. A partial mage's Effort is one lower, never below 1.
+- A Vowed's Unarmored Defense sets a level-based base AC while no armor or shield is equipped;
+  equipment and level changes recalculate it automatically.
+- A second eligible Focus pick advances a two-rank Focus. One-rank Foci cannot normally be taken
+  twice; Developed Attribute can be repeated for a different attribute, and Specialist can
+  advance or be taken again for a different skill. Spirit Familiar's second rank can be repeated
+  for additional benefits. Mage and partial Mage choices exclude Developed Attribute and
+  Nullifier; the standalone Healer and Vowed options follow their source partial-Mage category.
+  Advancement uses each class's general Focus pool, not the narrower Expert or Warrior starting
+  pick, while nonhuman origin Foci remain available with GM permission. Specific Attribute,
+  Specialist, and familiar-benefit choices remain GM-guided notes rather than structured picks.
+- Creation skills cannot exceed level 1. Excess rolls and grants can be replaced with another
+  eligible skill chosen in the creation form, or rolled when left blank. Focus-granted
+  replacements cannot be Magic; other excess-skill replacements can be. Creation fails explicitly
+  if no eligible replacement remains. HP stays at 1 or more, and derived stats are computed last.
+  A partial mage's Effort is one lower, never below 1. The Healer and Vowed Effort formulas already
+  include that reduction.
 
 ## Combat
 
@@ -183,9 +205,14 @@ tables to create the first location and its people.
   Warrior's half level (rounded up) added as Killing Blow to damage and Shock.
 - Shock: on a miss, if AC is at most `shock_ac`, the target takes Shock + attribute + damage
   bonus; a hit does at least that much.
-- AC is the `armor` value: 10 + Dex modifier + one suit of armor + a shield. Creation records it,
-  `set_ac` recomputes it, and purchases use `armor_mode` (`max` for body armor, `shield` for
-  shields) so suits do not stack.
+- AC is the `armor` value: 10 + Dex modifier and one worn suit of armor, with one wielded shield
+  giving AC 13/14 or +1 with equal or better armor. Equipped armor and shields are tracked
+  separately from readied inventory. `equip_armor`, purchases, dropping, and stowing update AC;
+  Dexterity and level changes recalculate it. `set_ac` records a total AC, preserving any
+  difference from tracked defense as an adjustment. A statblock's untracked AC remains absolute;
+  when its equipment is explicitly tracked, the printed AC becomes its innate defense baseline.
+  Impervious Defense replaces body armor with an innate AC of 15 plus half the character's level,
+  rounded up, when that is better; it still benefits from Dexterity and a wielded shield.
 - A hit that takes hp to 0 defeats the target. An NPC is dead; a player character is mortally
   wounded and starts the book's six-round clock. `encounters.end_turn` ticks it whenever a round
   turns over, and the character dies at zero. A one-hour hourly clock remains as the fallback
@@ -226,6 +253,10 @@ tables to create the first location and its people.
   arbitrary partial classes.
 - Readied and Stowed are approximated by one inventory pool of 1.5 x Strength (half Readied plus
   full Stowed); the armor-encumbrance penalty on Sneak/Exert is rule text the GM applies.
+- Shield bashes do not automatically suspend the shield's AC benefit until the next turn; the GM
+  must account for that restriction.
+- Effort stats exist for every character, but committing Effort requires the relevant tradition or
+  the Healer or Vowed class.
 - Surprise, grappling, execution attacks, total defense, dual wielding, range bands, and many
   combat actions are rule text plus the relevant check/attack tools, not dedicated states.
 - Magic Workings, spell research, magic item creation, hirelings, projects, and faction turns are
@@ -237,8 +268,8 @@ tables to create the first location and its people.
 
 ## Validation
 
-- Full suite: `timeout 900 uv run pytest -n auto -q -p no:cacheprovider`: 1965 passed in about
-  41 seconds, with the Worlds Without Number tests across `test_wwn.py`,
+- Full suite: `uv run --offline pytest -q -n 4`: 2361 passed in about 53 seconds, with the
+  Worlds Without Number tests across `test_wwn.py`,
   `test_wwn_combat.py`, `test_wwn_advancement.py`, `test_wwn_magic.py`, and
   `test_wwn_refactor.py`.
 - Lint: `uv run ruff format src tests` and `uv run ruff check src tests`: clean.
@@ -264,10 +295,16 @@ tables to create the first location and its people.
   sides, and settled side initiative. The player pressed Start Jora's turn, End your turn, then
   Start Alley Hound's turn; the hound acted and its turn ended automatically, leaving Start
   Jora's turn for round two.
+- Live run 4 (real DeepSeek, isolated SQLite): a Vowed chose Know as the order skill. The GM
+  committed and recovered the resulting two-point Vowed Effort pool, and the engine refused a
+  Healer Effort attempt. Wearing and removing a War Shirt changed AC 13 to 11 and back; wielding
+  and removing a Large Shield changed AC 13 to 14 and back. The event replay matched the UI.
+  DeepSeek sometimes gave incorrect armor arithmetic and once sent an item id instead of its name;
+  that call was refused and succeeded when retried with the name.
 
 ## Commands
 
-- Tests: `timeout 900 uv run pytest -n auto -q -p no:cacheprovider`.
+- Tests: `uv run pytest -n auto -q -p no:cacheprovider`.
 - Lint: `uv run ruff format src tests`, then `uv run ruff check --fix src tests`.
 - Server: `uv run --env-file .env uvicorn --factory cygnusforge.web.app:app_from_env`.
 

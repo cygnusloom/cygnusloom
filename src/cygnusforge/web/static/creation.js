@@ -294,13 +294,16 @@
   const refreshTaggedPicks = () => {
     for (const fieldset of document.querySelectorAll("[data-tag-field]")) {
       const selectedTag = document.querySelector(`input[type="radio"][name="${fieldset.dataset.tagField}"]:checked`);
+      const skipped = selectedTag !== null && JSON.parse(fieldset.dataset.skipTags || "[]").includes(selectedTag.value);
+      fieldset.hidden = skipped;
+      fieldset.disabled = skipped;
       for (const group of fieldset.querySelectorAll("optgroup")) {
-        const offered = selectedTag !== null && group.dataset.tag === selectedTag.value;
+        const offered = !skipped && selectedTag !== null && group.dataset.tag === selectedTag.value;
         group.hidden = !offered;
         for (const option of group.children) option.disabled = !offered;
       }
       for (const select of fieldset.querySelectorAll("select")) {
-        if (select.selectedOptions[0]?.disabled) select.value = "";
+        if (skipped || select.selectedOptions[0]?.disabled) select.value = "";
       }
     }
   };
@@ -347,6 +350,61 @@
       }
     }
   };
+  const refreshFeaturePickOptions = () => {
+    const taken = new Map();
+    const advanced = new Set();
+    for (const fieldset of document.querySelectorAll('[data-pick-kind="feature"]')) {
+      const hidden = Boolean(fieldset.closest("[hidden]"));
+      const advance = fieldset.dataset.advanceRepeatedRank === "true";
+      const withinPick = new Set();
+      for (const row of fieldset.querySelectorAll("[data-feature-pick-row]")) {
+        const select = row.querySelector("[data-feature-choice]");
+        const description = row.querySelector("[data-feature-description]");
+        const modeLabel = row.querySelector("[data-feature-repeat-mode]");
+        const mode = modeLabel.querySelector("select");
+        if (hidden) {
+          select.value = "";
+          description.textContent = "";
+          description.hidden = true;
+          mode.value = "";
+          modeLabel.hidden = true;
+          mode.disabled = true;
+          continue;
+        }
+        for (const option of select.options) {
+          const previouslyTaken = taken.get(option.value) ?? 0;
+          const exhausted = option.dataset.ordered === "true" &&
+            option.dataset.repeatable !== "true" &&
+            (option.dataset.hasNextRank !== "true" || advanced.has(option.value));
+          option.disabled = Boolean(option.value) && (
+            withinPick.has(option.value) || (advance && previouslyTaken > 0 && exhausted)
+          );
+        }
+        if (select.selectedOptions[0]?.disabled) select.value = "";
+        const option = select.selectedOptions[0];
+        const value = select.value;
+        description.textContent = value ? option.dataset.description || "" : "";
+        description.hidden = !description.textContent;
+        const previouslyTaken = taken.get(value) ?? 0;
+        const mayChooseRepeat = Boolean(value) && advance && previouslyTaken > 0 &&
+          option.dataset.repeatable === "true" && option.dataset.hasNextRank === "true";
+        modeLabel.hidden = !mayChooseRepeat;
+        mode.disabled = !mayChooseRepeat;
+        if (!mayChooseRepeat) {
+          mode.value = "";
+        } else {
+          mode.options[0].disabled = advanced.has(value);
+          if (mode.options[0].disabled) mode.value = "repeat";
+        }
+        if (value) {
+          if (advance && previouslyTaken > 0 && option.dataset.hasNextRank === "true" &&
+              mode.value !== "repeat") advanced.add(value);
+          taken.set(value, previouslyTaken + 1);
+          withinPick.add(value);
+        }
+      }
+    }
+  };
   // A restricted choice offers only its options in the allowed groups while its gate is unchosen
   // or takes one of the gate's values. An option it rules out is disabled, and a pick of it is
   // cleared.
@@ -368,11 +426,13 @@
   refreshRestrictions();
   refreshTaggedPicks();
   refreshSkillPickOptions();
+  refreshFeaturePickOptions();
 
   document.addEventListener("change", (event) => {
     const target = event.target;
     if (target instanceof HTMLSelectElement) {
       if (target.closest('[data-pick-kind="skill"]')) refreshSkillPickOptions();
+      if (target.closest('[data-pick-kind="feature"]')) refreshFeaturePickOptions();
       return;
     }
     const radio = target;
@@ -383,6 +443,7 @@
     refreshTaggedPicks();
     if (radio.dataset.templateSelect) revealTables(radio.dataset.templateSelect);
     refreshSkillPickOptions();
+    refreshFeaturePickOptions();
     radio.closest("[data-choice-panel]")?.classList.remove("is-missing");
   });
 
@@ -548,13 +609,18 @@
   // feature; skill picks may repeat when the pool is smaller than the number of picks. In the
   // unchosen mode a pick the player already set is kept, and its value is not taken again.
   const randomizePicks = (fieldset, onlyUnchosen) => {
-    const selects = [...fieldset.querySelectorAll("select")];
     const skillPicks = fieldset.dataset.pickKind === "skill";
+    const selects = [...fieldset.querySelectorAll(skillPicks ? "select" : "[data-feature-choice]")];
     if (skillPicks) {
       if (!onlyUnchosen) {
         for (const select of selects) select.value = "";
       }
       refreshSkillPickOptions();
+    } else {
+      if (!onlyUnchosen) {
+        for (const select of selects) select.value = "";
+      }
+      refreshFeaturePickOptions();
     }
     const taken = new Set(onlyUnchosen ? selects.map((select) => select.value).filter(Boolean) : []);
     for (const select of selects) {
@@ -563,10 +629,11 @@
         .filter((option) => option.value !== "" && !option.disabled)
         .map((option) => option.value);
       const fresh = offered.filter((value) => !taken.has(value));
-      const pool = fresh.length > 0 ? fresh : offered;
+      const pool = skillPicks && fresh.length === 0 ? offered : fresh;
       select.value = pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : "";
       if (select.value !== "") taken.add(select.value);
       if (skillPicks) refreshSkillPickOptions();
+      else refreshFeaturePickOptions();
     }
   };
 
@@ -587,6 +654,19 @@
 
   document.addEventListener("click", (event) => {
     const target = event.target;
+
+    const addReplacement = target.closest("[data-add-skill-replacement]");
+    if (addReplacement) {
+      const rows = addReplacement.closest(".replacement-group")?.querySelector("[data-replacement-rows]");
+      const last = rows?.lastElementChild;
+      if (last) {
+        const row = last.cloneNode(true);
+        row.querySelector("span").textContent = `Replacement ${rows.children.length + 1}`;
+        row.querySelector("select").value = "";
+        rows.append(row);
+      }
+      return;
+    }
 
     // A click on the dialog element is either its backdrop or its padding. Only a click outside the box closes it.
     if (target instanceof HTMLDialogElement && target.classList.contains("choice-dialog")) {

@@ -401,6 +401,7 @@ def create_campaign(
         )
         db.add(campaign)
         db.flush()
+        marketplace = library.rule_sets[rule_set].marketplace
         # Seeding commits the campaign's world with it. If it fails, nothing is kept.
         seed_campaign(
             db,
@@ -413,6 +414,11 @@ def create_campaign(
             plus=library.rule_sets[rule_set].plus,
             npc_hp=library.rule_sets[rule_set].npc_hp,
             npc_hp_stat=library.rule_sets[rule_set].npc_hp_stat,
+            combat_rules=library.rule_sets[rule_set].combat,
+            inventory=library.rule_sets[rule_set].inventory,
+            item_sizes=library.rule_sets[rule_set].item_sizes,
+            magic=library.rule_sets[rule_set].magic,
+            currency=marketplace.currency if marketplace is not None else "",
             wilderness=library.rule_sets[rule_set].wilderness,
         )
         db.refresh(campaign)
@@ -483,6 +489,7 @@ def save_creation(
                 defense_modifier=rule_set.combat.defense_modifier if rule_set.combat else "",
                 pronouns=character.pronouns,
                 plus=rule_set.plus,
+                combat_rules=rule_set.combat,
             )
         db.commit()
 

@@ -10,6 +10,7 @@ defines the options every rule set shares, such as appearance and biography."""
 from __future__ import annotations
 
 import random
+from collections import deque
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
@@ -51,6 +52,14 @@ class Skill:
 
 
 @dataclass(frozen=True)
+class SkillReplacements:
+    """Excluded skills for excess rolled/template and feature grants during creation."""
+
+    roll_exclude: tuple[str, ...] = ()
+    feature_exclude: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class SkillProgression:
     """Untrained and trained skill levels, including the creation and advancement limits."""
 
@@ -58,6 +67,7 @@ class SkillProgression:
     first_level: int
     creation_maximum: int
     maximum: int
+    creation_replacements: SkillReplacements | None = None
 
 
 @dataclass(frozen=True)
@@ -65,8 +75,8 @@ class DerivedStat:
     """A stat whose value comes from the other stats, the counters, and the skills rather than
     from a roll. Its value is `base` + `plus`, minus the values of `minus_counters`, plus the
     best modifier among `best_modifier`, minus the best modifier among `minus_best_modifier`,
-    plus the best raw score among `best_score`, plus the levels of `plus_skills`, and minus one
-    when any template in `minus_templates` was chosen."""
+    plus the best raw score among `best_score`, plus the levels of `plus_skills` and selected
+    `plus_skill_picks`, and minus one when any template in `minus_templates` was chosen."""
 
     base: int = 0
     plus: int = 0
@@ -74,6 +84,7 @@ class DerivedStat:
     best_modifier: tuple[str, ...] = ()
     best_score: tuple[str, ...] = ()
     plus_skills: tuple[str, ...] = ()
+    plus_skill_picks: tuple[str, ...] = ()
     # Modifiers subtracted from the value, such as a saving throw that improves with an
     # attribute modifier. The best of them is used.
     minus_best_modifier: tuple[str, ...] = ()
@@ -119,6 +130,18 @@ class Stat:
 
 
 @dataclass(frozen=True)
+class DefenseFloor:
+    """A minimum base defense with optional counter and equipment restrictions."""
+
+    base: int
+    counter: str = ""
+    divisor: int = 1
+    round_up: bool = True
+    requires_no_armor: bool = False
+    requires_no_shield: bool = False
+
+
+@dataclass(frozen=True)
 class Feature:
     """A feature a character can have. An `item` is carried as an inventory item of `size`, with
     `uses` if it is consumed and `armor` added to the character's armor while carried. A `spell`
@@ -155,6 +178,10 @@ class Feature:
     # The effects run when the feature is granted while a character is created, in the order
     # they are given. See FEATURE_EFFECT_OPS.
     effects: tuple[Mapping[str, Any], ...] = ()
+    # A passive defense floor, optionally restricted by equipped armor or shields.
+    defense_floor: DefenseFloor | None = None
+    # A feature that may be taken again as a distinct choice.
+    repeatable: bool = False
 
 
 @dataclass(frozen=True)
@@ -168,24 +195,27 @@ class Granted:
 @dataclass(frozen=True)
 class Choose:
     """Features a template lets the character pick: `count` of `feature_type` whose tag is the
-    value of the field `tag_field`. A pick left out is rolled from the same pool."""
+    value of the field `tag_field`. A pick left out is rolled from the same pool. Tags in
+    `skip_tags` do not require a pick."""
 
     count: int
     feature_type: str
     tag_field: str
+    skip_tags: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
 class SkillPick:
     """Skills a template lets the character pick from a table: `count` of the table's option
     values, which are skill ids, save the ones in `exclude`. A pick left out is rolled. No skill
-    is raised above `max_level` by a rolling pick."""
+    is raised above `max_level` by a rolling pick; `label` identifies the choice on the form."""
 
     id: str
     count: int
     table: str
     max_level: int
     exclude: tuple[str, ...] = ()
+    label: str = "Skills"
 
 
 @dataclass(frozen=True)
@@ -203,6 +233,8 @@ class FeatPick:
     tags: tuple[str, ...] = ()
     # The feature type the pick offers, such as "spell" or "feat". Empty means any type.
     feature_type: str = ""
+    # A repeated ranked feature can advance to its next rank instead of adding another copy.
+    advance_repeated_rank: bool = False
 
 
 @dataclass(frozen=True)
@@ -292,6 +324,7 @@ class CharacterSpec:
     # The skills a character of this rule set may have a level in.
     skills: Mapping[str, Skill] = field(default_factory=dict)
     skill_progression: SkillProgression | None = None
+    ordered_feature_tags: tuple[str, ...] = ()
     # Template kinds a character may leave unchosen, such as a magical tradition only mages need.
     optional_kinds: tuple[str, ...] = ()
 
@@ -341,12 +374,13 @@ def build_character(
     template: str,
     *,
     skill_progression: object = None,
+    ordered_feature_tags: object = (),
 ) -> CharacterSpec:
     """Build the character spec from a rule set's definitions. `tables` are already loaded."""
     stats = _each(definitions, "stat", lambda d: _stat(d, template))
     _check_groups(stats, template)
     skills = _each(definitions, "skill", lambda d: _skill(d, template))
-    levels = _skill_progression(skill_progression, template)
+    levels = _skill_progression(skill_progression, skills, template)
     if skills and levels is None:
         raise ContentError(f"{template}: skills need a 'skill_progression' definition")
     counter_ids = frozenset(d.id for d in definitions if d.type == "counter")
@@ -355,6 +389,19 @@ def build_character(
         "feature",
         lambda d: load_feature(d, template, stats=stats, skills=skills, counters=counter_ids),
     )
+    if ordered_feature_tags == ():
+        ordered_feature_tags = []
+    ordered_tags = _text_ids(ordered_feature_tags, "ordered_feature_tags", template)
+    for tag in ordered_tags:
+        if not any(feature.tag == tag and feature.rank > 0 for feature in features.values()):
+            raise ContentError(f"{template}: ordered feature tag {tag!r} has no ranked features")
+    for feature in features.values():
+        floor = feature.defense_floor
+        if floor is not None and floor.counter and floor.counter not in counter_ids:
+            raise ContentError(
+                f"{template}: feature {feature.id!r} defense_floor names no counter "
+                f"({floor.counter!r})"
+            )
     fields = _each(
         definitions, "character_field", lambda d: _field(d, tables, "character_field", template)
     )
@@ -362,6 +409,7 @@ def build_character(
         definitions, "template", lambda d: _template(d, features, tables, skills, levels, template)
     )
     _check_stat_links(stats, skills, counter_ids, template)
+    _check_derived_skill_picks(stats, templates, fields, template)
     kinds = {item.kind for item in templates.values()}
     for item in templates.values():
         label = f"{template}: template {item.id!r}"
@@ -394,7 +442,7 @@ def build_character(
                     f"{template}: template {item.id!r} table {table!r} clashes with a field"
                 )
     _check_fields(fields, tables, template)
-    _check_pick_fields(templates, fields, template)
+    _check_pick_fields(templates, fields, tables, template)
     feature_types = {feature.feature_type for feature in features.values()}
     for item in fields.values():
         if item.knows is not None and item.knows not in feature_types:
@@ -411,11 +459,47 @@ def build_character(
         table_names=table_names,
         skills=skills,
         skill_progression=levels,
+        ordered_feature_tags=ordered_tags,
     )
 
 
+def _derived_skill_pick_ids(stats: Mapping[str, Stat]) -> set[str]:
+    return {
+        pick_id
+        for stat in stats.values()
+        if stat.derived is not None
+        for pick_id in stat.derived.plus_skill_picks
+    }
+
+
+def _check_derived_skill_picks(
+    stats: Mapping[str, Stat],
+    templates: Mapping[str, Template],
+    fields: Mapping[str, Field],
+    source: str,
+) -> None:
+    for pick_id in _derived_skill_pick_ids(stats):
+        owners = [
+            (item, pick)
+            for item in templates.values()
+            for pick in item.skill_picks
+            if pick.id == pick_id
+        ]
+        if not owners:
+            raise ContentError(f"{source}: derived stat names no skill pick ({pick_id!r})")
+        if any(pick.count != 1 for _, pick in owners):
+            raise ContentError(f"{source}: derived skill pick {pick_id!r} must choose one skill")
+        if len({item.kind for item, _ in owners}) != 1:
+            raise ContentError(f"{source}: derived skill pick {pick_id!r} spans template kinds")
+        if pick_id in fields or any(pick_id in item.tables for item in templates.values()):
+            raise ContentError(f"{source}: derived skill pick {pick_id!r} clashes with a field")
+
+
 def _check_pick_fields(
-    templates: Mapping[str, Template], fields: Mapping[str, Field], template: str
+    templates: Mapping[str, Template],
+    fields: Mapping[str, Field],
+    tables: Mapping[str, tuple[TableOption, ...]],
+    template: str,
 ) -> None:
     for item in templates.values():
         if item.choose is None:
@@ -426,6 +510,13 @@ def _check_pick_fields(
                 f"{template}: template {item.id!r} 'choose' needs a table field named "
                 f"{item.choose.tag_field!r}"
             )
+        values = {option.value for option in tables[gate.table]}
+        for tag in item.choose.skip_tags:
+            if tag not in values:
+                raise ContentError(
+                    f"{template}: template {item.id!r} 'choose' skip_tags names no "
+                    f"{item.choose.tag_field!r} option ({tag!r})"
+                )
 
 
 def _check_fields(
@@ -538,6 +629,7 @@ def _derived(value: object, label: str) -> DerivedStat:
         "best_modifier",
         "best_score",
         "plus_skills",
+        "plus_skill_picks",
         "minus_best_modifier",
         "minus_templates",
         "minimum",
@@ -551,6 +643,7 @@ def _derived(value: object, label: str) -> DerivedStat:
         best_modifier=_id_list(value.get("best_modifier", []), "best_modifier", label),
         best_score=_id_list(value.get("best_score", []), "best_score", label),
         plus_skills=_id_list(value.get("plus_skills", []), "plus_skills", label),
+        plus_skill_picks=_id_list(value.get("plus_skill_picks", []), "plus_skill_picks", label),
         minus_best_modifier=_id_list(
             value.get("minus_best_modifier", []), "minus_best_modifier", label
         ),
@@ -616,15 +709,19 @@ def _skill(definition: Definition, template: str) -> Skill:
     )
 
 
-def _skill_progression(value: object, template: str) -> SkillProgression | None:
+def _skill_progression(
+    value: object, skills: Mapping[str, Skill], template: str
+) -> SkillProgression | None:
     if value is None:
         return None
     label = f"{template}: 'skill_progression'"
     if not isinstance(value, Mapping):
         raise ContentError(f"{label} must be an object")
     keys = {"untrained", "first_level", "creation_maximum", "maximum"}
-    if set(value) != keys:
-        raise ContentError(f"{label} needs exactly {', '.join(sorted(keys))}")
+    if not keys <= set(value) or set(value) - keys - {"creation_replacements"}:
+        raise ContentError(
+            f"{label} needs {', '.join(sorted(keys))} and optional 'creation_replacements'"
+        )
     levels: dict[str, int] = {}
     for key in keys:
         level = value[key]
@@ -633,11 +730,31 @@ def _skill_progression(value: object, template: str) -> SkillProgression | None:
         levels[key] = level
     if not levels["first_level"] <= levels["creation_maximum"] <= levels["maximum"]:
         raise ContentError(f"{label} limits must be in increasing order")
+    replacement_data = value.get("creation_replacements")
+    replacements = None
+    if "creation_replacements" in value:
+        if not isinstance(replacement_data, Mapping) or set(replacement_data) - {
+            "roll_exclude",
+            "feature_exclude",
+        }:
+            raise ContentError(
+                f"{label} 'creation_replacements' must contain only "
+                "'roll_exclude' and 'feature_exclude'"
+            )
+        roll_exclude = _text_ids(replacement_data.get("roll_exclude", []), "roll_exclude", label)
+        feature_exclude = _text_ids(
+            replacement_data.get("feature_exclude", []), "feature_exclude", label
+        )
+        for skill_id in (*roll_exclude, *feature_exclude):
+            if skill_id not in skills:
+                raise ContentError(f"{label} excludes unknown skill {skill_id!r}")
+        replacements = SkillReplacements(roll_exclude, feature_exclude)
     return SkillProgression(
         untrained=levels["untrained"],
         first_level=levels["first_level"],
         creation_maximum=levels["creation_maximum"],
         maximum=levels["maximum"],
+        creation_replacements=replacements,
     )
 
 
@@ -740,6 +857,9 @@ def load_feature(
         raise ContentError(f"{label}: 'skill' names no skill ({skill!r})")
     shock = _amount(data, "shock", label)
     shock_ac = _amount(data, "shock_ac", label)
+    repeatable = data.get("repeatable", False)
+    if not isinstance(repeatable, bool):
+        raise ContentError(f"{label}: 'repeatable' must be a boolean")
     if shock and "shock_ac" not in data:
         raise ContentError(f"{label}: 'shock' needs a 'shock_ac'")
     return Feature(
@@ -760,6 +880,8 @@ def load_feature(
         shock_ac=shock_ac,
         flags=_text_list(data.get("flags", []), "flags", label),
         effects=_feature_effects(data.get("effects", []), label, stats, skills, counters),
+        defense_floor=_defense_floor(data.get("defense_floor"), counters, label),
+        repeatable=repeatable,
     )
 
 
@@ -790,6 +912,43 @@ def _stat_ids(value: object, key: str, stats: Collection[str], label: str) -> tu
     if unknown:
         raise ContentError(f"{label}: {key!r} names no stat ({unknown[0]!r})")
     return tuple(value)
+
+
+def _defense_floor(value: object, counters: Collection[str], label: str) -> DefenseFloor | None:
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label}: 'defense_floor' must be an object")
+    base = value.get("base")
+    if isinstance(base, bool) or not isinstance(base, int) or base < 0:
+        raise ContentError(f"{label}: defense_floor 'base' must be a whole number, 0 or more")
+    counter = value.get("counter", "")
+    if not isinstance(counter, str) or (counter and not counter.strip()):
+        raise ContentError(f"{label}: defense_floor 'counter' must be a counter id")
+    if counter and counters and counter not in counters:
+        raise ContentError(f"{label}: defense_floor names no counter ({counter!r})")
+    divisor = value.get("divisor", 1)
+    if isinstance(divisor, bool) or not isinstance(divisor, int) or divisor < 1:
+        raise ContentError(f"{label}: defense_floor 'divisor' must be a whole number, 1 or more")
+    round_up = value.get("round_up", True)
+    if not isinstance(round_up, bool):
+        raise ContentError(f"{label}: defense_floor 'round_up' must be true or false")
+    requires_no_armor = value.get("requires_no_armor", False)
+    if not isinstance(requires_no_armor, bool):
+        raise ContentError(f"{label}: defense_floor 'requires_no_armor' must be true or false")
+    requires_no_shield = value.get("requires_no_shield", False)
+    if not isinstance(requires_no_shield, bool):
+        raise ContentError(f"{label}: defense_floor 'requires_no_shield' must be true or false")
+    if not counter and ("divisor" in value or "round_up" in value):
+        raise ContentError(f"{label}: defense_floor division needs a 'counter'")
+    return DefenseFloor(
+        base=base,
+        counter=counter,
+        divisor=divisor,
+        round_up=round_up,
+        requires_no_armor=requires_no_armor,
+        requires_no_shield=requires_no_shield,
+    )
 
 
 def _feature_effects(
@@ -984,7 +1143,7 @@ def _template_requirements(value: object, label: str) -> tuple[TemplateRequireme
 
 def _skill_grants(value: object, skills: Mapping[str, Skill], label: str) -> dict[str, int]:
     """Skill levels a template adds to the unskilled base, by skill id."""
-    grants = _amounts(value, "skills", label, minimum=0)
+    grants = _amounts(value, "skills", label, minimum=1)
     for skill_id in grants:
         if skill_id not in skills:
             raise ContentError(f"{label}: 'skills' names no skill ({skill_id!r})")
@@ -1021,6 +1180,9 @@ def _skill_picks(
         if table not in tables:
             raise ContentError(f"{pick_label} {ident!r}: unknown table {table!r}")
         exclude = _text_ids(item.get("exclude", []), "exclude", pick_label)
+        name = item.get("label", "Skills")
+        if not isinstance(name, str) or not name.strip():
+            raise ContentError(f"{pick_label} {ident!r}: 'label' must be nonempty text")
         max_level = item.get("max_level", progression.creation_maximum)
         if (
             isinstance(max_level, bool)
@@ -1045,6 +1207,7 @@ def _skill_picks(
                 table=table,
                 exclude=exclude,
                 max_level=max_level,
+                label=name.strip(),
             )
         )
     return tuple(picks)
@@ -1085,6 +1248,9 @@ def _feat_picks(value: object, label: str) -> tuple[FeatPick, ...]:
             raise ContentError(
                 f"{pick_label} {ident!r}: 'max_rank' must be a whole number, 0 or more"
             )
+        advance_repeated_rank = item.get("advance_repeated_rank", False)
+        if not isinstance(advance_repeated_rank, bool):
+            raise ContentError(f"{pick_label} {ident!r}: 'advance_repeated_rank' must be boolean")
         picks.append(
             FeatPick(
                 id=ident,
@@ -1094,6 +1260,7 @@ def _feat_picks(value: object, label: str) -> tuple[FeatPick, ...]:
                 exclude=_text_ids(item.get("exclude", []), "exclude", pick_label),
                 tags=tags,
                 feature_type=feature_type,
+                advance_repeated_rank=advance_repeated_rank,
             )
         )
     return tuple(picks)
@@ -1122,7 +1289,8 @@ def _choose(data: object, label: str) -> Choose | None:
             f"{label}: 'choose' feature_type must be one of {', '.join(FEATURE_TYPES)}"
         )
     tag_field = required_text(data, "tag_field", f"{label}: 'choose'")
-    return Choose(count=count, feature_type=kind, tag_field=tag_field)
+    skip_tags = _text_ids(data.get("skip_tags", []), "skip_tags", f"{label}: 'choose'")
+    return Choose(count=count, feature_type=kind, tag_field=tag_field, skip_tags=skip_tags)
 
 
 def _amounts(value: object, key: str, label: str, minimum: int | None = None) -> dict[str, int]:
@@ -1207,9 +1375,34 @@ def character_schema(spec: CharacterSpec) -> dict[str, Any]:
     picks = _feature_pick_schemas(spec)
     if picks:
         properties["feature_picks"] = _object(picks)
+    repeat_picks = _feature_repeat_schemas(spec)
+    if repeat_picks:
+        properties["feature_repeats"] = _object(repeat_picks)
     skill_picks = _skill_pick_schemas(spec)
     if skill_picks:
         properties["skill_picks"] = _object(skill_picks)
+    progression = spec.skill_progression
+    if progression is not None and progression.creation_replacements is not None:
+        replacements = progression.creation_replacements
+        properties["skill_replacements"] = _object(
+            {
+                kind: {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["", *(skill for skill in spec.skills if skill not in excluded)],
+                    },
+                    "description": (
+                        f"Skills to use, in order, for excess {kind} grants; "
+                        "an empty entry or omitted choice is rolled"
+                    ),
+                }
+                for kind, excluded in (
+                    ("roll", replacements.roll_exclude),
+                    ("feature", replacements.feature_exclude),
+                )
+            }
+        )
     fields = {
         f.id: {"type": "string", "description": f.description or f.name}
         for f in spec.fields.values()
@@ -1245,7 +1438,9 @@ def _feature_pick_schemas(spec: CharacterSpec) -> dict[str, Any]:
             "items": {"type": "string", "enum": options},
             "maxItems": counts[pick_id],
             "uniqueItems": True,
-            "description": f"Features the character picks, up to {counts[pick_id]}",
+            "description": (
+                f"Features the character picks, up to {counts[pick_id]}; remaining picks are rolled"
+            ),
         }
         for pick_id, options in choices.items()
     }
@@ -1273,6 +1468,33 @@ def _skill_pick_schemas(spec: CharacterSpec) -> dict[str, Any]:
             "description": (
                 f"Skills the character picks, up to {counts[pick_id]}; "
                 "a skill may be picked again while its level stays within the pick's maximum"
+            ),
+        }
+        for pick_id, options in choices.items()
+    }
+
+
+def _feature_repeat_schemas(spec: CharacterSpec) -> dict[str, Any]:
+    choices: dict[str, set[str]] = {}
+    counts: dict[str, int] = {}
+    for template in spec.templates.values():
+        for pick in template.feat_picks:
+            if not pick.advance_repeated_rank:
+                continue
+            options = {
+                feature.id for feature in feature_pick_options(spec, pick) if feature.repeatable
+            }
+            if options:
+                choices.setdefault(pick.id, set()).update(options)
+                counts[pick.id] = max(counts.get(pick.id, 0), pick.count)
+    return {
+        pick_id: {
+            "type": "array",
+            "items": {"type": "string", "enum": sorted(options)},
+            "uniqueItems": True,
+            "maxItems": counts[pick_id],
+            "description": (
+                "Selected repeatable features to take as new choices instead of advancing rank"
             ),
         }
         for pick_id, options in choices.items()
@@ -1350,6 +1572,7 @@ def check_choices(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
     _check_picks(spec, submitted)
     _check_skill_picks(spec, submitted)
     _check_feature_picks(spec, submitted)
+    _check_feature_repeats(spec, submitted)
 
 
 def _check_templates(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
@@ -1397,27 +1620,51 @@ def _check_templates(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
 def _check_picks(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
     fields = submitted.get("fields", {})
     given = submitted.get("features", [])
+    picks_by_kind: dict[str, list[str]] = {}
+    for feature_id in given:
+        kind = spec.features[feature_id].feature_type
+        picks_by_kind.setdefault(kind, []).append(feature_id)
+    groups: dict[str, list[tuple[Template, Choose, str | None]]] = {}
     for template_id in submitted.get("templates", {}).values():
         template = spec.templates[template_id]
-        if template.choose is None:
+        choose = template.choose
+        if choose is None or not picks_by_kind.get(choose.feature_type):
             continue
-        kind = template.choose.feature_type
-        picks = [feature for feature in given if spec.features[feature].feature_type == kind]
-        if not picks:
-            continue
-        tag_field = template.choose.tag_field
-        if not fields.get(tag_field):
-            raise CharacterError(f"give {tag_field!r} to pick the {kind}s for {template.name}")
-        tag = fields[tag_field]
-        for feature in picks:
-            if spec.features[feature].tag != tag:
+        kind = choose.feature_type
+        tag = fields.get(choose.tag_field) or None
+        groups.setdefault(kind, []).append((template, choose, tag))
+    for kind, choices in groups.items():
+        active: dict[str, tuple[Template, Choose]] = {}
+        skipped: dict[str, Template] = {}
+        missing: list[tuple[Template, Choose]] = []
+        for template, choose, tag in choices:
+            if tag is None:
+                missing.append((template, choose))
+            elif tag in choose.skip_tags:
+                skipped[tag] = template
+            elif tag not in active or choose.count > active[tag][1].count:
+                active[tag] = (template, choose)
+        expected = " or ".join(
+            repr(tag) for tag in dict.fromkeys(tag for _, _, tag in choices if tag is not None)
+        )
+        for feature_id in picks_by_kind[kind]:
+            feature = spec.features[feature_id]
+            if feature.tag in active:
+                continue
+            if missing:
+                template, choose = missing[0]
                 raise CharacterError(
-                    f"{spec.features[feature].name!r} is not a {kind} from {tag!r}"
+                    f"give {choose.tag_field!r} to pick the {kind}s for {template.name}"
                 )
-        if len(picks) > template.choose.count:
-            raise CharacterError(
-                f"{template.name} picks {template.choose.count} {kind}s, not {len(picks)}"
-            )
+            if feature.tag in skipped:
+                raise CharacterError(
+                    f"{skipped[feature.tag].name} does not pick {kind}s for {feature.tag!r}"
+                )
+            raise CharacterError(f"{feature.name!r} is not a {kind} from {expected}")
+        for tag, (template, choose) in active.items():
+            count = sum(spec.features[feature].tag == tag for feature in picks_by_kind[kind])
+            if count > choose.count:
+                raise CharacterError(f"{template.name} picks {choose.count} {kind}s, not {count}")
 
 
 def _check_skill_picks(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
@@ -1461,21 +1708,53 @@ def _check_feature_picks(spec: CharacterSpec, submitted: Mapping[str, Any]) -> N
         for pick in template.feat_picks:
             features = given.get(pick.id, [])
             seen.add(pick.id)
-            if not isinstance(features, list) or not all(isinstance(f, str) for f in features):
-                raise CharacterError(f"feature pick {pick.id!r} must be a list of feature ids")
-            if len(features) > pick.count:
-                raise CharacterError(
-                    f"feature pick {pick.id!r} takes {pick.count} features, not {len(features)}"
-                )
-            if len(set(features)) != len(features):
-                raise CharacterError(f"feature pick {pick.id!r} repeats a feature")
-            offered = {feature.id for feature in feature_pick_options(spec, pick)}
-            for feature_id in features:
-                if feature_id not in offered:
-                    raise CharacterError(_not_offered(spec, pick, feature_id))
+            _selected_feature_pick(spec, pick, features)
     unknown = set(given) - seen
     if unknown:
         raise CharacterError(f"no feature pick named {min(unknown)!r}")
+
+
+def _check_feature_repeats(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
+    repeats = _pick_object(submitted.get("feature_repeats", {}), "feature_repeats")
+    selected = _pick_object(submitted.get("feature_picks", {}), "feature_picks")
+    active = {
+        pick.id: pick
+        for template_id in submitted.get("templates", {}).values()
+        if (template := spec.templates.get(template_id)) is not None
+        for pick in template.feat_picks
+    }
+    for pick_id, values in repeats.items():
+        pick = active.get(pick_id)
+        if pick is None or not pick.advance_repeated_rank:
+            raise CharacterError(f"feature pick {pick_id!r} cannot repeat features as new choices")
+        if (
+            not isinstance(values, list)
+            or not all(isinstance(value, str) for value in values)
+            or len(set(values)) != len(values)
+        ):
+            raise CharacterError(f"feature repeats for {pick_id!r} must be a list of distinct ids")
+        chosen = _selected_feature_pick(spec, pick, selected.get(pick_id, []))
+        for feature_id in values:
+            if feature_id not in chosen or not spec.features[feature_id].repeatable:
+                raise CharacterError(
+                    f"{feature_id!r} is not a selected repeatable feature of pick {pick_id!r}"
+                )
+
+
+def _selected_feature_pick(spec: CharacterSpec, pick: FeatPick, chosen: object) -> list[str]:
+    if not isinstance(chosen, list) or not all(isinstance(item, str) for item in chosen):
+        raise CharacterError(f"feature pick {pick.id!r} must be a list of feature ids")
+    if len(chosen) > pick.count:
+        raise CharacterError(
+            f"feature pick {pick.id!r} takes {pick.count} features, not {len(chosen)}"
+        )
+    if len(set(chosen)) != len(chosen):
+        raise CharacterError(f"feature pick {pick.id!r} repeats a feature")
+    offered = {feature.id for feature in feature_pick_options(spec, pick)}
+    for feature_id in chosen:
+        if feature_id not in offered:
+            raise CharacterError(_not_offered(spec, pick, feature_id))
+    return chosen
 
 
 def _pick_object(value: object, key: str) -> Mapping[str, Any]:
@@ -1699,6 +1978,9 @@ def resolve(
     given_fields = submitted.get("fields", {})
     given_skill_picks = _pick_object(submitted.get("skill_picks", {}), "skill_picks")
     given_feature_picks = _pick_object(submitted.get("feature_picks", {}), "feature_picks")
+    given_feature_repeats = _pick_object(submitted.get("feature_repeats", {}), "feature_repeats")
+    _check_feature_repeats(spec, submitted)
+    skill_replacements = _skill_replacement_choices(spec, submitted)
     fixed = fixed_stats(spec)
     stats = {
         s.id: given_stats[s.id]
@@ -1729,7 +2011,10 @@ def resolve(
                 if granted.quantity.isdigit()
                 else roll_total(granted.quantity, rng, plus=plus)
             )
-            features[granted.feature] = features.get(granted.feature, 0) + count
+            if count < 0:
+                raise CharacterError(f"feature {granted.feature!r} rolled a negative quantity")
+            if count:
+                features[granted.feature] = features.get(granted.feature, 0) + count
         for table in template.tables:
             fields[table] = given_fields.get(table) or rng.choice(spec.tables[table]).value
     _apply_plus_modifiers(spec, stats)
@@ -1742,11 +2027,21 @@ def resolve(
             fields[field_spec.id] = _field_value(spec, field_spec, given_fields, fields, rng)
     for field_spec in restricted:
         fields[field_spec.id] = _field_value(spec, field_spec, given_fields, fields, rng)
+    feat_picks = [
+        (pick, _selected_feature_pick(spec, pick, given_feature_picks.get(pick.id, [])))
+        for template_id in templates.values()
+        for pick in spec.templates[template_id].feat_picks
+    ]
+    reserved = {feature for _, chosen in feat_picks for feature in chosen}
+    feature_slots: list[tuple[str, tuple[str, ...]]] = []
+    tagged_planned: dict[tuple[str, str], int] = {}
     for template_id in templates.values():
         choose = spec.templates[template_id].choose
         if choose is not None:
-            _pick_features(spec, choose, fields, features, rng)
+            _plan_tagged_features(spec, choose, fields, features, tagged_planned, feature_slots)
+    tagged_count = len(feature_slots)
     skill_picks: list[tuple[SkillPick, list[str]]] = []
+    remembered_picks = _derived_skill_pick_ids(spec.stats)
     planned_increments = dict(increments)
     for template_id in templates.values():
         for pick in spec.templates[template_id].skill_picks:
@@ -1754,34 +2049,82 @@ def resolve(
                 spec, pick, planned_increments, given_skill_picks.get(pick.id, [])
             )
             skill_picks.append((pick, chosen))
+    _replace_excess_template_skills(spec, increments, skill_replacements, rng, skill_picks)
     skill_index = 0
     for template_id in templates.values():
         template = spec.templates[template_id]
         for pick in template.skill_picks:
             chosen = skill_picks[skill_index][1]
             _take_skill_pick(spec, pick, increments, chosen)
-            _roll_skill_picks(
+            rolled_skills = _roll_skill_picks(
                 spec,
                 pick,
                 increments,
                 pick.count - len(chosen),
                 rng,
                 skill_picks[skill_index + 1 :],
+                skill_replacements,
             )
+            if pick.id in remembered_picks:
+                selected_skills = chosen + rolled_skills
+                if len(selected_skills) != 1:
+                    raise CharacterError(f"skill pick {pick.id!r} needs one recorded choice")
+                fields[pick.id] = selected_skills[0]
             skill_index += 1
-        for feat in template.feat_picks:
-            _take_feature_pick(spec, feat, features, given_feature_picks.get(feat.id), rng)
+    blocked = set(features)
+    feature_plans: list[tuple[FeatPick, list[str], int, int]] = []
+    for pick, chosen in feat_picks:
+        blocked.update(chosen)
+        pool = tuple(
+            sorted(
+                feature.id
+                for feature in feature_pick_options(spec, pick)
+                if feature.id not in blocked
+            )
+        )
+        needed = pick.count - len(chosen)
+        if len(pool) < needed:
+            raise CharacterError(
+                f"feature pick {pick.id!r} requires {pick.count} different options; "
+                f"only {len(chosen) + len(pool)} available"
+            )
+        start = len(feature_slots)
+        message = f"feature pick {pick.id!r} cannot be filled with distinct options"
+        feature_slots.extend((message, pool) for _ in range(needed))
+        feature_plans.append((pick, chosen, start, len(feature_slots)))
+    rolled = _roll_feature_slots(feature_slots, reserved, rng)
+    for feature_id in rolled[:tagged_count]:
+        features[feature_id] = 1
+    for pick, chosen, start, end in feature_plans:
+        for feature_id in (*chosen, *rolled[start:end]):
+            _grant_feature_pick(
+                spec,
+                features,
+                pick,
+                feature_id,
+                repeat_as_new=feature_id in given_feature_repeats.get(pick.id, []),
+            )
+    _check_ordered_feature_ranks(spec, features)
     counters = {
         counter_id: _within(spec.counters[counter_id], spec.counters[counter_id].initial + amount)
         for counter_id, amount in counter_amounts.items()
     }
-    stats.update(derived_stats(spec, stats, counters, _final_skills(spec, increments), templates))
+    stats.update(
+        derived_stats(
+            spec, stats, counters, _final_skills(spec, increments), templates, fields=fields
+        )
+    )
     armor = 0
-    for feature_id in list(features):
-        for effect in spec.features[feature_id].effects:
-            armor += _run_effect(spec, effect, stats, increments, counters)
+    for feature_id, count in features.items():
+        effects = spec.features[feature_id].effects
+        if effects:
+            for _ in range(count):
+                for effect in effects:
+                    armor += _run_effect(
+                        spec, effect, stats, increments, counters, skill_replacements, rng
+                    )
     skills = _final_skills(spec, increments)
-    stats.update(derived_stats(spec, stats, counters, skills, templates))
+    stats.update(derived_stats(spec, stats, counters, skills, templates, fields=fields))
     return Sheet(
         stats=stats,
         templates=templates,
@@ -1793,32 +2136,150 @@ def resolve(
     )
 
 
-def _pick_features(
+def _grant_feature_pick(
+    spec: CharacterSpec,
+    features: dict[str, int],
+    pick: FeatPick,
+    feature_id: str,
+    *,
+    repeat_as_new: bool = False,
+) -> None:
+    feature = spec.features[feature_id]
+    if repeat_as_new:
+        if not pick.advance_repeated_rank or not feature.repeatable or not features.get(feature_id):
+            raise CharacterError(f"{feature.name!r} cannot be repeated as a new choice")
+        features[feature_id] += 1
+        return
+    if pick.advance_repeated_rank and feature.rank > 0 and features.get(feature_id, 0):
+        higher = feature_next_ranks(spec, pick, feature)
+        if len(higher) > 1:
+            raise CharacterError(f"{feature.name!r} has more than one next rank")
+        if higher:
+            target = higher[0].id
+            if features.get(target, 0):
+                raise CharacterError(f"{feature.name!r} has already reached its next rank")
+            features[target] = 1
+            return
+        if feature.tag in spec.ordered_feature_tags and not feature.repeatable:
+            raise CharacterError(f"{feature.name!r} is already at its maximum rank")
+    features[feature_id] = features.get(feature_id, 0) + 1
+
+
+def _check_ordered_feature_ranks(spec: CharacterSpec, features: Mapping[str, int]) -> None:
+    for feature_id in features:
+        check_ordered_feature_rank(spec, spec.features[feature_id], features)
+
+
+def check_ordered_feature_rank(
+    spec: CharacterSpec, feature: Feature, features: Mapping[str, int]
+) -> None:
+    """Validate a held feature against its ruleset's ordered ranks."""
+    count = features.get(feature.id, 0)
+    if not count or feature.tag not in spec.ordered_feature_tags or feature.rank <= 0:
+        return
+    if count > 1 and not feature.repeatable:
+        raise CharacterError(
+            f"{feature.name!r} cannot be taken more than once at rank {feature.rank}"
+        )
+    if feature.rank == 1:
+        return
+    previous = [
+        candidate
+        for candidate in spec.features.values()
+        if candidate.name == feature.name
+        and candidate.tag == feature.tag
+        and candidate.feature_type == feature.feature_type
+        and candidate.rank == feature.rank - 1
+    ]
+    if len(previous) != 1 or not features.get(previous[0].id):
+        raise CharacterError(f"{feature.name!r} rank {feature.rank} requires its previous rank")
+
+
+def _plan_tagged_features(
     spec: CharacterSpec,
     choose: Choose,
     fields: Mapping[str, str],
-    features: dict[str, int],
-    rng: random.Random,
+    features: Mapping[str, int],
+    planned: dict[tuple[str, str], int],
+    slots: list[tuple[str, tuple[str, ...]]],
 ) -> None:
-    """Roll the picks a template's `choose` leaves to chance: features of its type whose tag is
-    the value of the gate field, skipping any the character already has. An empty pool yields no
-    picks."""
+    """Plan a template's tagged picks, accounting for features already held or planned."""
+    tag = fields.get(choose.tag_field, "")
+    if tag in choose.skip_tags:
+        return
     held = [
         feature
         for feature in features
         if spec.features[feature].feature_type == choose.feature_type
+        and spec.features[feature].tag == tag
     ]
-    needed = max(0, choose.count - len(held))
-    tag = fields.get(choose.tag_field, "")
-    pool = sorted(
-        feature.id
-        for feature in spec.features.values()
-        if feature.feature_type == choose.feature_type
-        and feature.tag == tag
-        and feature.id not in features
+    key = (choose.feature_type, tag)
+    previous = planned.get(key, 0)
+    needed = max(0, choose.count - len(held) - previous)
+    pool = tuple(
+        sorted(
+            feature.id
+            for feature in spec.features.values()
+            if feature.feature_type == choose.feature_type
+            and feature.tag == tag
+            and feature.id not in features
+        )
     )
-    for feature in rng.sample(pool, min(needed, len(pool))):
-        features[feature] = 1
+    if len(pool) < previous + needed:
+        raise CharacterError(
+            f"{choose.feature_type} picks for {tag!r} require {choose.count} different options; "
+            f"only {len(held) + len(pool)} available"
+        )
+    message = f"{choose.feature_type} picks for {tag!r} cannot be filled with distinct options"
+    slots.extend((message, pool) for _ in range(needed))
+    planned[key] = previous + needed
+
+
+def _roll_feature_slots(
+    slots: Sequence[tuple[str, tuple[str, ...]]], reserved: set[str], rng: random.Random
+) -> tuple[str, ...]:
+    """Fill overlapping random pools, reserving manual picks whenever possible."""
+    options = [rng.sample(pool, len(pool)) for _, pool in slots]
+
+    def assign(*, reserve: bool) -> tuple[tuple[str, ...] | None, str]:
+        owners: dict[str, int] = {}
+        assigned: dict[int, str] = {}
+        for start, (message, _) in enumerate(slots):
+            pending = [start]
+            visited = {start}
+            reached: dict[str, int] = {}
+            free: str | None = None
+            # Reassign earlier rolls along an alternating path when pools overlap.
+            for slot in pending:
+                for feature_id in options[slot]:
+                    if feature_id in reached or (reserve and feature_id in reserved):
+                        continue
+                    reached[feature_id] = slot
+                    owner = owners.get(feature_id)
+                    if owner is None:
+                        free = feature_id
+                        break
+                    if owner not in visited:
+                        visited.add(owner)
+                        pending.append(owner)
+                if free is not None:
+                    break
+            if free is None:
+                return None, message
+            while free is not None:
+                slot = reached[free]
+                previous = assigned.get(slot)
+                owners[free] = slot
+                assigned[slot] = free
+                free = previous
+        return tuple(assigned[index] for index in range(len(slots))), ""
+
+    result, message = assign(reserve=True)
+    if result is None and reserved:
+        result, message = assign(reserve=False)
+    if result is None:
+        raise CharacterError(message)
+    return result
 
 
 def _take_skill_pick(
@@ -1847,10 +2308,113 @@ def _take_skill_pick(
 def _skill_pick_allows(
     spec: CharacterSpec, pick: SkillPick, increments: Mapping[str, int], skill_id: str
 ) -> bool:
-    return (
-        increments.get(skill_id, 0) <= 0
-        or _skill_level_of(spec, increments, skill_id) < pick.max_level
-    )
+    return _skill_below_maximum(spec, increments, skill_id, pick.max_level)
+
+
+def _skill_below_maximum(
+    spec: CharacterSpec, increments: Mapping[str, int], skill_id: str, maximum: int
+) -> bool:
+    return increments.get(skill_id, 0) <= 0 or _skill_level_of(spec, increments, skill_id) < maximum
+
+
+def _later_skill_picks_allow(
+    spec: CharacterSpec,
+    increments: Mapping[str, int],
+    later: Sequence[tuple[SkillPick, list[str]]],
+) -> bool:
+    trial = dict(increments)
+    for future_pick, chosen in later:
+        for skill_id in chosen:
+            if not _skill_pick_allows(spec, future_pick, trial, skill_id):
+                return False
+            trial[skill_id] = trial.get(skill_id, 0) + 1
+    return True
+
+
+def _skill_replacement_choices(
+    spec: CharacterSpec, submitted: Mapping[str, Any]
+) -> dict[str, deque[str]]:
+    progression = spec.skill_progression
+    rules = progression.creation_replacements if progression is not None else None
+    given = _pick_object(submitted.get("skill_replacements", {}), "skill_replacements")
+    if rules is None:
+        if given:
+            raise CharacterError("the rule set has no creation skill replacements")
+        return {}
+    if any(key not in {"roll", "feature"} for key in given):
+        raise CharacterError("skill replacements may only specify 'roll' and 'feature' choices")
+    choices: dict[str, deque[str]] = {}
+    for kind, excluded in (("roll", rules.roll_exclude), ("feature", rules.feature_exclude)):
+        values = given.get(kind, [])
+        if not isinstance(values, list) or not all(isinstance(value, str) for value in values):
+            raise CharacterError(f"{kind} skill replacements must be a list of skill ids")
+        for skill_id in values:
+            if skill_id and (skill_id not in spec.skills or skill_id in excluded):
+                raise CharacterError(f"{skill_id!r} is not an eligible {kind} replacement skill")
+        choices[kind] = deque(values)
+    return choices
+
+
+def _replace_excess_skill(
+    spec: CharacterSpec,
+    increments: dict[str, int],
+    original: str,
+    kind: str,
+    choices: Mapping[str, deque[str]],
+    rng: random.Random,
+    later: Sequence[tuple[SkillPick, list[str]]] = (),
+    maximum: int | None = None,
+) -> None:
+    progression = spec.skill_progression
+    if progression is None or progression.creation_replacements is None:
+        raise CharacterError("the rule set has no creation skill replacements")
+    rules = progression.creation_replacements
+    excluded = rules.roll_exclude if kind == "roll" else rules.feature_exclude
+    limit = progression.creation_maximum if maximum is None else maximum
+    pool = []
+    for skill_id in spec.skills:
+        if (
+            skill_id == original
+            or skill_id in excluded
+            or not _skill_below_maximum(spec, increments, skill_id, limit)
+        ):
+            continue
+        trial = dict(increments)
+        trial[skill_id] = trial.get(skill_id, 0) + 1
+        if _later_skill_picks_allow(spec, trial, later):
+            pool.append(skill_id)
+    if not pool:
+        raise CharacterError(
+            f"no eligible replacement skill for excess {kind} grant of {original!r}"
+        )
+    selected = choices[kind].popleft() if choices[kind] else ""
+    if selected and selected not in pool:
+        raise CharacterError(
+            f"{selected!r} cannot replace {original!r}: choose another uncapped skill "
+            "not needed by a later pick"
+        )
+    skill_id = selected or rng.choice(pool)
+    increments[skill_id] = increments.get(skill_id, 0) + 1
+
+
+def _replace_excess_template_skills(
+    spec: CharacterSpec,
+    increments: dict[str, int],
+    choices: Mapping[str, deque[str]],
+    rng: random.Random,
+    later: Sequence[tuple[SkillPick, list[str]]],
+) -> None:
+    progression = spec.skill_progression
+    if progression is None or progression.creation_replacements is None:
+        return
+    capacity = progression.creation_maximum - progression.first_level + 1
+    for skill_id, count in tuple(increments.items()):
+        excess = max(0, count - capacity)
+        if not excess:
+            continue
+        increments[skill_id] = capacity
+        for _ in range(excess):
+            _replace_excess_skill(spec, increments, skill_id, "roll", choices, rng, later)
 
 
 def _roll_skill_picks(
@@ -1860,61 +2424,36 @@ def _roll_skill_picks(
     count: int,
     rng: random.Random,
     later: Sequence[tuple[SkillPick, list[str]]],
-) -> None:
+    choices: Mapping[str, deque[str]],
+) -> list[str]:
     """Roll remaining picks without making a later explicit choice invalid."""
+    rolled: list[str] = []
     for _ in range(count):
         pool = []
+        progression = spec.skill_progression
+        replace_excess = progression is not None and progression.creation_replacements is not None
         for skill_id, _ in skill_pick_options(spec, pick):
             if not _skill_pick_allows(spec, pick, increments, skill_id):
+                if replace_excess:
+                    pool.append(skill_id)
                 continue
             trial = dict(increments)
             trial[skill_id] = trial.get(skill_id, 0) + 1
-            valid = True
-            for future_pick, chosen in later:
-                for future_skill in chosen:
-                    if not _skill_pick_allows(spec, future_pick, trial, future_skill):
-                        valid = False
-                        break
-                    trial[future_skill] = trial.get(future_skill, 0) + 1
-                if not valid:
-                    break
-            if valid:
+            if _later_skill_picks_allow(spec, trial, later):
                 pool.append(skill_id)
         if not pool:
-            return
+            if replace_excess:
+                raise CharacterError(f"skill pick {pick.id!r} has no eligible roll or replacement")
+            return rolled
         skill_id = rng.choice(pool)
-        increments[skill_id] = increments.get(skill_id, 0) + 1
-
-
-def _take_feature_pick(
-    spec: CharacterSpec,
-    pick: FeatPick,
-    features: dict[str, int],
-    chosen: object,
-    rng: random.Random,
-) -> None:
-    """Add the features a pick takes, one of each. The features given are used as they stand; a
-    missing list is rolled from the pick's options, skipping any the character already has."""
-    if chosen is None:
-        pool = [
-            feature.id for feature in feature_pick_options(spec, pick) if feature.id not in features
-        ]
-        for feature_id in rng.sample(pool, min(pick.count, len(pool))):
-            features[feature_id] = features.get(feature_id, 0) + 1
-        return
-    if not isinstance(chosen, list) or not all(isinstance(f, str) for f in chosen):
-        raise CharacterError(f"feature pick {pick.id!r} must be a list of feature ids")
-    if len(chosen) > pick.count:
-        raise CharacterError(
-            f"feature pick {pick.id!r} takes {pick.count} features, not {len(chosen)}"
-        )
-    if len(set(chosen)) != len(chosen):
-        raise CharacterError(f"feature pick {pick.id!r} repeats a feature")
-    offered = {feature.id for feature in feature_pick_options(spec, pick)}
-    for feature_id in chosen:
-        if feature_id not in offered:
-            raise CharacterError(_not_offered(spec, pick, feature_id))
-        features[feature_id] = features.get(feature_id, 0) + 1
+        if _skill_pick_allows(spec, pick, increments, skill_id):
+            increments[skill_id] = increments.get(skill_id, 0) + 1
+        else:
+            _replace_excess_skill(
+                spec, increments, skill_id, "roll", choices, rng, later, maximum=pick.max_level
+            )
+        rolled.append(skill_id)
+    return rolled
 
 
 def _run_effect(
@@ -1923,13 +2462,24 @@ def _run_effect(
     stats: dict[str, int],
     increments: dict[str, int],
     counters: dict[str, int],
+    choices: Mapping[str, deque[str]],
+    rng: random.Random,
 ) -> int:
     """Run one feature effect in place. Returns the armor it adds, which the others do not."""
     op = effect["op"]
     if op == "stat":
         stats[effect["id"]] += effect["delta"]
     elif op == "skill":
-        increments[effect["id"]] = increments.get(effect["id"], 0) + effect["delta"]
+        skill_id, delta = effect["id"], effect["delta"]
+        progression = spec.skill_progression
+        if progression is not None and progression.creation_replacements is not None and delta > 0:
+            for _ in range(delta):
+                if _skill_below_maximum(spec, increments, skill_id, progression.creation_maximum):
+                    increments[skill_id] = increments.get(skill_id, 0) + 1
+                else:
+                    _replace_excess_skill(spec, increments, skill_id, "feature", choices, rng)
+        else:
+            increments[skill_id] = increments.get(skill_id, 0) + delta
     elif op == "counter":
         counter_id, delta = effect["id"], effect["delta"]
         counter = spec.counters.get(counter_id)
@@ -1965,6 +2515,8 @@ def derived_stats(
     counters: Mapping[str, int],
     skills: Mapping[str, int],
     templates: Mapping[str, str] | None = None,
+    *,
+    fields: Mapping[str, str] | None = None,
 ) -> dict[str, int]:
     """The value of every derived stat the spec has, by stat id. A derived stat earlier in the
     spec may be used by a later one. Any value the mapping already holds for a derived stat is
@@ -1976,7 +2528,9 @@ def derived_stats(
     for stat in spec.stats.values():
         if stat.derived is None:
             continue
-        found[stat.id] = _derived_value(spec, stat.derived, scores, counters, skills, templates)
+        found[stat.id] = _derived_value(
+            spec, stat.derived, scores, counters, skills, templates, fields
+        )
         scores[stat.id] = found[stat.id]
     return found
 
@@ -1988,6 +2542,7 @@ def _derived_value(
     counters: Mapping[str, int],
     skills: Mapping[str, int],
     templates: Mapping[str, str] | None,
+    fields: Mapping[str, str] | None,
 ) -> int:
     value = derived.base + derived.plus
     value -= sum(_counter_start(spec, counters, name) for name in derived.minus_counters)
@@ -1995,11 +2550,49 @@ def _derived_value(
     value -= max((spec.modifier(stats, name) for name in derived.minus_best_modifier), default=0)
     value += max((_score(stats, name) for name in derived.best_score), default=0)
     value += sum(spec.skill_level(skills, name) for name in derived.plus_skills)
+    value += sum(
+        _chosen_skill_level(spec, pick_id, skills, templates, fields)
+        for pick_id in derived.plus_skill_picks
+    )
     if templates is not None and any(t in templates.values() for t in derived.minus_templates):
         value -= 1
     if derived.minimum is not None:
         value = max(derived.minimum, value)
     return value
+
+
+def _chosen_skill_level(
+    spec: CharacterSpec,
+    pick_id: str,
+    skills: Mapping[str, int],
+    templates: Mapping[str, str] | None,
+    fields: Mapping[str, str] | None,
+) -> int:
+    selected = next(
+        (
+            pick
+            for template_id in (templates or {}).values()
+            if (template := spec.templates.get(template_id)) is not None
+            for pick in template.skill_picks
+            if pick.id == pick_id
+        ),
+        None,
+    )
+    skill = (fields or {}).get(pick_id)
+    if templates is not None and selected is None:
+        if skill:
+            raise CharacterError(f"skill pick {pick_id!r} is not available to this character")
+        return 0
+    if not skill:
+        if selected is not None:
+            raise CharacterError(f"skill pick {pick_id!r} has no recorded choice")
+        return 0
+    if skill not in spec.skills or (
+        selected is not None
+        and skill not in {value for value, _ in skill_pick_options(spec, selected)}
+    ):
+        raise CharacterError(f"{skill!r} is not offered by skill pick {pick_id!r}")
+    return spec.skill_level(skills, skill)
 
 
 def _counter_start(spec: CharacterSpec, counters: Mapping[str, int], name: str) -> int:
@@ -2039,6 +2632,20 @@ def feature_pick_options(spec: CharacterSpec, pick: FeatPick) -> tuple[Feature, 
         and (not pick.feature_type or feature.feature_type == pick.feature_type)
         and (pick.max_rank is None or feature.rank <= pick.max_rank)
         and feature.id not in pick.exclude
+    )
+
+
+def feature_next_ranks(
+    spec: CharacterSpec, pick: FeatPick, feature: Feature
+) -> tuple[Feature, ...]:
+    return tuple(
+        candidate
+        for candidate in spec.features.values()
+        if candidate.name == feature.name
+        and candidate.tag == feature.tag
+        and candidate.feature_type == feature.feature_type
+        and candidate.rank == feature.rank + 1
+        and candidate.id not in pick.exclude
     )
 
 
@@ -2126,7 +2733,11 @@ def describe(spec: CharacterSpec, sheet: Sheet) -> str:
         parts = []
         for feature, count in sheet.features.items():
             found = spec.features[feature]
-            name = found.name if count == 1 else f"{found.name} x{count}"
+            name = found.name
+            if found.tag in spec.ordered_feature_tags and found.rank > 0:
+                name += f" (rank {found.rank})"
+            if count != 1:
+                name += f" x{count}"
             notes = [
                 str(effect["text"])
                 for effect in found.effects
@@ -2136,11 +2747,21 @@ def describe(spec: CharacterSpec, sheet: Sheet) -> str:
                 name += f" ({'; '.join(notes)})"
             parts.append(name)
         lines.append("Features: " + ", ".join(parts))
+    remembered_picks = _derived_skill_pick_ids(spec.stats)
+    skill_pick_labels = {
+        pick.id: pick.label
+        for template_id in sheet.templates.values()
+        for pick in spec.templates[template_id].skill_picks
+        if pick.id in remembered_picks
+    }
     for field_id, value in sheet.fields.items():
         if not value:
             continue
         if field_id in spec.fields:
             label = spec.fields[field_id].name
+        elif field_id in skill_pick_labels:
+            label = skill_pick_labels[field_id]
+            value = _skill_name(spec, value)
         else:
             label = spec.table_names.get(field_id, field_id)
         lines.append(f"{label}: {value}")

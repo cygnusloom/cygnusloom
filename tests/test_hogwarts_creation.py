@@ -359,11 +359,13 @@ def test_spell_picks_without_a_year_are_refused():
         )
 
 
-def test_a_graduate_picks_no_spells_since_none_is_tagged_graduate():
-    submitted = {"templates": {"blood": "pure-blood"}, "fields": {"year": "Graduate"}}
+@pytest.mark.parametrize("blood", BLOOD)
+def test_a_graduate_knows_previous_years_spells_without_starting_picks(blood: str):
+    submitted = {"templates": {"blood": blood}, "fields": {"year": "Graduate"}}
     check_choices(SPEC, submitted)
     sheet = resolve(SPEC, submitted, random.Random(5), plus=HOGWARTS.plus)
     assert _spells_of(sheet) == set()
+    assert "Knows every spell tagged with an earlier Year: 1st Year" in describe(SPEC, sheet)
     with pytest.raises(CharacterError, match="is not a spell from 'Graduate'"):
         check_choices(
             SPEC,

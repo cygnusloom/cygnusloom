@@ -14,6 +14,8 @@ from cygnusforge.content.character import (
     SkillProgression,
     TableOption,
     build_character,
+    derived_stats,
+    describe,
     resolve,
 )
 from cygnusforge.content.definitions import ContentError, Definition
@@ -87,6 +89,167 @@ def test_skill_levels_and_creation_cap_come_from_rule_data():
     assert spec.skill_trained(scholar.skills, "lore")
     assert apprentice.skills == {"lore": 1}
     assert spec.templates["apprentice"].skill_picks[0].max_level == 1
+    assert spec.templates["apprentice"].skill_picks[0].label == "Skills"
+
+
+@pytest.mark.parametrize("label", [None, "", " ", 3])
+def test_skill_pick_label_must_be_nonempty_text(label: object):
+    definitions = _definitions()
+    apprentice = definitions[2]
+    definitions[2] = replace(
+        apprentice,
+        data={
+            **apprentice.data,
+            "skill_picks": [{"id": "practice", "count": 1, "table": "skills", "label": label}],
+        },
+    )
+    with pytest.raises(ContentError, match="'label' must be nonempty text"):
+        build_character(
+            definitions,
+            {"skills": (TableOption(name=None, description="lore"),)},
+            {"skills": "Skills"},
+            "test",
+            skill_progression=LEVELS,
+        )
+
+
+def _derived_pick_definitions(*, count: int = 1, pick_id: str = "practice") -> list[Definition]:
+    definitions = _definitions()
+    apprentice = definitions[2]
+    definitions[2] = replace(
+        apprentice,
+        data={
+            **apprentice.data,
+            "skill_picks": [
+                {"id": "practice", "label": "Practice skill", "count": count, "table": "skills"}
+            ],
+        },
+    )
+    definitions.append(
+        Definition(
+            "stat",
+            "insight",
+            {
+                "type": "stat",
+                "id": "insight",
+                "name": "Insight",
+                "derived": {"base": 3, "plus_skill_picks": [pick_id]},
+            },
+        )
+    )
+    return definitions
+
+
+def _derived_pick_spec(definitions: list[Definition]):
+    return build_character(
+        definitions,
+        {"skills": (TableOption(name=None, description="lore"),)},
+        {"skills": "Skills"},
+        "test",
+        skill_progression={"untrained": -1, "first_level": 0, "creation_maximum": 1, "maximum": 4},
+    )
+
+
+@pytest.mark.parametrize("chosen", [False, True])
+def test_derived_stat_remembers_and_displays_a_selected_or_rolled_skill_pick(chosen: bool):
+    spec = _derived_pick_spec(_derived_pick_definitions())
+    submitted = {"templates": {"role": "apprentice"}}
+    if chosen:
+        submitted["skill_picks"] = {"practice": ["lore"]}
+    sheet = resolve(spec, submitted, random.Random(0), plus="sum")
+
+    assert sheet.fields["practice"] == "lore"
+    assert sheet.stats["insight"] == 3
+    assert "Practice skill: Lore" in describe(spec, sheet)
+    assert (
+        derived_stats(spec, {}, {}, {"lore": 1}, sheet.templates, fields=sheet.fields)["insight"]
+        == 4
+    )
+    assert derived_stats(spec, {}, {}, {"lore": 1}, {"role": "scholar"})["insight"] == 3
+
+
+def test_derived_stat_rejects_missing_invalid_or_inapplicable_saved_skill_picks():
+    spec = _derived_pick_spec(_derived_pick_definitions())
+    with pytest.raises(CharacterError, match="has no recorded choice"):
+        derived_stats(spec, {}, {}, {}, {"role": "apprentice"}, fields={})
+    with pytest.raises(CharacterError, match="not offered"):
+        derived_stats(spec, {}, {}, {}, {"role": "apprentice"}, fields={"practice": "unknown"})
+    with pytest.raises(CharacterError, match="not available"):
+        derived_stats(spec, {}, {}, {}, {"role": "scholar"}, fields={"practice": "lore"})
+
+
+def test_derived_skill_pick_cannot_silently_leave_a_roll_unfilled():
+    definitions = _derived_pick_definitions()
+    apprentice = definitions[2]
+    definitions[2] = replace(apprentice, data={**apprentice.data, "skills": {"lore": 2}})
+    spec = _derived_pick_spec(definitions)
+    with pytest.raises(CharacterError, match="needs one recorded choice"):
+        resolve(spec, {"templates": {"role": "apprentice"}}, random.Random(0), plus="sum")
+
+
+def test_derived_skill_pick_remembers_a_capped_roll_not_its_replacement():
+    definitions = _derived_pick_definitions()
+    definitions.append(Definition("skill", "craft", {"name": "Craft"}))
+    apprentice = definitions[2]
+    definitions[2] = replace(apprentice, data={**apprentice.data, "skills": {"lore": 2}})
+    spec = build_character(
+        definitions,
+        {"skills": (TableOption(name=None, description="lore"),)},
+        {"skills": "Skills"},
+        "test",
+        skill_progression={
+            "untrained": -1,
+            "first_level": 0,
+            "creation_maximum": 1,
+            "maximum": 4,
+            "creation_replacements": {"feature_exclude": []},
+        },
+    )
+    sheet = resolve(
+        spec,
+        {
+            "templates": {"role": "apprentice"},
+            "skill_replacements": {"roll": ["craft"]},
+        },
+        random.Random(0),
+        plus="sum",
+    )
+
+    assert sheet.fields["practice"] == "lore"
+    assert sheet.skills == {"lore": 1, "craft": 0}
+    assert sheet.stats["insight"] == 4
+
+
+@pytest.mark.parametrize(
+    ("count", "pick_id", "error"),
+    [(1, "missing", "names no skill pick"), (2, "practice", "must choose one skill")],
+)
+def test_derived_skill_pick_references_are_validated(count: int, pick_id: str, error: str):
+    with pytest.raises(ContentError, match=error):
+        _derived_pick_spec(_derived_pick_definitions(count=count, pick_id=pick_id))
+
+
+def test_derived_skill_pick_cannot_collide_with_a_character_field():
+    definitions = _derived_pick_definitions()
+    definitions.append(
+        Definition(
+            "character_field",
+            "practice",
+            {"type": "character_field", "id": "practice", "name": "Practice"},
+        )
+    )
+    with pytest.raises(ContentError, match="clashes with a field"):
+        _derived_pick_spec(definitions)
+
+
+def test_derived_skill_pick_cannot_span_template_kinds():
+    definitions = _derived_pick_definitions()
+    apprentice = definitions[2]
+    definitions.append(
+        replace(apprentice, id="other", data={**apprentice.data, "id": "other", "kind": "origin"})
+    )
+    with pytest.raises(ContentError, match="spans template kinds"):
+        _derived_pick_spec(definitions)
 
 
 def test_submitted_and_random_skill_picks_obey_the_same_pick_cap():
@@ -136,7 +299,7 @@ def _mixed_pick_spec(
                 "kind": "origin",
                 "name": "Background",
                 "description": "Training.",
-                "skills": {"lore": granted},
+                "skills": {"lore": granted} if granted else {},
                 "skill_picks": [
                     {"id": "early", "count": early_count, "table": "skills", "max_level": early_max}
                 ],
@@ -174,6 +337,14 @@ def _mixed_pick_spec(
 class FirstChoice(random.Random):
     def choice(self, seq):
         return seq[0]
+
+
+def test_zero_skill_grants_are_rejected_instead_of_silently_discarded():
+    definitions = _definitions()
+    scholar = definitions[1]
+    definitions[1] = replace(scholar, data={**scholar.data, "skills": {"lore": 0}})
+    with pytest.raises(ContentError, match="skills.*at least 1"):
+        build_character(definitions, {}, {}, "test", skill_progression=LEVELS)
 
 
 def test_random_skill_picks_preserve_later_manual_choices():

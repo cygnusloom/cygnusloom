@@ -334,7 +334,7 @@
     "id": "effort_healer",
     "name": "Healer Effort",
     "derived": {
-      "base": 1,
+      "base": 0,
       "best_modifier": ["int", "cha"],
       "plus_skills": ["heal"],
       "minimum": 1
@@ -345,9 +345,9 @@
     "id": "effort_vowed",
     "name": "Vowed Effort",
     "derived": {
-      "base": 1,
+      "base": 0,
       "best_modifier": ["str", "dex", "con", "int", "wis", "cha"],
-      "plus_skills": ["exert"],
+      "plus_skill_picks": ["order_skill"],
       "minimum": 1
     }
   }

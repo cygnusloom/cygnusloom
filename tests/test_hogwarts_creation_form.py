@@ -57,6 +57,7 @@ def test_picks_of_a_template_that_is_not_chosen_are_ignored():
 def test_creation_view_lists_the_spells_a_blood_status_can_pick_by_year():
     view = creation_view(SPEC, {stat: 0 for stat in SPEC.stats})
     blood = next(group for group in view["kinds"] if group["kind"] == "blood")
+    assert all(template["picks"]["skip_tags"] == ["Graduate"] for template in blood["templates"])
     pure = next(t for t in blood["templates"] if t["id"] == "pure-blood")
     assert pure["picks"]["count"] == 3
     tags = [group["tag"] for group in pure["picks"]["groups"]]
@@ -81,6 +82,7 @@ def test_the_hogwarts_creation_page_offers_spell_picks_for_blood_statuses(
     assert '<optgroup label="3rd Year" data-tag="3rd Year">' in page
     assert "data-randomize-tagged-picks" in page
     assert 'data-tag-field="field-year"' in page
+    assert page.count("data-skip-tags='[\"Graduate\"]'") == 3
     assert "<h3>Spells</h3>" in page
     assert "Randomize spells" in page
     assert "Spell 1" in page

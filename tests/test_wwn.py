@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+import random
 import re
 
+import pytest
 from sqlmodel import Session
 
-from cygnusforge.content.character import derived_stats, feature_pick_options
+from cygnusforge.content.character import (
+    CharacterError,
+    derived_stats,
+    feature_pick_options,
+    resolve,
+    skill_pick_options,
+)
 from cygnusforge.content.library import ContentLibrary
 from cygnusforge.services.events import load_state
 from tests.conftest import content_library
@@ -78,6 +86,254 @@ def test_wwn_derived_saves_and_effort() -> None:
     assert values["effort_high"] == 1 + 1 + 0
 
 
+@pytest.mark.parametrize(("stat", "skill"), [("effort_healer", "heal"), ("effort_vowed", "exert")])
+@pytest.mark.parametrize(("skill_level", "expected"), [(0, 1), (1, 2), (3, 4)])
+def test_standalone_partial_mage_effort_uses_skill_and_modifier(stat, skill, skill_level, expected):
+    spec = _wwn().rule_sets["worldswithoutnumber"].character
+    stats = {"str": 10, "dex": 10, "con": 10, "int": 14, "wis": 10, "cha": 10}
+    templates = {"class": "vowed"} if stat == "effort_vowed" else {"class": "healer"}
+    fields = {"order_skill": skill} if stat == "effort_vowed" else {}
+    values = derived_stats(
+        spec, stats, {"level": 1}, {skill: skill_level}, templates, fields=fields
+    )
+    assert values[stat] == expected
+
+
+@pytest.mark.parametrize(
+    ("template_id", "free_skills"),
+    [
+        ("artisan", ("craft",)),
+        ("barbarian", ("survive",)),
+        ("carter", ("ride",)),
+        ("courtesan", ("perform",)),
+        ("criminal", ("sneak",)),
+        ("hunter", ("shoot",)),
+        ("laborer", ("work",)),
+        ("merchant", ("trade",)),
+        ("noble", ("lead",)),
+        ("nomad", ("ride",)),
+        ("peasant", ("exert",)),
+        ("performer", ("perform",)),
+        ("physician", ("heal",)),
+        ("priest", ("pray",)),
+        ("sailor", ("sail",)),
+        ("scholar", ("know",)),
+        ("slave", ("sneak",)),
+        ("soldier", ("stab",)),
+        ("thug", ("punch",)),
+        ("wanderer", ("survive",)),
+        ("healer", ("heal",)),
+    ],
+)
+def test_wwn_templates_grant_their_free_level_zero_skills(template_id, free_skills):
+    spec = _wwn().rule_sets["worldswithoutnumber"].character
+    template = spec.templates[template_id]
+    skill_picks = {
+        pick.id: [
+            skill_id
+            for skill_id, _ in skill_pick_options(spec, pick)
+            if skill_id not in free_skills
+        ][: pick.count]
+        for pick in template.skill_picks
+    }
+    feature_picks = {
+        "class_focus_any": ["focus_unique_gift"],
+        "class_art_healer": ["art_empowered_healer"],
+        "class_art_vowed": ["art_brutal_counter"],
+    }
+    selected_features = {pick.id: feature_picks[pick.id] for pick in template.feat_picks}
+    sheet = resolve(
+        spec,
+        {
+            "templates": {template.kind: template_id},
+            "skill_picks": skill_picks,
+            "feature_picks": selected_features,
+        },
+        random.Random(12),
+        plus="sum",
+    )
+    assert {skill: sheet.skills.get(skill) for skill in free_skills} == dict.fromkeys(
+        free_skills, 0
+    )
+
+
+@pytest.mark.parametrize(
+    ("class_id", "art_pick", "art"),
+    [
+        ("healer", "class_art_healer", "art_empowered_healer"),
+        ("vowed", "class_art_vowed", "art_brutal_counter"),
+    ],
+)
+def test_standalone_partial_classes_receive_the_general_skill_choice(class_id, art_pick, art):
+    spec = _wwn().rule_sets["worldswithoutnumber"].character
+    skill_picks = {"background_learning": ["craft", "trade"], "class_free_skill": ["notice"]}
+    if class_id == "vowed":
+        skill_picks["order_skill"] = ["exert"]
+    sheet = resolve(
+        spec,
+        {
+            "templates": {"background": "artisan", "class": class_id},
+            "skill_picks": skill_picks,
+            "feature_picks": {"class_focus_any": ["focus_unique_gift"], art_pick: [art]},
+        },
+        random.Random(12),
+        plus="sum",
+    )
+    assert sheet.skills["notice"] == 0
+
+
+def test_vowed_order_skill_is_an_additional_noncombat_choice():
+    spec = _wwn().rule_sets["worldswithoutnumber"].character
+    order = next(pick for pick in spec.templates["vowed"].skill_picks if pick.id == "order_skill")
+    options = {skill for skill, _ in skill_pick_options(spec, order)}
+    assert {"trade", "magic"} <= options
+    assert not options.intersection({"punch", "shoot", "stab"})
+    submitted = {
+        "templates": {"background": "artisan", "class": "vowed"},
+        "stats": {"str": 10, "dex": 10, "con": 10, "int": 18, "wis": 10, "cha": 10},
+        "skill_picks": {
+            "background_learning": ["craft", "trade"],
+            "order_skill": ["trade"],
+            "class_free_skill": ["punch"],
+        },
+        "feature_picks": {
+            "class_focus_any": ["focus_unique_gift"],
+            "class_art_vowed": ["art_brutal_counter"],
+        },
+    }
+    sheet = resolve(spec, submitted, random.Random(12), plus="sum")
+    assert sheet.skills["trade"] == 1
+    assert sheet.skills["punch"] == 0
+    assert "exert" not in sheet.skills
+    assert sheet.fields["order_skill"] == "trade"
+    assert sheet.stats["effort_vowed"] == 3
+
+    submitted["skill_picks"]["order_skill"] = ["stab"]
+    with pytest.raises(CharacterError):
+        resolve(spec, submitted, random.Random(12), plus="sum")
+
+
+@pytest.mark.parametrize("seed", range(8))
+def test_random_vowed_order_skill_is_recorded_and_drives_effort(seed):
+    spec = _wwn().rule_sets["worldswithoutnumber"].character
+    sheet = resolve(
+        spec,
+        {
+            "templates": {"class": "vowed"},
+            "skill_picks": {"class_free_skill": ["notice"]},
+            "feature_picks": {
+                "class_focus_any": ["focus_unique_gift"],
+                "class_art_vowed": ["art_brutal_counter"],
+            },
+        },
+        random.Random(seed),
+        plus="sum",
+    )
+    skill = sheet.fields["order_skill"]
+    best = max(
+        spec.modifier(sheet.stats, stat) for stat in ("str", "dex", "con", "int", "wis", "cha")
+    )
+    assert sheet.stats["effort_vowed"] == max(1, sheet.skills[skill] + best)
+
+
+def test_vowed_creation_form_labels_the_order_and_general_skill_choices(client_factory):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    page = client.get(f"/campaigns/{campaign_id}").text
+    order = re.search(
+        r'<fieldset[^>]*data-pick-selects="order_skill".*?</fieldset>', page, re.DOTALL
+    )
+    general = re.search(
+        r'<fieldset[^>]*data-pick-selects="class_free_skill"[^>]*data-pick-template="vowed".*?</fieldset>',
+        page,
+        re.DOTALL,
+    )
+    assert order and "<h3>Order skill</h3>" in order.group()
+    assert general and "<h3>General skill</h3>" in general.group()
+
+
+def test_wwn_excess_focus_skill_uses_the_players_replacement():
+    spec = _wwn().rule_sets["worldswithoutnumber"].character
+    sheet = resolve(
+        spec,
+        {
+            "templates": {"background": "artisan", "class": "expert"},
+            "skill_picks": {
+                "background_learning": ["craft", "notice"],
+                "class_free_skill": ["know"],
+            },
+            "feature_picks": {
+                "class_focus_any": ["focus_artisan"],
+                "class_focus_expert": ["focus_connected"],
+            },
+            "skill_replacements": {"feature": ["perform"]},
+        },
+        random.Random(12),
+        plus="sum",
+    )
+    assert sheet.skills["craft"] == 1
+    assert sheet.skills["perform"] == 0
+
+
+def test_wwn_creation_form_persists_the_players_focus_skill_replacement(client_factory):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    page = client.get(f"/campaigns/{campaign_id}").text
+    fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
+    fields.update(_choices(page))
+    fields.update(
+        {
+            "template-background": "artisan",
+            "template-class": "expert",
+            "template-tradition": "no_tradition",
+            "pick-skill-artisan-background_learning-0": "craft",
+            "pick-skill-artisan-background_learning-1": "notice",
+            "pick-skill-expert-class_free_skill-0": "know",
+            "pick-feature-expert-class_focus_any-0": "focus_artisan",
+            "pick-feature-expert-class_focus_expert-0": "focus_connected",
+            "skill-replacement-feature": "perform",
+        }
+    )
+    created = _create_character(client, campaign_id, name="Wren", fields=fields)
+    assert created.status_code == 303, created.text
+    with Session(client.app.state.engine) as db:
+        pc = load_state(db, campaign_id).pc()
+    assert pc is not None
+    assert pc.skills["craft"] == 1
+    assert pc.skills["perform"] == 0
+
+
+def test_wwn_creation_form_can_repeat_specialist_for_another_skill(client_factory):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    page = client.get(f"/campaigns/{campaign_id}").text
+    fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
+    fields.update(_choices(page))
+    fields.update(
+        {
+            "template-background": "artisan",
+            "template-class": "expert",
+            "template-tradition": "no_tradition",
+            "pick-skill-artisan-background_learning-0": "notice",
+            "pick-skill-artisan-background_learning-1": "trade",
+            "pick-skill-expert-class_free_skill-0": "know",
+            "pick-feature-expert-class_focus_any-0": "focus_specialist",
+            "pick-feature-expert-class_focus_expert-0": "focus_specialist",
+            "repeat-feature-expert-class_focus_expert-0": "repeat",
+        }
+    )
+    created = _create_character(client, campaign_id, name="Wren", fields=fields)
+    assert created.status_code == 303, created.text
+    with Session(client.app.state.engine) as db:
+        pc = load_state(db, campaign_id).pc()
+    assert pc is not None
+    assert pc.features["focus_specialist"] == 2
+    assert "focus_specialist_2" not in pc.features
+
+
 def test_wwn_character_creation(client_factory) -> None:
     client = _signed_in(client_factory)
     response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
@@ -86,6 +342,13 @@ def test_wwn_character_creation(client_factory) -> None:
     page = client.get(f"/campaigns/{campaign_id}").text
     fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
     fields.update(_choices(page))
+    fields.update(
+        {
+            "template-class": "warrior",
+            "pick-feature-class_focus_any-0": "focus_die_hard",
+            "pick-feature-class_focus_warrior-0": "focus_alert",
+        }
+    )
     created = _create_character(client, campaign_id, name="Wren", fields=fields)
     error = re.search(r'<p class="form-error"[^>]*>(.*?)</p>', created.text, re.DOTALL)
     assert created.status_code == 303, error.group(1) if error else "no error"

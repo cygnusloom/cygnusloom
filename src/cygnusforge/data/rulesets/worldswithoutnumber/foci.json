@@ -304,6 +304,7 @@
     "feature_type": "feat",
     "tag": "focus",
     "rank": 1,
+    "repeatable": true,
     "description": "Choose an attribute; its modifier rises by +1, to a maximum of +3. The score itself does not change. May be taken again for another attribute, but not by mages.",
     "effects": [
       { "op": "note", "text": "Choose one attribute: its modifier improves by +1, to a maximum of +3, without changing the score. Take again for a different attribute. Not available to mages or partial mages." }
@@ -392,6 +393,7 @@
     "tag": "focus",
     "rank": 1,
     "description": "You have an innate Armor Class of 15 plus half your level, rounded up. It does not stack with worn armor, but Dexterity and shields still apply.",
+    "defense_floor": { "base": 15, "counter": "level", "divisor": 2 },
     "effects": [
       { "op": "note", "text": "Innate AC 15 + half level, rounded up. This does not stack with worn armor; Dexterity and shield modifiers still apply." }
     ]
@@ -743,6 +745,7 @@
     "feature_type": "feat",
     "tag": "focus",
     "rank": 1,
+    "repeatable": true,
     "description": "Choose a skill other than Magic, Stab, Shoot, or Punch. Roll 3d6 and drop the lowest on checks with it. May be taken again for another skill.",
     "effects": [
       { "op": "note", "text": "Choose one skill other than Magic, Stab, Shoot, or Punch. Roll 3d6 and drop the lowest on checks with it. Take again for a different skill." }
@@ -779,6 +782,7 @@
     "feature_type": "feat",
     "tag": "focus",
     "rank": 2,
+    "repeatable": true,
     "description": "Choose two familiar benefits: extra HP, a scaling attack, a skill bonus, another shape, flight, or speech. May be taken again for two more.",
     "effects": [
       { "op": "note", "text": "Choose two benefits for the familiar: HP equal to three times your level; an attack at +half level for 1d8; +1 on a broad class of skill checks; another shape it can adopt or discard; flight at its normal move; or speech in any language you know. Take again for two more benefits." }

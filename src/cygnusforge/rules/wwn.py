@@ -10,7 +10,14 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from cygnusforge.content.character import CharacterSpec, derived_stats
+from cygnusforge.content.character import (
+    CharacterError,
+    CharacterSpec,
+    Feature,
+    check_ordered_feature_rank,
+    derived_stats,
+    feature_pick_options,
+)
 from cygnusforge.rules.context import ToolContext
 from cygnusforge.rules.dice import roll_total
 from cygnusforge.rules.wwn_progression import (
@@ -22,7 +29,6 @@ from cygnusforge.rules.wwn_progression import (
 from cygnusforge.services.common import InvalidInput, whole_number
 from cygnusforge.services.events import (
     PC_KIND,
-    ArmorSet,
     CheckMade,
     EffectNoted,
     FeatureLearned,
@@ -33,7 +39,6 @@ from cygnusforge.services.events import (
 )
 from cygnusforge.services.hooks import HookContext
 
-MAX_BASE_ARMOR = 100
 MAX_ATTRIBUTE = 18
 
 
@@ -46,14 +51,14 @@ EFFORT_DURATIONS = ("scene", "day", "indefinite")
 @dataclass(frozen=True)
 class StartingPackage:
     """One of the book's starting equipment packages. Items are named as the equipment list
-    names them, so `give_item` finds them in the rule set's catalogue. `base_armor` is the
-    Armor Class bonus the package's armor and shield give over 10 + Dexterity."""
+    names them, so the shared inventory and equipment tools can use the catalogue."""
 
     id: str
     name: str
     items: tuple[str, ...]
     silver: int = 0
-    base_armor: int = 0
+    equipped_armor: str = ""
+    equipped_shield: str = ""
 
 
 STARTING_PACKAGES: Mapping[str, StartingPackage] = {
@@ -70,7 +75,8 @@ STARTING_PACKAGES: Mapping[str, StartingPackage] = {
                 "Backpack",
                 "Tinder box and 3 torches",
             ),
-            base_armor=5,
+            equipped_armor="Pieced Armor",
+            equipped_shield="Large Shield",
         ),
         StartingPackage(
             "pkg_mage_healer_scholar",
@@ -108,7 +114,7 @@ STARTING_PACKAGES: Mapping[str, StartingPackage] = {
                 "Tinder box and 3 torches",
             ),
             silver=20,
-            base_armor=2,
+            equipped_armor="Buff Coat",
         ),
         StartingPackage(
             "pkg_roguish_wanderer",
@@ -129,7 +135,8 @@ STARTING_PACKAGES: Mapping[str, StartingPackage] = {
                 "Grappling hook",
                 "Rope, 50 ft",
             ),
-            base_armor=3,
+            equipped_armor="Buff Coat",
+            equipped_shield="Small Shield",
         ),
         StartingPackage(
             "pkg_adventuring_peasant",
@@ -144,7 +151,8 @@ STARTING_PACKAGES: Mapping[str, StartingPackage] = {
                 "Mule and small cart",
                 "Tinder box and 3 torches",
             ),
-            base_armor=4,
+            equipped_armor="War Shirt",
+            equipped_shield="Large Shield",
         ),
         StartingPackage(
             "pkg_gentry_wayfarer",
@@ -161,7 +169,8 @@ STARTING_PACKAGES: Mapping[str, StartingPackage] = {
                 "Paper, 20 sheets",
             ),
             silver=20,
-            base_armor=3,
+            equipped_armor="Buff Coat",
+            equipped_shield="Small Shield",
         ),
     )
 }
@@ -1030,13 +1039,21 @@ def learn_focus(character: str, focus: str, ctx: ToolContext) -> dict[str, Any]:
         _, found = _character(hc, character)
         if found.counters.get("focus_picks", 0) < 1:
             raise InvalidInput(f"{found.name} has no focus picks to spend")
-        if focus in found.features:
+        _check_focus_class(spec, found.templates.get("class"), feature)
+        if focus in found.features and not feature.repeatable:
             raise InvalidInput(f"{found.name} already has {feature.name}")
+        if feature.defense_floor is not None and not found.defense_tracked:
+            raise InvalidInput(f"{found.name}'s equipped defense has not been recorded")
         if required is not None and required not in found.features:
             raise InvalidInput(
                 f"{feature.name} is the second rank; {found.name} needs "
                 f"{spec.features[required].name} first"
             )
+        held = {**found.features, focus: found.features.get(focus, 0) + 1}
+        try:
+            check_ordered_feature_rank(spec, feature, held)
+        except CharacterError as exc:
+            raise InvalidInput(str(exc)) from exc
         return {"stats": dict(found.stats), "skills": dict(found.skills)}
 
     held = ctx.world.with_hook_context(read)
@@ -1074,8 +1091,8 @@ def learn_focus(character: str, focus: str, ctx: ToolContext) -> dict[str, Any]:
             counter = str(effect["id"])
             ctx.world.adjust_counter(character, counter, delta)
         elif op == "armor":
-            current = _armor_base(ctx, character, spec)
-            set_ac(character, max(0, current + delta), ctx)
+            current = _armor_total(ctx, character, spec)
+            ctx.world.set_armor(character, max(0, current + delta))
         elif op == "note":
             notes.append(str(effect.get("text", "")))
         else:
@@ -1090,6 +1107,32 @@ def learn_focus(character: str, focus: str, ctx: ToolContext) -> dict[str, Any]:
         "rank": feature.rank,
         "focus_picks": remaining["value"],
     }
+
+
+def _check_focus_class(spec: CharacterSpec, class_id: str | None, feature: Feature) -> None:
+    if not class_id or feature.tag != "focus" or feature.rank <= 0:
+        return
+    template = spec.templates.get(class_id)
+    if template is None:
+        raise InvalidInput(f"there is no class template named {class_id!r}")
+    general_pick = next(
+        (pick for pick in template.feat_picks if pick.id == "class_focus_any"), None
+    )
+    if general_pick is None:
+        raise InvalidInput(f"{template.name} has no configured general Focus options")
+    options = feature_pick_options(spec, general_pick)
+    if feature.rank == 1:
+        allowed = any(option.id == feature.id for option in options)
+    else:
+        allowed = any(
+            option.rank == 1
+            and option.name == feature.name
+            and option.tag == feature.tag
+            and option.feature_type == feature.feature_type
+            for option in options
+        )
+    if not allowed:
+        raise InvalidInput(f"{feature.name} is not available to {template.name}")
 
 
 def learn_art(character: str, art: str, ctx: ToolContext) -> dict[str, Any]:
@@ -1195,7 +1238,10 @@ def grant_package(character: str, package: str, ctx: ToolContext) -> dict[str, A
         given.append(item)
     if found.silver:
         ctx.world.change_currency(character, found.silver, cause=f"the {found.name} package")
-    set_ac(character, base_armor=found.base_armor, ctx=ctx)
+    if found.equipped_armor:
+        ctx.world.equip_armor(character, found.equipped_armor)
+    if found.equipped_shield:
+        ctx.world.equip_armor(character, found.equipped_shield)
     return {
         "character": character,
         "package": found.id,
@@ -1205,52 +1251,9 @@ def grant_package(character: str, package: str, ctx: ToolContext) -> dict[str, A
     }
 
 
-def set_ac(
-    character: str = "",
-    base_armor: int | None = None,
-    ctx: ToolContext | None = None,
-    *,
-    name: str = "",
-    ac: int | None = None,
-) -> dict[str, Any]:
-    """Set a character's Armor Class. With `base_armor`, the AC is 10 + Dexterity modifier +
-    `base_armor` (0 unarmored, an armor item's AC less 10, plus a shield's 3 or 4). The tool call
-    names the total instead: `ac` is recorded as it stands, with `base_armor` reported as the
-    armor value behind it."""
-    if ctx is None:
-        raise InvalidInput("set_ac needs the tool context")
-    target = (character or name).strip()
-    if not target:
-        raise InvalidInput("say whose Armor Class changes")
-    if base_armor is None and ac is None:
-        raise InvalidInput("give the base armor or the total Armor Class")
-    base = None if base_armor is None else whole_number(base_armor, "base armor", 0, MAX_BASE_ARMOR)
-    total = None if ac is None else whole_number(ac, "Armor Class", 5, 30)
-
-    def action(hc: HookContext) -> dict[str, Any]:
-        _, found = _character(hc, target)
-        dexterity = ctx.world.character.modifier(found.stats, "dex")
-        if base is not None:
-            armor = 10 + dexterity + base
-            # Impervious Defense gives an innate AC of 15 plus half level. It replaces worn
-            # body armor but still adds Dexterity and a shield (a base of 4 or less).
-            if "focus_impervious_defense" in found.features and base <= 4:
-                level = found.counters.get("level", 1)
-                armor = max(armor, 15 + level // 2 + dexterity + base)
-            armor_value = base
-        else:
-            armor = int(total)
-            armor_value = armor - 10 - dexterity
-        db, campaign_id = hc.session()
-        record(db, campaign_id, ArmorSet(name=found.name, armor=armor))
-        return {
-            "character": found.name,
-            "armor": armor,
-            "base_armor": armor_value,
-            "dexterity": dexterity,
-        }
-
-    return ctx.world.with_hook_context(action)
+def set_ac(name: str, ac: int, ctx: ToolContext) -> dict[str, Any]:
+    """Set a total AC, preserving an adjustment to explicitly tracked defense."""
+    return ctx.world.set_armor(name, whole_number(ac, "Armor Class", 5, 30))
 
 
 def rest(
@@ -1357,7 +1360,14 @@ def _recompute_derived(
     def action(hc: HookContext) -> None:
         _, found = _character(hc, character)
         try:
-            values = derived_stats(spec, found.stats, found.counters, found.skills, found.templates)
+            values = derived_stats(
+                spec,
+                found.stats,
+                found.counters,
+                found.skills,
+                found.templates,
+                fields=found.fields,
+            )
         except ValueError as error:
             raise InvalidInput(str(error)) from error
         db, campaign_id = hc.session()
@@ -1382,7 +1392,7 @@ def _recompute_derived(
 def _learn_feature(
     ctx: ToolContext,
     character: str,
-    feature: Any,
+    feature: Feature,
     notes: Iterable[str],
     *,
     cause: str,
@@ -1391,6 +1401,8 @@ def _learn_feature(
 
     def action(hc: HookContext) -> None:
         _, found = _character(hc, character)
+        if feature.defense_floor is not None and not found.defense_tracked:
+            raise InvalidInput(f"{found.name}'s equipped defense has not been recorded")
         db, campaign_id = hc.session()
         record(
             db,
@@ -1400,6 +1412,7 @@ def _learn_feature(
                 feature=feature.id,
                 feature_name=feature.name,
                 cause=cause,
+                repeat=feature.repeatable,
             ),
         )
         for note in notes:
@@ -1407,6 +1420,8 @@ def _learn_feature(
                 record(db, campaign_id, EffectNoted(name=found.name, text=note))
 
     ctx.world.with_hook_context(action)
+    if feature.defense_floor is not None:
+        ctx.world.recalculate_defense(character)
 
 
 def _prior_focus(feature: Any) -> str | None:
@@ -1426,15 +1441,12 @@ def _effect_delta(effect: Mapping[str, Any], label: str) -> int:
     return delta
 
 
-def _armor_base(ctx: ToolContext, character: str, spec: CharacterSpec) -> int:
-    """The armor item value behind a character's current AC, so an armor effect can add to it.
-    A character whose AC has never been set is unarmored, so their base armor is 0 whatever
-    their Dexterity."""
+def _armor_total(ctx: ToolContext, character: str, spec: CharacterSpec) -> int:
+    """The current total AC, or the unarmored value if it has not been set."""
 
     def action(hc: HookContext) -> int:
         _, found = _character(hc, character)
         dexterity = spec.modifier(found.stats, "dex")
-        armor = found.armor or 10 + dexterity
-        return max(0, armor - 10 - dexterity)
+        return found.armor or 10 + dexterity
 
     return ctx.world.with_hook_context(action)

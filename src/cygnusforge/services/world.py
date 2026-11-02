@@ -129,6 +129,7 @@ from cygnusforge.services.events import (
     RegionAdded,
     SeasonSet,
     SkillChanged,
+    StartingItemsTransferred,
     StatRestored,
     TravelCharged,
     WorldObject,
@@ -190,6 +191,8 @@ class PackItem:
     kind: str
     text: str
     damage: str = ""
+    ready: bool = True
+    equipped: str = ""
 
 
 @dataclass(frozen=True)
@@ -199,6 +202,7 @@ class PackView:
     items: list[PackItem]
     used: int
     capacity: int
+    has_readied: bool = False
 
 
 @dataclass(frozen=True)
@@ -395,6 +399,7 @@ class WorldTools:
                 conditions=self.conditions,
                 rng=self.rng,
                 plus=self.plus,
+                spec=self.character,
             )
 
     def rest_history(self) -> dict[str, Any]:
@@ -530,12 +535,21 @@ class WorldTools:
             character=self.character,
         )
 
-    def _listed(self, item: str) -> ShopItem | None:
+    def _listed(self, item: str, *, include_character: bool = False) -> ShopItem | None:
         if self.marketplace is not None:
             listed = market_service.listed_item(self.marketplace, item)
             if listed is not None:
                 return listed
         relic = next((f for f in self.features.values() if same_item_name(f.name, item)), None)
+        if relic is None and include_character:
+            relic = next(
+                (
+                    f
+                    for f in self.character.features.values()
+                    if f.feature_type == "item" and same_item_name(f.name, item)
+                ),
+                None,
+            )
         if relic is None:
             return None
         return ShopItem(
@@ -548,8 +562,70 @@ class WorldTools:
             damage=relic.damage,
             uses=relic.uses,
             description=relic.description,
-            armor_mode="shield" if "shield" in relic.flags else "add",
+            armor_mode=(
+                "shield"
+                if "shield" in relic.flags
+                else "max"
+                if relic.armor and self.combat is not None and self.combat.defense_base
+                else "add"
+            ),
         )
+
+    def equip_armor(self, name: str, item: str, equipped: bool = True) -> dict[str, Any]:
+        rules = self.combat
+        if rules is None or not rules.defense_base:
+            raise InvalidInput("this rule set does not track equipped defense")
+        if not isinstance(equipped, bool):
+            raise InvalidInput("equipped must be true or false")
+        with session_scope(self.engine) as db:
+            found = _character_named(load_state(db, self.campaign_id), name)
+            held = next((entry for entry in found.items if same_item_name(entry.name, item)), None)
+            if held is None:
+                raise InvalidInput(f"{found.name} carries no {item!r}")
+            listed = self._listed(held.name, include_character=True)
+            if listed is None or listed.armor_mode not in {"max", "set", "shield"}:
+                raise InvalidInput(f"{held.name} is not equippable armor or a shield")
+            if equipped and not held.ready:
+                raise InvalidInput(f"{held.name} is stowed; ready it before equipping it")
+            is_shield = listed.armor_mode == "shield"
+            current = found.equipped_shield if is_shield else found.equipped_armor
+            if not equipped and (not current or not same_item_name(current, held.name)):
+                raise InvalidInput(f"{found.name} does not have {held.name} equipped")
+            selected = (held.name, listed.armor) if equipped else ("", 0)
+            armor = combat.set_defense_equipment(
+                db,
+                self.campaign_id,
+                found,
+                self.character,
+                rules,
+                armor=None if is_shield else selected,
+                shield=selected if is_shield else None,
+            )
+            db.commit()
+            return {
+                "character": found.name,
+                "item": held.name,
+                "equipped": equipped,
+                "armor": armor,
+            }
+
+    def _unequip_item(self, db: Session, name: str, item: str) -> None:
+        rules = self.combat
+        if rules is None or not rules.defense_base:
+            return
+        found = _character_named(load_state(db, self.campaign_id), name)
+        armor = (
+            ("", 0) if found.equipped_armor and same_item_name(found.equipped_armor, item) else None
+        )
+        shield = (
+            ("", 0)
+            if found.equipped_shield and same_item_name(found.equipped_shield, item)
+            else None
+        )
+        if armor is not None or shield is not None:
+            combat.set_defense_equipment(
+                db, self.campaign_id, found, self.character, rules, armor=armor, shield=shield
+            )
 
     def give_item(
         self, name: str, item: str, size: str = "normal", damage: str = ""
@@ -572,13 +648,16 @@ class WorldTools:
 
     def drop_item(self, name: str, item: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return inventory_service.drop_item(
+            result = inventory_service.drop_item(
                 db, self.campaign_id, _required(self.inventory, "inventory"), name, item
             )
+            self._unequip_item(db, name, item)
+            db.commit()
+            return result
 
     def ready_item(self, name: str, item: str, ready: bool = True) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return inventory_service.set_ready(
+            result = inventory_service.set_ready(
                 db,
                 self.campaign_id,
                 _required(self.inventory, "inventory"),
@@ -586,10 +665,18 @@ class WorldTools:
                 item,
                 ready,
             )
+            if not ready:
+                self._unequip_item(db, name, item)
+            db.commit()
+            return result
 
     def use_item(self, name: str, item: str, target: str | None = None) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return aid.use_item(
+            found = _character_named(load_state(db, self.campaign_id), name)
+            held = next((entry for entry in found.items if same_item_name(entry.name, item)), None)
+            if held is not None and held.max_uses > 0 and held.uses == 1:
+                self._unequip_item(db, name, item)
+            result = aid.use_item(
                 db,
                 self.campaign_id,
                 _required(self.inventory, "inventory"),
@@ -601,7 +688,10 @@ class WorldTools:
                 target,
                 self.magic.charged.kind if self.magic is not None else "",
                 plus=self.plus,
+                spec=self.character,
             )
+            db.commit()
+            return result
 
     def stabilize(self, name: str, explanation: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -614,6 +704,7 @@ class WorldTools:
                 self.conditions,
                 self.rng,
                 plus=self.plus,
+                spec=self.character,
             )
 
     def give_spell_item(
@@ -837,6 +928,15 @@ class WorldTools:
                     cause=bounded_text(cause, "cause", MAX_TEXT),
                 ),
             )
+            if (
+                self.combat is not None
+                and self.combat.defense_base
+                and stat == self.combat.defense_modifier
+                and character.defense_tracked
+            ):
+                combat.recalculate_defense(
+                    db, self.campaign_id, character.name, self.character, self.combat
+                )
             db.commit()
             return {
                 "character": character.name,
@@ -858,6 +958,7 @@ class WorldTools:
                 combat=self.combat,
                 rng=self.rng,
                 plus=self.plus,
+                spec=self.character,
             )
 
     def take_advancement(
@@ -868,7 +969,7 @@ class WorldTools:
         feature: str | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return advancements_service.take_advancement(
+            result = advancements_service.take_advancement(
                 db,
                 self.campaign_id,
                 character,
@@ -882,7 +983,16 @@ class WorldTools:
                 stat=stat,
                 feature=feature,
                 features=self.character.features,
+                spec=self.character,
             )
+            if self.combat is not None and self.combat.defense_base:
+                found = _character_named(load_state(db, self.campaign_id), character)
+                if found.defense_tracked:
+                    combat.recalculate_defense(
+                        db, self.campaign_id, found.name, self.character, self.combat
+                    )
+                    db.commit()
+            return result
 
     def end_period(self, period: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -896,6 +1006,7 @@ class WorldTools:
                 tallies=self.tallies,
                 rng=self.rng,
                 plus=self.plus,
+                spec=self.character,
             )
 
     def adjust_tally(
@@ -1072,7 +1183,7 @@ class WorldTools:
         important: bool = False,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return create_npc(
+            result = create_npc(
                 db,
                 self.campaign_id,
                 self.tables,
@@ -1094,6 +1205,10 @@ class WorldTools:
                 pronouns=pronouns,
                 important=important,
             )
+            if result["statblock"] is None:
+                self._initialize_generated_defense(db, name)
+            db.commit()
+            return result
 
     def hire_hireling(
         self,
@@ -1108,7 +1223,7 @@ class WorldTools:
         pronouns: str | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return hire_hireling(
+            result = hire_hireling(
                 db,
                 self.campaign_id,
                 self.tables,
@@ -1125,6 +1240,22 @@ class WorldTools:
                 pronouns=pronouns,
                 plus=self.plus,
             )
+            self._initialize_generated_defense(db, name)
+            db.commit()
+            return result
+
+    def _initialize_generated_defense(self, db: Session, name: str) -> None:
+        _initialize_generated_defense(
+            db,
+            self.campaign_id,
+            name,
+            self.character,
+            self.combat,
+            self.inventory,
+            self.item_sizes,
+            self.magic,
+            self.marketplace.currency if self.marketplace else "",
+        )
 
     def promote_hireling(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -1323,7 +1454,7 @@ class WorldTools:
         attacks: Sequence[Mapping[str, Any]] | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return update_npc(
+            result = update_npc(
                 db,
                 self.campaign_id,
                 self.character,
@@ -1337,8 +1468,13 @@ class WorldTools:
                 armor,
                 attacks,
                 armor_max=self.combat.armor_max if self.combat else 0,
+                defense_base=self.combat.defense_base if self.combat else 0,
                 plus=self.plus,
             )
+            if result["statted"] and armor is None:
+                self._initialize_generated_defense(db, name)
+            db.commit()
+            return result
 
     def delete_npc(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -1503,6 +1639,7 @@ class WorldTools:
                 targets=targets,
                 hit_modifier=hit_modifier,
                 conditions=self.conditions,
+                spec=self.character,
             )
 
     def attacks_per_action(self, name: str) -> int:
@@ -1532,6 +1669,7 @@ class WorldTools:
                 self.rng,
                 plus=self.plus,
                 conditions=self.conditions,
+                spec=self.character,
             )
 
     def player_attack(
@@ -1582,6 +1720,7 @@ class WorldTools:
                 conditions=self.conditions,
                 rng=self.rng,
                 plus=self.plus,
+                spec=self.character,
             )
 
     def player_initiative(self, roll: int) -> dict[str, Any]:
@@ -1597,7 +1736,29 @@ class WorldTools:
 
     def set_armor(self, name: str, armor: int) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return combat.set_armor(db, self.campaign_id, name, armor, self._rules().armor_max)
+            return combat.set_armor(
+                db,
+                self.campaign_id,
+                name,
+                armor,
+                self._rules().armor_max,
+                spec=self.character,
+                rules=self.combat,
+            )
+
+    def recalculate_defense(self, name: str) -> dict[str, Any]:
+        rules = self.combat
+        if rules is None or not rules.defense_base:
+            raise InvalidInput("this rule set does not track equipped defense")
+        with session_scope(self.engine) as db:
+            found = _character_named(load_state(db, self.campaign_id), name)
+            if not found.defense_tracked:
+                raise InvalidInput(f"{found.name}'s equipped defense has not been recorded")
+            value = combat.recalculate_defense(
+                db, self.campaign_id, found.name, self.character, rules
+            )
+            db.commit()
+            return {"character": found.name, "armor": value}
 
     def recover_character(self, name: str, explanation: str, consequence: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -1644,6 +1805,7 @@ class WorldTools:
                 self.conditions,
                 self.rng,
                 plus=self.plus,
+                spec=self.character,
             )
 
     def retreat(self, name: str, safe: bool) -> dict[str, Any]:
@@ -1943,6 +2105,11 @@ def seed_campaign(
     npc_hp: Mapping[str, int],
     npc_hp_stat: str | None,
     wilderness: Wilderness | None = None,
+    combat_rules: CombatRules | None = None,
+    inventory: InventoryRules | None = None,
+    item_sizes: Mapping[str, int] | None = None,
+    magic: MagicRules | None = None,
+    currency: str = "",
 ) -> None:
     """Record a campaign's places and the world's NPCs as events. The player character is made
     later, by `create_player_character`. An NPC that names a statblock takes its stats, and an
@@ -2006,6 +2173,18 @@ def seed_campaign(
         if base is not None:
             event = _with_statblock(event, base)
         record(db, campaign_id, event)
+        if base is None and not event.story_only:
+            _initialize_generated_defense(
+                db,
+                campaign_id,
+                event.name,
+                spec,
+                combat_rules,
+                inventory,
+                item_sizes,
+                magic,
+                currency,
+            )
     db.commit()
 
 
@@ -2026,7 +2205,9 @@ def set_campaign_options(
     return {"chosen": "campaign"}
 
 
-def _starting_item(feature: Feature, magic: MagicRules | None, item_sizes: Mapping[str, int]):
+def _starting_item(
+    feature: Feature, magic: MagicRules | None, item_sizes: Mapping[str, int]
+) -> Item:
     """The inventory item a starting feature becomes: a magic item for a spell, else the item."""
     if feature.feature_type == "spell":
         assert magic is not None
@@ -2043,8 +2224,105 @@ def _starting_item(feature: Feature, magic: MagicRules | None, item_sizes: Mappi
         item_sizes[feature.size],
         damage=feature.damage,
         rules=feature.rules,
+        flags=feature.flags,
         uses=feature.uses,
         max_uses=feature.uses,
+    )
+
+
+def _take_starting_items(
+    spec: CharacterSpec,
+    starting: dict[str, int],
+    inventory: InventoryRules | None,
+    item_sizes: Mapping[str, int] | None,
+    magic: MagicRules | None,
+    currency: str,
+) -> list[tuple[Feature, int]]:
+    carried: list[tuple[Feature, int]] = []
+    if inventory is not None and item_sizes is not None:
+        for feature_id in list(starting):
+            feature = spec.features[feature_id]
+            if feature_id != currency and (
+                feature.feature_type == "item"
+                or (feature.feature_type == "spell" and magic is not None)
+            ):
+                carried.append((feature, starting.pop(feature_id)))
+    return carried
+
+
+def _carry_starting_items(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    carried: Sequence[tuple[Feature, int]],
+    inventory: InventoryRules | None,
+    item_sizes: Mapping[str, int] | None,
+    magic: MagicRules | None,
+    *,
+    defense: bool,
+) -> tuple[tuple[str, int], tuple[str, int], int]:
+    armor = ("", 0)
+    shield = ("", 0)
+    armor_bonus = 0
+    if carried:
+        starting_inventory = _required(inventory, "inventory")
+        starting_sizes = _required(item_sizes, "item sizes")
+        for feature, count in carried:
+            for _ in range(count):
+                inventory_service.carry_item(
+                    db,
+                    campaign_id,
+                    starting_inventory,
+                    name,
+                    _starting_item(feature, magic, starting_sizes),
+                    cause="starting gear",
+                )
+            if defense:
+                if "shield" in feature.flags and feature.armor > shield[1]:
+                    shield = (feature.name, feature.armor)
+                elif "shield" not in feature.flags and feature.armor > armor[1]:
+                    armor = (feature.name, feature.armor)
+            else:
+                armor_bonus += feature.armor * count
+    return armor, shield, armor_bonus
+
+
+def _initialize_generated_defense(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    spec: CharacterSpec,
+    rules: CombatRules | None,
+    inventory: InventoryRules | None,
+    item_sizes: Mapping[str, int] | None,
+    magic: MagicRules | None,
+    currency: str,
+) -> None:
+    if rules is None or not rules.defense_base:
+        return
+    character = _character_named(load_state(db, campaign_id), name)
+    if character.story_only or character.defense_tracked:
+        return
+    starting = dict(character.features)
+    carried = _take_starting_items(spec, starting, inventory, item_sizes, magic, currency)
+    if carried:
+        record(
+            db,
+            campaign_id,
+            StartingItemsTransferred(name=character.name, features=[f.id for f, _ in carried]),
+        )
+    armor, shield, _ = _carry_starting_items(
+        db, campaign_id, name, carried, inventory, item_sizes, magic, defense=True
+    )
+    combat.set_defense_equipment(
+        db,
+        campaign_id,
+        character,
+        spec,
+        rules,
+        armor=armor,
+        shield=shield,
+        adjustment=character.armor,
     )
 
 
@@ -2067,6 +2345,7 @@ def create_player_character(
     *,
     pronouns: str,
     plus: str,
+    combat_rules: CombatRules | None = None,
 ) -> dict[str, Any]:
     """Make the player character from the player's choices. `rolled` are the stats rolled for
     this character; the player may only keep them or swap within a swap group. Starting item
@@ -2094,16 +2373,7 @@ def create_player_character(
     _check_sheet_text(sheet)
     fields = _sheet_fields(sheet)
     starting = fields["features"]
-    carried: list[tuple[Feature, int]] = []
-    if inventory is not None and item_sizes is not None:
-        for feature_id in list(starting):
-            feature = spec.features[feature_id]
-            if feature_id == currency:
-                continue
-            if feature.feature_type == "item" or (
-                feature.feature_type == "spell" and magic is not None
-            ):
-                carried.append((feature, starting.pop(feature_id)))
+    carried = _take_starting_items(spec, starting, inventory, item_sizes, magic, currency)
     record(db, campaign_id, PcAdded(name=name, pronouns=pronouns, **fields))
     # A rule set whose armor is its defense gives an unarmored character a base AC, such as
     # 10 + Dexterity. Focus and other feature effects add to the armor the carried features give.
@@ -2111,18 +2381,30 @@ def create_player_character(
     if defense_modifier:
         armor += spec.modifier(sheet.stats, defense_modifier)
     armor += sheet.armor
-    for feature, count in carried:
-        for _ in range(count):
-            inventory_service.carry_item(
-                db,
-                campaign_id,
-                inventory,
-                name,
-                _starting_item(feature, magic, item_sizes),
-                cause="starting gear",
-            )
-        armor += feature.armor * count
-    if armor:
+    equipped_armor, equipped_shield, item_armor = _carry_starting_items(
+        db,
+        campaign_id,
+        name,
+        carried,
+        inventory,
+        item_sizes,
+        magic,
+        defense=bool(combat_rules is not None and combat_rules.defense_base),
+    )
+    armor += item_armor
+    if combat_rules is not None and combat_rules.defense_base:
+        created = _character_named(load_state(db, campaign_id), name)
+        combat.set_defense_equipment(
+            db,
+            campaign_id,
+            created,
+            spec,
+            combat_rules,
+            armor=equipped_armor,
+            shield=equipped_shield,
+            adjustment=sheet.armor,
+        )
+    elif armor:
         cap = armor_max or combat.UNCAPPED_ARMOR
         record(db, campaign_id, ArmorSet(name=name, armor=min(armor, cap)))
     record(db, campaign_id, OpeningStarted())
@@ -2325,7 +2607,6 @@ def create_npc(
     if base is not None:
         event = _with_statblock(event, base)
     record(db, campaign_id, event)
-    db.commit()
     return {
         "created": "npc",
         "name": event.name,
@@ -2404,10 +2685,11 @@ def hire_hireling(
             templates=dict(event.templates),
             features=dict(event.features),
             fields=dict(event.fields),
+            counters=dict(event.counters),
+            armor=event.armor,
             skills=dict(event.skills),
         ),
     )
-    db.commit()
     return {
         "hired": event.name,
         "employer": boss.name,
@@ -2812,6 +3094,7 @@ def update_npc(
     attacks: Sequence[Mapping[str, Any]] | None = None,
     *,
     armor_max: int = 0,
+    defense_base: int = 0,
     plus: str,
 ) -> dict[str, Any]:
     """Change the NPC's details. Only the given fields change; quirks, if given, replace the list.
@@ -2839,7 +3122,7 @@ def update_npc(
         attack_map, attack_flags, attack_shock = _attacks(attacks or [])
         statted = NpcStatted(
             name=npc.name,
-            armor=0
+            armor=(sheet.armor if defense_base else 0)
             if armor is None
             else whole_number(armor, "armor", 0, armor_max or combat.UNCAPPED_ARMOR),
             attacks=attack_map,
@@ -2865,7 +3148,6 @@ def update_npc(
         )
     if statted is not None:
         record(db, campaign_id, statted)
-    db.commit()
     return {"updated": "npc", "name": npc.name, "statted": statted is not None}
 
 
@@ -3264,6 +3546,11 @@ def get_statblock(
 
 def _combat_lines(character: Character, spec: CharacterSpec, combat: CombatRules) -> list[str]:
     lines = [f"Armor: {character.armor}"]
+    if character.defense_tracked:
+        lines.append(
+            f"Worn armor: {character.equipped_armor or 'none'}; "
+            f"wielded shield: {character.equipped_shield or 'none'}"
+        )
     if character.large_group:
         if combat.groups is None:
             lines.append("Large group: a group that attacks with Blast")
@@ -3535,8 +3822,15 @@ def scene_view(
     sheet = describe(spec, _sheet_of(pc)).splitlines() if pc is not None else []
     pack = None
     if pc is not None and inventory is not None:
-        pack = PackView(
-            items=[
+        armor, shield = pc.equipped_armor, pc.equipped_shield
+        items = []
+        for item in pc.items:
+            equipped = ""
+            if armor and same_item_name(item.name, armor):
+                equipped, armor = "Worn", ""
+            elif shield and same_item_name(item.name, shield):
+                equipped, shield = "Wielded", ""
+            items.append(
                 PackItem(
                     name=item.name,
                     size=item.size,
@@ -3546,11 +3840,15 @@ def scene_view(
                     kind=item.kind,
                     text=item.text,
                     damage=item.damage,
+                    ready=item.ready,
+                    equipped=equipped,
                 )
-                for item in pc.items
-            ],
+            )
+        pack = PackView(
+            items=items,
             used=inventory_service.used_slots(pc),
             capacity=inventory_service.capacity_of(pc, inventory, spec),
+            has_readied=bool(inventory.readied_stat),
         )
     hirelings = tuple(
         c
@@ -3601,6 +3899,11 @@ def world_state_text(
         lines.append(f"It is {when}.")
     if pc.pronouns:
         lines.append(f"Pronouns: {pc.name}, {pc.pronouns}.")
+    if pc.defense_tracked:
+        lines.append(
+            f"Armor: {pc.armor}; worn armor: {pc.equipped_armor or 'none'}; "
+            f"wielded shield: {pc.equipped_shield or 'none'}."
+        )
     if pc.dead:
         where = f" the body lies at {pc.location}." if pc.location is not None else ""
         lines.append(f"Player character {pc.name} is dead;{where}".rstrip(".") + ".")

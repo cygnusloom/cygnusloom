@@ -16,6 +16,7 @@
         "count": 1,
         "tag": "focus",
         "max_rank": 1,
+        "advance_repeated_rank": true,
         "exclude": [
           "focus_armored_magic",
           "focus_artisan",
@@ -61,6 +62,7 @@
         "count": 1,
         "tag": "focus",
         "max_rank": 1,
+        "advance_repeated_rank": true,
         "exclude": [
           "focus_alert",
           "focus_armored_magic",
@@ -87,11 +89,15 @@
     "id": "healer",
     "kind": "class",
     "name": "Healer",
-    "description": "A spellcaster of curative arts. All Healers gain Heal as a bonus skill, the Healing Touch art, and one more art of their choice, and learn more arts as they advance. The book presents the Healer as a partial class; this engine offers it as a full class for play.",
+    "description": "A spellcaster of curative arts. All Healers gain a free Focus, Heal as a bonus skill, the Healing Touch art, and one more art of their choice, and learn more arts as they advance. The book presents the Healer as a partial class; this engine offers it as a full class for play.",
     "stats": { "hp": -1, "attack_bonus": -1 },
-    "skills": { "heal": 0 },
+    "skills": { "heal": 1 },
+    "skill_picks": [
+      { "id": "class_free_skill", "count": 1, "table": "all_skills", "max_level": 1 }
+    ],
     "features": [{ "feature": "art_healing_touch" }],
     "feat_picks": [
+      { "id": "class_focus_any", "count": 1, "tag": "focus", "max_rank": 1, "exclude": ["focus_special_origin", "focus_developed_attribute", "focus_nullifier", "focus_polymath"] },
       {
         "id": "class_art_healer",
         "count": 1,
@@ -107,15 +113,19 @@
     "id": "vowed",
     "kind": "class",
     "name": "Vowed",
-    "description": "A bodily adept who refines inner power into supernatural martial arts. All Vowed gain Martial Style, Unarmed Might, and Unarmored Defense, plus one more art of their choice, and learn more arts as they advance. The book presents the Vowed as a partial class; this engine offers it as a full class for play.",
+    "description": "A bodily adept who refines inner power into supernatural martial arts. All Vowed gain a non-combat bonus skill appropriate to their order (subject to GM approval), a free Focus, Martial Style, Unarmed Might, and Unarmored Defense, plus one more art of their choice, and learn more arts as they advance. The book presents the Vowed as a partial class; this engine offers it as a full class for play.",
     "stats": { "hp": 0, "attack_bonus": 0 },
-    "skills": { "punch": 0, "exert": 0 },
+    "skill_picks": [
+      { "id": "order_skill", "label": "Order skill", "count": 1, "table": "all_skills", "max_level": 1, "exclude": ["punch", "shoot", "stab"] },
+      { "id": "class_free_skill", "label": "General skill", "count": 1, "table": "all_skills", "max_level": 1 }
+    ],
     "features": [
       { "feature": "art_martial_style" },
       { "feature": "art_unarmed_might" },
       { "feature": "art_unarmored_defense" }
     ],
     "feat_picks": [
+      { "id": "class_focus_any", "count": 1, "tag": "focus", "max_rank": 1, "exclude": ["focus_special_origin", "focus_developed_attribute", "focus_nullifier", "focus_polymath"] },
       {
         "id": "class_art_vowed",
         "count": 1,
@@ -158,6 +168,7 @@
         "count": 1,
         "tag": "focus",
         "max_rank": 1,
+        "advance_repeated_rank": true,
         "exclude": [
           "focus_armored_magic",
           "focus_artisan",
@@ -188,6 +199,7 @@
         "count": 1,
         "tag": "focus",
         "max_rank": 1,
+        "advance_repeated_rank": true,
         "exclude": [
           "focus_alert",
           "focus_armored_magic",
@@ -226,15 +238,18 @@
         "count": 1,
         "tag": "focus",
         "max_rank": 1,
+        "advance_repeated_rank": true,
         "exclude": [
           "focus_alert",
           "focus_armsmaster",
           "focus_assassin",
           "focus_close_combatant",
           "focus_deadeye",
+          "focus_developed_attribute",
           "focus_die_hard",
           "focus_impervious_defense",
           "focus_lucky",
+          "focus_nullifier",
           "focus_shocking_assault",
           "focus_snipers_eye",
           "focus_unarmed_combatant",
@@ -263,6 +278,7 @@
         "count": 1,
         "tag": "focus",
         "max_rank": 1,
+        "advance_repeated_rank": true,
         "exclude": [
           "focus_armored_magic",
           "focus_artisan",

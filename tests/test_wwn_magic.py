@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from cygnusforge.rules import wwn, wwn_magic
+from cygnusforge.rules.wwn_progression import require_wwn_progression
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import CheckMade, SpellCast, load_state
 from tests.test_wwn_advancement import (
@@ -208,6 +209,47 @@ def test_a_partial_mage_has_one_less_effort_and_never_less_than_one(
     assert wwn_magic.commit_effort(NAME, "high", 1, "scene", ctx)["maximum"] == 1
 
 
+@pytest.mark.parametrize(
+    ("class_id", "tradition", "other_pool"),
+    [
+        ("warrior", None, "high"),
+        ("mage", "high_mage", "necromancer"),
+        ("healer", None, "vowed"),
+        ("vowed", None, "healer"),
+    ],
+)
+def test_effort_cannot_be_committed_to_an_unavailable_tradition(
+    client_factory: Callable[[], TestClient],
+    class_id: str,
+    tradition: str | None,
+    other_pool: str,
+) -> None:
+    app, campaign_id = _campaign(client_factory, class_id=class_id, tradition=tradition)
+    ctx = _ctx(_world_tools(app, campaign_id))
+
+    with pytest.raises(InvalidInput, match="cannot commit .* Effort"):
+        wwn_magic.commit_effort(NAME, other_pool, 1, "scene", ctx)
+
+    character = _pc(app, campaign_id)
+    assert wwn.EFFORT_MARK not in character.marks
+    assert not any(key.startswith("effort_") for key in character.harm)
+
+
+def test_a_dual_mage_can_commit_effort_to_either_tradition(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(
+        client_factory,
+        class_id="adventurer_mage_mage",
+        tradition="high_mage_partial",
+        tradition2="necromancer_partial_2",
+    )
+    ctx = _ctx(_world_tools(app, campaign_id))
+
+    assert wwn_magic.commit_effort(NAME, "high", 1, "scene", ctx)["committed"] == 1
+    assert wwn_magic.commit_effort(NAME, "necromancer", 1, "scene", ctx)["committed"] == 1
+
+
 def test_add_strain_and_heal_strain_stay_within_the_strain_score(
     client_factory: Callable[[], TestClient],
 ) -> None:
@@ -253,6 +295,42 @@ def test_effort_uses_the_configured_derived_pool(
     assert result["maximum"] == _stat(app, campaign_id, stat)
     assert result["maximum"] >= 4
     assert result["committed"] == 2
+
+    recovered = wwn_magic.recover_effort(NAME, tradition, "scene", ctx)
+    assert recovered["recovered"] == 2
+    assert wwn.EFFORT_MARK not in _pc(app, campaign_id).marks
+
+
+@pytest.mark.parametrize("tool_name", ["commit_effort", "recover_effort"])
+def test_effort_tool_advertises_every_configured_pool(tool_name: str) -> None:
+    progression = require_wwn_progression(WWN)
+    tradition = WWN.tool_calls[tool_name].parameters["properties"]["tradition"]
+    assert set(tradition["enum"]) == set(progression.tradition_effort_stats)
+
+
+def test_vowed_effort_tracks_the_order_skill_instead_of_exert(client_factory):
+    app, campaign_id = _campaign(
+        client_factory,
+        class_id="vowed",
+        options={
+            "template-background": "artisan",
+            "pick-skill-background_learning-0": "craft",
+            "pick-skill-background_learning-1": "know",
+            "pick-skill-order_skill-0": "trade",
+        },
+    )
+    tools = _world_tools(app, campaign_id)
+    ctx = _ctx(tools)
+    assert _pc(app, campaign_id).fields["order_skill"] == "trade"
+    assert _stat(app, campaign_id, "effort_vowed") == 2
+
+    tools.raise_skill(NAME, "exert", 4, cause="a test")
+    tools.adjust_counter(NAME, "skill_points", 2)
+    wwn.spend_skill_point(NAME, "trade", ctx)
+    result = wwn_magic.commit_effort(NAME, "vowed", 2, "scene", ctx)
+
+    assert _stat(app, campaign_id, "effort_vowed") == 3
+    assert result["maximum"] == 3
 
 
 def test_first_aid_rolls_a_d6_plus_heal_heals_and_adds_strain(
