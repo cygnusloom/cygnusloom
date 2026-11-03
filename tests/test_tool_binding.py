@@ -19,11 +19,9 @@ from tests.conftest import content_library
 from tests.test_library_strictness import _core, _ruleset, _write
 
 # Core tools that keep a Python function: the ones that need ToolContext, the one that runs a
-# loader hook, and the ones whose schema does not fit the WorldTools method.
+# loader hook, and the ones whose schema or signature does not fit the WorldTools method.
 KEPT_PYTHON = {
     "create_location",
-    "place_object",
-    "take_object",
     "roll_creative",
     "lookup_rule",
     "list_lookups",
@@ -243,20 +241,18 @@ def test_core_binding_leaves_the_schemas_unchanged():
         "place",
         "contents",
         "hidden",
-        "reason",
+        "cause",
     ]
 
 
 # Cairn tool calls that keep a Python function: the five whose schema does not fit the
-# WorldTools method, the ruleset's own condition logic, the two spell-item kinds that pick a
-# role, and the core heal wrapper the ruleset reuses.
+# WorldTools method, the ruleset's own condition logic, and the two spell-item kinds that pick a
+# role.
 CAIRN_KEPT_PYTHON = {
     "create_encounter_map",
     "create_monster",
     "give_scroll",
     "give_spellbook",
-    "heal_character",
-    "player_attack",
     "player_initiative",
     "player_retreat",
     "player_save",

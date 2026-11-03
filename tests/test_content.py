@@ -22,6 +22,7 @@ from cygnusforge.content.library import (
     _load_monster,
     _load_rule_hooks,
 )
+from cygnusforge.services.hooks import HookContext, call_hook
 from tests.conftest import content_library
 from tests.rolls import SocialRoll, social_roll
 
@@ -264,12 +265,55 @@ def test_cairn_hooks_resolve_rations_and_keep_the_rest_hook():
     hooks = content_library().rule_sets["cairn2e"].hooks
 
     assert hooks is not None
-    assert hooks.before_rest == "before_rest"
+    assert hooks.functions["before_rest"] == "before_rest"
+    assert set(hooks.functions) == {
+        "new_day",
+        "before_rest",
+        "held_back",
+        "after_consume",
+        "lodge",
+        "status",
+    }
+    assert "options" not in hooks.functions
     assert hooks.options == {
         "after_days": 1,
         "feature": "rations",
         "item": "Rations",
     }
+
+
+def test_a_rule_set_can_declare_a_new_hook_point():
+    module = ModuleType("test_rules")
+    module.dawn = lambda hc: "dawned"
+
+    hooks = _load_test_hooks(module, dawn="dawn")
+
+    assert hooks is not None
+    assert hooks.function_name("dawn") == "dawn"
+    hc = HookContext.for_rendering(hooks, None)
+    assert call_hook(hooks, "dawn", hc, default=None) == "dawned"
+
+
+def test_an_undeclared_hook_returns_its_default():
+    hooks = _load_test_hooks(ModuleType("test_rules"))
+
+    assert hooks is not None
+    hc = HookContext.for_rendering(hooks, None)
+    assert call_hook(hooks, "new_day", hc, 1, default=None) is None
+
+
+def test_a_hook_naming_a_missing_function_is_rejected():
+    module = ModuleType("test_rules")
+
+    with pytest.raises(ContentError, match="'missing' is not a function in 'test'"):
+        _load_test_hooks(module, dawn="missing")
+
+
+def test_a_hook_payload_must_name_non_empty_text():
+    module = ModuleType("test_rules")
+
+    with pytest.raises(ContentError, match="'dawn' must be non-empty text"):
+        _load_test_hooks(module, dawn="")
 
 
 @pytest.mark.parametrize(

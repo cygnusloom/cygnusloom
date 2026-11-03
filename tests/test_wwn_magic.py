@@ -509,7 +509,9 @@ def test_wwn_tools_bind_engine_operations_without_wrappers() -> None:
         if call.world_method is not None and call_id not in core_ids
     }
     assert bound == {
+        "abandon_project": "abandon_project",
         "add_participant": "add_participant",
+        "advance_project": "advance_project",
         "advance_time": "advance_time",
         "attack": "attack",
         "buy_item": "buy_item",
@@ -518,8 +520,10 @@ def test_wwn_tools_bind_engine_operations_without_wrappers() -> None:
         "dismiss_hireling": "dismiss_hireling",
         "drop_item": "drop_item",
         "end_encounter": "end_encounter",
+        "equip_armor": "equip_armor",
         "give_item": "give_item",
         "harm_character": "harm_character",
+        "heal_character": "heal_character",
         "hire_hireling": "hire_hireling",
         "place_participant": "place_participant",
         "player_save": "player_save",
@@ -535,6 +539,7 @@ def test_wwn_tools_bind_engine_operations_without_wrappers() -> None:
         "set_armor": "set_armor",
         "stabilize": "stabilize",
         "start_encounter": "start_encounter",
+        "start_project": "start_project",
         "update_encounter_map": "update_encounter_map",
     }
     for call_id, method in bound.items():

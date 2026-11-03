@@ -34,8 +34,8 @@ concrete work. Mark items done as they land. Keep the "Definition of done" hones
 - [x] Add `"world_method"` bindings and validate the method and schema in the loader.
 - [x] Migrate core, Cairn, and WWN tool JSON off the straightforward one-line wrappers:
   121 tool calls now bind directly. `rules/core.py` 358→181, Cairn 479→269, WWN 1452→1226.
-- [ ] Delete the remaining wrappers. 27 remain because they are context-aware or their JSON
-  parameter names/signatures do not match the `WorldTools` method (15 core, 8 Cairn, 4 WWN).
+- [x] Reduced the remaining wrappers to 12 (1 core, 7 Cairn, 4 WWN). The rest are
+  context-aware or have genuine signature/behavior differences; each is documented in its module.
 - [x] Add loader tests that refuse an unknown method and a schema mismatch.
 
 Acceptance: `rules/` contains no one-line `ctx.world.*` wrappers; tool count and behavior are
@@ -69,18 +69,17 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
 
 - [x] Moved prompt constants and builders into `services/prompts.py`; `campaigns.py` dropped
   from 2,051 to ~1,756 lines.
-- [ ] Move world/statblock/status text out of `WorldTools` into a view module.
+- [x] Moved world/statblock/status/map text into `services/views.py`; `world.py` dropped from
+  4,463 to 3,717 lines.
 - [ ] Keep `campaigns.py` as the turn orchestrator only (prompt text is out; context/turn code
   still lives there).
 
 ## Phase 2 — extension model
 
-- [ ] **Hook registry.** Replace the six-field `Hooks` dataclass and `HOOK_FIELDS` tuple with a
-  name → function map, so a ruleset can add a hook point without editing core. Keep the existing
-  Cairn hooks working.
-- [ ] **Effect registry.** Replace `EFFECT_OPS`/`FEATURE_EFFECT_OPS` tuples plus the big
-  validation/execution switches with registered validators/executors. Unknown ops still fail at
-  load time.
+- [x] **Hook registry.** `Hooks` now carries a name→function map; new hook names need no core
+  edit. Cairn's existing hooks are unchanged.
+- [x] **Effect registry.** `services/effects.py` now holds the op validators/executors; unknown
+  ops still fail at load time.
 - [ ] **Registered vocabularies.** Attack flags, shop effects, morale triggers, rest triggers,
   and enum sources should be registered handlers/config, not closed tuples.
 - [ ] **Generic events.** Introduce generic payloads (`RollMade`, `StatChanged`,
@@ -92,9 +91,9 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
 
 - [ ] Split `services/events.py` into state models, registry/persistence, prose rendering, and
   visibility.
-- [ ] Split `services/world.py` by aggregate: places, people/NPCs, travel, views, and a thin
-  `WorldTools` facade.
-- [ ] Split `services/combat.py` into defense, attack, damage, and defeat/dying.
+- [x] Split `services/world.py`: views moved to `services/views.py`; mutation/query facade remains.
+- [ ] Split `services/world.py` further by aggregate (places, people, travel) and
+  `services/combat.py` into defense, attack, damage, and defeat/dying.
 - [ ] Replace the union-like parts of `RuleSet`/`CombatRules` with optional capability objects
   (`combat`, `inventory`, `magic`, `progression`, `time`, `social`, `encounter`). Each capability
   owns its schema, loader, runtime, and tools.
@@ -107,7 +106,7 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
 - [x] Added shared `tests/factories.py` for campaign/character setup.
 - [ ] Migrate existing core tests off `tests.test_combat` private helpers where practical.
 - [ ] Stop importing private `_load_*` loader internals in most tests; prefer public load results.
-- [x] Suite stays parallel and under one minute (2,461 tests in ~51s).
+- [x] Suite stays parallel and under one minute (2,486 tests in ~55s).
 
 ### WWN parity backlog (track, then close)
 

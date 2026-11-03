@@ -35,7 +35,8 @@ from cygnusforge.services.events import (
     load_state,
     record,
 )
-from cygnusforge.services.world import WorldTools, scene_view, world_state_text
+from cygnusforge.services.views import scene_view, world_state_text
+from cygnusforge.services.world import WorldTools
 from tests.conftest import content_library
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
 from tests.test_character_creation import _cairn_campaign, _choices, _complete_form, _rolled_stats

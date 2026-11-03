@@ -77,12 +77,6 @@ def create_monster(
     )
 
 
-def player_attack(
-    target: str, weapon: str, ctx: ToolContext, modifier: str = "", damage: int = 0
-) -> dict[str, Any]:
-    return ctx.world.player_attack(target, weapon, modifier, damage_roll=damage or None)
-
-
 def set_condition(name: str, deprived: bool, cause: str, ctx: ToolContext) -> dict[str, Any]:
     """Mark a character deprived, with the cause, or clear the mark. Returns the day the
     deprivation began, or None when the character is not deprived."""

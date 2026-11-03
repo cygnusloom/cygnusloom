@@ -171,12 +171,11 @@
     "type": "tool_call",
     "id": "player_attack",
     "name": "player_attack",
-    "python_module": "cairn2e",
-    "function": "player_attack",
+    "world_method": "player_attack",
     "description": "Ask the player to roll their attack against a target. Attacks always hit, so the player's weapon roll is the damage; the modifier's dice replace the weapon's when one is named. The weapon must be carried (give it with give_item first, naming its damage if it is not in the catalogue), or be 'unarmed' for fists. Use it when the player says what they attack with and the target is in the encounter. The target takes the damage through its armor, Hit Protection, and Strength, as with an NPC attack. A detachment can only be hit by an impaired attack.",
     "player_input": {
       "weapon_param": "weapon",
-      "weapon_roll_param": "damage",
+      "weapon_roll_param": "damage_roll",
       "details": "{weapon} against {target}: roll the weapon's damage dice. Attacks always hit.",
       "modifier_param": "modifier"
     },
@@ -412,8 +411,7 @@
     "type": "tool_call",
     "id": "heal_character",
     "name": "heal_character",
-    "python_module": "core",
-    "function": "heal_character",
+    "world_method": "heal_character",
     "description": "Restore lost points of a stat, usually hit points, from a healing spell, art, or item. It never restores more than the character has lost.",
     "parameters": {
       "type": "object",

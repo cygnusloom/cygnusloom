@@ -303,6 +303,14 @@ def test_a_note_changes_no_stat_or_condition(client_factory):
     assert (dict(after.stats), list(after.conditions)) == snapshot
 
 
+def test_a_retire_op_retires_the_character(client_factory):
+    app, campaign_id, _ = _fight(client_factory)
+
+    _run(app, campaign_id, [{"op": "retire"}])
+
+    assert _character(app, campaign_id, PC).retired
+
+
 def test_a_non_12_scar_table_loads_contiguous_rolls():
     definition = Definition(type="injury_table", id="injuries", data={"entries": _entries(7)})
     table = _load_injury_entries(definition, CAIRN.character, CAIRN.conditions, "cairn2e")

@@ -3,8 +3,7 @@
     "type": "tool_call",
     "id": "lookup_move",
     "name": "lookup_move",
-    "python_module": "core",
-    "function": "lookup_move",
+    "world_method": "lookup_move",
     "lookup": true,
     "description": "Read a move's trigger, description, stat, and every outcome band by id or name. Read it before you decide whether a move applies.",
     "parameters": {
@@ -23,8 +22,7 @@
     "type": "tool_call",
     "id": "roll_move",
     "name": "roll_move",
-    "python_module": "core",
-    "function": "roll_move",
+    "world_method": "roll_move",
     "description": "Roll a move for a player character: 2d6 plus the trait the move uses, plus any condition penalty. For a move that rolls +one of your traits, or Get What You Seek, give the trait as stat. Add a modifier for things the story gives, such as +1 to help or hinder a Friend or a Rival, or -1 from Hexed. Pass the result to the player and narrate the band it lands in.",
     "parameters": {
       "type": "object",
@@ -58,8 +56,7 @@
     "type": "tool_call",
     "id": "adjust_counter",
     "name": "adjust_counter",
-    "python_module": "core",
-    "function": "adjust_counter",
+    "world_method": "adjust_counter",
     "description": "Change a player character's Luck or Experience: mark a point of Luck when they spend it, regain Luck at the end of a school year, or mark Experience. Use a negative change to spend or clear a point and a positive one to add or regain it.",
     "parameters": {
       "type": "object",
@@ -89,8 +86,7 @@
     "type": "tool_call",
     "id": "take_advancement",
     "name": "take_advancement",
-    "python_module": "core",
-    "function": "take_advancement",
+    "world_method": "take_advancement",
     "description": "Spend one of a player character's Advancements on an option: raise a trait, add a Favourite Subject, learn a spell, gain a magical object, or regain Luck. Use stat for an option that names a trait. For learning a spell, use feature for the spell: it must be from the character's current Year and not one they already know.",
     "parameters": {
       "type": "object",
@@ -125,8 +121,7 @@
     "type": "tool_call",
     "id": "end_period",
     "name": "end_period",
-    "python_module": "core",
-    "function": "end_period",
+    "world_method": "end_period",
     "description": "End a stretch of play, such as a school year, for every player character at once. Call it when the school year completes; it applies that period's effects to each character and starts the period's tallies, such as House Points, over from their final totals.",
     "parameters": {
       "type": "object",
@@ -146,8 +141,7 @@
     "type": "tool_call",
     "id": "adjust_tally",
     "name": "adjust_tally",
-    "python_module": "core",
-    "function": "adjust_tally",
+    "world_method": "adjust_tally",
     "description": "Add points to, or deduct points from, a running tally such as a House's points. Use a negative change to deduct. Give every award an award key, such as the match and date; a key already used on this tally is refused, so a repeated award cannot be counted twice. A gain equal to one this entry already received this school year is refused as a likely repeat; call again with force=true only if it is genuinely a new award.",
     "parameters": {
       "type": "object",
@@ -190,8 +184,7 @@
     "type": "tool_call",
     "id": "set_relation",
     "name": "set_relation",
-    "python_module": "core",
-    "function": "set_relation",
+    "world_method": "set_relation",
     "description": "Make someone a player character's Friend or Rival, or end that relation. Use it only at the end of a session, as the rules require.",
     "parameters": {
       "type": "object",

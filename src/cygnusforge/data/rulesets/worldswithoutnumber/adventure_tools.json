@@ -362,8 +362,7 @@
     "type": "tool_call",
     "id": "heal_character",
     "name": "heal_character",
-    "python_module": "core",
-    "function": "heal_character",
+    "world_method": "heal_character",
     "description": "Restore lost points of a stat, usually hit points, from a healing spell, art, or item. It never restores more than the character has lost. Recovering a mortally wounded character is a separate act.",
     "parameters": {
       "type": "object",
@@ -582,8 +581,7 @@
     "type": "tool_call",
     "id": "equip_armor",
     "name": "equip_armor",
-    "python_module": "core",
-    "function": "equip_armor",
+    "world_method": "equip_armor",
     "description": "Wear or remove a carried, readied suit of armor, or wield or stop wielding a carried, readied shield. Only one suit and one shield can be equipped; equipping another replaces that slot. Armor Class and shield protection against Shock update automatically. The returned Armor Class is authoritative: wearing armor or wielding a shield can lower it when a feature such as the Vowed's Unarmored Defense works only without that equipment. Consult the character's features before explaining a change.",
     "parameters": {
       "type": "object",
@@ -599,8 +597,7 @@
     "type": "tool_call",
     "id": "start_project",
     "name": "start_project",
-    "python_module": "core",
-    "function": "start_project",
+    "world_method": "start_project",
     "description": "Begin a long-running effort and track its points toward a target: a personal project, a piece of research, a magic working, or a faction turn. The kind and goal are free text; the target is how many points of work it needs. Advance it with advance_project as time, money, and rolls are spent.",
     "parameters": {
       "type": "object",
@@ -618,8 +615,7 @@
     "type": "tool_call",
     "id": "advance_project",
     "name": "advance_project",
-    "python_module": "core",
-    "function": "advance_project",
+    "world_method": "advance_project",
     "description": "Add progress to a project, research effort, magic working, or faction turn. Record in the note what the time, money, or roll bought. The project completes when progress reaches its target.",
     "parameters": {
       "type": "object",
@@ -635,8 +631,7 @@
     "type": "tool_call",
     "id": "abandon_project",
     "name": "abandon_project",
-    "python_module": "core",
-    "function": "abandon_project",
+    "world_method": "abandon_project",
     "description": "Give up a project, research effort, magic working, or faction turn.",
     "parameters": {
       "type": "object",

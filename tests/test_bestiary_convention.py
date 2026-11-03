@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 from fastapi.testclient import TestClient
 
-from cygnusforge.services.world import present_rules_text
+from cygnusforge.services.views import present_rules_text
 from tests.conftest import content_library
 from tests.test_combat import YARD, _fight
 from tests.test_world import _state

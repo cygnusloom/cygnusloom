@@ -521,33 +521,6 @@ DAMAGE_KINDS = ("absorb", "harm", "overflow")
 # or the GM's say-so. A condition's `ends` lists the ones that end it; `gm` always does.
 # The trigger any condition can end by, decided by the GM. A rule set names its other triggers.
 ALWAYS_CONDITION_END = "gm"
-# The effect ops an injury or condition may run, in the order they are listed.
-EFFECT_OPS = (
-    "note",
-    "set_max",
-    "condition",
-    "save",
-    "pick_stat",
-    "counter",
-    "end_condition",
-    "retire",
-    "raise_stat",
-)
-# Effect ops that only moves and counters' `full` effects may run, since only they carry the rule
-# set's counters and conditions into the effect.
-MOVE_ONLY_EFFECT_OPS = ("counter", "end_condition")
-# The keys each effect op reads, besides the op name. A misspelled key fails at load.
-EFFECT_OP_KEYS: Mapping[str, frozenset[str]] = {
-    "note": frozenset({"op", "text"}),
-    "set_max": frozenset({"op", "stat", "dice", "mode"}),
-    "condition": frozenset({"op", "id"}),
-    "save": frozenset({"op", "stat", "pass", "fail"}),
-    "pick_stat": frozenset({"op", "options", "dice"}),
-    "counter": frozenset({"op", "id", "delta", "set", "reset"}),
-    "end_condition": frozenset({"op", "id"}),
-    "retire": frozenset({"op"}),
-    "raise_stat": frozenset({"op", "stat", "delta", "cap"}),
-}
 # The key of a condition's `modifies` that applies to every stat.
 ALL_STATS = "*"
 # Situational keys a condition may modify besides the rule set's stats: attack rolls and checks.
@@ -1007,18 +980,18 @@ class InventoryRules:
 
 @dataclass(frozen=True)
 class Hooks:
-    """Rule-set code the engine calls at fixed points. `module` holds the functions named by the
-    hook fields; each field is a function name, or None when the rule set does not use that hook.
-    `options` is the plain mapping from the hooks definition, for the functions to read."""
+    """Rule-set code the engine calls at named points. `module` holds the functions; `functions`
+    maps each hook name the definition declares to a function name in that module. A hook the rule
+    set omits is never called, and the engine returns the caller's default instead. `options` is
+    the plain mapping from the hooks definition, for the functions to read."""
 
     module: ModuleType
-    new_day: str | None
-    before_rest: str | None
-    held_back: str | None
-    after_consume: str | None
-    lodge: str | None
-    status: str | None
-    options: Mapping[str, Any]
+    functions: Mapping[str, str] = field(default_factory=dict)
+    options: Mapping[str, Any] = field(default_factory=dict)
+
+    def function_name(self, hook_name: str) -> str | None:
+        """The function the definition names for `hook_name`, or None when it declares none."""
+        return self.functions.get(hook_name)
 
 
 @dataclass(frozen=True)
@@ -3791,7 +3764,9 @@ def _load_rule_data(
     return configured
 
 
-HOOK_FIELDS = ("new_day", "before_rest", "held_back", "after_consume", "lodge", "status")
+# The keys in a hooks definition that describe the definition rather than name a hook point.
+# Every other key is a hook name, so a rule set can add a hook point without a core edit.
+HOOK_RESERVED_KEYS = frozenset({"type", "id", "python_module", "options", "configure"})
 
 
 def _load_rule_hooks(
@@ -3801,8 +3776,10 @@ def _load_rule_hooks(
     rests: Mapping[str, RestLength],
     template: str,
 ) -> Hooks | None:
-    """Load fixed-point hooks and their options. An optional `configure` callable can validate and
-    normalize those options. A rest with upkeep needs the before_rest hook."""
+    """Load hook functions by name and their options. Every non-reserved key in the definition is
+    a hook name, and its value must name a function in the rule set's module. An optional
+    `configure` callable can validate and normalize the options. A rest with upkeep needs the
+    before_rest hook."""
     definition = _single_optional(definitions, "hooks", template)
     if definition is None:
         if any(length.upkeep for length in rests.values()):
@@ -3812,22 +3789,20 @@ def _load_rule_hooks(
         return None
     label = f"{template}: hooks {definition.id}"
     data = definition.data
-    check_keys(
-        data,
-        {"type", "id", "python_module", *HOOK_FIELDS, "options", "configure"},
-        label,
-    )
     module_id = required_text(data, "python_module", label)
     if module_id not in modules:
         raise ContentError(f"{label}: unknown python_module {module_id!r}")
     module = modules[module_id]
-    names: dict[str, str | None] = {}
-    for field_name in HOOK_FIELDS:
-        function_name = _optional_nonempty_text(data, field_name, label)
-        if function_name is not None and not callable(getattr(module, function_name, None)):
+    functions: dict[str, str] = {}
+    for hook_name in data:
+        if hook_name in HOOK_RESERVED_KEYS:
+            continue
+        function_name = _optional_nonempty_text(data, hook_name, label)
+        assert function_name is not None
+        if not callable(getattr(module, function_name, None)):
             raise ContentError(f"{label}: {function_name!r} is not a function in {module_id!r}")
-        names[field_name] = function_name
-    if any(length.upkeep for length in rests.values()) and names["before_rest"] is None:
+        functions[hook_name] = function_name
+    if any(length.upkeep for length in rests.values()) and "before_rest" not in functions:
         raise ContentError(
             f"{label}: a rest has upkeep, so the hooks need a 'before_rest' function"
         )
@@ -3860,7 +3835,7 @@ def _load_rule_hooks(
                 "with a non-string key"
             )
         options = dict(configured_options)
-    return Hooks(module=module, options=options, **names)
+    return Hooks(module=module, functions=functions, options=options)
 
 
 def _check_item_sizes(character: CharacterSpec, item_sizes: Mapping[str, int], template: str):
@@ -4509,6 +4484,139 @@ def _load_injury_entries(
     return tuple(loaded)
 
 
+@dataclass
+class _EffectCheck:
+    """What an effect op's load-time check needs: the rule set's stats, stored conditions, and
+    counters, and whether a `pick_stat` has supplied `$picked`."""
+
+    label: str
+    character: CharacterSpec
+    conditions: frozenset[str]
+    counters: frozenset[str] | None
+    picked: bool = False
+
+
+def _check_picked_stat(op: Mapping[str, Any], check: _EffectCheck, op_name: str) -> str:
+    """The op's stat, checked against the rule set, allowing `$picked` only after a pick."""
+    stat = required_text(op, "stat", check.label)
+    if stat == PICKED:
+        if not check.picked:
+            raise ContentError(f"{check.label}: {PICKED!r} is used before a pick_stat")
+    elif stat not in check.character.stats:
+        raise ContentError(f"{check.label}: {op_name} names no stat ({stat!r})")
+    return stat
+
+
+def _check_note(op: Mapping[str, Any], check: _EffectCheck) -> None:
+    required_text(op, "text", check.label)
+
+
+def _check_set_max(op: Mapping[str, Any], check: _EffectCheck) -> None:
+    _check_picked_stat(op, check, "set_max")
+    dice = required_text(op, "dice", check.label)
+    if not is_formula(dice):
+        raise ContentError(f"{check.label}: set_max 'dice' is not a formula ({dice!r})")
+    mode = required_text(op, "mode", check.label)
+    if mode not in MAX_MODES:
+        raise ContentError(f"{check.label}: set_max 'mode' must be one of {MAX_MODES}")
+
+
+def _check_condition(op: Mapping[str, Any], check: _EffectCheck) -> None:
+    condition = required_text(op, "id", check.label)
+    if condition not in check.conditions:
+        raise ContentError(
+            f"{check.label}: condition op names no stored condition ({condition!r})"
+        )
+
+
+def _check_save(op: Mapping[str, Any], check: _EffectCheck) -> None:
+    stat = required_text(op, "stat", check.label)
+    if stat not in check.character.stats:
+        raise ContentError(f"{check.label}: save names no stat ({stat!r})")
+    _check_effect_list(op.get("pass", []), check)
+    _check_effect_list(op.get("fail", []), check)
+
+
+def _check_pick_stat(op: Mapping[str, Any], check: _EffectCheck) -> None:
+    options = op.get("options")
+    if not isinstance(options, list) or not options:
+        raise ContentError(f"{check.label}: pick_stat 'options' must be a non-empty list")
+    for option in options:
+        if option not in check.character.stats:
+            raise ContentError(f"{check.label}: pick_stat names no stat ({option!r})")
+    dice = required_text(op, "dice", check.label)
+    if not DICE_SIDES.fullmatch(dice):
+        raise ContentError(f"{check.label}: pick_stat 'dice' must be a single die such as '1d6'")
+    check.picked = True
+
+
+def _check_counter(op: Mapping[str, Any], check: _EffectCheck) -> None:
+    counter = required_text(op, "id", check.label)
+    if counter not in (check.counters or frozenset()):
+        raise ContentError(f"{check.label}: counter op names no counter ({counter!r})")
+    if sum(key in op for key in ("delta", "set", "reset")) != 1:
+        raise ContentError(
+            f"{check.label}: counter op needs exactly one of 'delta', 'set' or 'reset'"
+        )
+    if "reset" in op:
+        if op["reset"] is not True:
+            raise ContentError(f"{check.label}: counter op 'reset' must be true")
+    else:
+        amount = op.get("delta", op.get("set"))
+        if not isinstance(amount, int) or isinstance(amount, bool):
+            raise ContentError(f"{check.label}: counter op amount must be a whole number")
+
+
+def _check_end_condition(op: Mapping[str, Any], check: _EffectCheck) -> None:
+    condition = required_text(op, "id", check.label)
+    if condition not in (*check.conditions, ALL_CONDITIONS):
+        raise ContentError(
+            f"{check.label}: end_condition names no stored condition ({condition!r})"
+        )
+
+
+def _check_retire(op: Mapping[str, Any], check: _EffectCheck) -> None:
+    """A retire op has no payload beyond its name."""
+
+
+def _check_raise_stat(op: Mapping[str, Any], check: _EffectCheck) -> None:
+    _check_picked_stat(op, check, "raise_stat")
+    amount = op.get("delta")
+    if not isinstance(amount, int) or isinstance(amount, bool) or amount < 1:
+        raise ContentError(f"{check.label}: raise_stat 'delta' must be a positive whole number")
+    cap = op.get("cap")
+    if not isinstance(cap, int) or isinstance(cap, bool) or cap < 1:
+        raise ContentError(f"{check.label}: raise_stat 'cap' must be a positive whole number")
+
+
+@dataclass(frozen=True)
+class EffectOpRules:
+    """One effect op: the payload keys it reads, the check its payload must pass at load time, and
+    whether only moves and counters may use it (they carry the rule set's counters and conditions
+    into the effect)."""
+
+    keys: frozenset[str]
+    check: Callable[[Mapping[str, Any], _EffectCheck], None]
+    move_only: bool = False
+
+
+# Every effect op the rule set's JSON may use, in the order the engine reports them. Adding an op
+# means registering its keys and check here and its executor in services.effects.
+EFFECT_RULES: Mapping[str, EffectOpRules] = {
+    "note": EffectOpRules(frozenset({"op", "text"}), _check_note),
+    "set_max": EffectOpRules(frozenset({"op", "stat", "dice", "mode"}), _check_set_max),
+    "condition": EffectOpRules(frozenset({"op", "id"}), _check_condition),
+    "save": EffectOpRules(frozenset({"op", "stat", "pass", "fail"}), _check_save),
+    "pick_stat": EffectOpRules(frozenset({"op", "options", "dice"}), _check_pick_stat),
+    "counter": EffectOpRules(
+        frozenset({"op", "id", "delta", "set", "reset"}), _check_counter, move_only=True
+    ),
+    "end_condition": EffectOpRules(frozenset({"op", "id"}), _check_end_condition, move_only=True),
+    "retire": EffectOpRules(frozenset({"op"}), _check_retire),
+    "raise_stat": EffectOpRules(frozenset({"op", "stat", "delta", "cap"}), _check_raise_stat),
+}
+
+
 def _check_effects(
     ops: object,
     label: str,
@@ -4521,96 +4629,39 @@ def _check_effects(
     """Validate a list of effect ops, in order. `picked` says whether a `pick_stat` came before,
     so `$picked` may be used. Returns the ops and whether a stat has been picked by the end.
     `counters` is the ids of the rule set's counters, given only where move-only ops are allowed."""
+    check = _EffectCheck(
+        label=label,
+        character=character,
+        conditions=conditions,
+        counters=counters,
+        picked=picked,
+    )
+    checked = _check_effect_list(ops, check)
+    return checked, check.picked
+
+
+def _check_effect_list(ops: object, check: _EffectCheck) -> tuple[Mapping[str, Any], ...]:
+    """Check one list of ops against the registry, updating `check.picked` as ops pick a stat."""
     if not isinstance(ops, list):
-        raise ContentError(f"{label}: effects must be a list")
+        raise ContentError(f"{check.label}: effects must be a list")
     checked: list[Mapping[str, Any]] = []
     for op in ops:
         if not isinstance(op, Mapping):
-            raise ContentError(f"{label}: each effect must be an object")
-        name = required_text(op, "op", label)
-        if name not in EFFECT_OPS:
-            raise ContentError(f"{label}: effect op {name!r} is not one of {EFFECT_OPS}")
-        check_keys(op, EFFECT_OP_KEYS[name], label)
-        if name in MOVE_ONLY_EFFECT_OPS and counters is None:
-            raise ContentError(f"{label}: effect op {name!r} is only allowed in moves and counters")
-        if name == "note":
-            required_text(op, "text", label)
-        elif name == "set_max":
-            stat = required_text(op, "stat", label)
-            if stat == PICKED:
-                if not picked:
-                    raise ContentError(f"{label}: {PICKED!r} is used before a pick_stat")
-            elif stat not in character.stats:
-                raise ContentError(f"{label}: set_max names no stat ({stat!r})")
-            dice = required_text(op, "dice", label)
-            if not is_formula(dice):
-                raise ContentError(f"{label}: set_max 'dice' is not a formula ({dice!r})")
-            mode = required_text(op, "mode", label)
-            if mode not in MAX_MODES:
-                raise ContentError(f"{label}: set_max 'mode' must be one of {MAX_MODES}")
-        elif name == "condition":
-            condition = required_text(op, "id", label)
-            if condition not in conditions:
-                raise ContentError(
-                    f"{label}: condition op names no stored condition ({condition!r})"
-                )
-        elif name == "counter":
-            counter = required_text(op, "id", label)
-            if counter not in (counters or frozenset()):
-                raise ContentError(f"{label}: counter op names no counter ({counter!r})")
-            if sum(key in op for key in ("delta", "set", "reset")) != 1:
-                raise ContentError(
-                    f"{label}: counter op needs exactly one of 'delta', 'set' or 'reset'"
-                )
-            if "reset" in op:
-                if op["reset"] is not True:
-                    raise ContentError(f"{label}: counter op 'reset' must be true")
-            else:
-                amount = op.get("delta", op.get("set"))
-                if not isinstance(amount, int) or isinstance(amount, bool):
-                    raise ContentError(f"{label}: counter op amount must be a whole number")
-        elif name == "raise_stat":
-            stat = required_text(op, "stat", label)
-            if stat == PICKED:
-                if not picked:
-                    raise ContentError(f"{label}: {PICKED!r} is used before a pick_stat")
-            elif stat not in character.stats:
-                raise ContentError(f"{label}: raise_stat names no stat ({stat!r})")
-            amount = op.get("delta")
-            if not isinstance(amount, int) or isinstance(amount, bool) or amount < 1:
-                raise ContentError(f"{label}: raise_stat 'delta' must be a positive whole number")
-            cap = op.get("cap")
-            if not isinstance(cap, int) or isinstance(cap, bool) or cap < 1:
-                raise ContentError(f"{label}: raise_stat 'cap' must be a positive whole number")
-        elif name == "end_condition":
-            condition = required_text(op, "id", label)
-            if condition not in (*conditions, ALL_CONDITIONS):
-                raise ContentError(
-                    f"{label}: end_condition names no stored condition ({condition!r})"
-                )
-        elif name == "save":
-            stat = required_text(op, "stat", label)
-            if stat not in character.stats:
-                raise ContentError(f"{label}: save names no stat ({stat!r})")
-            _, picked = _check_effects(
-                op.get("pass", []), label, character, conditions, picked, counters=counters
+            raise ContentError(f"{check.label}: each effect must be an object")
+        name = required_text(op, "op", check.label)
+        rules = EFFECT_RULES.get(name)
+        if rules is None:
+            raise ContentError(
+                f"{check.label}: effect op {name!r} is not one of {tuple(EFFECT_RULES)}"
             )
-            _, picked = _check_effects(
-                op.get("fail", []), label, character, conditions, picked, counters=counters
+        check_keys(op, rules.keys, check.label)
+        if rules.move_only and check.counters is None:
+            raise ContentError(
+                f"{check.label}: effect op {name!r} is only allowed in moves and counters"
             )
-        elif name == "pick_stat":
-            options = op.get("options")
-            if not isinstance(options, list) or not options:
-                raise ContentError(f"{label}: pick_stat 'options' must be a non-empty list")
-            for option in options:
-                if option not in character.stats:
-                    raise ContentError(f"{label}: pick_stat names no stat ({option!r})")
-            dice = required_text(op, "dice", label)
-            if not DICE_SIDES.fullmatch(dice):
-                raise ContentError(f"{label}: pick_stat 'dice' must be a single die such as '1d6'")
-            picked = True
+        rules.check(op, check)
         checked.append(op)
-    return tuple(checked), picked
+    return tuple(checked)
 
 
 def _load_table(definition: Definition, template: str) -> tuple[TableOption, ...]:

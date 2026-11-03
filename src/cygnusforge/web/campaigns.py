@@ -63,7 +63,7 @@ from cygnusforge.services.common import Conflict, InvalidInput, NotFound
 from cygnusforge.services.encounters import encounter_view
 from cygnusforge.services.events import speaker_name
 from cygnusforge.services.tools import check_arguments
-from cygnusforge.services.world import map_view, scene_view, time_view
+from cygnusforge.services.views import map_view, scene_view, time_view
 from cygnusforge.web.character_form import (
     campaign_submission_from_form,
     campaign_view,

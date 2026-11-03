@@ -16,7 +16,7 @@ from cygnusforge.services.events import (
     load_state,
     record,
 )
-from cygnusforge.services.world import scene_view, world_state_text
+from cygnusforge.services.views import scene_view, world_state_text
 from tests.test_campaigns import _create_character
 from tests.test_character_creation import _cairn_campaign, _complete_form
 from tests.test_combat import CAIRN, PC, _character, _tools

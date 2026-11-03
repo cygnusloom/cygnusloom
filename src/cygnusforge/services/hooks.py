@@ -53,10 +53,11 @@ class HookContext:
 def call_hook(
     hooks: Hooks | None, hook_name: str, hc: HookContext, *args: Any, default: Any
 ) -> Any:
-    """Call the named hook with the context first. Return default when the rule set has no such hook."""
+    """Call the named hook with the context first. Return default when the rule set does not
+    declare that hook."""
     if hooks is None:
         return default
-    function_name = getattr(hooks, hook_name)
+    function_name = hooks.function_name(hook_name)
     if function_name is None:
         return default
     return getattr(hooks.module, function_name)(hc, *args)
