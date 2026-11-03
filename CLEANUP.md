@@ -80,8 +80,9 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
   edit. Cairn's existing hooks are unchanged.
 - [x] **Effect registry.** `services/effects.py` now holds the op validators/executors; unknown
   ops still fail at load time.
-- [ ] **Registered vocabularies.** Attack flags now use a descriptor registry; shop effects,
-  morale triggers, rest triggers, and enum sources still need the same treatment.
+- [x] **Registered vocabularies.** Attack flags use descriptor behaviors, shop effects use
+  handler functions, morale triggers are configured per rule set, rest triggers already come
+  from each rest definition, and enum sources are a named value mapping.
 - [ ] **Generic events.** Introduce generic payloads (`RollMade`, `StatChanged`,
   `ResourceChanged`, `ConditionChanged`) and migrate new or low-risk features first. Recovery
   is consolidated; the rest remain.

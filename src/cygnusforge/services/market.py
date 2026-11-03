@@ -4,7 +4,8 @@ prices anything else. Services are paid by the first named character, who covers
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from sqlmodel import Session
@@ -216,6 +217,80 @@ def _find_service(marketplace: Marketplace, service: str) -> ShopService:
     raise InvalidInput(f"there is no service named {service!r}. The marketplace sells: {offered}")
 
 
+@dataclass(frozen=True)
+class ServiceContext:
+    """What a marketplace service handler gets: the transaction, the service, and its buyers."""
+
+    db: Session
+    campaign_id: int
+    marketplace: Marketplace
+    listed: ShopService
+    buyers: Sequence[Character]
+    payer: Character
+    hooks: Hooks | None
+
+
+@dataclass(frozen=True)
+class ServiceResult:
+    served: list[str]
+    price: int
+    currency_left: int
+
+
+def _deferred(ctx: ServiceContext) -> ServiceResult:
+    raise InvalidInput(f"{ctx.listed.name} is not modelled yet, so the GM must narrate it")
+
+
+def _lodge(ctx: ServiceContext) -> ServiceResult:
+    rooms = math.ceil(len(ctx.buyers) / ctx.listed.fits)
+    total = ctx.listed.price * rooms
+    left = _pay(ctx.db, ctx.campaign_id, ctx.marketplace, ctx.payer, total, cause=ctx.listed.name)
+    call_hook(
+        ctx.hooks,
+        "lodge",
+        HookContext(ctx.db, ctx.campaign_id, ctx.hooks, None),
+        [buyer.name for buyer in ctx.buyers],
+        default=None,
+    )
+    return ServiceResult([buyer.name for buyer in ctx.buyers], total, left)
+
+
+def _restore(ctx: ServiceContext) -> ServiceResult:
+    patients = [
+        buyer
+        for buyer in ctx.buyers
+        if any(buyer.harm.get(stat, 0) > 0 for stat in ctx.listed.restores)
+    ]
+    if not patients:
+        raise InvalidInput(f"nobody named needs {ctx.listed.name}")
+    total = ctx.listed.price * len(patients)
+    left = _pay(ctx.db, ctx.campaign_id, ctx.marketplace, ctx.payer, total, cause=ctx.listed.name)
+    for patient in patients:
+        for stat in ctx.listed.restores:
+            restored = recover(patient, stat, patient.harm.get(stat, 0))
+            if restored:
+                record(
+                    ctx.db,
+                    ctx.campaign_id,
+                    Recovered(
+                        name=patient.name,
+                        stat=stat,
+                        amount=restored,
+                        cause=ctx.listed.name,
+                    ),
+                )
+    return ServiceResult([patient.name for patient in patients], total, left)
+
+
+# The handlers a marketplace service's `effect` may name. Adding a service effect registers it
+# here; the loader accepts exactly these names.
+SHOP_EFFECTS: dict[str, Callable[[ServiceContext], ServiceResult]] = {
+    "deferred": _deferred,
+    "lodge": _lodge,
+    "restore": _restore,
+}
+
+
 def buy_service(
     db: Session,
     campaign_id: int,
@@ -224,13 +299,12 @@ def buy_service(
     service: str,
     hooks: Hooks | None = None,
 ) -> dict[str, Any]:
-    """The named characters buy a service, and the first of them pays for all of it. Shelter
-    covers the whole party a night, with a room for each `fits` characters; the rule set's lodge
-    hook records it. Restoring treats each
-    named character who has lost any of the attributes it restores, at the price per patient."""
+    """The named characters buy a service, and the first of them pays for all of it. The
+    service's configured effect handler decides what it does."""
     listed = _find_service(marketplace, service)
-    if listed.effect == "deferred":
-        raise InvalidInput(f"{listed.name} is not modelled yet, so the GM must narrate it")
+    handler = SHOP_EFFECTS.get(listed.effect)
+    if handler is None:
+        raise InvalidInput(f"{listed.name} has an unknown effect {listed.effect!r}")
     if not names:
         raise InvalidInput("name the characters the service is for")
     state: CampaignState = load_state(db, campaign_id)
@@ -239,51 +313,24 @@ def buy_service(
         character = character_named(state, named)
         seen.setdefault(character.name, character)
     buyers = list(seen.values())
-    payer = buyers[0]
-    if listed.effect == "lodge":
-        rooms = math.ceil(len(buyers) / listed.fits)
-        total = listed.price * rooms
-        left = _pay(db, campaign_id, marketplace, payer, total, cause=listed.name)
-        call_hook(
-            hooks,
-            "lodge",
-            HookContext(db, campaign_id, hooks, None),
-            [buyer.name for buyer in buyers],
-            default=None,
+    result = handler(
+        ServiceContext(
+            db=db,
+            campaign_id=campaign_id,
+            marketplace=marketplace,
+            listed=listed,
+            buyers=buyers,
+            payer=buyers[0],
+            hooks=hooks,
         )
-        served = [buyer.name for buyer in buyers]
-    else:
-        patients = [
-            buyer
-            for buyer in buyers
-            if any(buyer.harm.get(stat, 0) > 0 for stat in listed.restores)
-        ]
-        if not patients:
-            raise InvalidInput(f"nobody named needs {listed.name}")
-        total = listed.price * len(patients)
-        left = _pay(db, campaign_id, marketplace, payer, total, cause=listed.name)
-        for patient in patients:
-            for stat in listed.restores:
-                restored = recover(patient, stat, patient.harm.get(stat, 0))
-                if restored:
-                    record(
-                        db,
-                        campaign_id,
-                        Recovered(
-                            name=patient.name,
-                            stat=stat,
-                            amount=restored,
-                            cause=listed.name,
-                        ),
-                    )
-        served = [patient.name for patient in patients]
+    )
     db.commit()
     return {
         "service": listed.name,
-        "served": served,
-        "payer": payer.name,
-        "price": total,
-        "currency_left": left,
+        "served": result.served,
+        "payer": buyers[0].name,
+        "price": result.price,
+        "currency_left": result.currency_left,
         "currency": marketplace.currency,
     }
 
