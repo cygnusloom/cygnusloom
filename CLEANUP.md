@@ -101,7 +101,8 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
   Progress: `RuleSet` dropped from 44 flat fields to 18, with `content`, `progression`, `time`,
   and `items` capability objects and read-only aliases for existing consumers. `CombatRules` is
   still a 40-field bag.
-- [ ] Remove dead wrapper code (`end_npc_turn` adapters and any orphaned functions).
+- [x] Remove dead wrapper code. All tool wrappers are gone; tools bind `WorldTools`
+  operations directly or use declarative bind/rename metadata.
 
 ## Phase 4 — tests and parity
 
@@ -113,7 +114,7 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
   neutral fixture; `test_scars` still needs a non-broken migration.
 - [ ] Stop importing private `_load_*` loader internals in most tests; prefer public load results.
   `test_scars` is the main remaining loader-internal test.
-- [x] Suite stays parallel and under one minute (2,567 tests in ~37s).
+- [x] Suite stays parallel and under one minute (2,567 tests in ~37-41s).
 
 ### WWN parity backlog (track, then close)
 
@@ -130,8 +131,10 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
   tradition templates in `requires_templates`; a Warrior has none and a Mage keeps only the
   chosen tradition's pool (`tests/test_wwn_effort.py`).
 - [ ] Surprise, grappling, execution attacks, total defense, dual wielding, range bands.
-- [ ] Magic Workings, spell research, magic item creation, hirelings, projects, faction turns
-  (verify what is actually missing before implementing).
+- [x] Magic Workings, spell research, hirelings, projects, faction turns. Verified: the generic
+  project tracker (`start_project`/`advance_project`/`abandon_project`/`list_projects`) and
+  hireling tools are wired into WWN. Specific source costs and magic-item creation remain in
+  `ISSUE_TRACKER.md` rather than being claimed as complete parity.
 - [x] Structured bestiary multi-attacks instead of prose parsing. `attacks_per_action`
   is a validated field on statblocks, the WWN bestiary carries explicit counts, and the loader
   rejects prose that still says "N attacks per action".
