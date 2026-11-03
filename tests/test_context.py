@@ -14,8 +14,8 @@ from cygnusforge.config import Settings
 from cygnusforge.db.models import Campaign, Event
 from cygnusforge.llm.base import ChatReply, LLMError
 from cygnusforge.rules.context import brief
-from cygnusforge.services.campaigns import SUMMARY_PROMPT, SYSTEM_PROMPT, system_parts
 from cygnusforge.services.events import CampaignState, Channel, load_state
+from cygnusforge.services.prompts import SUMMARY_PROMPT, SYSTEM_PROMPT, system_parts
 from tests.conftest import is_journal_messages, make_app
 from tests.test_campaigns import _campaign_id, _send
 

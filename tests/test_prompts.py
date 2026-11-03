@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from cygnusforge.content.library import ContentLibrary, RuleSet
-from cygnusforge.services.campaigns import (
+from cygnusforge.services.prompts import (
+    JOURNAL_INSTRUCTION,
+    OOC_INSTRUCTION,
     STATE_INSTRUCTION,
+    journal_instruction,
     narrate_instruction,
     speech_instruction,
     state_instruction,
@@ -66,6 +69,20 @@ def test_speech_instruction_for_the_cairn_cap_of_two_is_unchanged():
 
 def test_speech_instruction_falls_back_to_digits_above_the_word_table():
     assert "and 11 at most." in speech_instruction(11)
+
+
+def test_moved_prompts_keep_the_markers_the_fake_provider_matches():
+    assert "Speech step." in speech_instruction(None)
+    assert "Out-of-character step." in OOC_INSTRUCTION
+    assert "Journal step." in JOURNAL_INSTRUCTION
+    assert "Journal step." in journal_instruction(1, "")
+
+
+def test_journal_instruction_keeps_its_day_and_journal_text():
+    empty = journal_instruction(3, "")
+    assert empty == f"{JOURNAL_INSTRUCTION}\n\nCampaign day 3. The journal is empty so far."
+    kept = journal_instruction(4, "Day 1: We set out.")
+    assert kept.endswith("Campaign day 4. The journal so far:\nDay 1: We set out.")
 
 
 def test_cairn_prompt_chooses_the_cycle_from_the_situation():

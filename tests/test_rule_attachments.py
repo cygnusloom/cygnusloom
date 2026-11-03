@@ -9,8 +9,8 @@ from fastapi.testclient import TestClient
 
 from cygnusforge.content.definitions import ContentError
 from cygnusforge.content.library import ContentLibrary
-from cygnusforge.services.campaigns import system_parts
 from cygnusforge.services.events import Item, ItemAdded, LocationAdded, record
+from cygnusforge.services.prompts import system_parts
 from cygnusforge.services.world import present_rules_text, world_state_text
 from tests.conftest import content_library
 from tests.test_character_creation import _cairn_campaign

@@ -1225,12 +1225,13 @@ def test_magic_icon_must_be_a_name():
         _load_magic(data, MAGIC_SIZES, "testland")
 
 
-def test_a_charged_role_takes_no_size_even_if_one_is_given():
-    magic = _load_magic(
-        _magic_definitions(charged={"kind": "wand", "size": "bulky"}), MAGIC_SIZES, "testland"
-    )
-    assert magic is not None
-    assert magic.charged == ItemKind("wand")
+def test_a_charged_role_rejects_a_size():
+    with pytest.raises(ContentError, match="unknown key\\(s\\) 'size'"):
+        _load_magic(
+            _magic_definitions(charged={"kind": "wand", "size": "bulky"}),
+            MAGIC_SIZES,
+            "testland",
+        )
 
 
 def test_no_magic_definition_means_no_magic():

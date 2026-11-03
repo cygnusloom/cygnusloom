@@ -11,12 +11,12 @@ from sqlmodel import Session
 
 from cygnusforge.config import Settings
 from cygnusforge.services.campaigns import (
-    STATE_INSTRUCTION,
     get_turn_context,
     get_turn_transcript,
     list_messages,
 )
 from cygnusforge.services.events import ChatGM, record
+from cygnusforge.services.prompts import STATE_INSTRUCTION
 from tests.conftest import NARRATE_TEXT, without_journal
 from tests.test_campaigns import _answer, _campaign_id, _send, _signed_in
 from tests.test_context import (

@@ -37,7 +37,6 @@
   {
     "type": "rule",
     "id": "vuk-choking-hold",
-    "important": true,
     "text": "As an Ash Phantom, she fully envelops her target, controlling their body like a puppet for one action, then dropping their paralyzed body to the ground (d4 STR damage). They die of asphyxiation if the ash is not somehow expelled (save STR)."
   },
   {

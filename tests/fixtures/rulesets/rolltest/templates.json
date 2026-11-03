@@ -1,0 +1,15 @@
+[
+  {
+    "type": "template",
+    "id": "test-role",
+    "kind": "role",
+    "name": "Test Role",
+    "description": "A neutral role for contract tests. It grants the Steady Nerves trait.",
+    "features": [
+      {
+        "feature": "steady-nerves",
+        "quantity": "1"
+      }
+    ]
+  }
+]

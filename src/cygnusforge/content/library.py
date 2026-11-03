@@ -60,6 +60,27 @@ CORE_RULE_SET = "core"
 REQUIRED_TABLES = ("personality", "accent", "quirk")
 
 
+def check_keys(data: Mapping[str, Any], allowed: Iterable[str], label: str) -> None:
+    """Reject any key a definition loader does not read.
+
+    `allowed` is every key the loader reads, including `type` and `id`. A misspelled or obsolete
+    key fails at load time instead of being ignored. Deliberately open maps, such as a combat's
+    `defeat` labels or the rule set's `npc_hp` tiers, are validated by the loader that reads them.
+    """
+    unknown = sorted(set(data) - set(allowed), key=str)
+    if unknown:
+        names = ", ".join(repr(key) for key in unknown)
+        raise ContentError(f"{label}: unknown key(s) {names}")
+
+
+def check_object_keys(data: object, allowed: Iterable[str], label: str) -> Mapping[str, Any]:
+    """Check that a nested object is a mapping and carries only keys its loader reads."""
+    if not isinstance(data, Mapping):
+        raise ContentError(f"{label} must be an object")
+    check_keys(data, allowed, label)
+    return data
+
+
 @dataclass(frozen=True)
 class LocationTemplate:
     id: str
@@ -507,6 +528,18 @@ EFFECT_OPS = (
 # Effect ops that only moves and counters' `full` effects may run, since only they carry the rule
 # set's counters and conditions into the effect.
 MOVE_ONLY_EFFECT_OPS = ("counter", "end_condition")
+# The keys each effect op reads, besides the op name. A misspelled key fails at load.
+EFFECT_OP_KEYS: Mapping[str, frozenset[str]] = {
+    "note": frozenset({"op", "text"}),
+    "set_max": frozenset({"op", "stat", "dice", "mode"}),
+    "condition": frozenset({"op", "id"}),
+    "save": frozenset({"op", "stat", "pass", "fail"}),
+    "pick_stat": frozenset({"op", "options", "dice"}),
+    "counter": frozenset({"op", "id", "delta", "set", "reset"}),
+    "end_condition": frozenset({"op", "id"}),
+    "retire": frozenset({"op"}),
+    "raise_stat": frozenset({"op", "stat", "delta", "cap"}),
+}
 # The key of a condition's `modifies` that applies to every stat.
 ALL_STATS = "*"
 # Situational keys a condition may modify besides the rule set's stats: attack rolls and checks.
@@ -572,6 +605,8 @@ class CounterRules:
     maximum: int | None
     initial: int
     full: tuple[Mapping[str, Any], ...]
+    # What the counter means, for rule-set authors and lookup tools.
+    description: str = ""
 
 
 @dataclass(frozen=True)
@@ -1228,6 +1263,11 @@ def _load_world(directory: Path) -> WorldTemplate:
     world = _single(definitions, "world", template)
     _check_directory_id(template, world.id)
     label = f"{template}: world"
+    check_keys(
+        world.data,
+        {"type", "id", "name", "description", "rule_set", "blurb", "start"},
+        label,
+    )
     locations = tuple(_load_location(d, template) for d in definitions if d.type == "location")
     npc_definitions = [d for d in definitions if d.type == "npc"]
     npcs = tuple(_load_npc(d, template) for d in npc_definitions)
@@ -1269,6 +1309,7 @@ def _load_regions(definitions: list[Definition], template: str) -> tuple[RegionT
         if d.type != "region":
             continue
         label = f"{template}: region {d.id}"
+        check_keys(d.data, {"type", "id", "name", "terrain", "points"}, label)
         raw = d.data.get("points")
         if not isinstance(raw, list) or not all(
             isinstance(point, list)
@@ -1315,10 +1356,8 @@ def _load_world_start(
     """The optional `start` object: a known location and the hooks that bring the party there."""
     if "start" not in data:
         return None
-    start = data["start"]
-    if not isinstance(start, Mapping):
-        raise ContentError(f"{label}: 'start' must be an object")
     start_label = f"{label}: start"
+    start = check_object_keys(data["start"], {"location", "hooks", "season"}, start_label)
     location = required_text(start, "location", start_label)
     if location not in location_ids:
         raise ContentError(f"{start_label} names unknown location {location!r}")
@@ -1346,6 +1385,14 @@ def _npc_statblock(definition: Definition, template: str) -> Definition:
 def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldContent:
     name = template.id
     own = template.definitions
+    _check_character_definitions(own, name)
+    for definition in own:
+        if definition.type == "rule":
+            check_keys(
+                definition.data,
+                {"type", "id", "text"},
+                f"{name}: rule {definition.id}",
+            )
     monsters = {
         d.id: _load_monster(d, rule_set.character, name, pool=_hit_pool(rule_set.combat))
         for d in own
@@ -1546,6 +1593,23 @@ def _check_authored_routes(spot: LocationTemplate, rule_set: RuleSet, template: 
 def _load_location(definition: Definition, template: str) -> LocationTemplate:
     label = f"{template}: location {definition.id}"
     data = definition.data
+    check_keys(
+        data,
+        {
+            "type",
+            "id",
+            "name",
+            "description",
+            "discovered",
+            "x",
+            "y",
+            "parent",
+            "icon",
+            "rules",
+            "routes",
+        },
+        label,
+    )
     discovered = data.get("discovered", False)
     if not isinstance(discovered, bool):
         raise ContentError(f"{label}: discovered must be true or false")
@@ -1633,6 +1697,25 @@ def _check_parents(locations: tuple[LocationTemplate, ...], template: str) -> No
 def _load_npc(definition: Definition, template: str) -> NpcTemplate:
     label = f"{template}: npc {definition.id}"
     data = definition.data
+    check_keys(
+        data,
+        {
+            "type",
+            "id",
+            "name",
+            "location",
+            "description",
+            "personality",
+            "accent",
+            "quirks",
+            "monster",
+            "story_only",
+            "rules",
+            "hp_tier",
+            *STATBLOCK_KEYS,
+        },
+        label,
+    )
     quirks = data.get("quirks")
     if quirks is not None:
         if not isinstance(quirks, list) or not all(
@@ -1682,6 +1765,178 @@ def _check_unique_names(entries: list[LocationTemplate | NpcTemplate], template:
         seen.add(key)
 
 
+# The keys the character loaders in content/character.py read. Checking them here keeps every
+# definition type strict even though those loaders are not part of this module's `_load_*` set.
+CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
+    "stat": frozenset(
+        {
+            "type",
+            "id",
+            "name",
+            "derived",
+            "swap_group",
+            "modifier",
+            "plus_modifier",
+            "minimum",
+            "values",
+            "formula",
+        }
+    ),
+    "skill": frozenset({"type", "id", "name", "description"}),
+    "feature": frozenset(
+        {
+            "type",
+            "id",
+            "name",
+            "feature_type",
+            "description",
+            "size",
+            "uses",
+            "armor",
+            "damage",
+            "rules",
+            "tag",
+            "rank",
+            "skill",
+            "attributes",
+            "shock",
+            "shock_ac",
+            "flags",
+            "effects",
+            "defense_floor",
+            "repeatable",
+        }
+    ),
+    "character_field": frozenset(
+        {
+            "type",
+            "id",
+            "name",
+            "description",
+            "table",
+            "group_roll",
+            "restricted_by",
+            "knows",
+        }
+    ),
+    "campaign_field": frozenset(
+        {
+            "type",
+            "id",
+            "name",
+            "description",
+            "table",
+            "group_roll",
+            "restricted_by",
+            "knows",
+        }
+    ),
+    "template": frozenset(
+        {
+            "type",
+            "id",
+            "kind",
+            "name",
+            "description",
+            "features",
+            "tables",
+            "names",
+            "stats",
+            "counters",
+            "choose",
+            "skills",
+            "skill_picks",
+            "feat_picks",
+            "compatible_with",
+            "template_requirements",
+            "choice_key",
+        }
+    ),
+}
+
+# The keys each feature effect op reads. Unknown ops are rejected by content/character.py.
+FEATURE_EFFECT_KEYS: Mapping[str, frozenset[str]] = {
+    "note": frozenset({"op", "text"}),
+    "armor": frozenset({"op", "delta"}),
+    "stat": frozenset({"op", "id", "delta"}),
+    "skill": frozenset({"op", "id", "delta"}),
+    "counter": frozenset({"op", "id", "delta"}),
+}
+DEFENSE_FLOOR_KEYS = frozenset(
+    {
+        "base",
+        "counter",
+        "divisor",
+        "round_up",
+        "requires_no_armor",
+        "requires_no_shield",
+    }
+)
+CHOOSE_KEYS = frozenset({"count", "feature_type", "tag_field", "skip_tags"})
+SKILL_PICK_KEYS = frozenset({"id", "count", "table", "exclude", "label", "max_level"})
+FEAT_PICK_KEYS = frozenset(
+    {
+        "id",
+        "count",
+        "tag",
+        "tags",
+        "feature_type",
+        "max_rank",
+        "exclude",
+        "advance_repeated_rank",
+    }
+)
+GRANTED_KEYS = frozenset({"feature", "quantity"})
+
+
+def _check_character_definitions(definitions: Iterable[Definition], template: str) -> None:
+    """Reject unknown keys in the definitions content/character.py loads."""
+    for definition in definitions:
+        allowed = CHARACTER_DEFINITION_KEYS.get(definition.type)
+        if allowed is None:
+            continue
+        label = f"{template}: {definition.type} {definition.id}"
+        check_keys(definition.data, allowed, label)
+        if definition.type == "feature":
+            _check_feature_keys(definition.data, label)
+        elif definition.type == "template":
+            _check_template_keys(definition.data, label)
+
+
+def _check_feature_keys(data: Mapping[str, Any], label: str) -> None:
+    effects = data.get("effects", [])
+    if isinstance(effects, list):
+        for index, op in enumerate(effects):
+            if not isinstance(op, Mapping):
+                continue
+            name = op.get("op")
+            allowed = FEATURE_EFFECT_KEYS.get(name) if isinstance(name, str) else None
+            if allowed is not None:
+                check_keys(op, allowed, f"{label}: effect {index}")
+    defense_floor = data.get("defense_floor")
+    if isinstance(defense_floor, Mapping):
+        check_keys(defense_floor, DEFENSE_FLOOR_KEYS, f"{label}: defense_floor")
+
+
+def _check_template_keys(data: Mapping[str, Any], label: str) -> None:
+    choose = data.get("choose")
+    if isinstance(choose, Mapping):
+        check_keys(choose, CHOOSE_KEYS, f"{label}: choose")
+    for key, allowed in (("skill_picks", SKILL_PICK_KEYS), ("feat_picks", FEAT_PICK_KEYS)):
+        picks = data.get(key, [])
+        if not isinstance(picks, list):
+            continue
+        for index, pick in enumerate(picks):
+            if isinstance(pick, Mapping):
+                check_keys(pick, allowed, f"{label}: {key} {index}")
+    grants = data.get("features", [])
+    if not isinstance(grants, list):
+        return
+    for index, grant in enumerate(grants):
+        if isinstance(grant, Mapping):
+            check_keys(grant, GRANTED_KEYS, f"{label}: feature grant {index}")
+
+
 def _load_rule_set(directory: Path, core_definitions: list[Definition]) -> RuleSet:
     """A rule set is its own definitions plus every core definition it does not replace."""
     template = directory.name
@@ -1701,6 +1956,32 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     head = _single(definitions, "rule_set", template)
     _check_directory_id(template, head.id)
     label = f"{template}: rule_set"
+    check_keys(
+        head.data,
+        {
+            "type",
+            "id",
+            "name",
+            "description",
+            "blurb",
+            "plus",
+            "skill_progression",
+            "ordered_feature_tags",
+            "optional_templates",
+            "condition_ends",
+            "npc_hp",
+            "npc_hp_stat",
+        },
+        label,
+    )
+    _check_character_definitions(definitions, template)
+    for definition in definitions:
+        if definition.type == "rule":
+            check_keys(
+                definition.data,
+                {"type", "id", "text", "important"},
+                f"{template}: rule {definition.id}",
+            )
     modules = {d.id: _import_module(d, template) for d in definitions if d.type == "python_module"}
     rules = {
         d.id: required_text(d.data, "text", f"{template}: rule {d.id}")
@@ -1895,6 +2176,7 @@ def _load_travel(definitions: list[Definition], template: str) -> Travel | None:
     if definition is None:
         return None
     label = f"{template}: travel {definition.id}"
+    check_keys(definition.data, {"type", "id", "modes", "default_leg"}, label)
     modes_data = definition.data.get("modes")
     if not isinstance(modes_data, dict) or not modes_data:
         raise ContentError(f"{label}: 'modes' must map mode names to speeds")
@@ -1903,6 +2185,7 @@ def _load_travel(definitions: list[Definition], template: str) -> Travel | None:
         mode_label = f"{label}: mode {name!r}"
         if not isinstance(mode, dict):
             raise ContentError(f"{mode_label} must be an object")
+        check_keys(mode, {"km_per_hour", "note"}, mode_label)
         speed = mode.get("km_per_hour")
         if not isinstance(speed, (int, float)) or isinstance(speed, bool) or speed <= 0:
             raise ContentError(f"{mode_label}: 'km_per_hour' must be a number above 0")
@@ -1912,12 +2195,14 @@ def _load_travel(definitions: list[Definition], template: str) -> Travel | None:
             note=required_text(mode, "note", mode_label),
         )
     default = definition.data.get("default_leg")
+    default_label = f"{label}: default_leg"
     if not isinstance(default, dict):
         raise ContentError(f"{label}: 'default_leg' must be an object")
+    check_keys(default, {"minutes", "note"}, default_label)
     return Travel(
         modes=modes,
-        default_leg_minutes=_whole(default, "minutes", f"{label}: default_leg", 1),
-        default_leg_note=required_text(default, "note", f"{label}: default_leg"),
+        default_leg_minutes=_whole(default, "minutes", default_label, 1),
+        default_leg_note=required_text(default, "note", default_label),
     )
 
 
@@ -2217,6 +2502,47 @@ def _load_combat(
 ) -> CombatRules:
     label = f"{template}: combat {definition.id}"
     data = definition.data
+    check_keys(
+        data,
+        {
+            "type",
+            "id",
+            "python_module",
+            "damage",
+            "check_die",
+            "initiative_stat",
+            "defeat",
+            "outside_harm",
+            "healing_stat",
+            "morale",
+            "modifiers",
+            "dying_hours",
+            "dying_rounds",
+            "armor_max",
+            "aid_items",
+            "unarmed",
+            "hit_mode",
+            "multi_attack",
+            "defense_base",
+            "defense_modifier",
+            "natural_one_misses",
+            "natural_max_hits",
+            "save",
+            "initiative_mode",
+            "groups",
+            "hit_bonus_stat",
+            "unskilled_attack_penalty",
+            "damage_bonus_stat",
+            "attribute_damage",
+            "shock_on_miss",
+            "minimum_shock_damage",
+            "defeat_at_zero",
+            "initiative",
+            "injuries",
+            "level_damage",
+        },
+        label,
+    )
     module: ModuleType | None = None
     if "python_module" in data:
         module_id = required_text(data, "python_module", label)
@@ -2234,14 +2560,18 @@ def _load_combat(
     defeat_data = data.get("defeat")
     if not isinstance(defeat_data, Mapping):
         raise ContentError(f"{label}: 'defeat' must be an object")
-    defeat = {
-        key: required_text(defeat_data, key, f"{label}: defeat")
-        for key in ("player_character", "npc")
-    }
-    if "player_character_dead" in defeat_data:
-        defeat["player_character_dead"] = required_text(
-            defeat_data, "player_character_dead", f"{label}: defeat"
-        )
+    # The labels are an open map: `player_character`, `player_character_dead`, `important_npc`,
+    # `npc`, and any future label a rule set invents. Every value must be non-empty text, but the
+    # loader must not drop a label it does not recognize.
+    defeat: dict[str, str] = {}
+    for key in defeat_data:
+        if not isinstance(key, str) or not key.strip():
+            raise ContentError(f"{label}: 'defeat' labels must be non-empty text")
+        defeat[key] = required_text(defeat_data, key, f"{label}: defeat")
+    for key in ("player_character", "npc"):
+        if key not in defeat:
+            # Use the standard text error so the message stays consistent with other loaders.
+            required_text(defeat_data, key, f"{label}: defeat")
     injury_table = _load_injury_table_ref(data, character, injury_tables, label)
     outside_harm = _load_outside_harm(data, character, label)
     unarmed_damage, unarmed_names, unarmed_skill = _load_unarmed(data, character, label)
@@ -2271,7 +2601,7 @@ def _load_combat(
         modifiers=_load_modifiers(data, label),
         dying_hours=_whole(data, "dying_hours", label, 0) if "dying_hours" in data else 0,
         dying_rounds=_whole(data, "dying_rounds", label, 0) if "dying_rounds" in data else 0,
-        armor_max=_whole(data, "armor_max", label, 0),
+        armor_max=_whole(data, "armor_max", label, 0) if "armor_max" in data else 0,
         dying_conditions=tuple(c.id for c in conditions.values() if c.dying),
         fatal_conditions=tuple(c.id for c in conditions.values() if c.fatal),
         aid_items=_names(data, "aid_items", label),
@@ -2351,9 +2681,9 @@ def _load_save(data: Mapping[str, Any], check_sides: int, label: str) -> SaveRul
     block = data.get("save")
     if block is None:
         return SaveRules(auto_success=1, auto_fail=check_sides)
-    if not isinstance(block, Mapping):
-        raise ContentError(f"{label}: 'save' must be an object")
-    mode = _choice(block, "mode", ("roll_under", "roll_over"), "roll_under", f"{label}: save")
+    save_label = f"{label}: save"
+    block = check_object_keys(block, {"mode", "auto_success", "auto_fail"}, save_label)
+    mode = _choice(block, "mode", ("roll_under", "roll_over"), "roll_under", save_label)
     rolls: dict[str, int | None] = {}
     for key in ("auto_success", "auto_fail"):
         value = block.get(key)
@@ -2371,9 +2701,12 @@ def _load_groups(data: Mapping[str, Any], label: str) -> GroupRules | None:
     block = data.get("groups")
     if block is None:
         return None
-    if not isinstance(block, Mapping):
-        raise ContentError(f"{label}: 'groups' must be an object")
     groups_label = f"{label}: groups"
+    block = check_object_keys(
+        block,
+        {"incoming_modifier", "blast_modifier", "blast_hits_all", "break_outcomes"},
+        groups_label,
+    )
     blast_hits_all = block.get("blast_hits_all", True)
     if not isinstance(blast_hits_all, bool):
         raise ContentError(f"{groups_label}: 'blast_hits_all' must be true or false")
@@ -2398,9 +2731,12 @@ def _load_morale(
     morale_data = data.get("morale")
     if morale_data is None:
         return None
-    if not isinstance(morale_data, Mapping):
-        raise ContentError(f"{label}: 'morale' must be an object")
     morale_label = f"{label}: morale"
+    morale_data = check_object_keys(
+        morale_data,
+        {"save_stat", "first_casualty", "half", "lone_at", "retreat_stat"},
+        morale_label,
+    )
     stats = {
         key: required_text(morale_data, key, morale_label)
         for key in ("save_stat", "lone_at", "retreat_stat")
@@ -2488,8 +2824,9 @@ def _load_unarmed(
     block = data.get("unarmed")
     if block is None:
         return "", frozenset(), ""
-    if not isinstance(block, Mapping):
-        raise ContentError(f"{label}: 'unarmed' must be an object")
+    block = check_object_keys(
+        block, {"damage", "names", "attributes", "skill"}, f"{label}: unarmed"
+    )
     damage = block.get("damage")
     if not isinstance(damage, str) or not is_formula(damage):
         raise ContentError(f"{label}: 'unarmed.damage' must be a dice formula such as '1d4'")
@@ -2581,6 +2918,7 @@ def _load_damage(
     for entry in entries:
         if not isinstance(entry, Mapping):
             raise ContentError(f"{label}: each damage step must be an object")
+        check_keys(entry, {"kind", "stat"}, label)
         kind = required_text(entry, "kind", label)
         if kind not in DAMAGE_KINDS:
             raise ContentError(f"{label}: damage step kind {kind!r} is not one of {DAMAGE_KINDS}")
@@ -2624,6 +2962,19 @@ def _load_monster(
 ) -> MonsterTemplate:
     label = f"{template}: monster {definition.id}"
     data = definition.data
+    check_keys(
+        data,
+        {
+            "type",
+            "id",
+            "name",
+            "description",
+            *STATBLOCK_KEYS,
+            "large_group",
+            "rules",
+        },
+        label,
+    )
     stats = data.get("stats")
     allowed = set(character.stats)
     required = {stat_id for stat_id, stat in character.stats.items() if stat.derived is None}
@@ -2783,6 +3134,7 @@ def _check_whole(value: object, label: str) -> None:
 
 def _load_grid(definition: Definition, template: str) -> EncounterGrid:
     label = f"{template}: encounter grid {definition.id}"
+    check_keys(definition.data, {"type", "id", "cell_feet", "move_feet"}, label)
     cell_feet = definition.data.get("cell_feet")
     move_feet = definition.data.get("move_feet")
     for key, value in (("cell_feet", cell_feet), ("move_feet", move_feet)):
@@ -2826,6 +3178,11 @@ def _load_encounter_terrain(
         if d.id in terrain:
             raise ContentError(f"{template}: duplicate encounter terrain {d.id!r}")
         label = f"{template}: encounter terrain {d.id}"
+        check_keys(
+            d.data,
+            {"type", "id", "name", "color", "rule", "move_cost", "difficult"},
+            label,
+        )
         terrain[d.id] = EncounterTerrain(
             id=d.id,
             name=required_text(d.data, "name", label),
@@ -2852,6 +3209,11 @@ def _load_world_terrain(definitions: list[Definition], template: str) -> dict[st
         if d.id in terrain:
             raise ContentError(f"{template}: duplicate world terrain {d.id!r}")
         label = f"{template}: world terrain {d.id}"
+        check_keys(
+            d.data,
+            {"type", "id", "name", "color", "rule", "pattern", "ink"},
+            label,
+        )
         pattern, ink = _terrain_pattern(d.data, label)
         terrain[d.id] = WorldTerrain(
             id=d.id,
@@ -2874,6 +3236,11 @@ def _load_encounter_objects(
         if d.id in objects:
             raise ContentError(f"{template}: duplicate encounter object {d.id!r}")
         label = f"{template}: encounter object {d.id}"
+        check_keys(
+            d.data,
+            {"type", "id", "name", "icon", "color", "blocks", "solid"},
+            label,
+        )
         objects[d.id] = EncounterObject(
             id=d.id,
             name=required_text(d.data, "name", label),
@@ -2898,6 +3265,11 @@ def _load_encounter_templates(
         if d.id in templates:
             raise ContentError(f"{template}: duplicate encounter template {d.id!r}")
         label = f"{template}: encounter template {d.id}"
+        check_keys(
+            d.data,
+            {"type", "id", "name", "columns", "rows", "background", "fills", "cells"},
+            label,
+        )
         columns = _map_size(d.data, "columns", label)
         rows = _map_size(d.data, "rows", label)
         templates[d.id] = EncounterTemplate(
@@ -2989,6 +3361,7 @@ def _paint(
     }
     for fill in _entries(data, "fills", label):
         fill_label = f"{label}: fill"
+        check_keys(fill, {"from", "to", "terrain", "object"}, fill_label)
         first = _corner(fill, "from", columns, rows, fill_label)
         last = _corner(fill, "to", columns, rows, fill_label)
         values = _changes(fill, terrain, objects, fill_label)
@@ -2997,6 +3370,7 @@ def _paint(
                 state[column, row].update(values)
     for cell in _entries(data, "cells", label):
         cell_label = f"{label}: cell"
+        check_keys(cell, {"column", "row", "terrain", "object"}, cell_label)
         position = _position(cell.get("column"), cell.get("row"), columns, rows, cell_label)
         state[position].update(_changes(cell, terrain, objects, cell_label))
     painted = []
@@ -3053,6 +3427,7 @@ def _load_prompts(definitions: list[Definition], template: str) -> tuple[PromptF
         label = f"{template}: prompt {d.id!r}"
         if d.id in ids:
             raise ContentError(f"{template}: duplicate prompt {d.id!r}")
+        check_keys(d.data, {"type", "id", "text", "step"}, label)
         ids.add(d.id)
         step = d.data.get("step", "state")
         if step not in ("state", "narration", "all"):
@@ -3068,7 +3443,9 @@ def _load_sentence_cap(definitions: list[Definition], template: str) -> int | No
     head = _single_optional(definitions, "narration", template)
     if head is None:
         return None
-    return _whole(head.data, "sentence_cap", f"{template}: narration", minimum=1)
+    label = f"{template}: narration"
+    check_keys(head.data, {"type", "id", "sentence_cap"}, label)
+    return _whole(head.data, "sentence_cap", label, minimum=1)
 
 
 def _whole(data: Mapping[str, Any], key: str, label: str, minimum: int) -> int:
@@ -3097,6 +3474,11 @@ def _load_clock(definitions: list[Definition], template: str) -> ClockRules | No
     if definition is None:
         return None
     label = f"{template}: clock {definition.id}"
+    check_keys(
+        definition.data,
+        {"type", "id", "parts", "stale_days", "wage_currency", "hours_per_part"},
+        label,
+    )
     parts = _names(definition.data, "parts", label)
     if not parts or len(set(parts)) != len(parts):
         raise ContentError(f"{label}: 'parts' must be a non-empty list of distinct names")
@@ -3130,6 +3512,7 @@ def _load_rests(
     if definition is None:
         return {}
     label = f"{template}: rest {definition.id}"
+    check_keys(definition.data, {"type", "id", "lengths", "interrupted"}, label)
     lengths = definition.data.get("lengths")
     if not isinstance(lengths, Mapping) or not lengths:
         raise ContentError(f"{label}: 'lengths' must be a non-empty object")
@@ -3138,6 +3521,21 @@ def _load_rests(
         length_label = f"{label}: length {length_id}"
         if not isinstance(data, Mapping):
             raise ContentError(f"{length_label} must be an object")
+        check_keys(
+            data,
+            {
+                "hours",
+                "parts",
+                "days",
+                "until",
+                "stop_at",
+                "full",
+                "restores",
+                "clears",
+                "upkeep",
+            },
+            length_label,
+        )
         parts = _whole(data, "parts", length_label, 0) if "parts" in data else 0
         days = _whole(data, "days", length_label, 0) if "days" in data else 0
         hours = _whole(data, "hours", length_label, 0) if "hours" in data else 0
@@ -3213,6 +3611,24 @@ def _load_inventory(
     if definition is None:
         return None
     label = f"{template}: inventory {definition.id}"
+    check_keys(
+        definition.data,
+        {
+            "type",
+            "id",
+            "capacity",
+            "penalty_name",
+            "penalty_lasts",
+            "penalty_item",
+            "penalty_slots",
+            "full_stat",
+            "capacity_stat",
+            "capacity_multiplier",
+            "readied_stat",
+            "readied_divisor",
+        },
+        label,
+    )
     full_stat = _optional_text(definition.data, "full_stat", label) or ""
     if full_stat and full_stat not in character.stats:
         raise ContentError(f"{label}: 'full_stat' names no stat ({full_stat!r})")
@@ -3238,11 +3654,14 @@ def _load_inventory(
 
 
 def _load_item_sizes(definitions: list[Definition], template: str) -> dict[str, int]:
-    return {
-        d.id: _whole(d.data, "slots", f"{template}: item size {d.id}", 0)
-        for d in definitions
-        if d.type == "item_size"
-    }
+    sizes: dict[str, int] = {}
+    for d in definitions:
+        if d.type != "item_size":
+            continue
+        label = f"{template}: item size {d.id}"
+        check_keys(d.data, {"type", "id", "slots"}, label)
+        sizes[d.id] = _whole(d.data, "slots", label, 0)
+    return sizes
 
 
 def _load_magic(
@@ -3252,6 +3671,11 @@ def _load_magic(
     if definition is None:
         return None
     label = f"{template}: magic {definition.id}"
+    check_keys(
+        definition.data,
+        {"type", "id", "reusable", "single_use", "charged", "cast_penalty"},
+        label,
+    )
     reusable = _load_item_kind(definition.data, "reusable", label, item_sizes, sized=True)
     single_use = _load_item_kind(definition.data, "single_use", label, item_sizes, sized=True)
     charged = _load_item_kind(definition.data, "charged", label, item_sizes, sized=False)
@@ -3278,6 +3702,8 @@ def _load_item_kind(
     if not isinstance(entry, Mapping):
         raise ContentError(f"{label}: {role!r} must be an object with a 'kind'")
     role_label = f"{label} {role}"
+    allowed = {"kind", "size", "icon"} if sized else {"kind", "icon"}
+    check_keys(entry, allowed, role_label)
     kind = required_text(entry, "kind", role_label)
     icon = entry.get("icon")
     if icon is not None and (not isinstance(icon, str) or not icon.strip()):
@@ -3305,6 +3731,9 @@ def _load_rule_data(
         data = definition.data
         if not isinstance(data, Mapping):
             raise ContentError(f"{label}: definition data must be an object")
+        # A rule_data definition is an explicit extension point: after the loader's own keys,
+        # the module's configurator owns the rest of the schema and rejects unknown settings.
+        # Both bundled configurators validate their complete key set.
         module_id = required_text(data, "python_module", label)
         module = modules.get(module_id)
         if module is None:
@@ -3357,6 +3786,11 @@ def _load_rule_hooks(
         return None
     label = f"{template}: hooks {definition.id}"
     data = definition.data
+    check_keys(
+        data,
+        {"type", "id", "python_module", *HOOK_FIELDS, "options", "configure"},
+        label,
+    )
     module_id = required_text(data, "python_module", label)
     if module_id not in modules:
         raise ContentError(f"{label}: unknown python_module {module_id!r}")
@@ -3428,12 +3862,31 @@ def _load_marketplace(
         if shop or services or hirelings:
             raise ContentError(f"{template}: the marketplace needs a 'marketplace' definition")
         return None
-    currency = required_text(head.data, "currency", f"{template}: marketplace")
+    market_label = f"{template}: marketplace"
+    check_keys(head.data, {"type", "id", "currency"}, market_label)
+    currency = required_text(head.data, "currency", market_label)
     if currency not in character.features:
         raise ContentError(f"{template}: marketplace 'currency' names no feature ({currency!r})")
     items = []
     for d in shop:
         label = f"{template}: shop item {d.id}"
+        check_keys(
+            d.data,
+            {
+                "type",
+                "id",
+                "name",
+                "category",
+                "price",
+                "size",
+                "armor",
+                "armor_mode",
+                "damage",
+                "uses",
+                "description",
+            },
+            label,
+        )
         size = required_text(d.data, "size", label)
         if size not in item_sizes:
             raise ContentError(f"{label}: 'size' names no item size ({size!r})")
@@ -3456,6 +3909,11 @@ def _load_marketplace(
     loaded_services = []
     for d in services:
         label = f"{template}: service {d.id}"
+        check_keys(
+            d.data,
+            {"type", "id", "name", "price", "effect", "fits", "restores"},
+            label,
+        )
         effect = required_text(d.data, "effect", label)
         if effect not in ("lodge", "restore", "deferred"):
             raise ContentError(f"{label}: 'effect' must be lodge, restore, or deferred")
@@ -3476,14 +3934,17 @@ def _load_marketplace(
                 restores=restores,
             )
         )
-    hired = [
-        Hireling(
-            id=d.id,
-            name=required_text(d.data, "name", f"{template}: hireling {d.id}"),
-            wage_per_day=_whole(d.data, "wage_per_day", f"{template}: hireling {d.id}", 0),
+    hired = []
+    for d in hirelings:
+        label = f"{template}: hireling {d.id}"
+        check_keys(d.data, {"type", "id", "name", "wage_per_day"}, label)
+        hired.append(
+            Hireling(
+                id=d.id,
+                name=required_text(d.data, "name", label),
+                wage_per_day=_whole(d.data, "wage_per_day", label, 0),
+            )
         )
-        for d in hirelings
-    ]
     return Marketplace(
         currency=currency,
         items=tuple(items),
@@ -3510,6 +3971,22 @@ def _load_conditions(
         label = f"{template}: condition {d.id}"
         if d.id in conditions:
             raise ContentError(f"{template}: duplicate condition {d.id!r}")
+        check_keys(
+            d.data,
+            {
+                "type",
+                "id",
+                "label",
+                "description",
+                "ends",
+                "on_end",
+                "derived",
+                "modifies",
+                "dying",
+                "fatal",
+            },
+            label,
+        )
         ends = d.data.get("ends", [])
         allowed = (*condition_ends, ALWAYS_CONDITION_END)
         if not isinstance(ends, list) or any(end not in allowed for end in ends):
@@ -3571,6 +4048,11 @@ def _load_counters(
         label = f"{template}: counter {d.id}"
         if d.id in counters:
             raise ContentError(f"{template}: duplicate counter {d.id!r}")
+        check_keys(
+            d.data,
+            {"type", "id", "label", "description", "min", "max", "initial", "full"},
+            label,
+        )
         minimum = _optional_whole(d.data, "min", label)
         maximum = _whole(d.data, "max", label, minimum) if "max" in d.data else None
         initial = _whole(d.data, "initial", label, minimum) if "initial" in d.data else minimum
@@ -3588,6 +4070,7 @@ def _load_counters(
             maximum=maximum,
             initial=initial,
             full=full,
+            description=_optional_text(d.data, "description", label) or "",
         )
     return counters
 
@@ -3608,6 +4091,7 @@ def _load_advancements(
         label = f"{template}: advancement {d.id}"
         if loaded:
             raise ContentError(f"{template}: more than one advancement")
+        check_keys(d.data, {"type", "id", "label", "counter", "options"}, label)
         counter = required_text(d.data, "counter", label)
         if counter not in ids:
             raise ContentError(f"{label}: 'counter' names no counter ({counter!r})")
@@ -3622,6 +4106,11 @@ def _load_advancements(
             if value in options:
                 raise ContentError(f"{label}: option {value!r} is repeated")
             olabel = f"{label}: option {value}"
+            check_keys(
+                option,
+                {"value", "label", "text", "limit", "picks", "effects", "learn"},
+                olabel,
+            )
             picks = _flag(option, "picks", olabel)
             effects, _ = _check_effects(
                 option.get("effects", []), olabel, character, conditions, picks, counters=ids
@@ -3651,8 +4140,9 @@ def _load_learn(data: object, character: CharacterSpec, label: str) -> LearnRule
     must match. None when the option teaches none."""
     if data is None:
         return None
-    if not isinstance(data, Mapping):
-        raise ContentError(f"{label}: 'learn' must be an object")
+    data = check_object_keys(
+        data, {"feature_type", "tag_field"}, f"{label}: 'learn'"
+    )
     feature_type = required_text(data, "feature_type", label)
     tag_field = required_text(data, "tag_field", label)
     if feature_type not in {f.feature_type for f in character.features.values()}:
@@ -3678,6 +4168,7 @@ def _load_periods(
         label = f"{template}: period {d.id}"
         if d.id in loaded:
             raise ContentError(f"{template}: duplicate period {d.id!r}")
+        check_keys(d.data, {"type", "id", "label", "effects", "tallies"}, label)
         effects, _ = _check_effects(
             d.data.get("effects", []),
             label,
@@ -3711,6 +4202,7 @@ def _load_tallies(definitions: list[Definition], template: str) -> dict[str, Tal
         label = f"{template}: tally {d.id}"
         if d.id in loaded:
             raise ContentError(f"{template}: duplicate tally {d.id!r}")
+        check_keys(d.data, {"type", "id", "label", "entries"}, label)
         raw = d.data.get("entries")
         if not isinstance(raw, list) or not raw:
             raise ContentError(f"{label}: 'entries' must be a non-empty list")
@@ -3718,6 +4210,7 @@ def _load_tallies(definitions: list[Definition], template: str) -> dict[str, Tal
         for entry in raw:
             if not isinstance(entry, Mapping):
                 raise ContentError(f"{label}: each entry must be an object")
+            check_keys(entry, {"value", "label"}, label)
             value = required_text(entry, "value", label)
             if value in entries:
                 raise ContentError(f"{label}: entry {value!r} is repeated")
@@ -3736,6 +4229,7 @@ def _load_relations(definitions: list[Definition], template: str) -> dict[str, R
         label = f"{template}: relation {d.id}"
         if d.id in loaded:
             raise ContentError(f"{template}: duplicate relation {d.id!r}")
+        check_keys(d.data, {"type", "id", "label", "limit"}, label)
         loaded[d.id] = RelationRules(
             id=d.id,
             label=required_text(d.data, "label", label),
@@ -3757,6 +4251,20 @@ def _load_checks(definitions: list[Definition], template: str) -> dict[str, Chec
         if d.type != "check":
             continue
         label = f"{template}: check {d.id}"
+        check_keys(
+            d.data,
+            {
+                "type",
+                "id",
+                "label",
+                "dice",
+                "unskilled",
+                "default_difficulty",
+                "minimum_difficulty",
+                "maximum_difficulty",
+            },
+            label,
+        )
         dice = required_text(d.data, "dice", label)
         if not is_formula(dice):
             raise ContentError(f"{label}: 'dice' is not a formula ({dice!r})")
@@ -3803,6 +4311,23 @@ def _load_moves(
         label = f"{template}: move {d.id}"
         if d.id in moves:
             raise ContentError(f"{template}: duplicate move {d.id!r}")
+        check_keys(
+            d.data,
+            {
+                "type",
+                "id",
+                "label",
+                "description",
+                "dice",
+                "stat",
+                "stat_choice",
+                "needs_all_conditions",
+                "skill",
+                "skill_floor",
+                "bands",
+            },
+            label,
+        )
         dice = required_text(d.data, "dice", label)
         if not is_formula(dice):
             raise ContentError(f"{label}: 'dice' is not a formula ({dice!r})")
@@ -3881,6 +4406,7 @@ def _load_bands(
     for index, band in enumerate(value):
         if not isinstance(band, Mapping):
             raise ContentError(f"{label}: each band must be an object")
+        check_keys(band, {"label", "text", "min", "effects"}, label)
         last = index == len(value) - 1
         minimum = band.get("min")
         if last and minimum is not None:
@@ -3911,8 +4437,9 @@ def _load_bands(
 def _load_derived(value: object, character: CharacterSpec, label: str) -> DerivedRule | None:
     if value is None:
         return None
-    if not isinstance(value, Mapping):
-        raise ContentError(f"{label}: 'derived' must be an object")
+    value = check_object_keys(
+        value, {"stat", "current", "needs_max"}, f"{label}: derived"
+    )
     stat = required_text(value, "stat", f"{label}: derived")
     if stat not in character.stats:
         raise ContentError(f"{label}: derived names no stat ({stat!r})")
@@ -3931,6 +4458,7 @@ def _load_injury_entries(
 ) -> tuple[InjuryEntry, ...]:
     """An Injuries table: a non-empty, contiguous set of entries starting at roll 1."""
     label = f"{template}: injury table {definition.id}"
+    check_keys(definition.data, {"type", "id", "name", "entries"}, label)
     entries = definition.data.get("entries")
     if not isinstance(entries, list) or not entries:
         raise ContentError(f"{label}: 'entries' must be a non-empty list")
@@ -3940,6 +4468,7 @@ def _load_injury_entries(
         if not isinstance(entry, Mapping):
             raise ContentError(f"{label}: each entry must be an object")
         entry_label = f"{label}: entry {position}"
+        check_keys(entry, {"roll", "name", "text", "effects"}, entry_label)
         if entry.get("roll") != position:
             raise ContentError(f"{entry_label}: 'roll' must be {position}")
         effects, _ = _check_effects(entry.get("effects", []), entry_label, character, stored, False)
@@ -3975,6 +4504,7 @@ def _check_effects(
         name = required_text(op, "op", label)
         if name not in EFFECT_OPS:
             raise ContentError(f"{label}: effect op {name!r} is not one of {EFFECT_OPS}")
+        check_keys(op, EFFECT_OP_KEYS[name], label)
         if name in MOVE_ONLY_EFFECT_OPS and counters is None:
             raise ContentError(f"{label}: effect op {name!r} is only allowed in moves and counters")
         if name == "note":
@@ -4059,6 +4589,7 @@ def _check_effects(
 
 def _load_table(definition: Definition, template: str) -> tuple[TableOption, ...]:
     label = f"{template}: table {definition.id}"
+    check_keys(definition.data, {"type", "id", "name", "options"}, label)
     options = definition.data.get("options")
     if not isinstance(options, list) or not options:
         raise ContentError(f"{label}: 'options' must be a non-empty list")
@@ -4092,6 +4623,7 @@ def _load_dice_table(definition: Definition, template: str) -> DiceTable:
     """A dice table has a single dice formula and rows of `roll` ("4" or "2-3") and `result`.
     The rows must run in order with no gaps, covering every roll the dice can show."""
     label = f"{template}: dice table {definition.id}"
+    check_keys(definition.data, {"type", "id", "name", "dice", "rows"}, label)
     name = _table_label(definition, template)
     dice = definition.data.get("dice")
     formula = FORMULA.fullmatch(dice) if isinstance(dice, str) else None
@@ -4150,6 +4682,7 @@ def _table_label(definition: Definition, template: str) -> str:
 
 def _import_module(definition: Definition, template: str) -> ModuleType:
     label = f"{template}: python_module {definition.id}"
+    check_keys(definition.data, {"type", "id", "module"}, label)
     name = required_text(definition.data, "module", label)
     try:
         return importlib.import_module(name)
@@ -4168,6 +4701,26 @@ def _load_tool_call(
 ) -> ToolCall:
     label = f"{template}: tool_call {definition.id}"
     data = definition.data
+    check_keys(
+        data,
+        {
+            "type",
+            "id",
+            "name",
+            "description",
+            "python_module",
+            "function",
+            "parameters",
+            "player_input",
+            "activity",
+            "character_options",
+            "lookup",
+            "journal_step",
+            "npc_hp_tier",
+            "travel",
+        },
+        label,
+    )
     module_id = required_text(data, "python_module", label)
     if module_id not in modules:
         raise ContentError(f"{label}: unknown python_module {module_id!r}")
@@ -4376,6 +4929,19 @@ def _check_player_input(
         return None
     if not isinstance(data, dict):
         raise ContentError(f"{label}: 'player_input' must be an object")
+    check_keys(
+        data,
+        {
+            "param",
+            "dice",
+            "dice_param",
+            "weapon_param",
+            "weapon_roll_param",
+            "details",
+            "modifier_param",
+        },
+        f"{label}: player_input",
+    )
     dice = data.get("dice")
     dice_param = data.get("dice_param")
     weapon_param = data.get("weapon_param")

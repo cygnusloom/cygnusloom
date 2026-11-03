@@ -1,0 +1,16 @@
+[
+  {
+    "type": "feature",
+    "id": "steady-nerves",
+    "name": "Steady Nerves",
+    "feature_type": "trait",
+    "description": "A test trait. Its bearer starts with one extra Focus.",
+    "effects": [
+      {
+        "op": "counter",
+        "id": "focus",
+        "delta": 1
+      }
+    ]
+  }
+]

@@ -278,7 +278,7 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
             if repeats:
                 feature_repeats[pick.id] = repeats
     submitted: dict[str, Any] = {"fields": fields}
-    if spec.stats:
+    if stats:
         submitted["stats"] = stats
     if spec.templates:
         submitted["templates"] = templates

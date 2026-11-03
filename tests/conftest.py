@@ -21,7 +21,7 @@ from cygnusforge.config import Settings
 from cygnusforge.content.library import DATA_DIR, ContentLibrary
 from cygnusforge.db.session import make_engine
 from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.services.campaigns import narrate_instruction
+from cygnusforge.services.prompts import narrate_instruction
 from cygnusforge.web import app as web_app
 from cygnusforge.web.app import create_app
 

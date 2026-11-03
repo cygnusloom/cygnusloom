@@ -1,0 +1,12 @@
+[
+  {
+    "type": "check",
+    "id": "task",
+    "label": "Task Check",
+    "dice": "1d10",
+    "unskilled": 0,
+    "default_difficulty": 6,
+    "minimum_difficulty": 1,
+    "maximum_difficulty": 10
+  }
+]

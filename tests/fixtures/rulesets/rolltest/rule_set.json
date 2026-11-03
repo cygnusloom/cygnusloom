@@ -3,7 +3,14 @@
     "type": "rule_set",
     "id": "rolltest",
     "name": "Roll Test",
-    "description": "Test-only rule set with a player roll. Not shown in the app."
+    "description": "Test-only rule set with a player roll. It also exercises the generic engine contract: a save, a check, a condition, a counter, a feature, and a template. Not shown in the app.",
+    "condition_ends": [
+      "rest",
+      "scene"
+    ],
+    "optional_templates": [
+      "role"
+    ]
   },
   {
     "type": "rule",

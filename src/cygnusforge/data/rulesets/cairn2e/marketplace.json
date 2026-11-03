@@ -814,8 +814,7 @@
     "name": "Room & Board",
     "price": 10,
     "effect": "lodge",
-    "fits": 1,
-    "per": "night"
+    "fits": 1
   },
   {
     "type": "service",
@@ -823,8 +822,7 @@
     "name": "Private Room & Board",
     "price": 35,
     "effect": "lodge",
-    "fits": 4,
-    "per": "night"
+    "fits": 4
   },
   {
     "type": "service",

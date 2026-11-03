@@ -1,0 +1,23 @@
+[
+  {
+    "type": "combat",
+    "id": "test",
+    "damage": [
+      {
+        "kind": "harm",
+        "stat": "resolve"
+      }
+    ],
+    "check_die": "1d20",
+    "initiative_stat": "resolve",
+    "defeat": {
+      "player_character": "out of action",
+      "npc": "out of action"
+    },
+    "save": {
+      "mode": "roll_under",
+      "auto_success": 1,
+      "auto_fail": 20
+    }
+  }
+]

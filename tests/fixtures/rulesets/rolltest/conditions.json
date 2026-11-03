@@ -1,0 +1,15 @@
+[
+  {
+    "type": "condition",
+    "id": "shaken",
+    "label": "Shaken",
+    "description": "A test condition: frayed nerves. Checks take a penalty until the character rests or the scene ends.",
+    "ends": [
+      "rest",
+      "scene"
+    ],
+    "modifies": {
+      "check": -2
+    }
+  }
+]

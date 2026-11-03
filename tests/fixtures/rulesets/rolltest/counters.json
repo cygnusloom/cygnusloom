@@ -1,0 +1,11 @@
+[
+  {
+    "type": "counter",
+    "id": "focus",
+    "label": "Focus",
+    "min": 0,
+    "max": 3,
+    "initial": 1,
+    "description": "A test counter with a small range, used to prove bounds and full effects."
+  }
+]

@@ -1,0 +1,10 @@
+[
+  {
+    "type": "stat",
+    "id": "resolve",
+    "name": "Resolve",
+    "derived": {
+      "base": 12
+    }
+  }
+]

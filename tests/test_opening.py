@@ -9,8 +9,8 @@ from sqlmodel import Session
 from cygnusforge.content.library import ContentLibrary
 from cygnusforge.llm.base import LLMError
 from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.services.campaigns import OPENING_PROMPT, opening_prompt
 from cygnusforge.services.events import load_state
+from cygnusforge.services.prompts import OPENING_PROMPT, opening_prompt
 from tests.conftest import csrf_token
 from tests.test_campaigns import (
     _answer,
