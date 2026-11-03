@@ -491,11 +491,12 @@ class DiceTable:
 @dataclass(frozen=True)
 class MonsterTemplate:
     """A statblock a GM can base a monster on. `stats` has every stat of the rule set's character,
-    and `attacks` maps each attack's name to its dice formula. `attack_flags` gives the flags of
-    the attacks that have any, such as blast, and `attack_shock` gives the Shock of the attacks
-    that have any, as (shock, shock_ac) pairs. A large group is a group the GM fights as one
-    unit. `rules` are the ids of the rules attached to the monster; `rule_text` holds the text of
-    those written in the statblock itself."""
+    and `attacks` maps each attack's name to its dice formula. `attacks_per_action` is how many
+    of those attacks the statblock makes in one action. `attack_flags` gives the flags of the
+    attacks that have any, such as blast, and `attack_shock` gives the Shock of the attacks that
+    have any, as (shock, shock_ac) pairs. A large group is a group the GM fights as one unit.
+    `rules` are the ids of the rules attached to the monster; `rule_text` holds the text of those
+    written in the statblock itself."""
 
     id: str
     name: str
@@ -503,17 +504,12 @@ class MonsterTemplate:
     stats: Mapping[str, int]
     armor: int
     attacks: Mapping[str, str]
+    attacks_per_action: int = 1
     large_group: bool = False
     rules: tuple[str, ...] = ()
     attack_flags: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
     attack_shock: Mapping[str, tuple[int, int]] = field(default_factory=dict)
     rule_text: Mapping[str, str] = field(default_factory=dict)
-
-    @property
-    def attacks_per_action(self) -> int:
-        """How many attacks the statblock's action makes, from its "N attacks per action" text."""
-        match = re.search(r"(\d+) attacks? per action", self.description, re.IGNORECASE)
-        return max(1, int(match.group(1))) if match else 1
 
 
 DAMAGE_KINDS = ("absorb", "harm", "overflow")
@@ -534,6 +530,9 @@ PICKED = "$picked"
 # A move's `stat` of "highest" rolls the best of its `stat_choice`, without the player picking.
 HIGHEST = "highest"
 DICE_SIDES = re.compile(r"1d[0-9]+")
+# The prose a statblock used to carry. The structured `attacks_per_action` field is the source of
+# truth now; the loader reads this only to refuse a statblock that still relies on the prose.
+ATTACKS_PER_ACTION_TEXT = re.compile(r"\b\d+\s+attacks?\s+per\s+action\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -1360,7 +1359,7 @@ def _has_statblock(data: Mapping[str, Any]) -> bool:
 
 def _npc_statblock(definition: Definition, template: str) -> Definition:
     """An NPC's own statblock, as a monster with the NPC's id. Monster fields come from the NPC."""
-    fields = ("name", "description", *STATBLOCK_KEYS)
+    fields = ("name", "description", *STATBLOCK_KEYS, "attacks_per_action")
     data = {key: definition.data[key] for key in fields if key in definition.data}
     return Definition(
         type="monster", id=definition.id, data={"type": "monster", "id": definition.id, **data}
@@ -1697,6 +1696,7 @@ def _load_npc(definition: Definition, template: str) -> NpcTemplate:
             "story_only",
             "rules",
             "hp_tier",
+            "attacks_per_action",
             *STATBLOCK_KEYS,
         },
         label,
@@ -2955,11 +2955,27 @@ def _load_monster(
             "name",
             "description",
             *STATBLOCK_KEYS,
+            "attacks_per_action",
             "large_group",
             "rules",
         },
         label,
     )
+    description = required_text(data, "description", label)
+    attacks_per_action = data.get("attacks_per_action", 1)
+    if (
+        isinstance(attacks_per_action, bool)
+        or not isinstance(attacks_per_action, int)
+        or attacks_per_action < 1
+    ):
+        raise ContentError(f"{label}: 'attacks_per_action' must be a whole number, at least 1")
+    if "attacks_per_action" not in data:
+        match = ATTACKS_PER_ACTION_TEXT.search(description)
+        if match is not None:
+            raise ContentError(
+                f"{label}: the description says {match.group(0)!r}; give the count as the "
+                "structured 'attacks_per_action' field instead of relying on the prose"
+            )
     stats = data.get("stats")
     allowed = set(character.stats)
     required = {stat_id for stat_id, stat in character.stats.items() if stat.derived is None}
@@ -2981,10 +2997,11 @@ def _load_monster(
     return MonsterTemplate(
         id=definition.id,
         name=required_text(data, "name", label),
-        description=required_text(data, "description", label),
+        description=description,
         stats=dict(stats),
         armor=armor,
         attacks=attacks,
+        attacks_per_action=attacks_per_action,
         large_group=large_group,
         rules=rules,
         attack_flags=attack_flags,
@@ -4141,9 +4158,7 @@ def _load_learn(data: object, character: CharacterSpec, label: str) -> LearnRule
     must match. None when the option teaches none."""
     if data is None:
         return None
-    data = check_object_keys(
-        data, {"feature_type", "tag_field"}, f"{label}: 'learn'"
-    )
+    data = check_object_keys(data, {"feature_type", "tag_field"}, f"{label}: 'learn'")
     feature_type = required_text(data, "feature_type", label)
     tag_field = required_text(data, "tag_field", label)
     if feature_type not in {f.feature_type for f in character.features.values()}:
@@ -4438,9 +4453,7 @@ def _load_bands(
 def _load_derived(value: object, character: CharacterSpec, label: str) -> DerivedRule | None:
     if value is None:
         return None
-    value = check_object_keys(
-        value, {"stat", "current", "needs_max"}, f"{label}: derived"
-    )
+    value = check_object_keys(value, {"stat", "current", "needs_max"}, f"{label}: derived")
     stat = required_text(value, "stat", f"{label}: derived")
     if stat not in character.stats:
         raise ContentError(f"{label}: derived names no stat ({stat!r})")
@@ -4524,9 +4537,7 @@ def _check_set_max(op: Mapping[str, Any], check: _EffectCheck) -> None:
 def _check_condition(op: Mapping[str, Any], check: _EffectCheck) -> None:
     condition = required_text(op, "id", check.label)
     if condition not in check.conditions:
-        raise ContentError(
-            f"{check.label}: condition op names no stored condition ({condition!r})"
-        )
+        raise ContentError(f"{check.label}: condition op names no stored condition ({condition!r})")
 
 
 def _check_save(op: Mapping[str, Any], check: _EffectCheck) -> None:
@@ -4856,9 +4867,7 @@ def _tool_handler(
         _world_method(method_name, label)
         return None, method_name
     if "python_module" not in data or "function" not in data:
-        raise ContentError(
-            f"{label}: give 'world_method', or 'python_module' with 'function'"
-        )
+        raise ContentError(f"{label}: give 'world_method', or 'python_module' with 'function'")
     module_id = required_text(data, "python_module", label)
     if module_id not in modules:
         raise ContentError(f"{label}: unknown python_module {module_id!r}")

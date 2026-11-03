@@ -20,9 +20,7 @@ def _table(*ops: dict[str, Any]) -> Definition:
         data={
             "type": "injury_table",
             "id": "injuries",
-            "entries": [
-                {"roll": 1, "name": "Test", "text": "A test.", "effects": list(ops)}
-            ],
+            "entries": [{"roll": 1, "name": "Test", "text": "A test.", "effects": list(ops)}],
         },
     )
 
@@ -97,9 +95,7 @@ def test_an_unknown_effect_key_is_rejected_at_load_time():
         ),
     ],
 )
-def test_malformed_effect_payloads_are_rejected_at_load_time(
-    op: dict[str, Any], message: str
-):
+def test_malformed_effect_payloads_are_rejected_at_load_time(op: dict[str, Any], message: str):
     with pytest.raises(ContentError, match=re.escape(message)):
         _load(op)
 

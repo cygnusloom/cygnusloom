@@ -188,9 +188,7 @@ def test_update_npc_knowledge_refuses_an_empty_change_or_unknown_place(
     assert "Nowhere" in nowhere["error"]
 
 
-def test_a_removed_npc_is_forgotten(
-    client_factory: Callable[[], TestClient], app: FastAPI
-):
+def test_a_removed_npc_is_forgotten(client_factory: Callable[[], TestClient], app: FastAPI):
     client, campaign_id = _campaign_id(client_factory)
     _place_pc(client, campaign_id, "Glowcap Ring")
     assert name_key("Brin Gallowcap") in _state(app, campaign_id).known

@@ -1218,25 +1218,62 @@ def test_bundled_cairn_prompts_and_cap_are_read():
     assert ContentLibrary.load().core.prompt_fragments == ()
 
 
+def _monster_definition(**changes: Any) -> Definition:
+    character = content_library().rule_sets["cairn2e"].character
+    stats = {stat: 10 for stat in character.stats}
+    data: dict[str, Any] = {
+        "type": "monster",
+        "id": "ghoul",
+        "name": "Ghoul",
+        "description": "A ghoul.",
+        "stats": stats,
+    }
+    data.update(changes)
+    return Definition(type="monster", id="ghoul", data=data)
+
+
 def test_a_monster_needs_at_least_one_hit_point():
     character = content_library().rule_sets["cairn2e"].character
     stats = {stat: 10 for stat in character.stats}
     stats["hp"] = 0
-    definition = Definition(
-        type="monster",
-        id="ghoul",
-        data={
-            "type": "monster",
-            "id": "ghoul",
-            "name": "Ghoul",
-            "description": "A ghoul.",
-            "stats": stats,
-        },
-    )
+    definition = _monster_definition(stats=stats)
     with pytest.raises(ContentError, match="stat 'hp' must be at least 1"):
         _load_monster(definition, character, "testland", pool="hp")
     stats["hp"] = 1
     assert _load_monster(definition, character, "testland", pool="hp").stats["hp"] == 1
+
+
+def test_a_monster_attack_count_is_a_structured_field():
+    character = content_library().rule_sets["cairn2e"].character
+    definition = _monster_definition(
+        description="A ghoul that strikes twice. (2 attacks per action.)",
+        attacks_per_action=2,
+    )
+    monster = _load_monster(definition, character, "testland", pool="hp")
+    assert monster.attacks_per_action == 2
+    assert "2 attacks per action" in monster.description
+
+
+def test_a_monster_attack_count_defaults_to_one():
+    character = content_library().rule_sets["cairn2e"].character
+    monster = _load_monster(_monster_definition(), character, "testland", pool="hp")
+    assert monster.attacks_per_action == 1
+
+
+@pytest.mark.parametrize("count", [0, -1, "2", 2.5, True])
+def test_a_monster_attack_count_must_be_a_positive_whole_number(count: Any):
+    character = content_library().rule_sets["cairn2e"].character
+    definition = _monster_definition(attacks_per_action=count)
+    message = "'attacks_per_action' must be a whole number, at least 1"
+    with pytest.raises(ContentError, match=message):
+        _load_monster(definition, character, "testland", pool="hp")
+
+
+def test_a_monster_attack_count_left_as_prose_is_refused():
+    character = content_library().rule_sets["cairn2e"].character
+    definition = _monster_definition(description="A ghoul. (2 attacks per action.)")
+    with pytest.raises(ContentError, match="structured 'attacks_per_action' field"):
+        _load_monster(definition, character, "testland", pool="hp")
 
 
 MAGIC_SIZES = {"petty": 0, "normal": 1, "bulky": 2}

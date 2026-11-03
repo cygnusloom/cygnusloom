@@ -43,4 +43,3 @@ def gain_injury(
     db.commit()
     run_effects(db, campaign_id, name, entry.effects, cx, f"injury {entry.name}", plus=plus)
     return entry
-

@@ -82,9 +82,7 @@ def test_a_trigger_outside_the_rule_sets_vocabulary_is_refused(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _add_condition(app, campaign_id, "walloped")
 
-    with _db(app) as db, pytest.raises(
-        InvalidInput, match="not a condition-ending trigger"
-    ):
+    with _db(app) as db, pytest.raises(InvalidInput, match="not a condition-ending trigger"):
         end_condition(
             db,
             campaign_id,

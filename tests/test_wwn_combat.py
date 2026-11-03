@@ -764,6 +764,31 @@ def test_a_statblocks_attack_count_is_resolved_in_one_action(client_factory):
     assert len(_struck(app, campaign_id)) - before == 2
 
 
+def test_a_single_attack_statblock_resolves_one_attack(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=30)
+    tools.create_monster("Ashcrawler Slave", YARD, template="ashcrawler_slave")
+    tools.add_participant("Ashcrawler Slave")
+    tools.set_stat_max(PC, "hp", 30, "for a long test fight")
+
+    before = len(_struck(app, campaign_id))
+    tools.attack("Ashcrawler Slave", "blade", PC)
+    assert len(_struck(app, campaign_id)) - before == 1
+
+
+def test_a_four_attack_statblock_resolves_all_four_attacks(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=30)
+    tools.create_monster("Polop Hellsquid", YARD, template="polop_hellsquid")
+    tools.add_participant("Polop Hellsquid")
+    tools.set_stat_max(PC, "hp", 200, "for a long test fight")
+
+    before = len(_struck(app, campaign_id))
+    result = tools.attack("Polop Hellsquid", "tentacle", PC)
+    assert len(_struck(app, campaign_id)) - before == 4
+    assert len(result["attacks"]) == 4
+
+
 def test_an_important_npc_is_mortally_wounded_rather_than_killed(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     tools.create_npc(

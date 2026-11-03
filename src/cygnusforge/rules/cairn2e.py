@@ -59,6 +59,8 @@ def create_monster(
     force: bool = False,
     detachment: bool | None = None,
 ) -> dict[str, Any]:
+    """Create a monster. Kept as a wrapper: the tool exposes hit_points, strength, dexterity, and
+    willpower, which this folds into the `stats` mapping `WorldTools.create_monster` takes."""
     return ctx.world.create_monster(
         name,
         location,
@@ -104,22 +106,30 @@ def set_condition(name: str, deprived: bool, cause: str, ctx: ToolContext) -> di
 
 
 def give_spellbook(name: str, spell: str, description: str, ctx: ToolContext) -> dict[str, Any]:
+    """Give a spellbook. Kept as a wrapper: it fixes `give_spell_item`'s `role` to reusable."""
     return ctx.world.give_spell_item(name, spell, description, role="reusable")
 
 
 def give_scroll(name: str, spell: str, description: str, ctx: ToolContext) -> dict[str, Any]:
+    """Give a scroll. Kept as a wrapper: it fixes `give_spell_item`'s `role` to single use."""
     return ctx.world.give_spell_item(name, spell, description, role="single_use")
 
 
 def player_save(ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
+    """Record the player's save. Kept as a wrapper: `WorldTools.player_save` has no default for
+    `roll`, so direct binding would fail the loader's signature check."""
     return ctx.world.player_save(roll)
 
 
 def player_initiative(ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
+    """Record the player's initiative. Kept as a wrapper: `WorldTools.player_initiative` has no
+    default for `roll`, so direct binding would fail the loader's signature check."""
     return ctx.world.player_initiative(roll)
 
 
 def player_retreat(safe: bool, ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
+    """Record the player's retreat. Kept as a wrapper: `WorldTools.player_retreat` has no default
+    for `roll`, so direct binding would fail the loader's signature check."""
     return ctx.world.player_retreat(safe, roll)
 
 
@@ -132,6 +142,8 @@ def create_encounter_map(
     rows: int | None = None,
     template: str = "",
 ) -> dict[str, Any]:
+    """Create an encounter map. Kept as a wrapper: `WorldTools.create_encounter_map` requires
+    columns and rows, while the tool lets a template supply them."""
     return ctx.world.create_encounter_map(
         name, location, columns, rows, description, template=template
     )

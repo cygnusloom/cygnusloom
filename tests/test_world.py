@@ -1054,7 +1054,9 @@ def test_campaign_page_panels_show_only_the_scene(client_factory: Callable[[], T
     assert 'data-view="journal"' in page
 
     characters_page = page[page.index('id="character-list"') :]
-    characters_page = characters_page[: characters_page.index("</section>", characters_page.index("People you know"))]
+    characters_page = characters_page[
+        : characters_page.index("</section>", characters_page.index("People you know"))
+    ]
     assert "Brin Gallowcap" in characters_page
     assert "Mara Thistledown" not in characters_page
     assert "Mossbell Hollow" not in characters_page

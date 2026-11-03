@@ -279,7 +279,8 @@ an open gap. [PARITY.md](./PARITY.md) is the same status list with the tool/JSON
   the character cannot access, and the Healer and Vowed pools use their own formulas
   (`stats.json`, `progression.json`); `tests/test_wwn_magic.py` covers the refusal.
 - **A statblock's multi-attack resolves in one action.** `combat.json` sets
-  `multi_attack: "each"`, so one `attack` call applies every attack the creature makes;
+  `multi_attack: "each"`, so one `attack` call applies every attack the creature makes; the
+  count comes from the statblock's structured `attacks_per_action` field,
   `tests/test_wwn_combat.py::test_a_statblocks_attack_count_is_resolved_in_one_action` covers it.
 - **Named NPCs are mortally wounded, not killed.** `combat.json` loads the whole `defeat` map,
   including `important_npc: "mortally wounded"`; `tests/test_library_strictness.py` and
@@ -299,8 +300,6 @@ an open gap. [PARITY.md](./PARITY.md) is the same status list with the tool/JSON
 - **Surprise, grappling, execution attacks, total defense, dual wielding, and range bands.** The
   grappled and prone conditions, situational `hit_modifier`s, and rule/prompt text exist, but
   these are GM-run checks and states, not engine state or round tracking.
-- **Structured attacks-per-action.** The count is still parsed from the statblock's
-  `N attacks per action` prose; it is not a JSON field.
 - **Monster special abilities.** Bestiary abilities remain prose in `description`; every `rules`
   list is empty, so none are machine-readable.
 - **PC Morale.** Player characters still roll and display a Morale score for uniformity, although

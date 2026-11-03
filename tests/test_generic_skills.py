@@ -32,7 +32,7 @@ from cygnusforge.services.events import (
     load_state,
     record,
 )
-from tests.test_combat import Rolls
+from tests.factories import Rolls
 from tests.test_wwn_advancement import _ctx
 from tests.test_wwn_combat import PC, _events, _wwn_campaign
 
@@ -524,9 +524,7 @@ def test_a_check_adds_its_skill_stat_and_situational_modifier(client_factory):
     skill = next(ident for ident in spec.skills if ident not in pc.skills)
     stat_bonus = spec.modifier(pc.stats, "dex")
 
-    result = tools.roll_check(
-        "skill", PC, skill=skill, stat="dex", difficulty=8, modifier=2
-    )
+    result = tools.roll_check("skill", PC, skill=skill, stat="dex", difficulty=8, modifier=2)
 
     assert result["roll"] == 7
     assert result["skill_level"] == -2

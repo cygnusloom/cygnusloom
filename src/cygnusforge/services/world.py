@@ -1787,10 +1787,6 @@ class WorldTools:
                 self.encounter_objects,
             )
 
-    def end_npc_turn(self, name: str) -> dict[str, Any]:
-        with session_scope(self.engine) as db:
-            return encounters.end_turn(db, self.campaign_id, name, by_player=False)
-
     def add_note(self, text: str, subject: str | None = None) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return add_note(db, self.campaign_id, text, subject)

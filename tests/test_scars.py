@@ -63,9 +63,7 @@ def _injury_combat(injuries: Any):
     )
 
 
-def _run(
-    app, campaign_id: int, ops: list[dict[str, Any]], *dice: int, combat=CAIRN.combat
-) -> None:
+def _run(app, campaign_id: int, ops: list[dict[str, Any]], *dice: int, combat=CAIRN.combat) -> None:
     """Run effect ops on Mara with the given dice, in order."""
     with _db(app) as db:
         cx = EffectContext(rng=Rolls(*dice), combat=combat)

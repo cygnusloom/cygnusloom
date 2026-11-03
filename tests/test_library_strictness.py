@@ -241,9 +241,7 @@ def test_combat_defeat_still_needs_the_core_labels(tree: Path):
         ),
     ],
 )
-def test_unknown_definition_keys_are_rejected(
-    tree: Path, files: dict[str, Any], message: str
-):
+def test_unknown_definition_keys_are_rejected(tree: Path, files: dict[str, Any], message: str):
     _write(tree, files)
     with pytest.raises(ContentError, match=re.escape(message)):
         ContentLibrary.load(tree)

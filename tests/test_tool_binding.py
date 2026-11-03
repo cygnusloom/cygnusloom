@@ -196,7 +196,9 @@ def _context(world: _World) -> ToolContext:
 
 def test_a_bound_tool_calls_the_world_method_with_its_arguments():
     world = _World()
-    result = _run(_note_tool(), {"text": "The bridge sways.", "subject": "Spore Bridge"}, _context(world))
+    result = _run(
+        _note_tool(), {"text": "The bridge sways.", "subject": "Spore Bridge"}, _context(world)
+    )
     assert result == {"note_id": 1, "text": "The bridge sways.", "subject": "Spore Bridge"}
     assert world.calls == [("The bridge sways.", "Spore Bridge")]
 

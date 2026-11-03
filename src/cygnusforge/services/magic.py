@@ -226,9 +226,7 @@ def roll_save(
         raise InvalidInput(
             f"{character.name} has no stats yet; give them stats with update_npc first"
         )
-    result = resolve_save(
-        combat, current(character, stat), rng=rng, roll=natural, plus=plus
-    )
+    result = resolve_save(combat, current(character, stat), rng=rng, roll=natural, plus=plus)
     record(
         db,
         campaign_id,

@@ -4,10 +4,16 @@ The helpers go through the app's own routes, so a test gets the same authenticat
 form validation, and creation services a player does. The neutral ``rolltest`` rule set and the
 ``testhollow`` world are the defaults: a test that only needs a working campaign can ask for
 one in a line.
+
+``scene`` and ``tools_for`` keep a test of generic behavior off a source book: the fixture rule
+set carries its own stats, combat, checks, conditions, and counters, so no Cairn statblock or
+world content is loaded. Tests about a shipped rule set's own content stay on that content.
 """
 
 from __future__ import annotations
 
+import json
+import random
 from collections.abc import Callable, Mapping
 
 from fastapi import FastAPI
@@ -15,14 +21,18 @@ from fastapi.testclient import TestClient
 from httpx import Response
 from sqlmodel import Session
 
-from cygnusforge.services.events import CampaignState, load_state
-from tests.conftest import csrf_token, register
+from cygnusforge.content.library import RuleSet
+from cygnusforge.services import world
+from cygnusforge.services.events import CampaignState, Character, Turn, load_state
+from cygnusforge.services.world import WorldTools
+from tests.conftest import content_library, csrf_token, register
 
 DEFAULT_WORLD = "testhollow"
 DEFAULT_RULE_SET = "rolltest"
 DEFAULT_LABEL = "Contract Hollow"
 DEFAULT_PC = "Ada"
 DEFAULT_PRONOUNS = "she/her"
+DEFAULT_PLACE = "Mossbell Hollow"
 
 # A form field name may already carry its prefix, as the existing creation helpers send it.
 _FIELD_PREFIXES = (
@@ -112,6 +122,160 @@ def open_campaign(app: FastAPI, campaign_id: int) -> CampaignState:
     """The campaign state as its recorded events read it now."""
     with Session(app.state.engine) as db:
         return load_state(db, campaign_id)
+
+
+def db(app: FastAPI) -> Session:
+    """A session on the app's database that keeps loaded rows readable after the block."""
+    return Session(app.state.engine, expire_on_commit=False)
+
+
+def character_named(app: FastAPI, campaign_id: int, name: str) -> Character:
+    """The character the campaign's events read back, found by name regardless of case."""
+    return open_campaign(app, campaign_id).characters[name.casefold()]
+
+
+def rules_for(rule_set: str = DEFAULT_RULE_SET) -> RuleSet:
+    """A loaded rule set from the test content tree."""
+    return content_library().rule_sets[rule_set]
+
+
+def tools_for(
+    app: FastAPI,
+    campaign_id: int,
+    *,
+    rule_set: str = DEFAULT_RULE_SET,
+    rng: random.Random | None = None,
+) -> WorldTools:
+    """World tools built from a rule set alone, for a campaign on that rule set.
+
+    This is the app's tool wiring without a world template's own content, which is all a test of
+    generic behavior needs: the fixture rule sets carry their own tables, stats, combat, checks,
+    conditions, and counters. A test that needs a world's statblocks or tables should ask the app
+    for the tools it builds, or pass that content itself.
+    """
+    rules = rules_for(rule_set)
+    return WorldTools(
+        engine=app.state.engine,
+        campaign_id=campaign_id,
+        tables=dict(rules.tables),
+        rng=rng if rng is not None else random.Random(0),
+        character=rules.character,
+        rule_data=rules.rule_data,
+        grid=rules.grid,
+        terrain=rules.terrain,
+        encounter_objects=rules.encounter_objects,
+        encounter_templates=rules.encounter_templates,
+        combat=rules.combat,
+        monsters=dict(rules.monsters),
+        checks=rules.checks,
+        conditions=rules.conditions,
+        counters=rules.counters,
+        advancements=rules.advancements,
+        periods=rules.periods,
+        tallies=rules.tallies,
+        relations=rules.relations,
+        moves=rules.moves,
+        dice_tables=rules.dice_tables,
+        clock_rules=rules.clock,
+        rests=rules.rests,
+        interrupted_rest=rules.interrupted_rest,
+        hooks=rules.hooks,
+        inventory=rules.inventory,
+        item_sizes=rules.item_sizes,
+        magic=rules.magic,
+        marketplace=rules.marketplace,
+        plus=rules.plus,
+        npc_hp=rules.npc_hp,
+        npc_hp_stat=rules.npc_hp_stat,
+        travel=rules.travel,
+        wilderness=rules.wilderness,
+        world_terrain=rules.world_terrain,
+    )
+
+
+def scene(
+    client_factory: Callable[[], TestClient],
+    *,
+    rule_set: str = DEFAULT_RULE_SET,
+    world_template: str = DEFAULT_WORLD,
+    name: str = DEFAULT_PC,
+    rng: random.Random | None = None,
+) -> tuple[FastAPI, int, WorldTools]:
+    """A campaign with one character, and tools to act with it: the app, its id, and the tools."""
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign(client, world_template=world_template, rule_set=rule_set)
+    created = create_character(client, campaign_id, name=name)
+    assert created.status_code == 303, created.text
+    return client.app, campaign_id, tools_for(client.app, campaign_id, rule_set=rule_set, rng=rng)
+
+
+def campaign_ready(
+    client_factory: Callable[[], TestClient],
+    *,
+    label: str = DEFAULT_LABEL,
+    world_template: str = DEFAULT_WORLD,
+    rule_set: str = DEFAULT_RULE_SET,
+    name: str = DEFAULT_PC,
+) -> tuple[TestClient, int]:
+    """A campaign whose opening GM turn has finished, so the player can act."""
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign(
+        client, label=label, world_template=world_template, rule_set=rule_set
+    )
+    created = create_character(client, campaign_id, name=name)
+    assert created.status_code == 303, created.text
+    answer(client, campaign_id, "continue")
+    return client, campaign_id
+
+
+def place_pc(
+    client: TestClient,
+    campaign_id: int,
+    location: str = DEFAULT_PLACE,
+    name: str = DEFAULT_PC,
+) -> None:
+    """Place the player character, as the GM does with move_actor on its first turn."""
+    with db(client.app) as session:
+        world.move_actor(session, campaign_id, name, location)
+
+
+def send_message(client: TestClient, campaign_id: int, text: str) -> Response:
+    """Send a player message to the campaign, without following the redirect."""
+    token = csrf_token(client, "/campaigns")
+    return client.post(
+        f"/campaigns/{campaign_id}/messages",
+        data={"csrf_token": token, "content": text},
+        follow_redirects=False,
+    )
+
+
+def answer(client: TestClient, campaign_id: int, kind: str, content: str = "") -> list[dict]:
+    """Answer the campaign's pending question and return the streamed reply events."""
+    token = csrf_token(client, "/campaigns")
+    response = client.post(
+        f"/campaigns/{campaign_id}/pending/stream",
+        data={"csrf_token": token, "kind": kind, "content": content},
+    )
+    return [json.loads(line) for line in response.text.splitlines() if line.strip()]
+
+
+def pending_turn(app: FastAPI, campaign_id: int) -> Turn | None:
+    """The turn waiting on the player, or None when the GM has finished."""
+    with db(app) as session:
+        return load_state(session, campaign_id).turn
+
+
+class Rolls(random.Random):
+    """Dice that show the given values, in order. A value outside the die's range fails the test."""
+
+    def __init__(self, *values: int):
+        super().__init__(0)
+        self.values = list(values)
+
+    def randint(self, low: int, high: int) -> int:
+        value = self.values.pop(0)
+        assert low <= value <= high, f"a die of {low} to {high} cannot show {value}"
+        return value
 
 
 def _field_form_name(name: str) -> str:

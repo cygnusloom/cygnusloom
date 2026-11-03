@@ -6,6 +6,7 @@ catalog rather than scraping the documents' prose.
 
 from __future__ import annotations
 
+import re
 from dataclasses import replace
 
 from cygnusforge.content.library import RuleSet
@@ -70,6 +71,18 @@ def test_wwn_statblock_multi_attack_uses_each_attack() -> None:
     combat = _wwn().combat
     assert combat is not None
     assert combat.multi_attack == "each"
+
+
+def test_wwn_bestiary_attack_counts_are_structured_fields() -> None:
+    monsters = _wwn().monsters
+    assert monsters["ashcrawler_slave"].attacks_per_action == 1
+    assert monsters["ashcrawler"].attacks_per_action == 2
+    assert monsters["polop_hellsquid"].attacks_per_action == 4
+    phrase = re.compile(r"(\d+)\s+attacks?\s+per\s+action", re.IGNORECASE)
+    for monster in monsters.values():
+        match = phrase.search(monster.description)
+        if match is not None:
+            assert monster.attacks_per_action == int(match.group(1)), monster.id
 
 
 def test_wwn_healer_and_vowed_commit_their_own_effort_pools() -> None:

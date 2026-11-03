@@ -22,11 +22,12 @@ from cygnusforge.services.events import (
     events_since,
     modifier_value,
 )
-from tests.test_combat import CAIRN, PC, Rolls, _character, _fight, _tools
+from tests.factories import DEFAULT_PC, Rolls, character_named, db, rules_for, scene, tools_for
 from tests.test_content import _core, _rule_set, _world, _write
-from tests.test_world import _db
 
-CAIRN_STAT = "str"
+ROLLTEST = rules_for()
+PC = DEFAULT_PC
+STAT = "resolve"
 
 
 def _band(label: str, minimum: int | None, text: str = "", effects: tuple = ()) -> MoveBand:
@@ -200,28 +201,30 @@ def _move_for_fight(*, stat: str | None = None, effects: tuple = ()) -> MoveRule
 
 
 def _move_events(app: FastAPI, campaign_id: int) -> list[MoveMade]:
-    with _db(app) as db:
-        return [decode(row) for row in events_since(db, campaign_id) if row.kind == MoveMade.kind]
+    with db(app) as session:
+        return [
+            decode(row) for row in events_since(session, campaign_id) if row.kind == MoveMade.kind
+        ]
 
 
 def _roll(app: FastAPI, campaign_id: int, move: MoveRules, rng: Rolls, **kwargs: Any) -> dict:
-    with _db(app) as db:
+    with db(app) as session:
         return moves_service.make_move(
-            db,
+            session,
             campaign_id,
             PC,
             move,
             rng,
-            plus=CAIRN.plus,
-            combat=CAIRN.combat,
-            conditions=CAIRN.conditions,
-            counters=CAIRN.counters,
+            plus=ROLLTEST.plus,
+            combat=ROLLTEST.combat,
+            conditions=ROLLTEST.conditions,
+            counters=ROLLTEST.counters,
             **kwargs,
         )
 
 
 def test_a_move_rolls_its_dice_and_records_the_band(client_factory: Callable[[], TestClient]):
-    app, campaign_id, _ = _fight(client_factory)
+    app, campaign_id, _ = scene(client_factory)
     result = _roll(app, campaign_id, _move(), Rolls(6, 4))
     assert result == {
         "move": "Roll",
@@ -242,16 +245,16 @@ def test_a_move_rolls_its_dice_and_records_the_band(client_factory: Callable[[],
 
 
 def test_a_move_adds_the_stat_and_the_situational_modifier(client_factory):
-    app, campaign_id, _ = _fight(client_factory)
-    stat = modifier_value(_character(app, campaign_id, PC), CAIRN_STAT)
-    result = _roll(app, campaign_id, _move_for_fight(stat=CAIRN_STAT), Rolls(3, 3), modifier=-2)
+    app, campaign_id, _ = scene(client_factory)
+    stat = modifier_value(character_named(app, campaign_id, PC), STAT)
+    result = _roll(app, campaign_id, _move_for_fight(stat=STAT), Rolls(3, 3), modifier=-2)
     assert result["roll"] == 6
     assert result["bonus"] == stat - 2
     assert result["total"] == 6 + stat - 2
 
 
 def test_a_move_without_a_stat_adds_only_the_modifier(client_factory):
-    app, campaign_id, _ = _fight(client_factory)
+    app, campaign_id, _ = scene(client_factory)
     result = _roll(app, campaign_id, _move(), Rolls(2, 2), modifier=3)
     assert (result["roll"], result["bonus"], result["total"]) == (4, 3, 7)
 
@@ -279,43 +282,45 @@ def _character_stub(stats: dict[str, int], harm: dict[str, int]) -> Character:
 
 
 def test_a_band_runs_its_effects(client_factory: Callable[[], TestClient]):
-    app, campaign_id, _ = _fight(client_factory)
+    app, campaign_id, _ = scene(client_factory)
     move = _move_for_fight(effects=({"op": "note", "text": "The bell rings."},))
     _roll(app, campaign_id, move, Rolls(6, 6))
-    with _db(app) as db:
+    with db(app) as session:
         notes = [
-            decode(row) for row in events_since(db, campaign_id) if row.kind == EffectNoted.kind
+            decode(row)
+            for row in events_since(session, campaign_id)
+            if row.kind == EffectNoted.kind
         ]
     assert [note.text for note in notes] == ["The bell rings."]
 
 
 def test_a_move_for_an_unknown_character_is_refused(client_factory: Callable[[], TestClient]):
-    app, campaign_id, _ = _fight(client_factory)
-    with _db(app) as db, pytest.raises(InvalidInput, match="no character named 'Nobody'"):
+    app, campaign_id, _ = scene(client_factory)
+    with db(app) as session, pytest.raises(InvalidInput, match="no character named 'Nobody'"):
         moves_service.make_move(
-            db,
+            session,
             campaign_id,
             "Nobody",
             _move(),
             Rolls(6, 6),
-            plus=CAIRN.plus,
-            combat=CAIRN.combat,
-            conditions=CAIRN.conditions,
-            counters=CAIRN.counters,
+            plus=ROLLTEST.plus,
+            combat=ROLLTEST.combat,
+            conditions=ROLLTEST.conditions,
+            counters=ROLLTEST.counters,
         )
 
 
 def test_world_tools_roll_a_move_by_id(client_factory: Callable[[], TestClient]):
-    app, campaign_id, _ = _fight(client_factory)
-    tools = replace(_tools(app, campaign_id, Rolls(5, 5)), moves={"roll": _move_for_fight()})
+    app, campaign_id, _ = scene(client_factory)
+    tools = replace(tools_for(app, campaign_id, rng=Rolls(5, 5)), moves={"roll": _move_for_fight()})
     result = tools.roll_move("roll", PC)
     assert result["total"] == 10
     assert result["band"] == "Strong"
 
 
 def test_world_tools_refuse_an_unknown_move(client_factory: Callable[[], TestClient]):
-    app, campaign_id, _ = _fight(client_factory)
-    tools = replace(_tools(app, campaign_id), moves={"roll": _move_for_fight()})
+    app, campaign_id, _ = scene(client_factory)
+    tools = replace(tools_for(app, campaign_id), moves={"roll": _move_for_fight()})
     with pytest.raises(InvalidInput, match="there is no move named 'climb'"):
         tools.roll_move("climb", PC)
 
@@ -478,15 +483,15 @@ def test_end_condition_is_allowed_for_a_stored_condition(tree: Path):
 
 
 def test_a_move_the_player_chooses_the_stat_for_rolls_that_stat(client_factory):
-    app, campaign_id, _ = _fight(client_factory)
-    move = replace(_move_for_fight(), stat_choice=("str", "dex"))
-    result = _roll(app, campaign_id, move, Rolls(3, 3), stat="dex")
-    assert result["bonus"] == modifier_value(_character(app, campaign_id, PC), "dex")
+    app, campaign_id, _ = scene(client_factory)
+    move = replace(_move_for_fight(), stat_choice=(STAT,))
+    result = _roll(app, campaign_id, move, Rolls(3, 3), stat=STAT)
+    assert result["bonus"] == modifier_value(character_named(app, campaign_id, PC), STAT)
 
 
 def test_a_move_the_player_chooses_the_stat_for_needs_a_choice(client_factory):
-    app, campaign_id, _ = _fight(client_factory)
-    move = replace(_move_for_fight(), stat_choice=("str", "dex"))
+    app, campaign_id, _ = scene(client_factory)
+    move = replace(_move_for_fight(), stat_choice=(STAT,))
     with pytest.raises(InvalidInput, match="pick one of"):
         _roll(app, campaign_id, move, Rolls(3, 3))
 
@@ -494,8 +499,8 @@ def test_a_move_the_player_chooses_the_stat_for_needs_a_choice(client_factory):
 def test_a_move_the_player_chooses_the_stat_for_refuses_a_stat_outside_the_choice(
     client_factory,
 ):
-    app, campaign_id, _ = _fight(client_factory)
-    move = replace(_move_for_fight(), stat_choice=("str", "dex"))
+    app, campaign_id, _ = scene(client_factory)
+    move = replace(_move_for_fight(), stat_choice=(STAT,))
     with pytest.raises(InvalidInput, match="pick one of"):
         _roll(app, campaign_id, move, Rolls(3, 3), stat="wil")
 

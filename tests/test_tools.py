@@ -14,7 +14,7 @@ from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.services.campaigns import list_messages
 from cygnusforge.services.tools import Ask, RollAnswer, TextAnswer, ToolRun, run_tool, tool_specs
 from tests.conftest import content_library, without_journal
-from tests.test_campaigns import _answer, _campaign_id, _pending, _place_pc, _send
+from tests.factories import answer, campaign_ready, pending_turn, place_pc, send_message
 
 ROLL = {
     "name": "social_roll",
@@ -277,25 +277,25 @@ def _saved(app: FastAPI, campaign_id: int) -> list[tuple[str, str]]:
 def test_model_rolls_then_narrates_and_only_the_narration_is_saved(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    client, campaign_id = _campaign_id(client_factory)
+    client, campaign_id = campaign_ready(client_factory)
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
     script = _script({"rounds": [[ROLL]], "text": "Well rolled."})
 
-    response = _send(client, campaign_id, script)
+    response = send_message(client, campaign_id, script)
 
     assert response.status_code == 303
     offered = [spec["function"]["name"] for spec in recorder.calls[0]["tools"]]
     assert set(offered) == {"social_roll", *CORE_TOOL_NAMES}
     assert _saved(app, campaign_id)[1:] == [("user", script)]
-    prompt = _pending(app, campaign_id).prompt
+    prompt = pending_turn(app, campaign_id).prompt
     assert (prompt.text, prompt.dice, prompt.details) == (
         "Roll to persuade.",
         "1d20",
         "Modifiers: +1 relationship, +0 circumstance.",
     )
 
-    events = _answer(client, campaign_id, "roll")
+    events = answer(client, campaign_id, "roll")
 
     assert events[-1] == {"type": "saved", "event_id": _saved_ids(app, campaign_id)[-1]}
     assert len(without_journal(recorder.calls)) == 3
@@ -304,13 +304,13 @@ def test_model_rolls_then_narrates_and_only_the_narration_is_saved(
     result = json.loads(tool_messages[0]["content"])
     assert result["relationship"] == 1 and result["total"] == result["die"] + 1
     assert _saved(app, campaign_id)[1:] == [("user", script), ("assistant", "Well rolled.")]
-    assert _pending(app, campaign_id) is None
+    assert pending_turn(app, campaign_id) is None
 
 
 def test_bad_tool_arguments_go_back_to_the_model(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    client, campaign_id = _campaign_id(client_factory)
+    client, campaign_id = campaign_ready(client_factory)
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
     bad = {
@@ -319,26 +319,26 @@ def test_bad_tool_arguments_go_back_to_the_model(
     }
     script = _script({"rounds": [[bad]], "text": "Let me try again."})
 
-    response = _send(client, campaign_id, script)
+    response = send_message(client, campaign_id, script)
 
     assert response.status_code == 303
     tool_message = next(m for m in recorder.calls[1]["messages"] if m["role"] == "tool")
     assert "must be integer" in _error_of(tool_message["content"])
     assert _saved(app, campaign_id)[-1] == ("assistant", "Let me try again.")
-    assert _pending(app, campaign_id) is None
+    assert pending_turn(app, campaign_id) is None
 
 
 def test_state_steps_are_not_capped_at_a_number_of_rounds(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    client, campaign_id = _campaign_id(client_factory)
+    client, campaign_id = campaign_ready(client_factory)
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
     script = _script({"rounds": [[ROLL]] * 6, "text": "Done."})
 
-    _send(client, campaign_id, script)
+    send_message(client, campaign_id, script)
     for _ in range(6):
-        _answer(client, campaign_id, "roll")
+        answer(client, campaign_id, "roll")
 
     assert len(without_journal(recorder.calls)) == 8
     assert _saved(app, campaign_id)[-1] == ("assistant", "Done.")
@@ -353,10 +353,10 @@ SPEAK = {
 def test_npc_dialogue_is_queued_for_the_narration_not_sent_as_a_tool_result(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    client, campaign_id = _campaign_id(client_factory)
+    client, campaign_id = campaign_ready(client_factory)
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
-    _place_pc(client, campaign_id)
+    place_pc(client, campaign_id)
     script = _script(
         {
             "rounds": [[SPEAK]],
@@ -365,7 +365,7 @@ def test_npc_dialogue_is_queued_for_the_narration_not_sent_as_a_tool_result(
         }
     )
 
-    _send(client, campaign_id, script)
+    send_message(client, campaign_id, script)
 
     messages = recorder.calls[-1]["messages"]
     tool_results = [m["content"] for m in messages if m["role"] == "tool"]

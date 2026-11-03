@@ -107,7 +107,9 @@ def end_condition(
     if not force:
         if condition_ends and how != ALWAYS_CONDITION_END and how not in condition_ends:
             options = ", ".join(condition_ends) or "none"
-            raise InvalidInput(f"{how!r} is not a condition-ending trigger; the rule set has {options}")
+            raise InvalidInput(
+                f"{how!r} is not a condition-ending trigger; the rule set has {options}"
+            )
         if how != ALWAYS_CONDITION_END and how not in rules.ends:
             allowed = ", ".join(rules.ends) or "none"
             raise InvalidInput(f"{rules.label} ends by {allowed}, not by {how}")

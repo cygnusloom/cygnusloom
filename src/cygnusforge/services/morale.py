@@ -70,9 +70,7 @@ def check_morale(
         group = _side_npcs(state, side)
         living = [member for member in group if not out_of_fight(member)]
         leader = living[0]
-        result = resolve_save(
-            combat, current(leader, morale.save_stat), rng=rng, plus=plus
-        )
+        result = resolve_save(combat, current(leader, morale.save_stat), rng=rng, plus=plus)
         record(
             db,
             campaign_id,

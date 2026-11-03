@@ -20,9 +20,9 @@ from cygnusforge.services.events import (
 from cygnusforge.services.injuries import EffectContext, run_effects
 from cygnusforge.services.world import WorldTools
 from tests.conftest import content_library
+from tests.factories import Rolls
 from tests.test_campaigns import _create_character, _new_campaign
 from tests.test_character_creation import _signed_in
-from tests.test_combat import Rolls
 from tests.test_world import _state
 
 LIBRARY = content_library()
