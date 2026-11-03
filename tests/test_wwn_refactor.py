@@ -94,7 +94,14 @@ def _wwn_pc(client: TestClient, campaign_id: int):
 def test_wwn_capacity_is_the_strength_score(client_factory: Callable[[], TestClient]):
     client, campaign_id = _wwn_campaign(client_factory)
     pc = _wwn_pc(client, campaign_id)
-    rules = replace(WWN.inventory, capacity_stat="str", capacity_multiplier=1)
+    rules = replace(
+        WWN.inventory,
+        pools=(),
+        size_pools={},
+        default_pool="",
+        capacity_stat="str",
+        capacity_multiplier=1,
+    )
     assert rules.capacity_multiplier == 1
     assert inventory.capacity_of(pc, rules, WWN.character) == pc.stats["str"]
 
@@ -102,7 +109,14 @@ def test_wwn_capacity_is_the_strength_score(client_factory: Callable[[], TestCli
 def test_a_capacity_multiplier_scales_the_score(client_factory: Callable[[], TestClient]):
     client, campaign_id = _wwn_campaign(client_factory)
     pc = _wwn_pc(client, campaign_id)
-    rules = replace(WWN.inventory, capacity_stat="str", capacity_multiplier=2)
+    rules = replace(
+        WWN.inventory,
+        pools=(),
+        size_pools={},
+        default_pool="",
+        capacity_stat="str",
+        capacity_multiplier=2,
+    )
     assert inventory.capacity_of(pc, rules, WWN.character) == pc.stats["str"] * 2
 
 
@@ -111,9 +125,15 @@ def test_carrying_and_dropping_report_the_stat_based_capacity(
 ):
     client, campaign_id = _wwn_campaign(client_factory)
     pc = _wwn_pc(client, campaign_id)
-    tools = _wwn_tools(
-        client.app, campaign_id, replace(WWN.inventory, capacity_stat="str", capacity_multiplier=1)
+    single_pool = replace(
+        WWN.inventory,
+        pools=(),
+        size_pools={},
+        default_pool="",
+        capacity_stat="str",
+        capacity_multiplier=1,
     )
+    tools = _wwn_tools(client.app, campaign_id, single_pool)
     carried = tools.give_item(WREN, "Rope")
     assert carried["capacity"] == pc.stats["str"]
     dropped = tools.drop_item(WREN, "Rope")
@@ -125,7 +145,14 @@ def test_a_buy_is_measured_against_the_stat_based_capacity(
 ):
     client, campaign_id = _wwn_campaign(client_factory)
     pc = _wwn_pc(client, campaign_id)
-    rules = replace(WWN.inventory, capacity_stat="str", capacity_multiplier=1)
+    rules = replace(
+        WWN.inventory,
+        pools=(),
+        size_pools={},
+        default_pool="",
+        capacity_stat="str",
+        capacity_multiplier=1,
+    )
     marketplace = Marketplace(
         currency="silver",
         items=(

@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from cygnusforge.content.library import InventoryPool, InventoryRules
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import ItemAdded, current, record
 from cygnusforge.services.market import listed_item
@@ -236,3 +237,97 @@ def test_the_campaign_page_lists_the_pack(client_factory: Callable[[], TestClien
     inventory = page[start : page.index("</section>", start)]
     assert f"Carrying {_used(client.app, campaign_id)} of {CAPACITY} slots." in inventory
     assert "<strong>Rope</strong>" in inventory
+
+
+def _empty_pack(app: FastAPI, campaign_id: int, tools: WorldTools) -> None:
+    """Drop the character's starting gear so a pool test starts with nothing carried."""
+    for held in list(_character(app, campaign_id, PC).items):
+        tools.drop_item(PC, held.name)
+
+
+def _pooled(tools: WorldTools) -> WorldTools:
+    """A single campaign using two named pools: two Readied slots and four Stowed."""
+    return replace(
+        tools,
+        inventory=InventoryRules(
+            capacity=0,
+            penalty_name="Overloaded",
+            penalty_lasts="until rest",
+            penalty_item="Overload",
+            penalty_slots=0,
+            pools=(
+                InventoryPool(id="readied", name="Readied", ready=True, capacity=2),
+                InventoryPool(id="stowed", name="Stowed", capacity=4),
+            ),
+            default_pool="stowed",
+        ),
+    )
+
+
+def test_named_pools_hold_items_and_readying_moves_one_to_the_readied_pool(
+    client_factory: Callable[[], TestClient],
+):
+    app, campaign_id, tools = _fight(client_factory)
+    tools = _pooled(tools)
+    _empty_pack(app, campaign_id, tools)
+    first = tools.give_item(PC, "Lantern")
+    assert first["pool"] == "stowed"
+    assert first["pool_slots"] == 1
+
+    result = tools.ready_item(PC, "Lantern")
+    assert result["ready"] is True
+    assert result["pool"] == "readied"
+    assert result["readied_slots"] == 1
+    assert _character(app, campaign_id, PC).items[0].ready is True
+
+
+def test_a_full_readied_pool_refuses_another_item(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools = _pooled(tools)
+    _empty_pack(app, campaign_id, tools)
+    tools.give_item(PC, "Lantern")
+    tools.give_item(PC, "Rope")
+    tools.ready_item(PC, "Lantern")
+    tools.ready_item(PC, "Rope")
+    tools.give_item(PC, "Torch")
+
+    with pytest.raises(InvalidInput, match="Readied pool has no room"):
+        tools.ready_item(PC, "Torch")
+
+
+def test_a_bulky_item_cannot_be_readied(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _empty_pack(app, campaign_id, tools)
+    rules = replace(
+        _pooled(tools).inventory,
+        size_pools={"bulky": "stowed"},
+    )
+    tools = replace(tools, inventory=rules)
+    tools.give_item(PC, "Ladder", size="bulky")
+
+    with pytest.raises(InvalidInput, match="too bulky"):
+        tools.ready_item(PC, "Ladder")
+
+
+def test_a_stowed_item_cannot_be_used_until_it_is_readied(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools = _pooled(tools)
+    _empty_pack(app, campaign_id, tools)
+    tools.give_item(PC, "Rations")
+
+    with pytest.raises(InvalidInput, match="stowed; ready it before use"):
+        tools.use_item(PC, "Rations")
+
+    tools.ready_item(PC, "Rations")
+    assert tools.use_item(PC, "Rations")["uses_left"] >= 0
+
+
+def test_a_named_stowed_pool_refuses_an_item_that_does_not_fit(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools = _pooled(tools)
+    _empty_pack(app, campaign_id, tools)
+    tools.give_item(PC, "Ladder", size="bulky")
+    tools.give_item(PC, "Rope", size="bulky")
+
+    with pytest.raises(InvalidInput, match="Stowed pool is full"):
+        tools.give_item(PC, "Anvil", size="bulky")

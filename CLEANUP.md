@@ -114,9 +114,12 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
 ### WWN parity backlog (track, then close)
 
 - [x] Source-valid partial-class pairings, including Healer and Vowed.
-- [ ] Separate Readied and Stowed capacity; armor-encumbrance penalties to Sneak/Exert.
-  Schema stage landed: inventory `pools`, `size_pools`, and `default_pool` load and validate
-  (`tests/test_inventory_schema.py`); the service still uses the single capacity model.
+- [x] Separate Readied and Stowed capacity. WWN uses a 0.5 x STR Readied pool and a 1 x STR
+  Stowed pool; items join by size/default, equipment joins Readied, a bulky item cannot be
+  readied, over-capacity is refused, and a stowed item cannot be used
+  (`tests/test_inventory.py`, `tests/test_inventory_schema.py`, `tests/test_wwn_inventory.py`).
+- [ ] Armor-encumbrance penalties to Sneak/Exert. Armor descriptions state the rule, but armor
+  items do not yet carry a structured check penalty.
 - [ ] Shield AC suspended after a shield bash until the next turn.
 - [x] Effort stats only for eligible characters. Each Effort stat names its granting class or
   tradition templates in `requires_templates`; a Warrior has none and a Mage keeps only the

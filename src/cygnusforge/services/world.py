@@ -2164,13 +2164,16 @@ def _starting_item(
             kind=magic.reusable.kind,
             text=feature.description,
         )
+    flags = list(feature.flags)
+    if feature.armor > 0 and "shield" not in flags and "armor" not in flags:
+        flags.append("armor")
     return Item(
         feature.name,
         feature.size,
         item_sizes[feature.size],
         damage=feature.damage,
         rules=feature.rules,
-        flags=feature.flags,
+        flags=tuple(flags),
         uses=feature.uses,
         max_uses=feature.uses,
     )

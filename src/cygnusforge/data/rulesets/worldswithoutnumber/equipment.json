@@ -2,17 +2,12 @@
   {
     "type": "inventory",
     "id": "wwn",
-    "capacity": 10,
-    "capacity_stat": "str",
-    "capacity_multiplier": 1.5,
-    "readied_stat": "str",
-    "readied_divisor": 2,
     "pools": [
       {
         "id": "stowed",
         "name": "Stowed",
         "stat": "str",
-        "multiplier": 1.5,
+        "multiplier": 1,
         "divisor": 1,
         "rounding": "down"
       },

@@ -12,7 +12,7 @@ procedure is not complete; **open** rule text or GM procedure only.
 | Character creation: attributes, skills, backgrounds, classes, Foci, gear | yes | `classes.json`, `backgrounds.json`, `foci.json`, `equipment.json`, `stats.json`; `tests/test_wwn.py`, `tests/test_wwn_advancement.py` | — |
 | Dual-mage Adventurer with two partial traditions | yes | `classes.json` (`adventurer_mage_mage`, `*_partial_2`), `progression.json` (`dual_mage`); `tests/test_wwn_advancement.py::test_a_dual_mage_takes_two_partial_traditions` | — |
 | Arbitrary partial-class pairings, including Healer and Vowed | open | `classes.json` has four fixed Adventurer pairings; Healer and Vowed are standalone classes | No generic partial + partial class builder |
-| Readied and Stowed pools | yes | `equipment.json`: `readied_stat: "str"`, `readied_divisor: 2`, `capacity_multiplier: 1.5`; `services/inventory.py`; `tests/test_wwn_combat.py::test_a_stowed_weapon_must_be_readied_before_it_can_strike` | — |
+| Readied and Stowed pools | yes | `equipment.json`: named `stowed` (1 x STR) and `readied` (0.5 x STR) pools, `size_pools`/`default_pool`; `services/inventory.py`; `tests/test_inventory.py` and `tests/test_inventory_schema.py` | — |
 | Armor-encumbrance penalty to Sneak/Exert | open | Armor descriptions and `rules.json` state the penalty | `roll_check` does not apply it automatically |
 | Shield bash | partial | `equipment.json` has `shield_bash_large` and `shield_bash_small` attack profiles | No state suspends the shield's AC until the next turn |
 | Effort commitment eligibility | yes | `stats.json` derived pools; `progression.json` tradition Effort stats; `wwn_magic.commit_effort`; `tests/test_wwn_magic.py::test_effort_cannot_be_committed_to_an_unavailable_tradition` | — |

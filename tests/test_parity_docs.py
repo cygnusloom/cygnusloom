@@ -46,8 +46,10 @@ def test_wwn_important_npc_defeat_label_loads() -> None:
 def test_wwn_readied_and_stowed_capacities_are_separate() -> None:
     rules = _wwn().inventory
     assert rules is not None
-    assert (rules.capacity_stat, rules.capacity_multiplier) == ("str", 1.5)
-    assert (rules.readied_stat, rules.readied_divisor) == ("str", 2)
+    assert [pool.id for pool in rules.pools] == ["stowed", "readied"]
+    assert [pool.ready for pool in rules.pools] == [False, True]
+    assert rules.default_pool == "stowed"
+    assert rules.size_pools["massive"] == "stowed"
 
     character = Character(
         kind="pc",

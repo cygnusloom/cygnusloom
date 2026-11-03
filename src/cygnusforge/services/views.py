@@ -499,7 +499,7 @@ def scene_view(
             items=items,
             used=inventory_service.used_slots(pc),
             capacity=inventory_service.capacity_of(pc, inventory, spec),
-            has_readied=bool(inventory.readied_stat),
+            has_readied=bool(inventory.readied_stat or any(pool.ready for pool in inventory.pools)),
         )
     hirelings = tuple(
         c
