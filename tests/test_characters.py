@@ -2,16 +2,29 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
 from collections.abc import Callable
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from cygnusforge.llm.base import ToolRequest
 from cygnusforge.services.events import name_key
+from cygnusforge.services.tools import ToolRun, run_tool
 from tests.test_campaigns import _campaign_id, _place_pc
-from tests.test_world import _state, _tool
+from tests.test_world import CAIRN_TOOLS, _ctx, _state
 
 PC = "Ada"
+
+
+def _tool(app: FastAPI, campaign_id: int, name: str, arguments: dict[str, Any]) -> dict:
+    """Run a Cairn tool: the characters-page tests need its hireling tools."""
+    request = ToolRequest(id="call_1", name=name, arguments=json.dumps(arguments))
+    run = asyncio.run(run_tool(CAIRN_TOOLS, request, None, _ctx(app, campaign_id)))
+    assert isinstance(run, ToolRun)
+    return json.loads(run.output)
 
 
 def _characters_section(page: str) -> str:

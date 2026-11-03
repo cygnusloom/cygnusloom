@@ -7,6 +7,29 @@
     "capacity_multiplier": 1.5,
     "readied_stat": "str",
     "readied_divisor": 2,
+    "pools": [
+      {
+        "id": "stowed",
+        "name": "Stowed",
+        "stat": "str",
+        "multiplier": 1.5,
+        "divisor": 1,
+        "rounding": "down"
+      },
+      {
+        "id": "readied",
+        "name": "Readied",
+        "stat": "str",
+        "multiplier": 1,
+        "divisor": 2,
+        "rounding": "down",
+        "ready": true
+      }
+    ],
+    "size_pools": {
+      "massive": "stowed"
+    },
+    "default_pool": "stowed",
     "penalty_name": "Overloaded",
     "penalty_lasts": "until you drop enough gear and rest",
     "penalty_item": "overload",

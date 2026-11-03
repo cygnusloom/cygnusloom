@@ -410,6 +410,8 @@ def test_wwn_mage_mage_form_exposes_distinct_partial_traditions(
         }
     ]
     assert first["compatible_with"]["class"] == [
+        "healer",
+        "vowed",
         "adventurer_expert_mage",
         "adventurer_warrior_mage",
         "adventurer_mage_mage",
@@ -417,6 +419,52 @@ def test_wwn_mage_mage_form_exposes_distinct_partial_traditions(
     assert first["choice_key"] == second["choice_key"] == "high_mage"
     assert 'data-choice-panel="template-tradition"' in page
     assert 'data-choice-panel="template-tradition2"' in page
+
+
+def test_wwn_healer_and_vowed_form_requires_a_second_partial_class(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    parser = _TemplateChoiceParser()
+    parser.feed(page)
+    choices = {
+        (choice["name"], choice["value"]): choice
+        for choice in parser.choices
+        if choice["kind"] is not None
+    }
+    healer = choices[("template-class", "healer")]
+    vowed = choices[("template-class", "vowed")]
+    warrior = choices[("template-class2", "warrior_partial_2")]
+    mage = choices[("template-class2", "mage_partial_2")]
+
+    for partial_class in (healer, vowed):
+        assert partial_class["requirements"] == [
+            {
+                "kinds": ["class", "class2"],
+                "distinct": True,
+                "missing_message": f"a {partial_class['value'].capitalize()} "
+                "must pair with another partial class",
+                "duplicate_message": f"a {partial_class['value'].capitalize()} "
+                "must pair with a different partial class",
+            }
+        ]
+    assert warrior["compatible_with"] == {
+        "class": ["healer", "vowed"],
+        "tradition": ["no_tradition"],
+    }
+    assert mage["compatible_with"]["tradition"] == [
+        "high_mage_partial",
+        "necromancer_partial",
+        "elementalist_partial",
+    ]
+    assert warrior["choice_key"] == "warrior"
+    assert mage["choice_key"] == "mage"
+    assert 'data-choice-panel="template-class2"' in page
+    assert '<h3 id="panel-kind-class2">Second Class</h3>' in page
 
 
 def test_wwn_skill_pick_form_exposes_progression_grants_and_caps(

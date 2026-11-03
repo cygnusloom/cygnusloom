@@ -49,6 +49,7 @@ TOOLS = CONTRACT.tool_calls
 TABLES = LIBRARY.core.tables
 # Shipped Cairn content, for the tests about its own campaign options and world.
 CAIRN = LIBRARY.rule_sets["cairn2e"]
+CAIRN_TOOLS = CAIRN.tool_calls
 # Neutral rules for a generic view test, so it carries no source book's content.
 INVENTORY = InventoryRules(
     capacity=10,

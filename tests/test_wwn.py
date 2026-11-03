@@ -17,7 +17,8 @@ from cygnusforge.content.character import (
 )
 from cygnusforge.content.library import ContentLibrary
 from cygnusforge.rules.wwn_progression import require_wwn_progression
-from cygnusforge.services.events import load_state
+from cygnusforge.services.events import NPC_KIND, PC_KIND, CampaignState, Character, load_state
+from cygnusforge.services.views import get_statblock, scene_view
 from tests.conftest import content_library
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
 from tests.test_character_creation import _choices, _rolled_stats
@@ -85,6 +86,42 @@ def test_wwn_derived_saves_and_effort() -> None:
     assert values["save_luck"] == 16 - 3
     assert values["strain"] == 18
     assert values["effort_high"] == 1 + 1 + 0
+
+
+def test_a_wwn_player_character_sheet_has_no_morale_but_a_statblock_does() -> None:
+    """Morale is a statblock score. The source gives PCs no Morale, so it is not rolled at
+    creation and a PC's sheet leaves it out, while an NPC or monster keeps the printed score."""
+    ruleset = _wwn().rule_sets["worldswithoutnumber"]
+    spec = ruleset.character
+    assert "morale" not in {stat.id for stat in spec.stats.values() if stat.derived is None}
+    sheet = resolve(spec, {"templates": {"class": "warrior"}}, random.Random(41), plus=ruleset.plus)
+    state = CampaignState()
+    state.characters["wren"] = Character(
+        kind=PC_KIND,
+        name="Wren",
+        location=None,
+        description="",
+        personality="",
+        accent="",
+        quirks=[],
+        stats=dict(sheet.stats),
+    )
+    block = get_statblock(state, "Wren", spec, ruleset.combat)
+    assert "Morale" not in "\n".join(block["statblock"])
+    assert all("Morale" not in line for line in scene_view(state, spec).sheet)
+
+    state.characters["hound"] = Character(
+        kind=NPC_KIND,
+        name="Hound",
+        location=None,
+        description="A lean hound.",
+        personality="",
+        accent="",
+        quirks=[],
+        stats={**sheet.stats, "morale": 10},
+    )
+    npc_block = get_statblock(state, "Hound", spec, ruleset.combat)
+    assert "Morale 10" in "\n".join(npc_block["statblock"])
 
 
 def test_starting_attack_bonus_matches_each_class_progression() -> None:

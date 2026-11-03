@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import inspect
 import logging
+import math
 import re
 import string
 from collections.abc import Callable, Iterable, Mapping, Sequence
@@ -957,13 +958,53 @@ class RestLength:
 
 
 @dataclass(frozen=True)
+class InventoryPool:
+    """One named pool of inventory slots, such as a Stowed pack or the items kept to hand.
+
+    A pool has either a fixed `capacity` or a capacity derived from a character's `stat`: the raw
+    score times `multiplier`, plus `base`, divided by `divisor`, and rounded `up` or `down`.
+    `ready` marks the pool as the one whose items a character can use without spending an action;
+    a rule set has at most one readied pool."""
+
+    id: str
+    name: str
+    ready: bool = False
+    # The fixed slot count for a pool that does not derive capacity from a stat.
+    capacity: int | None = None
+    # The stat a derived pool's capacity comes from. Empty for a fixed pool.
+    stat: str = ""
+    multiplier: float = 1.0
+    divisor: int = 1
+    # "down" or "up": how the derived slot count rounds after dividing.
+    rounding: str = "down"
+    # Slots added to the scaled score before dividing.
+    base: int = 0
+
+    def capacity_for(self, score: int) -> int:
+        """The slots this pool holds for a character with `score` in its stat. The result is
+        never negative."""
+        if self.capacity is not None:
+            return self.capacity
+        scaled = self.base + score * self.multiplier
+        if self.rounding == "up":
+            slots = math.ceil(scaled / self.divisor)
+        else:
+            slots = math.floor(scaled / self.divisor)
+        return max(0, int(slots))
+
+
+@dataclass(frozen=True)
 class InventoryRules:
     """How many slots a character's inventory has, what the penalty costs, and which stat takes harm
     when the inventory fills. `item_sizes` is in `RuleSet`.
 
-    A rule set may leave `capacity_stat` empty and use the fixed `capacity`, or name a stat and let
-    each character's raw score in it set their capacity, times `capacity_multiplier`. `full_stat`
-    is empty when a full inventory drains nothing."""
+    Named `pools` are the preferred model: each has its own fixed or stat-derived capacity, and
+    `size_pools` maps item sizes to them, falling back to `default_pool`. A rule set with no pools
+    keeps the single-pool model: it may leave `capacity_stat` empty and use the fixed `capacity`,
+    or name a stat and let each character's raw score in it set their capacity, times
+    `capacity_multiplier`. `readied_stat`/`readied_divisor` remain for the single-pool model; a
+    named readied pool carries the same idea. `full_stat` is empty when a full inventory drains
+    nothing."""
 
     capacity: int
     penalty_name: str
@@ -981,6 +1022,12 @@ class InventoryRules:
     # rule set has no Readied pool; `readied_divisor` divides the stat's score.
     readied_stat: str = ""
     readied_divisor: int = 1
+    # Named pools, in definition order. Empty when the rule set uses the single-pool model.
+    pools: tuple[InventoryPool, ...] = ()
+    # Item size id to the pool id its items occupy by default.
+    size_pools: Mapping[str, str] = field(default_factory=dict)
+    # The pool every item size without a `size_pools` entry occupies. Empty with no pools.
+    default_pool: str = ""
 
 
 @dataclass(frozen=True)
@@ -2069,8 +2116,8 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     clock = _load_clock(definitions, template)
     rests = _load_rests(definitions, character, template, clock, condition_ends)
     interrupted_rest = _load_interrupted_rest(definitions, rests, template)
-    inventory = _load_inventory(definitions, character, template)
     item_sizes = _load_item_sizes(definitions, template)
+    inventory = _load_inventory(definitions, character, item_sizes, template)
     _check_item_sizes(character, item_sizes, template)
     magic = _load_magic(definitions, item_sizes, template)
     hooks = _load_rule_hooks(definitions, modules, character, rests, template)
@@ -3627,7 +3674,10 @@ def _load_interrupted_rest(
 
 
 def _load_inventory(
-    definitions: list[Definition], character: CharacterSpec, template: str
+    definitions: list[Definition],
+    character: CharacterSpec,
+    item_sizes: Mapping[str, int],
+    template: str,
 ) -> InventoryRules | None:
     definition = _single_optional(definitions, "inventory", template)
     if definition is None:
@@ -3648,6 +3698,9 @@ def _load_inventory(
             "capacity_multiplier",
             "readied_stat",
             "readied_divisor",
+            "pools",
+            "size_pools",
+            "default_pool",
         },
         label,
     )
@@ -3657,8 +3710,26 @@ def _load_inventory(
     capacity_stat = _optional_text(definition.data, "capacity_stat", label) or ""
     if capacity_stat and capacity_stat not in character.stats:
         raise ContentError(f"{label}: 'capacity_stat' names no stat ({capacity_stat!r})")
+    pools = _load_inventory_pools(definition.data, character, label)
+    size_pools = _load_size_pools(definition.data, item_sizes, pools, label)
+    default_pool = _optional_nonempty_text(definition.data, "default_pool", label) or ""
+    pool_ids = {pool.id for pool in pools}
+    if pools and not default_pool:
+        raise ContentError(f"{label}: 'pools' needs a 'default_pool' naming a pool")
+    if default_pool and not pools:
+        raise ContentError(f"{label}: 'default_pool' needs 'pools'")
+    if default_pool and default_pool not in pool_ids:
+        raise ContentError(f"{label}: 'default_pool' names no pool ({default_pool!r})")
+    readied = [pool.id for pool in pools if pool.ready]
+    if len(readied) > 1:
+        names = ", ".join(repr(pool_id) for pool_id in readied)
+        raise ContentError(f"{label}: at most one pool may be readied, but {names} are")
+    # A single-pool rule set still names its capacity; named pools carry their own.
+    capacity = 0
+    if "capacity" in definition.data or not pools:
+        capacity = _whole(definition.data, "capacity", label, 1)
     return InventoryRules(
-        capacity=_whole(definition.data, "capacity", label, 1),
+        capacity=capacity,
         penalty_name=required_text(definition.data, "penalty_name", label),
         penalty_lasts=required_text(definition.data, "penalty_lasts", label),
         penalty_item=required_text(definition.data, "penalty_item", label),
@@ -3672,7 +3743,103 @@ def _load_inventory(
         readied_divisor=_whole(definition.data, "readied_divisor", label, 1)
         if "readied_divisor" in definition.data
         else 1,
+        pools=pools,
+        size_pools=size_pools,
+        default_pool=default_pool,
     )
+
+
+INVENTORY_POOL_KEYS = frozenset(
+    {"id", "name", "ready", "capacity", "stat", "multiplier", "divisor", "rounding", "base"}
+)
+# The derived capacity arithmetic: the character's raw score times `multiplier`, plus `base`,
+# divided by `divisor`, and rounded up or down.
+POOL_ROUNDINGS = ("down", "up")
+
+
+def _load_inventory_pools(
+    data: Mapping[str, Any], character: CharacterSpec, label: str
+) -> tuple[InventoryPool, ...]:
+    """The named pools. Each has a fixed `capacity` or a `stat` whose score derives it, and at
+    most one pool is `ready`."""
+    raw = data.get("pools", [])
+    if not isinstance(raw, list):
+        raise ContentError(f"{label}: 'pools' must be a list of pool objects")
+    pools: list[InventoryPool] = []
+    seen: set[str] = set()
+    for index, entry in enumerate(raw):
+        pool = check_object_keys(entry, INVENTORY_POOL_KEYS, f"{label}: pool {index}")
+        ident = required_text(pool, "id", f"{label}: pool {index}")
+        pool_label = f"{label}: pool {ident!r}"
+        if ident in seen:
+            raise ContentError(f"{label}: duplicate pool id {ident!r}")
+        seen.add(ident)
+        name = required_text(pool, "name", pool_label)
+        if "capacity" in pool:
+            for key in ("stat", "multiplier", "divisor", "rounding", "base"):
+                if key in pool:
+                    raise ContentError(
+                        f"{pool_label}: a fixed 'capacity' takes no {key!r}; derive it from a stat"
+                    )
+            pools.append(
+                InventoryPool(
+                    id=ident,
+                    name=name,
+                    ready=_flag(pool, "ready", pool_label),
+                    capacity=_whole(pool, "capacity", pool_label, 0),
+                )
+            )
+            continue
+        stat = required_text(pool, "stat", pool_label)
+        if stat not in character.stats:
+            raise ContentError(f"{pool_label}: 'stat' names no stat ({stat!r})")
+        multiplier = _number(pool, "multiplier", pool_label, 0.0) if "multiplier" in pool else 1.0
+        if multiplier <= 0:
+            raise ContentError(f"{pool_label}: 'multiplier' must be greater than zero")
+        rounding = pool.get("rounding", "down")
+        if rounding not in POOL_ROUNDINGS:
+            raise ContentError(
+                f"{pool_label}: 'rounding' must be one of {', '.join(POOL_ROUNDINGS)}"
+            )
+        pools.append(
+            InventoryPool(
+                id=ident,
+                name=name,
+                ready=_flag(pool, "ready", pool_label),
+                stat=stat,
+                multiplier=multiplier,
+                divisor=_whole(pool, "divisor", pool_label, 1) if "divisor" in pool else 1,
+                rounding=rounding,
+                base=_whole(pool, "base", pool_label, 0) if "base" in pool else 0,
+            )
+        )
+    return tuple(pools)
+
+
+def _load_size_pools(
+    data: Mapping[str, Any],
+    item_sizes: Mapping[str, int],
+    pools: Sequence[InventoryPool],
+    label: str,
+) -> dict[str, str]:
+    """The pool each item size occupies, checked against the rule set's item sizes and pools."""
+    raw = data.get("size_pools", {})
+    if not isinstance(raw, Mapping):
+        raise ContentError(f"{label}: 'size_pools' must map item size ids to pool ids")
+    if raw and not pools:
+        raise ContentError(f"{label}: 'size_pools' needs 'pools'")
+    pool_ids = {pool.id for pool in pools}
+    size_pools: dict[str, str] = {}
+    for size, pool_id in raw.items():
+        entry_label = f"{label}: size pool {size!r}"
+        if size not in item_sizes:
+            raise ContentError(f"{entry_label}: names no item size ({size!r})")
+        if not isinstance(pool_id, str) or not pool_id.strip():
+            raise ContentError(f"{entry_label}: must name a pool")
+        if pool_id not in pool_ids:
+            raise ContentError(f"{entry_label}: names no pool ({pool_id!r})")
+        size_pools[str(size)] = pool_id
+    return size_pools
 
 
 def _load_item_sizes(definitions: list[Definition], template: str) -> dict[str, int]:

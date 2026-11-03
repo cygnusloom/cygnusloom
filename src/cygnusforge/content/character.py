@@ -1594,6 +1594,8 @@ def _check_templates(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
         template = spec.templates[template_id]
         for kind, allowed in template.compatible_with.items():
             selected = chosen.get(kind, "")
+            if not selected:
+                raise CharacterError(f"{template.name} requires a {kind} choice")
             if selected not in allowed:
                 selected_name = (
                     spec.templates[selected].name if selected in spec.templates else selected

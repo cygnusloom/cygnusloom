@@ -1,0 +1,154 @@
+[
+  {
+    "type": "template",
+    "id": "warrior_partial_2",
+    "kind": "class2",
+    "choice_key": "warrior",
+    "name": "Second Partial Class: Warrior",
+    "description": "The martial half of an Adventurer. It adds a Warrior's hit points and attack bonus and one martial Focus. A second partial class is always paired with the character's first partial class.",
+    "compatible_with": { "class": ["healer", "vowed"], "tradition": ["no_tradition"] },
+    "stats": { "hp": 2, "attack_bonus": 1 },
+    "feat_picks": [
+      {
+        "id": "second_class_focus_warrior",
+        "count": 1,
+        "tag": "focus",
+        "max_rank": 1,
+        "advance_repeated_rank": true,
+        "exclude": [
+          "focus_armored_magic",
+          "focus_artisan",
+          "focus_authority",
+          "focus_connected",
+          "focus_cultured",
+          "focus_dealmaker",
+          "focus_developed_attribute",
+          "focus_diplomatic_grace",
+          "focus_gifted_chirurgeon",
+          "focus_henchkeeper",
+          "focus_impostor",
+          "focus_nullifier",
+          "focus_poisoner",
+          "focus_polymath",
+          "focus_rider",
+          "focus_specialist",
+          "focus_spirit_familiar",
+          "focus_trapmaster",
+          "focus_unique_gift",
+          "focus_well_met",
+          "focus_xenoblooded",
+          "focus_special_origin"
+        ]
+      }
+    ],
+    "names": "names"
+  },
+  {
+    "type": "template",
+    "id": "expert_partial_2",
+    "kind": "class2",
+    "choice_key": "expert",
+    "name": "Second Partial Class: Expert",
+    "description": "The skilled half of an Adventurer. It adds an Expert's training and one non-combat Focus. A second partial class is always paired with the character's first partial class.",
+    "compatible_with": { "class": ["healer", "vowed"], "tradition": ["no_tradition"] },
+    "stats": { "hp": 0, "attack_bonus": 0 },
+    "feat_picks": [
+      {
+        "id": "second_class_focus_expert",
+        "count": 1,
+        "tag": "focus",
+        "max_rank": 1,
+        "advance_repeated_rank": true,
+        "exclude": [
+          "focus_alert",
+          "focus_armored_magic",
+          "focus_armsmaster",
+          "focus_assassin",
+          "focus_close_combatant",
+          "focus_deadeye",
+          "focus_die_hard",
+          "focus_impervious_defense",
+          "focus_lucky",
+          "focus_shocking_assault",
+          "focus_snipers_eye",
+          "focus_unarmed_combatant",
+          "focus_valiant_defender",
+          "focus_whirlwind_assault",
+          "focus_special_origin"
+        ]
+      }
+    ],
+    "names": "names"
+  },
+  {
+    "type": "template",
+    "id": "mage_partial_2",
+    "kind": "class2",
+    "choice_key": "mage",
+    "name": "Second Partial Class: Mage",
+    "description": "The magical half of an Adventurer. It adds a partial magical tradition, chosen from the partial traditions. A second partial class is always paired with the character's first partial class.",
+    "compatible_with": {
+      "class": ["healer", "vowed"],
+      "tradition": ["high_mage_partial", "necromancer_partial", "elementalist_partial"]
+    },
+    "stats": { "hp": 0, "attack_bonus": 0 },
+    "names": "names"
+  },
+  {
+    "type": "template",
+    "id": "healer_partial_2",
+    "kind": "class2",
+    "choice_key": "healer",
+    "name": "Second Partial Class: Healer",
+    "description": "The curative half of an Adventurer. It grants Heal as a bonus skill, the Healing Touch art, and one more healer art. A second partial class is always paired with the character's first partial class.",
+    "compatible_with": { "class": ["healer", "vowed"], "tradition": ["no_tradition"] },
+    "stats": { "hp": -1, "attack_bonus": 0 },
+    "skills": { "heal": 1 },
+    "features": [{ "feature": "art_healing_touch" }],
+    "feat_picks": [
+      {
+        "id": "second_class_art_healer",
+        "count": 1,
+        "tag": "healer",
+        "max_rank": 0,
+        "exclude": ["art_healing_touch", "art_limb_restoration", "art_revive_the_fallen"]
+      }
+    ],
+    "names": "names"
+  },
+  {
+    "type": "template",
+    "id": "vowed_partial_2",
+    "kind": "class2",
+    "choice_key": "vowed",
+    "name": "Second Partial Class: Vowed",
+    "description": "The bodily-adept half of an Adventurer. It grants an order skill, Martial Style, Unarmed Might, Unarmored Defense, and one more vowed art. A second partial class is always paired with the character's first partial class.",
+    "compatible_with": { "class": ["healer", "vowed"], "tradition": ["no_tradition"] },
+    "stats": { "hp": 0, "attack_bonus": 0 },
+    "skill_picks": [
+      {
+        "id": "second_order_skill",
+        "label": "Order skill",
+        "count": 1,
+        "table": "all_skills",
+        "max_level": 1,
+        "exclude": ["punch", "shoot", "stab"]
+      }
+    ],
+    "features": [
+      { "feature": "art_martial_style" },
+      { "feature": "art_unarmed_might" },
+      { "feature": "art_unarmored_defense" }
+    ],
+    "feat_picks": [
+      {
+        "id": "second_class_art_vowed",
+        "count": 1,
+        "tag": "vowed",
+        "max_rank": 0,
+        "exclude": ["art_martial_style", "art_unarmed_might", "art_unarmored_defense"]
+      }
+    ],
+    "names": "names"
+  }
+]

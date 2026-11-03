@@ -88,7 +88,7 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
     kinds = [
         {
             "kind": kind,
-            "label": kind.capitalize(),
+            "label": _kind_label(kind),
             "optional": kind in spec.optional_kinds,
             "templates": [t for t in templates if t["kind"] == kind],
         }
@@ -208,15 +208,16 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
         ]
         if not offered:
             continue
+        label = _kind_label(kind)
         template_id = form_text(form, TEMPLATE_PREFIX + kind)
         if not template_id:
             if kind in spec.optional_kinds:
                 continue
-            raise InvalidInput(f"Choose a {kind} for your character")
+            raise InvalidInput(f"Choose a {label.lower()} for your character")
         if template_id not in {template.id for template in offered}:
             if kind in spec.optional_kinds:
                 continue
-            raise InvalidInput(f"That {kind} cannot be chosen with your other choices")
+            raise InvalidInput(f"That {label.lower()} cannot be chosen with your other choices")
         templates[kind] = template_id
     fields = {}
     for field in spec.fields.values():
@@ -308,6 +309,14 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
 def _template_is_compatible(template: Template, selected: dict[str, str]) -> bool:
     """A template is offered only when every template kind it names has an allowed selection."""
     return all(selected.get(kind) in allowed for kind, allowed in template.compatible_with.items())
+
+
+def _kind_label(kind: str) -> str:
+    """A readable label for a template kind. A trailing number names a later selection of the
+    same kind, so `class2` reads as "Second Class"."""
+    base = kind.removesuffix("2")
+    label = base.replace("_", " ").strip().title()
+    return f"Second {label}" if base != kind else label
 
 
 def _picks_view(spec: CharacterSpec, template: Template) -> dict[str, Any] | None:

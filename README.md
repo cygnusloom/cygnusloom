@@ -37,6 +37,11 @@ new rules. Definitions and their references are checked when the content library
 Character templates can restrict combinations without naming a particular RPG concept:
 
 - `compatible_with` maps another template kind to the template IDs allowed alongside it.
+  When a chosen template names a kind, that kind must have a selection from the allowed IDs.
+  The form hides a kind with no compatible option and skips it, so full classes can share a
+  ruleset with partial classes that require a second `class2` and a second partial class that
+  requires a `tradition` (`no_tradition` or a partial tradition). A missing compatible choice is
+  refused with the template's name and the kind it needs.
 - `template_requirements` lists kinds that must be selected when the template is chosen.
   Set `distinct` to require different choices. Templates in different kinds can use the same
   `choice_key` when they represent the same choice. Optional `missing_message` and
@@ -105,6 +110,16 @@ rolled.
 
 Magic item rules name distinct `reusable`, `single_use`, and `charged` kinds. Casting results and
 events use those configured kind names.
+
+Inventory rules may name `pools`, each with an `id`, a `name`, and either a fixed `capacity` or a
+capacity derived from a `stat`: the raw score times `multiplier`, plus `base`, divided by
+`divisor`, and rounded `up` or `down`. At most one pool sets `"ready": true` for the items a
+character can use without spending an action. `size_pools` maps an item size id to the pool its
+items occupy, and `default_pool` names the pool for every other size; a ruleset that names
+`pools` must name a `default_pool`, and both references are checked at load time. A ruleset with
+no `pools` keeps the single-pool model: `capacity` is the fixed size,
+or `capacity_stat` names the stat whose raw score, times `capacity_multiplier`, sets it, and the
+optional `readied_stat`/`readied_divisor` give the to-hand slots.
 
 In the 2.0 ruleset format, replace a template's old `classes` list with
 `"compatible_with": {"class": [...]}`, define `skill_progression` for any ruleset with skills,

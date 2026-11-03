@@ -17,7 +17,7 @@ from cygnusforge.services.tools import ToolRun, run_tool
 from cygnusforge.web.campaigns import _cell_tip
 from tests.conftest import content_library
 from tests.test_campaigns import _campaign_id, _place_pc
-from tests.test_world import TOOLS, _ctx, _db, _state
+from tests.test_world import _ctx, _db, _state
 
 LIBRARY = content_library()
 RULES = LIBRARY.rule_sets["cairn2e"]
@@ -45,7 +45,7 @@ def _call(
     )
     ctx = replace(ctx, world=world)
     request = ToolRequest(id="call_1", name=name, arguments=json.dumps(arguments))
-    run = asyncio.run(run_tool(TOOLS, request, None, ctx))
+    run = asyncio.run(run_tool(RULES.tool_calls, request, None, ctx))
     assert isinstance(run, ToolRun)
     return json.loads(run.output)
 

@@ -247,8 +247,11 @@ def tradition_effort_stat(tradition: str, progression: WWNProgression) -> str:
 
 
 def check_morale(name: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
-    """Roll 2d6 against a character's Morale score. A roll no higher than the score holds; a higher
-    roll breaks. Records the check, or notes that the character has no Morale score to check."""
+    """Roll 2d6 against an NPC's Morale score, which comes from its statblock (an NPC with no
+    statblock uses the rule set's default). A roll no higher than the score holds; a higher roll
+    breaks. Records the check, or notes that the character has no Morale score to check. The
+    source gives Morale only to NPCs and monsters: player characters never make this check and
+    carry no Morale score of their own."""
 
     def action(hc: HookContext) -> dict[str, Any]:
         _, character = _character(hc, name)
@@ -337,8 +340,8 @@ def player_roll_save(
 
 def instinct_check(name: str, instinct: int, cause: str, ctx: ToolContext) -> dict[str, Any]:
     """Check an NPC's Instinct: roll 1d10 and compare it to the score in the statblock. A roll no
-    higher than the Instinct means the creature acts on impulse. Player characters never check
-    Instinct."""
+    higher than the Instinct means the creature acts on impulse. Instinct is a statblock score,
+    not a character stat; player characters never check Instinct."""
     value = whole_number(instinct, "instinct", 0, 10)
 
     def action(hc: HookContext) -> dict[str, Any]:

@@ -88,8 +88,16 @@
     "type": "template",
     "id": "healer",
     "kind": "class",
-    "name": "Healer",
-    "description": "A spellcaster of curative arts. All Healers gain a free Focus, Heal as a bonus skill, the Healing Touch art, and one more art of their choice, and learn more arts as they advance. The book presents the Healer as a partial class; this engine offers it as a full class for play.",
+    "name": "Healer (Partial)",
+    "description": "A spellcaster of curative arts. Heal as a bonus skill, the Healing Touch art, and one more art of their choice, with more arts as they advance. The Healer is a partial class: choose a second partial class from the second-class panel. A Healer may pair with a Vowed, a Partial Warrior, a Partial Expert, or a Partial Mage with a partial tradition.",
+    "template_requirements": [
+      {
+        "kinds": ["class", "class2"],
+        "distinct": true,
+        "missing_message": "a Healer must pair with another partial class",
+        "duplicate_message": "a Healer must pair with a different partial class"
+      }
+    ],
     "stats": { "hp": -1, "attack_bonus": -1 },
     "skills": { "heal": 1 },
     "skill_picks": [
@@ -112,8 +120,16 @@
     "type": "template",
     "id": "vowed",
     "kind": "class",
-    "name": "Vowed",
-    "description": "A bodily adept who refines inner power into supernatural martial arts. All Vowed gain a non-combat bonus skill appropriate to their order (subject to GM approval), a free Focus, Martial Style, Unarmed Might, and Unarmored Defense, plus one more art of their choice, and learn more arts as they advance. The book presents the Vowed as a partial class; this engine offers it as a full class for play.",
+    "name": "Vowed (Partial)",
+    "description": "A bodily adept who refines inner power into supernatural martial arts. A non-combat bonus skill appropriate to their order (subject to GM approval), Martial Style, Unarmed Might, and Unarmored Defense, plus one more art of their choice, with more arts as they advance. The Vowed is a partial class: choose a second partial class from the second-class panel. A Vowed may pair with a Healer, a Partial Warrior, a Partial Expert, or a Partial Mage with a partial tradition.",
+    "template_requirements": [
+      {
+        "kinds": ["class", "class2"],
+        "distinct": true,
+        "missing_message": "a Vowed must pair with another partial class",
+        "duplicate_message": "a Vowed must pair with a different partial class"
+      }
+    ],
     "stats": { "hp": 0, "attack_bonus": -1 },
     "skill_picks": [
       { "id": "order_skill", "label": "Order skill", "count": 1, "table": "all_skills", "max_level": 1, "exclude": ["punch", "shoot", "stab"] },
@@ -335,8 +351,14 @@
     "id": "no_tradition",
     "kind": "tradition",
     "name": "No Tradition",
-    "description": "A character with no magical training. Warriors, Experts, and Adventurers without a spellcasting partial class choose this.",
-    "compatible_with": { "class": ["warrior", "expert", "adventurer_expert_warrior"] },
+    "description": "A character with no magical training. Warriors, Experts, Healers, Vowed, and Adventurers without a spellcasting partial class choose this.",
+    "compatible_with": { "class": [
+      "warrior",
+      "expert",
+      "healer",
+      "vowed",
+      "adventurer_expert_warrior"
+    ] },
     "names": "names"
   },
   {
@@ -367,6 +389,8 @@
     "name": "High Mage, Partial",
     "description": "Formal High Magic learned alongside another trade. A partial High Mage picks one art and two first-level spells, and learns one more art at levels 2, 3, 6, and 9.",
     "compatible_with": { "class": [
+      "healer",
+      "vowed",
       "adventurer_expert_mage",
       "adventurer_warrior_mage",
       "adventurer_mage_mage"
@@ -406,6 +430,8 @@
     "name": "Necromancer, Partial",
     "description": "Necromancy studied alongside another trade. A partial Necromancer picks one art and two first-level spells, and learns one more art at levels 3, 6, and 9.",
     "compatible_with": { "class": [
+      "healer",
+      "vowed",
       "adventurer_expert_mage",
       "adventurer_warrior_mage",
       "adventurer_mage_mage"
@@ -455,6 +481,8 @@
     "name": "Elementalist, Partial",
     "description": "Elemental mastery studied alongside another trade. A partial Elementalist gains Elemental Resilience and Elemental Sparks, picks one more art and two first-level spells, and learns one more art at levels 3, 6, and 9.",
     "compatible_with": { "class": [
+      "healer",
+      "vowed",
       "adventurer_expert_mage",
       "adventurer_warrior_mage",
       "adventurer_mage_mage"

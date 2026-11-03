@@ -7,7 +7,7 @@ opens a session, or changes the state. The world tools import these functions to
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from cygnusforge.content.character import CampaignSpec, CharacterSpec, Sheet, describe
@@ -190,7 +190,7 @@ def get_statblock(
     hooks-driven holds, items, and counter values follow."""
     character = _character_named(state, name)
     kind = "player character" if character.kind == PC_KIND else "npc"
-    lines = describe(spec, _sheet_of(character)).splitlines()
+    lines = _sheet_text(spec, character).splitlines()
     if character.description:
         lines.insert(0, f"Description: {character.description}")
     if combat is not None:
@@ -300,7 +300,7 @@ def speaker_profile(state: CampaignState, name: str, spec: CharacterSpec) -> str
     if npc.accent:
         lines.append(f"Accent: {npc.accent}")
     lines += [f"Quirks: {quirks}", f"Location: {npc.location}"]
-    sheet = describe(spec, _sheet_of(npc))
+    sheet = _sheet_text(spec, npc)
     if sheet:
         lines.append(sheet)
     return "\n".join(lines)
@@ -470,7 +470,7 @@ def scene_view(
     found = state.named(location) if location is not None else None
     place = found if isinstance(found, Place) else None
     npcs = _npcs_at(state, place.name) if place is not None else []
-    sheet = describe(spec, _sheet_of(pc)).splitlines() if pc is not None else []
+    sheet = _sheet_text(spec, pc).splitlines() if pc is not None else []
     pack = None
     if pc is not None and inventory is not None:
         armor, shield = pc.equipped_armor, pc.equipped_shield
@@ -794,6 +794,40 @@ def _sheet_of(character: Character) -> Sheet:
         fields=character.fields,
         counters=character.counters,
         skills=character.skills,
+    )
+
+
+def _sheet_text(spec: CharacterSpec, character: Character) -> str:
+    """A character's sheet as text. A player character's sheet leaves out the rule set's
+    statblock defaults: stats it derives with no inputs, such as a monster's Morale, which a
+    statblock supplies to an NPC and a player character never uses."""
+    sheet = _sheet_of(character)
+    if character.kind != PC_KIND:
+        return describe(spec, sheet)
+    own = {
+        stat: value for stat, value in sheet.stats.items() if not _is_statblock_default(spec, stat)
+    }
+    return describe(spec, replace(sheet, stats=own))
+
+
+def _is_statblock_default(spec: CharacterSpec, stat: str) -> bool:
+    """A derived stat with no inputs is a value a statblock supplies, not one computed from the
+    character's own scores, skills, counters, or templates."""
+    found = spec.stats.get(stat)
+    if found is None or found.derived is None:
+        return False
+    derived = found.derived
+    return not any(
+        (
+            derived.plus,
+            derived.minus_counters,
+            derived.best_modifier,
+            derived.best_score,
+            derived.plus_skills,
+            derived.plus_skill_picks,
+            derived.minus_best_modifier,
+            derived.minus_templates,
+        )
     )
 
 

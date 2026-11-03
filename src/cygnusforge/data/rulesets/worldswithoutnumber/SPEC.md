@@ -52,6 +52,12 @@ directory. The rules text here and in `rules.json` is paraphrased; the books are
   Warriors, Experts, and non-mage Adventurers take `no_tradition`. The form hides templates the
   chosen class cannot take, and the server refuses them. The full and partial templates carry
   the book's different starting art and spell counts.
+- Healer and Vowed are partial classes. Their class templates require a distinct `class2` choice,
+  so they cannot be played alone. The `class2` templates in `templates.json` are the second
+  partial classes, gated to a Healer or Vowed primary. The second partial names the tradition it
+  accepts: `no_tradition` for Warrior, Expert, Healer, and Vowed pairings, or one of the partial
+  traditions for a Partial Mage. `choice_key` makes "Healer + Healer" and "Vowed + Vowed"
+  duplicates. Full Warrior, Expert, Mage, and the four fixed Adventurer pairings are unchanged.
 - Morale is a 2d6 check in `rules/wwn.py` (`check_morale`); Instinct is 1d10 against the score
   in a statblock (`instinct_check`). Player characters make neither check.
 - Initiative is the book's side roll: `combat.initiative` has 1d8 + the best Dexterity modifier,
@@ -80,8 +86,9 @@ their player-facing behaviour.
 | Skills | `type: skill`, `template.skills`, `rule_set.skill_progression` | Skill definitions, level grants, and configured untrained, first, creation maximum, and advancement maximum levels |
 | Skill picks | `template.skill_picks` | `{id, count, table, exclude, max_level}`; repeated skills respect the cap, and blank picks are rolled |
 | Feature picks | `template.feat_picks` | `{id, count, tag, tags, feature_type, max_rank, exclude, advance_repeated_rank}`; `submitted["feature_picks"]` |
-| Template compatibility | `template.compatible_with` | Allowed choices in any other template kind |
+| Template compatibility | `template.compatible_with` | Allowed choices in any other template kind; a named kind must have an allowed selection |
 | Required selections | `template.template_requirements`, `template.choice_key` | Required and distinct choices across template kinds |
+| Partial class pairing | `class2` templates, `template_requirements`, `compatible_with`, `choice_key` | A partial class requires a distinct second partial class; the second partial names the tradition it accepts |
 | Ruleset data | `type: rule_data` | Validated structured data passed to ruleset tools without global state |
 | Feature rank and effects | `feature.rank`, `feature.effects` | Spell/Focus rank; `stat`, `skill`, `counter`, `armor`, `note` at creation |
 | Weapon data | `feature.skill`, `attributes`, `shock`, `shock_ac`, `flags` | What a weapon rolls, what it does on a miss, and engine flags such as `no_unskilled_penalty` |
@@ -139,7 +146,8 @@ their player-facing behaviour.
 | `stats.json` | Six attributes with modifier bands; hp, attack bonus, castings, morale; derived strain, five Effort pools, four saves |
 | `skills.json` | The 21 skills |
 | `backgrounds.json` | 20 background templates with a free skill and two Learning picks |
-| `classes.json` | Warrior, Expert, Mage, Healer, Vowed, four Adventurer pairings, and full and partial traditions with class gating |
+| `classes.json` | Warrior, Expert, Mage, partial Healer and Vowed, four Adventurer pairings, and full and partial traditions with class gating |
+| `templates.json` | Second partial classes for dual-partial Adventurers, with their tradition gates |
 | `foci.json` | Every free-book Focus, level 1 and 2, plus the nine nonhuman origin Foci |
 | `equipment.json` | Weapons, armor, adventuring gear, item sizes, inventory rules, marketplace, silver currency |
 | `character_fields.json` | Look, Goal, Appearance, Biography |
@@ -175,11 +183,13 @@ tables to create the first location and its people.
   skills are also in that table, so the quick option is covered by the same picks).
 - Classes grant their configured level-1 HP constant, attack bonus, skills, and Focus or art picks.
   Their starting attack bonuses match the first row of their class progression charts.
-  Every class also receives a general Focus and a free skill choice, including the standalone
-  Healer and Vowed options.
+  Every class also receives a general Focus and a free skill choice.
   Healers gain Heal-0; Vowed choose a non-combat bonus skill appropriate to their order, subject to
   GM approval. The Vowed's chosen order skill also determines their Effort, including when that
-  skill improves. The tradition is required and class-gated:
+  skill improves. Healer and Vowed are partial classes and must choose a second partial class:
+  Partial Warrior, Partial Expert, Partial Mage with a partial tradition, or the other of Healer
+  and Vowed. The second partial's hit points, attack bonus, Focus, skills, and arts come from
+  `templates.json`. The tradition is required and class-gated:
   a full mage takes the full tradition template (two High Magic arts, four spells; three
   Elementalist arts, four spells),
   and a partial mage takes the partial template (one High or Necromancer art and two spells;
@@ -192,7 +202,7 @@ tables to create the first location and its people.
   twice; Developed Attribute can be repeated for a different attribute, and Specialist can
   advance or be taken again for a different skill. Spirit Familiar's second rank can be repeated
   for additional benefits. Mage and partial Mage choices exclude Developed Attribute and
-  Nullifier; the standalone Healer and Vowed options follow their source partial-Mage category.
+  Nullifier; the partial Healer and Vowed options follow their source partial-Mage category.
   Advancement uses each class's general Focus pool, not the narrower Expert or Warrior starting
   pick, while nonhuman origin Foci remain available with GM permission. Specific Attribute,
   Specialist, and familiar-benefit choices remain GM-guided notes rather than structured picks.
@@ -285,12 +295,18 @@ an open gap. [PARITY.md](./PARITY.md) is the same status list with the tool/JSON
 - **Named NPCs are mortally wounded, not killed.** `combat.json` loads the whole `defeat` map,
   including `important_npc: "mortally wounded"`; `tests/test_library_strictness.py` and
   `tests/test_wwn_combat.py` cover it.
+- **Dual-partial Adventurers use source-valid pairs.** Healer and Vowed require a distinct
+  second `class2`; the second partial names `no_tradition` or a partial tradition, and
+  `choice_key` refuses two copies of the same partial class. `classes.json` and
+  `templates.json` hold the pairings; `tests/test_wwn_partial_classes.py` covers Healer + Vowed,
+  duplicate and invalid pairs, and the unchanged full classes.
 
 **Open**
 
-- **Arbitrary partial-class pairings, including Healer and Vowed.** Healer and Vowed are offered
-  as standalone full classes because the class system still cannot combine any two partial
-  classes.
+- **Second-partial advancement and Effort.** Advancement still reads the primary class's
+  progression chart, so a second partial does not add its own HP, attack, Focus, or art chart.
+  Effort recognition for a second partial is likewise keyed to the primary class. Pairing and
+  creation are complete; combining the two advancement charts remains open.
 - **Armor-encumbrance penalties.** Medium and heavy armor describe their Sneak/Exert penalty, but
   `roll_check` does not apply it automatically; the GM must pass the modifier.
 - **Shield bash.** The `shield_bash_large` and `shield_bash_small` attack profiles exist, but

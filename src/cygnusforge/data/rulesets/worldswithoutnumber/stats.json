@@ -197,7 +197,9 @@
     "type": "stat",
     "id": "morale",
     "name": "Morale",
-    "formula": "2d6"
+    "derived": {
+      "base": 8
+    }
   },
   {
     "type": "stat",

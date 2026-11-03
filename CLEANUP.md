@@ -113,8 +113,10 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
 
 ### WWN parity backlog (track, then close)
 
-- [ ] Source-valid partial-class pairings, including Healer and Vowed.
+- [x] Source-valid partial-class pairings, including Healer and Vowed.
 - [ ] Separate Readied and Stowed capacity; armor-encumbrance penalties to Sneak/Exert.
+  Schema stage landed: inventory `pools`, `size_pools`, and `default_pool` load and validate
+  (`tests/test_inventory_schema.py`); the service still uses the single capacity model.
 - [ ] Shield AC suspended after a shield bash until the next turn.
 - [ ] Effort stats only for eligible characters.
 - [ ] Surprise, grappling, execution attacks, total defense, dual wielding, range bands.
