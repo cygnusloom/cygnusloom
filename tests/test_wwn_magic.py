@@ -433,12 +433,8 @@ def _placeholder(schema: dict[str, Any]) -> Any:
 # WWN tools that cannot bind a WorldTools method directly: the wrapper translates a save name,
 # injects the check id, validates a total, or fills a schema gap the method's signature has.
 KEPT_WWN_WRAPPERS = {
-    "create_encounter_map",
     "player_attack",
     "player_roll_save",
-    "roll_check",
-    "roll_save",
-    "set_ac",
 }
 
 
@@ -451,12 +447,8 @@ def test_every_wwn_tool_loads_and_binds_its_declared_required_parameters() -> No
     ]
     assert {call.id for call in calls} == {
         # The WorldTools methods that cannot take the schema's argument names or defaults.
-        "roll_check",
-        "roll_save",
         "player_roll_save",
         "player_attack",
-        "set_ac",
-        "create_encounter_map",
         # Rule-set logic: advancement, focus/spell/art learning, morale, reaction, instinct, rest.
         "check_morale",
         "gain_xp",
@@ -515,6 +507,7 @@ def test_wwn_tools_bind_engine_operations_without_wrappers() -> None:
         "advance_time": "advance_time",
         "attack": "attack",
         "buy_item": "buy_item",
+        "create_encounter_map": "create_encounter_map",
         "create_monster": "create_monster",
         "delete_encounter_map": "delete_encounter_map",
         "dismiss_hireling": "dismiss_hireling",
@@ -532,10 +525,13 @@ def test_wwn_tools_bind_engine_operations_without_wrappers() -> None:
         "remove_participant": "remove_participant",
         "resolve_attacks": "resolve_attacks",
         "retreat": "retreat",
+        "roll_check": "roll_check",
         "roll_initiative": "roll_side_initiative",
+        "roll_save": "roll_save",
         "roll_tables": "roll_tables",
         "search_marketplace": "search_marketplace",
         "search_monster": "search_monster",
+        "set_ac": "set_armor",
         "set_armor": "set_armor",
         "stabilize": "stabilize",
         "start_encounter": "start_encounter",

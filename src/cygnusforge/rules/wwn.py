@@ -246,28 +246,6 @@ def tradition_effort_stat(tradition: str, progression: WWNProgression) -> str:
     return tradition_data(tradition, progression)[1]
 
 
-def roll_check(
-    character: str,
-    skill: str,
-    stat: str,
-    ctx: ToolContext,
-    difficulty: int = 8,
-    modifier: int = 0,
-    cause: str = "",
-) -> dict[str, Any]:
-    """Roll the rule set's skill check for a character. Kept as a wrapper: it fixes the check id
-    to "skill", which `WorldTools.roll_check` requires as its first argument."""
-    return ctx.world.roll_check(
-        "skill",
-        character,
-        skill=skill,
-        stat=stat,
-        difficulty=difficulty,
-        modifier=modifier,
-        cause=cause,
-    )
-
-
 def check_morale(name: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
     """Roll 2d6 against a character's Morale score. A roll no higher than the score holds; a higher
     roll breaks. Records the check, or notes that the character has no Morale score to check."""
@@ -345,14 +323,6 @@ def _save_stat(save: str) -> str:
         options = ", ".join(SAVE_STATS)
         raise InvalidInput(f"there is no save named {save!r}; the saves are: {options}")
     return stat
-
-
-def roll_save(character: str, save: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
-    """Roll a saving throw: d20 against the character's Physical, Evasion, Mental, or Luck save,
-    succeeding on a roll equal to or above the score. A failure only reports the result; what it
-    costs is the GM's to apply. Kept as a wrapper: it maps the tool's `save` name to the
-    character's `save_*` stat, where `WorldTools.roll_save` takes `name`, `stat`, and `reason`."""
-    return ctx.world.roll_save(character, _save_stat(save), cause)
 
 
 def player_roll_save(
@@ -496,21 +466,6 @@ def player_attack(
     return ctx.world.player_attack(
         target, weapon, modifier, attack_roll=roll, hit_modifier=hit_modifier
     )
-
-
-def create_encounter_map(
-    name: str,
-    location: str,
-    description: str,
-    ctx: ToolContext,
-    columns: int | None = None,
-    rows: int | None = None,
-    template: str = "",
-) -> dict[str, Any]:
-    """Make a grid map for an encounter at a location, such as the ford, a room, or a yard. Kept
-    as a wrapper: `WorldTools.create_encounter_map` requires columns and rows, while the tool
-    lets a template supply them."""
-    return ctx.world.create_encounter_map(name, location, columns, rows, description, template)
 
 
 def _xp_rate(ctx: ToolContext, rate: str = "") -> str:
@@ -1027,13 +982,6 @@ def grant_package(character: str, package: str, ctx: ToolContext) -> dict[str, A
         "items": given,
         "silver": found.silver,
     }
-
-
-def set_ac(name: str, ac: int, ctx: ToolContext) -> dict[str, Any]:
-    """Set a total AC, preserving an adjustment to explicitly tracked defense. Kept as a wrapper:
-    the tool's `ac` maps to `WorldTools.set_armor`'s `armor`, and the 5-30 range is enforced
-    here as well as in the schema."""
-    return ctx.world.set_armor(name, whole_number(ac, "Armor Class", 5, 30))
 
 
 def rest(

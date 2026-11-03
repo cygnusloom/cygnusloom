@@ -34,8 +34,9 @@ concrete work. Mark items done as they land. Keep the "Definition of done" hones
 - [x] Add `"world_method"` bindings and validate the method and schema in the loader.
 - [x] Migrate core, Cairn, and WWN tool JSON off the straightforward one-line wrappers:
   121 tool calls now bind directly. `rules/core.py` 358→181, Cairn 479→269, WWN 1452→1226.
-- [x] Reduced the remaining wrappers to 12 (1 core, 7 Cairn, 4 WWN). The rest are
-  context-aware or have genuine signature/behavior differences; each is documented in its module.
+- [x] Reduced the remaining wrappers to 12 (1 core, 7 Cairn, 4 WWN). The rest were
+  context-aware or had signature differences; each carries a docstring explaining why. The next
+  pass removes them through fixed-argument and renamed-argument bindings plus method defaults.
 - [x] Add loader tests that refuse an unknown method and a schema mismatch.
 
 Acceptance: `rules/` contains no one-line `ctx.world.*` wrappers; tool count and behavior are
@@ -117,7 +118,9 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
 - [ ] Surprise, grappling, execution attacks, total defense, dual wielding, range bands.
 - [ ] Magic Workings, spell research, magic item creation, hirelings, projects, faction turns
   (verify what is actually missing before implementing).
-- [ ] Structured bestiary multi-attacks instead of prose parsing.
+- [x] Structured bestiary multi-attacks instead of prose parsing. `attacks_per_action`
+  is a validated field on statblocks, the WWN bestiary carries explicit counts, and the loader
+  rejects prose that still says "N attacks per action".
 - [ ] Machine-readable monster special abilities.
 - [ ] PC Morale/Instinct aligned with the source.
 - [ ] Structured Developed Attribute, Specialist, and Spirit Familiar choices.

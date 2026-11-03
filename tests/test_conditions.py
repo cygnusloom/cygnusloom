@@ -6,28 +6,39 @@ import pytest
 
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.conditions import end_condition
-from cygnusforge.services.events import ConditionAdded, current, record
-from tests.test_combat import PC, Rolls, _character, _fight
-from tests.test_world import _db
+from cygnusforge.services.events import current
+from tests.factories import (
+    DEFAULT_PC,
+    Rolls,
+    scene,
+)
+from tests.factories import (
+    character_named as _character,
+)
+from tests.factories import (
+    db as open_db,
+)
+from tests.test_combat import _fight
 
-
-def _add_condition(app, campaign_id: int, condition: str) -> None:
-    with _db(app) as db:
-        record(db, campaign_id, ConditionAdded(name=PC, condition=condition, cause="a test"))
-        db.commit()
+# The fixture rule set's condition-ending triggers, from its own `rule_set.json`.
+FIXTURE_CONDITION_ENDS = ("rest", "scene")
+ADA = DEFAULT_PC
+# The Cairn campaign that `_fight` sets up names its player character this.
+PC = "Mara"
 
 
 def test_a_stored_condition_ends_by_one_of_its_triggers(client_factory):
-    app, campaign_id, tools = _fight(client_factory)
-    _add_condition(app, campaign_id, "deafened")
-    tools.end_condition(PC, "deafened", "aid")
+    app, campaign_id, tools = scene(client_factory)
+    tools.add_condition(ADA, "shaken", "a test")
 
-    assert _character(app, campaign_id, PC).conditions == []
+    tools.end_condition(ADA, "shaken", "rest")
+
+    assert _character(app, campaign_id, ADA).conditions == []
 
 
 def test_walloped_ends_at_rest_and_its_on_end_raises_max_hp(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _add_condition(app, campaign_id, "walloped")
+    tools.add_condition(PC, "walloped", "a test")
     before = _character(app, campaign_id, PC).stats["hp"]
     rest_tools = replace(tools, rng=Rolls(4))
     rest_tools.end_condition(PC, "walloped", "rest")
@@ -39,7 +50,7 @@ def test_walloped_ends_at_rest_and_its_on_end_raises_max_hp(client_factory):
 
 def test_a_night_rest_ends_walloped_and_adds_a_die_to_max_hp(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _add_condition(app, campaign_id, "walloped")
+    tools.add_condition(PC, "walloped", "a test")
     before = _character(app, campaign_id, PC).stats["hp"]
     rest_tools = replace(tools, rng=Rolls(4))
 
@@ -53,7 +64,7 @@ def test_a_night_rest_ends_walloped_and_adds_a_die_to_max_hp(client_factory):
 
 def test_a_week_of_rest_ends_hamstrung_by_extended_rest(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _add_condition(app, campaign_id, "hamstrung")
+    tools.add_condition(PC, "hamstrung", "a test")
 
     result = tools.rest("week", reason="recover")
 
@@ -62,70 +73,66 @@ def test_a_week_of_rest_ends_hamstrung_by_extended_rest(client_factory):
 
 
 def test_a_condition_names_only_its_own_triggers(client_factory):
-    app, campaign_id, tools = _fight(client_factory)
-    _add_condition(app, campaign_id, "walloped")
+    app, campaign_id, tools = scene(client_factory)
+    tools.add_condition(ADA, "shaken", "a test")
 
-    with pytest.raises(InvalidInput, match="ends by"):
-        tools.end_condition(PC, "walloped", "aid")
-    assert _character(app, campaign_id, PC).conditions == ["walloped"]
-
-
-def test_an_unlisted_way_of_ending_a_condition_is_refused(client_factory):
-    app, campaign_id, tools = _fight(client_factory)
-    _add_condition(app, campaign_id, "walloped")
-
-    with pytest.raises(InvalidInput, match="ends by rest, not by magic"):
-        tools.end_condition(PC, "walloped", "magic")
+    with pytest.raises(InvalidInput, match="ends by rest, scene, not by magic"):
+        tools.end_condition(ADA, "shaken", "magic")
+    assert _character(app, campaign_id, ADA).conditions == ["shaken"]
 
 
 def test_a_trigger_outside_the_rule_sets_vocabulary_is_refused(client_factory):
-    app, campaign_id, tools = _fight(client_factory)
-    _add_condition(app, campaign_id, "walloped")
+    app, campaign_id, tools = scene(client_factory)
+    tools.add_condition(ADA, "shaken", "a test")
 
-    with _db(app) as db, pytest.raises(InvalidInput, match="not a condition-ending trigger"):
+    with (
+        open_db(app) as session,
+        pytest.raises(InvalidInput, match="not a condition-ending trigger"),
+    ):
         end_condition(
-            db,
+            session,
             campaign_id,
-            PC,
-            "walloped",
+            ADA,
+            "shaken",
             "banana",
             tools.combat,
             tools.conditions,
             tools.rng,
             plus=tools.plus,
             spec=tools.character,
-            condition_ends=("rest", "extended_rest", "aid", "time"),
+            condition_ends=FIXTURE_CONDITION_ENDS,
         )
-    assert _character(app, campaign_id, PC).conditions == ["walloped"]
+    assert _character(app, campaign_id, ADA).conditions == ["shaken"]
 
 
-def test_a_gm_trigger_ends_a_condition_the_rule_set_leaves_to_the_gm(client_factory):
-    app, campaign_id, tools = _fight(client_factory)
-    _add_condition(app, campaign_id, "diseased")
-    tools.end_condition(PC, "diseased", "gm")
+def test_a_gm_trigger_ends_a_condition_the_rule_set_does_not_name(client_factory):
+    app, campaign_id, tools = scene(client_factory)
+    tools.add_condition(ADA, "shaken", "a test")
 
-    assert _character(app, campaign_id, PC).conditions == []
+    tools.end_condition(ADA, "shaken", "gm")
+
+    assert _character(app, campaign_id, ADA).conditions == []
 
 
 def test_ending_a_condition_the_character_does_not_have_is_refused(client_factory):
-    _, _, tools = _fight(client_factory)
+    _, _, tools = scene(client_factory)
 
     with pytest.raises(InvalidInput, match="does not have the condition"):
-        tools.end_condition(PC, "walloped", "rest")
+        tools.end_condition(ADA, "shaken", "rest")
 
 
 def test_ending_an_unknown_condition_is_refused(client_factory):
-    _, _, tools = _fight(client_factory)
+    _, _, tools = scene(client_factory)
 
     with pytest.raises(InvalidInput, match="there is no condition named"):
-        tools.end_condition(PC, "not_a_condition", "rest")
+        tools.end_condition(ADA, "not_a_condition", "rest")
 
 
 def test_ending_a_condition_for_an_unknown_character_is_refused(client_factory):
-    _, _, tools = _fight(client_factory)
+    _, _, tools = scene(client_factory)
 
     with pytest.raises(InvalidInput, match="there is no character named"):
-        tools.end_condition("Nobody", "walloped", "rest")
+        tools.end_condition("Nobody", "shaken", "rest")
 
 
 def test_a_derived_condition_cannot_be_ended(client_factory):
@@ -215,21 +222,21 @@ def test_outside_harm_to_a_defeated_character_is_refused(client_factory):
 
 
 def test_add_condition_gives_a_stored_condition_with_its_cause(client_factory):
-    app, campaign_id, tools = _fight(client_factory)
+    app, campaign_id, tools = scene(client_factory)
 
-    result = tools.add_condition(PC, "deafened", "a thunderclap")
+    result = tools.add_condition(ADA, "shaken", "a thunderclap")
 
-    assert result == {"character": PC, "condition": "deafened"}
-    assert _character(app, campaign_id, PC).conditions == ["deafened"]
+    assert result == {"character": ADA, "condition": "shaken"}
+    assert _character(app, campaign_id, ADA).conditions == ["shaken"]
 
 
 def test_add_condition_leaves_a_held_condition_as_it_is(client_factory):
-    app, campaign_id, tools = _fight(client_factory)
-    tools.add_condition(PC, "deafened", "a thunderclap")
+    app, campaign_id, tools = scene(client_factory)
+    tools.add_condition(ADA, "shaken", "a thunderclap")
 
-    tools.add_condition(PC, "deafened", "another thunderclap")
+    tools.add_condition(ADA, "shaken", "another thunderclap")
 
-    assert _character(app, campaign_id, PC).conditions == ["deafened"]
+    assert _character(app, campaign_id, ADA).conditions == ["shaken"]
 
 
 def test_add_condition_refuses_a_derived_condition(client_factory):
@@ -241,9 +248,9 @@ def test_add_condition_refuses_a_derived_condition(client_factory):
 
 
 def test_add_condition_refuses_an_unknown_condition_or_character(client_factory):
-    _, _, tools = _fight(client_factory)
+    _, _, tools = scene(client_factory)
 
     with pytest.raises(InvalidInput, match="no condition named"):
-        tools.add_condition(PC, "not_a_condition", "a test")
+        tools.add_condition(ADA, "not_a_condition", "a test")
     with pytest.raises(InvalidInput, match="no character named"):
-        tools.add_condition("Nobody", "deafened", "a test")
+        tools.add_condition("Nobody", "shaken", "a test")

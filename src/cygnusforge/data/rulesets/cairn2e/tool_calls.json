@@ -23,8 +23,15 @@
     "type": "tool_call",
     "id": "create_monster",
     "name": "create_monster",
-    "python_module": "cairn2e",
-    "function": "create_monster",
+    "world_method": "create_monster",
+    "bind": {
+      "stats": {
+        "hp": "hit_points",
+        "str": "strength",
+        "dex": "dexterity",
+        "wil": "willpower"
+      }
+    },
     "description": "Create a monster NPC in the world. Give a template to start from a bestiary statblock (see search_monster), and any value you give replaces the template's. A creature named exactly like a statblock uses that statblock and gives no stats of its own; set force to create a custom creature with that name instead. Without a statblock, give a description and every stat: hit_points, strength, dexterity, and willpower are required. Attacks replace the template's attacks when given.",
     "parameters": {
       "type": "object",
@@ -215,8 +222,7 @@
     "type": "tool_call",
     "id": "player_save",
     "name": "player_save",
-    "python_module": "cairn2e",
-    "function": "player_save",
+    "world_method": "player_save",
     "description": "Ask the player character to make the save they owe after their Strength was used up. The player rolls a d20 and the engine decides whether it passed. Use it when the player character's statblock shows a save due.",
     "player_input": {
       "dice": "1d20",
@@ -240,8 +246,7 @@
     "type": "tool_call",
     "id": "player_initiative",
     "name": "player_initiative",
-    "python_module": "cairn2e",
-    "function": "player_initiative",
+    "world_method": "player_initiative",
     "description": "Ask the player character to make their DEX save for initiative in the first round of an encounter. Call it once for each player character the encounter says is waiting for initiative. The result says whether more are still waiting, and when none are, the turn order is set and the first turn begins.",
     "player_input": {
       "dice": "1d20",
@@ -652,8 +657,7 @@
     "type": "tool_call",
     "id": "player_retreat",
     "name": "player_retreat",
-    "python_module": "cairn2e",
-    "function": "player_retreat",
+    "world_method": "player_retreat",
     "description": "Ask the player character to make their DEX save to run from the encounter. Pass safe as true only when there is a safe destination to run to; if not, the attempt is refused. A passed save takes the character out of the fight. A failed save leaves them in it.",
     "player_input": {
       "dice": "1d20",
@@ -820,8 +824,8 @@
     "type": "tool_call",
     "id": "give_spellbook",
     "name": "give_spellbook",
-    "python_module": "cairn2e",
-    "function": "give_spellbook",
+    "world_method": "give_spell_item",
+    "bind": {"role": "reusable"},
     "description": "Give a character a spellbook holding one spell. It takes one slot. Casting from it costs one Fatigue.",
     "parameters": {
       "type": "object",
@@ -850,8 +854,8 @@
     "type": "tool_call",
     "id": "give_scroll",
     "name": "give_scroll",
-    "python_module": "cairn2e",
-    "function": "give_scroll",
+    "world_method": "give_spell_item",
+    "bind": {"role": "single_use"},
     "description": "Give a character a scroll holding one spell. Scrolls are petty and take no slot. One cast spends the scroll and costs no Fatigue.",
     "parameters": {
       "type": "object",
@@ -1283,8 +1287,7 @@
     "type": "tool_call",
     "id": "create_encounter_map",
     "name": "create_encounter_map",
-    "python_module": "cairn2e",
-    "function": "create_encounter_map",
+    "world_method": "create_encounter_map",
     "description": "Create an encounter map: a grid of cells set in an existing location, where a tactical encounter takes place. Use it before starting an encounter there. Cells are scaled by the rule set's grid.",
     "parameters": {
       "type": "object",

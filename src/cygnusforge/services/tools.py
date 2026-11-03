@@ -151,8 +151,29 @@ def _dice_for(
     return modifier_dice or dice, None
 
 
+def _bound_arguments(tool: ToolCall, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """The keyword arguments a tool passes on: the schema's arguments under the names the function
+    or method takes, the objects the tool builds from them, and the arguments the tool fixes."""
+    built = {
+        source
+        for value in tool.bind.values()
+        if isinstance(value, Mapping)
+        for source in value.values()
+    }
+    call_arguments = {
+        tool.rename.get(name, name): value for name, value in arguments.items() if name not in built
+    }
+    for name, value in tool.bind.items():
+        call_arguments[name] = (
+            {key: arguments.get(source) for key, source in value.items()}
+            if isinstance(value, Mapping)
+            else value
+        )
+    return call_arguments
+
+
 async def _call(tool: ToolCall, arguments: dict[str, Any], ctx: ToolContext | None) -> ToolRun:
-    call_arguments = dict(arguments)
+    call_arguments = _bound_arguments(tool, arguments)
     if tool.world_method is not None:
         if ctx is None:
             return ToolRun(_error("this tool cannot run without a campaign"), None)

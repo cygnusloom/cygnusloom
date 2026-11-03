@@ -43,6 +43,7 @@ _FIELD_PREFIXES = (
     "skill-replacement-",
     "campaign-",
     "pronouns-",
+    "template-",
 )
 _TEMPLATE_PREFIX = "template-"
 

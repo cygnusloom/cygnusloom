@@ -3,8 +3,8 @@
     "type": "tool_call",
     "id": "roll_check",
     "name": "roll_check",
-    "python_module": "wwn",
-    "function": "roll_check",
+    "world_method": "roll_check",
+    "bind": {"check": "skill"},
     "description": "Roll a skill check for a character: 2d6 plus the skill's level plus the attribute's modifier against a difficulty, 8 by default. An untrained skill counts as -1. Call it whenever an action is uncertain and a skill applies, such as climbing (Exert), spotting an ambush (Notice), or casting a spell under pressure (Magic). Higher difficulties mean harder tasks: 10 is skilled work and 12 or more is formidable. A total equal to or above the difficulty succeeds.",
     "parameters": {
       "type": "object",
@@ -261,8 +261,8 @@
     "type": "tool_call",
     "id": "set_ac",
     "name": "set_ac",
-    "python_module": "wwn",
-    "function": "set_ac",
+    "world_method": "set_armor",
+    "rename": {"ac": "armor"},
     "description": "Set a character or NPC's total Armor Class for an art, spell, special adjustment, or a monster's printed AC. For tracked equipment this preserves the difference from calculated AC as an adjustment when equipment, Dexterity, or level later changes. Use equip_armor rather than this tool when armor or a shield is put on or taken off.",
     "parameters": {
       "type": "object",

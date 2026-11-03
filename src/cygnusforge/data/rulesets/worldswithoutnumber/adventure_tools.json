@@ -3,8 +3,8 @@
     "type": "tool_call",
     "id": "roll_save",
     "name": "roll_save",
-    "python_module": "wwn",
-    "function": "roll_save",
+    "world_method": "roll_save",
+    "rename": {"character": "name", "save": "stat", "cause": "reason"},
     "description": "Roll a saving throw: d20 against the character's Physical, Evasion, Mental, or Luck save, succeeding on a roll equal to or above the score. Call it when an effect threatens the character and the rules allow a save. A failure is recorded; apply what it costs yourself.",
     "parameters": {
       "type": "object",
@@ -15,8 +15,8 @@
         },
         "save": {
           "type": "string",
-          "enum": ["physical", "evasion", "mental", "luck"],
-          "description": "Which save: physical for bodily harm, evasion for dodging, mental for willpower, luck for blind chance."
+          "enum": ["save_physical", "save_evasion", "save_mental", "save_luck"],
+          "description": "Which save: save_physical for bodily harm, save_evasion for dodging, save_mental for willpower, save_luck for blind chance."
         },
         "cause": {
           "type": "string",
@@ -792,8 +792,7 @@
     "type": "tool_call",
     "id": "create_encounter_map",
     "name": "create_encounter_map",
-    "python_module": "wwn",
-    "function": "create_encounter_map",
+    "world_method": "create_encounter_map",
     "description": "Make a square grid map for an encounter at a location, such as a ford, room, or yard. A map is needed before start_encounter can be used.",
     "parameters": {
       "type": "object",

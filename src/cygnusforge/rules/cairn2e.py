@@ -44,41 +44,6 @@ def configure_hooks(
     return configured
 
 
-def create_monster(
-    name: str,
-    location: str,
-    ctx: ToolContext,
-    description: str | None = None,
-    template: str | None = None,
-    hit_points: int | None = None,
-    armor: int | None = None,
-    strength: int | None = None,
-    dexterity: int | None = None,
-    willpower: int | None = None,
-    attacks: list[dict[str, str]] | None = None,
-    force: bool = False,
-    detachment: bool | None = None,
-) -> dict[str, Any]:
-    """Create a monster. Kept as a wrapper: the tool exposes hit_points, strength, dexterity, and
-    willpower, which this folds into the `stats` mapping `WorldTools.create_monster` takes."""
-    return ctx.world.create_monster(
-        name,
-        location,
-        description=description,
-        template=template,
-        stats={
-            "hp": hit_points,
-            "str": strength,
-            "dex": dexterity,
-            "wil": willpower,
-        },
-        armor=armor,
-        attacks=attacks,
-        force=force,
-        detachment=detachment,
-    )
-
-
 def set_condition(name: str, deprived: bool, cause: str, ctx: ToolContext) -> dict[str, Any]:
     """Mark a character deprived, with the cause, or clear the mark. Returns the day the
     deprivation began, or None when the character is not deprived."""
@@ -103,50 +68,6 @@ def set_condition(name: str, deprived: bool, cause: str, ctx: ToolContext) -> di
         return {"name": character.name, "deprived": False, "since_day": None}
 
     return ctx.world.with_hook_context(action)
-
-
-def give_spellbook(name: str, spell: str, description: str, ctx: ToolContext) -> dict[str, Any]:
-    """Give a spellbook. Kept as a wrapper: it fixes `give_spell_item`'s `role` to reusable."""
-    return ctx.world.give_spell_item(name, spell, description, role="reusable")
-
-
-def give_scroll(name: str, spell: str, description: str, ctx: ToolContext) -> dict[str, Any]:
-    """Give a scroll. Kept as a wrapper: it fixes `give_spell_item`'s `role` to single use."""
-    return ctx.world.give_spell_item(name, spell, description, role="single_use")
-
-
-def player_save(ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
-    """Record the player's save. Kept as a wrapper: `WorldTools.player_save` has no default for
-    `roll`, so direct binding would fail the loader's signature check."""
-    return ctx.world.player_save(roll)
-
-
-def player_initiative(ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
-    """Record the player's initiative. Kept as a wrapper: `WorldTools.player_initiative` has no
-    default for `roll`, so direct binding would fail the loader's signature check."""
-    return ctx.world.player_initiative(roll)
-
-
-def player_retreat(safe: bool, ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
-    """Record the player's retreat. Kept as a wrapper: `WorldTools.player_retreat` has no default
-    for `roll`, so direct binding would fail the loader's signature check."""
-    return ctx.world.player_retreat(safe, roll)
-
-
-def create_encounter_map(
-    name: str,
-    location: str,
-    description: str,
-    ctx: ToolContext,
-    columns: int | None = None,
-    rows: int | None = None,
-    template: str = "",
-) -> dict[str, Any]:
-    """Create an encounter map. Kept as a wrapper: `WorldTools.create_encounter_map` requires
-    columns and rows, while the tool lets a template supply them."""
-    return ctx.world.create_encounter_map(
-        name, location, columns, rows, description, template=template
-    )
 
 
 # The character mark that records deprivation: {"since": day, "cause": text}.

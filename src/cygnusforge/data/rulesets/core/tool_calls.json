@@ -953,8 +953,7 @@
     "type": "tool_call",
     "id": "roll_creative",
     "name": "roll_creative",
-    "python_module": "core",
-    "function": "roll_creative",
+    "world_method": "roll_creative",
     "description": "Roll on the creative tables for a fresh idea. Use it when the player is directionless, or when the story is waiting for something to happen next and you have no clear direction. Each result is a suggestion, not a fact: work it into the scene in a way that fits what has already happened, and drop any result that clashes with the established story. Leave 'tables' out to roll every creative table (the core rule set has 'action', 'theme', 'plot_twist', 'location', and 'location_descriptor'), or name ids to roll only those.",
     "parameters": {
       "type": "object",

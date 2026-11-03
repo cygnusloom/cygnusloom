@@ -24,12 +24,6 @@ async def create_location(
     )
 
 
-def roll_creative(ctx: ToolContext, tables: list[str] | None = None) -> dict[str, Any]:
-    """Roll the creative tables. Kept as a wrapper: the tool's `tables` argument is optional, but
-    `WorldTools.roll_creative` requires it, so this supplies the None default."""
-    return ctx.world.roll_creative(tables)
-
-
 def list_projects(ctx: ToolContext) -> dict[str, Any]:
     return {"projects": ctx.world.list_projects()}
 

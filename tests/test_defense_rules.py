@@ -8,7 +8,13 @@ from cygnusforge.content.character import DefenseFloor, build_character
 from cygnusforge.content.definitions import ContentError, Definition
 from cygnusforge.services.combat import equipped_defense
 from cygnusforge.services.events import Character
-from tests.conftest import content_library
+from tests.factories import rules_for
+
+# The fixture rule set's character spec: a neutral base to hang a defense floor on. Its Resolve
+# stat has no modifier bands, so a score of 1 is a +1 modifier.
+SPEC = rules_for("rolltest").character
+FEATURE = "steady-nerves"
+COUNTER = "focus"
 
 
 def _definitions(floor: object, *, counter: bool = True) -> list[Definition]:
@@ -68,17 +74,16 @@ def test_defense_floor_requires_its_counter_even_when_no_counters_exist():
 def test_equipped_defense_uses_configured_floor_and_separate_equipment(
     tier: int, body: int, shield: int, adjustment: int, round_up: bool, expected: int
 ):
-    spec = content_library().rule_sets["worldswithoutnumber"].character
     natural = replace(
-        spec.features["focus_impervious_defense"],
+        SPEC.features[FEATURE],
         id="natural_defense",
         defense_floor=DefenseFloor(base=12, counter="tier", divisor=3, round_up=round_up),
     )
-    tier_counter = replace(spec.counters["level"], id="tier", initial=1)
+    tier_counter = replace(SPEC.counters[COUNTER], id="tier", initial=1)
     spec = replace(
-        spec,
-        features={**spec.features, natural.id: natural},
-        counters={**spec.counters, "tier": tier_counter},
+        SPEC,
+        features={**SPEC.features, natural.id: natural},
+        counters={**SPEC.counters, "tier": tier_counter},
     )
     character = Character(
         kind="pc",
@@ -88,7 +93,7 @@ def test_equipped_defense_uses_configured_floor_and_separate_equipment(
         personality="",
         accent="",
         quirks=[],
-        stats={"dex": 14},
+        stats={"resolve": 1},
         features={natural.id: 1},
         counters={"tier": tier},
         equipped_armor_value=body,
@@ -96,11 +101,10 @@ def test_equipped_defense_uses_configured_floor_and_separate_equipment(
         defense_adjustment=adjustment,
     )
 
-    assert equipped_defense(character, spec, 10, "dex") == expected
+    assert equipped_defense(character, spec, 10, "resolve") == expected
 
 
 def test_equipped_defense_ignores_a_zero_quantity_feature():
-    spec = content_library().rule_sets["worldswithoutnumber"].character
     character = Character(
         kind="pc",
         name="Example",
@@ -109,12 +113,12 @@ def test_equipped_defense_ignores_a_zero_quantity_feature():
         personality="",
         accent="",
         quirks=[],
-        stats={"dex": 14},
-        features={"focus_impervious_defense": 0},
+        stats={"resolve": 1},
+        features={FEATURE: 0},
         equipped_armor_value=2,
     )
 
-    assert equipped_defense(character, spec, 10, "dex") == 13
+    assert equipped_defense(character, SPEC, 10, "resolve") == 13
 
 
 @pytest.mark.parametrize(
@@ -137,14 +141,13 @@ def test_defense_floor_can_require_empty_equipment_slots(
     shield_value: int,
     expected: int,
 ):
-    spec = content_library().rule_sets["worldswithoutnumber"].character
     natural = replace(
-        spec.features["focus_impervious_defense"],
+        SPEC.features[FEATURE],
         defense_floor=DefenseFloor(
             base=15, requires_no_armor=no_armor, requires_no_shield=no_shield
         ),
     )
-    spec = replace(spec, features={**spec.features, natural.id: natural})
+    spec = replace(SPEC, features={**SPEC.features, natural.id: natural})
     character = Character(
         kind="pc",
         name="Example",
@@ -153,7 +156,7 @@ def test_defense_floor_can_require_empty_equipment_slots(
         personality="",
         accent="",
         quirks=[],
-        stats={"dex": 14},
+        stats={"resolve": 1},
         features={natural.id: 1},
         equipped_armor=body,
         equipped_armor_value=body_value,
@@ -161,4 +164,4 @@ def test_defense_floor_can_require_empty_equipment_slots(
         equipped_shield_value=shield_value,
     )
 
-    assert equipped_defense(character, spec, 10, "dex") == expected
+    assert equipped_defense(character, spec, 10, "resolve") == expected

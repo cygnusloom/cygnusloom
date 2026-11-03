@@ -43,6 +43,7 @@ from cygnusforge.services.events import (
     record,
 )
 from cygnusforge.services.injuries import EffectContext, run_effects
+from cygnusforge.services.tools import check_arguments
 from cygnusforge.services.world import WorldTools
 from tests.conftest import content_library
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
@@ -894,12 +895,11 @@ def test_set_ac_preserves_an_adjustment_when_equipment_changes(
 ) -> None:
     app, campaign_id = _campaign(client_factory)
     tools = _world_tools(app, campaign_id)
-    ctx = _ctx(tools)
     _set_stat(tools, "dex", 14)  # a +1 modifier
     tools.give_item(NAME, "Buff Coat")
     tools.equip_armor(NAME, "Buff Coat")
 
-    result = wwn.set_ac(name=NAME, ac=15, ctx=ctx)
+    result = tools.set_armor(NAME, 15)
 
     assert result["armor"] == 15
     assert _pc(app, campaign_id).defense_adjustment == 2
@@ -911,14 +911,13 @@ def test_set_ac_preserves_an_adjustment_when_equipment_changes(
 
 def test_set_ac_requires_a_valid_total(client_factory):
     app, campaign_id = _campaign(client_factory)
-    ctx = _ctx(_world_tools(app, campaign_id))
+    tools = _world_tools(app, campaign_id)
+    schema = WWN.tool_calls["set_ac"].parameters
 
-    with pytest.raises(InvalidInput, match="Armor Class"):
-        wwn.set_ac(name=NAME, ac=-1, ctx=ctx)
-    with pytest.raises(InvalidInput, match="Armor Class"):
-        wwn.set_ac(name=NAME, ac=31, ctx=ctx)
+    assert check_arguments(schema, {"name": NAME, "ac": -1}) == ("argument 'ac' must be at least 5")
+    assert check_arguments(schema, {"name": NAME, "ac": 31}) == ("argument 'ac' must be at most 30")
 
-    assert wwn.set_ac(name=NAME, ac=14, ctx=ctx)["armor"] == 14
+    assert tools.set_armor(NAME, 14)["armor"] == 14
 
 
 def test_the_slow_experience_track_uses_its_own_thresholds(

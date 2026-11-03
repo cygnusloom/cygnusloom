@@ -18,11 +18,10 @@ from cygnusforge.services.tools import ToolRun, run_tool
 from tests.conftest import content_library
 from tests.test_library_strictness import _core, _ruleset, _write
 
-# Core tools that keep a Python function: the ones that need ToolContext, the one that runs a
-# loader hook, and the ones whose schema or signature does not fit the WorldTools method.
+# Core tools that keep a Python function: the ones that need ToolContext and the ones that
+# check a rule or read the lookups. Every other core tool binds a WorldTools method.
 KEPT_PYTHON = {
     "create_location",
-    "roll_creative",
     "lookup_rule",
     "list_lookups",
     "speak",
@@ -183,7 +182,7 @@ async def _quiet_speak(speaker: str, profile: str, intent: str, replace: bool) -
     return None
 
 
-def _context(world: _World) -> ToolContext:
+def _context(world: Any) -> ToolContext:
     speak: Callable[[str, str, str, bool], Awaitable[None]] = _quiet_speak
     return ToolContext(
         world=world,  # type: ignore[arg-type]
@@ -247,17 +246,9 @@ def test_core_binding_leaves_the_schemas_unchanged():
     ]
 
 
-# Cairn tool calls that keep a Python function: the five whose schema does not fit the
-# WorldTools method, the ruleset's own condition logic, and the two spell-item kinds that pick a
-# role.
+# Cairn tool calls that keep a Python function: only the ruleset's own condition logic. Every
+# other Cairn tool binds a WorldTools method, with `bind` for fixed arguments.
 CAIRN_KEPT_PYTHON = {
-    "create_encounter_map",
-    "create_monster",
-    "give_scroll",
-    "give_spellbook",
-    "player_initiative",
-    "player_retreat",
-    "player_save",
     "set_condition",
 }
 
@@ -331,3 +322,216 @@ def test_cairn_migrates_every_wrapper_that_fits_and_keeps_the_rest():
             assert call.takes_context is False
     # The one tool whose id and method name differ.
     assert calls["set_map_cells"].world_method == "set_encounter_map_cells"
+
+
+# WWN tools that used to wrap a method to fix or rename an argument now bind it directly.
+WWN_BOUND = {"create_encounter_map", "roll_check", "roll_save", "set_ac"}
+
+
+def test_wwn_binds_the_tools_it_used_to_wrap():
+    calls = content_library().rule_sets["worldswithoutnumber"].tool_calls
+    for call_id in WWN_BOUND:
+        assert calls[call_id].world_method is not None
+        assert calls[call_id].function is None
+    assert calls["roll_check"].bind == {"check": "skill"}
+    assert calls["set_ac"].rename == {"ac": "armor"}
+    assert calls["roll_save"].rename == {
+        "character": "name",
+        "save": "stat",
+        "cause": "reason",
+    }
+
+
+def test_a_fixed_argument_loads_onto_the_tool(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/module.json": _tool(
+                bind={"subject": "Spire"},
+                parameters={
+                    "type": "object",
+                    "properties": {"text": {"type": "string"}},
+                    "required": ["text"],
+                },
+            )
+        },
+    )
+    tool = ContentLibrary.load(tree).rule_sets["testset"].tool_calls["note"]
+    assert tool.bind == {"subject": "Spire"}
+    assert tool.rename == {}
+
+
+def test_a_rename_loads_onto_the_tool(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/module.json": _tool(
+                world_method="set_armor",
+                rename={"ac": "armor"},
+                parameters={
+                    "type": "object",
+                    "properties": {"name": {"type": "string"}, "ac": {"type": "integer"}},
+                    "required": ["name", "ac"],
+                },
+            )
+        },
+    )
+    tool = ContentLibrary.load(tree).rule_sets["testset"].tool_calls["note"]
+    assert tool.rename == {"ac": "armor"}
+    assert tool.bind == {}
+
+
+def test_a_fixed_argument_the_method_does_not_take_is_rejected(tree: Path):
+    _write(tree, {"rulesets/testset/module.json": _tool(bind={"body": "text"})})
+    with pytest.raises(ContentError, match="'bind' names 'body'"):
+        ContentLibrary.load(tree)
+
+
+def test_a_fixed_argument_cannot_also_be_a_schema_argument(tree: Path):
+    _write(tree, {"rulesets/testset/module.json": _tool(bind={"text": "fixed"})})
+    with pytest.raises(ContentError, match="'bind' target 'text' is also a schema argument"):
+        ContentLibrary.load(tree)
+
+
+def test_an_object_binding_must_name_schema_arguments(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/module.json": _tool(
+                world_method="set_armor",
+                bind={"armor": {"note": "body"}},
+                parameters={
+                    "type": "object",
+                    "properties": {"name": {"type": "string"}},
+                    "required": ["name"],
+                },
+            )
+        },
+    )
+    with pytest.raises(ContentError, match="'bind' 'armor' names 'body'"):
+        ContentLibrary.load(tree)
+
+
+def test_a_rename_must_name_a_schema_argument(tree: Path):
+    _write(tree, {"rulesets/testset/module.json": _tool(rename={"body": "text"})})
+    with pytest.raises(ContentError, match="'rename' names 'body'"):
+        ContentLibrary.load(tree)
+
+
+def test_a_rename_target_must_be_a_method_parameter(tree: Path):
+    _write(tree, {"rulesets/testset/module.json": _tool(rename={"text": "body"})})
+    with pytest.raises(ContentError, match="'rename' target 'body' is not a parameter"):
+        ContentLibrary.load(tree)
+
+
+def test_a_rename_target_cannot_also_be_a_schema_argument(tree: Path):
+    _write(tree, {"rulesets/testset/module.json": _tool(rename={"text": "subject"})})
+    with pytest.raises(ContentError, match="'rename' target 'subject' is also a schema argument"):
+        ContentLibrary.load(tree)
+
+
+def test_bindings_need_a_world_method(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/module.json": [
+                {"type": "python_module", "id": "m", "module": "tests.rolls"},
+                {
+                    "type": "tool_call",
+                    "id": "social",
+                    "name": "social",
+                    "python_module": "m",
+                    "function": "social_roll",
+                    "description": "Talk it out.",
+                    "bind": {"subject": "Spire"},
+                    "parameters": {"type": "object", "properties": {}},
+                },
+            ]
+        },
+    )
+    with pytest.raises(ContentError, match="'bind' and 'rename' need 'world_method'"):
+        ContentLibrary.load(tree)
+
+
+class _ArmorWorld:
+    """The one WorldTools method the bound set_ac tool calls, under its own argument name."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, int]] = []
+
+    def set_armor(self, name: str, armor: int) -> dict[str, Any]:
+        self.calls.append((name, armor))
+        return {"character": name, "armor": armor}
+
+
+def test_a_bound_tool_renames_an_argument_for_the_method():
+    tool = content_library().rule_sets["worldswithoutnumber"].tool_calls["set_ac"]
+    world = _ArmorWorld()
+    result = _run(tool, {"name": "Bo", "ac": 15}, _context(world))
+    assert result == {"character": "Bo", "armor": 15}
+    assert world.calls == [("Bo", 15)]
+
+
+class _SpellWorld:
+    """The one WorldTools method the bound give_spellbook tool calls."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, str]] = []
+
+    def give_spell_item(
+        self, name: str, spell: str, description: str, *, role: str
+    ) -> dict[str, Any]:
+        self.calls.append((name, spell, role))
+        return {"name": name, "spell": spell, "role": role, "description": description}
+
+
+def test_a_bound_tool_fixes_an_argument_the_gm_never_gives():
+    tool = content_library().rule_sets["cairn2e"].tool_calls["give_spellbook"]
+    world = _SpellWorld()
+    result = _run(
+        tool,
+        {"name": "Bo", "spell": "Read Omens", "description": "A spellbook."},
+        _context(world),
+    )
+    assert result["role"] == "reusable"
+    assert world.calls == [("Bo", "Read Omens", "reusable")]
+
+
+class _MonsterWorld:
+    """The one WorldTools method the bound create_monster tool calls."""
+
+    def __init__(self) -> None:
+        self.calls: list[dict[str, Any]] = []
+
+    def create_monster(
+        self,
+        name: str,
+        location: str,
+        description: str | None = None,
+        template: str | None = None,
+        stats: dict[str, int | None] | None = None,
+        armor: int | None = None,
+        attacks: list[dict[str, Any]] | None = None,
+        force: bool = False,
+        detachment: bool | None = None,
+        rules: list[str] | None = None,
+    ) -> dict[str, Any]:
+        self.calls.append({"name": name, "location": location, "stats": stats})
+        return {"name": name, "stats": stats}
+
+
+def test_a_bound_tool_builds_an_object_from_flat_arguments():
+    tool = content_library().rule_sets["cairn2e"].tool_calls["create_monster"]
+    world = _MonsterWorld()
+    _run(
+        tool,
+        {"name": "Wolf", "location": "Ford", "hit_points": 3, "strength": 6},
+        _context(world),
+    )
+    assert world.calls == [
+        {
+            "name": "Wolf",
+            "location": "Ford",
+            "stats": {"hp": 3, "str": 6, "dex": None, "wil": None},
+        }
+    ]

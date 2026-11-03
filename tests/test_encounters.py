@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import random
 from collections.abc import Callable
 from dataclasses import replace
 from typing import Any
@@ -12,6 +13,7 @@ from fastapi.testclient import TestClient
 
 from cygnusforge.content.library import EncounterGrid
 from cygnusforge.llm.base import ToolRequest
+from cygnusforge.rules.context import ToolContext, brief
 from cygnusforge.services import encounters
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
@@ -28,16 +30,60 @@ from cygnusforge.services.events import (
     token_labels,
 )
 from cygnusforge.services.tools import ToolRun, run_tool
+from cygnusforge.services.world import WorldTools
 from tests.conftest import content_library, csrf_token
-from tests.test_campaigns import _answer, _campaign_id, _create_character, _place_pc, _send
+from tests.factories import (
+    answer,
+    campaign_ready,
+    create_character,
+    place_pc,
+    send_message,
+)
+from tests.factories import (
+    db as _db,
+)
+from tests.factories import (
+    open_campaign as _state,
+)
 from tests.test_character_creation import _cairn_campaign, _complete_form
 from tests.test_tools import _script
-from tests.test_world import TOOLS, _ctx, _db, _state
 
 LIBRARY = content_library()
 CAIRN_GRID = LIBRARY.rule_sets["cairn2e"].grid
+CAIRN_TOOLS = LIBRARY.rule_sets["cairn2e"].tool_calls
 MAP = "Mossbell Green"
 TOWN = "Mossbell Hollow"
+
+
+def _ctx(
+    app: FastAPI,
+    campaign_id: int,
+    speak: Callable[[str, str, str, bool], Any] | None = None,
+) -> ToolContext:
+    """The tool context the app builds, from the fixture rule set's own tools."""
+    rule_set = LIBRARY.rule_sets["rolltest"]
+
+    async def quiet_speak(speaker: str, profile: str, intent: str, replace: bool) -> None:
+        return None
+
+    return ToolContext(
+        world=WorldTools(
+            engine=app.state.engine,
+            campaign_id=campaign_id,
+            tables=dict(LIBRARY.core.tables),
+            rng=random.Random(0),
+            character=rule_set.character,
+            plus="sum",
+        ),
+        speak=speak or quiet_speak,
+        ooc=lambda narrate: None,
+        rules=rule_set.rules,
+        lookup_tools={
+            tool.name: brief(tool.description)
+            for tool in rule_set.tool_calls.values()
+            if tool.lookup
+        },
+    )
 
 
 def _call(
@@ -51,7 +97,7 @@ def _call(
     if grid is not None:
         ctx = replace(ctx, world=replace(ctx.world, grid=grid))
     request = ToolRequest(id="call_1", name=name, arguments=json.dumps(arguments))
-    run = asyncio.run(run_tool(TOOLS, request, None, ctx))
+    run = asyncio.run(run_tool(CAIRN_TOOLS, request, None, ctx))
     assert isinstance(run, ToolRun)
     return json.loads(run.output)
 
@@ -64,18 +110,18 @@ def _encounter_with(
     encounter tools in its own table; the test campaign has none of them."""
     if cairn:
         client, campaign_id = _cairn_campaign(client_factory)
-        created = _create_character(
+        created = create_character(
             client, campaign_id, name="Ada", fields=_complete_form(client, campaign_id)
         )
         assert created.status_code == 303
-        _answer(client, campaign_id, "continue")
+        answer(client, campaign_id, "continue")
         _call(
             client.app, campaign_id, "create_location", {"name": TOWN, "description": "A square."}
         )
     else:
-        client, campaign_id = _campaign_id(client_factory)
+        client, campaign_id = campaign_ready(client_factory)
     app = client.app
-    _place_pc(client, campaign_id, TOWN)
+    place_pc(client, campaign_id, TOWN)
     created = _call(
         app,
         campaign_id,
@@ -146,9 +192,9 @@ def test_cairn2e_has_a_grid_and_rolltest_does_not():
 
 
 def test_map_creation_is_validated(client_factory: Callable[[], TestClient]):
-    client, campaign_id = _campaign_id(client_factory)
+    client, campaign_id = campaign_ready(client_factory)
     app = client.app
-    _place_pc(client, campaign_id, TOWN)
+    place_pc(client, campaign_id, TOWN)
     args = {"name": MAP, "location": TOWN, "columns": 20, "rows": 20, "description": "Open."}
     assert _call(app, campaign_id, "create_encounter_map", args)["columns"] == 20
     assert "already" in _call(app, campaign_id, "create_encounter_map", args)["error"]
@@ -335,7 +381,7 @@ def test_npc_turn_is_played_out_and_ends_automatically(
         {"text": "Pip waits by the gate."},
         {"text": "Pip ducks behind the crate."},
     )
-    assert _send(client, campaign_id, script).status_code == 303
+    assert send_message(client, campaign_id, script).status_code == 303
 
     lines = _npc_turn_stream(client, campaign_id, "Pip")
 
@@ -356,7 +402,7 @@ def test_npc_turn_ends_only_when_the_gm_reply_finishes(
     client, campaign_id = _encounter_with(client_factory, columns=10, rows=10, cairn=True)
     app = client.app
     script = _script({"text": "Pip waits."}, {"text": "Pip shrugs and does nothing."})
-    assert _send(client, campaign_id, script).status_code == 303
+    assert send_message(client, campaign_id, script).status_code == 303
 
     lines = _npc_turn_stream(client, campaign_id, "Pip")
 
@@ -450,7 +496,7 @@ def test_campaign_page_shows_the_encounter_board_and_turn_controls(
 
 
 def test_campaign_page_has_no_board_without_an_encounter(client_factory: Callable[[], TestClient]):
-    client, campaign_id = _campaign_id(client_factory)
+    client, campaign_id = campaign_ready(client_factory)
     assert "encounter-board" not in client.get(f"/campaigns/{campaign_id}").text
     assert 'id="tab-world"' not in client.get(f"/campaigns/{campaign_id}").text
 
@@ -594,7 +640,7 @@ def test_campaign_page_lists_the_encounter_turn_order_under_the_map(
 def test_campaign_page_has_no_roster_or_taller_map_without_an_encounter(
     client_factory: Callable[[], TestClient],
 ):
-    client, campaign_id = _campaign_id(client_factory)
+    client, campaign_id = campaign_ready(client_factory)
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "encounter-roster" not in page
     assert 'class="side"' in page

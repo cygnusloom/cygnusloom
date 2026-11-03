@@ -209,6 +209,12 @@ class ToolCall:
     # The WorldTools method the engine calls, when the tool binds an engine operation instead of
     # naming a rule set function. The loader resolves it and checks it against the schema.
     world_method: str | None = None
+    # Arguments the tool supplies to its method itself, so the GM never gives them. A value that
+    # is an object builds one argument from the schema arguments it names, such as a statblock's
+    # stats from flat numbers.
+    bind: Mapping[str, Any] = field(default_factory=dict)
+    # Schema arguments passed to the method under a different name, mapping argument to parameter.
+    rename: Mapping[str, str] = field(default_factory=dict)
     player_input: PlayerInput | None = None
     # A str.format template shown to the player after the tool runs. Fields come from the
     # arguments and the result.
@@ -4799,6 +4805,8 @@ def _load_tool_call(
             "python_module",
             "function",
             "world_method",
+            "bind",
+            "rename",
             "parameters",
             "player_input",
             "activity",
@@ -4832,9 +4840,17 @@ def _load_tool_call(
         parameters = _with_travel(parameters, travel, label)
     if CONTEXT_ARGUMENT in parameters["properties"]:
         raise ContentError(f"{label}: {CONTEXT_ARGUMENT!r} is reserved and not a parameter")
+    bind, rename = _tool_binding(data, parameters, accepted, world_method is not None, label)
     player_input = _check_player_input(data.get("player_input"), parameters, accepted, label)
     activity = _check_activity(data.get("activity"), label)
-    _check_signature(accepted, parameters, label, consumed=_consumed(player_input))
+    _check_signature(
+        accepted,
+        parameters,
+        label,
+        consumed=_consumed(player_input),
+        bind=bind,
+        rename=rename,
+    )
     return ToolCall(
         id=definition.id,
         name=name,
@@ -4842,6 +4858,8 @@ def _load_tool_call(
         parameters=parameters,
         function=function,
         world_method=world_method,
+        bind=bind,
+        rename=rename,
         player_input=player_input,
         activity=activity,
         takes_context=world_method is None and CONTEXT_ARGUMENT in accepted,
@@ -4889,6 +4907,78 @@ def _world_method(name: str, label: str) -> Callable[..., Any]:
     if not callable(method):
         raise ContentError(f"{label}: {name!r} is not a method of WorldTools")
     return method
+
+
+def _tool_binding(
+    data: Mapping[str, Any],
+    parameters: Mapping[str, Any],
+    accepted: Mapping[str, inspect.Parameter],
+    bound_method: bool,
+    label: str,
+) -> tuple[Mapping[str, Any], Mapping[str, str]]:
+    """The arguments a bound tool adds to, and renames for, its WorldTools method.
+
+    `bind` supplies an argument the GM never gives, such as a fixed role or a check id. A value
+    that is an object builds one argument from the schema arguments it names, such as a
+    statblock's stats from flat numbers. `rename` passes a schema argument under the method's own
+    name. Both are optional, and both are checked against the method and the schema so a mismatch
+    fails at load time."""
+    bind = data.get("bind", {})
+    rename = data.get("rename", {})
+    if not isinstance(bind, Mapping):
+        raise ContentError(f"{label}: 'bind' must be an object")
+    if not isinstance(rename, Mapping):
+        raise ContentError(f"{label}: 'rename' must be an object")
+    if not bind and not rename:
+        return {}, {}
+    if not bound_method:
+        raise ContentError(f"{label}: 'bind' and 'rename' need 'world_method'")
+    properties = parameters["properties"]
+    fixed: dict[str, Any] = {}
+    sources: set[str] = set()
+    for target, value in bind.items():
+        if target not in accepted:
+            raise ContentError(f"{label}: 'bind' names {target!r}, which the method does not take")
+        if target in properties:
+            raise ContentError(f"{label}: 'bind' target {target!r} is also a schema argument")
+        if target in rename.values():
+            raise ContentError(f"{label}: 'bind' target {target!r} is also a rename target")
+        if isinstance(value, Mapping):
+            built: dict[str, str] = {}
+            for key, source in value.items():
+                if not isinstance(source, str) or source not in properties:
+                    raise ContentError(
+                        f"{label}: 'bind' {target!r} names {source!r}, "
+                        "which is not a schema argument"
+                    )
+                built[str(key)] = source
+                sources.add(source)
+            fixed[target] = built
+        else:
+            fixed[target] = value
+    renamed: dict[str, str] = {}
+    for source, target in rename.items():
+        if source not in properties:
+            raise ContentError(
+                f"{label}: 'rename' names {source!r}, which is not a schema argument"
+            )
+        if not isinstance(target, str) or not target:
+            raise ContentError(
+                f"{label}: 'rename' must give the method parameter {source!r} becomes"
+            )
+        if target not in accepted:
+            raise ContentError(
+                f"{label}: 'rename' target {target!r} is not a parameter of the method"
+            )
+        if target in properties:
+            raise ContentError(f"{label}: 'rename' target {target!r} is also a schema argument")
+        if target in renamed.values():
+            raise ContentError(f"{label}: 'rename' sends two arguments to {target!r}")
+        renamed[source] = target
+    for source in renamed:
+        if source in sources:
+            raise ContentError(f"{label}: 'bind' builds {source!r}, which 'rename' also renames")
+    return fixed, renamed
 
 
 def _accepted_parameters(
@@ -5219,18 +5309,33 @@ def _check_signature(
     parameters: Mapping[str, Any],
     label: str,
     consumed: frozenset[str] = frozenset(),
+    bind: Mapping[str, Any] | None = None,
+    rename: Mapping[str, str] | None = None,
 ) -> None:
-    """The GM calls the function with keyword arguments taken from the schema, so both must agree."""
+    """The GM calls the function with keyword arguments taken from the schema, so both must agree.
+    A renamed argument reaches the method under its own name, and a bound one comes from the tool,
+    so neither has to match a parameter name in the schema."""
+    bind = bind or {}
+    rename = rename or {}
     takes_any_keyword = any(p.kind is p.VAR_KEYWORD for p in accepted.values())
+    built = {
+        source for value in bind.values() if isinstance(value, Mapping) for source in value.values()
+    }
     if not takes_any_keyword:
         for name in parameters["properties"]:
-            if name not in accepted and name not in consumed:
+            if name in consumed or name in rename or name in built:
+                continue
+            if name not in accepted:
                 raise ContentError(f"{label}: function does not accept parameter {name!r}")
     required = set(parameters.get("required", []))
+    renamed = {target: source for source, target in rename.items()}
     for name, param in accepted.items():
         if param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD) or name == CONTEXT_ARGUMENT:
             continue
-        if param.default is param.empty and name not in required:
+        if name in bind:
+            continue
+        shown = renamed.get(name, name)
+        if param.default is param.empty and shown not in required:
             raise ContentError(
-                f"{label}: parameter {name!r} has no default, so it must be required"
+                f"{label}: parameter {shown!r} has no default, so it must be required"
             )

@@ -283,7 +283,8 @@ class WorldTools:
             raise InvalidInput(f"there is no character table named {table!r}")
         return self.rng.choice(options).value
 
-    def roll_creative(self, tables: list[str] | None) -> dict[str, Any]:
+    def roll_creative(self, tables: list[str] | None = None) -> dict[str, Any]:
+        """Roll the creative tables. Without `tables`, every creative table is rolled."""
         with session_scope(self.engine) as db:
             return roll_creative_tables(
                 db, self.campaign_id, tables, self.dice_tables, self.rng, plus=self.plus
@@ -1428,11 +1429,13 @@ class WorldTools:
         self,
         name: str,
         location: str,
-        columns: int | None,
-        rows: int | None,
-        description: str,
+        columns: int | None = None,
+        rows: int | None = None,
+        description: str = "",
         template: str = "",
     ) -> dict[str, Any]:
+        """Make a map at a location. A template may supply the size, so `columns` and `rows` are
+        optional, and every tool that makes a map requires its description."""
         with session_scope(self.engine) as db:
             return encounters.create_map(
                 db,
@@ -1654,7 +1657,8 @@ class WorldTools:
     def modifier_dice(self, modifier: str) -> str | None:
         return attack_modifiers.modifier_dice(self._rules().modifiers, modifier)
 
-    def player_save(self, roll: int) -> dict[str, Any]:
+    def player_save(self, roll: int = 0) -> dict[str, Any]:
+        """Record the player's own d20 for a save the combat rules have marked due."""
         with session_scope(self.engine) as db:
             return combat.player_save(
                 db,
@@ -1667,7 +1671,8 @@ class WorldTools:
                 spec=self.character,
             )
 
-    def player_initiative(self, roll: int) -> dict[str, Any]:
+    def player_initiative(self, roll: int = 0) -> dict[str, Any]:
+        """Record the player's own d20 for initiative in the first round."""
         with session_scope(self.engine) as db:
             return combat.player_initiative(db, self.campaign_id, roll, self._rules())
 
@@ -1758,7 +1763,8 @@ class WorldTools:
                 db, self.campaign_id, name, safe, self._rules(), self.rng, plus=self.plus
             )
 
-    def player_retreat(self, safe: bool, roll: int) -> dict[str, Any]:
+    def player_retreat(self, safe: bool, roll: int = 0) -> dict[str, Any]:
+        """Record the player's own d20 for a retreat."""
         with session_scope(self.engine) as db:
             return morale.player_retreat(db, self.campaign_id, safe, roll, self._rules())
 
