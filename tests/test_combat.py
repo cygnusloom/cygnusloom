@@ -1191,6 +1191,10 @@ def test_a_player_save_follows_a_declarative_roll_over_rule(client_factory, save
     app, campaign_id, tools = _fight(client_factory)
     tools = replace(tools, combat=_declarative(save={"mode": "roll_over"}))
     _foe(tools, "Grave Thing", claw="1d6")
+    # Keep the overflow stat high enough that the hit cannot drain it to 0; the test is about
+    # the roll-over comparison, not the randomly rolled score.
+    tools.set_stat_max(PC, "str", 10, cause="a test")
+    tools.set_stat_max(PC, "wil", 10, cause="a test")
     _set_stat(app, campaign_id, PC, "hp", 0)
     _hit(tools, "Grave Thing", PC, 5)
 

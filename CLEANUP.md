@@ -113,7 +113,7 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
   neutral fixture; `test_scars` still needs a non-broken migration.
 - [ ] Stop importing private `_load_*` loader internals in most tests; prefer public load results.
   `test_scars` is the main remaining loader-internal test.
-- [x] Suite stays parallel and under one minute (2,564 tests in ~33s).
+- [x] Suite stays parallel and under one minute (2,567 tests in ~37s).
 
 ### WWN parity backlog (track, then close)
 
@@ -122,8 +122,9 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
   Stowed pool; items join by size/default, equipment joins Readied, a bulky item cannot be
   readied, over-capacity is refused, and a stowed item cannot be used
   (`tests/test_inventory.py`, `tests/test_inventory_schema.py`, `tests/test_wwn_inventory.py`).
-- [ ] Armor-encumbrance penalties to Sneak/Exert. Armor descriptions state the rule, but armor
-  items do not yet carry a structured check penalty.
+- [x] Armor-encumbrance penalties to Sneak/Exert. Armor features and shop items carry
+  `encumbrance_checks`; `roll_check` subtracts the worn item's Encumbrance slots and records the
+  penalty on the check event (`tests/test_wwn_combat.py`).
 - [ ] Shield AC suspended after a shield bash until the next turn.
 - [x] Effort stats only for eligible characters. Each Effort stat names its granting class or
   tradition templates in `requires_templates`; a Warrior has none and a Mage keeps only the

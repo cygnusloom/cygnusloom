@@ -34,6 +34,7 @@ def roll_check(
     modifier: int = 0,
     cause: str = "",
     conditions: Mapping[str, ConditionRules] | None = None,
+    armor_penalty: int = 0,
 ) -> dict[str, Any]:
     """Roll `check` for a character and record what it made. The roll is the check's dice plus the
     skill's level (or the check's untrained penalty when the character has no level in it), the
@@ -84,14 +85,14 @@ def roll_check(
         rules.modifies.get("check", 0) + rules.modifies.get(ALL_STATS, 0)
         for rules in active_conditions(found, conditions or {})
     )
-    bonus = skill_bonus + stat_bonus + modifier + condition_modifier
+    bonus = skill_bonus + stat_bonus + modifier + condition_modifier + armor_penalty
     result = resolution.roll_check(
         rng,
         check.dice,
         skill_level=skill_bonus,
         stat_modifier=stat_bonus,
         difficulty=target,
-        modifier=modifier + condition_modifier,
+        modifier=modifier + condition_modifier + armor_penalty,
         plus=plus,
     )
     record(
@@ -112,6 +113,7 @@ def roll_check(
             difficulty=target,
             success=result.passed,
             cause=cause,
+            armor_penalty=armor_penalty,
         ),
     )
     db.commit()
@@ -128,5 +130,6 @@ def roll_check(
         "total": result.total,
         "difficulty": target,
         "success": result.passed,
+        "armor_penalty": armor_penalty,
         "cause": cause,
     }

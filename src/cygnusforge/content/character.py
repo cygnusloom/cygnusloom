@@ -180,6 +180,8 @@ class Feature:
     shock_ac: int = 0
     # Engine flags the weapon or item carries, such as "no_unskilled_penalty".
     flags: tuple[str, ...] = ()
+    # Check ids this worn item penalizes by its Encumbrance, such as Sneak or Exert.
+    encumbrance_checks: tuple[str, ...] = ()
     # The effects run when the feature is granted while a character is created, in the order
     # they are given. See FEATURE_EFFECT_OPS.
     effects: tuple[Mapping[str, Any], ...] = ()
@@ -888,6 +890,9 @@ def load_feature(
         shock=shock,
         shock_ac=shock_ac,
         flags=_text_list(data.get("flags", []), "flags", label),
+        encumbrance_checks=_text_list(
+            data.get("encumbrance_checks", []), "encumbrance_checks", label
+        ),
         effects=_feature_effects(data.get("effects", []), label, stats, skills, counters),
         defense_floor=_defense_floor(data.get("defense_floor"), counters, label),
         repeatable=repeatable,

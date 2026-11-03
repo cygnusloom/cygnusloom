@@ -317,8 +317,9 @@ an open gap. [PARITY.md](./PARITY.md) is the same status list with the tool/JSON
   progression chart, so a second partial does not add its own HP, attack, Focus, or art chart.
   Effort recognition for a second partial is likewise keyed to the primary class. Pairing and
   creation are complete; combining the two advancement charts remains open.
-- **Armor-encumbrance penalties.** Medium and heavy armor describe their Sneak/Exert penalty, but
-  `roll_check` does not apply it automatically; the GM must pass the modifier.
+- **Armor-encumbrance penalties.** Armor features and shop items carry `encumbrance_checks`;
+  `roll_check` subtracts the worn item's Encumbrance slots from those checks and records the
+  penalty on the check event.
 - **Shield bash.** The `shield_bash_large` and `shield_bash_small` attack profiles exist, but
   nothing suspends the shield's AC until the next turn.
 - **Surprise, grappling, execution attacks, total defense, dual wielding, and range bands.** The

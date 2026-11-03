@@ -1073,6 +1073,8 @@ class ShopItem:
     uses: int
     description: str
     armor_mode: str = "add"
+    # Check ids this worn item penalizes by its Encumbrance, such as Sneak or Exert.
+    encumbrance_checks: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -1977,6 +1979,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "shock",
             "shock_ac",
             "flags",
+            "encumbrance_checks",
             "effects",
             "defense_floor",
             "repeatable",
@@ -4229,6 +4232,7 @@ def _load_marketplace(
                 "damage",
                 "uses",
                 "description",
+                "encumbrance_checks",
             },
             label,
         )
@@ -4249,6 +4253,7 @@ def _load_marketplace(
                 damage=str(d.data.get("damage", "")),
                 uses=_whole(d.data, "uses", label, 0),
                 description=str(d.data.get("description", "")),
+                encumbrance_checks=_names(d.data, "encumbrance_checks", label),
             )
         )
     loaded_services = []

@@ -2891,6 +2891,8 @@ class CheckMade(GameEvent):
     difficulty: int = 0
     success: bool = False
     cause: str = ""
+    # What worn armor took off the roll, or 0 when nothing did.
+    armor_penalty: int = 0
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         return None
@@ -2903,6 +2905,8 @@ class CheckMade(GameEvent):
             used.append(f"{self.skill_name} {skill_bonus:+d}")
         if self.stat_name:
             used.append(self.stat_name)
+        if self.armor_penalty:
+            used.append(f"armor {self.armor_penalty:+d}")
         with_used = f" ({', '.join(used)})" if used else ""
         result = "succeeds" if self.success else "fails"
         text = (

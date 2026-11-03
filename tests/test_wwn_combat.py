@@ -1025,3 +1025,58 @@ def test_a_project_tracks_progress_to_completion(client_factory):
             "The last rubbing.",
         ]
     assert [p["name"] for p in tools.list_projects()] == ["Map the Vault"]
+
+
+def _roomy_pack(tools: WorldTools) -> WorldTools:
+    """A single-pool inventory large enough for the armor tests."""
+    return replace(
+        tools,
+        marketplace=WWN.marketplace,
+        inventory=replace(
+            WWN.inventory,
+            pools=(),
+            size_pools={},
+            default_pool="",
+            capacity=100,
+            capacity_stat="",
+            capacity_multiplier=1,
+        ),
+    )
+
+
+def test_medium_armor_penalizes_only_sneak_by_its_encumbrance(client_factory):
+    _, _, tools = _wwn_campaign(client_factory)
+    tools = _roomy_pack(tools)
+    tools.give_item(PC, "Mail Shirt")
+    tools.equip_armor(PC, "Mail Shirt")
+
+    sneak = tools.roll_check("skill", PC, skill="sneak", stat="dex", difficulty=8)
+    exert = tools.roll_check("skill", PC, skill="exert", stat="str", difficulty=8)
+
+    assert sneak["armor_penalty"] == -1
+    assert exert["armor_penalty"] == 0
+
+
+def test_heavy_armor_penalizes_sneak_and_exert_by_its_encumbrance(client_factory):
+    _, _, tools = _wwn_campaign(client_factory)
+    tools = _roomy_pack(tools)
+    tools.give_item(PC, "Mail Hauberk")
+    tools.equip_armor(PC, "Mail Hauberk")
+
+    sneak = tools.roll_check("skill", PC, skill="sneak", stat="dex", difficulty=8)
+    exert = tools.roll_check("skill", PC, skill="exert", stat="str", difficulty=8)
+
+    assert sneak["armor_penalty"] == -2
+    assert exert["armor_penalty"] == -2
+
+
+def test_light_armor_has_no_check_penalty(client_factory):
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    tools = _roomy_pack(tools)
+    tools.give_item(PC, "Buff Coat")
+    tools.equip_armor(PC, "Buff Coat")
+
+    result = tools.roll_check("skill", PC, skill="sneak", stat="dex", difficulty=8)
+
+    assert result["armor_penalty"] == 0
+    assert _pc(client.app, campaign_id).equipped_armor == "Buff Coat"

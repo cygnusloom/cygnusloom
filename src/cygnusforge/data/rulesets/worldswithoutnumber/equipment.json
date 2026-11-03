@@ -134,6 +134,7 @@
     "feature_type": "item",
     "size": "normal",
     "armor": 4,
+    "encumbrance_checks": ["sneak"],
     "description": "Medium armor: AC 14. Encumbrance 1; not discreet, and the load penalizes physical Sneak checks."
   },
   {
@@ -143,6 +144,7 @@
     "feature_type": "item",
     "size": "large",
     "armor": 5,
+    "encumbrance_checks": ["sneak"],
     "description": "Medium armor: AC 15. Encumbrance 2; not discreet, and the load penalizes physical Sneak checks."
   },
   {
@@ -152,6 +154,7 @@
     "feature_type": "item",
     "size": "huge",
     "armor": 6,
+    "encumbrance_checks": ["sneak"],
     "description": "Medium armor: AC 16. Encumbrance 3; not discreet, and the load penalizes physical Sneak checks."
   },
   {
@@ -161,6 +164,7 @@
     "feature_type": "item",
     "size": "large",
     "armor": 6,
+    "encumbrance_checks": ["sneak", "exert"],
     "description": "Heavy armor: AC 16. Encumbrance 2; the load penalizes Sneak and Exert checks."
   },
   {
@@ -170,6 +174,7 @@
     "feature_type": "item",
     "size": "large",
     "armor": 7,
+    "encumbrance_checks": ["sneak", "exert"],
     "description": "Heavy armor: AC 17. Encumbrance 2; the load penalizes Sneak and Exert checks."
   },
   {
@@ -179,6 +184,7 @@
     "feature_type": "item",
     "size": "huge",
     "armor": 9,
+    "encumbrance_checks": ["sneak", "exert"],
     "description": "Heavy armor: AC 19. Encumbrance 3; the load penalizes Sneak and Exert checks."
   },
   {
@@ -188,6 +194,7 @@
     "feature_type": "item",
     "size": "huge",
     "armor": 6,
+    "encumbrance_checks": ["sneak", "exert"],
     "description": "Heavy armor: AC 16, but proof against ordinary weapons. Non-magical melee and thrown attacks cannot hurt the wearer unless the weapon is two-handed, has Shock AC 16 or more, or the wearer is grappled. Encumbrance 3."
   },
   {
@@ -1077,6 +1084,7 @@
     "armor_mode": "max",
     "damage": "",
     "uses": 0,
+    "encumbrance_checks": ["sneak"],
     "description": "Medium armor, AC 14, Encumbrance 1; penalizes physical Sneak."
   },
   {
@@ -1090,6 +1098,7 @@
     "armor_mode": "max",
     "damage": "",
     "uses": 0,
+    "encumbrance_checks": ["sneak"],
     "description": "Medium armor, AC 15, Encumbrance 2; penalizes physical Sneak."
   },
   {
@@ -1103,6 +1112,7 @@
     "armor_mode": "max",
     "damage": "",
     "uses": 0,
+    "encumbrance_checks": ["sneak"],
     "description": "Medium armor, AC 16, Encumbrance 3; penalizes physical Sneak."
   },
   {
@@ -1116,6 +1126,7 @@
     "armor_mode": "max",
     "damage": "",
     "uses": 0,
+    "encumbrance_checks": ["sneak", "exert"],
     "description": "Heavy armor, AC 16, Encumbrance 2; penalizes Sneak and Exert."
   },
   {
@@ -1129,6 +1140,7 @@
     "armor_mode": "max",
     "damage": "",
     "uses": 0,
+    "encumbrance_checks": ["sneak", "exert"],
     "description": "Heavy armor, AC 17, Encumbrance 2; penalizes Sneak and Exert."
   },
   {
@@ -1142,6 +1154,7 @@
     "armor_mode": "max",
     "damage": "",
     "uses": 0,
+    "encumbrance_checks": ["sneak", "exert"],
     "description": "Heavy armor, AC 19, Encumbrance 3; penalizes Sneak and Exert."
   },
   {
@@ -1155,6 +1168,7 @@
     "armor_mode": "max",
     "damage": "",
     "uses": 0,
+    "encumbrance_checks": ["sneak", "exert"],
     "description": "Heavy armor, AC 16, Encumbrance 3; proof against ordinary non-magical weapons."
   },
   {

@@ -490,6 +490,7 @@ class WorldTools:
                 if relic.armor and self.combat is not None and self.combat.defense_base
                 else "add"
             ),
+            encumbrance_checks=relic.encumbrance_checks,
         )
 
     def equip_armor(self, name: str, item: str, equipped: bool = True) -> dict[str, Any]:
@@ -728,6 +729,27 @@ class WorldTools:
             None,
         )
 
+    def _armor_check_penalty(self, db: Session, character: str, skill: str) -> int:
+        """What worn armor takes off a check for `skill`: its Encumbrance slots when the armor
+        declares that check, such as medium armor on Sneak or heavy armor on Sneak and Exert."""
+        skill = skill.strip()
+        if not skill:
+            return 0
+        found = load_state(db, self.campaign_id).characters.get(name_key(character))
+        if found is None:
+            return 0
+        penalty = 0
+        for worn in (found.equipped_armor, found.equipped_shield):
+            if not worn:
+                continue
+            listed = self._listed(worn, include_character=True)
+            if listed is None or skill not in listed.encumbrance_checks:
+                continue
+            held = next((item for item in found.items if same_item_name(item.name, worn)), None)
+            if held is not None:
+                penalty -= held.slots
+        return penalty
+
     def roll_check(
         self,
         check: str,
@@ -757,6 +779,7 @@ class WorldTools:
                 modifier=modifier,
                 cause=cause,
                 conditions=self.conditions,
+                armor_penalty=self._armor_check_penalty(db, character, skill),
             )
 
     def raise_skill(self, name: str, skill: str, level: int, cause: str = "") -> dict[str, Any]:
