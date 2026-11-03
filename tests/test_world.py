@@ -5,7 +5,6 @@ import json
 import random
 from collections.abc import Callable
 from dataclasses import replace
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -14,13 +13,13 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 from cygnusforge.content.character import NO_CAMPAIGN, TableOption, choice_options, option_fields
-from cygnusforge.content.library import LocationTemplate
+from cygnusforge.content.library import InventoryRules, LocationTemplate, WorldTerrain
 from cygnusforge.db.models import Event
 from cygnusforge.llm.base import ChatReply, ToolRequest
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.rules.context import ToolContext, brief
 from cygnusforge.services import world
-from cygnusforge.services.campaigns import SPEECH_ATTEMPTS
+from cygnusforge.services.campaigns import SPEECH_ATTEMPTS, list_messages
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
     NPC_KIND,
@@ -34,27 +33,43 @@ from cygnusforge.services.events import (
 )
 from cygnusforge.services.tools import ToolRun, run_tool
 from tests.conftest import content_library, csrf_token
-from tests.test_campaigns import (
-    _campaign_id,
-    _create_character,
-    _new_campaign,
-    _place_pc,
-    _send,
-    _signed_in,
+from tests.factories import (
+    campaign_ready,
+    create_campaign,
+    create_character,
+    place_pc,
+    send_message,
+    signed_in_client,
 )
-from tests.test_tools import _recording_provider, _saved, _script
 
 LIBRARY = content_library()
-TOOLS = LIBRARY.rule_sets["cairn2e"].tool_calls
+# The neutral contract rule set, which inherits the core world tools.
+CONTRACT = LIBRARY.rule_sets["rolltest"]
+TOOLS = CONTRACT.tool_calls
 TABLES = LIBRARY.core.tables
+# Shipped Cairn content, for the tests about its own campaign options and world.
 CAIRN = LIBRARY.rule_sets["cairn2e"]
+# Neutral rules for a generic view test, so it carries no source book's content.
+INVENTORY = InventoryRules(
+    capacity=10,
+    penalty_name="Overloaded",
+    penalty_lasts="until a full night's rest",
+    penalty_item="Fatigue",
+    penalty_slots=1,
+)
+MAP_GROUND = {"lake": WorldTerrain(id="lake", name="Lake", color="#3f6f8f", rule="")}
+
+
+def _campaign_id(client_factory: Callable[[], TestClient]) -> tuple[TestClient, int]:
+    """A signed-in client and a campaign past its opening turn, from the shared factory."""
+    return campaign_ready(client_factory)
 
 
 def _values(table: str) -> list[str]:
     return [option.value for option in TABLES[table]]
 
 
-SPEC = LIBRARY.rule_sets["rolltest"].character
+SPEC = CONTRACT.character
 BUNDLED_NPCS = {
     "Mara Thistledown": "Mossbell Hollow",
     "Brin Gallowcap": "Glowcap Ring",
@@ -81,10 +96,10 @@ def _ctx(
         ),
         speak=speak or quiet_speak,
         ooc=lambda narrate: None,
-        rules=LIBRARY.rule_sets["rolltest"].rules,
+        rules=CONTRACT.rules,
         lookup_tools={
             tool.name: brief(tool.description)
-            for tool in LIBRARY.rule_sets["rolltest"].tool_calls.values()
+            for tool in CONTRACT.tool_calls.values()
             if tool.lookup
         },
     )
@@ -106,7 +121,7 @@ def _give_the_map_ground(app: FastAPI, campaign_id: int) -> None:
         rng=random.Random(0),
         character=SPEC,
         plus="sum",
-        world_terrain=LIBRARY.rule_sets["cairn2e"].world_terrain,
+        world_terrain=MAP_GROUND,
     )
     tools.create_region("Test Ground", "lake", [[-12, -12], [12, -12], [12, 12], [-12, 12]])
 
@@ -137,30 +152,10 @@ def test_player_character_starts_unplaced(client_factory: Callable[[], TestClien
 
 
 def test_the_locations_rule_uses_an_authored_route_before_inventing_a_place():
-    import cygnusforge
-
-    path = Path(cygnusforge.__file__).parent / "data/rulesets/core/rule_set.json"
-
-    def find(node: Any) -> dict[str, Any] | None:
-        if isinstance(node, dict):
-            if node.get("id") == "locations":
-                return node
-            for value in node.values():
-                found = find(value)
-                if found:
-                    return found
-        elif isinstance(node, list):
-            for value in node:
-                found = find(value)
-                if found:
-                    return found
-        return None
-
-    rule = find(json.loads(path.read_text(encoding="utf-8")))
-    assert rule is not None
+    rule = LIBRARY.core.rules["locations"]
     assert (
         "do not invent a corridor, passage, or other place between two places an authored route connects"
-        in rule["text"]
+        in rule
     )
 
 
@@ -214,8 +209,8 @@ def test_a_world_can_declare_a_place_inside_another(
     )
     world = replace(template, locations=(*template.locations, inn))
     monkeypatch.setitem(app.state.content.world_templates, "testhollow", world)
-    response = _new_campaign(_signed_in(client_factory))
-    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign(client)
     drowsy = _state(app, campaign_id).places["the drowsy cap"]
     assert drowsy.parent == "Mossbell Hollow"
     assert drowsy.position is None
@@ -257,19 +252,17 @@ def test_listed_npc_traits_are_kept(client_factory: Callable[[], TestClient], ap
 
 
 def test_character_name_cannot_match_an_npc(client_factory: Callable[[], TestClient]):
-    client = _signed_in(client_factory)
-    response = _new_campaign(client)
-    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-    rejected = _create_character(client, campaign_id, name="old hob")
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign(client)
+    rejected = create_character(client, campaign_id, name="old hob")
     assert rejected.status_code == 400
     assert "already used" in rejected.text
 
 
 def test_blank_character_name_is_rejected(client_factory: Callable[[], TestClient]):
-    client = _signed_in(client_factory)
-    response = _new_campaign(client)
-    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-    assert _create_character(client, campaign_id, name="   ").status_code == 400
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign(client)
+    assert create_character(client, campaign_id, name="   ").status_code == 400
 
 
 def test_random_traits_come_from_the_given_tables(
@@ -577,19 +570,14 @@ def test_notes_attach_to_the_campaign_a_location_or_a_character(
 
 def _described_campaign(client_factory: Callable[[], TestClient]) -> tuple[TestClient, int]:
     """A campaign whose player character has an appearance, so the sheet has lines to show."""
-    client = _signed_in(client_factory)
-    response = _new_campaign(client)
-    assert response.status_code == 303
-    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-    created = _create_character(
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign(client)
+    created = create_character(
         client,
         campaign_id,
-        fields={
-            "field-appearance": "Tall, with a red scarf.",
-            "field-biography": "Raised in the reeds.",
-        },
+        fields={"appearance": "Tall, with a red scarf.", "biography": "Raised in the reeds."},
     )
-    assert created.status_code == 303
+    assert created.status_code == 303, created.text
     return client, campaign_id
 
 
@@ -637,13 +625,13 @@ def test_the_pack_lists_items_with_uses_slots_and_capacity(
         )
         db.commit()
     state = _state(app, campaign_id)
-    pack = world.scene_view(state, SPEC, LIBRARY.rule_sets["cairn2e"].inventory).pack
+    pack = world.scene_view(state, SPEC, INVENTORY).pack
     assert pack is not None
     assert [item.name for item in pack.items] == ["Rope", "Rations", "Fatigue"]
     rations = pack.items[1]
     assert (rations.slots, rations.uses, rations.max_uses) == (0, 2, 3)
     assert pack.used == 1
-    assert pack.capacity == LIBRARY.rule_sets["cairn2e"].inventory.capacity
+    assert pack.capacity == INVENTORY.capacity
 
 
 def test_the_pack_is_absent_without_a_character_or_an_inventory_rule(
@@ -651,9 +639,7 @@ def test_the_pack_is_absent_without_a_character_or_an_inventory_rule(
 ):
     _, campaign_id = _campaign_id(client_factory)
     assert world.scene_view(_state(app, campaign_id), SPEC).pack is None
-    assert (
-        world.scene_view(CampaignState(), SPEC, LIBRARY.rule_sets["cairn2e"].inventory).pack is None
-    )
+    assert world.scene_view(CampaignState(), SPEC, INVENTORY).pack is None
 
 
 def test_all_at_location_describes_a_place_without_statblocks(
@@ -924,7 +910,7 @@ def test_speaker_profile_describes_an_npc_at_the_players_location(
     client_factory: Callable[[], TestClient], app
 ):
     client, campaign_id = _campaign_id(client_factory)
-    _place_pc(client, campaign_id)
+    place_pc(client, campaign_id)
     profile = world.speaker_profile(_state(app, campaign_id), "Mara Thistledown", SPEC)
     assert profile.splitlines()[0] == "Speaker: Mara Thistledown"
     assert "Personality: warm and protective" in profile
@@ -935,7 +921,7 @@ def test_speaker_at_player_tells_whether_an_npc_is_present(
     client_factory: Callable[[], TestClient], app
 ):
     client, campaign_id = _campaign_id(client_factory)
-    _place_pc(client, campaign_id)
+    place_pc(client, campaign_id)
     state = _state(app, campaign_id)
     assert world.speaker_at_player(state, "Mara Thistledown") is True
     assert world.speaker_at_player(state, "Brin Gallowcap") is False
@@ -962,7 +948,7 @@ def test_speak_tool_queues_dialogue_and_returns_only_an_acknowledgment(
     client_factory: Callable[[], TestClient], app
 ):
     client, campaign_id = _campaign_id(client_factory)
-    _place_pc(client, campaign_id)
+    place_pc(client, campaign_id)
     asked: list[tuple[str, str, str]] = []
 
     async def speak(speaker: str, profile: str, intent: str, replace: bool) -> None:
@@ -1075,22 +1061,19 @@ def test_campaign_page_maps_can_be_panned_and_zoomed(client_factory: Callable[[]
 
 
 def test_campaign_page_escapes_character_names(client_factory: Callable[[], TestClient]):
-    client = _signed_in(client_factory)
-    response = _new_campaign(client)
-    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-    assert _create_character(client, campaign_id, name="<b>Zed</b>").status_code == 303
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign(client)
+    assert create_character(client, campaign_id, name="<b>Zed</b>").status_code == 303
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "&lt;b&gt;Zed&lt;/b&gt;" in page
     assert "<b>Zed</b>" not in page
 
 
 def test_speech_is_a_separate_call_and_only_the_narration_is_saved(
-    client_factory: Callable[[], TestClient], app: FastAPI
+    client_factory: Callable[[], TestClient], app: FastAPI, fake: FakeProvider
 ):
-    recorder = _recording_provider()
     client, campaign_id = _campaign_id(client_factory)
-    app.state.providers = lambda model_id: (recorder, model_id)
-    _place_pc(client, campaign_id)
+    place_pc(client, campaign_id)
     speak_call = {
         "name": "speak",
         "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
@@ -1103,22 +1086,17 @@ def test_speech_is_a_separate_call_and_only_the_narration_is_saved(
         }
     )
 
-    _send(client, campaign_id, script)
+    send_message(client, campaign_id, script)
 
-    speech_calls = [
-        call
-        for call in recorder.calls
-        if call["messages"] and "Speech step." in str(call["messages"][0]["content"])
-    ]
+    speech_calls = _speech_calls(fake)
     assert len(speech_calls) == 1
-    assert "Speaker: Mara Thistledown" in json.dumps(speech_calls[0]["messages"])
-    assert "Intent: Warn Ada about the bog." in json.dumps(speech_calls[0]["messages"])
+    assert "Speaker: Mara Thistledown" in json.dumps(speech_calls[0])
+    assert "Intent: Warn Ada about the bog." in json.dumps(speech_calls[0])
     assert _saved(app, campaign_id)[1:] == [
         ("user", script),
         ("assistant", "Mara looks up from her kettle."),
     ]
-    narration = recorder.calls[-1]["messages"]
-    assert "Mind the bog, dearie." in json.dumps(narration)
+    assert "Mind the bog, dearie." in json.dumps(fake.calls[-1])
 
 
 class _EmptySpeech(FakeProvider):
@@ -1135,25 +1113,35 @@ class _EmptySpeech(FakeProvider):
         tools: list[dict[str, Any]] | None = None,
     ) -> ChatReply:
         if self.empty and "Speech step." in str(messages[0]["content"]):
+            self.calls.append(messages)
             self.empty -= 1
             return ChatReply(text="")
         return await super().chat(model, messages, tools)
 
 
-def _speech_calls(recorder: Any) -> list[dict[str, Any]]:
+def _speech_calls(provider: FakeProvider) -> list[list[dict[str, Any]]]:
+    """The messages the provider was sent for a speech step."""
     return [
-        call
-        for call in recorder.calls
-        if call["messages"] and "Speech step." in str(call["messages"][0]["content"])
+        messages
+        for messages in provider.calls
+        if messages and "Speech step." in str(messages[0]["content"])
     ]
 
 
+def _saved(app: FastAPI, campaign_id: int) -> list[tuple[str, str]]:
+    """The campaign's saved transcript, as role and content pairs."""
+    return [(m.role, m.content) for m in list_messages(app.state.engine, campaign_id)]
+
+
+def _script(*turns: dict[str, Any]) -> str:
+    return "__FAKE__:" + json.dumps({"turns": list(turns)})
+
+
 def test_an_empty_speech_reply_is_retried(client_factory: Callable[[], TestClient], app: FastAPI):
-    recorder = _recording_provider()
-    recorder.inner = _EmptySpeech(empty=1)
+    provider = _EmptySpeech(empty=1)
     client, campaign_id = _campaign_id(client_factory)
-    app.state.providers = lambda model_id: (recorder, model_id)
-    _place_pc(client, campaign_id)
+    app.state.providers = lambda model_id: (provider, model_id)
+    place_pc(client, campaign_id)
     speak_call = {
         "name": "speak",
         "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
@@ -1166,39 +1154,36 @@ def test_an_empty_speech_reply_is_retried(client_factory: Callable[[], TestClien
         }
     )
 
-    _send(client, campaign_id, script)
+    send_message(client, campaign_id, script)
 
-    assert len(_speech_calls(recorder)) == 2
+    assert len(_speech_calls(provider)) == 2
     assert _saved(app, campaign_id)[-1] == ("assistant", "Mara looks up from her kettle.")
-    assert "Mind the bog, dearie." in json.dumps(recorder.calls[-1]["messages"])
+    assert "Mind the bog, dearie." in json.dumps(provider.calls[-1])
 
 
 def test_speech_retries_are_bounded(client_factory: Callable[[], TestClient], app: FastAPI):
-    recorder = _recording_provider()
-    recorder.inner = _EmptySpeech(empty=SPEECH_ATTEMPTS)
+    provider = _EmptySpeech(empty=SPEECH_ATTEMPTS)
     client, campaign_id = _campaign_id(client_factory)
-    app.state.providers = lambda model_id: (recorder, model_id)
-    _place_pc(client, campaign_id)
+    app.state.providers = lambda model_id: (provider, model_id)
+    place_pc(client, campaign_id)
     speak_call = {
         "name": "speak",
         "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
     }
     script = _script({"rounds": [[speak_call]], "text": "Mara looks up.", "speech": {}})
 
-    _send(client, campaign_id, script)
+    send_message(client, campaign_id, script)
 
-    assert len(_speech_calls(recorder)) == SPEECH_ATTEMPTS
+    assert len(_speech_calls(provider)) == SPEECH_ATTEMPTS
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "the speech step returned no dialogue" in page
 
 
 def test_queued_dialogue_reaches_the_narration_as_json(
-    client_factory: Callable[[], TestClient], app: FastAPI
+    client_factory: Callable[[], TestClient], app: FastAPI, fake: FakeProvider
 ):
-    recorder = _recording_provider()
     client, campaign_id = _campaign_id(client_factory)
-    app.state.providers = lambda model_id: (recorder, model_id)
-    _place_pc(client, campaign_id)
+    place_pc(client, campaign_id)
     speak_call = {
         "name": "speak",
         "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
@@ -1208,11 +1193,11 @@ def test_queued_dialogue_reaches_the_narration_as_json(
         {"rounds": [[speak_call]], "text": "Mara looks up.", "speech": {"Mara Thistledown": said}}
     )
 
-    _send(client, campaign_id, script)
+    send_message(client, campaign_id, script)
 
     queued = [
         json.loads(m["content"])
-        for m in recorder.calls[-1]["messages"]
+        for m in fake.calls[-1]
         if m["role"] == "system" and "queued_dialogue" in str(m["content"])
     ]
     assert queued == [{"queued_dialogue": [{"speaker": "Mara Thistledown", "dialogue": said}]}]
@@ -1227,11 +1212,11 @@ def _contents(messages: list[dict[str, Any]]) -> str:
     return "\n".join(str(m.get("content")) for m in _non_user(messages))
 
 
-def test_an_npc_gets_one_line_per_reply(client_factory: Callable[[], TestClient], app: FastAPI):
-    recorder = _recording_provider()
+def test_an_npc_gets_one_line_per_reply(
+    client_factory: Callable[[], TestClient], app: FastAPI, fake: FakeProvider
+):
     client, campaign_id = _campaign_id(client_factory)
-    app.state.providers = lambda model_id: (recorder, model_id)
-    _place_pc(client, campaign_id)
+    place_pc(client, campaign_id)
     speak_call = {
         "name": "speak",
         "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
@@ -1244,28 +1229,23 @@ def test_an_npc_gets_one_line_per_reply(client_factory: Callable[[], TestClient]
         }
     )
 
-    _send(client, campaign_id, script)
+    send_message(client, campaign_id, script)
 
-    speech_calls = [
-        call
-        for call in recorder.calls
-        if call["messages"] and "Speech step." in str(call["messages"][0]["content"])
-    ]
-    assert len(speech_calls) == 1
+    assert len(_speech_calls(fake)) == 1
     assert any(
-        "already has dialogue for this reply" in json.dumps(call["messages"])
-        and "replace: true" in json.dumps(call["messages"])
-        for call in recorder.calls
+        "already has dialogue for this reply" in json.dumps(messages)
+        and "replace: true" in json.dumps(messages)
+        for messages in fake.calls
     )
-    narration = json.dumps(_non_user(recorder.calls[-1]["messages"]))
+    narration = json.dumps(_non_user(fake.calls[-1]))
     assert narration.count("Mind the bog, dearie.") == 1
 
 
-def test_replace_amends_the_queued_line(client_factory: Callable[[], TestClient], app: FastAPI):
-    recorder = _recording_provider()
+def test_replace_amends_the_queued_line(
+    client_factory: Callable[[], TestClient], app: FastAPI, fake: FakeProvider
+):
     client, campaign_id = _campaign_id(client_factory)
-    app.state.providers = lambda model_id: (recorder, model_id)
-    _place_pc(client, campaign_id)
+    place_pc(client, campaign_id)
     first = {
         "name": "speak",
         "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
@@ -1280,23 +1260,22 @@ def test_replace_amends_the_queued_line(client_factory: Callable[[], TestClient]
     }
     script = _script({"rounds": [[first], [amend]], "text": "Mara looks up from her kettle."})
 
-    _send(client, campaign_id, script)
+    send_message(client, campaign_id, script)
 
     assert any(
-        "which this intent replaces: Warn Ada about the bog." in json.dumps(call["messages"])
-        for call in recorder.calls
+        "which this intent replaces: Warn Ada about the bog." in json.dumps(messages)
+        for messages in fake.calls
     )
-    narration = _contents(recorder.calls[-1]["messages"])
+    narration = _contents(fake.calls[-1])
     assert '"dialogue": "Warn Ada about the bog and the lantern-moths."' in narration
     assert '"dialogue": "Warn Ada about the bog."' not in narration
 
 
 def test_a_failed_replace_keeps_the_queued_line(
-    client_factory: Callable[[], TestClient], app: FastAPI
+    client_factory: Callable[[], TestClient], app: FastAPI, fake: FakeProvider
 ):
-    recorder = _recording_provider()
     speech_steps = 0
-    inner_chat = recorder.chat
+    inner_chat = fake.chat
 
     async def chat(model, messages, tools=None):
         nonlocal speech_steps
@@ -1307,10 +1286,9 @@ def test_a_failed_replace_keeps_the_queued_line(
                 return ChatReply(text=markup)
         return await inner_chat(model, messages, tools)
 
-    recorder.chat = chat
+    fake.chat = chat
     client, campaign_id = _campaign_id(client_factory)
-    app.state.providers = lambda model_id: (recorder, model_id)
-    _place_pc(client, campaign_id)
+    place_pc(client, campaign_id)
     first = {
         "name": "speak",
         "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
@@ -1321,20 +1299,18 @@ def test_a_failed_replace_keeps_the_queued_line(
     }
     script = _script({"rounds": [[first], [amend]], "text": "Mara looks up from her kettle."})
 
-    _send(client, campaign_id, script)
+    send_message(client, campaign_id, script)
 
-    narration = _contents(recorder.calls[-1]["messages"])
+    narration = _contents(fake.calls[-1])
     assert '"dialogue": "Warn Ada about the bog."' in narration
     assert "<tool_call" not in narration
 
 
 def test_speech_with_tool_call_markup_is_not_spoken(
-    client_factory: Callable[[], TestClient], app: FastAPI
+    client_factory: Callable[[], TestClient], app: FastAPI, fake: FakeProvider
 ):
-    recorder = _recording_provider()
     client, campaign_id = _campaign_id(client_factory)
-    app.state.providers = lambda model_id: (recorder, model_id)
-    _place_pc(client, campaign_id)
+    place_pc(client, campaign_id)
     speak_call = {
         "name": "speak",
         "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
@@ -1348,12 +1324,10 @@ def test_speech_with_tool_call_markup_is_not_spoken(
         }
     )
 
-    _send(client, campaign_id, script)
+    send_message(client, campaign_id, script)
 
-    assert any(
-        "wrote a tool call instead" in json.dumps(call["messages"]) for call in recorder.calls
-    )
-    narration = json.dumps(_non_user(recorder.calls[-1]["messages"]))
+    assert any("wrote a tool call instead" in json.dumps(messages) for messages in fake.calls)
+    narration = json.dumps(_non_user(fake.calls[-1]))
     assert "<tool_call" not in narration
     assert _saved(app, campaign_id)[1:] == [
         ("user", script),
@@ -1362,12 +1336,10 @@ def test_speech_with_tool_call_markup_is_not_spoken(
 
 
 def test_speech_with_tag_style_tool_markup_is_not_spoken(
-    client_factory: Callable[[], TestClient], app: FastAPI
+    client_factory: Callable[[], TestClient], app: FastAPI, fake: FakeProvider
 ):
-    recorder = _recording_provider()
     client, campaign_id = _campaign_id(client_factory)
-    app.state.providers = lambda model_id: (recorder, model_id)
-    _place_pc(client, campaign_id)
+    place_pc(client, campaign_id)
     speak_call = {
         "name": "speak",
         "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
@@ -1381,33 +1353,29 @@ def test_speech_with_tag_style_tool_markup_is_not_spoken(
         }
     )
 
-    _send(client, campaign_id, script)
+    send_message(client, campaign_id, script)
 
-    assert any(
-        "wrote a tool call instead" in json.dumps(call["messages"]) for call in recorder.calls
-    )
-    narration = json.dumps(_non_user(recorder.calls[-1]["messages"]))
+    assert any("wrote a tool call instead" in json.dumps(messages) for messages in fake.calls)
+    narration = json.dumps(_non_user(fake.calls[-1]))
     assert "<get_statblock" not in narration
 
 
 def test_speech_step_gets_no_rules_or_lookup_instructions(
-    client_factory: Callable[[], TestClient], app: FastAPI
+    client_factory: Callable[[], TestClient], app: FastAPI, fake: FakeProvider
 ):
-    recorder = _recording_provider()
     client, campaign_id = _campaign_id(client_factory)
-    app.state.providers = lambda model_id: (recorder, model_id)
-    _place_pc(client, campaign_id)
+    place_pc(client, campaign_id)
     speak_call = {
         "name": "speak",
         "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
     }
     script = _script({"rounds": [[speak_call]], "text": "Mara turns back to her kettle."})
 
-    _send(client, campaign_id, script)
+    send_message(client, campaign_id, script)
 
-    speech = [call for call in recorder.calls if "Speech step." in str(call["messages"][0])]
+    speech = _speech_calls(fake)
     assert speech
-    system = str(speech[0]["messages"][0]["content"])
+    system = str(speech[0][0]["content"])
     assert "Warn Ada about the bog." in system
     assert "lookup" not in system
     assert "Rules for this campaign" not in system
@@ -1416,10 +1384,8 @@ def test_speech_step_gets_no_rules_or_lookup_instructions(
 def test_speech_shows_a_writing_dialogue_status(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    recorder = _recording_provider()
     client, campaign_id = _campaign_id(client_factory)
-    app.state.providers = lambda model_id: (recorder, model_id)
-    _place_pc(client, campaign_id)
+    place_pc(client, campaign_id)
     script = _script(
         {
             "rounds": [
@@ -1453,9 +1419,8 @@ def test_speech_shows_a_writing_dialogue_status(
 def test_player_character_waits_for_the_campaign_options(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
-    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
     with Session(app.state.engine) as db, pytest.raises(InvalidInput, match="campaign options"):
         world.create_player_character(
             db,
@@ -1474,9 +1439,8 @@ def test_player_character_waits_for_the_campaign_options(
 def test_campaign_options_are_stored_once_and_checked(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
-    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
     omen = CAIRN.campaign.tables["omen"][0].value
     with Session(app.state.engine) as db:
         with pytest.raises(InvalidInput):
@@ -1737,9 +1701,8 @@ def test_update_can_take_a_place_off_the_map_and_keep_it(
 def test_twin_lakes_map_places_every_module_location_it_has_a_position_for(
     client_factory: Callable[[], TestClient], app
 ):
-    client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
-    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
     placed = {
         loc.name
         for loc in app.state.content.world_templates["twin-lakes"].locations

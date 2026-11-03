@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from cygnusforge.content.library import ContentLibrary, RuleSet
 from cygnusforge.services.prompts import (
     JOURNAL_INSTRUCTION,
     OOC_INSTRUCTION,
@@ -10,18 +9,14 @@ from cygnusforge.services.prompts import (
     speech_instruction,
     state_instruction,
 )
+from tests.factories import rules_for
+
+# Shipped Cairn content, for the tests about its own prompt fragments.
+CAIRN = rules_for("cairn2e")
 
 
-def _cairn() -> RuleSet:
-    return ContentLibrary.load().rule_sets["cairn2e"]
-
-
-def _core() -> RuleSet:
-    return ContentLibrary.load().core
-
-
-def test_core_state_prompt_is_the_generic_loop_text_alone():
-    prompt = state_instruction(_core())
+def test_a_rule_set_without_prompt_fragments_gets_the_generic_loop_text_alone():
+    prompt = state_instruction(rules_for())
     assert prompt.startswith(STATE_INSTRUCTION)
     assert "Cairn" not in prompt
     assert "relic" not in prompt
@@ -31,9 +26,9 @@ def test_core_state_prompt_is_the_generic_loop_text_alone():
 
 
 def test_cairn_state_prompt_keeps_its_fragments_in_order():
-    prompt = state_instruction(_cairn())
+    prompt = state_instruction(CAIRN)
     fragments = [
-        fragment for fragment in _cairn().prompt_fragments if fragment.step in ("state", "all")
+        fragment for fragment in CAIRN.prompt_fragments if fragment.step in ("state", "all")
     ]
     positions = [prompt.index(fragment.text) for fragment in fragments]
     assert positions == sorted(positions)
@@ -43,11 +38,10 @@ def test_cairn_state_prompt_keeps_its_fragments_in_order():
 
 
 def test_narration_advice_stays_out_of_the_state_prompt():
-    rule_set = _cairn()
-    narration = [fragment for fragment in rule_set.prompt_fragments if fragment.step == "narration"]
+    narration = [fragment for fragment in CAIRN.prompt_fragments if fragment.step == "narration"]
     assert narration
-    state = state_instruction(rule_set)
-    told = narrate_instruction(rule_set)
+    state = state_instruction(CAIRN)
+    told = narrate_instruction(CAIRN)
     for fragment in narration:
         assert fragment.text not in state
         assert fragment.text in told
@@ -86,7 +80,7 @@ def test_journal_instruction_keeps_its_day_and_journal_text():
 
 
 def test_cairn_prompt_chooses_the_cycle_from_the_situation():
-    prompt = state_instruction(_cairn())
+    prompt = state_instruction(CAIRN)
     assert "Choose the cycle from the situation." in prompt
     assert "wilderness cycle is for broader long-term travel" in prompt
     assert "dungeon cycle is for a dungeon or other dangerous area" in prompt

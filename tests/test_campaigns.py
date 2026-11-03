@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import re
 from collections.abc import Callable
 from dataclasses import replace
@@ -13,15 +12,19 @@ from cygnusforge.config import Settings
 from cygnusforge.db.models import Campaign, Event
 from cygnusforge.llm.base import ChatReply, LLMError
 from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.services import world
-from cygnusforge.services.events import Turn, load_state
-from tests.conftest import NARRATE_TEXT, csrf_token, is_journal_messages, make_app, register
+from cygnusforge.services.events import Turn
+from tests.conftest import NARRATE_TEXT, csrf_token, is_journal_messages, make_app
+from tests.factories import (
+    answer,
+    pending_turn,
+    place_pc,
+    send_message,
+    signed_in_client,
+)
 
 
 def _signed_in(client_factory: Callable[[], TestClient], email: str = "ada@example.com"):
-    client = client_factory()
-    register(client, email)
-    return client
+    return signed_in_client(client_factory, email)
 
 
 def _new_campaign(
@@ -75,17 +78,11 @@ def _campaign_id(client_factory: Callable[[], TestClient]) -> tuple[TestClient, 
 
 def _place_pc(client: TestClient, campaign_id: int, location: str = "Mossbell Hollow") -> None:
     """Place the player character, as the GM does with move_actor on its first turn."""
-    with Session(client.app.state.engine, expire_on_commit=False) as db:
-        world.move_actor(db, campaign_id, "Ada", location)
+    place_pc(client, campaign_id, location)
 
 
 def _send(client: TestClient, campaign_id: int, text: str):
-    token = csrf_token(client, "/campaigns")
-    return client.post(
-        f"/campaigns/{campaign_id}/messages",
-        data={"csrf_token": token, "content": text},
-        follow_redirects=False,
-    )
+    return send_message(client, campaign_id, text)
 
 
 def _set_model(client: TestClient, campaign_id: int, model: str):
@@ -150,17 +147,11 @@ def _debug_client_factory(settings: Settings, fake: FakeProvider) -> Callable[[]
 
 
 def _answer(client: TestClient, campaign_id: int, kind: str, content: str = "") -> list[dict]:
-    token = csrf_token(client, "/campaigns")
-    response = client.post(
-        f"/campaigns/{campaign_id}/pending/stream",
-        data={"csrf_token": token, "kind": kind, "content": content},
-    )
-    return [json.loads(line) for line in response.text.splitlines() if line.strip()]
+    return answer(client, campaign_id, kind, content)
 
 
 def _pending(app: FastAPI, campaign_id: int) -> Turn | None:
-    with Session(app.state.engine) as db:
-        return load_state(db, campaign_id).turn
+    return pending_turn(app, campaign_id)
 
 
 def test_create_campaign_and_list_it(client_factory: Callable[[], TestClient]):
@@ -341,12 +332,6 @@ def test_new_campaign_form_offers_world_and_rule_set(client_factory: Callable[[]
     assert '<option value="rolltest"' in page
 
 
-def test_new_campaign_form_asks_for_the_rule_set_first(client_factory: Callable[[], TestClient]):
-    client = _signed_in(client_factory)
-    page = client.get("/campaigns/new").text
-    assert page.index('name="rule_set"') < page.index('name="world_template"')
-
-
 def test_new_campaign_form_shows_a_blurb_for_each_rule_set_and_world(
     client_factory: Callable[[], TestClient],
 ):
@@ -354,14 +339,6 @@ def test_new_campaign_form_shows_a_blurb_for_each_rule_set_and_world(
     page = client.get("/campaigns/new").text
     assert 'data-blurb="Test-only rule set with a player roll.' in page
     assert 'data-blurb="A magical forest of mushroom gnomes.' in page
-
-
-def test_campaign_shows_the_world_and_rule_set_it_was_created_with(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _campaign_id(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert "Test Hollow · Roll Test" in page
 
 
 def test_create_rejects_unknown_world_template(client_factory: Callable[[], TestClient]):

@@ -34,9 +34,8 @@ concrete work. Mark items done as they land. Keep the "Definition of done" hones
 - [x] Add `"world_method"` bindings and validate the method and schema in the loader.
 - [x] Migrate core, Cairn, and WWN tool JSON off the straightforward one-line wrappers:
   121 tool calls now bind directly. `rules/core.py` 358→181, Cairn 479→269, WWN 1452→1226.
-- [x] Reduced the remaining wrappers to 12 (1 core, 7 Cairn, 4 WWN). The rest were
-  context-aware or had signature differences; each carries a docstring explaining why. The next
-  pass removes them through fixed-argument and renamed-argument bindings plus method defaults.
+- [x] Removed the last 12 wrappers through declarative `bind`/`rename` tool metadata and method
+  defaults. `rules/` now has no `ctx.world.*` tool wrappers.
 - [x] Add loader tests that refuse an unknown method and a schema mismatch.
 
 Acceptance: `rules/` contains no one-line `ctx.world.*` wrappers; tool count and behavior are
@@ -106,8 +105,11 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
   counters, features, templates) with `tests/test_contract_ruleset.py`.
 - [x] Added shared `tests/factories.py` for campaign/character setup.
 - [ ] Migrate existing core tests off `tests.test_combat` private helpers where practical.
+  Progress: encounters, conditions, defense rules, and ruleset runtime tables now use the
+  neutral fixture; `test_scars` still needs a non-broken migration.
 - [ ] Stop importing private `_load_*` loader internals in most tests; prefer public load results.
-- [x] Suite stays parallel and under one minute (2,486 tests in ~55s).
+  `test_scars` is the main remaining loader-internal test.
+- [x] Suite stays parallel and under one minute (2,509 tests in ~35s).
 
 ### WWN parity backlog (track, then close)
 
