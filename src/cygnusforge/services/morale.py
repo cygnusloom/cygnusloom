@@ -15,12 +15,12 @@ from typing import Any
 from sqlmodel import Session
 
 from cygnusforge.content.library import CombatRules, MoraleRules
-from cygnusforge.rules.dice import roll_total
 from cygnusforge.services.combat import (
     _end_if_one_side_left,
     _living,
     _no_initiative_pending,
     current,
+    resolve_save,
 )
 from cygnusforge.services.common import InvalidInput, whole_number
 from cygnusforge.services.encounters import _participant
@@ -37,6 +37,7 @@ from cygnusforge.services.events import (
     out_of_fight,
     record,
 )
+from cygnusforge.services.resolution import RollResult
 
 
 def check_morale(
@@ -69,9 +70,9 @@ def check_morale(
         group = _side_npcs(state, side)
         living = [member for member in group if not out_of_fight(member)]
         leader = living[0]
-        roll = roll_total(combat.check_die, rng, plus=plus)
-        score = current(leader, morale.save_stat)
-        passed = combat.save_succeeds(roll, score)
+        result = resolve_save(
+            combat, current(leader, morale.save_stat), rng=rng, plus=plus
+        )
         record(
             db,
             campaign_id,
@@ -80,13 +81,13 @@ def check_morale(
                 tag=tag,
                 leader=leader.name,
                 stat=morale.save_stat,
-                roll=roll,
-                score=score,
-                passed=passed,
+                roll=result.roll,
+                score=result.score,
+                passed=result.passed,
             ),
         )
         db.commit()
-        if not passed:
+        if not result.passed:
             for member in living:
                 record(db, campaign_id, CharacterFled(name=member.name, reason="morale"))
             db.commit()
@@ -96,10 +97,10 @@ def check_morale(
                 "tag": tag,
                 "leader": leader.name,
                 "stat": morale.save_stat,
-                "roll": roll,
-                "score": score,
-                "passed": passed,
-                "fled": [member.name for member in living] if not passed else [],
+                "roll": result.roll,
+                "score": result.score,
+                "passed": result.passed,
+                "fled": [member.name for member in living] if not result.passed else [],
             }
         )
     if checks:
@@ -162,9 +163,10 @@ def retreat(
     character = _retreat_ready(state, name, safe, combat)
     if character.kind == PC_KIND:
         raise InvalidInput(f"{character.name} is a player character; use player_retreat instead")
-    return _run_retreat(
-        db, campaign_id, character, combat, roll_total(combat.check_die, rng, plus=plus)
-    )
+    morale = combat.morale
+    assert morale is not None
+    result = resolve_save(combat, current(character, morale.retreat_stat), rng=rng, plus=plus)
+    return _run_retreat(db, campaign_id, character, morale.retreat_stat, result)
 
 
 def player_retreat(
@@ -181,7 +183,10 @@ def player_retreat(
         raise InvalidInput("there is no player character in this campaign")
     character = _retreat_ready(state, pc.name, safe, combat)
     roll = whole_number(roll, "roll", 1, combat.check_sides)
-    return _run_retreat(db, campaign_id, character, combat, roll)
+    morale = combat.morale
+    assert morale is not None
+    result = resolve_save(combat, current(character, morale.retreat_stat), roll=roll)
+    return _run_retreat(db, campaign_id, character, morale.retreat_stat, result)
 
 
 def _retreat_ready(state: CampaignState, name: str, safe: bool, combat: CombatRules) -> Character:
@@ -203,27 +208,28 @@ def _run_retreat(
     db: Session,
     campaign_id: int,
     character: Character,
-    combat: CombatRules,
-    roll: int,
+    stat: str,
+    result: RollResult,
 ) -> dict[str, Any]:
-    morale = combat.morale
-    assert morale is not None
-    stat = morale.retreat_stat
-    score = current(character, stat)
-    passed = combat.save_succeeds(roll, score)
     record(
         db,
         campaign_id,
-        RetreatRolled(name=character.name, stat=stat, roll=roll, score=score, passed=passed),
+        RetreatRolled(
+            name=character.name,
+            stat=stat,
+            roll=result.roll,
+            score=result.score,
+            passed=result.passed,
+        ),
     )
-    if passed:
+    if result.passed:
         record(db, campaign_id, CharacterFled(name=character.name, reason="retreat"))
     db.commit()
     _end_if_one_side_left(db, campaign_id)
     return {
         "character": character.name,
         "stat": stat,
-        "roll": roll,
-        "score": score,
-        "passed": passed,
+        "roll": result.roll,
+        "score": result.score,
+        "passed": result.passed,
     }

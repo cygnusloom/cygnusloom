@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
 from typing import Any
 
 from cygnusforge.rules.context import ToolContext, brief
@@ -23,70 +22,6 @@ async def create_location(
     return ctx.world.create_location(
         name, description, discovered=discovered, x=x, y=y, force=force, parent=parent
     )
-
-
-def create_region(
-    name: str,
-    terrain: str,
-    points: Sequence[Sequence[float]],
-    ctx: ToolContext,
-    force: bool = False,
-    discovered: bool = False,
-) -> dict[str, Any]:
-    return ctx.world.create_region(name, terrain, points, force=force, discovered=discovered)
-
-
-def create_npc(
-    name: str,
-    location: str,
-    description: str,
-    ctx: ToolContext,
-    personality: str | None = None,
-    accent: str | None = None,
-    quirks: Sequence[str] | None = None,
-    character: Mapping[str, Any] | None = None,
-    force: bool = False,
-    hp_tier: str | None = None,
-    pronouns: str | None = None,
-    important: bool = False,
-) -> dict[str, Any]:
-    return ctx.world.create_npc(
-        name=name,
-        location=location,
-        description=description,
-        personality=personality,
-        accent=accent,
-        quirks=quirks,
-        character=character,
-        force=force,
-        hp_tier=hp_tier,
-        pronouns=pronouns,
-        important=important,
-    )
-
-
-def update_location(
-    name: str,
-    description: str,
-    ctx: ToolContext,
-    x: float | None = None,
-    y: float | None = None,
-    off_map: bool = False,
-    force: bool = False,
-) -> dict[str, Any]:
-    return ctx.world.update_location(name, description, x=x, y=y, off_map=off_map, force=force)
-
-
-def discover_location(name: str, ctx: ToolContext, summary: str | None = None) -> dict[str, Any]:
-    return ctx.world.discover_location(name, summary)
-
-
-def delete_location(name: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.delete_location(name)
-
-
-def change_currency(name: str, amount: int, cause: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.change_currency(name, amount, cause)
 
 
 def equip_armor(name: str, item: str, ctx: ToolContext, equipped: bool = True) -> dict[str, Any]:
@@ -111,103 +46,6 @@ def place_object(
 
 def take_object(object: str, character: str, reason: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.take_object(object, character, reason)
-
-
-def update_npc(
-    name: str,
-    ctx: ToolContext,
-    description: str | None = None,
-    personality: str | None = None,
-    accent: str | None = None,
-    quirks: Sequence[str] | None = None,
-    character: Mapping[str, Any] | None = None,
-    armor: int | None = None,
-    attacks: Sequence[Mapping[str, str]] | None = None,
-) -> dict[str, Any]:
-    return ctx.world.update_npc(
-        name=name,
-        description=description,
-        personality=personality,
-        accent=accent,
-        quirks=quirks,
-        character=character,
-        armor=armor,
-        attacks=attacks,
-    )
-
-
-def update_npc_knowledge(
-    name: str,
-    ctx: ToolContext,
-    description: str | None = None,
-    personality: str | None = None,
-    accent: str | None = None,
-    quirks: Sequence[str] | None = None,
-    pronouns: str | None = None,
-    relationship: str | None = None,
-    location: str | None = None,
-) -> dict[str, Any]:
-    return ctx.world.update_npc_knowledge(
-        name=name,
-        description=description,
-        personality=personality,
-        accent=accent,
-        quirks=quirks,
-        pronouns=pronouns,
-        relationship=relationship,
-        location=location,
-    )
-
-
-def delete_npc(name: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.delete_npc(name)
-
-
-def move_actor(
-    name: str,
-    mode: str,
-    ctx: ToolContext,
-    location: str | None = None,
-    travel: str = "",
-    route: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    return ctx.world.move_actor(name, location, travel or None, mode, route)
-
-
-def add_note(text: str, ctx: ToolContext, subject: str | None = None) -> dict[str, Any]:
-    return ctx.world.add_note(text, subject)
-
-
-def update_note(note_id: int, text: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.update_note(note_id, text)
-
-
-def delete_note(note_id: int, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.delete_note(note_id)
-
-
-def search_notes(query: str, ctx: ToolContext) -> dict[str, list[dict[str, Any]]]:
-    return ctx.world.search_notes(query)
-
-
-def append_journal(text: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.append_journal(text)
-
-
-def replace_in_journal(old_text: str, new_text: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.replace_in_journal(old_text, new_text)
-
-
-def search_journal(
-    query: str, ctx: ToolContext, context: int = 1
-) -> dict[str, list[dict[str, Any]]]:
-    return ctx.world.search_journal(query, context)
-
-
-def view_journal(
-    ctx: ToolContext, start_line: int = 1, end_line: int | None = None
-) -> dict[str, Any]:
-    return ctx.world.view_journal(start_line, end_line)
 
 
 def lookup_move(move: str, ctx: ToolContext) -> dict[str, Any]:
@@ -261,34 +99,6 @@ def set_relation(
     return ctx.world.set_relation(character, relation, other, added)
 
 
-def add_condition(name: str, condition: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.add_condition(name, condition, cause)
-
-
-def end_condition(name: str, condition: str, how: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.end_condition(name, condition, how)
-
-
-def all_at_location(ctx: ToolContext, location: str | None = None) -> dict[str, Any]:
-    return ctx.world.all_at_location(location)
-
-
-def search_location(query: str, ctx: ToolContext) -> dict[str, list[dict[str, Any]]]:
-    return ctx.world.search_location(query)
-
-
-def search_npc(query: str, ctx: ToolContext) -> dict[str, list[dict[str, Any]]]:
-    return ctx.world.search_npc(query)
-
-
-def get_statblock(name: str, ctx: ToolContext) -> dict[str, Any]:
-    return ctx.world.get_statblock(name)
-
-
-def character_options(ctx: ToolContext, field: str | None = None) -> dict[str, Any]:
-    return ctx.world.character_options(field)
-
-
 def start_project(
     name: str,
     kind: str,
@@ -323,16 +133,6 @@ def heal_character(
 ) -> dict[str, Any]:
     """Restore lost points of a stat, such as hit points from a healing spell or art."""
     return ctx.world.heal_character(name, amount, stat, cause)
-
-
-def lookup_condition(condition: str, ctx: ToolContext) -> dict[str, Any]:
-    """Read a condition's effects and the ways it ends."""
-    return ctx.world.lookup_condition(condition)
-
-
-def lookup_feature(feature: str, ctx: ToolContext) -> dict[str, Any]:
-    """Read a feature's full text, such as a spell, art, Focus, or class ability."""
-    return ctx.world.lookup_feature(feature)
 
 
 def lookup_rule(rule: str, ctx: ToolContext) -> dict[str, str]:

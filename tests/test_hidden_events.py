@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
+from typing import ClassVar
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
@@ -10,7 +13,7 @@ from cygnusforge.db.models import Campaign
 from cygnusforge.services.campaigns import campaign_transcript
 from cygnusforge.services.events import (
     EVENT_TYPES,
-    HIDDEN_KINDS,
+    GameEvent,
     LocationAdded,
     LocationDiscovered,
     NoteAdded,
@@ -20,16 +23,43 @@ from cygnusforge.services.events import (
 from tests.test_campaigns import _campaign_id
 
 
-def test_every_event_kind_is_classified_once():
-    assert set(HIDDEN_KINDS) == set(EVENT_TYPES)
+def test_every_registered_event_kind_has_a_visibility_decision():
+    for kind, event_type in EVENT_TYPES.items():
+        assert event_type.kind == kind
+        assert isinstance(event_type.hidden, bool)
+
+
+def test_is_hidden_reads_the_visibility_from_the_event_class():
+    for kind, event_type in EVENT_TYPES.items():
+        assert is_hidden(kind) is event_type.hidden
+
+
+def test_an_unknown_event_kind_raises():
+    with pytest.raises(KeyError):
+        is_hidden("event.does_not_exist")
+
+
+def test_a_new_event_with_no_visibility_choice_defaults_to_visible():
+    @dataclass(frozen=True)
+    class NewEvent(GameEvent):
+        kind: ClassVar[str] = "test.default_visibility"
+        detail: str = ""
+
+    try:
+        assert NewEvent.hidden is False
+        assert is_hidden("test.default_visibility") is False
+    finally:
+        del EVENT_TYPES["test.default_visibility"]
 
 
 def test_gm_bookkeeping_is_hidden_and_what_the_pc_perceives_is_visible():
+    assert EVENT_TYPES["npc.known"].hidden is True
     assert is_hidden("note.added")
     assert is_hidden("turn.state_step")
     assert is_hidden("npc.added")
     assert is_hidden("npc.known")
     assert is_hidden("combat.debug_stat_set")
+    assert EVENT_TYPES["chat.gm"].hidden is False
     assert not is_hidden("chat.gm")
     assert not is_hidden("chat.player")
     assert not is_hidden("location.discovered")

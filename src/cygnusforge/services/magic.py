@@ -19,8 +19,8 @@ from cygnusforge.content.library import (
     ItemKind,
     MagicRules,
 )
-from cygnusforge.rules.dice import roll_total
 from cygnusforge.services import inventory as inventory_service
+from cygnusforge.services.combat import resolve_save
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
     CampaignState,
@@ -226,18 +226,18 @@ def roll_save(
         raise InvalidInput(
             f"{character.name} has no stats yet; give them stats with update_npc first"
         )
-    roll = natural if natural is not None else roll_total(combat.check_die, rng, plus=plus)
-    score = current(character, stat)
-    passed = combat.save_succeeds(roll, score)
+    result = resolve_save(
+        combat, current(character, stat), rng=rng, roll=natural, plus=plus
+    )
     record(
         db,
         campaign_id,
         CharacterSaved(
             name=character.name,
             stat=stat,
-            roll=roll,
-            score=score,
-            passed=passed,
+            roll=result.roll,
+            score=result.score,
+            passed=result.passed,
             cause=reason,
         ),
     )
@@ -245,7 +245,7 @@ def roll_save(
     return {
         "name": character.name,
         "stat": stat,
-        "roll": roll,
-        "score": score,
-        "passed": passed,
+        "roll": result.roll,
+        "score": result.score,
+        "passed": result.passed,
     }

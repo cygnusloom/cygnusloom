@@ -4,6 +4,7 @@ from dataclasses import replace
 
 import pytest
 
+from cygnusforge.content.library import SaveRules
 from cygnusforge.services import encounters
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import FOES_SIDE, MoraleChecked
@@ -72,6 +73,18 @@ def test_a_lone_foe_that_breaks_flees_and_the_fight_ends(client_factory):
     assert result["morale"][0]["fled"] == ["Bo"]
     assert _state(app, campaign_id).encounter is None
     assert _character(app, campaign_id, "Bo").fled is False
+
+
+@pytest.mark.parametrize(("save_roll", "passed"), [(1, False), (20, True)])
+def test_a_morale_check_follows_a_declarative_roll_over_rule(client_factory, save_roll, passed):
+    _, _, tools = _fight(client_factory)
+    assert tools.combat is not None
+    tools = replace(tools, combat=replace(tools.combat, save=SaveRules(mode="roll_over")))
+    _foe(tools, "Bo", hp=6)
+
+    result = replace(tools, rng=Rolls(6, save_roll)).player_attack("Bo", "Sword")
+
+    assert result["morale"][0]["passed"] is passed
 
 
 def test_a_group_checks_at_its_first_casualty_with_the_leaders_wil(client_factory):
@@ -244,6 +257,19 @@ def test_an_npc_that_retreats_and_fails_stays_in_the_fight(client_factory):
     assert bo.fled is False
     assert bo.defeated is False
     assert _state(app, campaign_id).encounter is not None
+
+
+@pytest.mark.parametrize(("save_roll", "passed"), [(1, False), (20, True)])
+def test_a_retreat_follows_a_declarative_roll_over_rule(client_factory, save_roll, passed):
+    _, _, tools = _fight(client_factory)
+    assert tools.combat is not None
+    tools = replace(tools, combat=replace(tools.combat, save=SaveRules(mode="roll_over")))
+    _foe(tools, "Bo")
+    _foe(tools, "Cy")
+
+    result = replace(tools, rng=Rolls(save_roll)).retreat("Bo", True)
+
+    assert result["passed"] is passed
 
 
 def test_a_retreat_without_a_safe_way_is_refused_before_any_roll(client_factory):

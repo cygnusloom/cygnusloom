@@ -22,8 +22,7 @@ from cygnusforge.content.library import (
     EncounterTerrain,
     InitiativeRules,
 )
-from cygnusforge.rules.dice import roll_total
-from cygnusforge.services import death
+from cygnusforge.services import death, resolution
 from cygnusforge.services.common import InvalidInput, bounded_text
 from cygnusforge.services.events import (
     FOES_SIDE,
@@ -494,7 +493,7 @@ def _side_rolls(
     rolls = []
     for side, members in sides.items():
         bonus = max((_initiative_bonus(member, rules, spec) for member in members), default=0)
-        roll = roll_total(rules.die, rng)
+        roll = resolution.roll_die(rng or random.Random(), rules.die)
         rolls.append(
             {
                 "side": side,

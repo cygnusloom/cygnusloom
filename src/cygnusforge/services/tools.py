@@ -153,12 +153,20 @@ def _dice_for(
 
 async def _call(tool: ToolCall, arguments: dict[str, Any], ctx: ToolContext | None) -> ToolRun:
     call_arguments = dict(arguments)
-    if tool.takes_context:
+    if tool.world_method is not None:
         if ctx is None:
             return ToolRun(_error("this tool cannot run without a campaign"), None)
-        call_arguments[CONTEXT_ARGUMENT] = ctx
+        call = getattr(ctx.world, tool.world_method)
+    elif tool.function is not None:
+        if tool.takes_context:
+            if ctx is None:
+                return ToolRun(_error("this tool cannot run without a campaign"), None)
+            call_arguments[CONTEXT_ARGUMENT] = ctx
+        call = tool.function
+    else:
+        return ToolRun(_error("the tool has no function to run"), None)
     try:
-        result = tool.function(**call_arguments)
+        result = call(**call_arguments)
         if inspect.isawaitable(result):
             result = await result
         if hasattr(result, "to_dict"):

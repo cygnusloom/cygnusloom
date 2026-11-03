@@ -1166,6 +1166,54 @@ def test_a_player_save_is_refused_when_none_is_owed(client_factory):
         tools.player_save(5)
 
 
+@pytest.mark.parametrize(("save_roll", "passed"), [(4, False), (5, True), (6, True)])
+def test_an_npc_save_follows_a_declarative_roll_over_rule(client_factory, save_roll, passed):
+    app, campaign_id, tools = _fight(client_factory)
+    tools = replace(tools, combat=_declarative(save={"mode": "roll_over"}))
+    _foe(tools, "Grave Thing", claw="2d6")
+    _foe(tools, "Bo")
+
+    # 6 damage empties Bo's HP and 5 overflow comes off STR, leaving a score of 5.
+    result = _hit(tools, "Grave Thing", "Bo", 6, 5, save_roll)
+
+    assert result["save"] == {
+        "stat": "str",
+        "roll": save_roll,
+        "score": 5,
+        "passed": passed,
+    }
+    assert result["defeated"] is not passed
+    assert _character(app, campaign_id, "Bo").defeated is not passed
+
+
+@pytest.mark.parametrize(("save_roll", "passed"), [(1, False), (20, True)])
+def test_a_player_save_follows_a_declarative_roll_over_rule(client_factory, save_roll, passed):
+    app, campaign_id, tools = _fight(client_factory)
+    tools = replace(tools, combat=_declarative(save={"mode": "roll_over"}))
+    _foe(tools, "Grave Thing", claw="1d6")
+    _set_stat(app, campaign_id, PC, "hp", 0)
+    _hit(tools, "Grave Thing", PC, 5)
+
+    result = tools.player_save(save_roll)
+
+    assert result["passed"] is passed
+    assert _character(app, campaign_id, PC).defeated is not passed
+
+
+@pytest.mark.parametrize(("initiative_roll", "passed"), [(1, False), (20, True)])
+def test_player_initiative_follows_a_declarative_roll_over_rule(
+    client_factory, initiative_roll, passed
+):
+    _, _, tools = _fight(client_factory, rolled=False)
+    tools = replace(tools, combat=_declarative(save={"mode": "roll_over"}))
+    _foe(tools, "Grave Thing")
+
+    result = tools.player_initiative(initiative_roll)
+
+    assert result["passed"] is passed
+    assert result["roll"] == initiative_roll
+
+
 def test_set_armor_is_refused_for_an_unknown_name(client_factory):
     _, _, tools = _fight(client_factory)
     with pytest.raises(InvalidInput, match="there is no character named 'Nobody'"):

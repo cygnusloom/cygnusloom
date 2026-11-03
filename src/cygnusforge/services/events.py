@@ -623,6 +623,9 @@ EVENT_TYPES: dict[str, type[GameEvent]] = {}
 
 class GameEvent:
     kind: ClassVar[str]
+    # Whether the player's transcript hides events of this kind. An event class declares its own
+    # visibility next to its kind, so there is no central list to update when adding an event.
+    hidden: ClassVar[bool] = False
     channel: ClassVar[Channel] = Channel.LOG
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
@@ -714,6 +717,7 @@ def _parts(items: list[dict[str, str]]) -> list[ContextPart]:
 @dataclass(frozen=True)
 class LocationAdded(GameEvent):
     kind: ClassVar[str] = "location.added"
+    hidden: ClassVar[bool] = True
 
     name: str
     description: str
@@ -750,6 +754,7 @@ class RegionAdded(GameEvent):
     player's map once it is discovered or a discovered place lies inside it."""
 
     kind: ClassVar[str] = "region.added"
+    hidden: ClassVar[bool] = True
 
     name: str
     terrain: str
@@ -814,6 +819,7 @@ class CampaignOptionsChosen(GameEvent):
     character, and given to the GM through the state text rather than the chat."""
 
     kind: ClassVar[str] = "campaign.options"
+    hidden: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     options: dict[str, str]
@@ -825,6 +831,7 @@ class CampaignOptionsChosen(GameEvent):
 @dataclass(frozen=True)
 class NpcAdded(GameEvent):
     kind: ClassVar[str] = "npc.added"
+    hidden: ClassVar[bool] = True
 
     name: str
     location: str
@@ -890,6 +897,7 @@ class NpcStatted(GameEvent):
     """A story-only NPC is given its stats. The values are the resolved ones."""
 
     kind: ClassVar[str] = "npc.statted"
+    hidden: ClassVar[bool] = True
 
     name: str
     stats: dict[str, int]
@@ -1077,6 +1085,7 @@ class ActorMoved(GameEvent):
 @dataclass(frozen=True)
 class NoteAdded(GameEvent):
     kind: ClassVar[str] = "note.added"
+    hidden: ClassVar[bool] = True
 
     text: str
     # The name of the place or character the note is about, or None for the whole campaign.
@@ -1098,6 +1107,7 @@ class LocationUpdated(GameEvent):
     place has none. Discovery is not changed here; `LocationDiscovered` does that."""
 
     kind: ClassVar[str] = "location.updated"
+    hidden: ClassVar[bool] = True
 
     name: str
     description: str
@@ -1138,6 +1148,7 @@ class LocationSummarized(GameEvent):
     """A new player-facing summary for a place that is already discovered."""
 
     kind: ClassVar[str] = "location.summarized"
+    hidden: ClassVar[bool] = True
 
     name: str
     summary: str
@@ -1153,6 +1164,7 @@ class LocationSummarized(GameEvent):
 @dataclass(frozen=True)
 class LocationRemoved(GameEvent):
     kind: ClassVar[str] = "location.removed"
+    hidden: ClassVar[bool] = True
 
     name: str
 
@@ -1168,6 +1180,7 @@ class NpcUpdated(GameEvent):
     """An NPC's details after an update. The values are the resolved ones, not the changes."""
 
     kind: ClassVar[str] = "npc.updated"
+    hidden: ClassVar[bool] = True
 
     name: str
     description: str
@@ -1192,6 +1205,7 @@ class NpcKnown(GameEvent):
     and any relationship or last-known location the story has revealed since."""
 
     kind: ClassVar[str] = "npc.known"
+    hidden: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     name: str
@@ -1219,6 +1233,7 @@ class NpcKnown(GameEvent):
 @dataclass(frozen=True)
 class NpcRemoved(GameEvent):
     kind: ClassVar[str] = "npc.removed"
+    hidden: ClassVar[bool] = True
 
     name: str
 
@@ -1234,6 +1249,7 @@ class NpcRemoved(GameEvent):
 @dataclass(frozen=True)
 class NoteUpdated(GameEvent):
     kind: ClassVar[str] = "note.updated"
+    hidden: ClassVar[bool] = True
 
     note_id: int
     text: str
@@ -1253,6 +1269,7 @@ class NoteUpdated(GameEvent):
 @dataclass(frozen=True)
 class NoteRemoved(GameEvent):
     kind: ClassVar[str] = "note.removed"
+    hidden: ClassVar[bool] = True
 
     note_id: int
     # Kept for the Log, which shows the note that was removed.
@@ -1271,6 +1288,7 @@ class JournalAppended(GameEvent):
     does not repeat it."""
 
     kind: ClassVar[str] = "journal.appended"
+    hidden: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     text: str
@@ -1285,6 +1303,7 @@ class JournalReplaced(GameEvent):
     deletes it."""
 
     kind: ClassVar[str] = "journal.replaced"
+    hidden: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     old_text: str
@@ -1299,6 +1318,7 @@ class JournalStarted(GameEvent):
     """A journal step began. The log it writes from is what was recorded after this event."""
 
     kind: ClassVar[str] = "journal.started"
+    hidden: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     def apply(self, state: CampaignState, event_id: int) -> None:
@@ -1337,6 +1357,7 @@ class SpeechWritten(GameEvent):
     the speaker's queued line, if there is one."""
 
     kind: ClassVar[str] = "speech.written"
+    hidden: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     speaker: str
@@ -1389,6 +1410,7 @@ class OpeningStarted(GameEvent):
     recorded with the player character, so the campaign is never left without its opening."""
 
     kind: ClassVar[str] = "turn.opening"
+    hidden: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     def apply(self, state: CampaignState, event_id: int) -> None:
@@ -1442,6 +1464,7 @@ class SummaryUpdated(GameEvent):
     """The chat up to and including event `through` is now represented by `summary`."""
 
     kind: ClassVar[str] = "summary.updated"
+    hidden: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     summary: str
@@ -1457,6 +1480,7 @@ class TurnBegun(GameEvent):
     """The model's context for the open turn, once it is set up."""
 
     kind: ClassVar[str] = "turn.begun"
+    hidden: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     head: list[dict[str, str]]
@@ -1479,6 +1503,7 @@ class StateStepMade(GameEvent):
     Without, the turn moves on to the narration, and any NPC dialogue is passed to it."""
 
     kind: ClassVar[str] = "turn.state_step"
+    hidden: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     requests: list[dict[str, str]]
@@ -1502,6 +1527,7 @@ class OocStarted(GameEvent):
     next, and the story is narrated after that reply only when `narrate` is set."""
 
     kind: ClassVar[str] = "turn.ooc"
+    hidden: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     narrate: bool
@@ -1517,6 +1543,7 @@ class PromptShown(GameEvent):
     """The open turn is waiting for the player to roll or type a reply."""
 
     kind: ClassVar[str] = "turn.prompted"
+    hidden: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     text: str
@@ -1530,6 +1557,7 @@ class PromptShown(GameEvent):
 @dataclass(frozen=True)
 class MapCreated(GameEvent):
     kind: ClassVar[str] = "map.created"
+    hidden: ClassVar[bool] = True
 
     name: str
     location: str
@@ -1564,6 +1592,7 @@ class MapUpdated(GameEvent):
     keeps the current one. An encounter running on the map follows it."""
 
     kind: ClassVar[str] = "map.updated"
+    hidden: ClassVar[bool] = True
 
     name: str
     columns: int
@@ -1608,6 +1637,7 @@ class MapCellsChanged(GameEvent):
     """Sets cells of a map. A cell whose terrain and object are both "" is cleared."""
 
     kind: ClassVar[str] = "map.cells_changed"
+    hidden: ClassVar[bool] = True
 
     name: str
     # Each item is {"column", "row", "terrain", "object"}.
@@ -1628,6 +1658,7 @@ class MapCellsChanged(GameEvent):
 @dataclass(frozen=True)
 class MapDeleted(GameEvent):
     kind: ClassVar[str] = "map.deleted"
+    hidden: ClassVar[bool] = True
 
     name: str
 
@@ -2171,6 +2202,7 @@ class TablesRolled(GameEvent):
     result."""
 
     kind: ClassVar[str] = "dice.tables_rolled"
+    hidden: ClassVar[bool] = True
 
     rolls: list[dict[str, Any]]
 
@@ -2189,6 +2221,7 @@ class DungeonEventRolled(GameEvent):
     """A roll on the rule set's dungeon event table. It does not move the day or hour clock."""
 
     kind: ClassVar[str] = "dungeon.event"
+    hidden: ClassVar[bool] = True
 
     roll: int
     event: str
@@ -2206,6 +2239,7 @@ class DungeonEventRolled(GameEvent):
 @dataclass(frozen=True)
 class ReactionRolled(GameEvent):
     kind: ClassVar[str] = "reaction.rolled"
+    hidden: ClassVar[bool] = True
 
     roll: int
     band: str
@@ -2229,6 +2263,7 @@ class WeatherRolled(GameEvent):
     itself landed on the catastrophe weather."""
 
     kind: ClassVar[str] = "wilderness.weather_rolled"
+    hidden: ClassVar[bool] = True
 
     day: int
     season: str
@@ -2254,6 +2289,7 @@ class SeasonSet(GameEvent):
     """The season the campaign starts in. The wilderness calendar counts its days from here."""
 
     kind: ClassVar[str] = "wilderness.season_set"
+    hidden: ClassVar[bool] = True
 
     season: str
 
@@ -2269,6 +2305,7 @@ class WildernessEventRolled(GameEvent):
     """A roll on the Wilderness Events table during a Wilderness Action. It does not move the clock."""
 
     kind: ClassVar[str] = "wilderness.event_rolled"
+    hidden: ClassVar[bool] = True
 
     action: str
     roll: int
@@ -2294,6 +2331,7 @@ class SupplyGathered(GameEvent):
     """Rations found by a Supply action. The die that sets the find has `sides` faces."""
 
     kind: ClassVar[str] = "wilderness.supply_gathered"
+    hidden: ClassVar[bool] = True
 
     rations: int
     sides: int
@@ -2310,6 +2348,7 @@ class SupplyGathered(GameEvent):
 @dataclass(frozen=True)
 class CampMade(GameEvent):
     kind: ClassVar[str] = "wilderness.camp_made"
+    hidden: ClassVar[bool] = True
 
     party_size: int
     reason: str = ""
@@ -2327,6 +2366,7 @@ class WildernessEffectApplied(GameEvent):
     `do` names the kind of effect and `text` says what it did."""
 
     kind: ClassVar[str] = "wilderness.effect_applied"
+    hidden: ClassVar[bool] = True
 
     action: str
     do: str
@@ -2345,6 +2385,7 @@ class LostRolled(GameEvent):
     """A lost check on a path. `roll` is None when the path can never lose the party."""
 
     kind: ClassVar[str] = "wilderness.lost_rolled"
+    hidden: ClassVar[bool] = True
 
     path: str
     roll: int | None
@@ -2381,6 +2422,7 @@ class DefenseEquipmentSet(GameEvent):
     Log line of its own. `armor` is not changed here; ArmorSet still sets the armor total."""
 
     kind: ClassVar[str] = "combat.defense_equipment_set"
+    hidden: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     name: str
@@ -2408,6 +2450,7 @@ class InvincibilitySet(GameEvent):
     it on cancels a save the character owes, since no harm can make it due."""
 
     kind: ClassVar[str] = "combat.invincibility_set"
+    hidden: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     name: str
@@ -2429,6 +2472,7 @@ class DebugStatSet(GameEvent):
     that leaves it at `remaining`. Internal, so the GM does not see it."""
 
     kind: ClassVar[str] = "combat.debug_stat_set"
+    hidden: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     name: str
@@ -2449,6 +2493,7 @@ class DebugCurrencyAdded(GameEvent):
     earn it. Internal, so the GM does not see it."""
 
     kind: ClassVar[str] = "character.debug_currency_added"
+    hidden: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     name: str
@@ -2468,6 +2513,7 @@ class EffectNoted(GameEvent):
     """A rule effect with no mechanical change, such as a location roll or a choice the GM narrates."""
 
     kind: ClassVar[str] = "effect.noted"
+    hidden: ClassVar[bool] = True
 
     name: str
     text: str
@@ -2680,6 +2726,7 @@ class StartingItemsTransferred(GameEvent):
     """Move starting item features out of the sheet before adding their inventory items."""
 
     kind: ClassVar[str] = "character.starting_items_transferred"
+    hidden: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     name: str
@@ -3344,136 +3391,6 @@ class CharacterDrained(GameEvent):
         return f"{self.name}'s {self.stat.upper()} drops to 0 ({self.cause})."
 
 
-# Whether the player's transcript hides an event kind. Hidden kinds are GM bookkeeping or
-# things the player does not perceive; the rest are what the player's character says or
-# witnesses. Every registered kind must appear here (see tests/test_events.py).
-HIDDEN_KINDS: dict[str, bool] = {
-    # Turn plumbing and GM-only state.
-    "turn.begun": True,
-    "turn.opening": True,
-    "turn.prompted": True,
-    "turn.state_step": True,
-    "turn.ooc": True,
-    "speech.written": True,
-    "summary.updated": True,
-    "campaign.options": True,
-    # GM notes and GM-only records.
-    "note.added": True,
-    "note.updated": True,
-    "note.removed": True,
-    # The journal is shown in its own panel, not in the transcript.
-    "journal.appended": True,
-    "journal.replaced": True,
-    "journal.started": True,
-    "npc.added": True,
-    "npc.statted": True,
-    "npc.updated": True,
-    "npc.known": True,
-    "npc.removed": True,
-    "location.added": True,
-    "location.updated": True,
-    "location.removed": True,
-    "location.summarized": True,
-    "map.created": True,
-    "map.updated": True,
-    "map.deleted": True,
-    "map.cells_changed": True,
-    "effect.noted": True,
-    # GM-only rolls the player does not see.
-    "dungeon.event": True,
-    "dice.tables_rolled": True,
-    "reaction.rolled": True,
-    # Wilderness rolls are GM-only too, like the Dungeon Events table.
-    "wilderness.weather_rolled": True,
-    "wilderness.season_set": True,
-    "wilderness.event_rolled": True,
-    "wilderness.supply_gathered": True,
-    "wilderness.camp_made": True,
-    "wilderness.effect_applied": True,
-    "wilderness.lost_rolled": True,
-    # Debug edits.
-    "combat.debug_stat_set": True,
-    "combat.invincibility_set": True,
-    "character.debug_currency_added": True,
-    # Internal state with no Log line of its own.
-    "combat.defense_equipment_set": True,
-    # Tool plumbing. The roll result a tool produces is shown to the player.
-    "turn.failed": False,
-    "tool.ran": False,
-    # Player and GM speech.
-    "chat.player": False,
-    "chat.gm": False,
-    # Things the player's character does or witnesses.
-    "actor.moved": False,
-    "location.discovered": False,
-    "region.added": True,
-    "pc.added": False,
-    "move.made": False,
-    "hireling.added": False,
-    "hireling.dismissed": False,
-    "hireling.promoted": False,
-    "hireling.unpaid": False,
-    "encounter.started": False,
-    "encounter.ended": False,
-    "encounter.joined": False,
-    "encounter.left": False,
-    "encounter.placed": False,
-    "encounter.turn_begun": False,
-    "encounter.turn_ended": False,
-    "encounter.initiative_rolled": False,
-    "encounter.initiative_settled": False,
-    "combat.struck": False,
-    "combat.harmed": False,
-    "combat.save_rolled": False,
-    "combat.group_break_resolved": False,
-    "combat.armor_set": False,
-    "check.made": False,
-    "morale.checked": False,
-    "retreat.rolled": False,
-    "character.fled": False,
-    "character.surrendered": False,
-    "project.started": False,
-    "project.advanced": False,
-    "project.abandoned": False,
-    "character.healed": False,
-    "character.recovered": False,
-    "character.saved": False,
-    "character.dying": False,
-    "character.dying_rounds": False,
-    "character.stabilized": False,
-    "character.died": False,
-    "character.retired": False,
-    "character.drained": False,
-    "character.max_changed": False,
-    "character.skill_changed": False,
-    "character.stat_restored": False,
-    "character.advancement_taken": False,
-    "character.relation_changed": False,
-    "tally.changed": False,
-    "tally.reset": False,
-    "period.ended": False,
-    "character.feature_learned": False,
-    "character.starting_items_transferred": True,
-    "character.currency_changed": False,
-    "character.mark_set": False,
-    "character.item_added": False,
-    "character.item_readied": False,
-    "character.item_removed": False,
-    "character.item_uses_set": False,
-    "condition.added": False,
-    "condition.ended": False,
-    "counter.changed": False,
-    "injury.gained": False,
-    "rest.taken": False,
-    "rest.recovered": False,
-    "object.placed": False,
-    "object.taken": False,
-    "magic.spell_cast": False,
-    "clock.advanced": False,
-    "travel.charged": False,
-}
-
-
 def is_hidden(kind: str) -> bool:
-    """Whether the player's transcript hides events of this kind."""
-    return HIDDEN_KINDS[kind]
+    """Whether the player's transcript hides events of this kind. An unknown kind raises KeyError."""
+    return EVENT_TYPES[kind].hidden

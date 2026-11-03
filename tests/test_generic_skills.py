@@ -32,6 +32,7 @@ from cygnusforge.services.events import (
     load_state,
     record,
 )
+from tests.test_combat import Rolls
 from tests.test_wwn_advancement import _ctx
 from tests.test_wwn_combat import PC, _events, _wwn_campaign
 
@@ -511,6 +512,33 @@ def test_checks_and_advancement_use_configured_skill_limits(client_factory):
     assert tools.roll_check("skill", PC, skill=skill)["bonus"] == 7
     with pytest.raises(InvalidInput, match="from -2 to 7"):
         tools.raise_skill(PC, skill, 8, cause="training")
+
+
+def test_a_check_adds_its_skill_stat_and_situational_modifier(client_factory):
+    _, campaign_id, original_tools = _wwn_campaign(client_factory)
+    spec = replace(original_tools.character, skill_progression=SkillProgression(**LEVELS))
+    tools = replace(original_tools, character=spec, rng=Rolls(3, 4))
+    with Session(tools.engine) as db:
+        pc = load_state(db, campaign_id).pc()
+    assert pc is not None
+    skill = next(ident for ident in spec.skills if ident not in pc.skills)
+    stat_bonus = spec.modifier(pc.stats, "dex")
+
+    result = tools.roll_check(
+        "skill", PC, skill=skill, stat="dex", difficulty=8, modifier=2
+    )
+
+    assert result["roll"] == 7
+    assert result["skill_level"] == -2
+    assert result["bonus"] == -1 + stat_bonus + 2
+    assert result["total"] == 7 + result["bonus"]
+    assert result["difficulty"] == 8
+    assert result["success"] is (result["total"] >= 8)
+
+    clamped = replace(tools, rng=Rolls(1, 1)).roll_check(
+        "skill", PC, skill=skill, stat="dex", difficulty=99
+    )
+    assert clamped["difficulty"] == 30
 
 
 def test_first_aid_uses_a_trained_negative_skill_level(client_factory):

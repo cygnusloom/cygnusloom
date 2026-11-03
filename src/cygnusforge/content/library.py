@@ -53,6 +53,9 @@ ENUM_FROM_KEY = "enum_from"
 # The engine passes its ToolContext to a function that declares this parameter. The model
 # never sees it, so it must not appear in a tool's schema.
 CONTEXT_ARGUMENT = "ctx"
+# An unbound WorldTools method's signature starts with this. The engine calls it on a built
+# world, so the parameter is not part of a tool's schema.
+SELF_ARGUMENT = "self"
 logger = logging.getLogger(__name__)
 
 CORE_RULE_SET = "core"
@@ -200,7 +203,12 @@ class ToolCall:
     name: str
     description: str
     parameters: Mapping[str, Any]
-    function: Callable[..., Any]
+    # The rule set module's function, when the tool names one. The engine passes the arguments
+    # straight from the schema. Exactly one of `function` and `world_method` is set.
+    function: Callable[..., Any] | None = None
+    # The WorldTools method the engine calls, when the tool binds an engine operation instead of
+    # naming a rule set function. The loader resolves it and checks it against the schema.
+    world_method: str | None = None
     player_input: PlayerInput | None = None
     # A str.format template shown to the player after the tool runs. Fields come from the
     # arguments and the result.
@@ -4710,6 +4718,7 @@ def _load_tool_call(
             "description",
             "python_module",
             "function",
+            "world_method",
             "parameters",
             "player_input",
             "activity",
@@ -4721,13 +4730,11 @@ def _load_tool_call(
         },
         label,
     )
-    module_id = required_text(data, "python_module", label)
-    if module_id not in modules:
-        raise ContentError(f"{label}: unknown python_module {module_id!r}")
-    function_name = required_text(data, "function", label)
-    function = getattr(modules[module_id], function_name, None)
-    if not callable(function):
-        raise ContentError(f"{label}: {function_name!r} is not a function in {module_id!r}")
+    function, world_method = _tool_handler(data, modules, label)
+    inspected = function
+    if inspected is None and world_method is not None:
+        inspected = _world_method(world_method, label)
+    accepted = _accepted_parameters(inspected, unbound_method=world_method is not None)
     name = required_text(data, "name", label)
     if not TOOL_NAME.fullmatch(name):
         raise ContentError(f"{label}: 'name' must be 1 to 64 letters, digits, '_' or '-'")
@@ -4745,21 +4752,83 @@ def _load_tool_call(
         parameters = _with_travel(parameters, travel, label)
     if CONTEXT_ARGUMENT in parameters["properties"]:
         raise ContentError(f"{label}: {CONTEXT_ARGUMENT!r} is reserved and not a parameter")
-    player_input = _check_player_input(data.get("player_input"), parameters, function, label)
+    player_input = _check_player_input(data.get("player_input"), parameters, accepted, label)
     activity = _check_activity(data.get("activity"), label)
-    _check_signature(function, parameters, label, consumed=_consumed(player_input))
+    _check_signature(accepted, parameters, label, consumed=_consumed(player_input))
     return ToolCall(
         id=definition.id,
         name=name,
         description=required_text(data, "description", label),
         parameters=parameters,
         function=function,
+        world_method=world_method,
         player_input=player_input,
         activity=activity,
-        takes_context=CONTEXT_ARGUMENT in inspect.signature(function).parameters,
+        takes_context=world_method is None and CONTEXT_ARGUMENT in accepted,
         lookup=_flag(data, "lookup", label),
         journal_step=_flag(data, "journal_step", label),
     )
+
+
+def _tool_handler(
+    data: Mapping[str, Any], modules: Mapping[str, ModuleType], label: str
+) -> tuple[Callable[..., Any] | None, str | None]:
+    """What runs a tool: a rule set module's function, or the name of a WorldTools method.
+
+    A tool names exactly one of them. `world_method` binds an engine operation directly, so the
+    rule set ships no one-line wrapper. Naming both hides which one runs, and naming neither
+    leaves nothing to run."""
+    if "world_method" in data:
+        if "python_module" in data or "function" in data:
+            raise ContentError(
+                f"{label}: give either 'world_method' or 'python_module' and 'function', not both"
+            )
+        method_name = required_text(data, "world_method", label)
+        _world_method(method_name, label)
+        return None, method_name
+    if "python_module" not in data or "function" not in data:
+        raise ContentError(
+            f"{label}: give 'world_method', or 'python_module' with 'function'"
+        )
+    module_id = required_text(data, "python_module", label)
+    if module_id not in modules:
+        raise ContentError(f"{label}: unknown python_module {module_id!r}")
+    function_name = required_text(data, "function", label)
+    function = getattr(modules[module_id], function_name, None)
+    if not callable(function):
+        raise ContentError(f"{label}: {function_name!r} is not a function in {module_id!r}")
+    return function, None
+
+
+def _world_method(name: str, label: str) -> Callable[..., Any]:
+    """Check that `name` is a WorldTools method and return the unbound function.
+
+    The import is lazy: the world service imports this module, so importing it here at module
+    load would close the cycle."""
+    from cygnusforge.services.world import WorldTools
+
+    method = getattr(WorldTools, name, None)
+    if not callable(method):
+        raise ContentError(f"{label}: {name!r} is not a method of WorldTools")
+    return method
+
+
+def _accepted_parameters(
+    function: Callable[..., Any] | None, unbound_method: bool = False
+) -> Mapping[str, inspect.Parameter]:
+    """The parameters the engine may pass. A world method is an unbound class function, so its
+    signature includes `self`, which the engine never passes. It never takes the tool context
+    either, so `ctx` is left out too."""
+    if function is None:
+        raise ContentError("a tool with 'world_method' has no Python function to inspect")
+    parameters = inspect.signature(function).parameters
+    if not unbound_method:
+        return parameters
+    return {
+        name: parameter
+        for name, parameter in parameters.items()
+        if name not in (SELF_ARGUMENT, CONTEXT_ARGUMENT)
+    }
 
 
 def _npc_hp(data: Mapping[str, Any], label: str) -> dict[str, int]:
@@ -4923,7 +4992,10 @@ def _consumed(player_input: PlayerInput | None) -> frozenset[str]:
 
 
 def _check_player_input(
-    data: object, parameters: Mapping[str, Any], function: Callable[..., Any], label: str
+    data: object,
+    parameters: Mapping[str, Any],
+    accepted: Mapping[str, inspect.Parameter],
+    label: str,
 ) -> PlayerInput | None:
     if data is None:
         return None
@@ -4993,7 +5065,7 @@ def _check_player_input(
                 raise ContentError(
                     f"{label}: 'player_input.weapon_roll_param' must not be a schema parameter"
                 )
-            if weapon_roll_param not in inspect.signature(function).parameters:
+            if weapon_roll_param not in accepted:
                 raise ContentError(
                     f"{label}: function does not accept parameter {weapon_roll_param!r}"
                 )
@@ -5011,7 +5083,6 @@ def _check_player_input(
     if param is not None:
         if param in parameters["properties"]:
             raise ContentError(f"{label}: 'player_input.param' must not be a schema parameter")
-        accepted = inspect.signature(function).parameters
         if param not in accepted:
             raise ContentError(f"{label}: function does not accept parameter {param!r}")
     details = _check_template(data.get("details"), "player_input.details", label)
@@ -5066,13 +5137,12 @@ def _check_parameters(schema: object, label: str) -> dict[str, Any]:
 
 
 def _check_signature(
-    function: Callable[..., Any],
+    accepted: Mapping[str, inspect.Parameter],
     parameters: Mapping[str, Any],
     label: str,
     consumed: frozenset[str] = frozenset(),
 ) -> None:
     """The GM calls the function with keyword arguments taken from the schema, so both must agree."""
-    accepted = inspect.signature(function).parameters
     takes_any_keyword = any(p.kind is p.VAR_KEYWORD for p in accepted.values())
     if not takes_any_keyword:
         for name in parameters["properties"]:

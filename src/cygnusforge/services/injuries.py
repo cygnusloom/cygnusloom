@@ -348,24 +348,31 @@ def _save(
     combat = cx.combat
     assert combat is not None, "the loader only allows a save in a rule set with combat"
     character = load_state(db, campaign_id).characters[name_key(name)]
-    roll = roll_total(combat.check_die, cx.rng, plus=plus)
-    score = current(character, stat)
-    passed = combat.save_succeeds(roll, score)
+    # Combat imports this module, so this import must happen after the modules load.
+    from cygnusforge.services.combat import resolve_save
+
+    result = resolve_save(combat, current(character, stat), rng=cx.rng, plus=plus)
     record(
         db,
         campaign_id,
         CharacterSaved(
             name=character.name,
             stat=stat,
-            roll=roll,
-            score=score,
-            passed=passed,
+            roll=result.roll,
+            score=result.score,
+            passed=result.passed,
             cause=cause,
         ),
     )
     db.commit()
     run_effects(
-        db, campaign_id, name, op.get("pass" if passed else "fail", []), cx, cause, plus=plus
+        db,
+        campaign_id,
+        name,
+        op.get("pass" if result.passed else "fail", []),
+        cx,
+        cause,
+        plus=plus,
     )
 
 

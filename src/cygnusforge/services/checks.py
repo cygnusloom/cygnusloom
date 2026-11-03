@@ -13,7 +13,7 @@ from sqlmodel import Session
 
 from cygnusforge.content.character import CharacterSpec
 from cygnusforge.content.library import ALL_STATS, CheckRules, ConditionRules
-from cygnusforge.rules.dice import roll_total
+from cygnusforge.services import resolution
 from cygnusforge.services.common import InvalidInput, whole_number
 from cygnusforge.services.conditions import active_conditions
 from cygnusforge.services.events import CheckMade, load_state, name_key, record
@@ -84,10 +84,16 @@ def roll_check(
         rules.modifies.get("check", 0) + rules.modifies.get(ALL_STATS, 0)
         for rules in active_conditions(found, conditions or {})
     )
-    roll = roll_total(check.dice, rng, plus=plus)
     bonus = skill_bonus + stat_bonus + modifier + condition_modifier
-    total = roll + bonus
-    success = total >= target
+    result = resolution.roll_check(
+        rng,
+        check.dice,
+        skill_level=skill_bonus,
+        stat_modifier=stat_bonus,
+        difficulty=target,
+        modifier=modifier + condition_modifier,
+        plus=plus,
+    )
     record(
         db,
         campaign_id,
@@ -100,11 +106,11 @@ def roll_check(
             skill_bonus=skill_bonus,
             stat=stat_id,
             stat_name=stat_name,
-            roll=roll,
+            roll=result.roll,
             bonus=bonus,
-            total=total,
+            total=result.total,
             difficulty=target,
-            success=success,
+            success=result.passed,
             cause=cause,
         ),
     )
@@ -117,10 +123,10 @@ def roll_check(
         "skill_level": skill_level,
         "stat": stat_id,
         "stat_name": stat_name,
-        "roll": roll,
+        "roll": result.roll,
         "bonus": bonus,
-        "total": total,
+        "total": result.total,
         "difficulty": target,
-        "success": success,
+        "success": result.passed,
         "cause": cause,
     }

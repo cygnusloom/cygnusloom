@@ -433,7 +433,8 @@ def test_every_wwn_tool_loads_and_binds_its_declared_required_parameters() -> No
     calls = [
         call
         for call in WWN.tool_calls.values()
-        if call.function.__module__ in {"cygnusforge.rules.wwn", "cygnusforge.rules.wwn_magic"}
+        if call.function is not None
+        and call.function.__module__ in {"cygnusforge.rules.wwn", "cygnusforge.rules.wwn_magic"}
     ]
     assert {call.id for call in calls} == {
         "roll_check",

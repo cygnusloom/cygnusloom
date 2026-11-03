@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.content.library import _load_combat, _load_injury_entries
+from cygnusforge.content.library import SaveRules, _load_combat, _load_injury_entries
 from cygnusforge.services.events import (
     InjuryGained,
     MaxChanged,
@@ -63,10 +63,12 @@ def _injury_combat(injuries: Any):
     )
 
 
-def _run(app, campaign_id: int, ops: list[dict[str, Any]], *dice: int) -> None:
+def _run(
+    app, campaign_id: int, ops: list[dict[str, Any]], *dice: int, combat=CAIRN.combat
+) -> None:
     """Run effect ops on Mara with the given dice, in order."""
     with _db(app) as db:
-        cx = EffectContext(rng=Rolls(*dice), combat=CAIRN.combat)
+        cx = EffectContext(rng=Rolls(*dice), combat=combat)
         run_effects(db, campaign_id, PC, ops, cx, "a test", plus=CAIRN.plus)
 
 
@@ -262,6 +264,26 @@ def test_a_save_that_fails_runs_its_fail_ops(client_factory):
     ]
     _run(app, campaign_id, ops, 20)
     assert _character(app, campaign_id, PC).conditions == ["diseased"]
+
+
+@pytest.mark.parametrize(("save_roll", "condition"), [(1, "diseased"), (20, "deafened")])
+def test_a_save_op_follows_a_declarative_roll_over_rule(
+    client_factory, save_roll: int, condition: str
+):
+    app, campaign_id, _ = _fight(client_factory)
+    combat = replace(CAIRN.combat, save=SaveRules(mode="roll_over"))
+    ops = [
+        {
+            "op": "save",
+            "stat": "wil",
+            "pass": [{"op": "condition", "id": "deafened"}],
+            "fail": [{"op": "condition", "id": "diseased"}],
+        }
+    ]
+
+    _run(app, campaign_id, ops, save_roll, combat=combat)
+
+    assert _character(app, campaign_id, PC).conditions == [condition]
 
 
 def test_a_condition_already_held_is_not_added_twice(client_factory):

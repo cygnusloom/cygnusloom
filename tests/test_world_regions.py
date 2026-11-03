@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from cygnusforge.services import world
 from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import HIDDEN_KINDS, Region
+from cygnusforge.services.events import Region, is_hidden
 from cygnusforge.services.geometry import clearance, contains, overlaps
 from tests.conftest import content_library
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
@@ -285,7 +285,7 @@ def test_the_campaign_page_draws_the_regions_with_their_tooltips(
 
 def test_region_events_are_hidden_behind_show_hidden():
     """Region creation is GM bookkeeping, so it is hidden from the transcript by default."""
-    assert HIDDEN_KINDS["region.added"] is True
+    assert is_hidden("region.added") is True
 
 
 def test_bundled_regions_cover_the_whole_world_without_overlap(

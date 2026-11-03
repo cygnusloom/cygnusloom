@@ -23,7 +23,7 @@ from cygnusforge.content.library import (
     GroupRules,
 )
 from cygnusforge.rules.dice import roll_total
-from cygnusforge.services import death
+from cygnusforge.services import death, resolution
 from cygnusforge.services.attacks import (
     BLAST,
     IGNORES_ARMOR,
@@ -618,6 +618,56 @@ def surrender(db: Session, campaign_id: int, name: str, combat: CombatRules) -> 
     return {"character": character.name, "surrendered": True}
 
 
+def resolve_save(
+    combat: CombatRules,
+    score: int,
+    *,
+    rng: random.Random | None = None,
+    roll: int | None = None,
+    plus: str = "sum",
+) -> resolution.RollResult:
+    """Resolve a save against `score` through one rules-aware path.
+
+    A rule set whose Python module supplies `save_succeeds` owns the comparison; every other rule
+    set uses the shared resolution primitive with its declarative save mode and automatic rolls.
+    `roll` is a roll the player reported, used as it is; when it is None the engine rolls the rule
+    set's check die with `rng`."""
+    module = combat.module
+    if module is not None and callable(getattr(module, "save_succeeds", None)):
+        made = (
+            roll
+            if roll is not None
+            else resolution.roll_die(_required_rng(rng), combat.check_die, plus=plus)
+        )
+        return resolution.RollResult(
+            roll=made, score=score, passed=bool(module.save_succeeds(made, score))
+        )
+    if roll is not None:
+        return resolution.resolve_roll(
+            roll,
+            score,
+            mode=combat.save.mode,
+            auto_success=combat.save.auto_success,
+            auto_fail=combat.save.auto_fail,
+        )
+    return resolution.roll_score(
+        _required_rng(rng),
+        combat.check_die,
+        score,
+        mode=combat.save.mode,
+        auto_success=combat.save.auto_success,
+        auto_fail=combat.save.auto_fail,
+        plus=plus,
+    )
+
+
+def _required_rng(rng: random.Random | None) -> random.Random:
+    """The caller's random source. A caller that supplied the player's roll needs none."""
+    if rng is None:
+        raise ValueError("resolving a save needs either the player's roll or a random source")
+    return rng
+
+
 def _save(
     db: Session,
     campaign_id: int,
@@ -628,9 +678,7 @@ def _save(
     *,
     plus: str,
 ) -> dict[str, Any]:
-    roll = roll_total(combat.check_die, rng, plus=plus)
-    score = current(character, stat)
-    passed = combat.save_succeeds(roll, score)
+    result = resolve_save(combat, current(character, stat), rng=rng, plus=plus)
     critical = character.large_group
     record(
         db,
@@ -638,18 +686,23 @@ def _save(
         SaveRolled(
             name=character.name,
             stat=stat,
-            roll=roll,
-            score=score,
-            passed=passed,
+            roll=result.roll,
+            score=result.score,
+            passed=result.passed,
             status="" if critical else defeat_status(character, combat.defeat),
             critical=critical,
         ),
     )
     db.commit()
-    if not passed and not critical and character.kind == PC_KIND:
+    if not result.passed and not critical and character.kind == PC_KIND:
         death.on_critical_save_failed(db, campaign_id, combat, character.name)
         db.commit()
-    return {"stat": stat, "roll": roll, "score": score, "passed": passed}
+    return {
+        "stat": stat,
+        "roll": result.roll,
+        "score": result.score,
+        "passed": result.passed,
+    }
 
 
 def _no_initiative_pending(state: CampaignState) -> None:
@@ -1254,22 +1307,21 @@ def player_save(
         raise InvalidInput("no player character owes a save")
     roll = whole_number(roll, "roll", 1, combat.check_sides)
     stat = pc.save_due
-    score = current(pc, stat)
-    passed = combat.save_succeeds(roll, score)
+    result = resolve_save(combat, current(pc, stat), rng=rng, roll=roll, plus=plus)
     record(
         db,
         campaign_id,
         SaveRolled(
             name=pc.name,
             stat=stat,
-            roll=roll,
-            score=score,
-            passed=passed,
+            roll=result.roll,
+            score=result.score,
+            passed=result.passed,
             status=defeat_status(pc, combat.defeat),
         ),
     )
     db.commit()
-    if not passed:
+    if not result.passed:
         death.on_critical_save_failed(db, campaign_id, combat, pc.name)
     elif conditions and rng is not None:
         for cid in list(pc.conditions):
@@ -1287,7 +1339,13 @@ def player_save(
                     spec=spec,
                 )
     _end_if_one_side_left(db, campaign_id)
-    return {"character": pc.name, "stat": stat, "roll": roll, "score": score, "passed": passed}
+    return {
+        "character": pc.name,
+        "stat": stat,
+        "roll": result.roll,
+        "score": result.score,
+        "passed": result.passed,
+    }
 
 
 def player_initiative(
@@ -1301,16 +1359,15 @@ def player_initiative(
         raise InvalidInput("no one is rolling for initiative right now")
     character = state.characters[name_key(waiting[0])]
     roll = whole_number(roll, "roll", 1, combat.check_sides)
-    score = current(character, combat.initiative_stat)
-    passed = combat.save_succeeds(roll, score)
-    record(db, campaign_id, InitiativeRolled(name=character.name, passed=passed))
+    result = resolve_save(combat, current(character, combat.initiative_stat), roll=roll)
+    record(db, campaign_id, InitiativeRolled(name=character.name, passed=result.passed))
     db.commit()
     settle_initiative(db, campaign_id, combat.initiative_order)
     return {
         "character": character.name,
-        "roll": roll,
-        "score": score,
-        "passed": passed,
+        "roll": result.roll,
+        "score": result.score,
+        "passed": result.passed,
         "still_waiting": awaiting_initiative(load_state(db, campaign_id)),
     }
 
