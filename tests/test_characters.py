@@ -32,8 +32,41 @@ def test_meeting_an_npc_records_what_the_player_knows(
     assert set(known) == {name_key("Brin Gallowcap")}
     brin = known[name_key("Brin Gallowcap")]
     assert brin.location == "Glowcap Ring"
-    assert brin.description.startswith("A wiry gnome ranger")
+    # The NPC's own description is a GM record and may hold secrets, so meeting them does not
+    # copy it. Only the observable traits are learned.
+    assert brin.description == ""
     assert brin.personality
+
+
+def test_a_secret_in_an_npc_description_is_not_shown_to_the_player(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, "Glowcap Ring")
+    _tool(
+        app,
+        campaign_id,
+        "create_npc",
+        {
+            "name": "Vale",
+            "location": "Glowcap Ring",
+            "description": "A baker. He is secretly the cult's leader.",
+        },
+    )
+    assert _state(app, campaign_id).known[name_key("Vale")].description == ""
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "Secretly the cult" not in _characters_section(page)
+
+    _tool(
+        app,
+        campaign_id,
+        "update_npc_knowledge",
+        {"name": "Vale", "description": "A flour-dusted baker with a quick laugh."},
+    )
+    page = client.get(f"/campaigns/{campaign_id}").text
+    characters = _characters_section(page)
+    assert "A flour-dusted baker with a quick laugh." in characters
+    assert "secretly the cult" not in characters
 
 
 def test_an_npc_coming_to_the_player_is_remembered(
@@ -181,7 +214,8 @@ def test_a_dismissed_hireling_joins_the_people_the_player_knows(
 
     _tool(app, campaign_id, "dismiss_hireling", {"name": "Wick", "cause": "The pay ran out."})
     wick = _state(app, campaign_id).known[name_key("Wick")]
-    assert wick.description == "A lantern-bearer."
+    # The hireling's own description stays a GM record, like any NPC's.
+    assert wick.description == ""
     assert wick.location == "Glowcap Ring"
 
 

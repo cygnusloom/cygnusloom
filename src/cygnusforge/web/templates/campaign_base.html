@@ -54,7 +54,6 @@
               <span>Hired by {{ hireling.employer }}</span>
               {% if hireling.location %}<span>At {{ hireling.location }}</span>{% endif %}
             </p>
-            {% if hireling.description %}<p>{{ hireling.description }}</p>{% endif %}
             {% if hireling.personality %}<p><strong>Personality:</strong> {{ hireling.personality }}{% if hireling.accent %} · <strong>Accent:</strong> {{ hireling.accent }}{% endif %}</p>{% endif %}
             {% if hireling.quirks %}<p><strong>Quirks:</strong> {{ hireling.quirks | join("; ") }}</p>{% endif %}
           </article>

@@ -523,12 +523,13 @@ def _player_present(state: CampaignState) -> Character | None:
 
 
 def _remember_npc(state: CampaignState, npc: Character) -> None:
-    """Record what the player sees of an NPC at their shared location. Details the player already
-    learned beyond the NPC's own record, such as the relationship, are kept."""
+    """Record what the player sees of an NPC at their shared location: how the NPC carries
+    themselves, sounds, and behaves. The NPC's own description is a GM record that may hold
+    secrets, so it is never copied here; only what the GM records with update_npc_knowledge is."""
     before = state.known.get(name_key(npc.name))
     state.known[name_key(npc.name)] = KnownNpc(
         name=npc.name,
-        description=npc.description,
+        description=before.description if before is not None else "",
         personality=npc.personality,
         accent=npc.accent,
         quirks=tuple(npc.quirks),

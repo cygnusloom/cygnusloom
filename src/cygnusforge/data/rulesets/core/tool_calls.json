@@ -112,7 +112,7 @@
         },
         "description": {
           "type": "string",
-          "description": "Who the NPC is: appearance, role, and what they are doing. The player learns this on meeting them, so leave out secrets, hidden motives, and plans; keep those in notes."
+          "description": "Who the NPC is: appearance, role, and what they are doing. This is your own record and may hold secrets the player has not learned; the player never sees it. Use update_npc_knowledge for what the player can see."
         },
         "pronouns": {
           "type": "string",
@@ -716,7 +716,7 @@
     "python_module": "core",
     "function": "update_npc",
     "character_options": true,
-    "description": "Change an NPC's details. Only the fields you give change; the rest stay as they are. Giving quirks replaces the whole list. Use it when an NPC changes, for example after a shift in attitude or appearance. The description, personality, accent, quirks, and pronouns are what the player learns on meeting them, so keep secrets, hidden motives, and plans in notes instead. The player character cannot be changed this way. A story-only NPC has no stats until you give them with character, armor, and attacks; this works once, and it refuses an NPC that already has stats.",
+    "description": "Change an NPC's details. Only the fields you give change; the rest stay as they are. Giving quirks replaces the whole list. Use it when an NPC changes, for example after a shift in attitude or appearance. The description is your own record and may hold secrets the player has not learned; the player never sees it. The personality, accent, and quirks are what the player sees on meeting them. To record what the player has learned, use update_npc_knowledge. The player character cannot be changed this way. A story-only NPC has no stats until you give them with character, armor, and attacks; this works once, and it refuses an NPC that already has stats.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -726,7 +726,7 @@
         },
         "description": {
           "type": "string",
-          "description": "Optional. Who the NPC is now: appearance, role, and what they are doing. The player learns this on meeting them, so leave out anything hidden."
+          "description": "Optional. Who the NPC is now: appearance, role, and what they are doing. This is your own record and may hold secrets the player has not learned; the player never sees it."
         },
         "personality": {
           "type": "string",
@@ -788,7 +788,7 @@
     "name": "update_npc_knowledge",
     "python_module": "core",
     "function": "update_npc_knowledge",
-    "description": "Record what the player character has learned about an NPC. The Characters page shows only this, so keep it to what the player has seen or been told, and never write a secret the player has not learned. Meeting an NPC records their description, personality, accent, quirks, pronouns, and place automatically; use this tool when the story reveals more, when the player learns where an NPC has gone, when a relationship changes, or when a rumor puts someone in the player's mind before they are met. Only the fields you give change. The relationship is a short note in your own words, such as 'friendly, owes a debt' or 'wary of the party'. The location is the place the player now knows the NPC to be, and it must already exist. This does not change the NPC themselves; use update_npc for that.",
+    "description": "Record what the player character has learned about an NPC. The Characters page shows only what the player knows, so keep it to what the player has seen or been told, and never write a secret the player has not learned. Meeting an NPC records their personality, accent, quirks, pronouns, and place automatically; use this tool when the story reveals more, such as the NPC's appearance, when the player learns where an NPC has gone, when a relationship changes, or when a rumor puts someone in the player's mind before they are met. Only the fields you give change. The relationship is a short note in your own words, such as 'friendly, owes a debt' or 'wary of the party'. The location is the place the player now knows the NPC to be, and it must already exist. This does not change the NPC themselves; use update_npc for that.",
     "parameters": {
       "type": "object",
       "properties": {
