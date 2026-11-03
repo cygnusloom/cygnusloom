@@ -358,7 +358,11 @@ def test_gain_growth_reports_a_missing_background_table(
     background = _pc(app, campaign_id).templates["background"]
     table = f"growth_{background}"
     rule_set = replace(
-        WWN, tables={key: value for key, value in WWN.tables.items() if key != table}
+        WWN,
+        content=replace(
+            WWN.content,
+            tables={key: value for key, value in WWN.tables.items() if key != table},
+        ),
     )
     ctx = _campaign_context(app, campaign_id, rule_set=rule_set)
 

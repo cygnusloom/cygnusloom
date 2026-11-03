@@ -97,6 +97,9 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
 - [ ] Replace the union-like parts of `RuleSet`/`CombatRules` with optional capability objects
   (`combat`, `inventory`, `magic`, `progression`, `time`, `social`, `encounter`). Each capability
   owns its schema, loader, runtime, and tools.
+  Progress: `RuleSet` dropped from 44 flat fields to 18, with `content`, `progression`, `time`,
+  and `items` capability objects and read-only aliases for existing consumers. `CombatRules` is
+  still a 40-field bag.
 - [ ] Remove dead wrapper code (`end_npc_turn` adapters and any orphaned functions).
 
 ## Phase 4 — tests and parity
@@ -109,7 +112,7 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
   neutral fixture; `test_scars` still needs a non-broken migration.
 - [ ] Stop importing private `_load_*` loader internals in most tests; prefer public load results.
   `test_scars` is the main remaining loader-internal test.
-- [x] Suite stays parallel and under one minute (2,559 tests in ~32s).
+- [x] Suite stays parallel and under one minute (2,564 tests in ~33s).
 
 ### WWN parity backlog (track, then close)
 

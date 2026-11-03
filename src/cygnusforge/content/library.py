@@ -1132,87 +1132,213 @@ class PromptFragment:
 
 
 @dataclass(frozen=True)
+class RuleContent:
+    """The content a rule set carries: rules, tables, monsters, encounter and world terrain,
+    prompt fragments, and the other definition-shaped data."""
+
+    rules: Mapping[str, str]
+    tables: Mapping[str, tuple[TableOption, ...]] = field(default_factory=dict)
+    important: frozenset[str] = frozenset()
+    attached_rules: Mapping[str, str] = field(default_factory=dict)
+    monsters: Mapping[str, MonsterTemplate] = field(default_factory=dict)
+    npc_hp: Mapping[str, int] = field(default_factory=dict)
+    npc_hp_stat: str | None = None
+    dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
+    prompt_fragments: tuple[PromptFragment, ...] = ()
+    sentence_cap: int | None = None
+    terrain: Mapping[str, EncounterTerrain] = field(default_factory=dict)
+    encounter_objects: Mapping[str, EncounterObject] = field(default_factory=dict)
+    encounter_templates: Mapping[str, EncounterTemplate] = field(default_factory=dict)
+    world_terrain: Mapping[str, WorldTerrain] = field(default_factory=dict)
+    optional_templates: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ProgressionRules:
+    """The optional character-progression systems a rule set enables."""
+
+    counters: Mapping[str, CounterRules] = field(default_factory=dict)
+    advancements: Mapping[str, AdvancementRules] = field(default_factory=dict)
+    periods: Mapping[str, PeriodRules] = field(default_factory=dict)
+    tallies: Mapping[str, TallyRules] = field(default_factory=dict)
+    relations: Mapping[str, RelationRules] = field(default_factory=dict)
+    moves: Mapping[str, MoveRules] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class TimeRules:
+    """The clock, rests, travel, and wilderness procedure a rule set enables."""
+
+    clock: ClockRules | None = None
+    rests: Mapping[str, RestLength] = field(default_factory=dict)
+    interrupted_rest: str = ""
+    travel: Travel | None = None
+    wilderness: Wilderness | None = None
+
+
+@dataclass(frozen=True)
+class ItemRules:
+    """Inventory, item sizes, magic items, and the marketplace."""
+
+    inventory: InventoryRules | None = None
+    item_sizes: Mapping[str, int] = field(default_factory=dict)
+    magic: MagicRules | None = None
+    marketplace: Marketplace | None = None
+
+
+@dataclass(frozen=True)
 class RuleSet:
+    """One loaded rule set. The shared systems are grouped into capability objects; the read-only
+    aliases below keep older consumers working without flattening the model back into a union."""
+
     id: str
     name: str
     description: str
-    rules: Mapping[str, str]
+    content: RuleContent
     tool_calls: Mapping[str, ToolCall]
     character: CharacterSpec
     # What "+" between dice terms means: "sum" adds them, "highest" keeps the highest total.
     plus: str
     # Options shared by every character in a campaign, such as the omen.
     campaign: CampaignSpec
-    # Named option lists, such as "personality", used to generate NPC traits.
-    tables: Mapping[str, tuple[TableOption, ...]] = field(default_factory=dict)
-    # Rules whose text goes into every prompt. The others are read with lookup_rule.
-    important: frozenset[str] = frozenset()
-    # Rules written into a statblock, by id. They are read with lookup_rule, and reach the GM
-    # while a monster that carries them is present, but are not listed in every prompt.
-    attached_rules: Mapping[str, str] = field(default_factory=dict)
     # The scale of encounter maps, or None when the rule set has no grid: its encounters have no
     # movement limit.
     grid: EncounterGrid | None = None
     # How combat resolves, or None when the rule set has no combat.
     combat: CombatRules | None = None
-    # Statblocks for monsters, by id.
-    monsters: Mapping[str, MonsterTemplate] = field(default_factory=dict)
-    # HP for NPCs with no statblock, by tier name, such as "average": 3.
-    npc_hp: Mapping[str, int] = field(default_factory=dict)
-    # The stat an NPC's HP tier sets, such as "hp". None when the rule set has no HP tiers.
-    npc_hp_stat: str | None = None
     # Conditions an injury or effect can give, by id. Derived conditions are included.
     conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
-    # Counters a character keeps, by id, such as Experience.
-    counters: Mapping[str, CounterRules] = field(default_factory=dict)
-    # What a counter buys, by id, such as the Advancements a character spends.
-    advancements: Mapping[str, AdvancementRules] = field(default_factory=dict)
-    # Stretches of play that end for every character at once, by id, such as a school year.
-    periods: Mapping[str, PeriodRules] = field(default_factory=dict)
-    # Running scores the campaign keeps, by id, such as House Points.
-    tallies: Mapping[str, TallyRules] = field(default_factory=dict)
-    # Kinds of named link between characters, by id, such as a Friend.
-    relations: Mapping[str, RelationRules] = field(default_factory=dict)
-    # Moves a player or GM can make, by id.
-    moves: Mapping[str, MoveRules] = field(default_factory=dict)
     # Checks a character may make with dice, by id, such as a skill check.
     checks: Mapping[str, CheckRules] = field(default_factory=dict)
-    # Tables rolled with dice, by id, such as the GM's reaction table.
-    dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
-    # Time and rests. Each is None or empty when the rule set does not track them.
-    clock: ClockRules | None = None
-    rests: Mapping[str, RestLength] = field(default_factory=dict)
-    # The rest length an interrupted rest counts as, such as "moments".
-    interrupted_rest: str = ""
-    inventory: InventoryRules | None = None
-    # Item sizes by id, as the slots an item of that size takes.
-    item_sizes: Mapping[str, int] = field(default_factory=dict)
-    # How magic uses items, or None when the rule set has no magic.
-    magic: MagicRules | None = None
+    progression: ProgressionRules = field(default_factory=ProgressionRules)
+    time: TimeRules = field(default_factory=TimeRules)
+    items: ItemRules = field(default_factory=ItemRules)
     # The rule set's code hooks, or None when the rule set has none.
     hooks: Hooks | None = None
-    # What the marketplace sells, or None when the rule set has no marketplace.
-    marketplace: Marketplace | None = None
-    # Prompt fragments the GM prompt adds after its generic text, in file order.
-    prompt_fragments: tuple[PromptFragment, ...] = ()
-    # The most sentences a speech line may run, or None when the rule set does not cap it.
-    sentence_cap: int | None = None
-    # How fast travel goes, or None when the rule set does not charge time for travel.
-    travel: Travel | None = None
-    # The wilderness procedure, or None when the rule set has none.
-    wilderness: Wilderness | None = None
-    # Encounter-map content, by id: ground, objects that stand on it, and starter maps.
-    terrain: Mapping[str, EncounterTerrain] = field(default_factory=dict)
-    encounter_objects: Mapping[str, EncounterObject] = field(default_factory=dict)
-    encounter_templates: Mapping[str, EncounterTemplate] = field(default_factory=dict)
-    # Kinds of ground a world map can be divided into, by id.
-    world_terrain: Mapping[str, WorldTerrain] = field(default_factory=dict)
     # A short line shown when choosing the rule set on the create campaign page.
     blurb: str | None = None
-    # Template kinds a character may leave unchosen, such as a tradition only mages need.
-    optional_templates: tuple[str, ...] = ()
     # Rule-data values validated by the ruleset modules that declared them.
     rule_data: Mapping[str, object] = field(default_factory=dict)
+
+    @property
+    def rules(self) -> Mapping[str, str]:
+        return self.content.rules
+
+    @property
+    def tables(self) -> Mapping[str, tuple[TableOption, ...]]:
+        return self.content.tables
+
+    @property
+    def important(self) -> frozenset[str]:
+        return self.content.important
+
+    @property
+    def attached_rules(self) -> Mapping[str, str]:
+        return self.content.attached_rules
+
+    @property
+    def monsters(self) -> Mapping[str, MonsterTemplate]:
+        return self.content.monsters
+
+    @property
+    def npc_hp(self) -> Mapping[str, int]:
+        return self.content.npc_hp
+
+    @property
+    def npc_hp_stat(self) -> str | None:
+        return self.content.npc_hp_stat
+
+    @property
+    def dice_tables(self) -> Mapping[str, DiceTable]:
+        return self.content.dice_tables
+
+    @property
+    def prompt_fragments(self) -> tuple[PromptFragment, ...]:
+        return self.content.prompt_fragments
+
+    @property
+    def sentence_cap(self) -> int | None:
+        return self.content.sentence_cap
+
+    @property
+    def terrain(self) -> Mapping[str, EncounterTerrain]:
+        return self.content.terrain
+
+    @property
+    def encounter_objects(self) -> Mapping[str, EncounterObject]:
+        return self.content.encounter_objects
+
+    @property
+    def encounter_templates(self) -> Mapping[str, EncounterTemplate]:
+        return self.content.encounter_templates
+
+    @property
+    def world_terrain(self) -> Mapping[str, WorldTerrain]:
+        return self.content.world_terrain
+
+    @property
+    def optional_templates(self) -> tuple[str, ...]:
+        return self.content.optional_templates
+
+    @property
+    def counters(self) -> Mapping[str, CounterRules]:
+        return self.progression.counters
+
+    @property
+    def advancements(self) -> Mapping[str, AdvancementRules]:
+        return self.progression.advancements
+
+    @property
+    def periods(self) -> Mapping[str, PeriodRules]:
+        return self.progression.periods
+
+    @property
+    def tallies(self) -> Mapping[str, TallyRules]:
+        return self.progression.tallies
+
+    @property
+    def relations(self) -> Mapping[str, RelationRules]:
+        return self.progression.relations
+
+    @property
+    def moves(self) -> Mapping[str, MoveRules]:
+        return self.progression.moves
+
+    @property
+    def clock(self) -> ClockRules | None:
+        return self.time.clock
+
+    @property
+    def rests(self) -> Mapping[str, RestLength]:
+        return self.time.rests
+
+    @property
+    def interrupted_rest(self) -> str:
+        return self.time.interrupted_rest
+
+    @property
+    def travel(self) -> Travel | None:
+        return self.time.travel
+
+    @property
+    def wilderness(self) -> Wilderness | None:
+        return self.time.wilderness
+
+    @property
+    def inventory(self) -> InventoryRules | None:
+        return self.items.inventory
+
+    @property
+    def item_sizes(self) -> Mapping[str, int]:
+        return self.items.item_sizes
+
+    @property
+    def magic(self) -> MagicRules | None:
+        return self.items.magic
+
+    @property
+    def marketplace(self) -> Marketplace | None:
+        return self.items.marketplace
 
 
 @dataclass(frozen=True)
@@ -2166,45 +2292,53 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         name=required_text(head.data, "name", label),
         description=required_text(head.data, "description", label),
         blurb=_optional_text(head.data, "blurb", label),
-        rules=rules,
-        attached_rules=written,
-        important=important,
+        content=RuleContent(
+            rules=rules,
+            attached_rules=written,
+            important=important,
+            tables=tables,
+            monsters=monsters,
+            npc_hp=npc_hp,
+            npc_hp_stat=npc_hp_stat,
+            dice_tables=dice_tables,
+            prompt_fragments=prompt_fragments,
+            sentence_cap=sentence_cap,
+            terrain=terrain,
+            encounter_objects=encounter_objects,
+            encounter_templates=encounter_templates,
+            world_terrain=world_terrain,
+            optional_templates=optional_templates,
+        ),
         tool_calls=tool_calls,
         character=character,
-        advancements=advancements,
-        periods=periods,
-        tallies=tallies,
-        relations=relations,
         plus=_plus_mode(head.data, label),
-        npc_hp=npc_hp,
-        npc_hp_stat=npc_hp_stat,
         campaign=campaign,
-        tables=tables,
         grid=grid,
         combat=combat,
-        monsters=monsters,
         conditions=conditions,
-        counters=counters,
-        moves=moves,
         checks=checks,
-        dice_tables=dice_tables,
-        clock=clock,
-        rests=rests,
-        interrupted_rest=interrupted_rest,
-        inventory=inventory,
-        item_sizes=item_sizes,
-        magic=magic,
+        progression=ProgressionRules(
+            counters=counters,
+            advancements=advancements,
+            periods=periods,
+            tallies=tallies,
+            relations=relations,
+            moves=moves,
+        ),
+        time=TimeRules(
+            clock=clock,
+            rests=rests,
+            interrupted_rest=interrupted_rest,
+            travel=travel,
+            wilderness=wilderness,
+        ),
+        items=ItemRules(
+            inventory=inventory,
+            item_sizes=item_sizes,
+            magic=magic,
+            marketplace=marketplace,
+        ),
         hooks=hooks,
-        marketplace=marketplace,
-        prompt_fragments=prompt_fragments,
-        sentence_cap=sentence_cap,
-        travel=travel,
-        terrain=terrain,
-        encounter_objects=encounter_objects,
-        encounter_templates=encounter_templates,
-        world_terrain=world_terrain,
-        wilderness=wilderness,
-        optional_templates=optional_templates,
         rule_data=rule_data,
     )
 
