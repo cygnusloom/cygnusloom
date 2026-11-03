@@ -29,8 +29,11 @@
     "healing_stat": "hp",
     "morale": {
       "save_stat": "wil",
-      "first_casualty": true,
-      "half": true,
+      "triggers": [
+        {"tag": "first", "when": "lone"},
+        {"tag": "first", "when": "first_casualty"},
+        {"tag": "half", "when": "half_strength"}
+      ],
       "lone_at": "hp",
       "retreat_stat": "dex"
     },

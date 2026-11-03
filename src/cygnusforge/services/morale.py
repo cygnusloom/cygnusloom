@@ -10,6 +10,8 @@ change, records its events, and commits."""
 from __future__ import annotations
 
 import random
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from sqlmodel import Session
@@ -106,27 +108,60 @@ def check_morale(
     return checks
 
 
+@dataclass(frozen=True)
+class MoraleSide:
+    """One side's NPCs, in turn order, and the rules that say when they check."""
+
+    members: Sequence[Character]
+    rules: MoraleRules
+
+    @property
+    def casualties(self) -> int:
+        return sum(1 for member in self.members if member.defeated)
+
+
+def _at_lone_zero(side: MoraleSide) -> bool:
+    """A lone NPC checks when its lone stat, such as HP, reaches 0."""
+    if len(side.members) != 1:
+        return False
+    lone = side.members[0]
+    return not lone.defeated and current(lone, side.rules.lone_at) == 0
+
+
+def _at_first_casualty(side: MoraleSide) -> bool:
+    return len(side.members) > 1 and side.casualties > 0
+
+
+def _at_half_strength(side: MoraleSide) -> bool:
+    return len(side.members) > 1 and side.casualties * 2 >= len(side.members)
+
+
+# The conditions a morale trigger's `when` may name. A rule set lists the triggers it wants, in
+# the order it wants them; the tag in the log comes from the rule set.
+MORALE_TRIGGERS: dict[str, Callable[[MoraleSide], bool]] = {
+    "lone": _at_lone_zero,
+    "first_casualty": _at_first_casualty,
+    "half_strength": _at_half_strength,
+}
+
+
 def _due_tag(state: CampaignState, side: str, morale: MoraleRules) -> str | None:
-    """The morale tag the side owes now, or None. "first" is checked before "half", and each gets
-    its own save. A side with no living members owes nothing."""
+    """The morale tag the side owes now, or None. The rule set's triggers are checked in the
+    order it lists them, and each tag is checked once per encounter. A side with no living
+    members owes nothing."""
     encounter = state.encounter
     assert encounter is not None
     group = _side_npcs(state, side)
     if not group or all(out_of_fight(member) for member in group):
         return None
     done = encounter.morale.get(side, [])
-    if len(group) == 1:
-        lone = group[0]
-        if "first" not in done and not lone.defeated and current(lone, morale.lone_at) == 0:
-            return "first"
-        return None
-    casualties = sum(1 for member in group if member.defeated)
-    if casualties == 0:
-        return None
-    if morale.first_casualty and "first" not in done:
-        return "first"
-    if morale.half and "half" not in done and casualties * 2 >= len(group):
-        return "half"
+    members = MoraleSide(tuple(group), morale)
+    for trigger in morale.triggers:
+        if trigger.tag in done:
+            continue
+        due = MORALE_TRIGGERS.get(trigger.when)
+        if due is not None and due(members):
+            return trigger.tag
     return None
 
 

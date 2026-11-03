@@ -715,15 +715,26 @@ class InjuryTable:
 
 
 @dataclass(frozen=True)
+class MoraleTrigger:
+    """One configured morale check. `tag` is the label recorded in the log; `when` names a
+    registered condition such as first_casualty, half_strength, or lone."""
+
+    tag: str
+    when: str
+
+
+MORALE_TRIGGER_WHENS = ("lone", "first_casualty", "half_strength")
+
+
+@dataclass(frozen=True)
 class MoraleRules:
     """When a side of NPCs must make a morale save and what it is made with. `save_stat` is the
-    leader's stat the save uses. `first_casualty` and `half` say whether a side checks at its first
-    casualty and at half its number. `lone_at` is the stat a lone foe checks at when it reaches 0.
-    `retreat_stat` is the stat a character saves against to run from a fight."""
+    leader's stat the save uses. `triggers` lists the checks the rule set makes, in order, each
+    with its own log tag and registered condition. `lone_at` is the stat a lone foe checks at
+    when it reaches 0. `retreat_stat` is the stat a character saves against to run from a fight."""
 
     save_stat: str
-    first_casualty: bool
-    half: bool
+    triggers: tuple[MoraleTrigger, ...]
     lone_at: str
     retreat_stat: str
 
@@ -2906,7 +2917,7 @@ def _load_morale(
     morale_label = f"{label}: morale"
     morale_data = check_object_keys(
         morale_data,
-        {"save_stat", "first_casualty", "half", "lone_at", "retreat_stat"},
+        {"save_stat", "triggers", "lone_at", "retreat_stat"},
         morale_label,
     )
     stats = {
@@ -2916,16 +2927,25 @@ def _load_morale(
     for key, stat in stats.items():
         if stat not in character.stats:
             raise ContentError(f"{morale_label}: {key!r} names no stat ({stat!r})")
-    flags = {}
-    for key in ("first_casualty", "half"):
-        value = morale_data.get(key)
-        if not isinstance(value, bool):
-            raise ContentError(f"{morale_label}: {key!r} must be true or false")
-        flags[key] = value
+    raw_triggers = morale_data.get("triggers")
+    if not isinstance(raw_triggers, list) or not raw_triggers:
+        raise ContentError(f"{morale_label}: 'triggers' must be a non-empty list")
+    triggers: list[MoraleTrigger] = []
+    for index, raw in enumerate(raw_triggers):
+        item_label = f"{morale_label}: triggers[{index}]"
+        if not isinstance(raw, Mapping):
+            raise ContentError(f"{item_label}: must be an object")
+        item = check_object_keys(raw, {"tag", "when"}, item_label)
+        tag = required_text(item, "tag", item_label)
+        when = required_text(item, "when", item_label)
+        if when not in MORALE_TRIGGER_WHENS:
+            raise ContentError(
+                f"{item_label}: 'when' must be one of {', '.join(MORALE_TRIGGER_WHENS)}"
+            )
+        triggers.append(MoraleTrigger(tag=tag, when=when))
     return MoraleRules(
         save_stat=stats["save_stat"],
-        first_casualty=flags["first_casualty"],
-        half=flags["half"],
+        triggers=tuple(triggers),
         lone_at=stats["lone_at"],
         retreat_stat=stats["retreat_stat"],
     )
