@@ -5,7 +5,7 @@ and has nothing stored to end."""
 from __future__ import annotations
 
 import random
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 
 from sqlmodel import Session
 
@@ -84,9 +84,15 @@ def end_condition(
     *,
     plus: str,
     spec: CharacterSpec | None = None,
+    force: bool = False,
+    condition_ends: Sequence[str] = (),
 ) -> dict[str, object]:
     """End a stored condition. `how` is the trigger that ends it, which must be one the condition
-    lists, or `gm` for the GM ending it by decision. Then the condition's on-end effects run."""
+    lists, or `gm` for the GM ending it by decision. `condition_ends` is the rule set's trigger
+    vocabulary, checked alongside the condition's own list; a trigger the rule set does not name
+    is refused even when it appears in the condition. `force` ends the condition for an effect
+    that names it directly, with `how` used only as the Log's explanation. Then the condition's
+    on-end effects run."""
     state = load_state(db, campaign_id)
     character = state.characters.get(name_key(name))
     if character is None:
@@ -98,9 +104,13 @@ def end_condition(
         raise InvalidInput(f"{rules.label} holds while the stats say so and cannot be ended")
     if condition not in character.conditions:
         raise InvalidInput(f"{character.name} does not have the condition {rules.label}")
-    if how != ALWAYS_CONDITION_END and how not in rules.ends:
-        allowed = ", ".join(rules.ends) or "none"
-        raise InvalidInput(f"{rules.label} ends by {allowed}, not by {how}")
+    if not force:
+        if condition_ends and how != ALWAYS_CONDITION_END and how not in condition_ends:
+            options = ", ".join(condition_ends) or "none"
+            raise InvalidInput(f"{how!r} is not a condition-ending trigger; the rule set has {options}")
+        if how != ALWAYS_CONDITION_END and how not in rules.ends:
+            allowed = ", ".join(rules.ends) or "none"
+            raise InvalidInput(f"{rules.label} ends by {allowed}, not by {how}")
     record(db, campaign_id, ConditionEnded(name=character.name, condition=condition, how=how))
     db.commit()
     run_effects(

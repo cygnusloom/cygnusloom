@@ -136,10 +136,10 @@ their player-facing behaviour.
 | File | Contents |
 | --- | --- |
 | `rule_set.json` | Head, NPC HP tiers, encounter grid |
-| `stats.json` | Six attributes with modifier bands; hp, attack bonus, castings, morale; derived strain, three Effort pools, four saves |
+| `stats.json` | Six attributes with modifier bands; hp, attack bonus, castings, morale; derived strain, five Effort pools, four saves |
 | `skills.json` | The 21 skills |
 | `backgrounds.json` | 20 background templates with a free skill and two Learning picks |
-| `classes.json` | Warrior, Expert, Mage, four Adventurer pairings, and full and partial traditions with class gating |
+| `classes.json` | Warrior, Expert, Mage, Healer, Vowed, four Adventurer pairings, and full and partial traditions with class gating |
 | `foci.json` | Every free-book Focus, level 1 and 2, plus the nine nonhuman origin Foci |
 | `equipment.json` | Weapons, armor, adventuring gear, item sizes, inventory rules, marketplace, silver currency |
 | `character_fields.json` | Look, Goal, Appearance, Biography |
@@ -155,10 +155,13 @@ their player-facing behaviour.
 | `dice_tables.json` | Terrain, nation, ruler, government, history, and tag tables |
 | `worldgen_tables.json` | Reaction, culture, religion, community, site, ruin, event, and monster tables |
 | `world_terrain.json` | Ground kinds for a Latter Earth map |
-| `prompts.json` | Six WWN-specific GM prompt fragments, including encounter setup and player rolls |
+| `prompts.json` | WWN-specific GM prompt fragments, including encounter setup, player rolls, combat actions, and project tracking |
 | `tool_calls.json` | Checks, morale, advancement, gear, and magic tools |
-| `adventure_tools.json` | Combat, encounter, map, save, reaction, Instinct, rest, travel, and market tools |
+| `adventure_tools.json` | Combat, encounter, map, save, reaction, Instinct, rest, travel, market, hireling, and project tools |
 | `rest.json`, `clock.json` | A night or a few moments of rest and the four parts of a day |
+
+[PARITY.md](./PARITY.md) is the checkable status list. It names the tool, JSON, and test evidence
+for each area and the gaps that remain.
 
 The world template `src/cygnusforge/data/worlds/latter-earth/world.json` is deliberately empty: it
 names the rule set and gives a blurb, with no locations, NPCs, or start. The live GM uses the dice
@@ -250,39 +253,79 @@ tables to create the first location and its people.
 
 ## Known simplifications
 
-- A dual-mage Adventurer picks two partial traditions, each with its own art and spell picks and
-  its own Effort pool. The Healer and Vowed are offered as full classes, although the book
-  presents them as partial classes, because the class-pairing system does not yet combine two
-  arbitrary partial classes.
-- Readied and Stowed are approximated by one inventory pool of 1.5 x Strength (half Readied plus
-  full Stowed); the armor-encumbrance penalty on Sneak/Exert is rule text the GM applies.
-- Shield bashes do not automatically suspend the shield's AC benefit until the next turn; the GM
-  must account for that restriction.
-- Effort stats exist for every character, but committing Effort requires the relevant tradition or
-  the Healer or Vowed class.
-- Surprise, grappling, execution attacks, total defense, dual wielding, range bands, and many
-  combat actions are rule text plus the relevant check/attack tools, not dedicated states.
-- Magic Workings, spell research, magic item creation, hirelings, projects, and faction turns are
-  rule text; the engine has no subsystem for them.
-- Bestiary multi-attacks are parsed from the statblock text (`N attacks per action`), so one
-  `attack` call resolves every attack the creature makes.
-- Monster special abilities are prose in the statblocks; they are not machine-readable rules.
-- PCs have a Morale stat for uniformity, but the Morale and Instinct tools refuse PCs.
+Every item a previous version of this section listed is now either implemented, with evidence, or
+an open gap. [PARITY.md](./PARITY.md) is the same status list with the tool/JSON/test evidence.
+
+**Implemented**
+
+- **Dual-mage Adventurers use two partial traditions.** `adventurer_mage_mage` takes two of the
+  `*_partial_*` tradition templates, each with its own art and spell picks and its own Effort
+  pool (`classes.json`, `progression.json`); `tests/test_wwn_advancement.py` covers it.
+- **Readied and Stowed are separate pools.** `equipment.json` sets `readied_stat: "str"` and
+  `readied_divisor: 2`; total capacity stays 1.5 x Strength and `ready_item` refuses to exceed the
+  Readied pool. `services/inventory.py` computes both, and
+  `tests/test_wwn_combat.py::test_a_stowed_weapon_must_be_readied_before_it_can_strike` covers the
+  restriction.
+- **Projects, spell research, Magic Workings, and faction turns have a tracker.** The generic
+  `start_project`, `advance_project`, `abandon_project`, and `list_projects` tools store kind,
+  goal, target, progress, notes, and completion (`adventure_tools.json`, `rules/core.py`,
+  `services/events.py`); `tests/test_wwn_combat.py::test_a_project_tracks_progress_to_completion`
+  covers it.
+- **Hirelings have a subsystem.** `hire_hireling` and `dismiss_hireling` create a
+  player-controlled retainer with a rolled sheet, a daily silver wage, unpaid reporting, and an
+  ordinary NPC on dismissal (`adventure_tools.json`, `rules/wwn.py`, `services/world.py`);
+  `tests/test_hirelings.py` and `tests/test_promotion.py` cover it.
+- **Effort commitment is gated by tradition or class.** `wwn_magic.commit_effort` refuses a pool
+  the character cannot access, and the Healer and Vowed pools use their own formulas
+  (`stats.json`, `progression.json`); `tests/test_wwn_magic.py` covers the refusal.
+- **A statblock's multi-attack resolves in one action.** `combat.json` sets
+  `multi_attack: "each"`, so one `attack` call applies every attack the creature makes;
+  `tests/test_wwn_combat.py::test_a_statblocks_attack_count_is_resolved_in_one_action` covers it.
+- **Named NPCs are mortally wounded, not killed.** `combat.json` loads the whole `defeat` map,
+  including `important_npc: "mortally wounded"`; `tests/test_library_strictness.py` and
+  `tests/test_wwn_combat.py` cover it.
+
+**Open**
+
+- **Arbitrary partial-class pairings, including Healer and Vowed.** Healer and Vowed are offered
+  as standalone full classes because the class system still cannot combine any two partial
+  classes.
+- **Armor-encumbrance penalties.** Medium and heavy armor describe their Sneak/Exert penalty, but
+  `roll_check` does not apply it automatically; the GM must pass the modifier.
+- **Shield bash.** The `shield_bash_large` and `shield_bash_small` attack profiles exist, but
+  nothing suspends the shield's AC until the next turn.
+- **Effort display.** Every character still derives and shows all Effort pools; only committing
+  is gated by tradition or class.
+- **Surprise, grappling, execution attacks, total defense, dual wielding, and range bands.** The
+  grappled and prone conditions, situational `hit_modifier`s, and rule/prompt text exist, but
+  these are GM-run checks and states, not engine state or round tracking.
+- **Structured attacks-per-action.** The count is still parsed from the statblock's
+  `N attacks per action` prose; it is not a JSON field.
+- **Monster special abilities.** Bestiary abilities remain prose in `description`; every `rules`
+  list is empty, so none are machine-readable.
+- **PC Morale.** Player characters still roll and display a Morale score for uniformity, although
+  `check_morale` and `instinct_check` correctly refuse PCs.
+- **Structured benefit choices.** Developed Attribute, Specialist, and Spirit Familiar benefits
+  are still `note` effects the GM must guide, not stored choices.
+- **Magic item creation.** `rules.json` describes it; there is no item-creation subsystem.
+- **Source project/faction procedures.** The generic tracker records progress only; the book's
+  project costs, research requirements, Magic Working requirements, and faction assets and turns
+  remain GM text.
 
 ## Validation
 
-- Full suite: `uv run --offline pytest -q -n 4`: 2366 passed in about 52 seconds, with the
-  Worlds Without Number tests across `test_wwn.py`,
-  `test_wwn_combat.py`, `test_wwn_advancement.py`, `test_wwn_magic.py`, and
-  `test_wwn_refactor.py`.
-- Lint: `uv run ruff format src tests` and `uv run ruff check src tests`: clean.
+- Full suite: `uv run pytest -n auto -q -p no:cacheprovider`, with the Worlds Without Number
+  tests across `test_wwn.py`, `test_wwn_combat.py`, `test_wwn_advancement.py`,
+  `test_wwn_magic.py`, `test_wwn_refactor.py`, and `test_parity_docs.py`.
+- Lint: `uv run ruff format src tests` and `uv run ruff check src tests`.
 - WWN tests: `tests/test_wwn.py` (content, modifiers, derived stats, creation, spell picks),
   `tests/test_wwn_combat.py` (AC, Shock, hit/damage bonuses, defeat, outside harm, natural
   1/20, side initiative, player-rolled attacks and saves, button-driven NPC turns, the six-round
   dying clock), `tests/test_wwn_advancement.py` (XP tracks, levels, skills,
-  attributes, Foci, origins, arts, spells, AC, Frail rest), and `tests/test_wwn_magic.py`
+  attributes, Foci, origins, arts, spells, AC, Frail rest), `tests/test_wwn_magic.py`
   (preparation, castings, Effort, Strain, first aid), `tests/test_wwn_refactor.py` (capacity,
-  side initiative, enums, armor modes).
+  side initiative, enums, armor modes), and `tests/test_parity_docs.py` (tool catalog and
+  documented parity facts).
 - Live run 1 (real DeepSeek, SQLite on port 8903): created a Warrior from the creation form,
   the GM used the world-generation tables to build Greywater Ford with two NPCs, moved the
   character there, and narrated the opening. A second turn rolled a real 2d6 Notice check
@@ -328,8 +371,8 @@ tables to create the first location and its people.
       attribute costs, HP rerolls, slow XP, arts, starting spells, first aid, Frail rest,
       tradition gating, origin Foci, gear, reaction/Instinct, map and combat tools, and 47
       world-generation tables. Found and fixed the spell-pick filter in a live run.
-- [x] Parity pass 2: Healer and Vowed classes and arts, dual-mage second traditions, readied and
-      stowed items, shield Shock, multi-attack statblocks, named NPC mortal wounds, generic
-      `heal_character` and `lookup_condition`, explicit Start/End turn flow with automatic NPC
-      turn endings, project/research/faction tracking, Die Hard and Impervious Defense, and a
-      faster suite.
+- [x] Parity pass 2: Healer and Vowed classes and arts, dual-mage second traditions, separate
+      Readied/Stowed pools, shield Shock, statblock multi-attack resolution, named NPC mortal
+      wounds, generic `heal_character` and `lookup_condition`, explicit Start/End turn flow with
+      automatic NPC turn endings, project/research/faction progress tracking, Die Hard and
+      Impervious Defense, and a faster suite.

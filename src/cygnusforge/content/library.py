@@ -957,7 +957,9 @@ class ClockRules:
 class RestLength:
     """A rest the GM can call for. It passes `hours` hours, `parts` parts of a day, or `days`
     days, and `until_morning` runs on to the next morning. A full rest restores what `restores`
-    lists and clears the item kinds in `clears`. A character the hooks hold back recovers nothing."""
+    lists and clears the item kinds in `clears`. `ends` lists the condition-ending triggers the
+    rest counts as, such as "rest" or "extended_rest". A character the hooks hold back recovers
+    nothing."""
 
     id: str
     hours: int
@@ -967,6 +969,8 @@ class RestLength:
     full: bool
     restores: tuple[str, ...]
     clears: tuple[str, ...]
+    # The condition-ending triggers this rest counts as, named by the rest definition.
+    ends: tuple[str, ...] = ()
     # Whether the rest has upkeep: the rule set's before_rest hook runs for it.
     upkeep: bool = False
     # For a rest that runs until morning: a part it begins in maps to the part it ends at instead,
@@ -2084,7 +2088,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
                     "in the rule set"
                 )
     clock = _load_clock(definitions, template)
-    rests = _load_rests(definitions, character, template, clock)
+    rests = _load_rests(definitions, character, template, clock, condition_ends)
     interrupted_rest = _load_interrupted_rest(definitions, rests, template)
     inventory = _load_inventory(definitions, character, template)
     item_sizes = _load_item_sizes(definitions, template)
@@ -3512,10 +3516,13 @@ def _load_rests(
     character: CharacterSpec,
     template: str,
     clock: ClockRules | None,
+    condition_ends: Sequence[str] = (),
 ) -> dict[str, RestLength]:
     """The rest lengths of the rule set's single rest definition, by id. Each needs `full` and at
-    least one of `parts`, `days`, or `until: "morning"`. `stop_at` maps a part of the day to the
-    part a rest begun in it ends at instead, and needs `until` and a clock."""
+    least one of `parts`, `days`, or `until: "morning"`. `ends` names the condition-ending
+    triggers the rest counts as, and must come from the rule set's `condition_ends`. `stop_at`
+    maps a part of the day to the part a rest begun in it ends at instead, and needs `until` and
+    a clock."""
     definition = _single_optional(definitions, "rest", template)
     if definition is None:
         return {}
@@ -3540,6 +3547,7 @@ def _load_rests(
                 "full",
                 "restores",
                 "clears",
+                "ends",
                 "upkeep",
             },
             length_label,
@@ -3560,6 +3568,15 @@ def _load_rests(
         for stat in restores:
             if stat not in character.stats:
                 raise ContentError(f"{length_label}: 'restores' names no stat ({stat!r})")
+        ends = _names(data, "ends", length_label)
+        if condition_ends:
+            unknown = [end for end in ends if end not in condition_ends]
+            if unknown:
+                allowed = ", ".join(condition_ends)
+                raise ContentError(
+                    f"{length_label}: 'ends' must list only the rule set's condition triggers: "
+                    f"{allowed}"
+                )
         upkeep = data.get("upkeep", False)
         if not isinstance(upkeep, bool):
             raise ContentError(f"{length_label}: 'upkeep' must be true or false")
@@ -3572,6 +3589,7 @@ def _load_rests(
             full=full,
             restores=restores,
             clears=_names(data, "clears", length_label),
+            ends=ends,
             upkeep=upkeep,
             stop_at=stop_at,
         )

@@ -20,6 +20,7 @@ from cygnusforge.rules.wwn_progression import require_wwn_progression
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import CheckMade, SpellCast, load_state
 from tests.test_wwn_advancement import (
+    LIBRARY,
     NAME,
     WWN,
     _campaign,
@@ -429,6 +430,18 @@ def _placeholder(schema: dict[str, Any]) -> Any:
     return "x"
 
 
+# WWN tools that cannot bind a WorldTools method directly: the wrapper translates a save name,
+# injects the check id, validates a total, or fills a schema gap the method's signature has.
+KEPT_WWN_WRAPPERS = {
+    "create_encounter_map",
+    "player_attack",
+    "player_roll_save",
+    "roll_check",
+    "roll_save",
+    "set_ac",
+}
+
+
 def test_every_wwn_tool_loads_and_binds_its_declared_required_parameters() -> None:
     calls = [
         call
@@ -437,7 +450,14 @@ def test_every_wwn_tool_loads_and_binds_its_declared_required_parameters() -> No
         and call.function.__module__ in {"cygnusforge.rules.wwn", "cygnusforge.rules.wwn_magic"}
     ]
     assert {call.id for call in calls} == {
+        # The WorldTools methods that cannot take the schema's argument names or defaults.
         "roll_check",
+        "roll_save",
+        "player_roll_save",
+        "player_attack",
+        "set_ac",
+        "create_encounter_map",
+        # Rule-set logic: advancement, focus/spell/art learning, morale, reaction, instinct, rest.
         "check_morale",
         "gain_xp",
         "gain_growth",
@@ -448,8 +468,12 @@ def test_every_wwn_tool_loads_and_binds_its_declared_required_parameters() -> No
         "learn_art",
         "improve_attribute",
         "grant_package",
-        "set_ac",
+        "roll_starting_silver",
         "recover_after_rest",
+        "roll_reaction",
+        "instinct_check",
+        "rest",
+        # Worlds Without Number magic.
         "prepare_spells",
         "cast_spell",
         "commit_effort",
@@ -458,45 +482,12 @@ def test_every_wwn_tool_loads_and_binds_its_declared_required_parameters() -> No
         "heal_strain",
         "first_aid",
         "restore_spell_slots",
-        "roll_save",
-        "player_roll_save",
-        "roll_reaction",
-        "instinct_check",
-        "roll_tables",
-        "roll_initiative",
-        "start_encounter",
-        "end_encounter",
-        "add_participant",
-        "remove_participant",
-        "attack",
-        "player_attack",
-        "resolve_attacks",
-        "set_armor",
-        "harm_character",
-        "stabilize",
-        "recover_character",
-        "player_save",
-        "retreat",
-        "rest",
-        "advance_time",
-        "give_item",
-        "drop_item",
-        "ready_item",
-        "hire_hireling",
-        "dismiss_hireling",
-        "buy_item",
-        "search_marketplace",
-        "create_monster",
-        "search_monster",
-        "roll_starting_silver",
-        "create_encounter_map",
-        "update_encounter_map",
-        "delete_encounter_map",
-        "place_participant",
     }
+    assert {call.id for call in calls} & KEPT_WWN_WRAPPERS == KEPT_WWN_WRAPPERS
     for call in calls:
         module = wwn if call.function.__module__ == "cygnusforge.rules.wwn" else wwn_magic
         assert getattr(module, call.name) is call.function
+        assert call.world_method is None
         assert call.takes_context
         properties = call.parameters["properties"]
         required = call.parameters.get("required", [])
@@ -508,6 +499,53 @@ def test_every_wwn_tool_loads_and_binds_its_declared_required_parameters() -> No
             arguments[call.player_input.param] = 1
         arguments["ctx"] = object()
         inspect.signature(call.function).bind(**arguments)
+
+
+def test_wwn_tools_bind_engine_operations_without_wrappers() -> None:
+    core_ids = set(LIBRARY.core.tool_calls)
+    bound = {
+        call_id: call.world_method
+        for call_id, call in WWN.tool_calls.items()
+        if call.world_method is not None and call_id not in core_ids
+    }
+    assert bound == {
+        "add_participant": "add_participant",
+        "advance_time": "advance_time",
+        "attack": "attack",
+        "buy_item": "buy_item",
+        "create_monster": "create_monster",
+        "delete_encounter_map": "delete_encounter_map",
+        "dismiss_hireling": "dismiss_hireling",
+        "drop_item": "drop_item",
+        "end_encounter": "end_encounter",
+        "give_item": "give_item",
+        "harm_character": "harm_character",
+        "hire_hireling": "hire_hireling",
+        "place_participant": "place_participant",
+        "player_save": "player_save",
+        "ready_item": "ready_item",
+        "recover_character": "recover_character",
+        "remove_participant": "remove_participant",
+        "resolve_attacks": "resolve_attacks",
+        "retreat": "retreat",
+        "roll_initiative": "roll_side_initiative",
+        "roll_tables": "roll_tables",
+        "search_marketplace": "search_marketplace",
+        "search_monster": "search_monster",
+        "set_armor": "set_armor",
+        "stabilize": "stabilize",
+        "start_encounter": "start_encounter",
+        "update_encounter_map": "update_encounter_map",
+    }
+    for call_id, method in bound.items():
+        call = WWN.tool_calls[call_id]
+        assert call.function is None
+        assert call.takes_context is False
+        assert call.world_method == method
+    for call_id in KEPT_WWN_WRAPPERS:
+        call = WWN.tool_calls[call_id]
+        assert call.function is not None
+        assert call.world_method is None
 
 
 def test_first_aid_gives_no_benefit_at_maximum_system_strain(

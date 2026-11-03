@@ -121,8 +121,7 @@
     "type": "tool_call",
     "id": "roll_tables",
     "name": "roll_tables",
-    "python_module": "wwn",
-    "function": "roll_tables",
+    "world_method": "roll_tables",
     "description": "Roll on one or more of the rule set's dice tables and log every result. Use the world-generation tables (significant_terrain, terrain_quirk, terrain_antagonists, nation_disputes_with_neighbor, ruler_class, government_struggle, history_event, community_tags, court_tags, ruin_tags, wilderness_tags) to build the starting region. Also available: site_type, site_feature, site_hazard, site_enigma, site_treasure, deeps_type, ruin_characteristic, ruin_encounter_human, ruin_encounter_beast, ruin_encounter_sapient, encounter_template, wilderness_event, dungeon_event, monster_shape, monster_drive, and monster_twist. Use dungeon_reaction (2d6) for a quick reaction, or roll_reaction to add Charisma. The engine returns the results; you decide what they mean.",
     "parameters": {
       "type": "object",
@@ -140,8 +139,7 @@
     "type": "tool_call",
     "id": "roll_initiative",
     "name": "roll_initiative",
-    "python_module": "wwn",
-    "function": "roll_initiative",
+    "world_method": "roll_side_initiative",
     "description": "Roll initiative for each side of the encounter: 1d8 plus the best Dexterity modifier in the side, with ties going to the party. Call it once the participants have joined the encounter and before the first round. No player character makes an individual initiative roll.",
     "parameters": {"type": "object", "properties": {}, "required": []}
   },
@@ -149,8 +147,7 @@
     "type": "tool_call",
     "id": "start_encounter",
     "name": "start_encounter",
-    "python_module": "wwn",
-    "function": "start_encounter",
+    "world_method": "start_encounter",
     "description": "Start an encounter on a map. Create the map first if the place has none. Add the participants, then call roll_initiative before anyone acts.",
     "parameters": {
       "type": "object",
@@ -167,8 +164,7 @@
     "type": "tool_call",
     "id": "end_encounter",
     "name": "end_encounter",
-    "python_module": "wwn",
-    "function": "end_encounter",
+    "world_method": "end_encounter",
     "description": "End the encounter in progress once the fight, chase, or parley is over.",
     "parameters": {"type": "object", "properties": {}, "required": []}
   },
@@ -176,8 +172,7 @@
     "type": "tool_call",
     "id": "add_participant",
     "name": "add_participant",
-    "python_module": "wwn",
-    "function": "add_participant",
+    "world_method": "add_participant",
     "description": "Add a character to the encounter on a side. Player characters default to the party and NPCs to the foes.",
     "parameters": {
       "type": "object",
@@ -198,8 +193,7 @@
     "type": "tool_call",
     "id": "remove_participant",
     "name": "remove_participant",
-    "python_module": "wwn",
-    "function": "remove_participant",
+    "world_method": "remove_participant",
     "description": "Take a character out of the encounter, such as one who flees or is left behind.",
     "parameters": {
       "type": "object",
@@ -216,8 +210,7 @@
     "type": "tool_call",
     "id": "attack",
     "name": "attack",
-    "python_module": "wwn",
-    "function": "attack",
+    "world_method": "attack",
     "description": "Make an NPC's attack: d20 plus its attack bonus against the target's Armor Class, with a natural 1 always missing and a natural 20 always hitting. The engine rolls the damage; on a miss it still applies the attack's Shock when the target's AC is low enough. Call it only when the NPC's side is acting.",
     "parameters": {
       "type": "object",
@@ -294,8 +287,7 @@
     "type": "tool_call",
     "id": "resolve_attacks",
     "name": "resolve_attacks",
-    "python_module": "wwn",
-    "function": "resolve_attacks",
+    "world_method": "resolve_attacks",
     "description": "Resolve several NPC attacks on one character at once, such as a creature's several attacks per action or several foes striking the same target. Each attack rolls its own attack die and applies its own damage in turn.",
     "parameters": {
       "type": "object",
@@ -325,8 +317,7 @@
     "type": "tool_call",
     "id": "set_armor",
     "name": "set_armor",
-    "python_module": "wwn",
-    "function": "set_armor",
+    "world_method": "set_armor",
     "description": "Set a character's total Armor Class for a special adjustment or a monster's printed AC. For tracked equipment the adjustment persists as equipment or other defense changes. Use equip_armor for equipment changes.",
     "parameters": {
       "type": "object",
@@ -349,8 +340,7 @@
     "type": "tool_call",
     "id": "harm_character",
     "name": "harm_character",
-    "python_module": "wwn",
-    "function": "harm_character",
+    "world_method": "harm_character",
     "description": "Harm a character outside combat, from a fall, poison, exposure, or privation. Use harm from an attack only through attack or player_attack. A PC brought to 0 HP is mortally wounded; an NPC is dead.",
     "parameters": {
       "type": "object",
@@ -390,8 +380,7 @@
     "type": "tool_call",
     "id": "stabilize",
     "name": "stabilize",
-    "python_module": "wwn",
-    "function": "stabilize",
+    "world_method": "stabilize",
     "description": "Stop a mortally wounded character's dying clock. The character wakes with 1 hit point after ten minutes and gains the Frail condition. In the book this needs an Int/Heal or Dex/Heal check at difficulty 8 plus the rounds since they fell; call roll_check first and stabilize only on a success.",
     "parameters": {
       "type": "object",
@@ -409,8 +398,7 @@
     "type": "tool_call",
     "id": "recover_character",
     "name": "recover_character",
-    "python_module": "wwn",
-    "function": "recover_character",
+    "world_method": "recover_character",
     "description": "Clear a mortally wounded character's dying state as magical healing does, leaving the harm they took for heal_character to restore. Use it after the character is stabilized and the healing magic reaches them.",
     "parameters": {
       "type": "object",
@@ -426,8 +414,7 @@
     "type": "tool_call",
     "id": "player_save",
     "name": "player_save",
-    "python_module": "wwn",
-    "function": "player_save",
+    "world_method": "player_save",
     "description": "Pass the player's own d20 roll for a save the engine has marked due after harm. Use it only when a save is owed.",
     "parameters": {
       "type": "object",
@@ -446,8 +433,7 @@
     "type": "tool_call",
     "id": "retreat",
     "name": "retreat",
-    "python_module": "wwn",
-    "function": "retreat",
+    "world_method": "retreat",
     "description": "Take a character out of the fight. Set safe to true only when the character has a clear route away.",
     "parameters": {
       "type": "object",
@@ -488,8 +474,7 @@
     "type": "tool_call",
     "id": "advance_time",
     "name": "advance_time",
-    "python_module": "wwn",
-    "function": "advance_time",
+    "world_method": "advance_time",
     "description": "Move the campaign clock forward. Use it for downtime, travel you track yourself, or the hour a mortally wounded character has left to live.",
     "parameters": {
       "type": "object",
@@ -505,8 +490,7 @@
     "type": "tool_call",
     "id": "hire_hireling",
     "name": "hire_hireling",
-    "python_module": "wwn",
-    "function": "hire_hireling",
+    "world_method": "hire_hireling",
     "character_options": true,
     "description": "Hire a retainer into a player character's company. The retainer has a rolled sheet like an NPC's and is controlled by the player. Its wage is paid in silver from the employer each new day, and an employer who cannot pay is reported as unpaid. Leave personality, accent, or quirks out to have them rolled. Names must be unique among locations and characters.",
     "parameters": {
@@ -528,8 +512,7 @@
     "type": "tool_call",
     "id": "dismiss_hireling",
     "name": "dismiss_hireling",
-    "python_module": "wwn",
-    "function": "dismiss_hireling",
+    "world_method": "dismiss_hireling",
     "description": "Remove a retainer from its employer's company. It stays where it is and becomes an ordinary NPC.",
     "parameters": {
       "type": "object",
@@ -544,8 +527,7 @@
     "type": "tool_call",
     "id": "give_item",
     "name": "give_item",
-    "python_module": "wwn",
-    "function": "give_item",
+    "world_method": "give_item",
     "description": "Give a character an item. A catalogue item takes its listed size; a new item needs its size and, for a weapon, its damage dice.",
     "parameters": {
       "type": "object",
@@ -569,8 +551,7 @@
     "type": "tool_call",
     "id": "drop_item",
     "name": "drop_item",
-    "python_module": "wwn",
-    "function": "drop_item",
+    "world_method": "drop_item",
     "description": "Remove an item from a character's inventory. Dropping equipped armor or a wielded shield also unequips it and recalculates Armor Class.",
     "parameters": {
       "type": "object",
@@ -585,8 +566,7 @@
     "type": "tool_call",
     "id": "ready_item",
     "name": "ready_item",
-    "python_module": "wwn",
-    "function": "ready_item",
+    "world_method": "ready_item",
     "description": "Ready a carried item for use, or stow it. A character can keep only half their Strength in slots readied; readied weapons can attack. Readying armor or a shield does not equip it; use equip_armor to wear or wield it. Stowing equipped defense also unequips it. Retrieving a stowed item takes a Main action.",
     "parameters": {
       "type": "object",
@@ -680,8 +660,7 @@
     "type": "tool_call",
     "id": "buy_item",
     "name": "buy_item",
-    "python_module": "wwn",
-    "function": "buy_item",
+    "world_method": "buy_item",
     "description": "Buy a catalogue item with silver, or price an item the catalogue does not list. Armor updates the buyer's Armor Class automatically.",
     "parameters": {
       "type": "object",
@@ -705,8 +684,7 @@
     "type": "tool_call",
     "id": "search_marketplace",
     "name": "search_marketplace",
-    "python_module": "wwn",
-    "function": "search_marketplace",
+    "world_method": "search_marketplace",
     "description": "Find items and services the marketplace sells, by name or category.",
     "parameters": {
       "type": "object",
@@ -720,8 +698,7 @@
     "type": "tool_call",
     "id": "create_monster",
     "name": "create_monster",
-    "python_module": "wwn",
-    "function": "create_monster",
+    "world_method": "create_monster",
     "description": "Create a creature from the bestiary and place it at a location. Give the template id (use search_monster to find it) and any changes to its stats, armor, or attacks.",
     "parameters": {
       "type": "object",
@@ -758,8 +735,7 @@
     "type": "tool_call",
     "id": "search_monster",
     "name": "search_monster",
-    "python_module": "wwn",
-    "function": "search_monster",
+    "world_method": "search_monster",
     "description": "Find bestiary statblocks by name or description.",
     "parameters": {
       "type": "object",
@@ -841,8 +817,7 @@
     "type": "tool_call",
     "id": "update_encounter_map",
     "name": "update_encounter_map",
-    "python_module": "wwn",
-    "function": "update_encounter_map",
+    "world_method": "update_encounter_map",
     "description": "Change an encounter map's description, columns, or rows.",
     "parameters": {
       "type": "object",
@@ -859,8 +834,7 @@
     "type": "tool_call",
     "id": "delete_encounter_map",
     "name": "delete_encounter_map",
-    "python_module": "wwn",
-    "function": "delete_encounter_map",
+    "world_method": "delete_encounter_map",
     "description": "Delete an encounter map that is no longer needed.",
     "parameters": {
       "type": "object",
@@ -872,8 +846,7 @@
     "type": "tool_call",
     "id": "place_participant",
     "name": "place_participant",
-    "python_module": "wwn",
-    "function": "place_participant",
+    "world_method": "place_participant",
     "description": "Put an encounter participant on a cell of the map grid.",
     "parameters": {
       "type": "object",

@@ -23,13 +23,14 @@ from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.conditions import end_condition
 from cygnusforge.services.events import (
     PC_KIND,
-    RestRecovered,
+    Recovered,
     RestTaken,
     load_state,
     record,
 )
 from cygnusforge.services.hooks import HookContext, call_hook
 from cygnusforge.services.inventory import clear_items
+from cygnusforge.services.recovery import recover
 
 HISTORY_LIMIT = 20
 
@@ -100,18 +101,25 @@ def take_rest(
     recovering = [c for c in party if not held[c.name]]
     result["held_back"] = [c.name for c in party if held[c.name]]
     for character in recovering:
-        if any(character.harm.get(stat, 0) for stat in rest.restores):
-            record(
-                db, campaign_id, RestRecovered(name=character.name, restores=list(rest.restores))
-            )
+        for stat in rest.restores:
+            restored = recover(character, stat, character.harm.get(stat, 0))
+            if restored:
+                record(
+                    db,
+                    campaign_id,
+                    Recovered(
+                        name=character.name,
+                        stat=stat,
+                        amount=restored,
+                        restores=list(rest.restores),
+                    ),
+                )
     if rest.full and rest.clears:
         clear_items(db, campaign_id, [c.name for c in recovering], rest.clears)
     if combat is not None and conditions and rng is not None:
-        triggers: list[str] = []
-        if rest.full:
-            triggers.append("rest")
-        if rest.days > 1:
-            triggers.append("extended_rest")
+        # The rest definition names the condition triggers it counts as, such as "rest" or
+        # "extended_rest"; the engine does not infer them from the length or fullness.
+        triggers = rest.ends
         for character in recovering:
             for cid in list(character.conditions):
                 cond_rules = conditions.get(cid)

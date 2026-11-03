@@ -9,7 +9,8 @@
         "restores": [
           "hp"
         ],
-        "clears": []
+        "clears": [],
+        "ends": []
       },
       "night": {
         "until": "morning",
@@ -22,6 +23,9 @@
         ],
         "clears": [
           "fatigue"
+        ],
+        "ends": [
+          "rest"
         ],
         "upkeep": true
       },
@@ -37,6 +41,10 @@
         ],
         "clears": [
           "fatigue"
+        ],
+        "ends": [
+          "rest",
+          "extended_rest"
         ],
         "upkeep": true
       }

@@ -5,6 +5,7 @@ from dataclasses import replace
 import pytest
 
 from cygnusforge.services.common import InvalidInput
+from cygnusforge.services.conditions import end_condition
 from cygnusforge.services.events import ConditionAdded, current, record
 from tests.test_combat import PC, Rolls, _character, _fight
 from tests.test_world import _db
@@ -75,6 +76,29 @@ def test_an_unlisted_way_of_ending_a_condition_is_refused(client_factory):
 
     with pytest.raises(InvalidInput, match="ends by rest, not by magic"):
         tools.end_condition(PC, "walloped", "magic")
+
+
+def test_a_trigger_outside_the_rule_sets_vocabulary_is_refused(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _add_condition(app, campaign_id, "walloped")
+
+    with _db(app) as db, pytest.raises(
+        InvalidInput, match="not a condition-ending trigger"
+    ):
+        end_condition(
+            db,
+            campaign_id,
+            PC,
+            "walloped",
+            "banana",
+            tools.combat,
+            tools.conditions,
+            tools.rng,
+            plus=tools.plus,
+            spec=tools.character,
+            condition_ends=("rest", "extended_rest", "aid", "time"),
+        )
+    assert _character(app, campaign_id, PC).conditions == ["walloped"]
 
 
 def test_a_gm_trigger_ends_a_condition_the_rule_set_leaves_to_the_gm(client_factory):

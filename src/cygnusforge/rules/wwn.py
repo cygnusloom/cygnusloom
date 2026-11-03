@@ -363,13 +363,6 @@ def player_roll_save(
     return ctx.world.roll_save(character, _save_stat(save), cause, natural=roll)
 
 
-def roll_initiative(ctx: ToolContext) -> dict[str, Any]:
-    """Roll once for each side of an encounter, adding the best Dexterity modifier in each, and
-    set the order. Call it after the participants have joined, before the first round. Ties go
-    to the party."""
-    return ctx.world.roll_side_initiative()
-
-
 def instinct_check(name: str, instinct: int, cause: str, ctx: ToolContext) -> dict[str, Any]:
     """Check an NPC's Instinct: roll 1d10 and compare it to the score in the statblock. A roll no
     higher than the Instinct means the creature acts on impulse. Player characters never check
@@ -409,14 +402,6 @@ def instinct_check(name: str, instinct: int, cause: str, ctx: ToolContext) -> di
         }
 
     return ctx.world.with_hook_context(action)
-
-
-def roll_tables(tables: list[str], ctx: ToolContext) -> dict[str, Any]:
-    """Roll on one or more of the rule set's dice tables and log the results. World generation
-    uses significant_terrain, terrain_quirk, terrain_antagonists, nation_disputes_with_neighbor,
-    ruler_class, government_struggle, history_event, community_tags, court_tags, ruin_tags, and
-    wilderness_tags; dungeon_reaction (2d6) gives an NPC's first reaction to the party."""
-    return ctx.world.roll_tables(tables)
 
 
 def gain_growth(character: str, ctx: ToolContext) -> dict[str, Any]:
@@ -493,31 +478,6 @@ def roll_reaction(
     return ctx.world.with_hook_context(action)
 
 
-def attack(
-    attacker: str,
-    attack: str,
-    target: str,
-    ctx: ToolContext,
-    modifier: str = "",
-    targets: list[str] | None = None,
-    hit_modifier: int = 0,
-    count: int = 0,
-) -> dict[str, Any]:
-    """Make an NPC's attack: d20 plus its attack bonus against the target's Armor Class, with
-    natural 1 always missing and natural 20 always hitting. The engine rolls damage and Shock.
-    A statblock with several attacks per action resolves all of them; set `count` to 1 to make
-    only one. `hit_modifier` carries cover, range, or another situational penalty or bonus."""
-    return ctx.world.attack(
-        attacker,
-        attack,
-        target,
-        modifier,
-        targets,
-        hit_modifier=hit_modifier,
-        count=count,
-    )
-
-
 def player_attack(
     target: str,
     weapon: str,
@@ -536,18 +496,6 @@ def player_attack(
     )
 
 
-def resolve_attacks(target: str, attacks: list[dict[str, str]], ctx: ToolContext) -> dict[str, Any]:
-    """Resolve several NPC attacks on one character at once, such as a monster's several attacks
-    or several foes striking the same target. Each rolls to hit in turn."""
-    return ctx.world.resolve_attacks(target, attacks)
-
-
-def start_encounter(map: str, ctx: ToolContext) -> dict[str, Any]:
-    """Start an encounter on a map. Add the participants with add_participant, then call
-    roll_initiative before the first round."""
-    return ctx.world.start_encounter(map)
-
-
 def create_encounter_map(
     name: str,
     location: str,
@@ -559,180 +507,6 @@ def create_encounter_map(
 ) -> dict[str, Any]:
     """Make a grid map for an encounter at a location, such as the ford, a room, or a yard."""
     return ctx.world.create_encounter_map(name, location, columns, rows, description, template)
-
-
-def update_encounter_map(
-    name: str,
-    columns: int,
-    rows: int,
-    description: str,
-    ctx: ToolContext,
-) -> dict[str, Any]:
-    """Change an encounter map's description or size."""
-    return ctx.world.update_encounter_map(name, columns, rows, description)
-
-
-def delete_encounter_map(name: str, ctx: ToolContext) -> dict[str, Any]:
-    """Delete an encounter map that is no longer needed."""
-    return ctx.world.delete_encounter_map(name)
-
-
-def place_participant(name: str, column: int, row: int, ctx: ToolContext) -> dict[str, Any]:
-    """Put an encounter participant on a cell of the map grid."""
-    return ctx.world.place_participant(name, column, row)
-
-
-def end_encounter(ctx: ToolContext) -> dict[str, Any]:
-    """End the encounter in progress."""
-    return ctx.world.end_encounter()
-
-
-def add_participant(name: str, ctx: ToolContext, side: str | None = None) -> dict[str, Any]:
-    """Add a character to the encounter on a side, the party or the foes by default."""
-    return ctx.world.add_participant(name, side)
-
-
-def remove_participant(name: str, ctx: ToolContext) -> dict[str, Any]:
-    """Take a character out of the encounter."""
-    return ctx.world.remove_participant(name)
-
-
-def end_npc_turn(name: str, ctx: ToolContext) -> dict[str, Any]:
-    """End an NPC's turn once its actions are resolved."""
-    return ctx.world.end_npc_turn(name)
-
-
-def advance_time(ctx: ToolContext, days: int = 0, parts: int = 0, hours: int = 0) -> dict[str, Any]:
-    """Move the campaign clock forward, such as the hour a mortally wounded character has left to
-    live or the days of downtime an advancement needs."""
-    return ctx.world.advance_time(days, parts, hours)
-
-
-def give_item(
-    name: str, item: str, ctx: ToolContext, size: str = "", damage: str = ""
-) -> dict[str, Any]:
-    """Give a character an item, naming a catalogue item or a new one with its size and damage."""
-    return ctx.world.give_item(name, item, size or "normal", damage)
-
-
-def drop_item(name: str, item: str, ctx: ToolContext) -> dict[str, Any]:
-    """Remove an item from a character's inventory."""
-    return ctx.world.drop_item(name, item)
-
-
-def ready_item(name: str, item: str, ctx: ToolContext, ready: bool = True) -> dict[str, Any]:
-    """Ready an item for use, or stow it so it takes an action to retrieve. A character can keep
-    only half their Strength in slots readied."""
-    return ctx.world.ready_item(name, item, ready)
-
-
-def hire_hireling(
-    name: str,
-    employer: str,
-    wage: int,
-    description: str,
-    ctx: ToolContext,
-    personality: str | None = None,
-    accent: str | None = None,
-    quirks: list[str] | None = None,
-    character: Mapping[str, Any] | None = None,
-    pronouns: str | None = None,
-) -> dict[str, Any]:
-    """Hire a retainer into a player character's company, paid in silver each day."""
-    return ctx.world.hire_hireling(
-        name=name,
-        employer=employer,
-        wage=wage,
-        description=description,
-        personality=personality,
-        accent=accent,
-        quirks=quirks,
-        character=character,
-        pronouns=pronouns,
-    )
-
-
-def dismiss_hireling(name: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
-    """Remove a retainer from its employer's company."""
-    return ctx.world.dismiss_hireling(name, cause)
-
-
-def buy_item(
-    name: str, item: str, ctx: ToolContext, price: int | None = None, size: str = ""
-) -> dict[str, Any]:
-    """Buy a catalogue item, or price an item the catalogue does not list."""
-    return ctx.world.buy_item(name, item, price, size)
-
-
-def search_marketplace(query: str, ctx: ToolContext) -> dict[str, Any]:
-    """Find items and services the marketplace sells."""
-    return ctx.world.search_marketplace(query)
-
-
-def create_monster(
-    name: str,
-    location: str,
-    ctx: ToolContext,
-    description: str | None = None,
-    template: str | None = None,
-    stats: dict[str, int | None] | None = None,
-    armor: int | None = None,
-    attacks: list[dict[str, Any]] | None = None,
-    force: bool = False,
-    rules: list[str] | None = None,
-) -> dict[str, Any]:
-    """Create a creature from the bestiary and place it at a location."""
-    return ctx.world.create_monster(
-        name,
-        location,
-        description,
-        template,
-        stats,
-        armor,
-        attacks,
-        force,
-        rules=rules,
-    )
-
-
-def search_monster(query: str, ctx: ToolContext) -> dict[str, Any]:
-    """Find a bestiary statblock by name."""
-    return ctx.world.search_monster(query)
-
-
-def harm_character(
-    name: str, stat: str, amount: int, cause: str, ctx: ToolContext
-) -> dict[str, Any]:
-    """Harm a character outside combat, such as a fall, poison, or privation."""
-    return ctx.world.harm_character(name, stat, amount, cause)
-
-
-def stabilize(name: str, explanation: str, ctx: ToolContext) -> dict[str, Any]:
-    """Stop a mortally wounded character's dying clock, leaving them Frail."""
-    return ctx.world.stabilize(name, explanation)
-
-
-def recover_character(
-    name: str, explanation: str, consequence: str, ctx: ToolContext
-) -> dict[str, Any]:
-    """Clear a mortally wounded character's dying state, as magical healing does. Use
-    `heal_character` for the hit points the healing restores."""
-    return ctx.world.recover_character(name, explanation, consequence)
-
-
-def player_save(ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
-    """Pass the player's own d20 roll for a save the engine has marked due."""
-    return ctx.world.player_save(roll)
-
-
-def set_armor(name: str, armor: int, ctx: ToolContext) -> dict[str, Any]:
-    """Set a character's total Armor Class."""
-    return ctx.world.set_armor(name, armor)
-
-
-def retreat(name: str, safe: bool, ctx: ToolContext) -> dict[str, Any]:
-    """Take a character out of the fight, safely when they have a clear route."""
-    return ctx.world.retreat(name, safe)
 
 
 def _xp_rate(ctx: ToolContext, rate: str = "") -> str:

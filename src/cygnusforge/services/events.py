@@ -1857,25 +1857,36 @@ class ProjectAbandoned(GameEvent):
 
 
 @dataclass(frozen=True)
-class CharacterHealed(GameEvent):
-    """Healing reduces a character's harm in a stat, never below zero. `restored` is the harm
-    actually removed, which is less than `amount` when the character had taken less harm."""
+class Recovered(GameEvent):
+    """A character recovers harm from one stat, by healing, a rest, paid treatment, or a rule-set
+    effect. `amount` is the harm actually restored, never more than the character had taken.
+    `cause` names what restored it. `restores` lists the stats a rest set out to restore, so the
+    Log can say the recovery came from a rest rather than from one named cause."""
 
-    kind: ClassVar[str] = "character.healed"
+    kind: ClassVar[str] = "character.recovered_harm"
 
     name: str
     stat: str
     amount: int
-    restored: int
     cause: str = ""
+    restores: list[str] = field(default_factory=list)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
-        character.harm[self.stat] = max(0, character.harm.get(self.stat, 0) - self.restored)
+        taken = character.harm.get(self.stat, 0)
+        remaining = taken - max(0, min(self.amount, taken))
+        if remaining:
+            character.harm[self.stat] = remaining
+        else:
+            character.harm.pop(self.stat, None)
 
     def render(self) -> str:
-        text = f"{self.name} recovers {self.restored} {self.stat.upper()}"
-        return f"{text} ({self.cause})." if self.cause else f"{text}."
+        text = f"{self.name} recovers {self.amount} {self.stat.upper()}"
+        if self.cause:
+            return f"{text} ({self.cause})."
+        if self.restores:
+            return f"{text} from the rest."
+        return f"{text}."
 
 
 @dataclass(frozen=True)
@@ -2927,26 +2938,9 @@ class SkillChanged(GameEvent):
         return f"{text} ({self.cause})." if self.cause else f"{text}."
 
 
-@dataclass(frozen=True)
-class StatRestored(GameEvent):
-    """A character recovers `amount` of what it lost from one stat, such as lost hit points. The
-    harm never goes below none."""
-
-    kind: ClassVar[str] = "character.stat_restored"
-
-    name: str
-    stat: str
-    amount: int
-    cause: str = ""
-
-    def apply(self, state: CampaignState, event_id: int) -> None:
-        character = state.characters[name_key(self.name)]
-        before = character.harm.get(self.stat, 0)
-        character.harm[self.stat] = max(0, before - self.amount)
-
-    def render(self) -> str:
-        text = f"{self.name} recovers {self.amount} {self.stat.upper()}"
-        return f"{text} ({self.cause})." if self.cause else f"{text}."
+# The WWN ruleset modules still build this event directly. They are outside this cleanup's file
+# ownership, so keep the old name as an alias for `Recovered` until they call the recovery service.
+StatRestored = Recovered
 
 
 @dataclass(frozen=True)
@@ -3118,28 +3112,6 @@ class RestTaken(GameEvent):
     def render(self) -> str:
         interrupted = ", interrupted" if self.interrupted else ""
         return f"The party rests ({self.length}{interrupted}): {self.reason.rstrip('.!? ')}."
-
-
-@dataclass(frozen=True)
-class RestRecovered(GameEvent):
-    """A character recovers the stats a rest restores. Recovery clears their harm in those stats.
-    `cause` names what restored them when it is not a rest, such as a paid treatment."""
-
-    kind: ClassVar[str] = "rest.recovered"
-
-    name: str
-    restores: list[str]
-    cause: str = ""
-
-    def apply(self, state: CampaignState, event_id: int) -> None:
-        character = state.characters[name_key(self.name)]
-        for stat in self.restores:
-            character.harm.pop(stat, None)
-
-    def render(self) -> str:
-        if self.cause:
-            return f"{self.name} recovers: {self.cause}."
-        return f"{self.name} recovers from the rest."
 
 
 @dataclass(frozen=True)

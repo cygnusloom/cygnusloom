@@ -127,14 +127,15 @@ from cygnusforge.services.events import (
     ProjectAbandoned,
     ProjectAdvanced,
     ProjectStarted,
+    Recovered,
     Region,
     RegionAdded,
     SeasonSet,
     SkillChanged,
     StartingItemsTransferred,
-    StatRestored,
     TravelCharged,
     WorldObject,
+    current,
     defeat_status,
     load_state,
     name_key,
@@ -145,6 +146,7 @@ from cygnusforge.services.events import (
 from cygnusforge.services.geometry import clearance, contains, overlaps, polygon_problem, uncovered
 from cygnusforge.services.hooks import HookContext, call_hook
 from cygnusforge.services.objects import visible_objects
+from cygnusforge.services.recovery import recover
 from cygnusforge.services.tools import check_arguments
 
 T = TypeVar("T")
@@ -911,24 +913,23 @@ class WorldTools:
                 raise InvalidInput(
                     f"{character.name} has no stat {stat!r}; the stats are: {options}"
                 )
-            before = character.harm.get(stat, 0)
+            restored = recover(character, stat, value)
             record(
                 db,
                 self.campaign_id,
-                StatRestored(
+                Recovered(
                     name=character.name,
                     stat=stat,
-                    amount=value,
+                    amount=restored,
                     cause=bounded_text(cause, "cause", MAX_TEXT),
                 ),
             )
             db.commit()
-            restored = min(value, before)
             return {
                 "character": character.name,
                 "stat": stat,
                 "restored": restored,
-                "current": character.stats.get(stat, 0) - max(0, before - value),
+                "current": current(character, stat),
             }
 
     def set_stat_max(self, name: str, stat: str, value: int, cause: str = "") -> dict[str, Any]:

@@ -27,7 +27,6 @@ from cygnusforge.services.events import (
     CharacterRetired,
     CharacterSaved,
     ConditionAdded,
-    ConditionEnded,
     CounterChanged,
     EffectNoted,
     InjuryGained,
@@ -239,9 +238,22 @@ def _end_condition(
             ),
         )
         return
-    record(db, campaign_id, ConditionEnded(name=character.name, condition=condition, how=cause))
-    db.commit()
-    run_effects(db, campaign_id, name, rules.on_end, cx, f"{rules.label} ended", plus=plus)
+    # Conditions imports this module, so the import belongs here rather than at module load.
+    from cygnusforge.services.conditions import end_condition as end_stored_condition
+
+    end_stored_condition(
+        db,
+        campaign_id,
+        character.name,
+        condition,
+        cause,
+        cx.combat,
+        cx.conditions,
+        cx.rng,
+        plus=plus,
+        spec=cx.spec,
+        force=True,
+    )
 
 
 def _raise_stat(

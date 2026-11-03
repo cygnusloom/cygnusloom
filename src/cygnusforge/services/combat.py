@@ -47,7 +47,6 @@ from cygnusforge.services.events import (
     CampaignState,
     Character,
     CharacterDied,
-    CharacterHealed,
     CharacterRecovered,
     CharacterSurrendered,
     DebugCurrencyAdded,
@@ -58,6 +57,7 @@ from cygnusforge.services.events import (
     Harmed,
     InitiativeRolled,
     InvincibilitySet,
+    Recovered,
     SaveRolled,
     Struck,
     current,
@@ -69,6 +69,7 @@ from cygnusforge.services.events import (
     same_item_name,
 )
 from cygnusforge.services.injuries import EffectContext, gain_injury
+from cygnusforge.services.recovery import recover
 
 MAX_DAMAGE = 1000
 # Sanity bound on armor when the rule set sets no cap (armor_max of 0).
@@ -1509,25 +1510,18 @@ def heal_character(
         raise InvalidInput(f"{character.name} has no stat {stat!r}; the stats are: {options}")
     if isinstance(amount, bool) or not isinstance(amount, int) or amount < 1:
         raise InvalidInput("healing must restore a whole number of points, 1 or more")
-    taken = character.harm.get(stat, 0)
-    restored = min(amount, taken)
+    restored = recover(character, stat, amount)
     record(
         db,
         campaign_id,
-        CharacterHealed(
-            name=character.name,
-            stat=stat,
-            amount=amount,
-            restored=restored,
-            cause=cause,
-        ),
+        Recovered(name=character.name, stat=stat, amount=restored, cause=cause),
     )
     db.commit()
     return {
         "character": character.name,
         "stat": stat,
         "restored": restored,
-        "harm": max(0, taken - restored),
+        "harm": character.harm.get(stat, 0),
     }
 
 

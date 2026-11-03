@@ -930,7 +930,7 @@ def test_lookup_condition_returns_its_effects_and_triggers(client_factory):
 def test_healing_restores_harm_and_never_goes_below_zero(client_factory):
     client, campaign_id, tools = _wwn_campaign(client_factory)
     app = client.app
-    from cygnusforge.services.events import CharacterHealed
+    from cygnusforge.services.events import Recovered
 
     tools.harm_character(PC, "hp", 2, "a test wound")
     healed = tools.heal_character(PC, 5, cause="a healing art")
@@ -938,8 +938,22 @@ def test_healing_restores_harm_and_never_goes_below_zero(client_factory):
     assert healed["restored"] == 2
     assert healed["harm"] == 0
     assert _pc(app, campaign_id).harm.get("hp", 0) == 0
-    [event] = _events(app, campaign_id, CharacterHealed.kind)
-    assert (event.amount, event.restored) == (5, 2)
+    [event] = _events(app, campaign_id, Recovered.kind)
+    assert (event.stat, event.amount, event.cause) == ("hp", 2, "a healing art")
+
+
+def test_healing_with_no_harm_records_zero_and_changes_nothing(client_factory):
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    app = client.app
+    from cygnusforge.services.events import Recovered
+
+    healed = tools.heal_character(PC, 5, cause="a healing art")
+
+    assert healed["restored"] == 0
+    assert healed["harm"] == 0
+    assert _pc(app, campaign_id).harm == {}
+    [event] = _events(app, campaign_id, Recovered.kind)
+    assert event.amount == 0
 
 
 def test_default_healing_stat_is_ruleset_configurable(client_factory):

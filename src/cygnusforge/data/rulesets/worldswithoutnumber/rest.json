@@ -7,7 +7,8 @@
         "hours": 1,
         "full": false,
         "restores": [],
-        "clears": []
+        "clears": [],
+        "ends": []
       },
       "night": {
         "until": "morning",
@@ -16,13 +17,20 @@
         },
         "full": true,
         "restores": [],
-        "clears": []
+        "clears": [],
+        "ends": [
+          "rest"
+        ]
       },
       "extended": {
         "days": 7,
         "full": true,
         "restores": [],
-        "clears": []
+        "clears": [],
+        "ends": [
+          "rest",
+          "extended_rest"
+        ]
       }
     },
     "interrupted": "moments"

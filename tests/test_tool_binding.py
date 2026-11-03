@@ -245,3 +245,91 @@ def test_core_binding_leaves_the_schemas_unchanged():
         "hidden",
         "reason",
     ]
+
+
+# Cairn tool calls that keep a Python function: the five whose schema does not fit the
+# WorldTools method, the ruleset's own condition logic, the two spell-item kinds that pick a
+# role, and the core heal wrapper the ruleset reuses.
+CAIRN_KEPT_PYTHON = {
+    "create_encounter_map",
+    "create_monster",
+    "give_scroll",
+    "give_spellbook",
+    "heal_character",
+    "player_attack",
+    "player_initiative",
+    "player_retreat",
+    "player_save",
+    "set_condition",
+}
+
+CAIRN_TOOLS = {
+    "add_participant",
+    "add_penalty",
+    "advance_time",
+    "attack",
+    "buy_item",
+    "buy_service",
+    "cast_spell",
+    "create_encounter_map",
+    "create_monster",
+    "delete_encounter_map",
+    "dismiss_hireling",
+    "drop_item",
+    "dungeon_cycle",
+    "end_encounter",
+    "give_charged_item",
+    "give_item",
+    "give_scroll",
+    "give_spellbook",
+    "harm_character",
+    "heal_character",
+    "hire_hireling",
+    "place_participant",
+    "player_attack",
+    "player_initiative",
+    "player_retreat",
+    "player_save",
+    "recharge_charged_item",
+    "recover_character",
+    "remove_participant",
+    "resolve_attacks",
+    "resolve_group_break",
+    "rest",
+    "rest_history",
+    "retreat",
+    "roll_reaction",
+    "roll_save",
+    "roll_tables",
+    "search_marketplace",
+    "search_monster",
+    "set_armor",
+    "set_condition",
+    "set_map_cells",
+    "stabilize",
+    "start_encounter",
+    "surrender",
+    "update_encounter_map",
+    "use_charge",
+    "use_item",
+    "wilderness_action",
+}
+
+
+def test_cairn_migrates_every_wrapper_that_fits_and_keeps_the_rest():
+    library = content_library()
+    calls = library.rule_sets["cairn2e"].tool_calls
+    assert set(calls) - set(library.core.tool_calls) == CAIRN_TOOLS
+    assert {
+        call_id for call_id, call in calls.items() if call_id in CAIRN_TOOLS and call.function
+    } == CAIRN_KEPT_PYTHON
+    for call_id in CAIRN_TOOLS:
+        call = calls[call_id]
+        if call_id in CAIRN_KEPT_PYTHON:
+            assert call.world_method is None
+        else:
+            assert call.world_method is not None
+            assert call.function is None
+            assert call.takes_context is False
+    # The one tool whose id and method name differ.
+    assert calls["set_map_cells"].world_method == "set_encounter_map_cells"

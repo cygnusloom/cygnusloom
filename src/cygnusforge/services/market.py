@@ -26,7 +26,7 @@ from cygnusforge.services.events import (
     Character,
     CurrencyChanged,
     Item,
-    RestRecovered,
+    Recovered,
     load_state,
     name_key,
     record,
@@ -39,6 +39,7 @@ from cygnusforge.services.inventory import (
     character_named,
     used_slots,
 )
+from cygnusforge.services.recovery import recover
 
 MAX_PRICE = 100_000
 
@@ -262,11 +263,19 @@ def buy_service(
         total = listed.price * len(patients)
         left = _pay(db, campaign_id, marketplace, payer, total, cause=listed.name)
         for patient in patients:
-            record(
-                db,
-                campaign_id,
-                RestRecovered(name=patient.name, restores=list(listed.restores), cause=listed.name),
-            )
+            for stat in listed.restores:
+                restored = recover(patient, stat, patient.harm.get(stat, 0))
+                if restored:
+                    record(
+                        db,
+                        campaign_id,
+                        Recovered(
+                            name=patient.name,
+                            stat=stat,
+                            amount=restored,
+                            cause=listed.name,
+                        ),
+                    )
         served = [patient.name for patient in patients]
     db.commit()
     return {

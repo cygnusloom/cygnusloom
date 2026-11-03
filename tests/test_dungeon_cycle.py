@@ -1,21 +1,23 @@
 from __future__ import annotations
 
+import asyncio
+import json
 import random
 from collections.abc import Callable
 from dataclasses import replace
+from typing import Any
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from cygnusforge.content.definitions import ContentError
-from cygnusforge.content.library import CONTEXT_ARGUMENT
-from cygnusforge.rules import cairn2e
+from cygnusforge.llm.base import ToolRequest
 from cygnusforge.rules.context import ToolContext
 from cygnusforge.services import dungeon
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import events_since
-from cygnusforge.services.tools import tool_specs
+from cygnusforge.services.tools import ToolRun, run_tool, tool_specs
 from cygnusforge.services.world import WorldTools
 from tests.test_combat import CAIRN, _fight_client
 from tests.test_world import _db, _state
@@ -260,8 +262,10 @@ def test_the_tools_are_in_the_tool_list_and_wired_to_python():
         "lingering",
     ]
     assert set(specs["roll_reaction"]["function"]["parameters"]["properties"]) == {"reason"}
-    assert CAIRN.tool_calls["dungeon_cycle"].function is cairn2e.dungeon_cycle
-    assert CAIRN.tool_calls["roll_reaction"].function is cairn2e.roll_reaction
+    assert CAIRN.tool_calls["dungeon_cycle"].world_method == "dungeon_cycle"
+    assert CAIRN.tool_calls["dungeon_cycle"].function is None
+    assert CAIRN.tool_calls["roll_reaction"].world_method == "roll_reaction"
+    assert CAIRN.tool_calls["roll_reaction"].function is None
 
 
 def _context(tools: WorldTools) -> ToolContext:
@@ -277,17 +281,22 @@ def _context(tools: WorldTools) -> ToolContext:
     )
 
 
+def _run_tool(name: str, arguments: dict[str, Any], ctx: ToolContext) -> dict[str, Any]:
+    """Run one named tool through the engine, as the GM would."""
+    request = ToolRequest(id="call_1", name=name, arguments=json.dumps(arguments))
+    run = asyncio.run(run_tool(CAIRN.tool_calls, request, ctx=ctx))
+    assert isinstance(run, ToolRun)
+    return json.loads(run.output)
+
+
 def test_the_tool_functions_reach_the_world_through_the_context(
     client_factory: Callable[[], TestClient], monkeypatch: pytest.MonkeyPatch
 ):
     app, campaign_id, tools = _live_tools(client_factory)
     monkeypatch.setattr(dungeon, "roll_total", lambda formula, rng=None, plus=None: 6)
-    out = CAIRN.tool_calls["dungeon_cycle"].function(
-        **{"triggers": ["loud"], "reason": "Hammering.", CONTEXT_ARGUMENT: _context(tools)}
-    )
+    ctx = _context(tools)
+    out = _run_tool("dungeon_cycle", {"triggers": ["loud"], "reason": "Hammering."}, ctx)
     assert out["event"] == "Quiet"
-    reaction = CAIRN.tool_calls["roll_reaction"].function(
-        **{"reason": "Who goes there?", CONTEXT_ARGUMENT: _context(tools)}
-    )
+    reaction = _run_tool("roll_reaction", {"reason": "Who goes there?"}, ctx)
     assert reaction["band"] == REACTION_BANDS[reaction["roll"]]
     assert _logged_kinds(app, campaign_id)[-2:] == ["dungeon.event", "reaction.rolled"]
