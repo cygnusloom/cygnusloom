@@ -215,12 +215,27 @@ def test_every_arcane_class_gets_the_configured_partial_mage_effort_reduction() 
     progression = require_wwn_progression(WWN)
     stats = {"str": 10, "dex": 10, "con": 10, "int": 14, "wis": 10, "cha": 10}
     for class_id, casting_table in progression.casting_class_tables.items():
-        values = derived_stats(
-            WWN.character, stats, {"level": 1}, {"magic": 1}, {"class": class_id}
-        )
+        if casting_table == "full_mage":
+            templates = {"class": class_id, "tradition": "high_mage"}
+            pools = ("effort_high",)
+        elif casting_table == "dual_mage":
+            templates = {
+                "class": class_id,
+                "tradition": "high_mage_partial",
+                "tradition2": "necromancer_partial_2",
+            }
+            pools = ("effort_high", "effort_necromancer")
+        else:
+            templates = {"class": class_id, "tradition": "high_mage_partial"}
+            pools = ("effort_high",)
+        values = derived_stats(WWN.character, stats, {"level": 1}, {"magic": 1}, templates)
         expected = 3 if casting_table == "full_mage" else 2
-        for stat in ("effort_high", "effort_necromancer", "effort_elemental"):
+        for stat in pools:
             assert values[stat] == expected, (class_id, stat)
+        # A character has only the pools their chosen traditions grant.
+        assert "effort_elemental" not in values, class_id
+        if casting_table != "dual_mage":
+            assert "effort_necromancer" not in values, class_id
 
 
 @pytest.mark.parametrize(

@@ -46,6 +46,11 @@ directory. The rules text here and in `rules.json` is paraphrased; the books are
 - Magic state (prepared spells and committed Effort) lives in character `marks`, the way Cairn
   keeps deprivation, so it replays from the log. Daily castings and Effort use harm on ordinary
   stats, so `current(castings)` and `current(effort_high)` are what is left.
+- An Effort pool exists only for a character whose class or tradition grants it. Each Effort stat
+  names its granting templates in `requires_templates`, so a Warrior or Expert has no Effort
+  stat at all, a Mage or partial Mage has only the pool of the tradition they chose, a Healer has
+  Healer Effort, and a Vowed has Vowed Effort. Commitment still checks the character's tradition
+  before touching a pool.
 - The tradition kind is required, but each tradition template names the classes that may take it
   through the generic `compatible_with` template restriction.
   A Mage's tradition is the full template, an Adventurer mage takes the partial template, and
@@ -82,7 +87,7 @@ their player-facing behaviour.
 | --- | --- | --- |
 | Attribute modifiers | `stat.modifier` | Bands of `{min, modifier}`; `Stat.modifier(score)`, `CharacterSpec.modifier` |
 | Rolled stat plus modifier | `stat.plus_modifier` | `hp` adds the Constitution modifier to its roll |
-| Derived stats | `stat.derived` | `base`, `plus`, `minus_counters`, `best_modifier`, `minus_best_modifier`, `best_score`, `plus_skills`, `minus_templates`, `minimum` |
+| Derived stats | `stat.derived` | `base`, `plus`, `minus_counters`, `best_modifier`, `minus_best_modifier`, `best_score`, `plus_skills`, `plus_skill_picks`, `minus_templates`, `requires_templates`, `minimum` |
 | Skills | `type: skill`, `template.skills`, `rule_set.skill_progression` | Skill definitions, level grants, and configured untrained, first, creation maximum, and advancement maximum levels |
 | Skill picks | `template.skill_picks` | `{id, count, table, exclude, max_level}`; repeated skills respect the cap, and blank picks are rolled |
 | Feature picks | `template.feat_picks` | `{id, count, tag, tags, feature_type, max_rank, exclude, advance_repeated_rank}`; `submitted["feature_picks"]` |
@@ -143,7 +148,7 @@ their player-facing behaviour.
 | File | Contents |
 | --- | --- |
 | `rule_set.json` | Head, NPC HP tiers, encounter grid |
-| `stats.json` | Six attributes with modifier bands; hp, attack bonus, castings, morale; derived strain, five Effort pools, four saves |
+| `stats.json` | Six attributes with modifier bands; hp, attack bonus, castings, morale; derived strain, five Effort pools (each present only for its granting class or tradition), four saves |
 | `skills.json` | The 21 skills |
 | `backgrounds.json` | 20 background templates with a free skill and two Learning picks |
 | `classes.json` | Warrior, Expert, Mage, partial Healer and Vowed, four Adventurer pairings, and full and partial traditions with class gating |
@@ -288,6 +293,11 @@ an open gap. [PARITY.md](./PARITY.md) is the same status list with the tool/JSON
 - **Effort commitment is gated by tradition or class.** `wwn_magic.commit_effort` refuses a pool
   the character cannot access, and the Healer and Vowed pools use their own formulas
   (`stats.json`, `progression.json`); `tests/test_wwn_magic.py` covers the refusal.
+- **Effort pools appear only on eligible sheets.** Each Effort stat's `requires_templates` names
+  the class or tradition templates that grant it, so a Warrior or Expert has no Effort stat, a
+  Mage has only their chosen tradition's pool, and a Healer, Vowed, or dual-mage has exactly the
+  pools their choices grant (`stats.json`, `content/character.py`); `tests/test_wwn_effort.py`
+  covers the pools, commitment refusal, and recovery.
 - **A statblock's multi-attack resolves in one action.** `combat.json` sets
   `multi_attack: "each"`, so one `attack` call applies every attack the creature makes; the
   count comes from the statblock's structured `attacks_per_action` field,
@@ -311,15 +321,14 @@ an open gap. [PARITY.md](./PARITY.md) is the same status list with the tool/JSON
   `roll_check` does not apply it automatically; the GM must pass the modifier.
 - **Shield bash.** The `shield_bash_large` and `shield_bash_small` attack profiles exist, but
   nothing suspends the shield's AC until the next turn.
-- **Effort display.** Every character still derives and shows all Effort pools; only committing
-  is gated by tradition or class.
 - **Surprise, grappling, execution attacks, total defense, dual wielding, and range bands.** The
   grappled and prone conditions, situational `hit_modifier`s, and rule/prompt text exist, but
   these are GM-run checks and states, not engine state or round tracking.
 - **Monster special abilities.** Bestiary abilities remain prose in `description`; every `rules`
   list is empty, so none are machine-readable.
-- **PC Morale.** Player characters still roll and display a Morale score for uniformity, although
-  `check_morale` and `instinct_check` correctly refuse PCs.
+- **PC Morale.** Player characters do not carry or display a Morale score. Morale and Instinct
+  are statblock scores for NPCs and monsters, and `check_morale` / `instinct_check` correctly
+  refuse player characters.
 - **Structured benefit choices.** Developed Attribute, Specialist, and Spirit Familiar benefits
   are still `note` effects the GM must guide, not stored choices.
 - **Magic item creation.** `rules.json` describes it; there is no item-creation subsystem.

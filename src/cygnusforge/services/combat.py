@@ -25,8 +25,7 @@ from cygnusforge.content.library import (
 from cygnusforge.rules.dice import roll_total
 from cygnusforge.services import death, resolution
 from cygnusforge.services.attacks import (
-    BLAST,
-    IGNORES_ARMOR,
+    AttackFlags,
     highest_index,
     modifier_dice,
     modifier_name,
@@ -771,8 +770,8 @@ def attack(
             plus=plus,
             spec=spec,
         )
-    flags = source.attack_flags.get(name, [])
-    if BLAST in flags:
+    flags = AttackFlags.of(source.attack_flags.get(name, ()))
+    if flags.hits_all_targets:
         return _blast_attack(
             db,
             campaign_id,
@@ -805,7 +804,7 @@ def attack(
         raw,
         modifier=modifier_name(modifier),
         plus=plus,
-        ignores_armor=IGNORES_ARMOR in flags,
+        ignores_armor=flags.ignores_armor,
         hit_bonus=_stat_bonus(combat, source, combat.hit_bonus_stat)
         + hit_modifier
         + _condition_attack_modifier(source, conditions),
@@ -853,6 +852,7 @@ def _blast_attack(
     damage_bonus = _stat_bonus(combat, source, combat.damage_bonus_stat)
     hit_bonus = _stat_bonus(combat, source, combat.hit_bonus_stat)
     shock, shock_ac = _attack_shock(source, name)
+    ignores_armor = AttackFlags.of(source.attack_flags.get(name, ())).ignores_armor
     results = []
     for target in chosen:
         # An earlier hit in the blast can break a later target's side, so each is checked as it comes up.
@@ -872,7 +872,7 @@ def _blast_attack(
                 raw,
                 modifier=modifier_name(modifier),
                 plus=plus,
-                ignores_armor=IGNORES_ARMOR in source.attack_flags.get(name, []),
+                ignores_armor=ignores_armor,
                 hit_bonus=hit_bonus,
                 shock=shock,
                 shock_ac=shock_ac,
@@ -934,6 +934,7 @@ def _blast(
     damage_bonus = _stat_bonus(combat, source, combat.damage_bonus_stat)
     hit_bonus = _stat_bonus(combat, source, combat.hit_bonus_stat)
     shock, shock_ac = _attack_shock(source, name)
+    ignores_armor = AttackFlags.of(source.attack_flags.get(name, ())).ignores_armor
     results = []
     for target in targets:
         # An earlier hit in the blast can break another target's side, so each is checked as it comes up.
@@ -953,7 +954,7 @@ def _blast(
                 raw,
                 modifier=groups.blast_modifier,
                 plus=plus,
-                ignores_armor=IGNORES_ARMOR in source.attack_flags.get(name, []),
+                ignores_armor=ignores_armor,
                 hit_bonus=hit_bonus,
                 shock=shock,
                 shock_ac=shock_ac,
@@ -1004,8 +1005,8 @@ def resolve_attacks(
             raise InvalidInput(f"{source.name} is on {struck.name}'s side and cannot attack them")
         _require_impaired(struck, modifier_name(entry.get("modifier")), combat)
         name = _attack_named(source, attack_name)
-        flags = source.attack_flags.get(name, [])
-        if BLAST in flags:
+        flags = AttackFlags.of(source.attack_flags.get(name, ()))
+        if flags.hits_all_targets:
             raise InvalidInput(
                 f"{source.name}'s {name} has Blast, which hits each target in its area; use "
                 "attack with targets instead"
@@ -1018,7 +1019,7 @@ def resolve_attacks(
                 weapon=name,
                 modifier=modifier_name(entry.get("modifier")),
                 dice=dice or source.attacks[name],
-                ignores_armor=IGNORES_ARMOR in flags,
+                ignores_armor=flags.ignores_armor,
                 hit_bonus=_stat_bonus(combat, source, combat.hit_bonus_stat)
                 + int(entry.get("hit_modifier", 0))
                 + _condition_attack_modifier(source, conditions),

@@ -76,7 +76,8 @@ class DerivedStat:
     from a roll. Its value is `base` + `plus`, minus the values of `minus_counters`, plus the
     best modifier among `best_modifier`, minus the best modifier among `minus_best_modifier`,
     plus the best raw score among `best_score`, plus the levels of `plus_skills` and selected
-    `plus_skill_picks`, and minus one when any template in `minus_templates` was chosen."""
+    `plus_skill_picks`, and minus one when any template in `minus_templates` was chosen. A stat
+    with `requires_templates` exists only when one of those templates was chosen."""
 
     base: int = 0
     plus: int = 0
@@ -90,6 +91,10 @@ class DerivedStat:
     minus_best_modifier: tuple[str, ...] = ()
     # Template ids that each make the value one lower, such as a partial class's Effort penalty.
     minus_templates: tuple[str, ...] = ()
+    # Template ids that make the stat available, such as the classes or traditions that grant an
+    # Effort pool. Empty means every character has the stat; otherwise it is left off the sheet
+    # when none of them was chosen.
+    requires_templates: tuple[str, ...] = ()
     # The lowest value the stat may take, when it has one.
     minimum: int | None = None
 
@@ -429,7 +434,7 @@ def build_character(
     for stat in stats.values():
         if stat.derived is None:
             continue
-        for name in stat.derived.minus_templates:
+        for name in (*stat.derived.minus_templates, *stat.derived.requires_templates):
             if name not in templates:
                 raise ContentError(
                     f"{template}: stat {stat.id!r} 'derived' names no template ({name!r})"
@@ -632,6 +637,7 @@ def _derived(value: object, label: str) -> DerivedStat:
         "plus_skill_picks",
         "minus_best_modifier",
         "minus_templates",
+        "requires_templates",
         "minimum",
     }
     if unknown:
@@ -648,6 +654,9 @@ def _derived(value: object, label: str) -> DerivedStat:
             value.get("minus_best_modifier", []), "minus_best_modifier", label
         ),
         minus_templates=_id_list(value.get("minus_templates", []), "minus_templates", label),
+        requires_templates=_id_list(
+            value.get("requires_templates", []), "requires_templates", label
+        ),
         minimum=None if "minimum" not in value else _whole_number(value, "minimum", label, 0),
     )
 
@@ -2520,21 +2529,31 @@ def derived_stats(
     *,
     fields: Mapping[str, str] | None = None,
 ) -> dict[str, int]:
-    """The value of every derived stat the spec has, by stat id. A derived stat earlier in the
-    spec may be used by a later one. Any value the mapping already holds for a derived stat is
-    ignored, so the result is the same however often it is computed. `templates` are the chosen
-    templates by kind, for a derived stat that depends on one."""
+    """The value of every derived stat the character has, by stat id. A stat whose
+    `requires_templates` are not among the chosen templates is left out. A derived stat earlier
+    in the spec may be used by a later one. Any value the mapping already holds for a derived
+    stat is ignored, so the result is the same however often it is computed. `templates` are the
+    chosen templates by kind, for a derived stat that depends on one; without them, a stat that
+    requires a template is left out."""
     derived_ids = {stat.id for stat in spec.stats.values() if stat.derived is not None}
     scores = {key: value for key, value in stats.items() if key not in derived_ids}
     found: dict[str, int] = {}
     for stat in spec.stats.values():
-        if stat.derived is None:
+        if stat.derived is None or not _derived_available(stat.derived, templates):
             continue
         found[stat.id] = _derived_value(
             spec, stat.derived, scores, counters, skills, templates, fields
         )
         scores[stat.id] = found[stat.id]
     return found
+
+
+def _derived_available(derived: DerivedStat, templates: Mapping[str, str] | None) -> bool:
+    """Whether the chosen templates make a derived stat available. A stat with no
+    `requires_templates` is always available; one with them needs a matching chosen template."""
+    if not derived.requires_templates:
+        return True
+    return any(template in (templates or {}).values() for template in derived.requires_templates)
 
 
 def _derived_value(

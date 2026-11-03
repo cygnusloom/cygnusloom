@@ -79,13 +79,19 @@ def test_wwn_strength_modifier_bands() -> None:
 def test_wwn_derived_saves_and_effort() -> None:
     spec = _wwn().rule_sets["worldswithoutnumber"].character
     stats = {"str": 14, "dex": 8, "con": 18, "int": 12, "wis": 10, "cha": 3}
-    values = derived_stats(spec, stats, {"level": 3}, {"magic": 1})
+    templates = {"class": "mage", "tradition": "high_mage"}
+    values = derived_stats(spec, stats, {"level": 3}, {"magic": 1}, templates)
     assert values["save_physical"] == 16 - 3 - 2
     assert values["save_evasion"] == 16 - 3
     assert values["save_mental"] == 16 - 3
     assert values["save_luck"] == 16 - 3
     assert values["strain"] == 18
     assert values["effort_high"] == 1 + 1 + 0
+    # Only the chosen tradition's pool is present; the other traditions are left off.
+    assert "effort_necromancer" not in values
+    assert "effort_elemental" not in values
+    assert "effort_healer" not in values
+    assert "effort_vowed" not in values
 
 
 def test_a_wwn_player_character_sheet_has_no_morale_but_a_statblock_does() -> None:

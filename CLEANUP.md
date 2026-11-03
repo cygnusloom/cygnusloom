@@ -80,8 +80,8 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
   edit. Cairn's existing hooks are unchanged.
 - [x] **Effect registry.** `services/effects.py` now holds the op validators/executors; unknown
   ops still fail at load time.
-- [ ] **Registered vocabularies.** Attack flags, shop effects, morale triggers, rest triggers,
-  and enum sources should be registered handlers/config, not closed tuples.
+- [ ] **Registered vocabularies.** Attack flags now use a descriptor registry; shop effects,
+  morale triggers, rest triggers, and enum sources still need the same treatment.
 - [ ] **Generic events.** Introduce generic payloads (`RollMade`, `StatChanged`,
   `ResourceChanged`, `ConditionChanged`) and migrate new or low-risk features first. Recovery
   is consolidated; the rest remain.
@@ -109,7 +109,7 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
   neutral fixture; `test_scars` still needs a non-broken migration.
 - [ ] Stop importing private `_load_*` loader internals in most tests; prefer public load results.
   `test_scars` is the main remaining loader-internal test.
-- [x] Suite stays parallel and under one minute (2,509 tests in ~35s).
+- [x] Suite stays parallel and under one minute (2,559 tests in ~32s).
 
 ### WWN parity backlog (track, then close)
 
@@ -118,7 +118,9 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
   Schema stage landed: inventory `pools`, `size_pools`, and `default_pool` load and validate
   (`tests/test_inventory_schema.py`); the service still uses the single capacity model.
 - [ ] Shield AC suspended after a shield bash until the next turn.
-- [ ] Effort stats only for eligible characters.
+- [x] Effort stats only for eligible characters. Each Effort stat names its granting class or
+  tradition templates in `requires_templates`; a Warrior has none and a Mage keeps only the
+  chosen tradition's pool (`tests/test_wwn_effort.py`).
 - [ ] Surprise, grappling, execution attacks, total defense, dual wielding, range bands.
 - [ ] Magic Workings, spell research, magic item creation, hirelings, projects, faction turns
   (verify what is actually missing before implementing).
@@ -126,7 +128,9 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
   is a validated field on statblocks, the WWN bestiary carries explicit counts, and the loader
   rejects prose that still says "N attacks per action".
 - [ ] Machine-readable monster special abilities.
-- [ ] PC Morale/Instinct aligned with the source.
+- [x] PC Morale/Instinct aligned with the source. WWN PCs no longer carry or display a
+  Morale score; NPC and monster morale checks still work
+  (`tests/test_wwn.py::test_a_wwn_player_character_sheet_has_no_morale_but_a_statblock_does`).
 - [ ] Structured Developed Attribute, Specialist, and Spirit Familiar choices.
 
 ## Verification
