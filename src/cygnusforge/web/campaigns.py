@@ -657,7 +657,9 @@ def _campaign_page(
             status_code=status_code,
             campaign=campaign,
             world=library.world_templates.get(campaign.world_template),
-            scene=scene_view(world.state, spec, inventory_rules),
+            scene=scene_view(
+                world.state, spec, inventory_rules, rule_set.relations if rule_set else None
+            ),
             world_map=world_map,
             rule_set=rule_set,
             show_options=options_pending,
@@ -694,7 +696,9 @@ def _campaign_page(
         status_code=status_code,
         campaign=campaign,
         world=library.world_templates.get(campaign.world_template),
-        scene=scene_view(world.state, spec, inventory_rules),
+        scene=scene_view(
+            world.state, spec, inventory_rules, rule_set.relations if rule_set else None
+        ),
         world_map=world_map,
         time=time_view(world.state, rule_set.clock if rule_set else None),
         rule_set=rule_set,

@@ -289,6 +289,24 @@ class Note:
     text: str
 
 
+@dataclass(frozen=True)
+class KnownNpc:
+    """What the player character knows of an NPC: the details the player has seen or been told,
+    how the NPC stands with the player, and where the player last knew the NPC to be. The GM's
+    full record of the NPC may hold more than this."""
+
+    name: str
+    description: str = ""
+    personality: str = ""
+    accent: str = ""
+    quirks: tuple[str, ...] = ()
+    pronouns: str | None = None
+    # What the player has learned of how the NPC stands with them, such as "friendly, owes a debt".
+    relationship: str = ""
+    # The place the player last knew the NPC to be, or None when they do not know.
+    location: str | None = None
+
+
 def normalize_journal(text: str) -> str:
     """The journal text with no run of more than one blank line and no surrounding whitespace."""
     return re.sub(r"\n{3,}", "\n\n", text).strip()
@@ -435,6 +453,8 @@ class CampaignState:
     # World objects by the id of the event that placed them.
     objects: dict[int, WorldObject] = field(default_factory=dict)
     notes: list[Note] = field(default_factory=list)
+    # What the player character knows of each met NPC, by name without case.
+    known: dict[str, KnownNpc] = field(default_factory=dict)
     # The journal the player reads, oldest first.
     journal: str = ""
     # The event that began the last journal step. The next one writes from the log after it.
@@ -492,6 +512,30 @@ def speaker_name(state: CampaignState) -> str | None:
 
 def name_key(name: str) -> str:
     return name.strip().casefold()
+
+
+def _player_present(state: CampaignState) -> Character | None:
+    """The player character, when they can take in their surroundings: alive and placed."""
+    pc = state.pc()
+    if pc is None or pc.out_of_play or pc.location is None:
+        return None
+    return pc
+
+
+def _remember_npc(state: CampaignState, npc: Character) -> None:
+    """Record what the player sees of an NPC at their shared location. Details the player already
+    learned beyond the NPC's own record, such as the relationship, are kept."""
+    before = state.known.get(name_key(npc.name))
+    state.known[name_key(npc.name)] = KnownNpc(
+        name=npc.name,
+        description=npc.description,
+        personality=npc.personality,
+        accent=npc.accent,
+        quirks=tuple(npc.quirks),
+        pronouns=npc.pronouns,
+        relationship=before.relationship if before is not None else "",
+        location=npc.location,
+    )
 
 
 def same_item_name(a: str, b: str) -> bool:
@@ -806,7 +850,7 @@ class NpcAdded(GameEvent):
     skills: dict[str, int] = field(default_factory=dict)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        state.characters[name_key(self.name)] = Character(
+        npc = Character(
             kind=NPC_KIND,
             name=self.name,
             location=self.location,
@@ -831,6 +875,10 @@ class NpcAdded(GameEvent):
             rules=list(self.rules),
             skills=dict(self.skills),
         )
+        state.characters[name_key(self.name)] = npc
+        pc = _player_present(state)
+        if pc is not None and pc.location == npc.location:
+            _remember_npc(state, npc)
 
     def render(self) -> str:
         return f"New character: {self.name}, at {self.location}."
@@ -940,6 +988,8 @@ class HirelingDismissed(GameEvent):
         character.hireling = False
         character.employer = ""
         character.wage = 0
+        # The player knew the hireling while they were in the company.
+        _remember_npc(state, character)
 
     def render(self) -> str:
         return f"{self.name} leaves the company: {self.cause}."
@@ -997,10 +1047,25 @@ class ActorMoved(GameEvent):
     location: str | None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        state.characters[name_key(self.name)].location = self.location
+        actor = state.characters[name_key(self.name)]
+        actor.location = self.location
         place = state.places.get(name_key(self.location)) if self.location else None
         if place is not None:
             state.places[name_key(place.name)] = replace(place, visited_day=state.clock.day)
+        pc = _player_present(state)
+        if pc is None or self.location is None:
+            return
+        if actor.kind == PC_KIND:
+            # Coming into a place shows the player who is there. Hirelings travel with the
+            # player character, who is the one whose sight matters.
+            if actor.hireling:
+                return
+            for npc in state.characters.values():
+                if npc.kind == NPC_KIND and npc.location == self.location:
+                    _remember_npc(state, npc)
+        elif actor.kind == NPC_KIND and actor.location == pc.location:
+            # An NPC coming to the player's place is seen at once.
+            _remember_npc(state, actor)
 
     def render(self) -> str:
         if self.location is None:
@@ -1121,6 +1186,36 @@ class NpcUpdated(GameEvent):
 
 
 @dataclass(frozen=True)
+class NpcKnown(GameEvent):
+    """What the player character knows of an NPC: a snapshot of the details seen when the two met,
+    and any relationship or last-known location the story has revealed since."""
+
+    kind: ClassVar[str] = "npc.known"
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    name: str
+    description: str = ""
+    personality: str = ""
+    accent: str = ""
+    quirks: list[str] = field(default_factory=list)
+    pronouns: str | None = None
+    relationship: str = ""
+    location: str | None = None
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.known[name_key(self.name)] = KnownNpc(
+            name=self.name,
+            description=self.description,
+            personality=self.personality,
+            accent=self.accent,
+            quirks=tuple(self.quirks),
+            pronouns=self.pronouns,
+            relationship=self.relationship,
+            location=self.location,
+        )
+
+
+@dataclass(frozen=True)
 class NpcRemoved(GameEvent):
     kind: ClassVar[str] = "npc.removed"
 
@@ -1128,6 +1223,8 @@ class NpcRemoved(GameEvent):
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         del state.characters[name_key(self.name)]
+        # A removed NPC was only passing through, so the player no longer keeps them in mind.
+        state.known.pop(name_key(self.name), None)
 
     def render(self) -> str:
         return f"Character removed: {self.name}."
@@ -3270,6 +3367,7 @@ HIDDEN_KINDS: dict[str, bool] = {
     "npc.added": True,
     "npc.statted": True,
     "npc.updated": True,
+    "npc.known": True,
     "npc.removed": True,
     "location.added": True,
     "location.updated": True,

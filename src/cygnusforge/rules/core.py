@@ -136,6 +136,29 @@ def update_npc(
     )
 
 
+def update_npc_knowledge(
+    name: str,
+    ctx: ToolContext,
+    description: str | None = None,
+    personality: str | None = None,
+    accent: str | None = None,
+    quirks: Sequence[str] | None = None,
+    pronouns: str | None = None,
+    relationship: str | None = None,
+    location: str | None = None,
+) -> dict[str, Any]:
+    return ctx.world.update_npc_knowledge(
+        name=name,
+        description=description,
+        personality=personality,
+        accent=accent,
+        quirks=quirks,
+        pronouns=pronouns,
+        relationship=relationship,
+        location=location,
+    )
+
+
 def delete_npc(name: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.delete_npc(name)
 

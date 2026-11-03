@@ -32,7 +32,7 @@
     "type": "rule",
     "id": "npcs",
     "important": true,
-    "text": "NPCs are people (or other creatures) the player character can meet. Create an NPC when the story needs one, place it at a location, and describe who they are. NPCs have a personality, an accent, and quirks. Update an NPC when they change, and delete one when they leave the story for good. Keep them consistent with what has happened. Only an NPC who is at the player character's location can speak to them. The player character is not an NPC and cannot be updated or removed this way."
+    "text": "NPCs are people (or other creatures) the player character can meet. Create an NPC when the story needs one, place it at a location, and describe who they are. An NPC's description, personality, accent, quirks, and pronouns are what the player character learns on meeting them, so keep them to what can be seen and heard: put secrets, hidden motives, and plans in notes, not in the NPC's description. Update an NPC when they change, and delete one when they leave the story for good. Keep them consistent with what has happened. Only an NPC who is at the player character's location can speak to them. The player character is not an NPC and cannot be updated or removed this way. Use update_npc_knowledge to record what the player later learns about an NPC, such as a change in how they stand with the player or where they have gone."
   },
   {
     "type": "rule",

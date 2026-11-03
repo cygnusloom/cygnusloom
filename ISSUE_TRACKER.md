@@ -4,11 +4,10 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
 
 # Untriaged Issues
 
-1. Change the characters panel to be searchable and organized better, and be a full page like the map instead of a dialog. It should have only information that the player knows about. It should be updated as the player continues to interact with NPCs, and have information like personality, relationship with the player, and last know location.
-2. Add svg icons to everything that can have icons (monsters, items, location types, etc.). Also add looks_like fields to definitions so that things without icons can inheirit their looks.
-3. Make the branding generic. "cygnusforge" is the generic internal name of the software; but the user-facing branding should be configurable. "Cygnus Forge" should be changeable to whatever is needed, by environment variable.
-4. The GM can narrate incorrect mechanics even when the recorded state and tool results are correct. In DeepSeek tests it misexplained Vowed armor calculations and said an advancement point remained after it was spent. Improve grounding or validation so player-facing narration follows the engine's results.
-5. Bring the documented [Worlds Without Number simplifications](src/cygnusforge/data/rulesets/worldswithoutnumber/SPEC.md#known-simplifications) in line with the source rules, using generic engine mechanisms where practical:
+1. Add svg icons to everything that can have icons (monsters, items, location types, etc.). Also add looks_like fields to definitions so that things without icons can inheirit their looks.
+2. Make the branding generic. "cygnusforge" is the generic internal name of the software; but the user-facing branding should be configurable. "Cygnus Forge" should be changeable to whatever is needed, by environment variable.
+3. The GM can narrate incorrect mechanics even when the recorded state and tool results are correct. In DeepSeek tests it misexplained Vowed armor calculations and said an advancement point remained after it was spent. Improve grounding or validation so player-facing narration follows the engine's results.
+4. Bring the documented [Worlds Without Number simplifications](src/cygnusforge/data/rulesets/worldswithoutnumber/SPEC.md#known-simplifications) in line with the source rules, using generic engine mechanisms where practical:
    - Support source-valid pairings of partial classes, including Healer and Vowed, instead of offering them as standalone classes.
    - Model separate Readied and Stowed capacities and apply armor-encumbrance penalties to Sneak and Exert.
    - Suspend a shield's AC benefit after a shield bash until the next turn.
@@ -19,6 +18,7 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
    - Represent monster special abilities as machine-readable rules instead of prose alone.
    - Align PC Morale and Instinct with the source rules rather than giving PCs a uniform Morale stat while refusing both tools.
    - Make Developed Attribute, Specialist, and Spirit Familiar benefit choices structured instead of GM-guided notes.
+5. Leveling up (if rulesets have that idea, and it requires choices) should be an interactive process.
 
 # Triaged Issues
 

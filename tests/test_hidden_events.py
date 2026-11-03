@@ -28,6 +28,7 @@ def test_gm_bookkeeping_is_hidden_and_what_the_pc_perceives_is_visible():
     assert is_hidden("note.added")
     assert is_hidden("turn.state_step")
     assert is_hidden("npc.added")
+    assert is_hidden("npc.known")
     assert is_hidden("combat.debug_stat_set")
     assert not is_hidden("chat.gm")
     assert not is_hidden("chat.player")

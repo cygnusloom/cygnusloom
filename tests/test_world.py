@@ -1053,10 +1053,11 @@ def test_campaign_page_panels_show_only_the_scene(client_factory: Callable[[], T
     assert "data-drawer-target=" not in page
     assert 'data-view="journal"' in page
 
-    dialog = page[page.index('id="dialog-characters"') :]
-    dialog = dialog[: dialog.index("</dialog>")]
-    assert "Mossbell Hollow" not in dialog
-    assert "Mara Thistledown" not in dialog
+    characters_page = page[page.index('id="character-list"') :]
+    characters_page = characters_page[: characters_page.index("</section>", characters_page.index("People you know"))]
+    assert "Brin Gallowcap" in characters_page
+    assert "Mara Thistledown" not in characters_page
+    assert "Mossbell Hollow" not in characters_page
 
     # The activity log keeps its history of what the GM wrote, by design.
     assert "New location: Mossbell Hollow." in page

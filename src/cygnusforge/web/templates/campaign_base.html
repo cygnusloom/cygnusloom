@@ -7,7 +7,7 @@
     <button type="button" class="sidebar-item" data-view-target="play" aria-pressed="true" aria-label="Play" title="Play"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 5v14l12-7z"/></svg></button>
     <button type="button" class="sidebar-item" data-view-target="map" aria-pressed="false" aria-label="Map" title="Map"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg></button>
     <button type="button" class="sidebar-item" data-view-target="journal" aria-pressed="false" aria-label="Journal" title="Journal"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z"/></svg></button>
-    <button type="button" class="sidebar-item" data-dialog-target="dialog-characters" aria-haspopup="dialog" aria-label="Characters" title="Characters"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
+    <button type="button" class="sidebar-item" data-view-target="characters" aria-pressed="false" aria-label="Characters" title="Characters"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
     {% block sidebar_extra %}{% endblock %}
   </nav>
   <div class="views">
@@ -23,32 +23,69 @@
       <h2>Journal</h2>
       <div class="journal">{{ journal_text(scene.journal) }}</div>
     </section>
+    <section class="view characters-page" data-view="characters" aria-labelledby="characters-title" hidden>
+      <h2 id="characters-title">Characters</h2>
+      <label class="filter-field">
+        <span class="visually-hidden">Search characters</span>
+        <input type="search" data-filter="#character-list" placeholder="Search by name, personality, relationship, or place" autocomplete="off">
+      </label>
+      <div id="character-list" class="character-list">
+        {% if scene.pc %}
+        <section class="character-group" data-filter-group aria-labelledby="characters-you">
+          <h3 id="characters-you">You</h3>
+          <article class="character-card" data-filter-item>
+            <h4>{{ scene.pc.name }}{% if scene.pc.dead %} <span class="muted">(dead)</span>{% elif scene.pc.retired %} <span class="muted">(left the story)</span>{% endif %}</h4>
+            <p class="character-facts">
+              {% if scene.pc.pronouns %}<span>Pronouns: {{ scene.pc.pronouns }}</span>{% endif %}
+              <span>{% if scene.location %}At {{ scene.location.name }}{% else %}Not yet placed{% endif %}</span>
+            </p>
+            {% if scene.pc.description %}<p>{{ scene.pc.description }}</p>{% endif %}
+          </article>
+        </section>
+        {% endif %}
+        {% if scene.hirelings %}
+        <section class="character-group" data-filter-group aria-labelledby="characters-hirelings">
+          <h3 id="characters-hirelings">Hirelings</h3>
+          {% for hireling in scene.hirelings %}
+          <article class="character-card" data-filter-item>
+            <h4>{{ hireling.name }}{% if hireling.dead %} <span class="muted">(dead)</span>{% endif %}</h4>
+            <p class="character-facts">
+              {% if hireling.pronouns %}<span>Pronouns: {{ hireling.pronouns }}</span>{% endif %}
+              <span>Hired by {{ hireling.employer }}</span>
+              {% if hireling.location %}<span>At {{ hireling.location }}</span>{% endif %}
+            </p>
+            {% if hireling.description %}<p>{{ hireling.description }}</p>{% endif %}
+            {% if hireling.personality %}<p><strong>Personality:</strong> {{ hireling.personality }}{% if hireling.accent %} · <strong>Accent:</strong> {{ hireling.accent }}{% endif %}</p>{% endif %}
+            {% if hireling.quirks %}<p><strong>Quirks:</strong> {{ hireling.quirks | join("; ") }}</p>{% endif %}
+          </article>
+          {% endfor %}
+        </section>
+        {% endif %}
+        <section class="character-group" data-filter-group aria-labelledby="characters-known">
+          <h3 id="characters-known">People you know</h3>
+          {% for npc in scene.known %}
+          <article class="character-card" data-filter-item>
+            <h4>{{ npc.name }}{% if npc.dead %} <span class="muted">(dead)</span>{% endif %}</h4>
+            <p class="character-facts">
+              {% if npc.pronouns %}<span>Pronouns: {{ npc.pronouns }}</span>{% endif %}
+              {% if npc.relation %}<span class="character-relation">{{ npc.relation }}</span>{% endif %}
+              {% if npc.here %}<span>Here{% if npc.location %} at {{ npc.location }}{% endif %}</span>{% elif npc.location %}<span>Last known: {{ npc.location }}</span>{% else %}<span>Whereabouts unknown</span>{% endif %}
+            </p>
+            {% if npc.relationship %}<p><strong>Relationship:</strong> {{ npc.relationship }}</p>{% endif %}
+            {% if npc.description %}<p>{{ npc.description }}</p>{% endif %}
+            {% if npc.personality %}<p><strong>Personality:</strong> {{ npc.personality }}</p>{% endif %}
+            {% if npc.accent %}<p><strong>Accent:</strong> {{ npc.accent }}</p>{% endif %}
+            {% if npc.quirks %}<p><strong>Quirks:</strong> {{ npc.quirks | join("; ") }}</p>{% endif %}
+          </article>
+          {% else %}
+          <p class="muted">You have not met anyone yet.</p>
+          {% endfor %}
+        </section>
+      </div>
+      <p class="muted" data-filter-empty hidden>No characters match that search.</p>
+    </section>
   </div>
 </div>
-<dialog id="dialog-characters" class="app-dialog" aria-labelledby="dialog-characters-title">
-  <form method="dialog">
-    <h2 id="dialog-characters-title">Characters</h2>
-    {% if scene.pc %}
-    <h3>{% if scene.pc.dead %}Fallen{% elif scene.pc.retired %}Departed{% else %}You{% endif %}</h3>
-    <p><strong>{{ scene.pc.name }}</strong>{% if scene.pc.dead %} (dead){% elif scene.pc.retired %} (left the story){% endif %}{% if scene.location %}, at {{ scene.location.name }}{% else %}, not yet placed{% endif %}</p>
-    {% endif %}
-    {% if scene.location %}
-    <h3>Here</h3>
-    <p><strong>{{ scene.location.name }}</strong>{% if scene.location.summary %}: {{ scene.location.summary }}{% endif %}</p>
-    <h3>NPCs here</h3>
-    {% for npc in scene.npcs %}
-      <div class="npc">
-        <p><strong>{{ npc.name }}</strong></p>
-        <p>{{ npc.description }}</p>
-        <p class="muted">{% if npc.pronouns %}Pronouns: {{ npc.pronouns }}. {% endif %}Personality: {{ npc.personality }}. Accent: {{ npc.accent }}. Quirks: {{ npc.quirks | join("; ") or "none" }}.</p>
-      </div>
-    {% else %}
-      <p class="muted">No NPCs here.</p>
-    {% endfor %}
-    {% endif %}
-    <button type="submit">Close</button>
-  </form>
-</dialog>
 {% block dialogs %}{% endblock %}
 {% endblock %}
 {% block scripts %}

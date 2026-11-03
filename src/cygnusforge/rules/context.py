@@ -98,6 +98,18 @@ class CoreWorld(Protocol):
         attacks: Sequence[Mapping[str, str]] | None = None,
     ) -> dict[str, Any]: ...
 
+    def update_npc_knowledge(
+        self,
+        name: str,
+        description: str | None = None,
+        personality: str | None = None,
+        accent: str | None = None,
+        quirks: Sequence[str] | None = None,
+        pronouns: str | None = None,
+        relationship: str | None = None,
+        location: str | None = None,
+    ) -> dict[str, Any]: ...
+
     def delete_npc(self, name: str) -> dict[str, Any]: ...
 
     def hire_hireling(

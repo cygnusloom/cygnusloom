@@ -105,6 +105,7 @@ from cygnusforge.services.events import (
     Item,
     JournalAppended,
     JournalReplaced,
+    KnownNpc,
     LocationAdded,
     LocationDiscovered,
     LocationRemoved,
@@ -116,6 +117,7 @@ from cygnusforge.services.events import (
     NoteRemoved,
     NoteUpdated,
     NpcAdded,
+    NpcKnown,
     NpcRemoved,
     NpcStatted,
     NpcUpdated,
@@ -165,9 +167,30 @@ SAME_POINT_KM = 0.01
 
 
 @dataclass(frozen=True)
+class KnownNpcView:
+    """An NPC the player has met, as the player knows them: the details seen at the meeting, the
+    relationship the story has revealed, and where the player last knew them to be."""
+
+    name: str
+    description: str
+    personality: str
+    accent: str
+    quirks: tuple[str, ...]
+    pronouns: str | None
+    relationship: str
+    # The rule set's named link, such as "Friend", when the player character holds one.
+    relation: str
+    # The place the player last knew the NPC to be, or None when the player does not know.
+    location: str | None
+    # The NPC is at the player character's location now.
+    here: bool
+    dead: bool
+
+
+@dataclass(frozen=True)
 class SceneView:
     """What the player may see: the player character, the place they are in, the NPCs there, the
-    player character's statblock, and the journal."""
+    player character's statblock, the journal, and everyone the player has met."""
 
     pc: Character | None
     location: Place | None
@@ -177,6 +200,7 @@ class SceneView:
     pack: PackView | None = None
     hirelings: tuple[Character, ...] = ()
     objects: tuple[WorldObject, ...] = ()
+    known: tuple[KnownNpcView, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -1475,6 +1499,31 @@ class WorldTools:
                 self._initialize_generated_defense(db, name)
             db.commit()
             return result
+
+    def update_npc_knowledge(
+        self,
+        name: str,
+        description: str | None = None,
+        personality: str | None = None,
+        accent: str | None = None,
+        quirks: Sequence[str] | None = None,
+        pronouns: str | None = None,
+        relationship: str | None = None,
+        location: str | None = None,
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return update_npc_knowledge(
+                db,
+                self.campaign_id,
+                name,
+                description=description,
+                personality=personality,
+                accent=accent,
+                quirks=quirks,
+                pronouns=pronouns,
+                relationship=relationship,
+                location=location,
+            )
 
     def delete_npc(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -3151,6 +3200,60 @@ def update_npc(
     return {"updated": "npc", "name": npc.name, "statted": statted is not None}
 
 
+def update_npc_knowledge(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    *,
+    description: str | None = None,
+    personality: str | None = None,
+    accent: str | None = None,
+    quirks: Sequence[str] | None = None,
+    pronouns: str | None = None,
+    relationship: str | None = None,
+    location: str | None = None,
+) -> dict[str, Any]:
+    """Record what the player character has learned of an NPC. Only the given fields change. The
+    NPC need not have been met yet: a rumor can put someone in the player's mind, with whatever
+    was told. `location` is the place the player now knows the NPC to be."""
+    state = load_state(db, campaign_id)
+    npc = _npc_named(state, name)
+    if all(
+        value is None
+        for value in (description, personality, accent, quirks, pronouns, relationship, location)
+    ):
+        raise InvalidInput(
+            "give at least one of description, personality, accent, quirks, pronouns, "
+            "relationship, or location"
+        )
+    known = state.known.get(name_key(npc.name), KnownNpc(name=npc.name))
+    where = known.location
+    if location is not None:
+        where = _place_named(state, location).name
+    record(
+        db,
+        campaign_id,
+        NpcKnown(
+            name=npc.name,
+            description=known.description
+            if description is None
+            else bounded_text(description, "description", MAX_TEXT),
+            personality=known.personality
+            if personality is None
+            else bounded_text(personality, "personality", MAX_NAME),
+            accent=known.accent if accent is None else bounded_text(accent, "accent", MAX_NAME),
+            quirks=list(known.quirks) if quirks is None else _quirks(quirks) or [],
+            pronouns=known.pronouns if pronouns is None else _optional_text(pronouns, "pronouns"),
+            relationship=known.relationship
+            if relationship is None
+            else bounded_text(relationship, "relationship", MAX_NAME),
+            location=where,
+        ),
+    )
+    db.commit()
+    return {"updated": "npc knowledge", "name": npc.name}
+
+
 def delete_npc(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     npc = _npc_named(state, name)
@@ -3810,10 +3913,14 @@ def _map_region(
 
 
 def scene_view(
-    state: CampaignState, spec: CharacterSpec, inventory: InventoryRules | None = None
+    state: CampaignState,
+    spec: CharacterSpec,
+    inventory: InventoryRules | None = None,
+    relations: Mapping[str, RelationRules] | None = None,
 ) -> SceneView:
     """The player's view. It shows only what is at the player character's location, including any
-    hirelings there. The pack shows the player character's items when the rule set has an inventory."""
+    hirelings there, and everyone the player has met. The pack shows the player character's items
+    when the rule set has an inventory."""
     pc = state.pc()
     location = pc.location if pc is not None else None
     found = state.named(location) if location is not None else None
@@ -3865,6 +3972,7 @@ def scene_view(
         pack=pack,
         hirelings=hirelings,
         objects=objects,
+        known=_known_npc_views(state, pc, place, relations),
     )
 
 
@@ -4032,6 +4140,45 @@ def _location_entry(place: Place) -> dict[str, Any]:
 
 def _npcs_at(state: CampaignState, location: str) -> list[Character]:
     return [c for c in state.characters.values() if c.kind == NPC_KIND and c.location == location]
+
+
+def _known_npc_views(
+    state: CampaignState,
+    pc: Character | None,
+    place: Place | None,
+    relations: Mapping[str, RelationRules] | None,
+) -> tuple[KnownNpcView, ...]:
+    """Everyone the player has met, with the rule set's named relation where the player character
+    holds one. A known NPC whose record was removed is left out."""
+    views = []
+    for key, knowledge in state.known.items():
+        npc = state.characters.get(key)
+        if npc is None or npc.kind != NPC_KIND:
+            continue
+        relation = ""
+        if pc is not None:
+            for relation_id, names in pc.relations.items():
+                if any(name_key(name) == key for name in names):
+                    rules = relations.get(relation_id) if relations is not None else None
+                    relation = rules.label if rules is not None else relation_id.capitalize()
+                    break
+        views.append(
+            KnownNpcView(
+                name=knowledge.name,
+                description=knowledge.description,
+                personality=knowledge.personality,
+                accent=knowledge.accent,
+                quirks=knowledge.quirks,
+                pronouns=knowledge.pronouns,
+                relationship=knowledge.relationship,
+                relation=relation,
+                location=knowledge.location,
+                here=place is not None and npc.location == place.name,
+                dead=npc.dead,
+            )
+        )
+    views.sort(key=lambda view: view.name.casefold())
+    return tuple(views)
 
 
 def present_rules_text(state: CampaignState, rules: Mapping[str, str]) -> str:

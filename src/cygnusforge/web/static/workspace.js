@@ -77,6 +77,32 @@
     });
   });
 
+  // A search box narrows the cards in the region its data-filter names. A group left with no
+  // matching card is hidden too, and the page says so when nothing matches at all.
+  document.querySelectorAll("[data-filter]").forEach((input) => {
+    const target = document.querySelector(input.dataset.filter);
+    if (!target) return;
+    const items = Array.from(target.querySelectorAll("[data-filter-item]"));
+    const groups = Array.from(target.querySelectorAll("[data-filter-group]"));
+    const empty = document.querySelector("[data-filter-empty]");
+    const apply = () => {
+      const query = input.value.trim().toLocaleLowerCase();
+      let shown = 0;
+      for (const item of items) {
+        const text = (item.dataset.filterText ?? item.textContent ?? "").toLocaleLowerCase();
+        const match = !query || text.includes(query);
+        item.hidden = !match;
+        if (match) shown += 1;
+      }
+      for (const group of groups) {
+        group.hidden = !group.querySelector("[data-filter-item]:not([hidden])");
+      }
+      if (empty) empty.hidden = shown > 0;
+    };
+    input.addEventListener("input", apply);
+    apply();
+  });
+
   document.querySelectorAll("[data-dialog-target]").forEach((button) => {
     const dialog = document.getElementById(button.dataset.dialogTarget);
     button.addEventListener("click", () => {
