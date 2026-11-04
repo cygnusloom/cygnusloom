@@ -140,6 +140,7 @@
           break;
         case "log":
           appendLog(item.text, item.hidden, current.bubble);
+          refreshMap();
           break;
         case "delta":
           current.status.hidden = true;
@@ -172,6 +173,74 @@
     reload();
   };
 
+  // While a reply streams, ask the server whether the turn is still running. A stream can die
+  // without ending, or fall silent behind a stalling provider, and the page would then sit on a
+  // disabled composer while the turn is long finished. The poll notices and reloads, which is
+  // how every other turn ends. The first check waits, so a turn that has not been recorded yet
+  // is never mistaken for a finished one.
+  const STATUS_POLL_MS = 5000;
+  const STATUS_FIRST_MS = 10000;
+  const statusUrl = document.querySelector("[data-status-url]")?.dataset.statusUrl;
+  const watchTurn = () => {
+    if (!statusUrl) return;
+    let stopped = false;
+    const tick = async () => {
+      if (stopped) return;
+      try {
+        const response = await fetch(statusUrl, {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        if (response.ok) {
+          const { status } = await response.json();
+          if (status !== "busy") {
+            stopped = true;
+            reload();
+            return;
+          }
+        }
+      } catch {
+        // A failed poll is not fatal: the stream may still be alive, so try again.
+      }
+      setTimeout(tick, STATUS_POLL_MS);
+    };
+    setTimeout(tick, STATUS_FIRST_MS);
+  };
+
+  // Redraw the map while the GM works, so an encounter being built appears as it is built: the
+  // board, the joining sides, initiative, and every placement. Redraws are throttled, and the
+  // reload when the turn ends replaces the panel with the server's final state anyway.
+  const MAP_REFRESH_MS = 2500;
+  const mapUrl = document.querySelector("[data-map-url]")?.dataset.mapUrl;
+  let mapTimer = null;
+  const refreshMap = () => {
+    if (!mapUrl || mapTimer) return;
+    mapTimer = setTimeout(async () => {
+      mapTimer = null;
+      try {
+        const response = await fetch(mapUrl, {
+          credentials: "same-origin",
+          headers: { Accept: "text/html" },
+        });
+        if (!response.ok) return;
+        const template = document.createElement("template");
+        template.innerHTML = (await response.text()).trim();
+        const fresh = template.content.querySelector(".map-panel");
+        const current = document.querySelector(".map-panel");
+        if (!fresh || !current) return;
+        const selected = current.querySelector('[role="tab"][aria-selected="true"]')?.id || "";
+        current.replaceWith(fresh);
+        fresh
+          .closest(".side")
+          ?.classList.toggle("in-encounter", Boolean(fresh.querySelector("#panel-encounter")));
+        window.initWorkspaceTabs?.();
+        if (selected) window.workspaceSelectTab?.(selected);
+      } catch {
+        // A failed redraw is harmless: the next one, or the reload at the end, catches up.
+      }
+    }, MAP_REFRESH_MS);
+  };
+
   composer.addEventListener("submit", async (event) => {
     event.preventDefault();
     const text = textarea.value.trim();
@@ -182,6 +251,7 @@
     errorBox.hidden = true;
     textarea.value = "";
     setBusy(true);
+    watchTurn();
     // Disabling the Send button drops focus, so move it back to the message box.
     textarea.focus();
 
@@ -223,6 +293,7 @@
     const controls = (form.closest("[data-pending]") ?? form).querySelectorAll("button, textarea");
     for (const control of controls) control.disabled = true;
     setGmState("busy");
+    watchTurn();
     const reply = addBubble("assistant", "Cygnus");
     const attempt = { started: false };
     try {

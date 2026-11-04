@@ -5,7 +5,7 @@
     <button type="button" class="sidebar-item" data-side-toggle aria-pressed="false" aria-label="Details" title="Details"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg></button>
 {% endblock %}
 {% block play %}
-    <div class="workspace" data-view="play">
+    <div class="workspace" data-view="play" data-status-url="/campaigns/{{ campaign.id }}/turn-status" data-map-url="/campaigns/{{ campaign.id }}/map">
       <section class="chat" aria-label="Chat">
           <h1 class="chat-title">{{ campaign.name }}</h1>
           <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
@@ -122,43 +122,7 @@
         </section>
 
         <aside class="side{% if encounter %} in-encounter{% endif %}">
-          <section class="map-panel" aria-label="Map">
-            {% if encounter %}
-            <div class="tab-list" role="tablist" aria-label="Map views">
-              <button type="button" class="tab" role="tab" id="tab-encounter" aria-controls="panel-encounter" aria-selected="true">Encounter</button>
-              <button type="button" class="tab" role="tab" id="tab-world" aria-controls="panel-world" aria-selected="false" tabindex="-1">World map</button>
-            </div>
-            <div class="tab-panel map-view" role="tabpanel" id="panel-encounter" aria-labelledby="tab-encounter">
-              <div class="map-frame">{{ encounter_board(encounter, encounter_rows) }}</div>
-              <div class="encounter-status">
-                <p><strong>{{ encounter.map }}</strong> <span class="muted">{{ encounter.location }}, round {{ encounter.round }}</span></p>
-                {% if not encounter.participants %}
-                <p class="muted">No one has joined yet.</p>
-                {% endif %}
-              </div>
-              {% if encounter.participants %}
-              <ul class="encounter-roster" aria-label="Turn order">
-                {% for participant in encounter.participants %}
-                <li{% if participant.acting %} class="acting"{% endif %}>
-                  <span class="muted">{{ participant.number }}.</span>
-                  <strong>{{ participant.name }}</strong>
-                  {% if participant.creature %}<span class="muted">{{ participant.creature }}</span>{% endif %}
-                  {% if participant.is_pc %}<span class="muted">(you)</span>{% endif %}
-                  {% if participant.status %}<span class="roster-status">{{ participant.status }}</span>{% endif %}
-                  {% if participant.acting %}<span class="roster-state">acting</span>{% elif participant.next %}<span class="roster-state muted">next</span>{% endif %}
-                </li>
-                {% endfor %}
-              </ul>
-              {% endif %}
-            </div>
-            <div class="tab-panel map-view" role="tabpanel" id="panel-world" aria-labelledby="tab-world" hidden>
-              {{ map_board(world_map, framed=true, prefix="tab") }}
-            </div>
-            {% else %}
-              {{ map_board(world_map, framed=true, prefix="tab") }}
-            {% endif %}
-            {{ time_strip(time) }}
-          </section>
+          {% include "campaign_map.html" %}
 
           <section class="tabs-panel">
             <div class="tab-list" role="tablist" aria-label="Panels">

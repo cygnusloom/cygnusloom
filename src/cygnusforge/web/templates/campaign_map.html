@@ -1,0 +1,43 @@
+{% from "macros.html" import map_board, encounter_board, time_strip %}
+{#
+  The map panel, kept apart from the page so the turn stream can refresh it while the GM is
+  building an encounter. The player watches the board, the roster, and the clock change as the
+  GM works, instead of seeing the finished scene only after the reply lands.
+#}
+<section class="map-panel" aria-label="Map">
+  {% if encounter %}
+  <div class="tab-list" role="tablist" aria-label="Map views">
+    <button type="button" class="tab" role="tab" id="tab-encounter" aria-controls="panel-encounter" aria-selected="true">Encounter</button>
+    <button type="button" class="tab" role="tab" id="tab-world" aria-controls="panel-world" aria-selected="false" tabindex="-1">World map</button>
+  </div>
+  <div class="tab-panel map-view" role="tabpanel" id="panel-encounter" aria-labelledby="tab-encounter">
+    <div class="map-frame">{{ encounter_board(encounter, encounter_rows) }}</div>
+    <div class="encounter-status">
+      <p><strong>{{ encounter.map }}</strong> <span class="muted">{{ encounter.location }}, round {{ encounter.round }}</span></p>
+      {% if not encounter.participants %}
+      <p class="muted">No one has joined yet.</p>
+      {% endif %}
+    </div>
+    {% if encounter.participants %}
+    <ul class="encounter-roster" aria-label="Turn order">
+      {% for participant in encounter.participants %}
+      <li{% if participant.acting %} class="acting"{% endif %}>
+        <span class="muted">{{ participant.number }}.</span>
+        <strong>{{ participant.name }}</strong>
+        {% if participant.creature %}<span class="muted">{{ participant.creature }}</span>{% endif %}
+        {% if participant.is_pc %}<span class="muted">(you)</span>{% endif %}
+        {% if participant.status %}<span class="roster-status">{{ participant.status }}</span>{% endif %}
+        {% if participant.acting %}<span class="roster-state">acting</span>{% elif participant.next %}<span class="roster-state muted">next</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  <div class="tab-panel map-view" role="tabpanel" id="panel-world" aria-labelledby="tab-world" hidden>
+    {{ map_board(world_map, framed=true, prefix="tab") }}
+  </div>
+  {% else %}
+    {{ map_board(world_map, framed=true, prefix="tab") }}
+  {% endif %}
+  {{ time_strip(time) }}
+</section>

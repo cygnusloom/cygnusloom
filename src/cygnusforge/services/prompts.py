@@ -65,7 +65,10 @@ STATE_INSTRUCTION = (
     "such as secrets, promises, debts, and clues. Do not copy into a note anything a location, character, "
     "statblock, or NPC record already holds. Before adding a note, check the existing notes: update one "
     "rather than repeating a fact. Record only settled facts, not actions still in progress. Do not "
-    "narrate here; the narration comes in the next step."
+    "narrate here; the narration comes in the next step. When several changes do not depend on "
+    "each other, make every one of their tool calls in this same reply: three NPCs, a location and "
+    "its people, or a pile of setting facts are one round, not one round each. Every extra round "
+    "costs the player another wait."
 )
 # Closes the state step after the ruleset's fragments.
 STATE_CLOSING = "When nothing else needs to change, reply with one short sentence saying so."

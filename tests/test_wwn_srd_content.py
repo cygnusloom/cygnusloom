@@ -13,8 +13,11 @@ import json
 import re
 from pathlib import Path
 
+import pytest
+
 from cygnusforge.content.library import ContentLibrary
 from cygnusforge.services import views
+from cygnusforge.services.common import InvalidInput
 from tests import factories
 from tests.conftest import content_library
 from tests.test_wwn_advancement import NAME, _campaign, _world_tools
@@ -160,6 +163,31 @@ def test_recording_a_setting_fact_reaches_the_world_state(
     text = views.world_state_text(state, rules.campaign)
     assert "Setting:" in text
     assert "A highland of herders and old stone." in text
+
+
+def test_recording_several_setting_facts_takes_one_call(client_factory) -> None:
+    """The opening writes six or more facts; one round per fact is the difference between a
+    three-minute opening and a long one."""
+    app, campaign_id = _campaign(client_factory)
+    tools = _world_tools(app, campaign_id)
+
+    result = tools.record_settings(
+        [
+            {"topic": "The world", "detail": "A river kingdom."},
+            {"topic": "Magic", "detail": "Learned from old books."},
+            {"topic": "The world", "detail": "A river kingdom of oath-bound clans."},
+        ]
+    )
+
+    assert result["recorded"] == ["The world", "Magic", "The world"]
+    assert result["facts"] == 2
+    state = factories.open_campaign(app, campaign_id)
+    assert state.settings == {
+        "The world": "A river kingdom of oath-bound clans.",
+        "Magic": "Learned from old books.",
+    }
+    with pytest.raises(InvalidInput):
+        tools.record_settings([])
 
 
 def test_setting_facts_do_not_leak_between_campaigns(client_factory) -> None:

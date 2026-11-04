@@ -1573,6 +1573,10 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         with session_scope(self.engine) as db:
             return record_setting(db, self.campaign_id, topic, detail)
 
+    def record_settings(self, facts: list[dict[str, str]]) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return record_settings(db, self.campaign_id, facts)
+
     def update_note(self, note_id: int, text: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return update_note(db, self.campaign_id, note_id, text)

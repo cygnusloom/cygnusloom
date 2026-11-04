@@ -116,6 +116,7 @@ CORE_TOOLS = {
     "list_lookups",
     "roll_creative",
     "record_setting",
+    "record_settings",
 }
 
 

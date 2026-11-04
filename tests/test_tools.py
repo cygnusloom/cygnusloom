@@ -143,6 +143,7 @@ CORE_TOOL_NAMES = {
     "delete_note",
     "search_notes",
     "search_journal",
+    "record_settings",
     "view_journal",
     "speak",
     "ooc",

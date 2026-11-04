@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from fastapi import APIRouter, Request
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from starlette.responses import Response
 
 from cygnusforge.auth.deps import page_user, verify_csrf
@@ -59,9 +59,9 @@ from cygnusforge.services.campaigns import (
 from cygnusforge.services.campaigns import (
     discard_pending as discard_pending_turn,
 )
-from cygnusforge.services.common import Conflict, InvalidInput, NotFound
+from cygnusforge.services.common import Conflict, InvalidInput, NotFound, session_scope
 from cygnusforge.services.encounters import encounter_view
-from cygnusforge.services.events import speaker_name
+from cygnusforge.services.events import last_event_id, load_state, speaker_name
 from cygnusforge.services.tools import check_arguments
 from cygnusforge.services.views import map_view, scene_view, time_view
 from cygnusforge.web.character_form import (
@@ -256,6 +256,62 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
 def campaign_page(request: Request, campaign_id: int) -> Response:
     user = page_user(request)
     return _campaign_page(request, user, campaign_id)
+
+
+@router.get("/{campaign_id}/turn-status")
+def turn_status(request: Request, campaign_id: int) -> Response:
+    """Whether the GM is still working on the campaign's open turn.
+
+    The page polls this while it streams a reply. A stream can die without ending, or fall silent
+    for minutes behind a slow provider, and then the player's composer stays disabled even though
+    the turn is over. The poll sees the turn end and reloads the page.
+    """
+    user = page_user(request)
+    engine = request.app.state.engine
+    get_campaign(engine, user.id, campaign_id)
+    with session_scope(engine) as db:
+        turn = load_state(db, campaign_id).turn
+        newest = last_event_id(db, campaign_id)
+    if turn is None:
+        status = "idle"
+    elif turn.failed is not None:
+        status = "failed"
+    elif turn.prompt is not None:
+        status = "prompt"
+    else:
+        status = "busy"
+    return JSONResponse({"status": status, "event": newest})
+
+
+@router.get("/{campaign_id}/map")
+def map_fragment(request: Request, campaign_id: int) -> Response:
+    """The map panel on its own, so the page can redraw it while the GM is still working.
+
+    Creating an encounter takes the GM a dozen tool calls: the map, the joining sides, initiative,
+    and every placement. Refreshing this fragment during the turn lets the player watch the board
+    fill in instead of waiting for the finished scene.
+    """
+    user = page_user(request)
+    engine = request.app.state.engine
+    library = request.app.state.content
+    campaign = get_campaign(engine, user.id, campaign_id)
+    rule_set = library.rule_sets.get(campaign.rule_set)
+    world = campaign_world(engine, user.id, campaign.id)
+    encounter = encounter_view(
+        world.state,
+        rule_set.grid if rule_set else None,
+        rule_set.combat if rule_set else None,
+        rule_set.terrain if rule_set else None,
+        rule_set.encounter_objects if rule_set else None,
+    )
+    return render(
+        request,
+        "campaign_map.html",
+        world_map=map_view(world.state, rule_set.world_terrain if rule_set else None),
+        time=time_view(world.state, rule_set.clock if rule_set else None),
+        encounter=encounter,
+        encounter_rows=_encounter_rows(encounter) if encounter is not None else [],
+    )
 
 
 @router.post("/{campaign_id}/model")

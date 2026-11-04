@@ -28,28 +28,42 @@
     });
   }
 
-  document.querySelectorAll('[role="tablist"]').forEach((list) => {
-    const tabs = Array.from(list.querySelectorAll('[role="tab"]'));
-    const select = (tab) => {
-      for (const other of tabs) {
-        const selected = other === tab;
-        other.setAttribute("aria-selected", String(selected));
-        other.tabIndex = selected ? 0 : -1;
-        document.getElementById(other.getAttribute("aria-controls")).hidden = !selected;
-      }
-      tab.focus();
-    };
+  // A turn stream can redraw the map panel while the GM works, so tab wiring lives in a function
+  // the page calls again after a redraw, and the select helper is exposed for restoring the tab
+  // the player was reading.
+  const initTabs = (root = document) => {
+    root.querySelectorAll('[role="tablist"]').forEach((list) => {
+      const tabs = Array.from(list.querySelectorAll('[role="tab"]'));
+      const select = (tab, focus = true) => {
+        for (const other of tabs) {
+          const selected = other === tab;
+          other.setAttribute("aria-selected", String(selected));
+          other.tabIndex = selected ? 0 : -1;
+          const panel = document.getElementById(other.getAttribute("aria-controls"));
+          if (panel) panel.hidden = !selected;
+        }
+        if (focus) tab.focus();
+      };
+      list.selectTab = select;
 
-    tabs.forEach((tab, index) => {
-      tab.addEventListener("click", () => select(tab));
-      tab.addEventListener("keydown", (event) => {
-        const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
-        if (step === undefined) return;
-        event.preventDefault();
-        select(tabs[(index + step + tabs.length) % tabs.length]);
+      tabs.forEach((tab, index) => {
+        tab.addEventListener("click", () => select(tab));
+        tab.addEventListener("keydown", (event) => {
+          const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+          if (step === undefined) return;
+          event.preventDefault();
+          select(tabs[(index + step + tabs.length) % tabs.length]);
+        });
       });
     });
-  });
+  };
+  initTabs();
+  window.initWorkspaceTabs = initTabs;
+  window.workspaceSelectTab = (id) => {
+    const tab = document.getElementById(id);
+    const list = tab && tab.closest('[role="tablist"]');
+    if (tab && list && list.selectTab) list.selectTab(tab, false);
+  };
 
   const closeOnBackdropClick = (dialog) => {
     dialog.addEventListener("click", (event) => {

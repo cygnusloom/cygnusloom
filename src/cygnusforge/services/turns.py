@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import random
 import re
-from collections.abc import AsyncIterator, Iterable, Mapping, Sequence
+from collections.abc import AsyncIterator, Awaitable, Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -91,8 +92,16 @@ MAX_MESSAGE = 8000
 SPOKEN_MARKUP = re.compile(r"<[^>]*>|\b\w+\(\s*\{")
 # An empty speech reply is retried this many times before the step gives up.
 SPEECH_ATTEMPTS = 3
+SPEECH_RETRY = (
+    "Your last reply was empty. Write the line now: only the words the speaker says aloud, "
+    "one line, and nothing else."
+)
 # An empty narration is requested again this many times before the turn fails.
 NARRATION_ATTEMPTS = 2
+# A long model call would otherwise leave the player's stream silent, and a silent stream looks
+# exactly like a hung page. Every this many seconds of waiting, the turn sends a status line.
+HEARTBEAT_SECONDS = 15.0
+HEARTBEAT_MESSAGE = "Still working..."
 JOURNAL_ROUNDS = 3
 # Once the prompt reaches this share of the context window, older history is summarized.
 COMPRESS_AT = 0.5
@@ -527,6 +536,54 @@ def _flush(run: _Run) -> list[Logged]:
     ]
 
 
+async def _await_with_heartbeat[T](
+    call: Awaitable[T], result: list[T], message: str = HEARTBEAT_MESSAGE
+) -> AsyncIterator[TurnEvent]:
+    """Await one model call, sending a status line while it runs.
+
+    Without this the player's stream says nothing at all between the tool result and the reply,
+    which is indistinguishable from a hung page when a provider takes minutes.
+    """
+    task = asyncio.ensure_future(call)
+    try:
+        while True:
+            done, _ = await asyncio.wait({task}, timeout=HEARTBEAT_SECONDS)
+            if done:
+                result.append(task.result())
+                return
+            yield Status(message)
+    finally:
+        if not task.done():
+            task.cancel()
+
+
+async def _stream_with_heartbeat(
+    stream: AsyncIterator[Any], message: str = HEARTBEAT_MESSAGE
+) -> AsyncIterator[tuple[bool, Any]]:
+    """Yield each streamed item as (True, item), and a (False, None) while the model is silent.
+
+    The pending read is carried across timeouts rather than cancelled, so a slow provider is
+    never interrupted by the heartbeat.
+    """
+    iterator = stream.__aiter__()
+    pending = asyncio.ensure_future(iterator.__anext__())
+    try:
+        while True:
+            done, _ = await asyncio.wait({pending}, timeout=HEARTBEAT_SECONDS)
+            if not done:
+                yield False, None
+                continue
+            try:
+                item = pending.result()
+            except StopAsyncIteration:
+                return
+            pending = asyncio.ensure_future(iterator.__anext__())
+            yield True, item
+    finally:
+        if not pending.done():
+            pending.cancel()
+
+
 async def _speak(
     engine: Engine,
     provider: Provider,
@@ -571,8 +628,9 @@ async def _speak(
     label = f"Speech step (round {turn.rounds})"
     speech = [{"role": "system", "content": system}, *conversation]
     reply = ""
-    for _ in range(SPEECH_ATTEMPTS):
-        reply = (await complete(provider, model_name, speech)).strip()
+    for attempt in range(SPEECH_ATTEMPTS):
+        request = speech if attempt == 0 else [*speech, {"role": "system", "content": SPEECH_RETRY}]
+        reply = (await complete(provider, model_name, request)).strip()
         if reply:
             break
     malformed = SPOKEN_MARKUP.search(reply) is not None
@@ -594,7 +652,13 @@ async def _speak(
     if malformed:
         raise InvalidInput(f"the speech step wrote a tool call instead of {speaker}'s words")
     if not reply:
-        raise LLMError("the speech step returned no dialogue")
+        # A tool error rather than a dead turn: the GM sees the failure in the tool result, and
+        # can narrate around the missing line or ask for it again more simply. Ending the whole
+        # reply because one NPC had nothing to say loses work the player already waited for.
+        raise InvalidInput(
+            f"the speech step returned no words for {speaker}; narrate the reply without their "
+            "quoted line, or call speak again with a simpler intent"
+        )
 
 
 async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
@@ -758,8 +822,12 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                 view.append(_queued_dialogue_note(turn.speech))
             view.append({"role": "system", "content": OOC_INSTRUCTION})
             step: ChatReply | None = None
-            async for item in run.provider.stream(run.model_name, view, tools):
-                if isinstance(item, TextDelta):
+            async for arrived, item in _stream_with_heartbeat(
+                run.provider.stream(run.model_name, view, tools)
+            ):
+                if not arrived:
+                    yield Status(HEARTBEAT_MESSAGE)
+                elif isinstance(item, TextDelta):
                     yield Delta(item.text)
                 else:
                     step = item
@@ -822,7 +890,12 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
         view = [*turn.messages, state]
         if turn.speech:
             view.append(_queued_dialogue_note(turn.speech))
-        step = await run.provider.chat(run.model_name, view, tools)
+        replied: list[ChatReply] = []
+        async for event in _await_with_heartbeat(
+            run.provider.chat(run.model_name, view, tools), replied
+        ):
+            yield event
+        step = replied[0]
         if not step.tool_requests:
             messages: list[dict[str, Any]] = []
             context: list[ContextPart] = []
@@ -866,8 +939,12 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
     reply = ""
     for _attempt in range(NARRATION_ATTEMPTS):
         narration: ChatReply | None = None
-        async for item in run.provider.stream(run.model_name, messages, None):
-            if isinstance(item, TextDelta):
+        async for arrived, item in _stream_with_heartbeat(
+            run.provider.stream(run.model_name, messages, None)
+        ):
+            if not arrived:
+                yield Status(HEARTBEAT_MESSAGE)
+            elif isinstance(item, TextDelta):
                 yield Delta(item.text)
             else:
                 narration = item

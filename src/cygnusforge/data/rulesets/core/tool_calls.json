@@ -1010,6 +1010,42 @@
   },
   {
     "type": "tool_call",
+    "id": "record_settings",
+    "name": "record_settings",
+    "world_method": "record_settings",
+    "description": "Record several facts about the world you invented in one call, such as the world, the starting region, its peoples, its powers, its history, its magic, and its conflict. The facts are shown back to you every turn. Recording an existing topic replaces that fact. Use this instead of record_setting when you have more than one fact to write, so the whole world is one round rather than one round per fact.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "facts": {
+          "type": "array",
+          "description": "The facts to record, in the order they should read.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "topic": {
+                "type": "string",
+                "description": "Short label for the fact, such as 'The world' or 'Magic'."
+              },
+              "detail": {
+                "type": "string",
+                "description": "The fact itself, as one or two sentences the table can use."
+              }
+            },
+            "required": [
+              "topic",
+              "detail"
+            ]
+          }
+        }
+      },
+      "required": [
+        "facts"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "record_setting",
     "name": "record_setting",
     "world_method": "record_setting",

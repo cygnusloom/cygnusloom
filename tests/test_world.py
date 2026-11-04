@@ -1163,6 +1163,7 @@ def test_an_empty_speech_reply_is_retried(client_factory: Callable[[], TestClien
 
 
 def test_speech_retries_are_bounded(client_factory: Callable[[], TestClient], app: FastAPI):
+    """Silence is retried a fixed number of times, then the turn carries on without the line."""
     provider = _EmptySpeech(empty=SPEECH_ATTEMPTS)
     client, campaign_id = _campaign_id(client_factory)
     app.state.providers = lambda model_id: (provider, model_id)
@@ -1173,11 +1174,12 @@ def test_speech_retries_are_bounded(client_factory: Callable[[], TestClient], ap
     }
     script = _script({"rounds": [[speak_call]], "text": "Mara looks up.", "speech": {}})
 
-    send_message(client, campaign_id, script)
+    response = send_message(client, campaign_id, script)
 
+    assert response.status_code == 303
     assert len(_speech_calls(provider)) == SPEECH_ATTEMPTS
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert "the speech step returned no dialogue" in page
+    # The GM is told the line failed, and the reply the player waited for is still delivered.
+    assert _saved(app, campaign_id)[-1] == ("assistant", "Mara looks up.")
 
 
 def test_queued_dialogue_reaches_the_narration_as_json(

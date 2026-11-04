@@ -1514,6 +1514,32 @@ def record_setting(db: Session, campaign_id: int, topic: str, detail: str) -> di
     }
 
 
+def record_settings(db: Session, campaign_id: int, facts: list[dict[str, str]]) -> dict[str, Any]:
+    """Record several setting facts in one call, so a whole world is written in a single round.
+
+    Each fact is an object with a topic and a detail. Recording a topic again replaces it, and a
+    topic repeated inside the batch keeps its last detail, which is how the list itself reads.
+    Batching matters more than it looks: the opening writes six or more facts, and one call per
+    fact is one model round per fact.
+    """
+    if not facts:
+        raise InvalidInput("give at least one fact")
+    state = load_state(db, campaign_id)
+    keys = {name_key(topic): topic for topic in state.settings}
+    recorded: list[str] = []
+    for fact in facts:
+        if not isinstance(fact, Mapping):
+            raise InvalidInput("each fact must be an object with a topic and a detail")
+        topic = bounded_text(fact.get("topic"), "topic", MAX_NAME)
+        detail = bounded_text(fact.get("detail"), "detail", MAX_SETTING)
+        key = keys.get(name_key(topic), topic)
+        keys[name_key(topic)] = key
+        record(db, campaign_id, SettingRecorded(topic=key, detail=detail))
+        recorded.append(key)
+    db.commit()
+    return {"recorded": recorded, "facts": len(keys)}
+
+
 def update_note(db: Session, campaign_id: int, note_id: int, text: str) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     _note_with_id(state, note_id)
