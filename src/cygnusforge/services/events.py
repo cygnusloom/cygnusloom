@@ -640,6 +640,24 @@ class NoteAdded(GameEvent):
 
 
 @dataclass(frozen=True)
+class SettingRecorded(GameEvent):
+    """One fact about the world the GM invented, keyed by topic. Recording a topic again replaces
+    the old fact, so the GM can revise the setting as play makes it concrete."""
+
+    kind: ClassVar[str] = "setting.recorded"
+    hidden: ClassVar[bool] = True
+
+    topic: str
+    detail: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.settings[self.topic] = self.detail
+
+    def render(self) -> str:
+        return f"Setting, {self.topic}: {self.detail}"
+
+
+@dataclass(frozen=True)
 class LocationUpdated(GameEvent):
     """A location's details after an update. The position is the resolved one, and None if the
     place has none. Discovery is not changed here; `LocationDiscovered` does that."""

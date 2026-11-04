@@ -312,7 +312,9 @@ def test_random_vowed_order_skill_is_recorded_and_drives_effort(seed):
 
 def test_vowed_creation_form_labels_the_order_and_general_skill_choices(client_factory):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
+    response = _new_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     page = client.get(f"/campaigns/{campaign_id}").text
     order = re.search(
@@ -352,7 +354,9 @@ def test_wwn_excess_focus_skill_uses_the_players_replacement():
 
 def test_wwn_creation_form_persists_the_players_focus_skill_replacement(client_factory):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
+    response = _new_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     page = client.get(f"/campaigns/{campaign_id}").text
     fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
@@ -381,7 +385,9 @@ def test_wwn_creation_form_persists_the_players_focus_skill_replacement(client_f
 
 def test_wwn_creation_form_can_repeat_specialist_for_another_skill(client_factory):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
+    response = _new_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     page = client.get(f"/campaigns/{campaign_id}").text
     fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
@@ -410,7 +416,9 @@ def test_wwn_creation_form_can_repeat_specialist_for_another_skill(client_factor
 
 def test_wwn_character_creation(client_factory) -> None:
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
+    response = _new_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
     assert response.status_code == 303
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     page = client.get(f"/campaigns/{campaign_id}").text

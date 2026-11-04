@@ -77,18 +77,18 @@ def test_wwn_statblock_multi_attack_uses_each_attack() -> None:
 
 def test_wwn_bestiary_abilities_are_structured_fields() -> None:
     monsters = _wwn().monsters
-    spore = monsters["ashcrawler"].abilities[0]
+    spore = monsters["ember_hound"].abilities[0]
     assert (spore.kind, spore.trigger, spore.save) == ("save_or_condition", "hit", "save_physical")
-    cry = monsters["wailer_crane"].abilities[0]
+    cry = monsters["choir_wraith"].abilities[0]
     assert (cry.kind, cry.damage) == ("action", "1d4")
-    assert monsters["brass_scytheman"].abilities[0].kind == "immunity"
+    assert monsters["hollow_guard"].abilities[0].kind == "immunity"
 
 
 def test_wwn_bestiary_attack_counts_are_structured_fields() -> None:
     monsters = _wwn().monsters
-    assert monsters["ashcrawler_slave"].attacks_per_action == 1
-    assert monsters["ashcrawler"].attacks_per_action == 2
-    assert monsters["polop_hellsquid"].attacks_per_action == 4
+    assert monsters["rot_shambler"].attacks_per_action == 1
+    assert monsters["ember_hound"].attacks_per_action == 2
+    assert monsters["tide_grasper"].attacks_per_action == 4
     phrase = re.compile(r"(\d+)\s+attacks?\s+per\s+action", re.IGNORECASE)
     for monster in monsters.values():
         match = phrase.search(monster.description)

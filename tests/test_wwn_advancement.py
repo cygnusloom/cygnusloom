@@ -185,7 +185,9 @@ def _campaign(
 ) -> tuple[FastAPI, int]:
     """A campaign with one player character of the chosen class, created through the form."""
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
+    response = _new_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
     assert response.status_code == 303
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     with pytest.MonkeyPatch.context() as patch:
@@ -226,7 +228,7 @@ def _campaign_context(
 ):
     """Build the same rule-set tool context as a running campaign."""
     rule_set = WWN if rule_set is None else rule_set
-    world = LIBRARY.world_content("latter-earth", rule_set.id)
+    world = LIBRARY.world_content("unwritten-world", rule_set.id)
     return campaigns_service._tool_context(
         app.state.engine,
         random.Random(seed),
@@ -1033,7 +1035,9 @@ def test_a_warrior_cannot_take_a_magical_tradition(
     client_factory: Callable[[], TestClient],
 ) -> None:
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
+    response = _new_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     page = client.get(f"/campaigns/{campaign_id}").text
     fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
@@ -1052,7 +1056,9 @@ def test_invalid_manual_skill_cap_is_reported_on_the_creation_form(
     client_factory: Callable[[], TestClient],
 ) -> None:
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
+    response = _new_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     page = client.get(f"/campaigns/{campaign_id}").text
     fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
@@ -1439,7 +1445,7 @@ def test_generated_character_creation_rolls_back_if_defense_initialization_fails
 def test_world_seed_initializes_generated_defense_but_preserves_statblocks(
     app: FastAPI, client_factory, monkeypatch
 ):
-    template = app.state.content.world_templates["latter-earth"]
+    template = app.state.content.world_templates["unwritten-world"]
     monster_id, monster = next(iter(WWN.monsters.items()))
     people = (
         NpcTemplate("scout", "Scout", "yard", "A scout.", None, None, None),
@@ -1448,11 +1454,11 @@ def test_world_seed_initializes_generated_defense_but_preserves_statblocks(
     )
     monkeypatch.setitem(
         app.state.content.world_templates,
-        "latter-earth",
+        "unwritten-world",
         replace(template, locations=(LocationTemplate("yard", "Yard", "A yard."),), npcs=people),
     )
     response = _new_campaign(
-        _signed_in(client_factory), world_template="latter-earth", rule_set="worldswithoutnumber"
+        _signed_in(client_factory), world_template="unwritten-world", rule_set="worldswithoutnumber"
     )
     assert response.status_code == 303
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
@@ -1689,7 +1695,7 @@ def test_buying_set_and_add_armor_updates_slots_and_persistent_adjustment(client
         ("pkg_ranger_archer", 12, 16),
         ("pkg_roguish_wanderer", 13, 17),
         ("pkg_adventuring_peasant", 14, 17),
-        ("pkg_gentry_wayfarer", 13, 17),
+        ("pkg_gentry_wayfarer", 13, 16),
     ],
 )
 @pytest.mark.parametrize("focus", [False, True])

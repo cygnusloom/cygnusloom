@@ -122,9 +122,11 @@ def _wwn_tools(
 def _wwn_campaign(
     client_factory: Callable[[], TestClient], choices: dict[str, str] | None = None
 ) -> tuple[TestClient, int, WorldTools]:
-    """A latter-earth campaign with a newly created player character and the WWN world tools."""
+    """An unwritten-world campaign with a newly created player character and the WWN world tools."""
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
+    response = _new_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
     assert response.status_code == 303
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     page = client.get(f"/campaigns/{campaign_id}").text
@@ -814,39 +816,39 @@ def test_a_stowed_weapon_must_be_readied_before_it_can_strike(client_factory):
 def test_a_statblocks_attack_count_is_resolved_in_one_action(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=30)
-    tools.create_monster("Ashcrawler", YARD, template="ashcrawler")
-    tools.add_participant("Ashcrawler")
+    tools.create_monster("Ember Hound", YARD, template="ember_hound")
+    tools.add_participant("Ember Hound")
     tools.set_stat_max(PC, "hp", 30, "for a long test fight")
 
     before = len(_struck(app, campaign_id))
-    take_turn(tools, "Ashcrawler")
-    tools.attack("Ashcrawler", "bite", PC)
+    take_turn(tools, "Ember Hound")
+    tools.attack("Ember Hound", "bite", PC)
     assert len(_struck(app, campaign_id)) - before == 2
 
 
 def test_a_single_attack_statblock_resolves_one_attack(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=30)
-    tools.create_monster("Ashcrawler Slave", YARD, template="ashcrawler_slave")
-    tools.add_participant("Ashcrawler Slave")
+    tools.create_monster("Rot Shambler", YARD, template="rot_shambler")
+    tools.add_participant("Rot Shambler")
     tools.set_stat_max(PC, "hp", 30, "for a long test fight")
 
     before = len(_struck(app, campaign_id))
-    take_turn(tools, "Ashcrawler Slave")
-    tools.attack("Ashcrawler Slave", "blade", PC)
+    take_turn(tools, "Rot Shambler")
+    tools.attack("Rot Shambler", "claw", PC)
     assert len(_struck(app, campaign_id)) - before == 1
 
 
 def test_a_four_attack_statblock_resolves_all_four_attacks(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=30)
-    tools.create_monster("Polop Hellsquid", YARD, template="polop_hellsquid")
-    tools.add_participant("Polop Hellsquid")
+    tools.create_monster("Tide Grasper", YARD, template="tide_grasper")
+    tools.add_participant("Tide Grasper")
     tools.set_stat_max(PC, "hp", 200, "for a long test fight")
 
     before = len(_struck(app, campaign_id))
-    take_turn(tools, "Polop Hellsquid")
-    result = tools.attack("Polop Hellsquid", "tentacle", PC)
+    take_turn(tools, "Tide Grasper")
+    result = tools.attack("Tide Grasper", "tentacle", PC)
     assert len(_struck(app, campaign_id)) - before == 4
     assert len(result["attacks"]) == 4
 

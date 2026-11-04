@@ -49,7 +49,7 @@
     "id": "mountains",
     "name": "Mountains",
     "color": "#8b8078",
-    "rule": "Mountain country and arratu. Travel is 0.5 miles per hour; passes are few and defended.",
+    "rule": "Mountain country and broken highland. Travel is 0.5 miles per hour; passes are few and defended.",
     "pattern": "ridges",
     "ink": "#4f4741"
   },

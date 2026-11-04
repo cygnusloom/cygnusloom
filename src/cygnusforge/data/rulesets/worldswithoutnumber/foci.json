@@ -665,16 +665,16 @@
   },
   {
     "type": "feature",
-    "id": "focus_origin_automaton",
-    "name": "Automaton",
+    "id": "focus_origin_forged",
+    "name": "Forge-Born",
     "feature_type": "feat",
     "tag": "origin",
     "rank": 1,
-    "description": "You are a self-willed automaton, probably humanoid and possibly human enough to pass inspection. You need no food, drink, or breath, are immune to disease, poison, and natural temperature extremes, and recharge instead of sleeping, but long ages have degraded one attribute.",
+    "description": "You were shaped from clay, stone, or brass and kindled into a will of your own. You need no food, drink, or breath, are immune to disease, poison, and natural temperature extremes, and stand idle through the night instead of sleeping, but the making left one part of you lesser.",
     "effects": [
       {
         "op": "note",
-        "text": "Automaton traits: you do not need to eat, drink, or breathe, and are immune to disease, poison, and natural climatic extremes of temperature. You recharge for six hours a day in place of sleep. Healing and similar effects work on you and cost System Strain as usual. At zero hit points you are mortally wounded and can still be stabilized by someone who knows how to repair you; if you die, you are broken beyond conventional repair."
+        "text": "Forge-Born traits: you do not need to eat, drink, or breathe, and are immune to disease, poison, and natural climatic extremes of temperature. You spend six hours a day idle and still in place of sleep. Healing and similar effects work on you and cost System Strain as usual. At zero hit points you are mortally wounded and can still be stabilized by someone who knows how to mend you; if you die, you are broken past ordinary repair."
       },
       {
         "op": "note",
@@ -684,12 +684,12 @@
   },
   {
     "type": "feature",
-    "id": "focus_origin_drudge",
-    "name": "Drudge",
+    "id": "focus_origin_thrallborn",
+    "name": "Thrall-Born",
     "feature_type": "feat",
     "tag": "origin",
     "rank": 1,
-    "description": "You are a Drudge of unusual intellect and capacity for violence. You gain Exert, gain +1 Strength and Constitution modifiers, take -1 Intelligence and Charisma modifiers, and take -2 on all Mental saving throws.",
+    "description": "You were bred and worked for another's profit, and you proved too stubborn and too dangerous to keep in the yard. You gain Exert, gain +1 Strength and Constitution modifiers, take -1 Intelligence and Charisma modifiers, and take -2 on all Mental saving throws.",
     "effects": [
       {
         "op": "skill",
@@ -709,7 +709,7 @@
     "feature_type": "feat",
     "tag": "origin",
     "rank": 1,
-    "description": "You are a dwarf, a demihuman weapon-race of the ancient Outsiders. You gain Craft, sense solid objects within 20 feet as if by sight, add +2 to saves against hostile magic, need only half the usual food, water, and air, and gain +1 to your hit point die each level.",
+    "description": "You are a dwarf, one of the deep folk, raised in halls cut from living rock and taught that a wall is a thing you can hear. You gain Craft, sense solid objects within 20 feet as if by sight, add +2 to saves against hostile magic, need only half the usual food, water, and air, and gain +1 to your hit point die each level.",
     "effects": [
       {
         "op": "skill",
@@ -718,7 +718,7 @@
       },
       {
         "op": "note",
-        "text": "Surrounding-sense out to 20 feet: you distinguish solid objects as if using your sense of sight. You gain +2 on all saves against hostile magical effects, need only half the usual food, water, and air, and gain +1 to your hit point die at each level."
+        "text": "Stone-sense out to 20 feet: you distinguish solid objects as if using your sense of sight. You gain +2 on all saves against hostile magical effects, need only half the usual food, water, and air, and gain +1 to your hit point die at each level."
       }
     ]
   },
@@ -729,7 +729,7 @@
     "feature_type": "feat",
     "tag": "origin",
     "rank": 1,
-    "description": "You are a reincarnated transhuman drawing on fragments of past lives. You gain Notice, a bonus skill of your choice with a daily reroll, and clear sight in anything short of complete darkness; no attribute score stays below 9.",
+    "description": "You are an elf, long-lived kin of the old fair folk, carrying memories that are not entirely your own. You gain Notice, a bonus skill of your choice with a daily reroll, and clear sight in anything short of complete darkness; no attribute score stays below 9.",
     "effects": [
       {
         "op": "skill",
@@ -738,7 +738,7 @@
       },
       {
         "op": "note",
-        "text": "Choose any skill as a bonus skill reflecting your past memories; once per day you may reroll a failed check with it. You see clearly in anything short of complete darkness."
+        "text": "Choose any skill as a bonus skill reflecting the memories you carry; once per day you may reroll a failed check with it. You see clearly in anything short of complete darkness."
       },
       {
         "op": "note",
@@ -748,12 +748,12 @@
   },
   {
     "type": "feature",
-    "id": "focus_origin_great_anak",
-    "name": "Great Anak",
+    "id": "focus_origin_giantblooded",
+    "name": "Giant-Blooded",
     "feature_type": "feat",
     "tag": "origin",
     "rank": 1,
-    "description": "You are an unusually human-tolerant Great Anak who can function in human society if your nature is hidden. You gain Stab and Punch, gain +1 Strength and Constitution modifiers, and take -1 Dexterity and Charisma modifiers.",
+    "description": "A giant walked in your grandmother's line, and the blood comes back true in you: broad, tall, and slow to be afraid. You gain Stab and Punch, gain +1 Strength and Constitution modifiers, and take -1 Dexterity and Charisma modifiers.",
     "effects": [
       {
         "op": "skill",
@@ -767,18 +767,18 @@
       },
       {
         "op": "note",
-        "text": "Your Strength and Constitution modifiers increase by 1, up to a maximum of +2; your Dexterity and Charisma modifiers decrease by 1, to a minimum of -2. Unless you look unusually human, life in human lands is extremely difficult."
+        "text": "Your Strength and Constitution modifiers increase by 1, up to a maximum of +2; your Dexterity and Charisma modifiers decrease by 1, to a minimum of -2. Unless you pass for unusually large and homely human, life in settled lands is difficult."
       }
     ]
   },
   {
     "type": "feature",
-    "id": "focus_origin_halfman",
-    "name": "Halfman",
+    "id": "focus_origin_beastkin",
+    "name": "Beastkin",
     "feature_type": "feat",
     "tag": "origin",
     "rank": 1,
-    "description": "You were separated from your herd and grew to human intellect. You gain Survive, gain +1 Constitution modifier, are immune to natural extremes of heat and cold, can eat any plant matter a ruminant could, and take -2 on all Mental saves.",
+    "description": "You were born to a horned herd-folk and grew past the herd's wits into a person's. You gain Survive, gain +1 Constitution modifier, are immune to natural extremes of heat and cold, can eat any plant matter a grazing beast could, and take -2 on all Mental saves.",
     "effects": [
       {
         "op": "skill",
@@ -787,18 +787,18 @@
       },
       {
         "op": "note",
-        "text": "Your Constitution modifier increases by 1, up to a maximum of +2. You are immune to natural extremes of heat and cold and can digest any plant matter a normal ruminant could. Your isolation from the herd inflicts a -2 penalty on all Mental saving throws."
+        "text": "Your Constitution modifier increases by 1, up to a maximum of +2. You are immune to natural extremes of heat and cold and can digest any plant matter a normal grazing beast could. Your isolation from your kind inflicts a -2 penalty on all Mental saving throws."
       }
     ]
   },
   {
     "type": "feature",
-    "id": "focus_origin_houri",
-    "name": "Houri",
+    "id": "focus_origin_glamoured",
+    "name": "Glamoured",
     "feature_type": "feat",
     "tag": "origin",
     "rank": 1,
-    "description": "You are a Houri who has broken the lure of enforced happiness. You gain Convince and Perform, gain +1 Charisma modifier, but take -2 on all Mental saving throws.",
+    "description": "A spirit of desire touched your line, and its glamour sits on you still: people turn to look, and believe what you tell them. You gain Convince and Perform, gain +1 Charisma modifier, but take -2 on all Mental saving throws.",
     "effects": [
       {
         "op": "skill",
@@ -812,18 +812,18 @@
       },
       {
         "op": "note",
-        "text": "Your Charisma modifier increases by 1, up to a maximum of +2. You are innately susceptible to mental influence, taking a -2 penalty on all Mental saving throws. Obeying orders still gives you an emotional rush, but it does not control your decisions."
+        "text": "Your Charisma modifier increases by 1, up to a maximum of +2. You are innately susceptible to mental influence, taking a -2 penalty on all Mental saving throws. Being admired is a physical pleasure for you, but it does not decide what you do."
       }
     ]
   },
   {
     "type": "feature",
-    "id": "focus_origin_lesser_anak",
-    "name": "Lesser Anak",
+    "id": "focus_origin_gutterkin",
+    "name": "Gutterkin",
     "feature_type": "feat",
     "tag": "origin",
     "rank": 1,
-    "description": "You are a humane Lesser Anak, smaller and spindlier than the Great Anak. You gain Stab and Sneak, gain +1 Dexterity modifier, and take -1 Constitution modifier.",
+    "description": "Your people live in the gaps of a city: under the floorboards, behind the shutters, in the walls of houses built after they were forgotten. You gain Stab and Sneak, gain +1 Dexterity modifier, and take -1 Constitution modifier.",
     "effects": [
       {
         "op": "skill",
@@ -837,26 +837,26 @@
       },
       {
         "op": "note",
-        "text": "Your Dexterity modifier increases by 1, up to a maximum of +2; your Constitution modifier decreases by 1, to a minimum of -2. You function in human society only if your nature is hidden."
+        "text": "Your Dexterity modifier increases by 1, up to a maximum of +2; your Constitution modifier decreases by 1, to a minimum of -2. Settled folk take you for a human child or a stray until they look closely, and treat you as an intruder when they do."
       }
     ]
   },
   {
     "type": "feature",
-    "id": "focus_origin_undead",
-    "name": "Undead",
+    "id": "focus_origin_revenant",
+    "name": "Revenant",
     "feature_type": "feat",
     "tag": "origin",
     "rank": 1,
-    "description": "You are a sentient undead able to pass as human. You need not eat, drink, or breathe; you are immune to poison, disease, sleep, and unconsciousness and indifferent to natural heat and cold; healing needs your own or a Necromancer's aid; and one attribute modifier is reduced by 1.",
+    "description": "You died, and something kept the body walking. You need not eat, drink, or breathe; you are immune to poison, disease, sleep, and unconsciousness and indifferent to natural heat and cold; healing needs your own or a Necromancer's aid; and one attribute modifier is reduced by 1.",
     "effects": [
       {
         "op": "note",
-        "text": "Undead qualities: you cannot be poisoned, diseased, or made to sleep or fall unconscious, and you need not eat, drink, or breathe. You are indifferent to normal extremes of heat or cold, do not decay further, and self-repair at normal healing rates. Conventional healing fails on you unless you use it yourself, a Necromancer does, or another person skilled in maintaining dead flesh does. Ordinary undead are destroyed at zero hit points, but as a PC you automatically stabilize instead."
+        "text": "Revenant qualities: you cannot be poisoned, diseased, or made to sleep or fall unconscious, and you need not eat, drink, or breathe. You are indifferent to normal extremes of heat or cold, do not decay further, and mend at normal healing rates. Conventional healing fails on you unless you use it yourself, a Necromancer does, or another person skilled in maintaining dead flesh does. Ordinary undead are destroyed at zero hit points, but as a PC you automatically stabilize instead."
       },
       {
         "op": "note",
-        "text": "Choose one attribute; its modifier decreases by 1, to a minimum of -2. You can teach allies how to use healing effects on you. You can masquerade as a normal human unless closely inspected; if you can pass perfectly, choose one debility or vulnerability from the undead qualities. This origin needs the GM's permission."
+        "text": "Choose one attribute; its modifier decreases by 1, to a minimum of -2. You can teach allies how to use healing effects on you. You can masquerade as a living person unless closely inspected; if you can pass perfectly, choose one debility or vulnerability from the revenant qualities. This origin needs the GM's permission."
       }
     ]
   },

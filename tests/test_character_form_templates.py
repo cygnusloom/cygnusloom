@@ -345,7 +345,7 @@ class _SkillPickParser(HTMLParser):
     [
         ("twin-lakes", "cairn2e"),
         ("hogwarts", "hogwarts-rpg"),
-        ("latter-earth", "worldswithoutnumber"),
+        ("unwritten-world", "worldswithoutnumber"),
     ],
 )
 def test_creation_page_round_trips_template_metadata_for_each_ruleset(
@@ -386,7 +386,9 @@ def test_wwn_mage_mage_form_exposes_distinct_partial_traditions(
     client_factory: Callable[[], TestClient],
 ):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
+    response = _new_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     page = client.get(f"/campaigns/{campaign_id}").text
 
@@ -425,7 +427,9 @@ def test_wwn_healer_and_vowed_form_requires_a_second_partial_class(
     client_factory: Callable[[], TestClient],
 ):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
+    response = _new_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     page = client.get(f"/campaigns/{campaign_id}").text
 
@@ -471,7 +475,9 @@ def test_wwn_skill_pick_form_exposes_progression_grants_and_caps(
     client_factory: Callable[[], TestClient],
 ):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
+    response = _new_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     page = client.get(f"/campaigns/{campaign_id}").text
 
@@ -528,7 +534,9 @@ def test_wwn_multitag_spell_picks_are_labeled_in_the_creation_form(
     client_factory: Callable[[], TestClient],
 ):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
+    response = _new_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     page = client.get(f"/campaigns/{campaign_id}").text
     picks = page.split('data-pick-selects="tradition_spells_elementalist"', 1)[1]

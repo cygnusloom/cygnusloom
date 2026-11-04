@@ -4,8 +4,12 @@ This file is the working spec and log for the `worldswithoutnumber` ruleset and 
 primitives it needed. It is kept here so the decisions are not lost. The loader reads only
 `*.json` files, so this file is not loaded as content.
 
-Reference: `WorldsWithoutNumber_FreePDF_040221.pdf` and `WWN_Character_Sheet_031521.pdf` in this
-directory. The rules text here and in `rules.json` is paraphrased; the books are not copied.
+Reference: `Worlds_Without_Number_System_Reference_Document.pdf` in this directory, the CC0 SRD.
+The rule set was first built from the free book and its character sheet, which are copyrighted and
+have been removed. The SRD grants the mechanics, class, art, and spell names, equipment, progression,
+and two example backgrounds. It does not grant the setting, the creatures, the starting packages,
+or the GM tables, so those are original to this project. [The rewrite log](../../../docs/WWN_SRD_REWRITE.md)
+records the audit and what replaced what.
 
 ## Goal (from the user)
 
@@ -13,8 +17,9 @@ directory. The rules text here and in `rules.json` is paraphrased; the books are
    backgrounds, classes, Foci, equipment, checks, combat, saves, System Strain, Effort, the three
    spellcasting traditions, advancement, the bestiary, the GM rules, and the world-generation
    tables.
-2. Use the world-generation material to aid the AI GM. The bundled `latter-earth` world is an
-   empty template: it has no locations, NPCs, or start.
+2. Use the world-generation material to aid the AI GM. The bundled `unwritten-world` world is an
+   empty template: it has no locations, NPCs, or start, and the GM invents the setting with the
+   creative and world tables and records it with `record_setting`.
 3. While doing so, find engine code shaped specifically for Cairn 2e or Hogwarts and move that
    behaviour into ruleset JSON or an isolated ruleset module, so the engine stays generic. The
    refactor is a side effect of WWN, not a rewrite.
@@ -43,8 +48,10 @@ directory. The rules text here and in `rules.json` is paraphrased; the books are
   charts live in [progression.json](./progression.json) and are validated for each loaded ruleset.
   Class tables must correspond exactly to defined class templates; unsupported legacy aliases
   are not loaded.
-- Starting gear is the book's equipment packages, modelled as `kit` templates in
-  [templates.json](./templates.json). The kind is required, so every character leaves creation
+- Starting gear is six kits themed on common adventuring roles, modelled as `kit` templates in
+  [templates.json](./templates.json). Each kit is a selection of catalogue items, so the armour,
+  weapons, and gear are the SRD's equipment under a loadout of this project's own naming. The kind
+  is required, so every character leaves creation
   with one, and each template's `grant` lists the catalogue items, starting silver, and the armor
   and shield already worn. Creation carries them through the generic template grant, so the GM
   never has to invent gear. A character with few Readied slots still holds a weapon at the ready,
@@ -165,7 +172,7 @@ their player-facing behaviour.
 | `backgrounds.json` | 20 background templates with a free skill and two Learning picks |
 | `classes.json` | Warrior, Expert, Mage, partial Healer and Vowed, four Adventurer pairings, and full and partial traditions with class gating |
 | `templates.json` | Second partial classes for dual-partial Adventurers, with their tradition gates |
-| `foci.json` | Every free-book Focus, level 1 and 2, plus the nine nonhuman origin Foci |
+| `foci.json` | Every SRD Focus, level 1 and 2, plus nine original origin Foci |
 | `equipment.json` | Weapons, armor, adventuring gear, item sizes, inventory rules, marketplace, silver currency |
 | `character_fields.json` | Look, Goal, Appearance, Biography |
 | `tables.json` | Appearance, personality, accent, quirk, names, 20 Growth/Learning table pairs, and the all-skills table |
@@ -175,11 +182,12 @@ their player-facing behaviour.
 | `counters.json` | Level, XP, skill points, Focus picks, art picks, attribute boosts |
 | `spells.json` | High Magic, Necromancer, and Elementalist spells as ranked features |
 | `arts.json` | The three traditions' arts as features |
-| `monsters.json` | The free-book bestiary with AC, Shock, saves, and Morale |
+| `monsters.json` | 56 original creatures with AC, Shock, saves, and Morale |
 | `rules.json` | 52 paraphrased GM rules, with the core ones marked important |
-| `dice_tables.json` | Terrain, nation, ruler, government, history, and tag tables |
-| `worldgen_tables.json` | Reaction, culture, religion, community, site, ruin, event, and monster tables |
-| `world_terrain.json` | Ground kinds for a Latter Earth map |
+| `dice_tables.json` | 33 original terrain, nation, ruler, government, history, and tag tables |
+| `worldgen_tables.json` | 42 original reaction, culture, religion, community, site, ruin, event, and monster tables |
+| `creative_tables.json` | Six 1d100 idea tables the GM rolls to invent a setting |
+| `world_terrain.json` | Ground kinds for a fantasy map |
 | `prompts.json` | WWN-specific GM prompt fragments, including encounter setup, player rolls, combat actions, and project tracking |
 | `tool_calls.json` | Checks, morale, advancement, gear, and magic tools |
 | `adventure_tools.json` | Combat, encounter, map, save, reaction, Instinct, rest, travel, market, hireling, and project tools |
@@ -188,9 +196,10 @@ their player-facing behaviour.
 [PARITY.md](./PARITY.md) is the checkable status list. It names the tool, JSON, and test evidence
 for each area and the gaps that remain.
 
-The world template `src/cygnusforge/data/worlds/latter-earth/world.json` is deliberately empty: it
-names the rule set and gives a blurb, with no locations, NPCs, or start. The live GM uses the dice
-tables to create the first location and its people.
+The world template `src/cygnusforge/data/worlds/unwritten-world/world.json` is deliberately empty:
+it names the rule set and gives a blurb, with no locations, NPCs, or start. The live GM invents
+the setting from the creative and world tables, records it with `record_setting`, and then creates
+the first location and its people.
 
 ## Creation
 
@@ -212,7 +221,8 @@ tables to create the first location and its people.
   and a partial mage takes the partial template (one High or Necromancer art and two spells;
   three Elementalist arts and two spells). Non-casters take `no_tradition`.
 - Foci, starting spells, and arts are `feature_picks`; each Focus's fixed bonuses are applied at
-  creation through `effects`. A starting equipment package or 3d6 x 10 silver may follow.
+  creation through `effects`. Every character also picks one of the six kits, which grants its
+  catalogue items, worn armour and shield, and any starting silver.
 - A Vowed's Unarmored Defense sets a level-based base AC while no armor or shield is equipped;
   equipment and level changes recalculate it automatically.
 - A second eligible Focus pick advances a two-rank Focus. One-rank Foci cannot normally be taken
@@ -221,7 +231,7 @@ tables to create the first location and its people.
   for additional benefits. Mage and partial Mage choices exclude Developed Attribute and
   Nullifier; the partial Healer and Vowed options follow their source partial-Mage category.
   Advancement uses each class's general Focus pool, not the narrower Expert or Warrior starting
-  pick, while nonhuman origin Foci remain available with GM permission. Specific Attribute,
+  pick, while origin Foci remain available with GM permission. Specific Attribute,
   Specialist, and familiar-benefit choices remain GM-guided notes rather than structured picks.
 - Creation skills cannot exceed level 1. Excess rolls and grants can be replaced with another
   eligible skill chosen in the creation form, or rolled when left blank. Focus-granted
@@ -267,7 +277,7 @@ tables to create the first location and its people.
 - `spend_skill_point` charges 1, 2, 3, 4, or 5 points for levels 0 to 4 and enforces the minimum
   character levels 1, 1, 3, 6, and 9. `improve_attribute` buys the five attribute boosts at 1 to
   5 points.
-- `learn_focus` also accepts a nonhuman origin Focus; `learn_art` spends an art pick on the
+- `learn_focus` also accepts an origin Focus; `learn_art` spends an art pick on the
   character's tradition; `learn_spell` lets Necromancers and Elementalists learn High Magic.
 - `prepare_spells` replaces the prepared list, limited by the class/level casting table.
   `cast_spell` spends one `castings` point. `restore_spell_slots` clears them.
@@ -401,12 +411,12 @@ an open gap. [PARITY.md](./PARITY.md) is the same status list with the tool/JSON
 - [x] Content: attributes, skills, 20 backgrounds, 7 classes and 3 traditions, Foci, equipment,
       spells, arts, bestiary, rules, world-generation tables.
 - [x] Ruleset modules: `rules/wwn.py` and `rules/wwn_magic.py`.
-- [x] Empty Latter Earth world template.
+- [x] Empty `unwritten-world` world template, invented by the GM at the table.
 - [x] Tests for creation, checks, combat, advancement, magic, and the refactors.
 - [x] Live DeepSeek run: creation, world generation, narration, and a skill check.
 - [x] Fidelity pass: corrected saving throws, AC, natural 1/20, Killing Blow, skill and
       attribute costs, HP rerolls, slow XP, arts, starting spells, first aid, Frail rest,
-      tradition gating, origin Foci, gear, reaction/Instinct, map and combat tools, and 47
+      tradition gating, origin Foci, gear, reaction/Instinct, map and combat tools, and 75
       world-generation tables. Found and fixed the spell-pick filter in a live run.
 - [x] Parity pass 2: Healer and Vowed classes and arts, dual-mage second traditions, separate
       Readied/Stowed pools, shield Shock, statblock multi-attack resolution, named NPC mortal

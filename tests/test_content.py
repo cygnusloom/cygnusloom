@@ -115,6 +115,7 @@ CORE_TOOLS = {
     "end_condition",
     "list_lookups",
     "roll_creative",
+    "record_setting",
 }
 
 
@@ -142,7 +143,7 @@ def tree(tmp_path: Path) -> Path:
 
 def test_bundled_content_loads():
     library = ContentLibrary.load()
-    assert set(library.world_templates) == {"twin-lakes", "hogwarts", "latter-earth"}
+    assert set(library.world_templates) == {"twin-lakes", "hogwarts", "unwritten-world"}
     assert library.world_templates["twin-lakes"].name == "Twin Lakes"
     twin_lakes = library.world_templates["twin-lakes"]
     assert twin_lakes.locations

@@ -5,11 +5,26 @@
     "name": "NPC Reaction",
     "dice": "2d6",
     "rows": [
-      {"roll": "2", "result": "As aggressively hostile as the situation allows."},
-      {"roll": "3-5", "result": "More unfriendly and hostile than the situation would suggest."},
-      {"roll": "6-8", "result": "As predictably hostile or friendly as they usually are here."},
-      {"roll": "9-11", "result": "More friendly and benign than expected given the circumstances."},
-      {"roll": "12", "result": "As friendly and helpful as their nature and the situation permit."}
+      {
+        "roll": "2",
+        "result": "As hostile as the situation allows, and they move to attack or drive the party off at once."
+      },
+      {
+        "roll": "3-5",
+        "result": "Wary and unfriendly, weapons ready, with no patience for questions or delays."
+      },
+      {
+        "roll": "6-8",
+        "result": "Cautious and neutral, willing to talk while keeping one eye on the road behind them."
+      },
+      {
+        "roll": "9-11",
+        "result": "Well disposed and willing, glad to trade news, goods, or directions without much pressing."
+      },
+      {
+        "roll": "12",
+        "result": "Genuinely friendly and helpful, and they share what little they have as far as their means allow."
+      }
     ]
   },
   {
@@ -18,32 +33,86 @@
     "name": "How the Crisis Originated",
     "dice": "1d8",
     "rows": [
-      {"roll": "1", "result": "Aboriginal peoples already united in the area."},
-      {"roll": "2", "result": "Refugees from a fallen land."},
-      {"roll": "3", "result": "Exiles or losers of some civil strife."},
-      {"roll": "4", "result": "Colonists who later became independent."},
-      {"roll": "5", "result": "A people magically created or shaped here."},
-      {"roll": "6", "result": "People drawn here by a shared faith or ideology."},
-      {"roll": "7", "result": "A conquering army that went native."},
-      {"roll": "8", "result": "Migrants who came for profit or plunder."}
+      {
+        "roll": "1",
+        "result": "A river changed course and moved a whole district's wealth to a neighbor."
+      },
+      {
+        "roll": "2",
+        "result": "A mercenary company was dismissed without pay at the end of a campaign."
+      },
+      {
+        "roll": "3",
+        "result": "A poor harvest coincided with a tax increase and a rumor of hoarding."
+      },
+      {
+        "roll": "4",
+        "result": "A road was closed for repairs and left a trade town without customers."
+      },
+      {
+        "roll": "5",
+        "result": "A healer was accused of poisoning a noble child and fled before trial."
+      },
+      {
+        "roll": "6",
+        "result": "A border marker was moved during a single night of heavy rain."
+      },
+      {
+        "roll": "7",
+        "result": "A shipment of grain arrived spoiled and the merchants blamed each other."
+      },
+      {
+        "roll": "8",
+        "result": "A marriage contract was broken after the bride's family lost its fortune."
+      }
     ]
   },
   {
     "type": "dice_table",
     "id": "original_inhabitants",
-    "name": "What Became of the Original Inhabitants",
+    "name": "What Became of the First People",
     "dice": "1d10",
     "rows": [
-      {"roll": "1", "result": "No other humans were living here."},
-      {"roll": "2", "result": "Wiped out in warfare."},
-      {"roll": "3", "result": "Utterly assimilated by the newcomers."},
-      {"roll": "4", "result": "Driven into exile."},
-      {"roll": "5", "result": "They became the ruling class."},
-      {"roll": "6", "result": "They became an oppressed underclass."},
-      {"roll": "7", "result": "Partially assimilated."},
-      {"roll": "8", "result": "They kept small areas of self-rule."},
-      {"roll": "9", "result": "Two fates: roll 1d8 twice and use both."},
-      {"roll": "10", "result": "No one can agree on what happened."}
+      {
+        "roll": "1",
+        "result": "They kept their own courts in three valleys and answer to no one else."
+      },
+      {
+        "roll": "2",
+        "result": "They were pushed into the least fertile hills and still farm there."
+      },
+      {
+        "roll": "3",
+        "result": "They were absorbed so completely that only a few words of their speech remain."
+      },
+      {
+        "roll": "4",
+        "result": "They were converted, renamed, and taught to forget their own genealogies."
+      },
+      {
+        "roll": "5",
+        "result": "They were wiped out by sickness before any treaty could be made."
+      },
+      {
+        "roll": "6",
+        "result": "They became the new rulers by marrying into the incoming houses."
+      },
+      {
+        "roll": "7",
+        "result": "No two accounts agree whether they fled, died, or were simply absorbed."
+      },
+      {
+        "roll": "8",
+        "result": "They were hired as soldiers and settled as a separate quarter in every town."
+      },
+      {
+        "roll": "9",
+        "result": "They were gone before the first settlers arrived, leaving only field boundaries."
+      },
+      {
+        "roll": "10",
+        "result": "They fled across the water and their descendants still raid the coast."
+      }
     ]
   },
   {
@@ -52,92 +121,278 @@
     "name": "How They Overcame the Crisis",
     "dice": "1d10",
     "rows": [
-      {"roll": "1", "result": "A brilliant and inspirational leader arose."},
-      {"roll": "2", "result": "Organization and unity overcame the trouble."},
-      {"roll": "3", "result": "Grim determination and endurance outlasted the woe."},
-      {"roll": "4", "result": "Faith strengthened them against the hardship."},
-      {"roll": "5", "result": "Skillful use of magic resolved the problem."},
-      {"roll": "6", "result": "Martial prowess and military cunning won through."},
-      {"roll": "7", "result": "Diplomatic ties and outside help."},
-      {"roll": "8", "result": "Industrious labor and tireless exertion."},
-      {"roll": "9", "result": "Economic brilliance and trading acumen."},
-      {"roll": "10", "result": "Ruthless but effective sacrifices were made."}
+      {
+        "roll": "1",
+        "result": "A marriage and a border adjustment bought them a decade of peace."
+      },
+      {
+        "roll": "2",
+        "result": "A merchant league lent them the money at terms that crippled them for years."
+      },
+      {
+        "roll": "3",
+        "result": "They abandoned the outer districts and held the river line instead."
+      },
+      {
+        "roll": "4",
+        "result": "The cities agreed to share grain and troops under a temporary council."
+      },
+      {
+        "roll": "5",
+        "result": "They gave up a province and a generation of pride to save the rest."
+      },
+      {
+        "roll": "6",
+        "result": "They dug canals, rebuilt bridges, and paid for it with three years of hunger."
+      },
+      {
+        "roll": "7",
+        "result": "A single leader held the factions together long enough to outlast the danger."
+      },
+      {
+        "roll": "8",
+        "result": "They made a bargain with a local power that everyone agreed never to discuss."
+      },
+      {
+        "roll": "9",
+        "result": "They let the plague burn through the outer wards and sealed the inner ones."
+      },
+      {
+        "roll": "10",
+        "result": "They borrowed heavily, traded their way out, and repaid every creditor."
+      }
     ]
   },
   {
     "type": "dice_table",
     "id": "social_identity",
-    "name": "Major Unit of Social Identity",
+    "name": "What People Belong To",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "Extended family out to cousins and like kin."},
-      {"roll": "2", "result": "Religious factions or alliances of faiths."},
-      {"roll": "3", "result": "Regional and province-based identity."},
-      {"roll": "4", "result": "Ethnic membership."},
-      {"roll": "5", "result": "Professional guild or trade-specific group."},
-      {"roll": "6", "result": "Identity based on their local community."},
-      {"roll": "7", "result": "Educational ties to institutions or traditions."},
-      {"roll": "8", "result": "Patron-client relationships with major figures."},
-      {"roll": "9", "result": "Hereditary loyalty to a political group."},
-      {"roll": "10", "result": "Trade guilds specific to particular roles."},
-      {"roll": "11", "result": "Dynastic lineages with cadet branches."},
-      {"roll": "12", "result": "Lineages founded on ancient hero-ancestors."},
-      {"roll": "13", "result": "Numerous castes of hereditary workers."},
-      {"roll": "14", "result": "Inheritance of an ancient body modification."},
-      {"roll": "15", "result": "Astrologically determined birth groups."},
-      {"roll": "16", "result": "Warbands or civic military service groups."},
-      {"roll": "17", "result": "Voluntary mutual-assistance brotherhoods."},
-      {"roll": "18", "result": "Far-flung clans of affiliated families."},
-      {"roll": "19", "result": "Having or lacking noble blood."},
-      {"roll": "20", "result": "Ideological groups or philosophical sects."}
+      {
+        "roll": "1",
+        "result": "The hidden mark of a mutual-aid brotherhood, given in the handshake and the password."
+      },
+      {
+        "roll": "2",
+        "result": "A debt of hospitality owed between households, renewed by gifts and remembered by both."
+      },
+      {
+        "roll": "3",
+        "result": "The guild of licensed beggars, whose members hold territory and settle disputes among themselves."
+      },
+      {
+        "roll": "4",
+        "result": "A pact with a local spirit of place, inherited with the fields and renewed at sowing."
+      },
+      {
+        "roll": "5",
+        "result": "A trade secret held by a few families who will not teach it to outsiders."
+      },
+      {
+        "roll": "6",
+        "result": "Membership in a household cult that keeps its own hearth and buries its own dead."
+      },
+      {
+        "roll": "7",
+        "result": "A shared ancestor said to have walked out of the marsh with a rope of iron."
+      },
+      {
+        "roll": "8",
+        "result": "Membership in a craft guild that sets the price of every pot and pane in the district."
+      },
+      {
+        "roll": "9",
+        "result": "Closeness to the old ruling line, reckoned through cadet branches and half-remembered cousins."
+      },
+      {
+        "roll": "10",
+        "result": "A sworn compact sealed by sharing a cup, by which unrelated households settle disputes together."
+      },
+      {
+        "roll": "11",
+        "result": "A vow of pilgrimage taken by a whole household, binding them to a shared road and shrine."
+      },
+      {
+        "roll": "12",
+        "result": "A blood-oath between two families that makes cousins of strangers and enemies of their enemies."
+      },
+      {
+        "roll": "13",
+        "result": "Membership in a herding band that moves with the seasons and claims pasture by custom."
+      },
+      {
+        "roll": "14",
+        "result": "The road one's people have always traveled, with its fairs and its scattered kin."
+      },
+      {
+        "roll": "15",
+        "result": "The trade cant one speaks, which marks a person as belonging wherever the work is done."
+      },
+      {
+        "roll": "16",
+        "result": "Descent from a single grandmother whose name every household still recites at births."
+      },
+      {
+        "roll": "17",
+        "result": "Being bound to a temple as a servant, whether or not one ever takes vows."
+      },
+      {
+        "roll": "18",
+        "result": "Membership in a freeholders' assembly that votes on commons and fences and admits by petition."
+      },
+      {
+        "roll": "19",
+        "result": "The clan one marries into, since a person keeps their birth clan only until the wedding."
+      },
+      {
+        "roll": "20",
+        "result": "The order of singers who keep the family histories and admit new members by apprenticeship."
+      }
     ]
   },
   {
     "type": "dice_table",
     "id": "physical_quirk",
-    "name": "Optional Physical Quirks",
+    "name": "Distinguishing Physical Traits",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "They possess an extra eye somewhere."},
-      {"roll": "2", "result": "An additional set of limbs or extremities."},
-      {"roll": "3", "result": "Extremely pronounced sexual dimorphism."},
-      {"roll": "4", "result": "Patches of feathers, scales, fur, or the like."},
-      {"roll": "5", "result": "They have a tail of some sort."},
-      {"roll": "6", "result": "They possess wings, useful or not."},
-      {"roll": "7", "result": "Their skin has an unusual texture."},
-      {"roll": "8", "result": "They bear their creator's sigil marks."},
-      {"roll": "9", "result": "The sexes look very similar to outsiders."},
-      {"roll": "10", "result": "They have a particular scent to them."},
-      {"roll": "11", "result": "Their voices are peculiar in some way."},
-      {"roll": "12", "result": "Additional or too few fingers or toes."},
-      {"roll": "13", "result": "They have animalistic features in some way."},
-      {"roll": "14", "result": "One or more manipulatory tentacles."},
-      {"roll": "15", "result": "They have light-emitting organs or skin."},
-      {"roll": "16", "result": "Their mouths are fanged or tusked."},
-      {"roll": "17", "result": "Alien Outsider features of some kind."},
-      {"roll": "18", "result": "Their proportions are distinctly strange."},
-      {"roll": "19", "result": "They don't show age the way others do."},
-      {"roll": "20", "result": "Roll twice and blend the results."}
+      {
+        "roll": "1",
+        "result": "They carry a faint smell of woodsmoke and resin that clings even after washing."
+      },
+      {
+        "roll": "2",
+        "result": "Their second and third toes are joined by a web of skin, and sandals are cut to show it."
+      },
+      {
+        "roll": "3",
+        "result": "They carry their weight high on the shoulders, with long necks and narrow hips."
+      },
+      {
+        "roll": "4",
+        "result": "They heal slowly and scar generously, so most adults wear a record of their work on their hands."
+      },
+      {
+        "roll": "5",
+        "result": "Their eyebrows meet above the nose, a trait families read as a sign of temper."
+      },
+      {
+        "roll": "6",
+        "result": "They tan very dark in summer and go pale as paper in winter, with little in between."
+      },
+      {
+        "roll": "7",
+        "result": "Nearly all have a white forelock from birth, worn long or shorn without ceremony."
+      },
+      {
+        "roll": "8",
+        "result": "Their fingers are stained a permanent brown from the dye vats, a mark no washing removes."
+      },
+      {
+        "roll": "9",
+        "result": "Their teeth are small and close-set, giving every smile a childlike look."
+      },
+      {
+        "roll": "10",
+        "result": "Their hands are long-fingered and double-jointed, and they can tell one knot from another by touch."
+      },
+      {
+        "roll": "11",
+        "result": "Most have a gap between the front teeth, and children are taught to whistle through it."
+      },
+      {
+        "roll": "12",
+        "result": "They sleep in short stretches and wake at the least sound, which strangers find unnerving."
+      },
+      {
+        "roll": "13",
+        "result": "Most people are short and broad, built low to the ground and hard to knock over."
+      },
+      {
+        "roll": "14",
+        "result": "Thick, dark calluses cover the palms from an early age and never fade."
+      },
+      {
+        "roll": "15",
+        "result": "Most have a high, narrow palate and speak through the nose, a sound their neighbors mimic."
+      },
+      {
+        "roll": "16",
+        "result": "Almost all are left-handed, and their tools and looms are built the other way around."
+      },
+      {
+        "roll": "17",
+        "result": "A faint birthmark behind the left ear is so common that it is barely remarked."
+      },
+      {
+        "roll": "18",
+        "result": "They walk with a slight forward stoop from a lifetime of carrying loads on the back."
+      },
+      {
+        "roll": "19",
+        "result": "Their faces freckle so heavily in summer that the pattern is used to tell families apart."
+      },
+      {
+        "roll": "20",
+        "result": "Most have a heavy brow and a strong jaw, which makes them seem to glower when calm."
+      }
     ]
   },
   {
     "type": "dice_table",
     "id": "adornment",
-    "name": "Common Forms of Adornment",
+    "name": "Common Adornment",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "Intricate hairstyles or braiding."},
-      {"roll": "2", "result": "Painted skin markings that sometimes change."},
-      {"roll": "3", "result": "Tattoos of cultural significance."},
-      {"roll": "4", "result": "Piercings, whether minor or elaborate."},
-      {"roll": "5", "result": "Role- or class-specific clothing items."},
-      {"roll": "6", "result": "Patterned hair shaving or depilation."},
-      {"roll": "7", "result": "Culturally significant jewelry or accessories."},
-      {"roll": "8", "result": "Color choices that carry social meaning."},
-      {"roll": "9", "result": "Socially meaningful animal motif items."},
-      {"roll": "10", "result": "Worn weapons, tools, or trade implements."},
-      {"roll": "11", "result": "Significant use of scent or perfume."},
-      {"roll": "12", "result": "Impractical or elaborate role-based clothes."}
+      {
+        "roll": "1",
+        "result": "Chalk stripes on the cheeks for mourning."
+      },
+      {
+        "roll": "2",
+        "result": "A single earring of hammered tin."
+      },
+      {
+        "roll": "3",
+        "result": "Crushed pine rubbed into the hair."
+      },
+      {
+        "roll": "4",
+        "result": "Wide felt hats with a feather at the back."
+      },
+      {
+        "roll": "5",
+        "result": "Braided hair pinned with bone pins."
+      },
+      {
+        "roll": "6",
+        "result": "A strip shaved above each ear."
+      },
+      {
+        "roll": "7",
+        "result": "Twisted iron neck-rings worn tight at the throat."
+      },
+      {
+        "roll": "8",
+        "result": "A patchwork sash marking a household."
+      },
+      {
+        "roll": "9",
+        "result": "Silver wire wound through the beard."
+      },
+      {
+        "roll": "10",
+        "result": "Copper rings on every finger but the thumb."
+      },
+      {
+        "roll": "11",
+        "result": "Linen wraps dyed with walnut stain."
+      },
+      {
+        "roll": "12",
+        "result": "Tattooed bands around the wrists."
+      }
     ]
   },
   {
@@ -146,14 +401,38 @@
     "name": "Hair Color and Texture",
     "dice": "1d8",
     "rows": [
-      {"roll": "1", "result": "Night-black, very tightly curled."},
-      {"roll": "2", "result": "Dark brown, dense and curled."},
-      {"roll": "3", "result": "Lighter brown, slightly wavy."},
-      {"roll": "4", "result": "Red shades, stiff and straight."},
-      {"roll": "5", "result": "Blond, thick and wavy."},
-      {"roll": "6", "result": "White or white-blond, thin and fine."},
-      {"roll": "7", "result": "An unusual palette, thick and flowing."},
-      {"roll": "8", "result": "No hair at all, or only scant, delicate growth."}
+      {
+        "roll": "1",
+        "result": "Salt-and-pepper by thirty, waved and close-cropped."
+      },
+      {
+        "roll": "2",
+        "result": "Chestnut brown, straight and heavy as a rope."
+      },
+      {
+        "roll": "3",
+        "result": "Dull brown, coarse and dry, usually braided with grease."
+      },
+      {
+        "roll": "4",
+        "result": "Honey blond, thick and loosely curled."
+      },
+      {
+        "roll": "5",
+        "result": "Mousy brown, limp and easily oiled flat."
+      },
+      {
+        "roll": "6",
+        "result": "Thinning early, most keeping what remains cropped close."
+      },
+      {
+        "roll": "7",
+        "result": "Red-gold, coarse and stiff, worn long by everyone."
+      },
+      {
+        "roll": "8",
+        "result": "Pale flaxen, fine and prone to tangling."
+      }
     ]
   },
   {
@@ -162,14 +441,38 @@
     "name": "Skin Colors",
     "dice": "1d8",
     "rows": [
-      {"roll": "1", "result": "Extremely dark hues."},
-      {"roll": "2", "result": "Dark browns and mocha shades."},
-      {"roll": "3", "result": "Golden, sallow, or ivory tones."},
-      {"roll": "4", "result": "Olives or light browns."},
-      {"roll": "5", "result": "Ruddy or tanned complexions."},
-      {"roll": "6", "result": "Pale white or pinkish hues."},
-      {"roll": "7", "result": "An unusual color or pattern of colors."},
-      {"roll": "8", "result": "Scales, fur, or an unusual hide type."}
+      {
+        "roll": "1",
+        "result": "Golden tan, deepening to bronze in summer."
+      },
+      {
+        "roll": "2",
+        "result": "Sallow and gray-tinged from long winters indoors."
+      },
+      {
+        "roll": "3",
+        "result": "Ruddy and weathered, permanently flushed from cold."
+      },
+      {
+        "roll": "4",
+        "result": "Very pale, burning easily and rarely seen in full sun."
+      },
+      {
+        "roll": "5",
+        "result": "Rich umber, weathered darker on hands and face."
+      },
+      {
+        "roll": "6",
+        "result": "Dark mahogany with a cool, even tone."
+      },
+      {
+        "roll": "7",
+        "result": "Copper-brown, freckled across the nose."
+      },
+      {
+        "roll": "8",
+        "result": "Olive with a golden cast, dry from wind."
+      }
     ]
   },
   {
@@ -178,14 +481,38 @@
     "name": "Eye Coloration",
     "dice": "1d8",
     "rows": [
-      {"roll": "1", "result": "Black or extremely dark brown."},
-      {"roll": "2", "result": "Hazel or olive."},
-      {"roll": "3", "result": "Blues in varying shades."},
-      {"roll": "4", "result": "Grays, whether flat or metallic."},
-      {"roll": "5", "result": "Ambers and yellows."},
-      {"roll": "6", "result": "Greens in different shades."},
-      {"roll": "7", "result": "An unusual or luminous color."},
-      {"roll": "8", "result": "Slit or unusual pupils; roll again for color."}
+      {
+        "roll": "1",
+        "result": "Hazel, shifting from green to brown with the light."
+      },
+      {
+        "roll": "2",
+        "result": "Gray-green, with lids that fold low at the outer corner."
+      },
+      {
+        "roll": "3",
+        "result": "Warm brown, with a heavy fold above the lid."
+      },
+      {
+        "roll": "4",
+        "result": "Near-black, wide and round."
+      },
+      {
+        "roll": "5",
+        "result": "Pale blue, narrowed by a lifetime of bright snow."
+      },
+      {
+        "roll": "6",
+        "result": "Cornflower blue, wide and quick."
+      },
+      {
+        "roll": "7",
+        "result": "One brown and one green, common enough to be unremarkable."
+      },
+      {
+        "roll": "8",
+        "result": "Pale gray, almost silver in winter."
+      }
     ]
   },
   {
@@ -194,14 +521,38 @@
     "name": "Church Structures",
     "dice": "1d8",
     "rows": [
-      {"roll": "1", "result": "Each holy man or woman leads their own branch with whatever followers they gather."},
-      {"roll": "2", "result": "Multiple pontiffs, friendly or rival, each with subordinate clergy."},
-      {"roll": "3", "result": "One pontiff over upper clergy and temple heads, with minor clergy beneath."},
-      {"roll": "4", "result": "Independent congregations whose clergy answer to their parishioners."},
-      {"roll": "5", "result": "Lay patrons fund temples serving their family's wishes, staffed by paid clergy."},
-      {"roll": "6", "result": "No official clergy; respected believers teach and lead rites without special rank."},
-      {"roll": "7", "result": "The church is part of the state, its clergy officials appointed by the government."},
-      {"roll": "8", "result": "The faith's structure varies from place to place; roll twice."}
+      {
+        "roll": "1",
+        "result": "Every household keeps a hearth shrine, and respected elders lead the rites without any ordained rank."
+      },
+      {
+        "roll": "2",
+        "result": "A council of senior priests who must agree before any doctrine is taught in public."
+      },
+      {
+        "roll": "3",
+        "result": "Two rival temple heads in separate cities, each with clergy and shrines, neither willing to yield."
+      },
+      {
+        "roll": "4",
+        "result": "Congregations of ordinary believers that hire their clergy by the season and argue doctrine at every meeting."
+      },
+      {
+        "roll": "5",
+        "result": "Wandering preachers with no fixed temple, each gathering a following and moving on before it hardens."
+      },
+      {
+        "roll": "6",
+        "result": "The faith is a branch of the crown, its priests appointed and paid as officials."
+      },
+      {
+        "roll": "7",
+        "result": "No central authority at all; each region keeps its own rites under a shared name."
+      },
+      {
+        "roll": "8",
+        "result": "A society of healers who serve as clergy, treating the sick as part of every rite."
+      }
     ]
   },
   {
@@ -210,26 +561,86 @@
     "name": "Human Concern or Natural Principle",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "A human vice; or a local terrain type."},
-      {"roll": "2", "result": "A kind of demihuman; or beasts."},
-      {"roll": "3", "result": "Agriculture; or beauty and sex."},
-      {"roll": "4", "result": "Cities; or cosmic law."},
-      {"roll": "5", "result": "Commerce; or creation."},
-      {"roll": "6", "result": "Crafting; or death."},
-      {"roll": "7", "result": "Deception; or fertility."},
-      {"roll": "8", "result": "Healing; or forests."},
-      {"roll": "9", "result": "Justice; or magic."},
-      {"roll": "10", "result": "Luck; or mountains."},
-      {"roll": "11", "result": "Marriage or family; or night."},
-      {"roll": "12", "result": "Music; or one or more seasons."},
-      {"roll": "13", "result": "Prophecy; or pain."},
-      {"roll": "14", "result": "Protection; or the sea and rivers."},
-      {"roll": "15", "result": "Revenge; or the sky."},
-      {"roll": "16", "result": "Ruling; or storms and rain."},
-      {"roll": "17", "result": "Theft or crime; or the sun, moon, and stars."},
-      {"roll": "18", "result": "Travel or roads; or the underworld."},
-      {"roll": "19", "result": "War; or time."},
-      {"roll": "20", "result": "Wisdom; or untamed nature."}
+      {
+        "roll": "1",
+        "result": "The scars left after a wound, as proof that a body survived."
+      },
+      {
+        "roll": "2",
+        "result": "The protection of children and the naming of the newborn."
+      },
+      {
+        "roll": "3",
+        "result": "The echoes in caves and the voices that answer from the dark."
+      },
+      {
+        "roll": "4",
+        "result": "Storms, and the rain that comes too late or too hard."
+      },
+      {
+        "roll": "5",
+        "result": "The turning of the seasons, and the signs that announce each one."
+      },
+      {
+        "roll": "6",
+        "result": "Hospitality, and the duty owed to a stranger at the door."
+      },
+      {
+        "roll": "7",
+        "result": "The making of marriages and the households they create."
+      },
+      {
+        "roll": "8",
+        "result": "The craft of weaving, and the thread that holds a household together."
+      },
+      {
+        "roll": "9",
+        "result": "The setting of boundaries and the stones that mark them."
+      },
+      {
+        "roll": "10",
+        "result": "The trade road and the safety of those who travel it."
+      },
+      {
+        "roll": "11",
+        "result": "The forging of metal, and the fire that makes it obedient."
+      },
+      {
+        "roll": "12",
+        "result": "Healing, and the binding of wounds in body and household."
+      },
+      {
+        "roll": "13",
+        "result": "The silence after snow, and the stillness that follows a burial."
+      },
+      {
+        "roll": "14",
+        "result": "The weight of a promise made over running water."
+      },
+      {
+        "roll": "15",
+        "result": "The brewing of beer, and the songs that make a long night pass."
+      },
+      {
+        "roll": "16",
+        "result": "The care of the dead and the safe keeping of their names."
+      },
+      {
+        "roll": "17",
+        "result": "The stars, and the patterns by which farmers and travelers time their work."
+      },
+      {
+        "roll": "18",
+        "result": "The bones of the earth, and the mines that open them."
+      },
+      {
+        "roll": "19",
+        "result": "Dreams, and the messages that arrive in sleep."
+      },
+      {
+        "roll": "20",
+        "result": "The keeping of bees and the sweetness that comes from patient work."
+      }
     ]
   },
   {
@@ -238,26 +649,86 @@
     "name": "Religious Requirements",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "Never or always associate with certain types of people."},
-      {"roll": "2", "result": "Never eat a particular common food."},
-      {"roll": "3", "result": "Give a significant tithe regularly."},
-      {"roll": "4", "result": "Make particular sacrifices at certain times."},
-      {"roll": "5", "result": "Revere or hate a class or group of people."},
-      {"roll": "6", "result": "Forbid a certain common profession or role."},
-      {"roll": "7", "result": "Forbid an activity common to society."},
-      {"roll": "8", "result": "Give secular obedience to the clergy."},
-      {"roll": "9", "result": "Pray at certain fixed places or times."},
-      {"roll": "10", "result": "Never or always trade with certain sorts of people."},
-      {"roll": "11", "result": "Never or always live in certain places."},
-      {"roll": "12", "result": "Marry exclusively within the faith."},
-      {"roll": "13", "result": "Do something society finds repugnant."},
-      {"roll": "14", "result": "Hold certain places to be taboo."},
-      {"roll": "15", "result": "Hide the inner faith's teachings from outsiders."},
-      {"roll": "16", "result": "Make sacrifices that society finds hateful."},
-      {"roll": "17", "result": "Never or always make war on certain types."},
-      {"roll": "18", "result": "Honor or degrade a particular profession."},
-      {"roll": "19", "result": "Make certain pilgrimages to holy places."},
-      {"roll": "20", "result": "Never or always cooperate with a certain faith."}
+      {
+        "roll": "1",
+        "result": "Believers must make a pilgrimage to a shrine at least once in their lives."
+      },
+      {
+        "roll": "2",
+        "result": "Believers must fast from all cooked food for three days after a funeral."
+      },
+      {
+        "roll": "3",
+        "result": "The faithful must give a coin to every beggar at the temple gate, without exception."
+      },
+      {
+        "roll": "4",
+        "result": "Believers must pour a cup of every drink onto the ground before tasting it."
+      },
+      {
+        "roll": "5",
+        "result": "No believer may cross running water on the day of the dead."
+      },
+      {
+        "roll": "6",
+        "result": "A believer may not swear an oath without a witness from the temple."
+      },
+      {
+        "roll": "7",
+        "result": "Every adult must learn the lineage chant of their household and recite it at festivals."
+      },
+      {
+        "roll": "8",
+        "result": "The first catch of every season must be given whole to the temple, never eaten by the catcher."
+      },
+      {
+        "roll": "9",
+        "result": "Each adult must walk the boundary of the temple's land once a year and touch every marker stone."
+      },
+      {
+        "roll": "10",
+        "result": "The faithful must bring any dispute to the temple before taking it to a lord."
+      },
+      {
+        "roll": "11",
+        "result": "No one may sit at a table where an unbroken bone has been left, lest the meal offend the dead."
+      },
+      {
+        "roll": "12",
+        "result": "The faithful must have their children blessed before the first year is out."
+      },
+      {
+        "roll": "13",
+        "result": "No believer may sell a horse, a boat, or a plow to an outsider without the temple's leave."
+      },
+      {
+        "roll": "14",
+        "result": "No believer may carry iron into a place of worship."
+      },
+      {
+        "roll": "15",
+        "result": "Believers may not eat the flesh of any animal that was not bled and blessed first."
+      },
+      {
+        "roll": "16",
+        "result": "Believers must speak the names of their dead aloud once each month."
+      },
+      {
+        "roll": "17",
+        "result": "Believers must pray at dawn facing the nearest standing stone, wherever they are."
+      },
+      {
+        "roll": "18",
+        "result": "Believers must give their second-best garment to the temple each spring."
+      },
+      {
+        "roll": "19",
+        "result": "Every household must bake a loaf on the eve of the week and give it to a stranger."
+      },
+      {
+        "roll": "20",
+        "result": "The faithful may not eat alone, and must share any meal with whoever is present."
+      }
     ]
   },
   {
@@ -266,46 +737,142 @@
     "name": "Temple Quirks",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "It's built into a once-secular building."},
-      {"roll": "2", "result": "It's remarkably well fortified."},
-      {"roll": "3", "result": "It's connected to a secular business."},
-      {"roll": "4", "result": "The clergy are largely related to each other."},
-      {"roll": "5", "result": "It stands in an unusually dangerous location."},
-      {"roll": "6", "result": "It shares space with a friendly faith."},
-      {"roll": "7", "result": "It follows unusual prohibitions or rites."},
-      {"roll": "8", "result": "It holds access to some ancient artifact."},
-      {"roll": "9", "result": "Its library is remarkably extensive."},
-      {"roll": "10", "result": "It attracts prophets and religious merchants."},
-      {"roll": "11", "result": "It provides some illicit or scandalous service."},
-      {"roll": "12", "result": "It's more a merchant enterprise than a shrine."},
-      {"roll": "13", "result": "It's unusually beautifully built."},
-      {"roll": "14", "result": "It's a shadow of a once-glorious past."},
-      {"roll": "15", "result": "It's unusually recent in its founding."},
-      {"roll": "16", "result": "The clergy there generally hate each other."},
-      {"roll": "17", "result": "Its leadership is foreign or demihuman."},
-      {"roll": "18", "result": "It deals only with the proven faithful."},
-      {"roll": "19", "result": "It displaced a former faith, perhaps violently."},
-      {"roll": "20", "result": "It's actually another faith, merely concealed."}
+      {
+        "roll": "1",
+        "result": "The temple has been rebuilt so often that it is a patchwork of five architectures."
+      },
+      {
+        "roll": "2",
+        "result": "The temple is a converted granary, its grain chutes still visible in the ceiling."
+      },
+      {
+        "roll": "3",
+        "result": "A spring rises under the altar and runs out through a channel in the floor."
+      },
+      {
+        "roll": "4",
+        "result": "The temple stands on a raft of lashed timbers that rises with the flood."
+      },
+      {
+        "roll": "5",
+        "result": "The interior smells always of cedar, even when no cedar burns."
+      },
+      {
+        "roll": "6",
+        "result": "A cracked bell hangs in the courtyard and is rung only for funerals."
+      },
+      {
+        "roll": "7",
+        "result": "The interior is painted floor to ceiling in a single faded red."
+      },
+      {
+        "roll": "8",
+        "result": "The roof is a single great tree trunk, hollowed and laid across the walls."
+      },
+      {
+        "roll": "9",
+        "result": "Its tower leans so far that the whole building seems about to follow."
+      },
+      {
+        "roll": "10",
+        "result": "The temple is cut into a hillside, its entrance a plain door in a field."
+      },
+      {
+        "roll": "11",
+        "result": "Its walls are carved with a genealogical list that has run out of room."
+      },
+      {
+        "roll": "12",
+        "result": "Its facade is covered in a mosaic of broken pottery from the whole district."
+      },
+      {
+        "roll": "13",
+        "result": "Its courtyard is a maze of low walls that pilgrims must walk before entering."
+      },
+      {
+        "roll": "14",
+        "result": "The temple is built of sun-dried brick, renewed every few years by the congregation."
+      },
+      {
+        "roll": "15",
+        "result": "A hundred small clay lamps line every ledge, lit at dusk and never all at once."
+      },
+      {
+        "roll": "16",
+        "result": "Its altar is a single block of black stone said to have fallen from the sky."
+      },
+      {
+        "roll": "17",
+        "result": "A narrow stair spirals down to a pool where the faithful wash their hands."
+      },
+      {
+        "roll": "18",
+        "result": "Its walls are built from the salvaged stones of three older shrines, none matching."
+      },
+      {
+        "roll": "19",
+        "result": "A great iron hook hangs above the altar, and no one will say what it held."
+      },
+      {
+        "roll": "20",
+        "result": "Its doors are hammered bronze and show the temple's history in relief."
+      }
     ]
   },
   {
     "type": "dice_table",
     "id": "sinister_reward",
-    "name": "Rewards of the Sinister Faith",
+    "name": "What the Forbidden Cult Offers",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "It defends an oppressed group, charging service as the price of aid."},
-      {"roll": "2", "result": "Its chosen believers receive magical powers or occult gifts."},
-      {"roll": "3", "result": "It bestows wealth and prosperity on those who serve it."},
-      {"roll": "4", "result": "It grants an undead or deathless state to devout servitors."},
-      {"roll": "5", "result": "It protects believers from a plague, disaster, or constant hazard."},
-      {"roll": "6", "result": "It wins political power through blackmail, bribes, and vile favors."},
-      {"roll": "7", "result": "Its principles are the comfortable morals of hereditary believers."},
-      {"roll": "8", "result": "It grants intense physical pleasures believers could not otherwise taste."},
-      {"roll": "9", "result": "It lends muscle, letting the faithful beat or terrorize their opponents."},
-      {"roll": "10", "result": "It justifies the believers' worst impulses as divine will."},
-      {"roll": "11", "result": "It promises salvation from a catastrophe that will strike unbelievers."},
-      {"roll": "12", "result": "It gives outcasts meaning, importance, and power through its awful majesty."}
+      {
+        "roll": "1",
+        "result": "It grants its faithful a run of luck in trade, so long as the tithe is paid on time."
+      },
+      {
+        "roll": "2",
+        "result": "It gives its members a place in a household that will never cast them out."
+      },
+      {
+        "roll": "3",
+        "result": "It promises that the faithful will be remembered by name after death and their enemies forgotten."
+      },
+      {
+        "roll": "4",
+        "result": "It grants the faithful dreams of their enemies' plans, vivid and usually accurate."
+      },
+      {
+        "roll": "5",
+        "result": "It makes the crops of the faithful grow and the crops of their neighbors fail."
+      },
+      {
+        "roll": "6",
+        "result": "It teaches the names of small spirits, by which the faithful can command them."
+      },
+      {
+        "roll": "7",
+        "result": "It offers protection from a plague that it alone seems to foresee."
+      },
+      {
+        "roll": "8",
+        "result": "It lets parents choose the health of a child before it is born."
+      },
+      {
+        "roll": "9",
+        "result": "It forgives any crime, so long as the crime is confessed to the cult and not the law."
+      },
+      {
+        "roll": "10",
+        "result": "It shares out the property of members who die, and its members die conveniently."
+      },
+      {
+        "roll": "11",
+        "result": "It teaches a song that makes beasts and children obedient to the singer."
+      },
+      {
+        "roll": "12",
+        "result": "It lets the faithful speak with the dead, who answer truthfully if the price is paid."
+      }
     ]
   },
   {
@@ -314,26 +881,86 @@
     "name": "Cult Traits",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "It favors monstrous body alterations."},
-      {"roll": "2", "result": "It's a remnant of a now-dead culture."},
-      {"roll": "3", "result": "It holds a variety of potent ancient artifacts."},
-      {"roll": "4", "result": "It's a sect of a better-known public faith."},
-      {"roll": "5", "result": "It cuts secret deals with the ruling class."},
-      {"roll": "6", "result": "It has a totemic beast or monster type."},
-      {"roll": "7", "result": "Its members live where normal people could not."},
-      {"roll": "8", "result": "They are cannibals or other gustatory deviants."},
-      {"roll": "9", "result": "It has agents inside other religious groups."},
-      {"roll": "10", "result": "It was thought to be wiped out in the past."},
-      {"roll": "11", "result": "A subculture of the land is friendly to it."},
-      {"roll": "12", "result": "It employs technology-like magics."},
-      {"roll": "13", "result": "It commands many servitor monsters."},
-      {"roll": "14", "result": "An area is tacitly understood to belong to it."},
-      {"roll": "15", "result": "It was once a public and powerful faith."},
-      {"roll": "16", "result": "It's a recent offshoot of a mystery cult."},
-      {"roll": "17", "result": "Its rites are public but its doctrines secret."},
-      {"roll": "18", "result": "It recruits from one trade or region."},
-      {"roll": "19", "result": "It's led by an undying or reincarnating figure."},
-      {"roll": "20", "result": "It has infiltrated the government at a high level."}
+      {
+        "roll": "1",
+        "result": "It teaches that the poor carry a greater share of the world's power and the rich have stolen it."
+      },
+      {
+        "roll": "2",
+        "result": "It recruits the desperate with food, shelter, and a name."
+      },
+      {
+        "roll": "3",
+        "result": "The cult records every member's wrongdoings in writing and uses the record as leverage."
+      },
+      {
+        "roll": "4",
+        "result": "It meets in plain sight as a burial society, and members wear a common token."
+      },
+      {
+        "roll": "5",
+        "result": "It forbids members to speak of the cult to outsiders, even under torture."
+      },
+      {
+        "roll": "6",
+        "result": "It celebrates its founding with a feast that outsiders are never allowed to see."
+      },
+      {
+        "roll": "7",
+        "result": "It recruits from a single trade, and every member owes their place to another member."
+      },
+      {
+        "roll": "8",
+        "result": "It has no temple but meets wherever its leader happens to be staying."
+      },
+      {
+        "roll": "9",
+        "result": "It marks its members with a small tattoo in a place clothing covers."
+      },
+      {
+        "roll": "10",
+        "result": "It holds that the world is a dream and that acts committed in dreams are real."
+      },
+      {
+        "roll": "11",
+        "result": "It is divided into ranks, and advancement requires the betrayal of a fellow member."
+      },
+      {
+        "roll": "12",
+        "result": "It teaches that the gods are dead and that the cult's ancestors killed them."
+      },
+      {
+        "roll": "13",
+        "result": "It requires each member to keep a vigil one night a month, taking turns so the vigil never ends."
+      },
+      {
+        "roll": "14",
+        "result": "It adopts orphans and raises them as its own, and they are loyal beyond reason."
+      },
+      {
+        "roll": "15",
+        "result": "It holds its rites in the ruins of an older temple and calls them a restoration."
+      },
+      {
+        "roll": "16",
+        "result": "Its leaders are chosen by lot and serve until they die."
+      },
+      {
+        "roll": "17",
+        "result": "It keeps a rented house in every town, always under a false name."
+      },
+      {
+        "roll": "18",
+        "result": "It keeps its sacred text in memory rather than writing and recites it in a single night."
+      },
+      {
+        "roll": "19",
+        "result": "It holds that children born in a certain month belong to the cult."
+      },
+      {
+        "roll": "20",
+        "result": "Members give up their family names on joining and take new ones from a list of the dead."
+      }
     ]
   },
   {
@@ -342,18 +969,54 @@
     "name": "Village Rationale",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "A farming village around good soil."},
-      {"roll": "2", "result": "A herding village with nearby pasture."},
-      {"roll": "3", "result": "A fishing village on water."},
-      {"roll": "4", "result": "A mining or quarrying village."},
-      {"roll": "5", "result": "A village on a trade road."},
-      {"roll": "6", "result": "A village around a shrine or holy site."},
-      {"roll": "7", "result": "A village on a river crossing or ford."},
-      {"roll": "8", "result": "A village near ruins it plunders."},
-      {"roll": "9", "result": "A village serving a nearby fort."},
-      {"roll": "10", "result": "A village of outcasts or exiles."},
-      {"roll": "11", "result": "A village around a mill or craft."},
-      {"roll": "12", "result": "A village founded for a single resource."}
+      {
+        "roll": "1",
+        "result": "A lord planted this settlement to hold a border he no longer defends, and the people stayed anyway."
+      },
+      {
+        "roll": "2",
+        "result": "A leper house was built well away from the town, and healthy families followed to sell to it."
+      },
+      {
+        "roll": "3",
+        "result": "A spring that never freezes made this the only winter stop between two market towns."
+      },
+      {
+        "roll": "4",
+        "result": "A road-warden's tower stood here once, and the village grew up servicing the men who guarded the crossing."
+      },
+      {
+        "roll": "5",
+        "result": "A fishing weir built across the narrow channel feeds the village and supplies three inland markets."
+      },
+      {
+        "roll": "6",
+        "result": "Herds winter in the shallow valley, and the herders' seasonal huts slowly became houses with chimneys."
+      },
+      {
+        "roll": "7",
+        "result": "Pilgrims walking to a shrine three hills over need one night's shelter, and this is the sheltered place."
+      },
+      {
+        "roll": "8",
+        "result": "The villagers hold an old oath binding them to keep the bridge here repaired and staffed."
+      },
+      {
+        "roll": "9",
+        "result": "Two roads meet at this ford, and the village exists to move carts across and charge them for it."
+      },
+      {
+        "roll": "10",
+        "result": "The old quarry left a shelf of flat stone, and anyone wanting a dry floor came here to build."
+      },
+      {
+        "roll": "11",
+        "result": "A seam of iron-bearing rock broke the surface, and the village grew around the first two shafts."
+      },
+      {
+        "roll": "12",
+        "result": "Salt pans along the flats give work for six weeks each summer and nothing at all the rest of the year."
+      }
     ]
   },
   {
@@ -362,18 +1025,54 @@
     "name": "Village Features",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "A palisade or simple wall."},
-      {"roll": "2", "result": "A well or spring at the center."},
-      {"roll": "3", "result": "A shrine or small temple."},
-      {"roll": "4", "result": "A mill, forge, or workshop."},
-      {"roll": "5", "result": "A tavern or meeting hall."},
-      {"roll": "6", "result": "A market square or fairground."},
-      {"roll": "7", "result": "A watchtower or beacon."},
-      {"roll": "8", "result": "Old ruins built into the village."},
-      {"roll": "9", "result": "A bridge, ford, or ferry."},
-      {"roll": "10", "result": "A manor or hall of the local lord."},
-      {"roll": "11", "result": "An unusual tree, stone, or landmark."},
-      {"roll": "12", "result": "A recent scar of war, fire, or flood."}
+      {
+        "roll": "1",
+        "result": "A tall wooden crane stands over the millpond, its rope swinging free and its hook empty."
+      },
+      {
+        "roll": "2",
+        "result": "Every roof is weighted with the same grey stones, stacked in patterns that look deliberate."
+      },
+      {
+        "roll": "3",
+        "result": "Bright painted shutters mark the houses rebuilt after the fire, and nothing else is painted."
+      },
+      {
+        "roll": "4",
+        "result": "A timber scaffold leans against the church tower, unfinished for longer than anyone remembers."
+      },
+      {
+        "roll": "5",
+        "result": "Hedges of thorn divide the village into quarters, each with its own gap and its own gate."
+      },
+      {
+        "roll": "6",
+        "result": "The smell of boiling hides reaches you a mile off, and the tanners' sheds sit at the entrance."
+      },
+      {
+        "roll": "7",
+        "result": "Half the houses stand empty, shutters nailed shut and doorways filled with stacked firewood."
+      },
+      {
+        "roll": "8",
+        "result": "A single street of packed clay, wide enough for one cart and lined with open drains."
+      },
+      {
+        "roll": "9",
+        "result": "The lane narrows to a shoulder's width at the middle, where two houses lean together overhead."
+      },
+      {
+        "roll": "10",
+        "result": "A line of standing stones crosses the village green, and the houses are built between them."
+      },
+      {
+        "roll": "11",
+        "result": "The houses turn their backs to the road, and every door faces the fields instead."
+      },
+      {
+        "roll": "12",
+        "result": "A wall of stacked fieldstone circles the village, too low to stop a man and too high to step over."
+      }
     ]
   },
   {
@@ -382,18 +1081,54 @@
     "name": "Village Involvements",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "The village owes taxes or tribute."},
-      {"roll": "2", "result": "A local feud divides families."},
-      {"roll": "3", "result": "Bandits or raiders demand pay."},
-      {"roll": "4", "result": "A monster or beast troubles the fields."},
-      {"roll": "5", "result": "A shrine's clergy meddles in village life."},
-      {"roll": "6", "result": "A merchant or guild has a claim here."},
-      {"roll": "7", "result": "The village hides a fugitive or secret."},
-      {"roll": "8", "result": "A plague or blight has struck recently."},
-      {"roll": "9", "result": "The young are leaving for the cities."},
-      {"roll": "10", "result": "A wedding, funeral, or festival is due."},
-      {"roll": "11", "result": "The village is split over a new ruler."},
-      {"roll": "12", "result": "Something beneath the village draws attention."}
+      {
+        "roll": "1",
+        "result": "They ask you to swear a dead man's debts were paid, and hand you his tally sticks."
+      },
+      {
+        "roll": "2",
+        "result": "The headman offers free lodging to anyone willing to sit up all night in the granary."
+      },
+      {
+        "roll": "3",
+        "result": "The village wants you to witness a sale of land and swear the buyer was sober."
+      },
+      {
+        "roll": "4",
+        "result": "They invite you to judge a contest of strength, and both champions are related to the headman."
+      },
+      {
+        "roll": "5",
+        "result": "A young woman begs passage out with your party and offers to pay in her family's silver."
+      },
+      {
+        "roll": "6",
+        "result": "The village offers a guide to the next town if you first help raise a fallen beam."
+      },
+      {
+        "roll": "7",
+        "result": "Someone has been stealing from the shrine, and the villagers want an outsider to say who."
+      },
+      {
+        "roll": "8",
+        "result": "The elders ask you to carry word to a hermit up the valley that his brother has died."
+      },
+      {
+        "roll": "9",
+        "result": "A widow insists you drink at her table before you leave, and her sons block the door politely."
+      },
+      {
+        "roll": "10",
+        "result": "They ask every traveller to carry a sealed letter to the next town and will not say what it holds."
+      },
+      {
+        "roll": "11",
+        "result": "A boy follows your party out of the village and refuses to go back, offering to work."
+      },
+      {
+        "roll": "12",
+        "result": "The villagers will not sell you food until you agree to look at a sick child."
+      }
     ]
   },
   {
@@ -402,18 +1137,54 @@
     "name": "City Rationale",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "A capital of a nation or province."},
-      {"roll": "2", "result": "A great port or river trade hub."},
-      {"roll": "3", "result": "A city grown around a fortress."},
-      {"roll": "4", "result": "A city grown around a temple."},
-      {"roll": "5", "result": "A mining or resource city."},
-      {"roll": "6", "result": "A market city for a rich region."},
-      {"roll": "7", "result": "A city of scholars or mages."},
-      {"roll": "8", "result": "A city on a crossroads of trade."},
-      {"roll": "9", "result": "A city built on ancient ruins."},
-      {"roll": "10", "result": "A frontier or garrison city."},
-      {"roll": "11", "result": "A city of refugees and exiles."},
-      {"roll": "12", "result": "A holy city of pilgrimage."}
+      {
+        "roll": "1",
+        "result": "Wine from the south must be landed and rested here before it survives the road north."
+      },
+      {
+        "roll": "2",
+        "result": "A great fair held once a year became a fair held every month, and then a permanent town."
+      },
+      {
+        "roll": "3",
+        "result": "The city grew to serve a garrison that never disbanded and slowly turned into a government."
+      },
+      {
+        "roll": "4",
+        "result": "It began as a winter camp for herders and became a market because everyone came there anyway."
+      },
+      {
+        "roll": "5",
+        "result": "The city grew behind a fortress that guarded the only pass through the mountains and taxed it."
+      },
+      {
+        "roll": "6",
+        "result": "A river wide enough for barges meets a road that carries wool, so cargo must change hands here."
+      },
+      {
+        "roll": "7",
+        "result": "The city holds the only bridge for eighty miles, and everything crossing the river pays at it."
+      },
+      {
+        "roll": "8",
+        "result": "The city stands where three roads meet at a shallow lake, and the lake supplies salt and fish."
+      },
+      {
+        "roll": "9",
+        "result": "A duke moved his court here to escape a plague in his old capital and never moved back."
+      },
+      {
+        "roll": "10",
+        "result": "A river delta gives shelter to a hundred hulls and enough mud to beach them for repairs."
+      },
+      {
+        "roll": "11",
+        "result": "A temple's relic drew pilgrims, the pilgrims drew merchants, and the merchants paid for the walls."
+      },
+      {
+        "roll": "12",
+        "result": "The old realm's capital fell, and this city inherited its clerks, its records, and its claims."
+      }
     ]
   },
   {
@@ -422,18 +1193,54 @@
     "name": "City Features",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "Massive walls and gates."},
-      {"roll": "2", "result": "A great temple or cathedral."},
-      {"roll": "3", "result": "A palace or citadel."},
-      {"roll": "4", "result": "A grand marketplace."},
-      {"roll": "5", "result": "A university, library, or academy."},
-      {"roll": "6", "result": "A harbor, docks, or great bridge."},
-      {"roll": "7", "result": "An arena or public square."},
-      {"roll": "8", "result": "A guildhall or bank."},
-      {"roll": "9", "result": "A district of one trade or people."},
-      {"roll": "10", "result": "Ancient works still in use."},
-      {"roll": "11", "result": "A sewer, aqueduct, or underground."},
-      {"roll": "12", "result": "A recent ruin or burned district."}
+      {
+        "roll": "1",
+        "result": "The city has no rubbish heaps: night carts collect everything and tip it into the marsh outside the wall."
+      },
+      {
+        "roll": "2",
+        "result": "The harbour stinks of fish oil and pitch, and the smell reaches the hill districts by midmorning."
+      },
+      {
+        "roll": "3",
+        "result": "The whole city smells of baking bread at dawn and of the drains two hours later."
+      },
+      {
+        "roll": "4",
+        "result": "Bells in a dozen shrines compete every noon, and the result is a sound like a collapsing barn."
+      },
+      {
+        "roll": "5",
+        "result": "A wall of black basalt runs through the city, older than any building and impossible to cut."
+      },
+      {
+        "roll": "6",
+        "result": "Lime dust hangs over the tanners' quarter, and the people who work there look grey as stones."
+      },
+      {
+        "roll": "7",
+        "result": "A bronze bell in the great tower is rung by hand each hour, and the whole city sets its day by it."
+      },
+      {
+        "roll": "8",
+        "result": "A canal cuts the city in two, and the only crossings are seven narrow footbridges with steep steps."
+      },
+      {
+        "roll": "9",
+        "result": "The river runs brown through the city and emerges clean, because the dyers are forbidden upstream."
+      },
+      {
+        "roll": "10",
+        "result": "Rows of elms line the main street, planted so evenly that the road looks longer than it is."
+      },
+      {
+        "roll": "11",
+        "result": "A wooden tower of scaffolding rises over the cathedral, and it is now older than the cathedral."
+      },
+      {
+        "roll": "12",
+        "result": "A thousand pigeons live in the temple eaves, and their cooing is the loudest sound at dawn."
+      }
     ]
   },
   {
@@ -442,18 +1249,54 @@
     "name": "City Involvements",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "A power struggle among the ruling families."},
-      {"roll": "2", "result": "A guild or merchant house has too much power."},
-      {"roll": "3", "result": "Criminals or a thieves' guild control a district."},
-      {"roll": "4", "result": "A religious dispute divides the city."},
-      {"roll": "5", "result": "A foreign envoy or spy is meddling."},
-      {"roll": "6", "result": "A plague or famine strains the poor."},
-      {"roll": "7", "result": "A monster or cult hides in the city."},
-      {"roll": "8", "result": "The city is preparing for war."},
-      {"roll": "9", "result": "A great festival or execution is due."},
-      {"roll": "10", "result": "Refugees crowd the gates."},
-      {"roll": "11", "result": "A magical or ancient danger stirs."},
-      {"roll": "12", "result": "The ruler is weak, absent, or disputed."}
+      {
+        "roll": "1",
+        "result": "A stranger must burn a coin at the temple of the gate before entering the inner city."
+      },
+      {
+        "roll": "2",
+        "result": "The watch demands a hostage for any party carrying more than two blades through the gate."
+      },
+      {
+        "roll": "3",
+        "result": "The gate scribes record your name, your business, and your face, then sell the record to anyone."
+      },
+      {
+        "roll": "4",
+        "result": "Every visitor is expected to attend the ruler's public audience and present a gift there."
+      },
+      {
+        "roll": "5",
+        "result": "The guilds set a fixed price for lodging, and any inn charging less is closed by morning."
+      },
+      {
+        "roll": "6",
+        "result": "The customs house opens your packs, values your goods, and offers to buy them at that value."
+      },
+      {
+        "roll": "7",
+        "result": "A rite at the city gate requires you to state aloud why you came, and the answer is recorded."
+      },
+      {
+        "roll": "8",
+        "result": "Any foreigner doing business must first buy a year's membership in a trade hall."
+      },
+      {
+        "roll": "9",
+        "result": "A toll is owed on every weapon longer than a forearm, payable at each district boundary."
+      },
+      {
+        "roll": "10",
+        "result": "The city requires every visitor to name a local sponsor, and sponsors charge for the honour."
+      },
+      {
+        "roll": "11",
+        "result": "You must stand surety for any local you speak to, or the watch takes your goods instead."
+      },
+      {
+        "roll": "12",
+        "result": "No one may trade inside the walls without a guild token, and tokens cost more than most visitors carry."
+      }
     ]
   },
   {
@@ -462,18 +1305,54 @@
     "name": "Tribe Rationale",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "Herdsmen following the seasons."},
-      {"roll": "2", "result": "Hunters of a great wilderness."},
-      {"roll": "3", "result": "Raiders on settled lands."},
-      {"roll": "4", "result": "Wanderers of a desert or waste."},
-      {"roll": "5", "result": "Fisher folk of a coast or lake."},
-      {"roll": "6", "result": "Hill farmers of poor soil."},
-      {"roll": "7", "result": "Forest dwellers of a deep wood."},
-      {"roll": "8", "result": "A tribe of a strange or alien blood."},
-      {"roll": "9", "result": "Exiles who fled into the wild."},
-      {"roll": "10", "result": "Pilgrims or zealots on the move."},
-      {"roll": "11", "result": "Traders of a long route."},
-      {"roll": "12", "result": "Survivors of a ruined nation."}
+      {
+        "roll": "1",
+        "result": "Their woodlands supply pitch and charcoal to the cities, and they follow the cutting."
+      },
+      {
+        "roll": "2",
+        "result": "They raise horses on open grass and sell the surplus to any army that pays in iron."
+      },
+      {
+        "roll": "3",
+        "result": "Their valleys flood every spring, so they farm the terraces and move their houses twice a year."
+      },
+      {
+        "roll": "4",
+        "result": "Their herds need salt, and their route follows the licks around the edge of the waste."
+      },
+      {
+        "roll": "5",
+        "result": "They live by wrecking and salvage on a dangerous coast, and their own boats are deliberately poor."
+      },
+      {
+        "roll": "6",
+        "result": "The band broke from a larger people over a marriage and has kept its distance ever since."
+      },
+      {
+        "roll": "7",
+        "result": "Their land was taken by a stronger band, so they raid the roads of the people who took it."
+      },
+      {
+        "roll": "8",
+        "result": "The forest gives them game, timber, and cover, and they have not left it in six generations."
+      },
+      {
+        "roll": "9",
+        "result": "They cut salt from a dry lake bed and trade it inland for grain they cannot grow."
+      },
+      {
+        "roll": "10",
+        "result": "A long drought emptied their homeland, and they have wandered since looking for water they trust."
+      },
+      {
+        "roll": "11",
+        "result": "A blood feud with the lowland towns keeps them in the hills, where they can see riders coming."
+      },
+      {
+        "roll": "12",
+        "result": "They hold a pass that everyone must use and charge for it instead of farming the thin soil."
+      }
     ]
   },
   {
@@ -482,18 +1361,54 @@
     "name": "Tribe Features",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "A great herd or train of beasts."},
-      {"roll": "2", "result": "Portable tents or shelters."},
-      {"roll": "3", "result": "A sacred pole, idol, or banner."},
-      {"roll": "4", "result": "A herd of horses or riding beasts."},
-      {"roll": "5", "result": "Skilled hunters or trackers."},
-      {"roll": "6", "result": "A tradition of song or story."},
-      {"roll": "7", "result": "Craft of a particular kind."},
-      {"roll": "8", "result": "A secret route or hidden camp."},
-      {"roll": "9", "result": "A powerful shaman or leader."},
-      {"roll": "10", "result": "A grudge against a settled people."},
-      {"roll": "11", "result": "A strange bond with a monster."},
-      {"roll": "12", "result": "A relic of their old homeland."}
+      {
+        "roll": "1",
+        "result": "Their horses are marked with a painted hand on the flank, and so are their prisoners."
+      },
+      {
+        "roll": "2",
+        "result": "They ride small, shaggy horses and never dismount to speak, even to their own elders."
+      },
+      {
+        "roll": "3",
+        "result": "The band travels with carts instead of pack animals, and the carts are painted with old battles."
+      },
+      {
+        "roll": "4",
+        "result": "They carry their dead with them for a season before burying, wrapped in painted cloth."
+      },
+      {
+        "roll": "5",
+        "result": "Their camp circle is marked by a ring of flat stones no one is allowed to step over."
+      },
+      {
+        "roll": "6",
+        "result": "Every adult wears a strip of dyed cloth on the left arm, and the pattern shows which family."
+      },
+      {
+        "roll": "7",
+        "result": "Their camps are ringed with the skulls of their own herd animals, set on poles facing outward."
+      },
+      {
+        "roll": "8",
+        "result": "Their faces are painted with ash and grease in a pattern that changes at each new moon."
+      },
+      {
+        "roll": "9",
+        "result": "Their camp moves with a train of dogs that howl all night and sleep all day."
+      },
+      {
+        "roll": "10",
+        "result": "Their clothes are sewn with small bells, muffled in the hunt and unstopped in war."
+      },
+      {
+        "roll": "11",
+        "result": "Their tents are made of stitched hide, and every seam is marked with a knot of human hair."
+      },
+      {
+        "roll": "12",
+        "result": "They cut their hair only when someone dies, so its length tells you what they have lost."
+      }
     ]
   },
   {
@@ -502,18 +1417,54 @@
     "name": "Tribe Involvements",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "They are moving through the party's land."},
-      {"roll": "2", "result": "They seek a lost member or beast."},
-      {"roll": "3", "result": "They need a trade good they cannot make."},
-      {"roll": "4", "result": "They are fleeing a stronger foe."},
-      {"roll": "5", "result": "They are planning a raid."},
-      {"roll": "6", "result": "A sickness or curse troubles them."},
-      {"roll": "7", "result": "They guard a holy or secret place."},
-      {"roll": "8", "result": "They are split by a leadership quarrel."},
-      {"roll": "9", "result": "They have taken a hostage or prisoner."},
-      {"roll": "10", "result": "They know a route through dangerous land."},
-      {"roll": "11", "result": "They worship or serve a strange power."},
-      {"roll": "12", "result": "They are the remnant of a larger people."}
+      {
+        "roll": "1",
+        "result": "The band asks you to carry a challenge to a rival chief and repeat his answer word for word."
+      },
+      {
+        "roll": "2",
+        "result": "They ask you to find a boy who ran off to the towns and bring him back, willing or not."
+      },
+      {
+        "roll": "3",
+        "result": "They ask you to settle which of two brothers should lead, and will hold you to your answer."
+      },
+      {
+        "roll": "4",
+        "result": "They want a written promise from your party and have no one who can read it aloud."
+      },
+      {
+        "roll": "5",
+        "result": "They want iron, and will trade hides, horses, and safe passage for any blade you can spare."
+      },
+      {
+        "roll": "6",
+        "result": "A dying elder wants news of the world before he dies, and will pay in directions."
+      },
+      {
+        "roll": "7",
+        "result": "They ask you to stand witness that a stolen herd changed hands fairly."
+      },
+      {
+        "roll": "8",
+        "result": "They want a stranger's oath to seal a treaty, because no one among them is trusted to swear."
+      },
+      {
+        "roll": "9",
+        "result": "They want to buy your horses and will steal them if the price is refused twice."
+      },
+      {
+        "roll": "10",
+        "result": "The band wants a song about itself and will trade a guide for one that is good."
+      },
+      {
+        "roll": "11",
+        "result": "They demand you take one of their young to the next town and leave him there."
+      },
+      {
+        "roll": "12",
+        "result": "They demand a gift for crossing their ground, and refuse coin as an insult to the giver."
+      }
     ]
   },
   {
@@ -522,16 +1473,46 @@
     "name": "Example Site",
     "dice": "1d10",
     "rows": [
-      {"roll": "1", "result": "A ruined keep or fort."},
-      {"roll": "2", "result": "A lost shrine or temple."},
-      {"roll": "3", "result": "A collapsed tower or observatory."},
-      {"roll": "4", "result": "A buried vault or bunker."},
-      {"roll": "5", "result": "A overgrown estate or manor."},
-      {"roll": "6", "result": "A deep cave or natural cavern."},
-      {"roll": "7", "result": "A sunken or flooded complex."},
-      {"roll": "8", "result": "An ancient workshop or factory."},
-      {"roll": "9", "result": "A mine or quarry with old workings."},
-      {"roll": "10", "result": "A strange monument or gateway."}
+      {
+        "roll": "1",
+        "result": "An old manor sunk to the windowsills in a peat bog."
+      },
+      {
+        "roll": "2",
+        "result": "A silver mine abandoned mid-shift, carts still loaded at the tunnel mouth."
+      },
+      {
+        "roll": "3",
+        "result": "A monastery with one bell tower standing and no other building whole."
+      },
+      {
+        "roll": "4",
+        "result": "A sea cave the tide fills twice a day and leaves toys in."
+      },
+      {
+        "roll": "5",
+        "result": "A hillside tomb whose lintel bears a name no living tongue can read."
+      },
+      {
+        "roll": "6",
+        "result": "A walled orchard where the trees bear fruit out of season."
+      },
+      {
+        "roll": "7",
+        "result": "A quarry cut into a cliff, its terraces carved with unfinished figures."
+      },
+      {
+        "roll": "8",
+        "result": "A ring of tiered stone seats, its floor swept and freshly raked."
+      },
+      {
+        "roll": "9",
+        "result": "A royal hunting lodge in woods that no hunter now enters."
+      },
+      {
+        "roll": "10",
+        "result": "A dry cistern the size of a cathedral, with a town built inside it."
+      }
     ]
   },
   {
@@ -540,16 +1521,46 @@
     "name": "Basic Type of Feature",
     "dice": "1d10",
     "rows": [
-      {"roll": "1", "result": "A sealed door or gate."},
-      {"roll": "2", "result": "A collapsed passage."},
-      {"roll": "3", "result": "A flooded room or shaft."},
-      {"roll": "4", "result": "A hall of pillars or statues."},
-      {"roll": "5", "result": "A stair or ramp down."},
-      {"roll": "6", "result": "A room of old machinery."},
-      {"roll": "7", "result": "A shrine or altar."},
-      {"roll": "8", "result": "A prison or cage."},
-      {"roll": "9", "result": "A library or record room."},
-      {"roll": "10", "result": "A treasure chamber or vault."}
+      {
+        "roll": "1",
+        "result": "A great hall where every sound returns doubled, in someone else's voice."
+      },
+      {
+        "roll": "2",
+        "result": "A mosaic floor showing a city that does not exist, updated with new streets."
+      },
+      {
+        "roll": "3",
+        "result": "A gallery of portraits where one face appears in every frame."
+      },
+      {
+        "roll": "4",
+        "result": "A table set for thirty, with food laid out and still warm."
+      },
+      {
+        "roll": "5",
+        "result": "A gate standing alone in a meadow, its posts set in dressed stone."
+      },
+      {
+        "roll": "6",
+        "result": "A library of clay tablets shelved in an order no one can parse."
+      },
+      {
+        "roll": "7",
+        "result": "A well in the courtyard that goes down further than the hill does."
+      },
+      {
+        "roll": "8",
+        "result": "A staircase of forty steps that arrives at the top with forty-one."
+      },
+      {
+        "roll": "9",
+        "result": "A room of clay jars, each sealed with wax and humming faintly."
+      },
+      {
+        "roll": "10",
+        "result": "A door of green bronze that opens only outward, by a mechanism no one has found."
+      }
     ]
   },
   {
@@ -558,26 +1569,86 @@
     "name": "Hazards",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "Unstable floors or ceilings."},
-      {"roll": "2", "result": "A poison gas or spore."},
-      {"roll": "3", "result": "A magical ward or curse."},
-      {"roll": "4", "result": "A deadly trap of blades or spikes."},
-      {"roll": "5", "result": "A collapsing wall or rockfall."},
-      {"roll": "6", "result": "A flooding room or rising water."},
-      {"roll": "7", "result": "A fire or explosive hazard."},
-      {"roll": "8", "result": "A hostile guardian beast."},
-      {"roll": "9", "result": "An ancient defense automaton."},
-      {"roll": "10", "result": "A psychic or mental assault."},
-      {"roll": "11", "result": "A disease-ridden area."},
-      {"roll": "12", "result": "A dark or blinding area."},
-      {"roll": "13", "result": "A narrow or precarious path."},
-      {"roll": "14", "result": "A sleeping or hidden monster."},
-      {"roll": "15", "result": "A hungry or desperate survivor."},
-      {"roll": "16", "result": "A rival delver or bandit."},
-      {"roll": "17", "result": "A magical trap of illusions."},
-      {"roll": "18", "result": "A room that shifts or rotates."},
-      {"roll": "19", "result": "A powerful but dormant artifact."},
-      {"roll": "20", "result": "A hazard of the Latter Earth's strange physics."}
+      {
+        "roll": "1",
+        "result": "The stairs spiral around a hole with no rail, and the treads get narrower toward the bottom."
+      },
+      {
+        "roll": "2",
+        "result": "A guardian beast sleeps under a heap of rags and wakes if anyone speaks above a whisper."
+      },
+      {
+        "roll": "3",
+        "result": "A glass floor over a deep well shows the safe path only from one side of the room."
+      },
+      {
+        "roll": "4",
+        "result": "An iron bell hangs by the door, rigged to ring when the door swings past a certain point."
+      },
+      {
+        "roll": "5",
+        "result": "Old mortar sifts from the arch in a fine dust, and the arch settles with each loud noise."
+      },
+      {
+        "roll": "6",
+        "result": "Mushrooms grow thick on the rotten floorbeams, and their spores fill the air when disturbed."
+      },
+      {
+        "roll": "7",
+        "result": "A ward of cold hangs in the arch, and it drains the warmth from anyone carrying metal through it."
+      },
+      {
+        "roll": "8",
+        "result": "The room floods slowly whenever the door is propped open, filling to shoulder height in an hour."
+      },
+      {
+        "roll": "9",
+        "result": "A wall of loose bricks is shored up by a single timber that has almost finished burning through."
+      },
+      {
+        "roll": "10",
+        "result": "Chalk marks on the wall count down the passages, and the marks are wrong past the seventh."
+      },
+      {
+        "roll": "11",
+        "result": "The air in the room is heavy and sweet, and earlier arrivals lie near the only vent."
+      },
+      {
+        "roll": "12",
+        "result": "Stair treads are cut unevenly on purpose, so anyone hurrying down them misjudges the last three."
+      },
+      {
+        "roll": "13",
+        "result": "The old furnace still holds heat and vents through a grate where someone will step."
+      },
+      {
+        "roll": "14",
+        "result": "The cistern's cover is cracked and hidden under silt, and the water below is deep and cold."
+      },
+      {
+        "roll": "15",
+        "result": "A stone door closes behind each person who enters, and the counterweight only works from outside."
+      },
+      {
+        "roll": "16",
+        "result": "A pressure plate sits in the centre of the doorway, greased so that even a careful step slides."
+      },
+      {
+        "roll": "17",
+        "result": "The mirror in the hall shows the room as it was, and the figure in it turns when you turn."
+      },
+      {
+        "roll": "18",
+        "result": "A nest of pale spiders lives in the roof beams, and they drop on anyone carrying a light."
+      },
+      {
+        "roll": "19",
+        "result": "Two corpses sit at a table with full cups, and the cups are laced for whoever drinks next."
+      },
+      {
+        "roll": "20",
+        "result": "The floor is a thin crust over a flooded cellar, and it cracks where the mortar has gone grey."
+      }
     ]
   },
   {
@@ -586,26 +1657,86 @@
     "name": "Distractors",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "A cache of worthless old coins."},
-      {"roll": "2", "result": "A corpse of a previous delver."},
-      {"roll": "3", "result": "A locked but empty chest."},
-      {"roll": "4", "result": "A mural of a forgotten battle."},
-      {"roll": "5", "result": "A room of broken furniture."},
-      {"roll": "6", "result": "A trail of old blood."},
-      {"roll": "7", "result": "A false door or secret passage."},
-      {"roll": "8", "result": "A pile of rusted weapons."},
-      {"roll": "9", "result": "A shrine to an unknown god."},
-      {"roll": "10", "result": "A journal with a mad warning."},
-      {"roll": "11", "result": "A room of strange fungi."},
-      {"roll": "12", "result": "A sleeping animal."},
-      {"roll": "13", "result": "A collapsed statue of a hero."},
-      {"roll": "14", "result": "A cache of tools or rope."},
-      {"roll": "15", "result": "A map scratched on a wall."},
-      {"roll": "16", "result": "A bell or alarm mechanism."},
-      {"roll": "17", "result": "A room of mirrors."},
-      {"roll": "18", "result": "A small, harmless haunting."},
-      {"roll": "19", "result": "A locked door with no key."},
-      {"roll": "20", "result": "A rival's abandoned camp."}
+      {
+        "roll": "1",
+        "result": "A rope ladder hangs into a shaft, and the shaft ends on a ledge six feet down."
+      },
+      {
+        "roll": "2",
+        "result": "A journal's last page warns that the east door is death, and the east door leads to a closet."
+      },
+      {
+        "roll": "3",
+        "result": "A shrine to an unknown god holds a bowl of coins that crumble when lifted."
+      },
+      {
+        "roll": "4",
+        "result": "An iron cage hangs from the ceiling with a skeleton inside, and the cage has never been locked."
+      },
+      {
+        "roll": "5",
+        "result": "A body in fine armour lies on a heap of gold that is painted wood and worth nothing."
+      },
+      {
+        "roll": "6",
+        "result": "A single candle burns in the empty hall, recently lit, and no one has been here for days."
+      },
+      {
+        "roll": "7",
+        "result": "The corpse of a rival team hangs from a beam, and the rope is newer than the corpse."
+      },
+      {
+        "roll": "8",
+        "result": "Fresh footprints cross the dust and lead straight into a wall that has no seam."
+      },
+      {
+        "roll": "9",
+        "result": "A stair winds up into darkness, and the top step is only four feet above the floor."
+      },
+      {
+        "roll": "10",
+        "result": "A nest of eggs in the corner draws the eye away from the shells already cracked by the exit."
+      },
+      {
+        "roll": "11",
+        "result": "A bell mechanism hangs above the entrance and is missing the striker that would ring it."
+      },
+      {
+        "roll": "12",
+        "result": "A brass key on a chain hangs from a peg by the door, and no lock in the place fits it."
+      },
+      {
+        "roll": "13",
+        "result": "A fine sword stands in the floor of the hall, and the blade is soft tin dressed to look keen."
+      },
+      {
+        "roll": "14",
+        "result": "A great stone face in the wall weeps water, and the water runs from a crack far above."
+      },
+      {
+        "roll": "15",
+        "result": "A pile of coins glitters under a shaft of light, and the coins are lead slugs painted gold."
+      },
+      {
+        "roll": "16",
+        "result": "The old library holds shelves of blank books, arranged with great care and dusted often."
+      },
+      {
+        "roll": "17",
+        "result": "A long corridor of doors gives onto small cells, all empty, all with their bolt on the outside."
+      },
+      {
+        "roll": "18",
+        "result": "An old map scratched into the wall marks a treasure room that the builder never finished."
+      },
+      {
+        "roll": "19",
+        "result": "Someone has chalked a warning in three languages on a door, and the door opens easily."
+      },
+      {
+        "roll": "20",
+        "result": "A chorus of voices sings behind a door, and the room beyond holds only a wind gap."
+      }
     ]
   },
   {
@@ -614,54 +1745,174 @@
     "name": "Enigmas",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "Who built this place, and why?"},
-      {"roll": "2", "result": "What happened to its inhabitants?"},
-      {"roll": "3", "result": "What does the inscription mean?"},
-      {"roll": "4", "result": "Where does the sealed door lead?"},
-      {"roll": "5", "result": "Why does the statue weep?"},
-      {"roll": "6", "result": "What is the machine for?"},
-      {"roll": "7", "result": "Who is the figure in the mural?"},
-      {"roll": "8", "result": "Why are the dead unburied?"},
-      {"roll": "9", "result": "What power holds the place intact?"},
-      {"roll": "10", "result": "Why do the rooms repeat?"},
-      {"roll": "11", "result": "What language is this?"},
-      {"roll": "12", "result": "Who left the fresh footprints?"},
-      {"roll": "13", "result": "What does the locked box hold?"},
-      {"roll": "14", "result": "Why is this place untouched by time?"},
-      {"roll": "15", "result": "What is the singing in the dark?"},
-      {"roll": "16", "result": "Why do the animals avoid this place?"},
-      {"roll": "17", "result": "What was taken from the shrine?"},
-      {"roll": "18", "result": "Who watches from the shadows?"},
-      {"roll": "19", "result": "What is the source of the dreams?"},
-      {"roll": "20", "result": "What lies beneath the lowest floor?"}
+      {
+        "roll": "1",
+        "result": "The stairwell smells of the sea, though the nearest coast is four days' ride away."
+      },
+      {
+        "roll": "2",
+        "result": "A garden grows below ground with no light, and someone has pruned it recently."
+      },
+      {
+        "roll": "3",
+        "result": "Two sets of stairs climb the same tower, and neither set arrives at the same floor."
+      },
+      {
+        "roll": "4",
+        "result": "The tower has no stairs to its top, and the window above is unbroken and too small to climb."
+      },
+      {
+        "roll": "5",
+        "result": "Every lamp in the hall was filled the day the place was sealed, and all of them are still full."
+      },
+      {
+        "roll": "6",
+        "result": "The counting room's tally sticks record payments made for eleven years after the last date carved."
+      },
+      {
+        "roll": "7",
+        "result": "The map room's shelves are empty, but the dust shows where a single scroll was taken."
+      },
+      {
+        "roll": "8",
+        "result": "The bones in the crypt are all left-handed, and every one of them is a grown adult."
+      },
+      {
+        "roll": "9",
+        "result": "Someone has been sweeping the dust into neat piles, and the piles are arranged as a map."
+      },
+      {
+        "roll": "10",
+        "result": "Water runs uphill in a channel cut by hand, and no wheel or pump is anywhere in the works."
+      },
+      {
+        "roll": "11",
+        "result": "A feast was laid and abandoned mid-meal, and the bread is still soft after forty years."
+      },
+      {
+        "roll": "12",
+        "result": "A portrait has been repainted so often that the face beneath is now the size of a fist."
+      },
+      {
+        "roll": "13",
+        "result": "The place was built for a hundred people, and every bed has been slept in by two."
+      },
+      {
+        "roll": "14",
+        "result": "The dead in the courtyard fell facing the same direction, and the gate is behind them."
+      },
+      {
+        "roll": "15",
+        "result": "The same man appears in three carvings separated by two hundred years of wear."
+      },
+      {
+        "roll": "16",
+        "result": "Two graves lie outside the wall, marked with the same name and the same day."
+      },
+      {
+        "roll": "17",
+        "result": "Every room in the place is numbered, and the numbers skip from eleven to thirteen twice."
+      },
+      {
+        "roll": "18",
+        "result": "The cellar holds wine that has never been opened, and the crates are stencilled with a foreign hand."
+      },
+      {
+        "roll": "19",
+        "result": "The shrine's god has two faces, and the prayers carved beneath address a third."
+      },
+      {
+        "roll": "20",
+        "result": "The guardroom's rota lists a watch of twelve, and there are only eleven bunks."
+      }
     ]
   },
   {
     "type": "dice_table",
     "id": "site_treasure",
-    "name": "Possible Treasure Locations",
+    "name": "Where the Treasure Is",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "In a locked chest."},
-      {"roll": "2", "result": "On a corpse."},
-      {"roll": "3", "result": "Beneath a loose flagstone."},
-      {"roll": "4", "result": "Inside a statue or idol."},
-      {"roll": "5", "result": "In a hidden alcove."},
-      {"roll": "6", "result": "In the lair of a beast."},
-      {"roll": "7", "result": "In a flooded room."},
-      {"roll": "8", "result": "In a shrine's offering bowl."},
-      {"roll": "9", "result": "In a trapped container."},
-      {"roll": "10", "result": "In the possession of a rival."},
-      {"roll": "11", "result": "In a collapsed room."},
-      {"roll": "12", "result": "In a vault behind a mechanism."},
-      {"roll": "13", "result": "In a grave or tomb."},
-      {"roll": "14", "result": "On a high shelf or ledge."},
-      {"roll": "15", "result": "In a nest or burrow."},
-      {"roll": "16", "result": "In a locked cabinet."},
-      {"roll": "17", "result": "On the body of a guardian."},
-      {"roll": "18", "result": "In a sack of refuse."},
-      {"roll": "19", "result": "In a hidden compartment."},
-      {"roll": "20", "result": "Where the light does not reach."}
+      {
+        "roll": "1",
+        "result": "Beneath the third flagstone of the nave, in a lead box that has been soldered shut."
+      },
+      {
+        "roll": "2",
+        "result": "Inside a hollow pillar that must be broken, and the pillar holds up the only safe ceiling."
+      },
+      {
+        "roll": "3",
+        "result": "Behind the statue's base, in a cavity that opens only when the statue is turned fully round."
+      },
+      {
+        "roll": "4",
+        "result": "Under the roots of the courtyard tree, which something has been digging around at night."
+      },
+      {
+        "roll": "5",
+        "result": "In the walled-off kitchen chimney, above a fire pit that still smells strongly of smoke."
+      },
+      {
+        "roll": "6",
+        "result": "In the chimney's flue above the kitchen, wedged where only a thin arm can reach it."
+      },
+      {
+        "roll": "7",
+        "result": "Sealed inside a jar among ninety ordinary jars, and the seal is marked with a fish."
+      },
+      {
+        "roll": "8",
+        "result": "Behind the chapel's east window, in a recess reachable only from the roof by rope."
+      },
+      {
+        "roll": "9",
+        "result": "Within the guardian's harness, which must be cut free while the guardian is still upright."
+      },
+      {
+        "roll": "10",
+        "result": "In the cistern's overflow pipe, wedged tight and requiring the water to be shut off first."
+      },
+      {
+        "roll": "11",
+        "result": "In a locked ossuary rack, behind a human skull that is heavier than a skull should be."
+      },
+      {
+        "roll": "12",
+        "result": "Buried in the ash heap of the old furnace, where the heat still cracks the skin of diggers."
+      },
+      {
+        "roll": "13",
+        "result": "In the cold spring that feeds the baths, held down by a stone that must be lifted blind."
+      },
+      {
+        "roll": "14",
+        "result": "Behind the tapestry, in a niche whose covering stone is held by a rusted iron pin."
+      },
+      {
+        "roll": "15",
+        "result": "In the abbot's cell, packed inside a wax candle that has been burned down to a stub."
+      },
+      {
+        "roll": "16",
+        "result": "Under the millpond, in a millstone's central hole, hidden by silt and one deep breath."
+      },
+      {
+        "roll": "17",
+        "result": "Stitched into a corpse's coat at the bottom of the flooded shaft, under cold black water."
+      },
+      {
+        "roll": "18",
+        "result": "In the drowned archives, inside a stone book box that must be carried through waist-deep water."
+      },
+      {
+        "roll": "19",
+        "result": "In a lead coffin in the crypt, which is nailed shut and heavier than the men who nailed it."
+      },
+      {
+        "roll": "20",
+        "result": "On the highest gallery, in a bird's nest built of stolen cloth and a dead man's hair."
+      }
     ]
   },
   {
@@ -670,12 +1921,30 @@
     "name": "Major Types of Deeps",
     "dice": "1d6",
     "rows": [
-      {"roll": "1", "result": "An ancient ruin from a fallen empire."},
-      {"roll": "2", "result": "A natural cave system."},
-      {"roll": "3", "result": "A mine or quarry."},
-      {"roll": "4", "result": "A sunken or buried city."},
-      {"roll": "5", "result": "A fortress or bunker."},
-      {"roll": "6", "result": "A site of strange magic or alien works."}
+      {
+        "roll": "1",
+        "result": "A tomb-city cut in tiers, where each level was sealed by a different dead house and never reopened."
+      },
+      {
+        "roll": "2",
+        "result": "An undercroft of a fallen sorcerer-realm, its halls collapsed in places and its wards still holding the rest."
+      },
+      {
+        "roll": "3",
+        "result": "A deep mine following a vein that ran out centuries ago, with the deeper galleries walled shut from inside."
+      },
+      {
+        "roll": "4",
+        "result": "A collapsed palace whose cellars go deeper than the palace stood tall, against every sensible reckoning."
+      },
+      {
+        "roll": "5",
+        "result": "A cistern-city where the reservoirs were built as halls, and the water was drawn down to hide something."
+      },
+      {
+        "roll": "6",
+        "result": "A flooded quarry whose drowned galleries were cut by masons who left their tools on the benches."
+      }
     ]
   },
   {
@@ -684,12 +1953,30 @@
     "name": "Characteristic Ruins",
     "dice": "1d6",
     "rows": [
-      {"roll": "1", "result": "Crumbling walls and broken halls."},
-      {"roll": "2", "result": "Overgrown with roots and vines."},
-      {"roll": "3", "result": "Flooded or damp throughout."},
-      {"roll": "4", "result": "Strange machines still hum."},
-      {"roll": "5", "result": "Signs of a violent end."},
-      {"roll": "6", "result": "A place of old worship."}
+      {
+        "roll": "1",
+        "result": "All the ruins face the same way, their doors and windows turned from the sunrise."
+      },
+      {
+        "roll": "2",
+        "result": "Every ruin here has a dry well at its centre, and each well is deeper than the hill above it."
+      },
+      {
+        "roll": "3",
+        "result": "Every doorway in these ruins is too low for a standing adult, whatever the height of the hall beyond."
+      },
+      {
+        "roll": "4",
+        "result": "Birds avoid these ruins; the ones that nest there sing a note no other bird makes."
+      },
+      {
+        "roll": "5",
+        "result": "The stones of these ruins are warm to the touch at dusk, however cold the night has turned."
+      },
+      {
+        "roll": "6",
+        "result": "Every ruin here is built of one pale stone, quarried somewhere no living mason has ever found."
+      }
     ]
   },
   {
@@ -698,18 +1985,54 @@
     "name": "Ruin Encounters: Human",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "A band of delvers."},
-      {"roll": "2", "result": "A lost merchant."},
-      {"roll": "3", "result": "A hermit or exile."},
-      {"roll": "4", "result": "A gang of bandits."},
-      {"roll": "5", "result": "A noble's hunting party."},
-      {"roll": "6", "result": "A scholar and guards."},
-      {"roll": "7", "result": "A patrol of soldiers."},
-      {"roll": "8", "result": "A cult's initiates."},
-      {"roll": "9", "result": "A fleeing criminal."},
-      {"roll": "10", "result": "A mad prophet."},
-      {"roll": "11", "result": "A rival adventuring band."},
-      {"roll": "12", "result": "A lone scavenger."}
+      {
+        "roll": "1",
+        "result": "A gang of children is running a rope through the flooded galleries to recover coins dropped by earlier visitors."
+      },
+      {
+        "roll": "2",
+        "result": "A surveyor with a lantern and a length of knotted cord is mapping the halls for a buyer in the capital."
+      },
+      {
+        "roll": "3",
+        "result": "Three escaped prisoners are hiding in a dry cistern and will trade what they know for a share of water."
+      },
+      {
+        "roll": "4",
+        "result": "A pair of thieves is arguing over a locked coffer they carried out but cannot open without waking something."
+      },
+      {
+        "roll": "5",
+        "result": "A band of relic pedlars is sorting grave goods by weight, arguing over which pieces carry a curse."
+      },
+      {
+        "roll": "6",
+        "result": "A grieving widow has paid a dozen mercenaries to bring back her husband's body, or what is left of it."
+      },
+      {
+        "roll": "7",
+        "result": "A chain gang and their overseer are quarrying dressed stone from the ruin itself for a new church."
+      },
+      {
+        "roll": "8",
+        "result": "A mad hermit is ringing a cracked handbell and insists the ruin has begun to count the living."
+      },
+      {
+        "roll": "9",
+        "result": "A pilgrim is kneeling at a wall of names and will not move until someone answers a question scratched there."
+      },
+      {
+        "roll": "10",
+        "result": "A physician and her apprentice are harvesting a grey fungus from the walls, filling jars with great care."
+      },
+      {
+        "roll": "11",
+        "result": "A young scholar is copying inscriptions by rushlight while her two guards play dice and ignore the dark."
+      },
+      {
+        "roll": "12",
+        "result": "Two rival heirs and their servants are cataloguing a vault's contents, each writing a different inventory."
+      }
     ]
   },
   {
@@ -718,18 +2041,54 @@
     "name": "Ruin Encounters: Beasts and Monsters",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "A pack of rats or small predators."},
-      {"roll": "2", "result": "A great serpent."},
-      {"roll": "3", "result": "A swarm of bats or insects."},
-      {"roll": "4", "result": "A lone large predator."},
-      {"roll": "5", "result": "A nest of spiders."},
-      {"roll": "6", "result": "An unnatural beast of the old world."},
-      {"roll": "7", "result": "A scavenger drawn by corpses."},
-      {"roll": "8", "result": "A territorial herbivore."},
-      {"roll": "9", "result": "A cursed or wounded creature."},
-      {"roll": "10", "result": "A beast with strange powers."},
-      {"roll": "11", "result": "A hungry thing from below."},
-      {"roll": "12", "result": "A creature guarding its young."}
+      {
+        "roll": "1",
+        "result": "Fifty bats hang in a dead-end vault and will not leave while a light burns beneath them."
+      },
+      {
+        "roll": "2",
+        "result": "Something with too many joints is feeding in the dark and stops whenever the party stops."
+      },
+      {
+        "roll": "3",
+        "result": "A wounded bear has taken shelter in a dry room and cannot leave without passing the party."
+      },
+      {
+        "roll": "4",
+        "result": "A rat-thing stands upright, wearing a child's shoe on one paw and holding another in its mouth."
+      },
+      {
+        "roll": "5",
+        "result": "A thing that was once a horse circles the room on too many legs and stops when it is spoken to."
+      },
+      {
+        "roll": "6",
+        "result": "A mother wolf has denned in an old shrine and her cubs are old enough to be curious about strangers."
+      },
+      {
+        "roll": "7",
+        "result": "A thin grey creature mimics the party's voices from a side passage, always one word behind."
+      },
+      {
+        "roll": "8",
+        "result": "A nest of thumb-length burrowing things lives in the dust and wakes when the floor is scuffed."
+      },
+      {
+        "roll": "9",
+        "result": "A huge pale worm comes up through the floor where warm blood has been spilled, sensing the hurt."
+      },
+      {
+        "roll": "10",
+        "result": "A bloated, dripping thing blocks the stair and slowly extends a tendril toward the nearest torch."
+      },
+      {
+        "roll": "11",
+        "result": "A blind, hairless mole-thing the size of a pony follows the party by the sound of their breathing."
+      },
+      {
+        "roll": "12",
+        "result": "A pale spider the size of a hand is spinning a web across a doorway faster than a man could walk."
+      }
     ]
   },
   {
@@ -738,32 +2097,86 @@
     "name": "Ruin Encounters: Nonhuman Sapients",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "A patrol of dwarves."},
-      {"roll": "2", "result": "An elven scout."},
-      {"roll": "3", "result": "A band of drudges."},
-      {"roll": "4", "result": "Anak raiders."},
-      {"roll": "5", "result": "Halfmen foragers."},
-      {"roll": "6", "result": "A houri wanderer."},
-      {"roll": "7", "result": "A lone undead."},
-      {"roll": "8", "result": "A group of restless shades."},
-      {"roll": "9", "result": "A relic automaton."},
-      {"roll": "10", "result": "A Jikegida hunting party."},
-      {"roll": "11", "result": "A Polop scavenger."},
-      {"roll": "12", "result": "A Tuhulot manipulator."}
+      {
+        "roll": "1",
+        "result": "A colony of the sleepless, who cannot close their eyes, keeps a lamp burning and asks the party to take a watch."
+      },
+      {
+        "roll": "2",
+        "result": "A people who bind their eyes with wax in daylight and read the walls by touch, offering to guide."
+      },
+      {
+        "roll": "3",
+        "result": "A people who speak only while touching stone will trade a secret of the ruin for a piece of iron."
+      },
+      {
+        "roll": "4",
+        "result": "A knot of pale children who speak in chorus will trade directions for one of the party's shadows."
+      },
+      {
+        "roll": "5",
+        "result": "A silent folk with painted throats hold converse by drumming on the stone with horn mallets."
+      },
+      {
+        "roll": "6",
+        "result": "A band of salt-skinned divers, who can stay dry only an hour before their skin begins to split."
+      },
+      {
+        "roll": "7",
+        "result": "A people whose joints are bound in copper wire move stiffly and ask whether the party came to wake the house."
+      },
+      {
+        "roll": "8",
+        "result": "A thin folk who drink from stone bowls have no names for themselves, only for the rooms they keep."
+      },
+      {
+        "roll": "9",
+        "result": "The mask-wearers keep a dead house's rites and will not let anyone pass a shrine with a bare face."
+      },
+      {
+        "roll": "10",
+        "result": "Two feathered people, taller than a man, are arguing over a boundary stone that moved in the night."
+      },
+      {
+        "roll": "11",
+        "result": "A thin, pale folk who live in the walls and come out to trade bone for salt and clean water."
+      },
+      {
+        "roll": "12",
+        "result": "Three gaunt figures with reed-strip skin, taller than the doors, speak a tongue that sounds like a tally."
+      }
     ]
   },
   {
     "type": "dice_table",
     "id": "encounter_template",
-    "name": "Encounter Table Template",
+    "name": "Shape of an Encounter",
     "dice": "1d6",
     "rows": [
-      {"roll": "1", "result": "A patrol or guards."},
-      {"roll": "2", "result": "A foraging or hunting party."},
-      {"roll": "3", "result": "A lone creature or person."},
-      {"roll": "4", "result": "A group at work or rest."},
-      {"roll": "5", "result": "A group in conflict with another."},
-      {"roll": "6", "result": "A strange or unnatural event."}
+      {
+        "roll": "1",
+        "result": "Four workers hauling a loaded sledge through a narrow door, so nobody has a hand free for a weapon."
+      },
+      {
+        "roll": "2",
+        "result": "Two scouts crouched at a junction, drawing in the dust, one of them holding a finger to their lips."
+      },
+      {
+        "roll": "3",
+        "result": "Two groups facing each other across a hall, shouting, and neither has noticed the party yet."
+      },
+      {
+        "roll": "4",
+        "result": "A dozen figures asleep in a ring around a banked fire, with one wakeful and facing away."
+      },
+      {
+        "roll": "5",
+        "result": "Six figures eating around a table, weapons stacked in the corner, and a dog already growling."
+      },
+      {
+        "roll": "6",
+        "result": "A group hauling a closed chest up a stair, arguing about whether it has begun to move."
+      }
     ]
   },
   {
@@ -772,26 +2185,86 @@
     "name": "Wilderness Events",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "A sudden storm."},
-      {"roll": "2", "result": "A party of travelers."},
-      {"roll": "3", "result": "A predator tracks the party."},
-      {"roll": "4", "result": "A useful plant or spring."},
-      {"roll": "5", "result": "A ruined waystone or marker."},
-      {"roll": "6", "result": "A abandoned camp."},
-      {"roll": "7", "result": "A wounded animal."},
-      {"roll": "8", "result": "A distant fire."},
-      {"roll": "9", "result": "A river too high to cross."},
-      {"roll": "10", "result": "A strange sound at night."},
-      {"roll": "11", "result": "A body of a traveler."},
-      {"roll": "12", "result": "A patrol or bandits."},
-      {"roll": "13", "result": "A natural obstacle or detour."},
-      {"roll": "14", "result": "A sign of a great beast."},
-      {"roll": "15", "result": "A lost child or traveler."},
-      {"roll": "16", "result": "An old battlefield."},
-      {"roll": "17", "result": "A shrine or offering place."},
-      {"roll": "18", "result": "A sudden fog."},
-      {"roll": "19", "result": "A useful cache or supply."},
-      {"roll": "20", "result": "A monster or strange creature."}
+      {
+        "roll": "1",
+        "result": "The trail crosses a stretch of ground where every stone is turned over, as if something searched it."
+      },
+      {
+        "roll": "2",
+        "result": "The sun sets in the wrong quarter, and every shadow the party casts agrees with it until dark."
+      },
+      {
+        "roll": "3",
+        "result": "A dead ox lies across the track, its hide unmarked, and the flies have not found it."
+      },
+      {
+        "roll": "4",
+        "result": "The party's packs are lighter by one sack when they wake, and the ground around camp is undisturbed."
+      },
+      {
+        "roll": "5",
+        "result": "The party's water tastes of iron, and every animal they pass refuses to drink from the same stream."
+      },
+      {
+        "roll": "6",
+        "result": "A sudden hailstorm strips the leaves, and the party must choose between shelter and the dry streambed."
+      },
+      {
+        "roll": "7",
+        "result": "The path runs through a stand of trees all scarred at the same height by old axe cuts."
+      },
+      {
+        "roll": "8",
+        "result": "Every bird in the valley goes silent at once, then a single bell rings from somewhere under the hill."
+      },
+      {
+        "roll": "9",
+        "result": "A flock of crows lifts from one tree at a time, moving ahead of the party as if escorting them."
+      },
+      {
+        "roll": "10",
+        "result": "A bridge over a swollen river has lost its middle third, and someone left a rope tied to the far post."
+      },
+      {
+        "roll": "11",
+        "result": "A wounded deer hobbles across the track and lies down a short way off, as if asking to be followed."
+      },
+      {
+        "roll": "12",
+        "result": "A horn sounds three times from the trees, and no one in the party can tell how far away it is."
+      },
+      {
+        "roll": "13",
+        "result": "A dog with a broken tether follows the party for a mile and then refuses to go further."
+      },
+      {
+        "roll": "14",
+        "result": "An old boundary stone has been dug up and set down facing the wrong way, with fresh mud on it."
+      },
+      {
+        "roll": "15",
+        "result": "A trader's cart stands abandoned with its goods intact and a fresh grave dug beside the wheel."
+      },
+      {
+        "roll": "16",
+        "result": "A woman on the road ahead is driving three goats and walking backwards, watching where she came from."
+      },
+      {
+        "roll": "17",
+        "result": "A man sits at a crossroads with a ledger, offering to record the party's names for a small fee."
+      },
+      {
+        "roll": "18",
+        "result": "A line of smoke rises from beyond a ridge, too thin for a camp and too steady for a fire."
+      },
+      {
+        "roll": "19",
+        "result": "A mist rises at dusk and carries the sound of a market that should be a day's ride away."
+      },
+      {
+        "roll": "20",
+        "result": "A rain-swollen stream has cut a new channel through a graveyard and is carrying bones downstream."
+      }
     ]
   },
   {
@@ -800,26 +2273,86 @@
     "name": "Dungeon Events",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "A distant scream."},
-      {"roll": "2", "result": "A collapse or rockfall."},
-      {"roll": "3", "result": "A patrol of inhabitants."},
-      {"roll": "4", "result": "A door slams shut."},
-      {"roll": "5", "result": "A strange light or glow."},
-      {"roll": "6", "result": "A faint voice or whisper."},
-      {"roll": "7", "result": "A rush of air or draft."},
-      {"roll": "8", "result": "A small cave-in."},
-      {"roll": "9", "result": "A wandering beast."},
-      {"roll": "10", "result": "A trap triggers."},
-      {"roll": "11", "result": "A rival delver appears."},
-      {"roll": "12", "result": "A monster's lair is found."},
-      {"roll": "13", "result": "A sudden silence."},
-      {"roll": "14", "result": "A smell of smoke or rot."},
-      {"roll": "15", "result": "A tremor shakes the place."},
-      {"roll": "16", "result": "A magical effect manifests."},
-      {"roll": "17", "result": "A survivor begs for help."},
-      {"roll": "18", "result": "A hidden passage opens."},
-      {"roll": "19", "result": "A guardian stirs."},
-      {"roll": "20", "result": "A treasure is glimpsed."}
+      {
+        "roll": "1",
+        "result": "The floor ahead is clean and swept, in a corridor where everything else is thick with dust."
+      },
+      {
+        "roll": "2",
+        "result": "A cold draft carries the smell of wet earth and old smoke, and it is coming from a wall."
+      },
+      {
+        "roll": "3",
+        "result": "The party's shadows lengthen toward the light rather than away from it, and only for a moment."
+      },
+      {
+        "roll": "4",
+        "result": "Somewhere below, a bell rings once and the dust on every ledge shivers off."
+      },
+      {
+        "roll": "5",
+        "result": "A shadow crosses the torchlight in a closed room, and it is not cast by anyone present."
+      },
+      {
+        "roll": "6",
+        "result": "A carving of a sealed door now shows it standing open, and a narrow gap has opened beneath the image."
+      },
+      {
+        "roll": "7",
+        "result": "A slow grinding begins under the floor and the passage behind the party is shorter than it was."
+      },
+      {
+        "roll": "8",
+        "result": "A bell rope hangs in a shaft and is moving, though the shaft is too narrow for a hand."
+      },
+      {
+        "roll": "9",
+        "result": "The air changes and the torch flames bend toward a wall with no crack in it."
+      },
+      {
+        "roll": "10",
+        "result": "Water begins to seep from a seam in the ceiling, first a trickle and then a steady pour."
+      },
+      {
+        "roll": "11",
+        "result": "The last door the party forced has closed itself, and the marks of their crowbar are gone."
+      },
+      {
+        "roll": "12",
+        "result": "Two passages that were dark are now faintly lit, and the light comes from something burning."
+      },
+      {
+        "roll": "13",
+        "result": "A stone in the floor gives slightly underfoot and settles, and something below takes a breath."
+      },
+      {
+        "roll": "14",
+        "result": "A low tide sound runs through the ruin, though the party is far above any water they know of."
+      },
+      {
+        "roll": "15",
+        "result": "A door the party passed an hour ago is standing open now, though nobody touched it."
+      },
+      {
+        "roll": "16",
+        "result": "A voice recites a list of names in the next room and stops at the sound of the party's boots."
+      },
+      {
+        "roll": "17",
+        "result": "A long low sound moves through the stone, and a hairline crack opens along one wall."
+      },
+      {
+        "roll": "18",
+        "result": "Frost spreads across a wall from a single point, forming the rough shape of a doorway."
+      },
+      {
+        "roll": "19",
+        "result": "The party's echoes come back wrong, answering a beat late or in more voices than they have."
+      },
+      {
+        "roll": "20",
+        "result": "The carved faces on a wall have all turned toward the party, though the stone is unbroken."
+      }
     ]
   },
   {
@@ -828,18 +2361,54 @@
     "name": "Monster Shapes",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "Humanoid."},
-      {"roll": "2", "result": "Beast-like."},
-      {"roll": "3", "result": "Serpentine."},
-      {"roll": "4", "result": "Many-legged."},
-      {"roll": "5", "result": "Winged."},
-      {"roll": "6", "result": "Amorphous."},
-      {"roll": "7", "result": "Aquatic."},
-      {"roll": "8", "result": "Mechanical or automaton."},
-      {"roll": "9", "result": "Hybrid of two shapes."},
-      {"roll": "10", "result": "Gigantic."},
-      {"roll": "11", "result": "Tiny swarm."},
-      {"roll": "12", "result": "Something with no natural shape."}
+      {
+        "roll": "1",
+        "result": "A serpent body ending in a cluster of small arms."
+      },
+      {
+        "roll": "2",
+        "result": "A human frame wrapped in layered hide plates."
+      },
+      {
+        "roll": "3",
+        "result": "A low, broad beast that moves on six legs."
+      },
+      {
+        "roll": "4",
+        "result": "A quadruped with a human face and no eyes."
+      },
+      {
+        "roll": "5",
+        "result": "A bloated, floating sac trailing fine threads."
+      },
+      {
+        "roll": "6",
+        "result": "A tall, thin giant with limbs too long for its body."
+      },
+      {
+        "roll": "7",
+        "result": "A writhing mass of pale, rootlike tendrils."
+      },
+      {
+        "roll": "8",
+        "result": "A pillar of woven reeds and bone that walks."
+      },
+      {
+        "roll": "9",
+        "result": "A horned quadruped with a flattened, toadlike face."
+      },
+      {
+        "roll": "10",
+        "result": "A tall, gaunt humanoid with too many joints."
+      },
+      {
+        "roll": "11",
+        "result": "A pale, hairless biped that walks on its knuckles."
+      },
+      {
+        "roll": "12",
+        "result": "A many-eyed head on a spidery walking body."
+      }
     ]
   },
   {
@@ -848,18 +2417,54 @@
     "name": "Monstrous Drives",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "Hunger."},
-      {"roll": "2", "result": "Territorial defense."},
-      {"roll": "3", "result": "Reproduction or propagation."},
-      {"roll": "4", "result": "Greed or hoarding."},
-      {"roll": "5", "result": "Fear or survival."},
-      {"roll": "6", "result": "Hatred of a kind of creature."},
-      {"roll": "7", "result": "Service to a master."},
-      {"roll": "8", "result": "Curiosity or play."},
-      {"roll": "9", "result": "A religious or occult purpose."},
-      {"roll": "10", "result": "A need for a resource."},
-      {"roll": "11", "result": "Revenge or grief."},
-      {"roll": "12", "result": "An alien instinct no one can name."}
+      {
+        "roll": "1",
+        "result": "To avenge a death it cannot name."
+      },
+      {
+        "roll": "2",
+        "result": "An urge no living thing can explain."
+      },
+      {
+        "roll": "3",
+        "result": "To complete a rite it was made for."
+      },
+      {
+        "roll": "4",
+        "result": "To find a mate that no longer exists."
+      },
+      {
+        "roll": "5",
+        "result": "To gather and guard bright metal."
+      },
+      {
+        "roll": "6",
+        "result": "To survive at any cost."
+      },
+      {
+        "roll": "7",
+        "result": "To be worshipped by something weaker."
+      },
+      {
+        "roll": "8",
+        "result": "To seed new broods in living hosts."
+      },
+      {
+        "roll": "9",
+        "result": "To see what happens when things break."
+      },
+      {
+        "roll": "10",
+        "result": "To return to a place that no longer exists."
+      },
+      {
+        "roll": "11",
+        "result": "To keep its young fed and hidden."
+      },
+      {
+        "roll": "12",
+        "result": "To drink from a particular spring."
+      }
     ]
   },
   {
@@ -868,26 +2473,86 @@
     "name": "Activity Twists",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "It is wounded or starving."},
-      {"roll": "2", "result": "It is protecting something."},
-      {"roll": "3", "result": "It is being hunted."},
-      {"roll": "4", "result": "It is split from its group."},
-      {"roll": "5", "result": "It is disguised or hidden."},
-      {"roll": "6", "result": "It is asleep or dormant."},
-      {"roll": "7", "result": "It is feeding."},
-      {"roll": "8", "result": "It is building or digging."},
-      {"roll": "9", "result": "It is performing a ritual."},
-      {"roll": "10", "result": "It is playing or displaying."},
-      {"roll": "11", "result": "It is fleeing something worse."},
-      {"roll": "12", "result": "It is guarding a treasure."},
-      {"roll": "13", "result": "It is searching for something."},
-      {"roll": "14", "result": "It is sick or cursed."},
-      {"roll": "15", "result": "It is negotiating with another."},
-      {"roll": "16", "result": "It is wounded by a previous fight."},
-      {"roll": "17", "result": "It is caring for young."},
-      {"roll": "18", "result": "It is trapped."},
-      {"roll": "19", "result": "It is watching the party."},
-      {"roll": "20", "result": "It is doing something inexplicable."}
+      {
+        "roll": "1",
+        "result": "It collects small objects and trades them for food."
+      },
+      {
+        "roll": "2",
+        "result": "It speaks only in questions and answers them itself."
+      },
+      {
+        "roll": "3",
+        "result": "It can only move toward what it can smell."
+      },
+      {
+        "roll": "4",
+        "result": "It is dying of something and knows it."
+      },
+      {
+        "roll": "5",
+        "result": "It remembers every face it has seen and greets them by name."
+      },
+      {
+        "roll": "6",
+        "result": "It repeats the last action it saw performed, exactly."
+      },
+      {
+        "roll": "7",
+        "result": "It will not enter a place it has not been invited."
+      },
+      {
+        "roll": "8",
+        "result": "It is terrified of its own reflection."
+      },
+      {
+        "roll": "9",
+        "result": "It casts no shadow and grows agitated in bright sun."
+      },
+      {
+        "roll": "10",
+        "result": "It counts everything it sees and becomes furious at errors."
+      },
+      {
+        "roll": "11",
+        "result": "It prefers the company of animals to people."
+      },
+      {
+        "roll": "12",
+        "result": "It follows orders given by anyone wearing a crown."
+      },
+      {
+        "roll": "13",
+        "result": "It can step through shadows but not into light."
+      },
+      {
+        "roll": "14",
+        "result": "It offers a bargain before it attacks."
+      },
+      {
+        "roll": "15",
+        "result": "It sleeps in the shape of a stone and wakes when struck."
+      },
+      {
+        "roll": "16",
+        "result": "It will stop fighting to rescue a fallen companion."
+      },
+      {
+        "roll": "17",
+        "result": "It gives away its treasure to anyone who asks politely."
+      },
+      {
+        "roll": "18",
+        "result": "It heals quickly from any wound it did not see coming."
+      },
+      {
+        "roll": "19",
+        "result": "It cannot tell the living from the dead."
+      },
+      {
+        "roll": "20",
+        "result": "It imitates the wounded cries of animals to draw people out."
+      }
     ]
   }
 ]

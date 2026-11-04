@@ -1007,5 +1007,29 @@
         "condition"
       ]
     }
+  },
+  {
+    "type": "tool_call",
+    "id": "record_setting",
+    "name": "record_setting",
+    "world_method": "record_setting",
+    "description": "Record one fact about the world you invented: a region, a people, a power, a piece of history, a law of magic, or the conflict the campaign turns on. The facts are shown back to you every turn, so this is how the setting stays consistent. Recording an existing topic replaces that fact. Call it as you build the world before the opening narration, and again whenever play makes the setting more specific.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "description": "Short label for the fact, such as 'The starting region', 'Magic', or 'The Broken Crown war'."
+        },
+        "detail": {
+          "type": "string",
+          "description": "The fact itself, as one or two sentences the table can use."
+        }
+      },
+      "required": [
+        "topic",
+        "detail"
+      ]
+    }
   }
 ]

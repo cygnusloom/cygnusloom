@@ -547,6 +547,9 @@ def world_state_text(
         for field_id, value in state.options.items()
         if field_id in campaign.fields
     ]
+    if state.settings:
+        lines.append("Setting:")
+        lines.extend(f"  {topic}: {detail}" for topic, detail in state.settings.items())
     if clock_rules is not None:
         when = f"day {state.clock.day}, {clock_rules.parts[state.clock.part]}"
         if clock_rules.hours_per_part > 1:

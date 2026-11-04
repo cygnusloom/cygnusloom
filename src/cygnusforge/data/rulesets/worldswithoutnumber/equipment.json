@@ -71,7 +71,7 @@
     "name": "Silver Pieces",
     "feature_type": "item",
     "size": "tiny",
-    "description": "Silver coins, the standard money of the Latter Earth: ten silver to a gold piece and ten copper to a silver piece. A full hundred coins counts as one item of Encumbrance."
+    "description": "Silver coins, the standard money of the settled lands: ten silver to a gold piece and ten copper to a silver piece. A full hundred coins counts as one item of Encumbrance."
   },
   {
     "type": "feature",

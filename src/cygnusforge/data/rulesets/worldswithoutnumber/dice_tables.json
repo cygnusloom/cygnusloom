@@ -5,26 +5,86 @@
     "name": "Significant Terrain",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "Ancient farmland: a broad region re-engineered for farming."},
-      {"roll": "2", "result": "Arratu wasteland: xenoformed land hostile to human life or held by alien things."},
-      {"roll": "3", "result": "Blasted lands: scorched or irradiated by ancient war; ruins are likely."},
-      {"roll": "4", "result": "Canyons: deep cuts left by present or vanished rivers."},
-      {"roll": "5", "result": "Dense forest: trackless, dark, and a natural barrier."},
-      {"roll": "6", "result": "Grasslands: broad plains or savanna forming one coherent whole."},
-      {"roll": "7", "result": "Islands: a significant island or an archipelago off the coast."},
-      {"roll": "8", "result": "Jagged mountains: young, tall peaks with a strong rain shadow."},
-      {"roll": "9", "result": "Jungle: semi-alien flora and fauna in a classic adventure jungle."},
-      {"roll": "10", "result": "Light forest: woodland broken by other terrain."},
-      {"roll": "11", "result": "Megaplex: the ruins of one huge ancient structure stretching for miles."},
-      {"roll": "12", "result": "Pit: a collapsed underground megastructure leaving a hole tens of miles wide."},
-      {"roll": "13", "result": "Rain forest: vast, damp, and green."},
-      {"roll": "14", "result": "Rocky hills: stony ground with little arable land; herding and raiding dominate."},
-      {"roll": "15", "result": "Rolling hills: gentle hills and good farmland."},
-      {"roll": "16", "result": "Sand desert: a waste of dunes, from rain shadow or ancient war."},
-      {"roll": "17", "result": "Scrub desert: the leeward side of mountains, bordering grassland or savanna."},
-      {"roll": "18", "result": "Swamp: a sinking river, lake margin, or wet delta turned to bog."},
-      {"roll": "19", "result": "Volcano: an active volcanic mountain in a nearby range."},
-      {"roll": "20", "result": "Weathered mountains: low, rounded mountains with a skirt of hills."}
+      {
+        "roll": "1",
+        "result": "A high snowfield never melts except at one bare green patch that stays warm all winter."
+      },
+      {
+        "roll": "2",
+        "result": "Dry ravines maze across soft earth, deep enough to hide an army and lose a road."
+      },
+      {
+        "roll": "3",
+        "result": "A natural bowl in the hills carries a whisper from one rim to the other."
+      },
+      {
+        "roll": "4",
+        "result": "Boulders the size of houses litter a grassy valley, dropped by a force no one can name."
+      },
+      {
+        "roll": "5",
+        "result": "The river dives underground for a mile in a red stone canyon and returns changed in colour."
+      },
+      {
+        "roll": "6",
+        "result": "Grey trunks stand in a flooded wood where the water rose one year and never went down."
+      },
+      {
+        "roll": "7",
+        "result": "Trees so tall stand here that the ground beneath them lies in twilight at noon."
+      },
+      {
+        "roll": "8",
+        "result": "Wind-carved stone arches stand across the desert, some upright and most fallen into rubble."
+      },
+      {
+        "roll": "9",
+        "result": "A wide lake with no outlet is ringed by salt flats that whiten with every dry year."
+      },
+      {
+        "roll": "10",
+        "result": "A hot wind blows all year up a river valley, ripening the crops a month early."
+      },
+      {
+        "roll": "11",
+        "result": "Dead trees stand in the shallows of a drowned peninsula, marking the channel for boats."
+      },
+      {
+        "roll": "12",
+        "result": "A black pebble desert rings underfoot and grows nothing, crossed by one road of white paving stones."
+      },
+      {
+        "roll": "13",
+        "result": "Old farmers terraced a mountain from foot to shoulder, with one switchback path serving every field."
+      },
+      {
+        "roll": "14",
+        "result": "Sinkholes dot the plain in their hundreds, each one a collapsed cavern roof."
+      },
+      {
+        "roll": "15",
+        "result": "Steaming mineral terraces climb the hillside, each pool a different colour."
+      },
+      {
+        "roll": "16",
+        "result": "A high grassland plateau is split by one straight chasm that no river dug and no mason bridged."
+      },
+      {
+        "roll": "17",
+        "result": "A ridge runs straight for thirty miles, shaped so evenly that travellers argue over whether it is natural."
+      },
+      {
+        "roll": "18",
+        "result": "Steaming vents and boiling mud fill a valley that stinks of sulphur and makes the air shiver."
+      },
+      {
+        "roll": "19",
+        "result": "A shallow inland sea dries to a cracked pan in summer and drowns the road in spring."
+      },
+      {
+        "roll": "20",
+        "result": "Stacked stone pillars stand in the surf, the leavings of a cliff the sea has eaten through."
+      }
     ]
   },
   {
@@ -33,26 +93,86 @@
     "name": "Terrain Quirk",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "Significant magical structures stand here."},
-      {"roll": "2", "result": "The place features in the nation's origin legend."},
-      {"roll": "3", "result": "The whole feature is man-made by ancient arts."},
-      {"roll": "4", "result": "Time and space sometimes slip here."},
-      {"roll": "5", "result": "Magical power draws wizards to the place."},
-      {"roll": "6", "result": "Living here subtly changes the inhabitants."},
-      {"roll": "7", "result": "The ground is holy to a particular faith."},
-      {"roll": "8", "result": "The place was a different kind of terrain before."},
-      {"roll": "9", "result": "Human-worked vistas of beauty shape the land."},
-      {"roll": "10", "result": "This was formerly an Outsider stronghold."},
-      {"roll": "11", "result": "A significant part of the place is underground."},
-      {"roll": "12", "result": "Ancient wards restrain the place from expanding."},
-      {"roll": "13", "result": "It was a nature preserve of a megastructure."},
-      {"roll": "14", "result": "An ancient artificial mind still maintains it."},
-      {"roll": "15", "result": "Magic is warped throughout the area."},
-      {"roll": "16", "result": "The flora and fauna are queasily wrong."},
-      {"roll": "17", "result": "Locals once populated the place far more heavily."},
-      {"roll": "18", "result": "Rulership of the place is widely disputed."},
-      {"roll": "19", "result": "The ground is riddled with caves and delvings."},
-      {"roll": "20", "result": "A unique type of sentient lives here."}
+      {
+        "roll": "1",
+        "result": "A shrine at the valley mouth is kept by a family who will not say what it shelters."
+      },
+      {
+        "roll": "2",
+        "result": "The valley's dead are buried upright, facing the pass they never crossed."
+      },
+      {
+        "roll": "3",
+        "result": "Nothing buried here rots, so graves are weighted and sunk in the marsh."
+      },
+      {
+        "roll": "4",
+        "result": "No beast will cross a certain brook, and the shepherds pretend not to notice."
+      },
+      {
+        "roll": "5",
+        "result": "The border is marked by a ditch that no one is permitted to fill in."
+      },
+      {
+        "roll": "6",
+        "result": "One tree bears fruit out of season, and the village treats the harvest as common property."
+      },
+      {
+        "roll": "7",
+        "result": "Wolves and shepherds keep an old truce here that neither side will explain."
+      },
+      {
+        "roll": "8",
+        "result": "The ground rings hollow for a mile in every direction from the old tower."
+      },
+      {
+        "roll": "9",
+        "result": "Old boundary stones still stand in the fields, and stepping over one is a legal act."
+      },
+      {
+        "roll": "10",
+        "result": "The local speech has no word for stranger, only for guest and for enemy."
+      },
+      {
+        "roll": "11",
+        "result": "Lightning strikes the same bare crag most summers, and there are offerings at its foot."
+      },
+      {
+        "roll": "12",
+        "result": "Two standing stones hum faintly at dawn, and the locals will not discuss it."
+      },
+      {
+        "roll": "13",
+        "result": "Every road in the region bends toward a single standing stone, whatever the map says."
+      },
+      {
+        "roll": "14",
+        "result": "A hilltop maze of low walls is rebuilt every spring by the village children."
+      },
+      {
+        "roll": "15",
+        "result": "The local birds carry seeds of a plant that grows nowhere else in the world."
+      },
+      {
+        "roll": "16",
+        "result": "Rain falls on one side of a line and not the other, sharp as a wall."
+      },
+      {
+        "roll": "17",
+        "result": "Every tree along the ridge leans toward the same shrine, whichever way the wind blows."
+      },
+      {
+        "roll": "18",
+        "result": "An empty throne of grey stone sits on the hill, and no one has ever sat in it."
+      },
+      {
+        "roll": "19",
+        "result": "A black stone arch stands in the ruins, and every mason who tried to quarry it has died."
+      },
+      {
+        "roll": "20",
+        "result": "The stars here stand a hand's width wrong, and local sailors steer by the error."
+      }
     ]
   },
   {
@@ -61,18 +181,54 @@
     "name": "Terrain Antagonists",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "Secessionist rebels, violent and organized."},
-      {"roll": "2", "result": "Angry cultists of a local faith."},
-      {"roll": "3", "result": "Resentful locals who distrust outsiders."},
-      {"roll": "4", "result": "Cunning dangerous beasts of one kind."},
-      {"roll": "5", "result": "Relic-creatures left by ancient settlements."},
-      {"roll": "6", "result": "Elemental emanations from the disordered land."},
-      {"roll": "7", "result": "A hostile sentient monster civilization."},
-      {"roll": "8", "result": "Brutal envoys of the central government."},
-      {"roll": "9", "result": "Raiders and bandits driven into the area."},
-      {"roll": "10", "result": "Rapacious local lords and gang bosses."},
-      {"roll": "11", "result": "Furious remnants of a native population."},
-      {"roll": "12", "result": "Outsider remnants holding a bitter grudge."}
+      {
+        "roll": "1",
+        "result": "A press gang from a distant war, combing the roads for bodies."
+      },
+      {
+        "roll": "2",
+        "result": "A riding clan that raids the settled valleys the week before harvest."
+      },
+      {
+        "roll": "3",
+        "result": "A hermit who sets snares across the road and calls them prayers."
+      },
+      {
+        "roll": "4",
+        "result": "A cave thing that mimics voices to draw travellers off the path."
+      },
+      {
+        "roll": "5",
+        "result": "A warlord's deserters hold the only bridge and take payment in boots."
+      },
+      {
+        "roll": "6",
+        "result": "Lean wolves that follow travellers for days and only close at nightfall."
+      },
+      {
+        "roll": "7",
+        "result": "Toll-keeping monks whose charter expired a hundred years ago."
+      },
+      {
+        "roll": "8",
+        "result": "A bandit company that taxes the ford and calls the payment a toll."
+      },
+      {
+        "roll": "9",
+        "result": "A guild of grave-robbers who resent competition and loose arrows from cover."
+      },
+      {
+        "roll": "10",
+        "result": "A great serpent that suns itself on the warm stones of the pass."
+      },
+      {
+        "roll": "11",
+        "result": "Leftover servants of a dead sorcerer, still keeping an order nobody remembers."
+      },
+      {
+        "roll": "12",
+        "result": "A fog-bound tribe that takes one traveller from every party that passes."
+      }
     ]
   },
   {
@@ -81,14 +237,38 @@
     "name": "Terrain Use",
     "dice": "1d8",
     "rows": [
-      {"roll": "1", "result": "A rare and precious resource is found here."},
-      {"roll": "2", "result": "Ancient sites and relics are common."},
-      {"roll": "3", "result": "The land is sacred to a group or religion."},
-      {"roll": "4", "result": "Control of the place matters militarily."},
-      {"roll": "5", "result": "Substantial productive infrastructure stands here."},
-      {"roll": "6", "result": "A major trade route passes through."},
-      {"roll": "7", "result": "Uncontrolled, the place is a nest of raiders and worse."},
-      {"roll": "8", "result": "A mighty Working still functions here."}
+      {
+        "roll": "1",
+        "result": "Horses bred on the open grass and sold to cavalry officers."
+      },
+      {
+        "roll": "2",
+        "result": "Sheep and wool, sold to lowland weavers at a fixed spring fair."
+      },
+      {
+        "roll": "3",
+        "result": "Wine from hillside plots, most of it drunk within a day's ride."
+      },
+      {
+        "roll": "4",
+        "result": "Milling, since the streams run strong and every village has a wheel."
+      },
+      {
+        "roll": "5",
+        "result": "Stone quarried on one hill and shipped out as dressed blocks."
+      },
+      {
+        "roll": "6",
+        "result": "Cattle fattened on marsh grass and driven to market in autumn."
+      },
+      {
+        "roll": "7",
+        "result": "Salt pans along the flats, worked by families who inherit the rights."
+      },
+      {
+        "roll": "8",
+        "result": "Terraced grain and goats, with everything else carried in by mule."
+      }
     ]
   },
   {
@@ -97,12 +277,30 @@
     "name": "Terrain Danger",
     "dice": "1d6",
     "rows": [
-      {"roll": "1", "result": "Safer than usual for its kind."},
-      {"roll": "2", "result": "One notable kind of danger."},
-      {"roll": "3", "result": "Site-specific flavors of peril."},
-      {"roll": "4", "result": "Unusually dangerous in several ways."},
-      {"roll": "5", "result": "Kills the unprepared quickly."},
-      {"roll": "6", "result": "A death zone for all but the strongest."}
+      {
+        "roll": "1",
+        "result": "Avalanche on the north slopes through the melting weeks."
+      },
+      {
+        "roll": "2",
+        "result": "Sinkholes opening in the road where old workings run beneath."
+      },
+      {
+        "roll": "3",
+        "result": "Thin air in the high passes, which slows the strong and sickens the weak."
+      },
+      {
+        "roll": "4",
+        "result": "Biting insects in the wet season that madden pack animals."
+      },
+      {
+        "roll": "5",
+        "result": "Summer wildfire that runs uphill faster than a horse can gallop."
+      },
+      {
+        "roll": "6",
+        "result": "Rockfall on the cliff road after any hard rain."
+      }
     ]
   },
   {
@@ -111,10 +309,22 @@
     "name": "Terrain Population",
     "dice": "1d4",
     "rows": [
-      {"roll": "1", "result": "Almost unpopulated, unusually empty for its kind."},
-      {"roll": "2", "result": "Very few settlers or workers."},
-      {"roll": "3", "result": "Average or higher population density."},
-      {"roll": "4", "result": "A rush of people has come here."}
+      {
+        "roll": "1",
+        "result": "A few fortified manors holding broad, thinly peopled fields."
+      },
+      {
+        "roll": "2",
+        "result": "A single monastery and its tenants, and nothing else for a day's ride."
+      },
+      {
+        "roll": "3",
+        "result": "Crowded villages with no land left for the younger children."
+      },
+      {
+        "roll": "4",
+        "result": "Mining camps that swell with a good seam and empty when it fails."
+      }
     ]
   },
   {
@@ -123,16 +333,46 @@
     "name": "Terrain Last Event",
     "dice": "1d10",
     "rows": [
-      {"roll": "1", "result": "A significant battle was fought here."},
-      {"roll": "2", "result": "A mad prophet tried to start a faith here."},
-      {"roll": "3", "result": "A usurper and their supporters fled into the place."},
-      {"roll": "4", "result": "A resource strike drew many people."},
-      {"roll": "5", "result": "A major nest of bandits or raiders formed."},
-      {"roll": "6", "result": "A rich ancient ruin was discovered."},
-      {"roll": "7", "result": "An uncanny plague erupted."},
-      {"roll": "8", "result": "Some grim and terrible thing was awoken."},
-      {"roll": "9", "result": "A community of outcasts or marginals formed."},
-      {"roll": "10", "result": "A natural or uncanny disaster struck."}
+      {
+        "roll": "1",
+        "result": "A sorcerer's tower fell on its own, and nobody will go near the rubble."
+      },
+      {
+        "roll": "2",
+        "result": "A great beast was killed, and the hunters who killed it now rule the valley."
+      },
+      {
+        "roll": "3",
+        "result": "A long drought broke, and the fields are green for the first time in years."
+      },
+      {
+        "roll": "4",
+        "result": "A landslide closed the pass, and the long way around has become the road."
+      },
+      {
+        "roll": "5",
+        "result": "The river changed course and left the mill and the ford high and dry."
+      },
+      {
+        "roll": "6",
+        "result": "A flood took the old bridge and the village that kept it."
+      },
+      {
+        "roll": "7",
+        "result": "The lord died without an heir, and three claimants now tax the same fields."
+      },
+      {
+        "roll": "8",
+        "result": "The bandit chief was hanged, and his people are fighting over what he left."
+      },
+      {
+        "roll": "9",
+        "result": "A wizard bought the whole valley and has not been seen since."
+      },
+      {
+        "roll": "10",
+        "result": "Fire burned the market town, and the new one is being built a mile away."
+      }
     ]
   },
   {
@@ -141,26 +381,86 @@
     "name": "Nation Disputes With Neighbor",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "Raiders take refuge in their lands."},
-      {"roll": "2", "result": "Ownership of a resource site is disputed."},
-      {"roll": "3", "result": "A usurper or criminal is sheltered there."},
-      {"roll": "4", "result": "A troublemaking religion is based there."},
-      {"roll": "5", "result": "Their rulers claim a right to the throne."},
-      {"roll": "6", "result": "A diplomatic marriage is going sour."},
-      {"roll": "7", "result": "A past war left deep scars."},
-      {"roll": "8", "result": "Their culture is supplanting local beliefs."},
-      {"roll": "9", "result": "Their immigrants gain great influence."},
-      {"roll": "10", "result": "They broke an alliance or important pact."},
-      {"roll": "11", "result": "They lured away an academy or great temple."},
-      {"roll": "12", "result": "Border tariffs and taxes block trade."},
-      {"roll": "13", "result": "They drove a terrible beast into this land."},
-      {"roll": "14", "result": "A Working of theirs caused problems."},
-      {"roll": "15", "result": "They woke a great peril from the past."},
-      {"roll": "16", "result": "They cooperate with an enemy group."},
-      {"roll": "17", "result": "They are suspected of backing assassinations."},
-      {"roll": "18", "result": "A spy ring is suspected or has been found."},
-      {"roll": "19", "result": "They refused aid for a current need."},
-      {"roll": "20", "result": "They are hostile to an allied group."}
+      {
+        "roll": "1",
+        "result": "A river that changed course and left the agreed border high and dry."
+      },
+      {
+        "roll": "2",
+        "result": "A treaty clause on fortress-building that one side has quietly broken."
+      },
+      {
+        "roll": "3",
+        "result": "The border market, where each realm's law is applied to the other's merchants."
+      },
+      {
+        "roll": "4",
+        "result": "The succession of a small realm that both neighbours want to influence."
+      },
+      {
+        "roll": "5",
+        "result": "A forest both crowns claim for ship timber."
+      },
+      {
+        "roll": "6",
+        "result": "An insult at a peace conference that neither court will apologise for."
+      },
+      {
+        "roll": "7",
+        "result": "The true line of a border drawn by a surveyor who was paid twice."
+      },
+      {
+        "roll": "8",
+        "result": "Fishing rights in the bay where the two fleets meet each spring."
+      },
+      {
+        "roll": "9",
+        "result": "The debts of a bankrupt border lord who owes money to both crowns."
+      },
+      {
+        "roll": "10",
+        "result": "A relic that both temples say was stolen from them."
+      },
+      {
+        "roll": "11",
+        "result": "A college of wizards that recruits from both realms and answers to neither."
+      },
+      {
+        "roll": "12",
+        "result": "The title to a province that exists only in old charters."
+      },
+      {
+        "roll": "13",
+        "result": "A marriage contract that one court says was never sealed."
+      },
+      {
+        "roll": "14",
+        "result": "Refugees crossing the border, and who must feed them."
+      },
+      {
+        "roll": "15",
+        "result": "A silver seam that runs under the border and surfaces on both sides."
+      },
+      {
+        "roll": "16",
+        "result": "A bridge toll raised three times without notice."
+      },
+      {
+        "roll": "17",
+        "result": "The right to toll the only bridge across the border river."
+      },
+      {
+        "roll": "18",
+        "result": "A river island that both realms have farmed for four generations."
+      },
+      {
+        "roll": "19",
+        "result": "A truce that expires each spring and must be argued out again."
+      },
+      {
+        "roll": "20",
+        "result": "The return of a noble who fled across the line after a killing."
+      }
     ]
   },
   {
@@ -169,26 +469,86 @@
     "name": "Nation Positive Ties",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "The ruling classes are related."},
-      {"roll": "2", "result": "An important faith crosses the border."},
-      {"roll": "3", "result": "They fought on our side in the past."},
-      {"roll": "4", "result": "Their culture is widely admired here."},
-      {"roll": "5", "result": "They helped overcome an eldritch peril."},
-      {"roll": "6", "result": "They held back an enemy from our border."},
-      {"roll": "7", "result": "The two peoples share origins."},
-      {"roll": "8", "result": "They provide critical trade relations."},
-      {"roll": "9", "result": "Sages and scholars came from there."},
-      {"roll": "10", "result": "They gave critical aid during a disaster."},
-      {"roll": "11", "result": "A local hero came originally from there."},
-      {"roll": "12", "result": "A past hero-king ruled both lands."},
-      {"roll": "13", "result": "They produce a vital commodity."},
-      {"roll": "14", "result": "They share an enemy with us."},
-      {"roll": "15", "result": "A Working of theirs helps here too."},
-      {"roll": "16", "result": "A long alliance or trade pact binds us."},
-      {"roll": "17", "result": "They recently conceded disputed land."},
-      {"roll": "18", "result": "They admire elements of this culture."},
-      {"roll": "19", "result": "They are considered unusually attractive here."},
-      {"roll": "20", "result": "They took in refugees from here."}
+      {
+        "roll": "1",
+        "result": "An agreement to hunt bandits on both sides of the line."
+      },
+      {
+        "roll": "2",
+        "result": "An old alliance sealed at a battle both realms call a victory."
+      },
+      {
+        "roll": "3",
+        "result": "Border lords who marry across the line and visit constantly."
+      },
+      {
+        "roll": "4",
+        "result": "A hostage exchange that has grown into a friendship between heirs."
+      },
+      {
+        "roll": "5",
+        "result": "A plague agreement: news of sickness crosses the border before the sickness does."
+      },
+      {
+        "roll": "6",
+        "result": "A shared river that both realms need kept clear and bridged."
+      },
+      {
+        "roll": "7",
+        "result": "A harvest truce, renewed each year, that both armies keep."
+      },
+      {
+        "roll": "8",
+        "result": "Grain shipped one way and iron the other, on contracts renewed each year."
+      },
+      {
+        "roll": "9",
+        "result": "A horse trade neither realm can afford to lose."
+      },
+      {
+        "roll": "10",
+        "result": "A joint hatred of a third realm that presses on both borders."
+      },
+      {
+        "roll": "11",
+        "result": "Two monarchs, brother and sister, who write to each other weekly."
+      },
+      {
+        "roll": "12",
+        "result": "Pensions paid to the same old soldiers by both crowns."
+      },
+      {
+        "roll": "13",
+        "result": "A wizard's compact that binds both crowns to the same limits."
+      },
+      {
+        "roll": "14",
+        "result": "An annual exchange of noble children that everyone now calls tradition."
+      },
+      {
+        "roll": "15",
+        "result": "Joint midsummer games that settle more quarrels than any court."
+      },
+      {
+        "roll": "16",
+        "result": "A mutual guarantee of each other's borders against outside claims."
+      },
+      {
+        "roll": "17",
+        "result": "A marriage between the two ruling houses, renewed every generation."
+      },
+      {
+        "roll": "18",
+        "result": "A common coinage that both realms accept without assay."
+      },
+      {
+        "roll": "19",
+        "result": "A shared calendar and festival that makes a summer war unthinkable."
+      },
+      {
+        "roll": "20",
+        "result": "A shared guild that arbitrates disputes between both realms' merchants."
+      }
     ]
   },
   {
@@ -197,26 +557,86 @@
     "name": "Nation Current Problems",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "Farmland is depleted."},
-      {"roll": "2", "result": "Verminous monsters are swarming."},
-      {"roll": "3", "result": "A rebel front is stirring trouble."},
-      {"roll": "4", "result": "An outside power backs internal strife."},
-      {"roll": "5", "result": "Leadership is inept and distracted."},
-      {"roll": "6", "result": "A religious reformer breaks old compacts."},
-      {"roll": "7", "result": "An evil provokes outraged rioting."},
-      {"roll": "8", "result": "Dark cults attract the ambitious."},
-      {"roll": "9", "result": "A blighted horde threatens the borders."},
-      {"roll": "10", "result": "An ancient ruin has disgorged a peril."},
-      {"roll": "11", "result": "Malcontents have obtained a potent artifact."},
-      {"roll": "12", "result": "Luxuriance has left the coffers bare."},
-      {"roll": "13", "result": "Local aristocrats push for independence."},
-      {"roll": "14", "result": "An important mine has run out or been harmed."},
-      {"roll": "15", "result": "A sinister favorite has infatuated the leader."},
-      {"roll": "16", "result": "A recurring plant plague causes hunger."},
-      {"roll": "17", "result": "Fearsome monsters are migrating in."},
-      {"roll": "18", "result": "A rival is preparing war or raiding."},
-      {"roll": "19", "result": "A grand national plan exhausts the people."},
-      {"roll": "20", "result": "A savage grudge divides the lords."}
+      {
+        "roll": "1",
+        "result": "A prophet's followers have built a fortified camp outside the capital."
+      },
+      {
+        "roll": "2",
+        "result": "A distant province is in open revolt and the roads there are closed."
+      },
+      {
+        "roll": "3",
+        "result": "The treasury is empty and the army has not been paid since spring."
+      },
+      {
+        "roll": "4",
+        "result": "The old king's bastards are numerous, popular, and ambitious."
+      },
+      {
+        "roll": "5",
+        "result": "A riot at the harvest fair has left the city guard hated and the squares empty."
+      },
+      {
+        "roll": "6",
+        "result": "A sorcerer has settled in the hills, and the crown cannot remove him."
+      },
+      {
+        "roll": "7",
+        "result": "Nobles and guilds are deadlocked, and no law has passed in a year."
+      },
+      {
+        "roll": "8",
+        "result": "The young monarch's regent will not surrender the seal."
+      },
+      {
+        "roll": "9",
+        "result": "The woods have been cut so far back that the charcoal burners are moving on."
+      },
+      {
+        "roll": "10",
+        "result": "A disputed election to the high temple has left two claimants and no authority."
+      },
+      {
+        "roll": "11",
+        "result": "The border forts are undermanned and six months behind on pay."
+      },
+      {
+        "roll": "12",
+        "result": "The river has shifted and taken a whole province's trade with it."
+      },
+      {
+        "roll": "13",
+        "result": "A religious order has grown rich enough to defy the crown."
+      },
+      {
+        "roll": "14",
+        "result": "A witch-hunt has turned on the harmless and the useful alike."
+      },
+      {
+        "roll": "15",
+        "result": "The army is loyal to a general rather than to the throne."
+      },
+      {
+        "roll": "16",
+        "result": "A generation of young men left for the wars and did not come back."
+      },
+      {
+        "roll": "17",
+        "result": "The guilds have shut the markets until a tariff is repealed."
+      },
+      {
+        "roll": "18",
+        "result": "A long drought has emptied the granaries and lowered the wells."
+      },
+      {
+        "roll": "19",
+        "result": "Plague is spreading through the ports, and the crown is hiding it."
+      },
+      {
+        "roll": "20",
+        "result": "The realm is split between two capitals, and neither will yield precedence."
+      }
     ]
   },
   {
@@ -225,26 +645,86 @@
     "name": "Nation Good Things",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "A splendid mine or resource has been found."},
-      {"roll": "2", "result": "A pious saint strengthens a major faith."},
-      {"roll": "3", "result": "A noble heir shows heroic greatness."},
-      {"roll": "4", "result": "A major rival suffered a calamity."},
-      {"roll": "5", "result": "New farmland has opened."},
-      {"roll": "6", "result": "A new trade route has been forged."},
-      {"roll": "7", "result": "A horrible monster was slain or driven off."},
-      {"roll": "8", "result": "Good harvests enrich the people."},
-      {"roll": "9", "result": "A wicked minister has been deposed."},
-      {"roll": "10", "result": "A new academy has opened."},
-      {"roll": "11", "result": "A bandit or rebel uprising was crushed."},
-      {"roll": "12", "result": "Rival lords have started making peace."},
-      {"roll": "13", "result": "An old enemy agreed to peace."},
-      {"roll": "14", "result": "The military won a recent victory."},
-      {"roll": "15", "result": "A helpful Working has been activated."},
-      {"roll": "16", "result": "A powerful artifact aids the ruler."},
-      {"roll": "17", "result": "An old source of unrest has calmed."},
-      {"roll": "18", "result": "A dark cult was revealed and purged."},
-      {"roll": "19", "result": "New diplomatic ties have been made."},
-      {"roll": "20", "result": "A new lord has risen, loved by the people."}
+      {
+        "roll": "1",
+        "result": "A small realm with a large reputation for fair dealing."
+      },
+      {
+        "roll": "2",
+        "result": "A road to the sea that no neighbour can close."
+      },
+      {
+        "roll": "3",
+        "result": "A great library draws scholars from across the neighbouring lands."
+      },
+      {
+        "roll": "4",
+        "result": "Licensed midwives in every town, and a low death rate to show for it."
+      },
+      {
+        "roll": "5",
+        "result": "The courts are honest, and a commoner can beat a lord in them."
+      },
+      {
+        "roll": "6",
+        "result": "An autumn fair that draws merchants from three realms."
+      },
+      {
+        "roll": "7",
+        "result": "The army is small but drilled, and every village keeps a muster roll."
+      },
+      {
+        "roll": "8",
+        "result": "Wool so fine that merchants cross two borders to buy it."
+      },
+      {
+        "roll": "9",
+        "result": "The border is quiet, and the border lords are rich enough to stay loyal."
+      },
+      {
+        "roll": "10",
+        "result": "Surveyors have mapped every field and every claim in the realm."
+      },
+      {
+        "roll": "11",
+        "result": "A line of beacon towers, kept in repair and always manned."
+      },
+      {
+        "roll": "12",
+        "result": "A queen who is genuinely loved, and a court that knows it."
+      },
+      {
+        "roll": "13",
+        "result": "The bridges are sound, the milestones counted, and the couriers reliable."
+      },
+      {
+        "roll": "14",
+        "result": "A wizard's tower that has answered to the crown for two centuries."
+      },
+      {
+        "roll": "15",
+        "result": "Foresters keep the woods healthy and the poachers few."
+      },
+      {
+        "roll": "16",
+        "result": "A river fleet that can move an army in three days."
+      },
+      {
+        "roll": "17",
+        "result": "Iron and coal in the same valley, and smiths who understand both."
+      },
+      {
+        "roll": "18",
+        "result": "The old canal still works, and the barges still pay for its upkeep."
+      },
+      {
+        "roll": "19",
+        "result": "The harvest is so reliable that the realm sells grain abroad."
+      },
+      {
+        "roll": "20",
+        "result": "A standing law that no one may be imprisoned for debt."
+      }
     ]
   },
   {
@@ -253,26 +733,86 @@
     "name": "Nation Theme",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "Barbarism: brutal, bestial violence and ignorance sit near the surface."},
-      {"roll": "2", "result": "Decadence: indulgence and cruelty are ordinary, and the PCs will see the damage."},
-      {"roll": "3", "result": "Despair: hopelessness and submission to fate; the natives rarely resist."},
-      {"roll": "4", "result": "Exhaustion: resources and hope are spent, leaving little energy to improve."},
-      {"roll": "5", "result": "Ignorance: load-bearing superstition; clearing it would cause bloody disruption."},
-      {"roll": "6", "result": "Oppression: rule is a crushing weight."},
-      {"roll": "7", "result": "Poverty: even the rich are poor."},
-      {"roll": "8", "result": "Precarity: all goods are fleeting and institutions may crumble."},
-      {"roll": "9", "result": "Stratification: the classes do not touch."},
-      {"roll": "10", "result": "Violence: life is cheap."},
-      {"roll": "11", "result": "Enlightenment: knowledge is loved, and academies are central to politics."},
-      {"roll": "12", "result": "Expansion: borders swell through conquest, assimilation, or cultural appeal."},
-      {"roll": "13", "result": "Hope: the promise of a better future, from discovery, innovation, or beloved rulers."},
-      {"roll": "14", "result": "Justice: laws are meant to be applied evenly, and righteousness is a public concern."},
-      {"roll": "15", "result": "Legitimacy: the rulers are accepted as rightful and hard to imagine overthrown."},
-      {"roll": "16", "result": "Pageantry: splendor, monuments, and ritual display bind the nation together."},
-      {"roll": "17", "result": "Prosperity: wealth is easily had and even commoners live well."},
-      {"roll": "18", "result": "Renewal: old houses rise and decayed institutions are reformed."},
-      {"roll": "19", "result": "Triumph: a recent victory is a fresh and unifying memory."},
-      {"roll": "20", "result": "Unity: shared purposes bind the people together."}
+      {
+        "roll": "1",
+        "result": "One law spoken in three languages"
+      },
+      {
+        "roll": "2",
+        "result": "A realm that mistrusts its own army"
+      },
+      {
+        "roll": "3",
+        "result": "Every family with a grievance and a claim"
+      },
+      {
+        "roll": "4",
+        "result": "Quiet competence and no ceremony to show for it"
+      },
+      {
+        "roll": "5",
+        "result": "Wealth everyone can see and nobody can touch"
+      },
+      {
+        "roll": "6",
+        "result": "The frontier's last law and first argument"
+      },
+      {
+        "roll": "7",
+        "result": "A crown worn lightly and defended slowly"
+      },
+      {
+        "roll": "8",
+        "result": "Proud, poor, and impossible to govern quietly"
+      },
+      {
+        "roll": "9",
+        "result": "A realm that remembers every insult and repays none"
+      },
+      {
+        "roll": "10",
+        "result": "Ambition dressed as duty"
+      },
+      {
+        "roll": "11",
+        "result": "A young realm with old borders"
+      },
+      {
+        "roll": "12",
+        "result": "A merchant's peace bought with a soldier's blood"
+      },
+      {
+        "roll": "13",
+        "result": "Hospitality as policy, suspicion as habit"
+      },
+      {
+        "roll": "14",
+        "result": "A realm that forgives its kings everything except weakness"
+      },
+      {
+        "roll": "15",
+        "result": "Splendour on the surface, debt underneath"
+      },
+      {
+        "roll": "16",
+        "result": "A land of tenants who behave like owners"
+      },
+      {
+        "roll": "17",
+        "result": "Stern, orderly, and secretly fond of festivals"
+      },
+      {
+        "roll": "18",
+        "result": "A realm at ease with its contradictions"
+      },
+      {
+        "roll": "19",
+        "result": "A realm that has outlived its own legends"
+      },
+      {
+        "roll": "20",
+        "result": "A hard land that makes hard people kind"
+      }
     ]
   },
   {
@@ -281,10 +821,22 @@
     "name": "Number of Rulers",
     "dice": "1d4",
     "rows": [
-      {"roll": "1", "result": "There is a single nominal monarch."},
-      {"roll": "2", "result": "There is a monarch and several under-kings."},
-      {"roll": "3", "result": "There is a group of approximate equals."},
-      {"roll": "4", "result": "There are a large number of small rulers."}
+      {
+        "roll": "1",
+        "result": "A single priest-king, attended by an assembly that may only advise."
+      },
+      {
+        "roll": "2",
+        "result": "A crowned ruler and a handful of under-kings who obey when it suits them."
+      },
+      {
+        "roll": "3",
+        "result": "A hall of clan chiefs, each master of his own valley and none of the others."
+      },
+      {
+        "roll": "4",
+        "result": "A warlord and the captains who could replace him by morning."
+      }
     ]
   },
   {
@@ -293,18 +845,54 @@
     "name": "Ruling Class",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "Hereditary nobility of blood."},
-      {"roll": "2", "result": "Powerful merchant-princes and oligarchs."},
-      {"roll": "3", "result": "Sorcerers and the arcanely skilled."},
-      {"roll": "4", "result": "Magically-empowered bloodlines."},
-      {"roll": "5", "result": "Proletariat peasantry or artisans."},
-      {"roll": "6", "result": "A minority ethnicity of long historical rule."},
-      {"roll": "7", "result": "Clergy of one or more local faiths."},
-      {"roll": "8", "result": "Citizens of a special city or old homeland."},
-      {"roll": "9", "result": "Outsiders or nonhumans of a certain type."},
-      {"roll": "10", "result": "Warlords or military leaders."},
-      {"roll": "11", "result": "Clan heads or ethnarchs of particular groups."},
-      {"roll": "12", "result": "Colonizer viceroys of a foreign hegemon."}
+      {
+        "roll": "1",
+        "result": "A bloodline in which the gift appears in every second generation."
+      },
+      {
+        "roll": "2",
+        "result": "Shrine-keepers of a roadside god who became a war cult."
+      },
+      {
+        "roll": "3",
+        "result": "Mounted herders from the eastern plains, still despised by the farmers."
+      },
+      {
+        "roll": "4",
+        "result": "A knightly order that swore to protect the realm and stayed to run it."
+      },
+      {
+        "roll": "5",
+        "result": "Priests of a temple that owns a third of the farmland."
+      },
+      {
+        "roll": "6",
+        "result": "Widows and dowagers of the great houses, ruling through sons and stewards."
+      },
+      {
+        "roll": "7",
+        "result": "Magesmiths whose forges arm every army on the border."
+      },
+      {
+        "roll": "8",
+        "result": "Merchant houses whose ledgers hold more leverage than any banner."
+      },
+      {
+        "roll": "9",
+        "result": "Guild artisans who took the city in a single bloody week."
+      },
+      {
+        "roll": "10",
+        "result": "Citizens of the old capital, who alone hold a vote in the assembly."
+      },
+      {
+        "roll": "11",
+        "result": "Sorcerers who trade in secrets and never explain their methods."
+      },
+      {
+        "roll": "12",
+        "result": "War captains who never went home after the last war."
+      }
     ]
   },
   {
@@ -313,38 +901,110 @@
     "name": "Source of Legitimacy",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "They have simply always been the rulers."},
-      {"roll": "2", "result": "They are thought wiser and more virtuous."},
-      {"roll": "3", "result": "Their martial prowess is awe-inspiring."},
-      {"roll": "4", "result": "The gods chose them as the leaders."},
-      {"roll": "5", "result": "They were chosen by popular will."},
-      {"roll": "6", "result": "They are loved for their benevolence."},
-      {"roll": "7", "result": "They utterly crushed the last batch of rebels."},
-      {"roll": "8", "result": "They brought greater prosperity to the land."},
-      {"roll": "9", "result": "They smashed the prior government."},
-      {"roll": "10", "result": "They brought order out of bloody chaos."},
-      {"roll": "11", "result": "They led the nation to greater glory and pride."},
-      {"roll": "12", "result": "They seem less bad than the alternatives."}
+      {
+        "roll": "1",
+        "result": "An old treaty names their house as arbiter in all disputes."
+      },
+      {
+        "roll": "2",
+        "result": "They were elected for one year and simply never left."
+      },
+      {
+        "roll": "3",
+        "result": "They won every battle they were ever asked to fight."
+      },
+      {
+        "roll": "4",
+        "result": "They broke the last rebellion and displayed the heads for a season."
+      },
+      {
+        "roll": "5",
+        "result": "The temple anointed them before a crowd that filled the whole square."
+      },
+      {
+        "roll": "6",
+        "result": "They were chosen by lot, and the lot is assumed to be divine."
+      },
+      {
+        "roll": "7",
+        "result": "A prophecy names them, and the prophecy is inconveniently specific."
+      },
+      {
+        "roll": "8",
+        "result": "They have held the seat so long that no one remembers the alternative."
+      },
+      {
+        "roll": "9",
+        "result": "They are the last heir of a line that ruled for three centuries."
+      },
+      {
+        "roll": "10",
+        "result": "They pulled down the old order, and no one wants it back."
+      },
+      {
+        "roll": "11",
+        "result": "They are believed wiser than their rivals, and the belief is untested."
+      },
+      {
+        "roll": "12",
+        "result": "They keep the border clans paid, and the border clans keep them."
+      }
     ]
   },
   {
     "type": "dice_table",
     "id": "ruler_control",
-    "name": "Institutions and Agents of Control",
+    "name": "Bodies That Enforce the Ruler's Will",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "Subordinate lords pledged to the ruler."},
-      {"roll": "2", "result": "Obedient commoner bureaucracies."},
-      {"roll": "3", "result": "Magically-empowered enforcers."},
-      {"roll": "4", "result": "A major religion allied with state power."},
-      {"roll": "5", "result": "A powerful and respected judiciary."},
-      {"roll": "6", "result": "Savage brutes on the government leash."},
-      {"roll": "7", "result": "Economy-controlling officialdom."},
-      {"roll": "8", "result": "Divine blessings and curses on the people."},
-      {"roll": "9", "result": "Ingrained obedience in the populace."},
-      {"roll": "10", "result": "Hireling enforcers employed at need."},
-      {"roll": "11", "result": "Sorcerers in service to the ruler."},
-      {"roll": "12", "result": "A specific ethnic client group of the ruler."}
+      {
+        "roll": "1",
+        "result": "Control of the salt pans and the good iron."
+      },
+      {
+        "roll": "2",
+        "result": "A pack of sworn brutes kept hungry and pointed at trouble."
+      },
+      {
+        "roll": "3",
+        "result": "Hostages taken from every great household and raised in the capital."
+      },
+      {
+        "roll": "4",
+        "result": "Village headmen who owe their posts to the crown and know it."
+      },
+      {
+        "roll": "5",
+        "result": "Habit, mostly; people obey before they think to ask why."
+      },
+      {
+        "roll": "6",
+        "result": "Lesser lords who hold their land on condition of answering a summons."
+      },
+      {
+        "roll": "7",
+        "result": "Oaths sworn on relics, which the oath-breakers genuinely believe in."
+      },
+      {
+        "roll": "8",
+        "result": "Court sorcerers who read the letters and remember all of them."
+      },
+      {
+        "roll": "9",
+        "result": "Enforcers whose authority comes from a charm they cannot remove."
+      },
+      {
+        "roll": "10",
+        "result": "The right to name heirs, which every house needs and none can buy."
+      },
+      {
+        "roll": "11",
+        "result": "Clerks and reeves drawn from commoner families and loyal to the office."
+      },
+      {
+        "roll": "12",
+        "result": "Granary wardens and toll-keepers who decide who eats and who trades."
+      }
     ]
   },
   {
@@ -353,14 +1013,38 @@
     "name": "Form of a Single Ruler",
     "dice": "1d8",
     "rows": [
-      {"roll": "1", "result": "A king or queen over lesser lords."},
-      {"roll": "2", "result": "An autocrat with non-noble officials."},
-      {"roll": "3", "result": "A president chosen by certain electors."},
-      {"roll": "4", "result": "A warlord recognized as the strongest."},
-      {"roll": "5", "result": "The seniormost representative of the ruling class."},
-      {"roll": "6", "result": "A divinely-chosen leader of the land."},
-      {"roll": "7", "result": "A monarch for a fixed term or situation."},
-      {"roll": "8", "result": "A wielder of some magical legitimacy."}
+      {
+        "roll": "1",
+        "result": "A steward ruling in the name of a king nobody has seen in years."
+      },
+      {
+        "roll": "2",
+        "result": "A queen dowager acting as regent for a son who will never be old enough."
+      },
+      {
+        "roll": "3",
+        "result": "A hunt-master of the clans, chosen for skill and obeyed for luck."
+      },
+      {
+        "roll": "4",
+        "result": "A master of the mint whose face is on every coin in circulation."
+      },
+      {
+        "roll": "5",
+        "result": "An autocrat who staffs the offices with commoners and keeps the nobles at court."
+      },
+      {
+        "roll": "6",
+        "result": "The eldest surviving head of the ruling house, chosen by the kindred."
+      },
+      {
+        "roll": "7",
+        "result": "A high priest who speaks for a god and is never contradicted aloud."
+      },
+      {
+        "roll": "8",
+        "result": "A monarch bound to a fixed term, whose term keeps being extended."
+      }
     ]
   },
   {
@@ -369,82 +1053,238 @@
     "name": "Form of Multiple Rulers",
     "dice": "1d8",
     "rows": [
-      {"roll": "1", "result": "Nobly-born peers of the realm."},
-      {"roll": "2", "result": "The seniormost figures in the ruling class."},
-      {"roll": "3", "result": "An elect chosen by ruling-class electors."},
-      {"roll": "4", "result": "Hereditary heirs to their positions."},
-      {"roll": "5", "result": "Warlords with the strongest backing."},
-      {"roll": "6", "result": "Oligarchs of greatest wealth or influence."},
-      {"roll": "7", "result": "Divinely-chosen representatives of their class."},
-      {"roll": "8", "result": "Bureaucratically-chosen ministers."}
+      {
+        "roll": "1",
+        "result": "Hereditary heirs to seats that have not changed hands in centuries."
+      },
+      {
+        "roll": "2",
+        "result": "War captains whose votes are counted in companies, not in heads."
+      },
+      {
+        "roll": "3",
+        "result": "A synod of elders who rule by interpretation of an old text."
+      },
+      {
+        "roll": "4",
+        "result": "A regency council of five, of whom two are already dead and unmentioned."
+      },
+      {
+        "roll": "5",
+        "result": "An elected bench of magnates, chosen for life by the great households."
+      },
+      {
+        "roll": "6",
+        "result": "The senior heads of the ruling class, who decide by seniority and grudge."
+      },
+      {
+        "roll": "7",
+        "result": "A council of clan mothers who sit until they agree."
+      },
+      {
+        "roll": "8",
+        "result": "Temple delegates who must agree unanimously or the city stops."
+      }
     ]
   },
   {
     "type": "dice_table",
     "id": "government_struggle",
-    "name": "Current Struggle Within the Government",
+    "name": "Faction Fight Inside the Government",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "The ruler is trying to crush a too-powerful lord."},
-      {"roll": "2", "result": "Ministers are trying to usurp power."},
-      {"roll": "3", "result": "A grand scheme has gone terribly wrong."},
-      {"roll": "4", "result": "External diplomacy has bungled something."},
-      {"roll": "5", "result": "A usurper secretly controls a major power."},
-      {"roll": "6", "result": "Foreign rivals are backing malcontents."},
-      {"roll": "7", "result": "A different class demands a share of rule."},
-      {"roll": "8", "result": "The existing ruling class wants more power."},
-      {"roll": "9", "result": "A disfavored class is being oppressed."},
-      {"roll": "10", "result": "Popular discontent is destroying legitimacy."},
-      {"roll": "11", "result": "The prior ruler's incompetence still harms it."},
-      {"roll": "12", "result": "The heir is unacceptable to many."}
+      {
+        "roll": "1",
+        "result": "An envoy insulted a neighboring court, and the insult has been remembered."
+      },
+      {
+        "roll": "2",
+        "result": "A rival power is paying the border lords to make noise."
+      },
+      {
+        "roll": "3",
+        "result": "The old capital resents the new one and says so in every tavern."
+      },
+      {
+        "roll": "4",
+        "result": "A caste of laborers is being worked to ruin and has begun to organize."
+      },
+      {
+        "roll": "5",
+        "result": "The last ruler's failed war is still being paid for, and the bills are due."
+      },
+      {
+        "roll": "6",
+        "result": "The ruler is whittling down a lord whose retainers outnumber the crown's."
+      },
+      {
+        "roll": "7",
+        "result": "A general has begun to answer orders with questions."
+      },
+      {
+        "roll": "8",
+        "result": "A guild has bought the tax farmers, and the revenue has thinned to nothing."
+      },
+      {
+        "roll": "9",
+        "result": "A usurper holds the loyalty of the capital guard and has not yet said so."
+      },
+      {
+        "roll": "10",
+        "result": "The temple wants the right to name the next ruler."
+      },
+      {
+        "roll": "11",
+        "result": "The chief minister has been quietly appointing his own kin to every office."
+      },
+      {
+        "roll": "12",
+        "result": "The royal household itself is split between the ruler's two consorts."
+      }
     ]
   },
   {
     "type": "dice_table",
     "id": "government_recent_event",
-    "name": "Recent Governmental Event",
+    "name": "What the Government Just Did",
     "dice": "1d20",
     "rows": [
-      {"roll": "1", "result": "A major official was executed for treason."},
-      {"roll": "2", "result": "A critically-necessary heir was born."},
-      {"roll": "3", "result": "A chief minister fell rapidly from grace."},
-      {"roll": "4", "result": "A high noble made rebellious noises."},
-      {"roll": "5", "result": "A major faith was offended by the rulers."},
-      {"roll": "6", "result": "An allied nation was angered by some act."},
-      {"roll": "7", "result": "An enemy nation's spy ring was revealed."},
-      {"roll": "8", "result": "A vast governmental project was announced."},
-      {"roll": "9", "result": "Corrupt officials plundered a great plan."},
-      {"roll": "10", "result": "A major new bureaucracy was formed."},
-      {"roll": "11", "result": "A heavy tax was levied to deal with an issue."},
-      {"roll": "12", "result": "A general was dismissed for incompetence."},
-      {"roll": "13", "result": "A folk hero rose to dangerous popularity."},
-      {"roll": "14", "result": "A major infrastructure project was begun."},
-      {"roll": "15", "result": "A fief or territory was put in new hands."},
-      {"roll": "16", "result": "Certain merchants were fined to beggary."},
-      {"roll": "17", "result": "A terrorist attack by rebels or external foes."},
-      {"roll": "18", "result": "A major faction of officials collapsed."},
-      {"roll": "19", "result": "A large bureaucracy was dissolved."},
-      {"roll": "20", "result": "Internal province borders were redrawn."}
+      {
+        "roll": "1",
+        "result": "A daughter was married to a border lord to buy his silence, and his rivals are insulted."
+      },
+      {
+        "roll": "2",
+        "result": "The chief minister fell from favor in a single afternoon, and no one will say why."
+      },
+      {
+        "roll": "3",
+        "result": "The mint debased the coin, and prices in the market have doubled in a month."
+      },
+      {
+        "roll": "4",
+        "result": "A ring of foreign agents was uncovered inside the household guard."
+      },
+      {
+        "roll": "5",
+        "result": "A great granary was opened to feed the army, and the winter has not yet begun."
+      },
+      {
+        "roll": "6",
+        "result": "The ruler's guard was doubled, and the reason given changes by the day."
+      },
+      {
+        "roll": "7",
+        "result": "A great fortress was announced, and the levy to pay for it is already being taken."
+      },
+      {
+        "roll": "8",
+        "result": "An assembly was dissolved before it could vote and has not been called again."
+      },
+      {
+        "roll": "9",
+        "result": "The crown seized a monastery's lands to pay its soldiers, and the monks preach against it."
+      },
+      {
+        "roll": "10",
+        "result": "A truce was signed with an old enemy, and the soldiers are being sent home unpaid."
+      },
+      {
+        "roll": "11",
+        "result": "A treasurer was hanged for treason, and the accounts he kept have vanished."
+      },
+      {
+        "roll": "12",
+        "result": "A wealthy fief was granted to a favorite, and the neighbors are counting spears."
+      },
+      {
+        "roll": "13",
+        "result": "A royal progress was cut short by a rockslide that looked carefully arranged."
+      },
+      {
+        "roll": "14",
+        "result": "The faction that ran the treasury has collapsed, and its rivals are dividing the offices."
+      },
+      {
+        "roll": "15",
+        "result": "A judge was removed for ruling against the crown, and the courts have gone quiet."
+      },
+      {
+        "roll": "16",
+        "result": "The temple was publicly slighted at a feast, and the priests have not forgotten."
+      },
+      {
+        "roll": "17",
+        "result": "Assassins struck at a provincial governor and left a note claiming a higher authority."
+      },
+      {
+        "roll": "18",
+        "result": "A census was ordered, and the villages are hiding people, grain, and cattle."
+      },
+      {
+        "roll": "19",
+        "result": "An heir was born after eleven years of hoping, and every faction is recalculating."
+      },
+      {
+        "roll": "20",
+        "result": "The province borders were redrawn overnight, and two lords now claim the same mill."
+      }
     ]
   },
   {
     "type": "dice_table",
     "id": "government_officials_problem",
-    "name": "Officials Recently Causing Problems",
+    "name": "Which Official Is the Problem",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "Rapaciously grasping tax-farmers."},
-      {"roll": "2", "result": "Ill-disciplined and thieving military troops."},
-      {"roll": "3", "result": "Bribe-hungry and meddling magistrates."},
-      {"roll": "4", "result": "Ever-watchful informers among neighbors."},
-      {"roll": "5", "result": "Tithe-hungry collectors from the state faith."},
-      {"roll": "6", "result": "Corrupt and untrustworthy market officials."},
-      {"roll": "7", "result": "Carelessly superior nobles and their retinues."},
-      {"roll": "8", "result": "Thuggish constables or city guardsmen."},
-      {"roll": "9", "result": "Pitiless inquisitors hunting out dark magics."},
-      {"roll": "10", "result": "Law enforcers acting as if they are the law."},
-      {"roll": "11", "result": "State scholars teaching vile principles."},
-      {"roll": "12", "result": "Corrupt village headmen acting as tyrants."}
+      {
+        "roll": "1",
+        "result": "Harbor masters who charge by the crate and by the crate's contents."
+      },
+      {
+        "roll": "2",
+        "result": "Tax farmers who take the levy twice and the receipt once."
+      },
+      {
+        "roll": "3",
+        "result": "Noble retinues that ride through the market and take what they please."
+      },
+      {
+        "roll": "4",
+        "result": "Market wardens who set the weights and own the scales."
+      },
+      {
+        "roll": "5",
+        "result": "Informers who report on neighbors and settle old scores."
+      },
+      {
+        "roll": "6",
+        "result": "Constables who have started arresting people for their purses."
+      },
+      {
+        "roll": "7",
+        "result": "Road wardens who have begun behaving as though the road is theirs."
+      },
+      {
+        "roll": "8",
+        "result": "Hereditary gate-keepers who charge entry to a free city."
+      },
+      {
+        "roll": "9",
+        "result": "Village headmen who have made themselves small kings."
+      },
+      {
+        "roll": "10",
+        "result": "Grain inspectors who condemn good wheat and then buy it cheap."
+      },
+      {
+        "roll": "11",
+        "result": "Garrison troops who have begun charging tolls on their own roads."
+      },
+      {
+        "roll": "12",
+        "result": "Court scholars who teach that the old laws no longer bind anyone."
+      }
     ]
   },
   {
@@ -453,58 +1293,142 @@
     "name": "Problems of the Ministers",
     "dice": "1d8",
     "rows": [
-      {"roll": "1", "result": "Their chief schemes too much against rivals."},
-      {"roll": "2", "result": "They are out of touch or lazy in their work."},
-      {"roll": "3", "result": "They recently suffered a bloody purge."},
-      {"roll": "4", "result": "Enemy forces have allies among them."},
-      {"roll": "5", "result": "They are distracted by factional infighting."},
-      {"roll": "6", "result": "The leadership tends to ignore their advice."},
-      {"roll": "7", "result": "They tacitly usurp power from the ruler."},
-      {"roll": "8", "result": "They are committed to a very bad idea."}
+      {
+        "roll": "1",
+        "result": "The youngest minister is the ruler's nephew and outranks every capable man."
+      },
+      {
+        "roll": "2",
+        "result": "One minister has proof of another's treason and is saving it for the right moment."
+      },
+      {
+        "roll": "3",
+        "result": "The chief minister runs a private network of clients against his rivals."
+      },
+      {
+        "roll": "4",
+        "result": "The ministers have begun issuing orders the ruler has never seen."
+      },
+      {
+        "roll": "5",
+        "result": "The ministers have quietly taken over appointments and none of them mention it."
+      },
+      {
+        "roll": "6",
+        "result": "The ministers are competent and hate one another more than they fear the ruler."
+      },
+      {
+        "roll": "7",
+        "result": "A purge was promised and never carried out, so everyone is waiting."
+      },
+      {
+        "roll": "8",
+        "result": "The whole bench is committed to a war the treasury cannot pay for."
+      }
     ]
   },
   {
     "type": "dice_table",
     "id": "ruler_established",
-    "name": "How Established Is the Current Ruler?",
+    "name": "How Long the Ruler Has Held Power",
     "dice": "1d6",
     "rows": [
-      {"roll": "1", "result": "They are an outsider with few existing allies."},
-      {"roll": "2", "result": "They are newly-ascended to the throne."},
-      {"roll": "3", "result": "They have some basic ties with strong allies."},
-      {"roll": "4", "result": "They have a hard core of useful supporters."},
-      {"roll": "5", "result": "They have an extensive support network."},
-      {"roll": "6", "result": "They are practically an institution of their own."}
+      {
+        "roll": "1",
+        "result": "Ten years on the seat, and the last plot against it is a decade old."
+      },
+      {
+        "roll": "2",
+        "result": "Third of their line to hold the seat, and the first obeyed without argument."
+      },
+      {
+        "roll": "3",
+        "result": "Supported by a network of clients in every province and every guild."
+      },
+      {
+        "roll": "4",
+        "result": "The only ruler most of the people have ever seen."
+      },
+      {
+        "roll": "5",
+        "result": "An outsider who came to power with no allies but the men who carried him."
+      },
+      {
+        "roll": "6",
+        "result": "Held in place by one marriage, two promises, and a great deal of luck."
+      }
     ]
   },
   {
     "type": "dice_table",
     "id": "government_stability",
-    "name": "How Stable Is the Government?",
+    "name": "How Secure the Government Is",
     "dice": "1d4",
     "rows": [
-      {"roll": "1", "result": "Precarious, its authority questioned by some."},
-      {"roll": "2", "result": "It has significant problems, but it functions."},
-      {"roll": "3", "result": "Relatively stable, with strong legitimacy."},
-      {"roll": "4", "result": "Stable, able to endure even fierce shocks."}
+      {
+        "roll": "1",
+        "result": "Working badly: the machinery grinds, yet the grain still gets counted."
+      },
+      {
+        "roll": "2",
+        "result": "Strong, with a legitimacy that has survived two bad harvests."
+      },
+      {
+        "roll": "3",
+        "result": "Untested: nothing has threatened it, and nothing has tested it."
+      },
+      {
+        "roll": "4",
+        "result": "Confident, and overextended in three directions at once."
+      }
     ]
   },
   {
     "type": "dice_table",
     "id": "government_strength",
-    "name": "A Strength of the Government",
+    "name": "An Asset of the Government",
     "dice": "1d10",
     "rows": [
-      {"roll": "1", "result": "The bureaucracy is extremely efficient."},
-      {"roll": "2", "result": "The military leadership is fiercely loyal."},
-      {"roll": "3", "result": "It has great legitimacy with the populace."},
-      {"roll": "4", "result": "It has firm economic control over the land."},
-      {"roll": "5", "result": "The populace is convinced it will bring good."},
-      {"roll": "6", "result": "Its diplomats are remarkably cunning."},
-      {"roll": "7", "result": "An expert spymaster serves it well."},
-      {"roll": "8", "result": "It has access to powerful sorceries."},
-      {"roll": "9", "result": "It has firm ties with an important faith."},
-      {"roll": "10", "result": "Its nobles have magic blessings or gifted blood."}
+      {
+        "roll": "1",
+        "result": "A bound spirit that answers questions the ruler has not thought to ask."
+      },
+      {
+        "roll": "2",
+        "result": "A fortress that has never been taken."
+      },
+      {
+        "roll": "3",
+        "result": "Envoys who can turn a war into a marriage in a single season."
+      },
+      {
+        "roll": "4",
+        "result": "A spymaster who reads the letters of three courts."
+      },
+      {
+        "roll": "5",
+        "result": "A river fleet that can starve a city without a siege."
+      },
+      {
+        "roll": "6",
+        "result": "Ownership of the salt pans and the good iron."
+      },
+      {
+        "roll": "7",
+        "result": "Coin in the vault while every rival is borrowing."
+      },
+      {
+        "roll": "8",
+        "result": "A standing alliance with the hill clans, paid in tribute and respect."
+      },
+      {
+        "roll": "9",
+        "result": "A network of informers in every market town."
+      },
+      {
+        "roll": "10",
+        "result": "Clerks who can count a province's grain before the harvest ends."
+      }
     ]
   },
   {
@@ -513,116 +1437,374 @@
     "name": "Historical Event",
     "dice": "1d100",
     "rows": [
-      {"roll": "1-2", "result": "Battleground: the group's land was a battlefield for stronger rivals, and they suffered for it."},
-      {"roll": "3-4", "result": "Betrayal: they betrayed a trusting neighbor, or were betrayed by a false friend."},
-      {"roll": "5-6", "result": "Brutal Oppression: one portion of the group was reduced to wretched servitude."},
-      {"roll": "7-8", "result": "Class Struggle: classes fought openly or subtly for their own gain."},
-      {"roll": "9-10", "result": "Consequences: an earlier event had long-term good or bad effects."},
-      {"roll": "11-12", "result": "Decadence: old strengths crumbled into indolence and indulgence."},
-      {"roll": "13-14", "result": "Depravity: vile debauchery and base habits became commonplace."},
-      {"roll": "15-16", "result": "Desolation: part of their territory became uninhabitable."},
-      {"roll": "17-18", "result": "Diplomatic Coup: an unusually successful alliance or affiliation was made."},
-      {"roll": "19-20", "result": "Economic Boom: circumstances brought a burst of prosperity."},
-      {"roll": "21-22", "result": "Enemies Within: a hostile subgroup worked evil from inside."},
-      {"roll": "23-24", "result": "Evil Wizard: a malevolent sorcerer or arcane cult caused great trouble."},
-      {"roll": "25-26", "result": "Exodus: a large part of the group left for a supposedly better land."},
-      {"roll": "27-28", "result": "Exquisite Art: they produced art still revered today."},
-      {"roll": "29-30", "result": "External War: they fought a rival nation with grave consequences."},
-      {"roll": "31-32", "result": "Freakish Magic: a unique magic was developed here and its secrets kept."},
-      {"roll": "33-34", "result": "Golden Age: everything went well for an extended period."},
-      {"roll": "35-36", "result": "Good Wizard: a powerful magic-user protected or taught the group."},
-      {"roll": "37-38", "result": "Great Awakening: a wave of reform and renewed commitment swept through."},
-      {"roll": "39-40", "result": "Great Builders: they raised many vast palaces, monuments, or estates."},
-      {"roll": "41-42", "result": "Great Infrastructure: they built canals, walls, roads, aqueducts, or mines."},
-      {"roll": "43-44", "result": "Hero King: a ruler won legendary glory that is honored still."},
-      {"roll": "45-46", "result": "Immigrants: a large group of foreigners entered more or less peacefully."},
-      {"roll": "47-48", "result": "Inefficient Rule: governance was impractical, corrupt, or bound to unhelpful values."},
-      {"roll": "49-50", "result": "Internal War: a civil war involved all or many of the group."},
-      {"roll": "51-52", "result": "Loss of Confidence: a shock or new encounter made them doubt their own customs."},
-      {"roll": "53-54", "result": "Magical Disaster: a large-scale magical calamity scarred the group."},
-      {"roll": "55-56", "result": "Magical Tech: they developed a useful magical technology or infrastructure."},
-      {"roll": "57-58", "result": "Natural Calamity: earthquake, drought, tsunami, or meteor strike smote them."},
-      {"roll": "59-60", "result": "New Horizons: they discovered new territory, underground or elsewhere."},
-      {"roll": "61-62", "result": "New Rulers: the ruling dynasty was replaced peacefully or by conquest."},
-      {"roll": "63-64", "result": "Noble Function: the ruling class was expected to fill a specific role such as priest or mage."},
-      {"roll": "65-66", "result": "Noble Strife: assassinations, petty wars, and mutual struggle consumed the nobility."},
-      {"roll": "67-68", "result": "Plague: a vast sickness culled many and may still linger."},
-      {"roll": "69-70", "result": "Poverty: circumstances reduced them to harsh simplicity for a time."},
-      {"roll": "71-72", "result": "Power Brokers: they were a critical regional power broker for a time."},
-      {"roll": "73-74", "result": "Praetorian Coups: soldiers or guards became the ruler's electors or deposers."},
-      {"roll": "75-76", "result": "Priest King: religion and rule became deeply intertwined."},
-      {"roll": "77-78", "result": "Rare Resource: a uniquely valuable resource was found or made."},
-      {"roll": "79-80", "result": "Religious Fall: a once-honored religion collapsed."},
-      {"roll": "81-82", "result": "Religious Rise: a powerful new religion arose."},
-      {"roll": "83-84", "result": "Resource Collapse: a critical resource ran short."},
-      {"roll": "85-86", "result": "Secession: a substantial part of the territory tried to leave."},
-      {"roll": "87-88", "result": "Terrain Change: part of the land slowly changed its ecosystem."},
-      {"roll": "89-90", "result": "Total Collapse: society fell into anarchic chaos for a time."},
-      {"roll": "91-92", "result": "Twist of Fate: roll again, but reverse whether the event ultimately helped or hurt."},
-      {"roll": "93-94", "result": "Urbanization: one or more cities grew vastly and spawned supporting towns."},
-      {"roll": "95-96", "result": "Weak Throne: the center weakened and lords gained effective independence."},
-      {"roll": "97-98", "result": "Xenophilia: they adopted foreign customs and welcomed foreigners."},
-      {"roll": "99-100", "result": "Xenophobia: they turned against foreign people and cut off contact."}
+      {
+        "roll": "1-2",
+        "result": "Mercenaries unpaid for a season sacked the town they had been hired to defend, and no city since has hired a company without keeping its pay chest under guard."
+      },
+      {
+        "roll": "3-4",
+        "result": "A palace fire killed the royal family and left a distant cousin on the throne, and the regency that ruled in his name redistributed so many titles that nearly every noble house owes it something."
+      },
+      {
+        "roll": "5-6",
+        "result": "A ruler ordered every household counted and every field measured, and the tax rolls made that year are so accurate that later laws could be imposed without ever meeting the people they burdened."
+      },
+      {
+        "roll": "7-8",
+        "result": "Refugees fleeing a burning kingdom to the north were settled on empty border land, and their descendants still speak a dialect that marks them as outsiders in their own villages."
+      },
+      {
+        "roll": "9-10",
+        "result": "Shepherds found a sealed stair beneath a collapsed hill and sold the location to a scholar, whose dig uncovered a cache of brass tablets no living tongue can read."
+      },
+      {
+        "roll": "11-12",
+        "result": "Hunters following a wounded animal found a paved road through the hills that no map showed, and the trade route reopened along it repaid the realm's war debts within a generation."
+      },
+      {
+        "roll": "13-14",
+        "result": "For thirty years the realm's judges sold their verdicts, and when the practice was exposed the public lost faith in courts so thoroughly that duels of honor returned."
+      },
+      {
+        "roll": "15-16",
+        "result": "A canal dug by conscripted labor opened the dry interior to settlement, and the conscripts' descendants still hold the water rights that the crown granted their grandparents in lieu of pay."
+      },
+      {
+        "roll": "17-18",
+        "result": "A long war with a rival kingdom ended in a negotiated peace, but the border forts it left behind still mark the land and the old grudges still shape marriage and trade."
+      },
+      {
+        "roll": "19-20",
+        "result": "A defeated army was rebuilt around common soldiers rather than noble officers, and the reforms that humiliated the great houses made the realm briefly unbeatable and permanently divided."
+      },
+      {
+        "roll": "21-22",
+        "result": "A temple claimed the right to tithe the whole realm and the crown answered by seizing its lands, and the settlement left every parish with two competing claims to its granary."
+      },
+      {
+        "roll": "23-24",
+        "result": "A queen spent her dowry on a road through the mountains, and the trade it drew made her husband's rivals rich enough to rebel against him twice."
+      },
+      {
+        "roll": "25-26",
+        "result": "A ruler's long madness was kept secret by his household while clerks forged his seal, and the laws passed in those years were repealed so unevenly that the realm still argues about them."
+      },
+      {
+        "roll": "27-28",
+        "result": "Two royal brothers divided the realm by treaty and then spent thirty years undoing the division, leaving a border drawn through orchards and a peasantry that pays taxes twice."
+      },
+      {
+        "roll": "29-30",
+        "result": "A trusted march lord opened a gate to a besieging army for a promise of marriage, and the realm has never trusted its border lords with the keys to anything since."
+      },
+      {
+        "roll": "31-32",
+        "result": "A chancellor sold the realm's border passwords to three neighbors at once, and the purge that followed executed so many clerks that the tax rolls went uncollected for two years."
+      },
+      {
+        "roll": "33-34",
+        "result": "A shepherd's vision on a hillside began a movement that outlived the temple that condemned it, and its meeting houses now stand where the old shrines were pulled down."
+      },
+      {
+        "roll": "35-36",
+        "result": "A sorcerer-king drained the marshes to grow a private garden, and the drained soil later became the only good farmland in the region, which the crown seized on a legal pretext."
+      },
+      {
+        "roll": "37-38",
+        "result": "A dispute over whether the dead might be prayed for in the old tongue split the temple in two, and rival shrines on either side of the river still refuse to share festivals."
+      },
+      {
+        "roll": "39-40",
+        "result": "A great hunt was called to clear the wolves that had taken children from the border farms, and the huntsmen who stayed on afterward became the core of the realm's forest guard."
+      },
+      {
+        "roll": "41-42",
+        "result": "A people displaced by a distant war arrived with their herds and their smiths, and their ironwork was so good that the realm's own smiths petitioned to have them expelled, unsuccessfully."
+      },
+      {
+        "roll": "43-44",
+        "result": "A cattle sickness emptied the pastures in two summers, and the herders who turned to raising pigs instead still regard cattle as a luxury and pigs as a livelihood."
+      },
+      {
+        "roll": "45-46",
+        "result": "A prophecy that the realm would fall when its bells cracked led the crown to cast every bell anew, and the foundry districts that grew around the work became the realm's richest quarter."
+      },
+      {
+        "roll": "47-48",
+        "result": "A surveyor's error put a valuable forest on the wrong side of a border, and the courts that tried the resulting case produced a body of law every later boundary dispute cites."
+      },
+      {
+        "roll": "49-50",
+        "result": "A fever that began in the river ports killed a third of the people in two summers, and whole villages were abandoned to the orchards that have since gone wild."
+      },
+      {
+        "roll": "51-52",
+        "result": "Repeated raids by a hill clan were answered with a punitive expedition that marched too far, and the two-year war that followed ended with the clan holding better land than before."
+      },
+      {
+        "roll": "53-54",
+        "result": "A working meant to end a drought instead called down a season of unseasonable frost, and the orchards that died have been replaced by pasture the heirs still dispute."
+      },
+      {
+        "roll": "55-56",
+        "result": "A blight of locusts stripped three harvests and drove the price of bread so high that the crown opened the royal granaries, emptying reserves it later needed for war."
+      },
+      {
+        "roll": "57-58",
+        "result": "A diplomatic marriage was annulled after the bride's household was found to have forged its genealogy, and the scandal made the realm distrustful of foreign matches for a century."
+      },
+      {
+        "roll": "59-60",
+        "result": "A generation of banditry on the high road was ended by a bounty that made informers of the bandits' own families, and the villages along that road still keep their doors barred after dark."
+      },
+      {
+        "roll": "61-62",
+        "result": "A storm tide drowned the lowland farms in a single night, and the seawall built afterward by forced labor has held twice and failed once since."
+      },
+      {
+        "roll": "63-64",
+        "result": "A ruler moved whole villages to the frontier to farm land no one wanted, and the families who survived the first winters still call themselves the king's orphans."
+      },
+      {
+        "roll": "65-66",
+        "result": "A fire that started in a candlemaker's cellar took the royal archive with it, and every land grant older than two generations is now argued from memory and forged copies."
+      },
+      {
+        "roll": "67-68",
+        "result": "A mountain that had been quiet for centuries threw ash over the northern farms, and the refugees it displaced founded the market towns that now dominate that region's grain trade."
+      },
+      {
+        "roll": "69-70",
+        "result": "The high temple's oracle fell silent for a year and then spoke nonsense, and half the priesthood walked out, taking the temple's silver and its best singers with them."
+      },
+      {
+        "roll": "71-72",
+        "result": "A cult bred a strain of wheat that ripened in winter and then burned every field of it, and the fear of winter grain has never quite left the farming villages."
+      },
+      {
+        "roll": "73-74",
+        "result": "A tax on looms sparked a weavers' revolt that held the capital for eleven days, and the guild charter won in the settlement still limits what the crown may levy."
+      },
+      {
+        "roll": "75-76",
+        "result": "A regime banned the study of old law and burned the commentaries, and the judges who memorized them in defiance became a secret tradition that still meets in cellars."
+      },
+      {
+        "roll": "77-78",
+        "result": "A child was said to have stopped a flood by holding up a hand at the riverbank, and the shrine built on that spot has drawn pilgrims and counterfeit relics ever since."
+      },
+      {
+        "roll": "79-80",
+        "result": "Three claimants fought a nine-year war over a throne, and the settlement that ended it divided the offices of state so evenly that no ruler since has been able to act quickly."
+      },
+      {
+        "roll": "81-82",
+        "result": "A circle of healers ended a plague by burning the houses of the infected and quarantining the wells, and the quarantine laws they wrote are still read aloud each spring."
+      },
+      {
+        "roll": "83-84",
+        "result": "A spring appeared at a shrine during a siege and the defenders held out three months longer, and though the water is ordinary now, the shrine still sells it in sealed jars."
+      },
+      {
+        "roll": "85-86",
+        "result": "A sorcerer who had served three rulers was burned on a charge of treason, and the lesser mages who fled the realm took knowledge of the old workings with them."
+      },
+      {
+        "roll": "87-88",
+        "result": "When the salt trade shifted to a rival port, a fifth of the realm's townsfolk walked away in one autumn, leaving streets that farmers now plow for turnips."
+      },
+      {
+        "roll": "89-90",
+        "result": "Three years of rain that never came emptied the granaries, and the crown's decision to feed the cities before the countryside is still quoted as an insult in market squares."
+      },
+      {
+        "roll": "91-92",
+        "result": "A guild bought grain from overseas during a failed harvest and sold it at cost, and the favor it earned has kept its members on the city council ever since."
+      },
+      {
+        "roll": "93-94",
+        "result": "A victorious general returned from the frontier with his army and took the throne without a battle, and the precedent has made every later ruler nervous about leaving the capital."
+      },
+      {
+        "roll": "95-96",
+        "result": "Silver was struck in the western hills and for a decade every criminal and gambler in the region came to spend it, leaving a city of wide streets and deep debts."
+      },
+      {
+        "roll": "97-98",
+        "result": "An heir was poisoned at his own betrothal feast, and the inquiry that followed ruined three noble houses, whose surviving children were raised in exile and returned with claims."
+      },
+      {
+        "roll": "99-100",
+        "result": "A wandering preacher gathered an army of pilgrims to retake a ruined shrine, and though the campaign failed, the roads and bridges his followers built still carry grain to market."
+      }
     ]
   },
   {
     "type": "dice_table",
     "id": "history_peak",
-    "name": "What Was Great About Its Peak?",
+    "name": "What Was Great at the Height",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "A terrible regional evil was driven back."},
-      {"roll": "2", "result": "Academies were built that are still honored."},
-      {"roll": "3", "result": "Ancient foes were united."},
-      {"roll": "4", "result": "Grand Workings were raised."},
-      {"roll": "5", "result": "They controlled the trade of the entire region."},
-      {"roll": "6", "result": "They were hegemon over weaker neighbors."},
-      {"roll": "7", "result": "Their armies were fearsomely mighty."},
-      {"roll": "8", "result": "Their culture compelled their neighbors."},
-      {"roll": "9", "result": "Magnificent works of art were created."},
-      {"roll": "10", "result": "Numerous legendary heroes arose."},
-      {"roll": "11", "result": "The populace was tremendously prosperous."},
-      {"roll": "12", "result": "Wonderful works of architecture were built."}
+      {
+        "roll": "1",
+        "result": "Masonry that has not shifted a finger's width in four centuries."
+      },
+      {
+        "roll": "2",
+        "result": "Singers sent for from courts a month's ride beyond the border."
+      },
+      {
+        "roll": "3",
+        "result": "Granaries that could feed the whole region through two failed harvests."
+      },
+      {
+        "roll": "4",
+        "result": "A crown whose word ended disputes between cities without an army."
+      },
+      {
+        "roll": "5",
+        "result": "Craftsmen whose glass and dyed cloth were sold in six ports."
+      },
+      {
+        "roll": "6",
+        "result": "Laws written plainly enough that farmers could cite them by chapter."
+      },
+      {
+        "roll": "7",
+        "result": "Scholars who charted the stars and the tides with equal care."
+      },
+      {
+        "roll": "8",
+        "result": "Canals that carried water uphill to terraces no one thought farmable."
+      },
+      {
+        "roll": "9",
+        "result": "Horse herds that made every neighboring cavalry look shabby."
+      },
+      {
+        "roll": "10",
+        "result": "A war fleet that kept every river mouth in friendly hands."
+      },
+      {
+        "roll": "11",
+        "result": "Markets that set the price of grain for a dozen lesser cities."
+      },
+      {
+        "roll": "12",
+        "result": "Noble houses that competed in patronage instead of private war."
+      }
     ]
   },
   {
     "type": "dice_table",
     "id": "history_failure",
-    "name": "Why Did It Fail at the Final Crisis?",
+    "name": "Why It Failed at the Last Crisis",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "Its people were too deeply divided."},
-      {"roll": "2", "result": "Its leadership was hopelessly inept."},
-      {"roll": "3", "result": "The gods cursed it to ruin."},
-      {"roll": "4", "result": "Decadence and self-absorption doomed it."},
-      {"roll": "5", "result": "It was vastly overconfident in its plans."},
-      {"roll": "6", "result": "Its neighbors conspired to ruin it."},
-      {"roll": "7", "result": "Two crises struck at once and were too much."},
-      {"roll": "8", "result": "It was culturally exhausted and apathetic."},
-      {"roll": "9", "result": "Some tried to take advantage of the crisis."},
-      {"roll": "10", "result": "Its strengths were useless against the problem."},
-      {"roll": "11", "result": "The crisis was far too vast and overwhelming."},
-      {"roll": "12", "result": "Some leaders were allied with the crisis."}
+      {
+        "roll": "1",
+        "result": "The great houses held back their levies, each waiting to see who would win."
+      },
+      {
+        "roll": "2",
+        "result": "Its grain reserves had been sold the year before to balance a ledger."
+      },
+      {
+        "roll": "3",
+        "result": "Its mages quarreled over precedence while the wards failed one by one."
+      },
+      {
+        "roll": "4",
+        "result": "Its treasury was already pledged to a war that no longer mattered."
+      },
+      {
+        "roll": "5",
+        "result": "Its people had not been paid, fed, or told the truth in years."
+      },
+      {
+        "roll": "6",
+        "result": "Its allies had been insulted once too often and simply stayed home."
+      },
+      {
+        "roll": "7",
+        "result": "Its laws required a council for every decision, and the council could not be convened."
+      },
+      {
+        "roll": "8",
+        "result": "Its faith had promised deliverance, and deliverance never came."
+      },
+      {
+        "roll": "9",
+        "result": "Its priests called the crisis a judgment and forbade any resistance."
+      },
+      {
+        "roll": "10",
+        "result": "Its best soldiers were overseas, garrisoning a conquest nobody wanted."
+      },
+      {
+        "roll": "11",
+        "result": "Its watch had been allowed to rot because nobody expected trouble."
+      },
+      {
+        "roll": "12",
+        "result": "Capital and provinces blamed each other for the previous defeat."
+      }
     ]
   },
   {
     "type": "dice_table",
     "id": "history_survivors",
-    "name": "What Became of the Unabsorbed Survivors?",
+    "name": "What Became of the Survivors",
     "dice": "1d12",
     "rows": [
-      {"roll": "1", "result": "They fled for refuge to a neighboring nation."},
-      {"roll": "2", "result": "They sought to hide in a dangerous wilderness."},
-      {"roll": "3", "result": "They were exterminated by bitter rivals."},
-      {"roll": "4", "result": "They degenerated into savage remnants."},
-      {"roll": "5", "result": "They were enslaved by their enemies."},
-      {"roll": "6", "result": "They were magically transformed or twisted."},
-      {"roll": "7", "result": "They were shattered into pockets of survivors."},
-      {"roll": "8", "result": "They became a remnant shadow of themselves."},
-      {"roll": "9", "result": "They forcibly migrated into a weaker land."},
-      {"roll": "10", "result": "They formed the nucleus of a new culture."},
-      {"roll": "11", "result": "They split into several smaller groups."},
-      {"roll": "12", "result": "Roll twice; the resulting groups hate each other."}
+      {
+        "roll": "1",
+        "result": "They settled in a foreign city and grew rich in a trade their hosts despised."
+      },
+      {
+        "roll": "2",
+        "result": "They crossed the desert and were never heard from again by anyone who wrote."
+      },
+      {
+        "roll": "3",
+        "result": "They fled to an island and kept their own laws there for three centuries."
+      },
+      {
+        "roll": "4",
+        "result": "They fled into the marsh country and became guides no outsider can follow."
+      },
+      {
+        "roll": "5",
+        "result": "They refused to leave and were slowly reduced to a few stubborn households."
+      },
+      {
+        "roll": "6",
+        "result": "They married into the new ruling house and quietly outlasted it."
+      },
+      {
+        "roll": "7",
+        "result": "They scattered into the hill villages and lost their own tongue in two generations."
+      },
+      {
+        "roll": "8",
+        "result": "They took to the high pastures and have stayed there ever since."
+      },
+      {
+        "roll": "9",
+        "result": "They withdrew to a monastery and preserved their records in its scriptorium."
+      },
+      {
+        "roll": "10",
+        "result": "They joined a new religious movement and became its first adherents."
+      },
+      {
+        "roll": "11",
+        "result": "They took service with the conquerors and were hated for it by everyone left."
+      },
+      {
+        "roll": "12",
+        "result": "They were resettled as a buffer against raiders and grew hard and suspicious."
+      }
     ]
   },
   {
@@ -631,56 +1813,206 @@
     "name": "Community Tags",
     "dice": "1d100",
     "rows": [
-      {"roll": "1-2", "result": "Ancient Infrastructure"},
-      {"roll": "3-4", "result": "Bad Neighbors"},
-      {"roll": "5-6", "result": "Blood Feud"},
-      {"roll": "7-8", "result": "Brilliant Innovation"},
-      {"roll": "9-10", "result": "Broken Spirits"},
-      {"roll": "11-12", "result": "Corrupt Laws"},
-      {"roll": "13-14", "result": "Criminal Bosses"},
-      {"roll": "15-16", "result": "Cultural Center"},
-      {"roll": "17-18", "result": "Cursed Circumstances"},
-      {"roll": "19-20", "result": "Decadent Locals"},
-      {"roll": "21-22", "result": "Decaying Working"},
-      {"roll": "23-24", "result": "Demihuman Populace"},
-      {"roll": "25-26", "result": "Dueling Lords"},
-      {"roll": "27-28", "result": "Enemy Within"},
-      {"roll": "29-30", "result": "Faded Remnant"},
-      {"roll": "31-32", "result": "Fallen Prosperity"},
-      {"roll": "33-34", "result": "Foreign Enclave"},
-      {"roll": "35-36", "result": "Guild Oligarchy"},
-      {"roll": "37-38", "result": "Heavy Fortification"},
-      {"roll": "39-40", "result": "Hidden Ruler"},
-      {"roll": "41-42", "result": "Hostile Terrain"},
-      {"roll": "43-44", "result": "Incompetent Leaders"},
-      {"roll": "45-46", "result": "Inherited Architecture"},
-      {"roll": "47-48", "result": "Inhuman Cooperation"},
-      {"roll": "49-50", "result": "Lawless Class"},
-      {"roll": "51-52", "result": "Magical Academy"},
-      {"roll": "53-54", "result": "Martial Tradition"},
-      {"roll": "55-56", "result": "Miserable Penury"},
-      {"roll": "57-58", "result": "Mistreated Blighted"},
-      {"roll": "59-60", "result": "Monstrous Tribute"},
-      {"roll": "61-62", "result": "Neglectful Ruler"},
-      {"roll": "63-64", "result": "New Industry"},
-      {"roll": "65-66", "result": "Pilgrimage Site"},
-      {"roll": "67-68", "result": "Plagued City"},
-      {"roll": "69-70", "result": "Population Boom"},
-      {"roll": "71-72", "result": "Raider Scourge"},
-      {"roll": "73-74", "result": "Rebel Stronghold"},
-      {"roll": "75-76", "result": "Rigid Castes"},
-      {"roll": "77-78", "result": "Scars of War"},
-      {"roll": "79-80", "result": "Seat of Rule"},
-      {"roll": "81-82", "result": "Secret Treachery"},
-      {"roll": "83-84", "result": "Sinking City"},
-      {"roll": "85-86", "result": "Theocratic Authorities"},
-      {"roll": "87-88", "result": "Toxic Economy"},
-      {"roll": "89-90", "result": "Trade Hub"},
-      {"roll": "91-92", "result": "Unique Product"},
-      {"roll": "93-94", "result": "Upstart Faith"},
-      {"roll": "95-96", "result": "Warring Council"},
-      {"roll": "97-98", "result": "Widespread Prosperity"},
-      {"roll": "99-100", "result": "Xenophobic Locals"}
+      {
+        "roll": "1-2",
+        "result": "Bells rung backward for bad news"
+      },
+      {
+        "roll": "3-4",
+        "result": "Halberds leaning by every door"
+      },
+      {
+        "roll": "5-6",
+        "result": "Rope-makers walking backwards"
+      },
+      {
+        "roll": "7-8",
+        "result": "A hedge hiding the eastern wall"
+      },
+      {
+        "roll": "9-10",
+        "result": "A miller who skimps on weight"
+      },
+      {
+        "roll": "11-12",
+        "result": "A debtors' cage still in use"
+      },
+      {
+        "roll": "13-14",
+        "result": "Every stranger gets a long look"
+      },
+      {
+        "roll": "15-16",
+        "result": "A bell rope frayed thin"
+      },
+      {
+        "roll": "17-18",
+        "result": "Duckboards laid over the mud"
+      },
+      {
+        "roll": "19-20",
+        "result": "Smoke smelling of peat and apples"
+      },
+      {
+        "roll": "21-22",
+        "result": "Curfew bought off with small coin"
+      },
+      {
+        "roll": "23-24",
+        "result": "Bees kept in the churchyard wall"
+      },
+      {
+        "roll": "25-26",
+        "result": "Children named for the weather"
+      },
+      {
+        "roll": "27-28",
+        "result": "A dog that follows tax collectors"
+      },
+      {
+        "roll": "29-30",
+        "result": "Disputes settled by stone-throwing"
+      },
+      {
+        "roll": "31-32",
+        "result": "Laundry strung across the lane"
+      },
+      {
+        "roll": "33-34",
+        "result": "A bell cast from captured swords"
+      },
+      {
+        "roll": "35-36",
+        "result": "Notices read aloud by criers"
+      },
+      {
+        "roll": "37-38",
+        "result": "Gravestones set flat in paving"
+      },
+      {
+        "roll": "39-40",
+        "result": "Wool drying on every fence"
+      },
+      {
+        "roll": "41-42",
+        "result": "Plague marks still on lintels"
+      },
+      {
+        "roll": "43-44",
+        "result": "Weather read from chimney smoke"
+      },
+      {
+        "roll": "45-46",
+        "result": "A relic fingerbone in glass"
+      },
+      {
+        "roll": "47-48",
+        "result": "Looms clacking through the night"
+      },
+      {
+        "roll": "49-50",
+        "result": "Doors painted with blue lime"
+      },
+      {
+        "roll": "51-52",
+        "result": "Children selling rushlights at dusk"
+      },
+      {
+        "roll": "53-54",
+        "result": "A bridge with a toll stone"
+      },
+      {
+        "roll": "55-56",
+        "result": "A smokehouse that never closes"
+      },
+      {
+        "roll": "57-58",
+        "result": "A cracked bell for the watch"
+      },
+      {
+        "roll": "59-60",
+        "result": "Coopers hammering before sunrise"
+      },
+      {
+        "roll": "61-62",
+        "result": "Names of the dead on gates"
+      },
+      {
+        "roll": "63-64",
+        "result": "Piglets loose in the lanes"
+      },
+      {
+        "roll": "65-66",
+        "result": "Wool caps worn indoors by custom"
+      },
+      {
+        "roll": "67-68",
+        "result": "A shrine of stacked fieldstones"
+      },
+      {
+        "roll": "69-70",
+        "result": "Painted boundary stones at crossroads"
+      },
+      {
+        "roll": "71-72",
+        "result": "A market cross worn smooth"
+      },
+      {
+        "roll": "73-74",
+        "result": "Wells that taste of iron"
+      },
+      {
+        "roll": "75-76",
+        "result": "Nettles grown deliberately for rope"
+      },
+      {
+        "roll": "77-78",
+        "result": "Dogs asleep in the road"
+      },
+      {
+        "roll": "79-80",
+        "result": "A cider press shared four ways"
+      },
+      {
+        "roll": "81-82",
+        "result": "Bread priced by the weather"
+      },
+      {
+        "roll": "83-84",
+        "result": "Gulls stealing from the market"
+      },
+      {
+        "roll": "85-86",
+        "result": "Salt barrels stacked by the gate"
+      },
+      {
+        "roll": "87-88",
+        "result": "Tanners downwind of everything"
+      },
+      {
+        "roll": "89-90",
+        "result": "Cats fed at the fish stall"
+      },
+      {
+        "roll": "91-92",
+        "result": "Pigs kept indoors through winter"
+      },
+      {
+        "roll": "93-94",
+        "result": "Roofs thatched in unmatched patches"
+      },
+      {
+        "roll": "95-96",
+        "result": "Mash smell hiding a back still"
+      },
+      {
+        "roll": "97-98",
+        "result": "Fear of the old quarry road"
+      },
+      {
+        "roll": "99-100",
+        "result": "Honey traded for barley, not coin"
+      }
     ]
   },
   {
@@ -689,56 +2021,206 @@
     "name": "Court Tags",
     "dice": "1d100",
     "rows": [
-      {"roll": "1-2", "result": "Affliction's Mark"},
-      {"roll": "3-4", "result": "Ancestral Obligation"},
-      {"roll": "5-6", "result": "Awesome Legitimacy"},
-      {"roll": "7-8", "result": "Awkward Birth"},
-      {"roll": "9-10", "result": "Blandished Leadership"},
-      {"roll": "11-12", "result": "Cadet Branches"},
-      {"roll": "13-14", "result": "Capricious Orders"},
-      {"roll": "15-16", "result": "Cultural Insignia"},
-      {"roll": "17-18", "result": "Daring Ambition"},
-      {"roll": "19-20", "result": "Dark Secret"},
-      {"roll": "21-22", "result": "Decadent Court"},
-      {"roll": "23-24", "result": "Devil's Bargain"},
-      {"roll": "25-26", "result": "Diplomatic Demands"},
-      {"roll": "27-28", "result": "Disputed Inheritance"},
-      {"roll": "29-30", "result": "Excess Heirs"},
-      {"roll": "31-32", "result": "False Prize"},
-      {"roll": "33-34", "result": "Fatal Extravagance"},
-      {"roll": "35-36", "result": "Forbidden Romance"},
-      {"roll": "37-38", "result": "Foreign Ties"},
-      {"roll": "39-40", "result": "Gate Keeper"},
-      {"roll": "41-42", "result": "Hidden Blight"},
-      {"roll": "43-44", "result": "Hopeless Rival"},
-      {"roll": "45-46", "result": "Impure Blood"},
-      {"roll": "47-48", "result": "Inadequate Tools"},
-      {"roll": "49-50", "result": "Inept Ruler"},
-      {"roll": "51-52", "result": "Iron Law"},
-      {"roll": "53-54", "result": "Lost Purpose"},
-      {"roll": "55-56", "result": "Magical Subversion"},
-      {"roll": "57-58", "result": "Ministerial Capture"},
-      {"roll": "59-60", "result": "New Generation"},
-      {"roll": "61-62", "result": "New Opportunity"},
-      {"roll": "63-64", "result": "Outside Debts"},
-      {"roll": "65-66", "result": "Overextended Grasp"},
-      {"roll": "67-68", "result": "Poisonous Cliques"},
-      {"roll": "69-70", "result": "Priestly Influence"},
-      {"roll": "71-72", "result": "Proxy Speaker"},
-      {"roll": "73-74", "result": "Rampant Corruption"},
-      {"roll": "75-76", "result": "Recent Brutality"},
-      {"roll": "77-78", "result": "Regency Council"},
-      {"roll": "79-80", "result": "Restive Lessers"},
-      {"roll": "81-82", "result": "Rival Dreams"},
-      {"roll": "83-84", "result": "Rival Power"},
-      {"roll": "85-86", "result": "Ruling Regalia"},
-      {"roll": "87-88", "result": "Runaway Rule"},
-      {"roll": "89-90", "result": "Shining Successor"},
-      {"roll": "91-92", "result": "Splendid Seat"},
-      {"roll": "93-94", "result": "Sublime Skill"},
-      {"roll": "95-96", "result": "Sudden Strength"},
-      {"roll": "97-98", "result": "Threatened Violence"},
-      {"roll": "99-100", "result": "Waning Wealth"}
+      {
+        "roll": "1-2",
+        "result": "Newcomers quizzed on old lineages"
+      },
+      {
+        "roll": "3-4",
+        "result": "Seating rewritten nightly on slate"
+      },
+      {
+        "roll": "5-6",
+        "result": "Duels fought at dawn in orchards"
+      },
+      {
+        "roll": "7-8",
+        "result": "A choir that sings at meals"
+      },
+      {
+        "roll": "9-10",
+        "result": "Music stops when the ruler speaks"
+      },
+      {
+        "roll": "11-12",
+        "result": "Hounds allowed at the table"
+      },
+      {
+        "roll": "13-14",
+        "result": "Salt cellars placed by favor"
+      },
+      {
+        "roll": "15-16",
+        "result": "Betrothals unsigned for years"
+      },
+      {
+        "roll": "17-18",
+        "result": "Scented baths before every audience"
+      },
+      {
+        "roll": "19-20",
+        "result": "Painted ceilings of hunting scenes"
+      },
+      {
+        "roll": "21-22",
+        "result": "A confectioner with a royal license"
+      },
+      {
+        "roll": "23-24",
+        "result": "Sleeves cut wide to hide hands"
+      },
+      {
+        "roll": "25-26",
+        "result": "A masked porter at the gate"
+      },
+      {
+        "roll": "27-28",
+        "result": "Factions named for their colors"
+      },
+      {
+        "roll": "29-30",
+        "result": "Moth-eaten banners in the hall"
+      },
+      {
+        "roll": "31-32",
+        "result": "Hunting horns at odd hours"
+      },
+      {
+        "roll": "33-34",
+        "result": "Rooms named after dead children"
+      },
+      {
+        "roll": "35-36",
+        "result": "A herald with a failing voice"
+      },
+      {
+        "roll": "37-38",
+        "result": "Two chancellors who never speak"
+      },
+      {
+        "roll": "39-40",
+        "result": "Gifts refused three times first"
+      },
+      {
+        "roll": "41-42",
+        "result": "Everyone speaks in the third person"
+      },
+      {
+        "roll": "43-44",
+        "result": "A motto no one can translate"
+      },
+      {
+        "roll": "45-46",
+        "result": "Whispers that follow a servant's name"
+      },
+      {
+        "roll": "47-48",
+        "result": "Guests searched at the door"
+      },
+      {
+        "roll": "49-50",
+        "result": "Masks worn after sunset"
+      },
+      {
+        "roll": "51-52",
+        "result": "Silence at the second bell"
+      },
+      {
+        "roll": "53-54",
+        "result": "Cloaks lined in grey wolf fur"
+      },
+      {
+        "roll": "55-56",
+        "result": "Bloodlines traced on a painted wall"
+      },
+      {
+        "roll": "57-58",
+        "result": "Oaths sworn on a broken sword"
+      },
+      {
+        "roll": "59-60",
+        "result": "A throne of gilded antlers"
+      },
+      {
+        "roll": "61-62",
+        "result": "A portrait turned to the wall"
+      },
+      {
+        "roll": "63-64",
+        "result": "Live animals given at midsummer"
+      },
+      {
+        "roll": "65-66",
+        "result": "Drinking horns set with garnets"
+      },
+      {
+        "roll": "67-68",
+        "result": "A dead rival's rooms kept locked"
+      },
+      {
+        "roll": "69-70",
+        "result": "A whispering gallery in the tower"
+      },
+      {
+        "roll": "71-72",
+        "result": "A council chamber short of chairs"
+      },
+      {
+        "roll": "73-74",
+        "result": "Servants who hear everything"
+      },
+      {
+        "roll": "75-76",
+        "result": "Everyone related by marriage somehow"
+      },
+      {
+        "roll": "77-78",
+        "result": "A council meeting without the ruler"
+      },
+      {
+        "roll": "79-80",
+        "result": "Gloves worn at every meal"
+      },
+      {
+        "roll": "81-82",
+        "result": "A sword hung above the doorway"
+      },
+      {
+        "roll": "83-84",
+        "result": "Feasts that last three days"
+      },
+      {
+        "roll": "85-86",
+        "result": "Rival heirs who share a tutor"
+      },
+      {
+        "roll": "87-88",
+        "result": "The ruler's chair set higher"
+      },
+      {
+        "roll": "89-90",
+        "result": "Bows measured by rank"
+      },
+      {
+        "roll": "91-92",
+        "result": "Nightly readings from a family history"
+      },
+      {
+        "roll": "93-94",
+        "result": "Poison-tasters with steady hands"
+      },
+      {
+        "roll": "95-96",
+        "result": "A library locked to one reader"
+      },
+      {
+        "roll": "97-98",
+        "result": "Foreign physicians with strange herbs"
+      },
+      {
+        "roll": "99-100",
+        "result": "A ruler who collects old maps"
+      }
     ]
   },
   {
@@ -747,56 +2229,206 @@
     "name": "Ruin Tags",
     "dice": "1d100",
     "rows": [
-      {"roll": "1-2", "result": "Ancient Archives"},
-      {"roll": "3-4", "result": "Aspiring Conqueror"},
-      {"roll": "5-6", "result": "Automaton Servants"},
-      {"roll": "7-8", "result": "Birthing Cyst"},
-      {"roll": "9-10", "result": "Bitter Remnants"},
-      {"roll": "11-12", "result": "Civil War"},
-      {"roll": "13-14", "result": "Cyclical Doom"},
-      {"roll": "15-16", "result": "Decrepit Structure"},
-      {"roll": "17-18", "result": "Desperate Hunger"},
-      {"roll": "19-20", "result": "Dire Tombs"},
-      {"roll": "21-22", "result": "Distant Gate"},
-      {"roll": "23-24", "result": "Dungeon Heart"},
-      {"roll": "25-26", "result": "Experimental Lab"},
-      {"roll": "27-28", "result": "Failed Intrusion"},
-      {"roll": "29-30", "result": "Fallen Sanctuary"},
-      {"roll": "31-32", "result": "False Front"},
-      {"roll": "33-34", "result": "Feral Magic"},
-      {"roll": "35-36", "result": "Flooded Halls"},
-      {"roll": "37-38", "result": "Freshly Looted"},
-      {"roll": "39-40", "result": "Friendly Foes"},
-      {"roll": "41-42", "result": "Hidden Within"},
-      {"roll": "43-44", "result": "Hiveminded Natives"},
-      {"roll": "45-46", "result": "Hospitable Natives"},
-      {"roll": "47-48", "result": "Hostile Environment"},
-      {"roll": "49-50", "result": "Infectious Miasma"},
-      {"roll": "51-52", "result": "Invincible Delusion"},
-      {"roll": "53-54", "result": "Lethal Treasure"},
-      {"roll": "55-56", "result": "Limited Access"},
-      {"roll": "57-58", "result": "Lingering Curse"},
-      {"roll": "59-60", "result": "Living Dungeon"},
-      {"roll": "61-62", "result": "Lost Colony"},
-      {"roll": "63-64", "result": "Magical Wonder"},
-      {"roll": "65-66", "result": "Monster Forge"},
-      {"roll": "67-68", "result": "Outsider Domain"},
-      {"roll": "69-70", "result": "Precious Resource"},
-      {"roll": "71-72", "result": "Raider Lair"},
-      {"roll": "73-74", "result": "Recruiting Drive"},
-      {"roll": "75-76", "result": "Religious Zealots"},
-      {"roll": "77-78", "result": "Rigid Hierarchy"},
-      {"roll": "79-80", "result": "Royal Refuge"},
-      {"roll": "81-82", "result": "Sacrificial Bargain"},
-      {"roll": "83-84", "result": "Sealed Evil"},
-      {"roll": "85-86", "result": "Secret Alliance"},
-      {"roll": "87-88", "result": "Shifting Interior"},
-      {"roll": "89-90", "result": "Spatial Flux"},
-      {"roll": "91-92", "result": "Surfacer Hideout"},
-      {"roll": "93-94", "result": "Taboo Place"},
-      {"roll": "95-96", "result": "Things Below"},
-      {"roll": "97-98", "result": "Useless Treasure"},
-      {"roll": "99-100", "result": "Wizard's Lair"}
+      {
+        "roll": "1-2",
+        "result": "A well that smells of copper"
+      },
+      {
+        "roll": "3-4",
+        "result": "Rust that looks like writing"
+      },
+      {
+        "roll": "5-6",
+        "result": "A ladder short of the shaft"
+      },
+      {
+        "roll": "7-8",
+        "result": "Knocking from somewhere below"
+      },
+      {
+        "roll": "9-10",
+        "result": "Dust disturbed in one room only"
+      },
+      {
+        "roll": "11-12",
+        "result": "Names scratched into the walls"
+      },
+      {
+        "roll": "13-14",
+        "result": "Tiles that rattle underfoot"
+      },
+      {
+        "roll": "15-16",
+        "result": "A garden gone entirely to thorn"
+      },
+      {
+        "roll": "17-18",
+        "result": "A well with a sealed mouth"
+      },
+      {
+        "roll": "19-20",
+        "result": "Ash falling from no fire"
+      },
+      {
+        "roll": "21-22",
+        "result": "Mortar scratched out course by course"
+      },
+      {
+        "roll": "23-24",
+        "result": "A bell too cracked to sound"
+      },
+      {
+        "roll": "25-26",
+        "result": "An altar stained black"
+      },
+      {
+        "roll": "27-28",
+        "result": "A cloak rotted to its clasps"
+      },
+      {
+        "roll": "29-30",
+        "result": "A chamber that stays dry"
+      },
+      {
+        "roll": "31-32",
+        "result": "A corridor sloping downward wrongly"
+      },
+      {
+        "roll": "33-34",
+        "result": "A shrine swept clean this morning"
+      },
+      {
+        "roll": "35-36",
+        "result": "Wall paintings flaking to blankness"
+      },
+      {
+        "roll": "37-38",
+        "result": "Owl pellets thick in the hall"
+      },
+      {
+        "roll": "39-40",
+        "result": "Bones arranged in careful patterns"
+      },
+      {
+        "roll": "41-42",
+        "result": "Iron keys without locks"
+      },
+      {
+        "roll": "43-44",
+        "result": "Stairs that end in open sky"
+      },
+      {
+        "roll": "45-46",
+        "result": "Rats that do not flee"
+      },
+      {
+        "roll": "47-48",
+        "result": "A heavy door without a handle"
+      },
+      {
+        "roll": "49-50",
+        "result": "Webbing thick as sailcloth"
+      },
+      {
+        "roll": "51-52",
+        "result": "Ward marks cut above the lintel"
+      },
+      {
+        "roll": "53-54",
+        "result": "Blank-eyed statues in a ring"
+      },
+      {
+        "roll": "55-56",
+        "result": "A stair that circles endlessly"
+      },
+      {
+        "roll": "57-58",
+        "result": "A shaft where air moves upward"
+      },
+      {
+        "roll": "59-60",
+        "result": "A pool too clear to trust"
+      },
+      {
+        "roll": "61-62",
+        "result": "Lamps that still hold oil"
+      },
+      {
+        "roll": "63-64",
+        "result": "Salt crust on every surface"
+      },
+      {
+        "roll": "65-66",
+        "result": "Chisel marks on finished stone"
+      },
+      {
+        "roll": "67-68",
+        "result": "A stairwell that smells of smoke"
+      },
+      {
+        "roll": "69-70",
+        "result": "Birds nesting in a broken dome"
+      },
+      {
+        "roll": "71-72",
+        "result": "A floor of earth and roots"
+      },
+      {
+        "roll": "73-74",
+        "result": "Broken pottery sorted into piles"
+      },
+      {
+        "roll": "75-76",
+        "result": "A spill of green-glazed tiles"
+      },
+      {
+        "roll": "77-78",
+        "result": "Silence where insects should be"
+      },
+      {
+        "roll": "79-80",
+        "result": "Coins fused in a melted chest"
+      },
+      {
+        "roll": "81-82",
+        "result": "Statues with faces chiseled away"
+      },
+      {
+        "roll": "83-84",
+        "result": "Doorways bricked from the far side"
+      },
+      {
+        "roll": "85-86",
+        "result": "A statue that has moved"
+      },
+      {
+        "roll": "87-88",
+        "result": "A fire pit with cold ash"
+      },
+      {
+        "roll": "89-90",
+        "result": "Old blood black on the steps"
+      },
+      {
+        "roll": "91-92",
+        "result": "Goat tracks through the shrine"
+      },
+      {
+        "roll": "93-94",
+        "result": "Echoes that answer too late"
+      },
+      {
+        "roll": "95-96",
+        "result": "A door of stacked stones"
+      },
+      {
+        "roll": "97-98",
+        "result": "Standing water and drowned lamps"
+      },
+      {
+        "roll": "99-100",
+        "result": "A skeleton seated at a table"
+      }
     ]
   },
   {
@@ -805,56 +2437,206 @@
     "name": "Wilderness Tags",
     "dice": "1d100",
     "rows": [
-      {"roll": "1-2", "result": "Abandoned Village"},
-      {"roll": "3-4", "result": "Ancient Guardians"},
-      {"roll": "5-6", "result": "Ancient Monument"},
-      {"roll": "7-8", "result": "Arratu Land"},
-      {"roll": "9-10", "result": "Bandit Lair"},
-      {"roll": "11-12", "result": "Beast Swarm"},
-      {"roll": "13-14", "result": "Blighted Tribe"},
-      {"roll": "15-16", "result": "Broken Infrastructure"},
-      {"roll": "17-18", "result": "Chokepoint"},
-      {"roll": "19-20", "result": "Collapsed Deep"},
-      {"roll": "21-22", "result": "Criminal Meet"},
-      {"roll": "23-24", "result": "Cryptic Art"},
-      {"roll": "25-26", "result": "Cursed Land"},
-      {"roll": "27-28", "result": "Decayed Working"},
-      {"roll": "29-30", "result": "Demihuman Community"},
-      {"roll": "31-32", "result": "Devil Grove"},
-      {"roll": "33-34", "result": "Disused Mine"},
-      {"roll": "35-36", "result": "Healing Terrain"},
-      {"roll": "37-38", "result": "Hermitage"},
-      {"roll": "39-40", "result": "Historical Survival"},
-      {"roll": "41-42", "result": "Isolated Academy"},
-      {"roll": "43-44", "result": "Labyrinthine Tangle"},
-      {"roll": "45-46", "result": "Lost Battlefield"},
-      {"roll": "47-48", "result": "Lost City"},
-      {"roll": "49-50", "result": "Magical Springs"},
-      {"roll": "51-52", "result": "Migration Path"},
-      {"roll": "53-54", "result": "Military Outpost"},
-      {"roll": "55-56", "result": "Monstrous Beast"},
-      {"roll": "57-58", "result": "Motherlode"},
-      {"roll": "59-60", "result": "Nomad Camp"},
-      {"roll": "61-62", "result": "Outsider Enclave"},
-      {"roll": "63-64", "result": "Overgrown Tomb"},
-      {"roll": "65-66", "result": "Perilous Path"},
-      {"roll": "67-68", "result": "Pilgrimage Site"},
-      {"roll": "69-70", "result": "Precious Game"},
-      {"roll": "71-72", "result": "Rampant Experiment"},
-      {"roll": "73-74", "result": "Refugee Camp"},
-      {"roll": "75-76", "result": "Remnant Road"},
-      {"roll": "77-78", "result": "Remote Monastery"},
-      {"roll": "79-80", "result": "Ruined Fortification"},
-      {"roll": "81-82", "result": "Savage Hamlet"},
-      {"roll": "83-84", "result": "Sculpted Terrain"},
-      {"roll": "85-86", "result": "Seductive Peril"},
-      {"roll": "87-88", "result": "Taboo Territory"},
-      {"roll": "89-90", "result": "Toxic Ruins"},
-      {"roll": "91-92", "result": "Treacherous Terrain"},
-      {"roll": "93-94", "result": "Twisted Fauna"},
-      {"roll": "95-96", "result": "Uncanny Weather"},
-      {"roll": "97-98", "result": "Working Wreckage"},
-      {"roll": "99-100", "result": "Zealot Colony"}
+      {
+        "roll": "1-2",
+        "result": "Tracks of something heavy and slow"
+      },
+      {
+        "roll": "3-4",
+        "result": "A cave mouth that drips"
+      },
+      {
+        "roll": "5-6",
+        "result": "A path lined with bleached bones"
+      },
+      {
+        "roll": "7-8",
+        "result": "Windrows of dead fish"
+      },
+      {
+        "roll": "9-10",
+        "result": "A thicket full of old snares"
+      },
+      {
+        "roll": "11-12",
+        "result": "A creek that smells of sulphur"
+      },
+      {
+        "roll": "13-14",
+        "result": "A ridge with no cover"
+      },
+      {
+        "roll": "15-16",
+        "result": "Pines growing in a straight line"
+      },
+      {
+        "roll": "17-18",
+        "result": "A stream that vanishes and returns"
+      },
+      {
+        "roll": "19-20",
+        "result": "Mud that smells of rot"
+      },
+      {
+        "roll": "21-22",
+        "result": "Birds that follow travelers"
+      },
+      {
+        "roll": "23-24",
+        "result": "A gorge that swallows sound"
+      },
+      {
+        "roll": "25-26",
+        "result": "A ridge line of dead grass"
+      },
+      {
+        "roll": "27-28",
+        "result": "A wind that never stops"
+      },
+      {
+        "roll": "29-30",
+        "result": "Dead pines standing grey"
+      },
+      {
+        "roll": "31-32",
+        "result": "Marsh gas burning blue"
+      },
+      {
+        "roll": "33-34",
+        "result": "A spring bubbling up black"
+      },
+      {
+        "roll": "35-36",
+        "result": "Grey lichen over everything"
+      },
+      {
+        "roll": "37-38",
+        "result": "Hailstones the size of knuckles"
+      },
+      {
+        "roll": "39-40",
+        "result": "Water that tastes of iron"
+      },
+      {
+        "roll": "41-42",
+        "result": "A hill with a bare crown"
+      },
+      {
+        "roll": "43-44",
+        "result": "Lightning scars on the tallest tree"
+      },
+      {
+        "roll": "45-46",
+        "result": "A clearing kept bare by ants"
+      },
+      {
+        "roll": "47-48",
+        "result": "Rain that arrives without clouds"
+      },
+      {
+        "roll": "49-50",
+        "result": "A trail marked with cloth scraps"
+      },
+      {
+        "roll": "51-52",
+        "result": "A cliff of red clay"
+      },
+      {
+        "roll": "53-54",
+        "result": "Ash beneath a layer of moss"
+      },
+      {
+        "roll": "55-56",
+        "result": "A gully of dry waterfalls"
+      },
+      {
+        "roll": "57-58",
+        "result": "Pools steaming in the morning"
+      },
+      {
+        "roll": "59-60",
+        "result": "Sand that hisses when walked"
+      },
+      {
+        "roll": "61-62",
+        "result": "A slope of loose scree"
+      },
+      {
+        "roll": "63-64",
+        "result": "Wind that carries distant voices"
+      },
+      {
+        "roll": "65-66",
+        "result": "Thorn scrub that catches cloaks"
+      },
+      {
+        "roll": "67-68",
+        "result": "Ground that gives like a sponge"
+      },
+      {
+        "roll": "69-70",
+        "result": "Ferns taller than a man"
+      },
+      {
+        "roll": "71-72",
+        "result": "Ravens circling one hill"
+      },
+      {
+        "roll": "73-74",
+        "result": "Locusts moving in a slow column"
+      },
+      {
+        "roll": "75-76",
+        "result": "A valley of black stones"
+      },
+      {
+        "roll": "77-78",
+        "result": "A pass that whistles in wind"
+      },
+      {
+        "roll": "79-80",
+        "result": "A hollow of warm ground"
+      },
+      {
+        "roll": "81-82",
+        "result": "A meadow humming with flies"
+      },
+      {
+        "roll": "83-84",
+        "result": "Wind smelling of rain and ash"
+      },
+      {
+        "roll": "85-86",
+        "result": "Needles and silence underfoot"
+      },
+      {
+        "roll": "87-88",
+        "result": "A fallen tree across the ford"
+      },
+      {
+        "roll": "89-90",
+        "result": "A lake with no outlet"
+      },
+      {
+        "roll": "91-92",
+        "result": "A cairn someone has rebuilt"
+      },
+      {
+        "roll": "93-94",
+        "result": "Woods where no axe has rung"
+      },
+      {
+        "roll": "95-96",
+        "result": "Sun that reddens skin fast"
+      },
+      {
+        "roll": "97-98",
+        "result": "Frost on the north faces only"
+      },
+      {
+        "roll": "99-100",
+        "result": "Brambles grown into arches"
+      }
     ]
   }
 ]

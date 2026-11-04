@@ -118,12 +118,12 @@
     "type": "rule",
     "id": "travel",
     "important": true,
-    "text": "A party travels about ten hours a day. Base speed is 3 miles per hour on plains, 2 in light forest or desert, 1.5 in dense forest or rugged hills, 1 in swamp, and 0.5 in mountains or arratu. A road doubles the pace; foul weather halves it, and deep snow reduces it to a tenth."
+    "text": "A party travels about ten hours a day. Base speed is 3 miles per hour on plains, 2 in light forest or desert, 1.5 in dense forest or rugged hills, 1 in swamp, and 0.5 in mountains or broken highland. A road doubles the pace; foul weather halves it, and deep snow reduces it to a tenth."
   },
   {
     "type": "rule",
     "id": "supplies",
-    "text": "Each person needs a day's food and water (1 item each) and a night's firewood (4 items); a week of packed food is 4 items. Foraging takes half a day and a Wis/Survive check (difficulty 8 in woodland, 9 in scrub or savanna, 12 in desert, 14 in arratu), yielding 1d6 units plus the group's Survive levels, minimum 1. Without the Survive skill the total is -1, with a minimum of 1 unit. A full day of foraging adds -2 to the difficulty, and each further day in the same hex adds +1."
+    "text": "Each person needs a day's food and water (1 item each) and a night's firewood (4 items); a week of packed food is 4 items. Foraging takes half a day and a Wis/Survive check (difficulty 8 in woodland, 9 in scrub or savanna, 12 in desert, 14 in broken highland), yielding 1d6 units plus the group's Survive levels, minimum 1. Without the Survive skill the total is -1, with a minimum of 1 unit. A full day of foraging adds -2 to the difficulty, and each further day in the same hex adds +1."
   },
   {
     "type": "rule",
@@ -183,7 +183,7 @@
   {
     "type": "rule",
     "id": "high-magic",
-    "text": "High Magic is the learned sorcery of the Academies: versatile spells of protection, insight, travel, and battle, ranked 1 to 5. High Mages prepare spells and spend castings, and many also use arts that commit Effort."
+    "text": "High Magic is the learned sorcery of the great schools: versatile spells of protection, insight, travel, and battle, ranked 1 to 5. High Mages prepare spells and spend castings, and many also use arts that commit Effort."
   },
   {
     "type": "rule",
@@ -269,6 +269,6 @@
     "type": "rule",
     "id": "narration",
     "important": true,
-    "text": "Narration stays in the present tense. In the Latter Earth, show age and loss: ruins older than the nations around them, strange skies and weather, and common folk who treat sorcery as a dangerous fact of life. Describe what the characters see and do, and leave the players room to act."
+    "text": "Narration stays in the present tense. Show age and loss: ruins older than the nations around them, strange skies and weather, and common folk who treat sorcery as a dangerous fact of life. Describe what the characters see and do, and leave the players room to act."
   }
 ]

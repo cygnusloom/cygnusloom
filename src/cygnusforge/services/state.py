@@ -467,6 +467,8 @@ class CampaignState:
     # World objects by the id of the event that placed them.
     objects: dict[int, WorldObject] = field(default_factory=dict)
     notes: list[Note] = field(default_factory=list)
+    # Facts about the world the GM invented, by topic, shown to the GM every turn.
+    settings: dict[str, str] = field(default_factory=dict)
     # What the player character knows of each met NPC, by name without case.
     known: dict[str, KnownNpc] = field(default_factory=dict)
     # The journal the player reads, oldest first.

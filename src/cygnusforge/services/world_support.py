@@ -89,6 +89,7 @@ from cygnusforge.services.events import (
     Place,
     RegionAdded,
     SeasonSet,
+    SettingRecorded,
     StartingItemsTransferred,
     TravelCharged,
     load_state,
@@ -112,6 +113,8 @@ T = TypeVar("T")
 MAX_NAME = 120
 MAX_STAT = 999
 MAX_TEXT = 2000
+# One setting fact: a short paragraph about a topic, shown to the GM every turn.
+MAX_SETTING = 400
 # A player-facing summary of a place: a sentence or two, not the place's full description.
 MAX_SUMMARY = 300
 MAX_QUIRKS = 10
@@ -1483,6 +1486,31 @@ def add_note(
         "noted": True,
         "id": note_id,
         "subject": subject_name if subject_name is not None else CAMPAIGN_WIDE,
+    }
+
+
+def record_setting(db: Session, campaign_id: int, topic: str, detail: str) -> dict[str, Any]:
+    """Record or revise one fact about the invented world, keyed by topic without case.
+
+    The GM builds the setting as the campaign opens. Recording a topic again replaces the earlier
+    fact, so the GM can sharpen a region or a people as the story settles, and the newest version
+    is the one that reaches the GM's world state.
+    """
+    state = load_state(db, campaign_id)
+    topic = bounded_text(topic, "topic", MAX_NAME)
+    detail = bounded_text(detail, "detail", MAX_SETTING)
+    key = next(
+        (existing for existing in state.settings if name_key(existing) == name_key(topic)),
+        topic,
+    )
+    replaced = state.settings.get(key)
+    record(db, campaign_id, SettingRecorded(topic=key, detail=detail))
+    db.commit()
+    return {
+        "recorded": key,
+        "detail": detail,
+        "replaced": replaced if replaced is not None and replaced != detail else None,
+        "facts": len(state.settings) + (0 if replaced is not None else 1),
     }
 
 

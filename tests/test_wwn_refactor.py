@@ -58,7 +58,9 @@ WREN = "Wren"
 def _wwn_campaign(client_factory: Callable[[], TestClient]) -> tuple[TestClient, int]:
     """A Worlds Without Number campaign with its player character created."""
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="latter-earth", rule_set="worldswithoutnumber")
+    response = _new_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
     assert response.status_code == 303
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     page = client.get(f"/campaigns/{campaign_id}").text

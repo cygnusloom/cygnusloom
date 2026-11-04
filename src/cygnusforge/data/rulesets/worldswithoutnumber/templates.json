@@ -155,8 +155,8 @@
     "type": "template",
     "id": "pkg_armored_warrior",
     "kind": "kit",
-    "name": "Armored Warrior",
-    "description": "A fighter's kit: a suit of pieced armor, a large shield, a short sword and dagger, and the gear to keep a camp. Every character carries it at creation.",
+    "name": "Shieldwall Veteran",
+    "description": "A line fighter's loadout: pieced armor and a large shield, a short sword for the press and a dagger for the gaps, with a pack, a night's food, and fire for the camp.",
     "grant": {
       "items": [
         "Pieced Armor",
@@ -164,8 +164,8 @@
         "Short Sword",
         "Dagger",
         "Backpack",
+        "Rations, One Week",
         "Tinder Box",
-        "Torch",
         "Torch",
         "Torch"
       ],
@@ -177,8 +177,8 @@
     "type": "template",
     "id": "pkg_mage_healer_scholar",
     "kind": "kit",
-    "name": "Mage, Healer, or Scholar",
-    "description": "A scholar's kit: a staff and two daggers, lantern and oil, a writing kit and paper, a healer's pouch, and food and water, with 80 silver to spare.",
+    "name": "Candle Scholar",
+    "description": "A reader's loadout: a staff and a pair of daggers, a lantern with oil, a writing kit and paper, a healer's pouch, and a week of food and water, with 80 silver kept back for books, bribes, and reagents.",
     "grant": {
       "items": [
         "Dagger",
@@ -204,8 +204,8 @@
     "type": "template",
     "id": "pkg_ranger_archer",
     "kind": "kit",
-    "name": "Ranger or Archer",
-    "description": "A hunter's kit: a buff coat, a large bow with twenty arrows, a dagger and hand axe, and the gear to camp in the field, with 20 silver to spare.",
+    "name": "Greenwood Scout",
+    "description": "A woodsman's loadout: a buff coat, a large bow and a score of arrows, a dagger and a hand axe for close work, cooking gear and field rations, with 20 silver kept for the road.",
     "grant": {
       "items": [
         "Buff Coat",
@@ -220,7 +220,7 @@
         "Tinder Box",
         "Torch",
         "Torch",
-        "Torch"
+        "Rope, 50 ft"
       ],
       "silver": 20,
       "equip": ["Buff Coat"]
@@ -231,14 +231,13 @@
     "type": "template",
     "id": "pkg_roguish_wanderer",
     "kind": "kit",
-    "name": "Roguish Wanderer",
-    "description": "A thief's kit: a buff coat and small shield, a short sword and a brace of throwing blades, rope and a grappling hook, and the gear to travel light.",
+    "name": "Back-Alley Knife",
+    "description": "A quiet entry loadout: a buff coat and small shield, a stiletto and a brace of throwing blades, rope and a grappling hook for the way in and the way out.",
     "grant": {
       "items": [
         "Buff Coat",
         "Small Shield",
-        "Short Sword",
-        "Throwing Blade",
+        "Stiletto",
         "Throwing Blade",
         "Throwing Blade",
         "Throwing Blade",
@@ -247,7 +246,6 @@
         "Rations, One Week",
         "Waterskin",
         "Tinder Box",
-        "Torch",
         "Torch",
         "Torch",
         "Grappling Hook",
@@ -261,8 +259,8 @@
     "type": "template",
     "id": "pkg_adventuring_peasant",
     "kind": "kit",
-    "name": "Adventuring Peasant",
-    "description": "A villager's kit: a war shirt, a large shield, a light spear and dagger, and the gear to keep a camp. A mule and cart are transport, not pack gear.",
+    "name": "Village Levy",
+    "description": "A villager called out to fight: a war shirt and a large shield, a light spear and a dagger, and a bundle of food and fire for the march.",
     "grant": {
       "items": [
         "War Shirt",
@@ -271,8 +269,8 @@
         "Dagger",
         "Backpack",
         "Rations, One Week",
+        "Waterskin",
         "Tinder Box",
-        "Torch",
         "Torch",
         "Torch"
       ],
@@ -284,23 +282,23 @@
     "type": "template",
     "id": "pkg_gentry_wayfarer",
     "kind": "kit",
-    "name": "Gentry Wayfarer",
-    "description": "A gentle-born traveller's kit: a buff coat and small shield, a short sword, fine clothing, a writing kit and paper, and the gear to keep a camp, with 20 silver to spare.",
+    "name": "Household Envoy",
+    "description": "A messenger sent in a great house's name: a linothorax worn under fine clothes, a short sword, a writing kit and paper, and 20 silver for inns and gate fees.",
     "grant": {
       "items": [
-        "Buff Coat",
-        "Small Shield",
+        "Linothorax",
         "Short Sword",
-        "Backpack",
-        "Rations, One Week",
-        "Waterskin",
         "Clothes, Fine",
         "Writing Kit",
         "Paper, 10 Sheets",
-        "Paper, 10 Sheets"
+        "Backpack",
+        "Rations, One Week",
+        "Waterskin",
+        "Tinder Box",
+        "Torch"
       ],
       "silver": 20,
-      "equip": ["Buff Coat", "Small Shield"]
+      "equip": ["Linothorax"]
     },
     "names": "names"
   }
