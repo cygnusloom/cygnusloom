@@ -449,10 +449,10 @@ def place_map_token(
             raise InvalidInput(
                 f"{character.name} is not at any location; move them to {entry.location} first"
             )
-        if name_key(character.location) != name_key(entry.location):
+        if not _inside_place(state, character.location, entry.location):
             raise InvalidInput(
-                f"{character.name} is at {character.location}, not at {entry.location}, "
-                f"where {entry.name} is"
+                f"{character.name} is at {character.location}, not at {entry.location} or "
+                f"inside it, where {entry.name} is"
             )
     if not (_is_int(column) and _is_int(row)) or not (
         0 <= column < entry.columns and 0 <= row < entry.rows
@@ -1016,6 +1016,22 @@ def _local_map_for(state: CampaignState, current_location: str | None) -> Encoun
     return None
 
 
+def _inside_place(state: CampaignState, location: str | None, ancestor: str) -> bool:
+    """Whether a place is `ancestor` or lies inside it, following parent places."""
+    seen: set[str] = set()
+    name = location
+    while name is not None:
+        key = name_key(name)
+        if key == name_key(ancestor):
+            return True
+        if key in seen:
+            return False
+        seen.add(key)
+        place = state.places.get(key)
+        name = place.parent if place is not None else None
+    return False
+
+
 def local_map_view(
     state: CampaignState,
     grid: EncounterGrid | None,
@@ -1039,50 +1055,43 @@ def local_map_view(
     for key, cell in entry.tokens.items():
         character = characters.get(key)
         if character is None:
+            # A prop has no location of its own; its token is its whole position.
             found[key] = {
                 "name": _token_name(key),
                 "cell": cell,
                 "is_pc": False,
+                "kind": "prop",
+                "placed": True,
                 "creature": "",
                 "status": "",
                 "defeated": False,
             }
-        else:
+        elif _inside_place(state, character.location, entry.location):
             found[key] = {
                 "name": character.name,
                 "cell": cell,
                 "is_pc": character.kind == PC_KIND,
+                "kind": "player character" if character.kind == PC_KIND else "npc",
+                "placed": True,
                 "creature": _creature_label(character),
                 "status": _status(character, None),
                 "defeated": character.defeated,
             }
-    occupied = set(entry.tokens.values())
-    here = {name_key(entry.location)}
-    if current_location:
-        here.add(name_key(current_location))
+        # A token left at another place is stale. The character is not here, so the map does
+        # not show them until they return or are placed again.
     for key, character in characters.items():
         if key in found:
             continue
-        if character.location is None or name_key(character.location) not in here:
+        if not _inside_place(state, character.location, entry.location):
             continue
-        # A character with no token yet still stands somewhere in the room. Give them the first
-        # free cell for display; placing a token persists that cell for the next encounter.
-        cell = next(
-            (
-                (column, row)
-                for row in range(entry.rows)
-                for column in range(entry.columns)
-                if (column, row) not in occupied
-                and not _blocks(entry, (column, row), encounter_objects)
-            ),
-            None,
-        )
-        if cell is not None:
-            occupied.add(cell)
+        # Only a token gives a character a position. An unplaced character is listed, but no
+        # cell is invented for them.
         found[key] = {
             "name": character.name,
-            "cell": cell,
+            "cell": None,
             "is_pc": character.kind == PC_KIND,
+            "kind": "player character" if character.kind == PC_KIND else "npc",
+            "placed": False,
             "creature": _creature_label(character),
             "status": _status(character, None),
             "defeated": character.defeated,
@@ -1102,3 +1111,14 @@ def local_map_view(
         "marked_cells": _marked_cells(entry, terrain, encounter_objects),
         "participants": participants,
     }
+
+
+def local_map_position(state: CampaignState, character: Character) -> dict[str, Any] | None:
+    """Where a character stands on the local map at their location, when a token places them."""
+    entry = _local_map_for(state, character.location)
+    if entry is None:
+        return None
+    cell = entry.tokens.get(name_key(character.name))
+    if cell is None:
+        return None
+    return {"map": entry.name, "column": cell[0], "row": cell[1]}

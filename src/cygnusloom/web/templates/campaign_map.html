@@ -55,6 +55,7 @@
         <strong>{{ participant.name }}</strong>
         {% if participant.creature %}<span class="muted">{{ participant.creature }}</span>{% endif %}
         {% if participant.is_pc %}<span class="muted">(you)</span>{% endif %}
+        {% if participant.cell %}<span class="muted">column {{ participant.cell[0] }}, row {{ participant.cell[1] }}</span>{% else %}<span class="muted">not yet placed</span>{% endif %}
         {% if participant.status %}<span class="roster-status">{{ participant.status }}</span>{% endif %}
       </li>
       {% endfor %}

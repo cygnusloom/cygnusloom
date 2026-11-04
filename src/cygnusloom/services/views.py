@@ -220,12 +220,16 @@ def get_statblock(
     lines += _status_lines(character, conditions, inventory, hooks, counters)
     for key, choices in character.feature_choices.items():
         lines.append(f"Feature choice {key}: {', '.join(choices)}")
-    return {
+    result = {
         "name": character.name,
         "kind": kind,
         "location": character.location,
         "statblock": lines,
     }
+    position = encounters.local_map_position(state, character)
+    if position is not None:
+        result["position"] = position
+    return result
 
 
 def _combat_lines(character: Character, spec: CharacterSpec, combat: CombatRules) -> list[str]:
@@ -700,7 +704,66 @@ def world_state_text(
         lines.append(f"NPCs in the wind, at no location: {', '.join(wind)}.")
     lines.extend(_status_lines(pc, conditions, inventory, hooks, counters))
     lines.extend(_encounter_lines(state, grid, combat, terrain, encounter_objects))
+    if state.encounter is None:
+        lines.extend(_local_map_lines(state, grid, terrain, encounter_objects, pc))
     return "\n".join(lines)
+
+
+def _local_map_lines(
+    state: CampaignState,
+    grid: EncounterGrid | None,
+    terrain: Mapping[str, EncounterTerrain] | None,
+    encounter_objects: Mapping[str, EncounterObject] | None,
+    pc: Character,
+) -> list[str]:
+    """The local map outside an encounter, so the GM sees the logical position of everyone
+    placed on it. Only tokens place a character; an unplaced one is listed without a cell."""
+    view = encounters.local_map_view(
+        state, grid, terrain, encounter_objects, state.characters, pc.location
+    )
+    if view is None:
+        return []
+    lines = [
+        (
+            f"Local map: {view['map']} at {view['location']}, {view['columns']} by "
+            f"{view['rows']} cells, columns and rows counted from 0 at the top left. "
+            f"{view['description']}"
+        )
+    ]
+    if view["background"] is not None:
+        lines.append(_terrain_sentence("Background", view["background"]))
+    background_name = (view["background"] or {}).get("name", "")
+    marks = _map_marks_summary(view["marked_cells"], background_name)
+    if marks:
+        lines.append(f"Objects and terrain on the map: {marks}.")
+    unplaced: list[str] = []
+    for who in view["participants"]:
+        cell = who["cell"]
+        if cell is None:
+            lines.append(f"- {who['name']} ({who['kind']}), not yet placed.")
+            unplaced.append(who["name"])
+        else:
+            lines.append(f"- {who['name']} ({who['kind']}), column {cell[0]}, row {cell[1]}.")
+    if unplaced:
+        lines.append(
+            "Place every unplaced character with place_map_token before narrating where they stand."
+        )
+    return lines
+
+
+def _map_marks_summary(cells: Sequence[dict[str, Any]], background: str = "") -> str:
+    """What a local map holds, counted by name: "Table x6, Wall (blocks) x54". Terrain that
+    matches the background is already named once, so it is left out of the count."""
+    counts: dict[str, int] = {}
+    for cell in cells:
+        if cell["object"]:
+            name = f"{cell['object']} (blocks)" if cell["blocks"] else cell["object"]
+        elif cell["terrain"] and cell["terrain"] != background:
+            name = f"{cell['terrain']} (difficult)" if cell["difficult"] else cell["terrain"]
+        else:
+            continue
+        counts[name] = counts.get(name, 0) + 1
+    return ", ".join(f"{name} x{count}" for name, count in sorted(counts.items()))
 
 
 def _encounter_lines(

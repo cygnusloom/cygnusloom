@@ -10,7 +10,7 @@ from collections.abc import Callable
 
 from fastapi.testclient import TestClient
 
-from cygnusloom.services import encounters
+from cygnusloom.services import encounters, views
 from cygnusloom.services.events import name_key
 from tests.conftest import content_library
 from tests.factories import create_campaign, open_campaign, signed_in_client
@@ -132,8 +132,231 @@ def test_the_local_map_view_shows_the_characters_in_the_room(
     assert view is not None
     by_name = {participant["name"]: participant for participant in view["participants"]}
     assert by_name["Pip"]["cell"] == (2, 1)
-    assert by_name["Ada"]["cell"] is not None
+    assert by_name["Pip"]["placed"] is True
+    assert by_name["Pip"]["kind"] == "npc"
+    # No token means no logical position: the view does not invent a cell for Ada.
+    assert by_name["Ada"]["cell"] is None
+    assert by_name["Ada"]["placed"] is False
     assert by_name["Ada"]["is_pc"]
+    assert by_name["Ada"]["kind"] == "player character"
+
+    _call(
+        client.app,
+        campaign_id,
+        "place_map_token",
+        {"map": MAP, "name": "Ada", "column": 5, "row": 5},
+    )
+    state = open_campaign(client.app, campaign_id)
+    view = encounters.local_map_view(
+        state,
+        LIBRARY.rule_sets["cairn2e"].grid,
+        LIBRARY.rule_sets["cairn2e"].terrain,
+        LIBRARY.rule_sets["cairn2e"].encounter_objects,
+        state.characters,
+        player.location,
+    )
+    assert view is not None
+    by_name = {participant["name"]: participant for participant in view["participants"]}
+    assert by_name["Ada"]["cell"] == (5, 5)
+    assert by_name["Ada"]["placed"] is True
+
+
+def test_a_token_left_at_another_place_is_not_shown_on_the_map(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, TOWN)
+    _create_local_map(client, campaign_id)
+    _call(
+        client.app,
+        campaign_id,
+        "create_npc",
+        {"name": "Pip", "location": TOWN, "description": "A scruffy courier."},
+    )
+    _call(
+        client.app,
+        campaign_id,
+        "place_map_token",
+        {"map": MAP, "name": "Pip", "column": 2, "row": 1},
+    )
+    _call(
+        client.app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Pip", "location": "Spore Bridge"},
+    )
+    state = open_campaign(client.app, campaign_id)
+    player = state.pc()
+    assert player is not None
+    view = encounters.local_map_view(
+        state,
+        LIBRARY.rule_sets["cairn2e"].grid,
+        LIBRARY.rule_sets["cairn2e"].terrain,
+        LIBRARY.rule_sets["cairn2e"].encounter_objects,
+        state.characters,
+        player.location,
+    )
+    assert view is not None
+    names = {participant["name"] for participant in view["participants"]}
+    assert "Pip" not in names
+
+
+def test_a_character_inside_a_place_can_be_placed_on_its_map(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, TOWN)
+    _create_local_map(client, campaign_id)
+    _call(
+        client.app,
+        campaign_id,
+        "create_location",
+        {
+            "name": "The Drowsy Cap",
+            "description": "A tavern under the oak.",
+            "parent": TOWN,
+        },
+    )
+    _call(
+        client.app,
+        campaign_id,
+        "create_npc",
+        {
+            "name": "Pip",
+            "location": "The Drowsy Cap",
+            "description": "A scruffy courier.",
+        },
+    )
+    placed = _call(
+        client.app,
+        campaign_id,
+        "place_map_token",
+        {"map": MAP, "name": "Pip", "column": 4, "row": 4},
+    )
+    assert placed["placed"] == "Pip"
+    state = open_campaign(client.app, campaign_id)
+    player = state.pc()
+    assert player is not None
+    view = encounters.local_map_view(
+        state,
+        LIBRARY.rule_sets["cairn2e"].grid,
+        LIBRARY.rule_sets["cairn2e"].terrain,
+        LIBRARY.rule_sets["cairn2e"].encounter_objects,
+        state.characters,
+        player.location,
+    )
+    assert view is not None
+    by_name = {participant["name"]: participant for participant in view["participants"]}
+    assert by_name["Pip"]["cell"] == (4, 4)
+
+
+def test_a_prop_token_keeps_its_cell_without_a_character(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, TOWN)
+    _create_local_map(client, campaign_id)
+    _call(
+        client.app,
+        campaign_id,
+        "place_map_token",
+        {"map": MAP, "name": "Wooden Crate", "column": 6, "row": 3},
+    )
+    state = open_campaign(client.app, campaign_id)
+    player = state.pc()
+    assert player is not None
+    view = encounters.local_map_view(
+        state,
+        LIBRARY.rule_sets["cairn2e"].grid,
+        LIBRARY.rule_sets["cairn2e"].terrain,
+        LIBRARY.rule_sets["cairn2e"].encounter_objects,
+        state.characters,
+        player.location,
+    )
+    assert view is not None
+    by_name = {participant["name"]: participant for participant in view["participants"]}
+    assert by_name["Wooden Crate"]["cell"] == (6, 3)
+    assert by_name["Wooden Crate"]["kind"] == "prop"
+    assert by_name["Wooden Crate"]["placed"] is True
+
+
+def test_the_gm_orientation_lists_local_map_positions_and_unplaced_characters(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, TOWN)
+    _create_local_map(client, campaign_id)
+    _call(
+        client.app,
+        campaign_id,
+        "create_npc",
+        {"name": "Pip", "location": TOWN, "description": "A scruffy courier."},
+    )
+    _call(
+        client.app,
+        campaign_id,
+        "place_map_token",
+        {"map": MAP, "name": "Pip", "column": 2, "row": 1},
+    )
+    rules = LIBRARY.rule_sets["cairn2e"]
+    text = views.world_state_text(
+        open_campaign(client.app, campaign_id),
+        rules.campaign,
+        grid=rules.grid,
+        terrain=rules.terrain,
+        encounter_objects=rules.encounter_objects,
+    )
+    assert f"Local map: {MAP} at {TOWN}" in text
+    assert "- Pip (npc), column 2, row 1." in text
+    assert "- Ada (player character), not yet placed." in text
+    assert "Place every unplaced character with place_map_token" in text
+
+
+def test_get_statblock_reports_a_local_map_position(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, TOWN)
+    _create_local_map(client, campaign_id)
+    _call(
+        client.app,
+        campaign_id,
+        "create_npc",
+        {"name": "Pip", "location": TOWN, "description": "A scruffy courier."},
+    )
+    _call(
+        client.app,
+        campaign_id,
+        "place_map_token",
+        {"map": MAP, "name": "Pip", "column": 2, "row": 1},
+    )
+    pip = _call(client.app, campaign_id, "get_statblock", {"name": "Pip"})
+    assert pip["position"] == {"map": MAP, "column": 2, "row": 1}
+    ada = _call(client.app, campaign_id, "get_statblock", {"name": "Ada"})
+    assert "position" not in ada
+
+
+def test_the_local_map_roster_marks_placed_and_unplaced_characters(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, TOWN)
+    _create_local_map(client, campaign_id)
+    _call(
+        client.app,
+        campaign_id,
+        "create_npc",
+        {"name": "Pip", "location": TOWN, "description": "A scruffy courier."},
+    )
+    _call(
+        client.app,
+        campaign_id,
+        "place_map_token",
+        {"map": MAP, "name": "Pip", "column": 2, "row": 1},
+    )
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "column 2, row 1" in page
+    assert "not yet placed" in page
 
 
 def test_the_campaign_page_offers_the_local_map_tab(
