@@ -1,7 +1,8 @@
-"""Structural parity checks for the Worlds Without Number ruleset.
+"""Contract checks for the Worlds Without Number ruleset.
 
-These pin the facts `PARITY.md` records. They assert the loaded content and tool catalog rather
-than scraping the document's prose.
+These pin the loaded content and tool catalog the engine builds on: the project and hireling
+tools, the separate Readied and Stowed pools, the combat defaults, and the structured bestiary
+fields.
 """
 
 from __future__ import annotations
