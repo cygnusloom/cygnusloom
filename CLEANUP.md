@@ -6,6 +6,22 @@ Version: remains `2.0.0`; breaking internal changes are allowed.
 This is the working checklist for the architecture cleanup. It turns the audit findings into
 concrete work. Mark items done as they land. Keep the "Definition of done" honest.
 
+## Status snapshots
+
+**Landed in this pass:** strict JSON schemas; direct tool binding with zero ruleset wrappers;
+one roll-resolution, recovery, and condition-lifecycle primitive; prompt/view extraction; hook,
+effect, attack-flag, shop-effect, morale-trigger, rest-trigger, and enum-source registries;
+visibility metadata; `RuleSet` reduced from 44 flat fields to 18 with content/progression/time/
+item capabilities; neutral contract ruleset and shared test factories; WWN partial-class
+pairing, Effort eligibility, Readied/Stowed pools, armor encumbrance, structured bestiary
+multi-attacks, and PC Morale correction.
+
+**Still open:** `campaigns.py` orchestrator split; generic event payloads; splitting
+`events.py`, `world.py` further, and `combat.py`; `CombatRules` capability grouping; the
+`test_scars.py` private-loader migration; WWN shield-bash AC state, combat actions, structured
+monster abilities, and structured Focus benefit choices; source-accurate project/magic-item
+costs.
+
 ## Definition of done
 
 - A ruleset that reuses existing mechanics can be added with JSON only.
@@ -159,3 +175,8 @@ UI/live check at the end of the cleanup:
 - Create a campaign for each shipped ruleset.
 - Create a character, run one scene, one encounter turn, one save/check, and one recovery.
 - Confirm the Log, journal, and tool results agree.
+
+**Last verification:** ruff clean; `2567 passed in 31.62s` with `-n auto`; live server on a fresh
+throwaway SQLite database served the development login, listed Cairn 2e / Hogwarts RPG / Worlds
+Without Number, and created a WWN Latter Earth campaign and character through the real form. The
+remaining live steps (encounter turn, save/check, recovery) are covered by the automated suite.
