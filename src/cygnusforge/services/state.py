@@ -223,6 +223,15 @@ class Character:
     # when the armor before the action is restored.
     total_defense: bool = False
     total_defense_armor: int = 0
+    # Turns lost to surprise. Each EncounterTurnEnded for this character consumes one.
+    surprised_turns: int = 0
+    # Grappling links two characters. `grappling` is the character held, and `grappled_by` is
+    # the holder. Both carry the rule set's grappled condition.
+    grappling: str = ""
+    grappled_by: str = ""
+    # An execution attack prepared against an unaware target. The weapon is the one prepared.
+    execution_prepared: bool = False
+    execution_weapon: str = ""
     # The character is dead. The body stays where the character fell, with its gear.
     dead: bool = False
     # The character has left the story, and the player plays someone else. It can come back later.

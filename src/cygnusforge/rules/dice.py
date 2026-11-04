@@ -40,6 +40,24 @@ def roll_total(formula: str, rng: random.Random | None = None, *, plus: str | No
     return kept + flat
 
 
+def max_total(formula: str, plus: str | None = None) -> int:
+    """The highest total a formula can roll. A multi-term formula uses the same `plus` mode as
+    `roll_total`; flat bonuses and penalties always add."""
+    if not is_formula(formula):
+        raise ValueError(f"not a dice formula: {formula!r}")
+    dice, flat = _terms(formula)
+    if len(dice) == 1:
+        count, sides = dice[0]
+        return count * sides + flat
+    if plus is None:
+        raise ValueError(f"{formula!r} has several terms, so the rule set's plus mode is needed")
+    if plus not in PLUS_MODES:
+        raise ValueError(f"unknown plus mode: {plus!r}")
+    totals = [count * sides for count, sides in dice]
+    kept = max(totals) if plus == "highest" else sum(totals)
+    return kept + flat
+
+
 def _terms(formula: str) -> tuple[list[tuple[int, int]], int]:
     """The dice terms of a formula as (count, sides), and the flat total of its bonuses."""
     dice: list[tuple[int, int]] = []

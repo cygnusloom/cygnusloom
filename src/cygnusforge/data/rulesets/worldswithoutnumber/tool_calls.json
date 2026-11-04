@@ -286,6 +286,116 @@
   },
   {
     "type": "tool_call",
+    "id": "prepare_execution",
+    "name": "prepare_execution",
+    "world_method": "prepare_execution",
+    "description": "Prepare an execution attack with a carried weapon after a full minute of setup against a target that has not noticed the attacker. The preparation is lost if the target is spooked. Follow it with execute.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The character preparing the execution."
+        },
+        "weapon": {
+          "type": "string",
+          "description": "The carried melee weapon to use."
+        }
+      },
+      "required": [
+        "name",
+        "weapon"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "execute",
+    "name": "execute",
+    "world_method": "execute",
+    "description": "Make a prepared execution attack against an unaware or helpless target. A melee execution hits automatically and deals the weapon's maximum damage; the target should then make the source's save with the attacker's combat skill penalty.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "string",
+          "description": "The unaware or helpless target."
+        },
+        "weapon": {
+          "type": "string",
+          "description": "The weapon prepared for the execution."
+        }
+      },
+      "required": [
+        "target",
+        "weapon"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "grapple",
+    "name": "grapple",
+    "world_method": "grapple",
+    "description": "Record a successful grapple after an unarmed hit and a won opposed Str/Punch check. Both characters carry the grappled condition: neither can move away, only unarmed attacks are possible, and the holder can hurt the target each round.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "holder": {
+          "type": "string",
+          "description": "The character doing the grappling."
+        },
+        "target": {
+          "type": "string",
+          "description": "The character being grappled."
+        }
+      },
+      "required": [
+        "holder",
+        "target"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "break_grapple",
+    "name": "break_grapple",
+    "world_method": "break_grapple",
+    "description": "End a grapple after a successful opposed check or when the holder lets go. Both characters lose the grappled condition.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Either character in the grapple."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "surprise",
+    "name": "surprise",
+    "world_method": "surprise",
+    "description": "Mark a character or side as surprised. A surprised character loses their next turn and cannot attack until that turn passes. Use it when an ambush succeeds and the defenders did not notice the attackers.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the surprised character."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "total_defense",
     "name": "total_defense",
     "world_method": "total_defense",

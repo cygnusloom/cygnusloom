@@ -28,6 +28,7 @@ from cygnusforge.services.events import (
     CharacterSaved,
     ChatGM,
     EncounterTurnBegun,
+    EncounterTurnEnded,
     Harmed,
     Struck,
     current,
@@ -879,6 +880,86 @@ def test_a_carried_shield_only_blocks_shock_when_wielded(client_factory):
     replace(tools, rng=Rolls(1, 1, 1, 1, 1, 1)).attack(FOE, "Claw", PC)
     wielded = _struck(app, campaign_id)[-1]
     assert (wielded.hit, wielded.shock, wielded.shield_round) == (False, 0, 1)
+
+
+def test_an_execution_against_an_unaware_target_does_maximum_damage(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=30)
+    tools.give_item(PC, LONG_SWORD, damage="1d8")
+    tools.add_condition(FOE, "unaware", "watching the wrong doorway")
+
+    tools.prepare_execution(PC, LONG_SWORD)
+    result = tools.execute(FOE, LONG_SWORD)
+
+    assert result["execution"] is True
+    assert result["damage"] == 8
+    assert _character(app, campaign_id, PC).execution_prepared is False
+
+
+def test_grappling_restricts_both_sides_to_unarmed_attacks(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=20)
+    tools.give_item(PC, LONG_SWORD, damage="1d8")
+
+    tools.grapple(FOE, PC)
+    holder = _character(app, campaign_id, FOE)
+    target = _character(app, campaign_id, PC)
+    assert (holder.grappling, holder.grappled_by) == (PC, "")
+    assert (target.grappling, target.grappled_by) == ("", FOE)
+    assert "grappled" in holder.conditions
+    assert "grappled" in target.conditions
+    with pytest.raises(InvalidInput, match="grappled"):
+        tools.player_attack(FOE, LONG_SWORD, attack_roll=10, damage_roll=2)
+
+    tools.break_grapple(PC)
+    freed = _character(app, campaign_id, PC)
+    assert (freed.grappling, freed.grappled_by) == ("", "")
+    assert "grappled" not in freed.conditions
+
+
+def test_a_surprised_character_loses_a_turn_before_acting(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=20)
+
+    result = tools.surprise(FOE)
+    assert result["turns"] == 1
+    assert _character(app, campaign_id, FOE).surprised_turns == 1
+    with pytest.raises(InvalidInput, match="surprised"):
+        tools.attack(FOE, "Claw", PC)
+
+    with Session(app.state.engine) as db:
+        record(db, campaign_id, EncounterTurnEnded(name=FOE))
+        db.commit()
+    assert _character(app, campaign_id, FOE).surprised_turns == 0
+
+
+def test_long_range_takes_the_configured_penalty(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=20, armor=20)
+    tools.give_item(PC, BOW, damage="1d8")
+
+    short = tools.player_attack(FOE, BOW, range_band="short", attack_roll=10, damage_roll=2)
+    short_hit = _struck(app, campaign_id)[-1]
+    long = tools.player_attack(FOE, BOW, range_band="long", attack_roll=10, damage_roll=2)
+    long_hit = _struck(app, campaign_id)[-1]
+
+    assert short["hit"] is False
+    assert long["hit"] is False
+    assert long_hit.to_hit == short_hit.to_hit - 2
+
+
+def test_dual_wielding_applies_its_hit_penalty_and_damage_bonus(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=20, armor=20)
+    tools.give_item(PC, LONG_SWORD, damage="1d8")
+
+    tools.player_attack(FOE, LONG_SWORD, attack_roll=10, damage_roll=2)
+    single = _struck(app, campaign_id)[-1]
+    tools.player_attack(FOE, LONG_SWORD, attack_roll=10, damage_roll=2, dual_wield=True)
+    paired = _struck(app, campaign_id)[-1]
+
+    assert paired.to_hit == single.to_hit - 1
+    assert paired.raw == single.raw + 2
 
 
 def test_total_defense_adds_its_bonus_until_the_next_turn(client_factory):

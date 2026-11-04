@@ -460,6 +460,8 @@ def player_attack(
     modifier: str = "",
     roll: int = 0,
     hit_modifier: int = 0,
+    range_band: str = "",
+    dual_wield: bool = False,
 ) -> dict[str, Any]:
     """Record the player character's attack with a carried weapon, or unarmed, using the d20 the
     player rolled. The engine rolls damage; Shock applies on a miss. `hit_modifier` carries cover,
@@ -467,7 +469,13 @@ def player_attack(
     if not 1 <= roll <= 20:
         raise InvalidInput("the player's attack roll must be 1 to 20")
     return ctx.world.player_attack(
-        target, weapon, modifier, attack_roll=roll, hit_modifier=hit_modifier
+        target,
+        weapon,
+        modifier,
+        attack_roll=roll,
+        hit_modifier=hit_modifier,
+        range_band=range_band,
+        dual_wield=dual_wield,
     )
 
 

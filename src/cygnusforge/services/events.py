@@ -1158,6 +1158,10 @@ class EncounterEnded(GameEvent):
                 character.armor = character.total_defense_armor
                 character.total_defense = False
                 character.total_defense_armor = 0
+            character.grappling = ""
+            character.grappled_by = ""
+            if "grappled" in character.conditions:
+                character.conditions.remove("grappled")
         state.encounter = None
 
     def render(self) -> str:
@@ -1486,6 +1490,9 @@ class EncounterTurnEnded(GameEvent):
         encounter = state.encounter
         if encounter is None:
             return
+        character = state.characters.get(name_key(self.name))
+        if character is not None and character.surprised_turns > 0:
+            character.surprised_turns -= 1
         encounter.acting = None
         encounter.moved = 0
         encounter.up += 1
@@ -1562,6 +1569,111 @@ class ShieldBashed(GameEvent):
 
     def render(self) -> str:
         return f"{self.name} bashes with a shield; its AC bonus is suspended until the next turn."
+
+
+@dataclass(frozen=True)
+class ExecutionPrepared(GameEvent):
+    """A character spent the preparation time for an execution attack with `weapon`."""
+
+    kind: ClassVar[str] = "combat.execution_prepared"
+    hidden: ClassVar[bool] = True
+
+    name: str
+    weapon: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.execution_prepared = True
+        character.execution_weapon = self.weapon
+
+    def render(self) -> str:
+        return f"{self.name} prepares an execution attack with {self.weapon}."
+
+
+@dataclass(frozen=True)
+class ExecutionTaken(GameEvent):
+    """An execution attack was made, clearing the preparation."""
+
+    kind: ClassVar[str] = "combat.execution_taken"
+    hidden: ClassVar[bool] = True
+
+    name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.execution_prepared = False
+        character.execution_weapon = ""
+
+    def render(self) -> str:
+        return f"{self.name} makes an execution attack."
+
+
+@dataclass(frozen=True)
+class GrappleStarted(GameEvent):
+    """One character grapples another. Both carry the grappled condition, and both are linked
+    until GrappleEnded."""
+
+    kind: ClassVar[str] = "combat.grapple_started"
+
+    holder: str
+    target: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        holder = state.characters[name_key(self.holder)]
+        target = state.characters[name_key(self.target)]
+        holder.grappling = target.name
+        target.grappled_by = holder.name
+        for character in (holder, target):
+            if "grappled" not in character.conditions:
+                character.conditions.append("grappled")
+
+    def render(self) -> str:
+        return f"{self.holder} grapples {self.target}."
+
+
+@dataclass(frozen=True)
+class GrappleEnded(GameEvent):
+    """A grapple ends, freeing both characters and removing the grappled condition."""
+
+    kind: ClassVar[str] = "combat.grapple_ended"
+
+    name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        other_name = character.grappling or character.grappled_by
+        other = state.characters.get(name_key(other_name)) if other_name else None
+        character.grappling = ""
+        character.grappled_by = ""
+        if "grappled" in character.conditions:
+            character.conditions.remove("grappled")
+        if other is not None:
+            other.grappling = ""
+            other.grappled_by = ""
+            if "grappled" in other.conditions:
+                other.conditions.remove("grappled")
+
+    def render(self) -> str:
+        return f"{self.name} breaks free of the grapple."
+
+
+@dataclass(frozen=True)
+class Surprised(GameEvent):
+    """A character was caught off guard. They lose `turns` turns, consumed as each of their
+    encounter turns ends."""
+
+    kind: ClassVar[str] = "combat.surprised"
+    hidden: ClassVar[bool] = True
+
+    name: str
+    turns: int = 1
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.surprised_turns = max(character.surprised_turns, self.turns)
+
+    def render(self) -> str:
+        return f"{self.name} is surprised and loses {self.turns} turn(s)."
 
 
 @dataclass(frozen=True)

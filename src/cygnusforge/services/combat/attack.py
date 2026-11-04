@@ -346,6 +346,10 @@ def attack(
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     source = _participant(state, attacker)
+    if source.grappled_by and name_key(attack_name) not in combat.unarmed_names:
+        raise InvalidInput(f"{source.name} is grappled and can only make unarmed attacks")
+    if source.surprised_turns > 0:
+        raise InvalidInput(f"{source.name} is surprised and cannot act this turn")
     if source.kind != NPC_KIND:
         raise InvalidInput(f"{source.name} is a player character; use player_attack instead")
     _living(source, combat)
@@ -746,6 +750,8 @@ def player_attack(
     damage_roll: int | None = None,
     hit_modifier: int = 0,
     conditions: Mapping[str, ConditionRules] | None = None,
+    range_band: str = "",
+    dual_wield: bool = False,
 ) -> dict[str, Any]:
     """A player character's hit. The engine rolls the damage unless the player's roll is passed as
     `damage_roll`. The hit mode decides whether it lands. A group takes only impaired attacks.
@@ -760,6 +766,10 @@ def player_attack(
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     pc = _player_character(state)
+    if pc.grappled_by and name_key(weapon) not in combat.unarmed_names:
+        raise InvalidInput(f"{pc.name} is grappled and can only make unarmed attacks")
+    if pc.surprised_turns > 0:
+        raise InvalidInput(f"{pc.name} is surprised and cannot act this turn")
     _living(pc, combat)
     if damage_roll is not None and damage_roll < 1:
         raise InvalidInput("the player's damage roll must be at least 1")
@@ -770,6 +780,19 @@ def player_attack(
     _require_impaired(struck, modifier_name(modifier), combat)
     raw = damage_roll if damage_roll is not None else roll_total(dice, rng, plus=plus)
     bonuses = _player_bonuses(combat, pc, name, spec, weapon_feature)
+    range_penalty = 0
+    if range_band:
+        band = range_band.strip().casefold()
+        if band not in combat.range_penalties:
+            options = ", ".join(sorted(combat.range_penalties)) or "none"
+            raise InvalidInput(f"there is no range band named {range_band!r}; choose {options}")
+        range_penalty = combat.range_penalties[band]
+    dual_penalty = 0
+    if dual_wield:
+        if not (combat.dual_wield_hit_penalty or combat.dual_wield_damage_bonus):
+            raise InvalidInput("this rule set has no dual-wielding action")
+        dual_penalty = combat.dual_wield_hit_penalty
+        raw += combat.dual_wield_damage_bonus
     raw += bonuses.damage
     # The hit is rolled after the damage, so a roll_vs_defense rule set draws its dice in the same
     # order it always has.
@@ -780,7 +803,12 @@ def player_attack(
             attack_roll if attack_roll is not None else roll_total(combat.check_die, rng, plus=plus)
         )
         to_hit = (
-            natural + bonuses.to_hit + hit_modifier + _condition_attack_modifier(pc, conditions)
+            natural
+            + bonuses.to_hit
+            + hit_modifier
+            + range_penalty
+            + dual_penalty
+            + _condition_attack_modifier(pc, conditions)
         )
     return _strike(
         db,

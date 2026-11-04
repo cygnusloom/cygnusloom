@@ -46,6 +46,7 @@ from cygnusforge.content.library import (
     Wilderness,
     WorldTerrain,
 )
+from cygnusforge.rules.dice import max_total
 from cygnusforge.services import advancements as advancements_service
 from cygnusforge.services import aid, combat, encounters, morale
 from cygnusforge.services import attacks as attack_modifiers
@@ -76,12 +77,17 @@ from cygnusforge.services.dungeon import dungeon_rules
 from cygnusforge.services.dungeon import roll_reaction as roll_reaction_service
 from cygnusforge.services.events import (
     PC_KIND,
+    ExecutionPrepared,
+    ExecutionTaken,
+    GrappleEnded,
+    GrappleStarted,
     MaxChanged,
     ProjectAbandoned,
     ProjectAdvanced,
     ProjectStarted,
     Recovered,
     SkillChanged,
+    Surprised,
     TotalDefenseTaken,
     current,
     load_state,
@@ -1150,6 +1156,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         attack_roll: int | None = None,
         damage_roll: int | None = None,
         hit_modifier: int = 0,
+        range_band: str = "",
+        dual_wield: bool = False,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.player_attack(
@@ -1167,6 +1175,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 damage_roll=damage_roll,
                 hit_modifier=hit_modifier,
                 conditions=self.conditions,
+                range_band=range_band,
+                dual_wield=dual_wield,
             )
 
     def attack_dice(self, weapon: str, modifier: str = "") -> str:
@@ -1217,6 +1227,111 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 spec=self.character,
                 rules=self.combat,
             )
+
+    def prepare_execution(self, name: str, weapon: str) -> dict[str, Any]:
+        """Prepare an execution attack with a carried weapon. The target must be unaware or
+        helpless when the attack is made."""
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            character = state.characters.get(name_key(name))
+            if character is None:
+                raise InvalidInput(f"there is no character named {name!r}")
+            feature = self._weapon_feature(weapon)
+            held = next((item for item in character.items if same_item_name(item.name, weapon)), None)
+            if feature is None and (held is None or not held.damage):
+                raise InvalidInput(f"{weapon!r} is not a carried weapon with damage dice")
+            record(
+                db,
+                self.campaign_id,
+                ExecutionPrepared(name=character.name, weapon=weapon),
+            )
+            db.commit()
+            return {"character": character.name, "weapon": weapon, "prepared": True}
+
+    def execute(self, target: str, weapon: str) -> dict[str, Any]:
+        """Make a prepared execution attack against an unaware or helpless target. A melee
+        execution hits automatically and does the weapon's maximum damage."""
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            pc = state.pc()
+            if pc is None:
+                raise InvalidInput("there is no player character in this campaign")
+            if not pc.execution_prepared or not same_item_name(pc.execution_weapon, weapon):
+                raise InvalidInput(f"{pc.name} has not prepared an execution with {weapon!r}")
+            struck = state.characters.get(name_key(target))
+            if struck is None:
+                raise InvalidInput(f"there is no character named {target!r}")
+            helpless = {"unaware", "unconscious"}
+            if not helpless.intersection(struck.conditions):
+                raise InvalidInput(f"{struck.name} is aware and cannot be executed")
+            feature = self._weapon_feature(weapon)
+            held = next((item for item in pc.items if same_item_name(item.name, weapon)), None)
+            dice = feature.damage if feature is not None and feature.damage else (
+                held.damage if held is not None else ""
+            )
+            if not dice:
+                raise InvalidInput(f"{weapon!r} has no damage dice")
+            damage = max_total(dice, self.plus)
+            record(db, self.campaign_id, ExecutionTaken(name=pc.name))
+            result = combat.player_attack(
+                db,
+                self.campaign_id,
+                struck.name,
+                weapon,
+                self._rules(),
+                self.rng,
+                plus=self.plus,
+                spec=self.character,
+                weapon_feature=feature,
+                attack_roll=20,
+                damage_roll=damage,
+                conditions=self.conditions,
+            )
+            db.commit()
+            return {**result, "execution": True, "damage": damage}
+
+    def grapple(self, holder: str, target: str) -> dict[str, Any]:
+        """Record a successful grapple. Both characters carry the grappled condition."""
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            attacker = state.characters.get(name_key(holder))
+            struck = state.characters.get(name_key(target))
+            if attacker is None:
+                raise InvalidInput(f"there is no character named {holder!r}")
+            if struck is None:
+                raise InvalidInput(f"there is no character named {target!r}")
+            if attacker.name == struck.name:
+                raise InvalidInput("a character cannot grapple themselves")
+            record(db, self.campaign_id, GrappleStarted(holder=attacker.name, target=struck.name))
+            db.commit()
+            return {"holder": attacker.name, "target": struck.name}
+
+    def break_grapple(self, name: str) -> dict[str, Any]:
+        """End a grapple, freeing both characters."""
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            character = state.characters.get(name_key(name))
+            if character is None:
+                raise InvalidInput(f"there is no character named {name!r}")
+            if not character.grappling and not character.grappled_by:
+                raise InvalidInput(f"{character.name} is not grappling")
+            record(db, self.campaign_id, GrappleEnded(name=character.name))
+            db.commit()
+            return {"character": character.name}
+
+    def surprise(self, name: str) -> dict[str, Any]:
+        """Mark a character as surprised; they lose the configured number of turns."""
+        rules = self._rules()
+        if rules.surprise_turns <= 0:
+            raise InvalidInput("this rule set has no surprise rule")
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            character = state.characters.get(name_key(name))
+            if character is None:
+                raise InvalidInput(f"there is no character named {name!r}")
+            record(db, self.campaign_id, Surprised(name=character.name, turns=rules.surprise_turns))
+            db.commit()
+            return {"character": character.name, "turns": rules.surprise_turns}
 
     def total_defense(self, name: str) -> dict[str, Any]:
         """Spend a Main action on total defense. The configured bonus lasts until the

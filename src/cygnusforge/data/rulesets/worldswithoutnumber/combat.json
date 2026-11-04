@@ -31,6 +31,10 @@
     "natural_one_misses": true,
     "natural_max_hits": true,
     "total_defense": 2,
+    "range_bands": {"short": 0, "long": -2},
+    "dual_wield_hit_penalty": -1,
+    "dual_wield_damage_bonus": 2,
+    "surprise_turns": 1,
     "level_damage": {
       "template_kind": "class",
       "templates": [

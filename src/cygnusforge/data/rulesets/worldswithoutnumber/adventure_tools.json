@@ -275,6 +275,17 @@
           "default": 0,
           "description": "A situational bonus or penalty to the hit roll: -2 long range, -4 firing while meleed or attacking prone, -1 dual wielding, -2 or -4 cover, -2 for total defence."
         },
+        "range_band": {
+          "type": "string",
+          "enum": ["short", "long"],
+          "default": "short",
+          "description": "The range band the shot is fired at. Short has no penalty; long gives -2 to hit."
+        },
+        "dual_wield": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when attacking with two one-handed melee weapons. The engine applies the rule set's dual-wield hit penalty and damage bonus."
+        },
         "prompt": {
           "type": "string",
           "description": "What the player is asked to roll, such as 'Roll your attack with the long sword.'"

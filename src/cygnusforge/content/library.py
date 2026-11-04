@@ -885,6 +885,15 @@ class CombatRules:
     # The defense bonus from spending a Main action on total defense. Zero when the rule set
     # has no such action.
     total_defense_bonus: int = 0
+    # The hit modifier for each attack range band, such as {"short": 0, "long": -2}.
+    range_penalties: Mapping[str, int] = field(default_factory=dict)
+    # Two-weapon fighting's hit penalty and damage bonus. Zero when the rule set has no such
+    # action.
+    dual_wield_hit_penalty: int = 0
+    dual_wield_damage_bonus: int = 0
+    # How many of a surprised character's turns are lost. Zero when the rule set has no
+    # surprise rule.
+    surprise_turns: int = 0
 
     @property
     def damage(self) -> tuple[DamageStep, ...]:
@@ -2628,6 +2637,21 @@ def _load_wilderness_travel(
     )
 
 
+def _signed_map(data: Mapping[str, Any], key: str, label: str) -> dict[str, int]:
+    """A name-to-whole-number map that may be negative, such as range penalties."""
+    value = data.get(key, {})
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label}: {key!r} must map names to whole numbers")
+    result: dict[str, int] = {}
+    for name, number in value.items():
+        if not isinstance(name, str) or not name.strip():
+            raise ContentError(f"{label}: {key!r} needs named entries")
+        if not isinstance(number, int) or isinstance(number, bool):
+            raise ContentError(f"{label}: {key!r} {name!r} must be a whole number")
+        result[name.strip().casefold()] = number
+    return result
+
+
 def _whole_map(data: Mapping[str, Any], key: str, label: str) -> dict[str, int]:
     value = data.get(key)
     if not isinstance(value, Mapping) or not value:
@@ -2806,6 +2830,10 @@ def _load_combat(
             "natural_one_misses",
             "natural_max_hits",
             "total_defense",
+            "range_bands",
+            "dual_wield_hit_penalty",
+            "dual_wield_damage_bonus",
+            "surprise_turns",
             "save",
             "initiative_mode",
             "groups",
@@ -2918,6 +2946,18 @@ def _load_combat(
         initiative=_load_initiative(data, character, label),
         module=module,
         total_defense_bonus=_optional_whole(data, "total_defense", label) or 0,
+        range_penalties=_signed_map(data, "range_bands", label),
+        dual_wield_hit_penalty=(
+            _whole(data, "dual_wield_hit_penalty", label, -99)
+            if "dual_wield_hit_penalty" in data
+            else 0
+        ),
+        dual_wield_damage_bonus=(
+            _whole(data, "dual_wield_damage_bonus", label, -99)
+            if "dual_wield_damage_bonus" in data
+            else 0
+        ),
+        surprise_turns=_optional_whole(data, "surprise_turns", label) or 0,
     )
 
 
