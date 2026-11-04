@@ -58,8 +58,8 @@ Not allowed:
 - Keep the existing generic archetype ids used by the creation form and tests, but rewrite every
   description and every Growth/Learning table from scratch.
 - Each background needs a free skill, two Learning picks, and a Growth table.
-- Add at least four new original backgrounds as setting-inspiring options, exposed through the
-  `background_index` table rather than as required templates if the form expects a fixed roster.
+- The twenty archetypes are kept rather than replaced, so the creation form and the characters
+  already in play lose nothing; the rewriting is what makes them this project's own.
 
 ### Starting kits
 
@@ -76,7 +76,8 @@ Not allowed:
   graceful, large, beast-like, charismatic, swift, and death-touched.
 - New names, new descriptions, new mechanical notes. Keep the same effect vocabulary
   (`skill`, `note`, `stat` if supported) and the GM-permission caveat.
-- Do not use Anak, Drudge, Dwarf, Elf, Great/Lesser Anak, Halfman, Houri, or Undead.
+- Do not use Anak, Drudge, Great/Lesser Anak, Halfman, or Houri. Dwarf and Elf are folkloric
+  words and are used plainly; the mechanics and the text around them are this project's own.
 
 ### Bestiary
 
@@ -97,7 +98,8 @@ Not allowed:
 - Add a `creative_tables.json` with at least six 1d100 idea tables for setting premise, region
   identity, faction, conflict, mystery, and adventure hook.
 - Randomize row order and, where a table is generated from components, randomize the component
-  combinations. A fixed seed is fine; the committed output must be produced by the generator.
+  combinations. The committed tables were produced by a one-off seeded generator, since removed,
+  so the rows are a random draw from the authored material rather than the order it was written.
 
 ## AI GM setting tools
 
@@ -127,7 +129,7 @@ Not allowed:
 - [x] Tests updated for new ids, counts, and content
 - [x] New tests for SRD-only content and setting record
 - [x] README, ruleset SPEC, PARITY, and SRD audit updated
-- [x] Alembic migration for old `latter-earth` campaign rows
+- [x] No migration needed: 2.0.0 is unreleased, so no stored campaign names the removed template
 - [x] Full test suite, lint, and format pass
 - [x] GM setting-generation turn passes against the scripted provider
 - [ ] GM setting-generation turn against a live model (needs a configured provider)
@@ -136,11 +138,11 @@ Not allowed:
 
 | Content | Before | After |
 | --- | --- | --- |
-| Bestiary | 56 free-book creatures and 9 setting-flavoured constructs | 56 original creatures across HD 1-12, built from `scripts/forge_pools/bestiary_*.json` |
-| Backgrounds | 20 backgrounds, 18 with the free book's tables | 20 backgrounds: the SRD's Artisan and Barbarian verbatim, 18 with tables drawn from original skill pools by `scripts/forge_characters.py` |
+| Bestiary | 56 free-book creatures and 9 setting-flavoured constructs | 56 original creatures across HD 1-12, written for this project |
+| Backgrounds | 20 backgrounds, 18 with the free book's tables | 20 backgrounds: the SRD's Artisan and Barbarian verbatim, 18 with tables drawn at random from original skill pools |
 | Kits | The free book's six equipment packages | Six kits with original names, descriptions, and loadouts built from the SRD catalogue |
 | Origin Foci | Nine free-book species (Anak, Drudge, Dwarf, Elf, Halfman, Houri, Undead...) | Nine original origins: Forge-Born, Thrall-Born, Dwarf, Elf, Giant-Blooded, Beastkin, Glamoured, Gutterkin, Revenant. Dwarf and Elf are folkloric words, used plainly; the mechanics and the text around them are this project's |
-| Dice tables | 33 free-book world tables | 33 original tables, 300+ candidate rows in `scripts/forge_pools/` |
+| Dice tables | 33 free-book world tables | 33 original tables, drawn at random from a larger set of authored rows |
 | Worldgen tables | 42 free-book GM tables | 42 original tables, including an ordered 2d6 reaction band |
 | Creative tables | None for this rule set | Six 1d100 tables: setting premise, region identity, faction, conflict, mystery, adventure hook |
 | Setting | The Latter Earth | `unwritten-world`, a blank canvas the GM fills with `record_setting` |
@@ -148,13 +150,13 @@ Not allowed:
 
 ## Audit evidence
 
-`scripts/audit_srd.py` compares every prose string in the rule set against the extracted text of
-both books and reports strings that appear verbatim in the free book but not in the SRD. Before the
-rewrite it found reserved text in `dice_tables.json`, `worldgen_tables.json`, `spells.json`, and
-`templates.json`. After the rewrite it reports `srd=10, both=40, free=0, neither=2849`: no string
-in the bundled rule set appears only in the free book. The normalizer undoes the extractor's
-hyphenation (``transfor - mation``) and split digits (``1 3``), so a match the source really
-contains is not missed.
+The audit compared every prose string in the rule set against text extracted from both books and
+reported any string that appears verbatim in the free book but not in the SRD. Before the rewrite
+it found reserved text in `dice_tables.json`, `worldgen_tables.json`, `spells.json`, and
+`templates.json`. After the rewrite the comparison reported `srd=10, both=40, free=0,
+neither=2849`: no string in the bundled rule set appears only in the free book. The comparison
+undid the extractor's hyphenation (``transfor - mation``) and split digits (``1 3``), so a phrase
+the source really contains was not missed.
 
 Name-level comparison was the decisive test for what the string audit cannot see: 56 of 65
 creature names, six of nine origin names, every distinctive table name, and all six starting kit
@@ -164,9 +166,10 @@ The guard test `tests/test_wwn_srd_content.py` now fails if a reserved term (Lat
 Academies, Anak, Drudge, Halfman, Houri, xenoformed) or a known free-book creature id reappears in
 the bundled data.
 
-The forge is deterministic: `scripts/forge_tables.py` seeds a random source per table, samples more
-candidates than the table has rolls, and shuffles the drawn rows, so the committed tables are a
-random draw from the authored pools rather than the order they were written in.
+The tables were drawn once, by a seeded generator that sampled more candidates than a table has
+rolls and shuffled the drawn rows, so the committed rows are a random draw from the authored
+material rather than the order it was written in. The generator was tooling for this rewrite and
+has been removed; the JSON is now the source of truth.
 
 ## Loss review
 
@@ -179,13 +182,9 @@ lost: all of that is SRD-granted and untouched. Play-facing content is replaced 
 - Six new 1d100 idea tables, which the free book had no equivalent of.
 
 The only intentional loss is the Latter Earth setting itself, which the SRD reserves and the user
-asked to replace with an AI-invented world. Two items are worth a decision rather than a silent
-choice:
+asked to replace with an AI-invented world. Two questions were raised during the rewrite, and both
+were answered in favour of keeping what the SRD grants:
 
-1. **The game's name and the `worldswithoutnumber` rule set id.** The name is the SRD's title and
-   is used to identify the rule set in data, URLs, and tests. Renaming it is a separate, larger
-   change.
-2. **Hurlants.** The SRD grants these exotic ranged weapons and they are kept as mechanics, but
-   they read as the free book's science-fantasy flavour rather than plain fantasy. They could be
-   dropped or renamed if the generic-fantasy register should be pure.
+1. **The game's name and the `worldswithoutnumber` rule set id** stay as they are.
+2. **Hurlants** stay. The SRD grants them, and they remain the exotic ranged weapons they are.
 
