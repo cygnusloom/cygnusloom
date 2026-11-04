@@ -8,8 +8,7 @@ Reference: `Worlds_Without_Number_System_Reference_Document.pdf` in this directo
 The rule set was first built from the free book and its character sheet, which are copyrighted and
 have been removed. The SRD grants the mechanics, class, art, and spell names, equipment, progression,
 and two example backgrounds. It does not grant the setting, the creatures, the starting packages,
-or the GM tables, so those are original to this project. [The rewrite log](../../../docs/WWN_SRD_REWRITE.md)
-records the audit and what replaced what.
+or the GM tables, so those are original to this project.
 
 ## Goal (from the user)
 
