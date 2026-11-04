@@ -20,6 +20,7 @@ from cygnusforge.services.injuries import EffectContext, run_effects
 from tests import factories
 from tests.conftest import content_library
 from tests.support import DEFAULT_RULE_SET, content_tree
+from tests.turns import take_turn
 
 CAIRN = content_library().rule_sets["cairn2e"]
 PC = "Mara"
@@ -156,7 +157,9 @@ def test_a_hit_to_exactly_zero_hp_gives_the_scar_for_the_harm_taken(client_facto
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Grave Thing", claw="1d20")
     _set_max(app, campaign_id, "hp", 10)
+    take_turn(tools, "Grave Thing")
     _hit(tools, "Grave Thing", PC, 7)
+    take_turn(tools, "Grave Thing")
     result = _hit(tools, "Grave Thing", PC, 3)
 
     assert result["injury"] == "Walloped"
@@ -170,6 +173,7 @@ def test_the_scar_roll_is_capped_at_the_last_entry(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Grave Thing", claw="1d20")
     _set_max(app, campaign_id, "hp", 20)
+    take_turn(tools, "Grave Thing")
     result = _hit(tools, "Grave Thing", PC, 20)
 
     assert result["injury"] == "Doomed"
@@ -180,6 +184,7 @@ def test_a_hit_that_leaves_hp_above_zero_gives_no_scar(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Grave Thing", claw="1d20")
     _set_max(app, campaign_id, "hp", 10)
+    take_turn(tools, "Grave Thing")
     result = _hit(tools, "Grave Thing", PC, 1)
 
     assert "injury" not in result
@@ -190,6 +195,7 @@ def test_a_hit_that_takes_hp_to_zero_and_overflows_gains_a_scar_and_owes_a_save(
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Grave Thing", claw="1d20")
     _set_max(app, campaign_id, "hp", 3)
+    take_turn(tools, "Grave Thing")
     result = _hit(tools, "Grave Thing", PC, 5)
 
     assert result["harm"] == {"hp": 3, "str": 2}
@@ -201,6 +207,7 @@ def test_a_hit_that_takes_hp_to_zero_and_overflows_gains_a_scar_and_owes_a_save(
 def test_a_foe_brought_to_zero_gains_no_scar(client_factory):
     _, _, tools = _fight(client_factory)
     _foe(tools, "Bo", hp=2)
+    take_turn(tools, PC)
     result = replace(tools, rng=factories.Rolls(2, 1)).player_attack("Bo", "Sword")
 
     assert "injury" not in result
@@ -219,6 +226,7 @@ def test_damage_trigger_can_injure_an_npc_without_depleting_the_selected_stat(
     tools = replace(tools, combat=_injury_combat(tmp_path, injuries))
     _foe(tools, "Bo", hp=10)
 
+    take_turn(tools, PC)
     result = replace(tools, rng=factories.Rolls(1)).player_attack("Bo", "Sword")
 
     assert result["harm"] == {"hp": 1}
@@ -241,7 +249,9 @@ def test_the_statblock_names_the_conditions_and_scars_a_character_has(client_fac
     assert not any(line.startswith("Injuries:") for line in lines)
 
     _set_max(app, campaign_id, "hp", 10)
+    take_turn(tools, "Grave Thing")
     _hit(tools, "Grave Thing", PC, 7)
+    take_turn(tools, "Grave Thing")
     _hit(tools, "Grave Thing", PC, 3)
 
     lines = tools.get_statblock(PC)["statblock"]

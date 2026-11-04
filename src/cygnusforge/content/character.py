@@ -272,6 +272,17 @@ class TemplateRequirement:
 
 
 @dataclass(frozen=True)
+class TemplateGrant:
+    """What a template hands the character at creation beyond stats, skills, and features: items,
+    money, and the equipment already worn or wielded. Names are the rule set's catalogue names, so
+    a starting kit reads the way the book's equipment list does."""
+
+    items: tuple[str, ...] = ()
+    silver: int = 0
+    equip: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class Template:
     id: str
     kind: str
@@ -298,6 +309,8 @@ class Template:
     template_requirements: tuple[TemplateRequirement, ...] = ()
     # Selections with the same key represent the same choice across different kinds.
     choice_key: str = ""
+    # Items, money, and equipment handed over at creation, such as a starting equipment kit.
+    grant: TemplateGrant = field(default_factory=TemplateGrant)
 
 
 @dataclass(frozen=True)
@@ -1165,7 +1178,35 @@ def _template(
         compatible_with=_template_compatibility(data.get("compatible_with", {}), label),
         template_requirements=_template_requirements(data.get("template_requirements", []), label),
         choice_key=choice_key,
+        grant=_template_grant(data.get("grant"), label),
     )
+
+
+def _template_grant(value: object, label: str) -> TemplateGrant:
+    """The items, money, and equipment a template hands over at creation."""
+    if value is None:
+        return TemplateGrant()
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label}: 'grant' must be an object")
+    unknown = sorted(set(value) - {"items", "silver", "equip"})
+    if unknown:
+        raise ContentError(f"{label}: 'grant' has unknown keys: {', '.join(unknown)}")
+    silver = value.get("silver", 0)
+    if not isinstance(silver, int) or isinstance(silver, bool) or silver < 0:
+        raise ContentError(f"{label}: 'grant.silver' must be a whole number of 0 or more")
+    return TemplateGrant(
+        items=_text_items(value.get("items", []), f"{label}: 'grant.items'"),
+        silver=silver,
+        equip=_text_items(value.get("equip", []), f"{label}: 'grant.equip'"),
+    )
+
+
+def _text_items(value: object, label: str) -> tuple[str, ...]:
+    if not isinstance(value, list) or not all(
+        isinstance(item, str) and item.strip() for item in value
+    ):
+        raise ContentError(f"{label} must be a list of item names")
+    return tuple(item.strip() for item in value)
 
 
 def _template_compatibility(value: object, label: str) -> dict[str, tuple[str, ...]]:

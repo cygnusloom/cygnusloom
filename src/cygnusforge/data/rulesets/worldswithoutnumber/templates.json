@@ -150,5 +150,158 @@
       }
     ],
     "names": "names"
+  },
+  {
+    "type": "template",
+    "id": "pkg_armored_warrior",
+    "kind": "kit",
+    "name": "Armored Warrior",
+    "description": "A fighter's kit: a suit of pieced armor, a large shield, a short sword and dagger, and the gear to keep a camp. Every character carries it at creation.",
+    "grant": {
+      "items": [
+        "Pieced Armor",
+        "Large Shield",
+        "Short Sword",
+        "Dagger",
+        "Backpack",
+        "Tinder Box",
+        "Torch",
+        "Torch",
+        "Torch"
+      ],
+      "equip": ["Pieced Armor", "Large Shield"]
+    },
+    "names": "names"
+  },
+  {
+    "type": "template",
+    "id": "pkg_mage_healer_scholar",
+    "kind": "kit",
+    "name": "Mage, Healer, or Scholar",
+    "description": "A scholar's kit: a staff and two daggers, lantern and oil, a writing kit and paper, a healer's pouch, and food and water, with 80 silver to spare.",
+    "grant": {
+      "items": [
+        "Dagger",
+        "Dagger",
+        "Staff",
+        "Backpack",
+        "Lantern",
+        "Tinder Box",
+        "Oil, One Pint",
+        "Oil, One Pint",
+        "Writing Kit",
+        "Paper, 10 Sheets",
+        "Paper, 10 Sheets",
+        "Rations, One Week",
+        "Waterskin",
+        "Healer's Pouch"
+      ],
+      "silver": 80
+    },
+    "names": "names"
+  },
+  {
+    "type": "template",
+    "id": "pkg_ranger_archer",
+    "kind": "kit",
+    "name": "Ranger or Archer",
+    "description": "A hunter's kit: a buff coat, a large bow with twenty arrows, a dagger and hand axe, and the gear to camp in the field, with 20 silver to spare.",
+    "grant": {
+      "items": [
+        "Buff Coat",
+        "Bow, Large",
+        "Arrows, 20",
+        "Dagger",
+        "Hand Axe",
+        "Backpack",
+        "Cooking Utensils",
+        "Rations, One Week",
+        "Waterskin",
+        "Tinder Box",
+        "Torch",
+        "Torch",
+        "Torch"
+      ],
+      "silver": 20,
+      "equip": ["Buff Coat"]
+    },
+    "names": "names"
+  },
+  {
+    "type": "template",
+    "id": "pkg_roguish_wanderer",
+    "kind": "kit",
+    "name": "Roguish Wanderer",
+    "description": "A thief's kit: a buff coat and small shield, a short sword and a brace of throwing blades, rope and a grappling hook, and the gear to travel light.",
+    "grant": {
+      "items": [
+        "Buff Coat",
+        "Small Shield",
+        "Short Sword",
+        "Throwing Blade",
+        "Throwing Blade",
+        "Throwing Blade",
+        "Throwing Blade",
+        "Throwing Blade",
+        "Backpack",
+        "Rations, One Week",
+        "Waterskin",
+        "Tinder Box",
+        "Torch",
+        "Torch",
+        "Torch",
+        "Grappling Hook",
+        "Rope, 50 ft"
+      ],
+      "equip": ["Buff Coat", "Small Shield"]
+    },
+    "names": "names"
+  },
+  {
+    "type": "template",
+    "id": "pkg_adventuring_peasant",
+    "kind": "kit",
+    "name": "Adventuring Peasant",
+    "description": "A villager's kit: a war shirt, a large shield, a light spear and dagger, and the gear to keep a camp. A mule and cart are transport, not pack gear.",
+    "grant": {
+      "items": [
+        "War Shirt",
+        "Large Shield",
+        "Light Spear",
+        "Dagger",
+        "Backpack",
+        "Rations, One Week",
+        "Tinder Box",
+        "Torch",
+        "Torch",
+        "Torch"
+      ],
+      "equip": ["War Shirt", "Large Shield"]
+    },
+    "names": "names"
+  },
+  {
+    "type": "template",
+    "id": "pkg_gentry_wayfarer",
+    "kind": "kit",
+    "name": "Gentry Wayfarer",
+    "description": "A gentle-born traveller's kit: a buff coat and small shield, a short sword, fine clothing, a writing kit and paper, and the gear to keep a camp, with 20 silver to spare.",
+    "grant": {
+      "items": [
+        "Buff Coat",
+        "Small Shield",
+        "Short Sword",
+        "Backpack",
+        "Rations, One Week",
+        "Waterskin",
+        "Clothes, Fine",
+        "Writing Kit",
+        "Paper, 10 Sheets",
+        "Paper, 10 Sheets"
+      ],
+      "silver": 20,
+      "equip": ["Buff Coat", "Small Shield"]
+    },
+    "names": "names"
   }
 ]

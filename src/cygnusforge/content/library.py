@@ -2171,6 +2171,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "compatible_with",
             "template_requirements",
             "choice_key",
+            "grant",
         }
     ),
 }
@@ -2208,6 +2209,7 @@ FEAT_PICK_KEYS = frozenset(
     }
 )
 GRANTED_KEYS = frozenset({"feature", "quantity"})
+TEMPLATE_GRANT_KEYS = frozenset({"items", "silver", "equip"})
 
 
 def _check_character_definitions(definitions: Iterable[Definition], template: str) -> None:
@@ -2240,6 +2242,9 @@ def _check_feature_keys(data: Mapping[str, Any], label: str) -> None:
 
 
 def _check_template_keys(data: Mapping[str, Any], label: str) -> None:
+    grant = data.get("grant")
+    if isinstance(grant, Mapping):
+        check_keys(grant, TEMPLATE_GRANT_KEYS, f"{label}: grant")
     choose = data.get("choose")
     if isinstance(choose, Mapping):
         check_keys(choose, CHOOSE_KEYS, f"{label}: choose")

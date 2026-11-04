@@ -188,16 +188,20 @@ def carry_item(
     name: str,
     item: Item,
     cause: str,
+    *,
+    overflow: bool = False,
 ) -> dict[str, Any]:
     """Add an item and drain the full stat if this fills the inventory. A rule set with named
-    pools refuses an item its pool cannot hold; a single-pool rule set adds it over capacity and
-    says so."""
+    pools refuses an item its pool cannot hold, unless `overflow` allows it, which the starting kit
+    and a wilderness bounty use so gear the book hands out is never lost to a full pack. A single-pool rule
+    set adds it over capacity and says so."""
     character = character_named(load_state(db, campaign_id), name)
     capacity = capacity_of(character, rules)
     before = used_slots(character)
     after = before + item.slots
     ready = item.ready
     pool: InventoryPool | None = None
+    over_pool = False
     if rules.pools:
         equipment = bool(item.damage or {"shield", "armor"} & set(item.flags))
         pool = readied_pool(rules) if equipment else None
@@ -207,12 +211,15 @@ def carry_item(
             raise InvalidInput(f"there is no inventory pool for {item.size!r}")
         used = pool_usage(character, rules, pool.id)
         if used + item.slots > pool_capacity(character, rules, pool.id):
-            raise InvalidInput(
-                f"{character.name}'s {pool.name} pool is full: {used} of "
-                f"{pool_capacity(character, rules, pool.id)} slots used, and {item.name} "
-                f"takes {item.slots}"
-            )
-        ready = pool.ready
+            if not overflow:
+                raise InvalidInput(
+                    f"{character.name}'s {pool.name} pool is full: {used} of "
+                    f"{pool_capacity(character, rules, pool.id)} slots used, and {item.name} "
+                    f"takes {item.slots}"
+                )
+            over_pool = True
+            ready = False
+        ready = pool.ready if not over_pool else False
     record(
         db,
         campaign_id,
@@ -244,6 +251,8 @@ def carry_item(
             pool_slots=pool_usage(character, rules, pool.id) + item.slots,
             pool_capacity=pool_capacity(character, rules, pool.id),
         )
+        if over_pool:
+            result["over_capacity"] = True
     if not rules.pools and rules.full_stat and before < capacity <= after:
         record(
             db,
@@ -311,9 +320,13 @@ def carry_listed(
     item_sizes: Mapping[str, int],
     name: str,
     listed: ShopItem,
+    cause: str = "",
+    *,
+    overflow: bool = False,
 ) -> dict[str, Any]:
     """Carry one copy of a catalogue item with its listed size, uses, and description. It does
-    not commit, so a wilderness effect can grant items inside its own transaction."""
+    not commit, so a wilderness effect or a starting kit can grant items inside its own
+    transaction."""
     if listed.size not in item_sizes:
         raise InvalidInput(f"there is no item size named {listed.size!r}")
     flags: tuple[str, ...] = ()
@@ -331,7 +344,7 @@ def carry_listed(
         max_uses=listed.uses,
         flags=flags,
     )
-    return carry_item(db, campaign_id, rules, name, item, cause="")
+    return carry_item(db, campaign_id, rules, name, item, cause=cause, overflow=overflow)
 
 
 def fits_listed(

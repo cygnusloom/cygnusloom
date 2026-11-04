@@ -38,11 +38,18 @@ directory. The rules text here and in `rules.json` is paraphrased; the books are
   (spell level or Focus level) and creation `effects` (stat, skill, counter, armor, note).
   Selecting the same Focus for both eligible class picks grants its first and second ranks when
   the Focus has a second rank.
-- Advancement arithmetic and starting packages live in the isolated
+- Advancement arithmetic lives in the isolated
   [WWN module](../../../rules/wwn.py). Class, experience, casting, art, and skill-prerequisite
   charts live in [progression.json](./progression.json) and are validated for each loaded ruleset.
   Class tables must correspond exactly to defined class templates; unsupported legacy aliases
   are not loaded.
+- Starting gear is the book's equipment packages, modelled as `kit` templates in
+  [templates.json](./templates.json). The kind is required, so every character leaves creation
+  with one, and each template's `grant` lists the catalogue items, starting silver, and the armor
+  and shield already worn. Creation carries them through the generic template grant, so the GM
+  never has to invent gear. A character with few Readied slots still holds a weapon at the ready,
+  because the kit's weapons are carried first. The `grant_package` tool reads the same kits for a
+  character who joined without one, such as a promoted hireling.
 - Magic state (prepared spells and committed Effort) lives in character `marks`, the way Cairn
   keeps deprivation, so it replays from the log. Daily castings and Effort use harm on ordinary
   stats, so `current(castings)` and `current(effort_high)` are what is left.
@@ -77,6 +84,11 @@ directory. The rules text here and in `rules.json` is paraphrased; the books are
   turn starts when the player presses Start, including their own; the player ends only their own
   character's turn with End your turn. An NPC's turn ends automatically when the GM's reply
   finishes, and the next actor waits for Start. The GM's `end_npc_turn` tool is not offered.
+  The engine enforces the order on the combat tools: `attack`, `resolve_attacks`, and
+  `player_attack` refuse an attacker who is not taking their turn, so a foe cannot strike before
+  the player starts its turn. Each takes `force`, which the GM sets only for an action the story
+  needs outside the order, such as an ambush. `resolve_attacks` with more than one attacker is
+  such a case, since two foes act on their own turns.
 
 ## Generic engine primitives added
 

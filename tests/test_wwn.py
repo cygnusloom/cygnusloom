@@ -439,7 +439,26 @@ def test_wwn_character_creation(client_factory) -> None:
     assert pc.stats["hp"] >= 1
     assert pc.stats["save_physical"] <= 16
     spec = _wwn().rule_sets["worldswithoutnumber"].character
-    assert pc.armor == 10 + spec.modifier(pc.stats, "dex")
+    # The creation form gives every character the starting kit it picked, so the character is
+    # armed and armored before the first turn.
+    assert pc.templates["kit"] == "pkg_armored_warrior"
+    assert pc.equipped_armor == "Pieced Armor" and pc.equipped_shield == "Large Shield"
+    assert any(item.name == "Short Sword" for item in pc.items)
+    assert pc.armor > 10 + spec.modifier(pc.stats, "dex")
+
+
+def test_a_starting_kit_hands_over_the_books_gear(client_factory):
+    """A character starts with the items, money, and armor of the kit the player chose, so the
+    GM never has to invent gear the book already gives."""
+    spec = _wwn().rule_sets["worldswithoutnumber"].character
+    kits = {kit.id: kit for kit in spec.templates.values() if kit.kind == "kit"}
+    assert len(kits) == 6
+    for kit in kits.values():
+        assert kit.grant.items, kit.id
+        assert all(kit.grant.items), kit.id
+    scholar = kits["pkg_mage_healer_scholar"]
+    assert scholar.grant.silver == 80
+    assert "Staff" in scholar.grant.items
 
 
 def test_a_spell_pick_offers_only_spells() -> None:

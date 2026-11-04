@@ -46,6 +46,7 @@ from cygnusforge.rules.dice import is_formula
 from cygnusforge.services import clock as clock_service
 from cygnusforge.services import combat
 from cygnusforge.services import inventory as inventory_service
+from cygnusforge.services import market as market_service
 from cygnusforge.services import wilderness as wilderness_service
 from cygnusforge.services.attacks import ATTACK_FLAGS
 from cygnusforge.services.common import (
@@ -368,6 +369,64 @@ def _initialize_generated_defense(
     )
 
 
+def _carry_granted_kit(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    sheet: Sheet,
+    spec: CharacterSpec,
+    marketplace: Marketplace | None,
+    inventory: InventoryRules | None,
+    item_sizes: Mapping[str, int] | None,
+) -> tuple[tuple[str, int], tuple[str, int], int]:
+    """Carry what the chosen templates grant: catalogue items, starting money, and the armor and
+    shield already worn. Returns the equipped armor and shield the kit gives, and the silver."""
+    armor: tuple[str, int] = ("", 0)
+    shield: tuple[str, int] = ("", 0)
+    silver = 0
+    for template_id in sheet.templates.values():
+        grant = spec.templates[template_id].grant
+        if not (grant.items or grant.equip or grant.silver):
+            continue
+        if marketplace is None:
+            raise InvalidInput("this rule set has no marketplace to grant starting items from")
+        rules = _required(inventory, "inventory")
+        carried: list[market_service.ShopItem] = []
+        for item_name in grant.items:
+            listed = market_service.listed_item(marketplace, item_name)
+            if listed is None:
+                raise InvalidInput(f"there is no catalogue item named {item_name!r}")
+            carried.append(listed)
+        # Weapons go into the pack first, so a character with few Readied slots still has one at
+        # the ready. Worn armor and a wielded shield protect whether or not there was room to
+        # ready them.
+        for listed in sorted(carried, key=lambda item: 0 if item.damage else 1):
+            inventory_service.carry_listed(
+                db,
+                campaign_id,
+                rules,
+                _required(item_sizes, "item sizes"),
+                name,
+                listed,
+                cause="starting gear",
+                overflow=True,
+            )
+        for item_name in grant.equip:
+            listed = market_service.listed_item(marketplace, item_name)
+            if listed is None:
+                raise InvalidInput(f"there is no catalogue item named {item_name!r}")
+            if listed.armor_mode == "shield":
+                shield = (listed.name, listed.armor)
+            else:
+                armor = (listed.name, listed.armor)
+        if grant.silver:
+            market_service.change_currency(
+                db, campaign_id, marketplace, name, grant.silver, "starting silver"
+            )
+            silver += grant.silver
+    return armor, shield, silver
+
+
 def create_player_character(
     db: Session,
     campaign_id: int,
@@ -384,6 +443,7 @@ def create_player_character(
     armor_max: int = 0,
     defense_base: int = 0,
     defense_modifier: str = "",
+    marketplace: Marketplace | None = None,
     *,
     pronouns: str,
     plus: str,
@@ -392,7 +452,8 @@ def create_player_character(
     """Make the player character from the player's choices. `rolled` are the stats rolled for
     this character; the player may only keep them or swap within a swap group. Starting item
     features are carried as inventory items, spell features as the rule set's magic items, and the armor they
-    give is worn. The currency stays a count. The pronouns are how the GM refers to the character."""
+    give is worn. A template that grants a starting kit hands over its items, money, and equipment
+    the same way. The currency stays a count. The pronouns are how the GM refers to the character."""
     state = load_state(db, campaign_id)
     current = state.pc()
     if current is not None and not current.dead:
@@ -433,6 +494,13 @@ def create_player_character(
         magic,
         defense=bool(combat_rules is not None and combat_rules.defense_base),
     )
+    granted_armor, granted_shield, _ = _carry_granted_kit(
+        db, campaign_id, name, sheet, spec, marketplace, inventory, item_sizes
+    )
+    if granted_armor[0]:
+        equipped_armor = granted_armor
+    if granted_shield[0]:
+        equipped_shield = granted_shield
     armor += item_armor
     if combat_rules is not None and combat_rules.defense_base:
         created = _character_named(load_state(db, campaign_id), name)

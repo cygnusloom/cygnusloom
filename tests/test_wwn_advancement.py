@@ -180,6 +180,7 @@ def _campaign(
     tradition: str | None = None,
     tradition2: str | None = None,
     options: dict[str, str] | None = None,
+    kit: str | None = None,
     name: str = NAME,
 ) -> tuple[FastAPI, int]:
     """A campaign with one player character of the chosen class, created through the form."""
@@ -193,6 +194,8 @@ def _campaign(
         fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
         fields.update(_choices(page))
         fields.update(options or {})
+        if kit is not None:
+            fields["template-kit"] = kit
         fields["template-class"] = class_id
         fields.update(CLASS_PICKS[class_id])
         fields["pick-skill-class_free_skill-0"] = "notice"
@@ -900,6 +903,8 @@ def test_set_ac_preserves_an_adjustment_when_equipment_changes(
     app, campaign_id = _campaign(client_factory)
     tools = _world_tools(app, campaign_id)
     _set_stat(tools, "dex", 14)  # a +1 modifier
+    # The kit's shield would add its own point over the Buff Coat, so set it aside.
+    tools.drop_item(NAME, "Large Shield")
     tools.give_item(NAME, "Buff Coat")
     tools.equip_armor(NAME, "Buff Coat")
 
@@ -1143,6 +1148,9 @@ def test_a_vowed_starts_with_the_three_basic_arts_and_another(client_factory):
 def test_vowed_unarmored_defense_tracks_equipment_and_level(client_factory):
     app, campaign_id = _campaign(client_factory, class_id="vowed")
     tools = _world_tools(app, campaign_id)
+    # Unarmored Defense only applies without the starting kit's armor and shield.
+    tools.drop_item(NAME, "Pieced Armor")
+    tools.drop_item(NAME, "Large Shield")
     assert _pc(app, campaign_id).armor == 14  # 13 + level // 2 + Dexterity
 
     tools.give_item(NAME, "Buff Coat")
@@ -1207,6 +1215,9 @@ def test_impervious_defense_combines_with_body_armor_and_shields(
     app, campaign_id = _campaign(client_factory, class_id="warrior")
     tools = _world_tools(app, campaign_id)
     ctx = _ctx(tools)
+    # Start from bare skin, since this test is about the focus and the armor it chooses itself.
+    tools.drop_item(NAME, "Pieced Armor")
+    tools.drop_item(NAME, "Large Shield")
     tools.adjust_counter(NAME, "focus_picks", 1)
     wwn.learn_focus(NAME, "focus_impervious_defense", ctx)
 
@@ -1225,6 +1236,8 @@ def test_impervious_defense_combines_with_body_armor_and_shields(
 def test_impervious_defense_rounds_half_level_up(client_factory, level: int, bonus: int):
     app, campaign_id = _campaign(client_factory, class_id="warrior")
     tools = _world_tools(app, campaign_id)
+    tools.drop_item(NAME, "Pieced Armor")
+    tools.drop_item(NAME, "Large Shield")
     if level > 1:
         tools.adjust_counter(NAME, "level", level - 1)
     tools.adjust_counter(NAME, "focus_picks", 1)
@@ -1238,6 +1251,8 @@ def test_impervious_defense_rounds_half_level_up(client_factory, level: int, bon
 def test_impervious_defense_updates_on_level_and_dexterity_changes(client_factory):
     app, campaign_id = _campaign(client_factory)
     tools = _world_tools(app, campaign_id)
+    tools.drop_item(NAME, "Pieced Armor")
+    tools.drop_item(NAME, "Large Shield")
     ctx = _ctx(tools)
     tools.adjust_counter(NAME, "focus_picks", 1)
     wwn.learn_focus(NAME, "focus_impervious_defense", ctx)
@@ -1256,6 +1271,9 @@ def test_impervious_defense_applies_when_selected_at_creation(client_factory, mo
     picks = {**CLASS_PICKS["warrior"], "pick-feature-class_focus_any-0": "focus_impervious_defense"}
     monkeypatch.setitem(CLASS_PICKS, "warrior", picks)
     app, campaign_id = _campaign(client_factory)
+    tools = _world_tools(app, campaign_id)
+    tools.drop_item(NAME, "Pieced Armor")
+    tools.drop_item(NAME, "Large Shield")
 
     character = _pc(app, campaign_id)
     assert character.features["focus_impervious_defense"] == 1
@@ -1269,6 +1287,9 @@ def test_a_warrior_can_start_with_both_ranks_of_a_focus(client_factory, monkeypa
     }
     monkeypatch.setitem(CLASS_PICKS, "warrior", picks)
     app, campaign_id = _campaign(client_factory)
+    tools = _world_tools(app, campaign_id)
+    tools.drop_item(NAME, "Pieced Armor")
+    tools.drop_item(NAME, "Large Shield")
 
     character = _pc(app, campaign_id)
     assert character.features["focus_impervious_defense"] == 1
@@ -1279,6 +1300,8 @@ def test_a_warrior_can_start_with_both_ranks_of_a_focus(client_factory, monkeypa
 def test_effect_operations_refresh_defense_after_counter_and_stat_changes(client_factory):
     app, campaign_id = _campaign(client_factory)
     tools = _world_tools(app, campaign_id)
+    tools.drop_item(NAME, "Pieced Armor")
+    tools.drop_item(NAME, "Large Shield")
     tools.adjust_counter(NAME, "focus_picks", 1)
     wwn.learn_focus(NAME, "focus_impervious_defense", _ctx(tools))
     assert _pc(app, campaign_id).armor == 17
@@ -1448,6 +1471,8 @@ def test_world_seed_initializes_generated_defense_but_preserves_statblocks(
 def test_indirect_condition_end_effects_refresh_defense(client_factory, ending: str):
     app, campaign_id = _campaign(client_factory)
     tools = _world_tools(app, campaign_id)
+    tools.drop_item(NAME, "Pieced Armor")
+    tools.drop_item(NAME, "Large Shield")
     tools.adjust_counter(NAME, "focus_picks", 1)
     wwn.learn_focus(NAME, "focus_impervious_defense", _ctx(tools))
     condition = replace(
@@ -1506,6 +1531,9 @@ def test_indirect_condition_end_effects_refresh_defense(client_factory, ending: 
 def test_equipped_items_are_replaced_removed_or_stowed_explicitly(client_factory):
     app, campaign_id = _campaign(client_factory)
     tools = _world_tools(app, campaign_id)
+    # The kit's spare weapons fill the Readied pool the items below need.
+    tools.drop_item(NAME, "Short Sword")
+    tools.drop_item(NAME, "Dagger")
     _set_stat(tools, "str", 18)
     for item in ("Buff Coat", "Pieced Armor", "Small Shield", "Large Shield", "Dagger"):
         tools.give_item(NAME, item)
@@ -1557,6 +1585,9 @@ def test_removing_equipment_keeps_inventory_and_defense_in_one_transaction(
         _world_tools(app, campaign_id),
         marketplace=replace(marketplace, items=items),
     )
+    # The test's shield replaces the starting kit's armor and shield.
+    tools.drop_item(NAME, "Pieced Armor")
+    tools.drop_item(NAME, "Large Shield")
     _set_stat(tools, "str", 18)
     tools.give_item(NAME, "Large Shield")
     tools.equip_armor(NAME, "Large Shield")
@@ -1597,6 +1628,8 @@ def test_removing_equipment_keeps_inventory_and_defense_in_one_transaction(
 def test_buying_defense_equips_better_items_and_keeps_adjustments(client_factory):
     app, campaign_id = _campaign(client_factory)
     tools = _world_tools(app, campaign_id)
+    tools.drop_item(NAME, "Pieced Armor")
+    tools.drop_item(NAME, "Large Shield")
     _set_stat(tools, "str", 18)
     tools.change_currency(NAME, 2000, cause="a test")
 
@@ -1631,6 +1664,8 @@ def test_buying_set_and_add_armor_updates_slots_and_persistent_adjustment(client
         original_marketplace, items=(*original_marketplace.items, replacement, bonus)
     )
     tools = replace(_world_tools(app, campaign_id), marketplace=marketplace)
+    tools.drop_item(NAME, "Pieced Armor")
+    tools.drop_item(NAME, "Large Shield")
     _set_stat(tools, "str", 18)
     tools.change_currency(NAME, 2000, cause="a test")
 
@@ -1661,15 +1696,13 @@ def test_buying_set_and_add_armor_updates_slots_and_persistent_adjustment(client
 def test_starting_package_armor_respects_the_innate_floor(
     client_factory, package: str, normal_ac: int, focused_ac: int, focus: bool
 ):
-    app, campaign_id = _campaign(client_factory, class_id="warrior")
+    app, campaign_id = _campaign(client_factory, class_id="warrior", kit=package)
     tools = _world_tools(app, campaign_id)
     ctx = _ctx(tools)
     _set_stat(tools, "str", 18)
     if focus:
         tools.adjust_counter(NAME, "focus_picks", 1)
         wwn.learn_focus(NAME, "focus_impervious_defense", ctx)
-
-    wwn.grant_package(NAME, package, ctx)
 
     dexterity = WWN.character.modifier(_pc(app, campaign_id).stats, "dex")
     assert _pc(app, campaign_id).armor == (focused_ac if focus else normal_ac) + dexterity

@@ -338,15 +338,17 @@ def attack(
     hit_modifier: int = 0,
     conditions: Mapping[str, ConditionRules] | None = None,
     spec: CharacterSpec | None = None,
+    force: bool = False,
 ) -> dict[str, Any]:
     """An NPC's attack. Under the auto hit mode it always hits, so the attack's damage is the roll.
     A modifier rolls its own dice instead of the attack's. An attack with Blast hits every target in
-    its area, which is `targets` (it must include `target`), and each target rolls separately. Who
-    acts when is the turn order's job; this only checks the attacker has the attack and both are
-    living."""
+    its area, which is `targets` (it must include `target`), and each target rolls separately. An
+    attacker may only strike on their own turn unless `force` overrides that; the turn order's
+    Start and End buttons are what hand out turns."""
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     source = _participant(state, attacker)
+    _require_turn(state, source, force)
     if source.grappled_by and name_key(attack_name) not in combat.unarmed_names:
         raise InvalidInput(f"{source.name} is grappled and can only make unarmed attacks")
     if source.surprised_turns > 0:
@@ -581,12 +583,13 @@ def resolve_attacks(
     plus: str,
     conditions: Mapping[str, ConditionRules] | None = None,
     spec: CharacterSpec | None = None,
+    force: bool = False,
 ) -> dict[str, Any]:
     """Several NPC attacks on one character, such as two NPCs of the foe side or one NPC's two
     weapons. Every attack rolls its own dice. Under the rule set's "highest" multi-attack the
     highest roll is the one hit and the rest are recorded; under "each" every attack hits in turn.
-    Each attacker must be a living NPC on the foe side, and every attack is checked before any die
-    is rolled."""
+    Each attacker must be a living NPC on the foe side, every attack is checked before any die is
+    rolled, and each attacker needs their own turn unless `force` overrides that."""
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     struck = _living(_participant(state, target), combat)
@@ -605,6 +608,7 @@ def resolve_attacks(
         source = _living(_participant(state, attacker_name), combat)
         if source.kind != NPC_KIND:
             raise InvalidInput(f"{source.name} is a player character; use player_attack instead")
+        _require_turn(state, source, force)
         if source.large_group:
             raise InvalidInput(f"{source.name} is a group; use attack, which has its Blast")
         if encounter.sides.get(name_key(source.name), "") == foe_side:
@@ -754,11 +758,12 @@ def player_attack(
     conditions: Mapping[str, ConditionRules] | None = None,
     range_band: str = "",
     dual_wield: bool = False,
+    force: bool = False,
 ) -> dict[str, Any]:
     """A player character's hit. The engine rolls the damage unless the player's roll is passed as
     `damage_roll`. The hit mode decides whether it lands. A group takes only impaired attacks.
     When the player has already rolled the d20, pass it as `attack_roll`; the engine uses that
-    natural roll.
+    natural roll. The character strikes on their own turn unless `force` overrides that.
 
     A rule set with modifier bands and skills passes its `spec` and the weapon's `feature`. The
     hit roll then adds the rule set's hit bonus stat, the weapon skill (or its unskilled penalty),
@@ -768,6 +773,7 @@ def player_attack(
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     pc = _player_character(state)
+    _require_turn(state, pc, force)
     if pc.grappled_by and name_key(weapon) not in combat.unarmed_names:
         raise InvalidInput(f"{pc.name} is grappled and can only make unarmed attacks")
     if pc.surprised_turns > 0:
@@ -872,6 +878,27 @@ def _player_character(state: CampaignState) -> Character:
     if pc is None:
         raise InvalidInput("there is no player character in this campaign")
     return pc
+
+
+def _require_turn(state: CampaignState, actor: Character, force: bool) -> None:
+    """Refuse an attack the attacker has no turn for. An encounter runs on turns: each actor's turn
+    starts when the player presses Start and ends when the player ends it or, for an NPC, when the
+    GM's reply finishes. That makes a turn the only time an actor may strike, so an NPC cannot cut
+    in ahead of its place in the order. `force` lets the GM resolve an action the story needs
+    outside the order, such as an ambush that takes the party unawares."""
+    encounter = state.encounter
+    if force or encounter is None:
+        return
+    if encounter.acting is None:
+        raise InvalidInput(
+            f"no one is taking a turn, so {actor.name} cannot attack: press Start for the next "
+            "turn first, or pass force true when the story needs an action outside the turn order"
+        )
+    if name_key(encounter.acting) != name_key(actor.name):
+        raise InvalidInput(
+            f"it is {encounter.acting}'s turn, not {actor.name}'s: press End your turn first, or "
+            "pass force true when the story needs an action outside the turn order"
+        )
 
 
 def _weapon_name(weapon: str) -> str:

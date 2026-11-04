@@ -24,6 +24,7 @@ from tests.test_combat import (
     _set_stat,
 )
 from tests.test_world import _db
+from tests.turns import take_turn
 
 
 def _events(app: FastAPI, campaign_id: int, kind: str) -> list[Event]:
@@ -161,6 +162,7 @@ def test_a_doomed_character_who_passes_the_save_is_cured_and_gains_max_hp(client
     _add_condition_by_effect(app, campaign_id, "doomed")
     _foe(tools, "Bo", claw="4d6")
     _set_stat(app, campaign_id, PC, "hp", 0)
+    take_turn(tools, "Bo")
     _hit(tools, "Bo", PC, 6, 6, 6, 6)
     before = _character(app, campaign_id, PC).stats["hp"]
     assert before < 18

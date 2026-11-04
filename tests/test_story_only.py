@@ -22,9 +22,10 @@ from cygnusforge.services.events import (
 from cygnusforge.services.world import WorldTools
 from tests.conftest import content_library
 from tests.test_character_creation import _cairn_campaign
-from tests.test_combat import _fight, _tools
+from tests.test_combat import PC, _fight, _tools
 from tests.test_content import _core, _rule_set, _world, _write
 from tests.test_world import _db, _state
+from tests.turns import take_turn
 
 LIBRARY = content_library()
 TWIN_LAKES = LIBRARY.world_templates["twin-lakes"]
@@ -117,6 +118,7 @@ def test_a_story_only_npc_cannot_be_attacked_by_the_public_api(
     # add_participant refuses a story-only NPC, so it is never in the order and the public attack
     # path stops at the participant lookup before reaching the stats guard.
     _, _, tools = _fight(client_factory)
+    take_turn(tools, PC)
     with pytest.raises(InvalidInput, match="is not in the encounter"):
         tools.player_attack(STORY, "Sword")
 
@@ -139,8 +141,10 @@ def test_a_story_only_npc_in_the_order_is_refused_as_target_and_attacker(
     with _db(app) as db:
         record(db, campaign_id, ParticipantJoined(name=STORY, side="foes"))
         db.commit()
+    take_turn(tools, "Grave Thing")
     with pytest.raises(InvalidInput, match="has no stats yet"):
         tools.attack("Grave Thing", "Claw", STORY)
+    take_turn(tools, STORY)
     with pytest.raises(InvalidInput, match="has no stats yet"):
         tools.attack(STORY, "Claw", "Grave Thing")
 

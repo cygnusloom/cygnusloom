@@ -1073,6 +1073,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         targets: Sequence[str] | None = None,
         hit_modifier: int = 0,
         count: int = 0,
+        force: bool = False,
     ) -> dict[str, Any]:
         attacks = count or self.attacks_per_action(attacker)
         if attacks > 1 and targets is None:
@@ -1085,7 +1086,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 }
                 for _ in range(attacks)
             ]
-            return self.resolve_attacks(target, entries)
+            return self.resolve_attacks(target, entries, force=force)
         with session_scope(self.engine) as db:
             return combat.attack(
                 db,
@@ -1101,6 +1102,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 hit_modifier=hit_modifier,
                 conditions=self.conditions,
                 spec=self.character,
+                force=force,
             )
 
     def attacks_per_action(self, name: str) -> int:
@@ -1119,7 +1121,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             )
             return template.attacks_per_action if template is not None else 1
 
-    def resolve_attacks(self, target: str, attacks: Sequence[Mapping[str, str]]) -> dict[str, Any]:
+    def resolve_attacks(
+        self, target: str, attacks: Sequence[Mapping[str, str]], force: bool = False
+    ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.resolve_attacks(
                 db,
@@ -1131,6 +1135,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 plus=self.plus,
                 conditions=self.conditions,
                 spec=self.character,
+                force=force,
             )
 
     def player_attack(
@@ -1143,6 +1148,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         hit_modifier: int = 0,
         range_band: str = "",
         dual_wield: bool = False,
+        force: bool = False,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.player_attack(
@@ -1162,6 +1168,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 conditions=self.conditions,
                 range_band=range_band,
                 dual_wield=dual_wield,
+                force=force,
             )
 
     def attack_dice(self, weapon: str, modifier: str = "") -> str:

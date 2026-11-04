@@ -211,7 +211,7 @@
     "id": "attack",
     "name": "attack",
     "world_method": "attack",
-    "description": "Make an NPC's attack: d20 plus its attack bonus against the target's Armor Class, with a natural 1 always missing and a natural 20 always hitting. The engine rolls the damage; on a miss it still applies the attack's Shock when the target's AC is low enough. Call it only when the NPC's side is acting.",
+    "description": "Make an NPC's attack: d20 plus its attack bonus against the target's Armor Class, with a natural 1 always missing and a natural 20 always hitting. The engine rolls the damage; on a miss it still applies the attack's Shock when the target's AC is low enough. An attack is refused unless the attacker is the character taking their turn, so the player presses Start for the NPC's turn first; pass force true only for an action the story needs outside the turn order, such as an ambush.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -240,6 +240,11 @@
           "maximum": 10,
           "default": 0,
           "description": "How many attacks to resolve. Leave it out to use the statblock's attacks per action, or set 1 for a single attack."
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Resolve the attack even though this is not the attacker's turn. Set it only when the story needs an action outside the turn order, such as an ambush that catches the party unawares."
         }
       },
       "required": ["attacker", "attack", "target"]
@@ -251,7 +256,7 @@
     "name": "player_attack",
     "python_module": "wwn",
     "function": "player_attack",
-    "description": "Ask the player to roll their attack with a carried weapon or unarmed, then record the d20. The engine adds the weapon skill, the best weapon attribute, the attack bonus, and a Warrior's Killing Blow, rolls damage, and applies Shock on a miss when the target's AC is low enough. Use it for the player character; the player presses the roll button and the result is final.",
+    "description": "Ask the player to roll their attack with a carried weapon or unarmed, then record the d20. The engine adds the weapon skill, the best weapon attribute, the attack bonus, and a Warrior's Killing Blow, rolls damage, and applies Shock on a miss when the target's AC is low enough. Use it for the player character; the player presses the roll button and the result is final. An attack is refused unless the player character is taking their turn, so the player presses Start for it first; pass force true only for an action the story needs outside the turn order.",
     "player_input": {
       "dice": "1d20",
       "param": "roll",
@@ -286,6 +291,11 @@
           "default": false,
           "description": "True when attacking with two one-handed melee weapons. The engine applies the rule set's dual-wield hit penalty and damage bonus."
         },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Resolve the attack even though this is not the player character's turn. Set it only when the story needs an action outside the turn order."
+        },
         "prompt": {
           "type": "string",
           "description": "What the player is asked to roll, such as 'Roll your attack with the long sword.'"
@@ -299,7 +309,7 @@
     "id": "resolve_attacks",
     "name": "resolve_attacks",
     "world_method": "resolve_attacks",
-    "description": "Resolve several NPC attacks on one character at once, such as a creature's several attacks per action or several foes striking the same target. Each attack rolls its own attack die and applies its own damage in turn.",
+    "description": "Resolve several NPC attacks on one character at once, such as a creature's several attacks per action or several foes striking the same target. Each attack rolls its own attack die and applies its own damage in turn. Every attacker must be taking their turn unless force is true.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -319,6 +329,11 @@
             },
             "required": ["attacker", "attack"]
           }
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Resolve the attacks even though they are not the attackers' turns. Set it only when the story needs an action outside the turn order, such as an ambush."
         }
       },
       "required": ["target", "attacks"]
@@ -538,7 +553,7 @@
     "id": "give_item",
     "name": "give_item",
     "world_method": "give_item",
-    "description": "Give a character an item. A catalogue item takes its listed size; a new item needs its size and, for a weapon, its damage dice.",
+    "description": "Give a character an item they are given, find, or loot, with no payment. A catalogue item takes its listed size, uses, and damage; a new item needs its size and, for a weapon, its damage dice. Never use it because the player says the character has something or reaches for it: check the inventory first, and if the character does not carry it, say so and let them find, buy, or do without it. Never use it for something the character pays for; use buy_item.",
     "parameters": {
       "type": "object",
       "properties": {

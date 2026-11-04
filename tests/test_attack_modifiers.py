@@ -29,6 +29,7 @@ from tests.test_combat import (
     _set_stat,
 )
 from tests.test_combat import _combat as _combat_definition
+from tests.turns import take_turn
 
 IMPAIRED = "1d4"
 ENHANCED = "1d12"
@@ -60,6 +61,7 @@ def test_an_impaired_npc_attack_rolls_the_impaired_dice(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Grave Thing", claw="1d6")
     _foe(tools, "Bo")
+    take_turn(tools, "Grave Thing")
     result = replace(tools, rng=Rolls(4)).attack("Grave Thing", "Claw", "Bo", modifier="impaired")
     assert result["raw"] == 4
     assert _struck(app, campaign_id)[-1].modifier == "impaired"
@@ -71,6 +73,7 @@ def test_an_enhanced_npc_attack_rolls_the_enhanced_dice(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Grave Thing", claw="1d6")
     _foe(tools, "Bo", hp=20)
+    take_turn(tools, "Grave Thing")
     result = replace(tools, rng=Rolls(12)).attack("Grave Thing", "Claw", "Bo", modifier="Enhanced")
     assert result["raw"] == 12
     assert _struck(app, campaign_id)[-1].modifier == "enhanced"
@@ -80,6 +83,7 @@ def test_normal_is_the_attacks_own_dice_and_no_modifier(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Grave Thing", claw="1d6")
     _foe(tools, "Bo", hp=20)
+    take_turn(tools, "Grave Thing")
     assert (
         replace(tools, rng=Rolls(6)).attack("Grave Thing", "Claw", "Bo", modifier="normal")["raw"]
         == 6
@@ -91,6 +95,7 @@ def test_an_unknown_modifier_is_an_error(client_factory):
     _, _, tools = _fight(client_factory)
     _foe(tools, "Grave Thing")
     _foe(tools, "Bo")
+    take_turn(tools, "Grave Thing")
     with pytest.raises(InvalidInput, match="unknown attack modifier 'stunned'"):
         tools.attack("Grave Thing", "Claw", "Bo", modifier="stunned")
 
@@ -98,6 +103,7 @@ def test_an_unknown_modifier_is_an_error(client_factory):
 def test_an_unknown_modifier_on_a_player_attack_is_an_error(client_factory):
     _, _, tools = _fight(client_factory)
     _foe(tools, "Bo")
+    take_turn(tools, PC)
     with pytest.raises(InvalidInput, match="unknown attack modifier"):
         tools.player_attack("Bo", "Sword", modifier="stunned")
 
@@ -105,6 +111,7 @@ def test_an_unknown_modifier_on_a_player_attack_is_an_error(client_factory):
 def test_a_player_hit_records_its_modifier(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Bo", hp=20)
+    take_turn(tools, PC)
     tools.player_attack("Bo", "Sword", modifier="impaired")
     assert _struck(app, campaign_id)[-1].modifier == "impaired"
 
@@ -150,7 +157,9 @@ def test_resolve_attacks_keeps_the_highest_roll_and_applies_one_hit(client_facto
     _foe(tools, "Bo", claw="1d6")
     _set_stat(app, campaign_id, PC, "hp", 0)
     result = replace(tools, rng=Rolls(2, 5)).resolve_attacks(
-        PC, [{"attacker": "Grave Thing", "attack": "Claw"}, {"attacker": "Bo", "attack": "Claw"}]
+        PC,
+        [{"attacker": "Grave Thing", "attack": "Claw"}, {"attacker": "Bo", "attack": "Claw"}],
+        force=True,
     )
     assert result["raw"] == 5
     assert result["harm"] == {"str": 5}
@@ -170,7 +179,9 @@ def test_resolve_attacks_ties_go_to_the_earlier_attack(client_factory):
     _foe(tools, "Bo", claw="1d6")
     _set_stat(app, campaign_id, PC, "hp", 0)
     replace(tools, rng=Rolls(4, 4)).resolve_attacks(
-        PC, [{"attacker": "Grave Thing", "attack": "Claw"}, {"attacker": "Bo", "attack": "Claw"}]
+        PC,
+        [{"attacker": "Grave Thing", "attack": "Claw"}, {"attacker": "Bo", "attack": "Claw"}],
+        force=True,
     )
     assert _struck(app, campaign_id)[-1].attacker == "Grave Thing"
 
@@ -186,6 +197,7 @@ def test_resolve_attacks_uses_each_attacks_modifier_and_records_it(client_factor
             {"attacker": "Grave Thing", "attack": "Claw", "modifier": "impaired"},
             {"attacker": "Bo", "attack": "Claw", "modifier": "enhanced"},
         ],
+        force=True,
     )
     strike = _struck(app, campaign_id)[-1]
     assert (strike.attacker, strike.raw) == ("Bo", 12)
@@ -197,10 +209,35 @@ def test_resolve_attacks_with_one_attack_has_no_rolled_record(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Grave Thing", claw="1d6")
     _set_stat(app, campaign_id, PC, "hp", 0)
+    take_turn(tools, "Grave Thing")
     replace(tools, rng=Rolls(3)).resolve_attacks(
         PC, [{"attacker": "Grave Thing", "attack": "Claw"}]
     )
     assert _struck(app, campaign_id)[-1].rolled == ""
+
+
+def test_resolve_attacks_needs_the_attackers_turn_unless_forced(client_factory):
+    """Several attackers at once steps outside the order, so it is refused until the GM forces it;
+    one attacker's several attacks happen on that attacker's turn."""
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, "Grave Thing", claw="1d6")
+    _foe(tools, "Bo", claw="1d6")
+    both = [
+        {"attacker": "Grave Thing", "attack": "Claw"},
+        {"attacker": "Bo", "attack": "Claw"},
+    ]
+
+    with pytest.raises(InvalidInput, match="no one is taking a turn"):
+        replace(tools, rng=Rolls(1, 1)).resolve_attacks(PC, both)
+    assert _struck(app, campaign_id) == []
+
+    take_turn(tools, "Grave Thing")
+    with pytest.raises(InvalidInput, match="it is Grave Thing's turn"):
+        replace(tools, rng=Rolls(1, 1)).resolve_attacks(PC, both)
+    result = replace(tools, rng=Rolls(2, 5)).resolve_attacks(
+        PC, [{"attacker": "Grave Thing", "attack": "Claw"}]
+    )
+    assert result["target"] == PC
 
 
 @pytest.mark.parametrize(
@@ -227,7 +264,7 @@ def test_resolve_attacks_checks_every_attack_before_rolling(client_factory, atta
     _foe(tools, "Bo", claw="1d6")
     # With no dice at all, any roll would fail with an IndexError rather than InvalidInput.
     with pytest.raises(InvalidInput, match=message):
-        replace(tools, rng=Rolls()).resolve_attacks(PC, attacks)
+        replace(tools, rng=Rolls()).resolve_attacks(PC, attacks, force=True)
     assert _struck(app, campaign_id) == []
 
 
@@ -237,7 +274,7 @@ def test_resolve_attacks_rejects_an_attacker_on_the_targets_side(client_factory)
     _foe(tools, "Bo", claw="1d6")
     with pytest.raises(InvalidInput, match="is on Grave Thing's side and cannot attack them"):
         replace(tools, rng=Rolls()).resolve_attacks(
-            "Grave Thing", [{"attacker": "Bo", "attack": "Claw"}]
+            "Grave Thing", [{"attacker": "Bo", "attack": "Claw"}], force=True
         )
     assert _struck(app, campaign_id) == []
 
@@ -248,10 +285,13 @@ def test_resolve_attacks_rejects_a_defeated_attacker(client_factory):
     _foe(tools, "Bo")
     # Two of the dice are the claw, then the save for the overflow, then a morale roll for the
     # first casualty and one for half the side.
+    take_turn(tools, "Grave Thing")
     _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 1, 1)
     assert _character(app, campaign_id, "Bo").defeated is True
     with pytest.raises(InvalidInput):
-        replace(tools, rng=Rolls()).resolve_attacks(PC, [{"attacker": "Bo", "attack": "Claw"}])
+        replace(tools, rng=Rolls()).resolve_attacks(
+            PC, [{"attacker": "Bo", "attack": "Claw"}], force=True
+        )
 
 
 def test_resolve_attacks_through_the_tool_takes_modifiers(client_factory):
@@ -264,6 +304,7 @@ def test_resolve_attacks_through_the_tool_takes_modifiers(client_factory):
         "resolve_attacks",
         {
             "target": PC,
+            "force": True,
             "attacks": [
                 {"attacker": "Grave Thing", "attack": "Claw", "modifier": "impaired"},
                 {"attacker": "Bo", "attack": "Claw"},

@@ -207,6 +207,7 @@ def save_creation(
                 item_sizes=rule_set.item_sizes,
                 magic=rule_set.magic,
                 currency=rule_set.marketplace.currency if rule_set.marketplace else "",
+                marketplace=rule_set.marketplace,
                 armor_max=rule_set.combat.armor_max if rule_set.combat else 0,
                 defense_base=rule_set.combat.defense_base if rule_set.combat else 0,
                 defense_modifier=rule_set.combat.defense_modifier if rule_set.combat else "",

@@ -88,6 +88,15 @@ def _wwn_pc(client: TestClient, campaign_id: int):
         return load_state(db, campaign_id).characters[WREN.casefold()]
 
 
+def _empty_pack(client: TestClient, campaign_id: int) -> None:
+    """Drop everything the character carries. Every character starts with the kit the creation
+    form gives, so a test that measures what a pack can take empties it first."""
+    with Session(client.app.state.engine) as db:
+        for held in list(load_state(db, campaign_id).characters[WREN.casefold()].items):
+            inventory.drop_item(db, campaign_id, WWN.inventory, WREN, held.name)
+        db.commit()
+
+
 # --- 1. Inventory capacity from a stat ------------------------------------------------------
 
 
@@ -171,6 +180,7 @@ def test_a_buy_is_measured_against_the_stat_based_capacity(
         services=(),
         hirelings=(),
     )
+    _empty_pack(client, campaign_id)
     with Session(client.app.state.engine) as db:
         record(
             db,
@@ -198,6 +208,11 @@ def test_taking_an_object_uses_stat_based_capacity(client_factory: Callable[[], 
     client, campaign_id = _wwn_campaign(client_factory)
     rules = replace(
         WWN.inventory,
+        # The test measures the stat-based capacity alone, so it drops the Readied and Stowed
+        # pools, which the character's starting kit would otherwise fill.
+        pools=(),
+        size_pools={},
+        default_pool="",
         capacity=0,
         capacity_stat="str",
         capacity_multiplier=100,
@@ -561,6 +576,7 @@ def test_a_marketplace_can_trade_in_any_currency_feature(client_factory: Callabl
         services=(),
         hirelings=(),
     )
+    _empty_pack(client, campaign_id)
     with Session(client.app.state.engine) as db:
         record(
             db,

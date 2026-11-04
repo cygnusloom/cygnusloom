@@ -17,6 +17,7 @@ from tests.test_character_creation import (
     _complete_form,
 )
 from tests.test_combat import CAIRN, PC, Rolls, _character, _fight, _foe
+from tests.turns import take_turn
 
 
 def _held(app, campaign_id: int, name: str):
@@ -27,6 +28,7 @@ def test_a_carried_custom_weapon_rolls_its_own_dice(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     tools.give_item(PC, "Cutlass", damage="1d8")
     _foe(tools, "Bo", hp=20)
+    take_turn(tools, PC)
     replace(tools, rng=Rolls(8)).player_attack("Bo", "Cutlass")
     assert _struck(app, campaign_id)[-1].raw == 8
 
@@ -35,6 +37,7 @@ def test_a_modifier_with_its_own_dice_overrides_the_weapons(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     tools.give_item(PC, "Cutlass", damage="1d8")
     _foe(tools, "Bo")
+    take_turn(tools, PC)
     replace(tools, rng=Rolls(4)).player_attack("Bo", "Cutlass", modifier="impaired")
     assert _struck(app, campaign_id)[-1].raw == 4
 
@@ -43,6 +46,7 @@ def test_two_weapons_keep_the_higher_of_their_dice(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     tools.give_item(PC, "Twin Daggers", damage="1d6+1d6")
     _foe(tools, "Bo", hp=20)
+    take_turn(tools, PC)
     replace(tools, rng=Rolls(2, 5)).player_attack("Bo", "Twin Daggers")
     assert _struck(app, campaign_id)[-1].raw == 5
 
@@ -50,6 +54,7 @@ def test_two_weapons_keep_the_higher_of_their_dice(client_factory):
 def test_unarmed_fists_roll_1d4(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Bo")
+    take_turn(tools, PC)
     replace(tools, rng=Rolls(4)).player_attack("Bo", "fists")
     assert _struck(app, campaign_id)[-1].raw == 4
     assert CAIRN.combat.unarmed_damage == "1d4"
@@ -58,6 +63,7 @@ def test_unarmed_fists_roll_1d4(client_factory):
 def test_an_uncarried_weapon_is_refused(client_factory):
     _, _, tools = _fight(client_factory)
     _foe(tools, "Bo")
+    take_turn(tools, PC)
     with pytest.raises(InvalidInput, match="carries no weapon named 'Cutlass'"):
         tools.player_attack("Bo", "Cutlass")
 
@@ -66,6 +72,7 @@ def test_a_carried_item_with_no_damage_is_refused(client_factory):
     _, _, tools = _fight(client_factory)
     tools.give_item(PC, "Rope")
     _foe(tools, "Bo")
+    take_turn(tools, PC)
     with pytest.raises(InvalidInput, match="Rope is not a weapon: it has no damage dice"):
         tools.player_attack("Bo", "Rope")
 

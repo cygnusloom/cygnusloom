@@ -7,7 +7,6 @@ ruleset's validated ``progression`` data. Remaining rule-specific behavior is ke
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
 from typing import Any
 
 from cygnusforge.content.character import (
@@ -46,134 +45,6 @@ MAX_ATTRIBUTE = 18
 # {"scene": {"high": 1}, "day": {"necromancer": 2}}.
 EFFORT_MARK = "effort_committed"
 EFFORT_DURATIONS = ("scene", "day", "indefinite")
-
-
-@dataclass(frozen=True)
-class StartingPackage:
-    """One of the book's starting equipment packages. Items are named as the equipment list
-    names them, so the shared inventory and equipment tools can use the catalogue."""
-
-    id: str
-    name: str
-    items: tuple[str, ...]
-    silver: int = 0
-    equipped_armor: str = ""
-    equipped_shield: str = ""
-
-
-STARTING_PACKAGES: Mapping[str, StartingPackage] = {
-    package.id: package
-    for package in (
-        StartingPackage(
-            "pkg_armored_warrior",
-            "Armored Warrior",
-            (
-                "Pieced Armor",
-                "Large Shield",
-                "Short Sword",
-                "Dagger",
-                "Backpack",
-                "Tinder box and 3 torches",
-            ),
-            equipped_armor="Pieced Armor",
-            equipped_shield="Large Shield",
-        ),
-        StartingPackage(
-            "pkg_mage_healer_scholar",
-            "Mage, Healer, or Scholar",
-            (
-                "Dagger",
-                "Dagger",
-                "Staff",
-                "Backpack",
-                "Lantern",
-                "Tinder box",
-                "Oil, 2 pint flasks",
-                "Writing kit",
-                "Paper, 20 sheets",
-                "Rations, 1 week",
-                "Waterskin",
-                "Healer's pouch",
-            ),
-            silver=80,
-        ),
-        StartingPackage(
-            "pkg_ranger_archer",
-            "Ranger or Archer",
-            (
-                "Buff Coat",
-                "Bow, Large",
-                "Arrows, 20",
-                "Quiver",
-                "Dagger",
-                "Hand Axe",
-                "Backpack",
-                "Cooking utensils",
-                "Rations, 1 week",
-                "Waterskin",
-                "Tinder box and 3 torches",
-            ),
-            silver=20,
-            equipped_armor="Buff Coat",
-        ),
-        StartingPackage(
-            "pkg_roguish_wanderer",
-            "Roguish Wanderer",
-            (
-                "Buff Coat",
-                "Small Shield",
-                "Short Sword",
-                "Throwing Blade",
-                "Throwing Blade",
-                "Throwing Blade",
-                "Throwing Blade",
-                "Throwing Blade",
-                "Backpack",
-                "Rations, 1 week",
-                "Waterskin",
-                "Tinder box and 3 torches",
-                "Grappling hook",
-                "Rope, 50 ft",
-            ),
-            equipped_armor="Buff Coat",
-            equipped_shield="Small Shield",
-        ),
-        StartingPackage(
-            "pkg_adventuring_peasant",
-            "Adventuring Peasant",
-            (
-                "War Shirt",
-                "Large Shield",
-                "Light Spear",
-                "Dagger",
-                "Backpack",
-                "Rations, 1 week",
-                "Mule and small cart",
-                "Tinder box and 3 torches",
-            ),
-            equipped_armor="War Shirt",
-            equipped_shield="Large Shield",
-        ),
-        StartingPackage(
-            "pkg_gentry_wayfarer",
-            "Gentry Wayfarer",
-            (
-                "Buff Coat",
-                "Small Shield",
-                "Short Sword",
-                "Backpack",
-                "Rations, 1 week",
-                "Waterskin",
-                "Fine suit of clothing",
-                "Writing kit",
-                "Paper, 20 sheets",
-            ),
-            silver=20,
-            equipped_armor="Buff Coat",
-            equipped_shield="Small Shield",
-        ),
-    )
-}
 
 
 def class_table(class_id: str, progression: WWNProgression) -> ClassTable:
@@ -462,10 +333,12 @@ def player_attack(
     hit_modifier: int = 0,
     range_band: str = "",
     dual_wield: bool = False,
+    force: bool = False,
 ) -> dict[str, Any]:
     """Record the player character's attack with a carried weapon, or unarmed, using the d20 the
     player rolled. The engine rolls damage; Shock applies on a miss. `hit_modifier` carries cover,
-    range, dual wielding, or another situational penalty or bonus."""
+    range, dual wielding, or another situational penalty or bonus. The character must be taking
+    their turn unless `force` says the story needs the attack outside it."""
     if not 1 <= roll <= 20:
         raise InvalidInput("the player's attack roll must be 1 to 20")
     return ctx.world.player_attack(
@@ -476,6 +349,7 @@ def player_attack(
         hit_modifier=hit_modifier,
         range_band=range_band,
         dual_wield=dual_wield,
+        force=force,
     )
 
 
@@ -971,27 +845,35 @@ def roll_starting_silver(character: str, ctx: ToolContext) -> dict[str, Any]:
 
 
 def grant_package(character: str, package: str, ctx: ToolContext) -> dict[str, Any]:
-    """Give a character the items and starting silver of one of the book's equipment packages."""
-    found = STARTING_PACKAGES.get(package.strip().casefold())
+    """Give a character the gear of one of the book's equipment packages. Creation already grants
+    the kit the player chose, so this is for a character who joined without one, such as a
+    promoted hireling. The packages are the rule set's `kit` templates."""
+    kits = [t for t in ctx.world.character.templates.values() if t.kind == "kit"]
+    found = next(
+        (
+            kit
+            for kit in kits
+            if package.strip().casefold() in (kit.id.casefold(), kit.name.casefold())
+        ),
+        None,
+    )
     if found is None:
-        options = ", ".join(sorted(STARTING_PACKAGES))
+        options = ", ".join(sorted(kit.id for kit in kits)) or "none"
         raise InvalidInput(f"there is no package {package!r}; the packages are: {options}")
     given: list[str] = []
-    for item in found.items:
+    for item in found.grant.items:
         ctx.world.give_item(character, item)
         given.append(item)
-    if found.silver:
-        ctx.world.change_currency(character, found.silver, cause=f"the {found.name} package")
-    if found.equipped_armor:
-        ctx.world.equip_armor(character, found.equipped_armor)
-    if found.equipped_shield:
-        ctx.world.equip_armor(character, found.equipped_shield)
+    if found.grant.silver:
+        ctx.world.change_currency(character, found.grant.silver, cause=f"the {found.name} package")
+    for item in found.grant.equip:
+        ctx.world.equip_armor(character, item)
     return {
         "character": character,
         "package": found.id,
         "name": found.name,
         "items": given,
-        "silver": found.silver,
+        "silver": found.grant.silver,
     }
 
 

@@ -21,6 +21,7 @@ from tests.test_combat import (
     save_succeeds,
 )
 from tests.test_world import _db, _state
+from tests.turns import take_turn
 
 LEADER_WIL = 15
 
@@ -44,10 +45,12 @@ def _morale(app, campaign_id: int) -> dict[str, list[str]]:
 def test_a_lone_foe_checks_morale_at_zero_hp_not_before(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Bo", hp=6)
+    take_turn(tools, PC)
     result = replace(tools, rng=Rolls(3)).player_attack("Bo", "Sword")
     assert "morale" not in result
     assert _morale(app, campaign_id) == {}
 
+    take_turn(tools, PC)
     result = replace(tools, rng=Rolls(3, 1)).player_attack("Bo", "Sword")
     assert result["morale"] == [
         {
@@ -68,6 +71,7 @@ def test_a_lone_foe_checks_morale_at_zero_hp_not_before(client_factory):
 def test_a_lone_foe_that_breaks_flees_and_the_fight_ends(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Bo", hp=6)
+    take_turn(tools, PC)
     result = replace(tools, rng=Rolls(6, 20)).player_attack("Bo", "Sword")
     assert result["morale"][0]["passed"] is False
     assert result["morale"][0]["fled"] == ["Bo"]
@@ -82,6 +86,7 @@ def test_a_morale_check_follows_a_declarative_roll_over_rule(client_factory, sav
     tools = replace(tools, combat=replace(tools.combat, save=SaveRules(mode="roll_over")))
     _foe(tools, "Bo", hp=6)
 
+    take_turn(tools, PC)
     result = replace(tools, rng=Rolls(6, save_roll)).player_attack("Bo", "Sword")
 
     assert result["morale"][0]["passed"] is passed
@@ -96,6 +101,7 @@ def test_a_group_checks_at_its_first_casualty_with_the_leaders_wil(client_factor
     expected_leader = next(n for n in encounter.order if n in ("Grave Thing", "Cy"))
     wil = {"Grave Thing": LEADER_WIL, "Cy": 3}[expected_leader]
     roll = 12 if wil == LEADER_WIL else 4
+    take_turn(tools, "Grave Thing")
     result = _hit(tools, "Grave Thing", "Bo", 6, 5, 20, roll)
     check = result["morale"][0]
     assert check["leader"] == expected_leader
@@ -108,6 +114,7 @@ def test_a_group_of_two_makes_a_separate_check_for_first_and_half(client_factory
     app, campaign_id, tools = _fight(client_factory)
     _monster(tools, "Grave Thing", wil=10)
     _foe(tools, "Bo")
+    take_turn(tools, "Grave Thing")
     result = _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 1, 1)
     assert [check["tag"] for check in result["morale"]] == ["first", "half"]
     assert _morale(app, campaign_id) == {FOES_SIDE: ["first", "half"]}
@@ -117,6 +124,7 @@ def test_a_failed_first_check_makes_the_side_flee_so_no_half_check_follows(clien
     app, campaign_id, tools = _fight(client_factory)
     _monster(tools, "Grave Thing", wil=10)
     _foe(tools, "Bo")
+    take_turn(tools, "Grave Thing")
     result = _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 20)
     assert [check["tag"] for check in result["morale"]] == ["first"]
     assert result["morale"][0]["passed"] is False
@@ -129,13 +137,16 @@ def test_a_group_checks_at_first_casualty_and_at_half_once_each(client_factory):
     _foe(tools, "Bo")
     _foe(tools, "Cy")
     _foe(tools, "Dee")
+    take_turn(tools, "Grave Thing")
     first = _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 1)
     assert [check["tag"] for check in first["morale"]] == ["first"]
+    take_turn(tools, "Grave Thing")
     second = _hit(tools, "Grave Thing", "Cy", 6, 5, 20, 1)
     assert [check["tag"] for check in second["morale"]] == ["half"]
     assert _morale(app, campaign_id) == {FOES_SIDE: ["first", "half"]}
     # Three of four are down and both tags are spent, so no morale die is rolled. Rolls(6, 5, 20)
     # would fail if one were.
+    take_turn(tools, "Grave Thing")
     third = _hit(tools, "Grave Thing", "Dee", 6, 5, 20)
     assert "morale" not in third
     assert _morale(app, campaign_id) == {FOES_SIDE: ["first", "half"]}
@@ -146,6 +157,7 @@ def test_a_failed_group_check_flees_every_living_foe_and_ends_the_fight(client_f
     _monster(tools, "Grave Thing", wil=10)
     _foe(tools, "Bo")
     _foe(tools, "Cy")
+    take_turn(tools, "Grave Thing")
     result = _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 20)
     check = result["morale"][0]
     assert check["passed"] is False
@@ -158,6 +170,7 @@ def test_a_player_character_is_never_checked_for_morale(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Bo", claw="4d6")
     _set_stat(app, campaign_id, PC, "hp", 0)
+    take_turn(tools, "Bo")
     result = _hit(tools, "Bo", PC, 6, 6, 6, 6)
     assert "morale" not in result
     assert _morale(app, campaign_id) == {}
@@ -169,6 +182,7 @@ def test_a_fled_character_cannot_attack(client_factory):
     _foe(tools, "Grave Thing")
     _foe(tools, "Bo")
     _foe(tools, "Cy")
+    take_turn(tools, "Bo")
     replace(tools, rng=Rolls(10)).retreat("Bo", True)
     assert _character(app, campaign_id, "Bo").fled is True
     with pytest.raises(InvalidInput, match="Bo has fled the fight"):
@@ -221,6 +235,7 @@ def test_a_surrendered_character_cannot_attack_and_shows_as_surrendered(client_f
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Bo")
     _foe(tools, "Cy")
+    take_turn(tools, "Bo")
     tools.surrender("Bo")
     with pytest.raises(InvalidInput, match="Bo has surrendered"):
         _hit(tools, "Bo", PC, 1)
@@ -231,6 +246,7 @@ def test_a_defeated_character_shows_defeat_rather_than_fled(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, "Grave Thing", claw="2d6")
     _foe(tools, "Bo")
+    take_turn(tools, "Grave Thing")
     _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 1, 1)
     bo = _character(app, campaign_id, "Bo")
     assert bo.defeated is True

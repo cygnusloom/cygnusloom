@@ -238,7 +238,7 @@
     "name": "grant_package",
     "python_module": "wwn",
     "function": "grant_package",
-    "description": "Give a character a starting equipment package, once at creation. Packages are better value than rolling starting silver and each bundles the gear a role needs. Give each character one package and do not grant it again.",
+    "description": "Give a character one of the book's starting equipment packages. Creation already gives every character the kit the player chose, so use this only for a character who joined without gear, such as a promoted hireling. Do not use it to hand out an item the player says they have; those come from the story, from give_item, or from buy_item.",
     "parameters": {
       "type": "object",
       "properties": {

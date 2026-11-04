@@ -134,7 +134,7 @@
     "id": "attack",
     "name": "attack",
     "world_method": "attack",
-    "description": "Make an NPC's attack against a character. Attacks always hit. The attack's damage is rolled by the engine and reduces the target's armor, then Hit Protection, then Strength, and a target whose Strength is used up must make a Strength save. Use it only when the attacker's side is acting, after the initiative is set. Player characters attack with player_attack, not this tool. A detachment (a statblock marked as a group) is hit only by impaired attacks, except an individual's attack with Blast, which rolls its normal dice against it. A detachment's own attack has Blast: the engine rolls its enhanced damage separately for each living individual on the other side, and the target you name is one of them; leave targets out for a detachment. An individual's attack with Blast (its statblock lists the attack with the blast flag) hits every target you list in targets, and each target rolls its damage separately; the target you name must be in that list. Without targets, it hits the named target alone and rolls once. An attack flagged ignores_armor skips the target's armor. A detachment whose Strength is used up makes a Strength save; if it fails it is broken, and the attack and targeting are refused until resolve_group_break is called.",
+    "description": "Make an NPC's attack against a character. Attacks always hit. The attack's damage is rolled by the engine and reduces the target's armor, then Hit Protection, then Strength, and a target whose Strength is used up must make a Strength save. Use it only when the attacker is taking their turn, after the initiative is set; an attack by anyone else is refused unless force is true. Player characters attack with player_attack, not this tool. A detachment (a statblock marked as a group) is hit only by impaired attacks, except an individual's attack with Blast, which rolls its normal dice against it. A detachment's own attack has Blast: the engine rolls its enhanced damage separately for each living individual on the other side, and the target you name is one of them; leave targets out for a detachment. An individual's attack with Blast (its statblock lists the attack with the blast flag) hits every target you list in targets, and each target rolls its damage separately; the target you name must be in that list. Without targets, it hits the named target alone and rolls once. An attack flagged ignores_armor skips the target's armor. A detachment whose Strength is used up makes a Strength save; if it fails it is broken, and the attack and targeting are refused until resolve_group_break is called.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -165,6 +165,11 @@
             "type": "string"
           },
           "description": "Only for an individual's attack with Blast: the names of every character in its area, including the target. Each rolls its damage separately. Leave it out for any other attack."
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Resolve the attack even though this is not the attacker's turn. Set it only when the story needs an action outside the turn order, such as an ambush that catches the party unawares."
         }
       },
       "required": [
@@ -179,7 +184,7 @@
     "id": "player_attack",
     "name": "player_attack",
     "world_method": "player_attack",
-    "description": "Ask the player to roll their attack against a target. Attacks always hit, so the player's weapon roll is the damage; the modifier's dice replace the weapon's when one is named. The weapon must be carried (give it with give_item first, naming its damage if it is not in the catalogue), or be 'unarmed' for fists. Use it when the player says what they attack with and the target is in the encounter. The target takes the damage through its armor, Hit Protection, and Strength, as with an NPC attack. A detachment can only be hit by an impaired attack.",
+    "description": "Ask the player to roll their attack against a target. Attacks always hit, so the player's weapon roll is the damage; the modifier's dice replace the weapon's when one is named. The weapon must be carried (give it with give_item first, naming its damage if it is not in the catalogue), or be 'unarmed' for fists. Use it when the player says what they attack with, the target is in the encounter, and it is the player character's turn; an attack outside their turn is refused unless force is true. The target takes the damage through its armor, Hit Protection, and Strength, as with an NPC attack. A detachment can only be hit by an impaired attack.",
     "player_input": {
       "weapon_param": "weapon",
       "weapon_roll_param": "damage_roll",
@@ -209,6 +214,11 @@
             "enhanced"
           ],
           "description": "The attack's modifier. 'normal' is the attack's own dice; 'impaired' and 'enhanced' roll different dice. Leave it out for a normal attack."
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Resolve the attack even though this is not the player character's turn. Set it only when the story needs an action outside the turn order."
         }
       },
       "required": [
@@ -326,7 +336,7 @@
     "id": "resolve_attacks",
     "name": "resolve_attacks",
     "world_method": "resolve_attacks",
-    "description": "Resolve several NPC attacks on one character at once, such as two foes attacking the same character or one NPC using two weapons. Each attack rolls its own dice, only the single highest roll hits, and the damage is applied once. Every attacker must be a living NPC on the side opposing the target, and the whole list is checked before any dice are rolled. Use it only when the attackers' side is acting, after the initiative is set. Player characters attack with player_attack, not this tool. An attack with Blast cannot be resolved here; use attack with targets for it.",
+    "description": "Resolve several NPC attacks on one character at once, such as two foes attacking the same character or one NPC using two weapons. Each attack rolls its own dice, only the single highest roll hits, and the damage is applied once. Every attacker must be a living NPC on the side opposing the target, the whole list is checked before any dice are rolled, and every attacker must be taking their turn unless force is true. Use it only when the attackers' turns come up, after the initiative is set. Player characters attack with player_attack, not this tool. An attack with Blast cannot be resolved here; use attack with targets for it.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -363,6 +373,11 @@
               "attack"
             ]
           }
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Resolve the attacks even though they are not the attackers' turns. Set it only when the story needs an action outside the turn order, such as an ambush."
         }
       },
       "required": [
