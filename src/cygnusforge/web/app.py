@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from starlette.middleware.sessions import SessionMiddleware
 
+from cygnusforge import license_text
 from cygnusforge.auth.deps import AdminRequired, LoginRequired, StepUpRequired
 from cygnusforge.auth.oidc import OIDCProvider, build_oidc_provider
 from cygnusforge.auth.ratelimit import RateLimiter
@@ -94,6 +95,11 @@ def create_app(
     def license_page(request: Request) -> Response:
         """The AGPL notice and the source offer, reachable before signing in."""
         return render(request, "license.html")
+
+    @app.get("/license.txt", include_in_schema=False)
+    def license_file() -> PlainTextResponse:
+        """The license text itself, so a deployment needs no other host to serve it."""
+        return PlainTextResponse(license_text())
 
     app.add_exception_handler(LoginRequired, _login_redirect)
     app.add_exception_handler(AdminRequired, _forbidden)

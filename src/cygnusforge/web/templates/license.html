@@ -17,19 +17,18 @@
     </p>
     <p>
       You should have received a copy of the GNU Affero General Public License along with this
-      program. If not, see <a href="https://www.gnu.org/licenses/">gnu.org/licenses</a>. The full
-      text ships as the <a href="{{ source_url }}/blob/master/LICENSE">LICENSE file</a> of the source
-      code.
+      program. If not, see <a href="https://www.gnu.org/licenses/">gnu.org/licenses</a>. This
+      server keeps the full text at <a href="/license.txt">/license.txt</a>.
     </p>
+    {% if source_url %}
     <h2>Source code</h2>
     <p>
       The AGPL covers software used over a network, so everyone using this site can get the source of
       the version it runs. It is available at <a href="{{ source_url }}">{{ source_url }}</a>.
     </p>
-    <h2>Content</h2>
-    <p>
-      Rule sets and worlds bundled with the engine keep their own licenses. The
-      <a href="{{ source_url }}#content-credits">content credits</a> list them.
-    </p>
+    {% endif %}
+    {% if credits %}
+      {{ credits | markdown }}
+    {% endif %}
   </section>
 {% endblock %}

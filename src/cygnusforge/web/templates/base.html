@@ -33,7 +33,7 @@
     <p>
       Cygnus Forge {{ app_version }} · Copyright (C) 2026 Cygnus Forge contributors ·
       Free software under the <a href="/license">GNU Affero General Public License v3 or later</a>,
-      without warranty · <a href="{{ source_url }}">Source</a>
+      without warranty{% if source_url %} · <a href="{{ source_url }}">Source</a>{% endif %}
     </p>
   </footer>
   {% block scripts %}{% endblock %}

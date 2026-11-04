@@ -20,6 +20,9 @@ dependencies = [
     "psycopg[binary]>=3.3.6",
 ]
 
+[project.urls]
+Source = "https://github.com/linewriter1024/cygnusforge"
+
 [dependency-groups]
 dev = [
     "pytest>=8",
@@ -50,6 +53,9 @@ exclude = [
 [tool.hatch.build.targets.wheel]
 packages = ["src/cygnusforge"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"CREDITS.md" = "cygnusforge/CREDITS.md"
+
 [tool.hatch.build.targets.sdist]
 only-include = [
     ".devcontainer",
@@ -58,6 +64,7 @@ only-include = [
     ".github",
     ".gitignore",
     ".vscode",
+    "CREDITS.md",
     "Dockerfile",
     "ISSUE_TRACKER.md",
     "LICENSE",

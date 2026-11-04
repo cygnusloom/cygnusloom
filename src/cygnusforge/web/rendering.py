@@ -9,7 +9,7 @@ from markupsafe import Markup
 from starlette.responses import Response
 from starlette.templating import Jinja2Templates
 
-from cygnusforge import SOURCE_URL, __version__
+from cygnusforge import SOURCE_URL, __version__, content_credits
 from cygnusforge.auth.deps import current_user, get_csrf, is_admin_user
 from cygnusforge.auth.oidc import account_management_url
 from cygnusforge.services.accounts import decode_roles
@@ -48,6 +48,7 @@ def render(request: Request, name: str, status_code: int = 200, **context: Any) 
         or account_management_url(settings.oidc_issuer),
         "app_version": __version__,
         "source_url": SOURCE_URL,
+        "credits": content_credits(),
         **context,
     }
     return templates.TemplateResponse(request, name, values, status_code=status_code)

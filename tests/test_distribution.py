@@ -19,6 +19,7 @@ def test_distributions_exclude_untracked_runtime_and_private_files(tmp_path: Pat
         shutil.copy2(ROOT / name, project / name)
     for name in (
         "README.md",
+        "CREDITS.md",
         ".env.example",
         "src/cygnusforge/__init__.py",
         "src/cygnusforge/asset.txt",
@@ -67,6 +68,7 @@ def test_distributions_exclude_untracked_runtime_and_private_files(tmp_path: Pat
 
     assert {
         PurePosixPath("README.md"),
+        PurePosixPath("CREDITS.md"),
         PurePosixPath(".env.example"),
         PurePosixPath("src/cygnusforge/__init__.py"),
         PurePosixPath("src/cygnusforge/asset.txt"),
@@ -80,6 +82,7 @@ def test_distributions_exclude_untracked_runtime_and_private_files(tmp_path: Pat
     assert {
         PurePosixPath("cygnusforge/__init__.py"),
         PurePosixPath("cygnusforge/asset.txt"),
+        PurePosixPath("cygnusforge/CREDITS.md"),
     } <= wheel_paths
     wheel_excluded = {
         PurePosixPath(name).relative_to("src") for name in excluded if name.startswith("src/")
