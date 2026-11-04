@@ -1,15 +1,9 @@
-"""Combat: hits, armor, the harm they cause, and the saves they force. The rule set's combat module
-decides what a save means and how initiative is ordered. This service checks each step against the
-encounter and records what happened.
-
-Like the rest of the world service, each function loads the campaign's state, validates the
-change, records its events, and commits."""
-
-from __future__ import annotations
+"""Attacks: the roll, the hit, the blast, and a party attacking together.
+"""
 
 import random
-from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, replace
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from sqlmodel import Session
@@ -19,11 +13,10 @@ from cygnusforge.content.library import (
     ALL_STATS,
     CombatRules,
     ConditionRules,
-    DamageStep,
     GroupRules,
 )
 from cygnusforge.rules.dice import roll_total
-from cygnusforge.services import death, resolution
+from cygnusforge.services import death
 from cygnusforge.services.attacks import (
     AttackFlags,
     highest_index,
@@ -31,240 +24,38 @@ from cygnusforge.services.attacks import (
     modifier_name,
     rolls_text,
 )
-from cygnusforge.services.common import InvalidInput, bounded_text, whole_number
-from cygnusforge.services.conditions import active_conditions, end_condition
+from cygnusforge.services.combat.constants import NO_UNSKILLED_PENALTY
+from cygnusforge.services.combat.damage import (
+    Damage,
+    WeaponBonuses,
+    _defeat_after_harm,
+    _end_if_one_side_left,
+    _harm_stat,
+    _injury_from_hit,
+    _living,
+    _require_impaired,
+    apply_damage,
+)
+from cygnusforge.services.combat.initiative import _no_initiative_pending
+from cygnusforge.services.combat.save import _save
+from cygnusforge.services.common import InvalidInput
+from cygnusforge.services.conditions import active_conditions
 from cygnusforge.services.encounters import (
     _participant,
-    awaiting_initiative,
-    initiative_open,
-    settle_initiative,
 )
 from cygnusforge.services.events import (
     NPC_KIND,
     PC_KIND,
-    ArmorSet,
     CampaignState,
     Character,
-    CharacterDied,
-    CharacterRecovered,
-    CharacterSurrendered,
-    DebugCurrencyAdded,
-    DebugStatSet,
-    DefenseEquipmentSet,
-    EncounterEnded,
-    GroupBreakResolved,
-    Harmed,
-    InitiativeRolled,
-    InvincibilitySet,
-    Recovered,
-    SaveRolled,
     Struck,
     current,
-    defeat_status,
     load_state,
     name_key,
     out_of_fight,
     record,
     same_item_name,
 )
-from cygnusforge.services.injuries import EffectContext, gain_injury
-from cygnusforge.services.recovery import recover
-
-MAX_DAMAGE = 1000
-# Sanity bound on armor when the rule set sets no cap (armor_max of 0).
-UNCAPPED_ARMOR = 1000
-MAX_RECOVERY_TEXT = 600
-MAX_CAUSE_TEXT = 200
-# A weapon feature flag: the weapon can be used without the unskilled attack penalty, as the free
-# Worlds Without Number rules say of crossbows.
-NO_UNSKILLED_PENALTY = "no_unskilled_penalty"
-
-
-def armor_after(current: int, listed: int, mode: str, defense: int = 0) -> int:
-    """Combine an armor value with the current defense according to its configured mode."""
-    if mode == "set":
-        return defense + listed
-    if mode == "max":
-        return max(current, defense + listed)
-    if mode == "shield":
-        if current <= defense:
-            return defense + listed
-        return max(current + 1, defense + listed)
-    return current + listed
-
-
-def equipped_defense(character: Character, spec: CharacterSpec, base: int, modifier: str) -> int:
-    """Calculate defense from passive floors, worn armor, a wielded shield, and adjustments."""
-    bonus = spec.modifier(character.stats, modifier) if modifier else 0
-    unarmored = base + bonus
-    floor = max(base, character.innate_defense)
-    for feature_id, count in character.features.items():
-        feature = spec.features.get(feature_id)
-        if count <= 0 or feature is None or feature.defense_floor is None:
-            continue
-        rule = feature.defense_floor
-        if rule.requires_no_armor and (character.equipped_armor or character.equipped_armor_value):
-            continue
-        if rule.requires_no_shield and (
-            character.equipped_shield or character.equipped_shield_value
-        ):
-            continue
-        value = rule.base
-        if rule.counter:
-            counter = spec.counters.get(rule.counter)
-            if counter is None:
-                raise InvalidInput(f"defense floor names no counter {rule.counter!r}")
-            amount = character.counters.get(rule.counter, counter.initial)
-            value += -(-amount // rule.divisor) if rule.round_up else amount // rule.divisor
-        floor = max(floor, value)
-    armor = max(unarmored + character.equipped_armor_value, floor + bonus)
-    if character.equipped_shield_value:
-        armor = armor_after(armor, character.equipped_shield_value, "shield", unarmored)
-    return armor + character.defense_adjustment
-
-
-def recalculate_defense(
-    db: Session,
-    campaign_id: int,
-    name: str,
-    spec: CharacterSpec,
-    rules: CombatRules,
-) -> int:
-    """Record the current defense after an equipment, feature, counter, or stat change."""
-    character = load_state(db, campaign_id).characters.get(name_key(name))
-    if character is None:
-        raise InvalidInput(f"there is no character named {name!r}")
-    value = equipped_defense(character, spec, rules.defense_base, rules.defense_modifier)
-    value = max(0, min(value, rules.armor_max or UNCAPPED_ARMOR))
-    if value != character.armor:
-        record(db, campaign_id, ArmorSet(name=character.name, armor=value))
-    return value
-
-
-def set_defense_equipment(
-    db: Session,
-    campaign_id: int,
-    character: Character,
-    spec: CharacterSpec,
-    rules: CombatRules,
-    *,
-    armor: tuple[str, int] | None = None,
-    shield: tuple[str, int] | None = None,
-    adjustment: int | None = None,
-) -> int:
-    """Change either equipped defense slot or its adjustment, then record the resulting AC."""
-    body = (
-        armor if armor is not None else (character.equipped_armor, character.equipped_armor_value)
-    )
-    held_shield = (
-        shield
-        if shield is not None
-        else (character.equipped_shield, character.equipped_shield_value)
-    )
-    if body[1] < 0 or held_shield[1] < 0:
-        raise InvalidInput("equipped armor values must not be negative")
-    if (not body[0] and body[1]) or (not held_shield[0] and held_shield[1]):
-        raise InvalidInput("equipped armor values need item names")
-    innate = character.innate_defense
-    if not character.defense_tracked and character.armor and adjustment is None:
-        bonus = (
-            spec.modifier(character.stats, rules.defense_modifier) if rules.defense_modifier else 0
-        )
-        innate = max(0, character.armor - bonus)
-    record(
-        db,
-        campaign_id,
-        DefenseEquipmentSet(
-            name=character.name,
-            equipped_armor=body[0],
-            equipped_armor_value=body[1],
-            equipped_shield=held_shield[0],
-            equipped_shield_value=held_shield[1],
-            innate_defense=innate,
-            defense_adjustment=(character.defense_adjustment if adjustment is None else adjustment),
-        ),
-    )
-    return recalculate_defense(db, campaign_id, character.name, spec, rules)
-
-
-@dataclass(frozen=True)
-class WeaponBonuses:
-    """What a player character's weapon adds to an attack: `to_hit` to the hit roll, `damage` to
-    the hit's own damage, and the `shock` a miss does through armor of `shock_ac` or less."""
-
-    to_hit: int = 0
-    damage: int = 0
-    shock: int = 0
-    shock_ac: int = 0
-
-
-@dataclass(frozen=True)
-class Damage:
-    """What a hit did: the damage armor absorbed, the harm by stat, and the stat a save is owed on."""
-
-    absorbed: int
-    harm: dict[str, int]
-    save: str | None
-
-
-def apply_damage(
-    steps: Sequence[DamageStep],
-    armor: int,
-    current_of: Callable[[str], int],
-    raw: int,
-) -> Damage:
-    """Run a hit's damage through the rule set's steps in order. `absorb` takes up to `armor` off
-    the hit. `harm` takes up to the stat's current score. `overflow` takes the rest and owes a save
-    on its stat. Damage left after the last step has no effect."""
-    absorbed = 0
-    harm: dict[str, int] = {}
-    save: str | None = None
-    dealt = raw
-    for step in steps:
-        if step.kind == "absorb":
-            absorbed = min(armor, dealt)
-            dealt -= absorbed
-        elif step.kind == "harm":
-            assert step.stat is not None
-            taken = min(dealt, current_of(step.stat))
-            if taken:
-                harm[step.stat] = taken
-            dealt -= taken
-        else:
-            assert step.stat is not None
-            if dealt:
-                harm[step.stat] = dealt
-                save = step.stat
-            dealt = 0
-    return Damage(absorbed=absorbed, harm=harm, save=save)
-
-
-def _living(character: Character, combat: CombatRules) -> Character:
-    if character.story_only:
-        raise InvalidInput(
-            f"{character.name} has no stats yet; give them stats with update_npc first"
-        )
-    if character.defeated:
-        raise InvalidInput(f"{character.name} is {defeat_status(character, combat.defeat)}")
-    if character.fled:
-        raise InvalidInput(f"{character.name} has fled the fight")
-    if character.surrendered:
-        raise InvalidInput(f"{character.name} has surrendered")
-    if character.critical_due:
-        raise InvalidInput(
-            f"{character.name} is broken and awaits the GM's decision; call resolve_group_break"
-        )
-    return character
-
-
-def _require_impaired(target: Character, modifier: str, combat: CombatRules) -> None:
-    """A group is hit only by the rule set's incoming modifier. A rule set with no groups block
-    places no such limit."""
-    if combat.groups is None or not target.large_group:
-        return
-    required = combat.groups.incoming_modifier
-    if modifier != required:
-        raise InvalidInput(f"{target.name} is a group; attacks on it must be {required}")
 
 
 def _stat_bonus(combat: CombatRules, character: Character, stat: str) -> int:
@@ -361,25 +152,6 @@ def _attack_shock(source: Character, name: str) -> tuple[int, int]:
     if len(pair) < 2:
         return 0, 0
     return int(pair[0]), int(pair[1])
-
-
-def _harm_stat(combat: CombatRules) -> str | None:
-    """The first stat a hit harms, which is the one shock and defeat are read from."""
-    return next((step.stat for step in combat.damage if step.kind == "harm"), None)
-
-
-def _defeat_after_harm(
-    combat: CombatRules, target: Character, harm: Mapping[str, int]
-) -> tuple[bool, str]:
-    """Whether this harm took a stat the rule set leaves a character defeated at 0 down to 0, and
-    where that defeat leaves the character."""
-    if target.invincible:
-        return False, ""
-    for stat in combat.defeat_at_zero:
-        if current(target, stat) - harm.get(stat, 0) <= 0:
-            return True, defeat_status(target, combat.defeat)
-    return False, ""
-
 
 def _strike(
     db: Session,
@@ -536,180 +308,6 @@ def _strike(
     result["defeated"] = load_state(db, campaign_id).characters[name_key(target.name)].defeated
     _end_if_one_side_left(db, campaign_id)
     return result
-
-
-def _injury_from_hit(
-    db: Session,
-    campaign_id: int,
-    combat: CombatRules,
-    rng: random.Random,
-    name: str,
-    damage: Damage,
-    *,
-    plus: str,
-    spec: CharacterSpec | None = None,
-) -> str | None:
-    """Apply the configured injury trigger to eligible targets, using harm as the table index."""
-    table = combat.injury_table
-    if table is None:
-        return None
-    lost = damage.harm.get(table.stat, 0)
-    if lost == 0:
-        return None
-    character = load_state(db, campaign_id).characters[name_key(name)]
-    if character.kind not in table.target_kinds:
-        return None
-    if table.trigger == "depleted" and current(character, table.stat) != 0:
-        return None
-    roll = min(lost, len(table.entries))
-    entry = gain_injury(
-        db,
-        campaign_id,
-        name,
-        table,
-        roll,
-        EffectContext(rng=rng, combat=combat, spec=spec),
-        plus=plus,
-    )
-    return entry.name
-
-
-def _end_if_one_side_left(db: Session, campaign_id: int) -> None:
-    """End the encounter once only one side still has a character who can fight. The check
-    needs at least two sides in the encounter, so a fight among one side is left alone."""
-    state = load_state(db, campaign_id)
-    encounter = state.encounter
-    if encounter is None:
-        return
-    sides: dict[str, list[Character]] = {}
-    for display in encounter.order:
-        character = state.characters[name_key(display)]
-        side = encounter.sides.get(name_key(character.name), "")
-        sides.setdefault(side, []).append(character)
-    if len(sides) < 2:
-        return
-    standing = [
-        side for side, members in sides.items() if any(not out_of_fight(m) for m in members)
-    ]
-    if len(standing) > 1:
-        return
-    if standing:
-        reason = f"Only the {standing[0]} side can still fight."
-    else:
-        reason = "Nobody is left able to fight."
-    record(db, campaign_id, EncounterEnded(reason=reason))
-    db.commit()
-
-
-def surrender(db: Session, campaign_id: int, name: str, combat: CombatRules) -> dict[str, Any]:
-    """A character gives up the fight. The encounter ends once one side has nobody who can fight."""
-    state = load_state(db, campaign_id)
-    if state.encounter is None:
-        raise InvalidInput("there is no encounter to surrender in")
-    character = state.characters.get(name_key(name))
-    if character is None:
-        raise InvalidInput(f"there is no character named {name!r}")
-    if name_key(character.name) not in state.encounter.sides:
-        raise InvalidInput(f"{character.name} is not in the encounter")
-    _living(character, combat)
-    record(db, campaign_id, CharacterSurrendered(name=character.name))
-    db.commit()
-    _end_if_one_side_left(db, campaign_id)
-    return {"character": character.name, "surrendered": True}
-
-
-def resolve_save(
-    combat: CombatRules,
-    score: int,
-    *,
-    rng: random.Random | None = None,
-    roll: int | None = None,
-    plus: str = "sum",
-) -> resolution.RollResult:
-    """Resolve a save against `score` through one rules-aware path.
-
-    A rule set whose Python module supplies `save_succeeds` owns the comparison; every other rule
-    set uses the shared resolution primitive with its declarative save mode and automatic rolls.
-    `roll` is a roll the player reported, used as it is; when it is None the engine rolls the rule
-    set's check die with `rng`."""
-    module = combat.module
-    if module is not None and callable(getattr(module, "save_succeeds", None)):
-        made = (
-            roll
-            if roll is not None
-            else resolution.roll_die(_required_rng(rng), combat.check_die, plus=plus)
-        )
-        return resolution.RollResult(
-            roll=made, score=score, passed=bool(module.save_succeeds(made, score))
-        )
-    if roll is not None:
-        return resolution.resolve_roll(
-            roll,
-            score,
-            mode=combat.save.mode,
-            auto_success=combat.save.auto_success,
-            auto_fail=combat.save.auto_fail,
-        )
-    return resolution.roll_score(
-        _required_rng(rng),
-        combat.check_die,
-        score,
-        mode=combat.save.mode,
-        auto_success=combat.save.auto_success,
-        auto_fail=combat.save.auto_fail,
-        plus=plus,
-    )
-
-
-def _required_rng(rng: random.Random | None) -> random.Random:
-    """The caller's random source. A caller that supplied the player's roll needs none."""
-    if rng is None:
-        raise ValueError("resolving a save needs either the player's roll or a random source")
-    return rng
-
-
-def _save(
-    db: Session,
-    campaign_id: int,
-    combat: CombatRules,
-    rng: random.Random,
-    character: Character,
-    stat: str,
-    *,
-    plus: str,
-) -> dict[str, Any]:
-    result = resolve_save(combat, current(character, stat), rng=rng, plus=plus)
-    critical = character.large_group
-    record(
-        db,
-        campaign_id,
-        SaveRolled(
-            name=character.name,
-            stat=stat,
-            roll=result.roll,
-            score=result.score,
-            passed=result.passed,
-            status="" if critical else defeat_status(character, combat.defeat),
-            critical=critical,
-        ),
-    )
-    db.commit()
-    if not result.passed and not critical and character.kind == PC_KIND:
-        death.on_critical_save_failed(db, campaign_id, combat, character.name)
-        db.commit()
-    return {
-        "stat": stat,
-        "roll": result.roll,
-        "score": result.score,
-        "passed": result.passed,
-    }
-
-
-def _no_initiative_pending(state: CampaignState) -> None:
-    if initiative_open(state):
-        waiting = ", ".join(awaiting_initiative(state))
-        raise InvalidInput(f"initiative is not set yet; {waiting} must roll for it first")
-
 
 def _attack_named(source: Character, attack_name: str) -> str:
     """The name of one of the NPC's attacks, matched without regard to case."""
@@ -1062,7 +660,6 @@ def resolve_attacks(
         spec=spec,
     )
 
-
 @dataclass(frozen=True)
 class PlannedAttack:
     """One of several NPC attacks on the same target, before any of its dice are rolled."""
@@ -1261,338 +858,3 @@ def _attack_dice(pc: Character, weapon: str, modifier: str, combat: CombatRules)
         )
     return modifier_dice(combat.modifiers, modifier) or weapon_dice
 
-
-def resolve_group_break(
-    db: Session, campaign_id: int, name: str, outcome: str, combat: CombatRules
-) -> dict[str, Any]:
-    """The GM's decision after a group's Critical Damage save failed. "defeat" breaks and defeats it,
-    "flee" breaks it up so its members run from the fight. Until this is called, the group cannot
-    attack or be attacked. The rule set's groups list the decisions a break may take."""
-    state = load_state(db, campaign_id)
-    character = state.characters.get(name_key(name))
-    if character is None:
-        raise InvalidInput(f"there is no character named {name!r}")
-    if not character.large_group:
-        raise InvalidInput(f"{character.name} is not a group")
-    if not character.critical_due:
-        raise InvalidInput(f"{character.name} has no failed critical damage save to resolve")
-    outcomes = (combat.groups or GroupRules()).break_outcomes
-    if outcome not in outcomes:
-        raise InvalidInput(f"outcome must be {' or '.join(repr(o) for o in outcomes)}")
-    status = defeat_status(character, combat.defeat) if outcome == "defeat" else ""
-    record(
-        db,
-        campaign_id,
-        GroupBreakResolved(name=character.name, outcome=outcome, status=status),
-    )
-    db.commit()
-    _end_if_one_side_left(db, campaign_id)
-    return {"character": character.name, "outcome": outcome}
-
-
-def player_save(
-    db: Session,
-    campaign_id: int,
-    roll: int,
-    combat: CombatRules,
-    *,
-    conditions: Mapping[str, ConditionRules] | None = None,
-    rng: random.Random | None = None,
-    plus: str = "sum",
-    spec: CharacterSpec | None = None,
-) -> dict[str, Any]:
-    """The save a player character owes after harm overflowed, rolled by the player. Passing it
-    ends any fatal condition the character has, such as Doomed, when the rule set defines it."""
-    state = load_state(db, campaign_id)
-    pc = state.pc()
-    if pc is None or pc.save_due is None:
-        raise InvalidInput("no player character owes a save")
-    roll = whole_number(roll, "roll", 1, combat.check_sides)
-    stat = pc.save_due
-    result = resolve_save(combat, current(pc, stat), rng=rng, roll=roll, plus=plus)
-    record(
-        db,
-        campaign_id,
-        SaveRolled(
-            name=pc.name,
-            stat=stat,
-            roll=result.roll,
-            score=result.score,
-            passed=result.passed,
-            status=defeat_status(pc, combat.defeat),
-        ),
-    )
-    db.commit()
-    if not result.passed:
-        death.on_critical_save_failed(db, campaign_id, combat, pc.name)
-    elif conditions and rng is not None:
-        for cid in list(pc.conditions):
-            if cid in combat.fatal_conditions and cid in conditions:
-                end_condition(
-                    db,
-                    campaign_id,
-                    pc.name,
-                    cid,
-                    "gm",
-                    combat,
-                    conditions,
-                    rng,
-                    plus=plus,
-                    spec=spec,
-                )
-    _end_if_one_side_left(db, campaign_id)
-    return {
-        "character": pc.name,
-        "stat": stat,
-        "roll": result.roll,
-        "score": result.score,
-        "passed": result.passed,
-    }
-
-
-def player_initiative(
-    db: Session, campaign_id: int, roll: int, combat: CombatRules
-) -> dict[str, Any]:
-    """A player character's initiative save, on the rule set's initiative stat. Once every player
-    character has rolled, the order of round one is set."""
-    state = load_state(db, campaign_id)
-    waiting = awaiting_initiative(state)
-    if not waiting:
-        raise InvalidInput("no one is rolling for initiative right now")
-    character = state.characters[name_key(waiting[0])]
-    roll = whole_number(roll, "roll", 1, combat.check_sides)
-    result = resolve_save(combat, current(character, combat.initiative_stat), roll=roll)
-    record(db, campaign_id, InitiativeRolled(name=character.name, passed=result.passed))
-    db.commit()
-    settle_initiative(db, campaign_id, combat.initiative_order)
-    return {
-        "character": character.name,
-        "roll": result.roll,
-        "score": result.score,
-        "passed": result.passed,
-        "still_waiting": awaiting_initiative(load_state(db, campaign_id)),
-    }
-
-
-def set_armor(
-    db: Session,
-    campaign_id: int,
-    name: str,
-    armor: int,
-    armor_max: int = 0,
-    *,
-    spec: CharacterSpec | None = None,
-    rules: CombatRules | None = None,
-) -> dict[str, Any]:
-    """Set what each hit against a character absorbs, up to the rule set's armor cap (0 means
-    no cap)."""
-    state = load_state(db, campaign_id)
-    character = state.characters.get(name_key(name))
-    if character is None:
-        raise InvalidInput(f"there is no character named {name!r}")
-    value = whole_number(armor, "armor", 0, armor_max or UNCAPPED_ARMOR)
-    if character.defense_tracked and rules is not None and rules.defense_base:
-        if spec is None:
-            raise InvalidInput("equipped defense requires the character rules")
-        unadjusted = equipped_defense(
-            replace(character, defense_adjustment=0),
-            spec,
-            rules.defense_base,
-            rules.defense_modifier,
-        )
-        set_defense_equipment(
-            db, campaign_id, character, spec, rules, adjustment=value - unadjusted
-        )
-    else:
-        record(db, campaign_id, ArmorSet(name=character.name, armor=value))
-    db.commit()
-    return {"character": character.name, "armor": value}
-
-
-def set_invincibility(db: Session, campaign_id: int, name: str, active: bool) -> dict[str, Any]:
-    """Turn the debug invincibility buff on or off for a player character."""
-    state = load_state(db, campaign_id)
-    character = state.characters.get(name_key(name))
-    if character is None:
-        raise InvalidInput(f"there is no character named {name!r}")
-    if character.kind != PC_KIND:
-        raise InvalidInput(f"{character.name} is not a player character")
-    record(db, campaign_id, InvincibilitySet(name=character.name, active=active))
-    db.commit()
-    return {"character": character.name, "invincible": active}
-
-
-def set_debug_stat(
-    db: Session, campaign_id: int, name: str, stat: str, remaining: int
-) -> dict[str, Any]:
-    """Set a player character's current score for one stat, for testing damage rules."""
-    state = load_state(db, campaign_id)
-    character = state.characters.get(name_key(name))
-    if character is None:
-        raise InvalidInput(f"there is no character named {name!r}")
-    if character.kind != PC_KIND:
-        raise InvalidInput(f"{character.name} is not a player character")
-    if stat not in character.stats:
-        raise InvalidInput(f"{character.name} has no stat {stat!r}")
-    value = whole_number(remaining, "remaining", 0, character.stats[stat])
-    record(db, campaign_id, DebugStatSet(name=character.name, stat=stat, remaining=value))
-    db.commit()
-    return {"character": character.name, "stat": stat, "remaining": value}
-
-
-def add_debug_currency(
-    db: Session, campaign_id: int, name: str, feature: str, amount: int
-) -> dict[str, Any]:
-    """Give a player character some of the rule set's currency, for testing purchases."""
-    state = load_state(db, campaign_id)
-    character = state.characters.get(name_key(name))
-    if character is None:
-        raise InvalidInput(f"there is no character named {name!r}")
-    if character.kind != PC_KIND:
-        raise InvalidInput(f"{character.name} is not a player character")
-    value = whole_number(amount, "amount", 1, 10_000)
-    record(db, campaign_id, DebugCurrencyAdded(name=character.name, feature=feature, amount=value))
-    db.commit()
-    return {"character": character.name, "feature": feature, "gained": value}
-
-
-def recover_character(
-    db: Session,
-    campaign_id: int,
-    name: str,
-    explanation: str,
-    consequence: str,
-    combat: CombatRules,
-) -> dict[str, Any]:
-    """Bring a player character back from critical damage. The GM says how they survived and what
-    it cost them; the harm they took stays as it was."""
-    state = load_state(db, campaign_id)
-    character = state.characters.get(name_key(name))
-    if character is None:
-        raise InvalidInput(f"there is no character named {name!r}")
-    if character.kind != PC_KIND:
-        raise InvalidInput(f"{character.name} is not a player character and cannot be recovered")
-    if character.dead:
-        raise InvalidInput(f"{character.name} is dead and cannot be recovered")
-    if character.dying_hours is not None or character.dying_rounds is not None:
-        raise InvalidInput(f"{character.name} is still dying; stabilize them first")
-    if not character.defeated:
-        raise InvalidInput(f"{character.name} is not {combat.defeat['player_character']}")
-    record(
-        db,
-        campaign_id,
-        CharacterRecovered(
-            name=character.name,
-            explanation=bounded_text(explanation, "explanation", MAX_RECOVERY_TEXT),
-            consequence=bounded_text(consequence, "consequence", MAX_RECOVERY_TEXT),
-        ),
-    )
-    db.commit()
-    return {"character": character.name, "recovered": True}
-
-
-def heal_character(
-    db: Session,
-    campaign_id: int,
-    name: str,
-    stat: str,
-    amount: int,
-    cause: str,
-) -> dict[str, Any]:
-    """Restore harm in one stat, never below zero. Healing is separate from recovering a
-    mortally wounded character: it reduces harm, while `recover_character` clears the dying
-    state."""
-    state = load_state(db, campaign_id)
-    character = state.characters.get(name_key(name))
-    if character is None:
-        raise InvalidInput(f"there is no character named {name!r}")
-    if stat not in character.stats:
-        options = ", ".join(sorted(character.stats)) or "none"
-        raise InvalidInput(f"{character.name} has no stat {stat!r}; the stats are: {options}")
-    if isinstance(amount, bool) or not isinstance(amount, int) or amount < 1:
-        raise InvalidInput("healing must restore a whole number of points, 1 or more")
-    restored = recover(character, stat, amount)
-    record(
-        db,
-        campaign_id,
-        Recovered(name=character.name, stat=stat, amount=restored, cause=cause),
-    )
-    db.commit()
-    return {
-        "character": character.name,
-        "stat": stat,
-        "restored": restored,
-        "harm": character.harm.get(stat, 0),
-    }
-
-
-def harm_character(
-    db: Session,
-    campaign_id: int,
-    name: str,
-    stat: str,
-    amount: int,
-    cause: str,
-    combat: CombatRules,
-) -> dict[str, Any]:
-    """Harm a player character outside combat, such as from a fall or poison. Only the rule set's
-    outside-harm stats can take it. Harm that takes the overflow stat to 0 defeats the character."""
-    state = load_state(db, campaign_id)
-    character = state.characters.get(name_key(name))
-    if character is None:
-        raise InvalidInput(f"there is no character named {name!r}")
-    _living(character, combat)
-    if stat not in combat.outside_harm:
-        options = ", ".join(combat.outside_harm) or "none"
-        raise InvalidInput(f"harm outside combat can only take {options}, not {stat!r}")
-    value = whole_number(amount, "amount", 1, MAX_DAMAGE)
-    before = current(character, stat)
-    if character.invincible:
-        return {
-            "character": character.name,
-            "stat": stat,
-            "taken": 0,
-            "current": before,
-            "defeated": False,
-        }
-    if before == 0:
-        raise InvalidInput(f"{character.name} has no {stat.upper()} left to lose")
-    taken = min(value, before)
-    overflow = [step.stat for step in combat.damage if step.kind == "overflow"]
-    at_zero = stat in combat.defeat_at_zero and taken == before
-    defeats = (stat in overflow and taken == before) or at_zero
-    record(
-        db,
-        campaign_id,
-        Harmed(
-            name=character.name,
-            stat=stat,
-            taken=taken,
-            cause=bounded_text(cause, "cause", MAX_CAUSE_TEXT),
-            defeats=defeats,
-            status=defeat_status(
-                character, combat.defeat, killed=True if not at_zero else character.kind == NPC_KIND
-            )
-            if defeats
-            else "",
-        ),
-    )
-    if defeats and (character.kind == PC_KIND or character.important):
-        if at_zero:
-            death.begin_dying(
-                db, campaign_id, combat, character.name, cause=f"outside combat, with {stat} at 0"
-            )
-        else:
-            record(
-                db,
-                campaign_id,
-                CharacterDied(name=character.name, cause=f"outside combat, with {stat} at 0"),
-            )
-    db.commit()
-    return {
-        "character": character.name,
-        "stat": stat,
-        "taken": taken,
-        "current": before - taken,
-        "defeated": defeats,
-    }
