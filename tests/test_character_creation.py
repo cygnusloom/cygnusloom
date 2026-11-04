@@ -19,6 +19,8 @@ STAT_HIDDEN_RE = re.compile(r'<input type="hidden" name="stat-(\w+)" value="(\d+
 RADIO_RE = re.compile(
     r'<input type="radio" name="((?:template|field|campaign)-[\w-]+)" value="([^"]*)"'
 )
+PICK_SELECT_RE = re.compile(r'<select name="(pick-[\w-]+)"[^>]*>(.*?)</select>', re.DOTALL)
+OPTION_VALUE_RE = re.compile(r'<option value="([^"]*)"([^>]*)>')
 CAMPAIGN_RADIO_RE = re.compile(r'<input type="radio" name="(campaign-[\w-]+)" value="([^"]*)"')
 
 
@@ -63,6 +65,43 @@ def _choices(page: str) -> dict[str, str]:
     for name, value in RADIO_RE.findall(page):
         choices.setdefault(name, html.unescape(value))
     return choices
+
+
+def _picks(page: str) -> dict[str, str]:
+    """One choice for every pick select, the way a player works down the lists: the first select
+    of a group takes the first option, the second the second, and so on, so no pick is left for
+    the server to roll. Tests that check a particular pick set it themselves afterwards."""
+    picks: dict[str, str] = {}
+    for name, body in PICK_SELECT_RE.findall(page):
+        options = [
+            html.unescape(value)
+            for value, attributes in OPTION_VALUE_RE.findall(body)
+            if value and "disabled" not in attributes
+        ]
+        if not options:
+            continue
+        index = name.rpartition("-")[2]
+        position = int(index) if index.isdigit() else 0
+        picks[name] = options[min(position, len(options) - 1)]
+    return picks
+
+
+def _named_picks(fields: dict[str, str]) -> dict[str, str]:
+    """The skill and feature picks a test set by their generic name, named for the templates the
+    form chose. The server reads a template's own pick name before the generic one, so a pin
+    would otherwise lose to the default the form carries for every template."""
+    chosen = [value for name, value in fields.items() if name.startswith("template-") and value]
+    named = dict(fields)
+    for name, value in fields.items():
+        for prefix in ("pick-skill-", "pick-feature-"):
+            if not name.startswith(prefix):
+                continue
+            pick, _, index = name[len(prefix) :].rpartition("-")
+            if not index.isdigit() or "-" in pick:
+                continue
+            for template_id in chosen:
+                named[f"{prefix}{template_id}-{pick}-{index}"] = value
+    return named
 
 
 def _campaign_choices(page: str) -> dict[str, str]:

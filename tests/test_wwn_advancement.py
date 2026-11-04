@@ -46,33 +46,27 @@ from cygnusforge.services.injuries import EffectContext, run_effects
 from cygnusforge.services.tools import check_arguments
 from cygnusforge.services.world import WorldTools
 from tests.conftest import content_library
+from tests.factories import WWN_STATS
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
-from tests.test_character_creation import _choices, _rolled_stats
+from tests.test_character_creation import (
+    _choices,
+    _named_picks,
+    _picks,
+    _rolled_stats,
+)
 
 LIBRARY: ContentLibrary = content_library()
 WWN = LIBRARY.rule_sets["worldswithoutnumber"]
 NAME = "Wren"
 
-# The creation form rolls attributes from an unseeded generator. These tests pin the roll so the
-# class, Constitution, Dexterity, and mental modifiers a level or a check sees are known. A
-# Constitution of 10 gives no HP modifier, so the rolled 6 is also the submitted HP.
-FIXED_STATS = {
-    "str": 12,
-    "dex": 14,
-    "con": 10,
-    "int": 18,
-    "wis": 10,
-    "cha": 8,
-    "hp": 6,
-    "attack_bonus": 1,
-    "castings": 1,
-    "morale": 7,
-}
+# The creation form rolls from an unseeded generator. These tests pin the roll so the class,
+# Constitution, Dexterity, and mental modifiers a level or a check sees are known. A Constitution
+# of 10 gives no HP modifier, so the rolled 6 is also the submitted HP.
 
 
 def _fixed_roll(spec: object, rng: object, *, plus: str) -> dict[str, int]:
-    """The rolled attribute pool, pinned so the tests know every modifier."""
-    return dict(FIXED_STATS)
+    """The rolled stats, pinned so the tests know every modifier."""
+    return dict(WWN_STATS)
 
 
 # The Focus and art picks each class and tradition takes in the creation form, so the tests know
@@ -195,6 +189,7 @@ def _campaign(
         page = client.get(f"/campaigns/{campaign_id}").text
         fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
         fields.update(_choices(page))
+        fields.update(_picks(page))
         fields.update(options or {})
         if kit is not None:
             fields["template-kit"] = kit
@@ -213,6 +208,7 @@ def _campaign(
         if tradition2 is not None:
             fields["template-tradition2"] = tradition2
             fields.update(TRADITION2_PICKS[tradition2])
+        fields = _named_picks(fields)
         created = _create_character(client, campaign_id, name=name, fields=fields)
     error = re.search(r'<p class="form-error"[^>]*>(.*?)</p>', created.text, re.DOTALL)
     assert created.status_code == 303, error.group(1) if error else created.text[:500]
@@ -1045,6 +1041,7 @@ def test_a_warrior_cannot_take_a_magical_tradition(
     fields["template-class"] = "warrior"
     fields["template-tradition"] = "high_mage"
 
+    fields = _named_picks(fields)
     created = _create_character(client, campaign_id, name="Wren", fields=fields)
 
     error = re.search(r'<p class="form-error"[^>]*>(.*?)</p>', created.text, re.DOTALL)
@@ -1074,6 +1071,7 @@ def test_invalid_manual_skill_cap_is_reported_on_the_creation_form(
         }
     )
 
+    fields = _named_picks(fields)
     created = _create_character(client, campaign_id, name="Wren", fields=fields)
 
     assert created.status_code == 400
@@ -1088,7 +1086,7 @@ def test_invalid_manual_skill_cap_is_reported_on_the_creation_form(
         assert not state.options
 
     fields["pick-skill-class_free_skill-0"] = "craft"
-    accepted = _create_character(client, campaign_id, name="Wren", fields=fields)
+    accepted = _create_character(client, campaign_id, name="Wren", fields=_named_picks(fields))
 
     assert accepted.status_code == 303
     with Session(app.state.engine) as db:

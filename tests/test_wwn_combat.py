@@ -42,8 +42,9 @@ from cygnusforge.services.tools import Ask, RollAnswer, ToolRequest, run_tool
 from cygnusforge.services.views import scene_view
 from cygnusforge.services.world import WorldTools
 from tests.conftest import content_library, csrf_token
+from tests.factories import WWN_STATS, pinned_stats
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
-from tests.test_character_creation import _choices, _rolled_stats
+from tests.test_character_creation import _choices, _named_picks, _picks, _rolled_stats
 from tests.test_combat import Rolls, _character
 from tests.test_world import _db
 from tests.turns import take_turn
@@ -129,9 +130,11 @@ def _wwn_campaign(
     )
     assert response.status_code == 303
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-    page = client.get(f"/campaigns/{campaign_id}").text
+    with pinned_stats(WWN_STATS):
+        page = client.get(f"/campaigns/{campaign_id}").text
     fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
     fields.update(_choices(page))
+    fields.update(_picks(page))
     fields.update(
         {
             "pick-feature-class_focus_any-0": "focus_unique_gift",
@@ -139,6 +142,7 @@ def _wwn_campaign(
         }
     )
     fields.update(choices or {})
+    fields = _named_picks(fields)
     created = _create_character(client, campaign_id, name=PC, fields=fields)
     error = re.search(r'<p class="form-error"[^>]*>(.*?)</p>', created.text, re.DOTALL)
     assert created.status_code == 303, error.group(1) if error else "no error"

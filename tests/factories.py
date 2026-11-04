@@ -16,7 +16,9 @@ import html
 import json
 import random
 import re
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
+from contextlib import contextmanager
+from unittest.mock import patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -24,6 +26,7 @@ from httpx import Response
 from sqlmodel import Session
 
 from cygnusforge.content.library import RuleSet
+from cygnusforge.services import campaigns as campaigns_service
 from cygnusforge.services import world
 from cygnusforge.services.events import CampaignState, Character, Turn, load_state
 from cygnusforge.services.world import WorldTools
@@ -35,6 +38,40 @@ DEFAULT_LABEL = "Contract Hollow"
 DEFAULT_PC = "Ada"
 DEFAULT_PRONOUNS = "she/her"
 DEFAULT_PLACE = "Mossbell Hollow"
+
+# A stat block with every modifier known, for Worlds Without Number tests that assert exact
+# armor, hit points, or Readied capacity. A test that builds a character from the page's own roll
+# gets whatever 3d6 said, so one run in twenty has a Strength too low to hold the starting gear;
+# that is a real play experience but a useless test, because the number the test compares against
+# was written for a different character.
+WWN_STATS = {
+    "str": 12,
+    "dex": 14,
+    "con": 10,
+    "int": 18,
+    "wis": 10,
+    "cha": 8,
+    # The page rolls these too, so the pin has to cover every rolled stat.
+    "hp": 6,
+    "attack_bonus": 1,
+    "castings": 1,
+}
+
+
+@contextmanager
+def pinned_stats(stats: Mapping[str, int]) -> Iterator[None]:
+    """Make the creation page roll `stats` instead of dice, for as long as the block runs.
+
+    The page stores its roll in the session, so the pin has to be in place when the page is
+    loaded; the creation form then posts those same values.
+    """
+    with patch.object(
+        campaigns_service,
+        "roll_stats",
+        lambda spec, rng, *, plus: dict(stats),
+    ):
+        yield
+
 
 # A form field name may already carry its prefix, as the existing creation helpers send it.
 _FIELD_PREFIXES = (

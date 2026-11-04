@@ -21,8 +21,9 @@ from cygnusforge.rules.wwn_progression import require_wwn_progression
 from cygnusforge.services.events import NPC_KIND, PC_KIND, CampaignState, Character, load_state
 from cygnusforge.services.views import get_statblock, scene_view
 from tests.conftest import content_library
+from tests.factories import WWN_STATS, pinned_stats
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
-from tests.test_character_creation import _choices, _rolled_stats
+from tests.test_character_creation import _choices, _named_picks, _picks, _rolled_stats
 
 
 def _wwn() -> ContentLibrary:
@@ -358,9 +359,11 @@ def test_wwn_creation_form_persists_the_players_focus_skill_replacement(client_f
         client, world_template="unwritten-world", rule_set="worldswithoutnumber"
     )
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-    page = client.get(f"/campaigns/{campaign_id}").text
+    with pinned_stats(WWN_STATS):
+        page = client.get(f"/campaigns/{campaign_id}").text
     fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
     fields.update(_choices(page))
+    fields.update(_picks(page))
     fields.update(
         {
             "template-background": "artisan",
@@ -374,6 +377,7 @@ def test_wwn_creation_form_persists_the_players_focus_skill_replacement(client_f
             "skill-replacement-feature": "perform",
         }
     )
+    fields = _named_picks(fields)
     created = _create_character(client, campaign_id, name="Wren", fields=fields)
     assert created.status_code == 303, created.text
     with Session(client.app.state.engine) as db:
@@ -389,9 +393,11 @@ def test_wwn_creation_form_can_repeat_specialist_for_another_skill(client_factor
         client, world_template="unwritten-world", rule_set="worldswithoutnumber"
     )
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-    page = client.get(f"/campaigns/{campaign_id}").text
+    with pinned_stats(WWN_STATS):
+        page = client.get(f"/campaigns/{campaign_id}").text
     fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
     fields.update(_choices(page))
+    fields.update(_picks(page))
     fields.update(
         {
             "template-background": "artisan",
@@ -405,6 +411,7 @@ def test_wwn_creation_form_can_repeat_specialist_for_another_skill(client_factor
             "repeat-feature-expert-class_focus_expert-0": "repeat",
         }
     )
+    fields = _named_picks(fields)
     created = _create_character(client, campaign_id, name="Wren", fields=fields)
     assert created.status_code == 303, created.text
     with Session(client.app.state.engine) as db:
@@ -421,9 +428,11 @@ def test_wwn_character_creation(client_factory) -> None:
     )
     assert response.status_code == 303
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-    page = client.get(f"/campaigns/{campaign_id}").text
+    with pinned_stats(WWN_STATS):
+        page = client.get(f"/campaigns/{campaign_id}").text
     fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
     fields.update(_choices(page))
+    fields.update(_picks(page))
     fields.update(
         {
             "template-class": "warrior",
@@ -431,6 +440,7 @@ def test_wwn_character_creation(client_factory) -> None:
             "pick-feature-class_focus_warrior-0": "focus_alert",
         }
     )
+    fields = _named_picks(fields)
     created = _create_character(client, campaign_id, name="Wren", fields=fields)
     error = re.search(r'<p class="form-error"[^>]*>(.*?)</p>', created.text, re.DOTALL)
     assert created.status_code == 303, error.group(1) if error else "no error"

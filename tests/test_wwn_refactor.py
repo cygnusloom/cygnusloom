@@ -38,8 +38,16 @@ from cygnusforge.services.events import (
 from cygnusforge.services.views import scene_view, world_state_text
 from cygnusforge.services.world import WorldTools
 from tests.conftest import content_library
+from tests.factories import WWN_STATS, pinned_stats
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
-from tests.test_character_creation import _cairn_campaign, _choices, _complete_form, _rolled_stats
+from tests.test_character_creation import (
+    _cairn_campaign,
+    _choices,
+    _complete_form,
+    _named_picks,
+    _picks,
+    _rolled_stats,
+)
 from tests.test_combat import CAIRN, PC, Rolls, _character, _fight_client, _state, _tools
 
 LIBRARY: ContentLibrary = content_library()
@@ -63,11 +71,14 @@ def _wwn_campaign(client_factory: Callable[[], TestClient]) -> tuple[TestClient,
     )
     assert response.status_code == 303
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-    page = client.get(f"/campaigns/{campaign_id}").text
+    with pinned_stats(WWN_STATS):
+        page = client.get(f"/campaigns/{campaign_id}").text
     fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
     fields.update(_choices(page))
+    fields.update(_picks(page))
+    fields = _named_picks(fields)
     created = _create_character(client, campaign_id, name=WREN, fields=fields)
-    assert created.status_code == 303
+    assert created.status_code == 303, created.text
     return client, campaign_id
 
 
@@ -303,7 +314,7 @@ def _side_encounter(
     created = _create_character(
         client, campaign_id, name=PC, fields=_complete_form(client, campaign_id)
     )
-    assert created.status_code == 303
+    assert created.status_code == 303, created.text
     app = client.app
     with Session(app.state.engine) as db:
         # Close the campaign's opening turn so an NPC's turn may begin.
@@ -430,7 +441,7 @@ def test_an_encounter_started_without_side_rules_opens_no_side_roll(
     created = _create_character(
         client, campaign_id, name=PC, fields=_complete_form(client, campaign_id)
     )
-    assert created.status_code == 303
+    assert created.status_code == 303, created.text
     tools = _tools(client.app, campaign_id)
     tools.create_location(YARD, "Cobbles.")
     tools.move_actor(PC, YARD)
