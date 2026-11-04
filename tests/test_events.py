@@ -19,6 +19,8 @@ from cygnusforge.services.events import (
     NoteAdded,
     NpcAdded,
     Place,
+    ResourceChanged,
+    StatChanged,
     decode,
     last_event_id,
     load_state,
@@ -26,6 +28,30 @@ from cygnusforge.services.events import (
     truncate,
 )
 from tests.test_campaigns import _campaign_id, _send
+
+
+def test_generic_payloads_apply_to_character_state():
+    from cygnusforge.services.events import CampaignState, Character, ConditionChanged
+
+    state = CampaignState()
+    state.characters["hero"] = Character(
+        kind="pc",
+        name="Hero",
+        location=None,
+        description="",
+        personality="",
+        accent="",
+        quirks=[],
+        stats={"hp": 10, "str": 10},
+        counters={"xp": 0},
+    )
+    StatChanged(name="Hero", stat="hp", before=10, after=7, cause="a test").apply(state, 1)
+    ResourceChanged(name="Hero", resource="xp", before=0, after=3, cause="a test").apply(state, 2)
+    ConditionChanged(name="Hero", condition="prone", active=True, cause="a test").apply(state, 3)
+    hero = state.characters["hero"]
+    assert hero.harm["hp"] == 3
+    assert hero.counters["xp"] == 3
+    assert hero.conditions == ["prone"]
 
 
 def test_a_kind_is_required():

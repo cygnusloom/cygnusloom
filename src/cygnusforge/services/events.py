@@ -166,6 +166,93 @@ def _parts(items: list[dict[str, str]]) -> list[ContextPart]:
 
 
 @dataclass(frozen=True)
+class RollMade(GameEvent):
+    """A generic record of a roll whose outcome a feature or a rule set's module already knows."""
+
+    kind: ClassVar[str] = "roll.made"
+
+    name: str
+    roll: str
+    total: int
+    cause: str = ""
+
+    def render(self) -> str:
+        return f"{self.name} rolls {self.roll}: {self.total} ({self.cause})."
+
+
+@dataclass(frozen=True)
+class StatChanged(GameEvent):
+    """A generic change to one of a character's current stat scores. `before` and `after` are the
+    current values, not the maximums."""
+
+    kind: ClassVar[str] = "character.stat_changed"
+    hidden: ClassVar[bool] = True
+
+    name: str
+    stat: str
+    before: int
+    after: int
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.harm[self.stat] = max(0, character.stats.get(self.stat, 0) - self.after)
+
+    def render(self) -> str:
+        return f"{self.name}'s {self.stat.upper()} changes from {self.before} to {self.after}."
+
+
+@dataclass(frozen=True)
+class ResourceChanged(GameEvent):
+    """A generic change to a feature count or a counter, such as silver, a charge, or Experience."""
+
+    kind: ClassVar[str] = "character.resource_changed"
+    hidden: ClassVar[bool] = True
+
+    name: str
+    resource: str
+    before: int
+    after: int
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        if self.resource in character.counters:
+            character.counters[self.resource] = self.after
+        else:
+            character.features[self.resource] = max(0, self.after)
+
+    def render(self) -> str:
+        return f"{self.name}'s {self.resource} changes from {self.before} to {self.after}."
+
+
+@dataclass(frozen=True)
+class ConditionChanged(GameEvent):
+    """A generic condition change for a rule-set module or a feature that already decided the
+    outcome. Stored conditions are added or removed directly."""
+
+    kind: ClassVar[str] = "character.condition_changed"
+    hidden: ClassVar[bool] = True
+
+    name: str
+    condition: str
+    active: bool
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        if self.active:
+            if self.condition not in character.conditions:
+                character.conditions.append(self.condition)
+        elif self.condition in character.conditions:
+            character.conditions.remove(self.condition)
+
+    def render(self) -> str:
+        state = "gains" if self.active else "loses"
+        return f"{self.name} {state} the {self.condition} condition ({self.cause})."
+
+
+@dataclass(frozen=True)
 class LocationAdded(GameEvent):
     kind: ClassVar[str] = "location.added"
     hidden: ClassVar[bool] = True
