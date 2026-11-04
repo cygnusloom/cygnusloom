@@ -27,6 +27,7 @@ from cygnusforge.services.events import (
     CharacterDying,
     CharacterSaved,
     ChatGM,
+    EncounterTurnBegun,
     Harmed,
     Struck,
     current,
@@ -878,6 +879,31 @@ def test_a_carried_shield_only_blocks_shock_when_wielded(client_factory):
     replace(tools, rng=Rolls(1, 1, 1, 1, 1, 1)).attack(FOE, "Claw", PC)
     wielded = _struck(app, campaign_id)[-1]
     assert (wielded.hit, wielded.shock, wielded.shield_round) == (False, 0, 1)
+
+
+def test_a_shield_bash_suspends_the_shields_ac_until_the_next_turn(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools = replace(tools, marketplace=WWN.marketplace)
+    _foe(tools, hp=20)
+    tools.give_item(PC, "Large Shield")
+    tools.equip_armor(PC, "Large Shield")
+    tools.give_item(PC, "Shield Bash, Large", damage="1d6")
+
+    before = _pc(app, campaign_id)
+    assert before.shield_bonus > 0
+    tools.player_attack(FOE, "Shield Bash, Large", attack_roll=20, damage_roll=2)
+
+    suspended = _pc(app, campaign_id)
+    assert suspended.shield_suspended is True
+    assert suspended.armor == before.armor - before.shield_bonus
+
+    with Session(app.state.engine) as db:
+        record(db, campaign_id, EncounterTurnBegun(name=PC))
+        db.commit()
+
+    restored = _pc(app, campaign_id)
+    assert restored.shield_suspended is False
+    assert restored.armor == before.armor
 
 
 def test_equipping_a_shield_on_a_statblock_uses_its_printed_ac_as_the_baseline(client_factory):

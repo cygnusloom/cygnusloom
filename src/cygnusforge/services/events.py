@@ -1150,6 +1150,10 @@ class EncounterEnded(GameEvent):
             character.fled = False
             character.surrendered = False
             character.critical_due = False
+            if character.shield_suspended:
+                character.armor = max(character.armor, character.shield_suspended_armor)
+                character.shield_suspended = False
+                character.shield_suspended_armor = 0
         state.encounter = None
 
     def render(self) -> str:
@@ -1451,6 +1455,10 @@ class EncounterTurnBegun(GameEvent):
         if encounter is None:
             return
         character = state.characters[name_key(self.name)]
+        if character.shield_suspended:
+            character.armor = max(character.armor, character.shield_suspended_armor)
+            character.shield_suspended = False
+            character.shield_suspended_armor = 0
         encounter.acting = character.name
         encounter.moved = 0
         if character.kind == NPC_KIND and state.turn is None:
@@ -1524,6 +1532,28 @@ class InitiativeSettled(GameEvent):
 
     def render(self) -> str:
         return "Initiative is set: " + ", ".join(self.order) + "."
+
+
+@dataclass(frozen=True)
+class ShieldBashed(GameEvent):
+    """A character bashed with a shield. Its AC bonus is suspended until the character's next
+    turn, when EncounterTurnBegun restores it."""
+
+    kind: ClassVar[str] = "combat.shield_bashed"
+    hidden: ClassVar[bool] = True
+
+    name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        if character.shield_suspended or not character.equipped_shield_value:
+            return
+        character.shield_suspended_armor = character.armor
+        character.shield_suspended = True
+        character.armor = max(0, character.armor - character.shield_bonus)
+
+    def render(self) -> str:
+        return f"{self.name} bashes with a shield; its AC bonus is suspended until the next turn."
 
 
 @dataclass(frozen=True)
@@ -1892,6 +1922,7 @@ class DefenseEquipmentSet(GameEvent):
     equipped_armor_value: int = 0
     equipped_shield: str = ""
     equipped_shield_value: int = 0
+    shield_bonus: int = 0
     innate_defense: int = 0
     defense_adjustment: int = 0
 
@@ -1901,6 +1932,7 @@ class DefenseEquipmentSet(GameEvent):
         character.equipped_armor_value = self.equipped_armor_value
         character.equipped_shield = self.equipped_shield
         character.equipped_shield_value = self.equipped_shield_value
+        character.shield_bonus = self.shield_bonus
         character.innate_defense = self.innate_defense
         character.defense_adjustment = self.defense_adjustment
         character.defense_tracked = True

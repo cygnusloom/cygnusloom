@@ -60,7 +60,7 @@ def equipped_defense(character: Character, spec: CharacterSpec, base: int, modif
             value += -(-amount // rule.divisor) if rule.round_up else amount // rule.divisor
         floor = max(floor, value)
     armor = max(unarmored + character.equipped_armor_value, floor + bonus)
-    if character.equipped_shield_value:
+    if character.equipped_shield_value and not character.shield_suspended:
         armor = armor_after(armor, character.equipped_shield_value, "shield", unarmored)
     return armor + character.defense_adjustment
 
@@ -113,6 +113,23 @@ def set_defense_equipment(
             spec.modifier(character.stats, rules.defense_modifier) if rules.defense_modifier else 0
         )
         innate = max(0, character.armor - bonus)
+    without_shield = equipped_defense(
+        replace(character, equipped_shield="", equipped_shield_value=0, shield_suspended=False),
+        spec,
+        rules.defense_base,
+        rules.defense_modifier,
+    )
+    with_shield = equipped_defense(
+        replace(
+            character,
+            equipped_shield=held_shield[0],
+            equipped_shield_value=held_shield[1],
+            shield_suspended=False,
+        ),
+        spec,
+        rules.defense_base,
+        rules.defense_modifier,
+    )
     record(
         db,
         campaign_id,
@@ -122,6 +139,7 @@ def set_defense_equipment(
             equipped_armor_value=body[1],
             equipped_shield=held_shield[0],
             equipped_shield_value=held_shield[1],
+            shield_bonus=max(0, with_shield - without_shield),
             innate_defense=innate,
             defense_adjustment=(character.defense_adjustment if adjustment is None else adjustment),
         ),

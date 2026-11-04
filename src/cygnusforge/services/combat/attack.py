@@ -48,6 +48,7 @@ from cygnusforge.services.events import (
     PC_KIND,
     CampaignState,
     Character,
+    ShieldBashed,
     Struck,
     current,
     load_state,
@@ -238,6 +239,7 @@ def _strike(
                     status=status,
                 ),
             )
+            _record_shield_bash(db, campaign_id, attacker, weapon)
             db.commit()
             if defeats:
                 if target.kind == PC_KIND or target.important:
@@ -279,6 +281,7 @@ def _strike(
             status=status,
         ),
     )
+    _record_shield_bash(db, campaign_id, attacker, weapon)
     db.commit()
     if defeats and (target.kind == PC_KIND or target.important):
         death.begin_dying(db, campaign_id, combat, target.name)
@@ -825,6 +828,13 @@ def _shield_round(db: Session, campaign_id: int, target: Character) -> int:
     ):
         return 0
     return encounter.round
+
+
+def _record_shield_bash(db: Session, campaign_id: int, attacker: str, weapon: str) -> None:
+    """A shield bash suspends the attacker's shield AC until the attacker's next turn."""
+    name = name_key(weapon)
+    if name.startswith("shield bash") or name.startswith("shield_bash"):
+        record(db, campaign_id, ShieldBashed(name=attacker))
 
 
 def _player_character(state: CampaignState) -> Character:

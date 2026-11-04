@@ -150,6 +150,9 @@ class Character:
     equipped_armor_value: int = 0
     equipped_shield: str = ""
     equipped_shield_value: int = 0
+    # How much of the armor total comes from the wielded shield, so a shield bash can suspend
+    # exactly that contribution.
+    shield_bonus: int = 0
     # A statblock's printed AC, without the defense modifier, when equipment is later tracked.
     innate_defense: int = 0
     # An extra adjustment to defense from the equipped gear, set with it.
@@ -212,6 +215,10 @@ class Character:
     # The encounter round in which a shield last turned aside Shock, so it can stop only the
     # first Shock in each round.
     shock_blocked_round: int = 0
+    # A shield bash suspends the shield's AC until the character's next turn. The armor before
+    # the suspension is kept so the next turn can restore it without recomputing the sheet.
+    shield_suspended: bool = False
+    shield_suspended_armor: int = 0
     # The character is dead. The body stays where the character fell, with its gear.
     dead: bool = False
     # The character has left the story, and the player plays someone else. It can come back later.
