@@ -12,8 +12,10 @@ world content is loaded. Tests about a shipped rule set's own content stay on th
 
 from __future__ import annotations
 
+import html
 import json
 import random
+import re
 from collections.abc import Callable, Mapping
 
 from fastapi import FastAPI
@@ -82,6 +84,42 @@ def create_campaign(
     )
     assert response.status_code == 303, response.text
     return int(response.headers["location"].rsplit("/", 1)[1])
+
+
+STAT_SELECT_RE = re.compile(r'<select name="stat-(\w+)"[^>]*>(.*?)</select>', re.DOTALL)
+STAT_HIDDEN_RE = re.compile(r'<input type="hidden" name="stat-(\w+)" value="(\d+)">')
+CHOICE_RE = re.compile(r'<input type="radio" name="((?:template|field)-[\w-]+)" value="([^"]*)"')
+
+
+def creation_fields(client: TestClient, campaign_id: int) -> dict[str, str]:
+    """The rolled stats and the first choice of every radio group, as the creation form sends
+    them. A rule set that rolls stats needs this before ``create_character``."""
+    page = client.get(f"/campaigns/{campaign_id}").text
+    rolled = {
+        stat: int(re.search(r'value="(\d+)" selected', body).group(1))
+        for stat, body in STAT_SELECT_RE.findall(page)
+    }
+    rolled.update({stat: int(value) for stat, value in STAT_HIDDEN_RE.findall(page)})
+    fields = {f"stat-{stat}": str(value) for stat, value in rolled.items()}
+    for name, value in CHOICE_RE.findall(page):
+        fields.setdefault(name, html.unescape(value))
+    return fields
+
+
+def choose_campaign_options(client: TestClient, campaign_id: int, rule_set: str) -> None:
+    """Choose the first value of every campaign option, as the creation form does."""
+    rules = content_library().rule_sets[rule_set]
+    if not rules.campaign.fields:
+        return
+    options: dict[str, str] = {}
+    for field in rules.campaign.fields.values():
+        if field.table is not None:
+            options[field.id] = next(iter(rules.campaign.tables[field.table])).value
+        else:
+            options[field.id] = "A test."
+    with db(client.app) as session:
+        world.set_campaign_options(session, campaign_id, rules.campaign, options)
+        session.commit()
 
 
 def create_character(

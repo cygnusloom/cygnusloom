@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from pathlib import Path
 from typing import Any
 
 import pytest
 
-from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.content.library import SaveRules, _load_combat, _load_injury_entries
+from cygnusforge.content.definitions import ContentError
+from cygnusforge.content.library import ContentLibrary, RuleSet, SaveRules
 from cygnusforge.services.events import (
     InjuryGained,
     MaxChanged,
@@ -16,8 +17,21 @@ from cygnusforge.services.events import (
     record,
 )
 from cygnusforge.services.injuries import EffectContext, run_effects
-from tests.test_combat import CAIRN, PC, Rolls, _character, _fight, _foe, _hit
-from tests.test_world import _db
+from tests import factories
+from tests.conftest import content_library
+from tests.support import DEFAULT_RULE_SET, content_tree
+
+CAIRN = content_library().rule_sets["cairn2e"]
+PC = "Mara"
+YARD = "Stonegate Yard"
+MAP = "Yard Green"
+
+_DEFAULT_INJURIES = {
+    "table": "synthetic",
+    "stat": "hp",
+    "trigger": "depleted",
+    "target_kinds": ["pc"],
+}
 
 
 def _entries(count: int) -> list[dict[str, Any]]:
@@ -33,18 +47,29 @@ def _swapped() -> list[dict[str, Any]]:
     return entries
 
 
-def _injury_combat(injuries: Any):
-    entries = _load_injury_entries(
-        Definition(type="injury_table", id="synthetic", data={"entries": _entries(4)}),
-        CAIRN.character,
-        CAIRN.conditions,
-        "synthetic",
-    )
-    return _load_combat(
-        Definition(
-            type="combat",
-            id="synthetic",
-            data={
+def _stat(ident: str, name: str) -> dict[str, Any]:
+    return {"type": "stat", "id": ident, "name": name, "derived": {"base": 10}}
+
+
+def _synthetic_rules(
+    tmp_path: Path,
+    *,
+    entries: list[dict[str, Any]] | None = None,
+    injuries: Any = _DEFAULT_INJURIES,
+) -> RuleSet:
+    """A rule set whose injury table and combat are written for the test and loaded publicly."""
+    tree = content_tree(
+        tmp_path,
+        definitions=[
+            _stat("hp", "HP"),
+            _stat("dex", "Dexterity"),
+            {
+                "type": "injury_table",
+                "id": "synthetic",
+                "name": "Synthetic Injuries",
+                "entries": _entries(4) if entries is None else entries,
+            },
+            {
                 "type": "combat",
                 "id": "synthetic",
                 "damage": [{"kind": "harm", "stat": "hp"}],
@@ -54,24 +79,70 @@ def _injury_combat(injuries: Any):
                 "armor_max": 0,
                 "injuries": injuries,
             },
-        ),
-        {},
-        CAIRN.character,
-        CAIRN.conditions,
-        {"synthetic": entries},
-        "synthetic",
+        ],
     )
+    return ContentLibrary.load(tree).rule_sets[DEFAULT_RULE_SET]
+
+
+def _injury_combat(tmp_path: Path, injuries: Any):
+    combat = _synthetic_rules(tmp_path, entries=_entries(4), injuries=injuries).combat
+    assert combat is not None
+    return combat
+
+
+def _fight(client_factory):
+    """A Cairn campaign with Mara in the yard, the yard mapped, and an encounter under way."""
+    client = factories.signed_in_client(client_factory)
+    campaign_id = factories.create_campaign(client, world_template="twin-lakes", rule_set=CAIRN.id)
+    factories.choose_campaign_options(client, campaign_id, CAIRN.id)
+    created = factories.create_character(
+        client,
+        campaign_id,
+        name=PC,
+        fields=factories.creation_fields(client, campaign_id),
+    )
+    assert created.status_code == 303, created.text
+    tools = factories.tools_for(client.app, campaign_id, rule_set=CAIRN.id)
+    tools.give_item(PC, "Sword", damage="1d8")
+    tools.create_location(YARD, "Cobbles around a dry well.")
+    tools.move_actor(PC, YARD)
+    tools.create_encounter_map(MAP, YARD, 10, 10, "Open cobbles.")
+    tools.start_encounter(MAP)
+    tools.add_participant(PC)
+    tools.player_initiative(1)
+    return client.app, campaign_id, tools
+
+
+def _foe(tools, name: str, hp: int = 6, armor: int = 0, claw: str = "1d6") -> None:
+    tools.create_monster(
+        name,
+        YARD,
+        description="A foe.",
+        stats={"hp": hp, "str": 10, "dex": 10, "wil": 10},
+        armor=armor,
+        attacks=[{"name": "Claw", "dice": claw}],
+    )
+    tools.add_participant(name)
+
+
+def _hit(tools, attacker: str, target: str, *dice: int) -> dict[str, Any]:
+    """`attacker` swings its Claw at `target`, with the given dice."""
+    return replace(tools, rng=factories.Rolls(*dice)).attack(attacker, "Claw", target)
+
+
+def _character(app, campaign_id: int, name: str):
+    return factories.character_named(app, campaign_id, name)
 
 
 def _run(app, campaign_id: int, ops: list[dict[str, Any]], *dice: int, combat=CAIRN.combat) -> None:
     """Run effect ops on Mara with the given dice, in order."""
-    with _db(app) as db:
-        cx = EffectContext(rng=Rolls(*dice), combat=combat)
+    with factories.db(app) as db:
+        cx = EffectContext(rng=factories.Rolls(*dice), combat=combat)
         run_effects(db, campaign_id, PC, ops, cx, "a test", plus=CAIRN.plus)
 
 
 def _set_max(app, campaign_id: int, stat: str, value: int) -> None:
-    with _db(app) as db:
+    with factories.db(app) as db:
         before = _character(app, campaign_id, PC).stats[stat]
         record(
             db,
@@ -130,12 +201,14 @@ def test_a_hit_that_takes_hp_to_zero_and_overflows_gains_a_scar_and_owes_a_save(
 def test_a_foe_brought_to_zero_gains_no_scar(client_factory):
     _, _, tools = _fight(client_factory)
     _foe(tools, "Bo", hp=2)
-    result = replace(tools, rng=Rolls(2, 1)).player_attack("Bo", "Sword")
+    result = replace(tools, rng=factories.Rolls(2, 1)).player_attack("Bo", "Sword")
 
     assert "injury" not in result
 
 
-def test_damage_trigger_can_injure_an_npc_without_depleting_the_selected_stat(client_factory):
+def test_damage_trigger_can_injure_an_npc_without_depleting_the_selected_stat(
+    client_factory, tmp_path: Path
+):
     app, campaign_id, tools = _fight(client_factory)
     injuries = {
         "table": "synthetic",
@@ -143,17 +216,17 @@ def test_damage_trigger_can_injure_an_npc_without_depleting_the_selected_stat(cl
         "trigger": "damage",
         "target_kinds": ["npc"],
     }
-    tools = replace(tools, combat=_injury_combat(injuries))
+    tools = replace(tools, combat=_injury_combat(tmp_path, injuries))
     _foe(tools, "Bo", hp=10)
 
-    result = replace(tools, rng=Rolls(1)).player_attack("Bo", "Sword")
+    result = replace(tools, rng=factories.Rolls(1)).player_attack("Bo", "Sword")
 
     assert result["harm"] == {"hp": 1}
     assert result["injury"] == "Injury 1"
     npc = _character(app, campaign_id, "Bo")
     assert current(npc, "hp") == 9
     assert npc.injuries == ["Injury 1"]
-    with _db(app) as db:
+    with factories.db(app) as db:
         [event] = [
             decode(row) for row in events_since(db, campaign_id) if row.kind == InjuryGained.kind
         ]
@@ -309,30 +382,29 @@ def test_a_retire_op_retires_the_character(client_factory):
     assert _character(app, campaign_id, PC).retired
 
 
-def test_a_non_12_scar_table_loads_contiguous_rolls():
-    definition = Definition(type="injury_table", id="injuries", data={"entries": _entries(7)})
-    table = _load_injury_entries(definition, CAIRN.character, CAIRN.conditions, "cairn2e")
-    assert [entry.roll for entry in table] == list(range(1, 8))
+def test_a_non_12_scar_table_loads_contiguous_rolls(tmp_path: Path):
+    combat = _synthetic_rules(tmp_path, entries=_entries(7)).combat
+    assert combat is not None
+    table = combat.injury_table
+    assert table is not None
+    assert [entry.roll for entry in table.entries] == list(range(1, 8))
 
 
-def test_an_empty_scar_table_is_rejected():
-    definition = Definition(type="injury_table", id="injuries", data={"entries": []})
+def test_an_empty_scar_table_is_rejected(tmp_path: Path):
     with pytest.raises(ContentError, match="'entries' must be a non-empty list"):
-        _load_injury_entries(definition, CAIRN.character, CAIRN.conditions, "cairn2e")
+        _synthetic_rules(tmp_path, entries=[])
 
 
-def test_a_scar_table_whose_entries_are_out_of_order_is_rejected():
-    definition = Definition(type="injury_table", id="injuries", data={"entries": _swapped()})
+def test_a_scar_table_whose_entries_are_out_of_order_is_rejected(tmp_path: Path):
     with pytest.raises(ContentError, match="'roll' must be 1"):
-        _load_injury_entries(definition, CAIRN.character, CAIRN.conditions, "cairn2e")
+        _synthetic_rules(tmp_path, entries=_swapped())
 
 
-def test_a_scar_naming_an_unknown_condition_is_rejected():
+def test_a_scar_naming_an_unknown_condition_is_rejected(tmp_path: Path):
     entries = _entries(12)
     entries[0]["effects"] = [{"op": "condition", "id": "not_a_condition"}]
-    definition = Definition(type="injury_table", id="injuries", data={"entries": entries})
     with pytest.raises(ContentError, match="names no stored condition"):
-        _load_injury_entries(definition, CAIRN.character, CAIRN.conditions, "cairn2e")
+        _synthetic_rules(tmp_path, entries=entries)
 
 
 def test_the_loaded_scar_table_has_twelve_entries_in_order():
@@ -423,9 +495,9 @@ def test_the_loaded_scar_table_has_twelve_entries_in_order():
         ),
     ],
 )
-def test_malformed_injury_trigger_configuration_is_rejected(injuries, message):
+def test_malformed_injury_trigger_configuration_is_rejected(tmp_path: Path, injuries, message):
     with pytest.raises(ContentError, match=message):
-        _injury_combat(injuries)
+        _injury_combat(tmp_path, injuries)
 
 
 def test_the_scar_text_is_the_books_text():

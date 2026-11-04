@@ -1,46 +1,50 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Any
 
 import pytest
 
-from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.content.library import EFFECT_RULES, _check_effects, _load_injury_entries
+from cygnusforge.content.definitions import ContentError
+from cygnusforge.content.library import EFFECT_RULES, ContentLibrary, _check_effects
 from cygnusforge.services.effects import EFFECT_EXECUTORS
 from tests.conftest import content_library
+from tests.support import DEFAULT_RULE_SET, content_tree
 
 CAIRN = content_library().rule_sets["cairn2e"]
 
 
-def _table(*ops: dict[str, Any]) -> Definition:
-    return Definition(
-        type="injury_table",
-        id="injuries",
-        data={
-            "type": "injury_table",
-            "id": "injuries",
-            "entries": [{"roll": 1, "name": "Test", "text": "A test.", "effects": list(ops)}],
-        },
-    )
+def _stat(ident: str) -> dict[str, Any]:
+    return {"type": "stat", "id": ident, "name": ident.upper(), "derived": {"base": 10}}
 
 
-def _load(*ops: dict[str, Any]):
-    return _load_injury_entries(_table(*ops), CAIRN.character, CAIRN.conditions, "testset")
+def _table(*ops: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "type": "injury_table",
+        "id": "injuries",
+        "entries": [{"roll": 1, "name": "Test", "text": "A test.", "effects": list(ops)}],
+    }
+
+
+def _load(tmp_path: Path, *ops: dict[str, Any]):
+    definitions = [*(_stat(stat) for stat in ("hp", "str", "dex", "wil")), _table(*ops)]
+    tree = content_tree(tmp_path, definitions=definitions)
+    return ContentLibrary.load(tree).rule_sets[DEFAULT_RULE_SET]
 
 
 def test_every_effect_op_has_a_load_check_and_a_runtime_executor():
     assert set(EFFECT_RULES) == set(EFFECT_EXECUTORS)
 
 
-def test_an_unknown_effect_op_is_rejected_at_load_time():
+def test_an_unknown_effect_op_is_rejected_at_load_time(tmp_path: Path):
     with pytest.raises(ContentError, match=r"effect op 'explode' is not one of"):
-        _load({"op": "explode"})
+        _load(tmp_path, {"op": "explode"})
 
 
-def test_an_unknown_effect_key_is_rejected_at_load_time():
+def test_an_unknown_effect_key_is_rejected_at_load_time(tmp_path: Path):
     with pytest.raises(ContentError, match=r"unknown key\(s\) 'bogus'"):
-        _load({"op": "note", "text": "A note.", "bogus": True})
+        _load(tmp_path, {"op": "note", "text": "A note.", "bogus": True})
 
 
 @pytest.mark.parametrize(
@@ -95,9 +99,11 @@ def test_an_unknown_effect_key_is_rejected_at_load_time():
         ),
     ],
 )
-def test_malformed_effect_payloads_are_rejected_at_load_time(op: dict[str, Any], message: str):
+def test_malformed_effect_payloads_are_rejected_at_load_time(
+    tmp_path: Path, op: dict[str, Any], message: str
+):
     with pytest.raises(ContentError, match=re.escape(message)):
-        _load(op)
+        _load(tmp_path, op)
 
 
 def test_an_end_condition_names_a_stored_condition_where_moves_allow_it():

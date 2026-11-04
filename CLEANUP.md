@@ -125,9 +125,11 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
 - [x] Added shared `tests/factories.py` for campaign/character setup.
 - [ ] Migrate existing core tests off `tests.test_combat` private helpers where practical.
   Progress: encounters, conditions, defense rules, and ruleset runtime tables now use the
-  neutral fixture; `test_scars` still needs a non-broken migration.
+  neutral fixture; `test_scars` now builds its Cairn campaign through `tests/factories.py` and
+  local helpers.
 - [ ] Stop importing private `_load_*` loader internals in most tests; prefer public load results.
-  `test_scars` is the main remaining loader-internal test.
+  `test_scars` now loads its synthetic injury tables and combats through `ContentLibrary.load`;
+  the remaining `_load_*` imports are direct loader unit tests.
 - [x] Suite stays parallel and under one minute (2,567 tests in ~37-41s).
 
 ### WWN parity backlog (track, then close)
