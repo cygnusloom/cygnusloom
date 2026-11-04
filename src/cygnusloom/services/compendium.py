@@ -1649,7 +1649,16 @@ def _add_live_factions(
         lines = [faction.description] if faction.description else []
         if faction.trait:
             lines.append(f"Trait: {faction.trait}")
-        lines.append(f"{points} {tally.label if tally is not None else 'points'}")
+        if tally is not None:
+            lines.append(f"{points} {tally.label}")
+        if faction.assets:
+            lines.append(f"Turn {faction.turn}")
+            for asset in sorted(faction.assets.values(), key=lambda item: item.name.casefold()):
+                readiness = "ready" if faction.asset_ready(asset) else "acted"
+                lines.append(
+                    f"{asset.name} ({asset.category} {asset.kind}): "
+                    f"{asset.hp}/{asset.hp_max} HP, {readiness}"
+                )
         factions[key] = _Draft(
             name=faction.name,
             summary=faction.trait or faction.description,

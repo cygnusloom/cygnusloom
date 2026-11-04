@@ -31,6 +31,7 @@ from cygnusloom.content.library import (
     EncounterObject,
     EncounterTemplate,
     EncounterTerrain,
+    FactionAssetDefinition,
     Hooks,
     InventoryRules,
     MagicRules,
@@ -159,6 +160,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     # The rule set's conditions by id.
     conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
     projects: Mapping[str, ProjectDefinition] = field(default_factory=dict)
+    # The rule set's faction assets by id, such as Infantry or Smugglers.
+    faction_assets: Mapping[str, FactionAssetDefinition] = field(default_factory=dict)
     dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
     # The rule set's moves by id.
     moves: Mapping[str, MoveRules] = field(default_factory=dict)
@@ -984,6 +987,63 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     def list_factions(self) -> list[dict[str, Any]]:
         with session_scope(self.engine) as db:
             return factions_service.list_factions(db, self.campaign_id, self.tallies)
+
+    def add_faction_asset(
+        self, faction: str, kind: str, name: str = "", notes: str = ""
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return factions_service.add_faction_asset(
+                db,
+                self.campaign_id,
+                self.faction_assets,
+                faction,
+                kind,
+                name,
+                notes,
+            )
+
+    def update_faction_asset(
+        self,
+        faction: str,
+        asset: str,
+        name: str | None = None,
+        notes: str | None = None,
+        qualities: list[str] | None = None,
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return factions_service.update_faction_asset(
+                db,
+                self.campaign_id,
+                faction,
+                asset,
+                name=name,
+                notes=notes,
+                qualities=qualities,
+            )
+
+    def remove_faction_asset(self, faction: str, asset: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return factions_service.remove_faction_asset(db, self.campaign_id, faction, asset)
+
+    def faction_asset_acted(self, faction: str, asset: str, note: str = "") -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return factions_service.faction_asset_acted(db, self.campaign_id, faction, asset, note)
+
+    def damage_faction_asset(self, faction: str, asset: str, amount: int) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return factions_service.damage_faction_asset(
+                db, self.campaign_id, faction, asset, amount
+            )
+
+    def repair_faction_asset(self, faction: str, asset: str, amount: int) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return factions_service.repair_faction_asset(
+                db, self.campaign_id, faction, asset, amount
+            )
+
+    def take_faction_turn(self, faction: str, note: str = "") -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return factions_service.take_faction_turn(db, self.campaign_id, faction, note)
 
     def set_relation(
         self, character: str, relation: str, other: str, added: bool

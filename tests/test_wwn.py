@@ -17,7 +17,7 @@ from cygnusloom.content.character import (
     skill_pick_options,
 )
 from cygnusloom.content.library import ContentLibrary
-from cygnusloom.rules.wwn_progression import require_wwn_progression
+from cygnusloom.rules.wwn_progression import combine_class_tables, require_wwn_progression
 from cygnusloom.services.events import NPC_KIND, PC_KIND, CampaignState, Character, load_state
 from cygnusloom.services.views import get_statblock, scene_view
 from tests.conftest import content_library
@@ -152,13 +152,23 @@ def test_starting_attack_bonus_matches_each_class_progression() -> None:
     ruleset = _wwn().rule_sets["worldswithoutnumber"]
     progression = require_wwn_progression(ruleset)
     for class_id, chart in progression.class_tables.items():
+        kind = ruleset.character.templates[class_id].kind
+        if kind == "class2":
+            primary = "vowed" if class_id == "healer_partial_2" else "healer"
+            templates = {"class": primary, "class2": class_id}
+            expected = combine_class_tables(
+                [progression.class_tables[primary], chart], progression.class_pairing
+            ).attack[0]
+        else:
+            templates = {"class": class_id}
+            expected = chart.attack[0]
         sheet = resolve(
             ruleset.character,
-            {"templates": {"class": class_id}},
+            {"templates": templates},
             random.Random(17),
             plus=ruleset.plus,
         )
-        assert sheet.stats["attack_bonus"] == chart.attack[0], class_id
+        assert sheet.stats["attack_bonus"] == expected, class_id
 
 
 @pytest.mark.parametrize(("stat", "skill"), [("effort_healer", "heal"), ("effort_vowed", "exert")])

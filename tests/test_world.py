@@ -1469,6 +1469,9 @@ LOOKUP_TOOL_NAMES = {
     "lookup_condition",
     "list_custom_features",
     "list_factions",
+    "list_lookups",
+    "list_dice_tables",
+    "roll_creative",
 }
 
 

@@ -144,10 +144,32 @@ class CustomFeature:
 
 
 @dataclass
+class FactionAsset:
+    """One asset a faction owns. Its kind names the rule set's asset definition; its stats are
+    resolved when it is bought, so later rule-set changes do not rewrite the campaign. An asset
+    may act once per faction turn, so it is ready while `acted_turn` is behind the faction's
+    current `turn`."""
+
+    id: str
+    kind: str
+    name: str
+    category: str
+    hp_max: int
+    hp: int
+    magic: str
+    attack: str = ""
+    counter: str = ""
+    qualities: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
+    acted_turn: int = 0
+
+
+@dataclass
 class Faction:
     """A campaign faction the GM invents, such as a magic-school college. Its points live in the
     tally named `tally`, under the entry `entry`, so the existing cup, award, and reset paths
-    keep it."""
+    keep it. A rule set with no faction tally makes a tally-less faction, whose assets and turn
+    are its whole record."""
 
     id: str
     name: str
@@ -155,6 +177,12 @@ class Faction:
     trait: str
     tally: str
     entry: str
+    turn: int = 1
+    assets: dict[str, FactionAsset] = field(default_factory=dict)
+
+    def asset_ready(self, asset: FactionAsset) -> bool:
+        """Whether the asset may still act this faction turn."""
+        return asset.acted_turn < self.turn
 
 
 @dataclass

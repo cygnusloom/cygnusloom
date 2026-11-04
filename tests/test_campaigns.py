@@ -39,7 +39,6 @@ def _new_campaign(
     label: str = "Test chat",
     world_template: str = "testhollow",
     rule_set: str = "rolltest",
-    setting: str = "",
     table_genres: list[str] | None = None,
 ):
     token = csrf_token(client, "/campaigns/new")
@@ -48,7 +47,6 @@ def _new_campaign(
         "label": label,
         "world_template": world_template,
         "rule_set": rule_set,
-        "setting": setting,
     }
     if table_genres is not None:
         data["table_genres"] = table_genres
@@ -65,11 +63,14 @@ def _create_character(
     name: str = "Ada",
     fields: dict[str, str] | None = None,
     pronouns: str | None = "she/her",
+    setting: str | None = None,
 ):
     token = csrf_token(client, f"/campaigns/{campaign_id}")
     form = {"csrf_token": token, "name": name, **(fields or {})}
     if pronouns is not None:
         form["pronouns"] = pronouns
+    if setting is not None:
+        form["setting"] = setting
     return client.post(
         f"/campaigns/{campaign_id}/creation",
         data=form,
@@ -82,10 +83,10 @@ def _campaign_id(
 ) -> tuple[TestClient, int]:
     """A campaign whose opening GM turn has finished, so players can act."""
     client = _signed_in(client_factory)
-    response = _new_campaign(client, setting=setting)
+    response = _new_campaign(client)
     assert response.status_code == 303
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-    created = _create_character(client, campaign_id)
+    created = _create_character(client, campaign_id, setting=setting)
     assert created.status_code == 303
     _answer(client, campaign_id, "continue")
     return client, campaign_id
@@ -292,33 +293,43 @@ def test_new_campaign_form_asks_for_the_label_last(
     assert page.index('name="world_template"') < page.index('name="label"')
 
 
-def test_new_campaign_form_offers_an_optional_setting_and_story(
+def test_setting_belongs_to_the_campaign_options_creation_page(
     client_factory: Callable[[], TestClient],
 ):
     client = _signed_in(client_factory)
-    page = client.get("/campaigns/new").text
+    first_page = client.get("/campaigns/new").text
+    assert 'name="setting"' not in first_page
+    response = _new_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
+    campaign_id = _created_campaign_id(response)
+    page = client.get(f"/campaigns/{campaign_id}").text
     assert 'name="setting" rows="6" maxlength="4000"' in page
-    assert page.index('name="world_template"') < page.index('name="setting"')
-    assert page.index('name="setting"') < page.index('name="label"')
+    assert page.index("Campaign options") < page.index('name="setting"')
+    assert page.index('name="setting"') < page.index("Your character")
     assert "Blank is ignored." in page
 
 
 def test_create_stores_the_setting_and_story(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, label="Briefed", setting="  A heist in a drowned city.  ")
+    response = _new_campaign(client, label="Briefed")
     assert response.status_code == 303
+    campaign_id = _created_campaign_id(response)
+    created = _create_character(client, campaign_id, setting="  A heist in a drowned city.  ")
+    assert created.status_code == 303
     with Session(client.app.state.engine) as db:
-        campaign = db.get(Campaign, _created_campaign_id(response))
+        campaign = db.get(Campaign, campaign_id)
         assert campaign is not None
         assert campaign.setting == "A heist in a drowned city."
 
 
 def test_blank_setting_is_ignored(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, setting="   ")
+    response = _new_campaign(client)
     assert response.status_code == 303
+    campaign_id = _created_campaign_id(response)
+    created = _create_character(client, campaign_id, setting="   ")
+    assert created.status_code == 303
     with Session(client.app.state.engine) as db:
-        campaign = db.get(Campaign, _created_campaign_id(response))
+        campaign = db.get(Campaign, campaign_id)
         assert campaign is not None
         assert campaign.setting == ""
 
@@ -327,11 +338,18 @@ def test_create_rejects_an_overlong_setting_and_keeps_the_text(
     client_factory: Callable[[], TestClient],
 ):
     client = _signed_in(client_factory)
+    response = _new_campaign(client)
+    assert response.status_code == 303
+    campaign_id = _created_campaign_id(response)
     setting = "x" * 4001
-    response = _new_campaign(client, setting=setting)
-    assert response.status_code == 400
-    assert "setting and story must be at most 4000 characters" in response.text
-    assert setting in response.text
+    created = _create_character(client, campaign_id, setting=setting)
+    assert created.status_code == 400
+    assert "setting and story must be at most 4000 characters" in created.text
+    assert setting in created.text
+    with Session(client.app.state.engine) as db:
+        campaign = db.get(Campaign, campaign_id)
+        assert campaign is not None
+        assert campaign.setting == ""
 
 
 def test_create_stores_the_chosen_table_genres(client_factory: Callable[[], TestClient]):

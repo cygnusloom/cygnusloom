@@ -616,13 +616,28 @@ def world_state_text(
         standings = []
         for faction in sorted(state.factions.values(), key=lambda item: item.name.casefold()):
             points = state.tallies.get(faction.tally, {}).get(faction.entry, 0)
-            cup = (
-                tallies[faction.tally].label
-                if tallies is not None and faction.tally in tallies
-                else "points"
-            )
+            if not faction.tally:
+                cup = ""
+            else:
+                cup = (
+                    tallies[faction.tally].label
+                    if tallies is not None and faction.tally in tallies
+                    else "points"
+                )
             trait = f" ({faction.trait})" if faction.trait else ""
-            standings.append(f"{faction.name}{trait}: {points} {cup}")
+            standing = f"{faction.name}{trait}: {points} {cup}" if cup else f"{faction.name}{trait}"
+            if faction.assets:
+                assets = ", ".join(
+                    f"{asset.name} {asset.hp}/{asset.hp_max} HP "
+                    f"{'ready' if faction.asset_ready(asset) else 'acted'}"
+                    for asset in sorted(
+                        faction.assets.values(), key=lambda item: item.name.casefold()
+                    )
+                )
+                standing += f" [Turn {faction.turn}: {assets}]"
+            elif faction.turn != 1:
+                standing += f" [Turn {faction.turn}]"
+            standings.append(standing)
         lines.append("Factions: " + "; ".join(standings) + ".")
     if clock_rules is not None:
         when = f"day {state.clock.day}, {clock_rules.parts[state.clock.part]}"

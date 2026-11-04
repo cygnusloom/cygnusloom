@@ -88,6 +88,40 @@ def test_a_healer_with_a_partial_mage_tradition_has_both_pools(
     assert _effort_pools(_pc(app, campaign_id).stats) == {"effort_healer", "effort_high"}
 
 
+def test_a_second_partial_class_grants_its_effort_pool(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    healer_app, healer_campaign = _campaign(
+        client_factory, class_id="healer", class2="vowed_partial_2"
+    )
+    assert _effort_pools(_pc(healer_app, healer_campaign).stats) == {
+        "effort_healer",
+        "effort_vowed",
+    }
+
+    vowed_app, vowed_campaign = _campaign(
+        client_factory, class_id="vowed", class2="healer_partial_2"
+    )
+    assert _effort_pools(_pc(vowed_app, vowed_campaign).stats) == {
+        "effort_healer",
+        "effort_vowed",
+    }
+
+
+def test_a_healer_and_second_partial_vowed_recovers_both_effort_pools(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory, class_id="healer", class2="vowed_partial_2")
+    ctx = _ctx(_world_tools(app, campaign_id))
+
+    wwn_magic.commit_effort(NAME, "healer", 1, "scene", ctx)
+    wwn_magic.commit_effort(NAME, "vowed", 1, "scene", ctx)
+    rested = wwn.recover_after_rest(NAME, ctx)
+
+    assert rested["restored"]["effort_healer"] == 1
+    assert rested["restored"]["effort_vowed"] == 1
+
+
 def test_a_warrior_sheet_shows_no_effort_lines(
     client_factory: Callable[[], TestClient],
 ) -> None:

@@ -19,8 +19,10 @@ from cygnusloom.content.character import (
 from cygnusloom.content.definitions import ContentError
 from cygnusloom.rules.wwn_progression import (
     CastingRow,
+    ClassPairing,
     ClassTable,
     WWNProgression,
+    combine_class_tables,
     configure_progression,
     parse_wwn_progression,
     require_wwn_progression,
@@ -36,6 +38,7 @@ PROGRESSION_PATH = (
     / "progression.json"
 )
 CLASSES_PATH = PROGRESSION_PATH.with_name("classes.json")
+TEMPLATES_PATH = PROGRESSION_PATH.with_name("templates.json")
 
 
 @pytest.fixture
@@ -62,7 +65,11 @@ def _character_spec(
     skill_maximum: int = 4,
     level_maximum: int = 10,
 ) -> CharacterSpec:
-    definitions = json.loads(CLASSES_PATH.read_text(encoding="utf-8"))
+    definitions = [
+        definition
+        for path in (CLASSES_PATH, TEMPLATES_PATH)
+        for definition in json.loads(path.read_text(encoding="utf-8"))
+    ]
     templates = {
         definition["id"]: Template(
             id=definition["id"],
@@ -128,6 +135,13 @@ def test_shipped_progression_matches_existing_wwn_values(
     assert progression.xp_fast == (0, 3, 6, 12, 18, 27, 39, 54, 72, 93)
     assert progression.xp_slow == (0, 6, 15, 24, 36, 51, 69, 87, 105, 139)
     assert dict(progression.skill_level_minimums) == {0: 1, 1: 1, 2: 3, 3: 6, 4: 9}
+    assert progression.class_pairing == ClassPairing(
+        hit_die="best",
+        hp_constant="best",
+        attack="best",
+        focus_levels="union",
+        quick_learner="any",
+    )
     assert set(progression.class_tables) == {
         "warrior",
         "expert",
@@ -138,6 +152,11 @@ def test_shipped_progression_matches_existing_wwn_values(
         "adventurer_expert_mage",
         "adventurer_warrior_mage",
         "adventurer_mage_mage",
+        "warrior_partial_2",
+        "expert_partial_2",
+        "mage_partial_2",
+        "healer_partial_2",
+        "vowed_partial_2",
     }
 
     assert progression.class_tables["warrior"] == ClassTable(
@@ -160,12 +179,22 @@ def test_shipped_progression_matches_existing_wwn_values(
         7,
     )
     assert progression.class_tables["adventurer_warrior_mage"].quick_learner is False
+    assert progression.class_tables["healer_partial_2"] == progression.class_tables["healer"]
+    assert progression.class_tables["vowed_partial_2"] == progression.class_tables["vowed"]
+    assert progression.class_tables["warrior_partial_2"] == ClassTable(
+        6, 2, (1, 2, 2, 3, 4, 5, 5, 6, 6, 7), frozenset({2, 5, 7, 10}), False
+    )
+    assert progression.class_tables["expert_partial_2"] == ClassTable(
+        6, 0, (0, 1, 1, 2, 2, 3, 3, 4, 4, 5), frozenset({2, 5, 7, 10}), True
+    )
+    assert progression.class_tables["mage_partial_2"].hp_constant == -1
 
     assert progression.full_mage_classes == frozenset({"mage"})
     assert progression.partial_mage_classes == frozenset(
         {
             "adventurer_expert_mage",
             "adventurer_warrior_mage",
+            "mage_partial_2",
         }
     )
     assert progression.dual_mage_classes == frozenset({"adventurer_mage_mage"})
@@ -248,7 +277,9 @@ def test_class_tables_match_the_ruleset_class_templates(
 ) -> None:
     progression = parse_wwn_progression(progression_definition, "synthetic/classes")
     class_ids = {
-        template.id for template in character_spec.templates.values() if template.kind == "class"
+        template.id
+        for template in character_spec.templates.values()
+        if template.kind in {"class", "class2"}
     }
 
     assert set(progression.class_tables) == class_ids
@@ -335,6 +366,79 @@ def test_level_chart_must_match_configured_level_counter(
 
     with pytest.raises(ContentError, match="level counter maximum 9"):
         configure_progression(progression_definition, character, "synthetic/level-bound")
+
+
+def test_combining_class_charts_matches_the_shipped_adventurer_tables(
+    progression_definition: dict[str, Any],
+) -> None:
+    progression = parse_wwn_progression(progression_definition, "synthetic/pairing")
+    tables = progression.class_tables
+    policy = progression.class_pairing
+
+    for first, second, combined in (
+        ("expert_partial_2", "warrior_partial_2", "adventurer_expert_warrior"),
+        ("expert_partial_2", "mage_partial_2", "adventurer_expert_mage"),
+        ("warrior_partial_2", "mage_partial_2", "adventurer_warrior_mage"),
+        ("mage_partial_2", "mage_partial_2", "adventurer_mage_mage"),
+    ):
+        assert combine_class_tables([tables[first], tables[second]], policy) == tables[combined]
+
+    healer_and_warrior = combine_class_tables(
+        [tables["healer"], tables["warrior_partial_2"]], policy
+    )
+    assert healer_and_warrior.hp_constant == 2
+    assert healer_and_warrior.attack == (1, 2, 2, 3, 4, 5, 5, 6, 6, 7)
+    assert healer_and_warrior.quick_learner is False
+
+
+def test_combining_class_charts_rejects_an_unknown_policy() -> None:
+    chart = ClassTable(6, 0, (0, 1), frozenset({2}), False)
+    policy = ClassPairing(
+        hit_die="best",
+        hp_constant="best",
+        attack="best",
+        focus_levels="first",
+        quick_learner="any",
+    )
+
+    with pytest.raises(ContentError, match="focus_levels policy 'first' is not supported"):
+        combine_class_tables([chart, chart], policy)
+
+
+def _drop_class_pairing(data: dict[str, Any]) -> None:
+    data.pop("class_pairing")
+
+
+def _add_unknown_pairing_field(data: dict[str, Any]) -> None:
+    data["class_pairing"]["skills"] = "best"
+
+
+def _set_unknown_pairing_policy(data: dict[str, Any]) -> None:
+    data["class_pairing"]["hp_constant"] = "worst"
+
+
+def _shorten_class_pairing(data: dict[str, Any]) -> None:
+    data["class_pairing"].pop("attack")
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        _drop_class_pairing,
+        _add_unknown_pairing_field,
+        _set_unknown_pairing_policy,
+        _shorten_class_pairing,
+    ],
+)
+def test_malformed_class_pairing_is_rejected(
+    progression_definition: dict[str, Any],
+    change: Callable[[dict[str, Any]], None],
+) -> None:
+    malformed = copy.deepcopy(progression_definition)
+    change(malformed)
+
+    with pytest.raises(ContentError, match="synthetic/progression"):
+        parse_wwn_progression(malformed, "synthetic/progression")
 
 
 def _drop_xp(data: dict[str, Any]) -> None:

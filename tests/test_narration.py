@@ -20,8 +20,9 @@ from tests.test_tools import ROLL, _recording_provider, _script
 
 
 def _narrator(recorder: Any) -> list[dict[str, Any]]:
-    """The messages of the narration, which is the turn's last provider call."""
-    return recorder.calls[-1]["messages"]
+    """The messages of the narration: the turn's last call without tools. The review call comes
+    after it in the same turn and offers tools."""
+    return next(call["messages"] for call in reversed(recorder.calls) if call["tools"] is None)
 
 
 def _visible_log(app: FastAPI, campaign_id: int, after: int) -> list[str]:

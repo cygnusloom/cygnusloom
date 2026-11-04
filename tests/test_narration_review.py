@@ -8,18 +8,22 @@ state and the review's reason.
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 from typing import Any
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from cygnusloom.db.models import Event
+from cygnusloom.db.models import Campaign, Event
+from cygnusloom.llm.base import ChatReply
+from cygnusloom.services.campaigns import get_turn_context
 from cygnusloom.services.events import CampaignState, load_state
-from tests.conftest import csrf_token, is_review_messages
-from tests.test_campaigns import _campaign_id, _send
-from tests.test_tools import _recording_provider, _saved, _script
+from cygnusloom.services.tools import tool_specs
+from tests.conftest import content_library, csrf_token, is_review_messages
+from tests.test_campaigns import _campaign_id, _place_pc, _send
+from tests.test_tools import _recording_provider, _saved, _saved_ids, _script
 
 UNDO = {
     "name": "undo_narration",
@@ -29,6 +33,63 @@ CREATE_GATE = {
     "name": "create_location",
     "arguments": {"name": "Gate Room", "description": "A room behind the gate."},
 }
+LIST_LOOKUPS = {"name": "list_lookups", "arguments": {}}
+LIST_DICE_TABLES = {"name": "list_dice_tables", "arguments": {}}
+BAD_UNDO = {"name": "undo_narration", "arguments": {"reason": ""}}
+SPEAK_MARA = {
+    "name": "speak",
+    "arguments": {"npc": "Mara Thistledown", "intent": "Warn them about the bridge."},
+}
+
+
+class _ReviewProvider:
+    """The recording fake, with the text the fake leaves out: a review's own words, and the
+    prose a state step writes alongside a tool call. Both are what the review and the rewrite
+    must carry between them."""
+
+    name = "fake"
+
+    def __init__(
+        self,
+        inner: Any,
+        *,
+        fault: str = "",
+        verdict: str = "",
+        state_text: str = "",
+    ) -> None:
+        self.inner = inner
+        self.fault = fault
+        self.verdict = verdict
+        self.state_text = state_text
+
+    async def chat(
+        self,
+        model: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+    ) -> ChatReply:
+        reply = await self.inner.chat(model, messages, tools)
+        if is_review_messages(messages):
+            text = self.fault if reply.tool_requests else self.verdict
+            return ChatReply(
+                text=text, tool_requests=reply.tool_requests, reasoning=reply.reasoning
+            )
+        if self.state_text and tools is not None and reply.tool_requests:
+            return ChatReply(
+                text=self.state_text,
+                tool_requests=reply.tool_requests,
+                reasoning=reply.reasoning,
+            )
+        return reply
+
+    async def stream(
+        self,
+        model: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+    ) -> AsyncIterator[Any]:
+        async for item in self.inner.stream(model, messages, tools):
+            yield item
 
 
 def _state(app: FastAPI, campaign_id: int) -> CampaignState:
@@ -195,5 +256,188 @@ def test_review_offers_the_usual_tools_and_no_journal_tools(
     assert len(_narration_calls(recorder, script)) == 1
     review = _review_calls(recorder)[0]
     offered = {spec["function"]["name"] for spec in review["tools"]}
-    assert {"create_location", "get_statblock", "add_note"} <= offered
-    assert {"append_journal", "replace_in_journal"} & offered == set()
+    assert {
+        "create_location",
+        "get_statblock",
+        "add_note",
+        "move_actor",
+        "undo_narration",
+    } <= offered
+    assert {"speak", "ooc", "append_journal", "replace_in_journal"} & offered == set()
+
+
+def test_review_tools_keep_wwn_world_methods_and_drop_speech_and_ooc():
+    rule_set = content_library().rule_sets["worldswithoutnumber"]
+    offered = {
+        spec["function"]["name"] for spec in tool_specs(rule_set.tool_calls, review_step=True) or []
+    }
+    assert {"undo_narration", "damage_faction_asset"} <= offered
+    assert {"speak", "ooc"} & offered == set()
+
+
+def test_the_review_sees_the_state_step_tool_call_result_prose_and_speech(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id)
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (
+        _ReviewProvider(recorder, state_text="I weigh the warning before narrating."),
+        model_id,
+    )
+    script = _script(
+        {
+            "rounds": [[SPEAK_MARA]],
+            "speech": {"Mara Thistledown": "The bridge is out."},
+            "text": "Mara warns you about the bridge.",
+        }
+    )
+    assert _send(client, campaign_id, script).status_code == 303
+
+    review = _review_calls(recorder)[0]
+    blob = json.dumps(review["messages"])
+    # The state step's tool call and its result reach the review through the turn messages.
+    assert '"name": "speak"' in blob
+    assert "dialogue queued for the narration" in blob
+    # The state step's prose is not shown to the narrator, but the review must see it.
+    assert "What the GM did before narrating, for review:" in blob
+    assert "I weigh the warning before narrating." in blob
+    # The review must see the speech step's profile and intent to judge the dialogue.
+    assert "Speech step (round 1)" in blob
+    assert "Who they are: The village elder" in blob
+    assert "Intent: Warn them about the bridge." in blob
+    # The narration instruction tells the narrator not to call tools; the review must not see it.
+    assert "Do not call tools." not in blob
+
+
+def test_the_rewrite_sees_the_reviewers_fault_text(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    fault = "The narration invents an advancement point Ada does not have."
+    client, campaign_id = _campaign_id(client_factory)
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (_ReviewProvider(recorder, fault=fault), model_id)
+    script = _script(
+        {
+            "rounds": [[]],
+            "text": "Ada still has one advancement point to spend.",
+            "rewrite": "Ada has no advancement point left.",
+            "review": [[[UNDO]]],
+        }
+    )
+
+    assert _send(client, campaign_id, script).status_code == 303
+
+    narration_calls = _narration_calls(recorder, script)
+    assert len(narration_calls) == 2
+    rewrite = json.dumps(narration_calls[1])
+    assert fault in rewrite
+    assert "Turn review (round 1)" in rewrite
+    undone = _undone_events(app, campaign_id)
+    assert len(undone) == 1
+    # The reviewer's explicit undo reason is kept; its whole review is a context note.
+    assert json.loads(undone[0].payload)["reason"] == UNDO["arguments"]["reason"]
+
+
+def test_a_changed_record_uses_the_reviewers_words_as_the_reason(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    fault = "The gate room must exist before the narration names it."
+    client, campaign_id = _campaign_id(client_factory)
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (_ReviewProvider(recorder, fault=fault), model_id)
+    script = _script(
+        {
+            "rounds": [[]],
+            "text": "The gate is open.",
+            "rewrite": "The gate opens onto a small room.",
+            "review": [[[CREATE_GATE]]],
+        }
+    )
+
+    assert _send(client, campaign_id, script).status_code == 303
+
+    undone = _undone_events(app, campaign_id)
+    assert len(undone) == 1
+    assert json.loads(undone[0].payload)["reason"] == fault
+    rewrite = json.dumps(_narration_calls(recorder, script)[1])
+    assert fault in rewrite
+
+
+def test_a_failed_undo_still_retracts_and_rewrites(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    fault = "The narration contradicts the record."
+    client, campaign_id = _campaign_id(client_factory)
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (_ReviewProvider(recorder, fault=fault), model_id)
+    script = _script(
+        {
+            "rounds": [[]],
+            "text": "A wrong narration.",
+            "rewrite": "A corrected narration.",
+            "review": [[[BAD_UNDO]]],
+        }
+    )
+
+    events = _stream(client, campaign_id, script)
+
+    assert [e["type"] for e in events].count("retract") == 1
+    assert _saved(app, campaign_id)[-1] == ("assistant", "A corrected narration.")
+    assert len(_narration_calls(recorder, script)) == 2
+    undone = _undone_events(app, campaign_id)
+    assert len(undone) == 1
+    assert json.loads(undone[0].payload)["reason"] == fault
+
+
+def test_a_passing_review_records_its_verdict_in_the_turn_context(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    verdict = "The turn passes: the record and the narration agree."
+    client, campaign_id = _campaign_id(client_factory)
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (_ReviewProvider(recorder, verdict=verdict), model_id)
+    script = _script({"rounds": [[]], "text": "Ada waits."})
+    assert _send(client, campaign_id, script).status_code == 303
+
+    reply_id = _saved_ids(app, campaign_id)[-1]
+    with Session(app.state.engine) as db:
+        owner_id = db.get(Campaign, campaign_id).owner_id
+    parts = get_turn_context(app.state.engine, owner_id, campaign_id, reply_id)
+    verdicts = [part for part in parts if part.source.startswith("Turn review verdict")]
+    assert [(part.source, part.content) for part in verdicts] == [
+        ("Turn review verdict (round 1)", verdict)
+    ]
+    with Session(app.state.engine) as db:
+        steps = list(
+            db.exec(
+                select(Event).where(
+                    Event.campaign_id == campaign_id, Event.kind == "turn.review_step"
+                )
+            ).all()
+        )
+    assert any(json.loads(step.payload)["messages"] == [] for step in steps)
+
+
+@pytest.mark.parametrize("call", [LIST_LOOKUPS, LIST_DICE_TABLES])
+def test_a_read_only_list_tool_does_not_trigger_the_changed_record_rewrite(
+    client_factory: Callable[[], TestClient], app: FastAPI, call: dict[str, Any]
+):
+    client, campaign_id = _campaign_id(client_factory)
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    script = _script(
+        {
+            "rounds": [[]],
+            "text": "Ada waits.",
+            "rewrite": "Ada waits, rewritten.",
+            "review": [[[call]]],
+        }
+    )
+
+    events = _stream(client, campaign_id, script)
+
+    assert [e["type"] for e in events].count("retract") == 0
+    assert _saved(app, campaign_id)[-1] == ("assistant", "Ada waits.")
+    assert len(_narration_calls(recorder, script)) == 1
+    assert _undone_events(app, campaign_id) == []

@@ -41,6 +41,7 @@ from cygnusloom.services.state import (  # noqa: F401
     Encounter,
     EncounterMap,
     Faction,
+    FactionAsset,
     Item,
     KnownNpc,
     Note,
@@ -1009,6 +1010,10 @@ class ChatGM(GameEvent):
     reasoning: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
+        # A correction belongs to the narration it was written for. Once a reply is recorded,
+        # a later narration must not be told to fix that stale fault.
+        if state.turn is not None:
+            state.turn.revision = ""
         if self.final:
             state.turn = None
         else:
@@ -2258,7 +2263,12 @@ class LostRolled(GameEvent):
 
 @dataclass(frozen=True)
 class ArmorSet(GameEvent):
+    """A character's armor total changed. The character sheet and inventory tab already show the
+    total, so the transcript does not announce it; the log line stays available as a hidden
+    event."""
+
     kind: ClassVar[str] = "combat.armor_set"
+    hidden: ClassVar[bool] = True
 
     name: str
     armor: int
@@ -2684,6 +2694,8 @@ class FactionAdded(GameEvent):
 
     def render(self) -> str:
         trait = f" ({self.trait})" if self.trait else ""
+        if not self.tally or not self.entry:
+            return f"New faction: {self.name}{trait}."
         return f"New faction: {self.name}{trait}, {self.points} points."
 
 
@@ -2726,6 +2738,196 @@ class FactionRemoved(GameEvent):
 
     def render(self) -> str:
         return f"The faction {self.name} disbands."
+
+
+@dataclass(frozen=True)
+class FactionAssetAdded(GameEvent):
+    """A faction buys an asset. Its stats are resolved from the rule set's definition now, so a
+    later content change does not alter the campaign's record of what it owns."""
+
+    kind: ClassVar[str] = "faction.asset_added"
+
+    faction_id: str
+    asset_id: str
+    asset_kind: str
+    name: str
+    category: str
+    hp_max: int
+    hp: int
+    magic: str
+    attack: str = ""
+    counter: str = ""
+    qualities: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        faction = state.factions.get(self.faction_id)
+        if faction is None:
+            return
+        faction.assets[self.asset_id] = FactionAsset(
+            id=self.asset_id,
+            kind=self.asset_kind,
+            name=self.name,
+            category=self.category,
+            hp_max=self.hp_max,
+            hp=max(0, min(self.hp, self.hp_max)),
+            magic=self.magic,
+            attack=self.attack,
+            counter=self.counter,
+            qualities=list(self.qualities),
+            notes=list(self.notes),
+        )
+
+    def render(self) -> str:
+        return f"New faction asset: {self.name} ({self.category})."
+
+
+@dataclass(frozen=True)
+class FactionAssetUpdated(GameEvent):
+    """A faction asset's name, hit points, notes, or qualities changed. The event stores the full
+    resolved values, so replay does not depend on the earlier event's contents."""
+
+    kind: ClassVar[str] = "faction.asset_updated"
+
+    faction_id: str
+    asset_id: str
+    name: str
+    hp: int
+    notes: list[str] = field(default_factory=list)
+    qualities: list[str] = field(default_factory=list)
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        faction = state.factions.get(self.faction_id)
+        if faction is None:
+            return
+        asset = faction.assets.get(self.asset_id)
+        if asset is None:
+            return
+        asset.name = self.name
+        asset.hp = max(0, min(self.hp, asset.hp_max))
+        asset.notes = list(self.notes)
+        asset.qualities = list(self.qualities)
+
+    def render(self) -> str:
+        return f"Faction asset {self.name} is updated."
+
+
+@dataclass(frozen=True)
+class FactionAssetRemoved(GameEvent):
+    """A faction asset is destroyed or disbanded."""
+
+    kind: ClassVar[str] = "faction.asset_removed"
+
+    faction_id: str
+    asset_id: str
+    name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        faction = state.factions.get(self.faction_id)
+        if faction is not None:
+            faction.assets.pop(self.asset_id, None)
+
+    def render(self) -> str:
+        return f"The faction asset {self.name} is lost."
+
+
+@dataclass(frozen=True)
+class FactionAssetActed(GameEvent):
+    """A faction asset used its action for the current faction turn. It cannot act again until
+    the faction takes another turn. The Factions tab shows the readiness, so the transcript does
+    not announce the bookkeeping."""
+
+    kind: ClassVar[str] = "faction.asset_acted"
+    hidden: ClassVar[bool] = True
+
+    faction_id: str
+    asset_id: str
+    name: str = ""
+    note: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        faction = state.factions.get(self.faction_id)
+        if faction is None:
+            return
+        asset = faction.assets.get(self.asset_id)
+        if asset is None:
+            return
+        asset.acted_turn = faction.turn
+        if self.note:
+            asset.notes.append(self.note)
+
+    def render(self) -> str:
+        text = f"{self.name or 'A faction asset'} acts this faction turn"
+        return f"{text} ({self.note})." if self.note else f"{text}."
+
+
+@dataclass(frozen=True)
+class FactionAssetDamaged(GameEvent):
+    """A faction asset lost hit points, never below zero."""
+
+    kind: ClassVar[str] = "faction.asset_damaged"
+
+    faction_id: str
+    asset_id: str
+    amount: int
+    name: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        faction = state.factions.get(self.faction_id)
+        if faction is None:
+            return
+        asset = faction.assets.get(self.asset_id)
+        if asset is not None:
+            asset.hp = max(0, asset.hp - self.amount)
+
+    def render(self) -> str:
+        return f"{self.name or 'A faction asset'} takes {self.amount} damage."
+
+
+@dataclass(frozen=True)
+class FactionAssetRepaired(GameEvent):
+    """A faction asset regained hit points, never above its maximum."""
+
+    kind: ClassVar[str] = "faction.asset_repaired"
+
+    faction_id: str
+    asset_id: str
+    amount: int
+    name: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        faction = state.factions.get(self.faction_id)
+        if faction is None:
+            return
+        asset = faction.assets.get(self.asset_id)
+        if asset is not None:
+            asset.hp = min(asset.hp_max, asset.hp + self.amount)
+
+    def render(self) -> str:
+        return f"{self.name or 'A faction asset'} is repaired for {self.amount} hit points."
+
+
+@dataclass(frozen=True)
+class FactionTurnTaken(GameEvent):
+    """A faction began its next turn. Every asset that acted in an earlier turn is ready again.
+    The Factions tab shows the turn, so the transcript does not announce the bookkeeping."""
+
+    kind: ClassVar[str] = "faction.turn_taken"
+    hidden: ClassVar[bool] = True
+
+    faction_id: str
+    turn: int
+    name: str = ""
+    note: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        faction = state.factions.get(self.faction_id)
+        if faction is not None:
+            faction.turn = self.turn
+
+    def render(self) -> str:
+        text = f"{self.name or 'The faction'} begins faction turn {self.turn}"
+        return f"{text} ({self.note})." if self.note else f"{text}."
 
 
 @dataclass(frozen=True)

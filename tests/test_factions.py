@@ -246,3 +246,24 @@ def test_the_campaign_page_shows_the_factions_tab_once_factions_exist(
     assert 'id="panel-factions"' in page
     assert "Ember College" in page
     assert "0 College Cup" in page
+
+
+def test_a_rule_set_without_a_faction_tally_creates_tally_less_factions(
+    client_factory: Callable[[], TestClient],
+):
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
+    tools = tools_for(client.app, campaign_id, rule_set="worldswithoutnumber")
+
+    for index in range(6):
+        created = tools.create_faction(
+            f"Border League {index}", "A league of border captains.", "Militarist"
+        )
+        assert created["tally"] == ""
+        assert created["entry"] == ""
+        assert created["points"] == 0
+        assert created["cup"] == ""
+
+    assert len(tools.list_factions()) == 6

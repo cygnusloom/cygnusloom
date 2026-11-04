@@ -578,6 +578,7 @@ def tool_context(
         checks=rule_set.checks,
         conditions=rule_set.conditions,
         projects=rule_set.projects,
+        faction_assets=rule_set.faction_assets,
         moves=rule_set.moves,
         counters=rule_set.counters,
         advancements=rule_set.advancements,

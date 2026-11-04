@@ -19,6 +19,9 @@ from cygnusloom.services.common import InvalidInput, NotFound
 logger = logging.getLogger(__name__)
 
 _PYTHON_TYPES: dict[str, type] = {"string": str, "array": list, "object": dict}
+# The turn review must not speak for an NPC or restart the out-of-character step. Those tools
+# stay in the state step's list, but are left out of the review's.
+_REVIEW_STEP_EXCLUDED = frozenset({"speak", "ooc"})
 
 
 @dataclass(frozen=True)
@@ -57,7 +60,11 @@ def tool_specs(
     if journal_step:
         selected = [tool for tool in tool_calls.values() if tool.journal_step]
     elif review_step:
-        selected = [tool for tool in tool_calls.values() if not tool.journal_step]
+        selected = [
+            tool
+            for tool in tool_calls.values()
+            if not tool.journal_step and tool.name not in _REVIEW_STEP_EXCLUDED
+        ]
     else:
         selected = [
             tool for tool in tool_calls.values() if not tool.journal_step and not tool.review_step

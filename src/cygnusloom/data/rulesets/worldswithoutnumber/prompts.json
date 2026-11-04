@@ -90,6 +90,6 @@
     "type": "prompt",
     "id": "projects_and_factions",
     "step": "state",
-    "text": "Track Projects, Magic Workings, spell research, and faction turns with start_project, advance_project, and list_projects. Pick a target that matches the book's difficulty, then advance the tracker only when the time, silver, and rolls are actually spent; put what the advance bought in the note. Never leave a long effort only in prose."
+    "text": "Track Projects, Magic Workings, and spell research with start_project, advance_project, and list_projects. Pick a target that matches the book's difficulty, advance only when the time, silver, and rolls are actually spent, and put what the advance bought in the note. Model factions as engine state, not prose: create_faction records the faction, add_faction_asset gives it a book asset such as Infantry, Smugglers, or Farmers, and faction_asset_acted records each asset's one action for the current faction turn. Use damage_faction_asset and repair_faction_asset for hit points, and take_faction_turn to close the turn and ready every asset. Never leave a long effort, faction asset, or faction turn only in prose."
   }
 ]

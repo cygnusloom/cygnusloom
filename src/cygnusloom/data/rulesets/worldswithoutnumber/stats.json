@@ -228,7 +228,8 @@
       "minus_templates": [
         "adventurer_expert_mage",
         "adventurer_warrior_mage",
-        "adventurer_mage_mage"
+        "adventurer_mage_mage",
+        "mage_partial_2"
       ],
       "requires_templates": [
         "high_mage",
@@ -254,7 +255,8 @@
       "minus_templates": [
         "adventurer_expert_mage",
         "adventurer_warrior_mage",
-        "adventurer_mage_mage"
+        "adventurer_mage_mage",
+        "mage_partial_2"
       ],
       "requires_templates": [
         "necromancer",
@@ -280,7 +282,8 @@
       "minus_templates": [
         "adventurer_expert_mage",
         "adventurer_warrior_mage",
-        "adventurer_mage_mage"
+        "adventurer_mage_mage",
+        "mage_partial_2"
       ],
       "requires_templates": [
         "elementalist",
@@ -354,7 +357,7 @@
       "base": 0,
       "best_modifier": ["int", "cha"],
       "plus_skills": ["heal"],
-      "requires_templates": ["healer"],
+      "requires_templates": ["healer", "healer_partial_2"],
       "minimum": 1
     }
   },
@@ -365,8 +368,8 @@
     "derived": {
       "base": 0,
       "best_modifier": ["str", "dex", "con", "int", "wis", "cha"],
-      "plus_skill_picks": ["order_skill"],
-      "requires_templates": ["vowed"],
+      "plus_skill_picks": ["order_skill", "second_order_skill"],
+      "requires_templates": ["vowed", "vowed_partial_2"],
       "minimum": 1
     }
   }

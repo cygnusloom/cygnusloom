@@ -38,9 +38,10 @@
   </div>
   <form method="post" action="/campaigns/{{ campaign.id }}/creation" class="creation-form"{% if character.skill_progression %} data-skill-first-level="{{ character.skill_progression.first_level }}" data-skill-creation-maximum="{{ character.skill_progression.creation_maximum }}"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    {% if show_options %}
+    {% if show_options or show_setting %}
     <section class="creation-section" aria-labelledby="options-title">
       <h2 id="options-title">Campaign options</h2>
+      {% if show_options %}
       <p class="muted">These options are shared by every character in the campaign, and they are chosen once. Pick each one, roll it with the dice button, or use the randomize buttons.</p>
       <div class="creation-grid">
         {% for field in options.choice_fields %}
@@ -50,6 +51,18 @@
           {{ text_panel("campaign-" ~ field.id, field.name, field.description) }}
         {% endfor %}
       </div>
+      {% endif %}
+      {% if show_setting %}
+      <div class="creation-grid">
+        <section class="creation-panel" aria-labelledby="panel-setting">
+          <h3 id="panel-setting">Setting / story (optional)</h3>
+          <label>
+            <textarea name="setting" rows="6" maxlength="4000" placeholder="Describe the kind of setting or story you want to play. Leave blank to let the world and rule set lead." aria-labelledby="panel-setting">{{ campaign_setting }}</textarea>
+          </label>
+          <p class="muted">Tell Cygnus what kind of world or story you want. Blank is ignored.</p>
+        </section>
+      </div>
+      {% endif %}
     </section>
     {% endif %}
     {% if show_character %}

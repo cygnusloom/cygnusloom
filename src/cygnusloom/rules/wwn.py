@@ -23,6 +23,7 @@ from cygnusloom.rules.wwn_progression import (
     CastingRow,
     ClassTable,
     WWNProgression,
+    combine_class_tables,
     require_wwn_progression,
 )
 from cygnusloom.services import reactions
@@ -55,6 +56,44 @@ def class_table(class_id: str, progression: WWNProgression) -> ClassTable:
         options = ", ".join(sorted(progression.class_tables))
         raise InvalidInput(f"there is no class table for {class_id!r}; the classes are: {options}")
     return found
+
+
+# A class that grants an art tradition of its own, including a second partial class.
+_CLASS_TRADITIONS = {
+    "healer": "healer",
+    "healer_partial_2": "healer",
+    "vowed": "vowed",
+    "vowed_partial_2": "vowed",
+}
+
+
+def class_ids(found: Any) -> list[str]:
+    """The character's class template ids, the primary class first and a second class after."""
+    ids = []
+    for kind in ("class", "class2"):
+        class_id = str(found.templates.get(kind, "")).strip().casefold()
+        if class_id:
+            ids.append(class_id)
+    return ids
+
+
+def advancement_table(found: Any, progression: WWNProgression) -> ClassTable:
+    """The chart a character advances on: its class table, or two partial tables combined."""
+    ids = class_ids(found)
+    if not ids:
+        raise InvalidInput(f"{found.name} has no class, so has no level to gain")
+    tables = [class_table(class_id, progression) for class_id in ids]
+    if len(tables) == 1:
+        return tables[0]
+    return combine_class_tables(tables, progression.class_pairing)
+
+
+def casting_class_id(found: Any, progression: WWNProgression) -> str | None:
+    """The class whose casting chart a character uses: the class first, then the second class."""
+    for class_id in class_ids(found):
+        if class_id in progression.casting_class_tables:
+            return class_id
+    return None
 
 
 def _chart_level(level: Any, progression: WWNProgression, character: str, chart: str) -> int:
@@ -97,15 +136,16 @@ def tradition_tag(tradition: str, progression: WWNProgression) -> str:
 
 def tradition_ids(found: Any) -> list[str]:
     """Every art tradition a character has. A Mage/Mage Adventurer has two, and a Healer or
-    Vowed has one from its class rather than a tradition template."""
+    Vowed has one from its class, whether that class is the primary or the second partial one."""
     ids = [
         str(found.templates[kind])
         for kind in ("tradition", "tradition2")
         if found.templates.get(kind)
     ]
-    class_id = str(found.templates.get("class", "")).strip().casefold()
-    if class_id in {"healer", "vowed"}:
-        ids.append(class_id)
+    for class_id in class_ids(found):
+        tradition = _CLASS_TRADITIONS.get(class_id)
+        if tradition is not None and tradition not in ids:
+            ids.append(tradition)
     return ids
 
 
@@ -460,12 +500,13 @@ def apply_level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str
                 f"{found.name} has {xp} experience; level {level + 1} needs {threshold} on the "
                 f"{rate} track"
             )
-        class_id = found.templates.get("class", "")
-        if not class_id:
+        if not class_ids(found):
             raise InvalidInput(f"{found.name} has no class, so has no level to gain")
         return {
             "level": level,
-            "class_id": class_id,
+            "class_ids": class_ids(found),
+            "table": advancement_table(found, progression),
+            "casting_class": casting_class_id(found, progression),
             "traditions": tradition_ids(found),
             "hp": found.stats.get("hp", 0),
             "con": spec.modifier(found.stats, "con"),
@@ -477,7 +518,7 @@ def apply_level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str
     found = ctx.world.with_hook_context(read)
     level = int(found["level"])
     new_level = level + 1
-    table = class_table(str(found["class_id"]), progression)
+    table: ClassTable = found["table"]
     ctx.world.adjust_counter(character, "level", 1)
     # The book rerolls the class hit dice for the new level, adding Constitution to each die,
     # and keeps the old total plus one when the reroll is no better.
@@ -497,16 +538,21 @@ def apply_level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str
     focus_picks = 1 if new_level in table.focus_levels else 0
     if focus_picks:
         ctx.world.adjust_counter(character, "focus_picks", focus_picks)
+    casting_class = str(found["casting_class"] or found["class_ids"][0])
     art_picks = sum(
-        _art_picks(str(found["class_id"]), tradition, new_level, progression)
+        _art_picks(casting_class, tradition, new_level, progression)
         for tradition in found["traditions"]
     )
     if art_picks:
         ctx.world.adjust_counter(character, "art_picks", art_picks)
-    casting = casting_row(str(found["class_id"]), new_level, progression)
+    casting = (
+        casting_row(str(found["casting_class"]), new_level, progression)
+        if found["casting_class"] is not None
+        else None
+    )
     if casting is not None:
         ctx.world.set_stat_max(character, "castings", casting.casts, cause=f"level {new_level}")
-    spell_picks = _spell_picks(str(found["class_id"]), casting, progression)
+    spell_picks = _spell_picks(casting_class, casting, progression)
     if spell_picks:
         ctx.world.adjust_counter(character, "spell_picks", spell_picks)
     _recompute_derived(ctx, character, spec, cause=f"level {new_level}")
@@ -533,17 +579,13 @@ def _spell_picks(class_id: str, casting: CastingRow | None, progression: WWNProg
 
 
 def _art_picks(class_id: str, tradition: str, level: int, progression: WWNProgression) -> int:
-    """The art picks a class chart grants at a level: a single arcane tradition uses the full
-    chart, while an Adventurer's partial mage uses the partial chart. A dual mage counts as a
-    partial mage for both traditions."""
+    """The art picks a class chart grants at a level: a full Mage uses the full chart, while a
+    partial class, including a second partial class, uses the partial chart."""
     tag = tradition_tag(tradition, progression)
     if not tag:
         return 0
-    levels = (
-        progression.art_levels_full
-        if class_id.strip().casefold() == "mage"
-        else progression.art_levels_partial
-    )
+    full_chart = class_id.strip().casefold() == "mage"
+    levels = progression.art_levels_full if full_chart else progression.art_levels_partial
     return 1 if level in levels.get(tag, frozenset()) else 0
 
 
@@ -568,14 +610,15 @@ def level_up_summary(character: str, ctx: ToolContext) -> dict[str, Any]:
                 f"{found.name} has {xp} experience; level {level + 1} needs {threshold} on the "
                 f"{rate} track"
             )
-        class_id = found.templates.get("class", "")
-        if not class_id:
+        if not class_ids(found):
             raise InvalidInput(f"{found.name} has no class, so has no level to gain")
         return {
             "level": level,
             "xp": xp,
             "threshold": threshold,
-            "class_id": class_id,
+            "class_ids": class_ids(found),
+            "table": advancement_table(found, progression),
+            "casting_class": casting_class_id(found, progression),
             "traditions": tradition_ids(found),
             "rate": rate,
         }
@@ -583,15 +626,20 @@ def level_up_summary(character: str, ctx: ToolContext) -> dict[str, Any]:
     found = ctx.world.with_hook_context(read)
     level = int(found["level"])
     new_level = level + 1
-    class_id = str(found["class_id"])
-    table = class_table(class_id, progression)
+    table: ClassTable = found["table"]
     points = 4 if table.quick_learner else 3
     focus_picks = 1 if new_level in table.focus_levels else 0
+    casting_class = str(found["casting_class"] or found["class_ids"][0])
     art_picks = sum(
-        _art_picks(class_id, tradition, new_level, progression) for tradition in found["traditions"]
+        _art_picks(casting_class, tradition, new_level, progression)
+        for tradition in found["traditions"]
     )
-    casting = casting_row(class_id, new_level, progression)
-    spell_picks = _spell_picks(class_id, casting, progression)
+    casting = (
+        casting_row(str(found["casting_class"]), new_level, progression)
+        if found["casting_class"] is not None
+        else None
+    )
+    spell_picks = _spell_picks(casting_class, casting, progression)
     attack = table.attack[new_level - 1]
     lines = [
         f"Hit points: rerolled for level {new_level} (the old total plus one if the roll is worse).",
@@ -650,29 +698,41 @@ def level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str, Any]
 def focus_options(
     character: str, pick: Any, ctx: ToolContext, level: int | None = None
 ) -> list[dict[str, Any]]:
-    """The Foci a focus pick offers: the class's general focus list, with a rank-2 Focus offered
-    once its rank-1 Focus is known."""
+    """The Foci a focus pick offers: the focus picks of both class templates, with a rank-2
+    Focus offered once its rank-1 Focus is known."""
     spec = ctx.world.character
 
     def read(hc: HookContext) -> dict[str, Any]:
         _, found = _character(hc, character)
-        class_id = found.templates.get("class", "")
-        template = spec.templates.get(class_id, None)
-        if template is None:
+        ids = class_ids(found)
+        if not ids:
             raise InvalidInput(f"{found.name} has no class")
-        choice = next(
-            (candidate for candidate in template.feat_picks if candidate.id == "class_focus_any"),
-            None,
-        )
-        if choice is None:
-            return {"options": [], "features": dict(found.features)}
         return {
-            "options": [feature.id for feature in feature_pick_options(spec, choice)],
+            "options": [feature.id for feature in _focus_features(spec, ids)],
             "features": dict(found.features),
         }
 
     found = ctx.world.with_hook_context(read)
     return _feature_options(spec, found["options"], found["features"], set(pick.exclude))
+
+
+def _focus_features(spec: CharacterSpec, ids: Iterable[str]) -> list[Feature]:
+    """Every Focus the templates' focus picks offer, once, in template order."""
+    features: list[Feature] = []
+    seen: set[str] = set()
+    for class_id in ids:
+        template = spec.templates.get(class_id)
+        if template is None:
+            raise InvalidInput(f"there is no class template named {class_id!r}")
+        for choice in template.feat_picks:
+            tags = choice.tags or ((choice.tag,) if choice.tag else ())
+            if "focus" not in tags:
+                continue
+            for feature in feature_pick_options(spec, choice):
+                if feature.id not in seen:
+                    seen.add(feature.id)
+                    features.append(feature)
+    return features
 
 
 def art_options(
@@ -710,9 +770,9 @@ def spell_options(
 
     def read(hc: HookContext) -> dict[str, Any]:
         _, found = _character(hc, character)
-        class_id = found.templates.get("class", "")
+        casting_class = casting_class_id(found, progression)
         level = new_level or found.counters.get("level", 1)
-        row = casting_row(class_id, level, progression)
+        row = casting_row(casting_class, level, progression) if casting_class else None
         tags = set(tradition_tags(found, progression)) | {"high"}
         return {
             "tags": tags,
@@ -968,7 +1028,7 @@ def learn_focus(character: str, focus: str, ctx: ToolContext) -> dict[str, Any]:
         _, found = _character(hc, character)
         if found.counters.get("focus_picks", 0) < 1:
             raise InvalidInput(f"{found.name} has no focus picks to spend")
-        _check_focus_class(spec, found.templates.get("class"), feature)
+        _check_focus_class(spec, class_ids(found), feature)
         if focus in found.features and not feature.repeatable:
             raise InvalidInput(f"{found.name} already has {feature.name}")
         if feature.defense_floor is not None and not found.defense_tracked:
@@ -1038,30 +1098,26 @@ def learn_focus(character: str, focus: str, ctx: ToolContext) -> dict[str, Any]:
     }
 
 
-def _check_focus_class(spec: CharacterSpec, class_id: str | None, feature: Feature) -> None:
-    if not class_id or feature.tag != "focus" or feature.rank <= 0:
+def _check_focus_class(spec: CharacterSpec, ids: Iterable[str], feature: Feature) -> None:
+    ids = list(ids)
+    if not ids or feature.tag != "focus" or feature.rank <= 0:
         return
-    template = spec.templates.get(class_id)
-    if template is None:
-        raise InvalidInput(f"there is no class template named {class_id!r}")
-    general_pick = next(
-        (pick for pick in template.feat_picks if pick.id == "class_focus_any"), None
-    )
-    if general_pick is None:
-        raise InvalidInput(f"{template.name} has no configured general Focus options")
-    options = feature_pick_options(spec, general_pick)
+    choices = _focus_features(spec, ids)
     if feature.rank == 1:
-        allowed = any(option.id == feature.id for option in options)
+        allowed = any(option.id == feature.id for option in choices)
     else:
         allowed = any(
             option.rank == 1
             and option.name == feature.name
             and option.tag == feature.tag
             and option.feature_type == feature.feature_type
-            for option in options
+            for option in choices
         )
     if not allowed:
-        raise InvalidInput(f"{feature.name} is not available to {template.name}")
+        names = " or ".join(
+            spec.templates[class_id].name for class_id in ids if class_id in spec.templates
+        )
+        raise InvalidInput(f"{feature.name} is not available to {names}")
 
 
 def learn_art(character: str, art: str, ctx: ToolContext) -> dict[str, Any]:
@@ -1124,8 +1180,12 @@ def learn_spell(character: str, spell: str, ctx: ToolContext) -> dict[str, Any]:
                 f"{feature.name} is not a High Magic spell or a spell of {found.name}'s "
                 f"traditions, {', '.join(tags)}"
             )
-        class_id = found.templates.get("class", "")
-        row = casting_row(class_id, found.counters.get("level", 1), progression)
+        class_id = casting_class_id(found, progression)
+        row = (
+            casting_row(class_id, found.counters.get("level", 1), progression)
+            if class_id is not None
+            else None
+        )
         if row is None:
             raise InvalidInput(f"{found.name}'s class cannot cast spells")
         if feature.rank > row.max_spell_level:

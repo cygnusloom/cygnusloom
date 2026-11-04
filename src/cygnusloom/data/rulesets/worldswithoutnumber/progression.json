@@ -9,6 +9,13 @@
     "id": "progression",
     "python_module": "wwn_progression",
     "configure": "configure_progression",
+    "class_pairing": {
+      "hit_die": "best",
+      "hp_constant": "best",
+      "attack": "best",
+      "focus_levels": "union",
+      "quick_learner": "any"
+    },
     "classes": [
       {
         "id": "warrior",
@@ -81,6 +88,46 @@
         "attack": [0, 0, 0, 0, 1, 1, 1, 1, 1, 2],
         "focus_levels": [2, 5, 7, 10],
         "quick_learner": false
+      },
+      {
+        "id": "warrior_partial_2",
+        "hit_die": 6,
+        "hp_constant": 2,
+        "attack": [1, 2, 2, 3, 4, 5, 5, 6, 6, 7],
+        "focus_levels": [2, 5, 7, 10],
+        "quick_learner": false
+      },
+      {
+        "id": "expert_partial_2",
+        "hit_die": 6,
+        "hp_constant": 0,
+        "attack": [0, 1, 1, 2, 2, 3, 3, 4, 4, 5],
+        "focus_levels": [2, 5, 7, 10],
+        "quick_learner": true
+      },
+      {
+        "id": "mage_partial_2",
+        "hit_die": 6,
+        "hp_constant": -1,
+        "attack": [0, 0, 0, 0, 1, 1, 1, 1, 1, 2],
+        "focus_levels": [2, 5, 7, 10],
+        "quick_learner": false
+      },
+      {
+        "id": "healer_partial_2",
+        "hit_die": 6,
+        "hp_constant": -1,
+        "attack": [0, 0, 0, 0, 1, 1, 1, 1, 1, 2],
+        "focus_levels": [2, 5, 7, 10],
+        "quick_learner": false
+      },
+      {
+        "id": "vowed_partial_2",
+        "hit_die": 6,
+        "hp_constant": 0,
+        "attack": [0, 1, 1, 2, 2, 3, 3, 4, 4, 5],
+        "focus_levels": [2, 5, 7, 10],
+        "quick_learner": true
       }
     ],
     "xp": {
@@ -129,7 +176,8 @@
       "mage": "full_mage",
       "adventurer_expert_mage": "partial_mage",
       "adventurer_warrior_mage": "partial_mage",
-      "adventurer_mage_mage": "dual_mage"
+      "adventurer_mage_mage": "dual_mage",
+      "mage_partial_2": "partial_mage"
     },
     "traditions": {
       "tags": {

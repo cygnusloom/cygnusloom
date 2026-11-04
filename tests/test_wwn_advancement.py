@@ -125,6 +125,22 @@ TRADITION2_PICKS: dict[str, dict[str, str]] = {
         "pick-feature-tradition2_spells_elementalist-1": "spell_wardpact_invocation",
     },
 }
+CLASS2_PICKS: dict[str, dict[str, str]] = {
+    "warrior_partial_2": {
+        "pick-feature-second_class_focus_warrior-0": "focus_alert",
+    },
+    "expert_partial_2": {
+        "pick-feature-second_class_focus_expert-0": "focus_connected",
+    },
+    "mage_partial_2": {},
+    "healer_partial_2": {
+        "pick-feature-second_class_art_healer-0": "art_facile_healer",
+    },
+    "vowed_partial_2": {
+        "pick-feature-second_class_art_vowed-0": "art_brutal_counter",
+        "pick-skill-second_order_skill-0": "trade",
+    },
+}
 TRADITION_PICKS: dict[str, dict[str, str]] = {
     "no_tradition": {},
     "high_mage": {
@@ -171,6 +187,7 @@ def _campaign(
     client_factory: Callable[[], TestClient],
     *,
     class_id: str = "warrior",
+    class2: str | None = None,
     tradition: str | None = None,
     tradition2: str | None = None,
     options: dict[str, str] | None = None,
@@ -198,6 +215,9 @@ def _campaign(
         fields["pick-skill-class_free_skill-0"] = "notice"
         if class_id == "vowed":
             fields.setdefault("pick-skill-order_skill-0", "exert")
+        if class2 is not None:
+            fields["template-class2"] = class2
+            fields.update(CLASS2_PICKS[class2])
         if tradition is not None:
             if class_id != "mage" and tradition in {"high_mage", "necromancer", "elementalist"}:
                 tradition = f"{tradition}_partial"
@@ -415,6 +435,117 @@ def test_an_expert_pairing_gains_two_skill_points_on_level_up(
     # Quick Learner gives the Expert and partial Expert an extra point each level.
     assert result["skill_points"] == 4
     assert _counter(app, campaign_id, "skill_points") == 4
+
+
+def test_a_healer_and_partial_warrior_advance_on_the_combined_chart(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory, class_id="healer", class2="warrior_partial_2")
+    tools = _world_tools(app, campaign_id, seed=0)
+    ctx = _ctx(tools)
+    _set_stat(tools, "con", 10)  # no Constitution modifier
+    assert _stat(app, campaign_id, "attack_bonus") == 1
+
+    wwn.gain_xp(NAME, 3, "a session", ctx)
+    result = wwn.apply_level_up(NAME, ctx)
+
+    # The combined chart takes the Warrior's +2 HP a level and its higher attack; seed 0 rolls
+    # 4 and 4 on the two d6, so the rerolled total is 8 + 2 levels x 2 = 12.
+    assert result["hp"] == 12
+    assert result["attack_bonus"] == 2
+    assert result["skill_points"] == 3
+    assert result["focus_picks"] == 1
+    assert _stat(app, campaign_id, "attack_bonus") == 2
+    assert _counter(app, campaign_id, "focus_picks") == 1
+
+
+def test_a_healer_and_partial_expert_gains_quick_learner_skill_points(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory, class_id="healer", class2="expert_partial_2")
+    ctx = _ctx(_world_tools(app, campaign_id))
+
+    wwn.gain_xp(NAME, 3, "a session", ctx)
+    result = wwn.apply_level_up(NAME, ctx)
+
+    # A partial Expert's Quick Learner gives the fourth skill point.
+    assert result["skill_points"] == 4
+    assert _counter(app, campaign_id, "skill_points") == 4
+    options = {
+        option["id"] for option in wwn.focus_options(NAME, SimpleNamespace(exclude=set()), ctx)
+    }
+    # The second partial class's own focus pick widens the options past the Healer's list.
+    assert "focus_polymath" in options
+
+
+def test_a_healer_and_partial_vowed_combines_both_art_traditions(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory, class_id="healer", class2="vowed_partial_2")
+    ctx = _ctx(_world_tools(app, campaign_id))
+    character = _pc(app, campaign_id)
+    assert {"effort_healer", "effort_vowed"} <= set(character.stats)
+
+    wwn.gain_xp(NAME, 3, "a session", ctx)
+    result = wwn.apply_level_up(NAME, ctx)
+
+    # Both partial art charts grant a pick at level 2.
+    assert result["art_picks"] == 2
+    options = {
+        option["id"] for option in wwn.art_options(NAME, SimpleNamespace(exclude=set()), ctx)
+    }
+    assert {"art_facile_healer", "art_faultless_awareness"} <= options
+    assert wwn.learn_art(NAME, "art_facile_healer", ctx)["art_picks"] == 1
+    assert wwn.learn_art(NAME, "art_faultless_awareness", ctx)["art_picks"] == 0
+
+
+def test_a_healer_and_partial_mage_casts_as_a_partial_mage(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(
+        client_factory,
+        class_id="healer",
+        class2="mage_partial_2",
+        tradition="high_mage_partial",
+    )
+    tools = _world_tools(app, campaign_id)
+    ctx = _ctx(tools)
+    # Int 18 gives +2 and the second partial Mage takes the partial caster's -1.
+    assert _stat(app, campaign_id, "effort_high") == 2
+
+    wwn.gain_xp(NAME, 18, "a long road", ctx)
+    castings = [wwn.apply_level_up(NAME, ctx)["castings"] for _ in range(4)]
+
+    # The partial Mage chart casts 1, 1, 2, 2; a full Mage would cast 1, 2, 2, 3.
+    assert castings == [1, 1, 2, 2]
+    assert _stat(app, campaign_id, "castings") == 2
+    options = wwn.spell_options(NAME, SimpleNamespace(exclude=set()), ctx)
+    ranks = {option["rank"] for option in options}
+    assert 2 in ranks
+    # A partial Mage at level 5 casts spells of level 2 at most.
+    assert max(ranks) == 2
+
+
+def test_a_dual_partial_summary_reports_the_combined_gains(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory, class_id="healer", class2="warrior_partial_2")
+    ctx = _ctx(_world_tools(app, campaign_id))
+    wwn.gain_xp(NAME, 3, "a session", ctx)
+
+    summary = wwn.level_up_summary(NAME, ctx)
+
+    assert summary["new_level"] == 2
+    assert summary["attack_bonus"] == 2
+    assert summary["castings"] is None
+    assert summary["grants"] == {
+        "skill_points": 3,
+        "focus_picks": 1,
+        "art_picks": 1,
+        "spell_picks": 0,
+    }
+    assert "Attack bonus: 2." in summary["lines"]
+    assert "Focus pick: 1." in summary["lines"]
 
 
 def test_a_caster_raises_castings_from_the_class_table_on_level_up(

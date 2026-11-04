@@ -211,3 +211,91 @@ def test_chat_is_in_the_transcript_and_not_in_the_log(
     log = campaign_log(app.state.engine, owner_id, campaign_id)
     assert not any("Hello, is anyone there?" in line for line in log)
     assert list_messages(app.state.engine, campaign_id)[1].content == "Hello, is anyone there?"
+
+
+def test_faction_asset_and_turn_events_apply_and_replay_safely():
+    from cygnusloom.services.events import (
+        CampaignState,
+        FactionAdded,
+        FactionAssetActed,
+        FactionAssetAdded,
+        FactionAssetDamaged,
+        FactionAssetRemoved,
+        FactionAssetRepaired,
+        FactionAssetUpdated,
+        FactionTurnTaken,
+    )
+
+    state = CampaignState()
+    FactionAdded(
+        faction_id="league",
+        name="League",
+        description="",
+        trait="Militarist",
+        tally="",
+        entry="",
+    ).apply(state, 1)
+    FactionAssetAdded(
+        faction_id="league",
+        asset_id="infantry",
+        asset_kind="infantry",
+        name="Infantry",
+        category="force",
+        hp_max=6,
+        hp=6,
+        magic="None",
+        attack="F v. F/1d8 damage",
+        counter="1d6 damage",
+        qualities=["Subtle"],
+        notes=["Garrisoned."],
+    ).apply(state, 2)
+
+    asset = state.factions["league"].assets["infantry"]
+    assert (asset.hp, asset.hp_max, asset.acted_turn) == (6, 6, 0)
+    assert asset.qualities == ["Subtle"]
+
+    FactionAssetActed(
+        faction_id="league", asset_id="infantry", name="Infantry", note="Marched."
+    ).apply(state, 3)
+    assert asset.acted_turn == 1
+    assert asset.notes == ["Garrisoned.", "Marched."]
+
+    FactionTurnTaken(faction_id="league", turn=2, name="League").apply(state, 4)
+    assert state.factions["league"].turn == 2
+    assert state.factions["league"].asset_ready(asset) is True
+
+    FactionAssetDamaged(faction_id="league", asset_id="infantry", amount=99).apply(state, 5)
+    assert asset.hp == 0
+    FactionAssetRepaired(faction_id="league", asset_id="infantry", amount=99).apply(state, 6)
+    assert asset.hp == 6
+
+    FactionAssetUpdated(
+        faction_id="league",
+        asset_id="infantry",
+        name="Old Guard",
+        hp=5,
+        qualities=["Special"],
+        notes=["Renamed."],
+    ).apply(state, 7)
+    assert asset.name == "Old Guard"
+    assert (asset.hp, asset.qualities, asset.notes) == (5, ["Special"], ["Renamed."])
+
+    FactionAssetRemoved(faction_id="league", asset_id="infantry", name="Old Guard").apply(state, 8)
+    assert state.factions["league"].assets == {}
+
+    FactionAssetActed(faction_id="missing", asset_id="none").apply(state, 9)
+    FactionAssetDamaged(faction_id="league", asset_id="none", amount=1).apply(state, 10)
+    FactionTurnTaken(faction_id="missing", turn=3).apply(state, 11)
+
+
+def test_a_recorded_reply_clears_the_turns_revision():
+    from cygnusloom.services.events import CampaignState, ChatGM, Turn
+
+    state = CampaignState()
+    state.turn = Turn(opener=1, text="", begun=True, revision="the old fault")
+    ChatGM(content="An out-of-character reply.", model="m", final=False).apply(state, 2)
+    assert state.turn is not None
+    assert state.turn.revision == ""
+    state.turn = Turn(opener=3, text="", begun=True, revision="the old fault")
+    ChatGM(content="The story moves on.", model="m").apply(state, 4)
+    assert state.turn is None

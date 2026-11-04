@@ -245,6 +245,8 @@ def tools_for(
         monsters=dict(rules.monsters),
         checks=rules.checks,
         conditions=rules.conditions,
+        projects=rules.projects,
+        faction_assets=rules.faction_assets,
         counters=rules.counters,
         advancements=rules.advancements,
         periods=rules.periods,

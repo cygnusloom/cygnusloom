@@ -1565,6 +1565,23 @@ class ProjectDefinition:
 
 
 @dataclass(frozen=True)
+class FactionAssetDefinition:
+    """A source-defined faction asset: what it costs, its hit points, and how it fights."""
+
+    id: str
+    label: str
+    description: str
+    category: str
+    rating: int
+    cost: int
+    hp: int
+    magic: str
+    attack: str = ""
+    counter: str = ""
+    qualities: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class RuleSet:
     """One loaded rule set. The shared systems are grouped into capability objects; the read-only
     aliases below keep older consumers working without flattening the model back into a union."""
@@ -1590,6 +1607,8 @@ class RuleSet:
     checks: Mapping[str, CheckRules] = field(default_factory=dict)
     # Source-defined project kinds, by id, such as a magic item or spell research.
     projects: Mapping[str, ProjectDefinition] = field(default_factory=dict)
+    # Source-defined faction assets, by id, such as a unit of Infantry or a ring of Smugglers.
+    faction_assets: Mapping[str, FactionAssetDefinition] = field(default_factory=dict)
     progression: ProgressionRules = field(default_factory=ProgressionRules)
     time: TimeRules = field(default_factory=TimeRules)
     items: ItemRules = field(default_factory=ItemRules)
@@ -2753,6 +2772,7 @@ def _build_rule_set(
     if npc_hp_stat is not None and npc_hp_stat not in character.stats:
         raise ContentError(f"{label}: 'npc_hp_stat' {npc_hp_stat!r} is not a stat of this rule set")
     projects = _load_projects(definitions, checks, template)
+    faction_assets = _load_faction_assets(definitions, template)
     enum_sources = {
         "moves": sorted(moves),
         "stats": sorted(character.stats),
@@ -2809,6 +2829,7 @@ def _build_rule_set(
         conditions=conditions,
         checks=checks,
         projects=projects,
+        faction_assets=faction_assets,
         progression=ProgressionRules(
             counters=counters,
             advancements=advancements,
@@ -4943,6 +4964,67 @@ def _load_projects(
             ),
         )
     return projects
+
+
+def _load_faction_assets(
+    definitions: list[Definition], template: str
+) -> dict[str, FactionAssetDefinition]:
+    """Source-defined faction assets by id. A category or Magic rating outside the book's own
+    values fails at load time, so a typo cannot become a silently unusable asset."""
+    loaded: dict[str, FactionAssetDefinition] = {}
+    categories = ("cunning", "force", "wealth")
+    magic_ratings = ("None", "Low", "Medium", "High")
+    for d in definitions:
+        if d.type != "faction_asset":
+            continue
+        label = f"{template}: faction asset {d.id}"
+        if d.id in loaded:
+            raise ContentError(f"{template}: duplicate faction asset {d.id!r}")
+        check_keys(
+            d.data,
+            {
+                "type",
+                "id",
+                "label",
+                "description",
+                "category",
+                "rating",
+                "cost",
+                "hp",
+                "magic",
+                "attack",
+                "counter",
+                "qualities",
+            },
+            label,
+        )
+        category = required_text(d.data, "category", label)
+        if category not in categories:
+            raise ContentError(f"{label}: 'category' must be one of {', '.join(categories)}")
+        magic = required_text(d.data, "magic", label)
+        if magic not in magic_ratings:
+            raise ContentError(f"{label}: 'magic' must be one of {', '.join(magic_ratings)}")
+        rating = _whole(d.data, "rating", label, 1)
+        if rating > 8:
+            raise ContentError(f"{label}: 'rating' must be at most 8")
+        attack = d.data.get("attack", "")
+        counter = d.data.get("counter", "")
+        if not isinstance(attack, str) or not isinstance(counter, str):
+            raise ContentError(f"{label}: 'attack' and 'counter' must be text")
+        loaded[d.id] = FactionAssetDefinition(
+            id=d.id,
+            label=required_text(d.data, "label", label),
+            description=required_text(d.data, "description", label),
+            category=category,
+            rating=rating,
+            cost=_whole(d.data, "cost", label, 0),
+            hp=_whole(d.data, "hp", label, 1),
+            magic=magic,
+            attack=attack,
+            counter=counter,
+            qualities=_names(d.data, "qualities", label),
+        )
+    return loaded
 
 
 def _load_conditions(

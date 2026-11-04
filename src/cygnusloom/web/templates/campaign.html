@@ -187,7 +187,16 @@
             <div class="tab-panel" role="tabpanel" id="panel-factions" aria-labelledby="tab-factions" hidden>
               <ul>
                 {% for faction in factions %}
-                <li><strong>{{ faction.name }}</strong> — {{ faction.points }} {{ faction.cup }}{% if faction.trait %}<br><span class="muted">{{ faction.trait }}</span>{% endif %}</li>
+                <li><strong>{{ faction.name }}</strong>{% if faction.cup %} — {{ faction.points }} {{ faction.cup }}{% endif %}{% if faction.trait %}<br><span class="muted">{{ faction.trait }}</span>{% endif %}
+                  {% if faction.assets or faction.turn != 1 %}<br><span class="muted">Turn {{ faction.turn }}</span>{% endif %}
+                  {% if faction.assets %}
+                  <ul>
+                    {% for asset in faction.assets %}
+                    <li>{{ asset.name }} — {{ asset.hp }}/{{ asset.hp_max }} HP{% if asset.category %}, {{ asset.category }}{% endif %}, {{ "ready" if asset.ready else "acted" }}</li>
+                    {% endfor %}
+                  </ul>
+                  {% endif %}
+                </li>
                 {% endfor %}
               </ul>
             </div>

@@ -517,6 +517,7 @@ def test_wwn_tools_bind_engine_operations_without_wrappers() -> None:
     }
     assert bound == {
         "abandon_project": "abandon_project",
+        "add_faction_asset": "add_faction_asset",
         "add_participant": "add_participant",
         "advance_project": "advance_project",
         "advance_time": "advance_time",
@@ -532,7 +533,9 @@ def test_wwn_tools_bind_engine_operations_without_wrappers() -> None:
         "break_grapple": "break_grapple",
         "choose_feature_choice": "choose_feature_choice",
         "create_magic_item": "create_magic_item",
+        "damage_faction_asset": "damage_faction_asset",
         "execute": "execute",
+        "faction_asset_acted": "faction_asset_acted",
         "give_item": "give_item",
         "grapple": "grapple",
         "harm_character": "harm_character",
@@ -543,7 +546,9 @@ def test_wwn_tools_bind_engine_operations_without_wrappers() -> None:
         "prepare_execution": "prepare_execution",
         "ready_item": "ready_item",
         "recover_character": "recover_character",
+        "remove_faction_asset": "remove_faction_asset",
         "remove_participant": "remove_participant",
+        "repair_faction_asset": "repair_faction_asset",
         "resolve_attacks": "resolve_attacks",
         "retreat": "retreat",
         "roll_check": "roll_check",
@@ -558,8 +563,10 @@ def test_wwn_tools_bind_engine_operations_without_wrappers() -> None:
         "start_encounter": "start_encounter",
         "start_project": "start_project",
         "surprise": "surprise",
+        "take_faction_turn": "take_faction_turn",
         "total_defense": "total_defense",
         "update_encounter_map": "update_encounter_map",
+        "update_faction_asset": "update_faction_asset",
     }
     for call_id, method in bound.items():
         call = WWN.tool_calls[call_id]

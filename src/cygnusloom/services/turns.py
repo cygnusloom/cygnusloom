@@ -34,6 +34,7 @@ from cygnusloom.rules.dice import roll_total
 from cygnusloom.services import encounters
 from cygnusloom.services.common import InvalidInput, NotFound, session_scope
 from cygnusloom.services.events import (
+    NPC_KIND,
     PC_KIND,
     CampaignState,
     Channel,
@@ -404,6 +405,7 @@ def _tool_context(
         checks=rule_set.checks,
         conditions=rule_set.conditions,
         projects=rule_set.projects,
+        faction_assets=rule_set.faction_assets,
         moves=rule_set.moves,
         counters=rule_set.counters,
         advancements=rule_set.advancements,
@@ -564,6 +566,17 @@ def _narration_messages(
         messages.append({"role": "system", "content": f"{heading}\n{lines}"})
     if turn.speech:
         _add_speech(messages, [], turn.speech)
+    # The review's own words are lost from the tool-call messages, which keep no prose. Put them
+    # back for the rewrite so it corrects the fault the reviewer actually named.
+    review_notes = [part for part in turn.context if part.source.startswith("Turn review")]
+    if review_notes:
+        notes = "\n\n".join(f"{part.source}:\n{part.content}" for part in review_notes)
+        messages.append(
+            {
+                "role": "system",
+                "content": "The turn review's notes on the narration it set aside:\n\n" + notes,
+            }
+        )
     if turn.revision:
         messages.append(
             {"role": "system", "content": NARRATION_REVISION.format(reason=turn.revision)}
@@ -865,6 +878,82 @@ def _tool_failed(result: ToolRun) -> bool:
     return isinstance(payload, Mapping) and "error" in payload
 
 
+# Context sources the narrator never sees: the state step's own prose and the speech step's
+# profile and intent. The review is shown them so it can judge dialogue and actions.
+_REVIEW_ONLY_SOURCES = (
+    "GM state step (round",
+    "GM text (round",
+    "Speech step (round",
+)
+
+
+def _reviewed_undo_request(request: ToolRequest, review_text: str) -> ToolRequest:
+    """Use the review's own words as the undo reason when the review left it blank. An explicit
+    reason is kept, since it is the fault the reviewer chose to name. A malformed call is left
+    alone and fails."""
+    if not review_text:
+        return request
+    try:
+        arguments = json.loads(request.arguments)
+    except (TypeError, ValueError):
+        return request
+    if not isinstance(arguments, Mapping) or arguments.get("reason", "").strip():
+        return request
+    return ToolRequest(
+        id=request.id,
+        name=request.name,
+        arguments=json.dumps({**arguments, "reason": review_text}),
+    )
+
+
+def _review_only_context(turn: Turn) -> list[ContextPart]:
+    """The parts of the turn's context that the narration is not given. The speech step's profile
+    and intent are included; its reply repeats dialogue the review already has from the queued
+    lines, so only the system part is added."""
+    return [
+        part
+        for part in turn.context
+        if part.source.startswith(_REVIEW_ONLY_SOURCES)
+        and (part.role == "system" or not part.source.startswith("Speech step (round"))
+    ]
+
+
+def _end_npc_encounter_turn(run: _Run, actor: str) -> None:
+    """End the NPC encounter turn this reply plays out, before the reply is recorded. A reply
+    that completed must be saved even if the turn can no longer be ended, so a missing or
+    mismatched acting character is ignored."""
+    with session_scope(run.engine) as db:
+        state = load_state(db, run.campaign_id)
+        encounter = state.encounter
+        if (
+            encounter is None
+            or encounter.acting is None
+            or name_key(encounter.acting) != name_key(actor)
+        ):
+            return
+        character = state.characters.get(name_key(actor))
+        if character is None or character.kind != NPC_KIND:
+            return
+        try:
+            encounters.end_turn(db, run.campaign_id, character.name, by_player=False)
+        except (InvalidInput, KeyError):
+            # The story is done; leaving the turn open is better than losing the reply.
+            db.rollback()
+
+
+def _finish_reply(run: _Run, turn: Turn, reply: str, reasoning: str) -> int:
+    """Record the end of the NPC encounter turn a final reply plays out, then the final reply
+    itself. Both go through the same driver path, so a resumed or continued reply ends its turn
+    too, and a rollback to the reply keeps the turn-end event before it."""
+    if turn.actor is not None:
+        _end_npc_encounter_turn(run, turn.actor)
+    return _record(
+        run.engine,
+        run.campaign_id,
+        ChatGM(content=reply, model=run.model, reasoning=reasoning),
+    )
+
+
 def _take_debug_injection(run: _Run) -> DebugInjection | None:
     """Take the debug panel's one-shot injection for this turn, clearing it from the campaign."""
     state = _state(run.engine, run.campaign_id)
@@ -972,10 +1061,26 @@ async def _review_narration(
         return
     yield Status("Reviewing the turn...")
     view = _narration_messages(run, turn)
+    # The narration instruction says "Do not call tools." The review must call tools, so it is
+    # dropped from the view and the review instruction takes its place.
+    instruction = narrate_instruction(run.rule_set, run.world)
+    if view and view[-1].get("role") == "system" and view[-1].get("content") == instruction:
+        view.pop()
     view.append(_text_message(narration, reasoning))
+    hidden = _review_only_context(turn)
+    if hidden:
+        lines = "\n\n".join(f"{part.source}:\n{part.content}" for part in hidden)
+        view.append(
+            {
+                "role": "system",
+                "content": "What the GM did before narrating, for review:\n\n" + lines,
+            }
+        )
     view.append({"role": "system", "content": TURN_REVIEW_INSTRUCTION})
     undone = False
     changed = False
+    changed_text = ""
+    review_text = ""
     for round_no in range(1, REVIEW_ROUNDS + 1):
         replied: list[ChatReply] = []
         async for event in _await_with_heartbeat(
@@ -983,14 +1088,28 @@ async def _review_narration(
         ):
             yield event
         step = replied[0]
+        if step.text.strip():
+            review_text = step.text.strip()
         if not step.tool_requests:
+            context: list[ContextPart] = []
+            if step.text.strip():
+                context.append(
+                    ContextPart("assistant", f"Turn review verdict (round {round_no})", step.text)
+                )
+            _record(
+                run.engine,
+                run.campaign_id,
+                ReviewStepMade(messages=[], context=_dicts(context)),
+            )
             break
         view.append(_tool_call_message(step))
         messages: list[dict[str, Any]] = [_tool_call_message(step)]
-        context: list[ContextPart] = []
+        context = []
         if step.text.strip():
             context.append(ContextPart("assistant", f"Turn review (round {round_no})", step.text))
         for request in step.tool_requests:
+            if request.name == UNDO_NARRATION:
+                request = _reviewed_undo_request(request, review_text)
             tool_result = await run_tool(run.tool_calls, request, ctx=run.ctx)
             if isinstance(tool_result, Ask):
                 tool_result = ToolRun(
@@ -1003,7 +1122,15 @@ async def _review_narration(
                     None,
                 )
             failed = _tool_failed(tool_result)
-            if not failed and request.name == UNDO_NARRATION:
+            if request.name == UNDO_NARRATION:
+                if failed:
+                    # The undo tool records nothing when it fails, so the review records the
+                    # fault itself and sends the narration back anyway.
+                    _record(
+                        run.engine,
+                        run.campaign_id,
+                        NarrationUndone(reason=review_text or REVIEW_CHANGED_NOTE),
+                    )
                 if not undone:
                     yield Retract()
                     yield Status("Fixing the story...")
@@ -1012,6 +1139,8 @@ async def _review_narration(
                 tool = find_tool(run.tool_calls, request.name)
                 if tool is not None and not tool.lookup:
                     changed = True
+                    if step.text.strip():
+                        changed_text = step.text.strip()
             message = {"role": "tool", "tool_call_id": request.id, "content": tool_result.output}
             messages.append(message)
             view.append(message)
@@ -1028,7 +1157,11 @@ async def _review_narration(
             ReviewStepMade(messages=messages, context=_dicts(context)),
         )
     if changed and not undone:
-        _record(run.engine, run.campaign_id, NarrationUndone(reason=REVIEW_CHANGED_NOTE))
+        _record(
+            run.engine,
+            run.campaign_id,
+            NarrationUndone(reason=changed_text or REVIEW_CHANGED_NOTE),
+        )
         yield Retract()
         undone = True
     result.append(_ReviewResult(undone=undone))
@@ -1226,11 +1359,7 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             yield event
         if not reviewed[0].undone:
             break
-    event_id = _record(
-        run.engine,
-        run.campaign_id,
-        ChatGM(content=reply, model=run.model, reasoning=reasoning),
-    )
+    event_id = _finish_reply(run, turn, reply, reasoning)
     yield Saved(event_id)
 
 
@@ -1409,18 +1538,6 @@ async def start_encounter_turn(
         run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
         async for event in _guarded(run, _carry_on(run)):
             yield event
-        # A reply that finished normally leaves no open turn, so the NPC's turn is over. A reply
-        # waiting on the player's roll keeps the turn open until that answer is resolved.
-        with session_scope(engine) as db:
-            state = load_state(db, campaign_id)
-            encounter = state.encounter
-            if (
-                state.turn is None
-                and encounter is not None
-                and encounter.acting is not None
-                and name_key(encounter.acting) == name_key(character.name)
-            ):
-                encounters.end_turn(db, campaign_id, character.name, by_player=False)
 
 
 def begin_encounter_turn(engine: Engine, owner_id: int, campaign_id: int, name: str) -> None:

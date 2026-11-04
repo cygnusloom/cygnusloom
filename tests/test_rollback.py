@@ -4,14 +4,47 @@ from collections.abc import Callable
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 
-from cygnusloom.db.models import Campaign
+from cygnusloom.db.models import Campaign, Event
 from cygnusloom.services.campaigns import campaign_log, list_messages
-from cygnusloom.services.events import LocationAdded, load_state, record
+from cygnusloom.services.events import (
+    ChatPlayer,
+    EncounterEnded,
+    EncounterStarted,
+    EncounterTurnBegun,
+    EncounterTurnEnded,
+    JournalStarted,
+    LocationAdded,
+    NarrationUndone,
+    NoteAdded,
+    StatChanged,
+    SummaryUpdated,
+    TurnFailed,
+    last_event_id,
+    load_state,
+    record,
+)
 from tests.conftest import csrf_token
+from tests.factories import answer, send_message
 from tests.test_campaigns import _campaign_id, _pending, _send, _signed_in
+from tests.test_encounters import _encounter_with, _npc_turn_stream
 from tests.test_tools import ROLL, _recording_provider, _script
+
+PLAYER_ATTACK = {
+    "name": "player_attack",
+    "arguments": {"target": "Pip", "weapon": "unarmed", "prompt": "Roll your attack."},
+}
+
+
+def _event_kinds(app: FastAPI, campaign_id: int, after: int = 0) -> list[str]:
+    with Session(app.state.engine) as db:
+        rows = db.exec(
+            select(Event)
+            .where(Event.campaign_id == campaign_id, Event.id > after)
+            .order_by(Event.seq)
+        ).all()
+    return [row.kind for row in rows]
 
 
 def _ids(app: FastAPI, campaign_id: int, role: str) -> list[int]:
@@ -78,6 +111,113 @@ def test_rollback_discards_a_paused_turn(client_factory: Callable[[], TestClient
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "Roll to persuade." not in page
     assert len(list_messages(app.state.engine, campaign_id)) == 3
+
+
+def test_rollback_of_an_npc_reply_ends_the_turn_before_the_reply(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10, cairn=True)
+    script = _script({"text": "Pip waits."}, {"text": "Pip ducks behind the crate."})
+    assert send_message(client, campaign_id, script).status_code == 303
+    lines = _npc_turn_stream(client, campaign_id, "Pip")
+    assert lines[-1]["type"] == "saved"
+    reply_id = _ids(client.app, campaign_id, "assistant")[-1]
+    with Session(client.app.state.engine) as db:
+        ended_id = db.exec(
+            select(Event.id).where(
+                Event.campaign_id == campaign_id, Event.kind == "encounter.turn_ended"
+            )
+        ).one()
+    assert ended_id < reply_id
+
+    assert _rollback(client, campaign_id, reply_id).status_code == 303
+
+    with Session(client.app.state.engine) as db:
+        state = load_state(db, campaign_id)
+    assert state.turn is None
+    assert state.encounter is not None
+    assert state.encounter.acting is None
+    # The rollback kept the turn end, so the next actor can start.
+    token = csrf_token(client, "/campaigns")
+    response = client.post(
+        f"/campaigns/{campaign_id}/encounter/turn/begin",
+        data={"csrf_token": token, "name": "Ada"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+
+def test_a_prompt_paused_npc_turn_ends_when_it_is_resumed(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10, cairn=True)
+    script = _script(
+        {"text": "Pip waits."},
+        {"rounds": [[PLAYER_ATTACK]], "text": "Pip shrugs and does nothing."},
+    )
+    assert send_message(client, campaign_id, script).status_code == 303
+    lines = _npc_turn_stream(client, campaign_id, "Pip")
+    assert lines[-1]["type"] == "prompt"
+    assert _pending(client.app, campaign_id) is not None
+
+    events = answer(client, campaign_id, "text", "I brace myself.")
+
+    assert events[-1]["type"] == "saved"
+    with Session(client.app.state.engine) as db:
+        state = load_state(db, campaign_id)
+        ended = list(
+            db.exec(
+                select(Event).where(
+                    Event.campaign_id == campaign_id,
+                    Event.kind == "encounter.turn_ended",
+                )
+            ).all()
+        )
+    assert state.turn is None
+    assert state.encounter is not None
+    assert state.encounter.acting is None
+    assert len(ended) == 1
+
+
+def test_rollback_reverts_every_record_a_turn_leaves(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _send(client, campaign_id, "First question.")
+    reply_id = _ids(app, campaign_id, "assistant")[-1]
+    with Session(app.state.engine) as db:
+        snapshot = load_state(db, campaign_id)
+
+    # A turn opens and records every kind of state the player can undo: a journal, a note, a
+    # stat change, an encounter begin and end, a summary, a review undo, and a failure.
+    with Session(app.state.engine) as db:
+        opener = record(db, campaign_id, ChatPlayer(content="I look around.", speaker="Ada"))
+        record(db, campaign_id, JournalStarted())
+        record(db, campaign_id, NoteAdded(text="The gate is barred.", subject="Mossbell Hollow"))
+        record(
+            db,
+            campaign_id,
+            StatChanged(name="Ada", stat="hp", before=10, after=7, cause="a fall"),
+        )
+        record(db, campaign_id, EncounterStarted(map="Green", location="Mossbell Hollow"))
+        record(db, campaign_id, EncounterTurnBegun(name="Ada"))
+        record(db, campaign_id, EncounterTurnEnded(name="Ada"))
+        record(db, campaign_id, EncounterEnded(reason="test"))
+        record(db, campaign_id, SummaryUpdated(summary="So far, a fall.", through=opener))
+        record(db, campaign_id, NarrationUndone(reason="the narration was wrong"))
+        record(db, campaign_id, TurnFailed(error="the turn stopped"))
+        db.commit()
+    assert {"narration.undone", "journal.started", "summary.updated", "turn.failed"} <= set(
+        _event_kinds(app, campaign_id, after=reply_id)
+    )
+
+    assert _rollback(client, campaign_id, reply_id).status_code == 303
+
+    with Session(app.state.engine) as db:
+        state = load_state(db, campaign_id)
+        assert last_event_id(db, campaign_id) == reply_id
+    assert state == snapshot
+    assert _event_kinds(app, campaign_id, after=reply_id) == []
 
 
 def test_rollback_is_refused_for_other_accounts(

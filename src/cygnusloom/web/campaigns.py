@@ -111,7 +111,6 @@ async def create(request: Request) -> Response:
     label = form_text(form, "label")
     world_template = form_text(form, "world_template")
     rule_set = form_text(form, "rule_set")
-    setting = form_text(form, "setting")
     table_genres = [value for value in form.getlist("table_genres") if isinstance(value, str)]
     catalog = request.app.state.catalog
     models = catalog.model_ids()
@@ -132,7 +131,6 @@ async def create(request: Request) -> Response:
             world_template,
             rule_set,
             catalog.default_model_id(),
-            setting=setting,
             table_genres=table_genres,
         )
     except InvalidInput as exc:
@@ -144,7 +142,6 @@ async def create(request: Request) -> Response:
             label=label,
             world_template=world_template,
             rule_set=rule_set,
-            setting=setting,
             table_genres=table_genres,
         )
     return RedirectResponse(f"/campaigns/{campaign.id}", status_code=303)
@@ -220,14 +217,19 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
     engine = request.app.state.engine
     library = request.app.state.content
     key = _roll_key(campaign_id)
+    setting = ""
     try:
         campaign = get_campaign(engine, user.id, campaign_id)
+        state = campaign_world(engine, user.id, campaign_id).state
         options_pending, character_pending = _creation_pending(
-            campaign_world(engine, user.id, campaign_id).state,
-            library.rule_sets.get(campaign.rule_set),
+            state, library.rule_sets.get(campaign.rule_set)
         )
         if not options_pending and not character_pending:
             raise InvalidInput("this campaign's options and player character are already set")
+        # Read the brief even for a replacement character so an error can show it again, but only
+        # apply it before the campaign's first player character exists. A replacement character
+        # must not rewrite the campaign's setting and story.
+        setting = form_text(form, "setting")
         options = None
         if options_pending:
             options = campaign_submission_from_form(campaign_spec(library, campaign), form)
@@ -242,6 +244,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
                     campaign_id,
                     400,
                     "Your stats were rolled again. Review them and create your character.",
+                    setting=setting,
                 )
             spec = character_spec(library, campaign)
             submitted = submission_from_form(spec, form)
@@ -254,11 +257,19 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
                 submitted=submitted,
                 pronouns=pronouns_from_form(form),
             )
-        save_creation(engine, library, user.id, campaign_id, options=options, character=character)
+        save_creation(
+            engine,
+            library,
+            user.id,
+            campaign_id,
+            options=options,
+            character=character,
+            setting=setting if state.pc() is None else None,
+        )
     except InvalidInput as exc:
-        return _campaign_page(request, user, campaign_id, 400, str(exc))
+        return _campaign_page(request, user, campaign_id, 400, str(exc), setting=setting)
     except Conflict as exc:
-        return _campaign_page(request, user, campaign_id, 409, str(exc))
+        return _campaign_page(request, user, campaign_id, 409, str(exc), setting=setting)
     if character is not None:
         request.session.pop(key, None)
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
@@ -795,7 +806,6 @@ def _new_form(
     label: str = "",
     world_template: str = "",
     rule_set: str = "",
-    setting: str = "",
     table_genres: Sequence[str] | None = None,
 ) -> Response:
     library = request.app.state.content
@@ -828,7 +838,6 @@ def _new_form(
         status_code=status_code,
         error=error,
         campaign_label=label or default_labels.get(world_template, ""),
-        campaign_setting=setting,
         table_genres=library.available_table_genres,
         selected_table_genres=selected_table_genres,
         world_labels=default_labels,
@@ -885,6 +894,7 @@ def _campaign_page(
     status_code: int = 200,
     error: str = "",
     draft: str = "",
+    setting: str = "",
 ) -> Response:
     engine = request.app.state.engine
     settings = request.app.state.settings
@@ -947,6 +957,8 @@ def _campaign_page(
             rule_set=rule_set,
             compendium=compendium,
             show_options=options_pending,
+            show_setting=pc is None,
+            campaign_setting=setting or campaign.setting,
             options=campaign_view(options) if options_pending else None,
             show_character=character_pending,
             character=character,

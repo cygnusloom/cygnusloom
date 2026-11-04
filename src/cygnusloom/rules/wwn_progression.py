@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from itertools import pairwise
 from types import MappingProxyType
@@ -13,12 +13,14 @@ from cygnusloom.content.definitions import ContentError
 
 _CASTING_TABLES = ("full_mage", "partial_mage", "dual_mage")
 _NO_TRADITION = "no_tradition"
+_CLASS_KINDS = frozenset({"class", "class2"})
 _PROGRESSION_FIELDS = (
     "type",
     "id",
     "python_module",
     "configure",
     "classes",
+    "class_pairing",
     "xp",
     "casting",
     "casting_classes",
@@ -26,6 +28,15 @@ _PROGRESSION_FIELDS = (
     "art_levels",
     "skill_level_minimums",
 )
+# How two partial class charts combine into an Adventurer's chart, and the policies each field
+# accepts. The data names one policy per field.
+_CLASS_PAIRING_POLICIES: Mapping[str, tuple[str, ...]] = {
+    "hit_die": ("best",),
+    "hp_constant": ("best",),
+    "attack": ("best",),
+    "focus_levels": ("union",),
+    "quick_learner": ("any",),
+}
 
 
 class _WorldWithRuleData(Protocol):
@@ -45,6 +56,21 @@ class ClassTable:
 
 
 @dataclass(frozen=True)
+class ClassPairing:
+    """How two class charts combine, as the progression data configures it.
+
+    Each field names the policy the data chose: ``best`` takes the higher number, ``union``
+    keeps every focus level from either chart, and ``any`` is true when either chart is.
+    """
+
+    hit_die: str
+    hp_constant: str
+    attack: str
+    focus_levels: str
+    quick_learner: str
+
+
+@dataclass(frozen=True)
 class CastingRow:
     """A spellcaster's spell limits at one character level."""
 
@@ -60,6 +86,7 @@ class WWNProgression:
     max_level: int
     max_skill_level: int
     class_tables: Mapping[str, ClassTable]
+    class_pairing: ClassPairing
     xp_fast: tuple[int, ...]
     xp_slow: tuple[int, ...]
     casting_tables: Mapping[str, Mapping[int, CastingRow]]
@@ -186,6 +213,18 @@ def parse_wwn_progression(data: Mapping[str, Any], label: str = "progression") -
             focus_levels=frozenset(focus_levels),
             quick_learner=quick_learner,
         )
+
+    pairing_label = f"{label}.class_pairing"
+    pairing_data = _object(_required(definition, "class_pairing", label), pairing_label)
+    _exact_keys(pairing_data, tuple(_CLASS_PAIRING_POLICIES), pairing_label)
+    class_pairing = ClassPairing(
+        **{
+            field: _pairing_policy(
+                _required(pairing_data, field, pairing_label), field, pairing_label
+            )
+            for field in _CLASS_PAIRING_POLICIES
+        }
+    )
 
     casting_data = _object(_required(definition, "casting", label), f"{label}.casting")
     _exact_keys(casting_data, _CASTING_TABLES, f"{label}.casting")
@@ -331,6 +370,7 @@ def parse_wwn_progression(data: Mapping[str, Any], label: str = "progression") -
         max_level=max_level,
         max_skill_level=skill_levels[-1],
         class_tables=MappingProxyType(class_tables),
+        class_pairing=class_pairing,
         xp_fast=xp_fast,
         xp_slow=xp_slow,
         casting_tables=MappingProxyType(casting_tables),
@@ -352,7 +392,7 @@ def configure_progression(
         raise ContentError(f"{label}: progression configurator needs a CharacterSpec")
 
     class_ids = {
-        template.id for template in character.templates.values() if template.kind == "class"
+        template.id for template in character.templates.values() if template.kind in _CLASS_KINDS
     }
     missing_classes = sorted(class_ids - set(progression.class_tables))
     if missing_classes:
@@ -412,6 +452,49 @@ def configure_progression(
     return progression
 
 
+def combine_class_tables(tables: Sequence[ClassTable], policy: ClassPairing) -> ClassTable:
+    """Merge class charts into one, following the progression's parsed pairing policy."""
+    if not tables:
+        raise ContentError("class pairing: needs at least one class table")
+    levels = len(tables[0].attack)
+    if any(len(table.attack) != levels for table in tables):
+        raise ContentError("class pairing: attack charts must have the same number of levels")
+    return ClassTable(
+        hit_die=_paired_number(policy.hit_die, "hit_die", [table.hit_die for table in tables]),
+        hp_constant=_paired_number(
+            policy.hp_constant, "hp_constant", [table.hp_constant for table in tables]
+        ),
+        attack=tuple(
+            _paired_number(policy.attack, "attack", [table.attack[level] for table in tables])
+            for level in range(levels)
+        ),
+        focus_levels=_paired_levels(policy.focus_levels, tables),
+        quick_learner=_paired_flag(policy.quick_learner, tables),
+    )
+
+
+def _paired_number(policy: str, field: str, values: Sequence[int]) -> int:
+    if policy == "best":
+        return max(values)
+    raise _unknown_pairing(field, policy)
+
+
+def _paired_levels(policy: str, tables: Sequence[ClassTable]) -> frozenset[int]:
+    if policy == "union":
+        return frozenset().union(*(table.focus_levels for table in tables))
+    raise _unknown_pairing("focus_levels", policy)
+
+
+def _paired_flag(policy: str, tables: Sequence[ClassTable]) -> bool:
+    if policy == "any":
+        return any(table.quick_learner for table in tables)
+    raise _unknown_pairing("quick_learner", policy)
+
+
+def _unknown_pairing(field: str, policy: str) -> ContentError:
+    return ContentError(f"class pairing: {field} policy {policy!r} is not supported")
+
+
 def require_wwn_progression(world: _WorldWithRuleData) -> WWNProgression:
     """Resolve validated progression data from a world without keeping a module-level copy."""
     try:
@@ -468,6 +551,16 @@ def _integers(value: Any, label: str, *, minimum: int | None = None) -> tuple[in
     return tuple(
         _integer(item, f"{label}[{index}]", minimum=minimum) for index, item in enumerate(items)
     )
+
+
+def _pairing_policy(value: Any, field: str, label: str) -> str:
+    """One class-pairing policy: text naming a policy the field accepts."""
+    policy = _text(value, f"{label}.{field}")
+    allowed = _CLASS_PAIRING_POLICIES[field]
+    if policy not in allowed:
+        options = ", ".join(repr(option) for option in allowed)
+        raise ContentError(f"{label}.{field}: must be one of {options}")
+    return policy
 
 
 def _exact_keys(data: Mapping[str, Any], expected: tuple[str, ...], label: str) -> None:

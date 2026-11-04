@@ -106,16 +106,12 @@ def create_campaign(
     world_template: str,
     rule_set: str,
     model: str,
-    setting: str = "",
     table_genres: Sequence[str] | None = None,
     rng: random.Random | None = None,
 ) -> Campaign:
     name = (name or "").strip()
     if len(name) > MAX_NAME:
         raise InvalidInput(f"label must be 1 to {MAX_NAME} characters")
-    setting = (setting or "").strip()
-    if len(setting) > MAX_SETTING:
-        raise InvalidInput(f"setting and story must be at most {MAX_SETTING} characters")
     if world_template not in library.world_templates:
         raise InvalidInput("that world template is not available")
     if rule_set not in library.rule_sets:
@@ -148,7 +144,6 @@ def create_campaign(
             world_template=world_template,
             rule_set=rule_set,
             model=model,
-            setting=setting,
             table_genres=json.dumps(list(genres)),
         )
         db.add(campaign)
@@ -270,12 +265,24 @@ def save_creation(
     *,
     options: Mapping[str, Any] | None = None,
     character: NewCharacter | None = None,
+    setting: str | None = None,
 ) -> None:
-    """Save the campaign options and the player character together, so either both are saved or
-    neither is. A part left as None is not saved. The character needs the options first."""
+    """Save the campaign options, the player character, and the setting and story together, so
+    either all of them are saved or none is. A part left as None is not saved. The character
+    needs the options first. The setting is captured on the campaign-options creation page, not
+    when the campaign is first made."""
     campaign = get_campaign(engine, owner_id, campaign_id)
     spec = campaign_spec(library, campaign)
+    brief = None
+    if setting is not None:
+        brief = (setting or "").strip()
+        if len(brief) > MAX_SETTING:
+            raise InvalidInput(f"setting and story must be at most {MAX_SETTING} characters")
     with _exclusive(campaign_id), session_scope(engine) as db:
+        if brief is not None:
+            stored = db.get(Campaign, campaign_id)
+            if stored is not None:
+                stored.setting = brief
         if options is not None:
             set_campaign_options(db, campaign_id, spec, options)
         if character is not None:

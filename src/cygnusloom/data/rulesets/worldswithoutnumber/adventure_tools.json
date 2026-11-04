@@ -624,7 +624,7 @@
     "id": "start_project",
     "name": "start_project",
     "world_method": "start_project",
-    "description": "Begin a long-running effort and track its points toward a target: a personal project, a piece of research, a magic working, or a faction turn. The kind and goal are free text; the target is how many points of work it needs. Advance it with advance_project as time, money, and rolls are spent.",
+    "description": "Begin a long-running effort and track its points toward a target: a personal project, a piece of research, a magic working, or another long effort. The kind and goal are free text; the target is how many points of work it needs. Advance it with advance_project as time, money, and rolls are spent. Use add_faction_asset and take_faction_turn for factions instead.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -642,7 +642,7 @@
     "id": "advance_project",
     "name": "advance_project",
     "world_method": "advance_project",
-    "description": "Add progress to a project, research effort, magic working, or faction turn. Record in the note what the time, money, or roll bought. The project completes when progress reaches its target.",
+    "description": "Add progress to a project, research effort, magic working, or another long effort. Record in the note what the time, money, or roll bought. The project completes when progress reaches its target.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -658,7 +658,7 @@
     "id": "abandon_project",
     "name": "abandon_project",
     "world_method": "abandon_project",
-    "description": "Give up a project, research effort, magic working, or faction turn.",
+    "description": "Give up a project, research effort, magic working, or another long effort.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -674,8 +674,125 @@
     "name": "list_projects",
     "python_module": "core",
     "function": "list_projects",
-    "description": "List every project, research effort, magic working, and faction turn with its progress, notes, and whether it is complete or abandoned.",
+    "description": "List every project, research effort, and magic working with its progress, notes, and whether it is complete or abandoned.",
     "parameters": {"type": "object", "properties": {}}
+  },
+  {
+    "type": "tool_call",
+    "id": "add_faction_asset",
+    "name": "add_faction_asset",
+    "world_method": "add_faction_asset",
+    "description": "Give a faction one of the rule set's assets, such as Infantry, Smugglers, or Farmers. The kind may be the asset's id or its book name. Its cost, hit points, Magic, Attack, Counter, and qualities are resolved from the rule set. An asset can act once per faction turn.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "faction": {"type": "string", "description": "The faction's name."},
+        "kind": {"type": "string", "description": "The asset kind's id or book name, such as infantry or Infantry."},
+        "name": {"type": "string", "description": "A display name for this copy of the asset, unique within the faction. Defaults to the book name."},
+        "notes": {"type": "string", "description": "An optional note, such as where the asset is based."}
+      },
+      "required": ["faction", "kind"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "update_faction_asset",
+    "name": "update_faction_asset",
+    "world_method": "update_faction_asset",
+    "description": "Change a faction asset's display name, qualities, or notes. A note is appended to the asset's record. Use damage_faction_asset and repair_faction_asset for hit points.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "faction": {"type": "string", "description": "The faction's name."},
+        "asset": {"type": "string", "description": "The asset's name or id within the faction."},
+        "name": {"type": "string", "description": "The new display name."},
+        "notes": {"type": "string", "description": "A note to append to the asset's record."},
+        "qualities": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "The asset's full quality list, such as [\"Subtle\", \"Special\"]."
+        }
+      },
+      "required": ["faction", "asset"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "remove_faction_asset",
+    "name": "remove_faction_asset",
+    "world_method": "remove_faction_asset",
+    "description": "Remove or destroy one of a faction's assets.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "faction": {"type": "string", "description": "The faction's name."},
+        "asset": {"type": "string", "description": "The asset's name or id within the faction."}
+      },
+      "required": ["faction", "asset"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "faction_asset_acted",
+    "name": "faction_asset_acted",
+    "world_method": "faction_asset_acted",
+    "description": "Record that a faction asset used its action for the current faction turn. An asset can act only once per turn; the tool refuses a second action. End the turn with take_faction_turn to ready every asset again.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "faction": {"type": "string", "description": "The faction's name."},
+        "asset": {"type": "string", "description": "The asset's name or id within the faction."},
+        "note": {"type": "string", "description": "What the asset did, such as attacking, moving, or repairing."}
+      },
+      "required": ["faction", "asset"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "damage_faction_asset",
+    "name": "damage_faction_asset",
+    "world_method": "damage_faction_asset",
+    "description": "Reduce a faction asset's hit points by an amount. Hit points stop at zero rather than going negative.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "faction": {"type": "string", "description": "The faction's name."},
+        "asset": {"type": "string", "description": "The asset's name or id within the faction."},
+        "amount": {"type": "integer", "minimum": 1, "description": "The damage dealt."}
+      },
+      "required": ["faction", "asset", "amount"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "repair_faction_asset",
+    "name": "repair_faction_asset",
+    "world_method": "repair_faction_asset",
+    "description": "Restore a faction asset's hit points by an amount. Hit points stop at the asset's maximum.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "faction": {"type": "string", "description": "The faction's name."},
+        "asset": {"type": "string", "description": "The asset's name or id within the faction."},
+        "amount": {"type": "integer", "minimum": 1, "description": "The hit points repaired."}
+      },
+      "required": ["faction", "asset", "amount"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "take_faction_turn",
+    "name": "take_faction_turn",
+    "world_method": "take_faction_turn",
+    "description": "Close a faction's current turn and begin the next one. Every asset is ready to act again. Use this after resolving the faction's actions, upkeep, and asset abilities.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "faction": {"type": "string", "description": "The faction's name."},
+        "note": {"type": "string", "description": "What the faction accomplished this turn."}
+      },
+      "required": ["faction"]
+    }
   },
   {
     "type": "tool_call",

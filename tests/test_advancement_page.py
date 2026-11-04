@@ -66,6 +66,22 @@ def test_a_ready_level_shows_its_automatic_gains_and_picks(
     assert "level up to 2" in page.lower()
 
 
+def test_a_dual_partial_level_page_shows_the_combined_chart(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _wwn_campaign(client_factory, class_id="healer", class2="warrior_partial_2")
+    client = _signed_in(client_factory)
+    ctx = _ctx(_world_tools(app, campaign_id))
+    wwn.gain_xp(NAME, 3, "a session", ctx)
+
+    page = _page(client, campaign_id)
+
+    assert "Attack bonus: 2." in page
+    assert "Skill points: 3." in page
+    assert "Focus pick: 1." in page
+    assert "Art pick: 1." in page
+
+
 def test_level_up_applies_the_level_and_the_players_choices(
     client_factory: Callable[[], TestClient],
 ) -> None:

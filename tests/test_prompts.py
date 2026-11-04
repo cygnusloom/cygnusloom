@@ -55,6 +55,9 @@ def test_turn_review_instruction_is_generic():
     assert "player's message" in TURN_REVIEW_INSTRUCTION
     assert "what the GM did" in TURN_REVIEW_INSTRUCTION
     assert "narration below" in TURN_REVIEW_INSTRUCTION
+    assert "Call undo_narration before any other tool" in TURN_REVIEW_INSTRUCTION
+    assert "Prefer the smallest correction" in TURN_REVIEW_INSTRUCTION
+    assert "do not add speculative actions" in TURN_REVIEW_INSTRUCTION
 
 
 def test_ooc_instruction_does_not_restart_the_ooc_step():

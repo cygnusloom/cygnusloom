@@ -17,7 +17,13 @@ from typing import Any
 from cygnusloom.content.character import CharacterSpec, derived_stats
 from cygnusloom.rules.context import ToolContext
 from cygnusloom.rules.dice import roll_total
-from cygnusloom.rules.wwn import EFFORT_DURATIONS, EFFORT_MARK, tradition_data, tradition_tags
+from cygnusloom.rules.wwn import (
+    EFFORT_DURATIONS,
+    EFFORT_MARK,
+    casting_class_id,
+    tradition_data,
+    tradition_tags,
+)
 from cygnusloom.rules.wwn_progression import require_wwn_progression
 from cygnusloom.services.common import InvalidInput, whole_number
 from cygnusloom.services.events import (
@@ -66,8 +72,12 @@ def prepare_spells(character: str, spells: Sequence[str], ctx: ToolContext) -> d
         if not traditions:
             raise InvalidInput(f"{found.name} has no magical tradition")
         tradition = ", ".join(traditions)
-        class_id = str(found.templates.get("class", "")).strip().casefold()
-        table_id = progression.casting_class_tables.get(class_id)
+        casting_class = casting_class_id(found, progression)
+        table_id = (
+            progression.casting_class_tables.get(casting_class)
+            if casting_class is not None
+            else None
+        )
         if table_id is None:
             raise InvalidInput(f"{found.name}'s class cannot cast spells")
         level = found.counters.get("level", 1)

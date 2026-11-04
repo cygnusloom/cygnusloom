@@ -30,6 +30,13 @@ def test_wwn_tool_catalog_exposes_project_and_hireling_tools() -> None:
         "advance_project",
         "abandon_project",
         "list_projects",
+        "add_faction_asset",
+        "update_faction_asset",
+        "remove_faction_asset",
+        "faction_asset_acted",
+        "damage_faction_asset",
+        "repair_faction_asset",
+        "take_faction_turn",
     }
     assert expected <= set(tools)
     for tool_id in expected:

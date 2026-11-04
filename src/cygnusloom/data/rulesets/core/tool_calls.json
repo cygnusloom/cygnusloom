@@ -478,6 +478,7 @@
     "name": "list_lookups",
     "python_module": "core",
     "function": "list_lookups",
+    "lookup": true,
     "description": "List everything you can look up, each with a short brief: the lookup tools, the rules, and the locations and NPCs in the world. Use it when you are unsure what exists. Then look up the full entry with the matching tool.",
     "parameters": {
       "type": "object",
@@ -974,6 +975,7 @@
     "id": "roll_creative",
     "name": "roll_creative",
     "world_method": "roll_creative",
+    "lookup": true,
     "description": "Roll on the creative tables for a fresh idea. Use it when the player is directionless, or when the story is waiting for something to happen next and you have no clear direction. Each result is a suggestion, not a fact: work it into the scene in a way that fits what has already happened, and drop any result that clashes with the established story. Leave 'tables' out to roll every creative table (the core rule set has 'action', 'theme', 'plot_twist', 'location', and 'location_descriptor'), or name ids to roll only those.",
     "parameters": {
       "type": "object",
@@ -1193,6 +1195,7 @@
     "id": "list_dice_tables",
     "name": "list_dice_tables",
     "world_method": "list_dice_tables",
+    "lookup": true,
     "description": "List the dice and creative tables this campaign offers after its genre selection. Use it before roll_tables when you need the table ids, or to see what kind of idea tables the setting supports.",
     "parameters": {
       "type": "object",
