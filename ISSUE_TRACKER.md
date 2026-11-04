@@ -15,6 +15,7 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
 7. Full copendium; a new full-page item in the sidebar. Items listed in the inventory, creature types, player abilities, static lore, etc. should all link to the copendium. This would be stuff you could find in a sourcebook, not GM secrets. If possible things mentioned in the chat should be links too, but that might be too difficult for the AI GM. The copendium is loaded from the world and ruleset, but can be expanded by the AI GM during play as it comes up with new things. Likely the AI GM will not need to explicitly write to it, it should just build from the world as it exists.
 8. Audit the transcript for cleanliness - we likely don't need announcements about armor values (WWN).
 9. More local maps outside of encounters - for indoor or small-scale locations we should have nice maps that turn into encounter maps at a moments notice. Maybe combine the two concepts. Be able to place props, npcs, objects, etc.
+10. License the engine under the APGLv3.
 
 # Triaged Issues
 
