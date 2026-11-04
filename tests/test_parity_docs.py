@@ -75,6 +75,15 @@ def test_wwn_statblock_multi_attack_uses_each_attack() -> None:
     assert combat.multi_attack == "each"
 
 
+def test_wwn_bestiary_abilities_are_structured_fields() -> None:
+    monsters = _wwn().monsters
+    spore = monsters["ashcrawler"].abilities[0]
+    assert (spore.kind, spore.trigger, spore.save) == ("save_or_condition", "hit", "save_physical")
+    cry = monsters["wailer_crane"].abilities[0]
+    assert (cry.kind, cry.damage) == ("action", "1d4")
+    assert monsters["brass_scytheman"].abilities[0].kind == "immunity"
+
+
 def test_wwn_bestiary_attack_counts_are_structured_fields() -> None:
     monsters = _wwn().monsters
     assert monsters["ashcrawler_slave"].attacks_per_action == 1

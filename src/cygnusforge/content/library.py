@@ -496,6 +496,23 @@ class DiceTable:
 
 
 @dataclass(frozen=True)
+class MonsterAbility:
+    """A monster's special ability as data. `kind` says what it is, and the optional fields
+    say when it triggers, what save it forces, what condition or damage it causes."""
+
+    kind: str
+    name: str
+    description: str
+    trigger: str = ""
+    save: str = ""
+    condition: str = ""
+    damage: str = ""
+
+
+MONSTER_ABILITY_KINDS = ("save_or_condition", "action", "immunity", "passive")
+
+
+@dataclass(frozen=True)
 class MonsterTemplate:
     """A statblock a GM can base a monster on. `stats` has every stat of the rule set's character,
     and `attacks` maps each attack's name to its dice formula. `attacks_per_action` is how many
@@ -517,6 +534,8 @@ class MonsterTemplate:
     attack_flags: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
     attack_shock: Mapping[str, tuple[int, int]] = field(default_factory=dict)
     rule_text: Mapping[str, str] = field(default_factory=dict)
+    # The statblock's special abilities as structured rules instead of prose alone.
+    abilities: tuple[MonsterAbility, ...] = ()
 
 
 DAMAGE_KINDS = ("absorb", "harm", "overflow")
@@ -1671,7 +1690,13 @@ def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldCon
                 f"{name}: rule {definition.id}",
             )
     monsters = {
-        d.id: _load_monster(d, rule_set.character, name, pool=_hit_pool(rule_set.combat))
+        d.id: _load_monster(
+            d,
+            rule_set.character,
+            name,
+            pool=_hit_pool(rule_set.combat),
+            conditions=rule_set.conditions,
+        )
         for d in own
         if d.type == "monster"
     }
@@ -2338,7 +2363,9 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     if combat is None and any(c.dying or c.fatal for c in conditions.values()):
         raise ContentError(f"{template}: a condition is dying or fatal, but there is no combat")
     monsters = {
-        d.id: _load_monster(d, character, template, pool=_hit_pool(combat))
+        d.id: _load_monster(
+            d, character, template, pool=_hit_pool(combat), conditions=conditions
+        )
         for d in definitions
         if d.type == "monster"
     }
@@ -3296,6 +3323,7 @@ def _load_monster(
     template: str,
     *,
     pool: str | None,
+    conditions: Mapping[str, ConditionRules] | None = None,
 ) -> MonsterTemplate:
     label = f"{template}: monster {definition.id}"
     data = definition.data
@@ -3310,6 +3338,7 @@ def _load_monster(
             "attacks_per_action",
             "large_group",
             "rules",
+            "abilities",
         },
         label,
     )
@@ -3346,6 +3375,7 @@ def _load_monster(
     if not isinstance(large_group, bool):
         raise ContentError(f"{label}: 'large_group' must be true or false")
     rules, rule_text = _statblock_rules(data, label)
+    abilities = _statblock_abilities(data.get("abilities", []), character, conditions or {}, label)
     return MonsterTemplate(
         id=definition.id,
         name=required_text(data, "name", label),
@@ -3359,7 +3389,56 @@ def _load_monster(
         attack_flags=attack_flags,
         attack_shock=attack_shock,
         rule_text=rule_text,
+        abilities=abilities,
     )
+
+
+def _statblock_abilities(
+    raw: object,
+    character: CharacterSpec,
+    conditions: Mapping[str, ConditionRules],
+    label: str,
+) -> tuple[MonsterAbility, ...]:
+    """A statblock's special abilities as structured rules."""
+    if not isinstance(raw, list):
+        raise ContentError(f"{label}: 'abilities' must be a list")
+    abilities: list[MonsterAbility] = []
+    for entry in raw:
+        if not isinstance(entry, Mapping):
+            raise ContentError(f"{label}: each ability must be an object")
+        check_keys(
+            entry,
+            {"kind", "name", "description", "trigger", "save", "condition", "damage"},
+            f"{label}: ability",
+        )
+        kind = required_text(entry, "kind", f"{label}: ability")
+        if kind not in MONSTER_ABILITY_KINDS:
+            options = ", ".join(MONSTER_ABILITY_KINDS)
+            raise ContentError(f"{label}: ability kind {kind!r} must be one of {options}")
+        name = required_text(entry, "name", f"{label}: ability")
+        description = required_text(entry, "description", f"{label}: ability")
+        trigger = _optional_text(entry, "trigger", f"{label}: ability") or ""
+        save = _optional_text(entry, "save", f"{label}: ability") or ""
+        condition = _optional_text(entry, "condition", f"{label}: ability") or ""
+        damage = _optional_text(entry, "damage", f"{label}: ability") or ""
+        if save and save not in character.stats:
+            raise ContentError(f"{label}: ability {name!r} names no save stat {save!r}")
+        if condition and condition not in conditions:
+            raise ContentError(f"{label}: ability {name!r} names no condition {condition!r}")
+        if damage and not is_formula(damage):
+            raise ContentError(f"{label}: ability {name!r} damage must be a dice formula")
+        abilities.append(
+            MonsterAbility(
+                kind=kind,
+                name=name,
+                description=description,
+                trigger=trigger,
+                save=save,
+                condition=condition,
+                damage=damage,
+            )
+        )
+    return tuple(abilities)
 
 
 def _statblock_attacks(

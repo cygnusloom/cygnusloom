@@ -32,7 +32,17 @@
     },
     "attacks_per_action": 2,
     "large_group": false,
-    "rules": []
+    "rules": [],
+    "abilities": [
+      {
+        "kind": "save_or_condition",
+        "name": "Spore Infection",
+        "trigger": "hit",
+        "save": "save_physical",
+        "condition": "frail",
+        "description": "A bitten victim who fails a Physical save is infected and, within a week, becomes an Ashcrawler Slave unless potent healing magic intervenes."
+      }
+    ]
   },
   {
     "type": "monster",
@@ -455,7 +465,17 @@
     },
     "attacks_per_action": 1,
     "large_group": false,
-    "rules": []
+    "rules": [],
+    "abilities": [
+      {
+        "kind": "action",
+        "name": "Sonic Cry",
+        "trigger": "action",
+        "save": "save_physical",
+        "damage": "1d4",
+        "description": "As a Main Action, creatures within ten feet must make a Physical save or take 1d4 damage."
+      }
+    ]
   },
   {
     "type": "monster",
@@ -492,7 +512,14 @@
     },
     "attacks_per_action": 1,
     "large_group": false,
-    "rules": []
+    "rules": [],
+    "abilities": [
+      {
+        "kind": "immunity",
+        "name": "Automaton Immunities",
+        "description": "Immune to non-magical weapons and minor environmental harm; needs no food, air, or sleep beyond its daily recharge."
+      }
+    ]
   },
   {
     "type": "monster",
@@ -1672,7 +1699,14 @@
     },
     "attacks_per_action": 1,
     "large_group": false,
-    "rules": []
+    "rules": [],
+    "abilities": [
+      {
+        "kind": "passive",
+        "name": "Armor-Piercing Shock",
+        "description": "Its blade strikes once, and its Shock ignores armor."
+      }
+    ]
   },
   {
     "type": "monster",
@@ -1857,7 +1891,17 @@
     },
     "attacks_per_action": 1,
     "large_group": false,
-    "rules": []
+    "rules": [],
+    "abilities": [
+      {
+        "kind": "save_or_condition",
+        "name": "Venom",
+        "trigger": "hit",
+        "save": "save_physical",
+        "condition": "grappled",
+        "description": "A leader’s weapon sweats venom: a struck victim must make a Physical save or lose its next Main Action; two failed saves in one scene mean paralysis for the rest of it."
+      }
+    ]
   },
   {
     "type": "monster",
