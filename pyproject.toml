@@ -2,6 +2,8 @@
 name = "cygnusforge"
 version = "2.0.0"
 description = "Minimal web chat over an LLM"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
@@ -58,6 +60,7 @@ only-include = [
     ".vscode",
     "Dockerfile",
     "ISSUE_TRACKER.md",
+    "LICENSE",
     "README.md",
     "SPEC.md",
     "alembic",

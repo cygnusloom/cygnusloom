@@ -25,6 +25,7 @@ from cygnusforge.services.common import NotFound
 from cygnusforge.web.accounts import router as accounts_router
 from cygnusforge.web.admin import router as admin_router
 from cygnusforge.web.campaigns import router as campaigns_router
+from cygnusforge.web.rendering import render
 
 SESSION_COOKIE = "cygnusforge_session"
 SECURE_SESSION_COOKIE = "__Host-cygnusforge_session"
@@ -89,6 +90,11 @@ def create_app(
             return JSONResponse({"status": "error"}, status_code=503)
         return JSONResponse({"status": "ok"})
 
+    @app.get("/license", include_in_schema=False)
+    def license_page(request: Request) -> Response:
+        """The AGPL notice and the source offer, reachable before signing in."""
+        return render(request, "license.html")
+
     app.add_exception_handler(LoginRequired, _login_redirect)
     app.add_exception_handler(AdminRequired, _forbidden)
     app.add_exception_handler(StepUpRequired, _step_up_redirect)
@@ -116,8 +122,6 @@ async def _login_redirect(request: Request, exc: LoginRequired) -> RedirectRespo
 
 
 async def _forbidden(request: Request, exc: AdminRequired) -> Response:
-    from cygnusforge.web.rendering import render
-
     return render(request, "error.html", status_code=403, message="Administrator access required.")
 
 

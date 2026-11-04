@@ -165,6 +165,16 @@ Open http://localhost:21872 and follow the same Authentik and model setup. This 
 
 Configuration examples are in [.env.example](.env.example). Worlds and rule sets live in [src/cygnusforge/data](src/cygnusforge/data); treat content as trusted code because it can import Python modules.
 
+## License
+
+Cygnus Forge is Copyright (C) 2026 Cygnus Forge contributors and is free software under the
+[GNU Affero General Public License, version 3 or later](LICENSE). It comes with no warranty.
+
+The AGPL covers network use: a modified version offered to others over a network must offer them
+its Corresponding Source. The app shows these terms, with a link to the source, in the footer of
+every page and on its `/license` page. A fork that serves its own code should point `SOURCE_URL` in
+`src/cygnusforge/__init__.py` at that code.
+
 ## Content credits
 
 - Cairn 2e by Yochai Gal, licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/): https://cairnrpg.com/second-edition/.

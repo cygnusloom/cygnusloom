@@ -37,6 +37,23 @@ nav { display: flex; gap: 1rem; align-items: center; }
 
 main { max-width: 960px; margin: 1.5rem auto; padding: 0 1.5rem; }
 
+/* The AGPL notice: copyright, license, warranty, and where to get the source. */
+.site-footer {
+  flex: none;
+  margin-top: 2rem;
+  padding: 0.6rem 1.25rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+.site-footer p { margin: 0; }
+.site-footer a { color: var(--muted); }
+.site-footer a:hover, .site-footer a:focus-visible { color: var(--accent); }
+
+/* The campaign workspace fills the viewport, so its footer sits flush under the sidebar. */
+body.workspace-page .site-footer { margin-top: 0; padding-block: 0.35rem; }
+
 .card {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -424,6 +441,8 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
     grid-template-rows: 42% minmax(0, 1fr);
   }
   .shell.show-side .side.in-encounter { grid-template-rows: 55% minmax(0, 1fr); }
+  /* The bottom bar owns this edge of the screen; the account page carries the notice instead. */
+  body.workspace-page .site-footer { display: none; }
 }
 
 /* Phones: compact chrome, single-column details, scrollable data tables, touch-sized forms. */
