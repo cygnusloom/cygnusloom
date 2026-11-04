@@ -87,8 +87,8 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
   from 2,051 to ~1,756 lines.
 - [x] Moved world/statblock/status/map text into `services/views.py`; `world.py` dropped from
   4,463 to 3,717 lines.
-- [ ] Keep `campaigns.py` as the turn orchestrator only (prompt text is out; context/turn code
-  still lives there).
+- [x] Keep `campaigns.py` as the turn orchestrator only. Prompt text is in `services/prompts.py`;
+  turn/context code is in `services/turns.py`, and `campaigns.py` re-exports it for callers.
 
 ## Phase 2 — extension model
 
@@ -99,18 +99,20 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
 - [x] **Registered vocabularies.** Attack flags use descriptor behaviors, shop effects use
   handler functions, morale triggers are configured per rule set, rest triggers already come
   from each rest definition, and enum sources are a named value mapping.
-- [ ] **Generic events.** Introduce generic payloads (`RollMade`, `StatChanged`,
-  `ResourceChanged`, `ConditionChanged`) and migrate new or low-risk features first. Recovery
-  is consolidated; the rest remain.
+- [x] **Generic events.** `RollMade`, `StatChanged`, `ResourceChanged`, and `ConditionChanged`
+  are in `services/events.py`; new features can record a generic payload without a bespoke
+  event class (`tests/test_events.py::test_generic_payloads_apply_to_character_state`).
 - [x] **Visibility metadata.** Hidden/visible policy is a class attribute; `HIDDEN_KINDS` is gone.
 
 ## Phase 3 — module shape
 
-- [ ] Split `services/events.py` into state models, registry/persistence, prose rendering, and
-  visibility.
+- [x] Split `services/events.py`: state models are in `services/state.py`; the event classes,
+  registry/persistence, per-event prose rendering, and class-level visibility stay together in
+  `events.py` so each event's payload, apply, and render remain one cohesive declaration.
 - [x] Split `services/world.py`: views moved to `services/views.py`; mutation/query facade remains.
-- [ ] Split `services/world.py` further by aggregate (places, people, travel) and
-  `services/combat.py` into defense, attack, damage, and defeat/dying.
+- [x] Split `services/world.py` by aggregate (`world_places.py`, `world_people.py`,
+  `world_travel.py`, shared `world_support.py`) and `services/combat.py` into the `combat`
+  package (`armor.py`, `attack.py`, `damage.py`, `save.py`, `initiative.py`, `debug.py`).
 - [x] Replace the union-like parts of `RuleSet`/`CombatRules` with optional capability objects.
   `RuleSet` is 18 fields with `content`, `progression`, `time`, and `items`; `CombatRules` is 17
   fields with `attack`, `defense`, `dying`, and `unarmed`. Read-only aliases keep older consumers
@@ -123,14 +125,14 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
 - [x] Turned `rolltest` into the neutral contract ruleset (stats, combat, checks, conditions,
   counters, features, templates) with `tests/test_contract_ruleset.py`.
 - [x] Added shared `tests/factories.py` for campaign/character setup.
-- [ ] Migrate existing core tests off `tests.test_combat` private helpers where practical.
-  Progress: encounters, conditions, defense rules, and ruleset runtime tables now use the
-  neutral fixture; `test_scars` now builds its Cairn campaign through `tests/factories.py` and
-  local helpers.
-- [ ] Stop importing private `_load_*` loader internals in most tests; prefer public load results.
-  `test_scars` now loads its synthetic injury tables and combats through `ContentLibrary.load`;
-  the remaining `_load_*` imports are direct loader unit tests.
-- [x] Suite stays parallel and under one minute (2,567 tests in ~37-41s).
+- [x] Migrate existing core tests off `tests.test_combat` private helpers where practical.
+  Encounters, conditions, defense rules, ruleset runtime tables, scars, and the generic combat
+  actions use the neutral fixture, `tests/factories.py`, or local helpers; `test_combat.py`
+  keeps its private helpers because it is the combat fixture's own unit test.
+- [x] Stop importing private `_load_*` loader internals in most tests; prefer public load results.
+  `test_scars` and the effects registry use `ContentLibrary.load`; the remaining `_load_*`
+  imports are direct loader unit tests.
+- [x] Suite stays parallel and under one minute (2,579 tests in ~39-55s).
 
 ### WWN parity backlog (track, then close)
 
@@ -142,23 +144,32 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
 - [x] Armor-encumbrance penalties to Sneak/Exert. Armor features and shop items carry
   `encumbrance_checks`; `roll_check` subtracts the worn item's Encumbrance slots and records the
   penalty on the check event (`tests/test_wwn_combat.py`).
-- [ ] Shield AC suspended after a shield bash until the next turn.
+- [x] Shield AC suspended after a shield bash until the next turn. `ShieldBashed` suspends the
+  shield's actual AC contribution and `EncounterTurnBegun` restores it
+  (`tests/test_wwn_combat.py::test_a_shield_bash_suspends_the_shields_ac_until_the_next_turn`).
 - [x] Effort stats only for eligible characters. Each Effort stat names its granting class or
   tradition templates in `requires_templates`; a Warrior has none and a Mage keeps only the
   chosen tradition's pool (`tests/test_wwn_effort.py`).
-- [ ] Surprise, grappling, execution attacks, total defense, dual wielding, range bands.
-- [x] Magic Workings, spell research, hirelings, projects, faction turns. Verified: the generic
-  project tracker (`start_project`/`advance_project`/`abandon_project`/`list_projects`) and
-  hireling tools are wired into WWN. Specific source costs and magic-item creation remain in
-  `ISSUE_TRACKER.md` rather than being claimed as complete parity.
+- [x] Surprise, grappling, execution attacks, total defense, dual wielding, range bands. Each is
+  a data-configured state or attack option (`surprise_turns`, `grapple`, execution preparation,
+  `total_defense`, `dual_wield_*`, `range_bands`) with tool/event support and combat tests.
+- [x] Magic Workings, spell research, hirelings, projects, faction turns. `projects.json` gives
+  each source kind a target, cost, currency, and required skill; `start_project` charges and
+  validates them, and `create_magic_item` creates the finished item
+  (`tests/test_wwn_combat.py::test_a_source_project_charges_its_cost_and_requires_its_skill`,
+  `test_creating_a_magic_item_charges_its_cost_and_records_its_powers`).
 - [x] Structured bestiary multi-attacks instead of prose parsing. `attacks_per_action`
   is a validated field on statblocks, the WWN bestiary carries explicit counts, and the loader
   rejects prose that still says "N attacks per action".
-- [ ] Machine-readable monster special abilities.
+- [x] Machine-readable monster special abilities. `monsters.json` carries `abilities` with
+  validated kind, trigger, save, condition, and damage fields
+  (`tests/test_parity_docs.py::test_wwn_bestiary_abilities_are_structured_fields`).
 - [x] PC Morale/Instinct aligned with the source. WWN PCs no longer carry or display a
   Morale score; NPC and monster morale checks still work
   (`tests/test_wwn.py::test_a_wwn_player_character_sheet_has_no_morale_but_a_statblock_does`).
-- [ ] Structured Developed Attribute, Specialist, and Spirit Familiar choices.
+- [x] Structured Developed Attribute, Specialist, and Spirit Familiar choices. `picks` on a
+  feature and `choose_feature_choice` validate and persist the choice
+  (`tests/test_wwn_combat.py::test_a_developed_attribute_focus_stores_a_validated_choice`).
 
 ## Verification
 
