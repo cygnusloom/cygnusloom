@@ -111,12 +111,10 @@ Acceptance: one implementation of roll-vs-score; all ruleset save/morale/check t
 - [x] Split `services/world.py`: views moved to `services/views.py`; mutation/query facade remains.
 - [ ] Split `services/world.py` further by aggregate (places, people, travel) and
   `services/combat.py` into defense, attack, damage, and defeat/dying.
-- [ ] Replace the union-like parts of `RuleSet`/`CombatRules` with optional capability objects
-  (`combat`, `inventory`, `magic`, `progression`, `time`, `social`, `encounter`). Each capability
-  owns its schema, loader, runtime, and tools.
-  Progress: `RuleSet` dropped from 44 flat fields to 18, with `content`, `progression`, `time`,
-  and `items` capability objects and read-only aliases for existing consumers. `CombatRules` is
-  still a 40-field bag.
+- [x] Replace the union-like parts of `RuleSet`/`CombatRules` with optional capability objects.
+  `RuleSet` is 18 fields with `content`, `progression`, `time`, and `items`; `CombatRules` is 17
+  fields with `attack`, `defense`, `dying`, and `unarmed`. Read-only aliases keep older consumers
+  working.
 - [x] Remove dead wrapper code. All tool wrappers are gone; tools bind `WorldTools`
   operations directly or use declarative bind/rename metadata.
 

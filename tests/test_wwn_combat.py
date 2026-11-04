@@ -399,7 +399,12 @@ def test_an_unskilled_attack_takes_the_penalty(client_factory, weapon, skill, at
 
 def test_damage_adds_the_weapon_attribute_and_damage_bonus_stat(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    tools = replace(tools, combat=replace(WWN.combat, damage_bonus_stat="attack_bonus"))
+    tools = replace(
+        tools,
+        combat=replace(
+            WWN.combat, attack=replace(WWN.combat.attack, damage_bonus_stat="attack_bonus")
+        ),
+    )
     _foe(tools, hp=20, armor=10)
     tools.give_item(PC, LONG_SWORD, damage="1d8")
     pc = _pc(app, campaign_id)
@@ -413,7 +418,12 @@ def test_damage_adds_the_weapon_attribute_and_damage_bonus_stat(client_factory):
 
 def test_damage_bonus_stat_adds_to_shock(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    tools = replace(tools, combat=replace(WWN.combat, damage_bonus_stat="attack_bonus"))
+    tools = replace(
+        tools,
+        combat=replace(
+            WWN.combat, attack=replace(WWN.combat.attack, damage_bonus_stat="attack_bonus")
+        ),
+    )
     _foe(tools, hp=20, armor=13)
     tools.give_item(PC, WAR_AXE, damage="1d10")
     pc = _pc(app, campaign_id)
@@ -984,7 +994,11 @@ def test_healing_with_no_harm_records_zero_and_changes_nothing(client_factory):
 def test_default_healing_stat_is_ruleset_configurable(client_factory):
     client, campaign_id, tools = _wwn_campaign(client_factory)
     assert tools.combat is not None
-    rules = replace(tools.combat, healing_stat="str", outside_harm=("hp", "str"))
+    rules = replace(
+        tools.combat,
+        healing_stat="str",
+        dying=replace(tools.combat.dying, outside_harm=("hp", "str")),
+    )
     tools = replace(tools, combat=rules)
     tools.harm_character(PC, "str", 2, "a test wound")
 

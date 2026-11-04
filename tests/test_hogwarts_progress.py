@@ -5,7 +5,7 @@ from dataclasses import replace
 import pytest
 
 from cygnusforge.content.character import DefenseFloor
-from cygnusforge.content.library import CombatRules
+from cygnusforge.content.library import AttackRules, CombatRules, DefenseRules
 from cygnusforge.services.common import InvalidInput, session_scope
 from cygnusforge.services.events import (
     DefenseEquipmentSet,
@@ -322,12 +322,12 @@ def test_defense_feature_advancement_requires_tracked_equipment_before_spending(
     )
     combat = CombatRules(
         id="defense",
-        damage=(),
+        attack=AttackRules(damage=()),
         check_die="d20",
         check_sides=20,
         initiative_stat="",
         defeat={},
-        defense_base=10,
+        defense=DefenseRules(base=10),
     )
     tools = replace(_tools(app, campaign_id), character=spec, combat=combat)
     _grant_advancements(tools, 1)

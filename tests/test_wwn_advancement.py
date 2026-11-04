@@ -1459,9 +1459,12 @@ def test_indirect_condition_end_effects_refresh_defense(client_factory, ending: 
     assert combat_rules is not None
     combat = replace(
         combat_rules,
-        dying_conditions=("frail",),
-        fatal_conditions=("frail",),
-        aid_items=("Bandages",),
+        dying=replace(
+            combat_rules.dying,
+            dying_conditions=("frail",),
+            fatal_conditions=("frail",),
+            aid_items=("Bandages",),
+        ),
     )
     tools = replace(tools, combat=combat, conditions={"frail": condition})
     with Session(app.state.engine) as db:

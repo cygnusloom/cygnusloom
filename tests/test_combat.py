@@ -627,7 +627,11 @@ def test_multi_attack_each_applies_every_attack_in_turn(client_factory):
     _sturdy(app, campaign_id)
     _foe(tools, "Grave Thing", claw="1d6")
     _foe(tools, "Bo", claw="1d6")
-    each = replace(tools, combat=replace(CAIRN.combat, multi_attack="each"), rng=Rolls(1, 2))
+    each = replace(
+        tools,
+        combat=replace(CAIRN.combat, attack=replace(CAIRN.combat.attack, multi_attack="each")),
+        rng=Rolls(1, 2),
+    )
     result = each.resolve_attacks(
         PC, [{"attacker": "Grave Thing", "attack": "Claw"}, {"attacker": "Bo", "attack": "Claw"}]
     )
@@ -646,7 +650,11 @@ def test_multi_attack_each_stops_once_the_target_owes_a_save(client_factory):
     _foe(tools, "Grave Thing", claw="1d6")
     _foe(tools, "Bo", claw="1d6")
     _set_stat(app, campaign_id, PC, "hp", 0)
-    each = replace(tools, combat=replace(CAIRN.combat, multi_attack="each"), rng=Rolls(2, 3))
+    each = replace(
+        tools,
+        combat=replace(CAIRN.combat, attack=replace(CAIRN.combat.attack, multi_attack="each")),
+        rng=Rolls(2, 3),
+    )
     result = each.resolve_attacks(
         PC, [{"attacker": "Grave Thing", "attack": "Claw"}, {"attacker": "Bo", "attack": "Claw"}]
     )
@@ -661,7 +669,11 @@ def test_roll_vs_defense_misses_a_blow_that_does_not_reach_the_armor(client_fact
     tools.set_armor(PC, 3)
     _foe(tools, "Bo", claw="1d6")
     result = replace(
-        tools, combat=replace(CAIRN.combat, hit_mode="roll_vs_defense"), rng=Rolls(5, 2)
+        tools,
+        combat=replace(
+            CAIRN.combat, attack=replace(CAIRN.combat.attack, hit_mode="roll_vs_defense")
+        ),
+        rng=Rolls(5, 2),
     ).attack("Bo", "Claw", PC)
     assert result["hit"] is False
     assert (result["raw"], result["to_hit"], result["harm"]) == (5, 2, {})
@@ -677,7 +689,11 @@ def test_roll_vs_defense_lands_a_blow_that_reaches_the_armor(client_factory):
     tools.set_armor(PC, 3)
     _foe(tools, "Bo", claw="1d6")
     result = replace(
-        tools, combat=replace(CAIRN.combat, hit_mode="roll_vs_defense"), rng=Rolls(5, 3)
+        tools,
+        combat=replace(
+            CAIRN.combat, attack=replace(CAIRN.combat.attack, hit_mode="roll_vs_defense")
+        ),
+        rng=Rolls(5, 3),
     ).attack("Bo", "Claw", PC)
     assert "hit" not in result
     assert (result["raw"], result["armor"], result["harm"]) == (5, 3, {"hp": 2})
@@ -711,13 +727,16 @@ def test_a_large_group_line_names_the_incoming_modifier_its_rule_set_gives(clien
     assert large_group_line(CAIRN.combat) == (
         "Large group: a group that attacks with Blast and is hit only by impaired attacks"
     )
-    enhanced = replace(CAIRN.combat, groups=replace(groups, incoming_modifier="enhanced"))
+    enhanced = replace(
+        CAIRN.combat,
+        attack=replace(CAIRN.combat.attack, groups=replace(groups, incoming_modifier="enhanced")),
+    )
     assert large_group_line(enhanced) == (
         "Large group: a group that attacks with Blast and is hit only by enhanced attacks"
     )
-    assert large_group_line(replace(CAIRN.combat, groups=None)) == (
-        "Large group: a group that attacks with Blast"
-    )
+    assert large_group_line(
+        replace(CAIRN.combat, attack=replace(CAIRN.combat.attack, groups=None))
+    ) == ("Large group: a group that attacks with Blast")
 
 
 def test_a_statblock_template_gives_the_starting_values(client_factory):

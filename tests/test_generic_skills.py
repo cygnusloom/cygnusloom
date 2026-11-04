@@ -468,7 +468,7 @@ def test_combat_distinguishes_training_from_a_negative_skill_level():
     spec = _spec()
     combat = ContentLibrary.load().rule_sets["worldswithoutnumber"].combat
     assert combat is not None
-    combat = replace(combat, unskilled_attack_penalty=3)
+    combat = replace(combat, attack=replace(combat.attack, unskilled_attack_penalty=3))
     feature = Feature(
         id="wand",
         name="Wand",

@@ -803,94 +803,78 @@ class InitiativeRules:
 
 
 @dataclass(frozen=True)
+class AttackRules:
+    """How attacks are resolved: damage order, hit mode, modifiers, group fighting, and the
+    bonuses or penalties an attack applies."""
+
+    damage: tuple[DamageStep, ...]
+    modifiers: Mapping[str, str] = field(default_factory=dict)
+    hit_mode: str = "auto"
+    multi_attack: str = "highest"
+    groups: GroupRules | None = None
+    hit_bonus_stat: str = ""
+    unskilled_attack_penalty: int = 0
+    damage_bonus_stat: str = ""
+    attribute_damage: bool = False
+    shock_on_miss: bool = False
+    minimum_shock_damage: bool = False
+    natural_one_misses: bool = False
+    natural_max_hits: bool = False
+    level_damage: LevelDamageRules | None = None
+
+
+@dataclass(frozen=True)
+class DefenseRules:
+    """How armor and defense are calculated."""
+
+    armor_max: int = 0
+    base: int = 0
+    modifier: str = ""
+
+
+@dataclass(frozen=True)
+class DyingRules:
+    """The clocks and conditions that govern defeat and death, and the harm stats outside combat."""
+
+    outside_harm: tuple[str, ...] = ()
+    dying_hours: int = 0
+    dying_rounds: int = 0
+    dying_conditions: tuple[str, ...] = ()
+    fatal_conditions: tuple[str, ...] = ()
+    aid_items: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class UnarmedRules:
+    """What an unarmed strike rolls, what it is called, and what it may add."""
+
+    damage: str = ""
+    names: frozenset[str] = frozenset()
+    attributes: tuple[str, ...] = ()
+    skill: str = ""
+
+
+@dataclass(frozen=True)
 class CombatRules:
-    """How a rule set resolves combat. `damage` is the order a hit's damage goes through. `check_die`
-    is the die a save or initiative roll is made with, and `check_sides` its number of sides.
-    `initiative_stat` is what a player character saves against to act. `defeat` says where a defeat
-    leaves a player character (`player_character`) and an NPC (`npc`). `morale` is None when the
-    rule set has no morale checks. `modifiers` maps each attack modifier's name to the dice it rolls
-    instead of the attack's own.
-
-    `save` and `initiative_mode` decide saves and round-one order. A rule set's `module`, when it
-    has one, may supply `save_succeeds(roll, score)` and `initiative_order(entries)` to override
-    them; a rule set that declares its save and order in JSON needs no module. `hit_mode`
-    says whether a hit lands automatically ("auto") or only when the check die reaches the target's
-    armor, which is its defense ("roll_vs_defense"; an attack that ignores armor has none).
-    `multi_attack` says whether several attacks on one target apply only the highest roll
-    ("highest") or each in turn ("each").
-    `groups` is None when the rule set has no large groups.
-
-    `hit_bonus_stat` is the stat added to an attack roll, such as attack_bonus, and
-    `unskilled_attack_penalty` is how much is taken off when the attacker has no level in the
-    weapon's skill. `damage_bonus_stat` is the stat added to damage, and `attribute_damage` adds
-    the weapon's own attribute modifiers. `shock_on_miss` lets a miss still deal the weapon's
-    Shock when the target's defense is at most the weapon's shock_ac, and `minimum_shock_damage`
-    keeps a hit's damage at least the Shock. `defeat_at_zero` are the stats whose reaching 0
-    defeats a character.
-
-    `initiative` is None when initiative is rolled for each character as `initiative_mode` says.
-    When it names a side-based roll, the engine rolls once for each side instead of asking each
-    player character for a save."""
+    """How a rule set resolves combat. The attack, defense, dying, and unarmed systems are
+    capability objects; the remaining fields describe checks, initiative, saves, defeat, and the
+    optional ruleset module."""
 
     id: str
-    damage: tuple[DamageStep, ...]
     check_die: str
     check_sides: int
     initiative_stat: str
     defeat: Mapping[str, str]
+    attack: AttackRules
+    defense: DefenseRules = field(default_factory=DefenseRules)
+    dying: DyingRules = field(default_factory=DyingRules)
+    unarmed: UnarmedRules = field(default_factory=UnarmedRules)
     injury_table: InjuryTable | None = None
-    # The stats outside combat harm can take, such as strength, dexterity, and willpower.
-    outside_harm: tuple[str, ...] = ()
     # The stat healed when a tool call does not name one.
     healing_stat: str | None = None
     morale: MoraleRules | None = None
-    modifiers: Mapping[str, str] = field(default_factory=dict)
-    # A player character who is out of action and dying dies when this many hours pass unaided.
-    # Zero means dying characters do not die on an hourly clock.
-    dying_hours: int = 0
-    # A round-based clock, used when an encounter is running. Zero means no round clock. When both
-    # are set, the round clock runs in an encounter and the hourly one is the fallback between
-    # fights.
-    dying_rounds: int = 0
-    # The conditions that leave a character dying, and the ones that make a failed save fatal. Both
-    # come from the conditions' `dying` and `fatal` flags.
-    dying_conditions: tuple[str, ...] = ()
-    fatal_conditions: tuple[str, ...] = ()
-    # The dice an unarmed attack rolls, the names that mean unarmed, and its optional skill id.
-    unarmed_damage: str = ""
-    unarmed_names: frozenset[str] = frozenset()
-    # The attributes an unarmed attack may use for its modifier.
-    unarmed_attributes: tuple[str, ...] = ()
-    # The items a character can use on a dying character to stop the clock, by name.
-    aid_items: tuple[str, ...] = ()
-    # The most armor a character can have. Zero means armor has no cap.
-    armor_max: int = 0
-    # The Armor Class an unarmored character has before their `defense_modifier`, such as 10 in
-    # Worlds Without Number. Zero means armor is the only defense.
-    defense_base: int = 0
-    # The stat whose modifier adds to a character's Armor Class, such as dexterity.
-    defense_modifier: str = ""
-    # True when a natural 1 on the attack die always misses.
-    natural_one_misses: bool = False
-    # True when a natural roll of the check die's highest face always hits.
-    natural_max_hits: bool = False
-    hit_mode: str = "auto"
-    multi_attack: str = "highest"
     save: SaveRules = field(default_factory=SaveRules)
     initiative_mode: str = "pass_npcs_fail"
-    groups: GroupRules | None = None
-    # The stat added to an attack roll, such as attack_bonus. Empty when none is.
-    hit_bonus_stat: str = ""
-    # What an attack takes off when the attacker has no level in the weapon's skill.
-    unskilled_attack_penalty: int = 0
-    # The stat added to a weapon's damage. Empty when none is.
-    damage_bonus_stat: str = ""
-    # True when a weapon adds the modifier of each of its attributes to its damage.
-    attribute_damage: bool = False
-    # True when a miss still deals the weapon's Shock to a target whose defense is low enough.
-    shock_on_miss: bool = False
-    # True when a hit's damage is at least the weapon's Shock.
-    minimum_shock_damage: bool = False
     # The stats whose reaching 0 defeats a character.
     defeat_at_zero: tuple[str, ...] = ()
     # The side-based initiative roll, or None when each character rolls instead.
@@ -898,9 +882,114 @@ class CombatRules:
     # The rule set's Python functions, when it names a python_module. Each function, when present,
     # overrides the declarative save and initiative rules above.
     module: ModuleType | None = None
-    # The skill an unarmed strike uses, when configured.
-    unarmed_skill: str = ""
-    level_damage: LevelDamageRules | None = None
+
+    @property
+    def damage(self) -> tuple[DamageStep, ...]:
+        return self.attack.damage
+
+    @property
+    def modifiers(self) -> Mapping[str, str]:
+        return self.attack.modifiers
+
+    @property
+    def hit_mode(self) -> str:
+        return self.attack.hit_mode
+
+    @property
+    def multi_attack(self) -> str:
+        return self.attack.multi_attack
+
+    @property
+    def groups(self) -> GroupRules | None:
+        return self.attack.groups
+
+    @property
+    def hit_bonus_stat(self) -> str:
+        return self.attack.hit_bonus_stat
+
+    @property
+    def unskilled_attack_penalty(self) -> int:
+        return self.attack.unskilled_attack_penalty
+
+    @property
+    def damage_bonus_stat(self) -> str:
+        return self.attack.damage_bonus_stat
+
+    @property
+    def attribute_damage(self) -> bool:
+        return self.attack.attribute_damage
+
+    @property
+    def shock_on_miss(self) -> bool:
+        return self.attack.shock_on_miss
+
+    @property
+    def minimum_shock_damage(self) -> bool:
+        return self.attack.minimum_shock_damage
+
+    @property
+    def natural_one_misses(self) -> bool:
+        return self.attack.natural_one_misses
+
+    @property
+    def natural_max_hits(self) -> bool:
+        return self.attack.natural_max_hits
+
+    @property
+    def level_damage(self) -> LevelDamageRules | None:
+        return self.attack.level_damage
+
+    @property
+    def armor_max(self) -> int:
+        return self.defense.armor_max
+
+    @property
+    def defense_base(self) -> int:
+        return self.defense.base
+
+    @property
+    def defense_modifier(self) -> str:
+        return self.defense.modifier
+
+    @property
+    def outside_harm(self) -> tuple[str, ...]:
+        return self.dying.outside_harm
+
+    @property
+    def dying_hours(self) -> int:
+        return self.dying.dying_hours
+
+    @property
+    def dying_rounds(self) -> int:
+        return self.dying.dying_rounds
+
+    @property
+    def dying_conditions(self) -> tuple[str, ...]:
+        return self.dying.dying_conditions
+
+    @property
+    def fatal_conditions(self) -> tuple[str, ...]:
+        return self.dying.fatal_conditions
+
+    @property
+    def aid_items(self) -> tuple[str, ...]:
+        return self.dying.aid_items
+
+    @property
+    def unarmed_damage(self) -> str:
+        return self.unarmed.damage
+
+    @property
+    def unarmed_names(self) -> frozenset[str]:
+        return self.unarmed.names
+
+    @property
+    def unarmed_attributes(self) -> tuple[str, ...]:
+        return self.unarmed.attributes
+
+    @property
+    def unarmed_skill(self) -> str:
+        return self.unarmed.skill
 
     def save_succeeds(self, roll: int, score: int) -> bool:
         """Whether a save with this roll succeeds against a score."""
@@ -2775,47 +2864,55 @@ def _load_combat(
     level_damage = _load_level_damage(data, character, label)
     return CombatRules(
         id=definition.id,
-        damage=damage,
         check_die=check_die,
         check_sides=check_sides,
         initiative_stat=initiative_stat,
         defeat=defeat,
+        attack=AttackRules(
+            damage=damage,
+            modifiers=_load_modifiers(data, label),
+            hit_mode=_choice(data, "hit_mode", ("auto", "roll_vs_defense"), "auto", label),
+            multi_attack=_choice(data, "multi_attack", ("highest", "each"), "highest", label),
+            groups=_load_groups(data, label),
+            hit_bonus_stat=_optional_text(data, "hit_bonus_stat", label) or "",
+            unskilled_attack_penalty=_optional_whole(data, "unskilled_attack_penalty", label) or 0,
+            damage_bonus_stat=_optional_text(data, "damage_bonus_stat", label) or "",
+            attribute_damage=_flag_default(data, "attribute_damage", label, False),
+            shock_on_miss=_flag_default(data, "shock_on_miss", label, False),
+            minimum_shock_damage=_flag_default(data, "minimum_shock_damage", label, False),
+            natural_one_misses=_flag_default(data, "natural_one_misses", label, False),
+            natural_max_hits=_flag_default(data, "natural_max_hits", label, False),
+            level_damage=level_damage,
+        ),
+        defense=DefenseRules(
+            armor_max=_whole(data, "armor_max", label, 0) if "armor_max" in data else 0,
+            base=_optional_whole(data, "defense_base", label) or 0,
+            modifier=_optional_text(data, "defense_modifier", label) or "",
+        ),
+        dying=DyingRules(
+            outside_harm=outside_harm,
+            dying_hours=_whole(data, "dying_hours", label, 0) if "dying_hours" in data else 0,
+            dying_rounds=(_whole(data, "dying_rounds", label, 0) if "dying_rounds" in data else 0),
+            dying_conditions=tuple(c.id for c in conditions.values() if c.dying),
+            fatal_conditions=tuple(c.id for c in conditions.values() if c.fatal),
+            aid_items=_names(data, "aid_items", label),
+        ),
+        unarmed=UnarmedRules(
+            damage=unarmed_damage,
+            names=unarmed_names,
+            attributes=unarmed_attributes,
+            skill=unarmed_skill,
+        ),
         injury_table=injury_table,
-        outside_harm=outside_harm,
         healing_stat=_optional_text(data, "healing_stat", label),
         morale=_load_morale(data, character, label),
-        modifiers=_load_modifiers(data, label),
-        dying_hours=_whole(data, "dying_hours", label, 0) if "dying_hours" in data else 0,
-        dying_rounds=_whole(data, "dying_rounds", label, 0) if "dying_rounds" in data else 0,
-        armor_max=_whole(data, "armor_max", label, 0) if "armor_max" in data else 0,
-        dying_conditions=tuple(c.id for c in conditions.values() if c.dying),
-        fatal_conditions=tuple(c.id for c in conditions.values() if c.fatal),
-        aid_items=_names(data, "aid_items", label),
-        unarmed_damage=unarmed_damage,
-        unarmed_names=unarmed_names,
-        unarmed_skill=unarmed_skill,
-        unarmed_attributes=unarmed_attributes,
-        hit_mode=_choice(data, "hit_mode", ("auto", "roll_vs_defense"), "auto", label),
-        multi_attack=_choice(data, "multi_attack", ("highest", "each"), "highest", label),
-        defense_base=_optional_whole(data, "defense_base", label),
-        defense_modifier=_optional_text(data, "defense_modifier", label) or "",
-        natural_one_misses=_flag_default(data, "natural_one_misses", label, False),
-        natural_max_hits=_flag_default(data, "natural_max_hits", label, False),
         save=_load_save(data, check_sides, label),
         initiative_mode=_choice(
             data, "initiative_mode", ("pass_npcs_fail", "roll_order"), "pass_npcs_fail", label
         ),
-        groups=_load_groups(data, label),
-        module=module,
-        hit_bonus_stat=_optional_text(data, "hit_bonus_stat", label) or "",
-        unskilled_attack_penalty=_optional_whole(data, "unskilled_attack_penalty", label) or 0,
-        damage_bonus_stat=_optional_text(data, "damage_bonus_stat", label) or "",
-        level_damage=level_damage,
-        attribute_damage=_flag_default(data, "attribute_damage", label, False),
-        shock_on_miss=_flag_default(data, "shock_on_miss", label, False),
-        minimum_shock_damage=_flag_default(data, "minimum_shock_damage", label, False),
         defeat_at_zero=_names(data, "defeat_at_zero", label),
         initiative=_load_initiative(data, character, label),
+        module=module,
     )
 
 
