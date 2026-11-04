@@ -16,6 +16,7 @@ from cygnusforge.content.character import (
     Template,
     feature_next_ranks,
     feature_pick_options,
+    kind_label,
     skill_pick_options,
 )
 from cygnusforge.services.common import InvalidInput
@@ -88,7 +89,7 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
     kinds = [
         {
             "kind": kind,
-            "label": _kind_label(kind),
+            "label": kind_label(kind),
             "optional": kind in spec.optional_kinds,
             "templates": [t for t in templates if t["kind"] == kind],
         }
@@ -208,7 +209,7 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
         ]
         if not offered:
             continue
-        label = _kind_label(kind)
+        label = kind_label(kind)
         template_id = form_text(form, TEMPLATE_PREFIX + kind)
         if not template_id:
             if kind in spec.optional_kinds:
@@ -309,14 +310,6 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
 def _template_is_compatible(template: Template, selected: dict[str, str]) -> bool:
     """A template is offered only when every template kind it names has an allowed selection."""
     return all(selected.get(kind) in allowed for kind, allowed in template.compatible_with.items())
-
-
-def _kind_label(kind: str) -> str:
-    """A readable label for a template kind. A trailing number names a later selection of the
-    same kind, so `class2` reads as "Second Class"."""
-    base = kind.removesuffix("2")
-    label = base.replace("_", " ").strip().title()
-    return f"Second {label}" if base != kind else label
 
 
 def _picks_view(spec: CharacterSpec, template: Template) -> dict[str, Any] | None:

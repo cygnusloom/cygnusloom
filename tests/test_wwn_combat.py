@@ -39,6 +39,7 @@ from cygnusforge.services.events import (
     record,
 )
 from cygnusforge.services.tools import Ask, RollAnswer, ToolRequest, run_tool
+from cygnusforge.services.views import scene_view
 from cygnusforge.services.world import WorldTools
 from tests.conftest import content_library, csrf_token
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
@@ -1165,6 +1166,31 @@ def test_healing_with_no_harm_records_zero_and_changes_nothing(client_factory):
     assert _pc(app, campaign_id).harm == {}
     [event] = _events(app, campaign_id, Recovered.kind)
     assert event.amount == 0
+
+
+def test_a_wounded_character_sheet_shows_the_harm_left(client_factory):
+    """A player reads their own sheet to know how hurt they are, so a harmed stat shows its
+    remaining value beside its score."""
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    app = client.app
+    tools.set_stat_max(PC, "hp", 10, "for a test wound")
+
+    tools.harm_character(PC, "hp", 3, "a test wound")
+
+    hurt = _pc(app, campaign_id)
+    assert current(hurt, "hp") == 7
+    with Session(app.state.engine) as db:
+        sheet = scene_view(load_state(db, campaign_id), WWN.character).sheet
+    assert "Current: Hit Points 7 of 10" in sheet
+
+
+def test_an_unwounded_character_sheet_has_no_current_line(client_factory):
+    client, campaign_id, _tools = _wwn_campaign(client_factory)
+
+    with Session(client.app.state.engine) as db:
+        sheet = scene_view(load_state(db, campaign_id), WWN.character).sheet
+
+    assert not any(line.startswith("Current:") for line in sheet)
 
 
 def test_default_healing_stat_is_ruleset_configurable(client_factory):

@@ -36,6 +36,7 @@ from cygnusforge.services.events import (
     Place,
     Region,
     WorldObject,
+    current,
     defeat_status,
     name_key,
     same_item_name,
@@ -802,14 +803,27 @@ def _sheet_of(character: Character) -> Sheet:
 def _sheet_text(spec: CharacterSpec, character: Character) -> str:
     """A character's sheet as text. A player character's sheet leaves out the rule set's
     statblock defaults: stats it derives with no inputs, such as a monster's Morale, which a
-    statblock supplies to an NPC and a player character never uses."""
+    statblock supplies to an NPC and a player character never uses. A stat the character has
+    taken harm to shows its remaining value beside its score, so a wounded character reads as
+    wounded."""
     sheet = _sheet_of(character)
-    if character.kind != PC_KIND:
-        return describe(spec, sheet)
-    own = {
-        stat: value for stat, value in sheet.stats.items() if not _is_statblock_default(spec, stat)
-    }
-    return describe(spec, replace(sheet, stats=own))
+    own = sheet.stats
+    if character.kind == PC_KIND:
+        own = {
+            stat: value
+            for stat, value in sheet.stats.items()
+            if not _is_statblock_default(spec, stat)
+        }
+    text = describe(spec, replace(sheet, stats=own))
+    harmed = []
+    for stat, taken in character.harm.items():
+        if taken <= 0 or stat not in spec.stats:
+            continue
+        score = own.get(stat, character.stats.get(stat, 0))
+        harmed.append(f"{spec.stats[stat].name} {current(character, stat)} of {score}")
+    if harmed:
+        text = f"{text}\nCurrent: {', '.join(harmed)}"
+    return text
 
 
 def _is_statblock_default(spec: CharacterSpec, stat: str) -> bool:

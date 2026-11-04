@@ -2790,6 +2790,14 @@ def _skill_name(spec: CharacterSpec, skill: str) -> str:
     return found.name if found is not None else skill
 
 
+def kind_label(kind: str) -> str:
+    """A readable label for a template kind. A trailing number names a later selection of the
+    same kind, so `class2` reads as "Second Class"."""
+    base = kind.removesuffix("2")
+    label = base.replace("_", " ").strip().title()
+    return f"Second {label}" if base != kind else label
+
+
 def describe(spec: CharacterSpec, sheet: Sheet) -> str:
     """The character as the GM and the player read it, one line per part. Empty parts are left
     out."""
@@ -2801,7 +2809,7 @@ def describe(spec: CharacterSpec, sheet: Sheet) -> str:
     for kind in spec.kinds():
         if kind in sheet.templates:
             template = spec.templates[sheet.templates[kind]]
-            lines.append(f"{kind.capitalize()}: {template.name}")
+            lines.append(f"{kind_label(kind)}: {template.name}")
     if sheet.skills:
         lines.append(
             "Skills: "

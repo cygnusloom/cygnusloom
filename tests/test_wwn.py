@@ -11,6 +11,7 @@ from sqlmodel import Session
 from cygnusforge.content.character import (
     CharacterError,
     derived_stats,
+    describe,
     feature_pick_options,
     resolve,
     skill_pick_options,
@@ -128,6 +129,22 @@ def test_a_wwn_player_character_sheet_has_no_morale_but_a_statblock_does() -> No
     )
     npc_block = get_statblock(state, "Hound", spec, ruleset.combat)
     assert "Morale 10" in "\n".join(npc_block["statblock"])
+
+
+def test_a_second_class_template_is_labelled_second_class() -> None:
+    """A template kind with a trailing number names a later pick of the same kind. The sheet
+    spells that out rather than printing the raw kind id."""
+    ruleset = _wwn().rule_sets["worldswithoutnumber"]
+    spec = ruleset.character
+    sheet = resolve(
+        spec,
+        {"templates": {"class": "healer", "class2": "mage_partial_2"}},
+        random.Random(41),
+        plus=ruleset.plus,
+    )
+    text = describe(spec, sheet)
+    assert "Second Class:" in text
+    assert "Class2" not in text
 
 
 def test_starting_attack_bonus_matches_each_class_progression() -> None:
