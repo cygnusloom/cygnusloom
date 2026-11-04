@@ -1,7 +1,7 @@
 """Structural parity checks for the Worlds Without Number ruleset.
 
-These pin the facts `PARITY.md` and `SPEC.md` rely on. They assert the loaded content and tool
-catalog rather than scraping the documents' prose.
+These pin the facts `PARITY.md` records. They assert the loaded content and tool catalog rather
+than scraping the document's prose.
 """
 
 from __future__ import annotations

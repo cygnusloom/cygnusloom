@@ -2,7 +2,7 @@
 
 This is the checkable status of the ruleset. It is not a claim of full parity. Every **yes** row
 names the JSON, tool, or test that proves it; **partial** and **open** rows name the remaining
-gap. Keep this list and [SPEC.md](./SPEC.md#known-simplifications) in step when a gap closes.
+gap. Update this list when a gap closes or a new area is added.
 
 Legend: **yes** implemented with evidence; **partial** engine support exists but the source
 procedure is not complete; **open** rule text or GM procedure only.

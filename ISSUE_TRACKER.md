@@ -8,6 +8,9 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
 2. Make the branding generic. "cygnusforge" is the generic internal name of the software; but the user-facing branding should be configurable. "Cygnus Forge" should be changeable to whatever is needed, by environment variable.
 3. The GM can narrate incorrect mechanics even when the recorded state and tool results are correct. In DeepSeek tests it misexplained Vowed armor calculations and said an advancement point remained after it was spent. Improve grounding or validation so player-facing narration follows the engine's results.
 4. Leveling up (if rulesets have that idea, and it requires choices) should be an interactive process.
+5. A dual-partial Adventurer advances on the primary class's chart only: the second partial adds
+   no HP, attack, Focus, or art progression, and Effort recognition keys to the primary class.
+   Pairing and creation work; combining the two advancement charts does not.
 
 # Triaged Issues
 
