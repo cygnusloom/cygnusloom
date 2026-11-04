@@ -1264,6 +1264,9 @@ class ProjectStarted(GameEvent):
     project_kind: str
     goal: str
     target: int
+    cost: int = 0
+    currency: str = ""
+    owner: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.projects[name_key(self.name)] = Project(
@@ -1271,6 +1274,9 @@ class ProjectStarted(GameEvent):
             kind=self.project_kind,
             goal=self.goal,
             target=self.target,
+            cost=self.cost,
+            currency=self.currency,
+            owner=self.owner,
         )
 
     def render(self) -> str:

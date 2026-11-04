@@ -38,6 +38,7 @@ from cygnusforge.content.library import (
     MonsterTemplate,
     MoveRules,
     PeriodRules,
+    ProjectDefinition,
     RelationRules,
     RestLength,
     ShopItem,
@@ -77,11 +78,13 @@ from cygnusforge.services.dungeon import dungeon_rules
 from cygnusforge.services.dungeon import roll_reaction as roll_reaction_service
 from cygnusforge.services.events import (
     PC_KIND,
+    CurrencyChanged,
     ExecutionPrepared,
     ExecutionTaken,
     FeatureChoiceMade,
     GrappleEnded,
     GrappleStarted,
+    Item,
     MaxChanged,
     ProjectAbandoned,
     ProjectAdvanced,
@@ -153,6 +156,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     checks: Mapping[str, CheckRules] = field(default_factory=dict)
     # The rule set's conditions by id.
     conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
+    projects: Mapping[str, ProjectDefinition] = field(default_factory=dict)
     dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
     # The rule set's moves by id.
     moves: Mapping[str, MoveRules] = field(default_factory=dict)
@@ -1229,6 +1233,60 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 rules=self.combat,
             )
 
+    def create_magic_item(
+        self,
+        name: str,
+        item: str,
+        description: str,
+        *,
+        size: str = "normal",
+        damage: str = "",
+        cost: int = 0,
+        currency: str = "silver",
+    ) -> dict[str, Any]:
+        """Create a permanent magic item: charge its cost and give the character an item whose
+        text records what it does. The GM calls it after the magic-item project finishes."""
+        if not item.strip() or not description.strip():
+            raise InvalidInput("a magic item needs a name and a description")
+        if isinstance(cost, bool) or not isinstance(cost, int) or cost < 0:
+            raise InvalidInput("a magic item's cost must be a whole number, 0 or more")
+        if damage and not is_formula(damage):
+            raise InvalidInput(f"{damage!r} is not a dice formula such as 'd6'")
+        rules = _required(self.inventory, "inventory")
+        if size not in self.item_sizes:
+            raise InvalidInput(f"there is no item size named {size!r}")
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            character = state.characters.get(name_key(name))
+            if character is None:
+                raise InvalidInput(f"there is no character named {name!r}")
+            if cost:
+                if character.features.get(currency, 0) < cost:
+                    raise InvalidInput(
+                        f"creating {item} costs {cost} {currency}; "
+                        f"{character.name} has {character.features.get(currency, 0)}"
+                    )
+                record(
+                    db,
+                    self.campaign_id,
+                    CurrencyChanged(
+                        name=character.name,
+                        feature=currency,
+                        amount=-cost,
+                        cause=f"creating {item}",
+                    ),
+                )
+            result = inventory_service.carry_item(
+                db,
+                self.campaign_id,
+                rules,
+                character.name,
+                Item(item, size, self.item_sizes[size], text=description, damage=damage),
+                cause=f"a magic item created by {character.name}",
+            )
+            db.commit()
+            return {**result, "magic_item": item, "cost": cost, "currency": currency}
+
     def choose_feature_choice(
         self, name: str, feature: str, pick: str, choice: str
     ) -> dict[str, Any]:
@@ -1551,25 +1609,64 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         name: str,
         kind: str,
         goal: str,
-        target: int,
+        target: int = 0,
         force: bool = False,
+        owner: str = "",
     ) -> dict[str, Any]:
-        """Begin a project, research effort, magic working, or faction turn."""
+        """Begin a project, research effort, magic working, or faction turn. A source-defined
+        kind supplies its target, cost, currency, and required skill."""
         name = name.strip()
         kind = kind.strip()
         goal = goal.strip()
         if not name or not kind or not goal:
             raise InvalidInput("a project needs a name, a kind, and a goal")
+        definition = self.projects.get(kind)
+        if definition is not None:
+            target = target or definition.target
         if isinstance(target, bool) or not isinstance(target, int) or target < 1:
             raise InvalidInput("a project's target must be a whole number, 1 or more")
         with session_scope(self.engine) as db:
-            existing = load_state(db, self.campaign_id).projects.get(name_key(name))
+            state = load_state(db, self.campaign_id)
+            existing = state.projects.get(name_key(name))
             if existing is not None and not force:
                 raise InvalidInput(f"there is already a project named {name!r}")
+            payer = state.characters.get(name_key(owner)) if owner else state.pc()
+            if definition is not None and definition.cost:
+                if payer is None:
+                    raise InvalidInput(f"{definition.label} needs a character to pay its cost")
+                if definition.currency and payer.features.get(definition.currency, 0) < definition.cost:
+                    raise InvalidInput(
+                        f"{definition.label} costs {definition.cost} {definition.currency}; "
+                        f"{payer.name} has {payer.features.get(definition.currency, 0)}"
+                    )
+                if definition.skill and payer.skills.get(definition.skill, 0) < definition.skill_level:
+                    raise InvalidInput(
+                        f"{definition.label} needs {definition.skill} "
+                        f"level {definition.skill_level}"
+                    )
+                if definition.currency:
+                    record(
+                        db,
+                        self.campaign_id,
+                        CurrencyChanged(
+                            name=payer.name,
+                            feature=definition.currency,
+                            amount=-definition.cost,
+                            cause=f"starting {name}",
+                        ),
+                    )
             record(
                 db,
                 self.campaign_id,
-                ProjectStarted(name=name, project_kind=kind, goal=goal, target=target),
+                ProjectStarted(
+                    name=name,
+                    project_kind=kind,
+                    goal=goal,
+                    target=target,
+                    cost=definition.cost if definition else 0,
+                    currency=definition.currency if definition else "",
+                    owner=payer.name if payer else "",
+                ),
             )
             db.commit()
             return self._project_view(db, name)
@@ -1620,6 +1717,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             "target": project.target,
             "completed": project.completed,
             "abandoned": project.abandoned,
+            "cost": project.cost,
+            "currency": project.currency,
+            "owner": project.owner,
             "notes": list(project.notes),
         }
 

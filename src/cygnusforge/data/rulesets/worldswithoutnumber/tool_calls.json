@@ -286,6 +286,50 @@
   },
   {
     "type": "tool_call",
+    "id": "create_magic_item",
+    "name": "create_magic_item",
+    "world_method": "create_magic_item",
+    "description": "Create a permanent magic item after its magic-item project finishes. Charges the listed silver, then gives the character an item whose description records the item's powers. Use a weapon damage formula when the item is a weapon.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The character creating and receiving the item."
+        },
+        "item": {
+          "type": "string",
+          "description": "The magic item's name."
+        },
+        "description": {
+          "type": "string",
+          "description": "What the item does, in a sentence or two."
+        },
+        "size": {
+          "type": "string",
+          "description": "The item size, such as tiny, normal, large, or huge.",
+          "default": "normal"
+        },
+        "damage": {
+          "type": "string",
+          "description": "Damage dice when the item is a weapon, such as 1d8."
+        },
+        "cost": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Silver charged for the materials.",
+          "default": 0
+        }
+      },
+      "required": [
+        "name",
+        "item",
+        "description"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "choose_feature_choice",
     "name": "choose_feature_choice",
     "world_method": "choose_feature_choice",

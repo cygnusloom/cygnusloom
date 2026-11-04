@@ -1,0 +1,43 @@
+[
+  {
+    "type": "project",
+    "id": "magic_item",
+    "label": "Magic Item",
+    "description": "Create a permanent magic item. The work needs a full workshop, the listed silver, and a successful Magic check at the end.",
+    "target": 4,
+    "cost": 1000,
+    "currency": "silver",
+    "skill": "magic",
+    "skill_level": 1
+  },
+  {
+    "type": "project",
+    "id": "spell_research",
+    "label": "Spell Research",
+    "description": "Research a new spell or recover a lost one. Each advance is a week of study with a teacher or text.",
+    "target": 4,
+    "cost": 500,
+    "currency": "silver",
+    "skill": "magic",
+    "skill_level": 1
+  },
+  {
+    "type": "project",
+    "id": "magic_working",
+    "label": "Magic Working",
+    "description": "Raise a lasting magical work, such as a ward, a road, or a curse. The source sets the target by the scale of the working.",
+    "target": 6,
+    "cost": 2000,
+    "currency": "silver",
+    "skill": "magic",
+    "skill_level": 2
+  },
+  {
+    "type": "project",
+    "id": "faction_turn",
+    "label": "Faction Turn",
+    "description": "Resolve one faction turn: assets, orders, and upkeep. The target is the number of faction actions the table agrees to resolve.",
+    "target": 1,
+    "cost": 0
+  }
+]

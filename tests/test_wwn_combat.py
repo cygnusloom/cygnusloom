@@ -882,6 +882,42 @@ def test_a_carried_shield_only_blocks_shock_when_wielded(client_factory):
     assert (wielded.hit, wielded.shock, wielded.shield_round) == (False, 0, 1)
 
 
+def test_creating_a_magic_item_charges_its_cost_and_records_its_powers(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools = replace(tools, projects=WWN.projects, marketplace=WWN.marketplace)
+    tools.change_currency(PC, 100, "a test purse")
+
+    result = tools.create_magic_item(
+        PC,
+        "Staff of Ash",
+        "A staff that sheds ember light and adds 1 to fire damage.",
+        damage="1d6",
+        cost=100,
+    )
+    assert (result["magic_item"], result["cost"]) == ("Staff of Ash", 100)
+    with Session(app.state.engine) as db:
+        pc = load_state(db, campaign_id).characters[name_key(PC)]
+    staff = next(item for item in pc.items if item.name == "Staff of Ash")
+    assert staff.damage == "1d6"
+    assert "ember light" in staff.text
+    assert pc.features.get("silver", 0) == 0
+
+
+def test_a_source_project_charges_its_cost_and_requires_its_skill(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools = replace(tools, projects=WWN.projects, marketplace=WWN.marketplace)
+    tools.change_currency(PC, 1000, "a test purse")
+    tools.raise_skill(PC, "magic", 1, "a test teacher")
+
+    project = tools.start_project("Staff of Ash", "magic_item", "A fire staff", owner=PC)
+    assert (project["cost"], project["currency"], project["owner"]) == (1000, "silver", PC)
+    with Session(app.state.engine) as db:
+        pc = load_state(db, campaign_id).characters[name_key(PC)]
+    assert pc.features.get("silver", 0) == 0
+    with pytest.raises(InvalidInput, match="costs 1000 silver"):
+        tools.start_project("Second Staff", "magic_item", "Another staff", owner=PC)
+
+
 def test_a_developed_attribute_focus_stores_a_validated_choice(client_factory):
     client, campaign_id, tools = _wwn_campaign(
         client_factory,

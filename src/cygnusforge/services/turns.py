@@ -354,6 +354,7 @@ def _tool_context(
         features={**world.features},
         checks=rule_set.checks,
         conditions=rule_set.conditions,
+        projects=rule_set.projects,
         moves=rule_set.moves,
         counters=rule_set.counters,
         advancements=rule_set.advancements,

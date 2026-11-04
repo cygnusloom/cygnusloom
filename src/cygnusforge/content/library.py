@@ -1320,6 +1320,20 @@ class ItemRules:
 
 
 @dataclass(frozen=True)
+class ProjectDefinition:
+    """A source-defined long effort: its default target, cost, currency, and required skill."""
+
+    id: str
+    label: str
+    description: str
+    target: int = 1
+    cost: int = 0
+    currency: str = ""
+    skill: str = ""
+    skill_level: int = 0
+
+
+@dataclass(frozen=True)
 class RuleSet:
     """One loaded rule set. The shared systems are grouped into capability objects; the read-only
     aliases below keep older consumers working without flattening the model back into a union."""
@@ -1343,6 +1357,8 @@ class RuleSet:
     conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
     # Checks a character may make with dice, by id, such as a skill check.
     checks: Mapping[str, CheckRules] = field(default_factory=dict)
+    # Source-defined project kinds, by id, such as a magic item or spell research.
+    projects: Mapping[str, ProjectDefinition] = field(default_factory=dict)
     progression: ProgressionRules = field(default_factory=ProgressionRules)
     time: TimeRules = field(default_factory=TimeRules)
     items: ItemRules = field(default_factory=ItemRules)
@@ -2407,6 +2423,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         raise ContentError(f"{label}: 'npc_hp' needs 'npc_hp_stat', the stat its tiers set")
     if npc_hp_stat is not None and npc_hp_stat not in character.stats:
         raise ContentError(f"{label}: 'npc_hp_stat' {npc_hp_stat!r} is not a stat of this rule set")
+    projects = _load_projects(definitions, checks, template)
     enum_sources = {
         "moves": sorted(moves),
         "stats": sorted(character.stats),
@@ -2460,6 +2477,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         combat=combat,
         conditions=conditions,
         checks=checks,
+        projects=projects,
         progression=ProgressionRules(
             counters=counters,
             advancements=advancements,
@@ -4523,6 +4541,35 @@ def _load_marketplace(
         services=tuple(loaded_services),
         hirelings=tuple(hired),
     )
+
+
+def _load_projects(
+    definitions: list[Definition], checks: Mapping[str, CheckRules], label: str
+) -> dict[str, ProjectDefinition]:
+    """Source-defined project kinds by id."""
+    projects: dict[str, ProjectDefinition] = {}
+    for d in definitions:
+        if d.type != "project":
+            continue
+        project_label = f"{label}: project {d.id}"
+        check_keys(
+            d.data,
+            {"type", "id", "label", "description", "target", "cost", "currency", "skill", "skill_level"},
+            project_label,
+        )
+        projects[d.id] = ProjectDefinition(
+            id=d.id,
+            label=required_text(d.data, "label", project_label),
+            description=required_text(d.data, "description", project_label),
+            target=_whole(d.data, "target", project_label, 1) if "target" in d.data else 1,
+            cost=_whole(d.data, "cost", project_label, 0) if "cost" in d.data else 0,
+            currency=_optional_text(d.data, "currency", project_label) or "",
+            skill=_optional_text(d.data, "skill", project_label) or "",
+            skill_level=(
+                _whole(d.data, "skill_level", project_label, 1) if "skill_level" in d.data else 0
+            ),
+        )
+    return projects
 
 
 def _load_conditions(

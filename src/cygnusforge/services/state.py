@@ -288,6 +288,10 @@ class Project:
     progress: int = 0
     notes: list[str] = field(default_factory=list)
     completed: bool = False
+    # What the project cost, and who paid it.
+    cost: int = 0
+    currency: str = ""
+    owner: str = ""
     abandoned: bool = False
 
 
