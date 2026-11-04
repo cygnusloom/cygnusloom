@@ -882,6 +882,19 @@ def test_a_carried_shield_only_blocks_shock_when_wielded(client_factory):
     assert (wielded.hit, wielded.shock, wielded.shield_round) == (False, 0, 1)
 
 
+def test_a_developed_attribute_focus_stores_a_validated_choice(client_factory):
+    client, campaign_id, tools = _wwn_campaign(
+        client_factory,
+        choices={"pick-feature-class_focus_any-0": "focus_developed_attribute"},
+    )
+    tools.choose_feature_choice(PC, "Developed Attribute", "attribute", "str")
+    with Session(client.app.state.engine) as db:
+        pc = load_state(db, campaign_id).characters[name_key(PC)]
+    assert pc.feature_choices["focus_developed_attribute:attribute"] == ["str"]
+    with pytest.raises(InvalidInput, match="not an attribute"):
+        tools.choose_feature_choice(PC, "Developed Attribute", "attribute", "magic")
+
+
 def test_an_execution_against_an_unaware_target_does_maximum_damage(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=30)

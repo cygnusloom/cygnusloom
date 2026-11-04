@@ -79,6 +79,7 @@ from cygnusforge.services.events import (
     PC_KIND,
     ExecutionPrepared,
     ExecutionTaken,
+    FeatureChoiceMade,
     GrappleEnded,
     GrappleStarted,
     MaxChanged,
@@ -1227,6 +1228,58 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 spec=self.character,
                 rules=self.combat,
             )
+
+    def choose_feature_choice(
+        self, name: str, feature: str, pick: str, choice: str
+    ) -> dict[str, Any]:
+        """Record a structured choice for a feature the character has, such as the attribute
+        for Developed Attribute. The choice is validated against the feature's pick."""
+        spec = self.character
+        found = next(
+            (
+                item
+                for item in spec.features.values()
+                if item.id == feature or name_key(item.name) == name_key(feature)
+            ),
+            None,
+        )
+        if found is None:
+            raise InvalidInput(f"there is no feature named {feature!r}")
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            character = state.characters.get(name_key(name))
+            if character is None:
+                raise InvalidInput(f"there is no character named {name!r}")
+            if character.features.get(found.id, 0) <= 0:
+                raise InvalidInput(f"{character.name} does not have {found.name}")
+            rule = next((item for item in found.picks if item.id == pick), None)
+            if rule is None:
+                raise InvalidInput(f"{found.name} has no choice named {pick!r}")
+            choice = choice.strip()
+            if not choice:
+                raise InvalidInput("a feature choice cannot be empty")
+            if rule.kind == "stat" and choice not in spec.stats:
+                raise InvalidInput(f"{choice!r} is not an attribute")
+            if rule.kind == "skill" and choice not in spec.skills:
+                raise InvalidInput(f"{choice!r} is not a skill")
+            if rule.choices and choice not in rule.choices:
+                raise InvalidInput(f"{choice!r} is not one of {', '.join(rule.choices)}")
+            if choice in rule.exclude:
+                raise InvalidInput(f"{choice!r} cannot be chosen for {found.name}")
+            key = f"{found.id}:{pick}"
+            taken = character.feature_choices.get(key, [])
+            allowed = rule.count * character.features.get(found.id, 0)
+            if len(taken) >= allowed:
+                raise InvalidInput(f"{found.name} has no {rule.label} choice left")
+            if rule.kind != "text" and choice in taken:
+                raise InvalidInput(f"{choice!r} is already chosen for {found.name}")
+            record(
+                db,
+                self.campaign_id,
+                FeatureChoiceMade(name=character.name, feature=found.id, pick=pick, choice=choice),
+            )
+            db.commit()
+            return {"character": character.name, "feature": found.id, "pick": pick, "choice": choice}
 
     def prepare_execution(self, name: str, weapon: str) -> dict[str, Any]:
         """Prepare an execution attack with a carried weapon. The target must be unaware or

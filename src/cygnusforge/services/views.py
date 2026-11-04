@@ -196,6 +196,8 @@ def get_statblock(
     if combat is not None:
         lines += _combat_lines(character, spec, combat)
     lines += _status_lines(character, conditions, inventory, hooks, counters)
+    for key, choices in character.feature_choices.items():
+        lines.append(f"Feature choice {key}: {', '.join(choices)}")
     return {
         "name": character.name,
         "kind": kind,

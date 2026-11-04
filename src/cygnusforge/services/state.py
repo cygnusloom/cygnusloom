@@ -232,6 +232,8 @@ class Character:
     # An execution attack prepared against an unaware target. The weapon is the one prepared.
     execution_prepared: bool = False
     execution_weapon: str = ""
+    # Structured feature choices, keyed "feature_id:pick_id", in the order taken.
+    feature_choices: dict[str, list[str]] = field(default_factory=dict)
     # The character is dead. The body stays where the character fell, with its gear.
     dead: bool = False
     # The character has left the story, and the player plays someone else. It can come back later.

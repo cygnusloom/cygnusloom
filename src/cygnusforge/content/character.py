@@ -147,6 +147,21 @@ class DefenseFloor:
 
 
 @dataclass(frozen=True)
+class FeaturePick:
+    """A structured choice a feature requires, such as the attribute for Developed Attribute.
+    `choices` limits the pick and `exclude` removes options; an empty `choices` means every stat
+    or skill of the pick's kind."""
+
+    id: str
+    kind: str
+    label: str
+    choices: tuple[str, ...] = ()
+    exclude: tuple[str, ...] = ()
+    max_value: int = 0
+    count: int = 1
+
+
+@dataclass(frozen=True)
 class Feature:
     """A feature a character can have. An `item` is carried as an inventory item of `size`, with
     `uses` if it is consumed and `armor` added to the character's armor while carried. A `spell`
@@ -189,6 +204,8 @@ class Feature:
     defense_floor: DefenseFloor | None = None
     # A feature that may be taken again as a distinct choice.
     repeatable: bool = False
+    # The structured choices the feature asks the player to make.
+    picks: tuple[FeaturePick, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -896,7 +913,49 @@ def load_feature(
         effects=_feature_effects(data.get("effects", []), label, stats, skills, counters),
         defense_floor=_defense_floor(data.get("defense_floor"), counters, label),
         repeatable=repeatable,
+        picks=_feature_picks(data.get("picks", []), stats, skills, label),
     )
+
+
+def _feature_picks(
+    value: object, stats: Collection[str], skills: Mapping[str, Any], label: str
+) -> tuple[FeaturePick, ...]:
+    """The structured choices a feature asks for."""
+    if not isinstance(value, list):
+        raise ContentError(f"{label}: 'picks' must be a list")
+    picks: list[FeaturePick] = []
+    for entry in value:
+        if not isinstance(entry, Mapping):
+            raise ContentError(f"{label}: each pick must be an object")
+        pick_id = required_text(entry, "id", f"{label}: pick")
+        kind = required_text(entry, "kind", f"{label}: pick {pick_id}")
+        if kind not in ("stat", "skill", "text"):
+            raise ContentError(f"{label}: pick {pick_id!r} kind must be 'stat', 'skill', or 'text'")
+        label_text = required_text(entry, "label", f"{label}: pick {pick_id}")
+        choices = _text_list(entry.get("choices", []), "choices", f"{label}: pick {pick_id}")
+        exclude = _text_list(entry.get("exclude", []), "exclude", f"{label}: pick {pick_id}")
+        allowed = set(stats) if kind == "stat" else set(skills) if kind == "skill" else set()
+        unknown = [name for name in (*choices, *exclude) if allowed and name not in allowed]
+        if unknown:
+            raise ContentError(f"{label}: pick {pick_id!r} names no {kind} ({unknown[0]!r})")
+        max_value = entry.get("max_value", 0)
+        if isinstance(max_value, bool) or not isinstance(max_value, int) or max_value < 0:
+            raise ContentError(f"{label}: pick {pick_id!r} 'max_value' must be 0 or more")
+        count = entry.get("count", 1)
+        if isinstance(count, bool) or not isinstance(count, int) or count < 1:
+            raise ContentError(f"{label}: pick {pick_id!r} 'count' must be at least 1")
+        picks.append(
+            FeaturePick(
+                id=pick_id,
+                kind=kind,
+                label=label_text,
+                choices=choices,
+                exclude=exclude,
+                max_value=max_value,
+                count=count,
+            )
+        )
+    return tuple(picks)
 
 
 def _text_list(value: object, key: str, label: str) -> tuple[str, ...]:

@@ -286,6 +286,40 @@
   },
   {
     "type": "tool_call",
+    "id": "choose_feature_choice",
+    "name": "choose_feature_choice",
+    "world_method": "choose_feature_choice",
+    "description": "Record a structured choice a feature requires, such as the attribute for Developed Attribute or the skill for Specialist. The choice is validated against the feature and appears on the character's sheet.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The character making the choice."
+        },
+        "feature": {
+          "type": "string",
+          "description": "The feature's id or name."
+        },
+        "pick": {
+          "type": "string",
+          "description": "The pick's id, such as attribute or skill."
+        },
+        "choice": {
+          "type": "string",
+          "description": "The chosen stat, skill, or text."
+        }
+      },
+      "required": [
+        "name",
+        "feature",
+        "pick",
+        "choice"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "prepare_execution",
     "name": "prepare_execution",
     "world_method": "prepare_execution",

@@ -2108,6 +2108,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "encumbrance_checks",
             "effects",
             "defense_floor",
+            "picks",
             "repeatable",
         }
     ),

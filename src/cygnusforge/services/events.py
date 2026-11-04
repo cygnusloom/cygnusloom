@@ -1572,6 +1572,26 @@ class ShieldBashed(GameEvent):
 
 
 @dataclass(frozen=True)
+class FeatureChoiceMade(GameEvent):
+    """A structured choice for a feature, such as the attribute for Developed Attribute."""
+
+    kind: ClassVar[str] = "character.feature_choice_made"
+
+    name: str
+    feature: str
+    pick: str
+    choice: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        key = f"{self.feature}:{self.pick}"
+        character.feature_choices.setdefault(key, []).append(self.choice)
+
+    def render(self) -> str:
+        return f"{self.name} chooses {self.choice} for {self.feature} ({self.pick})."
+
+
+@dataclass(frozen=True)
 class ExecutionPrepared(GameEvent):
     """A character spent the preparation time for an execution attack with `weapon`."""
 

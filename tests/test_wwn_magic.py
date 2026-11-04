@@ -530,6 +530,7 @@ def test_wwn_tools_bind_engine_operations_without_wrappers() -> None:
         "end_encounter": "end_encounter",
         "equip_armor": "equip_armor",
         "break_grapple": "break_grapple",
+        "choose_feature_choice": "choose_feature_choice",
         "execute": "execute",
         "give_item": "give_item",
         "grapple": "grapple",

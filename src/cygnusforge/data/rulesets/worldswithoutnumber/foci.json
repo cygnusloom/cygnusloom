@@ -8,8 +8,15 @@
     "rank": 1,
     "description": "Your senses are hard to fool. You gain Notice, cannot be surprised, and enemies cannot use Execution Attacks against you. You also gain an edge on initiative.",
     "effects": [
-      { "op": "skill", "id": "notice", "delta": 1 },
-      { "op": "note", "text": "You cannot be surprised or made the target of an Execution Attack. Add +1 to your side's initiative, or roll twice and keep the better when initiative is individual." }
+      {
+        "op": "skill",
+        "id": "notice",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "You cannot be surprised or made the target of an Execution Attack. Add +1 to your side's initiative, or roll twice and keep the better when initiative is individual."
+      }
     ]
   },
   {
@@ -21,7 +28,10 @@
     "rank": 2,
     "description": "You move before anyone else. You act first in each combat round unless another Alert combatant is present.",
     "effects": [
-      { "op": "note", "text": "You act first in every combat round unless another combatant also has Alert." }
+      {
+        "op": "note",
+        "text": "You act first in every combat round unless another combatant also has Alert."
+      }
     ]
   },
   {
@@ -33,7 +43,10 @@
     "rank": 1,
     "description": "You can cast spells and use arts while wearing light or medium armor of Encumbrance 2 or less, and may use a shield if your other hand is free.",
     "effects": [
-      { "op": "note", "text": "Armor of Encumbrance 2 or less does not prevent spellcasting or arts; a shield is allowed while the other hand is empty. Only mages and partial mages may take this Focus." }
+      {
+        "op": "note",
+        "text": "Armor of Encumbrance 2 or less does not prevent spellcasting or arts; a shield is allowed while the other hand is empty. Only mages and partial mages may take this Focus."
+      }
     ]
   },
   {
@@ -45,7 +58,10 @@
     "rank": 2,
     "description": "You can cast in armor of any weight, and even with both hands full, as long as you are not bound.",
     "effects": [
-      { "op": "note", "text": "No armor weight or occupied hands prevent casting; being physically bound still does." }
+      {
+        "op": "note",
+        "text": "No armor weight or occupied hands prevent casting; being physically bound still does."
+      }
     ]
   },
   {
@@ -57,8 +73,15 @@
     "rank": 1,
     "description": "You gain Stab. You can ready a stowed melee or thrown weapon instantly, and add your Stab level to melee or thrown damage or Shock.",
     "effects": [
-      { "op": "skill", "id": "stab", "delta": 1 },
-      { "op": "note", "text": "Ready a stowed melee or thrown weapon as an Instant action. Add your Stab level to damage or Shock from melee or thrown weapons (not unarmed or projectile attacks)." }
+      {
+        "op": "skill",
+        "id": "stab",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Ready a stowed melee or thrown weapon as an Instant action. Add your Stab level to damage or Shock from melee or thrown weapons (not unarmed or projectile attacks)."
+      }
     ]
   },
   {
@@ -70,7 +93,10 @@
     "rank": 2,
     "description": "Your melee Shock ignores armor up to AC 10, and you gain +1 to hit with melee and thrown attacks.",
     "effects": [
-      { "op": "note", "text": "Melee Shock treats all targets as AC 10. Add +1 to hit with melee and thrown attacks." }
+      {
+        "op": "note",
+        "text": "Melee Shock treats all targets as AC 10. Add +1 to hit with melee and thrown attacks."
+      }
     ]
   },
   {
@@ -82,8 +108,15 @@
     "rank": 1,
     "description": "You gain Craft. Your Craft counts one level higher for building and maintaining mods, and mods you build need one less unit of arcane salvage.",
     "effects": [
-      { "op": "skill", "id": "craft", "delta": 1 },
-      { "op": "note", "text": "Treat Craft as one level higher (maximum 5) for mods. Mods cost one less unit of salvage, to a minimum of one. Ordinary professional work is covered without penalty." }
+      {
+        "op": "skill",
+        "id": "craft",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Treat Craft as one level higher (maximum 5) for mods. Mods cost one less unit of salvage, to a minimum of one. Ordinary professional work is covered without penalty."
+      }
     ]
   },
   {
@@ -95,7 +128,10 @@
     "rank": 2,
     "description": "The first mod on an item needs no upkeep and costs half the silver, masterwork gear is automatic, and once a month you can further reduce a mod's salvage cost.",
     "effects": [
-      { "op": "note", "text": "The first mod added to an item needs no Maintenance and costs half the usual silver. Masterwork gear is built automatically. Once a month, reduce a created mod's salvage cost by one more unit, to a minimum of zero." }
+      {
+        "op": "note",
+        "text": "The first mod added to an item needs no Maintenance and costs half the usual silver. Masterwork gear is built automatically. Once a month, reduce a created mod's salvage cost by one more unit, to a minimum of zero."
+      }
     ]
   },
   {
@@ -107,8 +143,15 @@
     "rank": 1,
     "description": "You gain Sneak. You can conceal a knife-sized object from anything short of a strip search and produce it instantly, and a surprise-round attack with it cannot miss.",
     "effects": [
-      { "op": "skill", "id": "sneak", "delta": 1 },
-      { "op": "note", "text": "Conceal an object no larger than a knife and draw it as an On Turn action. A point-blank melee or thrown attack with it during a surprise round automatically hits." }
+      {
+        "op": "skill",
+        "id": "sneak",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Conceal an object no larger than a knife and draw it as an On Turn action. A point-blank melee or thrown attack with it during a surprise round automatically hits."
+      }
     ]
   },
   {
@@ -120,7 +163,10 @@
     "rank": 2,
     "description": "You can move in the same round as an Execution Attack, splitting the movement before and after the strike.",
     "effects": [
-      { "op": "note", "text": "Take a Move action in the same round as an Execution Attack, dividing it before and after the attack." }
+      {
+        "op": "note",
+        "text": "Take a Move action in the same round as an Execution Attack, dividing it before and after the attack."
+      }
     ]
   },
   {
@@ -132,8 +178,15 @@
     "rank": 1,
     "description": "You gain Lead. Once a day, a Charisma/Lead check against a non-hostile NPC's Morale can make them comply with a request that is not deeply harmful or wildly out of character.",
     "effects": [
-      { "op": "skill", "id": "lead", "delta": 1 },
-      { "op": "note", "text": "Once per day, make a Charisma/Lead check against a non-hostile NPC's Morale; on a success they comply unless the request is significantly harmful or extremely uncharacteristic." }
+      {
+        "op": "skill",
+        "id": "lead",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Once per day, make a Charisma/Lead check against a non-hostile NPC's Morale; on a success they comply unless the request is significantly harmful or extremely uncharacteristic."
+      }
     ]
   },
   {
@@ -145,7 +198,10 @@
     "rank": 2,
     "description": "NPCs you directly lead gain Morale and hit bonuses equal to your Lead, plus +1 on skill checks, and will not act against your interests except under extreme pressure.",
     "effects": [
-      { "op": "note", "text": "NPCs directly led by you gain +Lead to Morale and hit rolls and +1 on skill checks. They will not act against your interests short of extreme pressure." }
+      {
+        "op": "note",
+        "text": "NPCs directly led by you gain +Lead to Morale and hit rolls and +1 on skill checks. They will not act against your interests short of extreme pressure."
+      }
     ]
   },
   {
@@ -157,7 +213,10 @@
     "rank": 1,
     "description": "You gain any combat skill. You can throw knife-sized weapons in melee without penalty, ignore melee Shock while unarmored, and disrupt spellcasting by fighting close.",
     "effects": [
-      { "op": "note", "text": "Gain level-0 in one combat skill (Stab, Shoot, or Punch). Throw knife-sized weapons in melee without penalty. Ignore melee Shock even unarmored, though doing so disrupts your own spellcasting that round." }
+      {
+        "op": "note",
+        "text": "Gain level-0 in one combat skill (Stab, Shoot, or Punch). Throw knife-sized weapons in melee without penalty. Ignore melee Shock even unarmored, though doing so disrupts your own spellcasting that round."
+      }
     ]
   },
   {
@@ -169,7 +228,10 @@
     "rank": 2,
     "description": "Your melee Shock treats all targets as AC 10, and Fighting Withdrawal becomes a free On Turn action.",
     "effects": [
-      { "op": "note", "text": "Your melee Shock treats every target as AC 10. Fighting Withdrawal costs only an On Turn action and may be used freely." }
+      {
+        "op": "note",
+        "text": "Your melee Shock treats every target as AC 10. Fighting Withdrawal costs only an On Turn action and may be used freely."
+      }
     ]
   },
   {
@@ -181,8 +243,15 @@
     "rank": 1,
     "description": "You gain Connect. After a week in a not-hostile place you have contacts who will do mildly illegal favors, one per game day.",
     "effects": [
-      { "op": "skill", "id": "connect", "delta": 1 },
-      { "op": "note", "text": "After a week in a not-hostile location, you know contacts who will do mildly illegal favors. Call on one favor per game day; the GM decides how far they will go." }
+      {
+        "op": "skill",
+        "id": "connect",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "After a week in a not-hostile location, you know contacts who will do mildly illegal favors. Call on one favor per game day; the GM decides how far they will go."
+      }
     ]
   },
   {
@@ -194,7 +263,10 @@
     "rank": 2,
     "description": "Once per session, if it is not entirely implausible, you can meet someone you know who will do modest favors. You choose when and where.",
     "effects": [
-      { "op": "note", "text": "Once per session, meet a known contact who will do modest favors, at a time and place you choose; the GM decides who and what they can do." }
+      {
+        "op": "note",
+        "text": "Once per session, meet a known contact who will do modest favors, at a time and place you choose; the GM decides who and what they can do."
+      }
     ]
   },
   {
@@ -206,8 +278,15 @@
     "rank": 1,
     "description": "You gain Connect. You speak common regional languages fluently, learn new ones quickly, and can call in a minor favor once a day.",
     "effects": [
-      { "op": "skill", "id": "connect", "delta": 1 },
-      { "op": "note", "text": "Speak common regional languages fluently and know basic phrases in uncommon ones; learn a new language in a week with a speaker. Once per game day, gain a minor favor from a non-hostile NPC at little cost or risk to them." }
+      {
+        "op": "skill",
+        "id": "connect",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Speak common regional languages fluently and know basic phrases in uncommon ones; learn a new language in a week with a speaker. Once per game day, gain a minor favor from a non-hostile NPC at little cost or risk to them."
+      }
     ]
   },
   {
@@ -219,7 +298,10 @@
     "rank": 2,
     "description": "Once per session, you can reroll a failed social skill check.",
     "effects": [
-      { "op": "note", "text": "Once per session, reroll a failed social skill check and use the better result." }
+      {
+        "op": "note",
+        "text": "Once per session, reroll a failed social skill check and use the better result."
+      }
     ]
   },
   {
@@ -231,8 +313,15 @@
     "rank": 1,
     "description": "You gain +2 maximum HP per level and automatically stabilize when Mortally Wounded, unless the injury leaves nothing to save.",
     "effects": [
-      { "op": "stat", "id": "hp", "delta": 2 },
-      { "op": "note", "text": "Add +2 maximum HP per character level, retroactively. Automatically stabilize when Mortally Wounded unless incinerated, dismembered, or similarly destroyed." }
+      {
+        "op": "stat",
+        "id": "hp",
+        "delta": 2
+      },
+      {
+        "op": "note",
+        "text": "Add +2 maximum HP per character level, retroactively. Automatically stabilize when Mortally Wounded unless incinerated, dismembered, or similarly destroyed."
+      }
     ]
   },
   {
@@ -244,7 +333,10 @@
     "rank": 2,
     "description": "The first time each day an injury would drop you to 0 HP, you remain at 1 HP instead.",
     "effects": [
-      { "op": "note", "text": "The first injury each day that would reduce you to 0 HP leaves you at 1 HP instead; instantly lethal trauma is unaffected." }
+      {
+        "op": "note",
+        "text": "The first injury each day that would reduce you to 0 HP leaves you at 1 HP instead; instantly lethal trauma is unaffected."
+      }
     ]
   },
   {
@@ -256,8 +348,15 @@
     "rank": 1,
     "description": "You gain Shoot. You can ready a stowed ranged weapon instantly, use bows in melee at -4, and add your Shoot level to ranged damage.",
     "effects": [
-      { "op": "skill", "id": "shoot", "delta": 1 },
-      { "op": "note", "text": "Ready a stowed ranged weapon as an Instant action. Use a bow or two-handed ranged weapon in melee at -4 to hit. Add your Shoot level to ranged damage." }
+      {
+        "op": "skill",
+        "id": "shoot",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Ready a stowed ranged weapon as an Instant action. Use a bow or two-handed ranged weapon in melee at -4 to hit. Add your Shoot level to ranged damage."
+      }
     ]
   },
   {
@@ -269,7 +368,10 @@
     "rank": 2,
     "description": "You reload crossbows and slow weapons quickly, use any ranged weapon in melee without penalty, and once per scene automatically hit an inanimate target.",
     "effects": [
-      { "op": "note", "text": "Reload a crossbow or slow weapon as an On Turn action if reloading takes no more than a round. Use any ranged weapon in melee without penalty. Once per scene, automatically hit an inanimate non-creature target unless you roll a 2 or the shot is impossible." }
+      {
+        "op": "note",
+        "text": "Reload a crossbow or slow weapon as an On Turn action if reloading takes no more than a round. Use any ranged weapon in melee without penalty. Once per scene, automatically hit an inanimate non-creature target unless you roll a 2 or the shot is impossible."
+      }
     ]
   },
   {
@@ -281,8 +383,15 @@
     "rank": 1,
     "description": "You gain Trade. With half an hour you can find a buyer or seller for almost any good or service in a community, legal or otherwise.",
     "effects": [
-      { "op": "skill", "id": "trade", "delta": 1 },
-      { "op": "note", "text": "Spend half an hour to find a buyer or seller for any tradable good or service in the community, legal or not. Marginal requests may require an adventure first." }
+      {
+        "op": "skill",
+        "id": "trade",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Spend half an hour to find a buyer or seller for any tradable good or service in the community, legal or not. Marginal requests may require an adventure first."
+      }
     ]
   },
   {
@@ -294,7 +403,10 @@
     "rank": 2,
     "description": "Once per session, a sentient being not currently trying to kill you agrees to a plausible request for a price or favor.",
     "effects": [
-      { "op": "note", "text": "Once per session, make a plausible request of a sentient being not actively hostile to you; it agrees for a price or favor. Major favors may be expensive." }
+      {
+        "op": "note",
+        "text": "Once per session, make a plausible request of a sentient being not actively hostile to you; it agrees for a price or favor. Major favors may be expensive."
+      }
     ]
   },
   {
@@ -307,7 +419,18 @@
     "repeatable": true,
     "description": "Choose an attribute; its modifier rises by +1, to a maximum of +3. The score itself does not change. May be taken again for another attribute, but not by mages.",
     "effects": [
-      { "op": "note", "text": "Choose one attribute: its modifier improves by +1, to a maximum of +3, without changing the score. Take again for a different attribute. Not available to mages or partial mages." }
+      {
+        "op": "note",
+        "text": "Choose one attribute: its modifier improves by +1, to a maximum of +3, without changing the score. Take again for a different attribute. Not available to mages or partial mages."
+      }
+    ],
+    "picks": [
+      {
+        "id": "attribute",
+        "kind": "stat",
+        "label": "Attribute",
+        "max_value": 3
+      }
     ]
   },
   {
@@ -319,8 +442,15 @@
     "rank": 1,
     "description": "You gain Convince. You speak regional languages, learn new ones quickly, and reroll 1s on negotiation or diplomacy checks.",
     "effects": [
-      { "op": "skill", "id": "convince", "delta": 1 },
-      { "op": "note", "text": "Speak common regional languages; learn a new one to a workable level in a week and to fluency in a month. Reroll 1s on negotiation or diplomacy skill checks." }
+      {
+        "op": "skill",
+        "id": "convince",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Speak common regional languages; learn a new one to a workable level in a week and to fluency in a month. Reroll 1s on negotiation or diplomacy skill checks."
+      }
     ]
   },
   {
@@ -332,7 +462,10 @@
     "rank": 2,
     "description": "Once a day you can silently consecrate a specific, time-limited bargain; breaking it requires a Mental save unless the target's life or something they love is imperiled.",
     "effects": [
-      { "op": "note", "text": "Once per day, silently bind a specific, time-limited bargain. The target must make a Mental save to break it unless their life or something they love is imperiled." }
+      {
+        "op": "note",
+        "text": "Once per day, silently bind a specific, time-limited bargain. The target must make a Mental save to break it unless their life or something they love is imperiled."
+      }
     ]
   },
   {
@@ -344,8 +477,15 @@
     "rank": 1,
     "description": "You gain Heal. You can stabilize an adjacent dying person each round as an On Turn action, roll 3d6 and drop the lowest on Heal checks, and first aid heals double.",
     "effects": [
-      { "op": "skill", "id": "heal", "delta": 1 },
-      { "op": "note", "text": "Stabilize one adjacent Mortally Wounded person per round as an On Turn action. Roll 3d6 and drop the lowest on Heal checks. First aid after battle restores twice the usual HP." }
+      {
+        "op": "skill",
+        "id": "heal",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Stabilize one adjacent Mortally Wounded person per round as an On Turn action. Roll 3d6 and drop the lowest on Heal checks. First aid after battle restores twice the usual HP."
+      }
     ]
   },
   {
@@ -357,7 +497,10 @@
     "rank": 2,
     "description": "Your healing is magical. As a Main Action you heal an adjacent wounded ally 1d6 + Heal, which can revive them without Frailty, at the cost of 1 System Strain.",
     "effects": [
-      { "op": "note", "text": "As a Main Action, heal an adjacent wounded ally for 1d6 + Heal skill. This can revive them without lingering Frailty. Each use adds 1 System Strain to the target and cannot be used at maximum Strain." }
+      {
+        "op": "note",
+        "text": "As a Main Action, heal an adjacent wounded ally for 1d6 + Heal skill. This can revive them without lingering Frailty. Each use adds 1 System Strain to the target and cannot be used at maximum Strain."
+      }
     ]
   },
   {
@@ -369,8 +512,15 @@
     "rank": 1,
     "description": "You gain Lead. Within a day of reaching a community you can recruit henchmen, up to one per three levels, who will escort and guard you.",
     "effects": [
-      { "op": "skill", "id": "lead", "delta": 1 },
-      { "op": "note", "text": "Acquire suitable henchmen within 24 hours of entering a community. Maximum one per three levels, rounded up. Henchmen escort and take risks but fight only for their own lives. Civilized henchmen use the Peaceful Human stat line." }
+      {
+        "op": "skill",
+        "id": "lead",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Acquire suitable henchmen within 24 hours of entering a community. Maximum one per three levels, rounded up. Henchmen escort and take risks but fight only for their own lives. Civilized henchmen use the Peaceful Human stat line."
+      }
     ]
   },
   {
@@ -382,7 +532,10 @@
     "rank": 2,
     "description": "Your henchmen fight unless hopelessly outmatched and count as veteran soldiers; skilled NPCs become loyal after a significant favor.",
     "effects": [
-      { "op": "note", "text": "Henchmen fight for you unless clearly overwhelmed and use the Veteran Soldier stat line. Skilled NPCs become faithful only after a significant favor." }
+      {
+        "op": "note",
+        "text": "Henchmen fight for you unless clearly overwhelmed and use the Veteran Soldier stat line. Skilled NPCs become faithful only after a significant favor."
+      }
     ]
   },
   {
@@ -393,9 +546,16 @@
     "tag": "focus",
     "rank": 1,
     "description": "You have an innate Armor Class of 15 plus half your level, rounded up. It does not stack with worn armor, but Dexterity and shields still apply.",
-    "defense_floor": { "base": 15, "counter": "level", "divisor": 2 },
+    "defense_floor": {
+      "base": 15,
+      "counter": "level",
+      "divisor": 2
+    },
     "effects": [
-      { "op": "note", "text": "Innate AC 15 + half level, rounded up. This does not stack with worn armor; Dexterity and shield modifiers still apply." }
+      {
+        "op": "note",
+        "text": "Innate AC 15 + half level, rounded up. This does not stack with worn armor; Dexterity and shield modifiers still apply."
+      }
     ]
   },
   {
@@ -407,7 +567,10 @@
     "rank": 2,
     "description": "Once a day, as an Instant action, you can shrug off one weapon attack or physical trauma that armor could plausibly stop.",
     "effects": [
-      { "op": "note", "text": "Once per day, as an Instant action, ignore one weapon attack or physical trauma. Environmental harm or harm no strong armor could stop cannot be resisted this way." }
+      {
+        "op": "note",
+        "text": "Once per day, as an Instant action, ignore one weapon attack or physical trauma. Environmental harm or harm no strong armor could stop cannot be resisted this way."
+      }
     ]
   },
   {
@@ -419,7 +582,10 @@
     "rank": 1,
     "description": "You gain Perform or Sneak. Once per scene you can reroll a check or save to maintain a disguise, and you hold one false identity of minor importance.",
     "effects": [
-      { "op": "note", "text": "Gain level-0 in Perform or Sneak. Once per scene, reroll a failed check or save to maintain an imposture or disguise. Hold one false identity of minor social importance, changeable with a week's work." }
+      {
+        "op": "note",
+        "text": "Gain level-0 in Perform or Sneak. Once per scene, reroll a failed check or save to maintain an imposture or disguise. Hold one false identity of minor social importance, changeable with a week's work."
+      }
     ]
   },
   {
@@ -431,7 +597,10 @@
     "rank": 2,
     "description": "As a Main Action you can switch among three chosen appearances, and you can establish a new false identity in each significant community after a day.",
     "effects": [
-      { "op": "note", "text": "As a Main Action, change among three chosen appearances. Establish a new false identity in each city or significant community where you spend at least a day." }
+      {
+        "op": "note",
+        "text": "As a Main Action, change among three chosen appearances. Establish a new false identity in each city or significant community where you spend at least a day."
+      }
     ]
   },
   {
@@ -443,7 +612,10 @@
     "rank": 1,
     "description": "Once a week, a blow or effect that would kill, mortally wound, or helplessly disable you fails instead. Roll all chance-based rolls twice and keep the better.",
     "effects": [
-      { "op": "note", "text": "Once per week, a blow or effect that would kill, Mortally Wound, or helplessly disable you fails to affect you. Roll all chance-based rolls twice and keep the better. Requires an attribute modifier of -1 or less." }
+      {
+        "op": "note",
+        "text": "Once per week, a blow or effect that would kill, Mortally Wound, or helplessly disable you fails to affect you. Roll all chance-based rolls twice and keep the better. Requires an attribute modifier of -1 or less."
+      }
     ]
   },
   {
@@ -455,7 +627,10 @@
     "rank": 2,
     "description": "Once per session, in peril, roll 1d6: on 2 or more something fortunate happens; on a 1 the situation worsens as the GM decides.",
     "effects": [
-      { "op": "note", "text": "Once per session while in peril, roll 1d6: on 2 or more something fortunate happens; on a 1 the situation immediately worsens as the GM sees fit." }
+      {
+        "op": "note",
+        "text": "Once per session while in peril, roll 1d6: on 2 or more something fortunate happens; on a 1 the situation immediately worsens as the GM sees fit."
+      }
     ]
   },
   {
@@ -467,7 +642,10 @@
     "rank": 1,
     "description": "You and allies within 20 feet gain +2 on saves against magic. You can sense magic nearby as an On Turn action, and your first failed magical save each day becomes a success.",
     "effects": [
-      { "op": "note", "text": "You and allies within 20 feet gain +2 on saves against magical effects. As an On Turn action, sense nearby magic without learning its details or source. Your first failed save against magic each day becomes a success. Not available to mages or partial mages." }
+      {
+        "op": "note",
+        "text": "You and allies within 20 feet gain +2 on saves against magical effects. As an On Turn action, sense nearby magic without learning its details or source. Your first failed save against magic each day becomes a success. Not available to mages or partial mages."
+      }
     ]
   },
   {
@@ -479,7 +657,10 @@
     "rank": 2,
     "description": "Once a day, as an Instant action, you ignore an unwanted magical effect or supernatural ability, even one that normally allows no save; a persistent effect is suppressed for the scene.",
     "effects": [
-      { "op": "note", "text": "Once per day, as an Instant action, ignore one unwanted magical effect or supernatural monstrous ability, even one that normally allows no save. A persistent effect stays suppressed for the rest of the scene." }
+      {
+        "op": "note",
+        "text": "Once per day, as an Instant action, ignore one unwanted magical effect or supernatural monstrous ability, even one that normally allows no save. A persistent effect stays suppressed for the rest of the scene."
+      }
     ]
   },
   {
@@ -491,8 +672,14 @@
     "rank": 1,
     "description": "You are a self-willed automaton, probably humanoid and possibly human enough to pass inspection. You need no food, drink, or breath, are immune to disease, poison, and natural temperature extremes, and recharge instead of sleeping, but long ages have degraded one attribute.",
     "effects": [
-      { "op": "note", "text": "Automaton traits: you do not need to eat, drink, or breathe, and are immune to disease, poison, and natural climatic extremes of temperature. You recharge for six hours a day in place of sleep. Healing and similar effects work on you and cost System Strain as usual. At zero hit points you are mortally wounded and can still be stabilized by someone who knows how to repair you; if you die, you are broken beyond conventional repair." },
-      { "op": "note", "text": "Choose one attribute; its modifier decreases by 1, to a minimum of -2. Your form is humanoid, and at your option human-like enough that only close inspection reveals your nature. This origin needs the GM's permission." }
+      {
+        "op": "note",
+        "text": "Automaton traits: you do not need to eat, drink, or breathe, and are immune to disease, poison, and natural climatic extremes of temperature. You recharge for six hours a day in place of sleep. Healing and similar effects work on you and cost System Strain as usual. At zero hit points you are mortally wounded and can still be stabilized by someone who knows how to repair you; if you die, you are broken beyond conventional repair."
+      },
+      {
+        "op": "note",
+        "text": "Choose one attribute; its modifier decreases by 1, to a minimum of -2. Your form is humanoid, and at your option human-like enough that only close inspection reveals your nature. This origin needs the GM's permission."
+      }
     ]
   },
   {
@@ -504,8 +691,15 @@
     "rank": 1,
     "description": "You are a Drudge of unusual intellect and capacity for violence. You gain Exert, gain +1 Strength and Constitution modifiers, take -1 Intelligence and Charisma modifiers, and take -2 on all Mental saving throws.",
     "effects": [
-      { "op": "skill", "id": "exert", "delta": 1 },
-      { "op": "note", "text": "Your Strength and Constitution modifiers increase by 1, up to a maximum of +2; your Intelligence and Charisma modifiers decrease by 1, to a minimum of -2. You suffer a -2 penalty on all Mental saving throws." }
+      {
+        "op": "skill",
+        "id": "exert",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Your Strength and Constitution modifiers increase by 1, up to a maximum of +2; your Intelligence and Charisma modifiers decrease by 1, to a minimum of -2. You suffer a -2 penalty on all Mental saving throws."
+      }
     ]
   },
   {
@@ -517,8 +711,15 @@
     "rank": 1,
     "description": "You are a dwarf, a demihuman weapon-race of the ancient Outsiders. You gain Craft, sense solid objects within 20 feet as if by sight, add +2 to saves against hostile magic, need only half the usual food, water, and air, and gain +1 to your hit point die each level.",
     "effects": [
-      { "op": "skill", "id": "craft", "delta": 1 },
-      { "op": "note", "text": "Surrounding-sense out to 20 feet: you distinguish solid objects as if using your sense of sight. You gain +2 on all saves against hostile magical effects, need only half the usual food, water, and air, and gain +1 to your hit point die at each level." }
+      {
+        "op": "skill",
+        "id": "craft",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Surrounding-sense out to 20 feet: you distinguish solid objects as if using your sense of sight. You gain +2 on all saves against hostile magical effects, need only half the usual food, water, and air, and gain +1 to your hit point die at each level."
+      }
     ]
   },
   {
@@ -530,9 +731,19 @@
     "rank": 1,
     "description": "You are a reincarnated transhuman drawing on fragments of past lives. You gain Notice, a bonus skill of your choice with a daily reroll, and clear sight in anything short of complete darkness; no attribute score stays below 9.",
     "effects": [
-      { "op": "skill", "id": "notice", "delta": 1 },
-      { "op": "note", "text": "Choose any skill as a bonus skill reflecting your past memories; once per day you may reroll a failed check with it. You see clearly in anything short of complete darkness." },
-      { "op": "note", "text": "Any attribute score below 9 must be raised to 9 by moving points from your other attributes; afflictions gained after play begins can still lower a score below that floor." }
+      {
+        "op": "skill",
+        "id": "notice",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Choose any skill as a bonus skill reflecting your past memories; once per day you may reroll a failed check with it. You see clearly in anything short of complete darkness."
+      },
+      {
+        "op": "note",
+        "text": "Any attribute score below 9 must be raised to 9 by moving points from your other attributes; afflictions gained after play begins can still lower a score below that floor."
+      }
     ]
   },
   {
@@ -544,9 +755,20 @@
     "rank": 1,
     "description": "You are an unusually human-tolerant Great Anak who can function in human society if your nature is hidden. You gain Stab and Punch, gain +1 Strength and Constitution modifiers, and take -1 Dexterity and Charisma modifiers.",
     "effects": [
-      { "op": "skill", "id": "stab", "delta": 1 },
-      { "op": "skill", "id": "punch", "delta": 1 },
-      { "op": "note", "text": "Your Strength and Constitution modifiers increase by 1, up to a maximum of +2; your Dexterity and Charisma modifiers decrease by 1, to a minimum of -2. Unless you look unusually human, life in human lands is extremely difficult." }
+      {
+        "op": "skill",
+        "id": "stab",
+        "delta": 1
+      },
+      {
+        "op": "skill",
+        "id": "punch",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Your Strength and Constitution modifiers increase by 1, up to a maximum of +2; your Dexterity and Charisma modifiers decrease by 1, to a minimum of -2. Unless you look unusually human, life in human lands is extremely difficult."
+      }
     ]
   },
   {
@@ -558,8 +780,15 @@
     "rank": 1,
     "description": "You were separated from your herd and grew to human intellect. You gain Survive, gain +1 Constitution modifier, are immune to natural extremes of heat and cold, can eat any plant matter a ruminant could, and take -2 on all Mental saves.",
     "effects": [
-      { "op": "skill", "id": "survive", "delta": 1 },
-      { "op": "note", "text": "Your Constitution modifier increases by 1, up to a maximum of +2. You are immune to natural extremes of heat and cold and can digest any plant matter a normal ruminant could. Your isolation from the herd inflicts a -2 penalty on all Mental saving throws." }
+      {
+        "op": "skill",
+        "id": "survive",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Your Constitution modifier increases by 1, up to a maximum of +2. You are immune to natural extremes of heat and cold and can digest any plant matter a normal ruminant could. Your isolation from the herd inflicts a -2 penalty on all Mental saving throws."
+      }
     ]
   },
   {
@@ -571,9 +800,20 @@
     "rank": 1,
     "description": "You are a Houri who has broken the lure of enforced happiness. You gain Convince and Perform, gain +1 Charisma modifier, but take -2 on all Mental saving throws.",
     "effects": [
-      { "op": "skill", "id": "convince", "delta": 1 },
-      { "op": "skill", "id": "perform", "delta": 1 },
-      { "op": "note", "text": "Your Charisma modifier increases by 1, up to a maximum of +2. You are innately susceptible to mental influence, taking a -2 penalty on all Mental saving throws. Obeying orders still gives you an emotional rush, but it does not control your decisions." }
+      {
+        "op": "skill",
+        "id": "convince",
+        "delta": 1
+      },
+      {
+        "op": "skill",
+        "id": "perform",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Your Charisma modifier increases by 1, up to a maximum of +2. You are innately susceptible to mental influence, taking a -2 penalty on all Mental saving throws. Obeying orders still gives you an emotional rush, but it does not control your decisions."
+      }
     ]
   },
   {
@@ -585,9 +825,20 @@
     "rank": 1,
     "description": "You are a humane Lesser Anak, smaller and spindlier than the Great Anak. You gain Stab and Sneak, gain +1 Dexterity modifier, and take -1 Constitution modifier.",
     "effects": [
-      { "op": "skill", "id": "stab", "delta": 1 },
-      { "op": "skill", "id": "sneak", "delta": 1 },
-      { "op": "note", "text": "Your Dexterity modifier increases by 1, up to a maximum of +2; your Constitution modifier decreases by 1, to a minimum of -2. You function in human society only if your nature is hidden." }
+      {
+        "op": "skill",
+        "id": "stab",
+        "delta": 1
+      },
+      {
+        "op": "skill",
+        "id": "sneak",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Your Dexterity modifier increases by 1, up to a maximum of +2; your Constitution modifier decreases by 1, to a minimum of -2. You function in human society only if your nature is hidden."
+      }
     ]
   },
   {
@@ -599,8 +850,14 @@
     "rank": 1,
     "description": "You are a sentient undead able to pass as human. You need not eat, drink, or breathe; you are immune to poison, disease, sleep, and unconsciousness and indifferent to natural heat and cold; healing needs your own or a Necromancer's aid; and one attribute modifier is reduced by 1.",
     "effects": [
-      { "op": "note", "text": "Undead qualities: you cannot be poisoned, diseased, or made to sleep or fall unconscious, and you need not eat, drink, or breathe. You are indifferent to normal extremes of heat or cold, do not decay further, and self-repair at normal healing rates. Conventional healing fails on you unless you use it yourself, a Necromancer does, or another person skilled in maintaining dead flesh does. Ordinary undead are destroyed at zero hit points, but as a PC you automatically stabilize instead." },
-      { "op": "note", "text": "Choose one attribute; its modifier decreases by 1, to a minimum of -2. You can teach allies how to use healing effects on you. You can masquerade as a normal human unless closely inspected; if you can pass perfectly, choose one debility or vulnerability from the undead qualities. This origin needs the GM's permission." }
+      {
+        "op": "note",
+        "text": "Undead qualities: you cannot be poisoned, diseased, or made to sleep or fall unconscious, and you need not eat, drink, or breathe. You are indifferent to normal extremes of heat or cold, do not decay further, and self-repair at normal healing rates. Conventional healing fails on you unless you use it yourself, a Necromancer does, or another person skilled in maintaining dead flesh does. Ordinary undead are destroyed at zero hit points, but as a PC you automatically stabilize instead."
+      },
+      {
+        "op": "note",
+        "text": "Choose one attribute; its modifier decreases by 1, to a minimum of -2. You can teach allies how to use healing effects on you. You can masquerade as a normal human unless closely inspected; if you can pass perfectly, choose one debility or vulnerability from the undead qualities. This origin needs the GM's permission."
+      }
     ]
   },
   {
@@ -612,8 +869,15 @@
     "rank": 1,
     "description": "You gain Heal. You can reroll a failed save against poison, brew toxins that deal 2d6 + level with a Physical save for half, and keep doses equal to your level.",
     "effects": [
-      { "op": "skill", "id": "heal", "delta": 1 },
-      { "op": "note", "text": "Reroll a failed save against poison. Brew a toxin in an hour that deals 2d6 + level damage on a hit or Shock, with a Physical save for half. Keep fresh doses equal to your level. Blade venom lasts 10 minutes or until a hit or Shock." }
+      {
+        "op": "skill",
+        "id": "heal",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Reroll a failed save against poison. Brew a toxin in an hour that deals 2d6 + level damage on a hit or Shock, with a Physical save for half. Keep fresh doses equal to your level. Blade venom lasts 10 minutes or until a hit or Shock."
+      }
     ]
   },
   {
@@ -625,7 +889,10 @@
     "rank": 2,
     "description": "You are immune to poison and can apply a universal antidote as a Main Action. Your poisons are harder to detect and resist, and ingested doses can be made non-lethal.",
     "effects": [
-      { "op": "note", "text": "Immune to poison. As a Main Action, apply a universal antidote to a poisoned ally. Detecting or saving against your poisons takes a penalty equal to your Heal skill. Ingested poisons can be made non-lethal and count as Execution Attacks against the unwary." }
+      {
+        "op": "note",
+        "text": "Immune to poison. As a Main Action, apply a universal antidote to a poisoned ally. Detecting or saving against your poisons takes a penalty equal to your Heal skill. Ingested poisons can be made non-lethal and count as Execution Attacks against the unwary."
+      }
     ]
   },
   {
@@ -637,7 +904,10 @@
     "rank": 1,
     "description": "You gain any one bonus skill. You treat every non-combat skill as at least level-0, even untrained ones.",
     "effects": [
-      { "op": "note", "text": "Gain one bonus skill. Treat all non-combat skills as at least level-0 for checks, even if untrained. Only experts and partial experts may take this Focus." }
+      {
+        "op": "note",
+        "text": "Gain one bonus skill. Treat all non-combat skills as at least level-0 for checks, even if untrained. Only experts and partial experts may take this Focus."
+      }
     ]
   },
   {
@@ -649,7 +919,10 @@
     "rank": 2,
     "description": "You treat every non-combat skill as at least level-1; these phantom levels do not stack with real levels or reduce training costs.",
     "effects": [
-      { "op": "note", "text": "Treat all non-combat skills as at least level-1 for checks. Phantom levels do not stack with real levels or discount training." }
+      {
+        "op": "note",
+        "text": "Treat all non-combat skills as at least level-1 for checks. Phantom levels do not stack with real levels or discount training."
+      }
     ]
   },
   {
@@ -661,8 +934,15 @@
     "rank": 1,
     "description": "You gain Ride. Your mount has Morale 12, uses your AC if better, travels half again as far in a day, and you can communicate with riding beasts.",
     "effects": [
-      { "op": "skill", "id": "ride", "delta": 1 },
-      { "op": "note", "text": "Your steed counts as Morale 12 in battle and uses your AC if higher. It travels 50% farther in a day. You communicate intuitively with riding beasts." }
+      {
+        "op": "skill",
+        "id": "ride",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Your steed counts as Morale 12 in battle and uses your AC if higher. It travels 50% farther in a day. You communicate intuitively with riding beasts."
+      }
     ]
   },
   {
@@ -674,7 +954,10 @@
     "rank": 2,
     "description": "Once per scene you can negate a hit on your steed, once per scene reroll a failed Ride check, and you can send simple thoughts to a bonded mount within 200 feet.",
     "effects": [
-      { "op": "note", "text": "Once per scene, negate a successful attack on your steed as an Instant action. Once per scene, reroll a failed Ride check. Send simple warnings and commands to a bonded mount within 200 feet." }
+      {
+        "op": "note",
+        "text": "Once per scene, negate a successful attack on your steed as an Instant action. Once per scene, reroll a failed Ride check. Send simple warnings and commands to a bonded mount within 200 feet."
+      }
     ]
   },
   {
@@ -686,7 +969,10 @@
     "rank": 1,
     "description": "You gain Punch or Stab. Your weapon's Shock treats targets as AC 10 when it can hurt them and they are not Shock-immune.",
     "effects": [
-      { "op": "note", "text": "Gain level-0 in Punch or Stab. Your weapon's Shock treats all targets as AC 10 when the weapon can harm them and they are not Shock-immune." }
+      {
+        "op": "note",
+        "text": "Gain level-0 in Punch or Stab. Your weapon's Shock treats all targets as AC 10 when the weapon can harm them and they are not Shock-immune."
+      }
     ]
   },
   {
@@ -698,7 +984,10 @@
     "rank": 2,
     "description": "Melee and unarmed Shock rises by +2, and a normal hit never deals less than its Shock would on a miss.",
     "effects": [
-      { "op": "note", "text": "Add +2 to the Shock of melee weapons and unarmed attacks that have Shock. A normal hit deals at least the Shock it would deal on a miss." }
+      {
+        "op": "note",
+        "text": "Add +2 to the Shock of melee weapons and unarmed attacks that have Shock. A normal hit deals at least the Shock it would deal on a miss."
+      }
     ]
   },
   {
@@ -710,8 +999,15 @@
     "rank": 1,
     "description": "You gain Shoot. Ranged Execution Attacks and target shooting roll 3d6 and drop the lowest, with bows, hurlants, or thrown weapons.",
     "effects": [
-      { "op": "skill", "id": "shoot", "delta": 1 },
-      { "op": "note", "text": "Roll 3d6 and drop the lowest on ranged Execution Attacks and target shooting with bows, hurlants, or thrown weapons." }
+      {
+        "op": "skill",
+        "id": "shoot",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Roll 3d6 and drop the lowest on ranged Execution Attacks and target shooting with bows, hurlants, or thrown weapons."
+      }
     ]
   },
   {
@@ -723,7 +1019,10 @@
     "rank": 2,
     "description": "Your ranged Execution Attacks do not miss; the target takes -4 on the Physical save against mortal injury and still takes double damage on a success.",
     "effects": [
-      { "op": "note", "text": "Ranged Execution Attacks cannot miss. The target takes -4 on the Physical save against immediate mortal injury and takes double normal damage even on a successful save." }
+      {
+        "op": "note",
+        "text": "Ranged Execution Attacks cannot miss. The target takes -4 on the Physical save against immediate mortal injury and takes double normal damage even on a successful save."
+      }
     ]
   },
   {
@@ -735,7 +1034,10 @@
     "rank": 0,
     "description": "With the GM's permission, this Focus represents a nonhuman origin. Its specific benefits are defined by the species in the bestiary.",
     "effects": [
-      { "op": "note", "text": "Spend a Focus pick on a nonhuman origin with GM permission. The origin's benefits come from its bestiary entry. Cosmetic origins with no mechanical benefit need no Focus." }
+      {
+        "op": "note",
+        "text": "Spend a Focus pick on a nonhuman origin with GM permission. The origin's benefits come from its bestiary entry. Cosmetic origins with no mechanical benefit need no Focus."
+      }
     ]
   },
   {
@@ -748,7 +1050,23 @@
     "repeatable": true,
     "description": "Choose a skill other than Magic, Stab, Shoot, or Punch. Roll 3d6 and drop the lowest on checks with it. May be taken again for another skill.",
     "effects": [
-      { "op": "note", "text": "Choose one skill other than Magic, Stab, Shoot, or Punch. Roll 3d6 and drop the lowest on checks with it. Take again for a different skill." }
+      {
+        "op": "note",
+        "text": "Choose one skill other than Magic, Stab, Shoot, or Punch. Roll 3d6 and drop the lowest on checks with it. Take again for a different skill."
+      }
+    ],
+    "picks": [
+      {
+        "id": "skill",
+        "kind": "skill",
+        "label": "Skill",
+        "exclude": [
+          "magic",
+          "stab",
+          "shoot",
+          "punch"
+        ]
+      }
     ]
   },
   {
@@ -760,7 +1078,23 @@
     "rank": 2,
     "description": "Roll 4d6 and drop the two lowest on checks with the chosen skill.",
     "effects": [
-      { "op": "note", "text": "Roll 4d6 and drop the two lowest on checks with the chosen skill." }
+      {
+        "op": "note",
+        "text": "Roll 4d6 and drop the two lowest on checks with the chosen skill."
+      }
+    ],
+    "picks": [
+      {
+        "id": "skill",
+        "kind": "skill",
+        "label": "Skill",
+        "exclude": [
+          "magic",
+          "stab",
+          "shoot",
+          "punch"
+        ]
+      }
     ]
   },
   {
@@ -772,7 +1106,17 @@
     "rank": 1,
     "description": "You gain a familiar between cat and human size with the traits of an evoked servitor. You can summon or dismiss it as a Main Action, it needs no food or sleep, and once a day it refreshes one point of committed Effort.",
     "effects": [
-      { "op": "note", "text": "Gain a familiar no smaller than a cat and no larger than a human, using the Evoked Servitor traits. Summon or dismiss it as a Main Action in melee range. It carries nothing and needs no food, water, or sleep. If killed, it cannot return for 24 hours. Once per day, it refreshes one point of your committed Effort." }
+      {
+        "op": "note",
+        "text": "Gain a familiar no smaller than a cat and no larger than a human, using the Evoked Servitor traits. Summon or dismiss it as a Main Action in melee range. It carries nothing and needs no food, water, or sleep. If killed, it cannot return for 24 hours. Once per day, it refreshes one point of your committed Effort."
+      }
+    ],
+    "picks": [
+      {
+        "id": "shape",
+        "kind": "text",
+        "label": "Familiar shape (record the chosen form in play)"
+      }
     ]
   },
   {
@@ -785,7 +1129,18 @@
     "repeatable": true,
     "description": "Choose two familiar benefits: extra HP, a scaling attack, a skill bonus, another shape, flight, or speech. May be taken again for two more.",
     "effects": [
-      { "op": "note", "text": "Choose two benefits for the familiar: HP equal to three times your level; an attack at +half level for 1d8; +1 on a broad class of skill checks; another shape it can adopt or discard; flight at its normal move; or speech in any language you know. Take again for two more benefits." }
+      {
+        "op": "note",
+        "text": "Choose two benefits for the familiar: HP equal to three times your level; an attack at +half level for 1d8; +1 on a broad class of skill checks; another shape it can adopt or discard; flight at its normal move; or speech in any language you know. Take again for two more benefits."
+      }
+    ],
+    "picks": [
+      {
+        "id": "benefit",
+        "kind": "text",
+        "label": "Familiar benefit (choose two each time)",
+        "count": 2
+      }
     ]
   },
   {
@@ -797,8 +1152,15 @@
     "rank": 1,
     "description": "You gain Notice. Once per scene you can reroll a failed check or save involving traps, and in five minutes you can rig a portal or passage with a snare, caltrops, or needles.",
     "effects": [
-      { "op": "skill", "id": "notice", "delta": 1 },
-      { "op": "note", "text": "Once per scene, reroll a failed check or save related to traps or snares. In five minutes, rig a portal, container, passage, or narrow space. A non-lethal trap costs the first victim a round; a dangerous trap deals 1d6 + twice your level with a save for half. Only one improvised trap may be active." }
+      {
+        "op": "skill",
+        "id": "notice",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Once per scene, reroll a failed check or save related to traps or snares. In five minutes, rig a portal, container, passage, or narrow space. A non-lethal trap costs the first victim a round; a dangerous trap deals 1d6 + twice your level with a save for half. Only one improvised trap may be active."
+      }
     ]
   },
   {
@@ -810,7 +1172,10 @@
     "rank": 2,
     "description": "Once per scene your work counts as an Extirpate Arcana spell against a trap or hazard, cast at twice your level, using Int/Notice or Dex/Notice.",
     "effects": [
-      { "op": "note", "text": "Once per scene, treat your efforts as an Extirpate Arcana spell against a trap or hazard, cast as if you were twice your level. Use an Int/Notice or Dex/Notice check. Stationary magical effects that the spell could dispel are affected." }
+      {
+        "op": "note",
+        "text": "Once per scene, treat your efforts as an Extirpate Arcana spell against a trap or hazard, cast as if you were twice your level. Use an Int/Notice or Dex/Notice check. Stationary magical effects that the spell could dispel are affected."
+      }
     ]
   },
   {
@@ -822,8 +1187,15 @@
     "rank": 1,
     "description": "You gain Punch. Your unarmed strikes count as melee weapons for binding foes, deal more damage as Punch rises, and at Punch-1 gain Shock against AC 15 or less.",
     "effects": [
-      { "op": "skill", "id": "punch", "delta": 1 },
-      { "op": "note", "text": "Unarmed attacks count as melee weapons for binding foes with bows and long arms when you have a free hand. Unarmed damage by Punch level is 1d6 at 0, 1d8 at 1, 1d10 at 2, 1d12 at 3, and 1d12+1 at 4. At Punch-1 or better, unarmed attacks gain Shock equal to Punch against AC 15 or less; do not add Punch twice to Shock." }
+      {
+        "op": "skill",
+        "id": "punch",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Unarmed attacks count as melee weapons for binding foes with bows and long arms when you have a free hand. Unarmed damage by Punch level is 1d6 at 0, 1d8 at 1, 1d10 at 2, 1d12 at 3, and 1d12+1 at 4. At Punch-1 or better, unarmed attacks gain Shock equal to Punch against AC 15 or less; do not add Punch twice to Shock."
+      }
     ]
   },
   {
@@ -835,7 +1207,10 @@
     "rank": 2,
     "description": "Even when your punch misses, you deal 1d6 plus the Shock the blow would have inflicted.",
     "effects": [
-      { "op": "note", "text": "A missed punch still deals 1d6 damage plus any Shock the blow would have inflicted." }
+      {
+        "op": "note",
+        "text": "A missed punch still deals 1d6 damage plus any Shock the blow would have inflicted."
+      }
     ]
   },
   {
@@ -847,7 +1222,10 @@
     "rank": 1,
     "description": "A special ability outside the other Foci, defined by you and the GM. It may be revised if it proves too strong or too weak.",
     "effects": [
-      { "op": "note", "text": "Define a unique ability with the GM. The group may revisit its power if play shows it to be too strong or too weak." }
+      {
+        "op": "note",
+        "text": "Define a unique ability with the GM. The group may revisit its power if play shows it to be too strong or too weak."
+      }
     ]
   },
   {
@@ -859,7 +1237,10 @@
     "rank": 1,
     "description": "You gain Stab or Punch. You gain +2 on Screen Ally checks, can screen one extra attacker each round, and can once per round screen against spells or area effects.",
     "effects": [
-      { "op": "note", "text": "Gain level-0 in Stab or Punch. Add +2 on Screen Ally checks and screen one more attacker per round than normal. Once per round, screen against an intangible spell or magical attack, or shield allies from area magic; the assailant's Magic check opposes you." }
+      {
+        "op": "note",
+        "text": "Gain level-0 in Stab or Punch. Add +2 on Screen Ally checks and screen one more attacker per round than normal. Once per round, screen against an intangible spell or magical attack, or shield allies from area magic; the assailant's Magic check opposes you."
+      }
     ]
   },
   {
@@ -871,7 +1252,10 @@
     "rank": 2,
     "description": "Your first Screen Ally check each round succeeds, you gain +2 AC while screening, and you can screen against foes as large as ogres.",
     "effects": [
-      { "op": "note", "text": "The first Screen Ally check each round automatically succeeds. Gain +2 AC while screening. Screen against foes as large as ogres or oxen." }
+      {
+        "op": "note",
+        "text": "The first Screen Ally check each round automatically succeeds. Gain +2 AC while screening. Screen against foes as large as ogres or oxen."
+      }
     ]
   },
   {
@@ -883,7 +1267,10 @@
     "rank": 1,
     "description": "Your presence improves reaction rolls by +1, and hostile encounters usually allow a round of parley unless violence is clearly intended.",
     "effects": [
-      { "op": "note", "text": "Reaction rolls made by encountered beings gain +1 while you are present. Hostile encounters usually allow one round of parley unless there is an ambush or a clear reason for violence." }
+      {
+        "op": "note",
+        "text": "Reaction rolls made by encountered beings gain +1 while you are present. Hostile encounters usually allow one round of parley unless there is an ambush or a clear reason for violence."
+      }
     ]
   },
   {
@@ -895,7 +1282,10 @@
     "rank": 2,
     "description": "Once per session, a reaction roll turns the subject as friendly and helpful as is plausible; this works only once per target.",
     "effects": [
-      { "op": "note", "text": "Once per session when a reaction roll is made, the subject becomes as friendly and helpful as is plausible; the GM decides why. Works only once per target." }
+      {
+        "op": "note",
+        "text": "Once per session when a reaction roll is made, the subject becomes as friendly and helpful as is plausible; the GM decides why. Works only once per target."
+      }
     ]
   },
   {
@@ -907,8 +1297,15 @@
     "rank": 1,
     "description": "You gain Stab. Once per scene, as an On Turn action, you apply your Shock to every susceptible foe in melee reach.",
     "effects": [
-      { "op": "skill", "id": "stab", "delta": 1 },
-      { "op": "note", "text": "Once per scene, as an On Turn action, apply your Shock damage to every susceptible foe within melee reach." }
+      {
+        "op": "skill",
+        "id": "stab",
+        "delta": 1
+      },
+      {
+        "op": "note",
+        "text": "Once per scene, as an On Turn action, apply your Shock damage to every susceptible foe within melee reach."
+      }
     ]
   },
   {
@@ -920,7 +1317,10 @@
     "rank": 2,
     "description": "The first time you kill someone in a round with an attack, you immediately gain another attack with a ready weapon against a target in range.",
     "effects": [
-      { "op": "note", "text": "The first kill you make in a round with a normal attack, by rolled damage or Shock, grants an immediate extra attack with any ready weapon against a target in range." }
+      {
+        "op": "note",
+        "text": "The first kill you make in a round with a normal attack, by rolled damage or Shock, grants an immediate extra attack with any ready weapon against a target in range."
+      }
     ]
   },
   {
@@ -932,7 +1332,10 @@
     "rank": 1,
     "description": "Choose a strange adaptation: heat immunity and smoke-sight; water breathing and swimming; altered gravity; or living without food, sleep, or air. Other gifts need GM approval.",
     "effects": [
-      { "op": "note", "text": "Choose one adaptation: immune to heat and able to breathe and see through smoke; water-adapted with water breathing, clear sight in water, and double swim speed; gravity-adapted with +1 to Strength or Dexterity modifier (maximum +3) and -1 to the other; or fed by radiation, needing no food, sleep, or air and seeing in darkness. Other gifts need GM approval." }
+      {
+        "op": "note",
+        "text": "Choose one adaptation: immune to heat and able to breathe and see through smoke; water-adapted with water breathing, clear sight in water, and double swim speed; gravity-adapted with +1 to Strength or Dexterity modifier (maximum +3) and -1 to the other; or fed by radiation, needing no food, sleep, or air and seeing in darkness. Other gifts need GM approval."
+      }
     ]
   }
 ]
