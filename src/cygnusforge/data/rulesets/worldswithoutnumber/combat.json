@@ -30,6 +30,7 @@
     "defense_modifier": "dex",
     "natural_one_misses": true,
     "natural_max_hits": true,
+    "total_defense": 2,
     "level_damage": {
       "template_kind": "class",
       "templates": [

@@ -82,6 +82,7 @@ from cygnusforge.services.events import (
     ProjectStarted,
     Recovered,
     SkillChanged,
+    TotalDefenseTaken,
     current,
     load_state,
     name_key,
@@ -1216,6 +1217,31 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 spec=self.character,
                 rules=self.combat,
             )
+
+    def total_defense(self, name: str) -> dict[str, Any]:
+        """Spend a Main action on total defense. The configured bonus lasts until the
+        character's next turn."""
+        rules = self._rules()
+        if rules.total_defense_bonus <= 0:
+            raise InvalidInput("this rule set has no total defense action")
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            character = state.characters.get(name_key(name))
+            if character is None:
+                raise InvalidInput(f"there is no character named {name!r}")
+            if state.encounter is None:
+                raise InvalidInput("total defense is only used in an encounter")
+            record(
+                db,
+                self.campaign_id,
+                TotalDefenseTaken(name=character.name, bonus=rules.total_defense_bonus),
+            )
+            db.commit()
+            return {
+                "character": character.name,
+                "bonus": rules.total_defense_bonus,
+                "armor": load_state(db, self.campaign_id).characters[name_key(character.name)].armor,
+            }
 
     def recalculate_defense(self, name: str) -> dict[str, Any]:
         rules = self.combat

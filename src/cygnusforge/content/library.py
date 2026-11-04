@@ -882,6 +882,9 @@ class CombatRules:
     # The rule set's Python functions, when it names a python_module. Each function, when present,
     # overrides the declarative save and initiative rules above.
     module: ModuleType | None = None
+    # The defense bonus from spending a Main action on total defense. Zero when the rule set
+    # has no such action.
+    total_defense_bonus: int = 0
 
     @property
     def damage(self) -> tuple[DamageStep, ...]:
@@ -2802,6 +2805,7 @@ def _load_combat(
             "defense_modifier",
             "natural_one_misses",
             "natural_max_hits",
+            "total_defense",
             "save",
             "initiative_mode",
             "groups",
@@ -2913,6 +2917,7 @@ def _load_combat(
         defeat_at_zero=_names(data, "defeat_at_zero", label),
         initiative=_load_initiative(data, character, label),
         module=module,
+        total_defense_bonus=_optional_whole(data, "total_defense", label) or 0,
     )
 
 

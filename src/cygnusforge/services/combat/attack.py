@@ -833,7 +833,7 @@ def _shield_round(db: Session, campaign_id: int, target: Character) -> int:
 def _record_shield_bash(db: Session, campaign_id: int, attacker: str, weapon: str) -> None:
     """A shield bash suspends the attacker's shield AC until the attacker's next turn."""
     name = name_key(weapon)
-    if name.startswith("shield bash") or name.startswith("shield_bash"):
+    if name.startswith(("shield bash", "shield_bash")):
         record(db, campaign_id, ShieldBashed(name=attacker))
 
 

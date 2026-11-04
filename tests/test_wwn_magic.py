@@ -551,6 +551,7 @@ def test_wwn_tools_bind_engine_operations_without_wrappers() -> None:
         "stabilize": "stabilize",
         "start_encounter": "start_encounter",
         "start_project": "start_project",
+        "total_defense": "total_defense",
         "update_encounter_map": "update_encounter_map",
     }
     for call_id, method in bound.items():

@@ -881,6 +881,26 @@ def test_a_carried_shield_only_blocks_shock_when_wielded(client_factory):
     assert (wielded.hit, wielded.shock, wielded.shield_round) == (False, 0, 1)
 
 
+def test_total_defense_adds_its_bonus_until_the_next_turn(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=20)
+    before = _pc(app, campaign_id)
+
+    result = tools.total_defense(PC)
+    assert result["bonus"] == 2
+    guarding = _pc(app, campaign_id)
+    assert guarding.total_defense is True
+    assert guarding.armor == before.armor + 2
+
+    with Session(app.state.engine) as db:
+        record(db, campaign_id, EncounterTurnBegun(name=PC))
+        db.commit()
+
+    restored = _pc(app, campaign_id)
+    assert restored.total_defense is False
+    assert restored.armor == before.armor
+
+
 def test_a_shield_bash_suspends_the_shields_ac_until_the_next_turn(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     tools = replace(tools, marketplace=WWN.marketplace)

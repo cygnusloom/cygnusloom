@@ -219,6 +219,10 @@ class Character:
     # the suspension is kept so the next turn can restore it without recomputing the sheet.
     shield_suspended: bool = False
     shield_suspended_armor: int = 0
+    # Total defense adds its bonus to the character's armor until the character's next turn,
+    # when the armor before the action is restored.
+    total_defense: bool = False
+    total_defense_armor: int = 0
     # The character is dead. The body stays where the character fell, with its gear.
     dead: bool = False
     # The character has left the story, and the player plays someone else. It can come back later.

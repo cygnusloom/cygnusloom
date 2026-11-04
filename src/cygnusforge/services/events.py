@@ -1154,6 +1154,10 @@ class EncounterEnded(GameEvent):
                 character.armor = max(character.armor, character.shield_suspended_armor)
                 character.shield_suspended = False
                 character.shield_suspended_armor = 0
+            if character.total_defense:
+                character.armor = character.total_defense_armor
+                character.total_defense = False
+                character.total_defense_armor = 0
         state.encounter = None
 
     def render(self) -> str:
@@ -1459,6 +1463,10 @@ class EncounterTurnBegun(GameEvent):
             character.armor = max(character.armor, character.shield_suspended_armor)
             character.shield_suspended = False
             character.shield_suspended_armor = 0
+        if character.total_defense:
+            character.armor = character.total_defense_armor
+            character.total_defense = False
+            character.total_defense_armor = 0
         encounter.acting = character.name
         encounter.moved = 0
         if character.kind == NPC_KIND and state.turn is None:
@@ -1554,6 +1562,29 @@ class ShieldBashed(GameEvent):
 
     def render(self) -> str:
         return f"{self.name} bashes with a shield; its AC bonus is suspended until the next turn."
+
+
+@dataclass(frozen=True)
+class TotalDefenseTaken(GameEvent):
+    """A character spent a Main action on total defense. `bonus` is added to the armor total until
+    the character's next turn, when EncounterTurnBegun restores the armor before the action."""
+
+    kind: ClassVar[str] = "combat.total_defense_taken"
+    hidden: ClassVar[bool] = True
+
+    name: str
+    bonus: int
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        if character.total_defense or self.bonus <= 0:
+            return
+        character.total_defense_armor = character.armor
+        character.total_defense = True
+        character.armor += self.bonus
+
+    def render(self) -> str:
+        return f"{self.name} takes total defense; armor rises by {self.bonus} until the next turn."
 
 
 @dataclass(frozen=True)

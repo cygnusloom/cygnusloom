@@ -286,6 +286,25 @@
   },
   {
     "type": "tool_call",
+    "id": "total_defense",
+    "name": "total_defense",
+    "world_method": "total_defense",
+    "description": "Spend a Main action on total defense. The character's Armor Class rises by 2 until the start of their next turn. Use it when a combatant gives up attacking to guard, and do not stack it with another total defense.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character taking total defense."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "recover_after_rest",
     "name": "recover_after_rest",
     "python_module": "wwn",
