@@ -75,4 +75,3 @@ from cygnusforge.services.combat.save import (  # noqa: F401
     resolve_save,
 )
 from cygnusforge.services.events import current  # noqa: F401
-

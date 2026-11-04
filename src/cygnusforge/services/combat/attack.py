@@ -1,5 +1,4 @@
-"""Attacks: the roll, the hit, the blast, and a party attacking together.
-"""
+"""Attacks: the roll, the hit, the blast, and a party attacking together."""
 
 import random
 from collections.abc import Mapping, Sequence
@@ -153,6 +152,7 @@ def _attack_shock(source: Character, name: str) -> tuple[int, int]:
     if len(pair) < 2:
         return 0, 0
     return int(pair[0]), int(pair[1])
+
 
 def _strike(
     db: Session,
@@ -311,6 +311,7 @@ def _strike(
     result["defeated"] = load_state(db, campaign_id).characters[name_key(target.name)].defeated
     _end_if_one_side_left(db, campaign_id)
     return result
+
 
 def _attack_named(source: Character, attack_name: str) -> str:
     """The name of one of the NPC's attacks, matched without regard to case."""
@@ -667,6 +668,7 @@ def resolve_attacks(
         spec=spec,
     )
 
+
 @dataclass(frozen=True)
 class PlannedAttack:
     """One of several NPC attacks on the same target, before any of its dice are rolled."""
@@ -895,4 +897,3 @@ def _attack_dice(pc: Character, weapon: str, modifier: str, combat: CombatRules)
             "naming its damage if it is not in the catalogue"
         )
     return modifier_dice(combat.modifiers, modifier) or weapon_dice
-

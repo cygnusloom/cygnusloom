@@ -56,6 +56,7 @@ class TravelMixin:
                 hooks=self.hooks,
                 inventory=self.inventory,
             )
+
     def _overland_move(
         self, name: str, location: str, route: Mapping[str, Any] | None
     ) -> dict[str, Any]:
@@ -186,4 +187,3 @@ class TravelMixin:
             }
         )
         return result
-

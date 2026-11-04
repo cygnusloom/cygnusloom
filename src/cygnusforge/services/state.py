@@ -630,5 +630,3 @@ def token_labels(names: Iterable[str]) -> dict[str, str]:
         for name in grown:
             widths[name] += 1
             labels[name] = compact[name][: widths[name]]
-
-

@@ -1,5 +1,4 @@
-"""Saves: what a save means and how a character rolls one.
-"""
+"""Saves: what a save means and how a character rolls one."""
 
 import random
 from collections.abc import Mapping
@@ -113,6 +112,7 @@ def _save(
         "passed": result.passed,
     }
 
+
 def player_save(
     db: Session,
     campaign_id: int,
@@ -171,4 +171,3 @@ def player_save(
         "score": result.score,
         "passed": result.passed,
     }
-

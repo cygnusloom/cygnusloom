@@ -1,5 +1,4 @@
-"""Armor and defense: what armor is worth and when equipment changes defense.
-"""
+"""Armor and defense: what armor is worth and when equipment changes defense."""
 
 from dataclasses import replace
 from typing import Any
@@ -146,6 +145,7 @@ def set_defense_equipment(
     )
     return recalculate_defense(db, campaign_id, character.name, spec, rules)
 
+
 def set_armor(
     db: Session,
     campaign_id: int,
@@ -179,4 +179,3 @@ def set_armor(
         record(db, campaign_id, ArmorSet(name=character.name, armor=value))
     db.commit()
     return {"character": character.name, "armor": value}
-

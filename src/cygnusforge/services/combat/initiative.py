@@ -1,5 +1,4 @@
-"""Initiative and group breaks: who acts first and when a side scatters.
-"""
+"""Initiative and group breaks: who acts first and when a side scatters."""
 
 from typing import Any
 
@@ -34,6 +33,7 @@ def _no_initiative_pending(state: CampaignState) -> None:
         waiting = ", ".join(awaiting_initiative(state))
         raise InvalidInput(f"initiative is not set yet; {waiting} must roll for it first")
 
+
 def resolve_group_break(
     db: Session, campaign_id: int, name: str, outcome: str, combat: CombatRules
 ) -> dict[str, Any]:
@@ -61,6 +61,7 @@ def resolve_group_break(
     _end_if_one_side_left(db, campaign_id)
     return {"character": character.name, "outcome": outcome}
 
+
 def player_initiative(
     db: Session, campaign_id: int, roll: int, combat: CombatRules
 ) -> dict[str, Any]:
@@ -83,4 +84,3 @@ def player_initiative(
         "passed": result.passed,
         "still_waiting": awaiting_initiative(load_state(db, campaign_id)),
     }
-

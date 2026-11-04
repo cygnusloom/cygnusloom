@@ -35,6 +35,7 @@ class PlacesMixin:
                 force=force,
                 discovered=discovered,
             )
+
     def create_location(
         self,
         name: str,
@@ -49,9 +50,11 @@ class PlacesMixin:
             return create_location(
                 db, self.campaign_id, name, description, discovered, x, y, force, parent
             )
+
     def discover_location(self, name: str, summary: str | None = None) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return discover_location(db, self.campaign_id, name, summary)
+
     def update_location(
         self,
         name: str,
@@ -63,15 +66,19 @@ class PlacesMixin:
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return update_location(db, self.campaign_id, name, description, x, y, off_map, force)
+
     def delete_location(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return delete_location(db, self.campaign_id, name)
+
     def all_at_location(self, location: str | None = None) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return all_at_location(load_state(db, self.campaign_id), location)
+
     def search_location(self, query: str) -> dict[str, list[dict[str, Any]]]:
         with session_scope(self.engine) as db:
             return search_location(load_state(db, self.campaign_id), query)
+
     def create_encounter_map(
         self,
         name: str,
@@ -95,11 +102,13 @@ class PlacesMixin:
                 template,
                 self.encounter_templates,
             )
+
     def set_encounter_map_cells(self, map: str, cells: list[Mapping[str, Any]]) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return encounters.set_map_cells(
                 db, self.campaign_id, map, cells, self.terrain, self.encounter_objects
             )
+
     def update_encounter_map(
         self,
         name: str,
@@ -113,7 +122,7 @@ class PlacesMixin:
             return encounters.update_map(
                 db, self.campaign_id, name, columns, rows, description, new_name, location
             )
+
     def delete_encounter_map(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return encounters.delete_map(db, self.campaign_id, name)
-

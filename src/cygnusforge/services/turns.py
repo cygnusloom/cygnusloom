@@ -103,7 +103,6 @@ SUMMARY_SHARE = 0.25
 WORDS_PER_TOKEN = 0.75
 
 
-
 def _campaigns():
     """The campaign module, imported when a turn runs so the two modules can re-export each other."""
     from cygnusforge.services import campaigns
@@ -379,7 +378,9 @@ def _tool_context(
     )
 
     async def check_new_location(name: str) -> None:
-        repeated = await _campaigns()._repeated_place(provider, model_name, world_tools.place_names(), name)
+        repeated = await _campaigns()._repeated_place(
+            provider, model_name, world_tools.place_names(), name
+        )
         if repeated is not None:
             raise InvalidInput(
                 f"there is already a location called {repeated!r}; use discover_location to reveal it"
@@ -605,7 +606,9 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     world_text = _world_text(run, state)
     message = run.opening if turn.opening else turn.text
     history = [
-        m for m in _campaigns().list_messages(run.engine, run.campaign_id) if watermark < m.id < turn.opener
+        m
+        for m in _campaigns().list_messages(run.engine, run.campaign_id)
+        if watermark < m.id < turn.opener
     ]
     present_text = present_rules_text(state, run.ctx.rules)
     prompt_tokens = sum(

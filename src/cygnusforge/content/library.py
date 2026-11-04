@@ -2380,9 +2380,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     if combat is None and any(c.dying or c.fatal for c in conditions.values()):
         raise ContentError(f"{template}: a condition is dying or fatal, but there is no combat")
     monsters = {
-        d.id: _load_monster(
-            d, character, template, pool=_hit_pool(combat), conditions=conditions
-        )
+        d.id: _load_monster(d, character, template, pool=_hit_pool(combat), conditions=conditions)
         for d in definitions
         if d.type == "monster"
     }
@@ -4554,7 +4552,17 @@ def _load_projects(
         project_label = f"{label}: project {d.id}"
         check_keys(
             d.data,
-            {"type", "id", "label", "description", "target", "cost", "currency", "skill", "skill_level"},
+            {
+                "type",
+                "id",
+                "label",
+                "description",
+                "target",
+                "cost",
+                "currency",
+                "skill",
+                "skill_level",
+            },
             project_label,
         )
         projects[d.id] = ProjectDefinition(

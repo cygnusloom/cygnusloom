@@ -1,5 +1,4 @@
-"""Damage, dying, defeat, and recovery: the harm a hit leaves behind.
-"""
+"""Damage, dying, defeat, and recovery: the harm a hit leaves behind."""
 
 import random
 from collections.abc import Callable, Mapping, Sequence
@@ -235,6 +234,7 @@ def _defeat_after_harm(
             return True, defeat_status(target, combat.defeat)
     return False, ""
 
+
 def _injury_from_hit(
     db: Session,
     campaign_id: int,
@@ -313,6 +313,7 @@ def surrender(db: Session, campaign_id: int, name: str, combat: CombatRules) -> 
     db.commit()
     _end_if_one_side_left(db, campaign_id)
     return {"character": character.name, "surrendered": True}
+
 
 def recover_character(
     db: Session,
@@ -454,4 +455,3 @@ def harm_character(
         "current": before - taken,
         "defeated": defeats,
     }
-

@@ -63,6 +63,7 @@ class PeopleMixin:
                 self._initialize_generated_defense(db, name)
             db.commit()
             return result
+
     def hire_hireling(
         self,
         name: str,
@@ -96,12 +97,15 @@ class PeopleMixin:
             self._initialize_generated_defense(db, name)
             db.commit()
             return result
+
     def promote_hireling(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return promote_hireling(db, self.campaign_id, name)
+
     def dismiss_hireling(self, name: str, cause: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return dismiss_hireling(db, self.campaign_id, name, cause)
+
     def update_npc(
         self,
         name: str,
@@ -135,6 +139,7 @@ class PeopleMixin:
                 self._initialize_generated_defense(db, name)
             db.commit()
             return result
+
     def update_npc_knowledge(
         self,
         name: str,
@@ -159,9 +164,11 @@ class PeopleMixin:
                 relationship=relationship,
                 location=location,
             )
+
     def delete_npc(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return delete_npc(db, self.campaign_id, name)
+
     def create_monster(
         self,
         name: str,
@@ -193,11 +200,14 @@ class PeopleMixin:
                 detachment=detachment,
                 rules=rules,
             )
+
     def search_monster(self, query: str) -> dict[str, list[dict[str, Any]]]:
         return search_monster(self.monsters, query)
+
     def search_npc(self, query: str) -> dict[str, list[dict[str, Any]]]:
         with session_scope(self.engine) as db:
             return search_npc(load_state(db, self.campaign_id), query)
+
     def get_statblock(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return get_statblock(
@@ -210,12 +220,14 @@ class PeopleMixin:
                 self.hooks,
                 self.counters,
             )
+
     def character_options(self, field: str | None = None) -> dict[str, Any]:
         return choice_options(self.character, field)
+
     def speaker_profile(self, name: str) -> str:
         with session_scope(self.engine) as db:
             return speaker_profile(load_state(db, self.campaign_id), name, self.character)
+
     def speaker_at_player(self, name: str) -> bool:
         with session_scope(self.engine) as db:
             return speaker_at_player(load_state(db, self.campaign_id), name)
-

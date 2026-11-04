@@ -1,5 +1,4 @@
-"""Debug tools for setting stats, currency, and invincibility.
-"""
+"""Debug tools for setting stats, currency, and invincibility."""
 
 from typing import Any
 
@@ -62,4 +61,3 @@ def add_debug_currency(
     record(db, campaign_id, DebugCurrencyAdded(name=character.name, feature=feature, amount=value))
     db.commit()
     return {"character": character.name, "feature": feature, "gained": value}
-

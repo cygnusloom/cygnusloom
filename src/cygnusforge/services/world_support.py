@@ -131,8 +131,6 @@ IN_DUNGEON = "in_dungeon"
 MOVE_MODES = (OVERLAND, IN_SETTLEMENT, IN_DUNGEON)
 
 
-
-
 def seed_campaign(
     db: Session,
     campaign_id: int,

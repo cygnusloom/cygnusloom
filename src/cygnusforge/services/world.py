@@ -187,7 +187,6 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     # The kinds of ground a world map's regions can be, by id.
     world_terrain: Mapping[str, WorldTerrain] = field(default_factory=dict)
 
-
     def roll_tables(self, tables: list[str]) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return roll_dice_tables(
@@ -1010,10 +1009,6 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             state = load_state(db, self.campaign_id)
             return sorted(place.name for place in state.places.values())
 
-
-
-
-
     def _initialize_generated_defense(self, db: Session, name: str) -> None:
         _initialize_generated_defense(
             db,
@@ -1026,19 +1021,6 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             self.magic,
             self.marketplace.currency if self.marketplace else "",
         )
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     def start_encounter(self, map: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -1078,8 +1060,6 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             return encounters.remove_participant(
                 db, self.campaign_id, name, self._initiative_order()
             )
-
-
 
     def search_marketplace(self, query: str) -> dict[str, Any]:
         return search_marketplace(_required(self.marketplace, "a marketplace"), query)
@@ -1337,7 +1317,12 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 FeatureChoiceMade(name=character.name, feature=found.id, pick=pick, choice=choice),
             )
             db.commit()
-            return {"character": character.name, "feature": found.id, "pick": pick, "choice": choice}
+            return {
+                "character": character.name,
+                "feature": found.id,
+                "pick": pick,
+                "choice": choice,
+            }
 
     def prepare_execution(self, name: str, weapon: str) -> dict[str, Any]:
         """Prepare an execution attack with a carried weapon. The target must be unaware or
@@ -1348,7 +1333,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             if character is None:
                 raise InvalidInput(f"there is no character named {name!r}")
             feature = self._weapon_feature(weapon)
-            held = next((item for item in character.items if same_item_name(item.name, weapon)), None)
+            held = next(
+                (item for item in character.items if same_item_name(item.name, weapon)), None
+            )
             if feature is None and (held is None or not held.damage):
                 raise InvalidInput(f"{weapon!r} is not a carried weapon with damage dice")
             record(
@@ -1377,8 +1364,10 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 raise InvalidInput(f"{struck.name} is aware and cannot be executed")
             feature = self._weapon_feature(weapon)
             held = next((item for item in pc.items if same_item_name(item.name, weapon)), None)
-            dice = feature.damage if feature is not None and feature.damage else (
-                held.damage if held is not None else ""
+            dice = (
+                feature.damage
+                if feature is not None and feature.damage
+                else (held.damage if held is not None else "")
             )
             if not dice:
                 raise InvalidInput(f"{weapon!r} has no damage dice")
@@ -1466,7 +1455,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             return {
                 "character": character.name,
                 "bonus": rules.total_defense_bonus,
-                "armor": load_state(db, self.campaign_id).characters[name_key(character.name)].armor,
+                "armor": load_state(db, self.campaign_id)
+                .characters[name_key(character.name)]
+                .armor,
             }
 
     def recalculate_defense(self, name: str) -> dict[str, Any]:
@@ -1599,11 +1590,6 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         with session_scope(self.engine) as db:
             return view_journal(load_state(db, self.campaign_id), start_line, end_line)
 
-
-
-
-
-
     def start_project(
         self,
         name: str,
@@ -1634,12 +1620,18 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             if definition is not None and definition.cost:
                 if payer is None:
                     raise InvalidInput(f"{definition.label} needs a character to pay its cost")
-                if definition.currency and payer.features.get(definition.currency, 0) < definition.cost:
+                if (
+                    definition.currency
+                    and payer.features.get(definition.currency, 0) < definition.cost
+                ):
                     raise InvalidInput(
                         f"{definition.label} costs {definition.cost} {definition.currency}; "
                         f"{payer.name} has {payer.features.get(definition.currency, 0)}"
                     )
-                if definition.skill and payer.skills.get(definition.skill, 0) < definition.skill_level:
+                if (
+                    definition.skill
+                    and payer.skills.get(definition.skill, 0) < definition.skill_level
+                ):
                     raise InvalidInput(
                         f"{definition.label} needs {definition.skill} "
                         f"level {definition.skill_level}"
@@ -1821,6 +1813,3 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     def lookup_index(self) -> dict[str, list[dict[str, Any]]]:
         with session_scope(self.engine) as db:
             return lookup_index(load_state(db, self.campaign_id))
-
-
-

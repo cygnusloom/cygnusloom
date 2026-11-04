@@ -8,4 +8,3 @@ MAX_CAUSE_TEXT = 200
 # A weapon feature flag: the weapon can be used without the unskilled attack penalty, as the free
 # Worlds Without Number rules say of crossbows.
 NO_UNSKILLED_PENALTY = "no_unskilled_penalty"
-
