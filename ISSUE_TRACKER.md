@@ -12,9 +12,10 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
    Pairing and creation work; combining the two advancement charts does not.
 6. WWN: Faction assets remain table-driven. The project kind and turn tracker are modelled, but the
    book's faction assets and their turns are GM text rather than engine state.
-7. Full copendium; a new full-page item in the sidebar. Items listed in the inventory, creature types, player abilities, static lore, etc. should all link to the copendium. This would be stuff you could find in a sourcebook, not GM secrets. If possible things mentioned in the chat should be links too, but that might be too difficult for the AI GM. The copendium is loaded from the world and ruleset, but can be expanded by the AI GM during play as it comes up with new things. Likely the AI GM will not need to explicitly write to it, it should just build from the world as it exists.
+7. Full copendium; a new full-page item in the sidebar. Items listed in the inventory, creature types, player abilities, static lore, etc. should all link to the copendium. This would be stuff you could find in a sourcebook, not GM secrets. If possible things mentioned in the chat should be links too, but that might be too difficult for the AI GM. The copendium is loaded from the world and ruleset, but can be expanded by the AI GM during play as it comes up with new things. Likely the AI GM will not need to explicitly write to it, it should just build from the world as it exists. You can access the copendium for each ruleset/world outside of a campaign too (you pick the (valid) combination of ruleset/world)
 8. Audit the transcript for cleanliness - we likely don't need announcements about armor values (WWN).
 9. More local maps outside of encounters - for indoor or small-scale locations we should have nice maps that turn into encounter maps at a moments notice. Maybe combine the two concepts. Be able to place props, npcs, objects, etc.
+10. Make the unwritten world set up for any ruleset; move world creation tables into core if they apply so they can be used for more creativity or world setup. Also the instructions to generate the setting should be in core not WWN; and they should only be default activated for worlds that have no setting already like the unwritten world.
 
 # Triaged Issues
 
