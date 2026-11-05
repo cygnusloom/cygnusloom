@@ -623,6 +623,11 @@ class RegionTemplate:
     name: str
     terrain: str
     points: tuple[tuple[float, float], ...]
+    # Optional looks and a display label. None follows the terrain kind.
+    color: str | None = None
+    pattern: str | None = None
+    ink: str | None = None
+    label: str | None = None
 
 
 @dataclass(frozen=True)
@@ -1942,7 +1947,11 @@ def _load_regions(definitions: list[Definition], template: str) -> tuple[RegionT
         if d.type != "region":
             continue
         label = f"{template}: region {d.id}"
-        check_keys(d.data, {"type", "id", "name", "terrain", "points"}, label)
+        check_keys(
+            d.data,
+            {"type", "id", "name", "terrain", "points", "color", "pattern", "ink", "label"},
+            label,
+        )
         raw = d.data.get("points")
         if not isinstance(raw, list) or not all(
             isinstance(point, list)
@@ -1966,6 +1975,10 @@ def _load_regions(definitions: list[Definition], template: str) -> tuple[RegionT
                 name=required_text(d.data, "name", label),
                 terrain=required_text(d.data, "terrain", label),
                 points=points,
+                color=_optional_color(d.data, "color", label) or None,
+                pattern=_style_choice(d.data, "pattern", TERRAIN_PATTERNS, label) or None,
+                ink=_optional_color(d.data, "ink", label) or None,
+                label=_optional_text(d.data, "label", label),
             )
         )
     seen: set[str] = set()

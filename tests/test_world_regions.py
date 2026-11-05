@@ -180,8 +180,8 @@ def test_unknown_terrain_is_refused_and_lists_the_kinds(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     campaign_id = _twin_lakes(client_factory)
-    with pytest.raises(InvalidInput, match="'bog' is not a terrain kind.*lake"):
-        _tools(app, campaign_id).create_region("Fen", "bog", SQUARE_OFF_THE_MAP)
+    with pytest.raises(InvalidInput, match="'quagmire' is not a terrain kind.*lake"):
+        _tools(app, campaign_id).create_region("Fen", "quagmire", SQUARE_OFF_THE_MAP)
 
 
 def test_an_overlapping_region_is_cut_to_the_open_ground(

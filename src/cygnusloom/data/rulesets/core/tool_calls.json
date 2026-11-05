@@ -36,6 +36,10 @@
         "parent": {
           "type": "string",
           "description": "The name of the top-level location this place is inside. Leave it out for a place on the map. A place with a parent cannot be given x or y."
+        },
+        "icon": {
+          "type": "string",
+          "description": "An icon id from map_options' place_icons, shown on the map, such as inn, tower, or temple. Leave it out for the default marker."
         }
       },
       "required": [
@@ -80,6 +84,22 @@
         "force": {
           "type": "boolean",
           "description": "Set true only to keep the whole shape where it overlaps other ground on purpose. Without it, the part that overlaps existing ground is cut away."
+        },
+        "color": {
+          "type": "string",
+          "description": "A hex colour for this ground, overriding the terrain kind's own, such as #7a2f3a. Leave it out to use the terrain colour."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "A texture id from map_options' patterns, overriding the terrain kind's own. Leave it out to use the terrain texture; give an empty string for no texture."
+        },
+        "ink": {
+          "type": "string",
+          "description": "A hex colour for the texture's marks. Leave it out to use the terrain kind's ink."
+        },
+        "label": {
+          "type": "string",
+          "description": "The name shown on the map, when it should differ from the region's name. At most 60 characters."
         }
       },
       "required": [
@@ -87,6 +107,102 @@
         "terrain",
         "points"
       ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "update_region",
+    "name": "update_region",
+    "world_method": "update_region",
+    "description": "Change an area of ground on the world map. Give only what changes: a new terrain kind, a new outline to extend or reshape it, discovery, or a colour, texture, ink, or label. An empty color, pattern, or label goes back to the terrain kind's own look or the region's name. A new outline that overlaps another region is refused unless force is true.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The region's name."
+        },
+        "terrain": {
+          "type": "string",
+          "description": "A new terrain kind id. Leave it out to keep the current kind."
+        },
+        "points": {
+          "type": "array",
+          "description": "A new outline of at least three [x, y] corners, in order around the edge, in kilometers from the map's center. Leave it out to keep the current outline.",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "discovered": {
+          "type": "boolean",
+          "description": "True to show the region to the player, false to hide it. Leave it out to keep it as it is."
+        },
+        "color": {
+          "type": "string",
+          "description": "A hex colour for the ground. An empty string goes back to the terrain kind's colour."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "A texture id from map_options. An empty string removes the texture."
+        },
+        "ink": {
+          "type": "string",
+          "description": "A hex colour for the texture's marks. Leave it out to keep the current ink."
+        },
+        "label": {
+          "type": "string",
+          "description": "The name shown on the map, at most 60 characters. An empty string goes back to the region's name."
+        },
+        "force": {
+          "type": "boolean",
+          "description": "Set true only to let the new outline overlap another region on purpose."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "update_world_map",
+    "name": "update_world_map",
+    "world_method": "update_world_map",
+    "description": "Change the look of the player's world map. Choose a palette and ambient light from map_options, or give custom background and line colours. Clouds and contour lines can be turned off when the chart should be plain. Leave a field out to keep it.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "palette": {
+          "type": "string",
+          "description": "A world map palette id from map_options."
+        },
+        "ambient": {
+          "type": "string",
+          "description": "An ambient look id from map_options: day, dusk, night, torchlit, foggy, underwater, or magical."
+        },
+        "background_color": {
+          "type": "string",
+          "description": "A hex colour for the map's ground, overriding the palette. An empty string goes back to the palette."
+        },
+        "line_color": {
+          "type": "string",
+          "description": "A hex colour for contour lines and the map's edge, overriding the palette. An empty string goes back to the palette."
+        },
+        "show_clouds": {
+          "type": "boolean",
+          "description": "False to leave the soft cloud texture off the chart."
+        },
+        "show_contours": {
+          "type": "boolean",
+          "description": "False to leave the faint contour lines off the chart."
+        }
+      },
+      "required": []
     }
   },
   {
@@ -551,6 +667,10 @@
         "force": {
           "type": "boolean",
           "description": "Set true only to put this place on a point another place already has, as when two places are the same spot. Without it, a point another place already has is refused."
+        },
+        "icon": {
+          "type": "string",
+          "description": "An icon id from map_options' place_icons for the map marker. An empty string goes back to the default marker."
         }
       },
       "required": [
@@ -1371,7 +1491,7 @@
     "name": "map_options",
     "world_method": "map_options",
     "lookup": true,
-    "description": "List the ids a local map can use: its terrains with their colours, patterns, and categories; its objects with their icons, categories, and blocking flags; the layout templates with their sizes and looks; the palettes, ambients, and patterns. Use it before create_local_map, set_map_cells, or update_local_map so every id is real.",
+    "description": "List the ids a map can use: local terrains with their colours, patterns, and categories; objects with their icons, categories, and blocking flags; layout templates with their sizes and looks; palettes, ambients, and patterns. The world section lists the world terrain kinds with their colours and textures, the world map palettes, ambient looks, and place icons. Use it before create_local_map, set_map_cells, update_local_map, create_region, update_region, or update_world_map so every id is real.",
     "parameters": {
       "type": "object",
       "properties": {},

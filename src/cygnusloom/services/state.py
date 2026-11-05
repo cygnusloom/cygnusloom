@@ -82,16 +82,48 @@ class Place:
     routes: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
+# The looks the player's world map may choose. The CSS colours each palette, so a campaign's
+# world can shift from a warm parchment chart to a cold midnight atlas without new art.
+WORLD_MAP_PALETTES = (
+    "parchment",
+    "atlas",
+    "verdant",
+    "ember",
+    "frost",
+    "midnight",
+    "ivory",
+    "obsidian",
+)
+
+
 @dataclass(frozen=True)
 class Region:
     """An area of one kind of ground on the world map. Its points are outline corners in
     kilometers from the map's center, in order around the edge. It is shown on the player's map
-    once it is discovered, or once a discovered place lies inside it."""
+    once it is discovered, or once a discovered place lies inside it. A colour, pattern, ink, or
+    label that is None follows the terrain kind; an empty pattern hides the texture."""
 
     name: str
     terrain: str
     points: tuple[tuple[float, float], ...]
     discovered: bool = False
+    color: str | None = None
+    pattern: str | None = None
+    ink: str | None = None
+    label: str | None = None
+
+
+@dataclass(frozen=True)
+class WorldMapStyle:
+    """The look of the player's world map: its palette, ambient light, custom ground and line
+    colours, and whether the chart draws clouds and contour lines."""
+
+    palette: str = "parchment"
+    ambient: str = "day"
+    background_color: str = ""
+    line_color: str = ""
+    show_clouds: bool = True
+    show_contours: bool = True
 
 
 @dataclass(frozen=True)
@@ -590,6 +622,8 @@ class CampaignState:
     turn: Turn | None = None
     # Regions of the world map by name without case.
     regions: dict[str, Region] = field(default_factory=dict)
+    # The world map's palette, ambient light, and custom colours.
+    world_map_style: WorldMapStyle = field(default_factory=WorldMapStyle)
     # Encounter maps by name without case, and the encounter in progress, if any.
     maps: dict[str, EncounterMap] = field(default_factory=dict)
     encounter: Encounter | None = None

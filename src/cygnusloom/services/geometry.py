@@ -73,6 +73,13 @@ def signed_area(points: Sequence[Point]) -> float:
     return total / 2
 
 
+def representative_point(points: Sequence[Point]) -> Point:
+    """A point inside the outline, for placing a label. It is near the middle but always on the
+    ground, even for a crescent or another shape whose centroid falls outside."""
+    point = Polygon(points).representative_point()
+    return (float(point.x), float(point.y))
+
+
 @dataclass(frozen=True)
 class Cut:
     """What is left of an outline once the ground other outlines cover is taken away."""

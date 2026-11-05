@@ -49,6 +49,7 @@ class CoreWorld(Protocol):
         y: float | None = None,
         force: bool = False,
         parent: str | None = None,
+        icon: str | None = None,
     ) -> dict[str, Any]: ...
 
     def create_region(
@@ -58,6 +59,10 @@ class CoreWorld(Protocol):
         points: Sequence[Sequence[float]],
         force: bool = False,
         discovered: bool = False,
+        color: str | None = None,
+        pattern: str | None = None,
+        ink: str | None = None,
+        label: str | None = None,
     ) -> dict[str, Any]: ...
 
     def create_npc(
@@ -82,6 +87,7 @@ class CoreWorld(Protocol):
         y: float | None = None,
         off_map: bool = False,
         force: bool = False,
+        icon: str | None = None,
     ) -> dict[str, Any]: ...
 
     def delete_location(self, name: str) -> dict[str, Any]: ...

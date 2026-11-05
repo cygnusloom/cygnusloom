@@ -6,6 +6,7 @@ opens a session, or changes the state. The world tools import these functions to
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Any
@@ -36,6 +37,7 @@ from cygnusloom.services.events import (
     Character,
     Place,
     Region,
+    WorldMapStyle,
     WorldObject,
     current,
     defeat_status,
@@ -43,7 +45,7 @@ from cygnusloom.services.events import (
     same_item_name,
     token_labels,
 )
-from cygnusloom.services.geometry import contains
+from cygnusloom.services.geometry import contains, representative_point, signed_area
 from cygnusloom.services.hooks import HookContext, call_hook
 from cygnusloom.services.objects import visible_objects
 
@@ -151,13 +153,16 @@ class MapMarker:
 class MapRegion:
     """An area of ground on the map. Its points are percentages of the map's width and height.
     `name` and `text` are None until the region is known, and `text` is what hovering it shows.
-    `pattern` is the id of the texture drawn over its colour, when its kind has one."""
+    `pattern` is the id of the texture drawn over its colour, when its kind has one.
+    `label_left` and `label_top` place the region's name, once it is known."""
 
     name: str | None
     text: str | None
     color: str
     points: tuple[tuple[float, float], ...]
     pattern: str | None = None
+    label_left: float | None = None
+    label_top: float | None = None
 
 
 @dataclass(frozen=True)
@@ -194,6 +199,7 @@ class MapView:
     origin: tuple[float, float] | None = None
     regions: list[MapRegion] = field(default_factory=list)
     patterns: list[MapPattern] = field(default_factory=list)
+    style: WorldMapStyle = field(default_factory=WorldMapStyle)
 
 
 def get_statblock(
@@ -425,15 +431,59 @@ def map_view(state: CampaignState, terrain: Mapping[str, WorldTerrain] | None = 
     origin_top = round(50 + cy / radius * 50, 2)
     on_board = 0 <= origin_left <= 100 and 0 <= origin_top <= 100
     kinds = terrain or {}
-    regions = [
-        _map_region(region, kinds, cx, cy, radius, _region_known(state, region))
-        for region in sorted(state.regions.values(), key=lambda region: name_key(region.name))
-    ]
-    patterns = [
-        MapPattern(id=_pattern_id(kind.id), shape=kind.pattern, ink=kind.ink)
+    # Large ground goes down first, so a lake or clearing forced over a marsh stays visible.
+    area_order = sorted(
+        state.regions.values(), key=lambda region: abs(signed_area(region.points)), reverse=True
+    )
+    regions = []
+    label_points: list[tuple[float, float]] = []
+    for region in area_order:
+        mapped = _map_region(region, kinds, cx, cy, radius, _region_known(state, region))
+        if (
+            mapped.name is not None
+            and mapped.label_left is not None
+            and mapped.label_top is not None
+        ):
+            point = (mapped.label_left, mapped.label_top)
+            gap = min(24.0, 6.0 + len(mapped.name) * 0.55)
+            crowded = any(
+                math.hypot(point[0] - left, point[1] - top) < gap for left, top in label_points
+            )
+            if crowded:
+                mapped = replace(mapped, label_left=None, label_top=None)
+            else:
+                chosen = point
+                if any(
+                    math.hypot(point[0] - marker.left, point[1] - marker.top) < 8.0
+                    for marker in markers
+                ):
+                    # A marker often sits at the middle of its region. Move the name aside
+                    # rather than leave the ground unnamed.
+                    for dx, dy in ((0, -9), (0, 9), (-9, 0), (9, 0), (-8, -8), (8, 8)):
+                        candidate = (point[0] + dx, point[1] + dy)
+                        if not 0 <= candidate[0] <= 100 or not 0 <= candidate[1] <= 100:
+                            continue
+                        if any(
+                            math.hypot(candidate[0] - marker.left, candidate[1] - marker.top) < 8.0
+                            for marker in markers
+                        ):
+                            continue
+                        chosen = candidate
+                        break
+                label_points.append(chosen)
+                mapped = replace(mapped, label_left=chosen[0], label_top=chosen[1])
+        regions.append(mapped)
+    patterns = {
+        _pattern_id(kind.id): MapPattern(id=_pattern_id(kind.id), shape=kind.pattern, ink=kind.ink)
         for kind in kinds.values()
         if kind.pattern is not None and kind.ink is not None
-    ]
+    }
+    for region in state.regions.values():
+        kind = kinds.get(region.terrain)
+        pattern_id = _region_pattern(region, kind)
+        if pattern_id is not None and pattern_id not in patterns:
+            shape, ink = _region_pattern_style(region, kind)
+            patterns[pattern_id] = MapPattern(id=pattern_id, shape=shape, ink=ink)
     return MapView(
         radius_km=round(radius, 2),
         markers=markers,
@@ -441,7 +491,8 @@ def map_view(state: CampaignState, terrain: Mapping[str, WorldTerrain] | None = 
         where=where,
         origin=(origin_left, origin_top) if on_board else None,
         regions=regions,
-        patterns=patterns,
+        patterns=list(patterns.values()),
+        style=state.world_map_style,
     )
 
 
@@ -471,17 +522,47 @@ def _map_region(
     known: bool,
 ) -> MapRegion:
     kind = kinds.get(region.terrain)
-    color = kind.color if kind is not None else "#888888"
+    color = region.color or (kind.color if kind is not None else "#888888")
     name = text = None
+    label_left = label_top = None
     if known:
-        name = region.name
+        name = region.label or region.name
         text = region.name if kind is None else f"{region.name} ({kind.name}). {kind.rule}"
-    pattern = _pattern_id(kind.id) if kind is not None and kind.pattern is not None else None
+        label_x, label_y = representative_point(region.points)
+        label_left = round(50 + (label_x - cx) / radius * 50, 2)
+        label_top = round(50 - (label_y - cy) / radius * 50, 2)
     points = tuple(
         (round(50 + (x - cx) / radius * 50, 2), round(50 - (y - cy) / radius * 50, 2))
         for x, y in region.points
     )
-    return MapRegion(name=name, text=text, color=color, points=points, pattern=pattern)
+    return MapRegion(
+        name=name,
+        text=text,
+        color=color,
+        points=points,
+        pattern=_region_pattern(region, kind),
+        label_left=label_left,
+        label_top=label_top,
+    )
+
+
+def _region_pattern(region: Region, kind: WorldTerrain | None) -> str | None:
+    """The texture an area draws: its terrain's own, a custom pattern, or none when the region
+    explicitly sets an empty pattern."""
+    if region.pattern is None:
+        if kind is None or kind.pattern is None:
+            return None
+        return _pattern_id(kind.id)
+    if region.pattern == "":
+        return None
+    shape, ink = _region_pattern_style(region, kind)
+    return f"custom-{shape}-{ink.lstrip('#')}"
+
+
+def _region_pattern_style(region: Region, kind: WorldTerrain | None) -> tuple[str, str]:
+    """The shape and ink of a region's custom texture, falling back to its terrain's ink."""
+    ink = region.ink or (kind.ink if kind is not None else None) or "#5b4a2a"
+    return region.pattern or "", ink
 
 
 def scene_view(

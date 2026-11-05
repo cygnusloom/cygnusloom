@@ -92,6 +92,8 @@ def _rule_set(ident: str = "testset") -> list[dict[str, str]]:
 CORE_TOOLS = {
     "create_location",
     "create_region",
+    "update_region",
+    "update_world_map",
     "create_npc",
     "update_location",
     "discover_location",

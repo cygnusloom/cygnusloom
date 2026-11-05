@@ -16,11 +16,19 @@ async def create_location(
     y: float | None = None,
     force: bool = False,
     parent: str | None = None,
+    icon: str | None = None,
 ) -> dict[str, Any]:
     if ctx.check_new_location is not None:
         await ctx.check_new_location(name)
     return ctx.world.create_location(
-        name, description, discovered=discovered, x=x, y=y, force=force, parent=parent
+        name,
+        description,
+        discovered=discovered,
+        x=x,
+        y=y,
+        force=force,
+        parent=parent,
+        icon=icon,
     )
 
 

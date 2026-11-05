@@ -187,5 +187,95 @@
     "rule": "Shoreline and coastal water. Easy going along the shore; boats keep close in.",
     "pattern": "waves",
     "ink": "#a9d4ea"
+  },
+  {
+    "type": "world_terrain",
+    "id": "river",
+    "name": "River",
+    "color": "#4f8fa8",
+    "rule": "Flowing water. Cross at a ford, bridge, or boat; the banks are easy going.",
+    "pattern": "waves",
+    "ink": "#c0e2ea"
+  },
+  {
+    "type": "world_terrain",
+    "id": "meadow",
+    "name": "Meadow",
+    "color": "#9fbe6a",
+    "rule": "Flower meadows and soft grass. Easy going on foot.",
+    "pattern": "tufts",
+    "ink": "#567a34"
+  },
+  {
+    "type": "world_terrain",
+    "id": "pinewood",
+    "name": "Pinewood",
+    "color": "#41684a",
+    "rule": "Dark conifer forest. Tough going: travel by rough_terrain.",
+    "pattern": "trees",
+    "ink": "#1d3824"
+  },
+  {
+    "type": "world_terrain",
+    "id": "canyon",
+    "name": "Canyon",
+    "color": "#b06a4a",
+    "rule": "Sheer walls and a broken floor. Perilous going: travel by rough_terrain.",
+    "pattern": "crags",
+    "ink": "#6e3722"
+  },
+  {
+    "type": "world_terrain",
+    "id": "saltflat",
+    "name": "Salt Flat",
+    "color": "#e3dfcf",
+    "rule": "Cracked white pan. Easy going when dry, but there is no water or cover.",
+    "pattern": "dunes",
+    "ink": "#b0a890"
+  },
+  {
+    "type": "world_terrain",
+    "id": "ashland",
+    "name": "Ashland",
+    "color": "#7a746c",
+    "rule": "Cold ash and cinders. Tough going, and the air stings the throat.",
+    "pattern": "flames",
+    "ink": "#b0604a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "lagoon",
+    "name": "Lagoon",
+    "color": "#3c9ca0",
+    "rule": "Calm, shallow water. Cross by boat or wade the warm shallows.",
+    "pattern": "reef",
+    "ink": "#d8a06a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "orchard",
+    "name": "Orchard",
+    "color": "#a8b85e",
+    "rule": "Rows of fruit trees and mown grass. Easy going between the trunks.",
+    "pattern": "trees",
+    "ink": "#5f6e2a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "highland",
+    "name": "Highland",
+    "color": "#8a7f9a",
+    "rule": "Wind-scoured upland. Tough going: travel by rough_terrain.",
+    "pattern": "ridges",
+    "ink": "#4e4560"
+  },
+  {
+    "type": "world_terrain",
+    "id": "bog",
+    "name": "Bog",
+    "color": "#4f6b4a",
+    "rule": "Deep, sucking bog. Perilous going: travel by rough_terrain, and test the ground.",
+    "pattern": "reeds",
+    "ink": "#263d24"
   }
 ]

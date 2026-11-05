@@ -51,6 +51,7 @@ from cygnusloom.services.state import (  # noqa: F401
     Region,
     RestRecord,
     Turn,
+    WorldMapStyle,
     WorldObject,
     _next_round,
     _player_present,
@@ -302,6 +303,10 @@ class RegionAdded(GameEvent):
     terrain: str
     points: list[list[float]]
     discovered: bool = False
+    color: str | None = None
+    pattern: str | None = None
+    ink: str | None = None
+    label: str | None = None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.regions[name_key(self.name)] = Region(
@@ -309,10 +314,76 @@ class RegionAdded(GameEvent):
             self.terrain,
             tuple((x, y) for x, y in self.points),
             discovered=self.discovered,
+            color=self.color,
+            pattern=self.pattern,
+            ink=self.ink,
+            label=self.label,
         )
 
     def render(self) -> str:
         return f"New region: {self.name}."
+
+
+@dataclass(frozen=True)
+class RegionUpdated(GameEvent):
+    """A region's ground, outline, discovery, or look after an update. The service resolves every
+    field, so apply replaces them all; None keeps the terrain kind's own colour or texture."""
+
+    kind: ClassVar[str] = "region.updated"
+    hidden: ClassVar[bool] = True
+
+    name: str
+    terrain: str
+    points: list[list[float]]
+    discovered: bool
+    color: str | None = None
+    pattern: str | None = None
+    ink: str | None = None
+    label: str | None = None
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.regions[name_key(self.name)] = Region(
+            self.name,
+            self.terrain,
+            tuple((x, y) for x, y in self.points),
+            discovered=self.discovered,
+            color=self.color,
+            pattern=self.pattern,
+            ink=self.ink,
+            label=self.label,
+        )
+
+    def render(self) -> str:
+        return f"Region updated: {self.name}."
+
+
+@dataclass(frozen=True)
+class WorldMapStyleChanged(GameEvent):
+    """The player's world map changes palette, ambient light, colours, or detail. The service
+    resolves every field, so apply sets them all rather than merging them."""
+
+    kind: ClassVar[str] = "map.world_style_changed"
+    hidden: ClassVar[bool] = True
+
+    palette: str
+    ambient: str
+    background_color: str = ""
+    line_color: str = ""
+    show_clouds: bool = True
+    show_contours: bool = True
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.world_map_style = WorldMapStyle(
+            palette=self.palette,
+            ambient=self.ambient,
+            background_color=self.background_color,
+            line_color=self.line_color,
+            show_clouds=self.show_clouds,
+            show_contours=self.show_contours,
+        )
+
+    def render(self) -> str:
+        return "World map restyled."
 
 
 @dataclass(frozen=True)
@@ -673,6 +744,9 @@ class LocationUpdated(GameEvent):
     description: str
     x: float | None = None
     y: float | None = None
+    icon: str | None = None
+    # Old events have no icon field, so only a change touches the place's icon.
+    icon_changed: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         key = name_key(self.name)
@@ -682,6 +756,7 @@ class LocationUpdated(GameEvent):
             name=self.name,
             description=self.description,
             position=_position(self.x, self.y),
+            icon=self.icon if self.icon_changed else before.icon,
         )
 
     def render(self) -> str:

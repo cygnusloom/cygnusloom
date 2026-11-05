@@ -190,8 +190,66 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 }
 .map-panel .map-board { width: auto; height: 100%; max-height: 100%; }
 /* The world map has no border or grid: its sky fills the frame, so the square board is not visible as a box. */
-.world-map { border: none; background-color: transparent; }
+.world-map {
+  border: none; background-color: transparent;
+  --world-bg: #cdbf9e; --world-line: #6f5f42; --world-ink: #2e2620;
+}
 .world-map::before { display: none; }
+.world-map.palette-parchment { --world-bg: #cdbf9e; --world-line: #6f5f42; --world-ink: #2e2620; }
+.world-map.palette-atlas { --world-bg: #d8e2e6; --world-line: #5b7686; --world-ink: #22323c; }
+.world-map.palette-verdant { --world-bg: #b8cba4; --world-line: #4f6b3a; --world-ink: #22331f; }
+.world-map.palette-ember { --world-bg: #d6a27e; --world-line: #7a3f22; --world-ink: #3a1e12; }
+.world-map.palette-frost { --world-bg: #dbe8f0; --world-line: #7896a8; --world-ink: #263844; }
+.world-map.palette-midnight { --world-bg: #1f2b45; --world-line: #6f8bb0; --world-ink: #d9e4f5; }
+.world-map.palette-ivory { --world-bg: #f0eadb; --world-line: #9a8a72; --world-ink: #332f28; }
+.world-map.palette-obsidian { --world-bg: #2b2b30; --world-line: #8c8c9c; --world-ink: #e8e8f0; }
+
+/* Ambient light over the chart. The markers and labels sit above it, so they stay readable. */
+.map-weather {
+  position: absolute; inset: 0; z-index: 1; border-radius: inherit; pointer-events: none;
+}
+.world-map.ambient-day .map-weather {
+  background: radial-gradient(ellipse at 35% 25%, rgba(255, 250, 225, 0.24), transparent 62%);
+}
+.world-map.ambient-dusk .map-weather {
+  background: linear-gradient(155deg, rgba(255, 160, 80, 0.24), transparent 55%),
+    radial-gradient(ellipse at 72% 82%, rgba(110, 70, 130, 0.22), transparent 60%);
+}
+.world-map.ambient-night .map-weather {
+  background: linear-gradient(180deg, rgba(12, 22, 52, 0.5), rgba(8, 14, 34, 0.34)),
+    radial-gradient(ellipse at 50% 40%, rgba(80, 110, 190, 0.16), transparent 70%);
+}
+.world-map.ambient-torchlit .map-weather {
+  background: radial-gradient(ellipse at 50% 45%, rgba(255, 190, 90, 0.28), transparent 62%),
+    radial-gradient(ellipse at 18% 82%, rgba(255, 145, 55, 0.18), transparent 42%);
+}
+.world-map.ambient-foggy .map-weather {
+  background: radial-gradient(ellipse at 50% 40%, rgba(255, 255, 255, 0.34), transparent 70%),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.16));
+}
+.world-map.ambient-underwater .map-weather {
+  background: linear-gradient(180deg, rgba(30, 110, 150, 0.28), rgba(20, 70, 110, 0.2)),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.07) 0 2px, transparent 2px 9px);
+}
+.world-map.ambient-magical .map-weather {
+  background: radial-gradient(ellipse at 30% 30%, rgba(170, 120, 255, 0.24), transparent 55%),
+    radial-gradient(ellipse at 70% 70%, rgba(90, 200, 255, 0.18), transparent 60%);
+}
+.map-region-label {
+  position: absolute; transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1)));
+  z-index: 3; max-width: 10rem; padding: 0.05rem 0.35rem; border-radius: 0.35rem;
+  font-size: 0.62rem; font-weight: 600; letter-spacing: 0.06em; line-height: 1.15;
+  text-align: center; text-transform: uppercase; white-space: normal; overflow-wrap: anywhere;
+  color: var(--world-ink); background: color-mix(in srgb, var(--world-bg) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--world-line) 55%, transparent);
+  pointer-events: none;
+}
+.world-map .map-marker { z-index: 4; }
+.world-map .map-compass, .world-map .map-scalebar { z-index: 5; color: var(--world-ink); }
+.world-map .map-scalebar {
+  background: color-mix(in srgb, var(--world-bg) 82%, transparent);
+  border-color: color-mix(in srgb, var(--world-line) 65%, transparent);
+}
 .map-page { display: flex; flex-direction: column; }
 .map-page .map-frame { flex: 1 1 auto; min-height: 14rem; }
 .time-strip {
@@ -262,7 +320,7 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
   pointer-events: none;
 }
 .world-map::after {
-  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 1;
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 2;
   box-shadow: inset 0 0 2.5rem rgba(46, 38, 32, 0.35);
   background: radial-gradient(ellipse at center, transparent 55%, rgba(46, 38, 32, 0.18) 100%);
 }

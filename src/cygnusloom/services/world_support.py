@@ -28,7 +28,10 @@ from cygnusloom.content.character import (
     check_swaps,
     resolve,
 )
+from cygnusloom.content.icons import icon_ids
 from cygnusloom.content.library import (
+    MAP_AMBIENTS,
+    TERRAIN_PATTERNS,
     ClockRules,
     CombatRules,
     Hooks,
@@ -88,15 +91,18 @@ from cygnusloom.services.events import (
     PcAdded,
     Place,
     RegionAdded,
+    RegionUpdated,
     SeasonSet,
     SettingRecorded,
     StartingItemsTransferred,
     TravelCharged,
+    WorldMapStyleChanged,
     load_state,
     name_key,
     record,
 )
 from cygnusloom.services.geometry import clearance, overlaps, polygon_problem, uncovered
+from cygnusloom.services.state import WORLD_MAP_PALETTES
 from cygnusloom.services.tools import check_arguments
 from cygnusloom.services.views import (
     _character_named,
@@ -121,6 +127,8 @@ MAX_QUIRKS = 10
 QUIRKS_PER_NPC = 2
 # A region outline may have at most this many corners.
 MAX_REGION_CORNERS = 200
+# A region label, or a place icon's caption, stays short enough for the map.
+MAX_MAP_LABEL = 60
 # A place given a map point must lie this far inside a region's edge, so the ground around it shows.
 REGION_BUFFER_KM = 0.5
 # Two places count as sharing a point when their positions agree to this many kilometers.
@@ -188,6 +196,10 @@ def seed_campaign(
                 name=region.name,
                 terrain=region.terrain,
                 points=[[x, y] for x, y in region.points],
+                color=region.color,
+                pattern=region.pattern,
+                ink=region.ink,
+                label=region.label,
             ),
         )
     for npc in world.npcs:
@@ -534,6 +546,7 @@ def create_location(
     y: float | None = None,
     force: bool = False,
     parent: str | None = None,
+    icon: str | None = None,
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_NAME)
@@ -542,6 +555,7 @@ def create_location(
     text = bounded_text(description, "description", MAX_TEXT)
     if not isinstance(discovered, bool):
         raise InvalidInput("discovered must be true or false")
+    icon_id = _place_icon(icon)
     px, py = _coordinates(x, y)
     inside = None
     if parent is not None:
@@ -554,7 +568,13 @@ def create_location(
         db,
         campaign_id,
         LocationAdded(
-            name=name, description=text, discovered=discovered, x=px, y=py, parent=inside
+            name=name,
+            description=text,
+            discovered=discovered,
+            x=px,
+            y=py,
+            parent=inside,
+            icon=icon_id,
         ),
     )
     db.commit()
@@ -584,6 +604,10 @@ def create_region(
     points: Sequence[Sequence[float]],
     force: bool = False,
     discovered: bool = False,
+    color: str | None = None,
+    pattern: str | None = None,
+    ink: str | None = None,
+    label: str | None = None,
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_NAME)
@@ -603,6 +627,10 @@ def create_region(
         raise InvalidInput("force must be true or false")
     if not isinstance(discovered, bool):
         raise InvalidInput("discovered must be true or false")
+    chosen_color = _chosen_color(color, "color")
+    chosen_pattern = _chosen_pattern(pattern)
+    chosen_ink = _chosen_color(ink, "ink")
+    chosen_label = _optional_text(label, "label", MAX_MAP_LABEL)
     result: dict[str, Any] = {
         "created": "region",
         "name": name,
@@ -639,10 +667,182 @@ def create_region(
             terrain=terrain,
             points=[[x, y] for x, y in corners],
             discovered=discovered,
+            color=chosen_color,
+            pattern=chosen_pattern,
+            ink=chosen_ink,
+            label=chosen_label,
         ),
     )
     db.commit()
     return result
+
+
+def update_region(
+    db: Session,
+    campaign_id: int,
+    kinds: Mapping[str, WorldTerrain],
+    name: str,
+    terrain: str | None = None,
+    points: Sequence[Sequence[float]] | None = None,
+    discovered: bool | None = None,
+    color: str | None = None,
+    pattern: str | None = None,
+    ink: str | None = None,
+    label: str | None = None,
+    force: bool = False,
+) -> dict[str, Any]:
+    """Change an area of the world map. Left out, the terrain, outline, discovery, colour,
+    pattern, ink, and label stay as they are; an empty colour or pattern goes back to the
+    terrain kind's own look, and an empty label goes back to the region's name."""
+    state = load_state(db, campaign_id)
+    key = name_key(name)
+    where = state.regions.get(key)
+    if where is None:
+        raise InvalidInput(f"there is no region named {name!r}")
+    chosen_terrain = where.terrain if terrain is None else terrain
+    if chosen_terrain not in kinds:
+        choices = ", ".join(sorted(kinds)) or "none"
+        raise InvalidInput(
+            f"{chosen_terrain!r} is not a terrain kind. The terrain kinds are: {choices}."
+        )
+    corners = (
+        [tuple(point) for point in where.points] if points is None else _region_corners(points)
+    )
+    problem = polygon_problem(corners)
+    if problem is not None:
+        raise InvalidInput(
+            f"the region {problem}. Give its corners in order around the edge, in kilometers "
+            "from the map's center."
+        )
+    if not isinstance(force, bool):
+        raise InvalidInput("force must be true or false")
+    if discovered is not None and not isinstance(discovered, bool):
+        raise InvalidInput("discovered must be true or false")
+    if points is not None and not force:
+        for other in state.regions.values():
+            if name_key(other.name) != key and overlaps(corners, other.points):
+                raise InvalidInput(
+                    f"the new outline overlaps the region {other.name!r}. Leave room for it, "
+                    "or pass force=true to overlap it."
+                )
+    chosen_discovered = where.discovered if discovered is None else discovered
+    chosen_color = where.color if color is None else _chosen_color(color, "color")
+    chosen_pattern = where.pattern if pattern is None else _chosen_pattern(pattern)
+    chosen_ink = where.ink if ink is None else _chosen_color(ink, "ink")
+    chosen_label = where.label if label is None else _optional_text(label, "label", MAX_MAP_LABEL)
+    record(
+        db,
+        campaign_id,
+        RegionUpdated(
+            name=where.name,
+            terrain=chosen_terrain,
+            points=[[x, y] for x, y in corners],
+            discovered=chosen_discovered,
+            color=chosen_color,
+            pattern=chosen_pattern,
+            ink=chosen_ink,
+            label=chosen_label,
+        ),
+    )
+    db.commit()
+    return {"updated": "region", "name": where.name}
+
+
+def update_world_map(
+    db: Session,
+    campaign_id: int,
+    palette: str | None = None,
+    ambient: str | None = None,
+    background_color: str | None = None,
+    line_color: str | None = None,
+    show_clouds: bool | None = None,
+    show_contours: bool | None = None,
+) -> dict[str, Any]:
+    """Change the player's world map look. Left out, each field stays as it is; an empty colour
+    goes back to the palette's own colour."""
+    state = load_state(db, campaign_id)
+    current = state.world_map_style
+    chosen_palette = (
+        current.palette if palette is None else _choice(palette, WORLD_MAP_PALETTES, "palette")
+    )
+    chosen_ambient = (
+        current.ambient if ambient is None else _choice(ambient, MAP_AMBIENTS, "ambient")
+    )
+    chosen_background = (
+        current.background_color
+        if background_color is None
+        else _chosen_color(background_color, "background_color")
+    )
+    chosen_line = (
+        current.line_color if line_color is None else _chosen_color(line_color, "line_color")
+    )
+    chosen_clouds = current.show_clouds if show_clouds is None else show_clouds
+    chosen_contours = current.show_contours if show_contours is None else show_contours
+    if not isinstance(chosen_clouds, bool):
+        raise InvalidInput("show_clouds must be true or false")
+    if not isinstance(chosen_contours, bool):
+        raise InvalidInput("show_contours must be true or false")
+    record(
+        db,
+        campaign_id,
+        WorldMapStyleChanged(
+            palette=chosen_palette,
+            ambient=chosen_ambient,
+            background_color=chosen_background,
+            line_color=chosen_line,
+            show_clouds=chosen_clouds,
+            show_contours=chosen_contours,
+        ),
+    )
+    db.commit()
+    return {
+        "updated": "world map",
+        "palette": chosen_palette,
+        "ambient": chosen_ambient,
+        "background_color": chosen_background,
+        "line_color": chosen_line,
+        "show_clouds": chosen_clouds,
+        "show_contours": chosen_contours,
+    }
+
+
+_HEX_COLOR = re.compile(r"#[0-9a-fA-F]{6}")
+
+
+def _chosen_color(value: object, label: str) -> str | None:
+    """A custom colour, or None to follow the terrain kind; an empty string resets it."""
+    if value is None:
+        return None
+    if value == "":
+        return ""
+    if not isinstance(value, str) or not _HEX_COLOR.fullmatch(value):
+        raise InvalidInput(f"{label} must be a hex colour like #3a3f47, not {value!r}")
+    return value
+
+
+def _chosen_pattern(value: object) -> str | None:
+    """A custom texture, or None to follow the terrain kind; an empty string hides it."""
+    if value is None or value == "":
+        return value if value is None else ""
+    if not isinstance(value, str) or value not in TERRAIN_PATTERNS:
+        allowed = ", ".join(TERRAIN_PATTERNS)
+        raise InvalidInput(f"pattern must be one of {allowed}, not {value!r}")
+    return value
+
+
+def _choice(value: object, allowed: Sequence[str], label: str) -> str:
+    if not isinstance(value, str) or value not in allowed:
+        raise InvalidInput(f"{label} must be one of {', '.join(allowed)}, not {value!r}")
+    return value
+
+
+def _place_icon(value: object) -> str | None:
+    """An icon id from the registry, or None when the place uses the default marker."""
+    if value is None or value == "":
+        return None
+    if not isinstance(value, str) or value not in icon_ids():
+        raise InvalidInput(f"there is no icon {value!r}. Use map_options to list the place icons.")
+    return value
 
 
 def _region_corners(points: Sequence[Sequence[float]]) -> list[tuple[float, float]]:
@@ -1123,14 +1323,18 @@ def update_location(
     y: float | None = None,
     off_map: bool = False,
     force: bool = False,
+    icon: str | None = None,
 ) -> dict[str, Any]:
     """Change a location's description and its map position. Giving x and y moves it. Giving
-    off_map takes it off the map. Without any of these the position stays as it is."""
+    off_map takes it off the map. Without any of these the position stays as it is. Giving an
+    icon changes the map marker; an empty icon goes back to the default marker."""
     state = load_state(db, campaign_id)
     where = _place_named(state, name)
     text = bounded_text(description, "description", MAX_TEXT)
     if not isinstance(off_map, bool):
         raise InvalidInput("off_map must be true or false")
+    icon_changed = icon is not None
+    icon_id = _place_icon(icon) if icon_changed else where.icon
     px, py = _coordinates(x, y)
     if where.parent is not None:
         if px is not None or py is not None:
@@ -1142,7 +1346,18 @@ def update_location(
     elif px is None and py is None and where.position is not None:
         px, py = where.position.x, where.position.y
     _ensure_open_point(state, where.name, px, py, force)
-    record(db, campaign_id, LocationUpdated(name=where.name, description=text, x=px, y=py))
+    record(
+        db,
+        campaign_id,
+        LocationUpdated(
+            name=where.name,
+            description=text,
+            x=px,
+            y=py,
+            icon=icon_id,
+            icon_changed=icon_changed,
+        ),
+    )
     db.commit()
     return {"updated": "location", "name": where.name}
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from cygnusloom.content.icons import icon_registry
 from cygnusloom.content.library import MAP_AMBIENTS, MAP_PALETTES, TERRAIN_PATTERNS
 from cygnusloom.services import encounters
 from cygnusloom.services.common import (
@@ -13,6 +14,7 @@ from cygnusloom.services.common import (
 from cygnusloom.services.events import (
     load_state,
 )
+from cygnusloom.services.state import WORLD_MAP_PALETTES
 from cygnusloom.services.world_support import *
 
 
@@ -24,6 +26,10 @@ class PlacesMixin:
         points: Sequence[Sequence[float]],
         force: bool = False,
         discovered: bool = False,
+        color: str | None = None,
+        pattern: str | None = None,
+        ink: str | None = None,
+        label: str | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return create_region(
@@ -35,6 +41,59 @@ class PlacesMixin:
                 points,
                 force=force,
                 discovered=discovered,
+                color=color,
+                pattern=pattern,
+                ink=ink,
+                label=label,
+            )
+
+    def update_region(
+        self,
+        name: str,
+        terrain: str | None = None,
+        points: Sequence[Sequence[float]] | None = None,
+        discovered: bool | None = None,
+        color: str | None = None,
+        pattern: str | None = None,
+        ink: str | None = None,
+        label: str | None = None,
+        force: bool = False,
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return update_region(
+                db,
+                self.campaign_id,
+                self.world_terrain,
+                name,
+                terrain=terrain,
+                points=points,
+                discovered=discovered,
+                color=color,
+                pattern=pattern,
+                ink=ink,
+                label=label,
+                force=force,
+            )
+
+    def update_world_map(
+        self,
+        palette: str | None = None,
+        ambient: str | None = None,
+        background_color: str | None = None,
+        line_color: str | None = None,
+        show_clouds: bool | None = None,
+        show_contours: bool | None = None,
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return update_world_map(
+                db,
+                self.campaign_id,
+                palette=palette,
+                ambient=ambient,
+                background_color=background_color,
+                line_color=line_color,
+                show_clouds=show_clouds,
+                show_contours=show_contours,
             )
 
     def create_location(
@@ -46,10 +105,20 @@ class PlacesMixin:
         y: float | None = None,
         force: bool = False,
         parent: str | None = None,
+        icon: str | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return create_location(
-                db, self.campaign_id, name, description, discovered, x, y, force, parent
+                db,
+                self.campaign_id,
+                name,
+                description,
+                discovered,
+                x,
+                y,
+                force,
+                parent,
+                icon,
             )
 
     def discover_location(self, name: str, summary: str | None = None) -> dict[str, Any]:
@@ -64,9 +133,12 @@ class PlacesMixin:
         y: float | None = None,
         off_map: bool = False,
         force: bool = False,
+        icon: str | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return update_location(db, self.campaign_id, name, description, x, y, off_map, force)
+            return update_location(
+                db, self.campaign_id, name, description, x, y, off_map, force, icon
+            )
 
     def delete_location(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -262,8 +334,30 @@ class PlacesMixin:
         return result
 
     def map_options(self) -> dict[str, Any]:
-        """The terrains, objects, templates, palettes, ambients, and patterns a map may use."""
+        """The terrains, objects, templates, palettes, ambients, patterns, and world map looks
+        a map may use."""
+        place_icons = [
+            {"id": icon_id, "label": entry.get("label", icon_id)}
+            for icon_id, entry in sorted(icon_registry().items())
+            if entry.get("category") == "places"
+        ]
         return {
+            "world": {
+                "terrains": [
+                    {
+                        "id": terrain.id,
+                        "name": terrain.name,
+                        "color": terrain.color,
+                        "pattern": terrain.pattern or "",
+                        "ink": terrain.ink or "",
+                        "rule": terrain.rule,
+                    }
+                    for terrain in sorted(self.world_terrain.values(), key=lambda entry: entry.id)
+                ],
+                "palettes": list(WORLD_MAP_PALETTES),
+                "ambients": list(MAP_AMBIENTS),
+                "place_icons": place_icons,
+            },
             "terrains": [
                 {
                     "id": terrain.id,

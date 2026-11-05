@@ -52,5 +52,77 @@
     "rule": "Broken walls and old foundations. Tough going, and full of things the school left behind.",
     "pattern": "crags",
     "ink": "#4b473d"
+  },
+  {
+    "type": "world_terrain",
+    "id": "courtyard",
+    "name": "Courtyard",
+    "color": "#b9aa92",
+    "rule": "Paved courts and cloisters. Easy going, and a good place to meet between lessons.",
+    "pattern": "bricks",
+    "ink": "#74654d"
+  },
+  {
+    "type": "world_terrain",
+    "id": "river",
+    "name": "River",
+    "color": "#4f8fa8",
+    "rule": "Flowing water. Cross at the bridge or the stepping stones; the banks are easy going.",
+    "pattern": "waves",
+    "ink": "#c0e2ea"
+  },
+  {
+    "type": "world_terrain",
+    "id": "meadow",
+    "name": "Meadow",
+    "color": "#9fbe6a",
+    "rule": "Flower meadow and soft grass. Easy going, and good ground for familiars.",
+    "pattern": "tufts",
+    "ink": "#567a34"
+  },
+  {
+    "type": "world_terrain",
+    "id": "gardens",
+    "name": "Gardens",
+    "color": "#7fa85e",
+    "rule": "Walled herb beds and gravel paths. Easy going, but some plants are not for picking.",
+    "pattern": "tufts",
+    "ink": "#3f642e"
+  },
+  {
+    "type": "world_terrain",
+    "id": "orchard",
+    "name": "Orchard",
+    "color": "#a8b85e",
+    "rule": "Rows of fruit trees and mown grass. Easy going between the trunks.",
+    "pattern": "trees",
+    "ink": "#5f6e2a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "pinewood",
+    "name": "Pinewood",
+    "color": "#41684a",
+    "rule": "Dark conifer forest. Tough going, and easy to lose the school behind you.",
+    "pattern": "trees",
+    "ink": "#1d3824"
+  },
+  {
+    "type": "world_terrain",
+    "id": "hills",
+    "name": "Hills",
+    "color": "#9a8456",
+    "rule": "Rolling hills above the school. Tough going, with a view of the whole campus.",
+    "pattern": "ridges",
+    "ink": "#5b4a2a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "marsh",
+    "name": "Marsh",
+    "color": "#5f7d55",
+    "rule": "Reedy marsh behind the grounds. Perilous going, and full of small lights at night.",
+    "pattern": "reeds",
+    "ink": "#2f4a2c"
   }
 ]
