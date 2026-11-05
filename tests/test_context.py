@@ -164,6 +164,33 @@ def test_chat_sends_every_rule_to_the_model_and_only_important_rules_in_full(set
             assert rule_text in system
 
 
+def test_the_players_setting_and_story_reach_the_gm(settings: Settings):
+    provider = RecordingProvider()
+    app = make_app(settings, fake_provider=provider)
+    _campaign_id(
+        lambda: TestClient(app),
+        setting="A heist in a city drowned beneath a clockwork moon.",
+    )
+    opening = provider.calls[0][0]["content"]
+    assert "The player asked for this setting and story" in opening
+    assert "A heist in a city drowned beneath a clockwork moon." in opening
+    # Every later step reads the same brief, including the narration.
+    assert any(
+        "A heist in a city drowned beneath a clockwork moon." in call[0]["content"]
+        for call in provider.calls[1:]
+    )
+
+
+def test_a_blank_setting_is_left_out_of_the_prompt(settings: Settings):
+    provider = RecordingProvider()
+    app = make_app(settings, fake_provider=provider)
+    _campaign_id(lambda: TestClient(app))
+    assert all(
+        "The player asked for this setting and story" not in call[0]["content"]
+        for call in provider.calls
+    )
+
+
 def test_no_summary_when_the_chat_is_well_inside_the_window(settings: Settings):
     provider = RecordingProvider()
     app = make_app(settings, fake_provider=provider)

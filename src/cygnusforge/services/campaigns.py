@@ -60,6 +60,8 @@ from cygnusforge.services.world import (
 
 MAX_NAME = 120
 MAX_MESSAGE = 8000
+# The player's optional setting/story brief at campaign creation. It is prompt text, not state.
+MAX_SETTING = 4000
 # Spoken words never contain angle brackets or call syntax, so either means a tool call was written.
 SPOKEN_MARKUP = re.compile(r"<[^>]*>|\b\w+\(\s*\{")
 # An empty speech reply is retried this many times before the step gives up.
@@ -85,11 +87,15 @@ def create_campaign(
     world_template: str,
     rule_set: str,
     model: str,
+    setting: str = "",
     rng: random.Random | None = None,
 ) -> Campaign:
     name = (name or "").strip()
     if len(name) > MAX_NAME:
         raise InvalidInput(f"label must be 1 to {MAX_NAME} characters")
+    setting = (setting or "").strip()
+    if len(setting) > MAX_SETTING:
+        raise InvalidInput(f"setting and story must be at most {MAX_SETTING} characters")
     if world_template not in library.world_templates:
         raise InvalidInput("that world template is not available")
     if rule_set not in library.rule_sets:
@@ -121,6 +127,7 @@ def create_campaign(
             world_template=world_template,
             rule_set=rule_set,
             model=model,
+            setting=setting,
         )
         db.add(campaign)
         db.flush()
@@ -518,6 +525,7 @@ def context_usage(
                 counters=rule_set.counters if rule_set else None,
             ),
             present_rules_text(state, all_rules),
+            campaign.setting,
         )
     )
     used += sum(estimate_tokens(m.content) for m in unsummarized)

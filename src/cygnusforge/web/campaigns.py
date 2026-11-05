@@ -106,6 +106,7 @@ async def create(request: Request) -> Response:
     label = form_text(form, "label")
     world_template = form_text(form, "world_template")
     rule_set = form_text(form, "rule_set")
+    setting = form_text(form, "setting")
     catalog = request.app.state.catalog
     models = catalog.model_ids()
     if not models:
@@ -125,6 +126,7 @@ async def create(request: Request) -> Response:
             world_template,
             rule_set,
             catalog.default_model_id(),
+            setting=setting,
         )
     except InvalidInput as exc:
         return _new_form(
@@ -135,6 +137,7 @@ async def create(request: Request) -> Response:
             label=label,
             world_template=world_template,
             rule_set=rule_set,
+            setting=setting,
         )
     return RedirectResponse(f"/campaigns/{campaign.id}", status_code=303)
 
@@ -638,6 +641,7 @@ def _new_form(
     label: str = "",
     world_template: str = "",
     rule_set: str = "",
+    setting: str = "",
 ) -> Response:
     library = request.app.state.content
     # The rule set comes first and decides which worlds are offered, so start from a rule set
@@ -660,6 +664,7 @@ def _new_form(
         status_code=status_code,
         error=error,
         campaign_label=label or default_labels.get(world_template, ""),
+        campaign_setting=setting,
         world_labels=default_labels,
         world_templates=library.world_templates.values(),
         rule_sets=library.rule_sets.values(),

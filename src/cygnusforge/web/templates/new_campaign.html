@@ -24,6 +24,11 @@
       </label>
       <p class="muted" data-blurb-for="world_template">{{ selected_world_blurb }}</p>
       <label>
+        Setting / story (optional)
+        <textarea name="setting" rows="6" maxlength="4000" placeholder="Describe the kind of setting or story you want to play. Leave blank to let the world and rule set lead.">{{ campaign_setting }}</textarea>
+      </label>
+      <p class="muted">Tell Cygnus what kind of world or story you want. Blank is ignored.</p>
+      <label>
         Label
         <input type="text" name="label" value="{{ campaign_label }}" maxlength="120">
       </label>

@@ -319,6 +319,9 @@ class _Run:
     # The campaign's world, or None when its template is gone. The prompt builders read its
     # setting to decide whether the GM invents one.
     world: WorldTemplate | None = None
+    # The setting and story the player asked for at creation, or blank. It is prompt guidance,
+    # not world state.
+    setting: str = ""
 
     @property
     def tool_calls(self) -> Mapping[str, ToolCall]:
@@ -446,6 +449,7 @@ def _start_run(
         opening=opening_prompt(template),
         unattached_rules=world.unattached_rules,
         world=template,
+        setting=campaign.setting,
     )
 
 
@@ -505,6 +509,7 @@ def _narration_messages(
         state.through,
         _world_text(run, state),
         present_rules_text(state, run.ctx.rules),
+        run.setting,
     )
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": "\n\n".join(p.content for p in scene)},
@@ -691,6 +696,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
             watermark,
             world_text,
             present_text,
+            run.setting,
         )
     )
     prompt_tokens += estimate_tokens(message) + sum(estimate_tokens(m.content) for m in history)
@@ -727,6 +733,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
         watermark,
         world_text,
         present_text,
+        run.setting,
     )
     conversation = [
         *(ContextPart(m.role, _campaigns()._message_source(m), m.content) for m in history),

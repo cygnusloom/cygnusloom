@@ -32,6 +32,7 @@ def _new_campaign(
     label: str = "Test chat",
     world_template: str = "testhollow",
     rule_set: str = "rolltest",
+    setting: str = "",
 ):
     token = csrf_token(client, "/campaigns/new")
     return client.post(
@@ -41,6 +42,7 @@ def _new_campaign(
             "label": label,
             "world_template": world_template,
             "rule_set": rule_set,
+            "setting": setting,
         },
         follow_redirects=False,
     )
@@ -64,10 +66,12 @@ def _create_character(
     )
 
 
-def _campaign_id(client_factory: Callable[[], TestClient]) -> tuple[TestClient, int]:
+def _campaign_id(
+    client_factory: Callable[[], TestClient], setting: str = ""
+) -> tuple[TestClient, int]:
     """A campaign whose opening GM turn has finished, so players can act."""
     client = _signed_in(client_factory)
-    response = _new_campaign(client)
+    response = _new_campaign(client, setting=setting)
     assert response.status_code == 303
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     created = _create_character(client, campaign_id)
@@ -275,6 +279,48 @@ def test_new_campaign_form_asks_for_the_label_last(
     page = client.get("/campaigns/new").text
     assert page.index('name="rule_set"') < page.index('name="world_template"')
     assert page.index('name="world_template"') < page.index('name="label"')
+
+
+def test_new_campaign_form_offers_an_optional_setting_and_story(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    page = client.get("/campaigns/new").text
+    assert 'name="setting" rows="6" maxlength="4000"' in page
+    assert page.index('name="world_template"') < page.index('name="setting"')
+    assert page.index('name="setting"') < page.index('name="label"')
+    assert "Blank is ignored." in page
+
+
+def test_create_stores_the_setting_and_story(client_factory: Callable[[], TestClient]):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, label="Briefed", setting="  A heist in a drowned city.  ")
+    assert response.status_code == 303
+    with Session(client.app.state.engine) as db:
+        campaign = db.get(Campaign, _created_campaign_id(response))
+        assert campaign is not None
+        assert campaign.setting == "A heist in a drowned city."
+
+
+def test_blank_setting_is_ignored(client_factory: Callable[[], TestClient]):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, setting="   ")
+    assert response.status_code == 303
+    with Session(client.app.state.engine) as db:
+        campaign = db.get(Campaign, _created_campaign_id(response))
+        assert campaign is not None
+        assert campaign.setting == ""
+
+
+def test_create_rejects_an_overlong_setting_and_keeps_the_text(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    setting = "x" * 4001
+    response = _new_campaign(client, setting=setting)
+    assert response.status_code == 400
+    assert "setting and story must be at most 4000 characters" in response.text
+    assert setting in response.text
 
 
 def test_campaign_list_keeps_the_label_editor_behind_a_toggle(

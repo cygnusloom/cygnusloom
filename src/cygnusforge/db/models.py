@@ -86,7 +86,9 @@ class Campaign(SQLModel, table=True):
     shows, which the player can change. `model` is the LLM every reply in the chat uses, and it
     can be switched at any time. It is configuration, not part of the log.
 
-    `world_template` and `rule_set` name directories under the bundled content."""
+    `world_template` and `rule_set` name directories under the bundled content. `setting` is the
+    optional free-form setting or story the player asked for at creation; it reaches the GM's
+    prompt every turn and is blank when the player left it out."""
 
     __tablename__ = "campaign"
 
@@ -96,6 +98,7 @@ class Campaign(SQLModel, table=True):
     world_template: str = Field(max_length=64)
     rule_set: str = Field(max_length=64)
     model: str = Field(max_length=120)
+    setting: str = Field(default="", sa_column=Column(Text, nullable=False))
     created_at: datetime = Field(default_factory=utcnow)
 
 

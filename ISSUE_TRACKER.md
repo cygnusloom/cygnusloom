@@ -14,7 +14,6 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
    book's faction assets and their turns are GM text rather than engine state.
 8. Audit the transcript for cleanliness - we likely don't need announcements about armor values (WWN).
 9. More local maps outside of encounters - for indoor or small-scale locations we should have nice maps that turn into encounter maps at a moments notice. Maybe combine the two concepts. Be able to place props, npcs, objects, etc.
-11. Add a "setting/story" freeform text to the campaign creation. This lets the player instruction the GM on what kind of story they want, or what kind of setting. If blank, it is ignored. It is most useful for unwritten worlds, but can contain instructions for pre-made worlds too.
 
 # Triaged Issues
 
