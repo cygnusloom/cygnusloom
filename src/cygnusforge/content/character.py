@@ -115,7 +115,7 @@ class Stat:
     values: tuple[int, ...] = ()
     # The modifier bands a score falls into, as (minimum, modifier) pairs with rising minimums.
     # A score takes the modifier of the highest minimum it reaches. With no bands the modifier
-    # is the score itself, which is how Cairn and Hogwarts read their stats.
+    # is the score itself, which is how Cairn reads its stats.
     modifier_bands: tuple[tuple[int, int], ...] = ()
     # The stat whose modifier is added to a rolled or given value, such as Constitution to a hit
     # die. Empty when the value is used as it stands.

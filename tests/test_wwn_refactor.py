@@ -558,14 +558,6 @@ def test_an_unknown_feature_type_is_refused():
         _tool_enum({"source": "features", "feature_type": "ritual"})
 
 
-def test_the_existing_rule_sets_still_fill_their_string_enums():
-    hogwarts = LIBRARY.rule_sets["hogwarts-rpg"]
-    move = hogwarts.tool_calls["roll_move"].parameters["properties"]["move"]
-    assert move["enum"] == sorted(hogwarts.moves)
-    assert move["enum"]
-    assert LIBRARY.rule_sets["cairn2e"].tool_calls
-
-
 # --- 4. Marketplace currency and armor -------------------------------------------------------
 
 

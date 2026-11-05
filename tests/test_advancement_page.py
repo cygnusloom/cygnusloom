@@ -1,4 +1,4 @@
-"""The player's advancement page: level-up choices, pick spending, and Advancements."""
+"""The player's advancement page: level-up choices and pick spending."""
 
 from __future__ import annotations
 
@@ -10,14 +10,8 @@ from fastapi.testclient import TestClient
 from cygnusforge.config import Settings
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.rules import wwn
-from cygnusforge.services.common import session_scope
-from cygnusforge.services.events import load_state
 from tests.conftest import csrf_token, make_app
 from tests.test_campaigns import _signed_in
-from tests.test_hogwarts import HARRY
-from tests.test_hogwarts import _campaign as _hogwarts_campaign
-from tests.test_hogwarts import _counter as _hogwarts_counter
-from tests.test_hogwarts import _tools as _hogwarts_tools
 from tests.test_wwn_advancement import (
     NAME,
     WWN,
@@ -263,57 +257,3 @@ def test_the_debug_panel_awards_experience_without_a_gm_turn(
 
     assert response.status_code == 303
     assert _counter(app, campaign_id, "xp") == 3
-
-
-def test_the_debug_panel_grants_a_hogwarts_advancement(
-    settings: Settings, fake: FakeProvider
-) -> None:
-    app = make_app(replace(settings, debug_panel=True), fake_provider=fake)
-    client_factory = lambda: TestClient(app)
-    _app, campaign_id = _hogwarts_campaign(client_factory)
-    client = _signed_in(client_factory)
-    token = csrf_token(client, f"/campaigns/{campaign_id}")
-
-    response = client.post(
-        f"/campaigns/{campaign_id}/debug/grant",
-        data={
-            "csrf_token": token,
-            "name": HARRY,
-            "kind": "advancement",
-        },
-        follow_redirects=False,
-    )
-
-    assert response.status_code == 303
-    assert _hogwarts_counter(app, campaign_id, "advancements") == 1
-
-
-def test_the_hogwarts_advancement_page_offers_an_option(
-    client_factory: Callable[[], TestClient],
-) -> None:
-    app, campaign_id = _hogwarts_campaign(client_factory)
-    client = _signed_in(client_factory)
-    tools = _hogwarts_tools(app, campaign_id)
-    tools.adjust_counter(HARRY, "advancements", 1)
-
-    page = _page(client, campaign_id)
-
-    assert "Advancement" in page
-    assert "Trait" in page or "trait" in page
-    assert "Favourite Subject" in page
-
-
-def test_a_hogwarts_advancement_takes_the_players_chosen_option(
-    client_factory: Callable[[], TestClient],
-) -> None:
-    app, campaign_id = _hogwarts_campaign(client_factory)
-    client = _signed_in(client_factory)
-    tools = _hogwarts_tools(app, campaign_id)
-    tools.adjust_counter(HARRY, "advancements", 1)
-
-    response = _submit(client, campaign_id, {"option": "trait", "stat-trait": "cunning"})
-
-    assert response.status_code == 303
-    with session_scope(app.state.engine) as db:
-        character = load_state(db, campaign_id).characters[HARRY.casefold()]
-    assert character.stats["cunning"] == 2

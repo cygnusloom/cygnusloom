@@ -15,7 +15,7 @@ from cygnusforge.content.library import DATA_DIR, ContentLibrary
 from cygnusforge.services.prompts import state_instruction
 from tests.conftest import content_library
 
-BUNDLED_RULE_SETS = ("cairn2e", "hogwarts-rpg", "worldswithoutnumber")
+BUNDLED_RULE_SETS = ("cairn2e", "worldswithoutnumber")
 SETTING_FORGE = "There is no published setting"
 
 
@@ -80,7 +80,7 @@ def test_the_unwritten_world_plays_with_any_rule_set():
     world = library.world_templates["unwritten-world"]
     assert world.rule_set is None
     assert not world.has_setting
-    for rule_set in ("cairn2e", "hogwarts-rpg", "rolltest"):
+    for rule_set in ("cairn2e", "worldswithoutnumber", "rolltest"):
         content = library.world_content("unwritten-world", rule_set)
         assert content.monsters == {}
         assert content.dice_tables == {}
@@ -100,7 +100,6 @@ def test_the_setting_forge_runs_for_the_unwritten_world(rule_set: str):
     [
         ("testhollow", "rolltest"),
         ("twin-lakes", "cairn2e"),
-        ("hogwarts", "hogwarts-rpg"),
     ],
 )
 def test_a_world_with_a_setting_gets_no_setting_forge(world: str, rule_set: str):

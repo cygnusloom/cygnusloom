@@ -460,7 +460,7 @@ def test_create_rejects_a_rule_set_the_world_is_not_played_with(
     client_factory: Callable[[], TestClient],
 ):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="twin-lakes", rule_set="hogwarts-rpg")
+    response = _new_campaign(client, world_template="twin-lakes", rule_set="worldswithoutnumber")
     assert response.status_code == 400
     assert "only works with the Cairn 2e rule set" in response.text
 

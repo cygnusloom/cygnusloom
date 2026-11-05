@@ -260,7 +260,7 @@ def test_a_move_without_a_stat_adds_only_the_modifier(client_factory):
 
 
 def test_a_trait_can_go_below_zero():
-    """Hogwarts traits run from -1 up, so a bonus can make the total smaller than the roll."""
+    """Stats run from -1 up, so a bonus can make the total smaller than the roll."""
     character = _character_stub(stats={"bravery": -1}, harm={})
     assert modifier_value(character, "bravery") == -1
     harmed = _character_stub(stats={"bravery": 1}, harm={"bravery": 2})

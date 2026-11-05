@@ -344,7 +344,6 @@ class _SkillPickParser(HTMLParser):
     ("world_template", "rule_set"),
     [
         ("twin-lakes", "cairn2e"),
-        ("hogwarts", "hogwarts-rpg"),
         ("unwritten-world", "worldswithoutnumber"),
     ],
 )

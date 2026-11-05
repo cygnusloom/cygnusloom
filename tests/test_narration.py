@@ -7,7 +7,6 @@ import json
 from collections.abc import Callable
 from typing import Any
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
@@ -181,10 +180,10 @@ def test_narrator_keeps_routine_beats_under_sixty_words(
     assert "or a brief exchange of dialogue" in system
 
 
-@pytest.mark.parametrize("rule_set_id", ["cairn2e", "hogwarts-rpg"])
-def test_present_tense_narration_is_an_important_core_rule(rule_set_id: str) -> None:
-    """The present-tense rule comes from the core rule set and is given in full to every ruleset."""
-    rule_set = content_library().rule_sets[rule_set_id]
+def test_present_tense_narration_is_an_important_core_rule() -> None:
+    """The present-tense rule comes from the core rule set and is given in full to a ruleset
+    that does not replace it."""
+    rule_set = content_library().rule_sets["cairn2e"]
     assert "narration" in rule_set.important
     parts = system_parts(rule_set.id, rule_set.rules, rule_set.important, "", 0)
     system = "\n".join(part.content for part in parts)

@@ -204,9 +204,9 @@ def test_the_standalone_page_falls_back_to_a_valid_world(
     assert response.status_code == 200
     assert "Compendium" in response.text
 
-    # Twin Lakes is a Cairn world, so asking for it with Hogwarts must fall back to a world the
-    # Hogwarts rule set offers rather than build a mismatched compendium.
-    response = client.get("/compendium?rule_set=hogwarts-rpg&world_template=twin-lakes")
+    # Twin Lakes is a Cairn world, so asking for it with Worlds Without Number must fall back to
+    # a world that rule set offers rather than build a mismatched compendium.
+    response = client.get("/compendium?rule_set=worldswithoutnumber&world_template=twin-lakes")
     assert response.status_code == 200
     selected = re.search(r'name="world_template".*?</select>', response.text, re.DOTALL)
     assert selected is not None
@@ -214,4 +214,4 @@ def test_the_standalone_page_falls_back_to_a_valid_world(
     assert chosen is not None
     library = content_library()
     world = library.world_templates[chosen.group(1)]
-    assert world.rule_set is None or world.rule_set == "hogwarts-rpg"
+    assert world.rule_set is None or world.rule_set == "worldswithoutnumber"

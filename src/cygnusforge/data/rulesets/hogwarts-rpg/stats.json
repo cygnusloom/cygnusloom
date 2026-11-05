@@ -1,7 +1,0 @@
-[
-  {"type": "stat", "id": "bravery", "name": "Bravery", "values": [-1, 0, 1, 1, 2], "swap_group": "traits"},
-  {"type": "stat", "id": "cunning", "name": "Cunning", "values": [-1, 0, 1, 1, 2], "swap_group": "traits"},
-  {"type": "stat", "id": "intellect", "name": "Intellect", "values": [-1, 0, 1, 1, 2], "swap_group": "traits"},
-  {"type": "stat", "id": "loyalty", "name": "Loyalty", "values": [-1, 0, 1, 1, 2], "swap_group": "traits"},
-  {"type": "stat", "id": "magic", "name": "Magic", "values": [-1, 0, 1, 1, 2], "swap_group": "traits"}
-]

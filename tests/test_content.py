@@ -150,11 +150,11 @@ def tree(tmp_path: Path) -> Path:
 
 def test_bundled_content_loads():
     library = ContentLibrary.load()
-    assert set(library.world_templates) == {"twin-lakes", "hogwarts", "unwritten-world"}
+    assert set(library.world_templates) == {"twin-lakes", "unwritten-world"}
     assert library.world_templates["twin-lakes"].name == "Twin Lakes"
     twin_lakes = library.world_templates["twin-lakes"]
     assert twin_lakes.locations
-    assert set(library.rule_sets) == {"cairn2e", "hogwarts-rpg", "worldswithoutnumber"}
+    assert set(library.rule_sets) == {"cairn2e", "worldswithoutnumber"}
     assert library.world_content("twin-lakes", "cairn2e").monsters
     assert library.rule_sets["worldswithoutnumber"].character.skills
     assert library.rule_sets["worldswithoutnumber"].monsters
@@ -350,28 +350,16 @@ def test_cairn_hook_configurator_validates_consumable_features(feature, message)
 def test_bundled_worlds_say_which_rule_set_they_use():
     library = ContentLibrary.load()
     assert library.world_templates["twin-lakes"].rule_set == "cairn2e"
-    assert library.world_templates["hogwarts"].rule_set == "hogwarts-rpg"
+    assert library.world_templates["unwritten-world"].rule_set is None
     assert library.world_templates["twin-lakes"].blurb
-    assert library.world_templates["hogwarts"].blurb
+    assert library.world_templates["unwritten-world"].blurb
     assert library.rule_sets["cairn2e"].blurb
-    assert library.rule_sets["hogwarts-rpg"].blurb
+    assert library.rule_sets["worldswithoutnumber"].blurb
 
 
-def test_hogwarts_world_has_a_map_the_gm_can_grow():
-    """Every top-level place in the Hogwarts world has a map point, and its ground is drawn from
-    kinds the rule set defines, so the world map shows the grounds and the GM can add regions."""
+def test_every_bundled_rule_set_defines_ground_kinds():
+    """Both bundled rule sets define ground kinds, so create_region works in either world."""
     library = ContentLibrary.load()
-    world = library.world_templates["hogwarts"]
-    top_level = [place for place in world.locations if place.parent is None]
-    assert top_level
-    assert all(place.x is not None and place.y is not None for place in top_level)
-    assert world.regions
-    # The ground reads as land, not as rectangles: every region has several uneven sides.
-    assert all(len(region.points) >= 6 for region in world.regions)
-    kinds = library.rule_sets["hogwarts-rpg"].world_terrain
-    assert kinds
-    assert {region.terrain for region in world.regions} <= set(kinds)
-    # Both bundled rule sets define ground kinds, so create_region works in either world.
     assert all(rule_set.world_terrain for rule_set in library.rule_sets.values())
 
 
@@ -1455,8 +1443,8 @@ def test_the_suraru_imperators_venomous_bite_is_a_blast():
     assert monster.attacks["venomous bite"] == "1d6"
 
 
-def _edit_hogwarts_templates(root: Path, edit: Any) -> None:
-    path = root / "rulesets" / "hogwarts-rpg" / "templates.json"
+def _edit_wwn_templates(root: Path, edit: Any) -> None:
+    path = root / "rulesets" / "worldswithoutnumber" / "templates.json"
     templates = json.loads(path.read_text(encoding="utf-8"))
     edit(templates)
     path.write_text(json.dumps(templates, indent=2), encoding="utf-8")
@@ -1466,12 +1454,18 @@ def _edit_hogwarts_templates(root: Path, edit: Any) -> None:
     "edit,message",
     [
         (lambda t: t[0]["stats"].update({"charm": 1}), "unknown stat 'charm' in 'stats'"),
-        (lambda t: t[-1]["counters"].update({"mana": 1}), "unknown counter 'mana' in 'counters'"),
-        (lambda t: t[-1]["counters"].update({"experience": -1}), "amounts must be at least 0"),
+        (
+            lambda t: t[0].setdefault("counters", {}).update({"mana": 1}),
+            "unknown counter 'mana' in 'counters'",
+        ),
+        (
+            lambda t: t[0].setdefault("counters", {}).update({"xp": -1}),
+            "amounts must be at least 0",
+        ),
     ],
 )
 def test_a_template_grant_must_name_a_known_stat_or_counter(tmp_path: Path, edit, message: str):
     root = _twin_lakes_copy(tmp_path)
-    _edit_hogwarts_templates(root, edit)
+    _edit_wwn_templates(root, edit)
     with pytest.raises(ContentError, match=re.escape(message)):
         ContentLibrary.load(root)

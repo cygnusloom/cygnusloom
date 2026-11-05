@@ -11,9 +11,13 @@ from sqlmodel import Session
 
 from cygnusforge.content.character import (
     CharacterError,
+    Choose,
     FeatPick,
+    Feature,
+    Field,
     Granted,
     TableOption,
+    Template,
     build_character,
     check_choices,
     feature_pick_options,
@@ -26,11 +30,47 @@ from cygnusforge.services.events import Character, NpcAdded, load_state, record
 from cygnusforge.web.character_form import creation_view
 from tests.conftest import content_library
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
-from tests.test_hogwarts import TRAITS
 from tests.test_wwn_combat import PC, _wwn_campaign
 
 TAG = "3rd Year"
-BASE = content_library().rule_sets["hogwarts-rpg"].character
+# The neutral roll test rule set, with one tag-driven template and a source feature, so the
+# generic feature-pick machinery is exercised without a source book.
+_ROLLTEST = content_library().rule_sets["rolltest"].character
+_SOURCE = Feature(
+    id="source-spell",
+    name="Source Spell",
+    feature_type="spell",
+    description="A spell the synthetic picks are copied from.",
+    size="",
+    uses=0,
+    armor=0,
+    tag=TAG,
+)
+_TEMPLATE = Template(
+    id="pure-blood",
+    kind="blood",
+    name="Pure Blood",
+    description="A synthetic template with a tag-driven pick.",
+    features=(),
+    tables=(),
+    names=(),
+    choose=Choose(count=1, feature_type="spell", tag_field="year"),
+)
+BASE = replace(
+    _ROLLTEST,
+    features={**_ROLLTEST.features, _SOURCE.id: _SOURCE},
+    templates={**_ROLLTEST.templates, _TEMPLATE.id: _TEMPLATE},
+    fields={
+        **_ROLLTEST.fields,
+        "year": Field(id="year", name="Year", description="", table="year"),
+    },
+    tables={
+        **_ROLLTEST.tables,
+        "year": (TableOption(None, "2nd Year"), TableOption(None, TAG)),
+    },
+    table_names={**_ROLLTEST.table_names, "year": "Year"},
+)
+TRAITS = {"field-year": TAG}
 
 
 def _tagged_spec(count: int):
@@ -639,7 +679,7 @@ def test_sparse_features_are_reported_on_the_creation_form(
     app = client.app
     assert isinstance(app, FastAPI)
     library = app.state.content
-    rule_set = library.rule_sets["hogwarts-rpg"]
+    rule_set = library.rule_sets["rolltest"]
     spec = (
         _tagged_spec(1)
         if pick_kind == "tagged"
@@ -652,9 +692,9 @@ def test_sparse_features_are_reported_on_the_creation_form(
             rule_set.id: replace(rule_set, character=spec),
         },
     )
-    response = _new_campaign(client, world_template="hogwarts", rule_set=rule_set.id)
+    response = _new_campaign(client, world_template="testhollow", rule_set=rule_set.id)
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-    fields = {**TRAITS, "template-blood": "pure-blood", "field-year": TAG}
+    fields = {**TRAITS, "template-blood": "pure-blood"}
 
     created = _create_character(client, campaign_id, name="Wren", fields=fields)
 

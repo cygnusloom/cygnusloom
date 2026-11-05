@@ -1,4 +1,0 @@
-[
-  {"type": "relation", "id": "friend", "label": "Friend", "limit": 2},
-  {"type": "relation", "id": "rival", "label": "Rival", "limit": 1}
-]
