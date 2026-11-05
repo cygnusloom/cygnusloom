@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}{{ view.label }} · {{ campaign.name }}{% endblock %}
+{% block content %}
+<section class="advancement-page" aria-labelledby="advancement-title">
+  <p><a href="/campaigns/{{ campaign.id }}">Back to {{ campaign.name }}</a></p>
+  <h1 id="advancement-title">{{ view.label }}: {{ view.character }}</h1>
+  <p class="muted">{{ rule_set.name if rule_set else campaign.rule_set }}{% if world %} · {{ world.name }}{% endif %}</p>
+
+  {% if view.kind == "level" and view.summary %}
+  <section class="advancement-summary" aria-labelledby="summary-title">
+    <h2 id="summary-title">Level {{ view.summary.new_level }}</h2>
+    <p>{{ view.character }} has {{ view.summary.xp }} experience; level {{ view.summary.new_level }} needs {{ view.summary.threshold }} on the {{ view.summary.rate }} track.</p>
+    <ul>
+      {% for line in view.summary.lines %}<li>{{ line }}</li>{% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if view.kind == "options" and view.options %}
+  <form method="post" action="/campaigns/{{ campaign.id }}/advancement" class="advancement-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <fieldset>
+      <legend>Choose one {{ view.label|lower }}</legend>
+      {% for option in view.options %}
+      <label class="advancement-option">
+        <input type="radio" name="option" value="{{ option.value }}" required>
+        <strong>{{ option.label }}</strong>
+        <span class="muted">{{ option.text }}</span>
+      </label>
+      {% if option.picks %}
+      <label>
+        {{ option.label }}: attribute
+        <select name="stat-{{ option.value }}">
+          <option value="">Choose an attribute</option>
+          {% for stat in option.stats %}<option value="{{ stat.id }}">{{ stat.name }}</option>{% endfor %}
+        </select>
+      </label>
+      {% endif %}
+      {% if option.features %}
+      <label>
+        {{ option.label }}: feature
+        <select name="feature-{{ option.value }}">
+          <option value="">Choose one</option>
+          {% for feature in option.features %}<option value="{{ feature.id }}">{{ feature.name }}</option>{% endfor %}
+        </select>
+      </label>
+      {% endif %}
+      {% endfor %}
+    </fieldset>
+    <button type="submit">Take the {{ view.label|lower }}</button>
+  </form>
+  {% elif view.picks %}
+  <form method="post" action="/campaigns/{{ campaign.id }}/advancement" class="advancement-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% for pick in view.picks %}
+      {% if pick.kind == "skill" %}
+      <fieldset class="creation-panel">
+        <legend>{{ pick.label }}: {{ pick.available }} available</legend>
+        {% if pick.skills %}
+        <table class="advancement-skills">
+          <thead><tr><th>Skill</th><th>Now</th><th>Raise to</th></tr></thead>
+          <tbody>
+          {% for skill in pick.skills %}
+            <tr>
+              <th scope="row">{{ skill.name }}</th>
+              <td>{{ skill.current }}</td>
+              <td>
+                <select name="skill-{{ pick.id }}-{{ skill.id }}">
+                  <option value="">No change</option>
+                  {% for target in skill.targets %}
+                  <option value="{{ target.level }}">{{ target.level }} ({{ target.cost }} point{{ "" if target.cost == 1 else "s" }}{% if target.minimum_level > 1 %}, needs level {{ target.minimum_level }}{% endif %})</option>
+                  {% endfor %}
+                </select>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="muted">No skill can be raised further.</p>
+        {% endif %}
+        <p class="muted">Skill points are shared with attribute boosts. Leave points unspent to save them for later.</p>
+      </fieldset>
+      {% elif pick.kind == "stat" %}
+      <fieldset class="creation-panel">
+        <legend>{{ pick.label }}: {{ pick.available }} point{{ "" if pick.available == 1 else "s" }} available</legend>
+        {% if pick.can_raise %}
+        <p class="muted">The next boost costs {{ pick.next_cost }} point{{ "" if pick.next_cost == 1 else "s" }}{% if pick.next_minimum and pick.next_minimum > 1 %}; it needs character level {{ pick.next_minimum }}{% endif %}. Buying several costs more each time.</p>
+        {% for stat in pick.stats %}
+        <label>
+          {{ stat.name }} (now {{ stat.value }})
+          <input type="number" name="stat-{{ pick.id }}-{{ stat.id }}" min="0" max="{{ pick.available }}" value="0">
+        </label>
+        {% endfor %}
+        {% else %}
+        <p class="muted">No attribute boost is available at this level.</p>
+        {% endif %}
+      </fieldset>
+      {% elif pick.kind == "feature" %}
+      <fieldset class="creation-panel">
+        <legend>{{ pick.label }}: {{ pick.available }} pick{{ "" if pick.available == 1 else "s" }} available</legend>
+        {% if pick.options %}
+          {% for index in range(pick.available) %}
+          <label>
+            {{ pick.label }} {{ index + 1 }}
+            <select name="pick-{{ pick.id }}-{{ index }}">
+              <option value="">No choice</option>
+              {% for option in pick.options %}
+              <option value="{{ option.id }}">{{ option.name }}{% if option.rank %} (rank {{ option.rank }}){% endif %}</option>
+              {% endfor %}
+            </select>
+          </label>
+          {% endfor %}
+        {% else %}
+        <p class="muted">No {{ pick.label|lower }} is available to this character.</p>
+        {% endif %}
+      </fieldset>
+      {% endif %}
+    {% endfor %}
+    <button type="submit">{% if view.kind == "level" %}Level up to {{ view.summary.new_level }}{% else %}Spend picks{% endif %}</button>
+  </form>
+  {% else %}
+  <p class="muted">There is nothing to advance right now.</p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -138,7 +138,7 @@
     "name": "level_up",
     "python_module": "wwn",
     "function": "level_up",
-    "description": "Raise a character from their current level to the next, once their XP total has reached that level's threshold (see gain_xp) and the level counter is below 10. Call it during downtime, and narrate the training or revelation it represents. Hit points are rerolled for the whole new level (level d6 plus the class constant and Constitution each level); if the total is no better than the old, the old total rises by one. The character also gains the class attack bonus for the new level, three skill points (four for an Expert or partial Expert, the extra one for non-combat skills or attributes), any focus pick due at levels 2, 5, 7, and 10, any art pick due on their class chart, and a larger daily casting limit if they cast spells.",
+    "description": "Advance a character one level once their XP total has reached the next threshold (see gain_xp). For an NPC this applies the level's automatic gains at once. For the player character it applies nothing: the player makes the level's choices on the character sheet, so tell them to level up there and wait. The automatic gains are a rerolled hit-point total (level d6 plus the class constant and Constitution each level, keeping the old total plus one when the roll is worse), the class attack bonus, three skill points (four for an Expert or partial Expert), any Focus, art, and spell picks due, and a larger daily casting limit for a spellcaster.",
     "parameters": {
       "type": "object",
       "properties": {

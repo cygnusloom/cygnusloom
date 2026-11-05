@@ -17,7 +17,7 @@
   {
     "type": "prompt",
     "id": "luck_and_experience",
-    "text": "When a player spends Luck, call adjust_counter luck -1. A move's failure band already marks Experience, so never add Experience again by hand. When a character has an Advancement, call take_advancement with the option the player chooses."
+    "text": "When a player spends Luck, call adjust_counter luck -1. A move's failure band already marks Experience, so never add Experience again by hand. When a character has an Advancement, the player chooses its option on the character sheet; tell them to do so and wait. Call take_advancement only for an NPC, or after the player has told you the exact option."
   },
   {
     "type": "prompt",

@@ -15,6 +15,7 @@ from cygnusforge.auth.deps import page_user, verify_csrf
 from cygnusforge.content.character import NO_CAMPAIGN, NO_CHARACTER, character_schema
 from cygnusforge.db.models import User
 from cygnusforge.llm.base import LLMError
+from cygnusforge.services import level_up as level_up_service
 from cygnusforge.services.campaigns import (
     Delta,
     Logged,
@@ -259,6 +260,35 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
+@router.get("/{campaign_id}/advancement")
+def advancement_page(request: Request, campaign_id: int) -> Response:
+    """The player's level-up or Advancement page."""
+    user = page_user(request)
+    return _advancement_page(request, user, campaign_id)
+
+
+@router.post("/{campaign_id}/advancement")
+async def submit_advancement(request: Request, campaign_id: int) -> Response:
+    """Apply a level-up, a pool of advancement picks, or an Advancement option."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    engine = request.app.state.engine
+    library = request.app.state.content
+    campaign = get_campaign(engine, user.id, campaign_id)
+    rule_set = library.rule_sets.get(campaign.rule_set)
+    if rule_set is None:
+        return _campaign_page(
+            request, user, campaign_id, 400, "that rule set is no longer available"
+        )
+    world = library.world_content(campaign.world_template, campaign.rule_set)
+    try:
+        level_up_service.apply_page(engine, campaign.id, rule_set, world, dict(form))
+    except InvalidInput as exc:
+        return _advancement_page(request, user, campaign_id, 400, str(exc))
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
 @router.get("/{campaign_id}")
 def campaign_page(request: Request, campaign_id: int) -> Response:
     user = page_user(request)
@@ -381,6 +411,41 @@ async def change_debug_stat(request: Request, campaign_id: int) -> Response:
         return _campaign_page(request, user, campaign_id, 400, str(exc))
     except Conflict as exc:
         return _campaign_page(request, user, campaign_id, 409, str(exc))
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
+@router.post("/{campaign_id}/debug/grant")
+async def grant_debug_advancement(request: Request, campaign_id: int) -> Response:
+    settings = request.app.state.settings
+    if not settings.debug_panel:
+        raise NotFound("not found")
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    engine = request.app.state.engine
+    library = request.app.state.content
+    campaign = get_campaign(engine, user.id, campaign_id)
+    rule_set = library.rule_sets.get(campaign.rule_set)
+    if rule_set is None:
+        return _campaign_page(
+            request, user, campaign_id, 400, "that rule set is no longer available"
+        )
+    raw = form_text(form, "amount").strip()
+    try:
+        amount = int(raw) if raw else 0
+        level_up_service.debug_grant(
+            engine,
+            campaign.id,
+            rule_set,
+            library.world_content(campaign.world_template, campaign.rule_set),
+            form_text(form, "kind"),
+            form_text(form, "name"),
+            amount,
+        )
+    except ValueError:
+        return _campaign_page(request, user, campaign_id, 400, "experience must be a number")
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
@@ -761,6 +826,37 @@ def _new_form(
     )
 
 
+def _advancement_page(
+    request: Request,
+    user: User,
+    campaign_id: int,
+    status_code: int = 200,
+    error: str = "",
+) -> Response:
+    engine = request.app.state.engine
+    library = request.app.state.content
+    campaign = get_campaign(engine, user.id, campaign_id)
+    rule_set = library.rule_sets.get(campaign.rule_set)
+    if rule_set is None:
+        return _campaign_page(
+            request, user, campaign_id, 400, "that rule set is no longer available"
+        )
+    world = library.world_content(campaign.world_template, campaign.rule_set)
+    view = level_up_service.page_view(engine, campaign.id, rule_set, world)
+    if view is None:
+        return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+    return render(
+        request,
+        "advancement.html",
+        status_code=status_code,
+        error=error,
+        campaign=campaign,
+        rule_set=rule_set,
+        world=library.world_templates.get(campaign.world_template),
+        view=view,
+    )
+
+
 def _campaign_page(
     request: Request,
     user: User,
@@ -840,6 +936,17 @@ def _campaign_page(
     messages = list_messages(engine, campaign.id)
     transcript = campaign_transcript(engine, user.id, campaign.id)
     world_content = library.world_content(campaign.world_template, campaign.rule_set)
+    advancement_due = (
+        level_up_service.advancement_due(world.state, rule_set) if rule_set is not None else False
+    )
+    advancement_available = False
+    if rule_set is not None:
+        try:
+            advancement_available = (
+                level_up_service.page_view(engine, campaign.id, rule_set, world_content) is not None
+            )
+        except InvalidInput:
+            advancement_available = False
     context = context_usage(
         campaign,
         world.state,
@@ -856,6 +963,11 @@ def _campaign_page(
         rule_set.combat if rule_set else None,
         rule_set.terrain if rule_set else None,
         rule_set.encounter_objects if rule_set else None,
+    )
+    debug_xp, debug_advancement = (
+        level_up_service.debug_grant_options(world.state, rule_set)
+        if settings.debug_panel and rule_set is not None
+        else (None, None)
     )
     return render(
         request,
@@ -888,6 +1000,8 @@ def _campaign_page(
         error=error,
         draft=draft,
         pending=pending_turn(engine, user.id, campaign.id),
+        advancement_due=advancement_due,
+        advancement_available=advancement_available,
         models=request.app.state.catalog.model_ids(),
         encounter=encounter,
         encounter_rows=_encounter_rows(encounter) if encounter is not None else [],
@@ -895,6 +1009,8 @@ def _campaign_page(
         debug_currency=rule_set.marketplace.currency if rule_set and rule_set.marketplace else "",
         debug_stats=[(stat.id, stat.name) for stat in spec.stats.values()],
         debug_tools=debug_tools,
+        debug_xp=debug_xp,
+        debug_advancement=debug_advancement,
         debug_injection=world.state.debug_injection,
         pc_invincible=pc.invincible,
         item_kind_icons=magic.item_kind_icons if magic is not None else {},

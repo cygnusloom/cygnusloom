@@ -10,6 +10,7 @@ import re
 import string
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
+from itertools import pairwise
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -660,6 +661,58 @@ class AdvancementRules:
 
 
 @dataclass(frozen=True)
+class LevelUpPick:
+    """One kind of choice a level-up offers.
+
+    A `skill` pick raises a skill to a new level for the cost in `costs`, at the character level
+    in `minimum_levels`. A `stat` pick buys one attribute boost per point spent from `counter`,
+    limited by `limit_counter` and `maximum`. A `feature` pick spends one point of `counter` to
+    learn one of the features `options` returns. Every pick has an `apply` hook that runs the
+    mechanical change through the rule set's own tools.
+    """
+
+    id: str
+    label: str
+    kind: str
+    counter: str
+    costs: Mapping[int, int] = field(default_factory=dict)
+    minimum_levels: Mapping[int, int] = field(default_factory=dict)
+    maximum: int | None = None
+    limit_counter: str = ""
+    # For a stat pick, only stats in this swap group may be raised, such as "attributes".
+    stat_group: str = ""
+    feature_type: str = ""
+    tags: tuple[str, ...] = ()
+    exclude: tuple[str, ...] = ()
+    # The rule set's functions that list the features a pick offers and apply one.
+    options: Callable[..., Any] | None = None
+    apply: Callable[..., Any] | None = None
+
+
+@dataclass(frozen=True)
+class LevelUpRules:
+    """A level progression a rule set defines in its JSON.
+
+    `apply_level` runs the book's automatic gains for one new level, such as hit points, attack
+    bonus, and any new pools of picks. `summary` describes those gains for the page before it is
+    submitted. `picks` are the choices the player then spends, each spending its own pool.
+    """
+
+    id: str
+    label: str
+    level_counter: str
+    xp_counter: str
+    tracks: Mapping[str, tuple[int, ...]]
+    rate_option: str
+    max_level: int
+    apply_level: Callable[..., Any]
+    summary: Callable[..., Any] | None
+    picks: Mapping[str, LevelUpPick]
+    # What the level-up means in the rule set's own words.
+    description: str = ""
+
+
+@dataclass(frozen=True)
 class PeriodRules:
     """A stretch of play, such as a school year, that ends for every character at once. Its
     effects run for each character."""
@@ -1304,6 +1357,7 @@ class ProgressionRules:
 
     counters: Mapping[str, CounterRules] = field(default_factory=dict)
     advancements: Mapping[str, AdvancementRules] = field(default_factory=dict)
+    level_ups: Mapping[str, LevelUpRules] = field(default_factory=dict)
     periods: Mapping[str, PeriodRules] = field(default_factory=dict)
     tallies: Mapping[str, TallyRules] = field(default_factory=dict)
     relations: Mapping[str, RelationRules] = field(default_factory=dict)
@@ -1448,6 +1502,10 @@ class RuleSet:
     @property
     def advancements(self) -> Mapping[str, AdvancementRules]:
         return self.progression.advancements
+
+    @property
+    def level_ups(self) -> Mapping[str, LevelUpRules]:
+        return self.progression.level_ups
 
     @property
     def periods(self) -> Mapping[str, PeriodRules]:
@@ -2379,6 +2437,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     advancements = _load_advancements(
         definitions, character, counters, frozenset(conditions), template
     )
+    level_ups = _load_level_ups(definitions, modules, character, counters, campaign, template)
     tallies = _load_tallies(definitions, template)
     periods = _load_periods(
         definitions, character, counters, frozenset(conditions), tallies, template
@@ -2496,6 +2555,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         progression=ProgressionRules(
             counters=counters,
             advancements=advancements,
+            level_ups=level_ups,
             periods=periods,
             tallies=tallies,
             relations=relations,
@@ -4782,6 +4842,252 @@ def _load_advancements(
             options=options,
         )
     return loaded
+
+
+def _load_level_ups(
+    definitions: list[Definition],
+    modules: Mapping[str, ModuleType],
+    character: CharacterSpec,
+    counters: Mapping[str, CounterRules],
+    campaign: CampaignSpec,
+    template: str,
+) -> dict[str, LevelUpRules]:
+    """The rule set's level progression, if it has one. Its picks are the choices a player makes
+    when a level is gained."""
+    loaded: dict[str, LevelUpRules] = {}
+    for definition in definitions:
+        if definition.type != "level_up":
+            continue
+        label = f"{template}: level_up {definition.id}"
+        if loaded:
+            raise ContentError(f"{template}: more than one level_up")
+        check_keys(
+            definition.data,
+            {
+                "type",
+                "id",
+                "label",
+                "description",
+                "level_counter",
+                "xp_counter",
+                "tracks",
+                "rate_option",
+                "python_module",
+                "apply_level",
+                "summary",
+                "picks",
+            },
+            label,
+        )
+        levels = required_text(definition.data, "level_counter", label)
+        if levels not in counters:
+            raise ContentError(f"{label}: 'level_counter' names no counter ({levels!r})")
+        xp = required_text(definition.data, "xp_counter", label)
+        if xp not in counters:
+            raise ContentError(f"{label}: 'xp_counter' names no counter ({xp!r})")
+        rate = required_text(definition.data, "rate_option", label)
+        if rate not in campaign.fields:
+            raise ContentError(f"{label}: 'rate_option' names no campaign option ({rate!r})")
+        tracks = _load_level_tracks(definition.data.get("tracks"), label)
+        module_id = required_text(definition.data, "python_module", label)
+        module = modules.get(module_id)
+        if module is None:
+            raise ContentError(f"{label}: unknown python_module {module_id!r}")
+        apply_level = _level_up_function(
+            module, required_text(definition.data, "apply_level", label), label
+        )
+        summary_name = _optional_text(definition.data, "summary", label)
+        summary = (
+            _level_up_function(module, summary_name, label) if summary_name is not None else None
+        )
+        picks = _load_level_picks(
+            definition.data.get("picks"),
+            module,
+            character,
+            counters,
+            label,
+        )
+        loaded[definition.id] = LevelUpRules(
+            id=definition.id,
+            label=required_text(definition.data, "label", label),
+            description=_optional_text(definition.data, "description", label) or "",
+            level_counter=levels,
+            xp_counter=xp,
+            tracks=tracks,
+            rate_option=rate,
+            max_level=len(next(iter(tracks.values()))),
+            apply_level=apply_level,
+            summary=summary,
+            picks=picks,
+        )
+    return loaded
+
+
+def _load_level_tracks(data: object, label: str) -> Mapping[str, tuple[int, ...]]:
+    """The XP thresholds of each experience track, all the same length and rising from zero."""
+    if not isinstance(data, Mapping) or not data:
+        raise ContentError(f"{label}: 'tracks' must be a non-empty object")
+    tracks: dict[str, tuple[int, ...]] = {}
+    length: int | None = None
+    for name, values in data.items():
+        track_label = f"{label}.tracks[{name!r}]"
+        if not isinstance(name, str) or not name.strip():
+            raise ContentError(f"{label}.tracks: a track name must be non-empty text")
+        if not isinstance(values, list) or not values:
+            raise ContentError(f"{track_label}: must be a non-empty list of levels")
+        if any(isinstance(value, bool) or not isinstance(value, int) for value in values):
+            raise ContentError(f"{track_label}: every threshold must be a whole number")
+        if values[0] != 0:
+            raise ContentError(f"{track_label}: the level 1 threshold must be 0")
+        if any(left >= right for left, right in pairwise(values)):
+            raise ContentError(f"{track_label}: thresholds must rise at every level")
+        if length is None:
+            length = len(values)
+        elif len(values) != length:
+            raise ContentError(f"{label}.tracks: every track must list the same number of levels")
+        tracks[name] = tuple(values)
+    return tracks
+
+
+def _load_level_picks(
+    data: object,
+    module: ModuleType,
+    character: CharacterSpec,
+    counters: Mapping[str, CounterRules],
+    label: str,
+) -> Mapping[str, LevelUpPick]:
+    if not isinstance(data, list) or not data:
+        raise ContentError(f"{label}: 'picks' must be a non-empty list")
+    picks: dict[str, LevelUpPick] = {}
+    for value in data:
+        if not isinstance(value, Mapping):
+            raise ContentError(f"{label}: every pick must be an object")
+        pick_id = required_text(value, "id", label)
+        if pick_id in picks:
+            raise ContentError(f"{label}: pick {pick_id!r} is repeated")
+        pick_label = f"{label}: pick {pick_id}"
+        kind = required_text(value, "kind", pick_label)
+        if kind not in ("skill", "stat", "feature"):
+            raise ContentError(f"{pick_label}: 'kind' must be skill, stat, or feature")
+        if kind == "feature":
+            check_keys(
+                value,
+                {
+                    "id",
+                    "label",
+                    "kind",
+                    "counter",
+                    "feature_type",
+                    "tags",
+                    "exclude",
+                    "options",
+                    "apply",
+                },
+                pick_label,
+            )
+        else:
+            check_keys(
+                value,
+                {
+                    "id",
+                    "label",
+                    "kind",
+                    "counter",
+                    "costs",
+                    "minimum_levels",
+                    "maximum",
+                    "limit_counter",
+                    "stat_group",
+                    "apply",
+                },
+                pick_label,
+            )
+        counter = required_text(value, "counter", pick_label)
+        if counter not in counters:
+            raise ContentError(f"{pick_label}: 'counter' names no counter ({counter!r})")
+        apply = _level_up_function(module, required_text(value, "apply", pick_label), pick_label)
+        if kind == "feature":
+            feature_type = required_text(value, "feature_type", pick_label)
+            if feature_type not in FEATURE_TYPES:
+                raise ContentError(
+                    f"{pick_label}: 'feature_type' must be one of {', '.join(FEATURE_TYPES)}"
+                )
+            options_name = required_text(value, "options", pick_label)
+            options = _level_up_function(module, options_name, pick_label)
+            tags = _texts(value.get("tags", []), f"{pick_label}.tags")
+            exclude = _texts(value.get("exclude", []), f"{pick_label}.exclude")
+            picks[pick_id] = LevelUpPick(
+                id=pick_id,
+                label=required_text(value, "label", pick_label),
+                kind=kind,
+                counter=counter,
+                feature_type=feature_type,
+                tags=tags,
+                exclude=exclude,
+                options=options,
+                apply=apply,
+            )
+            continue
+        costs = _level_costs(value.get("costs"), f"{pick_label}.costs")
+        minimums = _level_costs(value.get("minimum_levels"), f"{pick_label}.minimum_levels")
+        if set(costs) != set(minimums):
+            raise ContentError(f"{pick_label}: costs and minimum_levels must name the same steps")
+        maximum = value.get("maximum")
+        if maximum is not None and (
+            isinstance(maximum, bool) or not isinstance(maximum, int) or maximum < 1
+        ):
+            raise ContentError(f"{pick_label}: 'maximum' must be a whole number above 0")
+        limit = _optional_text(value, "limit_counter", pick_label)
+        if limit is not None and limit not in counters:
+            raise ContentError(f"{pick_label}: 'limit_counter' names no counter ({limit!r})")
+        picks[pick_id] = LevelUpPick(
+            id=pick_id,
+            label=required_text(value, "label", pick_label),
+            kind=kind,
+            counter=counter,
+            costs=costs,
+            minimum_levels=minimums,
+            maximum=maximum,
+            limit_counter=limit or "",
+            stat_group=_optional_text(value, "stat_group", pick_label) or "",
+            apply=apply,
+        )
+    return picks
+
+
+def _level_costs(data: object, label: str) -> Mapping[int, int]:
+    """Costs by step number: a JSON object with integer keys, or a list indexed from one."""
+    if isinstance(data, list):
+        values = {index: value for index, value in enumerate(data, start=1)}
+    elif isinstance(data, Mapping):
+        values = {}
+        for key, value in data.items():
+            try:
+                step = int(key)
+            except (TypeError, ValueError):
+                raise ContentError(f"{label}: step names must be whole numbers") from None
+            values[step] = value
+    else:
+        raise ContentError(f"{label}: must be an object or a list")
+    if not values:
+        raise ContentError(f"{label}: must name at least one step")
+    for step, cost in values.items():
+        if isinstance(cost, bool) or not isinstance(cost, int) or cost < 1:
+            raise ContentError(f"{label}: the cost at step {step} must be a whole number above 0")
+    return dict(sorted(values.items()))
+
+
+def _level_up_function(module: ModuleType, name: str, label: str) -> Callable[..., Any]:
+    function = getattr(module, name, None)
+    if not callable(function):
+        raise ContentError(f"{label}: {name!r} is not a function in {module.__name__!r}")
+    return function
+
+
+def _texts(data: object, label: str) -> tuple[str, ...]:
+    if not isinstance(data, list) or any(not isinstance(value, str) for value in data):
+        raise ContentError(f"{label}: must be a list of text values")
+    return tuple(data)
 
 
 def _load_learn(data: object, character: CharacterSpec, label: str) -> LearnRules | None:

@@ -319,7 +319,7 @@ def test_gain_xp_accumulates_and_marks_the_next_level_threshold(
     assert _counter(app, campaign_id, "xp") == 2
 
     with pytest.raises(InvalidInput, match="level 2 needs 3"):
-        wwn.level_up(NAME, ctx)
+        wwn.apply_level_up(NAME, ctx)
     assert _counter(app, campaign_id, "level") == 1
 
     at = wwn.gain_xp(NAME, 1, "a second session", ctx)
@@ -382,7 +382,7 @@ def test_level_up_raises_hp_attack_bonus_skill_points_and_focus_picks(
     before = _pc(app, campaign_id)
 
     wwn.gain_xp(NAME, 3, "a session", ctx)
-    result = wwn.level_up(NAME, ctx)
+    result = wwn.apply_level_up(NAME, ctx)
 
     # random.Random(0) rolls 4 and 4 on the two d6; a Warrior adds +2 a level and Die Hard
     # adds 2 more, so the rerolled total is 8 + 4 + 2 = 14, better than the old 10.
@@ -410,7 +410,7 @@ def test_an_expert_pairing_gains_two_skill_points_on_level_up(
     ctx = _ctx(_world_tools(app, campaign_id))
 
     wwn.gain_xp(NAME, 3, "a session", ctx)
-    result = wwn.level_up(NAME, ctx)
+    result = wwn.apply_level_up(NAME, ctx)
 
     # Quick Learner gives the Expert and partial Expert an extra point each level.
     assert result["skill_points"] == 4
@@ -425,13 +425,13 @@ def test_a_caster_raises_castings_from_the_class_table_on_level_up(
     assert _stat(app, campaign_id, "castings") == 1
 
     wwn.gain_xp(NAME, 3, "a session", ctx)
-    second = wwn.level_up(NAME, ctx)
+    second = wwn.apply_level_up(NAME, ctx)
     assert second["level"] == 2
     assert second["castings"] == 1
     assert _stat(app, campaign_id, "castings") == 1
 
     wwn.gain_xp(NAME, 3, "another session", ctx)
-    third = wwn.level_up(NAME, ctx)
+    third = wwn.apply_level_up(NAME, ctx)
     assert third["level"] == 3
     assert third["castings"] == 2
     assert _stat(app, campaign_id, "castings") == 2
@@ -449,7 +449,7 @@ def test_a_mage_with_a_poor_constitution_gains_at_least_one_hit_point(
     tools.set_stat_max(NAME, "hp", 5, cause="a test")
 
     wwn.gain_xp(NAME, 3, "a session", ctx)
-    result = wwn.level_up(NAME, ctx)
+    result = wwn.apply_level_up(NAME, ctx)
 
     assert result["hp"] == 8
     assert _stat(app, campaign_id, "hp") == 8
@@ -937,11 +937,11 @@ def test_the_slow_experience_track_uses_its_own_thresholds(
     assert below["next_threshold"] == 6
     assert below["ready"] is False
     with pytest.raises(InvalidInput, match="on the slow track"):
-        wwn.level_up(NAME, ctx, rate="slow")
+        wwn.apply_level_up(NAME, ctx, rate="slow")
 
     at = wwn.gain_xp(NAME, 1, "another session", ctx, rate="slow")
     assert at["ready"] is True
-    assert wwn.level_up(NAME, ctx, rate="slow")["level"] == 2
+    assert wwn.apply_level_up(NAME, ctx, rate="slow")["level"] == 2
 
 
 def test_an_attribute_boost_costs_more_each_time_and_needs_a_level(
@@ -974,7 +974,7 @@ def test_level_up_keeps_the_old_hit_points_plus_one_when_the_reroll_is_worse(
     tools.set_stat_max(NAME, "hp", 20, cause="a test")
 
     wwn.gain_xp(NAME, 3, "a session", ctx)
-    result = wwn.level_up(NAME, ctx)
+    result = wwn.apply_level_up(NAME, ctx)
 
     # The old 20 plus one, plus Die Hard's 2.
     assert result["hp"] == 23
@@ -999,7 +999,7 @@ def test_art_picks_come_from_the_class_chart_and_buy_arts(
     tools = _world_tools(app, campaign_id)
     ctx = _ctx(tools)
     wwn.gain_xp(NAME, 3, "a session", ctx)
-    result = wwn.level_up(NAME, ctx)
+    result = wwn.apply_level_up(NAME, ctx)
     assert result["art_picks"] == 1
     assert _counter(app, campaign_id, "art_picks") == 1
 
@@ -1186,7 +1186,7 @@ def test_the_experience_track_chosen_at_creation_guides_advancement(client_facto
 
     at = wwn.gain_xp(NAME, 1, "another session", ctx)
     assert at["ready"] is True
-    assert wwn.level_up(NAME, ctx)["level"] == 2
+    assert wwn.apply_level_up(NAME, ctx)["level"] == 2
 
 
 def test_a_healer_learns_another_healer_art_at_second_level(client_factory):
@@ -1195,7 +1195,7 @@ def test_a_healer_learns_another_healer_art_at_second_level(client_factory):
     ctx = _ctx(tools)
 
     wwn.gain_xp(NAME, 3, "a session", ctx)
-    result = wwn.level_up(NAME, ctx)
+    result = wwn.apply_level_up(NAME, ctx)
     assert result["art_picks"] == 1
     learned = wwn.learn_art(NAME, "art_facile_healer", ctx)
     assert learned["art"] == "art_facile_healer"
@@ -1263,9 +1263,9 @@ def test_impervious_defense_updates_on_level_and_dexterity_changes(client_factor
     assert _pc(app, campaign_id).armor == 17
 
     wwn.gain_xp(NAME, 6, "two sessions", ctx)
-    wwn.level_up(NAME, ctx)
+    wwn.apply_level_up(NAME, ctx)
     assert _pc(app, campaign_id).armor == 17
-    wwn.level_up(NAME, ctx)
+    wwn.apply_level_up(NAME, ctx)
     assert _pc(app, campaign_id).armor == 18
     _set_stat(tools, "dex", 3)
     assert _pc(app, campaign_id).armor == 15

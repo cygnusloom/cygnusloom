@@ -42,6 +42,14 @@
   },
   {
     "type": "counter",
+    "id": "spell_picks",
+    "label": "Spell Picks",
+    "min": 0,
+    "initial": 0,
+    "description": "Unspent spell picks granted to spellcasters each level. A full High Mage picks two spells a level; a partial mage, Necromancer, Elementalist, or dual-tradition Adventurer picks one."
+  },
+  {
+    "type": "counter",
     "id": "attribute_boosts",
     "label": "Attribute Boosts",
     "min": 0,

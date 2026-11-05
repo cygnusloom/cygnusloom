@@ -66,6 +66,7 @@ from cygnusforge.services.events import (
     speaker_name,
     truncate,
 )
+from cygnusforge.services.level_up import advancement_due
 from cygnusforge.services.prompts import (
     NARRATION_REVISION,
     OOC_INSTRUCTION,
@@ -1300,7 +1301,8 @@ async def stream_message(
         rule_set = library.rule_sets.get(campaign.rule_set)
         if rule_set is None:
             raise InvalidInput("that campaign's rule set is no longer available")
-        player = _state(engine, campaign.id).pc()
+        current = _state(engine, campaign.id)
+        player = current.pc()
         if player is None:
             raise InvalidInput("create your character before playing")
         if player.out_of_play:
@@ -1308,6 +1310,8 @@ async def stream_message(
             raise InvalidInput(
                 f"your character {state}: choose a new character or a hireling first"
             )
+        if advancement_due(current, rule_set):
+            raise InvalidInput("level up or choose your Advancement before sending another message")
         run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
         speaker = speaker_name(_state(engine, campaign.id))
         _record(engine, campaign.id, ChatPlayer(content=text, speaker=speaker))
@@ -1385,6 +1389,8 @@ async def start_encounter_turn(
         rule_set = library.rule_sets.get(campaign.rule_set)
         if rule_set is None:
             raise InvalidInput("that campaign's rule set is no longer available")
+        if advancement_due(_state(engine, campaign.id), rule_set):
+            raise InvalidInput("level up or choose your Advancement before starting a turn")
         with session_scope(engine) as db:
             character = encounters.begin_turn(db, campaign.id, name)
         if character.kind == PC_KIND:

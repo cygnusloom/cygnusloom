@@ -1,0 +1,71 @@
+[
+  {
+    "type": "level_up",
+    "id": "level",
+    "label": "Level Up",
+    "description": "Advance one level after a day or two of downtime. The engine rolls the new hit points and sets the class attack bonus; the choices below spend the picks the new level grants.",
+    "level_counter": "level",
+    "xp_counter": "xp",
+    "rate_option": "xp_rate",
+    "tracks": {
+      "fast": [0, 3, 6, 12, 18, 27, 39, 54, 72, 93],
+      "slow": [0, 6, 15, 24, 36, 51, 69, 87, 105, 139]
+    },
+    "python_module": "wwn",
+    "apply_level": "apply_level_up",
+    "summary": "level_up_summary",
+    "picks": [
+      {
+        "id": "skills",
+        "label": "Skill points",
+        "kind": "skill",
+        "counter": "skill_points",
+        "costs": {"0": 1, "1": 2, "2": 3, "3": 4, "4": 5},
+        "minimum_levels": {"0": 1, "1": 1, "2": 3, "3": 6, "4": 9},
+        "apply": "apply_skill_points"
+      },
+      {
+        "id": "attributes",
+        "label": "Attribute boosts",
+        "kind": "stat",
+        "counter": "skill_points",
+        "costs": {"1": 1, "2": 2, "3": 3, "4": 4, "5": 5},
+        "minimum_levels": {"1": 2, "2": 2, "3": 3, "4": 6, "5": 9},
+        "limit_counter": "attribute_boosts",
+        "maximum": 18,
+        "stat_group": "attributes",
+        "apply": "apply_attribute_boosts"
+      },
+      {
+        "id": "focus",
+        "label": "Focus",
+        "kind": "feature",
+        "counter": "focus_picks",
+        "feature_type": "feat",
+        "tags": ["focus"],
+        "options": "focus_options",
+        "apply": "apply_focus_pick"
+      },
+      {
+        "id": "art",
+        "label": "Art",
+        "kind": "feature",
+        "counter": "art_picks",
+        "feature_type": "feat",
+        "tags": ["high", "necromancer", "elementalist", "healer", "vowed"],
+        "options": "art_options",
+        "apply": "apply_art_pick"
+      },
+      {
+        "id": "spells",
+        "label": "Spells",
+        "kind": "feature",
+        "counter": "spell_picks",
+        "feature_type": "spell",
+        "tags": ["high", "necromancer", "elementalist"],
+        "options": "spell_options",
+        "apply": "apply_spell_pick"
+      }
+    ]
+  }
+]

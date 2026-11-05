@@ -43,7 +43,7 @@ def test_xp_and_level_up_use_the_loaded_ruleset_data(client_factory):
     after = wwn.gain_xp(NAME, 2, "a test", ctx, rate="fast")
     assert after["ready"]
 
-    result = wwn.level_up(NAME, ctx, rate="fast")
+    result = wwn.apply_level_up(NAME, ctx, rate="fast")
 
     assert result["level"] == 2
     assert result["attack_bonus"] == 3
@@ -67,7 +67,7 @@ def test_spell_preparation_and_casting_use_the_loaded_ruleset_data(client_factor
         wwn_magic.prepare_spells(NAME, known[:2], ctx)
     assert wwn_magic.prepare_spells(NAME, known[:1], ctx)["limit"] == 1
     wwn.gain_xp(NAME, 3, "a test", ctx, rate="fast")
-    assert wwn.level_up(NAME, ctx, rate="fast")["castings"] == 2
+    assert wwn.apply_level_up(NAME, ctx, rate="fast")["castings"] == 2
     assert wwn_magic.cast_spell(NAME, known[0], ctx)["castings_left"] == 1
     assert wwn_magic.cast_spell(NAME, known[0], ctx)["castings_left"] == 0
 
@@ -83,7 +83,7 @@ def test_second_tradition_grants_and_can_spend_its_art_pick(client_factory):
     ctx = _ctx(tools)
     wwn.gain_xp(NAME, 3, "a test", ctx, rate="fast")
 
-    result = wwn.level_up(NAME, ctx, rate="fast")
+    result = wwn.apply_level_up(NAME, ctx, rate="fast")
 
     assert result["art_picks"] == 1
     known = _pc(app, campaign_id).features

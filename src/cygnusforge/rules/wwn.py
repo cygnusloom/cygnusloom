@@ -418,7 +418,7 @@ def gain_xp(
     return ctx.world.with_hook_context(action)
 
 
-def level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str, Any]:
+def apply_level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str, Any]:
     """Raise a character one level, if their experience reaches the next threshold. Rolls the
     class hit dice for the new level's HP as the book says, sets the class attack bonus, adds
     three skill points (four for an Expert or partial Expert), grants any focus or art pick due,
@@ -489,6 +489,9 @@ def level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str, Any]
     casting = casting_row(str(found["class_id"]), new_level, progression)
     if casting is not None:
         ctx.world.set_stat_max(character, "castings", casting.casts, cause=f"level {new_level}")
+    spell_picks = _spell_picks(str(found["class_id"]), casting, progression)
+    if spell_picks:
+        ctx.world.adjust_counter(character, "spell_picks", spell_picks)
     _recompute_derived(ctx, character, spec, cause=f"level {new_level}")
     return {
         "character": character,
@@ -498,9 +501,18 @@ def level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str, Any]
         "skill_points": points,
         "focus_picks": focus_picks,
         "art_picks": art_picks,
+        "spell_picks": spell_picks,
         "castings": casting.casts if casting is not None else None,
         "rate": rate,
     }
+
+
+def _spell_picks(class_id: str, casting: CastingRow | None, progression: WWNProgression) -> int:
+    """The new spells a level grants: two for a full High Mage, one for every other spellcaster."""
+    if casting is None:
+        return 0
+    table_id = progression.casting_class_tables.get(class_id.strip().casefold())
+    return 2 if table_id == "full_mage" else 1
 
 
 def _art_picks(class_id: str, tradition: str, level: int, progression: WWNProgression) -> int:
@@ -516,6 +528,288 @@ def _art_picks(class_id: str, tradition: str, level: int, progression: WWNProgre
         else progression.art_levels_partial
     )
     return 1 if level in levels.get(tag, frozenset()) else 0
+
+
+def level_up_summary(character: str, ctx: ToolContext) -> dict[str, Any]:
+    """What the next level grants before it is taken, so the level-up page can show the automatic
+    gains and the size of each pick pool the player will spend."""
+    progression = require_wwn_progression(ctx.world)
+    rate = _xp_rate(ctx)
+    table_xp = progression.xp_slow if rate == "slow" else progression.xp_fast
+
+    def read(hc: HookContext) -> dict[str, Any]:
+        _, found = _character(hc, character)
+        level = _chart_level(found.counters.get("level", 1), progression, found.name, "experience")
+        if level >= progression.max_level:
+            raise InvalidInput(
+                f"{found.name} is already at the highest level, {progression.max_level}"
+            )
+        xp = found.counters.get("xp", 0)
+        threshold = table_xp[level]
+        if xp < threshold:
+            raise InvalidInput(
+                f"{found.name} has {xp} experience; level {level + 1} needs {threshold} on the "
+                f"{rate} track"
+            )
+        class_id = found.templates.get("class", "")
+        if not class_id:
+            raise InvalidInput(f"{found.name} has no class, so has no level to gain")
+        return {
+            "level": level,
+            "xp": xp,
+            "threshold": threshold,
+            "class_id": class_id,
+            "traditions": tradition_ids(found),
+            "rate": rate,
+        }
+
+    found = ctx.world.with_hook_context(read)
+    level = int(found["level"])
+    new_level = level + 1
+    class_id = str(found["class_id"])
+    table = class_table(class_id, progression)
+    points = 4 if table.quick_learner else 3
+    focus_picks = 1 if new_level in table.focus_levels else 0
+    art_picks = sum(
+        _art_picks(class_id, tradition, new_level, progression) for tradition in found["traditions"]
+    )
+    casting = casting_row(class_id, new_level, progression)
+    spell_picks = _spell_picks(class_id, casting, progression)
+    attack = table.attack[new_level - 1]
+    lines = [
+        f"Hit points: rerolled for level {new_level} (the old total plus one if the roll is worse).",
+        f"Attack bonus: {attack}.",
+        f"Skill points: {points}.",
+    ]
+    if focus_picks:
+        lines.append(f"Focus pick: {focus_picks}.")
+    if art_picks:
+        lines.append(f"Art pick: {art_picks}.")
+    if spell_picks:
+        lines.append(f"Spell pick: {spell_picks}.")
+    if casting is not None:
+        lines.append(f"Castings: {casting.casts}.")
+    lines.append("Saving throws improve by one.")
+    return {
+        "character": character,
+        "level": level,
+        "new_level": new_level,
+        "xp": found["xp"],
+        "threshold": found["threshold"],
+        "rate": rate,
+        "attack_bonus": attack,
+        "castings": casting.casts if casting is not None else None,
+        "lines": lines,
+        "grants": {
+            "skill_points": points,
+            "focus_picks": focus_picks,
+            "art_picks": art_picks,
+            "spell_picks": spell_picks,
+        },
+    }
+
+
+def level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str, Any]:
+    """The GM's level-up tool. An NPC advances at once; a player character is left for the
+    player to advance on the character sheet, because its picks are the player's choices."""
+
+    def read(hc: HookContext) -> tuple[str, str]:
+        _, found = _character(hc, character)
+        return found.kind, found.name
+
+    kind, name = ctx.world.with_hook_context(read)
+    if kind == PC_KIND:
+        return {
+            "character": name,
+            "pending": True,
+            "message": (
+                f"{name} is a player character. The player chooses the level-up on the "
+                "character sheet; no level was applied by this tool."
+            ),
+        }
+    return apply_level_up(name, ctx, rate=rate)
+
+
+def focus_options(
+    character: str, pick: Any, ctx: ToolContext, level: int | None = None
+) -> list[dict[str, Any]]:
+    """The Foci a focus pick offers: the class's general focus list, with a rank-2 Focus offered
+    once its rank-1 Focus is known."""
+    spec = ctx.world.character
+
+    def read(hc: HookContext) -> dict[str, Any]:
+        _, found = _character(hc, character)
+        class_id = found.templates.get("class", "")
+        template = spec.templates.get(class_id, None)
+        if template is None:
+            raise InvalidInput(f"{found.name} has no class")
+        choice = next(
+            (candidate for candidate in template.feat_picks if candidate.id == "class_focus_any"),
+            None,
+        )
+        if choice is None:
+            return {"options": [], "features": dict(found.features)}
+        return {
+            "options": [feature.id for feature in feature_pick_options(spec, choice)],
+            "features": dict(found.features),
+        }
+
+    found = ctx.world.with_hook_context(read)
+    return _feature_options(spec, found["options"], found["features"], set(pick.exclude))
+
+
+def art_options(
+    character: str, pick: Any, ctx: ToolContext, level: int | None = None
+) -> list[dict[str, Any]]:
+    """The arts of the character's own traditions that they do not already know."""
+    spec = ctx.world.character
+    progression = require_wwn_progression(ctx.world)
+
+    def read(hc: HookContext) -> dict[str, Any]:
+        _, found = _character(hc, character)
+        return {
+            "tags": set(tradition_tags(found, progression)),
+            "features": dict(found.features),
+        }
+
+    found = ctx.world.with_hook_context(read)
+    options = [
+        feature.id
+        for feature in spec.features.values()
+        if feature.feature_type == "feat"
+        and feature.tag in found["tags"]
+        and feature.tag != "focus"
+    ]
+    return _feature_options(spec, options, found["features"], set(pick.exclude))
+
+
+def spell_options(
+    character: str, pick: Any, ctx: ToolContext, new_level: int | None = None
+) -> list[dict[str, Any]]:
+    """The spells a caster may learn now: their traditions and High Magic, up to the highest
+    spell level their class and new level allow."""
+    spec = ctx.world.character
+    progression = require_wwn_progression(ctx.world)
+
+    def read(hc: HookContext) -> dict[str, Any]:
+        _, found = _character(hc, character)
+        class_id = found.templates.get("class", "")
+        level = new_level or found.counters.get("level", 1)
+        row = casting_row(class_id, level, progression)
+        tags = set(tradition_tags(found, progression)) | {"high"}
+        return {
+            "tags": tags,
+            "max_rank": row.max_spell_level if row is not None else 0,
+            "features": dict(found.features),
+        }
+
+    found = ctx.world.with_hook_context(read)
+    options = [
+        feature.id
+        for feature in spec.features.values()
+        if feature.feature_type == "spell"
+        and feature.tag in found["tags"]
+        and feature.rank <= found["max_rank"]
+    ]
+    return _feature_options(spec, options, found["features"], set(pick.exclude))
+
+
+def _feature_options(
+    spec: CharacterSpec,
+    option_ids: Iterable[str],
+    held: Mapping[str, int],
+    exclude: set[str],
+) -> list[dict[str, Any]]:
+    """The unheld features among `option_ids`, plus the next rank of a held Focus, as plain
+    dictionaries the page can show."""
+    options: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for option_id in option_ids:
+        feature = spec.features.get(option_id)
+        if feature is None or option_id in exclude or option_id in seen:
+            continue
+        candidates = [feature]
+        if option_id in held:
+            candidates.extend(_next_ranks(spec, feature))
+        for candidate in candidates:
+            if candidate.id in seen or candidate.id in exclude:
+                continue
+            if candidate.id in held and not candidate.repeatable:
+                continue
+            seen.add(candidate.id)
+            options.append(
+                {
+                    "id": candidate.id,
+                    "name": candidate.name,
+                    "description": candidate.description,
+                    "rank": candidate.rank,
+                    "repeatable": candidate.repeatable,
+                }
+            )
+    return sorted(options, key=lambda option: (option["name"], option["id"]))
+
+
+def _next_ranks(spec: CharacterSpec, feature: Feature) -> list[Feature]:
+    return [
+        candidate
+        for candidate in spec.features.values()
+        if candidate.name == feature.name
+        and candidate.tag == feature.tag
+        and candidate.feature_type == feature.feature_type
+        and candidate.rank == feature.rank + 1
+    ]
+
+
+def apply_skill_points(
+    character: str, pick: Any, changes: Mapping[str, int], ctx: ToolContext
+) -> dict[str, Any]:
+    """Raise each named skill to its submitted level, one level at a time, through the normal
+    skill-point tool."""
+    applied = []
+    for skill, target in changes.items():
+        current = _pc_skill_level(character, skill, ctx)
+        while current < target:
+            applied.append(spend_skill_point(character, skill, ctx))
+            current += 1
+    return {"character": character, "skills": applied}
+
+
+def _pc_skill_level(character: str, skill: str, ctx: ToolContext) -> int:
+    spec = ctx.world.character
+
+    def read(hc: HookContext) -> int:
+        _, found = _character(hc, character)
+        return spec.skill_level(found.skills, skill)
+
+    return int(ctx.world.with_hook_context(read))
+
+
+def apply_attribute_boosts(
+    character: str, pick: Any, boosts: Mapping[str, int], ctx: ToolContext
+) -> dict[str, Any]:
+    """Buy each submitted number of permanent attribute boosts through the normal tool."""
+    applied = []
+    for stat, count in boosts.items():
+        for _ in range(count):
+            applied.append(improve_attribute(character, stat, ctx))
+    return {"character": character, "attributes": applied}
+
+
+def apply_focus_pick(character: str, pick: Any, choice: str, ctx: ToolContext) -> dict[str, Any]:
+    """Spend a focus pick on the chosen Focus."""
+    return learn_focus(character, choice, ctx)
+
+
+def apply_art_pick(character: str, pick: Any, choice: str, ctx: ToolContext) -> dict[str, Any]:
+    """Spend an art pick on the chosen art."""
+    return learn_art(character, choice, ctx)
+
+
+def apply_spell_pick(character: str, pick: Any, choice: str, ctx: ToolContext) -> dict[str, Any]:
+    """Spend a spell pick on the chosen spell."""
+    result = learn_spell(character, choice, ctx)
+    remaining = ctx.world.adjust_counter(character, "spell_picks", -1)
+    return {**result, "spell_picks": remaining["value"]}
 
 
 def spend_skill_point(character: str, skill: str, ctx: ToolContext) -> dict[str, Any]:

@@ -806,6 +806,19 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 "maximum": new_value,
             }
 
+    def adjust_counter_request(self, character: str, counter: str, change: int) -> dict[str, Any]:
+        """The GM's counter tool. A player character's Advancement pool is spent by the player on
+        the character sheet, so the GM cannot take a point out of it."""
+        with session_scope(self.engine) as db:
+            found = _character_named(load_state(db, self.campaign_id), character)
+        advancement_counters = {rules.counter for rules in self.advancements.values()}
+        if found.kind == PC_KIND and change < 0 and counter in advancement_counters:
+            raise InvalidInput(
+                f"{found.name}'s {counter} is the player's choice; "
+                "they take an Advancement on the character sheet"
+            )
+        return self.adjust_counter(character, counter, change)
+
     def adjust_counter(self, character: str, counter: str, change: int) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return counters_service.adjust_counter(
@@ -821,6 +834,28 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 plus=self.plus,
                 spec=self.character,
             )
+
+    def request_advancement(
+        self,
+        character: str,
+        option: str,
+        stat: str | None = None,
+        feature: str | None = None,
+    ) -> dict[str, Any]:
+        """The GM's Advancement tool. A player character's option is the player's choice, so it
+        is left for the character sheet; an NPC takes the option at once."""
+        with session_scope(self.engine) as db:
+            found = _character_named(load_state(db, self.campaign_id), character)
+        if found.kind == PC_KIND:
+            return {
+                "character": found.name,
+                "pending": True,
+                "message": (
+                    f"{found.name} is a player character. The player chooses the Advancement on "
+                    "the character sheet; no Advancement was taken by this tool."
+                ),
+            }
+        return self.take_advancement(character, option, stat, feature)
 
     def take_advancement(
         self,

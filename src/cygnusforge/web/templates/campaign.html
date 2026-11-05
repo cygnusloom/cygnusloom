@@ -105,9 +105,12 @@
           </div>
           {% endif %}
           {% endif %}
+          {% if advancement_due %}
+          <p class="advancement-pause" role="status">Your character has advancement choices to make. <a href="/campaigns/{{ campaign.id }}/advancement">Level up or choose an Advancement</a> before continuing.</p>
+          {% endif %}
           <form method="post" action="/campaigns/{{ campaign.id }}/messages" data-stream-action="/campaigns/{{ campaign.id }}/messages/stream" data-player-name="{{ acting_name }}" class="composer" id="composer">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <textarea name="content" rows="3" required maxlength="8000" placeholder="{{ ('Answer the GM above first' if pending.prompt else 'Continue the reply first') if pending else 'Message' }}"{% if pending %} disabled{% endif %}>{{ draft }}</textarea>
+            <textarea name="content" rows="3" required maxlength="8000" placeholder="{{ ('Level up first' if advancement_due else ('Answer the GM above first' if pending.prompt else 'Continue the reply first')) if (pending or advancement_due) else 'Message' }}"{% if pending or advancement_due %} disabled{% endif %}>{{ draft }}</textarea>
             <div class="composer-actions">
               <div class="composer-tools">
                 <span class="context-meter" aria-label="Context usage" title="Estimated prompt size against the context window. At {{ '{:,}'.format(context.summary_at) }} tokens, older messages are summarized and the newest ones stay verbatim.">
@@ -116,7 +119,7 @@
                 </span>
                 <button type="button" class="composer-settings" data-dialog-target="dialog-settings" aria-haspopup="dialog" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
               </div>
-              <button type="submit"{% if pending %} disabled{% endif %}>Send</button>
+              <button type="submit"{% if pending or advancement_due %} disabled{% endif %}>Send</button>
             </div>
           </form>
         </section>
@@ -175,6 +178,9 @@
                 {% for ability in scene.abilities %}{% if not loop.first %} · {% endif %}{% if ability.entry %}<a href="#{{ ability.entry }}" data-view-link="compendium">{{ ability.name }}</a>{% else %}{{ ability.name }}{% endif %}{% endfor %}
               </p>
               {% endif %}
+              {% if advancement_available %}
+              <p><a class="button" href="/campaigns/{{ campaign.id }}/advancement">{{ "Level up" if advancement_due else "Advancement" }}</a></p>
+              {% endif %}
             </div>
             <div class="tab-panel" role="tabpanel" id="panel-inventory" aria-labelledby="tab-inventory" hidden>
               {% if scene.pack %}
@@ -232,6 +238,25 @@
                 <p>Give <strong>{{ player_name }}</strong> some {{ debug_currency }}:</p>
                 <label>Amount <input type="number" name="amount" min="1" max="10000" required></label>
                 <button type="submit">Give {{ debug_currency }}</button>
+              </form>
+              {% endif %}
+              {% if debug_xp %}
+              <form method="post" action="/campaigns/{{ campaign.id }}/debug/grant">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="name" value="{{ player_name }}">
+                <input type="hidden" name="kind" value="xp">
+                <p>Award experience to <strong>{{ player_name }}</strong> outside a GM turn. The default reaches the next level.</p>
+                <label>Amount <input type="number" name="amount" min="1" value="{{ debug_xp.amount }}" required></label>
+                <button type="submit">Give experience</button>
+              </form>
+              {% endif %}
+              {% if debug_advancement %}
+              <form method="post" action="/campaigns/{{ campaign.id }}/debug/grant">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="name" value="{{ player_name }}">
+                <input type="hidden" name="kind" value="advancement">
+                <p>Give <strong>{{ player_name }}</strong> one {{ debug_advancement.label }} outside a GM turn.</p>
+                <button type="submit">Grant an {{ debug_advancement.label }}</button>
               </form>
               {% endif %}
               {% if debug_injection %}
