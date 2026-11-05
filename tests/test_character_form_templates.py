@@ -345,6 +345,7 @@ class _SkillPickParser(HTMLParser):
     [
         ("twin-lakes", "cairn2e"),
         ("unwritten-world", "worldswithoutnumber"),
+        ("unwritten-academy", "academia-arcana"),
     ],
 )
 def test_creation_page_round_trips_template_metadata_for_each_ruleset(

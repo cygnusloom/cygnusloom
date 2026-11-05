@@ -1,0 +1,242 @@
+[
+  {
+    "type": "template",
+    "id": "prodigy",
+    "kind": "playbook",
+    "name": "Prodigy",
+    "description": "Magic comes easily to you, which is not the same as coming safely. You are the student the teachers watch and the other students whisper about.",
+    "stats": {"practice": 1},
+    "features": [
+      {"feature": "talent-prodigy", "quantity": "1"},
+      {"feature": "signature-spell", "quantity": "1"}
+    ]
+  },
+  {
+    "type": "template",
+    "id": "scholar",
+    "kind": "playbook",
+    "name": "Scholar",
+    "description": "You would rather understand a spell than cast it. Footnotes, contradictions, and the book nobody else has read are your natural habitat.",
+    "stats": {"theory": 1},
+    "features": [
+      {"feature": "talent-scholar", "quantity": "1"},
+      {"feature": "signature-spell", "quantity": "1"}
+    ]
+  },
+  {
+    "type": "template",
+    "id": "alchemist",
+    "kind": "playbook",
+    "name": "Alchemist",
+    "description": "You trust a well-stoppered bottle more than a grand gesture. Your sleeves smell of sulphur, and your pockets rattle when you run.",
+    "stats": {"alchemy": 1},
+    "features": [
+      {"feature": "talent-alchemist", "quantity": "1"},
+      {"feature": "signature-spell", "quantity": "1"}
+    ]
+  },
+  {
+    "type": "template",
+    "id": "rebel",
+    "kind": "playbook",
+    "name": "Rebel",
+    "description": "Rules are a map of where the interesting things are kept. You know the back stairs, the loose window, and which prefect can be talked around.",
+    "stats": {"cunning": 1},
+    "features": [
+      {"feature": "talent-rebel", "quantity": "1"},
+      {"feature": "signature-spell", "quantity": "1"}
+    ]
+  },
+  {
+    "type": "template",
+    "id": "socialite",
+    "kind": "playbook",
+    "name": "Socialite",
+    "description": "You know who is owed a favour, who is hiding a disappointment, and which table to sit at. Magic is easier when someone else is willing to help.",
+    "stats": {"charm": 1},
+    "features": [
+      {"feature": "talent-socialite", "quantity": "1"},
+      {"feature": "signature-spell", "quantity": "1"}
+    ]
+  },
+  {
+    "type": "template",
+    "id": "year-1",
+    "kind": "starting_year",
+    "name": "Year 1",
+    "description": "Your first year. Two spells, one subject, and a great deal you have not learned yet.",
+    "counters": {"year": 0},
+    "feat_picks": [
+      {
+        "id": "spells",
+        "count": 2,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "feature_type": "spell",
+        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
+      },
+      {
+        "id": "subjects",
+        "count": 1,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "feature_type": "subject"
+      },
+      {"id": "potions", "count": 1, "tag": "Potions", "feature_type": "potion"},
+      {"id": "enchantments", "count": 1, "tag": "Enchantments", "feature_type": "enchantment"}
+    ]
+  },
+  {
+    "type": "template",
+    "id": "year-2",
+    "kind": "starting_year",
+    "name": "Year 2",
+    "description": "Your second year. One more spell, another potion, and the first taste of a subject that is really yours.",
+    "counters": {"year": 1},
+    "feat_picks": [
+      {
+        "id": "spells",
+        "count": 3,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "feature_type": "spell",
+        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
+      },
+      {
+        "id": "subjects",
+        "count": 1,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "feature_type": "subject"
+      },
+      {"id": "potions", "count": 2, "tag": "Potions", "feature_type": "potion"},
+      {"id": "enchantments", "count": 1, "tag": "Enchantments", "feature_type": "enchantment"}
+    ]
+  },
+  {
+    "type": "template",
+    "id": "year-3",
+    "kind": "starting_year",
+    "name": "Year 3",
+    "description": "Your third year. A second subject, a first real specialization, and training that sticks.",
+    "counters": {"year": 2},
+    "feat_picks": [
+      {
+        "id": "spells",
+        "count": 4,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "feature_type": "spell",
+        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
+      },
+      {
+        "id": "subjects",
+        "count": 2,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "feature_type": "subject"
+      },
+      {"id": "potions", "count": 2, "tag": "Potions", "feature_type": "potion"},
+      {"id": "enchantments", "count": 1, "tag": "Enchantments", "feature_type": "enchantment"},
+      {"id": "training", "count": 1, "tag": "training-1-3", "feature_type": "trait"}
+    ]
+  },
+  {
+    "type": "template",
+    "id": "year-4",
+    "kind": "starting_year",
+    "name": "Year 4",
+    "description": "Your fourth year. The work gets harder, the choices get wider, and the cap on your best trait rises.",
+    "counters": {"year": 3},
+    "feat_picks": [
+      {
+        "id": "spells",
+        "count": 5,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "feature_type": "spell",
+        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
+      },
+      {
+        "id": "subjects",
+        "count": 2,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "feature_type": "subject"
+      },
+      {"id": "potions", "count": 3, "tag": "Potions", "feature_type": "potion"},
+      {"id": "enchantments", "count": 2, "tag": "Enchantments", "feature_type": "enchantment"},
+      {"id": "training", "count": 1, "tag": "training-4-6", "feature_type": "trait"}
+    ]
+  },
+  {
+    "type": "template",
+    "id": "year-5",
+    "kind": "starting_year",
+    "name": "Year 5",
+    "description": "Your fifth year. A third subject, a second training, and the first spells that make younger students go quiet.",
+    "counters": {"year": 4},
+    "feat_picks": [
+      {
+        "id": "spells",
+        "count": 6,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "feature_type": "spell",
+        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
+      },
+      {
+        "id": "subjects",
+        "count": 3,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "feature_type": "subject"
+      },
+      {"id": "potions", "count": 3, "tag": "Potions", "feature_type": "potion"},
+      {"id": "enchantments", "count": 2, "tag": "Enchantments", "feature_type": "enchantment"},
+      {"id": "training", "count": 2, "tag": "training-4-6", "feature_type": "trait"}
+    ]
+  },
+  {
+    "type": "template",
+    "id": "year-6",
+    "kind": "starting_year",
+    "name": "Year 6",
+    "description": "Your sixth year. The academy expects real work from you, and the libraries start to notice you.",
+    "counters": {"year": 5},
+    "feat_picks": [
+      {
+        "id": "spells",
+        "count": 7,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "feature_type": "spell",
+        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
+      },
+      {
+        "id": "subjects",
+        "count": 3,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "feature_type": "subject"
+      },
+      {"id": "potions", "count": 4, "tag": "Potions", "feature_type": "potion"},
+      {"id": "enchantments", "count": 2, "tag": "Enchantments", "feature_type": "enchantment"},
+      {"id": "training", "count": 2, "tag": "training-4-6", "feature_type": "trait"}
+    ]
+  },
+  {
+    "type": "template",
+    "id": "year-7",
+    "kind": "starting_year",
+    "name": "Year 7",
+    "description": "Your final year. Four subjects, a deep library, and the highest cap a student can reach.",
+    "counters": {"year": 6},
+    "feat_picks": [
+      {
+        "id": "spells",
+        "count": 8,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "feature_type": "spell",
+        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
+      },
+      {
+        "id": "subjects",
+        "count": 4,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "feature_type": "subject"
+      },
+      {"id": "potions", "count": 4, "tag": "Potions", "feature_type": "potion"},
+      {"id": "enchantments", "count": 3, "tag": "Enchantments", "feature_type": "enchantment"},
+      {"id": "training", "count": 3, "tag": "training-7", "feature_type": "trait"}
+    ]
+  }
+]

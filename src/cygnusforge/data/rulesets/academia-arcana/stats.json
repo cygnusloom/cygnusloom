@@ -1,0 +1,37 @@
+[
+  {
+    "type": "stat",
+    "id": "theory",
+    "name": "Theory",
+    "values": [-1, 0, 1, 1, 2],
+    "swap_group": "traits"
+  },
+  {
+    "type": "stat",
+    "id": "practice",
+    "name": "Practice",
+    "values": [-1, 0, 1, 1, 2],
+    "swap_group": "traits"
+  },
+  {
+    "type": "stat",
+    "id": "alchemy",
+    "name": "Alchemy",
+    "values": [-1, 0, 1, 1, 2],
+    "swap_group": "traits"
+  },
+  {
+    "type": "stat",
+    "id": "charm",
+    "name": "Charm",
+    "values": [-1, 0, 1, 1, 2],
+    "swap_group": "traits"
+  },
+  {
+    "type": "stat",
+    "id": "cunning",
+    "name": "Cunning",
+    "values": [-1, 0, 1, 1, 2],
+    "swap_group": "traits"
+  }
+]

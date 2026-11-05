@@ -1,0 +1,69 @@
+[
+  {
+    "type": "character_field",
+    "id": "major",
+    "name": "Major",
+    "description": "Choose one of your subjects as your major. Your major is the subject you know best and the one your Advancement spell picks come from.",
+    "table": "disciplines"
+  },
+  {
+    "type": "character_field",
+    "id": "college",
+    "name": "College",
+    "description": "The college you join once the academy's colleges are known. Leave it blank until the opening places you."
+  },
+  {
+    "type": "character_field",
+    "id": "signature-spell",
+    "name": "Signature Spell",
+    "description": "The personal spell that is yours alone: its name, what it looks like, and what it does."
+  },
+  {
+    "type": "character_field",
+    "id": "ambition",
+    "name": "Ambition",
+    "description": "What you want from the academy, in one or two sentences."
+  },
+  {
+    "type": "campaign_field",
+    "id": "period",
+    "name": "Time Period",
+    "description": "The era the academy belongs to.",
+    "table": "period"
+  },
+  {
+    "type": "campaign_field",
+    "id": "tone",
+    "name": "Tone",
+    "description": "How serious, strange, or warm the school stories are.",
+    "table": "tone"
+  },
+  {
+    "type": "campaign_field",
+    "id": "school_type",
+    "name": "School Type",
+    "description": "What kind of institution the academy is.",
+    "table": "school_type"
+  },
+  {
+    "type": "campaign_field",
+    "id": "magic_level",
+    "name": "Magic Level",
+    "description": "How common and how tame magic is in the world.",
+    "table": "magic_level"
+  },
+  {
+    "type": "campaign_field",
+    "id": "focus",
+    "name": "Academic Focus",
+    "description": "What the campaign is mostly about.",
+    "table": "focus"
+  },
+  {
+    "type": "campaign_field",
+    "id": "weirdness",
+    "name": "Weirdness",
+    "description": "How far the school leans into the strange and surreal.",
+    "table": "weirdness"
+  }
+]

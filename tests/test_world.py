@@ -1467,6 +1467,8 @@ LOOKUP_TOOL_NAMES = {
     "lookup_rule",
     "lookup_feature",
     "lookup_condition",
+    "list_custom_features",
+    "list_factions",
 }
 
 

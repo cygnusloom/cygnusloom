@@ -1,0 +1,30 @@
+[
+  {
+    "type": "project",
+    "id": "class_challenge",
+    "label": "Class Challenge",
+    "description": "A class sets a challenge: a puzzle in the classroom, a thing to find on the grounds, a creature to calm, or a lesson to survive. Complete it to earn the class reward.",
+    "target": 3
+  },
+  {
+    "type": "project",
+    "id": "spell_research",
+    "label": "Spell Research",
+    "description": "Research a new spell or recover a lost one. Each advance is a period of study, experiment, and dangerous trial.",
+    "target": 4
+  },
+  {
+    "type": "project",
+    "id": "potion_research",
+    "label": "Potion Research",
+    "description": "Develop a new potion or refine an old recipe. Each advance is a batch, a failure, and a better note in the margin.",
+    "target": 3
+  },
+  {
+    "type": "project",
+    "id": "enchantment_research",
+    "label": "Enchantment Research",
+    "description": "Design a new enchantment. Each advance is a test object, a binding, and a flaw discovered before it matters.",
+    "target": 4
+  }
+]

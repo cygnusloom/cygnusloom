@@ -54,6 +54,7 @@ from cygnusforge.content.library import (
     WorldTemplate,
     WorldTerrain,
 )
+from cygnusforge.services import custom_features
 from cygnusforge.services.events import (
     PC_KIND,
     CampaignState,
@@ -87,6 +88,7 @@ GROUP_ORDER = {
     "Encounter Objects": 9,
     "Encounter Maps": 10,
     "Map Scales": 11,
+    "Factions": 12,
     "Spells": 20,
     "Arts": 21,
     "Foci": 22,
@@ -118,6 +120,7 @@ GROUP_ORDER = {
 SECTION_ORDER = (
     ("world", "world", "The World"),
     ("places", "world", "Places"),
+    ("factions", "world", "Factions"),
     ("terrain", "world", "Terrain"),
     ("options", "characters", "Character Options"),
     ("stats", "characters", "Attributes"),
@@ -650,6 +653,19 @@ def _build(
             safe_rule_text,
         )
         _add_live_items(state, drafts["items"], item_names, aliases["item"])
+        _add_live_features(
+            state,
+            rule_set,
+            rule_text,
+            drafts["abilities"],
+            aliases["ability"],
+        )
+        _add_live_factions(
+            state,
+            rule_set,
+            drafts["factions"],
+            aliases["faction"],
+        )
 
     used_ids: set[str] = set()
     sections: list[CompendiumSection] = []
@@ -1260,7 +1276,13 @@ def _advancement_draft(advancement: str, option: AdvancementOption) -> _Draft:
     if option.limit is not None:
         lines.append(f"Limit: {option.limit}")
     if option.learn is not None:
-        lines.append(f"Learn: {option.learn.feature_type} by {option.learn.tag_field}")
+        if option.learn.tag:
+            detail = f" tagged {option.learn.tag}"
+        elif option.learn.tag_field:
+            detail = f" by {option.learn.tag_field}"
+        else:
+            detail = ""
+        lines.append(f"Learn: {option.learn.feature_type}{detail}")
     if option.effects:
         lines.append("Effects: " + "; ".join(_effect_text(effect) for effect in option.effects))
     if option.picks:
@@ -1289,6 +1311,13 @@ def _period_draft(period: PeriodRules) -> _Draft:
 
 
 def _tally_draft(tally: TallyRules) -> _Draft:
+    if tally.dynamic:
+        return _Draft(
+            name=tally.label,
+            summary="Points kept by the campaign's factions",
+            text="The campaign's factions are listed under Factions.",
+            group="Tallies",
+        )
     return _Draft(
         name=tally.label,
         summary=", ".join(tally.entries.values()),
@@ -1598,6 +1627,52 @@ def _rule_drafts(library: ContentLibrary, rule_set: RuleSet) -> list[tuple[str, 
             )
         )
     return drafts
+
+
+def _add_live_factions(
+    state: CampaignState,
+    rule_set: RuleSet,
+    factions: dict[str, _Draft],
+    aliases: list[tuple[str, str]],
+) -> None:
+    """Add the factions the GM invented, with their current cup points."""
+    for faction in state.factions.values():
+        tally = rule_set.tallies.get(faction.tally)
+        points = state.tallies.get(faction.tally, {}).get(faction.entry, 0)
+        key = f"faction:{faction.id}"
+        lines = [faction.description] if faction.description else []
+        if faction.trait:
+            lines.append(f"Trait: {faction.trait}")
+        lines.append(f"{points} {tally.label if tally is not None else 'points'}")
+        factions[key] = _Draft(
+            name=faction.name,
+            summary=faction.trait or faction.description,
+            text="\n".join(lines),
+            source="campaign",
+            group="Factions",
+        )
+        _alias(aliases, (faction.name, name_key(faction.name), faction.id), key)
+
+
+def _add_live_features(
+    state: CampaignState,
+    rule_set: RuleSet,
+    rule_text: Mapping[str, str],
+    abilities: dict[str, _Draft],
+    aliases: list[tuple[str, str]],
+) -> None:
+    """Add the features characters invented during play, such as researched spells."""
+    for character in state.characters.values():
+        for custom in character.custom_features.values():
+            if custom.id not in character.features:
+                continue
+            key = f"custom:{name_key(character.name)}:{custom.id}"
+            if key in abilities:
+                continue
+            abilities[key] = _feature_draft(
+                custom_features.as_feature(custom), rule_set, rule_text, "campaign"
+            )
+            _alias(aliases, (custom.id, custom.name, name_key(custom.name)), key)
 
 
 def _add_live_places(

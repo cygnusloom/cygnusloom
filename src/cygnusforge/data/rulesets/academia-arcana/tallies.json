@@ -1,0 +1,9 @@
+[
+  {
+    "type": "tally",
+    "id": "college-cup",
+    "label": "College Cup",
+    "entries": [],
+    "dynamic": true
+  }
+]

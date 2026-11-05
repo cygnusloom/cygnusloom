@@ -271,12 +271,15 @@ def option_views(
             ]
         features: list[dict[str, str]] = []
         if option.learn is not None:
-            tag = pc.fields.get(option.learn.tag_field, "")
+            learn = option.learn
+            tag = learn.tag or (pc.fields.get(learn.tag_field, "") if learn.tag_field else "")
+            restrict = bool(learn.tag or learn.tag_field)
             features = [
                 {"id": feature.id, "name": feature.name}
                 for feature in spec.features.values()
-                if feature.feature_type == option.learn.feature_type
-                and feature.tag == tag
+                if feature.feature_type == learn.feature_type
+                and (not restrict or feature.tag == tag)
+                and feature.id not in learn.exclude
                 and (feature.repeatable or feature.id not in pc.features)
             ]
         views.append(

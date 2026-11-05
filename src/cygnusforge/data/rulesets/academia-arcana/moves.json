@@ -1,0 +1,410 @@
+[
+  {
+    "type": "move",
+    "id": "cast_a_spell",
+    "label": "Cast a Spell",
+    "description": "When you attempt a spell under pressure, say the incantation, make the gesture, and roll +Practice.",
+    "dice": "2d6",
+    "stat": "practice",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "The magic does what you meant it to do, cleanly and fully."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "The magic works, but choose one: you draw unwanted attention; it has a minor unintended side effect; or it drains you, and you mark 1 Stress."
+      },
+      {
+        "label": "6-",
+        "text": "The magic slips, fails, or does something else. The GM makes a move, and a big working may mark Stress or cause a mishap."
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "research_and_study",
+    "label": "Research & Study",
+    "description": "When you search the archives, consult a text, or analyze an unknown magical thing, roll +Theory.",
+    "dice": "2d6",
+    "stat": "theory",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "Ask the GM two questions about the subject. The answers are true and useful."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "Ask the GM one question. The answer is true, but it comes with a cost or a complication: a missing page, a dangerous source, or a favour owed."
+      },
+      {
+        "label": "6-",
+        "text": "The information is incomplete, misleading, or guarded. The GM makes a move."
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "lab_work",
+    "label": "Lab Work",
+    "description": "When you prepare a compound, brew an elixir, or transmute materials in a proper or improvised lab, roll +Alchemy.",
+    "dice": "2d6",
+    "stat": "alchemy",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "The batch is potent and does exactly what you intended."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "It works, but it is unstable, temporary, or missing a rare final ingredient. Choose one; the GM says what it means."
+      },
+      {
+        "label": "6-",
+        "text": "The work fails, spoils, or goes somewhere dangerous. The GM makes a move."
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "break_curfew",
+    "label": "Break Curfew / Bend Rules",
+    "description": "When you sneak past wards, prefects, or faculty, or attempt something forbidden, roll +Cunning.",
+    "dice": "2d6",
+    "stat": "cunning",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You get in, get out, or get away clean."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You get what you wanted, but leave a clue, draw a witness, or meet an obstacle on the way out. The GM says which."
+      },
+      {
+        "label": "6-",
+        "text": "You are caught, cornered, or forced to abandon the attempt. The GM makes a move."
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "charm_someone",
+    "label": "Charm / Negotiate",
+    "description": "When you persuade, flatter, bargain, or work a room, roll +Charm.",
+    "dice": "2d6",
+    "stat": "charm",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "They agree, help, or let you pass, and they do not hold it against you."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "They agree, but they want something first, or someone else notices the favour."
+      },
+      {
+        "label": "6-",
+        "text": "They refuse, take offence, or raise the price. The GM makes a move."
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "duel",
+    "label": "Duel",
+    "description": "When you face another spellcaster in a formal or informal duel, roll +Practice for each exchange.",
+    "dice": "2d6",
+    "stat": "practice",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "Your spell lands cleanly, and your opponent is off balance."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "Choose one: both spells land; both miss and the exchange resets; or you land a hit but take a cost, such as a Condition, a lost wand, or a marked uniform."
+      },
+      {
+        "label": "6-",
+        "text": "Your opponent's spell lands, and the GM makes a move. A duel is rarely to the death, but it can still hurt."
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "play_school_sport",
+    "label": "Play the School Sport",
+    "description": "When you have control of a school match and your team is about to make a risky play, roll +Practice if you play boldly or +Cunning if you play dirty.",
+    "dice": "2d6",
+    "stat_choice": ["practice", "cunning"],
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "Your team scores, and you keep control of the match."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "Neither team scores, or your team scores but loses control. The GM says which, and the match moves on."
+      },
+      {
+        "label": "6-",
+        "text": "The other team scores. The GM makes a move, and the crowd has an opinion."
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "help_or_hinder",
+    "label": "Help or Hinder",
+    "description": "When you help, defend, trip up, or interfere with someone, roll +Charm. If they are a Friend or Rival, add +1.",
+    "dice": "2d6",
+    "stat": "charm",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "Give them +1 or -1 to their next roll, or prevent them from taking a Condition."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "They get the bonus or penalty, but you take a Condition, draw attention, or owe someone an explanation."
+      },
+      {
+        "label": "6-",
+        "text": "Your help backfires or your hindrance is noticed. The GM makes a move."
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "stand_in_face_of_danger",
+    "label": "Stand in the Face of Danger",
+    "description": "When you stand firm against a threat, physical or magical, roll +Practice if you meet it head-on or +Cunning if you outwit it.",
+    "dice": "2d6",
+    "stat_choice": ["practice", "cunning"],
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You hold, and nobody you are protecting gets hurt."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You hold, but choose one: you take a Condition; someone else takes the harm; or the threat backs off and comes back later."
+      },
+      {
+        "label": "6-",
+        "text": "The danger gets past you. The GM makes a move."
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "approach_magical_creature",
+    "label": "Approach a Magical Creature",
+    "description": "When you try to tame, help, bargain with, or get help from a magical creature, roll +Charm.",
+    "dice": "2d6",
+    "stat": "charm",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "The creature does what you want, or gives you what you need."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "It does what you want, but you take a Condition, it attracts attention, or it wants something first."
+      },
+      {
+        "label": "6-",
+        "text": "The creature panics, turns wild, or decides you are the problem. The GM makes a move."
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "use_magical_object",
+    "label": "Use a Magical Object",
+    "description": "When you use an enchanted object under pressure, roll +Theory if you understand it or +Practice if you force it.",
+    "dice": "2d6",
+    "stat_choice": ["theory", "practice"],
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "The object works exactly as you expected, and you get the most from it."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "Choose one: it does something unexpected but helpful; its effect is weaker or shorter; or using it costs you, and you mark 1 Stress."
+      },
+      {
+        "label": "6-",
+        "text": "The object fails, misfires, or does what it wants. The GM makes a move."
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "brew_potion",
+    "label": "Brew a Potion",
+    "description": "When you brew a potion you know, with the right ingredients and tools, roll +Alchemy.",
+    "dice": "2d6",
+    "stat": "alchemy",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You make the potion, and it keeps its strength."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You make it, but choose one: it has a side effect; it will spoil by the next scene; or you need one more ingredient to stabilize it."
+      },
+      {
+        "label": "6-",
+        "text": "The brew spoils, smokes, or spills. The GM makes a move."
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "forge_enchantment",
+    "label": "Forge an Enchantment",
+    "description": "When you place an enchantment you know on a suitable object, roll +Alchemy. You need the object, the materials, and uninterrupted time.",
+    "dice": "2d6",
+    "stat": "alchemy",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "The enchantment takes hold in the object and does what you designed."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "It works, but choose one: the object has a flaw the GM names; the working is tied to one person or place; or it will fade after a few uses."
+      },
+      {
+        "label": "6-",
+        "text": "The magic refuses, twists, or takes something from you. The GM makes a move."
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "study_for_exam",
+    "label": "Study for an Exam",
+    "description": "When you cram, revise, or prepare for a test, roll +Theory.",
+    "dice": "2d6",
+    "stat": "theory",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You are ready. Take +1 forward on the exam, and you know which topic the examiner will favor."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You learn enough to pass, but choose one: you are exhausted; you neglected a friend; or you missed a topic the GM names."
+      },
+      {
+        "label": "6-",
+        "text": "The material will not stick. The GM makes a move, and the exam will find the gap."
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "attend_class",
+    "label": "Attend a Class Challenge",
+    "description": "When you take on the challenge a class sets, roll +Theory for a lesson of the mind, +Practice for a lesson of casting, or +Alchemy for a lesson of making. The GM frames the challenge and names the stat.",
+    "dice": "2d6",
+    "stat_choice": ["theory", "practice", "alchemy"],
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You complete the challenge. Mark 1 progress on the class project and say what you learned."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You complete it with a cost: mark 1 progress, but take a Condition, draw attention, or leave something behind."
+      },
+      {
+        "label": "6-",
+        "text": "The challenge beats you for now. The GM makes a move, and the class project does not advance."
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "play_a_prank",
+    "label": "Play a Prank",
+    "description": "When you set up a trick, a diversion, or a beautiful piece of mischief, roll +Cunning.",
+    "dice": "2d6",
+    "stat": "cunning",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "It lands perfectly, and the right people laugh."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "It lands, but someone sees you, a target is angrier than you meant, or a teacher starts asking questions."
+      },
+      {
+        "label": "6-",
+        "text": "It backfires, is traced to you, or catches the wrong person. The GM makes a move."
+      }
+    ]
+  },
+  {
+    "type": "move",
+    "id": "signature_spell",
+    "label": "Cast Your Signature Spell",
+    "description": "When you cast the personal spell written in your Signature Spell field, roll +Practice.",
+    "dice": "2d6",
+    "stat": "practice",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "The spell does what it was made to do, and the flourish is unmistakably yours."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "It works, but choose one: it is more dramatic than you wanted; it costs you 1 Stress; or someone who should not have seen it did."
+      },
+      {
+        "label": "6-",
+        "text": "The spell turns inward or sideways. The GM makes a move, and the mark it leaves is personal."
+      }
+    ]
+  }
+]

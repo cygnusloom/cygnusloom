@@ -123,6 +123,15 @@ CORE_TOOLS = {
     "remove_map_token",
     "set_map_cells",
     "list_dice_tables",
+    "create_custom_feature",
+    "update_custom_feature",
+    "remove_custom_feature",
+    "list_custom_features",
+    "create_faction",
+    "update_faction",
+    "remove_faction",
+    "adjust_faction_points",
+    "list_factions",
 }
 
 
@@ -150,14 +159,20 @@ def tree(tmp_path: Path) -> Path:
 
 def test_bundled_content_loads():
     library = ContentLibrary.load()
-    assert set(library.world_templates) == {"twin-lakes", "unwritten-world"}
+    assert set(library.world_templates) == {"twin-lakes", "unwritten-world", "unwritten-academy"}
     assert library.world_templates["twin-lakes"].name == "Twin Lakes"
     twin_lakes = library.world_templates["twin-lakes"]
     assert twin_lakes.locations
-    assert set(library.rule_sets) == {"cairn2e", "worldswithoutnumber"}
+    assert set(library.rule_sets) == {"academia-arcana", "cairn2e", "worldswithoutnumber"}
     assert library.world_content("twin-lakes", "cairn2e").monsters
     assert library.rule_sets["worldswithoutnumber"].character.skills
     assert library.rule_sets["worldswithoutnumber"].monsters
+    academy = library.rule_sets["academia-arcana"]
+    assert academy.character.stats
+    assert academy.moves
+    assert academy.advancements
+    assert academy.periods
+    assert "magicschool" in academy.table_genres
 
 
 def _load_test_hooks(module: ModuleType, **overrides: Any):
@@ -351,14 +366,17 @@ def test_bundled_worlds_say_which_rule_set_they_use():
     library = ContentLibrary.load()
     assert library.world_templates["twin-lakes"].rule_set == "cairn2e"
     assert library.world_templates["unwritten-world"].rule_set is None
+    assert library.world_templates["unwritten-academy"].rule_set == "academia-arcana"
     assert library.world_templates["twin-lakes"].blurb
     assert library.world_templates["unwritten-world"].blurb
+    assert library.world_templates["unwritten-academy"].blurb
     assert library.rule_sets["cairn2e"].blurb
     assert library.rule_sets["worldswithoutnumber"].blurb
+    assert library.rule_sets["academia-arcana"].blurb
 
 
 def test_every_bundled_rule_set_defines_ground_kinds():
-    """Both bundled rule sets define ground kinds, so create_region works in either world."""
+    """Every bundled rule set defines ground kinds, so create_region works in its world."""
     library = ContentLibrary.load()
     assert all(rule_set.world_terrain for rule_set in library.rule_sets.values())
 

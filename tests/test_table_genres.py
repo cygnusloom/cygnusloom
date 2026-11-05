@@ -171,9 +171,9 @@ def test_a_creative_table_patch_keeps_or_overrides_the_core_genres():
 
 def test_the_bundled_rule_sets_offer_generic_and_fantasy_tables():
     library = ContentLibrary.load(DATA_DIR)
-    for rule_set_id in ("cairn2e", "worldswithoutnumber"):
+    for rule_set_id in ("cairn2e", "worldswithoutnumber", "academia-arcana"):
         rules = library.rule_sets[rule_set_id]
-        assert rules.table_genres == ("generic", "fantasy")
+        assert {"generic", "fantasy"} <= set(rules.table_genres)
         assert rules.dice_tables["setting_premise"].genres == ("fantasy",)
         assert rules.dice_tables["action"].genres == ("generic",)
     assert library.core.dice_tables["setting_premise"].genres == ("fantasy",)

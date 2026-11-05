@@ -1248,5 +1248,253 @@
         "cells"
       ]
     }
+  },
+  {
+    "type": "tool_call",
+    "id": "create_custom_feature",
+    "name": "create_custom_feature",
+    "world_method": "create_custom_feature",
+    "description": "Create and learn a feature invented during play, such as a researched spell, potion, or enchantment. Give it a name, the kind of magic, and a description that says exactly what it does. Add the base effect, the mods it was built from, and its Stress cost so the sheet and the compendium keep the design. For the player character, use the design the player has stated; do not invent one on their behalf.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the character who learns the feature."
+        },
+        "name": {
+          "type": "string",
+          "description": "The feature's name."
+        },
+        "feature_type": {
+          "type": "string",
+          "enum": ["spell", "potion", "enchantment", "item", "trait", "feat"],
+          "description": "The kind of feature it is."
+        },
+        "description": {
+          "type": "string",
+          "description": "What the feature does, in the rule set's own terms."
+        },
+        "tag": {
+          "type": "string",
+          "description": "The discipline or other tag the feature belongs to."
+        },
+        "rank": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The feature's rank, or 0 when it has none."
+        },
+        "subject": {
+          "type": "string",
+          "description": "The subject the magic belongs to, such as Charms."
+        },
+        "base": {
+          "type": "string",
+          "description": "The base effect the feature was built from."
+        },
+        "mods": {
+          "type": "array",
+          "description": "The mods applied to the base effect.",
+          "items": {"type": "string"}
+        },
+        "stress": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The Stress the feature costs when it is used."
+        },
+        "cause": {
+          "type": "string",
+          "description": "How it was invented, such as a research project or a class."
+        }
+      },
+      "required": ["character", "name", "feature_type", "description"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "update_custom_feature",
+    "name": "update_custom_feature",
+    "world_method": "update_custom_feature",
+    "description": "Refine a feature invented during play. Only the fields given are replaced. Use it when research, a mishap, or a lesson changes what the feature does.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the character who owns the feature."
+        },
+        "feature": {
+          "type": "string",
+          "description": "The feature's id or name."
+        },
+        "name": {"type": "string"},
+        "description": {"type": "string"},
+        "tag": {"type": "string"},
+        "rank": {"type": "integer", "minimum": 0},
+        "subject": {"type": "string"},
+        "base": {"type": "string"},
+        "mods": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "stress": {"type": "integer", "minimum": 0}
+      },
+      "required": ["character", "feature"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "remove_custom_feature",
+    "name": "remove_custom_feature",
+    "world_method": "remove_custom_feature",
+    "description": "Give up, lose, or refute a feature invented during play. This removes it from the character's sheet and lookups.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the character who owns the feature."
+        },
+        "feature": {
+          "type": "string",
+          "description": "The feature's id or name."
+        }
+      },
+      "required": ["character", "feature"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "list_custom_features",
+    "name": "list_custom_features",
+    "world_method": "list_custom_features",
+    "lookup": true,
+    "description": "List the features a character invented during play, with their kinds, subjects, mods, and Stress costs.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the character."
+        }
+      },
+      "required": ["character"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "create_faction",
+    "name": "create_faction",
+    "world_method": "create_faction",
+    "description": "Create a campaign faction, such as a magic-school college. Give it a name, a description, and a trait that colors its rivalries. Its points are kept in the rule set's dynamic faction tally, such as the College Cup. Create 3 to 5 factions at the campaign's opening, calling the tool for all of them in one reply. Leave tally out to use the rule set's only dynamic tally.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The faction's name."
+        },
+        "description": {
+          "type": "string",
+          "description": "What the faction is and what it is known for."
+        },
+        "trait": {
+          "type": "string",
+          "description": "A short trait or reputation, such as a stat bonus or a motto."
+        },
+        "points": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The points it starts the cup with, normally 0."
+        },
+        "tally": {
+          "type": "string",
+          "description": "Optional. The id of the dynamic tally that holds faction points."
+        }
+      },
+      "required": ["name", "description", "trait"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "update_faction",
+    "name": "update_faction",
+    "world_method": "update_faction",
+    "description": "Change a faction's name, description, or trait. Its id and cup entry stay the same. Use it when the story changes what a faction is or stands for.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "faction": {
+          "type": "string",
+          "description": "The faction's name or id."
+        },
+        "name": {"type": "string"},
+        "description": {"type": "string"},
+        "trait": {"type": "string"}
+      },
+      "required": ["faction"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "remove_faction",
+    "name": "remove_faction",
+    "world_method": "remove_faction",
+    "description": "Remove a faction and its cup entry from the campaign.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "faction": {
+          "type": "string",
+          "description": "The faction's name or id."
+        }
+      },
+      "required": ["faction"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "adjust_faction_points",
+    "name": "adjust_faction_points",
+    "world_method": "adjust_faction_points",
+    "description": "Add to or deduct from a faction's cup points. Use a negative change to deduct. Give every award a unique key, such as the contest and date; a key already used is refused, so one event is never paid twice.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "faction": {
+          "type": "string",
+          "description": "The faction's name or id."
+        },
+        "change": {
+          "type": "integer",
+          "description": "How many points to add (positive) or deduct (negative)."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why the points change."
+        },
+        "award": {
+          "type": "string",
+          "description": "A unique key for this award, such as the contest and date."
+        },
+        "force": {
+          "type": "boolean",
+          "description": "Set true only when a gain equal to an earlier one is genuinely a new award."
+        }
+      },
+      "required": ["faction", "change"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "list_factions",
+    "name": "list_factions",
+    "world_method": "list_factions",
+    "lookup": true,
+    "description": "List the campaign's factions with their traits, descriptions, and current cup points.",
+    "parameters": {
+      "type": "object",
+      "properties": {}
+    }
   }
 ]

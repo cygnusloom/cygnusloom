@@ -75,7 +75,15 @@ REQUIRED_TABLES = ("personality", "accent", "quirk")
 # `table_genres` match, and a campaign may narrow the choice further. A table tagged `generic`,
 # or with no genres at all, fits every setting. Extend this list and an existing table tag gains
 # a new reader without any code change.
-TABLE_GENRES = ("generic", "fantasy", "science-fiction", "horror", "modern", "historical")
+TABLE_GENRES = (
+    "generic",
+    "fantasy",
+    "magicschool",
+    "science-fiction",
+    "horror",
+    "modern",
+    "historical",
+)
 GENERIC_GENRE = "generic"
 
 
@@ -781,11 +789,14 @@ class AdvancementOption:
 
 @dataclass(frozen=True)
 class LearnRules:
-    """A feature an option lets a character learn: one of `feature_type` whose tag is the value of
-    the character field `tag_field`. Existing features may be learned again only if repeatable."""
+    """A feature an option lets a character learn: one of `feature_type`, optionally restricted to
+    the tag held by the character field `tag_field`, and never one of `exclude`. Existing features
+    may be learned again only if repeatable."""
 
     feature_type: str
-    tag_field: str
+    tag: str = ""
+    tag_field: str = ""
+    exclude: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -868,8 +879,10 @@ class TallyRules:
 
     id: str
     label: str
-    # Entry values and their labels, in file order.
+    # Entry values and their labels, in file order. A dynamic tally starts empty and gains its
+    # entries from campaign state, such as the colleges the GM invents.
     entries: Mapping[str, str]
+    dynamic: bool = False
 
 
 @dataclass(frozen=True)
@@ -2427,7 +2440,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
 FEATURE_EFFECT_KEYS: Mapping[str, frozenset[str]] = {
     "note": frozenset({"op", "text"}),
     "armor": frozenset({"op", "delta"}),
-    "stat": frozenset({"op", "id", "delta"}),
+    "stat": frozenset({"op", "id", "delta", "cap"}),
     "skill": frozenset({"op", "id", "delta"}),
     "counter": frozenset({"op", "id", "delta"}),
 }
@@ -3005,6 +3018,13 @@ def _optional_whole(data: Mapping[str, Any], key: str, label: str) -> int:
     if key not in data:
         return 0
     return _whole(data, key, label, 0)
+
+
+def _optional_signed_whole(data: Mapping[str, Any], key: str, label: str) -> int:
+    """A whole number that may be negative, such as a reputation counter's floor."""
+    if key not in data:
+        return 0
+    return _whole(data, key, label, -999)
 
 
 def _flag_default(data: Mapping[str, Any], key: str, label: str, default: bool) -> bool:
@@ -4997,7 +5017,7 @@ def _load_counters(
             {"type", "id", "label", "description", "min", "max", "initial", "full"},
             label,
         )
-        minimum = _optional_whole(d.data, "min", label)
+        minimum = _optional_signed_whole(d.data, "min", label)
         maximum = _whole(d.data, "max", label, minimum) if "max" in d.data else None
         initial = _whole(d.data, "initial", label, minimum) if "initial" in d.data else minimum
         if maximum is not None and initial > maximum:
@@ -5330,15 +5350,24 @@ def _load_learn(data: object, character: CharacterSpec, label: str) -> LearnRule
     must match. None when the option teaches none."""
     if data is None:
         return None
-    data = check_object_keys(data, {"feature_type", "tag_field"}, f"{label}: 'learn'")
+    data = check_object_keys(
+        data, {"feature_type", "tag", "tag_field", "exclude"}, f"{label}: 'learn'"
+    )
     feature_type = required_text(data, "feature_type", label)
-    tag_field = required_text(data, "tag_field", label)
     if feature_type not in {f.feature_type for f in character.features.values()}:
         raise ContentError(f"{label}: 'learn' names no feature type ({feature_type!r})")
-    field_spec = character.fields.get(tag_field)
-    if field_spec is None or field_spec.table is None:
-        raise ContentError(f"{label}: 'learn' needs a table field named {tag_field!r}")
-    return LearnRules(feature_type=feature_type, tag_field=tag_field)
+    tag = _optional_text(data, "tag", label) or ""
+    tag_field = data.get("tag_field", "")
+    if tag and tag_field:
+        raise ContentError(f"{label}: 'learn' takes a tag or a tag_field, not both")
+    if tag_field:
+        if not isinstance(tag_field, str):
+            raise ContentError(f"{label}: 'learn' tag_field must be text")
+        field_spec = character.fields.get(tag_field)
+        if field_spec is None or field_spec.table is None:
+            raise ContentError(f"{label}: 'learn' needs a table field named {tag_field!r}")
+    exclude = _texts(data.get("exclude", []), f"{label}: 'learn' exclude")
+    return LearnRules(feature_type=feature_type, tag=tag, tag_field=tag_field, exclude=exclude)
 
 
 def _load_periods(
@@ -5390,9 +5419,12 @@ def _load_tallies(definitions: list[Definition], template: str) -> dict[str, Tal
         label = f"{template}: tally {d.id}"
         if d.id in loaded:
             raise ContentError(f"{template}: duplicate tally {d.id!r}")
-        check_keys(d.data, {"type", "id", "label", "entries"}, label)
-        raw = d.data.get("entries")
-        if not isinstance(raw, list) or not raw:
+        check_keys(d.data, {"type", "id", "label", "entries", "dynamic"}, label)
+        dynamic = _flag_default(d.data, "dynamic", label, False)
+        raw = d.data.get("entries", [])
+        if not isinstance(raw, list):
+            raise ContentError(f"{label}: 'entries' must be a list")
+        if not raw and not dynamic:
             raise ContentError(f"{label}: 'entries' must be a non-empty list")
         entries: dict[str, str] = {}
         for entry in raw:
@@ -5404,7 +5436,10 @@ def _load_tallies(definitions: list[Definition], template: str) -> dict[str, Tal
                 raise ContentError(f"{label}: entry {value!r} is repeated")
             entries[value] = required_text(entry, "label", label)
         loaded[d.id] = TallyRules(
-            id=d.id, label=required_text(d.data, "label", label), entries=entries
+            id=d.id,
+            label=required_text(d.data, "label", label),
+            entries=entries,
+            dynamic=dynamic,
         )
     return loaded
 

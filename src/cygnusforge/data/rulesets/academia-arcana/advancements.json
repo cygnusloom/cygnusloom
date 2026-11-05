@@ -1,0 +1,38 @@
+[
+  {
+    "type": "advancement",
+    "id": "advancement",
+    "label": "Advancement",
+    "counter": "advancements",
+    "options": [
+      {
+        "value": "stat",
+        "label": "Raise a stat",
+        "text": "Raise one stat by 1, up to your Year cap: +2 in Years 1-3, +3 in Years 4-6, +4 in Year 7.",
+        "picks": true,
+        "effects": [{"op": "raise_stat", "stat": "$picked", "delta": 1, "cap": 4}]
+      },
+      {
+        "value": "spell",
+        "label": "Learn a spell",
+        "text": "Learn one spell you do not already know. Forbidden spells are never learned this way.",
+        "learn": {
+          "feature_type": "spell",
+          "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
+        }
+      },
+      {
+        "value": "subject",
+        "label": "Take a new subject",
+        "text": "Take a subject you have not studied before. You gain its +1 and may learn its magic.",
+        "learn": {"feature_type": "subject"}
+      },
+      {
+        "value": "talent",
+        "label": "Learn a talent",
+        "text": "Learn a new talent from your playbook or another.",
+        "learn": {"feature_type": "trait", "tag": "talent"}
+      }
+    ]
+  }
+]

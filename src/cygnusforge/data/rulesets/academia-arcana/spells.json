@@ -1,0 +1,362 @@
+[
+  {
+    "type": "feature",
+    "id": "light-step",
+    "name": "Light Step",
+    "feature_type": "spell",
+    "tag": "Charms",
+    "rank": 1,
+    "description": "Charm (Year 1). Your footsteps make no sound and leave no print for a scene. A sharp-eyed observer may still notice the dust moving."
+  },
+  {
+    "type": "feature",
+    "id": "unseen-hand",
+    "name": "Unseen Hand",
+    "feature_type": "spell",
+    "tag": "Charms",
+    "rank": 2,
+    "description": "Charm (Year 2). A invisible force carries, lifts, or pulls one small object within sight. It cannot strike a blow, but it can turn a key or pull a rope."
+  },
+  {
+    "type": "feature",
+    "id": "mending-word",
+    "name": "Mending Word",
+    "feature_type": "spell",
+    "tag": "Charms",
+    "rank": 1,
+    "description": "Charm (Year 1). A tear, crack, or break in a mundane object closes cleanly. The repair is visible on close inspection and cannot restore something missing."
+  },
+  {
+    "type": "feature",
+    "id": "borrowed-voice",
+    "name": "Borrowed Voice",
+    "feature_type": "spell",
+    "tag": "Charms",
+    "rank": 3,
+    "description": "Charm (Year 3). Your voice comes from a spot you can see for a scene. It says what you say, but it cannot make a sound you could not make."
+  },
+  {
+    "type": "feature",
+    "id": "tidy-room",
+    "name": "Tidy Room",
+    "feature_type": "spell",
+    "tag": "Charms",
+    "rank": 1,
+    "description": "Charm (Year 1). One room puts itself in order: beds made, books shelved, spills gone. It cannot sort what belongs to whom, and it hides nothing."
+  },
+  {
+    "type": "feature",
+    "id": "pocket-form",
+    "name": "Pocket Form",
+    "feature_type": "spell",
+    "tag": "Transfiguration",
+    "rank": 2,
+    "description": "Transfiguration (Year 2). One object no larger than a satchel folds into a palm-sized version of itself for an hour. It keeps its weight and its uses."
+  },
+  {
+    "type": "feature",
+    "id": "soften-stone",
+    "name": "Soften Stone",
+    "feature_type": "spell",
+    "tag": "Transfiguration",
+    "rank": 3,
+    "description": "Transfiguration (Year 3). A patch of stone or brick becomes clay-soft for a scene. It can be dug, shaped, or pushed through, then hardens again."
+  },
+  {
+    "type": "feature",
+    "id": "borrowed-shape",
+    "name": "Borrowed Shape",
+    "feature_type": "spell",
+    "tag": "Transfiguration",
+    "rank": 4,
+    "description": "Transfiguration (Year 4). You take the shape of one mundane animal for a scene. You keep your mind, but not your voice, hands, or wand."
+  },
+  {
+    "type": "feature",
+    "id": "iron-feather",
+    "name": "Iron Feather",
+    "feature_type": "spell",
+    "tag": "Transfiguration",
+    "rank": 3,
+    "description": "Transfiguration (Year 3). A light object becomes heavy as iron for a scene. It does not become stronger, so a rotted beam may break under its own new weight."
+  },
+  {
+    "type": "feature",
+    "id": "fold-space",
+    "name": "Fold Space",
+    "feature_type": "spell",
+    "tag": "Transfiguration",
+    "rank": 5,
+    "description": "Transfiguration (Year 5). Two doorways you can see become the same doorway for a breath. Anything crossing one arrives at the other. The fold closes with a sound like a book snapping shut."
+  },
+  {
+    "type": "feature",
+    "id": "threshold-sigil",
+    "name": "Threshold Sigil",
+    "feature_type": "spell",
+    "tag": "Warding",
+    "rank": 2,
+    "description": "Warding (Year 2). A doorway, window, or gate bears a sigil that warns you when something crosses it. The warning is a chime only you hear."
+  },
+  {
+    "type": "feature",
+    "id": "alarm-bell",
+    "name": "Alarm Bell",
+    "feature_type": "spell",
+    "tag": "Warding",
+    "rank": 1,
+    "description": "Warding (Year 1). A small bell sounds in your ear when a named person or creature enters a room you warded. It cannot tell you why they came."
+  },
+  {
+    "type": "feature",
+    "id": "reflection-ward",
+    "name": "Reflection Ward",
+    "feature_type": "spell",
+    "tag": "Warding",
+    "rank": 3,
+    "description": "Warding (Year 3). The next spell or hex aimed at you turns aside and marks the caster with a flash. It does not stop a physical blow."
+  },
+  {
+    "type": "feature",
+    "id": "sealed-letter",
+    "name": "Sealed Letter",
+    "feature_type": "spell",
+    "tag": "Warding",
+    "rank": 1,
+    "description": "Warding (Year 1). A letter or page can be read only by its named recipient. Anyone else sees a blank page and feels the seal warm."
+  },
+  {
+    "type": "feature",
+    "id": "safe-room",
+    "name": "Safe Room",
+    "feature_type": "spell",
+    "tag": "Warding",
+    "rank": 4,
+    "description": "Warding (Year 4). One room becomes hard to find or enter for a scene. People who mean you harm lose their way; people who mean you well find the door."
+  },
+  {
+    "type": "feature",
+    "id": "fragment-sight",
+    "name": "Fragment Sight",
+    "feature_type": "spell",
+    "tag": "Divination",
+    "rank": 2,
+    "description": "Divination (Year 2). You see a broken image of a place you have touched within the last day: one angle, one moment, no sound. The image is true but incomplete."
+  },
+  {
+    "type": "feature",
+    "id": "ink-answer",
+    "name": "Ink Answer",
+    "feature_type": "spell",
+    "tag": "Divination",
+    "rank": 1,
+    "description": "Divination (Year 1). Ink writes a short answer to one question on a page. The answer is true but terse, and it may answer a different question than you meant."
+  },
+  {
+    "type": "feature",
+    "id": "weather-ear",
+    "name": "Weather Ear",
+    "feature_type": "spell",
+    "tag": "Divination",
+    "rank": 1,
+    "description": "Divination (Year 1). You know the weather for the next day and whether a storm, frost, or heat is coming. You can also hear a storm coming an hour before it arrives."
+  },
+  {
+    "type": "feature",
+    "id": "truth-thread",
+    "name": "Truth Thread",
+    "feature_type": "spell",
+    "tag": "Divination",
+    "rank": 3,
+    "description": "Divination (Year 3). A red thread appears between two people who have made a promise to each other. It shows the promise exists, not whether either means to keep it."
+  },
+  {
+    "type": "feature",
+    "id": "lost-compass",
+    "name": "Lost Compass",
+    "feature_type": "spell",
+    "tag": "Divination",
+    "rank": 4,
+    "description": "Divination (Year 4). A compass points to the thing you have lost, not north. It points to where the thing is, not the safe way to reach it."
+  },
+  {
+    "type": "feature",
+    "id": "steady-breath",
+    "name": "Steady Breath",
+    "feature_type": "spell",
+    "tag": "Healing",
+    "rank": 1,
+    "description": "Healing (Year 1). A person's breathing slows and steadies, and pain fades for a scene. It does not heal a wound, only make it bearable."
+  },
+  {
+    "type": "feature",
+    "id": "knit-bone",
+    "name": "Knit Bone",
+    "feature_type": "spell",
+    "tag": "Healing",
+    "rank": 3,
+    "description": "Healing (Year 3). A broken bone sets and knits in minutes. The patient must stay still, and the bone is sore for a day."
+  },
+  {
+    "type": "feature",
+    "id": "calm-fever",
+    "name": "Calm Fever",
+    "feature_type": "spell",
+    "tag": "Healing",
+    "rank": 2,
+    "description": "Healing (Year 2). A fever breaks and a sick person rests easily for a night. The cause of the sickness remains and may return."
+  },
+  {
+    "type": "feature",
+    "id": "clear-mind",
+    "name": "Clear Mind",
+    "feature_type": "spell",
+    "tag": "Healing",
+    "rank": 2,
+    "description": "Healing (Year 2). A confused, charmed, or frightened mind becomes clear for a scene. The spell is obvious to anyone watching, and the cause may still be present."
+  },
+  {
+    "type": "feature",
+    "id": "shared-warmth",
+    "name": "Shared Warmth",
+    "feature_type": "spell",
+    "tag": "Healing",
+    "rank": 1,
+    "description": "Healing (Year 1). Warmth passes from you to one other person, enough to carry them through a cold night. You feel the cold in their place."
+  },
+  {
+    "type": "feature",
+    "id": "whisper-mask",
+    "name": "Whisper Mask",
+    "feature_type": "spell",
+    "tag": "Illusion",
+    "rank": 1,
+    "description": "Illusion (Year 1). Your voice seems to come from someone else, or from a place nearby. A careful listener can tell the sound is borrowed."
+  },
+  {
+    "type": "feature",
+    "id": "false-door",
+    "name": "False Door",
+    "feature_type": "spell",
+    "tag": "Illusion",
+    "rank": 2,
+    "description": "Illusion (Year 2). A door appears where there is only wall, or a real door looks like wall. The illusion fools sight and touch, but not a hand that pushes hard."
+  },
+  {
+    "type": "feature",
+    "id": "crowd-of-one",
+    "name": "Crowd of One",
+    "feature_type": "spell",
+    "tag": "Illusion",
+    "rank": 3,
+    "description": "Illusion (Year 3). You appear to be one of a small crowd, or one member of a crowd appears to be you. The illusion breaks if you speak out of character."
+  },
+  {
+    "type": "feature",
+    "id": "quiet-step",
+    "name": "Quiet Step",
+    "feature_type": "spell",
+    "tag": "Illusion",
+    "rank": 1,
+    "description": "Illusion (Year 1). Your footsteps and the rustle of your clothes are muffled for a scene. A ward or a good ear can still catch you."
+  },
+  {
+    "type": "feature",
+    "id": "painted-scene",
+    "name": "Painted Scene",
+    "feature_type": "spell",
+    "tag": "Illusion",
+    "rank": 4,
+    "description": "Illusion (Year 4). A scene you imagine fills a room for a scene: a feast, a storm, a crowd. It has no smell and cannot touch anything."
+  },
+  {
+    "type": "feature",
+    "id": "candle-call",
+    "name": "Candle Call",
+    "feature_type": "spell",
+    "tag": "Elemental",
+    "rank": 1,
+    "description": "Elemental (Year 1). A flame leaps to your hand, lights a wick, or snuffs out. It cannot spread beyond what you name."
+  },
+  {
+    "type": "feature",
+    "id": "gust",
+    "name": "Gust",
+    "feature_type": "spell",
+    "tag": "Elemental",
+    "rank": 1,
+    "description": "Elemental (Year 1). A hard gust shoves one person or knocks over light objects. It is enough to stagger, not to lift a person."
+  },
+  {
+    "type": "feature",
+    "id": "puddle-step",
+    "name": "Puddle Step",
+    "feature_type": "spell",
+    "tag": "Elemental",
+    "rank": 2,
+    "description": "Elemental (Year 2). You step into one puddle or pool and out of another you can see within a hundred paces. Both must be deep enough to cover a foot."
+  },
+  {
+    "type": "feature",
+    "id": "spark-arc",
+    "name": "Spark Arc",
+    "feature_type": "spell",
+    "tag": "Elemental",
+    "rank": 3,
+    "description": "Elemental (Year 3). A arc of spark jumps from your hand to a target, shocking and distracting it. It can light a lamp, jam a mechanism, or spoil a delicate ritual."
+  },
+  {
+    "type": "feature",
+    "id": "stone-song",
+    "name": "Stone Song",
+    "feature_type": "spell",
+    "tag": "Elemental",
+    "rank": 3,
+    "description": "Elemental (Year 3). You hear the shape of stone for a scene: hollows, cracks, old passages, and the places where it is about to fall."
+  },
+  {
+    "type": "feature",
+    "id": "command-the-will",
+    "name": "Command the Will",
+    "feature_type": "spell",
+    "tag": "Forbidden",
+    "rank": 5,
+    "description": "Forbidden. You force one person to obey a single short command for a breath. The victim knows what was done, and the academy treats its use as a serious crime."
+  },
+  {
+    "type": "feature",
+    "id": "sever-the-thread",
+    "name": "Sever the Thread",
+    "feature_type": "spell",
+    "tag": "Forbidden",
+    "rank": 5,
+    "description": "Forbidden. You cut the magical tie between two things: a ward and its anchor, a familiar and its master, a promise and its keepers. The cut is permanent and always leaves a mark."
+  },
+  {
+    "type": "feature",
+    "id": "borrowed-years",
+    "name": "Borrowed Years",
+    "feature_type": "spell",
+    "tag": "Forbidden",
+    "rank": 5,
+    "description": "Forbidden. You take years from your own future to buy power now. The GM decides what the debt looks like and when it comes due."
+  },
+  {
+    "type": "feature",
+    "id": "hollow-name",
+    "name": "Hollow Name",
+    "feature_type": "spell",
+    "tag": "Forbidden",
+    "rank": 5,
+    "description": "Forbidden. You strip a person's name from the world's memory for a day. Friends forget them, records blur, and only you remember. The name returns, but not the trust."
+  },
+  {
+    "type": "feature",
+    "id": "open-the-deep",
+    "name": "Open the Deep",
+    "feature_type": "spell",
+    "tag": "Forbidden",
+    "rank": 5,
+    "description": "Forbidden. You open a way to a place that should stay closed. Something always comes through, and it is never quite what you called."
+  }
+]

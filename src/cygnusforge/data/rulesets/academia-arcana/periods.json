@@ -1,0 +1,17 @@
+[
+  {
+    "type": "period",
+    "id": "school-year",
+    "label": "school year",
+    "tallies": ["college-cup"],
+    "effects": [
+      {"op": "counter", "id": "year", "delta": 1},
+      {"op": "counter", "id": "advancements", "delta": 4},
+      {"op": "counter", "id": "stress", "reset": true},
+      {
+        "op": "note",
+        "text": "The school year ends: the College Cup is reset after its final totals are logged, and every character gains a Year and four Advancement points to spend on a stat, a spell, a subject, and a talent."
+      }
+    ]
+  }
+]

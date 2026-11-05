@@ -1,0 +1,56 @@
+[
+  {
+    "type": "world_terrain",
+    "id": "halls",
+    "name": "Halls",
+    "color": "#b8ae9c",
+    "rule": "Stone corridors, stairs, and classrooms. Easy going, but every door may be watched.",
+    "pattern": "crags",
+    "ink": "#746a58"
+  },
+  {
+    "type": "world_terrain",
+    "id": "grounds",
+    "name": "Grounds",
+    "color": "#8dab6d",
+    "rule": "Lawns, playing fields, and paths. Easy going on foot.",
+    "pattern": "tufts",
+    "ink": "#4f6b3a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "lake",
+    "name": "Lake",
+    "color": "#2d6a8f",
+    "rule": "Open water. Nothing crosses it on foot; the way round follows the shore.",
+    "pattern": "waves",
+    "ink": "#a9d4ea"
+  },
+  {
+    "type": "world_terrain",
+    "id": "forest",
+    "name": "Forest",
+    "color": "#4d7a3c",
+    "rule": "Forest without a path. Tough going on foot, and easy to lose the school behind you.",
+    "pattern": "trees",
+    "ink": "#24421f"
+  },
+  {
+    "type": "world_terrain",
+    "id": "village",
+    "name": "Village Streets",
+    "color": "#b1a284",
+    "rule": "Cobbled streets and lanes between the houses. Easy going on foot.",
+    "pattern": "tufts",
+    "ink": "#6e5f43"
+  },
+  {
+    "type": "world_terrain",
+    "id": "ruins",
+    "name": "Ruins",
+    "color": "#7d786a",
+    "rule": "Broken walls and old foundations. Tough going, and full of things the school left behind.",
+    "pattern": "crags",
+    "ink": "#4b473d"
+  }
+]

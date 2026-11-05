@@ -68,6 +68,7 @@ from cygnusforge.services.common import Conflict, InvalidInput, NotFound, sessio
 from cygnusforge.services.compendium import compendium_view
 from cygnusforge.services.encounters import encounter_view, local_map_view
 from cygnusforge.services.events import CampaignState, last_event_id, load_state, speaker_name
+from cygnusforge.services.factions import faction_views
 from cygnusforge.services.tools import check_arguments
 from cygnusforge.services.views import map_view, scene_view, time_view
 from cygnusforge.web.character_form import (
@@ -809,7 +810,9 @@ def _new_form(
         if world.rule_set is None or world.rule_set == rule_set
     ]
     if world_template not in {world.id for world in worlds}:
-        world_template = worlds[0].id if worlds else ""
+        # Prefer a world built for this rule set over a generic one when the form first opens.
+        preferred = [world for world in worlds if world.rule_set == rule_set]
+        world_template = (preferred or worlds)[0].id if worlds else ""
     chosen_rule_set = library.rule_sets.get(rule_set)
     chosen_world = library.world_templates.get(world_template)
     # A fresh form starts on the rule set's own genres. A form shown again after an error keeps
@@ -1020,6 +1023,7 @@ def _campaign_page(
         pending=pending_turn(engine, user.id, campaign.id),
         advancement_due=advancement_due,
         advancement_available=advancement_available,
+        factions=faction_views(world.state, rule_set.tallies if rule_set else {}),
         models=request.app.state.catalog.model_ids(),
         encounter=encounter,
         encounter_rows=_encounter_rows(encounter) if encounter is not None else [],

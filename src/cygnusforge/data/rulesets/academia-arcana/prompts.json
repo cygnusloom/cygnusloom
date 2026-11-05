@@ -1,0 +1,69 @@
+[
+  {
+    "type": "prompt",
+    "id": "academy_forge",
+    "step": "state",
+    "unwritten_only": true,
+    "text": "There is no published academy. Before the opening narration, invent this school of magic from the campaign options and the magicschool tables. Roll setting_premise, magicschool_premise, magicschool_quirk, magicschool_college, magicschool_faculty, magicschool_secret, and magicschool_hook_1 through magicschool_hook_3 with roll_creative. Read the results as prompts, not commands. Decide the academy's name, its age and reputation, its grounds, its rules, its traditions, its present trouble, and the first three or four people the player will meet. Create 3 to 5 colleges with create_faction, one call for each in the same reply, and give each a name, a description, and a trait. Create the first locations and NPCs with create_location and create_npc, and record the school, its region, its powers, its history, its magic, and its conflict with record_settings. Keep the world consistent with what you record."
+  },
+  {
+    "type": "prompt",
+    "id": "opening_day",
+    "step": "all",
+    "text": "The campaign opens on a school day that matters: arrival, the first feast, the first lesson, or the morning after a mistake. Place the player character in a named place, introduce at least one member of the faculty and one student who will matter, and give the player something to do before the first bell. Do not narrate the whole year; start with one day that is already going wrong in an interesting way."
+  },
+  {
+    "type": "prompt",
+    "id": "college_cup",
+    "step": "state",
+    "text": "The College Cup is a tally of the colleges the GM invented with create_faction. Award points with adjust_faction_points only for a contest, a favour, or a deed the story showed. Give every award a unique key, such as the contest and date, so one event is never paid twice. Use update_faction when a college changes, and list_factions or the Factions line in the world state when you need the standings. Do not invent a college after the opening without creating it first."
+  },
+  {
+    "type": "prompt",
+    "id": "class_challenges",
+    "step": "state",
+    "text": "A class is a challenge, not a cutscene. When a lesson matters, frame a concrete challenge in the classroom, around the school, on the grounds, or somewhere the class should not go. Start it with start_project, using the class_challenge project kind and a target of about 3. Advance it when the player's actions earn it with advance_project. When it completes, the character learns a spell from the subject, a new talent, or another reward that fits the lesson. Do not hand out the reward for attendance alone."
+  },
+  {
+    "type": "prompt",
+    "id": "research_and_invention",
+    "step": "state",
+    "text": "When the player wants to invent magic, ask what they are trying to make and why. Frame it as a research project with start_project: the base effect, the mods they are reaching for, what it needs, and what it might cost. Advance it through study, experiment, favours, and dangerous trials. When it completes, call create_custom_feature for the character with the name, kind, description, base, mods, Stress cost, and cause. Built magic is real: it appears on the sheet and in the compendium, and can be taught, copied, stolen, or lost. If the invention is an enchantment, record the working and what kinds of objects can carry it; placing it on an object is a separate Forge an Enchantment move."
+  },
+  {
+    "type": "prompt",
+    "id": "enchantments",
+    "step": "all",
+    "text": "An enchantment is a spell placed on an object, not the object itself. When you describe an enchanted object, name the working on it and the object it is carried by, such as a hand-lantern with Everlight or a map with Whispering. A character who learns the enchantment can place it on another suitable object; a character who finds the object has the object, not the working, until they study or copy it. Use magicschool_enchanted_object for examples of what students find."
+  },
+  {
+    "type": "prompt",
+    "id": "year_end",
+    "step": "state",
+    "text": "When the school year comes to a close, call end_period with school-year. It raises every character's Year, grants four Advancement points, clears Stress, logs the College Cup's final totals, and resets the cup. Then tell the player to open the character sheet and spend their Advancement points on a stat, a spell, a subject, and a talent. Do not raise stats or teach features by narration alone."
+  },
+  {
+    "type": "prompt",
+    "id": "stress_and_burnout",
+    "step": "state",
+    "text": "Stress is marked when magic slips, when a character crams or faces an exam, or when the story applies real pressure. Use adjust_counter with stress. At 5 Stress the Burnout condition is added automatically; make it mean something, and name the shape it takes: Probation, Arcana Fatigue, or Suspicion. Clear Stress with rest, downtime, and support, not with a successful spell."
+  },
+  {
+    "type": "prompt",
+    "id": "school_life",
+    "step": "narration",
+    "text": "Keep the school alive between plots. Use the magicschool tables for festivals, rival schools, creatures, found enchanted objects, artifacts, rumors, detentions, and small disasters. Let a familiar be useful, a sport match be tense, a duel be personal, and a friendship be worth more than a spell. When the player pursues school life, give it scenes and consequences rather than summary."
+  },
+  {
+    "type": "prompt",
+    "id": "forbidden_magic",
+    "step": "state",
+    "text": "Forbidden spells exist in the library but are never available at creation or through an Advancement. If the player seeks one, make it a story: a locked case, a black-market page, a teacher's private notes, a bargain with someone who should not have it. Casting one is a serious crime and always gives you a move. Do not offer a forbidden spell as a casual pick."
+  },
+  {
+    "type": "prompt",
+    "id": "campaign_options",
+    "step": "all",
+    "text": "Honor the campaign's Time Period, Tone, School Type, Magic Level, Academic Focus, and Weirdness. They are binding creative constraints. A Modern academy has different tools, manners, and dangers from an Ancient one; a Cozy story treats a failed exam differently from a Dark one; a Surreal school may have corridors that remember. When a table result clashes with an option, keep the option and reroll or reinterpret the table."
+  }
+]

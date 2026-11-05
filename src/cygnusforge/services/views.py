@@ -22,9 +22,10 @@ from cygnusforge.content.library import (
     Hooks,
     InventoryRules,
     RelationRules,
+    TallyRules,
     WorldTerrain,
 )
-from cygnusforge.services import encounters
+from cygnusforge.services import custom_features, encounters
 from cygnusforge.services import inventory as inventory_service
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.conditions import active_conditions
@@ -595,10 +596,11 @@ def world_state_text(
     encounter_objects: Mapping[str, EncounterObject] | None = None,
     hooks: Hooks | None = None,
     counters: Mapping[str, CounterRules] | None = None,
+    tallies: Mapping[str, TallyRules] | None = None,
 ) -> str:
     """The GM's orientation at the start of a turn: the campaign options, the day, the player
-    character and where they are, the NPCs there, and any encounter in progress. The rest is looked
-    up with the lookup tools."""
+    character and where they are, the NPCs there, the factions and their cup, and any encounter in
+    progress. The rest is looked up with the lookup tools."""
     pc = state.pc()
     if pc is None:
         return ""
@@ -610,6 +612,18 @@ def world_state_text(
     if state.settings:
         lines.append("Setting:")
         lines.extend(f"  {topic}: {detail}" for topic, detail in state.settings.items())
+    if state.factions:
+        standings = []
+        for faction in sorted(state.factions.values(), key=lambda item: item.name.casefold()):
+            points = state.tallies.get(faction.tally, {}).get(faction.entry, 0)
+            cup = (
+                tallies[faction.tally].label
+                if tallies is not None and faction.tally in tallies
+                else "points"
+            )
+            trait = f" ({faction.trait})" if faction.trait else ""
+            standings.append(f"{faction.name}{trait}: {points} {cup}")
+        lines.append("Factions: " + "; ".join(standings) + ".")
     if clock_rules is not None:
         when = f"day {state.clock.day}, {clock_rules.parts[state.clock.part]}"
         if clock_rules.hours_per_part > 1:
@@ -886,7 +900,8 @@ def _sheet_text(spec: CharacterSpec, character: Character) -> str:
             for stat, value in sheet.stats.items()
             if not _is_statblock_default(spec, stat)
         }
-    text = describe(spec, replace(sheet, stats=own))
+    effective = replace(spec, features=custom_features.merged_features(spec, character))
+    text = describe(effective, replace(sheet, stats=own))
     harmed = []
     for stat, taken in character.harm.items():
         if taken <= 0 or stat not in spec.stats:

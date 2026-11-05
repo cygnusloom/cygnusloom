@@ -280,7 +280,7 @@ def test_new_campaign_form_prefills_the_default_label(
 ):
     client = _signed_in(client_factory)
     page = client.get("/campaigns/new").text
-    assert 'name="label" value="Test Hollow #1"' in page
+    assert 'name="label" value="Unwritten Academy #1"' in page
 
 
 def test_new_campaign_form_asks_for_the_label_last(
@@ -479,8 +479,8 @@ def test_new_campaign_form_starts_on_a_rule_set_and_a_world_that_fits(
 ):
     client = _signed_in(client_factory)
     page = client.get("/campaigns/new").text
-    assert re.search(r'<option value="cairn2e"[^>]* selected', page)
-    assert re.search(r'<option value="testhollow"[^>]* selected', page)
+    assert re.search(r'<option value="academia-arcana"[^>]* selected', page)
+    assert re.search(r'<option value="unwritten-academy"[^>]* selected', page)
 
 
 def test_create_stores_the_chosen_settings(client_factory: Callable[[], TestClient]):

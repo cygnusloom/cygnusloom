@@ -36,9 +36,11 @@ from cygnusforge.services.state import (  # noqa: F401
     Character,
     Clock,
     ContextPart,
+    CustomFeature,
     DebugInjection,
     Encounter,
     EncounterMap,
+    Faction,
     Item,
     KnownNpc,
     Note,
@@ -2604,6 +2606,78 @@ class TallyReset(GameEvent):
 
 
 @dataclass(frozen=True)
+class FactionAdded(GameEvent):
+    """A faction the GM invented, such as a magic-school college. Its points start in `tally`."""
+
+    kind: ClassVar[str] = "faction.added"
+
+    faction_id: str
+    name: str
+    description: str = ""
+    trait: str = ""
+    tally: str = ""
+    entry: str = ""
+    points: int = 0
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.factions[self.faction_id] = Faction(
+            id=self.faction_id,
+            name=self.name,
+            description=self.description,
+            trait=self.trait,
+            tally=self.tally,
+            entry=self.entry,
+        )
+        if self.tally and self.entry:
+            state.tallies.setdefault(self.tally, {})[self.entry] = self.points
+
+    def render(self) -> str:
+        trait = f" ({self.trait})" if self.trait else ""
+        return f"New faction: {self.name}{trait}, {self.points} points."
+
+
+@dataclass(frozen=True)
+class FactionUpdated(GameEvent):
+    """A faction's name, description, or trait changed. Its id and tally entry do not."""
+
+    kind: ClassVar[str] = "faction.updated"
+
+    faction_id: str
+    name: str
+    description: str = ""
+    trait: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        faction = state.factions.get(self.faction_id)
+        if faction is not None:
+            faction.name = self.name
+            faction.description = self.description
+            faction.trait = self.trait
+
+    def render(self) -> str:
+        return f"Faction {self.name} is updated."
+
+
+@dataclass(frozen=True)
+class FactionRemoved(GameEvent):
+    """A faction disbands and its cup entry is removed."""
+
+    kind: ClassVar[str] = "faction.removed"
+
+    faction_id: str
+    name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        faction = state.factions.pop(self.faction_id, None)
+        if faction is not None:
+            state.tallies.get(faction.tally, {}).pop(faction.entry, None)
+            state.tally_gains.get(faction.tally, {}).pop(faction.entry, None)
+
+    def render(self) -> str:
+        return f"The faction {self.name} disbands."
+
+
+@dataclass(frozen=True)
 class FeatureLearned(GameEvent):
     """A character learns a feature, such as a spell, that the rule set's Advancements teach."""
 
@@ -2624,6 +2698,110 @@ class FeatureLearned(GameEvent):
     def render(self) -> str:
         text = f"{self.name} learns {self.feature_name}"
         return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
+class CustomFeatureCreated(GameEvent):
+    """A character invents a feature, such as a researched spell, potion, or enchantment. The
+    feature is kept on the character and learned at once, so it needs no matching rule-set
+    definition."""
+
+    kind: ClassVar[str] = "character.custom_feature_created"
+
+    name: str
+    feature_id: str
+    feature_name: str
+    feature_type: str
+    description: str
+    tag: str = ""
+    rank: int = 0
+    subject: str = ""
+    base: str = ""
+    mods: list[str] = field(default_factory=list)
+    stress: int = 0
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        feature = CustomFeature(
+            id=self.feature_id,
+            name=self.feature_name,
+            feature_type=self.feature_type,
+            description=self.description,
+            tag=self.tag,
+            rank=self.rank,
+            subject=self.subject,
+            base=self.base,
+            mods=list(self.mods),
+            stress=self.stress,
+            cause=self.cause,
+        )
+        character.custom_features[feature.id] = feature
+        character.features[feature.id] = 1
+
+    def render(self) -> str:
+        text = f"{self.name} invents {self.feature_name}"
+        return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
+class CustomFeatureUpdated(GameEvent):
+    """A character's invented feature changes. Only the fields given are replaced."""
+
+    kind: ClassVar[str] = "character.custom_feature_updated"
+
+    name: str
+    feature_id: str
+    feature_name: str | None = None
+    description: str | None = None
+    tag: str | None = None
+    rank: int | None = None
+    subject: str | None = None
+    base: str | None = None
+    mods: list[str] | None = None
+    stress: int | None = None
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        feature = character.custom_features.get(self.feature_id)
+        if feature is None:
+            return
+        for key in (
+            "feature_name",
+            "description",
+            "tag",
+            "rank",
+            "subject",
+            "base",
+            "mods",
+            "stress",
+        ):
+            value = getattr(self, key)
+            if value is not None:
+                setattr(feature, "name" if key == "feature_name" else key, value)
+
+    def render(self) -> str:
+        name = self.feature_name or self.feature_id
+        return f"{self.name} refines {name}."
+
+
+@dataclass(frozen=True)
+class CustomFeatureRemoved(GameEvent):
+    """A character's invented feature is given up, lost, or refuted."""
+
+    kind: ClassVar[str] = "character.custom_feature_removed"
+
+    name: str
+    feature_id: str
+    feature_name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.custom_features.pop(self.feature_id, None)
+        character.features.pop(self.feature_id, None)
+
+    def render(self) -> str:
+        return f"{self.name} loses {self.feature_name}."
 
 
 @dataclass(frozen=True)

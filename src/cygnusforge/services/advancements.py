@@ -156,19 +156,24 @@ def _learnable(
         if feature is not None:
             raise InvalidInput(f"{label} does not take a feature")
         return None
-    tag = character.fields.get(learn.tag_field, "")
+    tag = learn.tag or (character.fields.get(learn.tag_field, "") if learn.tag_field else "")
+    restrict = bool(learn.tag or learn.tag_field)
     candidates = sorted(
         f.name
         for f in features.values()
         if f.feature_type == learn.feature_type
-        and f.tag == tag
+        and (not restrict or f.tag == tag)
+        and f.id not in learn.exclude
         and (f.repeatable or f.id not in character.features)
     )
     chosen = features.get(feature or "")
-    if chosen is None or chosen.feature_type != learn.feature_type or chosen.tag != tag:
-        raise InvalidInput(
-            f"{label} needs a {learn.feature_type} from {tag}; choose one of {candidates}"
-        )
+    if (
+        chosen is None
+        or chosen.feature_type != learn.feature_type
+        or (restrict and chosen.tag != tag)
+        or chosen.id in learn.exclude
+    ):
+        raise InvalidInput(f"{label} needs a {learn.feature_type}; choose one of {candidates}")
     if chosen.id in character.features and not chosen.repeatable:
         raise InvalidInput(f"{character.name} already has {chosen.name}")
     return chosen

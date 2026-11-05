@@ -1,0 +1,246 @@
+[
+  {
+    "type": "tool_call",
+    "id": "lookup_move",
+    "name": "lookup_move",
+    "world_method": "lookup_move",
+    "lookup": true,
+    "description": "Read a move's trigger, stat, and every outcome band by id or name. Read it before deciding whether a move applies.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "move": {
+          "type": "string",
+          "enum_from": "moves",
+          "description": "The move to read."
+        }
+      },
+      "required": ["move"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "roll_move",
+    "name": "roll_move",
+    "world_method": "roll_move",
+    "description": "Roll a move for a player character: 2d6 plus the stat the move uses, plus any condition penalty. For a move that rolls one of several stats, give the stat. Add a modifier for what the story gives, such as +1 for a Friend or -1 from a Condition. Pass the result to the player and narrate the band it lands in.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "move": {
+          "type": "string",
+          "enum_from": "moves",
+          "description": "The move to roll."
+        },
+        "character": {
+          "type": "string",
+          "description": "The name of the player character who rolls."
+        },
+        "modifier": {
+          "type": "integer",
+          "description": "A situational modifier from the story. Use 0 when none applies."
+        },
+        "stat": {
+          "type": "string",
+          "enum_from": "stats",
+          "description": "The stat to roll with, for a move that does not name one."
+        }
+      },
+      "required": ["move", "character"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "adjust_counter",
+    "name": "adjust_counter",
+    "world_method": "adjust_counter",
+    "description": "Change a character's Stress, Faculty Favor, or Peer Standing. Use a negative change to spend or clear and a positive one to add. Do not use it for Year or Advancements; those change through the school year and the Advancement page.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character."
+        },
+        "counter": {
+          "type": "string",
+          "enum_from": "counters",
+          "description": "Which counter to change."
+        },
+        "change": {
+          "type": "integer",
+          "description": "How much to add (positive) or remove (negative)."
+        }
+      },
+      "required": ["character", "counter", "change"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "take_advancement",
+    "name": "take_advancement",
+    "world_method": "take_advancement",
+    "description": "Spend one Advancement point on a stat, a spell, a subject, or a talent. For the player character, use the option the player has stated; the character sheet is where the player makes the choice. For a stat, use stat; for a feature, use feature.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character."
+        },
+        "option": {
+          "type": "string",
+          "enum_from": "advancement_options",
+          "description": "Which Advancement to take."
+        },
+        "stat": {
+          "type": "string",
+          "enum_from": "stats",
+          "description": "The stat to raise, for the stat option."
+        },
+        "feature": {
+          "type": "string",
+          "enum_from": "features",
+          "description": "The feature to learn, for the spell, subject, or talent option."
+        }
+      },
+      "required": ["character", "option"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "end_period",
+    "name": "end_period",
+    "world_method": "end_period",
+    "description": "End the school year for every living player character. It raises their Year, grants four Advancement points, clears Stress, logs the College Cup's final totals, and resets the cup. Call it only when the year actually ends in the story.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "period": {
+          "type": "string",
+          "enum_from": "periods",
+          "description": "Which period ends."
+        }
+      },
+      "required": ["period"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "set_relation",
+    "name": "set_relation",
+    "world_method": "set_relation",
+    "description": "Make someone a player character's Friend or Rival, or end that relation. Use it only at the end of a session, as the rules require.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the player character."
+        },
+        "relation": {
+          "type": "string",
+          "enum_from": "relations",
+          "description": "Which relation to change."
+        },
+        "other": {
+          "type": "string",
+          "description": "The name of the person, player or non-player, they are linked to."
+        },
+        "added": {
+          "type": "boolean",
+          "description": "true to make them this relation, false to end it."
+        }
+      },
+      "required": ["character", "relation", "other", "added"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "start_project",
+    "name": "start_project",
+    "world_method": "start_project",
+    "description": "Begin a long effort and track its points toward a target: a class challenge, spell research, potion research, or enchantment research. The kind and goal are free text; the target is how many points of work it needs. Advance it with advance_project as time, favours, and rolls are spent.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The project's name, unique among projects."
+        },
+        "kind": {
+          "type": "string",
+          "description": "What sort of effort it is, such as class, spell research, potion research, or enchantment research."
+        },
+        "goal": {
+          "type": "string",
+          "description": "What completing it achieves."
+        },
+        "target": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "How many progress points it needs."
+        },
+        "force": {
+          "type": "boolean",
+          "description": "Set true to replace a project of the same name."
+        }
+      },
+      "required": ["name", "kind", "goal", "target"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "advance_project",
+    "name": "advance_project",
+    "world_method": "advance_project",
+    "description": "Add progress to a class challenge or a research effort. Record in the note what the time, favour, or roll bought. The project completes when progress reaches its target.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The project's name."
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Progress points gained."
+        },
+        "note": {
+          "type": "string",
+          "description": "What was spent or learned."
+        }
+      },
+      "required": ["name", "amount"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "abandon_project",
+    "name": "abandon_project",
+    "world_method": "abandon_project",
+    "description": "Give up a class challenge or research effort.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "reason": {"type": "string"}
+      },
+      "required": ["name"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "list_projects",
+    "name": "list_projects",
+    "python_module": "core",
+    "function": "list_projects",
+    "lookup": true,
+    "description": "List every class challenge and research effort with its progress, notes, and whether it is complete or abandoned.",
+    "parameters": {
+      "type": "object",
+      "properties": {}
+    }
+  }
+]

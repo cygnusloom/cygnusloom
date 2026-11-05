@@ -1,0 +1,59 @@
+[
+  {
+    "type": "table",
+    "id": "disciplines",
+    "name": "Disciplines",
+    "options": [
+      "Charms",
+      "Transfiguration",
+      "Warding",
+      "Divination",
+      "Healing",
+      "Illusion",
+      "Elemental"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "period",
+    "name": "Time Period",
+    "options": [
+      "Ancient",
+      "Medieval",
+      "Renaissance",
+      "Victorian",
+      "Modern",
+      "Near Future"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "tone",
+    "name": "Tone",
+    "options": ["Whimsical", "Adventurous", "Cozy", "Dark", "Comedic"]
+  },
+  {
+    "type": "table",
+    "id": "school_type",
+    "name": "School Type",
+    "options": ["Prestigious", "Crumbling", "Experimental", "Secret", "Frontier"]
+  },
+  {
+    "type": "table",
+    "id": "magic_level",
+    "name": "Magic Level",
+    "options": ["Rare", "Common", "Wild"]
+  },
+  {
+    "type": "table",
+    "id": "focus",
+    "name": "Academic Focus",
+    "options": ["Lessons", "Friendships", "Mysteries", "Competition", "Survival"]
+  },
+  {
+    "type": "table",
+    "id": "weirdness",
+    "name": "Weirdness",
+    "options": ["Grounded", "Strange", "Surreal"]
+  }
+]

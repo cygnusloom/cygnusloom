@@ -1,0 +1,50 @@
+[
+  {
+    "type": "counter",
+    "id": "stress",
+    "label": "Stress",
+    "min": 0,
+    "max": 5,
+    "initial": 0,
+    "description": "Magical strain, exam pressure, and hard nights. At 5 Stress you burn out.",
+    "full": [
+      {"op": "note", "text": "Burnout: clear 3 Stress and take the Burnout condition until you address it in downtime."},
+      {"op": "condition", "id": "burnout"},
+      {"op": "counter", "id": "stress", "delta": -3}
+    ]
+  },
+  {
+    "type": "counter",
+    "id": "advancements",
+    "label": "Advancements",
+    "min": 0,
+    "initial": 0,
+    "description": "Year-end gains you have not spent yet. Each point buys one stat, spell, subject, or talent."
+  },
+  {
+    "type": "counter",
+    "id": "year",
+    "label": "Year",
+    "min": 1,
+    "initial": 1,
+    "description": "Your school year. It rises when a school year ends."
+  },
+  {
+    "type": "counter",
+    "id": "faculty_favor",
+    "label": "Faculty Favor",
+    "min": -3,
+    "max": 3,
+    "initial": 0,
+    "description": "How the faculty see you. Spend it to ask for access or leniency; low favor brings scrutiny."
+  },
+  {
+    "type": "counter",
+    "id": "peer_standing",
+    "label": "Peer Standing",
+    "min": -3,
+    "max": 3,
+    "initial": 0,
+    "description": "How the student body see you. Low standing brings mockery and closed doors; high standing brings help."
+  }
+]

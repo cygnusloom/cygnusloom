@@ -1,0 +1,10 @@
+[
+  {
+    "type": "world",
+    "id": "unwritten-academy",
+    "name": "Unwritten Academy",
+    "rule_set": "academia-arcana",
+    "blurb": "A school of magic that does not exist until the GM invents it: its colleges, faculty, grounds, rules, and current trouble.",
+    "description": "A blank magic-school setting. Before the opening narration the GM rolls the school premise, quirk, college, faculty, secret, festival, creature, artifact, and adventure-hook tables, decides what the results mean, and records the academy with record_settings: its name, its age and reputation, its colleges, its faculty, its grounds, its rules, its magic, and the trouble it is in. Then the GM builds the first locations and the people the player will meet. Nothing here is fixed, and the school is whatever the table makes of the first day."
+  }
+]

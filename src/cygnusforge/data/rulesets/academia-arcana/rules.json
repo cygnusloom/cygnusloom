@@ -1,0 +1,114 @@
+[
+  {
+    "type": "rule",
+    "id": "academy-life",
+    "important": true,
+    "text": "The academy is a school first: lessons, meals, dormitories, friendships, rivalries, and the small politics of who sits where. The GM invents its name, colleges, faculty, grounds, rules, and current trouble before play, using the setting tables and recording the result. The school is a place the players return to, not a dungeon they clear."
+  },
+  {
+    "type": "rule",
+    "id": "years",
+    "important": true,
+    "text": "Every player character has a Year from 1 to 7. A player may choose any starting Year, and a party may mix Years. Year sets starting spells, subjects, training, and the stat cap: +2 in Years 1-3, +3 in Years 4-6, and +4 in Year 7. When a school year ends, every character's Year rises by one, the College Cup resets after its final totals are logged, Stress clears, and each character gains four Advancement points."
+  },
+  {
+    "type": "rule",
+    "id": "subjects",
+    "important": true,
+    "text": "A subject is a field of study: Charms, Transfiguration, Warding, Divination, Healing, Illusion, or Elemental. A character with a subject adds +1 when that subject is the heart of the attempt and may learn its spells. Every character also names a Major, the subject their Advancement spell picks come from. A character may learn a new subject at a year's end or through play."
+  },
+  {
+    "type": "rule",
+    "id": "casting",
+    "important": true,
+    "text": "Casting is 2d6 + Practice. On a 10+ the spell does what was intended. On a 7-9 it works, but the caster chooses a cost: unwanted attention, a minor side effect, or 1 Stress. On a 6- the magic slips or fails and the GM makes a move. A large working, a spell far above the caster's Year, or casting while exhausted may mark Stress even on a success."
+  },
+  {
+    "type": "rule",
+    "id": "stress-and-burnout",
+    "important": true,
+    "text": "Stress runs from 0 to 5. Casting under pressure, cramming, exams, and setbacks mark it. At 5 Stress the character burns out: clear 3 Stress and take the Burnout condition, which lasts until real downtime and the GM's named consequence are addressed. A quiet day, a night's rest, and a friend's support are the usual ways to clear Stress; magic cannot simply wish it away."
+  },
+  {
+    "type": "rule",
+    "id": "classes",
+    "important": true,
+    "text": "A class is a formal project. The GM sets a challenge that fits the lesson: a puzzle in the classroom, something to find on the grounds, a creature to calm, a duel, or a lesson that goes wrong. The player works through it with the moves; each success advances the class project. When the project is complete, the character learns a spell from that subject, a new talent, or another reward the GM names. The GM starts the project with start_project and advances it with advance_project."
+  },
+  {
+    "type": "rule",
+    "id": "research",
+    "important": true,
+    "text": "A player may propose a new spell, potion, or enchantment. The GM frames it as a research project with a target and a clock, names what the work needs, and lets the player pursue it through study, experiment, favours, and dangerous trials. When the project completes, the GM creates the invented feature with create_custom_feature, built from a base effect and the mods the work established. The player may instead refine an invented feature with update_custom_feature."
+  },
+  {
+    "type": "rule",
+    "id": "colleges",
+    "important": true,
+    "text": "The GM invents 3 to 5 colleges at the opening, each with a name, a description, and a trait that colors its rivalries. The College Cup keeps their points; award points with adjust_faction_points only for contests, favours, and deeds the story shows, and give every award a unique key. The cup resets at the end of each school year after its final totals are logged."
+  },
+  {
+    "type": "rule",
+    "id": "reputation",
+    "important": true,
+    "text": "Faculty Favor and Peer Standing each run from -3 to +3. High favor opens restricted shelves, extensions, and quiet leniency; low favor brings scrutiny. High standing brings help, invitations, and the benefit of the doubt; low standing brings mockery, closed doors, and rivals who smell blood. Change them only when the story earns it."
+  },
+  {
+    "type": "rule",
+    "id": "detention-and-curfew",
+    "text": "Curfew is real. Being out of bounds, missing a class, or being caught in a forbidden place leads to detention, lost privileges, a letter home, or probation. Detention is a scene, not a roll: the GM makes it cost time, dignity, or a favour. Repeated trouble can add the Marked, Probation, or Suspicion condition."
+  },
+  {
+    "type": "rule",
+    "id": "duels-and-sport",
+    "text": "A duel is a series of exchanges: roll +Practice, compare the bands, and let the advantage change hands. A school sport is a team contest; roll +Practice for bold play or +Cunning for dirty play, and let the College Cup remember the result. Neither is usually to the death, but both can hurt."
+  },
+  {
+    "type": "rule",
+    "id": "forbidden-magic",
+    "important": true,
+    "text": "Forbidden spells are not available at creation and cannot be learned through an Advancement or a class. They exist in the library, and a character may find them in a locked case, a black-market page, or a teacher's private notes. Casting one is a serious crime and always gives the GM a move; the academy's response is a story of its own."
+  },
+  {
+    "type": "rule",
+    "id": "signature-spell",
+    "text": "Every character has a signature spell, written in their Signature Spell field. It is a personal expression of their magic, not one of the standard spells. When they cast it, use the Signature Spell move. Once per session, the signature-spell feature lets them treat a 6- on it as a 7-9."
+  },
+  {
+    "type": "rule",
+    "id": "school-life",
+    "text": "Festivals, holidays, school sport, duels, familiars, magical creatures, clubs, and the small dramas of dormitory life are part of the game. The GM should use the tables to bring them in, let the players pursue them, and let them matter. Friends and Rivals are named relationships that can add +1 to help or hinder someone."
+  },
+  {
+    "type": "rule",
+    "id": "familiars-and-creatures",
+    "text": "A familiar or pet is a companion, not a weapon. It can carry messages, keep watch, find a scent, or be a friend in a bad week. Magical creatures are individuals with wants and tempers; approach them with the Approach a Magical Creature move. A creature that is treated badly remembers it."
+  },
+  {
+    "type": "rule",
+    "id": "exams",
+    "text": "An exam is a scene with stakes: study first with Study for an Exam, then face the questions. A good result can open a subject, a favour, or an Advancement path; a bad one can add Frazzled, lose favor, or close a door. The GM should make the exam about what the character cares about, not just a roll."
+  },
+  {
+    "type": "rule",
+    "id": "custom-magic",
+    "important": true,
+    "text": "Invented magic is built from a base effect and mods across potency, duration, range, targets, Stress cost, drawback, component, special effect, and casting time. The GM states the base, the mods, and the Stress cost when the feature is created. Invented magic is a real feature on the sheet; it can be looked up, taught, copied, stolen, or lost like any other. An invented enchantment is a working that can be placed on a suitable object; the enchanted object is a separate thing, with its own description and limits."
+  },
+  {
+    "type": "rule",
+    "id": "campaign-options",
+    "text": "The campaign's Time Period, Tone, School Type, Magic Level, Academic Focus, and Weirdness are chosen once and are binding. They steer the fiction, the tables, and the academy the GM invents; they do not change the dice. A Modern academy has different tools and manners from an Ancient one, and a Cozy story treats a failed exam differently from a Dark one."
+  },
+  {
+    "type": "rule",
+    "id": "magic-library",
+    "text": "Magic comes in three kinds. Spells are cast with a word and a gesture; potions are brewed and drunk, thrown, or poured; enchantments are spells placed on objects and used through them. An enchantment is the working, not the object: the same Everlight can be placed on a lantern, a cup, a staff, or a window pane. The enchanted object is a separate thing with its own description, and it may be found in the world, bought, stolen, or made. A character may know any mix of magic, but their Major shapes what they learn most easily."
+  },
+  {
+    "type": "rule",
+    "id": "enchantments",
+    "important": true,
+    "text": "An enchantment is a spell that must be placed on a suitable object to be used. The enchantment feature describes the working and the kinds of objects it can be placed on; the enchanted object is the vessel. Placing an enchantment is the Forge an Enchantment move. An enchanted object found in the world is not automatically understood: the characters may need to identify the working, learn its limits, or discover what it was made for. A character may learn an enchantment without owning an object to put it on."
+  }
+]

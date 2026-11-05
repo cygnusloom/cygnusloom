@@ -158,6 +158,15 @@ CORE_TOOL_NAMES = {
     "remove_map_token",
     "set_map_cells",
     "list_dice_tables",
+    "create_custom_feature",
+    "update_custom_feature",
+    "remove_custom_feature",
+    "list_custom_features",
+    "create_faction",
+    "update_faction",
+    "remove_faction",
+    "adjust_faction_points",
+    "list_factions",
 }
 
 SOCIAL_ARGUMENTS = '{"prompt": "Roll to persuade.", "relationship": 2, "circumstance": -1}'

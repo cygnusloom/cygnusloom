@@ -49,11 +49,12 @@ from cygnusforge.content.library import (
 )
 from cygnusforge.rules.dice import max_total
 from cygnusforge.services import advancements as advancements_service
-from cygnusforge.services import aid, combat, encounters, morale
+from cygnusforge.services import aid, combat, custom_features, encounters, morale
 from cygnusforge.services import attacks as attack_modifiers
 from cygnusforge.services import checks as checks_service
 from cygnusforge.services import clock as clock_service
 from cygnusforge.services import counters as counters_service
+from cygnusforge.services import factions as factions_service
 from cygnusforge.services import inventory as inventory_service
 from cygnusforge.services import magic as magic_service
 from cygnusforge.services import market as market_service
@@ -906,6 +907,71 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 award=award,
                 force=force,
             )
+
+    def create_faction(
+        self,
+        name: str,
+        description: str,
+        trait: str,
+        points: int = 0,
+        tally: str = "",
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return factions_service.create_faction(
+                db,
+                self.campaign_id,
+                self.tallies,
+                name,
+                description,
+                trait,
+                points=points,
+                tally=tally,
+            )
+
+    def update_faction(
+        self,
+        faction: str,
+        name: str | None = None,
+        description: str | None = None,
+        trait: str | None = None,
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return factions_service.update_faction(
+                db,
+                self.campaign_id,
+                faction,
+                name=name,
+                description=description,
+                trait=trait,
+            )
+
+    def remove_faction(self, faction: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return factions_service.remove_faction(db, self.campaign_id, faction)
+
+    def adjust_faction_points(
+        self,
+        faction: str,
+        change: int,
+        reason: str = "",
+        award: str = "",
+        force: bool = False,
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return factions_service.adjust_faction_points(
+                db,
+                self.campaign_id,
+                self.tallies,
+                faction,
+                change,
+                reason=reason,
+                award=award,
+                force=force,
+            )
+
+    def list_factions(self) -> list[dict[str, Any]]:
+        with session_scope(self.engine) as db:
+            return factions_service.list_factions(db, self.campaign_id, self.tallies)
 
     def set_relation(
         self, character: str, relation: str, other: str, added: bool
@@ -1839,6 +1905,11 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 None,
             )
         if found is None:
+            with session_scope(self.engine) as db:
+                state = load_state(db, self.campaign_id)
+            located = custom_features.find_custom_feature_in_state(state, wanted)
+            if located is not None:
+                return custom_features.feature_view(located[1])
             raise InvalidInput(f"there is no feature named {feature!r}")
         return {
             "id": found.id,
@@ -1855,6 +1926,78 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             "flags": list(found.flags),
             "rules": list(found.rules),
         }
+
+    def create_custom_feature(
+        self,
+        character: str,
+        name: str,
+        feature_type: str,
+        description: str,
+        tag: str = "",
+        rank: int = 0,
+        subject: str = "",
+        base: str = "",
+        mods: list[str] | None = None,
+        stress: int = 0,
+        cause: str = "",
+    ) -> dict[str, Any]:
+        """Create and learn a feature invented during play."""
+        with session_scope(self.engine) as db:
+            return custom_features.create_custom_feature(
+                db,
+                self.campaign_id,
+                character,
+                name,
+                feature_type,
+                description,
+                tag=tag,
+                rank=rank,
+                subject=subject,
+                base=base,
+                mods=mods,
+                stress=stress,
+                cause=cause,
+            )
+
+    def update_custom_feature(
+        self,
+        character: str,
+        feature: str,
+        name: str | None = None,
+        description: str | None = None,
+        tag: str | None = None,
+        rank: int | None = None,
+        subject: str | None = None,
+        base: str | None = None,
+        mods: list[str] | None = None,
+        stress: int | None = None,
+    ) -> dict[str, Any]:
+        """Change one of a character's invented features."""
+        with session_scope(self.engine) as db:
+            return custom_features.update_custom_feature(
+                db,
+                self.campaign_id,
+                character,
+                feature,
+                name=name,
+                description=description,
+                tag=tag,
+                rank=rank,
+                subject=subject,
+                base=base,
+                mods=mods,
+                stress=stress,
+            )
+
+    def remove_custom_feature(self, character: str, feature: str) -> dict[str, Any]:
+        """Give up one of a character's invented features."""
+        with session_scope(self.engine) as db:
+            return custom_features.remove_custom_feature(db, self.campaign_id, character, feature)
+
+    def list_custom_features(self, character: str) -> list[dict[str, Any]]:
+        """List a character's invented features."""
+        with session_scope(self.engine) as db:
+            return custom_features.list_custom_features(db, self.campaign_id, character)
 
     def lookup_index(self) -> dict[str, list[dict[str, Any]]]:
         with session_scope(self.engine) as db:

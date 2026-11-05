@@ -17,6 +17,7 @@ def adjust_tally(
     entry: str,
     change: int,
     *,
+    entry_label: str = "",
     reason: str = "",
     award: str = "",
     force: bool = False,
@@ -24,14 +25,20 @@ def adjust_tally(
     """Add `change` to one entry of a tally. A negative change deducts from it. `award` is a key for
     the event being paid out; a tally refuses an award key it has already paid, so one event is not
     counted twice. A gain equal to one the entry already paid this period is refused as a likely
-    repeat, unless `force` is set."""
+    repeat, unless `force` is set. A dynamic tally accepts an entry the campaign made, with
+    `entry_label` as its display name."""
     if tally is None:
         raise InvalidInput("this rule set keeps no tallies")
     label = tally.entries.get(entry)
     if label is None:
-        raise InvalidInput(
-            f"there is no {tally.label} entry {entry!r}; choose one of {sorted(tally.entries)}"
-        )
+        if not tally.dynamic:
+            raise InvalidInput(
+                f"there is no {tally.label} entry {entry!r}; choose one of {sorted(tally.entries)}"
+            )
+        entry = entry.strip()
+        if not entry:
+            raise InvalidInput(f"{tally.label} needs an entry id")
+        label = entry_label.strip() or entry
     state = load_state(db, campaign_id)
     key = award.strip()
     if key and key in state.tally_awards.get(tally.id, set()):

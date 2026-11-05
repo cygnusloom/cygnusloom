@@ -43,11 +43,18 @@ def end_period(
     record(db, campaign_id, PeriodEnded(period=period.id, label=period.label))
     for tally_id in period.tallies:
         tally = tallies[tally_id]
-        final = {entry: state.tallies.get(tally_id, {}).get(entry, 0) for entry in tally.entries}
+        labels = dict(tally.entries)
+        if tally.dynamic:
+            for faction in state.factions.values():
+                if faction.tally == tally_id:
+                    labels[faction.entry] = faction.name
+            for entry in state.tallies.get(tally_id, {}):
+                labels.setdefault(entry, entry)
+        final = {entry: state.tallies.get(tally_id, {}).get(entry, 0) for entry in labels}
         record(
             db,
             campaign_id,
-            TallyReset(tally=tally.id, label=tally.label, final=final, labels=dict(tally.entries)),
+            TallyReset(tally=tally.id, label=tally.label, final=final, labels=labels),
         )
     cx = EffectContext(rng=rng, combat=combat, counters=counters, conditions=conditions, spec=spec)
     for character in pcs:

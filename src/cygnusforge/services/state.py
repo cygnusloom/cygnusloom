@@ -125,6 +125,39 @@ def _position(x: float | None, y: float | None) -> Position | None:
 
 
 @dataclass
+class CustomFeature:
+    """A feature invented during play, such as a researched spell, potion, or enchantment. It is
+    kept on the character rather than in the rule set's content, so it is available to the sheet,
+    feature lookups, and the compendium without changing the loaded files."""
+
+    id: str
+    name: str
+    feature_type: str
+    description: str
+    tag: str = ""
+    rank: int = 0
+    subject: str = ""
+    base: str = ""
+    mods: list[str] = field(default_factory=list)
+    stress: int = 0
+    cause: str = ""
+
+
+@dataclass
+class Faction:
+    """A campaign faction the GM invents, such as a magic-school college. Its points live in the
+    tally named `tally`, under the entry `entry`, so the existing cup, award, and reset paths
+    keep it."""
+
+    id: str
+    name: str
+    description: str
+    trait: str
+    tally: str
+    entry: str
+
+
+@dataclass
 class Character:
     kind: str
     name: str
@@ -139,6 +172,9 @@ class Character:
     stats: dict[str, int] = field(default_factory=dict)
     templates: dict[str, str] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
+    # Features invented during play, by id. A feature listed in `features` may be one of these
+    # rather than one of the rule set's own features.
+    custom_features: dict[str, CustomFeature] = field(default_factory=dict)
     fields: dict[str, str] = field(default_factory=dict)
     # Skill levels by skill id, for the rule sets that have skills. A skill not listed has no level.
     skills: dict[str, int] = field(default_factory=dict)
@@ -516,6 +552,8 @@ class CampaignState:
     weather_day: int | None = None
     weather_streak: int = 0
     start_season: str | None = None
+    # The campaign's factions by stable id, such as the school's colleges.
+    factions: dict[str, Faction] = field(default_factory=dict)
     # The campaign's tallies by tally id, then entry id, such as each House's points.
     tallies: dict[str, dict[str, int]] = field(default_factory=dict)
     # The award keys each tally has already paid out, so an award is never paid twice.

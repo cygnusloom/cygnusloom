@@ -1,0 +1,74 @@
+[
+  {
+    "type": "condition",
+    "id": "injured",
+    "label": "Injured",
+    "description": "-1 to every stat until the injury is treated. A night's rest or a visit to the infirmary clears it.",
+    "ends": ["rest", "downtime"],
+    "modifies": {"*": -1}
+  },
+  {
+    "type": "condition",
+    "id": "exhausted",
+    "label": "Exhausted",
+    "description": "-2 to Practice until you rest. Cramming, a long chase, or too many spells can cause it.",
+    "ends": ["rest", "downtime"],
+    "modifies": {"practice": -2}
+  },
+  {
+    "type": "condition",
+    "id": "frazzled",
+    "label": "Frazzled",
+    "description": "-2 to Theory until the scene ends or someone talks you down. A hard exam, a paradox, or a bad research roll can cause it.",
+    "ends": ["rest", "scene"],
+    "modifies": {"theory": -2}
+  },
+  {
+    "type": "condition",
+    "id": "embarrassed",
+    "label": "Embarrassed",
+    "description": "-2 to Charm until the scene ends or a friend supports you. Public failure, a prank gone wrong, or a dressing-down can cause it.",
+    "ends": ["scene", "downtime"],
+    "modifies": {"charm": -2}
+  },
+  {
+    "type": "condition",
+    "id": "marked",
+    "label": "Marked",
+    "description": "-2 to Cunning while a teacher, prefect, or rival is watching you. It ends when the heat dies down or you clear your name.",
+    "ends": ["downtime", "gm"],
+    "modifies": {"cunning": -2}
+  },
+  {
+    "type": "condition",
+    "id": "burnout",
+    "label": "Burnout",
+    "description": "-1 to every stat until you take real downtime and address it. The GM names the shape it takes: Probation, Arcana Fatigue, or Suspicion.",
+    "ends": ["downtime", "gm"],
+    "modifies": {"*": -1}
+  },
+  {
+    "type": "condition",
+    "id": "probation",
+    "label": "Probation",
+    "description": "-2 to Charm with faculty while you are on probation. It ends when the terms are met or the year turns.",
+    "ends": ["downtime", "gm"],
+    "modifies": {"charm": -2}
+  },
+  {
+    "type": "condition",
+    "id": "arcana-fatigue",
+    "label": "Arcana Fatigue",
+    "description": "-2 to Practice until you spend real time away from magic. It ends with rest and a quiet day.",
+    "ends": ["rest", "downtime"],
+    "modifies": {"practice": -2}
+  },
+  {
+    "type": "condition",
+    "id": "suspicion",
+    "label": "Suspicion",
+    "description": "-2 to Cunning while the faculty are watching you. It ends when the suspicion is answered or the year turns.",
+    "ends": ["downtime", "gm"],
+    "modifies": {"cunning": -2}
+  }
+]

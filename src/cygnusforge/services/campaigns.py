@@ -653,6 +653,7 @@ def context_usage(
                 inventory=rule_set.inventory if rule_set else None,
                 hooks=rule_set.hooks if rule_set else None,
                 counters=rule_set.counters if rule_set else None,
+                tallies=rule_set.tallies if rule_set else None,
             ),
             present_rules_text(state, all_rules),
             campaign.setting,

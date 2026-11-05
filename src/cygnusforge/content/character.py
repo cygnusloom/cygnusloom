@@ -19,7 +19,7 @@ from cygnusforge.content.definitions import ContentError, Definition, required_t
 from cygnusforge.content.icons import FALLBACK_ITEM, FALLBACK_WEAPON, resolve_icon
 from cygnusforge.rules.dice import FORMULA, is_formula, roll_total
 
-FEATURE_TYPES = ("item", "trait", "spell", "feat")
+FEATURE_TYPES = ("item", "trait", "spell", "potion", "enchantment", "subject", "feat")
 # The effects a feature may run when it is granted. A `stat`, `skill`, or `counter` effect adds
 # its `delta` to that stat's score, that skill's level, or that counter's starting value. An
 # `armor` effect adds its `delta` to the character's armor. A `note` effect only says something.
@@ -1103,6 +1103,10 @@ def _feature_effects(
         else:
             ident = required_text(op, "id", label)
             _effect_delta(op, label)
+            if name == "stat" and "cap" in op:
+                cap = op["cap"]
+                if not isinstance(cap, int) or isinstance(cap, bool):
+                    raise ContentError(f"{label}: a stat effect 'cap' must be a whole number")
             if known[name] and ident not in known[name]:
                 raise ContentError(f"{label}: effect op {name!r} names no {name} ({ident!r})")
         checked.append(op)
@@ -2622,7 +2626,9 @@ def _run_effect(
     """Run one feature effect in place. Returns the armor it adds, which the others do not."""
     op = effect["op"]
     if op == "stat":
-        stats[effect["id"]] += effect["delta"]
+        raised = stats[effect["id"]] + effect["delta"]
+        cap = effect.get("cap")
+        stats[effect["id"]] = min(raised, cap) if isinstance(cap, int) else raised
     elif op == "skill":
         skill_id, delta = effect["id"], effect["delta"]
         progression = spec.skill_progression
