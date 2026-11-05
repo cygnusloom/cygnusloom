@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from cygnusloom import SOURCE_URL, content_credits
+from cygnusloom import SOURCE_URL, WEBSITE_URL, content_credits
 from tests.conftest import register
 
 
@@ -19,7 +19,8 @@ def test_license_page_states_the_terms_and_offers_the_source(client: TestClient)
     assert "WITHOUT ANY WARRANTY" in text
     assert SOURCE_URL.startswith("https://")
     assert f'href="{SOURCE_URL}"' in text
-    assert 'href="https://cygnusloom.com"' in text
+    assert WEBSITE_URL.startswith("https://")
+    assert f'href="{WEBSITE_URL}"' in text
     assert 'href="/license.txt"' in text
 
 
@@ -49,13 +50,19 @@ def test_license_page_serves_the_content_credits(client: TestClient):
 
 def test_footer_shows_the_notice_before_and_after_signing_in(client: TestClient):
     anonymous = client.get("/login")
+    assert "© 2026 Cygnus Loom contributors" in anonymous.text
+    assert "Free software under" in anonymous.text
+    assert "no warranty" in anonymous.text
     assert 'href="/license"' in anonymous.text
-    assert "Copyright (C) 2026 Cygnus Loom contributors" in anonymous.text
-    assert 'href="https://cygnusloom.com"' in anonymous.text
+    assert ">AGPL-3.0-or-later</a>" in anonymous.text
+    assert f'href="{WEBSITE_URL}"' in anonymous.text
+    assert ">Website</a>" in anonymous.text
     assert f'href="{SOURCE_URL}"' in anonymous.text
+    assert ">Source</a>" in anonymous.text
 
     register(client)
     signed_in = client.get("/campaigns")
-    assert 'href="/license"' in signed_in.text
-    assert 'href="https://cygnusloom.com"' in signed_in.text
+    assert f'href="{WEBSITE_URL}"' in signed_in.text
+    assert ">Website</a>" in signed_in.text
     assert f'href="{SOURCE_URL}"' in signed_in.text
+    assert ">Source</a>" in signed_in.text

@@ -27,6 +27,16 @@ from tests.conftest import content_library
 from tests.rolls import SocialRoll, social_roll
 
 
+def test_bundled_content_marks_third_party_sources():
+    library = content_library()
+    assert library.rule_sets["cairn2e"].third_party is True
+    assert library.rule_sets["worldswithoutnumber"].third_party is True
+    assert library.rule_sets["academia-arcana"].third_party is False
+    assert library.world_templates["twin-lakes"].third_party is True
+    assert library.world_templates["unwritten-academy"].third_party is False
+    assert library.world_templates["unwritten-world"].third_party is False
+
+
 def _write(root: Path, files: dict[str, Any]) -> None:
     for rel, payload in files.items():
         path = root / rel

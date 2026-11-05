@@ -13,7 +13,6 @@ from starlette.responses import Response
 
 from cygnusloom.auth.deps import page_user, verify_csrf
 from cygnusloom.content.character import NO_CAMPAIGN, NO_CHARACTER, character_schema
-from cygnusloom.content.library import TABLE_GENRES
 from cygnusloom.db.models import User
 from cygnusloom.llm.base import LLMError
 from cygnusloom.services import level_up as level_up_service
@@ -830,7 +829,7 @@ def _new_form(
         error=error,
         campaign_label=label or default_labels.get(world_template, ""),
         campaign_setting=setting,
-        table_genres=TABLE_GENRES,
+        table_genres=library.available_table_genres,
         selected_table_genres=selected_table_genres,
         world_labels=default_labels,
         world_templates=library.world_templates.values(),
@@ -843,6 +842,8 @@ def _new_form(
         selected_rule_set_blurb=(
             (chosen_rule_set.blurb or chosen_rule_set.description) if chosen_rule_set else ""
         ),
+        selected_rule_set_third_party=bool(chosen_rule_set and chosen_rule_set.third_party),
+        selected_world_third_party=bool(chosen_world and chosen_world.third_party),
     )
 
 

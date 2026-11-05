@@ -11,8 +11,11 @@
   );
 
   const showBlurb = (select, name) => {
+    const option = select.selectedOptions[0];
     const output = document.querySelector(`[data-blurb-for="${name}"]`);
-    if (output) output.textContent = select.selectedOptions[0]?.dataset.blurb ?? "";
+    if (output) output.textContent = option?.dataset.blurb ?? "";
+    const credits = document.querySelector(`[data-blurb-credits="${name}"]`);
+    if (credits) credits.hidden = option?.dataset.thirdParty !== "1";
   };
 
   // The label follows the world until the player writes their own.

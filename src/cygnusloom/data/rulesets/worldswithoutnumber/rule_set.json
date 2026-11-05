@@ -4,6 +4,7 @@
     "id": "worldswithoutnumber",
     "name": "Worlds Without Number",
     "blurb": "A d20 fantasy game of ruin-delving, strange magic, and hard-won competence on an unwritten frontier.",
+    "third_party": true,
     "description": "A fantasy roleplaying game built on rolling 3d6 for attributes, adding a background, a class, and Foci, and resolving uncertain action with 2d6 skill checks. Characters delve into the ruins of fallen realms, deal with strange magic, and make their names in a world the GM invents from the setting tables. This rule set covers character creation, equipment, checks, conditions, and the foundations the advancement and magic modules build on.",
     "plus": "sum",
     "table_genres": ["generic", "fantasy"],

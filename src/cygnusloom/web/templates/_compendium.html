@@ -1,4 +1,5 @@
 {% if compendium and not compendium.empty %}
+{% set third_party = (compendium.rule_set and compendium.rule_set.third_party) or (compendium.world and compendium.world.third_party) %}
 <div class="compendium" data-compendium>
   <div class="compendium-heading">
     <p class="compendium-source">
@@ -6,6 +7,9 @@
       {% if compendium.world and compendium.rule_set %} · {% endif %}
       {% if compendium.rule_set %}<span>{{ compendium.rule_set.name }}</span>{% endif %}
     </p>
+    {% if third_party %}
+    <p class="muted source-credits">Includes third-party material. See <a href="/license">content credits</a>.</p>
+    {% endif %}
     {% if not standalone %}
     {% if compendium.rule_set and compendium.world %}
     <a class="compendium-standalone-link" href="/compendium?rule_set={{ compendium.rule_set.id }}&world_template={{ compendium.world.id }}">Open the standalone page</a>

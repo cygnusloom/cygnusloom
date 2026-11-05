@@ -17,6 +17,15 @@ from tests.factories import (
 )
 
 
+def test_the_nav_links_to_about_before_and_after_signing_in(
+    client_factory: Callable[[], TestClient],
+):
+    anonymous = client_factory().get("/login").text
+    assert '<a href="/license">About</a>' in anonymous
+    signed_in = signed_in_client(client_factory).get("/campaigns").text
+    assert '<a href="/license">About</a>' in signed_in
+
+
 def test_the_signed_in_nav_links_to_the_compendium(
     client_factory: Callable[[], TestClient],
 ):
@@ -42,6 +51,20 @@ def test_the_standalone_page_offers_rule_set_and_world_pickers(
     assert 'data-compendium-panel="world"' in page
     assert "compendium-group" in page
     assert "Open the standalone page" not in page
+
+
+def test_the_standalone_page_notes_third_party_content(
+    client_factory: Callable[[], TestClient],
+):
+    client = signed_in_client(client_factory)
+    page = client.get("/compendium?rule_set=cairn2e&world_template=twin-lakes").text
+    assert "Includes third-party material." in page
+    assert '<a href="/license">content credits</a>' in page
+
+    original = client.get(
+        "/compendium?rule_set=academia-arcana&world_template=unwritten-academy"
+    ).text
+    assert "Includes third-party material." not in original
 
 
 def test_a_campaign_has_a_compendium_view(

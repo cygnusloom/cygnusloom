@@ -231,12 +231,14 @@ def test_the_new_campaign_form_hides_the_genre_picker(client_factory):
     section = page[start:end]
     assert "<summary>Creative and lore tables</summary>" in section
     assert "Optional." in section
-    for genre in TABLE_GENRES:
+    available = content_library().available_table_genres
+    for genre in available:
         assert f'name="table_genres" value="{genre}"' in section
+    for genre in set(TABLE_GENRES) - set(available):
+        assert f'name="table_genres" value="{genre}"' not in section
     # The form starts on the selected rule set's own choice: the bundled sets are generic+fantasy.
     assert 'name="table_genres" value="generic" checked' in section
     assert 'name="table_genres" value="fantasy" checked' in section
-    assert 'name="table_genres" value="horror" checked' not in section
     assert " open" not in page[start : start + len('<details class="table-genres">')]
 
 

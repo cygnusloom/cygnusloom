@@ -15,11 +15,13 @@
         <a href="/compendium">Compendium</a>
         <a href="/account">Account</a>
         {% if is_admin %}<a href="/admin">Admin</a>{% endif %}
+        <a href="/license">About</a>
         <form method="post" action="/logout" class="inline">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <button type="submit">Log out</button>
         </form>
       {% else %}
+        <a href="/license">About</a>
         <a href="/login">Log in</a>
       {% endif %}
     </nav>
@@ -32,10 +34,10 @@
   </main>
   <footer class="site-footer">
     <p>
-      Cygnus Loom {{ app_version }} · Copyright (C) 2026 Cygnus Loom contributors ·
-      <a href="{{ website_url }}">cygnusloom.com</a> ·
-      Free software under the <a href="/license">GNU Affero General Public License v3 or later</a>,
-      without warranty{% if source_url %} · <a href="{{ source_url }}">Source</a>{% endif %}
+      Cygnus Loom {{ app_version }} · © 2026 Cygnus Loom contributors ·
+      {% if website_url %}<a href="{{ website_url }}">Website</a> · {% endif %}
+      Free software under <a href="/license">AGPL-3.0-or-later</a>, no warranty
+      {% if source_url %}· <a href="{{ source_url }}">Source</a>{% endif %}
     </p>
   </footer>
   {% block scripts %}{% endblock %}

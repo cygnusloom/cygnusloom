@@ -474,6 +474,42 @@ def test_new_campaign_form_marks_a_world_that_names_its_rule_set(
     assert "/static/new_campaign.js" in page
 
 
+def test_new_campaign_form_marks_third_party_content_and_offers_credits(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    page = client.get("/campaigns/new").text
+    assert re.search(r'<option value="cairn2e"[^>]*data-third-party="1"', page)
+    assert re.search(r'<option value="worldswithoutnumber"[^>]*data-third-party="1"', page)
+    assert re.search(r'<option value="twin-lakes"[^>]*data-third-party="1"', page)
+    assert re.search(r'<option value="academia-arcana"[^>]*data-third-party="0"', page)
+    assert re.search(r'<span data-blurb-credits="rule_set" hidden>', page)
+    assert re.search(r'<span data-blurb-credits="world_template" hidden>', page)
+    assert page.count('<a href="/license">content credits</a>') == 2
+
+
+def test_new_campaign_form_puts_credits_in_third_party_descriptions(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    response = _new_campaign(
+        client,
+        world_template="twin-lakes",
+        rule_set="cairn2e",
+        table_genres=["steampunk"],
+    )
+    assert response.status_code == 400
+    page = response.text
+    assert re.search(
+        r'<span data-blurb-credits="rule_set">\s*See <a href="/license">content credits</a>\.</span>',
+        page,
+    )
+    assert re.search(
+        r'<span data-blurb-credits="world_template">\s*See <a href="/license">content credits</a>\.</span>',
+        page,
+    )
+
+
 def test_new_campaign_form_starts_on_a_rule_set_and_a_world_that_fits(
     client_factory: Callable[[], TestClient],
 ):

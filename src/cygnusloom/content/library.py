@@ -279,6 +279,8 @@ class WorldTemplate:
     rule_set: str | None = None
     # A short line shown when choosing the world on the create campaign page.
     blurb: str | None = None
+    # True when the world is imported from a third-party source; the UI links to the credits.
+    third_party: bool = False
     # The world's monsters, tables, features, and rules, as definitions. They are checked against
     # each rule set in WorldContent, since a monster's stats depend on the rule set.
     definitions: tuple[Definition, ...] = ()
@@ -1595,6 +1597,8 @@ class RuleSet:
     hooks: Hooks | None = None
     # A short line shown when choosing the rule set on the create campaign page.
     blurb: str | None = None
+    # True when the rule set is imported from a third-party source; the UI links to the credits.
+    third_party: bool = False
     # The genres of dice and creative tables this rule set offers, such as ("generic", "fantasy").
     # A core table tagged `generic`, or with no tags, is always offered; any other core table must
     # share a tag with this selection to reach the rule set.
@@ -1749,6 +1753,17 @@ class ContentLibrary:
             )
         return self._world_content[key]
 
+    @property
+    def available_table_genres(self) -> tuple[str, ...]:
+        """The genres used by at least one table in the loaded rule sets, in canonical order."""
+        used = {
+            genre
+            for rule_set in (self.core, *self.rule_sets.values())
+            for table in rule_set.dice_tables.values()
+            for genre in table.genres
+        }
+        return tuple(genre for genre in TABLE_GENRES if genre in used)
+
     @classmethod
     def load(cls, data_dir: Path = DATA_DIR) -> ContentLibrary:
         """Load every world template and rule set. Each subdirectory is one of either.
@@ -1814,7 +1829,7 @@ def _load_world(directory: Path) -> WorldTemplate:
     label = f"{template}: world"
     check_keys(
         world.data,
-        {"type", "id", "name", "description", "rule_set", "blurb", "start"},
+        {"type", "id", "name", "description", "rule_set", "blurb", "third_party", "start"},
         label,
     )
     location_icons = _icon_entries(definitions, "location", template)
@@ -1849,6 +1864,7 @@ def _load_world(directory: Path) -> WorldTemplate:
         description=required_text(world.data, "description", label),
         rule_set=_optional_text(world.data, "rule_set", label),
         blurb=_optional_text(world.data, "blurb", label),
+        third_party=_flag(world.data, "third_party", label),
         locations=locations,
         npcs=npcs,
         definitions=(*own, *statblocks),
@@ -2586,6 +2602,7 @@ def _build_rule_set(
             "name",
             "description",
             "blurb",
+            "third_party",
             "plus",
             "skill_progression",
             "ordered_feature_tags",
@@ -2764,6 +2781,7 @@ def _build_rule_set(
         name=required_text(head.data, "name", label),
         description=required_text(head.data, "description", label),
         blurb=_optional_text(head.data, "blurb", label),
+        third_party=_flag(head.data, "third_party", label),
         table_genres=table_genres,
         content=RuleContent(
             rules=rules,

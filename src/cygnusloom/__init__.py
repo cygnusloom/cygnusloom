@@ -5,7 +5,6 @@ from importlib.metadata import PackageNotFoundError, distribution, metadata, ver
 from pathlib import Path
 
 DISTRIBUTION = "cygnusloom"
-WEBSITE_URL = "https://cygnusloom.com"
 PACKAGE_DIR = Path(__file__).resolve().parent
 # The repository root when the package runs from a source tree instead of an installed wheel.
 SOURCE_TREE = PACKAGE_DIR.parents[1]
@@ -32,9 +31,11 @@ try:
     __version__ = version(DISTRIBUTION)
     # The AGPL asks a network service to offer its users the source of the version it runs.
     SOURCE_URL = _project_url("Source")
+    WEBSITE_URL = _project_url("Homepage")
 except PackageNotFoundError:  # pragma: no cover - running from an unpacked source tree
     __version__ = "0.0.0"
     SOURCE_URL = ""
+    WEBSITE_URL = ""
 
 
 @cache

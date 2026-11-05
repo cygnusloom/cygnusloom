@@ -4,6 +4,7 @@
     "id": "cairn2e",
     "name": "Cairn 2e",
     "blurb": "A rules-light game of desperate survival in a dark, weird wilderness. Roll 3d6 for your attributes and see how long you last.",
+    "third_party": true,
     "plus": "highest",
     "table_genres": ["generic", "fantasy"],
     "condition_ends": ["rest", "extended_rest", "aid", "time"],

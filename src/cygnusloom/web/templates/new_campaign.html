@@ -9,20 +9,26 @@
         Rule set
         <select name="rule_set" required>
           {% for rule_set in rule_sets %}
-            <option value="{{ rule_set.id }}" data-blurb="{{ rule_set.blurb or rule_set.description }}" data-genres="{{ rule_set.table_genres | join(',') }}"{% if rule_set.id == selected_rule_set %} selected{% endif %}>{{ rule_set.name }}</option>
+            <option value="{{ rule_set.id }}" data-blurb="{{ rule_set.blurb or rule_set.description }}" data-third-party="{{ '1' if rule_set.third_party else '0' }}" data-genres="{{ rule_set.table_genres | join(',') }}"{% if rule_set.id == selected_rule_set %} selected{% endif %}>{{ rule_set.name }}</option>
           {% endfor %}
         </select>
       </label>
-      <p class="muted" data-blurb-for="rule_set">{{ selected_rule_set_blurb }}</p>
+      <p class="muted">
+        <span data-blurb-for="rule_set">{{ selected_rule_set_blurb }}</span>
+        <span data-blurb-credits="rule_set"{% if not selected_rule_set_third_party %} hidden{% endif %}> See <a href="/license">content credits</a>.</span>
+      </p>
       <label>
         World
         <select name="world_template" required>
           {% for world in world_templates %}
-            <option value="{{ world.id }}"{% if world.rule_set %} data-rule-set="{{ world.rule_set }}"{% endif %} data-label="{{ world_labels.get(world.id, '') }}" data-blurb="{{ world.blurb or world.description }}"{% if world.id == selected_world %} selected{% endif %}>{{ world.name }}</option>
+            <option value="{{ world.id }}"{% if world.rule_set %} data-rule-set="{{ world.rule_set }}"{% endif %} data-label="{{ world_labels.get(world.id, '') }}" data-blurb="{{ world.blurb or world.description }}" data-third-party="{{ '1' if world.third_party else '0' }}"{% if world.id == selected_world %} selected{% endif %}>{{ world.name }}</option>
           {% endfor %}
         </select>
       </label>
-      <p class="muted" data-blurb-for="world_template">{{ selected_world_blurb }}</p>
+      <p class="muted">
+        <span data-blurb-for="world_template">{{ selected_world_blurb }}</span>
+        <span data-blurb-credits="world_template"{% if not selected_world_third_party %} hidden{% endif %}> See <a href="/license">content credits</a>.</span>
+      </p>
       <label>
         Setting / story (optional)
         <textarea name="setting" rows="6" maxlength="4000" placeholder="Describe the kind of setting or story you want to play. Leave blank to let the world and rule set lead.">{{ campaign_setting }}</textarea>

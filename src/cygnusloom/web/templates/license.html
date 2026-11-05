@@ -22,8 +22,8 @@
     </p>
     <h2>About</h2>
     <p>
-      Cygnus Loom is a web-based RPG engine with an AI game master. The project home is
-      <a href="{{ website_url }}">cygnusloom.com</a>.
+      Cygnus Loom is a web-based RPG engine with an AI game master.
+      {% if website_url %}The project home is <a href="{{ website_url }}">{{ website_url }}</a>.{% endif %}
     </p>
     {% if source_url %}
     <h2>Source code</h2>
