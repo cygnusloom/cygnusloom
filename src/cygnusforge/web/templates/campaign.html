@@ -166,7 +166,7 @@
               {% if scene.pc.description %}<p>{{ scene.pc.description }}</p>{% endif %}
               {% endif %}
               {% for line in scene.sheet %}
-              <p>{{ line }}</p>
+              <p>{{ line | compendium_links(scene.sheet_links) }}</p>
               {% else %}
               <p class="muted">No character sheet yet.</p>
               {% endfor %}

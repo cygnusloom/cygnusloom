@@ -36,7 +36,11 @@ def test_the_standalone_page_offers_rule_set_and_world_pickers(
     assert 'action="/compendium"' in page
     assert 'name="rule_set"' in page
     assert 'name="world_template"' in page
-    assert 'data-filter="#compendium-sections"' in page
+    assert "data-compendium-search" in page
+    assert 'role="tablist"' in page
+    assert 'data-compendium-tab="world"' in page
+    assert 'data-compendium-panel="world"' in page
+    assert "compendium-group" in page
     assert "Open the standalone page" not in page
 
 
@@ -47,10 +51,11 @@ def test_a_campaign_has_a_compendium_view(
     page = client.get(f"/campaigns/{campaign_id}").text
     assert 'data-view-target="compendium"' in page
     assert 'data-view="compendium"' in page
-    assert 'id="compendium-sections"' in page
+    assert "data-compendium-search" in page
+    assert 'data-compendium-tab="world"' in page
 
 
-def test_a_character_ability_links_into_the_compendium(
+def test_the_character_panel_links_its_sheet_to_the_compendium(
     client_factory: Callable[[], TestClient],
 ):
     client = signed_in_client(client_factory)
@@ -61,4 +66,11 @@ def test_a_character_ability_links_into_the_compendium(
     page = client.get(f"/campaigns/{campaign_id}").text
     sheet = page[page.index('id="panel-character"') : page.index('id="panel-inventory"')]
     assert "Steady Nerves" in sheet
-    assert 'data-view-link="compendium"' in sheet
+    assert (
+        '<a href="#compendium-options-test-role" data-view-link="compendium">Test Role</a>' in sheet
+    )
+    assert (
+        '<a href="#compendium-abilities-steady-nerves" data-view-link="compendium">'
+        "Steady Nerves</a>" in sheet
+    )
+    assert '<a href="#compendium-advancement-focus" data-view-link="compendium">Focus</a>' in sheet

@@ -30,6 +30,8 @@ def compendium_page(request: Request, rule_set: str = "", world_template: str = 
     compendium = None
     if rule_set and world_template:
         compendium = compendium_view(library, rule_set, world_template)
+    chosen_rule_set = library.rule_sets.get(rule_set)
+    chosen_world = library.world_templates.get(world_template)
     return render(
         request,
         "compendium.html",
@@ -37,6 +39,12 @@ def compendium_page(request: Request, rule_set: str = "", world_template: str = 
         worlds=library.world_templates.values(),
         selected_rule_set=rule_set,
         selected_world=world_template,
+        selected_rule_set_blurb=(
+            (chosen_rule_set.blurb or chosen_rule_set.description) if chosen_rule_set else ""
+        ),
+        selected_world_blurb=(
+            (chosen_world.blurb or chosen_world.description) if chosen_world else ""
+        ),
         compendium=compendium,
         standalone=True,
         error="",

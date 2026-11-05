@@ -37,13 +37,82 @@ def test_cairn_compendium_has_the_sourcebook_sections():
     compendium = compendium_view(library, "cairn2e", "twin-lakes")
 
     sections = _sections(compendium)
-    assert "bestiary" in sections
-    assert "abilities" in sections
-    assert "items" in sections
+    assert {"world", "places", "terrain", "options", "stats", "items"} <= set(sections)
+    assert {"bestiary", "rules", "conditions", "tables", "dice"} <= set(sections)
     monster = next(iter(rules.monsters.values()))
     assert monster.name in _entry_names(compendium, "bestiary")
     shop_item = rules.marketplace.items[0]
     assert shop_item.name in _entry_names(compendium, "items")
+
+
+def test_compendium_tabs_group_the_sections():
+    library = content_library()
+    compendium = compendium_view(library, "cairn2e", "twin-lakes")
+
+    assert [tab.id for tab in compendium.tabs] == [
+        "world",
+        "characters",
+        "abilities",
+        "items",
+        "bestiary",
+        "rules",
+        "tables",
+    ]
+    assert all(
+        tab.count == sum(len(section.entries) for section in tab.sections)
+        for tab in compendium.tabs
+    )
+    assert sum(tab.count for tab in compendium.tabs) == compendium.total
+
+
+def test_section_groups_keep_the_designed_reading_order():
+    compendium = compendium_view(content_library(), "cairn2e", "twin-lakes")
+    sections = _sections(compendium)
+
+    assert [group.name for group in sections["world"].groups] == ["Overview"]
+    assert [group.name for group in sections["places"].groups][:2] == ["Regions", "Places"]
+    assert sections["options"].groups[0].name == "Overview"
+    assert sections["bestiary"].groups[0].name == "Monsters"
+
+
+def test_character_content_fills_the_character_and_table_tabs():
+    library = content_library()
+    rules = library.rule_sets["worldswithoutnumber"]
+    compendium = compendium_view(library, "worldswithoutnumber", "unwritten-world")
+
+    assert {
+        "options",
+        "stats",
+        "skills",
+        "fields",
+        "advancement",
+        "tables",
+        "dice",
+    } <= set(_sections(compendium))
+    assert next(iter(rules.character.stats.values())).name in _entry_names(compendium, "stats")
+    assert next(iter(rules.character.skills.values())).name in _entry_names(compendium, "skills")
+    assert next(iter(rules.character.templates.values())).name in _entry_names(
+        compendium, "options"
+    )
+    assert next(iter(rules.character.fields.values())).name in _entry_names(compendium, "fields")
+    assert rules.character.tables
+    assert next(iter(rules.character.table_names.values())) in _entry_names(compendium, "tables")
+    assert next(iter(rules.dice_tables.values())).name in _entry_names(compendium, "dice")
+
+
+def test_sheet_links_point_at_character_content():
+    library = content_library()
+    rules = library.rule_sets["rolltest"]
+    compendium = compendium_view(library, "rolltest", "testhollow")
+    template = next(iter(rules.character.templates.values()))
+    feature = next(iter(rules.character.features.values()))
+    stat = next(iter(rules.character.stats.values()))
+    counter = next(iter(rules.progression.counters.values()))
+
+    assert compendium.sheet_links[template.name] in _entry_ids(compendium, "options")
+    assert compendium.sheet_links[feature.name] in _entry_ids(compendium, "abilities")
+    assert compendium.sheet_links[stat.name] in _entry_ids(compendium, "stats")
+    assert compendium.sheet_links[counter.label] in _entry_ids(compendium, "advancement")
 
 
 def test_item_links_name_the_items_section_entries():
@@ -105,11 +174,12 @@ def test_a_discovered_place_shows_its_summary_not_its_secret(
     state = factories.open_campaign(app, campaign_id)
 
     compendium = compendium_view(content_library(), "rolltest", "testhollow", state)
-    section = _sections(compendium)["world"]
+    section = _sections(compendium)["places"]
     entry = next(entry for entry in section.entries if entry.name == "Hidden Nook")
 
     assert entry.summary == "A mossy nook behind the falls."
     assert entry.text == entry.summary
+    assert entry.group == "Discovered Places"
     assert "A secret cave." not in entry.text
     assert compendium.place_links["Hidden Nook"] == entry.id
 
@@ -118,7 +188,7 @@ def test_a_discovered_place_shows_its_summary_not_its_secret(
     state = factories.open_campaign(app, campaign_id)
     compendium = compendium_view(content_library(), "rolltest", "testhollow", state)
     bare = next(
-        entry for entry in _sections(compendium)["world"].entries if entry.name == "Bare Nook"
+        entry for entry in _sections(compendium)["places"].entries if entry.name == "Bare Nook"
     )
     assert bare.summary == ""
     assert bare.text == "A place you have discovered."

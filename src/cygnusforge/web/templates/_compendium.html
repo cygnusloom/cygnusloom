@@ -1,5 +1,5 @@
 {% if compendium and not compendium.empty %}
-<div class="compendium">
+<div class="compendium" data-compendium>
   <div class="compendium-heading">
     <p class="compendium-source">
       {% if compendium.world %}<span>{{ compendium.world.name }}</span>{% endif %}
@@ -17,40 +17,45 @@
     {% endif %}
   </div>
   <div class="compendium-toolbar">
+    <div class="tab-list compendium-tab-list" role="tablist" aria-label="Compendium sections">
+      {% for tab in compendium.tabs %}
+      <button type="button" class="tab compendium-tab" role="tab" id="compendium-tab-{{ tab.id }}" aria-controls="compendium-panel-{{ tab.id }}" aria-selected="{{ 'true' if loop.first else 'false' }}" tabindex="{{ 0 if loop.first else -1 }}" data-compendium-tab="{{ tab.id }}">{{ tab.name }} <span class="compendium-count">{{ tab.count }}</span></button>
+      {% endfor %}
+    </div>
     <label class="compendium-search">
       <span class="visually-hidden">Search the compendium</span>
-      <input type="search" data-filter="#compendium-sections" placeholder="Search the compendium" autocomplete="off">
+      <input type="search" data-compendium-search placeholder="Search entries" autocomplete="off">
     </label>
   </div>
-  {% if compendium.sections %}
-  <nav class="compendium-toc" aria-label="Compendium sections">
-    {% for section in compendium.sections %}
-    <a href="#section-{{ section.id }}">{{ section.name }}</a>
-    {% endfor %}
-  </nav>
-  {% endif %}
-  <div id="compendium-sections">
-    {% for section in compendium.sections %}
-    <section class="compendium-section" id="section-{{ section.id }}" data-filter-group>
+  <p class="compendium-status muted" data-compendium-count aria-live="polite">{{ compendium.total }} entries</p>
+  {% for tab in compendium.tabs %}
+  <div class="compendium-tab-panel" role="tabpanel" id="compendium-panel-{{ tab.id }}" aria-labelledby="compendium-tab-{{ tab.id }}" data-compendium-panel="{{ tab.id }}"{% if not loop.first %} hidden{% endif %}>
+    {% for section in tab.sections %}
+    <section class="compendium-section" id="section-{{ section.id }}" data-compendium-section>
       <h3>{{ section.name }}</h3>
-      {% for entry in section.entries %}
-      <article class="compendium-entry" id="{{ entry.id }}" data-filter-item data-filter-text="{{ entry.name }} {{ entry.summary }} {{ entry.text }} {{ entry.tags|join(' ') }}">
-        <h4>{{ entry.name }}</h4>
+      {% for group in section.groups %}
+      {% if group.name %}<h4 class="compendium-group">{{ group.name }}</h4>{% endif %}
+      {% for entry in group.entries %}
+      <article class="compendium-entry" id="{{ entry.id }}" data-compendium-entry data-compendium-text="{{ entry.name }} {{ entry.summary }} {{ entry.text }} {{ entry.tags | join(' ') }} {{ entry.group }}">
+        <h5>{{ entry.name }}</h5>
         {% if entry.tags or entry.source %}
         <p class="compendium-tags">
           {% if entry.source %}<span class="tag">{{ entry.source }}</span>{% endif %}
           {% for tag in entry.tags %}<span class="tag">{{ tag }}</span>{% endfor %}
         </p>
         {% endif %}
-        {% if entry.summary %}<p class="compendium-summary">{{ entry.summary }}</p>{% endif %}
+        {% if entry.summary and not entry.text.startswith(entry.summary) %}<p class="compendium-summary">{{ entry.summary }}</p>{% endif %}
         <div class="compendium-text">{{ entry.text }}</div>
       </article>
+      {% endfor %}
       {% endfor %}
     </section>
     {% endfor %}
   </div>
-  <p class="muted" data-filter-empty hidden>No compendium entries match that search.</p>
+  {% endfor %}
+  <p class="muted" data-compendium-empty hidden>No compendium entries match that search.</p>
 </div>
 {% else %}
 <p class="muted">No compendium content is available for this world and rule set.</p>
 {% endif %}
+

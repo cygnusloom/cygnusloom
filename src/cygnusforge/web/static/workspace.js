@@ -52,7 +52,12 @@
           const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
           if (step === undefined) return;
           event.preventDefault();
-          select(tabs[(index + step + tabs.length) % tabs.length]);
+          let next = (index + step + tabs.length) % tabs.length;
+          // A compendium search hides tabs with no matches; skip them when arrowing.
+          while (tabs[next].hidden && next !== index) {
+            next = (next + step + tabs.length) % tabs.length;
+          }
+          select(tabs[next]);
         });
       });
     });
@@ -91,16 +96,31 @@
     });
   });
 
+  // A compendium entry lives inside a tab panel, so opening one also selects its tab.
+  const revealCompendiumTarget = (target) => {
+    const panel = target.closest("[data-compendium-panel]");
+    if (!panel) return;
+    const tab = document.querySelector(
+      `[data-compendium-tab="${panel.dataset.compendiumPanel}"]`,
+    );
+    const list = tab && tab.closest('[role="tablist"]');
+    if (tab && list && list.selectTab) list.selectTab(tab, false);
+  };
+
   // A link can open a compendium entry directly, such as a bookmarked anchor. Show the view
   // that holds the target before scrolling to it, since a hidden view cannot scroll.
-  const anchored = location.hash && document.querySelector(location.hash);
-  if (anchored) {
+  const openHash = () => {
+    const anchored = location.hash && document.querySelector(location.hash);
+    if (!anchored) return;
     const view = anchored.closest("[data-view]");
-    if (view) {
-      showView(view.dataset.view);
-      anchored.scrollIntoView({ block: "start" });
-    }
-  }
+    if (view) showView(view.dataset.view);
+    revealCompendiumTarget(anchored);
+    anchored.scrollIntoView({ block: "start" });
+  };
+  openHash();
+  window.addEventListener("hashchange", openHash);
+  // Some browsers restore the fragment after the first script pass, so retry once at load.
+  window.addEventListener("load", openHash);
 
   // A link inside one view can point at an entry in another, such as an inventory item in the
   // compendium: switch views first, then scroll to the anchor the link names.
@@ -110,6 +130,7 @@
       if (!target) return;
       event.preventDefault();
       showView(link.dataset.viewLink);
+      revealCompendiumTarget(target);
       target.scrollIntoView({ block: "start" });
       history.replaceState(null, "", link.getAttribute("href"));
     });
@@ -141,6 +162,87 @@
       }
       if (empty) empty.hidden = shown > 0;
     };
+    input.addEventListener("input", apply);
+    apply();
+  });
+
+  // The compendium search filters every entry, including entries in other tabs, and moves to the
+  // first tab with a match when the current one has none.
+  document.querySelectorAll("[data-compendium]").forEach((root) => {
+    const input = root.querySelector("[data-compendium-search]");
+    if (!input) return;
+    const entries = [...root.querySelectorAll("[data-compendium-entry]")];
+    const sections = [...root.querySelectorAll("[data-compendium-section]")];
+    const panels = [...root.querySelectorAll("[data-compendium-panel]")];
+    const tabs = [...root.querySelectorAll("[data-compendium-tab]")];
+    const tabList = root.querySelector('.compendium-tab-list[role="tablist"]');
+    const count = root.querySelector("[data-compendium-count]");
+    const empty = root.querySelector("[data-compendium-empty]");
+    const total = entries.length;
+    const tabCounts = new Map(
+      tabs.map((tab) => [tab, tab.querySelector(".compendium-count")?.textContent ?? ""]),
+    );
+    let previousTab = "";
+
+    const selectTab = (panelId) => {
+      const tab = tabs.find((candidate) => candidate.dataset.compendiumTab === panelId);
+      if (tab && tabList && tabList.selectTab) tabList.selectTab(tab, false);
+    };
+
+    const apply = () => {
+      const query = input.value.trim().toLocaleLowerCase();
+      if (!query) {
+        for (const entry of entries) entry.hidden = false;
+        for (const section of sections) section.hidden = false;
+        for (const tab of tabs) {
+          tab.hidden = false;
+          const badge = tab.querySelector(".compendium-count");
+          if (badge) badge.textContent = tabCounts.get(tab) ?? "";
+        }
+        if (previousTab) {
+          selectTab(previousTab);
+          previousTab = "";
+        }
+        if (count) count.textContent = `${total} ${total === 1 ? "entry" : "entries"}`;
+        if (empty) empty.hidden = true;
+        return;
+      }
+      if (!previousTab) {
+        const selected = tabs.find((tab) => tab.getAttribute("aria-selected") === "true");
+        previousTab = selected?.dataset.compendiumTab ?? "";
+      }
+      const matching = new Set();
+      for (const entry of entries) {
+        const text = (entry.dataset.compendiumText ?? "").toLocaleLowerCase();
+        const match = text.includes(query);
+        entry.hidden = !match;
+        if (match) matching.add(entry);
+      }
+      for (const section of sections) {
+        section.hidden = !section.querySelector("[data-compendium-entry]:not([hidden])");
+      }
+      for (const panel of panels) {
+        const matches = panel.querySelectorAll("[data-compendium-entry]:not([hidden])").length;
+        const tab = tabs.find(
+          (candidate) => candidate.dataset.compendiumTab === panel.dataset.compendiumPanel,
+        );
+        if (tab) {
+          tab.hidden = matches === 0;
+          const badge = tab.querySelector(".compendium-count");
+          if (badge) badge.textContent = String(matches);
+        }
+      }
+      const selected = tabs.find((tab) => tab.getAttribute("aria-selected") === "true");
+      if (!selected || selected.hidden) {
+        const first = panels.find((panel) =>
+          panel.querySelector("[data-compendium-entry]:not([hidden])"),
+        );
+        if (first) selectTab(first.dataset.compendiumPanel);
+      }
+      if (count) count.textContent = `${matching.size} of ${total} entries`;
+      if (empty) empty.hidden = matching.size > 0;
+    };
+
     input.addEventListener("input", apply);
     apply();
   });

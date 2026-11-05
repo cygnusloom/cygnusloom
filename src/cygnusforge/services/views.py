@@ -100,6 +100,8 @@ class SceneView:
     known: tuple[KnownNpcView, ...] = ()
     abilities: tuple[FeatureLink, ...] = ()
     location_entry: str = ""
+    # Names printed on the sheet -> compendium entry id, so a sheet line can link its references.
+    sheet_links: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -484,6 +486,7 @@ def scene_view(
     ability_links: Mapping[str, str] | None = None,
     creature_links: Mapping[str, str] | None = None,
     place_links: Mapping[str, str] | None = None,
+    sheet_links: Mapping[str, str] | None = None,
 ) -> SceneView:
     """The player's view. It shows only what is at the player character's location, including any
     hirelings there, and everyone the player has met. The pack shows the player character's items
@@ -493,6 +496,7 @@ def scene_view(
     ability_entries = ability_links or {}
     creature_entries = creature_links or {}
     place_entries = place_links or {}
+    sheet_entries = sheet_links or {}
     pc = state.pc()
     location = pc.location if pc is not None else None
     found = state.named(location) if location is not None else None
@@ -566,6 +570,7 @@ def scene_view(
         known=_known_npc_views(state, pc, place, relations, creature_entries),
         abilities=abilities,
         location_entry=location_entry,
+        sheet_links=sheet_entries,
     )
 
 

@@ -1,9 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Compendium{% endblock %}
 {% block content %}
-  <section class="card narrow">
-    <h1>Compendium</h1>
-    <form method="get" action="/compendium">
+  <section class="card compendium-picker">
+    <div class="compendium-picker-heading">
+      <h1>Compendium</h1>
+      <p class="muted">Sourcebook material for a rule set and world: creatures, abilities, equipment, character options, tables, and rules.</p>
+    </div>
+    <form method="get" action="/compendium" class="compendium-picker-form">
       <label>
         Rule set
         <select name="rule_set">
@@ -12,7 +15,6 @@
           {% endfor %}
         </select>
       </label>
-      <p class="muted" data-blurb-for="rule_set"></p>
       <label>
         World
         <select name="world_template">
@@ -21,16 +23,17 @@
           {% endfor %}
         </select>
       </label>
-      <p class="muted" data-blurb-for="world_template"></p>
       <button type="submit">Show</button>
     </form>
+    <p class="muted compendium-picker-blurb" data-blurb-for="rule_set">{{ selected_rule_set_blurb }}</p>
+    <p class="muted compendium-picker-blurb" data-blurb-for="world_template">{{ selected_world_blurb }}</p>
   </section>
   {% if compendium and not compendium.empty %}
   <section class="compendium standalone">
     {% include "_compendium.html" %}
   </section>
   {% else %}
-  <p class="muted">No compendium content is available for this world and rule set.</p>
+  <p class="muted compendium-empty-page">No compendium content is available for this world and rule set.</p>
   {% endif %}
 {% endblock %}
 {% block scripts %}
@@ -38,3 +41,4 @@
   <script src="/static/new_campaign.js"></script>
   <script src="/static/workspace.js"></script>
 {% endblock %}
+
