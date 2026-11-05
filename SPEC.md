@@ -12,8 +12,6 @@ Whenever the player needs to roll some dice, the game will stop and let the play
 # Encounters
 Encounters are scenes within the game where simulated time slows down so actions can be resolved according to the ruleset, usually for combat. Actors in encounters will often take turns. The player clicks on a button to start each actors turn. The AI GM will run NPC turns. For their own turn, the player also clicks on a button to end it.
 
-The engine holds the turn order, not the model. A combat tool refuses an attack by a character who is not taking their turn, so an NPC cannot cut in ahead of its place in the order, and the player cannot act twice. Each combat tool also takes a `force` flag for the one case the order cannot cover: an action the story needs outside it, such as an ambush that catches the party unawares. The GM sets it deliberately, and the tool's description says when.
-
 # Generic Engine, JSON rules
 The engine should support various rulesets. It should not be a hodgepodge of spaghetti code as new rulesets pile on. Instead, ruleset behavior should be defined in the ruleset JSON. The engine itself must remain clean. Use modular systems with hooks, parameters, and customizable behavior so each ruleset can define how the engine behaves. If custom code is absolutely necessary, it can be contained within each ruleset's python module. However, most RPG concepts are similar enough that they can live within the generic core engine and just be parameterized in the JSON ruleset.
 
