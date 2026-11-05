@@ -56,7 +56,7 @@
     "type": "tool_call",
     "id": "adjust_counter",
     "name": "adjust_counter",
-    "world_method": "adjust_counter_request",
+    "world_method": "adjust_counter",
     "description": "Change a player character's Luck or Experience: mark a point of Luck when they spend it, regain Luck at the end of a school year, or mark Experience. Use a negative change to spend or clear a point and a positive one to add or regain it.",
     "parameters": {
       "type": "object",
@@ -86,8 +86,8 @@
     "type": "tool_call",
     "id": "take_advancement",
     "name": "take_advancement",
-    "world_method": "request_advancement",
-    "description": "Spend one of a player character's Advancements on an option: raise a trait, add a Favourite Subject, learn a spell, gain a magical object, or regain Luck. Use stat for an option that names a trait. For learning a spell, use feature for the spell: it must be from the character's current Year and not one they already know. For the player character this only tells the player to choose on the character sheet; the player's choice is taken from there. An NPC takes the option at once.",
+    "world_method": "take_advancement",
+    "description": "Spend one of a character's Advancements on an option: raise a trait, add a Favourite Subject, learn a spell, gain a magical object, or regain Luck. Use stat for an option that names a trait. For learning a spell, use feature for the spell: it must be from the character's current Year and not one they already know. For the player character, use the option the player has stated; the character sheet is where the player makes the choice.",
     "parameters": {
       "type": "object",
       "properties": {

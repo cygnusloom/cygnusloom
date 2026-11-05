@@ -73,7 +73,7 @@
   {
     "type": "prompt",
     "id": "advancement_loop",
-    "text": "Award gain_xp once per session or great achievement; it uses the campaign's experience track unless you override it. At a threshold call level_up during downtime, then call gain_growth for the background's Growth roll. A player character's level and its skill points, Focus, art, spell, and attribute choices belong to the player: call level_up only to let the engine record that the level is due, tell the player to open the character sheet and level up there, and wait. Do not call spend_skill_point, learn_focus, learn_art, learn_spell, or improve_attribute for the player character unless the player has already told you the exact choice. Never raise a level or skill by narration alone."
+    "text": "Award gain_xp once per session or great achievement; it uses the campaign's experience track unless you override it. At a threshold call level_up during downtime, then call gain_growth for the background's Growth roll. A player character's level and its skill points, Focus, art, spell, and attribute choices belong to the player: calling level_up for the player character applies nothing, so tell the player to open the character sheet and level up there, and wait. Do not call spend_skill_point, learn_focus, learn_art, learn_spell, or improve_attribute for the player character unless the player has already told you the exact choice. Never raise a level or skill by narration alone."
   },
   {
     "type": "prompt",

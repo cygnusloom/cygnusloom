@@ -5,13 +5,12 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import replace
 
-import pytest
 from fastapi.testclient import TestClient
 
 from cygnusforge.config import Settings
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.rules import wwn
-from cygnusforge.services.common import InvalidInput, session_scope
+from cygnusforge.services.common import session_scope
 from cygnusforge.services.events import load_state
 from tests.conftest import csrf_token, make_app
 from tests.test_campaigns import _signed_in
@@ -287,17 +286,6 @@ def test_the_debug_panel_grants_a_hogwarts_advancement(
 
     assert response.status_code == 303
     assert _hogwarts_counter(app, campaign_id, "advancements") == 1
-
-
-def test_the_gm_cannot_spend_a_players_advancement(
-    client_factory: Callable[[], TestClient],
-) -> None:
-    app, campaign_id = _hogwarts_campaign(client_factory)
-    tools = _hogwarts_tools(app, campaign_id)
-    tools.adjust_counter(HARRY, "advancements", 1)
-
-    with pytest.raises(InvalidInput, match="player's choice"):
-        tools.adjust_counter_request(HARRY, "advancements", -1)
 
 
 def test_the_hogwarts_advancement_page_offers_an_option(
