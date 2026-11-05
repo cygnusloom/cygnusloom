@@ -140,25 +140,21 @@ NARRATE_INSTRUCTION = (
     "character act, and do not bring back a monster or NPC that the state places elsewhere. "
     "Do not call tools."
 )
-NARRATION_REVIEW_INSTRUCTION = (
-    "Narration review step. The narration below was just written for the turn above, and it is "
-    "not yet saved. Check it against the record before the player is left with it: the world "
-    "state, the turn log, the tool results, and the rules. A sound narration is accurate, "
-    "complete, and sensible. Every number, name, place, item, condition, resource, rule, and "
-    "outcome it gives must come from the record; every entry of the turn log the player would "
-    "perceive must be covered; and nothing the record does not support may appear, including an "
-    "action for the player character the player's message did not take, an item used or spent "
-    "when no result says so, a combatant acting out of turn or from the wrong place, or a rule "
-    "stated in a way the rule does not say. Pay special attention to mechanics: hit points, "
-    "harm, healing, armor, Shock, Effort, system strain, coin, item counts and uses, "
-    "advancement points, and every counter or resource. A point, use, or thing a tool spent is "
-    "gone from the current sheet, and the narration must not offer it again. When the narration "
-    "is sound, call no tools and reply with one short sentence saying it passes. When it is not, "
-    "call undo_narration with the fault, then use the other tools to fix any state the turn left "
-    "missing or wrong; make no change the record does not support, do not rewrite the narration "
-    "yourself, and do not ask the player anything. If the record is right and only the words are "
-    "wrong, undo the narration and change nothing else: the narrator writes it again. Do not "
-    "undo for style, length, or harmless brevity; undo only when the player would be misled "
+TURN_REVIEW_INSTRUCTION = (
+    "Turn review step. Review the GM's turn before the player sees it. The player's message is "
+    "what they asked for; the tool calls and world actions recorded above are what the GM did "
+    "about it; the narration below is what the player will read. Check that the actions follow "
+    "the player's input, the rules, and the recorded state, and that the narration follows what "
+    "the GM actually did and what changed. The narration must not invent, omit, or contradict an "
+    "action, result, number, name, place, item, condition, resource, rule, or outcome, and it "
+    "must not act or speak for the player character beyond the player's message. When the "
+    "actions and narration are sound, call no tools and reply with one short sentence saying it "
+    "passes. When an action or the narration is not, call undo_narration with the fault, then "
+    "use the other tools to restore or correct the record; undo the wrong effect with the tools "
+    "when you can, make no change the record does not support, do not rewrite the narration "
+    "yourself, and do not ask the player anything. If the actions are right and only the words "
+    "are wrong, undo the narration and change nothing else: the narrator writes it again. Do "
+    "not undo for style, length, or harmless brevity; undo only when the player would be misled "
     "about what happened or what they can do. Do not call speak or change queued dialogue; if "
     "the dialogue itself is wrong, undo the narration and say so. Do not call the journal tools; "
     "the journal is a separate step."
@@ -321,20 +317,6 @@ def narrate_instruction(rule_set: RuleSet, world: WorldTemplate | None = None) -
                 fragment.text
                 for fragment in _prompt_fragments(rule_set, world)
                 if fragment.step in ("narration", "all")
-            ),
-        ]
-    )
-
-
-def narration_review_instruction(rule_set: RuleSet, world: WorldTemplate | None = None) -> str:
-    """The narration review step's prompt, then the ruleset's review fragments in order."""
-    return " ".join(
-        [
-            NARRATION_REVIEW_INSTRUCTION,
-            *(
-                fragment.text
-                for fragment in _prompt_fragments(rule_set, world)
-                if fragment.step in ("review", "all")
             ),
         ]
     )

@@ -91,11 +91,5 @@
     "id": "projects_and_factions",
     "step": "state",
     "text": "Track Projects, Magic Workings, spell research, and faction turns with start_project, advance_project, and list_projects. Pick a target that matches the book's difficulty, then advance the tracker only when the time, silver, and rolls are actually spent; put what the advance bought in the note. Never leave a long effort only in prose."
-  },
-  {
-    "type": "prompt",
-    "id": "mechanics_review",
-    "step": "review",
-    "text": "Check every mechanical statement against the current sheet and the tool results: attack totals, damage, Shock, armor, hit points, System Strain, Effort, silver, item counts and uses, skill and attribute totals, Focus and art picks, and advancement points. A resource or pick a tool spent is gone, and a feature, art, or spell must be described as its text says rather than as a guess. A narration that offers a spent point or explains armor or damage differently from the record is undone and written again."
   }
 ]

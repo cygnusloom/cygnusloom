@@ -4,6 +4,7 @@ from cygnusforge.services.prompts import (
     JOURNAL_INSTRUCTION,
     OOC_INSTRUCTION,
     STATE_INSTRUCTION,
+    TURN_REVIEW_INSTRUCTION,
     journal_instruction,
     narrate_instruction,
     speech_instruction,
@@ -47,6 +48,13 @@ def test_narration_advice_stays_out_of_the_state_prompt():
     for fragment in narration:
         assert fragment.text not in state
         assert fragment.text in told
+
+
+def test_turn_review_instruction_is_generic():
+    assert TURN_REVIEW_INSTRUCTION.startswith("Turn review step.")
+    assert "player's message" in TURN_REVIEW_INSTRUCTION
+    assert "what the GM did" in TURN_REVIEW_INSTRUCTION
+    assert "narration below" in TURN_REVIEW_INSTRUCTION
 
 
 def test_speech_instruction_without_a_cap_has_no_numeric_limit():

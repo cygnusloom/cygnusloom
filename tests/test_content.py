@@ -1181,6 +1181,19 @@ def test_duplicate_prompt_fragment_ids_are_rejected(tree: Path):
         ContentLibrary.load(tree)
 
 
+def test_a_rule_set_cannot_add_review_prompts(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/prompts.json": [
+                {"type": "prompt", "id": "review", "text": "Check it.", "step": "review"}
+            ]
+        },
+    )
+    with pytest.raises(ContentError):
+        ContentLibrary.load(tree)
+
+
 def test_sentence_cap_is_read_from_narration(tree: Path):
     _write(
         tree,
@@ -1217,7 +1230,6 @@ def test_bundled_cairn_prompts_and_cap_are_read():
         "conditions",
         "hirelings",
         "monster_abilities",
-        "resource_review",
         "setting_forge",
         "setting_continuity",
     ]

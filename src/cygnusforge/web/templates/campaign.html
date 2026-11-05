@@ -234,6 +234,34 @@
                 <button type="submit">Give {{ debug_currency }}</button>
               </form>
               {% endif %}
+              {% if debug_injection %}
+              <p><strong>Pending injection:</strong>
+                {% if debug_injection.mode == "tool" %}
+                call <code>{{ debug_injection.tool }}</code> with <code>{{ debug_injection.arguments }}</code>.
+                {% else %}
+                narrate <q>{{ debug_injection.text }}</q>
+                {% endif %}
+              </p>
+              <form method="post" action="/campaigns/{{ campaign.id }}/debug/injection/clear">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit">Clear injection</button>
+              </form>
+              {% endif %}
+              <form method="post" action="/campaigns/{{ campaign.id }}/debug/injection">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="mode" value="tool">
+                <p>Inject a wrong action into the next GM turn. The tool runs just before the narration, so the review sees it as the GM's own action.</p>
+                <label>Tool <select name="tool">{% for tool in debug_tools %}<option value="{{ tool }}">{{ tool }}</option>{% endfor %}</select></label>
+                <label>Arguments (JSON) <textarea name="arguments" rows="3" placeholder="{}">{}</textarea></label>
+                <button type="submit">Inject tool call</button>
+              </form>
+              <form method="post" action="/campaigns/{{ campaign.id }}/debug/injection">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="mode" value="narration">
+                <p>Inject wrong narration into the next GM turn. The review sees this text instead of the narrator's own.</p>
+                <label>Narration <textarea name="text" rows="3" required></textarea></label>
+                <button type="submit">Inject narration</button>
+              </form>
             </div>
             {% endif %}
           </section>

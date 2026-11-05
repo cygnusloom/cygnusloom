@@ -1,4 +1,4 @@
-"""The narration review checks what the narrator wrote before the player keeps it.
+"""The turn review checks the actions and narration before the player keeps them.
 
 A sound narration costs one model call and changes nothing. A review that finds a fault undoes
 the narration and may fix the record; the narrator then writes the beat again from the corrected

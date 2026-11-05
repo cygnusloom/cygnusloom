@@ -94,11 +94,5 @@
     "type": "prompt",
     "id": "monster_abilities",
     "text": "A statblock's attached rules are shown in your context while the monster is present; follow them as written. Find a statblock with search_monster and create it with create_monster; resolve its attacks with attack or resolve_attacks, and apply special effects with harm_character, roll_save, or add_condition."
-  },
-  {
-    "type": "prompt",
-    "id": "resource_review",
-    "step": "review",
-    "text": "Check every mechanical statement against the current sheet and the tool results: HP, STR, armor, gold, item uses, conditions, and the clock. A number or resource a tool spent or recorded is gone or changed on the sheet, so the narration must not offer it again. A hit whose harm all went to armor is a blow turned aside, never a miss."
   }
 ]

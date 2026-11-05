@@ -30,6 +30,7 @@ from cygnusforge.services.campaigns import (
     campaign_transcript,
     campaign_world,
     character_spec,
+    clear_debug_injection,
     context_usage,
     create_campaign,
     default_campaign_labels,
@@ -49,6 +50,7 @@ from cygnusforge.services.campaigns import (
     set_campaign_label,
     set_campaign_model,
     set_debug_currency,
+    set_debug_injection,
     set_debug_invincibility,
     set_debug_stat,
     start_encounter_turn,
@@ -416,6 +418,83 @@ async def change_debug_currency(request: Request, campaign_id: int) -> Response:
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
+@router.post("/{campaign_id}/debug/injection")
+async def change_debug_injection(request: Request, campaign_id: int) -> Response:
+    settings = request.app.state.settings
+    if not settings.debug_panel:
+        raise NotFound("not found")
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    mode = form_text(form, "mode")
+    try:
+        if mode == "tool":
+            campaign = get_campaign(request.app.state.engine, user.id, campaign_id)
+            rule_set = request.app.state.content.rule_sets.get(campaign.rule_set)
+            if rule_set is None:
+                raise InvalidInput("that campaign's rule set is no longer available")
+            name = form_text(form, "tool")
+            tool = next(
+                (candidate for candidate in rule_set.tool_calls.values() if candidate.name == name),
+                None,
+            )
+            if tool is None:
+                raise InvalidInput(f"there is no tool named {name!r}")
+            if tool.player_input is not None:
+                raise InvalidInput("choose a tool the GM can use without the player's answer")
+            if (
+                tool.lookup
+                or tool.journal_step
+                or tool.review_step
+                or tool.name in ("ooc", "speak")
+            ):
+                raise InvalidInput("choose a state-changing tool")
+            try:
+                arguments = json.loads(form_text(form, "arguments") or "{}")
+            except ValueError:
+                raise InvalidInput("arguments must be valid JSON")
+            problem = check_arguments(tool.parameters, arguments)
+            if problem:
+                raise InvalidInput(problem)
+            set_debug_injection(
+                request.app.state.engine,
+                user.id,
+                campaign_id,
+                "tool",
+                tool=tool.name,
+                arguments=json.dumps(arguments, sort_keys=True, ensure_ascii=False),
+            )
+        elif mode == "narration":
+            set_debug_injection(
+                request.app.state.engine,
+                user.id,
+                campaign_id,
+                "narration",
+                text=form_text(form, "text"),
+            )
+        else:
+            raise InvalidInput("mode must be tool or narration")
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
+@router.post("/{campaign_id}/debug/injection/clear")
+async def remove_debug_injection(request: Request, campaign_id: int) -> Response:
+    settings = request.app.state.settings
+    if not settings.debug_panel:
+        raise NotFound("not found")
+    user = page_user(request)
+    await verify_csrf(request)
+    try:
+        clear_debug_injection(request.app.state.engine, user.id, campaign_id)
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
 @router.get("/{campaign_id}/messages/{event_id}/context")
 def turn_context_fragment(request: Request, campaign_id: int, event_id: int) -> Response:
     user = page_user(request)
@@ -695,6 +774,19 @@ def _campaign_page(
     library = request.app.state.content
     campaign = get_campaign(engine, user.id, campaign_id)
     rule_set = library.rule_sets.get(campaign.rule_set)
+    debug_tools = (
+        sorted(
+            tool.name
+            for tool in rule_set.tool_calls.values()
+            if not tool.lookup
+            and not tool.journal_step
+            and not tool.review_step
+            and tool.player_input is None
+            and tool.name not in ("ooc", "speak")
+        )
+        if rule_set is not None
+        else []
+    )
     inventory_rules = rule_set.inventory if rule_set is not None else None
     magic = rule_set.magic if rule_set is not None else None
     spec = rule_set.character if rule_set else NO_CHARACTER
@@ -802,6 +894,8 @@ def _campaign_page(
         debug_panel=settings.debug_panel,
         debug_currency=rule_set.marketplace.currency if rule_set and rule_set.marketplace else "",
         debug_stats=[(stat.id, stat.name) for stat in spec.stats.values()],
+        debug_tools=debug_tools,
+        debug_injection=world.state.debug_injection,
         pc_invincible=pc.invincible,
         item_kind_icons=magic.item_kind_icons if magic is not None else {},
     )

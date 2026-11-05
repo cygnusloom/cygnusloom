@@ -39,6 +39,9 @@ from cygnusforge.services.events import (
     ChatPlayer,
     ClockAdvanced,
     ContextPart,
+    DebugInjection,
+    DebugInjectionCleared,
+    DebugInjectionRan,
     GameEvent,
     JournalStarted,
     NarrationUndone,
@@ -66,9 +69,9 @@ from cygnusforge.services.events import (
 from cygnusforge.services.prompts import (
     NARRATION_REVISION,
     OOC_INSTRUCTION,
+    TURN_REVIEW_INSTRUCTION,
     journal_instruction,
     narrate_instruction,
-    narration_review_instruction,
     opening_prompt,
     speech_instruction,
     state_instruction,
@@ -834,8 +837,8 @@ async def _write_journal(
 
 @dataclass(frozen=True)
 class _ReviewResult:
-    """What a narration review decided. `undone` means the narration was set aside and the story
-    must be written again from the record, after any tools the review ran to fix it."""
+    """What a turn review decided. `undone` means the narration was set aside and the story must
+    be written again from the record, after any tools the review ran to fix it."""
 
     undone: bool
 
@@ -849,12 +852,71 @@ def _tool_failed(result: ToolRun) -> bool:
     return isinstance(payload, Mapping) and "error" in payload
 
 
+def _take_debug_injection(run: _Run) -> DebugInjection | None:
+    """Take the debug panel's one-shot injection for this turn, clearing it from the campaign."""
+    state = _state(run.engine, run.campaign_id)
+    injection = state.debug_injection
+    if injection is None:
+        return None
+    _record(run.engine, run.campaign_id, DebugInjectionCleared())
+    return injection
+
+
+async def _inject_debug_tool(
+    run: _Run, turn: Turn, injection: DebugInjection
+) -> AsyncIterator[TurnEvent]:
+    """Run a debug-injected tool call as the GM's own action just before the narration, so the
+    narrator and the review see a deliberately wrong action in the record."""
+    yield Status(f"Injecting {injection.tool}...")
+    request = ToolRequest(
+        id=f"debug-injection-{turn.opener}",
+        name=injection.tool,
+        arguments=injection.arguments,
+    )
+    result = await run_tool(run.tool_calls, request, ctx=run.ctx)
+    if isinstance(result, Ask):
+        result = ToolRun(
+            json.dumps(
+                {
+                    "error": "the debug-injected tool needs the player's answer; "
+                    "choose a tool that runs without one"
+                }
+            ),
+            None,
+        )
+    step = ChatReply(text="", tool_requests=(request,))
+    messages = [
+        _tool_call_message(step),
+        {"role": "tool", "tool_call_id": request.id, "content": result.output},
+    ]
+    context = [
+        ContextPart(
+            "assistant",
+            "Debug-injected GM tool call",
+            f"{request.name}({request.arguments})",
+        ),
+        ContextPart("tool", f"Result of '{request.name}' (debug injection)", result.output),
+    ]
+    _record(
+        run.engine,
+        run.campaign_id,
+        DebugInjectionRan(tool=request.name, messages=messages, context=_dicts(context)),
+    )
+    for entry in _flush(run):
+        yield entry
+
+
 async def _narrate(
-    run: _Run, turn: Turn, result: list[tuple[str, str]]
+    run: _Run, turn: Turn, result: list[tuple[str, str]], forced: str = ""
 ) -> AsyncIterator[TurnEvent]:
     """Stream the narration and put its text and reasoning in `result`. An empty reply is asked
-    for again before the turn fails."""
+    for again before the turn fails. `forced` is the debug panel's injected narration, which is
+    streamed as if the model wrote it; it is not recorded itself, so the review sees it first."""
     yield Status("Narrating...")
+    if forced:
+        yield Delta(forced)
+        result.append((forced, ""))
+        return
     messages = _narration_messages(run, turn)
     reply = ""
     reasoning = ""
@@ -895,12 +957,10 @@ async def _review_narration(
     if tools is None:
         result.append(_ReviewResult(undone=False))
         return
-    yield Status("Checking the narration...")
+    yield Status("Reviewing the turn...")
     view = _narration_messages(run, turn)
     view.append(_text_message(narration, reasoning))
-    view.append(
-        {"role": "system", "content": narration_review_instruction(run.rule_set, run.world)}
-    )
+    view.append({"role": "system", "content": TURN_REVIEW_INSTRUCTION})
     undone = False
     changed = False
     for round_no in range(1, REVIEW_ROUNDS + 1):
@@ -916,17 +976,15 @@ async def _review_narration(
         messages: list[dict[str, Any]] = [_tool_call_message(step)]
         context: list[ContextPart] = []
         if step.text.strip():
-            context.append(
-                ContextPart("assistant", f"Narration review (round {round_no})", step.text)
-            )
+            context.append(ContextPart("assistant", f"Turn review (round {round_no})", step.text))
         for request in step.tool_requests:
             tool_result = await run_tool(run.tool_calls, request, ctx=run.ctx)
             if isinstance(tool_result, Ask):
                 tool_result = ToolRun(
                     json.dumps(
                         {
-                            "error": "the narration review cannot wait for the player; fix "
-                            "what you can without asking, or undo the narration"
+                            "error": "the turn review cannot wait for the player; fix what "
+                            "you can without asking, or undo the narration"
                         }
                     ),
                     None,
@@ -1113,6 +1171,14 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             ),
         )
 
+    injection = _take_debug_injection(run)
+    forced_narration = ""
+    if injection is not None and injection.mode == "tool":
+        async for event in _inject_debug_tool(run, turn, injection):
+            yield event
+        turn = _turn(_state(run.engine, run.campaign_id))
+    elif injection is not None and injection.mode == "narration":
+        forced_narration = injection.text
     if _turn_has_day_end(run.engine, run.campaign_id, turn.opener):
         async for event in _write_journal(run, turn):
             yield event
@@ -1121,7 +1187,12 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
     for review_round in range(NARRATION_REVIEWS + 1):
         turn = _turn(_state(run.engine, run.campaign_id))
         written: list[tuple[str, str]] = []
-        async for event in _narrate(run, turn, written):
+        async for event in _narrate(
+            run,
+            turn,
+            written,
+            forced=forced_narration if review_round == 0 else "",
+        ):
             yield event
         reply, reasoning = written[0]
         if review_round >= NARRATION_REVIEWS:

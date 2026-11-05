@@ -36,6 +36,7 @@ from cygnusforge.services.state import (  # noqa: F401
     Character,
     Clock,
     ContextPart,
+    DebugInjection,
     Encounter,
     EncounterMap,
     Item,
@@ -883,7 +884,7 @@ class JournalStarted(GameEvent):
 
 @dataclass(frozen=True)
 class NarrationUndone(GameEvent):
-    """A narration review set the just-written narration aside and will write the story again.
+    """A turn review set the just-written narration aside and will write the story again.
     The narration itself was not recorded, so this only carries the review's reason, which the
     next narration reads so it does not repeat the fault."""
 
@@ -1095,9 +1096,9 @@ class StateStepMade(GameEvent):
 
 @dataclass(frozen=True)
 class ReviewStepMade(GameEvent):
-    """One narration review step's tool calls and results. The review reads the narration that
-    was just written; its tool calls fix the record, and a narration written again after an undo
-    sees them."""
+    """One turn review step's tool calls and results. The review reads the actions and narration
+    just written; its tool calls fix the record, and a narration written again after an undo sees
+    them."""
 
     kind: ClassVar[str] = "turn.review_step"
     hidden: ClassVar[bool] = True
@@ -2309,6 +2310,57 @@ class DebugCurrencyAdded(GameEvent):
 
     def render(self) -> str:
         return f"{self.name} is given {self.amount} {self.feature} from the debug panel."
+
+
+@dataclass(frozen=True)
+class DebugInjectionSet(GameEvent):
+    """A one-shot fault the debug panel forces into the next GM turn: a tool call run just before
+    the narration, or text that replaces it."""
+
+    kind: ClassVar[str] = "debug.injection_set"
+    hidden: ClassVar[bool] = True
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    mode: str
+    tool: str = ""
+    arguments: str = "{}"
+    text: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.debug_injection = DebugInjection(
+            mode=self.mode, tool=self.tool, arguments=self.arguments, text=self.text
+        )
+
+
+@dataclass(frozen=True)
+class DebugInjectionCleared(GameEvent):
+    """The pending debug injection was taken by a turn, or removed from the debug panel."""
+
+    kind: ClassVar[str] = "debug.injection_cleared"
+    hidden: ClassVar[bool] = True
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.debug_injection = None
+
+
+@dataclass(frozen=True)
+class DebugInjectionRan(GameEvent):
+    """A debug-injected tool call and its result, added to the open turn so the narration and the
+    review see the wrong action exactly as if the GM had made it."""
+
+    kind: ClassVar[str] = "debug.injection_ran"
+    hidden: ClassVar[bool] = True
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    tool: str
+    messages: list[dict[str, Any]]
+    context: list[dict[str, str]]
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        turn = _open_turn(state)
+        turn.messages.extend(self.messages)
+        turn.context.extend(_parts(self.context))
 
 
 @dataclass(frozen=True)

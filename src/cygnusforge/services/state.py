@@ -350,8 +350,8 @@ class Turn:
     prompt: Ask | None = None
     # NPC lines written this turn that the narration has not seen yet: {"speaker", "dialogue"}.
     speech: list[dict[str, str]] = field(default_factory=list)
-    # What a narration review found wrong with the narration it set aside, so the next narration
-    # can correct it. Cleared when that narration is accepted.
+    # What a turn review found wrong with the narration it set aside, so the next narration can
+    # correct it. Cleared when that narration is accepted.
     revision: str = ""
     # Why the last step stopped, when it stopped with an error and has not been retried yet.
     failed: str | None = None
@@ -460,6 +460,17 @@ class WorldObject:
     name: str = ""
 
 
+@dataclass(frozen=True)
+class DebugInjection:
+    """A one-shot fault a debug panel setting forces into the next GM turn. `mode` is "tool" for
+    a tool call run just before the narration, or "narration" for text that replaces it."""
+
+    mode: str
+    tool: str = ""
+    arguments: str = "{}"
+    text: str = ""
+
+
 @dataclass
 class CampaignState:
     """The campaign as its log says it is now. Keys of `places` and `characters` are the names
@@ -478,6 +489,8 @@ class CampaignState:
     journal: str = ""
     # The event that began the last journal step. The next one writes from the log after it.
     journal_through: int = 0
+    # A one-shot fault the debug panel forces into the next GM turn, or None.
+    debug_injection: DebugInjection | None = None
     # Options shared by the whole campaign, keyed by field id. Empty until they are chosen.
     options: dict[str, str] = field(default_factory=dict)
     # Long-running efforts by name without case, such as projects, research, and faction turns.

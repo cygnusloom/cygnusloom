@@ -52,8 +52,8 @@ def tool_specs(
     review_step: bool = False,
 ) -> list[dict[str, Any]] | None:
     """The tool list for a chat request, or None when there are no tools for it. The journal step
-    gets only its own tools; the narration review step gets the usual tools plus its own; every
-    other step gets the usual tools."""
+    gets only its own tools; the turn review step gets the usual tools plus its own; every other
+    step gets the usual tools."""
     if journal_step:
         selected = [tool for tool in tool_calls.values() if tool.journal_step]
     elif review_step:

@@ -73,7 +73,7 @@ def test_each_phase_shows_a_status_and_only_the_narration_is_streamed(
         "Managing state...",
         "Updating the journal...",
         "Narrating...",
-        "Checking the narration...",
+        "Reviewing the turn...",
     ]
     narrating_at = events.index({"type": "status", "text": "Narrating..."})
     assert _deltas(events[:narrating_at]) == ""

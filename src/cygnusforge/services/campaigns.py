@@ -34,11 +34,14 @@ from cygnusforge.services.events import (
     ChatGM,
     ChatPlayer,
     ContextPart,
+    DebugInjectionCleared,
+    DebugInjectionSet,
     TurnFailed,
     decode,
     estimate_tokens,
     events_since,
     is_hidden,
+    record,
 )
 from cygnusforge.services.names import next_campaign_label
 from cygnusforge.services.prompts import (
@@ -396,6 +399,57 @@ def set_debug_currency(
     get_campaign(engine, owner_id, campaign_id)
     with _exclusive(campaign_id), session_scope(engine) as db:
         return combat.add_debug_currency(db, campaign_id, name, feature, amount)
+
+
+def set_debug_injection(
+    engine: Engine,
+    owner_id: int,
+    campaign_id: int,
+    mode: str,
+    tool: str = "",
+    arguments: str = "{}",
+    text: str = "",
+) -> dict[str, Any]:
+    """Set the one-shot fault the next GM turn must carry, for testing the review step. `tool`
+    names a tool call run just before the narration; `text` replaces the narration. Refused while
+    the GM is still writing a reply."""
+    get_campaign(engine, owner_id, campaign_id)
+    if mode == "tool":
+        tool = (tool or "").strip()
+        if not tool:
+            raise InvalidInput("choose a tool to inject")
+        if len(tool) > MAX_NAME:
+            raise InvalidInput(f"tool must be at most {MAX_NAME} characters")
+        arguments = (arguments or "{}").strip() or "{}"
+        if len(arguments) > MAX_MESSAGE:
+            raise InvalidInput(f"arguments must be at most {MAX_MESSAGE} characters")
+        text = ""
+    elif mode == "narration":
+        text = (text or "").strip()
+        if not text:
+            raise InvalidInput("text must hold the narration to inject")
+        if len(text) > MAX_MESSAGE:
+            raise InvalidInput(f"text must be at most {MAX_MESSAGE} characters")
+        tool = ""
+        arguments = "{}"
+    else:
+        raise InvalidInput("mode must be tool or narration")
+    with _exclusive(campaign_id), session_scope(engine) as db:
+        record(
+            db,
+            campaign_id,
+            DebugInjectionSet(mode=mode, tool=tool, arguments=arguments, text=text),
+        )
+        db.commit()
+    return {"injection": mode, "tool": tool}
+
+
+def clear_debug_injection(engine: Engine, owner_id: int, campaign_id: int) -> None:
+    """Remove a pending debug injection. Refused while the GM is still writing a reply."""
+    get_campaign(engine, owner_id, campaign_id)
+    with _exclusive(campaign_id), session_scope(engine) as db:
+        record(db, campaign_id, DebugInjectionCleared())
+        db.commit()
 
 
 @dataclass(frozen=True)

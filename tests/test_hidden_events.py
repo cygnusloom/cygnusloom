@@ -59,6 +59,11 @@ def test_gm_bookkeeping_is_hidden_and_what_the_pc_perceives_is_visible():
     assert is_hidden("npc.added")
     assert is_hidden("npc.known")
     assert is_hidden("combat.debug_stat_set")
+    assert is_hidden("debug.injection_set")
+    assert is_hidden("debug.injection_cleared")
+    assert is_hidden("debug.injection_ran")
+    assert is_hidden("narration.undone")
+    assert is_hidden("turn.review_step")
     assert EVENT_TYPES["chat.gm"].hidden is False
     assert not is_hidden("chat.gm")
     assert not is_hidden("chat.player")

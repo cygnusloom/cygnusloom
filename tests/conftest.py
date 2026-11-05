@@ -147,7 +147,7 @@ def client(client_factory: Callable[[], TestClient]) -> TestClient:
 
 
 JOURNAL_STEP = "Journal step."
-REVIEW_STEP = "Narration review step."
+REVIEW_STEP = "Turn review step."
 
 
 def is_journal_messages(messages: list[dict[str, Any]]) -> bool:

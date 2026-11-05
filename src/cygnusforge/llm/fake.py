@@ -16,8 +16,8 @@ posts the answer next. Its `text` is the narration. Its `error` raises LLMError;
 Within a turn, `chat` calls (the GM's state steps) get the rounds and return no text, and `stream`
 calls (the narration) get `text`. A review that undoes the narration makes the next `stream` call
 get `rewrite` instead. A journal step (its system message starts "Journal step.") gets the
-turn's `journal` rounds, one list of tool calls per round, and no text. A narration review step
-(its system message starts "Narration review step.") gets the turn's `review` passes, one list of
+turn's `journal` rounds, one list of tool calls per round, and no text. A turn review step (its
+system message starts "Turn review step.") gets the turn's `review` passes, one list of
 tool-call rounds per pass; the next pass starts after an undo. A speech step (its system message
 starts "Speech step.") gets the dialogue from the turn's `speech` object, keyed by the speaker's
 name. A speaker not listed there gets the intent back as its dialogue. A newer directive replaces
@@ -38,7 +38,7 @@ DIRECTIVE = "__FAKE__:"
 SPEECH_MARKER = "Speech step."
 OOC_MARKER = "Out-of-character step."
 JOURNAL_MARKER = "Journal step."
-REVIEW_MARKER = "Narration review step."
+REVIEW_MARKER = "Turn review step."
 REVISION_MARKER = "The last narration was set aside because:"
 _decoder = json.JSONDecoder()
 _WORDS = re.compile(r"\s*\S+|\s+")
@@ -101,7 +101,7 @@ def _journal_start(messages: list[dict[str, Any]]) -> int | None:
 
 
 def _review_start(messages: list[dict[str, Any]]) -> int | None:
-    """The index of the narration review instruction in the current turn, or None. Tool calls and
+    """The index of the turn review instruction in the current turn, or None. Tool calls and
     results follow it within a review step, so it need not be the last message."""
     last_user = max((i for i, m in enumerate(messages) if m["role"] == "user"), default=-1)
     for index in range(len(messages) - 1, last_user, -1):

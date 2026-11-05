@@ -608,6 +608,8 @@ def test_debug_panel_turns_invincibility_on_and_off(settings: Settings, fake: Fa
     page = client.get(f"/campaigns/{campaign_id}").text
     assert 'id="tab-debug"' in page
     assert "Make invincible" in page
+    assert "Inject tool call" in page
+    assert "Inject narration" in page
     assert _set_invincibility(client, campaign_id, "Ada", True).status_code == 303
     assert "Stop invincibility" in client.get(f"/campaigns/{campaign_id}").text
     assert _set_invincibility(client, campaign_id, "Ada", False).status_code == 303
