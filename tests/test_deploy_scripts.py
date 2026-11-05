@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -67,3 +68,27 @@ def test_entrypoint_waits_for_database_dns() -> None:
     entrypoint = ROOT / "deploy" / "entrypoint.sh"
     subprocess.run(["sh", "-n", str(entrypoint)], check=True, capture_output=True, text=True)
     assert "retrying migrations" in entrypoint.read_text()
+
+
+def test_dockerfile_copies_the_files_the_wheel_build_needs() -> None:
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    wheel = pyproject["tool"]["hatch"]["build"]["targets"]["wheel"]
+    needed = {Path(source).name for source in wheel["force-include"]}
+    needed.update(Path(name).name for name in pyproject["project"]["license-files"])
+
+    lines = (ROOT / "Dockerfile").read_text().splitlines()
+    install = next(
+        index
+        for index, line in enumerate(lines)
+        if line.startswith("RUN uv sync") and "--no-install-project" not in line
+    )
+    copied = {
+        Path(token).name
+        for line in lines[:install]
+        if line.startswith("COPY ")
+        for token in line.split()[1:-1]
+        if not token.startswith("--")
+    }
+    assert needed <= copied
+    # The image must import the wheel, where CREDITS.md is force-included, not the source tree.
+    assert "--no-editable" in lines[install]

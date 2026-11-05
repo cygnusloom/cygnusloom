@@ -12,7 +12,10 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY src ./src
 COPY alembic.ini ./
 COPY alembic ./alembic
-RUN uv sync --frozen --no-dev
+# The wheel force-includes CREDITS.md and ships LICENSE, so both must be here to build.
+COPY CREDITS.md LICENSE ./
+# Install the project from its wheel, so the image imports the packaged files, not src/.
+RUN uv sync --frozen --no-dev --no-editable
 
 FROM python:3.12-slim
 
@@ -25,7 +28,6 @@ RUN groupadd --system app && useradd --system --gid app --home-dir /app app
 WORKDIR /app
 
 COPY --from=builder /app/.venv /app/.venv
-COPY --from=builder /app/src /app/src
 COPY --from=builder /app/alembic /app/alembic
 COPY alembic.ini ./alembic.ini
 COPY deploy/entrypoint.sh ./entrypoint.sh
