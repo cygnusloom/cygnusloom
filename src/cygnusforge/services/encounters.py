@@ -42,6 +42,8 @@ from cygnusforge.services.events import (
     MapCellsChanged,
     MapCreated,
     MapDeleted,
+    MapTokenPlaced,
+    MapTokenRemoved,
     MapUpdated,
     ParticipantJoined,
     ParticipantLeft,
@@ -225,9 +227,12 @@ def create_map(
     template: str = "",
     templates: Mapping[str, EncounterTemplate] | None = None,
 ) -> dict[str, Any]:
-    """Create a map. With a `template`, its size and background come from the template and its
-    cells become marks; `columns` and `rows`, if given, override the template size. Without one,
-    columns and rows are required and the map starts empty."""
+    """Create a map at a location. A map is not necessarily an encounter: outside one it is a
+    local map that shows the player character, NPCs, and props where they stand. With a
+    `template`, its size and background come from the template and its cells become marks;
+    `columns` and `rows`, if given, override the template size. Without one, columns and rows are
+    required and the map starts empty. A location may have several maps; the newest is its local
+    map, and an encounter can start on any of them."""
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_MAP_NAME)
     if name_key(name) in state.maps:
@@ -404,6 +409,97 @@ def delete_map(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
     return {"deleted": "encounter map", "name": entry.name}
 
 
+def _token_name(key: str) -> str:
+    """A readable name for a token that is not a character, from its name key."""
+    return " ".join(word.capitalize() for word in key.replace("_", " ").split())
+
+
+def _in_encounter_on(state: CampaignState, entry: EncounterMap) -> bool:
+    """Whether the encounter in progress is using this map, so its cells are the only positions."""
+    return state.encounter is not None and name_key(state.encounter.map) == name_key(entry.name)
+
+
+def place_map_token(
+    db: Session,
+    campaign_id: int,
+    map_name: str,
+    name: str,
+    column: int,
+    row: int,
+    encounter_objects: Mapping[str, EncounterObject] | None = None,
+) -> dict[str, Any]:
+    """Place a token on a local map outside an encounter. A token may be a character, an NPC, or
+    a prop; a character must be at the map's location. During an encounter, positions belong to
+    `Encounter.cells`, so it refuses and `place_participant` is used instead.
+
+    The cell must be on the map and free: a blocking object or another token cannot share it.
+    Placing a token again moves it."""
+    state = load_state(db, campaign_id)
+    entry = _map_named(state, map_name)
+    if _in_encounter_on(state, entry):
+        raise InvalidInput(
+            f"an encounter is in progress on {entry.name}; "
+            "use place_participant to place a character in the fight"
+        )
+    name = bounded_text(name, "name", MAX_MAP_NAME)
+    key = name_key(name)
+    character = state.characters.get(key)
+    if character is not None:
+        if character.location is None:
+            raise InvalidInput(
+                f"{character.name} is not at any location; move them to {entry.location} first"
+            )
+        if name_key(character.location) != name_key(entry.location):
+            raise InvalidInput(
+                f"{character.name} is at {character.location}, not at {entry.location}, "
+                f"where {entry.name} is"
+            )
+    if not (_is_int(column) and _is_int(row)) or not (
+        0 <= column < entry.columns and 0 <= row < entry.rows
+    ):
+        raise InvalidInput(
+            f"a token can only go to columns 0 to {entry.columns - 1} and rows 0 to "
+            f"{entry.rows - 1} on {entry.name}"
+        )
+    target = (column, row)
+    blocker = _blocks(entry, target, encounter_objects or {})
+    if blocker:
+        raise InvalidInput(f"column {column}, row {row} is blocked by {blocker} on {entry.name}")
+    for other, cell in entry.tokens.items():
+        if other != key and cell == target:
+            raise InvalidInput(
+                f"column {column}, row {row} is taken by {_token_name(other)} on {entry.name}"
+            )
+    display = character.name if character is not None else name
+    record(
+        db,
+        campaign_id,
+        MapTokenPlaced(map=entry.name, name=display, column=column, row=row),
+    )
+    db.commit()
+    return {"placed": display, "map": entry.name, "column": column, "row": row}
+
+
+def remove_map_token(db: Session, campaign_id: int, map_name: str, name: str) -> dict[str, Any]:
+    """Take a token off a local map outside an encounter."""
+    state = load_state(db, campaign_id)
+    entry = _map_named(state, map_name)
+    if _in_encounter_on(state, entry):
+        raise InvalidInput(
+            f"an encounter is in progress on {entry.name}; "
+            "use remove_participant to take a character out of the fight"
+        )
+    name = bounded_text(name, "name", MAX_MAP_NAME)
+    key = name_key(name)
+    if key not in entry.tokens:
+        raise InvalidInput(f"there is no token named {name!r} on {entry.name}")
+    character = state.characters.get(key)
+    display = character.name if character is not None else name
+    record(db, campaign_id, MapTokenRemoved(map=entry.name, name=display))
+    db.commit()
+    return {"removed": display, "map": entry.name}
+
+
 def start_encounter(
     db: Session,
     campaign_id: int,
@@ -575,7 +671,17 @@ def add_participant(
     elif not isinstance(side, str) or not side.strip():
         raise InvalidInput("a side needs a name, such as party or foes")
     side = side.strip()
+    entry = state.maps.get(name_key(encounter.map))
+    token = entry.tokens.get(name_key(character.name)) if entry is not None else None
     record(db, campaign_id, ParticipantJoined(name=character.name, side=side))
+    # A local map's token cell becomes the participant's cell, so a fight that starts on the
+    # map does not need everyone placed again. The token stays on the map for when it is over.
+    if token is not None and token not in encounter.cells.values():
+        record(
+            db,
+            campaign_id,
+            ParticipantPlaced(name=character.name, column=token[0], row=token[1], cost=0),
+        )
     db.commit()
     result: dict[str, Any] = {"added": character.name, "side": side}
     if character.location != encounter.location:
@@ -883,5 +989,116 @@ def encounter_view(
         "moves_left": _moves_left(encounter, grid),
         "move_cells": grid.move_cells if grid is not None else None,
         "cell_feet": grid.cell_feet if grid is not None else None,
+        "participants": participants,
+    }
+
+
+def _newest_map_at(state: CampaignState, place_name: str) -> EncounterMap | None:
+    """The newest map set in a place, or None when it has none."""
+    matching = [
+        encounter_map
+        for encounter_map in state.maps.values()
+        if name_key(encounter_map.location) == name_key(place_name)
+    ]
+    if not matching:
+        return None
+    return max(enumerate(matching), key=lambda pair: (pair[1].created, pair[0]))[1]
+
+
+def _local_map_for(state: CampaignState, current_location: str | None) -> EncounterMap | None:
+    """The local map for a place: its newest map, or the newest map of its nearest parent."""
+    place = state.places.get(name_key(current_location)) if current_location else None
+    while place is not None:
+        entry = _newest_map_at(state, place.name)
+        if entry is not None:
+            return entry
+        place = state.places.get(name_key(place.parent)) if place.parent else None
+    return None
+
+
+def local_map_view(
+    state: CampaignState,
+    grid: EncounterGrid | None,
+    terrain: Mapping[str, EncounterTerrain] | None,
+    encounter_objects: Mapping[str, EncounterObject] | None,
+    characters: Mapping[str, Character],
+    current_location: str | None,
+) -> dict[str, Any] | None:
+    """The local map where the player is, as the UI and the GM's orientation text show it.
+
+    The map is the newest one at the place, or at its nearest parent when the place has none.
+    It shows the characters there and every token placed on it; a character with a token stands
+    on that cell. None when the player has no place or no map covers it. This is not an
+    encounter: there is no round, turn, or movement allowance."""
+    entry = _local_map_for(state, current_location)
+    if entry is None:
+        return None
+    terrain = terrain or {}
+    encounter_objects = encounter_objects or {}
+    found: dict[str, dict[str, Any]] = {}
+    for key, cell in entry.tokens.items():
+        character = characters.get(key)
+        if character is None:
+            found[key] = {
+                "name": _token_name(key),
+                "cell": cell,
+                "is_pc": False,
+                "creature": "",
+                "status": "",
+                "defeated": False,
+            }
+        else:
+            found[key] = {
+                "name": character.name,
+                "cell": cell,
+                "is_pc": character.kind == PC_KIND,
+                "creature": _creature_label(character),
+                "status": _status(character, None),
+                "defeated": character.defeated,
+            }
+    occupied = set(entry.tokens.values())
+    here = {name_key(entry.location)}
+    if current_location:
+        here.add(name_key(current_location))
+    for key, character in characters.items():
+        if key in found:
+            continue
+        if character.location is None or name_key(character.location) not in here:
+            continue
+        # A character with no token yet still stands somewhere in the room. Give them the first
+        # free cell for display; placing a token persists that cell for the next encounter.
+        cell = next(
+            (
+                (column, row)
+                for row in range(entry.rows)
+                for column in range(entry.columns)
+                if (column, row) not in occupied
+                and not _blocks(entry, (column, row), encounter_objects)
+            ),
+            None,
+        )
+        if cell is not None:
+            occupied.add(cell)
+        found[key] = {
+            "name": character.name,
+            "cell": cell,
+            "is_pc": character.kind == PC_KIND,
+            "creature": _creature_label(character),
+            "status": _status(character, None),
+            "defeated": character.defeated,
+        }
+    labels = token_labels(participant["name"] for participant in found.values())
+    participants = [
+        {"number": number, "label": labels[participant["name"]], **participant}
+        for number, participant in enumerate(found.values(), start=1)
+    ]
+    return {
+        "map": entry.name,
+        "location": entry.location,
+        "description": entry.description,
+        "columns": entry.columns,
+        "rows": entry.rows,
+        "background": _terrain_view(entry.background, terrain),
+        "marked_cells": _marked_cells(entry, terrain, encounter_objects),
         "participants": participants,
     }

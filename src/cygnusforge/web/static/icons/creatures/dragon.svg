@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Dragon</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 30 L22 20 L20 8 L30 16 Q32 12 38 12 L52 24 L58 22 L52 34 Q46 48 30 50 L14 44 L20 38 L10 36 Z" fill="#6f9a63"/><path d="M22 20 L34 28 L44 24" fill="none"/><circle cx="47" cy="25" r="2" fill="#2e2620"/><path d="M30 50 L24 58 M38 48 L42 58"/>
+  </g>
+</svg>

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -13,6 +13,7 @@ from starlette.responses import Response
 
 from cygnusforge.auth.deps import page_user, verify_csrf
 from cygnusforge.content.character import NO_CAMPAIGN, NO_CHARACTER, character_schema
+from cygnusforge.content.library import TABLE_GENRES
 from cygnusforge.db.models import User
 from cygnusforge.llm.base import LLMError
 from cygnusforge.services import level_up as level_up_service
@@ -65,8 +66,8 @@ from cygnusforge.services.campaigns import (
 )
 from cygnusforge.services.common import Conflict, InvalidInput, NotFound, session_scope
 from cygnusforge.services.compendium import compendium_view
-from cygnusforge.services.encounters import encounter_view
-from cygnusforge.services.events import last_event_id, load_state, speaker_name
+from cygnusforge.services.encounters import encounter_view, local_map_view
+from cygnusforge.services.events import CampaignState, last_event_id, load_state, speaker_name
 from cygnusforge.services.tools import check_arguments
 from cygnusforge.services.views import map_view, scene_view, time_view
 from cygnusforge.web.character_form import (
@@ -111,6 +112,7 @@ async def create(request: Request) -> Response:
     world_template = form_text(form, "world_template")
     rule_set = form_text(form, "rule_set")
     setting = form_text(form, "setting")
+    table_genres = [value for value in form.getlist("table_genres") if isinstance(value, str)]
     catalog = request.app.state.catalog
     models = catalog.model_ids()
     if not models:
@@ -131,6 +133,7 @@ async def create(request: Request) -> Response:
             rule_set,
             catalog.default_model_id(),
             setting=setting,
+            table_genres=table_genres,
         )
     except InvalidInput as exc:
         return _new_form(
@@ -142,6 +145,7 @@ async def create(request: Request) -> Response:
             world_template=world_template,
             rule_set=rule_set,
             setting=setting,
+            table_genres=table_genres,
         )
     return RedirectResponse(f"/campaigns/{campaign.id}", status_code=303)
 
@@ -341,6 +345,7 @@ def map_fragment(request: Request, campaign_id: int) -> Response:
         rule_set.terrain if rule_set else None,
         rule_set.encounter_objects if rule_set else None,
     )
+    local_map = _local_map(world.state, rule_set)
     return render(
         request,
         "campaign_map.html",
@@ -348,6 +353,8 @@ def map_fragment(request: Request, campaign_id: int) -> Response:
         time=time_view(world.state, rule_set.clock if rule_set else None),
         encounter=encounter,
         encounter_rows=_encounter_rows(encounter) if encounter is not None else [],
+        local_map=local_map,
+        local_map_rows=_encounter_rows(local_map) if local_map is not None else [],
     )
 
 
@@ -789,6 +796,7 @@ def _new_form(
     world_template: str = "",
     rule_set: str = "",
     setting: str = "",
+    table_genres: Sequence[str] | None = None,
 ) -> Response:
     library = request.app.state.content
     # The rule set comes first and decides which worlds are offered, so start from a rule set
@@ -804,6 +812,13 @@ def _new_form(
         world_template = worlds[0].id if worlds else ""
     chosen_rule_set = library.rule_sets.get(rule_set)
     chosen_world = library.world_templates.get(world_template)
+    # A fresh form starts on the rule set's own genres. A form shown again after an error keeps
+    # what the player checked, so the correction is the only thing they have to make.
+    selected_table_genres = (
+        tuple(table_genres)
+        if table_genres
+        else (chosen_rule_set.table_genres if chosen_rule_set else ())
+    )
     default_labels = default_campaign_labels(request.app.state.engine, library, user.id)
     return render(
         request,
@@ -812,6 +827,8 @@ def _new_form(
         error=error,
         campaign_label=label or default_labels.get(world_template, ""),
         campaign_setting=setting,
+        table_genres=TABLE_GENRES,
+        selected_table_genres=selected_table_genres,
         world_labels=default_labels,
         world_templates=library.world_templates.values(),
         rule_sets=library.rule_sets.values(),
@@ -964,6 +981,7 @@ def _campaign_page(
         rule_set.terrain if rule_set else None,
         rule_set.encounter_objects if rule_set else None,
     )
+    local_map = _local_map(world.state, rule_set)
     debug_xp, debug_advancement = (
         level_up_service.debug_grant_options(world.state, rule_set)
         if settings.debug_panel and rule_set is not None
@@ -1005,6 +1023,8 @@ def _campaign_page(
         models=request.app.state.catalog.model_ids(),
         encounter=encounter,
         encounter_rows=_encounter_rows(encounter) if encounter is not None else [],
+        local_map=local_map,
+        local_map_rows=_encounter_rows(local_map) if local_map is not None else [],
         debug_panel=settings.debug_panel,
         debug_currency=rule_set.marketplace.currency if rule_set and rule_set.marketplace else "",
         debug_stats=[(stat.id, stat.name) for stat in spec.stats.values()],
@@ -1014,6 +1034,23 @@ def _campaign_page(
         debug_injection=world.state.debug_injection,
         pc_invincible=pc.invincible,
         item_kind_icons=magic.item_kind_icons if magic is not None else {},
+    )
+
+
+def _local_map(state: CampaignState, rule_set: Any) -> dict[str, Any] | None:
+    """The map of the place the player character is in, if the place has one."""
+    if rule_set is None:
+        return None
+    player = state.pc()
+    if player is None:
+        return None
+    return local_map_view(
+        state,
+        rule_set.grid,
+        rule_set.terrain,
+        rule_set.encounter_objects,
+        state.characters,
+        player.location,
     )
 
 

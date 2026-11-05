@@ -1162,13 +1162,14 @@ class MapCreated(GameEvent):
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.maps[name_key(self.name)] = EncounterMap(
-            self.name,
-            self.location,
-            self.columns,
-            self.rows,
-            self.description,
-            self.background,
-            {k: v for k, v in marks_from_list(self.marks).items() if v.terrain or v.object},
+            name=self.name,
+            location=self.location,
+            columns=self.columns,
+            rows=self.rows,
+            description=self.description,
+            background=self.background,
+            marks={k: v for k, v in marks_from_list(self.marks).items() if v.terrain or v.object},
+            created=event_id,
         )
 
     def render(self) -> str:
@@ -1198,20 +1199,28 @@ class MapUpdated(GameEvent):
         before = state.maps.pop(key)
         name = self.new_name or before.name
         location = self.location or before.location
-        # Marks outside a smaller map are dropped, so replaying the log gives the same map.
+        # Marks and tokens outside a smaller map are dropped, so replaying the log gives the
+        # same map.
         marks = {
             (column, row): mark
             for (column, row), mark in before.marks.items()
             if column < self.columns and row < self.rows
         }
+        tokens = {
+            key: cell
+            for key, cell in before.tokens.items()
+            if cell[0] < self.columns and cell[1] < self.rows
+        }
         state.maps[name_key(name)] = EncounterMap(
-            name,
-            location,
-            self.columns,
-            self.rows,
-            self.description,
-            before.background,
-            marks,
+            name=name,
+            location=location,
+            columns=self.columns,
+            rows=self.rows,
+            description=self.description,
+            background=before.background,
+            marks=marks,
+            tokens=tokens,
+            created=before.created,
         )
         encounter = state.encounter
         if encounter is not None and name_key(encounter.map) == key:
@@ -1259,6 +1268,47 @@ class MapDeleted(GameEvent):
 
     def render(self) -> str:
         return f"Encounter map deleted: {self.name}."
+
+
+@dataclass(frozen=True)
+class MapTokenPlaced(GameEvent):
+    """A character, NPC, or prop is placed on a local map outside an encounter. When an encounter
+    starts on the map, the character's token cell becomes their participant cell."""
+
+    kind: ClassVar[str] = "map.token_placed"
+    hidden: ClassVar[bool] = True
+
+    map: str
+    name: str
+    column: int
+    row: int
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        encounter_map = state.maps.get(name_key(self.map))
+        if encounter_map is not None:
+            encounter_map.tokens[name_key(self.name)] = (self.column, self.row)
+
+    def render(self) -> str:
+        return f"{self.name} placed on {self.map} at column {self.column + 1}, row {self.row + 1}."
+
+
+@dataclass(frozen=True)
+class MapTokenRemoved(GameEvent):
+    """A token is taken off a local map outside an encounter."""
+
+    kind: ClassVar[str] = "map.token_removed"
+    hidden: ClassVar[bool] = True
+
+    map: str
+    name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        encounter_map = state.maps.get(name_key(self.map))
+        if encounter_map is not None:
+            encounter_map.tokens.pop(name_key(self.name), None)
+
+    def render(self) -> str:
+        return f"{self.name} removed from {self.map}."
 
 
 @dataclass(frozen=True)

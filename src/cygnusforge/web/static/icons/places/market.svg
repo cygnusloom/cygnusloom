@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Market</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 26 H56 V34 H8 Z" fill="#a9503f"/><path d="M8 26 L14 14 H50 L56 26 M20 26 V14 M32 26 V14 M44 26 V14"/><path d="M12 34 V52 H52 V34 M18 52 V44 H28 V52 M36 44 H46 V52"/><circle cx="24" cy="38" r="3" fill="#e6b53a"/><circle cx="40" cy="38" r="3" fill="#e6b53a"/>
+  </g>
+</svg>

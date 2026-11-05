@@ -9,7 +9,7 @@
         Rule set
         <select name="rule_set" required>
           {% for rule_set in rule_sets %}
-            <option value="{{ rule_set.id }}" data-blurb="{{ rule_set.blurb or rule_set.description }}"{% if rule_set.id == selected_rule_set %} selected{% endif %}>{{ rule_set.name }}</option>
+            <option value="{{ rule_set.id }}" data-blurb="{{ rule_set.blurb or rule_set.description }}" data-genres="{{ rule_set.table_genres | join(',') }}"{% if rule_set.id == selected_rule_set %} selected{% endif %}>{{ rule_set.name }}</option>
           {% endfor %}
         </select>
       </label>
@@ -28,6 +28,15 @@
         <textarea name="setting" rows="6" maxlength="4000" placeholder="Describe the kind of setting or story you want to play. Leave blank to let the world and rule set lead.">{{ campaign_setting }}</textarea>
       </label>
       <p class="muted">Tell Cygnus what kind of world or story you want. Blank is ignored.</p>
+      <details class="table-genres">
+        <summary>Creative and lore tables</summary>
+        <p class="muted">Optional. These genres choose which generation tables the GM is offered. The rule set's own choice is checked; leave it alone unless you want a different kind of setting.</p>
+        <div class="genre-options">
+          {% for genre in table_genres %}
+            <label><input type="checkbox" name="table_genres" value="{{ genre }}"{% if genre in selected_table_genres %} checked{% endif %}> {{ genre.replace("-", " ").capitalize() }}</label>
+          {% endfor %}
+        </div>
+      </details>
       <label>
         Label
         <input type="text" name="label" value="{{ campaign_label }}" maxlength="120">

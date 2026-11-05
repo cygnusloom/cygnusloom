@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Tavern</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 56 V26 L32 12 L56 26 V56 Z" fill="#b08a5e"/><path d="M20 56 V36 H34 V56 M40 24 H52 V40 H40 Z" fill="#f0e2c4"/><path d="M42 29 H50 V35 H42 Z" fill="#8b5e3c"/><path d="M24 42 V44 M29 42 V44"/>
+  </g>
+</svg>

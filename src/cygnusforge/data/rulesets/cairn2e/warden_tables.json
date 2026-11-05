@@ -2,6 +2,7 @@
   {
     "type": "dice_table",
     "id": "die_of_fate",
+    "genres": ["generic", "fantasy"],
     "name": "Die of Fate",
     "dice": "1d6",
     "rows": [
@@ -18,6 +19,7 @@
   {
     "type": "dice_table",
     "id": "monster_appearance_physique",
+    "genres": ["generic", "fantasy"],
     "name": "Appearance: Physique",
     "dice": "1d20",
     "rows": [
@@ -106,6 +108,7 @@
   {
     "type": "dice_table",
     "id": "monster_appearance_feature",
+    "genres": ["generic", "fantasy"],
     "name": "Appearance: Feature",
     "dice": "1d20",
     "rows": [
@@ -194,6 +197,7 @@
   {
     "type": "dice_table",
     "id": "monster_traits_quirks",
+    "genres": ["generic", "fantasy"],
     "name": "Traits: Quirks",
     "dice": "1d20",
     "rows": [
@@ -282,6 +286,7 @@
   {
     "type": "dice_table",
     "id": "monster_traits_weakness",
+    "genres": ["generic", "fantasy"],
     "name": "Traits: Weakness",
     "dice": "1d20",
     "rows": [
@@ -370,6 +375,7 @@
   {
     "type": "dice_table",
     "id": "monster_attacks_type",
+    "genres": ["generic", "fantasy"],
     "name": "Attacks: Type",
     "dice": "1d20",
     "rows": [
@@ -458,6 +464,7 @@
   {
     "type": "dice_table",
     "id": "monster_attacks_critical_damage",
+    "genres": ["generic", "fantasy"],
     "name": "Attacks: Critical Damage",
     "dice": "1d20",
     "rows": [
@@ -546,6 +553,7 @@
   {
     "type": "dice_table",
     "id": "monster_abilities_ability",
+    "genres": ["generic", "fantasy"],
     "name": "Abilities: Ability",
     "dice": "1d20",
     "rows": [
@@ -634,6 +642,7 @@
   {
     "type": "dice_table",
     "id": "monster_abilities_target",
+    "genres": ["generic", "fantasy"],
     "name": "Abilities: Target",
     "dice": "1d20",
     "rows": [

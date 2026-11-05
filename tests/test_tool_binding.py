@@ -209,7 +209,7 @@ def test_a_bound_tool_needs_a_campaign():
 
 def test_core_migrates_every_wrapper_that_fits_and_keeps_the_rest():
     calls = content_library().core.tool_calls
-    assert len(calls) == 38
+    assert len(calls) == 43
     assert {call_id for call_id, call in calls.items() if call.function is None} == (
         set(calls) - KEPT_PYTHON
     )
@@ -308,7 +308,7 @@ CAIRN_TOOLS = {
 def test_cairn_migrates_every_wrapper_that_fits_and_keeps_the_rest():
     library = content_library()
     calls = library.rule_sets["cairn2e"].tool_calls
-    assert set(calls) - set(library.core.tool_calls) == CAIRN_TOOLS
+    assert set(calls) - set(library.core.tool_calls) == CAIRN_TOOLS - {"set_map_cells"}
     assert {
         call_id for call_id, call in calls.items() if call_id in CAIRN_TOOLS and call.function
     } == CAIRN_KEPT_PYTHON

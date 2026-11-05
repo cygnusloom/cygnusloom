@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Spirit</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 52 Q10 42 14 30 Q18 14 32 12 Q46 14 50 30 Q54 42 46 52 Q40 46 36 54 Q32 48 28 54 Q24 46 18 52 Z" fill="#c9d9e6"/><circle cx="26" cy="30" r="3" fill="#2e2620"/><circle cx="38" cy="30" r="3" fill="#2e2620"/><path d="M29 39 Q32 42 35 39"/>
+  </g>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Aberration</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="32" cy="26" rx="20" ry="14" fill="#b9a7c9"/><circle cx="32" cy="26" r="7" fill="#f5f0e4"/><circle cx="32" cy="26" r="3" fill="#2e2620"/><path d="M16 38 Q10 48 16 58 M26 40 Q22 50 28 58 M38 40 Q42 50 36 58 M48 38 Q54 48 48 58"/>
+  </g>
+</svg>

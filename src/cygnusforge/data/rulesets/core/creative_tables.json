@@ -3,6 +3,7 @@
     "type": "creative_table",
     "id": "action",
     "name": "Action",
+    "genres": ["generic"],
     "source": "Ironsworn Rulebook by Shawn Tomkin, licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Text from the Datasworn transcription by rsek (https://github.com/rsek/datasworn), also CC BY 4.0.",
     "entries": [
       "Scheme",
@@ -111,6 +112,7 @@
     "type": "creative_table",
     "id": "theme",
     "name": "Theme",
+    "genres": ["generic"],
     "source": "Ironsworn Rulebook by Shawn Tomkin, licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Text from the Datasworn transcription by rsek (https://github.com/rsek/datasworn), also CC BY 4.0.",
     "entries": [
       "Risk",
@@ -219,6 +221,7 @@
     "type": "creative_table",
     "id": "plot_twist",
     "name": "Major Plot Twist",
+    "genres": ["generic"],
     "source": "Ironsworn Rulebook by Shawn Tomkin, licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Text from the Datasworn transcription by rsek (https://github.com/rsek/datasworn), also CC BY 4.0.",
     "entries": [
       "It was all a diversion.",
@@ -247,6 +250,7 @@
     "type": "creative_table",
     "id": "location",
     "name": "Location",
+    "genres": ["generic"],
     "source": "Ironsworn Rulebook by Shawn Tomkin, licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Text from the Datasworn transcription by rsek (https://github.com/rsek/datasworn), also CC BY 4.0. The rulebook weights some locations above others; here every entry is equally likely.",
     "entries": [
       "Hideout",
@@ -306,6 +310,7 @@
     "type": "creative_table",
     "id": "location_descriptor",
     "name": "Location Descriptor",
+    "genres": ["generic"],
     "source": "Ironsworn Rulebook by Shawn Tomkin, licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Text from the Datasworn transcription by rsek (https://github.com/rsek/datasworn), also CC BY 4.0.",
     "entries": [
       "High",

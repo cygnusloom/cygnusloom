@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Moor</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 54 Q16 42 26 50 Q36 38 46 48 Q54 42 58 50 V58 H6 Z" fill="#7d8a5e"/><path d="M14 44 V30 M14 34 L10 30 M14 38 L18 32 M28 40 V24 M28 28 L24 24 M28 32 L32 26 M44 44 V32 M44 36 L48 30 M44 40 L40 34" stroke="#4a5a2c"/><path d="M6 22 Q18 18 26 22 T46 22 T62 22" stroke="#b9c9c9"/>
+  </g>
+</svg>

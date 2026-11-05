@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Shrine</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 20 H54 M16 20 V12 H48 V20 M20 20 V52 M44 20 V52 M14 52 H50" stroke-width="3"/><path d="M26 52 V34 Q26 28 32 28 Q38 28 38 34 V52 Z" fill="#e8dcc4"/><circle cx="32" cy="38" r="3" fill="#e6b53a"/><path d="M8 56 H56"/>
+  </g>
+</svg>

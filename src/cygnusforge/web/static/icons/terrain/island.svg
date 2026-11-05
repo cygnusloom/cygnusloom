@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Island</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 48 Q16 40 32 42 Q48 40 58 48 Q48 58 32 56 Q16 58 6 48 Z" fill="#d9c58a"/><path d="M32 42 V20" stroke="#8b5e3c" stroke-width="4"/><path d="M32 22 Q18 18 14 8 Q30 10 32 22 Z M32 18 Q46 14 50 6 Q34 8 32 18 Z M32 30 Q22 28 18 20 Q30 22 32 30 Z" fill="#4d7a3c"/><path d="M4 52 Q14 48 24 52 M40 52 Q50 48 60 52" stroke="#4a8fae"/>
+  </g>
+</svg>

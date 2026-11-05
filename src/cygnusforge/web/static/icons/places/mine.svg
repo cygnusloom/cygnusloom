@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Mine</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 56 Q6 28 24 24 L40 24 Q58 28 58 56 Z" fill="#8a7d6d"/><path d="M20 56 V40 Q20 32 32 32 Q44 32 44 40 V56 Z" fill="#3f3a33"/><path d="M26 12 L46 4 M40 6 L46 4 L44 14" stroke="#8b5e3c"/><path d="M8 34 L16 30 M56 34 L48 30"/>
+  </g>
+</svg>

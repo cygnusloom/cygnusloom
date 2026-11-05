@@ -88,7 +88,9 @@ class Campaign(SQLModel, table=True):
 
     `world_template` and `rule_set` name directories under the bundled content. `setting` is the
     optional free-form setting or story the player asked for at creation; it reaches the GM's
-    prompt every turn and is blank when the player left it out."""
+    prompt every turn and is blank when the player left it out. `table_genres` is the optional
+    JSON list of genres the player narrowed the generation tables to at creation; blank means
+    the rule set's own choice."""
 
     __tablename__ = "campaign"
 
@@ -99,6 +101,7 @@ class Campaign(SQLModel, table=True):
     rule_set: str = Field(max_length=64)
     model: str = Field(max_length=120)
     setting: str = Field(default="", sa_column=Column(Text, nullable=False))
+    table_genres: str = Field(default="", sa_column=Column(Text, nullable=False))
     created_at: datetime = Field(default_factory=utcnow)
 
 

@@ -3,6 +3,7 @@
     "type": "feature",
     "id": "awl",
     "name": "Awl",
+    "looks_like": "dagger",
     "feature_type": "item",
     "description": "d6",
     "damage": "1d6"
@@ -11,6 +12,7 @@
     "type": "feature",
     "id": "backpack",
     "name": "Backpack",
+    "looks_like": "backpack",
     "feature_type": "item",
     "description": "Can hold up to six slots of items or Fatigue."
   },
@@ -18,6 +20,7 @@
     "type": "feature",
     "id": "badge",
     "name": "Badge",
+    "looks_like": "amulet",
     "feature_type": "item",
     "description": "",
     "size": "petty"
@@ -26,6 +29,7 @@
     "type": "feature",
     "id": "bandages",
     "name": "Bandages",
+    "looks_like": "tool",
     "feature_type": "item",
     "description": "3 uses",
     "uses": 3
@@ -34,6 +38,7 @@
     "type": "feature",
     "id": "black-outfit",
     "name": "Black Outfit",
+    "looks_like": "cloak",
     "feature_type": "item",
     "description": "",
     "size": "petty"
@@ -42,6 +47,7 @@
     "type": "feature",
     "id": "blank-book",
     "name": "Blank Book",
+    "looks_like": "book",
     "feature_type": "item",
     "description": ""
   },
@@ -49,6 +55,7 @@
     "type": "feature",
     "id": "blessed-tinctures",
     "name": "Blessed Tinctures",
+    "looks_like": "potion",
     "feature_type": "item",
     "description": ""
   },
@@ -56,6 +63,7 @@
     "type": "feature",
     "id": "boiled-leather",
     "name": "Boiled Leather",
+    "looks_like": "armor",
     "feature_type": "item",
     "description": "1 Armor",
     "armor": 1
@@ -64,6 +72,7 @@
     "type": "feature",
     "id": "bonesaw",
     "name": "Bonesaw",
+    "looks_like": "dagger",
     "feature_type": "item",
     "description": "d6",
     "damage": "1d6"
@@ -72,6 +81,7 @@
     "type": "feature",
     "id": "bow",
     "name": "Bow",
+    "looks_like": "bow",
     "feature_type": "item",
     "description": "d6 damage",
     "damage": "1d6",
@@ -81,6 +91,7 @@
     "type": "feature",
     "id": "brigandine",
     "name": "Brigandine",
+    "looks_like": "armor",
     "feature_type": "item",
     "description": "1 Armor",
     "armor": 1,
@@ -90,6 +101,7 @@
     "type": "feature",
     "id": "candle-helmet",
     "name": "Candle Helmet",
+    "looks_like": "helm",
     "feature_type": "item",
     "description": "+1 Armor, dim, 6 uses",
     "uses": 6,
@@ -99,6 +111,7 @@
     "type": "feature",
     "id": "cane-sword",
     "name": "Cane Sword",
+    "looks_like": "sword",
     "feature_type": "item",
     "description": "d6",
     "damage": "1d6"
@@ -107,6 +120,7 @@
     "type": "feature",
     "id": "cart",
     "name": "Cart",
+    "looks_like": "cart",
     "feature_type": "item",
     "description": "+4 slots",
     "size": "bulky"
@@ -115,6 +129,7 @@
     "type": "feature",
     "id": "chains",
     "name": "Chains",
+    "looks_like": "rope",
     "feature_type": "item",
     "description": "10ft"
   },
@@ -122,6 +137,7 @@
     "type": "feature",
     "id": "compass",
     "name": "Compass",
+    "looks_like": "tool",
     "feature_type": "item",
     "description": ""
   },
@@ -129,6 +145,7 @@
     "type": "feature",
     "id": "costume",
     "name": "Costume",
+    "looks_like": "cloak",
     "feature_type": "item",
     "description": ""
   },
@@ -136,6 +153,7 @@
     "type": "feature",
     "id": "crossbow",
     "name": "Crossbow",
+    "looks_like": "bow",
     "feature_type": "item",
     "description": "d8 damage",
     "damage": "1d8",
@@ -145,6 +163,7 @@
     "type": "feature",
     "id": "dagger",
     "name": "Dagger",
+    "looks_like": "dagger",
     "feature_type": "item",
     "description": "d6",
     "damage": "1d6"
@@ -153,6 +172,7 @@
     "type": "feature",
     "id": "fancy-hat",
     "name": "Fancy Hat",
+    "looks_like": "generic-item",
     "feature_type": "item",
     "description": "",
     "size": "petty"
@@ -161,6 +181,7 @@
     "type": "feature",
     "id": "ghillie-suit",
     "name": "Ghillie Suit",
+    "looks_like": "cloak",
     "feature_type": "item",
     "description": ""
   },
@@ -168,6 +189,7 @@
     "type": "feature",
     "id": "gloves",
     "name": "Gloves",
+    "looks_like": "tool",
     "feature_type": "item",
     "description": "",
     "size": "petty"
@@ -176,6 +198,7 @@
     "type": "feature",
     "id": "gold",
     "name": "Gold Pieces",
+    "looks_like": "coin",
     "feature_type": "item",
     "description": ""
   },
@@ -183,6 +206,7 @@
     "type": "feature",
     "id": "hammer",
     "name": "Hammer",
+    "looks_like": "mace",
     "feature_type": "item",
     "description": "d6",
     "damage": "1d6"
@@ -191,6 +215,7 @@
     "type": "feature",
     "id": "hand-axe",
     "name": "Hand Axe",
+    "looks_like": "axe",
     "feature_type": "item",
     "description": "d6",
     "damage": "1d6"
@@ -199,6 +224,7 @@
     "type": "feature",
     "id": "healing-salve",
     "name": "Healing Salve",
+    "looks_like": "potion",
     "feature_type": "item",
     "description": "restore 1d4 STR, 1 use",
     "uses": 1
@@ -207,6 +233,7 @@
     "type": "feature",
     "id": "heartroot-salve",
     "name": "Heartroot Salve",
+    "looks_like": "potion",
     "feature_type": "item",
     "description": "restores 1d4 STR, 1 use",
     "uses": 1
@@ -215,6 +242,7 @@
     "type": "feature",
     "id": "heirloom-amulet",
     "name": "Heirloom Amulet",
+    "looks_like": "amulet",
     "feature_type": "item",
     "description": "glows in the presence of magic",
     "size": "petty"
@@ -223,6 +251,7 @@
     "type": "feature",
     "id": "herbs-pouch",
     "name": "Herbs Pouch",
+    "looks_like": "tool",
     "feature_type": "item",
     "description": "restore 1 STR, 3 uses",
     "uses": 3
@@ -231,6 +260,7 @@
     "type": "feature",
     "id": "iron-dagger",
     "name": "Iron Dagger",
+    "looks_like": "dagger",
     "feature_type": "item",
     "description": "d6",
     "damage": "1d6"
@@ -239,6 +269,7 @@
     "type": "feature",
     "id": "iron-pot",
     "name": "Iron Pot",
+    "looks_like": "tool",
     "feature_type": "item",
     "description": ""
   },
@@ -246,6 +277,7 @@
     "type": "feature",
     "id": "lantern",
     "name": "Lantern",
+    "looks_like": "lantern-item",
     "feature_type": "item",
     "description": ""
   },
@@ -253,6 +285,7 @@
     "type": "feature",
     "id": "leather-jerkin",
     "name": "Leather Jerkin",
+    "looks_like": "armor",
     "feature_type": "item",
     "description": "1 Armor",
     "armor": 1
@@ -261,6 +294,7 @@
     "type": "feature",
     "id": "leather-whip",
     "name": "Leather Whip",
+    "looks_like": "rope",
     "feature_type": "item",
     "description": "d6",
     "damage": "1d6"
@@ -269,6 +303,7 @@
     "type": "feature",
     "id": "leech",
     "name": "Leech",
+    "looks_like": "tool",
     "feature_type": "item",
     "description": "restores 1 STR, 3 uses",
     "uses": 3
@@ -277,6 +312,7 @@
     "type": "feature",
     "id": "lockpicks",
     "name": "Lockpicks",
+    "looks_like": "key",
     "feature_type": "item",
     "description": ""
   },
@@ -284,6 +320,7 @@
     "type": "feature",
     "id": "long-sword",
     "name": "Long Sword",
+    "looks_like": "sword",
     "feature_type": "item",
     "description": "d10",
     "damage": "1d10",
@@ -293,6 +330,7 @@
     "type": "feature",
     "id": "lucky-jerkin",
     "name": "Lucky Jerkin",
+    "looks_like": "armor",
     "feature_type": "item",
     "description": "+1 Armor",
     "armor": 1
@@ -301,6 +339,7 @@
     "type": "feature",
     "id": "lure",
     "name": "Lure",
+    "looks_like": "tool",
     "feature_type": "item",
     "description": ""
   },
@@ -308,6 +347,7 @@
     "type": "feature",
     "id": "metal-pail",
     "name": "Metal Pail",
+    "looks_like": "tool",
     "feature_type": "item",
     "description": ""
   },
@@ -315,6 +355,7 @@
     "type": "feature",
     "id": "needle-knife",
     "name": "Needle-knife",
+    "looks_like": "dagger",
     "feature_type": "item",
     "description": "d6",
     "damage": "1d6"
@@ -323,6 +364,7 @@
     "type": "feature",
     "id": "oil-can",
     "name": "Oil Can",
+    "looks_like": "tool",
     "feature_type": "item",
     "description": "6 uses",
     "uses": 6
@@ -331,6 +373,7 @@
     "type": "feature",
     "id": "padded-leather",
     "name": "Padded Leather",
+    "looks_like": "armor",
     "feature_type": "item",
     "description": "1 Armor",
     "armor": 1
@@ -339,6 +382,7 @@
     "type": "feature",
     "id": "pincers",
     "name": "Pincers",
+    "looks_like": "tool",
     "feature_type": "item",
     "description": ""
   },
@@ -346,6 +390,7 @@
     "type": "feature",
     "id": "protective-gloves",
     "name": "Protective Gloves",
+    "looks_like": "tool",
     "feature_type": "item",
     "description": "",
     "size": "petty"
@@ -354,6 +399,7 @@
     "type": "feature",
     "id": "quill-ink",
     "name": "Quill & Ink",
+    "looks_like": "tool",
     "feature_type": "item",
     "description": ""
   },
@@ -361,6 +407,7 @@
     "type": "feature",
     "id": "rations",
     "name": "Rations",
+    "looks_like": "food",
     "feature_type": "item",
     "description": "3 uses",
     "uses": 3
@@ -369,6 +416,7 @@
     "type": "feature",
     "id": "repellent",
     "name": "Repellent",
+    "looks_like": "potion",
     "feature_type": "item",
     "description": "Wolfsbane, Mugwort, etc."
   },
@@ -376,6 +424,7 @@
     "type": "feature",
     "id": "roll-of-tin",
     "name": "Roll of Tin",
+    "looks_like": "tool",
     "feature_type": "item",
     "description": ""
   },
@@ -383,6 +432,7 @@
     "type": "feature",
     "id": "root-knife",
     "name": "Root Knife",
+    "looks_like": "dagger",
     "feature_type": "item",
     "description": "d6",
     "damage": "1d6"
@@ -391,6 +441,7 @@
     "type": "feature",
     "id": "rope",
     "name": "Rope",
+    "looks_like": "rope",
     "feature_type": "item",
     "description": "25ft"
   },
@@ -398,6 +449,7 @@
     "type": "feature",
     "id": "salt-pouch",
     "name": "Salt Pouch",
+    "looks_like": "tool",
     "feature_type": "item",
     "description": ""
   },
@@ -405,6 +457,7 @@
     "type": "feature",
     "id": "serrated-knife",
     "name": "Serrated Knife",
+    "looks_like": "dagger",
     "feature_type": "item",
     "description": "d6",
     "damage": "1d6"
@@ -413,6 +466,7 @@
     "type": "feature",
     "id": "sharpened-trowel",
     "name": "Sharpened Trowel",
+    "looks_like": "dagger",
     "feature_type": "item",
     "description": "d6",
     "damage": "1d6"
@@ -421,6 +475,7 @@
     "type": "feature",
     "id": "short-sword",
     "name": "Short Sword",
+    "looks_like": "sword",
     "feature_type": "item",
     "description": "d6",
     "damage": "1d6"
@@ -429,6 +484,7 @@
     "type": "feature",
     "id": "silver-knife",
     "name": "Silver Knife",
+    "looks_like": "dagger",
     "feature_type": "item",
     "description": "d6",
     "damage": "1d6"
@@ -437,6 +493,7 @@
     "type": "feature",
     "id": "simple-instrument",
     "name": "Simple Instrument",
+    "looks_like": "tool",
     "feature_type": "item",
     "description": "Pipes, Lute, etc."
   },
@@ -444,6 +501,7 @@
     "type": "feature",
     "id": "sling",
     "name": "Sling",
+    "looks_like": "bow",
     "feature_type": "item",
     "description": "d6 damage",
     "damage": "1d6"
@@ -452,6 +510,7 @@
     "type": "feature",
     "id": "soporific-darts",
     "name": "Soporific Darts",
+    "looks_like": "bow",
     "feature_type": "item",
     "description": "STR save or fall asleep, 6 uses",
     "uses": 6
@@ -467,6 +526,7 @@
     "type": "feature",
     "id": "spring-loaded-trap",
     "name": "Spring-Loaded trap",
+    "looks_like": "generic-item",
     "feature_type": "item",
     "description": "4 STR damage"
   },
@@ -474,6 +534,7 @@
     "type": "feature",
     "id": "spyglass",
     "name": "Spyglass",
+    "looks_like": "tool",
     "feature_type": "item",
     "description": ""
   },
@@ -481,6 +542,7 @@
     "type": "feature",
     "id": "stained-medical-finery",
     "name": "Stained Medical Finery",
+    "looks_like": "cloak",
     "feature_type": "item",
     "description": "",
     "size": "petty"
@@ -489,6 +551,7 @@
     "type": "feature",
     "id": "stake",
     "name": "Stake",
+    "looks_like": "dagger",
     "feature_type": "item",
     "description": "d6",
     "damage": "1d6"
@@ -497,6 +560,7 @@
     "type": "feature",
     "id": "tarp",
     "name": "Tarp",
+    "looks_like": "tent",
     "feature_type": "item",
     "description": ""
   },
@@ -504,6 +568,7 @@
     "type": "feature",
     "id": "torch",
     "name": "Torch",
+    "looks_like": "torch-item",
     "feature_type": "item",
     "description": "3 uses",
     "uses": 3
@@ -512,6 +577,7 @@
     "type": "feature",
     "id": "trick-playing-cards",
     "name": "Trick Playing Cards",
+    "looks_like": "tool",
     "feature_type": "item",
     "description": ""
   },
@@ -519,6 +585,7 @@
     "type": "feature",
     "id": "twin-daggers",
     "name": "Twin Daggers",
+    "looks_like": "dagger",
     "feature_type": "item",
     "description": "Two daggers. Roll both d6 and keep the higher.",
     "damage": "1d6+1d6",
@@ -528,6 +595,7 @@
     "type": "feature",
     "id": "twine-bauble",
     "name": "Twine Bauble",
+    "looks_like": "gem",
     "feature_type": "item",
     "description": "Ward once per day. Ward : A silver circle 50ft across appears on the ground. Choose one species that cannot cross it.",
     "size": "petty"
@@ -536,6 +604,7 @@
     "type": "feature",
     "id": "vestments-of-the-order",
     "name": "Vestments of the Order",
+    "looks_like": "cloak",
     "feature_type": "item",
     "description": "",
     "size": "petty"
@@ -544,6 +613,7 @@
     "type": "feature",
     "id": "water-shoes",
     "name": "Water Shoes",
+    "looks_like": "boots",
     "feature_type": "item",
     "description": ""
   }

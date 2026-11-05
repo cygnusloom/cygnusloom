@@ -120,6 +120,22 @@ def test_a_well_formed_dice_table_loads_from_a_definition():
     assert table.row_for(12).result == "c"
 
 
+def test_a_dice_table_reads_its_genre_tags():
+    table = _load_dice_table(
+        _definition([{"roll": "2-12", "result": "a"}], genres=["fantasy", "generic"]),
+        "test",
+    )
+    assert table.genres == ("fantasy", "generic")
+
+
+def test_a_dice_table_refuses_an_unknown_genre():
+    with pytest.raises(ContentError, match="unknown genre"):
+        _load_dice_table(
+            _definition([{"roll": "2-12", "result": "a"}], genres=["steampunk"]),
+            "test",
+        )
+
+
 def test_roll_tables_returns_one_roll_per_named_table_and_logs_one_event(client_factory):
     _, campaign_id, tools = _fight(client_factory)
     tables = CAIRN.dice_tables

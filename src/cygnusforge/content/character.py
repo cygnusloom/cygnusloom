@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from cygnusforge.content.definitions import ContentError, Definition, required_text
+from cygnusforge.content.icons import FALLBACK_ITEM, FALLBACK_WEAPON, resolve_icon
 from cygnusforge.rules.dice import FORMULA, is_formula, roll_total
 
 FEATURE_TYPES = ("item", "trait", "spell", "feat")
@@ -206,6 +207,10 @@ class Feature:
     repeatable: bool = False
     # The structured choices the feature asks the player to make.
     picks: tuple[FeaturePick, ...] = ()
+    # The icon the feature shows, resolved from `icon` or `looks_like` when the content loads.
+    icon: str | None = None
+    # The definition or icon whose looks this one borrows. Kept for authors and lookups.
+    looks_like: str | None = None
 
 
 @dataclass(frozen=True)
@@ -412,8 +417,11 @@ def build_character(
     *,
     skill_progression: object = None,
     ordered_feature_tags: object = (),
+    icon_entries: Mapping[str, tuple[str | None, str | None]] | None = None,
 ) -> CharacterSpec:
-    """Build the character spec from a rule set's definitions. `tables` are already loaded."""
+    """Build the character spec from a rule set's definitions. `tables` are already loaded.
+    `icon_entries` maps a feature id to its raw (icon, looks_like) so one feature may borrow
+    another's looks."""
     stats = _each(definitions, "stat", lambda d: _stat(d, template))
     _check_groups(stats, template)
     skills = _each(definitions, "skill", lambda d: _skill(d, template))
@@ -424,7 +432,14 @@ def build_character(
     features = _each(
         definitions,
         "feature",
-        lambda d: load_feature(d, template, stats=stats, skills=skills, counters=counter_ids),
+        lambda d: load_feature(
+            d,
+            template,
+            stats=stats,
+            skills=skills,
+            counters=counter_ids,
+            icon_entries=icon_entries,
+        ),
     )
     if ordered_feature_tags == ():
         ordered_feature_tags = []
@@ -862,9 +877,12 @@ def load_feature(
     stats: Collection[str] = (),
     skills: Collection[str] = (),
     counters: Collection[str] = (),
+    icon_entries: Mapping[str, tuple[str | None, str | None]] | None = None,
 ) -> Feature:
     """Read a feature. `stats`, `skills`, and `counters` are the ids the rule set defines; when one
-    is empty the ids of that kind are not checked, as for a world whose rule set is not known."""
+    is empty the ids of that kind are not checked, as for a world whose rule set is not known.
+    `icon_entries` maps feature ids to their raw (icon, looks_like) so `looks_like` may borrow
+    another feature's looks."""
     label = f"{template}: feature {definition.id}"
     data = definition.data
     kind = required_text(data, "feature_type", label)
@@ -903,6 +921,24 @@ def load_feature(
         raise ContentError(f"{label}: 'repeatable' must be a boolean")
     if shock and "shock_ac" not in data:
         raise ContentError(f"{label}: 'shock' needs a 'shock_ac'")
+    icon = data.get("icon")
+    if icon is not None and (not isinstance(icon, str) or not icon.strip()):
+        raise ContentError(f"{label}: 'icon' must be the name of an icon")
+    looks_like = data.get("looks_like")
+    if looks_like is not None and (not isinstance(looks_like, str) or not looks_like.strip()):
+        raise ContentError(f"{label}: 'looks_like' must name an icon or another definition")
+    # A carried feature's kind sets its fallback: a weapon shows the weapon icon, other items the
+    # generic item icon. Non-item features have no fallback picture.
+    fallback = None
+    if kind == "item":
+        fallback = FALLBACK_WEAPON if damage else FALLBACK_ITEM
+    resolved = resolve_icon(
+        icon,
+        looks_like,
+        label=label,
+        entries=icon_entries,
+        fallback=fallback,
+    )
     return Feature(
         id=definition.id,
         name=required_text(data, "name", label),
@@ -927,6 +963,8 @@ def load_feature(
         defense_floor=_defense_floor(data.get("defense_floor"), counters, label),
         repeatable=repeatable,
         picks=_feature_picks(data.get("picks", []), stats, skills, label),
+        icon=resolved,
+        looks_like=looks_like,
     )
 
 

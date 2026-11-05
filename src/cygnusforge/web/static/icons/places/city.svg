@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>City</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 56 V34 L14 26 L22 34 V56 Z" fill="#b9a78c"/><path d="M22 56 V22 L32 12 L42 22 V56 Z" fill="#a79274"/><path d="M42 56 V30 L50 22 L58 30 V56 Z" fill="#b9a78c"/><path d="M10 42 H18 M10 48 H18 M28 32 H36 M28 40 H36 M28 48 H36 M46 38 H54 M46 46 H54"/>
+  </g>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Ocean</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 36 Q12 22 20 36 Q28 22 36 36 Q44 22 52 36 Q58 28 62 34 V60 H4 Z" fill="#2d6a8f"/><path d="M8 46 Q16 40 24 46 T40 46 T56 46 M8 54 Q16 48 24 54 T40 54 T56 54" stroke="#a9d4ea"/>
+  </g>
+</svg>

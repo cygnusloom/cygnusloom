@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Ring</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="32" cy="38" r="16" fill="none" stroke="#e6b53a" stroke-width="6"/><path d="M32 22 L26 14 L32 6 L38 14 Z" fill="#6fa8c9"/><path d="M32 6 V22 M26 14 H38"/>
+  </g>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Giant</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="28" cy="12" r="7" fill="#c9a27a"/><path d="M16 26 Q28 18 40 26 L44 48 H34 L32 60 H24 L22 48 H12 Z" fill="#8b6b4a"/><path d="M40 26 L52 8" stroke-width="4"/><path d="M50 6 L58 4 L56 12 Z" fill="#a7adb2"/>
+  </g>
+</svg>

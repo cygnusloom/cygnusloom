@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Library</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 56 V18 L32 8 L56 18 V56 Z" fill="#c9b08a"/><path d="M18 26 H28 V44 H18 Z M36 26 H46 V44 H36 Z" fill="#e8dcc4"/><path d="M18 26 H28 M23 26 V44 M36 26 H46 M41 26 V44 M12 56 H52"/><path d="M28 20 H36"/>
+  </g>
+</svg>

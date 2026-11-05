@@ -391,6 +391,11 @@ class EncounterMap:
     background: str = ""
     # Marked cells, keyed by (column, row). A cell with no terrain and no object is not kept here.
     marks: dict[tuple[int, int], CellMark] = field(default_factory=dict)
+    # Tokens placed outside an encounter, keyed by name without case. A local map keeps its
+    # characters, NPCs, and props here until an encounter starts on it.
+    tokens: dict[str, tuple[int, int]] = field(default_factory=dict)
+    # The id of the map.created event, so the newest map at a place is known on replay.
+    created: int = 0
 
 
 @dataclass

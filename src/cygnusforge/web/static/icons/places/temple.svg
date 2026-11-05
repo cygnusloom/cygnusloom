@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Temple</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 24 L32 8 L56 24 Z" fill="#d9c9a8"/><path d="M10 24 H54 M14 24 V50 M24 24 V50 M40 24 V50 M50 24 V50 M10 50 H54"/><path d="M14 50 V56 H50 V50" fill="#d9c9a8"/><path d="M28 56 V42 Q32 38 36 42 V56"/>
+  </g>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Steppe</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 50 Q18 38 32 48 Q46 36 60 48 V58 H4 Z" fill="#b9b06a"/><path d="M12 44 V30 M12 34 L8 30 M12 38 L16 32 M24 40 V26 M24 30 L20 26 M24 34 L28 28 M40 42 V28 M40 32 L44 26 M40 36 L36 30 M52 44 V32 M52 36 L56 30 M52 40 L48 34" stroke="#7a7442"/>
+  </g>
+</svg>

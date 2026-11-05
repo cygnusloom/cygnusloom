@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Badlands</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 56 L14 24 L22 30 L28 16 L36 30 L44 22 L50 34 L58 28 V56 Z" fill="#b98a5e"/><path d="M14 24 L18 56 M28 16 L32 56 M44 22 L46 56 M8 44 H58 M20 62 L28 44 M38 62 L34 44"/>
+  </g>
+</svg>

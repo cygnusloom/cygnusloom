@@ -16,6 +16,8 @@ from cygnusforge.content.library import (
     ToolCall,
     WorldContent,
     WorldTemplate,
+    effective_table_genres,
+    tables_for_genres,
 )
 from cygnusforge.db.models import Campaign, Event
 from cygnusforge.llm.base import (
@@ -363,6 +365,7 @@ def _tool_context(
     campaign_id: int,
     rule_set: RuleSet,
     world: WorldContent,
+    table_genres: Sequence[str] | None = None,
 ) -> ToolContext:
     async def speak(speaker: str, profile: str, intent: str, replace: bool) -> None:
         await _speak(
@@ -380,6 +383,10 @@ def _tool_context(
     def ooc(narrate: bool) -> None:
         _record(engine, campaign_id, OocStarted(narrate=narrate))
 
+    # A campaign narrows the rule set's generation tables; a world's own tables are authored for
+    # it and stay as they are. No selection keeps the rule set's choice rather than dropping every
+    # tagged table.
+    genres = tuple(table_genres) if table_genres else rule_set.table_genres
     world_tools = WorldTools(
         engine,
         campaign_id,
@@ -403,7 +410,7 @@ def _tool_context(
         periods=rule_set.periods,
         tallies=rule_set.tallies,
         relations=rule_set.relations,
-        dice_tables={**rule_set.dice_tables, **world.dice_tables},
+        dice_tables={**tables_for_genres(rule_set.dice_tables, genres), **world.dice_tables},
         clock_rules=rule_set.clock,
         rests=rule_set.rests,
         interrupted_rest=rule_set.interrupted_rest,
@@ -471,6 +478,7 @@ def _start_run(
             campaign.id,
             rule_set,
             world,
+            table_genres=effective_table_genres(campaign.table_genres, rule_set),
         ),
         cursor=_newest(engine, campaign.id),
         opening=opening_prompt(template),

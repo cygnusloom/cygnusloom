@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Wand</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 52 L44 18" stroke="#8b5e3c" stroke-width="4"/><path d="M44 18 L50 10 L54 18 L46 24 Z" fill="#e6b53a"/><path d="M50 10 V2 M36 16 L30 10 M42 30 L34 32 M56 28 L62 34 M26 30 L20 26"/>
+  </g>
+</svg>

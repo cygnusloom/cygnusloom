@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Reef</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 50 Q14 44 24 50 T44 50 T64 50 V60 H4 Z" fill="#4a8fae"/><path d="M14 48 V30 M14 36 L8 30 M14 40 L20 34 M26 48 V22 M26 30 L20 24 M26 34 L32 26 M40 48 V34 M40 38 L46 30 M40 42 L34 34" stroke="#c4705a"/><circle cx="14" cy="26" r="3" fill="#e6b53a"/><circle cx="26" cy="18" r="3" fill="#e6b53a"/><circle cx="40" cy="28" r="3" fill="#e6b53a"/>
+  </g>
+</svg>

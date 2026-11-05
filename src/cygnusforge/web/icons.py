@@ -2,19 +2,23 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping
-from functools import lru_cache
-from pathlib import Path
 
-ICON_DIR = Path(__file__).parent / "static" / "icons"
-REGISTRY_PATH = ICON_DIR / "registry.json"
+from cygnusforge.content.icons import ICON_DIR, REGISTRY_PATH, icon_registry
+
+__all__ = [
+    "ICON_DIR",
+    "REGISTRY_PATH",
+    "icon_path",
+    "item_icon_id",
+    "place_icon_path",
+]
+
 ICON_URL_PREFIX = "/static/icons/"
 
 
-@lru_cache(maxsize=1)
 def _registry() -> dict[str, dict[str, str]]:
-    return json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
+    return icon_registry()
 
 
 def icon_path(icon_id: str) -> str:

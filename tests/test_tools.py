@@ -153,6 +153,11 @@ CORE_TOOL_NAMES = {
     "list_lookups",
     "roll_creative",
     "record_setting",
+    "create_local_map",
+    "place_map_token",
+    "remove_map_token",
+    "set_map_cells",
+    "list_dice_tables",
 }
 
 SOCIAL_ARGUMENTS = '{"prompt": "Roll to persuade.", "relationship": 2, "circumstance": -1}'

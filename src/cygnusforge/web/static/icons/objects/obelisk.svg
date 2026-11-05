@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Obelisk</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M28 6 H36 L40 50 H24 Z" fill="#b9b3a6"/><path d="M20 50 H44 V58 H20 Z" fill="#8a8478"/><path d="M32 14 V42 M28 22 H36 M28 30 H36 M28 38 H36"/>
+  </g>
+</svg>

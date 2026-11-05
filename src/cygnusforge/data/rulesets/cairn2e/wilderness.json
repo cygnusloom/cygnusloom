@@ -117,6 +117,7 @@
   {
     "type": "dice_table",
     "id": "wilderness_events",
+    "genres": ["fantasy"],
     "name": "Wilderness Events",
     "dice": "1d6",
     "rows": [
@@ -155,6 +156,7 @@
   {
     "type": "dice_table",
     "id": "weather_spring",
+    "genres": ["generic", "fantasy"],
     "name": "Spring Weather",
     "dice": "1d6",
     "rows": [
@@ -169,6 +171,7 @@
   {
     "type": "dice_table",
     "id": "weather_summer",
+    "genres": ["generic", "fantasy"],
     "name": "Summer Weather",
     "dice": "1d6",
     "rows": [
@@ -183,6 +186,7 @@
   {
     "type": "dice_table",
     "id": "weather_fall",
+    "genres": ["generic", "fantasy"],
     "name": "Fall Weather",
     "dice": "1d6",
     "rows": [
@@ -197,6 +201,7 @@
   {
     "type": "dice_table",
     "id": "weather_winter",
+    "genres": ["generic", "fantasy"],
     "name": "Winter Weather",
     "dice": "1d6",
     "rows": [

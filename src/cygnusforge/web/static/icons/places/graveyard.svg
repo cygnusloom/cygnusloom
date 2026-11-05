@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Graveyard</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 52 V32 Q10 24 18 24 Q26 24 26 32 V52 Z" fill="#b9b3a6"/><path d="M30 52 V38 Q30 32 36 32 Q42 32 42 38 V52 Z" fill="#a9a294"/><path d="M46 52 V28 Q46 22 53 22 Q60 22 60 28 V52 Z" fill="#b9b3a6"/><path d="M8 56 H60 M18 34 V40 M36 40 V45 M53 34 V40"/>
+  </g>
+</svg>

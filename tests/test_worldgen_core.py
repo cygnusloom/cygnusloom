@@ -46,8 +46,33 @@ def test_every_bundled_ruleset_inherits_the_core_worldgen_tables(rule_set: str):
 
 def test_core_carries_the_setting_instructions_for_a_blank_world():
     core = ContentLibrary.load().core.prompt_fragments
-    assert [fragment.id for fragment in core] == ["setting_forge", "setting_continuity"]
-    assert all(fragment.unwritten_only for fragment in core)
+    assert [fragment.id for fragment in core] == [
+        "setting_forge",
+        "setting_continuity",
+        "local_maps",
+    ]
+    assert all(fragment.unwritten_only for fragment in core if fragment.id != "local_maps")
+
+
+def test_a_generic_only_rule_set_leaves_the_fantasy_tables_out():
+    library = content_library()
+    rules = library.rule_sets["rolltest"]
+    assert rules.table_genres == ("generic",)
+    assert "action" in rules.dice_tables
+    assert "setting_premise" not in rules.dice_tables
+    # The sourcebook keeps every table even when a rule set's choice leaves one out.
+    assert "setting_premise" in library.core.dice_tables
+
+
+def test_the_setting_forge_names_no_table_a_genre_choice_could_hide():
+    core = ContentLibrary.load(DATA_DIR).core
+    prompt = next(
+        fragment.text for fragment in core.prompt_fragments if fragment.id == "setting_forge"
+    )
+    assert SETTING_FORGE in prompt
+    assert "Roll every creative table with roll_creative" in prompt
+    assert "the selected genres offer" in prompt
+    assert "significant_terrain" not in prompt
 
 
 def test_the_unwritten_world_plays_with_any_rule_set():

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Dungeon</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 56 V20 Q6 8 20 8 H44 Q58 8 58 20 V56 Z" fill="#7d7467"/><path d="M18 56 V30 Q18 22 32 22 Q46 22 46 30 V56 Z" fill="#2e2a25"/><path d="M22 56 V32 M32 56 V22 M42 56 V32 M18 40 H46 M18 48 H46" stroke="#c9b08a"/>
+  </g>
+</svg>

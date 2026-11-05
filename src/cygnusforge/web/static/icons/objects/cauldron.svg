@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Cauldron</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 26 Q10 54 32 56 Q54 54 54 26 Z" fill="#5a5650"/><ellipse cx="32" cy="26" rx="22" ry="7" fill="#6e6a62"/><path d="M14 22 Q18 12 22 22 M30 20 Q34 8 38 20 M42 22 Q46 14 50 22" stroke="#c0503a"/><path d="M16 42 L8 54 M48 42 L56 54"/>
+  </g>
+</svg>

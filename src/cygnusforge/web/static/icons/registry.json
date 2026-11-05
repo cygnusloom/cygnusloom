@@ -298,5 +298,325 @@
     "category": "tokens",
     "path": "tokens/neutral.svg",
     "label": "Neutral"
+  },
+  "beast": {
+    "category": "creatures",
+    "path": "creatures/beast.svg",
+    "label": "Beast"
+  },
+  "humanoid": {
+    "category": "creatures",
+    "path": "creatures/humanoid.svg",
+    "label": "Humanoid"
+  },
+  "undead": {
+    "category": "creatures",
+    "path": "creatures/undead.svg",
+    "label": "Undead"
+  },
+  "dragon": {
+    "category": "creatures",
+    "path": "creatures/dragon.svg",
+    "label": "Dragon"
+  },
+  "giant": {
+    "category": "creatures",
+    "path": "creatures/giant.svg",
+    "label": "Giant"
+  },
+  "ooze": {
+    "category": "creatures",
+    "path": "creatures/ooze.svg",
+    "label": "Ooze"
+  },
+  "construct": {
+    "category": "creatures",
+    "path": "creatures/construct.svg",
+    "label": "Construct"
+  },
+  "elemental": {
+    "category": "creatures",
+    "path": "creatures/elemental.svg",
+    "label": "Elemental"
+  },
+  "fey": {
+    "category": "creatures",
+    "path": "creatures/fey.svg",
+    "label": "Fey"
+  },
+  "swarm": {
+    "category": "creatures",
+    "path": "creatures/swarm.svg",
+    "label": "Swarm"
+  },
+  "aberration": {
+    "category": "creatures",
+    "path": "creatures/aberration.svg",
+    "label": "Aberration"
+  },
+  "plant-creature": {
+    "category": "creatures",
+    "path": "creatures/plant.svg",
+    "label": "Plant creature"
+  },
+  "spirit": {
+    "category": "creatures",
+    "path": "creatures/spirit.svg",
+    "label": "Spirit"
+  },
+  "city": {
+    "category": "places",
+    "path": "places/city.svg",
+    "label": "City"
+  },
+  "temple": {
+    "category": "places",
+    "path": "places/temple.svg",
+    "label": "Temple"
+  },
+  "tower": {
+    "category": "places",
+    "path": "places/tower.svg",
+    "label": "Tower"
+  },
+  "tavern": {
+    "category": "places",
+    "path": "places/tavern.svg",
+    "label": "Tavern"
+  },
+  "shop": {
+    "category": "places",
+    "path": "places/shop.svg",
+    "label": "Shop"
+  },
+  "farm": {
+    "category": "places",
+    "path": "places/farm.svg",
+    "label": "Farm"
+  },
+  "mine": {
+    "category": "places",
+    "path": "places/mine.svg",
+    "label": "Mine"
+  },
+  "graveyard": {
+    "category": "places",
+    "path": "places/graveyard.svg",
+    "label": "Graveyard"
+  },
+  "dungeon": {
+    "category": "places",
+    "path": "places/dungeon.svg",
+    "label": "Dungeon"
+  },
+  "camp": {
+    "category": "places",
+    "path": "places/camp.svg",
+    "label": "Camp"
+  },
+  "port": {
+    "category": "places",
+    "path": "places/port.svg",
+    "label": "Port"
+  },
+  "library": {
+    "category": "places",
+    "path": "places/library.svg",
+    "label": "Library"
+  },
+  "market": {
+    "category": "places",
+    "path": "places/market.svg",
+    "label": "Market"
+  },
+  "arena": {
+    "category": "places",
+    "path": "places/arena.svg",
+    "label": "Arena"
+  },
+  "shrine": {
+    "category": "places",
+    "path": "places/shrine.svg",
+    "label": "Shrine"
+  },
+  "desert": {
+    "category": "terrain",
+    "path": "terrain/desert.svg",
+    "label": "Desert"
+  },
+  "tundra": {
+    "category": "terrain",
+    "path": "terrain/tundra.svg",
+    "label": "Tundra"
+  },
+  "volcano": {
+    "category": "terrain",
+    "path": "terrain/volcano.svg",
+    "label": "Volcano"
+  },
+  "jungle": {
+    "category": "terrain",
+    "path": "terrain/jungle.svg",
+    "label": "Jungle"
+  },
+  "glacier": {
+    "category": "terrain",
+    "path": "terrain/glacier.svg",
+    "label": "Glacier"
+  },
+  "plateau": {
+    "category": "terrain",
+    "path": "terrain/plateau.svg",
+    "label": "Plateau"
+  },
+  "badlands": {
+    "category": "terrain",
+    "path": "terrain/badlands.svg",
+    "label": "Badlands"
+  },
+  "farmland": {
+    "category": "terrain",
+    "path": "terrain/farmland.svg",
+    "label": "Farmland"
+  },
+  "ocean": {
+    "category": "terrain",
+    "path": "terrain/ocean.svg",
+    "label": "Ocean"
+  },
+  "reef": {
+    "category": "terrain",
+    "path": "terrain/reef.svg",
+    "label": "Reef"
+  },
+  "island": {
+    "category": "terrain",
+    "path": "terrain/island.svg",
+    "label": "Island"
+  },
+  "moor": {
+    "category": "terrain",
+    "path": "terrain/moor.svg",
+    "label": "Moor"
+  },
+  "steppe": {
+    "category": "terrain",
+    "path": "terrain/steppe.svg",
+    "label": "Steppe"
+  },
+  "sword": {
+    "category": "items",
+    "path": "items/sword.svg",
+    "label": "Sword"
+  },
+  "axe": {
+    "category": "items",
+    "path": "items/axe.svg",
+    "label": "Axe"
+  },
+  "dagger": {
+    "category": "items",
+    "path": "items/dagger.svg",
+    "label": "Dagger"
+  },
+  "spear": {
+    "category": "items",
+    "path": "items/spear.svg",
+    "label": "Spear"
+  },
+  "mace": {
+    "category": "items",
+    "path": "items/mace.svg",
+    "label": "Mace"
+  },
+  "staff": {
+    "category": "items",
+    "path": "items/staff.svg",
+    "label": "Staff"
+  },
+  "wand": {
+    "category": "items",
+    "path": "items/wand.svg",
+    "label": "Wand"
+  },
+  "ring": {
+    "category": "items",
+    "path": "items/ring.svg",
+    "label": "Ring"
+  },
+  "amulet": {
+    "category": "items",
+    "path": "items/amulet.svg",
+    "label": "Amulet"
+  },
+  "cloak": {
+    "category": "items",
+    "path": "items/cloak.svg",
+    "label": "Cloak"
+  },
+  "boots": {
+    "category": "items",
+    "path": "items/boots.svg",
+    "label": "Boots"
+  },
+  "helm": {
+    "category": "items",
+    "path": "items/helm.svg",
+    "label": "Helm"
+  },
+  "backpack": {
+    "category": "items",
+    "path": "items/backpack.svg",
+    "label": "Backpack"
+  },
+  "torch-item": {
+    "category": "items",
+    "path": "items/torch-item.svg",
+    "label": "Torch"
+  },
+  "barrel": {
+    "category": "objects",
+    "path": "objects/barrel.svg",
+    "label": "Barrel"
+  },
+  "bookshelf": {
+    "category": "objects",
+    "path": "objects/bookshelf.svg",
+    "label": "Bookshelf"
+  },
+  "bench": {
+    "category": "objects",
+    "path": "objects/bench.svg",
+    "label": "Bench"
+  },
+  "throne": {
+    "category": "objects",
+    "path": "objects/throne.svg",
+    "label": "Throne"
+  },
+  "anvil": {
+    "category": "objects",
+    "path": "objects/anvil.svg",
+    "label": "Anvil"
+  },
+  "cauldron": {
+    "category": "objects",
+    "path": "objects/cauldron.svg",
+    "label": "Cauldron"
+  },
+  "fountain": {
+    "category": "objects",
+    "path": "objects/fountain.svg",
+    "label": "Fountain"
+  },
+  "obelisk": {
+    "category": "objects",
+    "path": "objects/obelisk.svg",
+    "label": "Obelisk"
+  },
+  "tent": {
+    "category": "objects",
+    "path": "objects/tent.svg",
+    "label": "Tent"
   }
 }

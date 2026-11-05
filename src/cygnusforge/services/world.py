@@ -194,6 +194,20 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 db, self.campaign_id, tables, self.dice_tables, self.rng, plus=self.plus
             )
 
+    def list_dice_tables(self) -> dict[str, Any]:
+        """The dice and creative tables this campaign offers, after genre filtering."""
+        return {
+            "tables": [
+                {
+                    "id": table.id,
+                    "name": table.name,
+                    "dice": table.dice,
+                    "creative": table.creative,
+                }
+                for table in self.dice_tables.values()
+            ]
+        }
+
     def draw_character_table(self, table: str) -> str:
         """Choose one option from a character table, without recording a campaign event."""
         options = self.tables.get(table)
@@ -409,6 +423,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 else "add"
             ),
             encumbrance_checks=relic.encumbrance_checks,
+            icon=relic.icon or "",
+            looks_like=relic.looks_like,
         )
 
     def equip_armor(self, name: str, item: str, equipped: bool = True) -> dict[str, Any]:

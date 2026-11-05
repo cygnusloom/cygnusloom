@@ -43,5 +43,149 @@
     "rule": "Marsh and fen. Perilous going: travel by rough_terrain.",
     "pattern": "reeds",
     "ink": "#2f4a2c"
+  },
+  {
+    "type": "world_terrain",
+    "id": "desert",
+    "name": "Desert",
+    "color": "#d9c58a",
+    "rule": "Sand and scrub. Tough going in heat: travel by rough_terrain, and carry water.",
+    "pattern": "dunes",
+    "ink": "#a08a4e"
+  },
+  {
+    "type": "world_terrain",
+    "id": "tundra",
+    "name": "Tundra",
+    "color": "#cfd8d8",
+    "rule": "Cold, open ground. Tough going in weather: travel by rough_terrain.",
+    "pattern": "ice",
+    "ink": "#7a8a8a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "glacier",
+    "name": "Glacier",
+    "color": "#b8dce6",
+    "rule": "Ice and crevasses. Perilous going: travel by rough_terrain, and rope up.",
+    "pattern": "ice",
+    "ink": "#5a8a96"
+  },
+  {
+    "type": "world_terrain",
+    "id": "volcano",
+    "name": "Volcano",
+    "color": "#6e625c",
+    "rule": "Ash, lava, and poisonous air. Perilous going: travel by rough_terrain.",
+    "pattern": "flames",
+    "ink": "#c0503a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "jungle",
+    "name": "Jungle",
+    "color": "#2f6a38",
+    "rule": "Dense tropical forest. Tough going: travel by rough_terrain.",
+    "pattern": "canopy",
+    "ink": "#183d1d"
+  },
+  {
+    "type": "world_terrain",
+    "id": "moor",
+    "name": "Moor",
+    "color": "#7d8a5e",
+    "rule": "Heath and peat. Tough going: travel by rough_terrain.",
+    "pattern": "moor",
+    "ink": "#4a5a2c"
+  },
+  {
+    "type": "world_terrain",
+    "id": "steppe",
+    "name": "Steppe",
+    "color": "#b9b06a",
+    "rule": "Open grassy plain. Easy going: travel on foot.",
+    "pattern": "tufts",
+    "ink": "#7a7442"
+  },
+  {
+    "type": "world_terrain",
+    "id": "badlands",
+    "name": "Badlands",
+    "color": "#b98a5e",
+    "rule": "Eroded gullies and broken rock. Tough going: travel by rough_terrain.",
+    "pattern": "crags",
+    "ink": "#6f4a2a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "farmland",
+    "name": "Farmland",
+    "color": "#c9b06a",
+    "rule": "Tilled fields and hedgerows. Easy going while the tracks are dry: travel on foot.",
+    "pattern": "tufts",
+    "ink": "#7a7432"
+  },
+  {
+    "type": "world_terrain",
+    "id": "ocean",
+    "name": "Ocean",
+    "color": "#2d6a8f",
+    "rule": "Open water. Nothing crosses it on foot; a boat is needed.",
+    "pattern": "waves",
+    "ink": "#a9d4ea"
+  },
+  {
+    "type": "world_terrain",
+    "id": "reef",
+    "name": "Reef",
+    "color": "#4a8fae",
+    "rule": "Shallow coral water. Small boats may cross slowly; larger craft cannot.",
+    "pattern": "reef",
+    "ink": "#c4705a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "island",
+    "name": "Island",
+    "color": "#cfc89a",
+    "rule": "An isolated shore. Easy going on the land; reaching it needs a boat.",
+    "pattern": "trees",
+    "ink": "#4d7a3c"
+  },
+  {
+    "type": "world_terrain",
+    "id": "plateau",
+    "name": "Plateau",
+    "color": "#b08a5e",
+    "rule": "Raised tableland. Tough going up or down the rim: travel by rough_terrain.",
+    "pattern": "crags",
+    "ink": "#6f4a2a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "mountains",
+    "name": "Mountains",
+    "color": "#8b8078",
+    "rule": "Mountain country. Perilous going: travel by rough_terrain; passes are few.",
+    "pattern": "crags",
+    "ink": "#4f4741"
+  },
+  {
+    "type": "world_terrain",
+    "id": "swamp",
+    "name": "Swamp",
+    "color": "#5f7d55",
+    "rule": "Bog and standing water. Perilous going: travel by rough_terrain.",
+    "pattern": "reeds",
+    "ink": "#2f4a2c"
+  },
+  {
+    "type": "world_terrain",
+    "id": "coast",
+    "name": "Coast",
+    "color": "#4a8fae",
+    "rule": "Shoreline and coastal water. Easy going along the shore; boats keep close in.",
+    "pattern": "waves",
+    "ink": "#a9d4ea"
   }
 ]

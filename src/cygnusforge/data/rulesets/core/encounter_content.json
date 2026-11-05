@@ -17,6 +17,26 @@
   {"type": "encounter_object", "id": "door", "name": "Doorway", "icon": "door", "color": "#6b4a2b", "blocks": false},
   {"type": "encounter_object", "id": "campfire", "name": "Campfire", "icon": "campfire", "color": "#8c3d1c", "blocks": false},
   {"type": "encounter_object", "id": "crate", "name": "Crate", "icon": "chest", "color": "#8a6a3a", "blocks": true},
+  {"type": "encounter_object", "id": "barrel", "name": "Barrel", "icon": "barrel", "color": "#7a5a34", "blocks": true},
+  {"type": "encounter_object", "id": "bookshelf", "name": "Bookshelf", "icon": "bookshelf", "color": "#6b4a2b", "blocks": true},
+  {"type": "encounter_object", "id": "bench", "name": "Bench", "icon": "bench", "color": "#7a5a34", "blocks": false},
+  {"type": "encounter_object", "id": "statue", "name": "Statue", "icon": "statue", "color": "#8a8790", "blocks": true},
+  {"type": "encounter_object", "id": "altar", "name": "Altar", "icon": "altar", "color": "#8a8790", "blocks": true},
+  {"type": "encounter_object", "id": "bed", "name": "Bed", "icon": "bed", "color": "#7a5a34", "blocks": false},
+  {"type": "encounter_object", "id": "stairs-up", "name": "Stairs up", "icon": "stairs-up", "color": "#6e6a62", "blocks": false},
+  {"type": "encounter_object", "id": "stairs-down", "name": "Stairs down", "icon": "stairs-down", "color": "#6e6a62", "blocks": false},
+  {"type": "encounter_object", "id": "gate", "name": "Gate", "icon": "gate", "color": "#4b3a2a", "blocks": true},
+  {"type": "encounter_object", "id": "portcullis", "name": "Portcullis", "icon": "portcullis", "color": "#4b3a2a", "blocks": true},
+  {"type": "encounter_object", "id": "bones", "name": "Bones", "icon": "bones", "color": "#d8d2c4", "blocks": false},
+  {"type": "encounter_object", "id": "boat", "name": "Boat", "icon": "boat", "color": "#6b4a2b", "blocks": false},
+  {"type": "encounter_object", "id": "cart", "name": "Cart", "icon": "cart", "color": "#7a5a34", "blocks": true},
+  {"type": "encounter_object", "id": "ladder", "name": "Ladder", "icon": "ladder", "color": "#8b5e3c", "blocks": false},
+  {"type": "encounter_object", "id": "fountain", "name": "Fountain", "icon": "fountain", "color": "#4d5b66", "blocks": true},
+  {"type": "encounter_object", "id": "throne", "name": "Throne", "icon": "throne", "color": "#8a6a3a", "blocks": true},
+  {"type": "encounter_object", "id": "tent", "name": "Tent", "icon": "tent", "color": "#a98b5f", "blocks": false},
+  {"type": "encounter_object", "id": "anvil", "name": "Anvil", "icon": "anvil", "color": "#5b5b60", "blocks": true},
+  {"type": "encounter_object", "id": "cauldron", "name": "Cauldron", "icon": "cauldron", "color": "#3f3f44", "blocks": true},
+  {"type": "encounter_object", "id": "obelisk", "name": "Obelisk", "icon": "obelisk", "color": "#8a8790", "blocks": true},
 
   {
     "type": "encounter_template",
@@ -86,5 +106,364 @@
       {"from": [6, 6], "to": [13, 6], "terrain": "dirt"}
     ],
     "cells": []
+  },
+  {
+    "type": "encounter_template",
+    "id": "tavern",
+    "name": "Tavern",
+    "columns": 14,
+    "rows": 10,
+    "background": "floor",
+    "fills": [
+      {"from": [0, 0], "to": [13, 0], "object": "wall"},
+      {"from": [0, 9], "to": [13, 9], "object": "wall"},
+      {"from": [0, 1], "to": [0, 8], "object": "wall"},
+      {"from": [13, 1], "to": [13, 8], "object": "wall"},
+      {"from": [2, 4], "to": [5, 5], "object": "table"},
+      {"from": [8, 4], "to": [11, 5], "object": "table"}
+    ],
+    "cells": [
+      {"column": 6, "row": 9, "object": "door"},
+      {"column": 1, "row": 1, "object": "barrel"},
+      {"column": 1, "row": 2, "object": "barrel"},
+      {"column": 12, "row": 1, "object": "campfire"},
+      {"column": 12, "row": 8, "object": "stairs-up"},
+      {"column": 2, "row": 3, "object": "bench"},
+      {"column": 5, "row": 3, "object": "bench"},
+      {"column": 8, "row": 3, "object": "bench"},
+      {"column": 11, "row": 3, "object": "bench"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "house",
+    "name": "House",
+    "columns": 12,
+    "rows": 9,
+    "background": "floor",
+    "fills": [
+      {"from": [0, 0], "to": [11, 0], "object": "wall"},
+      {"from": [0, 8], "to": [11, 8], "object": "wall"},
+      {"from": [0, 1], "to": [0, 7], "object": "wall"},
+      {"from": [11, 1], "to": [11, 7], "object": "wall"}
+    ],
+    "cells": [
+      {"column": 5, "row": 8, "object": "door"},
+      {"column": 2, "row": 2, "object": "bed"},
+      {"column": 4, "row": 2, "object": "crate"},
+      {"column": 6, "row": 4, "object": "table"},
+      {"column": 5, "row": 4, "object": "bench"},
+      {"column": 7, "row": 4, "object": "bench"},
+      {"column": 9, "row": 2, "object": "bookshelf"},
+      {"column": 2, "row": 7, "object": "campfire"},
+      {"column": 9, "row": 7, "object": "stairs-up"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "shop",
+    "name": "Shop",
+    "columns": 12,
+    "rows": 9,
+    "background": "floor",
+    "fills": [
+      {"from": [0, 0], "to": [11, 0], "object": "wall"},
+      {"from": [0, 8], "to": [11, 8], "object": "wall"},
+      {"from": [0, 1], "to": [0, 7], "object": "wall"},
+      {"from": [11, 1], "to": [11, 7], "object": "wall"},
+      {"from": [3, 4], "to": [8, 4], "object": "table"}
+    ],
+    "cells": [
+      {"column": 5, "row": 8, "object": "door"},
+      {"column": 1, "row": 1, "object": "crate"},
+      {"column": 2, "row": 1, "object": "barrel"},
+      {"column": 1, "row": 2, "object": "crate"},
+      {"column": 9, "row": 2, "object": "crate"},
+      {"column": 10, "row": 6, "object": "bookshelf"},
+      {"column": 2, "row": 7, "object": "stairs-up"},
+      {"column": 9, "row": 7, "object": "barrel"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "temple",
+    "name": "Temple",
+    "columns": 14,
+    "rows": 12,
+    "background": "floor",
+    "fills": [
+      {"from": [0, 0], "to": [13, 0], "object": "wall"},
+      {"from": [0, 11], "to": [13, 11], "object": "wall"},
+      {"from": [0, 1], "to": [0, 10], "object": "wall"},
+      {"from": [13, 1], "to": [13, 10], "object": "wall"},
+      {"from": [4, 8], "to": [9, 8], "object": "bench"},
+      {"from": [4, 9], "to": [9, 9], "object": "bench"}
+    ],
+    "cells": [
+      {"column": 6, "row": 11, "object": "door"},
+      {"column": 6, "row": 2, "object": "altar"},
+      {"column": 3, "row": 3, "object": "statue"},
+      {"column": 10, "row": 3, "object": "statue"},
+      {"column": 4, "row": 5, "object": "pillar"},
+      {"column": 9, "row": 5, "object": "pillar"},
+      {"column": 1, "row": 1, "object": "campfire"},
+      {"column": 12, "row": 1, "object": "campfire"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "crypt",
+    "name": "Crypt",
+    "columns": 12,
+    "rows": 10,
+    "background": "floor",
+    "fills": [
+      {"from": [0, 0], "to": [11, 0], "object": "wall"},
+      {"from": [0, 9], "to": [11, 9], "object": "wall"},
+      {"from": [0, 1], "to": [0, 8], "object": "wall"},
+      {"from": [11, 1], "to": [11, 8], "object": "wall"},
+      {"from": [3, 4], "to": [8, 4], "terrain": "rubble"},
+      {"from": [3, 5], "to": [8, 5], "terrain": "rubble"}
+    ],
+    "cells": [
+      {"column": 5, "row": 9, "object": "door"},
+      {"column": 5, "row": 1, "object": "stairs-down"},
+      {"column": 2, "row": 3, "object": "pillar"},
+      {"column": 9, "row": 3, "object": "pillar"},
+      {"column": 2, "row": 6, "object": "pillar"},
+      {"column": 9, "row": 6, "object": "pillar"},
+      {"column": 4, "row": 3, "object": "bones"},
+      {"column": 7, "row": 3, "object": "bones"},
+      {"column": 5, "row": 2, "object": "altar"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "cave",
+    "name": "Cave",
+    "columns": 14,
+    "rows": 11,
+    "background": "dirt",
+    "fills": [
+      {"from": [0, 0], "to": [13, 0], "object": "boulder"},
+      {"from": [0, 1], "to": [1, 10], "object": "boulder"},
+      {"from": [12, 1], "to": [13, 10], "object": "boulder"},
+      {"from": [2, 10], "to": [5, 10], "object": "boulder"},
+      {"from": [8, 10], "to": [11, 10], "object": "boulder"},
+      {"from": [8, 2], "to": [11, 4], "terrain": "shallow-water"}
+    ],
+    "cells": [
+      {"column": 6, "row": 10, "object": "door"},
+      {"column": 3, "row": 3, "object": "boulder"},
+      {"column": 10, "row": 7, "object": "boulder"},
+      {"column": 4, "row": 6, "object": "bones"},
+      {"column": 5, "row": 7, "object": "campfire"},
+      {"column": 2, "row": 8, "object": "boulder"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "watchtower",
+    "name": "Watchtower",
+    "columns": 10,
+    "rows": 10,
+    "background": "floor",
+    "fills": [
+      {"from": [0, 0], "to": [9, 0], "object": "wall"},
+      {"from": [0, 9], "to": [9, 9], "object": "wall"},
+      {"from": [0, 1], "to": [0, 8], "object": "wall"},
+      {"from": [9, 1], "to": [9, 8], "object": "wall"}
+    ],
+    "cells": [
+      {"column": 4, "row": 9, "object": "door"},
+      {"column": 2, "row": 1, "object": "stairs-up"},
+      {"column": 7, "row": 1, "object": "stairs-down"},
+      {"column": 4, "row": 4, "object": "table"},
+      {"column": 5, "row": 4, "object": "bench"},
+      {"column": 7, "row": 4, "object": "crate"},
+      {"column": 2, "row": 7, "object": "pillar"},
+      {"column": 7, "row": 7, "object": "pillar"},
+      {"column": 8, "row": 2, "object": "barrel"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "market",
+    "name": "Market square",
+    "columns": 16,
+    "rows": 12,
+    "background": "dirt",
+    "fills": [
+      {"from": [3, 3], "to": [5, 4], "object": "table"},
+      {"from": [10, 3], "to": [12, 4], "object": "table"},
+      {"from": [3, 8], "to": [5, 9], "object": "table"},
+      {"from": [10, 8], "to": [12, 9], "object": "table"}
+    ],
+    "cells": [
+      {"column": 7, "row": 5, "object": "fountain"},
+      {"column": 2, "row": 2, "object": "cart"},
+      {"column": 13, "row": 2, "object": "cart"},
+      {"column": 2, "row": 10, "object": "barrel"},
+      {"column": 13, "row": 10, "object": "barrel"},
+      {"column": 3, "row": 2, "object": "crate"},
+      {"column": 12, "row": 7, "object": "crate"},
+      {"column": 6, "row": 9, "object": "tent"},
+      {"column": 9, "row": 2, "object": "tent"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "camp",
+    "name": "Camp",
+    "columns": 12,
+    "rows": 10,
+    "background": "grass",
+    "fills": [
+      {"from": [0, 0], "to": [11, 0], "object": "tree"},
+      {"from": [0, 9], "to": [11, 9], "object": "tree"},
+      {"from": [0, 1], "to": [0, 8], "object": "tree"},
+      {"from": [11, 1], "to": [11, 8], "object": "tree"}
+    ],
+    "cells": [
+      {"column": 5, "row": 9, "object": "door"},
+      {"column": 3, "row": 2, "object": "tent"},
+      {"column": 8, "row": 2, "object": "tent"},
+      {"column": 5, "row": 5, "object": "campfire"},
+      {"column": 3, "row": 6, "object": "bench"},
+      {"column": 7, "row": 6, "object": "bench"},
+      {"column": 2, "row": 8, "object": "cart"},
+      {"column": 9, "row": 8, "object": "barrel"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "ship",
+    "name": "Ship",
+    "columns": 16,
+    "rows": 7,
+    "background": "floor",
+    "fills": [
+      {"from": [0, 0], "to": [15, 0], "object": "wall"},
+      {"from": [0, 6], "to": [15, 6], "object": "wall"},
+      {"from": [0, 1], "to": [0, 5], "object": "wall"},
+      {"from": [15, 1], "to": [15, 5], "object": "wall"}
+    ],
+    "cells": [
+      {"column": 7, "row": 6, "object": "door"},
+      {"column": 8, "row": 3, "object": "pillar"},
+      {"column": 2, "row": 1, "object": "crate"},
+      {"column": 3, "row": 1, "object": "barrel"},
+      {"column": 2, "row": 5, "object": "barrel"},
+      {"column": 13, "row": 1, "object": "bed"},
+      {"column": 13, "row": 5, "object": "crate"},
+      {"column": 12, "row": 3, "object": "stairs-down"},
+      {"column": 4, "row": 3, "object": "table"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "dungeon_hall",
+    "name": "Dungeon hall",
+    "columns": 14,
+    "rows": 10,
+    "background": "floor",
+    "fills": [
+      {"from": [0, 0], "to": [13, 0], "object": "wall"},
+      {"from": [0, 9], "to": [13, 9], "object": "wall"},
+      {"from": [0, 1], "to": [0, 8], "object": "wall"},
+      {"from": [13, 1], "to": [13, 8], "object": "wall"}
+    ],
+    "cells": [
+      {"column": 6, "row": 9, "object": "door"},
+      {"column": 2, "row": 3, "object": "pillar"},
+      {"column": 11, "row": 3, "object": "pillar"},
+      {"column": 2, "row": 6, "object": "pillar"},
+      {"column": 11, "row": 6, "object": "pillar"},
+      {"column": 6, "row": 2, "object": "statue"},
+      {"column": 4, "row": 5, "object": "bones"},
+      {"column": 9, "row": 5, "object": "bones"},
+      {"column": 12, "row": 1, "object": "stairs-down"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "castle_hall",
+    "name": "Castle hall",
+    "columns": 16,
+    "rows": 12,
+    "background": "floor",
+    "fills": [
+      {"from": [0, 0], "to": [15, 0], "object": "wall"},
+      {"from": [0, 11], "to": [15, 11], "object": "wall"},
+      {"from": [0, 1], "to": [0, 10], "object": "wall"},
+      {"from": [15, 1], "to": [15, 10], "object": "wall"},
+      {"from": [3, 6], "to": [6, 6], "object": "table"},
+      {"from": [9, 6], "to": [12, 6], "object": "table"}
+    ],
+    "cells": [
+      {"column": 7, "row": 11, "object": "door"},
+      {"column": 7, "row": 2, "object": "throne"},
+      {"column": 2, "row": 3, "object": "pillar"},
+      {"column": 13, "row": 3, "object": "pillar"},
+      {"column": 2, "row": 8, "object": "statue"},
+      {"column": 13, "row": 8, "object": "statue"},
+      {"column": 3, "row": 5, "object": "bench"},
+      {"column": 6, "row": 5, "object": "bench"},
+      {"column": 9, "row": 5, "object": "bench"},
+      {"column": 12, "row": 5, "object": "bench"},
+      {"column": 1, "row": 1, "object": "campfire"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "library",
+    "name": "Library",
+    "columns": 14,
+    "rows": 10,
+    "background": "floor",
+    "fills": [
+      {"from": [0, 0], "to": [13, 0], "object": "wall"},
+      {"from": [0, 9], "to": [13, 9], "object": "wall"},
+      {"from": [0, 1], "to": [0, 8], "object": "wall"},
+      {"from": [13, 1], "to": [13, 8], "object": "wall"},
+      {"from": [2, 2], "to": [5, 2], "object": "bookshelf"},
+      {"from": [8, 2], "to": [11, 2], "object": "bookshelf"},
+      {"from": [2, 6], "to": [5, 6], "object": "bookshelf"},
+      {"from": [8, 6], "to": [11, 6], "object": "bookshelf"}
+    ],
+    "cells": [
+      {"column": 6, "row": 9, "object": "door"},
+      {"column": 5, "row": 4, "object": "table"},
+      {"column": 8, "row": 4, "object": "table"},
+      {"column": 4, "row": 5, "object": "bench"},
+      {"column": 9, "row": 5, "object": "bench"},
+      {"column": 12, "row": 1, "object": "stairs-up"},
+      {"column": 1, "row": 8, "object": "ladder"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "cellar",
+    "name": "Cellar",
+    "columns": 12,
+    "rows": 8,
+    "background": "floor",
+    "fills": [
+      {"from": [0, 0], "to": [11, 0], "object": "wall"},
+      {"from": [0, 7], "to": [11, 7], "object": "wall"},
+      {"from": [0, 1], "to": [0, 6], "object": "wall"},
+      {"from": [11, 1], "to": [11, 6], "object": "wall"},
+      {"from": [6, 2], "to": [8, 3], "terrain": "mud"}
+    ],
+    "cells": [
+      {"column": 5, "row": 7, "object": "door"},
+      {"column": 2, "row": 1, "object": "stairs-up"},
+      {"column": 1, "row": 2, "object": "barrel"},
+      {"column": 1, "row": 3, "object": "barrel"},
+      {"column": 9, "row": 2, "object": "crate"},
+      {"column": 9, "row": 3, "object": "crate"},
+      {"column": 4, "row": 5, "object": "bones"},
+      {"column": 10, "row": 6, "object": "barrel"}
+    ]
   }
 ]

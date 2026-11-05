@@ -2,7 +2,7 @@
   {
     "type": "prompt",
     "id": "setting_forge",
-    "text": "There is no published setting. Invent this world yourself before the opening narration, and do not borrow a setting from any book, film, or game. Roll the idea tables with roll_creative to get a premise, a region, a faction, a conflict, a mystery, and a hook, then roll the structured tables with roll_tables: significant_terrain, terrain_quirk, terrain_antagonists, nation_theme, ruler_class, government_struggle, history_event, community_tags, court_tags, ruin_tags, and wilderness_tags. Read the results as prompts, not commands: keep what fits together, reroll what clashes, and decide what each answer means in this world. Write the decisions down in one record_settings call under topics such as the world, the starting region, its peoples, its powers, its history, its magic, and its present conflict, so they stay true in every later turn. Then build the opening with create_location for the first settlement and create_npc for the people the player will meet, calling each tool for all of them in the same reply rather than one per reply. Keep the world consistent with what you recorded; when play changes the setting, record the change.",
+    "text": "There is no published setting. Invent this world yourself before the opening narration, and do not borrow a setting from any book, film, or game. Roll every creative table with roll_creative to get a premise, a region, a faction, a conflict, a mystery, and a hook. Use list_dice_tables to see the structured tables the selected genres offer, then roll the ones you need with roll_tables. Read the results as prompts, not commands: keep what fits together, reroll what clashes, and decide what each answer means in this world. Write the decisions down in one record_settings call under topics such as the world, the starting region, its peoples, its powers, its history, its magic, and its present conflict, so they stay true in every later turn. Then build the opening with create_location for the first settlement and create_npc for the people the player will meet, calling each tool for all of them in the same reply rather than one per reply. Keep the world consistent with what you recorded; when play changes the setting, record the change.",
     "unwritten_only": true
   },
   {
@@ -11,5 +11,11 @@
     "step": "state",
     "text": "The Setting block in your world state is the record of the world you invented. Treat its facts as binding: places, peoples, powers, history, and the rules of magic stay as recorded unless the story changes them, and a change is written with record_setting before you narrate it. Do not introduce a nation, god, species, or law of magic that contradicts the record, and do not drift toward a familiar published setting.",
     "unwritten_only": true
+  },
+  {
+    "type": "prompt",
+    "id": "local_maps",
+    "step": "state",
+    "text": "A local map is a grid for an indoor or small-scale place: a room, tavern, house, temple, crypt, cave, watchtower, market, camp, ship, hall, library, or cellar. When the player is somewhere whose layout matters and no map shows it, make one with create_local_map from a fitting template. Put the player character, NPCs, and notable props where they are with place_map_token, and set furniture, doors, stairs, and other fixed objects with set_map_cells. Keep the tokens current as people move. If a fight starts on that map, use start_encounter on the same map and add participants: it becomes the encounter map and the tokens already placed become their cells, so do not make a second map or place everyone again."
   }
 ]

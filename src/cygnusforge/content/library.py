@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import inspect
+import json
 import logging
 import math
 import re
@@ -34,6 +35,13 @@ from cygnusforge.content.definitions import (
     read_definitions,
     required_text,
 )
+from cygnusforge.content.icons import (
+    FALLBACK_ITEM,
+    FALLBACK_MONSTER,
+    FALLBACK_PLACE,
+    FALLBACK_WEAPON,
+    resolve_icon,
+)
 from cygnusforge.rules.dice import FORMULA, PLUS_MODES, is_formula
 from cygnusforge.services.attacks import ATTACK_FLAGS
 from cygnusforge.services.geometry import overlaps, polygon_problem
@@ -63,6 +71,12 @@ logger = logging.getLogger(__name__)
 CORE_RULE_SET = "core"
 # Every rule set must define these tables. NPCs get a random entry from each one by default.
 REQUIRED_TABLES = ("personality", "accent", "quirk")
+# The genres a dice or creative table can be tagged with. A rule set offers the tables its own
+# `table_genres` match, and a campaign may narrow the choice further. A table tagged `generic`,
+# or with no genres at all, fits every setting. Extend this list and an existing table tag gains
+# a new reader without any code change.
+TABLE_GENRES = ("generic", "fantasy", "science-fiction", "horror", "modern", "historical")
+GENERIC_GENRE = "generic"
 
 
 def check_keys(data: Mapping[str, Any], allowed: Iterable[str], label: str) -> None:
@@ -86,6 +100,106 @@ def check_object_keys(data: object, allowed: Iterable[str], label: str) -> Mappi
     return data
 
 
+def _icon_entries(
+    definitions: Iterable[Definition],
+    kind: str,
+    template: str,
+) -> dict[str, tuple[str | None, str | None]]:
+    """The raw (icon, looks_like) a set of definitions names, by id, for `looks_like` chains.
+    Every field is checked to be text here, before a chain follows it."""
+    entries: dict[str, tuple[str | None, str | None]] = {}
+    for definition in definitions:
+        if definition.type != kind:
+            continue
+        label = f"{template}: {kind.replace('_', ' ')} {definition.id}"
+        icon = _optional_text(definition.data, "icon", label)
+        looks_like = _optional_text(definition.data, "looks_like", label)
+        entries[definition.id] = (icon, looks_like)
+    return entries
+
+
+def _icon_fields(
+    data: Mapping[str, Any],
+    entries: Mapping[str, tuple[str | None, str | None]],
+    fallback: str | None,
+    label: str,
+) -> tuple[str | None, str | None]:
+    """The resolved icon and the raw `looks_like` a definition carries."""
+    icon = _optional_text(data, "icon", label)
+    looks_like = _optional_text(data, "looks_like", label)
+    resolved = resolve_icon(
+        icon,
+        looks_like,
+        label=label,
+        entries=entries,
+        fallback=fallback,
+    )
+    return resolved, looks_like
+
+
+def read_table_genres(value: Any, label: str) -> tuple[str, ...]:
+    """The genre tags in a table's `genres`, checked against TABLE_GENRES. An absent list means
+    the table fits every setting. Repeats are refused, so a tag means what it says once."""
+    if value is None:
+        return ()
+    entries = _text_list(value, label)
+    unknown = [entry for entry in entries if entry not in TABLE_GENRES]
+    if unknown:
+        names = ", ".join(repr(entry) for entry in unknown)
+        raise ContentError(
+            f"{label}: unknown genre(s) {names}; choose from {', '.join(TABLE_GENRES)}"
+        )
+    if len(set(entries)) != len(entries):
+        raise ContentError(f"{label}: a genre may be named only once")
+    return tuple(entries)
+
+
+def _definition_genres(definition: Definition, template: str) -> tuple[str, ...]:
+    """A table definition's genre tags, before the table itself is built."""
+    if "genres" not in definition.data:
+        return ()
+    label = f"{template}: {definition.type.replace('_', ' ')} {definition.id}: 'genres'"
+    return read_table_genres(definition.data["genres"], label)
+
+
+def table_genre_offered(tags: Sequence[str], genres: Sequence[str]) -> bool:
+    """Whether a genre selection offers a table. A table with no tags, or one tagged `generic`,
+    belongs to every setting; otherwise at least one of its tags must be selected."""
+    if not tags or GENERIC_GENRE in tags:
+        return True
+    return bool(set(tags) & set(genres))
+
+
+def tables_for_genres(
+    tables: Mapping[str, DiceTable], genres: Sequence[str]
+) -> dict[str, DiceTable]:
+    """The tables a genre selection offers, keeping the mapping's order."""
+    return {
+        table_id: table
+        for table_id, table in tables.items()
+        if table_genre_offered(table.genres, genres)
+    }
+
+
+def effective_table_genres(stored: str, rule_set: RuleSet) -> tuple[str, ...]:
+    """The genres a campaign's tables are filtered by. A campaign's JSON list wins when it set
+    one; a blank, unreadable, or now-unknown list falls back to the rule set's default, so a
+    stale choice never leaves the GM without the tables the rule set means to offer."""
+    text = (stored or "").strip()
+    if not text:
+        return rule_set.table_genres
+    try:
+        value = json.loads(text)
+    except json.JSONDecodeError:
+        return rule_set.table_genres
+    if not isinstance(value, list):
+        return rule_set.table_genres
+    chosen = tuple(
+        dict.fromkeys(entry for entry in value if isinstance(entry, str) and entry in TABLE_GENRES)
+    )
+    return chosen or rule_set.table_genres
+
+
 @dataclass(frozen=True)
 class LocationTemplate:
     id: str
@@ -105,6 +219,11 @@ class LocationTemplate:
     # Authored overland routes from this place, by destination location id. Each route's path,
     # distance, terrain, and vast are checked against the rule set's wilderness travel.
     routes: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    # The raw `looks_like` this place borrows, kept for authors. The icon is resolved at load.
+    looks_like: str | None = None
+    # The id of the encounter template that is this place's authored local map, or None. It is
+    # checked against the rule set's templates when the world's content is built.
+    map: str | None = None
 
 
 @dataclass(frozen=True)
@@ -414,7 +533,20 @@ class EncounterTerrain:
 
 
 # The textures a world terrain kind may be drawn with. The map engine draws each one.
-TERRAIN_PATTERNS = ("waves", "trees", "ridges", "reeds", "tufts")
+TERRAIN_PATTERNS = (
+    "waves",
+    "trees",
+    "ridges",
+    "reeds",
+    "tufts",
+    "dunes",
+    "crags",
+    "ice",
+    "flames",
+    "canopy",
+    "moor",
+    "reef",
+)
 
 
 @dataclass(frozen=True)
@@ -500,6 +632,8 @@ class DiceTable:
     dice: str
     rows: tuple[DiceRow, ...]
     creative: bool = False
+    # The kinds of setting the table fits. Empty means every setting, as does `generic`.
+    genres: tuple[str, ...] = ()
 
     def row_for(self, roll: int) -> DiceRow:
         return next(row for row in self.rows if row.low <= roll <= row.high)
@@ -546,6 +680,10 @@ class MonsterTemplate:
     rule_text: Mapping[str, str] = field(default_factory=dict)
     # The statblock's special abilities as structured rules instead of prose alone.
     abilities: tuple[MonsterAbility, ...] = ()
+    # The creature icon the statblock shows, resolved from `icon` or `looks_like` at load time.
+    icon: str = FALLBACK_MONSTER
+    # The icon or definition whose looks this creature borrows. Kept for authors and lookups.
+    looks_like: str | None = None
 
 
 DAMAGE_KINDS = ("absorb", "harm", "overflow")
@@ -1257,6 +1395,10 @@ class ShopItem:
     armor_mode: str = "add"
     # Check ids this worn item penalizes by its Encumbrance, such as Sneak or Exert.
     encumbrance_checks: tuple[str, ...] = ()
+    # The icon the catalogue entry shows, resolved from `icon` or `looks_like` at load time.
+    icon: str = FALLBACK_ITEM
+    # The icon or definition whose looks this item borrows. Kept for authors and lookups.
+    looks_like: str | None = None
 
 
 @dataclass(frozen=True)
@@ -1432,6 +1574,10 @@ class RuleSet:
     hooks: Hooks | None = None
     # A short line shown when choosing the rule set on the create campaign page.
     blurb: str | None = None
+    # The genres of dice and creative tables this rule set offers, such as ("generic", "fantasy").
+    # A core table tagged `generic`, or with no tags, is always offered; any other core table must
+    # share a tag with this selection to reach the rule set.
+    table_genres: tuple[str, ...] = ()
     # Rule-data values validated by the ruleset modules that declared them.
     rule_data: Mapping[str, object] = field(default_factory=dict)
 
@@ -1650,7 +1796,12 @@ def _load_world(directory: Path) -> WorldTemplate:
         {"type", "id", "name", "description", "rule_set", "blurb", "start"},
         label,
     )
-    locations = tuple(_load_location(d, template) for d in definitions if d.type == "location")
+    location_icons = _icon_entries(definitions, "location", template)
+    locations = tuple(
+        _load_location(d, template, icon_entries=location_icons)
+        for d in definitions
+        if d.type == "location"
+    )
     npc_definitions = [d for d in definitions if d.type == "npc"]
     npcs = tuple(_load_npc(d, template) for d in npc_definitions)
     statblocks = [_npc_statblock(d, template) for d in npc_definitions if _has_statblock(d.data)]
@@ -1782,6 +1933,7 @@ def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldCon
             name,
             pool=_hit_pool(rule_set.combat),
             conditions=rule_set.conditions,
+            icon_entries=_icon_entries(own, "monster", name),
         )
         for d in own
         if d.type == "monster"
@@ -1801,7 +1953,10 @@ def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldCon
                 f"{name}: npc {npc.id!r} has hp_tier {npc.hp_tier!r}, which the "
                 f"{rule_set.id!r} rule set does not define"
             )
-    features = {d.id: load_feature(d, name) for d in own if d.type == "feature"}
+    feature_icons = _icon_entries(own, "feature", name)
+    features = {
+        d.id: load_feature(d, name, icon_entries=feature_icons) for d in own if d.type == "feature"
+    }
     raw_rules = {
         d.id: required_text(d.data, "text", f"{name}: rule {d.id}") for d in own if d.type == "rule"
     }
@@ -1813,6 +1968,11 @@ def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldCon
             )
     for spot in template.locations:
         _check_authored_routes(spot, rule_set, name)
+        if spot.map is not None and spot.map not in rule_set.encounter_templates:
+            raise ContentError(
+                f"{name}: location {spot.id!r} names local map template {spot.map!r}, which the "
+                f"{rule_set.id!r} rule set does not define"
+            )
     written = _attached_rules(monsters.values(), name)
     shared = sorted(written.keys() & raw_rules.keys())
     if shared:
@@ -1885,19 +2045,21 @@ def _load_creative_table(definition: Definition, template: str) -> DiceTable:
     `_patch_creative_table` applies before this runs. `source` credits where the entries came
     from and is checked here but not shown to the GM."""
     label = f"{template}: creative table {definition.id}"
-    extra = set(definition.data) - {"type", "id", "name", "entries", "source"}
+    extra = set(definition.data) - {"type", "id", "name", "entries", "source", "genres"}
     if extra:
         raise ContentError(f"{label}: unknown keys {sorted(extra)}")
     if "source" in definition.data:
         _text_list([definition.data["source"]], f"{label}: 'source'")
     name = _table_label(definition, template)
     entries = _creative_entries(definition.data.get("entries"), label)
+    genres = read_table_genres(definition.data.get("genres"), f"{label}: 'genres'")
     return DiceTable(
         id=definition.id,
         name=name,
         dice=f"1d{len(entries)}",
         rows=tuple(DiceRow(index, index, text) for index, text in enumerate(entries, 1)),
         creative=True,
+        genres=genres,
     )
 
 
@@ -1922,11 +2084,12 @@ def _patch_creative_table(
     """A rule set's creative table with `add` and `remove` changes the core table of the same id:
     the core entries, less `remove`, then `add` appended. Every removed entry must exist, and no
     added entry may already be there. A rule set table with `entries` replaces the core table
-    outright, as any definition does."""
+    outright, as any definition does. Genre tags follow the same rule: the patch's own `genres`
+    win, and a patch without them keeps the core table's tags."""
     label = f"{template}: creative table {definition.id}"
     if not {"add", "remove"} & set(definition.data):
         return definition
-    extra = set(definition.data) - {"type", "id", "name", "add", "remove", "source"}
+    extra = set(definition.data) - {"type", "id", "name", "add", "remove", "source", "genres"}
     if extra:
         raise ContentError(f"{label}: unknown keys {sorted(extra)} with 'add' or 'remove'")
     base = core.get(definition.id)
@@ -1951,6 +2114,8 @@ def _patch_creative_table(
     }
     if "source" in definition.data or "source" in base.data:
         data["source"] = definition.data.get("source", base.data.get("source"))
+    if "genres" in definition.data or "genres" in base.data:
+        data["genres"] = definition.data.get("genres", base.data.get("genres"))
     return Definition(type="creative_table", id=definition.id, data=data)
 
 
@@ -1978,7 +2143,12 @@ def _check_authored_routes(spot: LocationTemplate, rule_set: RuleSet, template: 
             )
 
 
-def _load_location(definition: Definition, template: str) -> LocationTemplate:
+def _load_location(
+    definition: Definition,
+    template: str,
+    *,
+    icon_entries: Mapping[str, tuple[str | None, str | None]] | None = None,
+) -> LocationTemplate:
     label = f"{template}: location {definition.id}"
     data = definition.data
     check_keys(
@@ -1993,8 +2163,10 @@ def _load_location(definition: Definition, template: str) -> LocationTemplate:
             "y",
             "parent",
             "icon",
+            "looks_like",
             "rules",
             "routes",
+            "map",
         },
         label,
     )
@@ -2009,6 +2181,7 @@ def _load_location(definition: Definition, template: str) -> LocationTemplate:
             raise ContentError(
                 f"{label}: {key} must be a number of kilometers from the map's center"
             )
+    icon, looks_like = _icon_fields(data, icon_entries or {}, FALLBACK_PLACE, label)
     return LocationTemplate(
         id=definition.id,
         name=required_text(data, "name", label),
@@ -2017,9 +2190,11 @@ def _load_location(definition: Definition, template: str) -> LocationTemplate:
         x=None if x is None else float(x),
         y=None if y is None else float(y),
         parent=_optional_text(data, "parent", label),
-        icon=_optional_text(data, "icon", label),
+        icon=icon,
         rules=rule_ids(data, label),
         routes=_load_routes(data, label),
+        looks_like=looks_like,
+        map=_optional_text(data, "map", label),
     )
 
 
@@ -2196,6 +2371,8 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "defense_floor",
             "picks",
             "repeatable",
+            "icon",
+            "looks_like",
         }
     ),
     "character_field": frozenset(
@@ -2333,8 +2510,23 @@ def _check_template_keys(data: Mapping[str, Any], label: str) -> None:
             check_keys(grant, GRANTED_KEYS, f"{label}: feature grant {index}")
 
 
+def _rule_set_table_genres(definitions: Sequence[Definition], template: str) -> tuple[str, ...]:
+    """The genres a rule set offers. Its `rule_set.table_genres` decides when set; otherwise the
+    rule set takes `generic` plus every genre its own tables use, so its own tables always fit."""
+    head = _single(list(definitions), "rule_set", template)
+    if "table_genres" in head.data:
+        return read_table_genres(head.data["table_genres"], f"{template}: rule_set: 'table_genres'")
+    used = {GENERIC_GENRE}
+    for definition in definitions:
+        if definition.type in ("dice_table", "creative_table"):
+            used.update(_definition_genres(definition, template))
+    return tuple(genre for genre in TABLE_GENRES if genre in used)
+
+
 def _load_rule_set(directory: Path, core_definitions: list[Definition]) -> RuleSet:
-    """A rule set is its own definitions plus every core definition it does not replace."""
+    """A rule set is its own definitions plus every core definition it does not replace. A core
+    dice or creative table joins it only when its genres fit the rule set's own selection; the
+    core library keeps every table, so the sourcebook stays complete."""
     template = directory.name
     core_creative = {d.id: d for d in core_definitions if d.type == "creative_table"}
     own = [
@@ -2342,13 +2534,25 @@ def _load_rule_set(directory: Path, core_definitions: list[Definition]) -> RuleS
         for d in read_definitions(directory)
     ]
     own_keys = {(d.type, d.id) for d in own}
+    genres = _rule_set_table_genres(own, template)
     inherited = [
-        d for d in core_definitions if d.type != "rule_set" and (d.type, d.id) not in own_keys
+        d
+        for d in core_definitions
+        if d.type != "rule_set"
+        and (d.type, d.id) not in own_keys
+        and (
+            d.type not in ("dice_table", "creative_table")
+            or table_genre_offered(_definition_genres(d, template), genres)
+        )
     ]
-    return _build_rule_set([*own, *inherited], template)
+    return _build_rule_set([*own, *inherited], template, table_genres=genres)
 
 
-def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
+def _build_rule_set(
+    definitions: list[Definition],
+    template: str,
+    table_genres: tuple[str, ...] | None = None,
+) -> RuleSet:
     head = _single(definitions, "rule_set", template)
     _check_directory_id(template, head.id)
     label = f"{template}: rule_set"
@@ -2367,9 +2571,12 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
             "condition_ends",
             "npc_hp",
             "npc_hp_stat",
+            "table_genres",
         },
         label,
     )
+    if table_genres is None:
+        table_genres = _rule_set_table_genres(definitions, template)
     _check_character_definitions(definitions, template)
     for definition in definitions:
         if definition.type == "rule":
@@ -2396,6 +2603,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         if name not in tables:
             raise ContentError(f"{template}: missing table {name!r}")
     table_names = {d.id: _table_label(d, template) for d in definitions if d.type == "table"}
+    feature_icons = _icon_entries(definitions, "feature", template)
     character = build_character(
         definitions,
         tables,
@@ -2403,6 +2611,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         template,
         skill_progression=head.data.get("skill_progression"),
         ordered_feature_tags=head.data.get("ordered_feature_tags", []),
+        icon_entries=feature_icons,
     )
     optional_templates = _names(head.data, "optional_templates", label)
     character = replace(character, optional_kinds=optional_templates)
@@ -2480,7 +2689,13 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
     _check_item_sizes(character, item_sizes, template)
     magic = _load_magic(definitions, item_sizes, template)
     hooks = _load_rule_hooks(definitions, modules, character, rests, template)
-    marketplace = _load_marketplace(definitions, item_sizes, character, template)
+    marketplace = _load_marketplace(
+        definitions,
+        item_sizes,
+        character,
+        template,
+        icon_entries=_icon_entries(definitions, "shop_item", template),
+    )
     prompt_fragments = _load_prompts(definitions, template)
     sentence_cap = _load_sentence_cap(definitions, template)
     travel = _load_travel(definitions, template)
@@ -2526,6 +2741,7 @@ def _build_rule_set(definitions: list[Definition], template: str) -> RuleSet:
         name=required_text(head.data, "name", label),
         description=required_text(head.data, "description", label),
         blurb=_optional_text(head.data, "blurb", label),
+        table_genres=table_genres,
         content=RuleContent(
             rules=rules,
             attached_rules=written,
@@ -3418,6 +3634,7 @@ def _load_monster(
     *,
     pool: str | None,
     conditions: Mapping[str, ConditionRules] | None = None,
+    icon_entries: Mapping[str, tuple[str | None, str | None]] | None = None,
 ) -> MonsterTemplate:
     label = f"{template}: monster {definition.id}"
     data = definition.data
@@ -3428,6 +3645,8 @@ def _load_monster(
             "id",
             "name",
             "description",
+            "icon",
+            "looks_like",
             *STATBLOCK_KEYS,
             "attacks_per_action",
             "large_group",
@@ -3470,6 +3689,7 @@ def _load_monster(
         raise ContentError(f"{label}: 'large_group' must be true or false")
     rules, rule_text = _statblock_rules(data, label)
     abilities = _statblock_abilities(data.get("abilities", []), character, conditions or {}, label)
+    icon, looks_like = _icon_fields(data, icon_entries or {}, FALLBACK_MONSTER, label)
     return MonsterTemplate(
         id=definition.id,
         name=required_text(data, "name", label),
@@ -3484,6 +3704,8 @@ def _load_monster(
         attack_shock=attack_shock,
         rule_text=rule_text,
         abilities=abilities,
+        icon=icon or FALLBACK_MONSTER,
+        looks_like=looks_like,
     )
 
 
@@ -4519,6 +4741,8 @@ def _load_marketplace(
     item_sizes: Mapping[str, int],
     character: CharacterSpec,
     template: str,
+    *,
+    icon_entries: Mapping[str, tuple[str | None, str | None]] | None = None,
 ) -> Marketplace | None:
     """The marketplace: `shop_item`, `service`, and `hireling` definitions. Items may be petty,
     normal, or bulky, as the rule set's item sizes say."""
@@ -4553,12 +4777,21 @@ def _load_marketplace(
                 "uses",
                 "description",
                 "encumbrance_checks",
+                "icon",
+                "looks_like",
             },
             label,
         )
         size = required_text(d.data, "size", label)
         if size not in item_sizes:
             raise ContentError(f"{label}: 'size' names no item size ({size!r})")
+        damage = str(d.data.get("damage", ""))
+        icon, looks_like = _icon_fields(
+            d.data,
+            icon_entries or {},
+            FALLBACK_WEAPON if damage else FALLBACK_ITEM,
+            label,
+        )
         items.append(
             ShopItem(
                 id=d.id,
@@ -4570,10 +4803,12 @@ def _load_marketplace(
                 armor_mode=_choice(
                     d.data, "armor_mode", ("add", "set", "max", "shield"), "add", label
                 ),
-                damage=str(d.data.get("damage", "")),
+                damage=damage,
                 uses=_whole(d.data, "uses", label, 0),
                 description=str(d.data.get("description", "")),
                 encumbrance_checks=_names(d.data, "encumbrance_checks", label),
+                icon=icon or FALLBACK_ITEM,
+                looks_like=looks_like,
             )
         )
     loaded_services = []
@@ -5646,10 +5881,12 @@ def _load_option(option: object, label: str) -> TableOption:
 
 def _load_dice_table(definition: Definition, template: str) -> DiceTable:
     """A dice table has a single dice formula and rows of `roll` ("4" or "2-3") and `result`.
-    The rows must run in order with no gaps, covering every roll the dice can show."""
+    The rows must run in order with no gaps, covering every roll the dice can show. `genres`
+    says which kinds of setting the table fits, and an absent list fits every setting."""
     label = f"{template}: dice table {definition.id}"
-    check_keys(definition.data, {"type", "id", "name", "dice", "rows"}, label)
+    check_keys(definition.data, {"type", "id", "name", "dice", "rows", "genres"}, label)
     name = _table_label(definition, template)
+    genres = read_table_genres(definition.data.get("genres"), f"{label}: 'genres'")
     dice = definition.data.get("dice")
     formula = FORMULA.fullmatch(dice) if isinstance(dice, str) else None
     if formula is None:
@@ -5694,7 +5931,7 @@ def _load_dice_table(definition: Definition, template: str) -> DiceTable:
         expected = row.high + 1
     if expected != high + 1:
         raise ContentError(f"{label}: rows must cover every roll up to {high}")
-    return DiceTable(id=definition.id, name=name, dice=dice, rows=tuple(loaded))
+    return DiceTable(id=definition.id, name=name, dice=dice, rows=tuple(loaded), genres=genres)
 
 
 def _table_label(definition: Definition, template: str) -> str:

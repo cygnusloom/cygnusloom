@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Elemental</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 4 L44 24 L38 24 Q46 34 44 44 Q42 54 32 58 Q22 54 20 44 Q18 34 26 24 L20 24 Z" fill="#6fa8c9"/><path d="M32 20 Q38 30 36 38 Q34 46 28 48 Q24 42 26 34 Q28 26 32 20 Z" fill="#d9eef7"/><circle cx="32" cy="40" r="2" fill="#2e2620"/>
+  </g>
+</svg>

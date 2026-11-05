@@ -36,6 +36,34 @@
   <div class="tab-panel map-view" role="tabpanel" id="panel-world" aria-labelledby="tab-world" hidden>
     {{ map_board(world_map, framed=true, prefix="tab") }}
   </div>
+  {% elif local_map %}
+  <div class="tab-list" role="tablist" aria-label="Map views">
+    <button type="button" class="tab" role="tab" id="tab-local" aria-controls="panel-local" aria-selected="true">Local map</button>
+    <button type="button" class="tab" role="tab" id="tab-world" aria-controls="panel-world" aria-selected="false" tabindex="-1">World map</button>
+  </div>
+  <div class="tab-panel map-view" role="tabpanel" id="panel-local" aria-labelledby="tab-local">
+    <div class="map-frame">{{ encounter_board(local_map, local_map_rows) }}</div>
+    <div class="encounter-status">
+      <p><strong>{{ local_map.map }}</strong> <span class="muted">{{ local_map.location }}</span></p>
+      <p class="muted">A local map of the place you are in. If a fight starts here, this same map becomes the encounter board.</p>
+    </div>
+    {% if local_map.participants %}
+    <ul class="encounter-roster" aria-label="People and props here">
+      {% for participant in local_map.participants %}
+      <li>
+        <span class="muted">{{ participant.number }}.</span>
+        <strong>{{ participant.name }}</strong>
+        {% if participant.creature %}<span class="muted">{{ participant.creature }}</span>{% endif %}
+        {% if participant.is_pc %}<span class="muted">(you)</span>{% endif %}
+        {% if participant.status %}<span class="roster-status">{{ participant.status }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  <div class="tab-panel map-view" role="tabpanel" id="panel-world" aria-labelledby="tab-world" hidden>
+    {{ map_board(world_map, framed=true, prefix="tab") }}
+  </div>
   {% else %}
     {{ map_board(world_map, framed=true, prefix="tab") }}
   {% endif %}

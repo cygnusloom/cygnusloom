@@ -19,6 +19,7 @@
   {
     "type": "dice_table",
     "id": "dungeon_events",
+    "genres": ["fantasy"],
     "name": "Dungeon Events",
     "dice": "1d6",
     "rows": [
@@ -57,6 +58,7 @@
   {
     "type": "dice_table",
     "id": "dungeon_reaction",
+    "genres": ["generic", "fantasy"],
     "name": "Reaction",
     "dice": "2d6",
     "rows": [

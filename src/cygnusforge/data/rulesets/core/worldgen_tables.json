@@ -2,6 +2,7 @@
   {
     "type": "dice_table",
     "id": "significant_terrain",
+    "genres": ["fantasy"],
     "name": "Significant Terrain",
     "dice": "1d20",
     "rows": [
@@ -90,6 +91,7 @@
   {
     "type": "dice_table",
     "id": "terrain_quirk",
+    "genres": ["fantasy"],
     "name": "Terrain Quirk",
     "dice": "1d20",
     "rows": [
@@ -178,6 +180,7 @@
   {
     "type": "dice_table",
     "id": "terrain_antagonists",
+    "genres": ["fantasy"],
     "name": "Terrain Antagonists",
     "dice": "1d12",
     "rows": [
@@ -234,6 +237,7 @@
   {
     "type": "dice_table",
     "id": "terrain_use",
+    "genres": ["fantasy"],
     "name": "Terrain Use",
     "dice": "1d8",
     "rows": [
@@ -274,6 +278,7 @@
   {
     "type": "dice_table",
     "id": "terrain_danger",
+    "genres": ["fantasy"],
     "name": "Terrain Danger",
     "dice": "1d6",
     "rows": [
@@ -306,6 +311,7 @@
   {
     "type": "dice_table",
     "id": "terrain_population",
+    "genres": ["fantasy"],
     "name": "Terrain Population",
     "dice": "1d4",
     "rows": [
@@ -330,6 +336,7 @@
   {
     "type": "dice_table",
     "id": "terrain_last_event",
+    "genres": ["fantasy"],
     "name": "Terrain Last Event",
     "dice": "1d10",
     "rows": [
@@ -378,6 +385,7 @@
   {
     "type": "dice_table",
     "id": "nation_disputes_with_neighbor",
+    "genres": ["generic", "fantasy"],
     "name": "Nation Disputes With Neighbor",
     "dice": "1d20",
     "rows": [
@@ -466,6 +474,7 @@
   {
     "type": "dice_table",
     "id": "nation_positive_ties",
+    "genres": ["generic", "fantasy"],
     "name": "Nation Positive Ties",
     "dice": "1d20",
     "rows": [
@@ -554,6 +563,7 @@
   {
     "type": "dice_table",
     "id": "nation_current_problems",
+    "genres": ["generic", "fantasy"],
     "name": "Nation Current Problems",
     "dice": "1d20",
     "rows": [
@@ -642,6 +652,7 @@
   {
     "type": "dice_table",
     "id": "nation_good_things",
+    "genres": ["generic", "fantasy"],
     "name": "Nation Good Things",
     "dice": "1d20",
     "rows": [
@@ -730,6 +741,7 @@
   {
     "type": "dice_table",
     "id": "nation_theme",
+    "genres": ["generic", "fantasy"],
     "name": "Nation Theme",
     "dice": "1d20",
     "rows": [
@@ -818,6 +830,7 @@
   {
     "type": "dice_table",
     "id": "ruler_count",
+    "genres": ["generic", "fantasy"],
     "name": "Number of Rulers",
     "dice": "1d4",
     "rows": [
@@ -842,6 +855,7 @@
   {
     "type": "dice_table",
     "id": "ruler_class",
+    "genres": ["fantasy"],
     "name": "Ruling Class",
     "dice": "1d12",
     "rows": [
@@ -898,6 +912,7 @@
   {
     "type": "dice_table",
     "id": "ruler_legitimacy",
+    "genres": ["generic", "fantasy"],
     "name": "Source of Legitimacy",
     "dice": "1d12",
     "rows": [
@@ -954,6 +969,7 @@
   {
     "type": "dice_table",
     "id": "ruler_control",
+    "genres": ["generic", "fantasy"],
     "name": "Bodies That Enforce the Ruler's Will",
     "dice": "1d12",
     "rows": [
@@ -1010,6 +1026,7 @@
   {
     "type": "dice_table",
     "id": "single_ruler_form",
+    "genres": ["generic", "fantasy"],
     "name": "Form of a Single Ruler",
     "dice": "1d8",
     "rows": [
@@ -1050,6 +1067,7 @@
   {
     "type": "dice_table",
     "id": "multiple_ruler_form",
+    "genres": ["generic", "fantasy"],
     "name": "Form of Multiple Rulers",
     "dice": "1d8",
     "rows": [
@@ -1090,6 +1108,7 @@
   {
     "type": "dice_table",
     "id": "government_struggle",
+    "genres": ["generic", "fantasy"],
     "name": "Faction Fight Inside the Government",
     "dice": "1d12",
     "rows": [
@@ -1146,6 +1165,7 @@
   {
     "type": "dice_table",
     "id": "government_recent_event",
+    "genres": ["generic", "fantasy"],
     "name": "What the Government Just Did",
     "dice": "1d20",
     "rows": [
@@ -1234,6 +1254,7 @@
   {
     "type": "dice_table",
     "id": "government_officials_problem",
+    "genres": ["generic", "fantasy"],
     "name": "Which Official Is the Problem",
     "dice": "1d12",
     "rows": [
@@ -1290,6 +1311,7 @@
   {
     "type": "dice_table",
     "id": "government_minister_problem",
+    "genres": ["generic", "fantasy"],
     "name": "Problems of the Ministers",
     "dice": "1d8",
     "rows": [
@@ -1330,6 +1352,7 @@
   {
     "type": "dice_table",
     "id": "ruler_established",
+    "genres": ["generic", "fantasy"],
     "name": "How Long the Ruler Has Held Power",
     "dice": "1d6",
     "rows": [
@@ -1362,6 +1385,7 @@
   {
     "type": "dice_table",
     "id": "government_stability",
+    "genres": ["generic", "fantasy"],
     "name": "How Secure the Government Is",
     "dice": "1d4",
     "rows": [
@@ -1386,6 +1410,7 @@
   {
     "type": "dice_table",
     "id": "government_strength",
+    "genres": ["fantasy"],
     "name": "An Asset of the Government",
     "dice": "1d10",
     "rows": [
@@ -1434,6 +1459,7 @@
   {
     "type": "dice_table",
     "id": "history_event",
+    "genres": ["generic", "fantasy"],
     "name": "Historical Event",
     "dice": "1d100",
     "rows": [
@@ -1642,6 +1668,7 @@
   {
     "type": "dice_table",
     "id": "history_peak",
+    "genres": ["generic", "fantasy"],
     "name": "What Was Great at the Height",
     "dice": "1d12",
     "rows": [
@@ -1698,6 +1725,7 @@
   {
     "type": "dice_table",
     "id": "history_failure",
+    "genres": ["generic", "fantasy"],
     "name": "Why It Failed at the Last Crisis",
     "dice": "1d12",
     "rows": [
@@ -1754,6 +1782,7 @@
   {
     "type": "dice_table",
     "id": "history_survivors",
+    "genres": ["generic", "fantasy"],
     "name": "What Became of the Survivors",
     "dice": "1d12",
     "rows": [
@@ -1810,6 +1839,7 @@
   {
     "type": "dice_table",
     "id": "community_tags",
+    "genres": ["generic", "fantasy"],
     "name": "Community Tags",
     "dice": "1d100",
     "rows": [
@@ -2018,6 +2048,7 @@
   {
     "type": "dice_table",
     "id": "court_tags",
+    "genres": ["generic", "fantasy"],
     "name": "Court Tags",
     "dice": "1d100",
     "rows": [
@@ -2226,6 +2257,7 @@
   {
     "type": "dice_table",
     "id": "ruin_tags",
+    "genres": ["generic", "fantasy"],
     "name": "Ruin Tags",
     "dice": "1d100",
     "rows": [
@@ -2434,6 +2466,7 @@
   {
     "type": "dice_table",
     "id": "wilderness_tags",
+    "genres": ["generic", "fantasy"],
     "name": "Wilderness Tags",
     "dice": "1d100",
     "rows": [
@@ -2642,6 +2675,7 @@
   {
     "type": "dice_table",
     "id": "dungeon_reaction",
+    "genres": ["generic", "fantasy"],
     "name": "NPC Reaction",
     "dice": "2d6",
     "rows": [
@@ -2670,6 +2704,7 @@
   {
     "type": "dice_table",
     "id": "history_origin",
+    "genres": ["generic", "fantasy"],
     "name": "How the Crisis Originated",
     "dice": "1d8",
     "rows": [
@@ -2710,6 +2745,7 @@
   {
     "type": "dice_table",
     "id": "original_inhabitants",
+    "genres": ["generic", "fantasy"],
     "name": "What Became of the First People",
     "dice": "1d10",
     "rows": [
@@ -2758,6 +2794,7 @@
   {
     "type": "dice_table",
     "id": "crisis_overcome",
+    "genres": ["generic", "fantasy"],
     "name": "How They Overcame the Crisis",
     "dice": "1d10",
     "rows": [
@@ -2806,6 +2843,7 @@
   {
     "type": "dice_table",
     "id": "social_identity",
+    "genres": ["generic", "fantasy"],
     "name": "What People Belong To",
     "dice": "1d20",
     "rows": [
@@ -2894,6 +2932,7 @@
   {
     "type": "dice_table",
     "id": "physical_quirk",
+    "genres": ["generic", "fantasy"],
     "name": "Distinguishing Physical Traits",
     "dice": "1d20",
     "rows": [
@@ -2982,6 +3021,7 @@
   {
     "type": "dice_table",
     "id": "adornment",
+    "genres": ["generic", "fantasy"],
     "name": "Common Adornment",
     "dice": "1d12",
     "rows": [
@@ -3038,6 +3078,7 @@
   {
     "type": "dice_table",
     "id": "hair",
+    "genres": ["generic", "fantasy"],
     "name": "Hair Color and Texture",
     "dice": "1d8",
     "rows": [
@@ -3078,6 +3119,7 @@
   {
     "type": "dice_table",
     "id": "skin",
+    "genres": ["generic", "fantasy"],
     "name": "Skin Colors",
     "dice": "1d8",
     "rows": [
@@ -3118,6 +3160,7 @@
   {
     "type": "dice_table",
     "id": "eyes",
+    "genres": ["generic", "fantasy"],
     "name": "Eye Coloration",
     "dice": "1d8",
     "rows": [
@@ -3158,6 +3201,7 @@
   {
     "type": "dice_table",
     "id": "church_structure",
+    "genres": ["fantasy"],
     "name": "Church Structures",
     "dice": "1d8",
     "rows": [
@@ -3198,6 +3242,7 @@
   {
     "type": "dice_table",
     "id": "religious_concern",
+    "genres": ["fantasy"],
     "name": "Human Concern or Natural Principle",
     "dice": "1d20",
     "rows": [
@@ -3286,6 +3331,7 @@
   {
     "type": "dice_table",
     "id": "religious_requirement",
+    "genres": ["fantasy"],
     "name": "Religious Requirements",
     "dice": "1d20",
     "rows": [
@@ -3374,6 +3420,7 @@
   {
     "type": "dice_table",
     "id": "temple_quirk",
+    "genres": ["fantasy"],
     "name": "Temple Quirks",
     "dice": "1d20",
     "rows": [
@@ -3462,6 +3509,7 @@
   {
     "type": "dice_table",
     "id": "sinister_reward",
+    "genres": ["fantasy"],
     "name": "What the Forbidden Cult Offers",
     "dice": "1d12",
     "rows": [
@@ -3518,6 +3566,7 @@
   {
     "type": "dice_table",
     "id": "cult_trait",
+    "genres": ["fantasy"],
     "name": "Cult Traits",
     "dice": "1d20",
     "rows": [
@@ -3606,6 +3655,7 @@
   {
     "type": "dice_table",
     "id": "village_rationale",
+    "genres": ["fantasy"],
     "name": "Village Rationale",
     "dice": "1d12",
     "rows": [
@@ -3662,6 +3712,7 @@
   {
     "type": "dice_table",
     "id": "village_feature",
+    "genres": ["fantasy"],
     "name": "Village Features",
     "dice": "1d12",
     "rows": [
@@ -3718,6 +3769,7 @@
   {
     "type": "dice_table",
     "id": "village_involvement",
+    "genres": ["fantasy"],
     "name": "Village Involvements",
     "dice": "1d12",
     "rows": [
@@ -3774,6 +3826,7 @@
   {
     "type": "dice_table",
     "id": "city_rationale",
+    "genres": ["fantasy"],
     "name": "City Rationale",
     "dice": "1d12",
     "rows": [
@@ -3830,6 +3883,7 @@
   {
     "type": "dice_table",
     "id": "city_feature",
+    "genres": ["fantasy"],
     "name": "City Features",
     "dice": "1d12",
     "rows": [
@@ -3886,6 +3940,7 @@
   {
     "type": "dice_table",
     "id": "city_involvement",
+    "genres": ["fantasy"],
     "name": "City Involvements",
     "dice": "1d12",
     "rows": [
@@ -3942,6 +3997,7 @@
   {
     "type": "dice_table",
     "id": "tribe_rationale",
+    "genres": ["fantasy"],
     "name": "Tribe Rationale",
     "dice": "1d12",
     "rows": [
@@ -3998,6 +4054,7 @@
   {
     "type": "dice_table",
     "id": "tribe_feature",
+    "genres": ["fantasy"],
     "name": "Tribe Features",
     "dice": "1d12",
     "rows": [
@@ -4054,6 +4111,7 @@
   {
     "type": "dice_table",
     "id": "tribe_involvement",
+    "genres": ["fantasy"],
     "name": "Tribe Involvements",
     "dice": "1d12",
     "rows": [
@@ -4110,6 +4168,7 @@
   {
     "type": "dice_table",
     "id": "site_type",
+    "genres": ["generic", "fantasy"],
     "name": "Example Site",
     "dice": "1d10",
     "rows": [
@@ -4158,6 +4217,7 @@
   {
     "type": "dice_table",
     "id": "site_feature",
+    "genres": ["fantasy"],
     "name": "Basic Type of Feature",
     "dice": "1d10",
     "rows": [
@@ -4206,6 +4266,7 @@
   {
     "type": "dice_table",
     "id": "site_hazard",
+    "genres": ["fantasy"],
     "name": "Hazards",
     "dice": "1d20",
     "rows": [
@@ -4294,6 +4355,7 @@
   {
     "type": "dice_table",
     "id": "site_distractor",
+    "genres": ["fantasy"],
     "name": "Distractors",
     "dice": "1d20",
     "rows": [
@@ -4382,6 +4444,7 @@
   {
     "type": "dice_table",
     "id": "site_enigma",
+    "genres": ["generic", "fantasy"],
     "name": "Enigmas",
     "dice": "1d20",
     "rows": [
@@ -4470,6 +4533,7 @@
   {
     "type": "dice_table",
     "id": "site_treasure",
+    "genres": ["generic", "fantasy"],
     "name": "Where the Treasure Is",
     "dice": "1d20",
     "rows": [
@@ -4558,6 +4622,7 @@
   {
     "type": "dice_table",
     "id": "deeps_type",
+    "genres": ["fantasy"],
     "name": "Major Types of Deeps",
     "dice": "1d6",
     "rows": [
@@ -4590,6 +4655,7 @@
   {
     "type": "dice_table",
     "id": "ruin_characteristic",
+    "genres": ["fantasy"],
     "name": "Characteristic Ruins",
     "dice": "1d6",
     "rows": [
@@ -4622,6 +4688,7 @@
   {
     "type": "dice_table",
     "id": "ruin_encounter_human",
+    "genres": ["fantasy"],
     "name": "Ruin Encounters: Human",
     "dice": "1d12",
     "rows": [
@@ -4678,6 +4745,7 @@
   {
     "type": "dice_table",
     "id": "ruin_encounter_beast",
+    "genres": ["fantasy"],
     "name": "Ruin Encounters: Beasts and Monsters",
     "dice": "1d12",
     "rows": [
@@ -4734,6 +4802,7 @@
   {
     "type": "dice_table",
     "id": "ruin_encounter_sapient",
+    "genres": ["fantasy"],
     "name": "Ruin Encounters: Nonhuman Sapients",
     "dice": "1d12",
     "rows": [
@@ -4790,6 +4859,7 @@
   {
     "type": "dice_table",
     "id": "encounter_template",
+    "genres": ["generic", "fantasy"],
     "name": "Shape of an Encounter",
     "dice": "1d6",
     "rows": [
@@ -4822,6 +4892,7 @@
   {
     "type": "dice_table",
     "id": "wilderness_event",
+    "genres": ["fantasy"],
     "name": "Wilderness Events",
     "dice": "1d20",
     "rows": [
@@ -4910,6 +4981,7 @@
   {
     "type": "dice_table",
     "id": "dungeon_event",
+    "genres": ["fantasy"],
     "name": "Dungeon Events",
     "dice": "1d20",
     "rows": [
@@ -4998,6 +5070,7 @@
   {
     "type": "dice_table",
     "id": "monster_shape",
+    "genres": ["generic", "fantasy"],
     "name": "Monster Shapes",
     "dice": "1d12",
     "rows": [
@@ -5054,6 +5127,7 @@
   {
     "type": "dice_table",
     "id": "monster_drive",
+    "genres": ["generic", "fantasy"],
     "name": "Monstrous Drives",
     "dice": "1d12",
     "rows": [
@@ -5110,6 +5184,7 @@
   {
     "type": "dice_table",
     "id": "monster_twist",
+    "genres": ["generic", "fantasy"],
     "name": "Activity Twists",
     "dice": "1d20",
     "rows": [
@@ -5198,6 +5273,7 @@
   {
     "type": "creative_table",
     "id": "setting_premise",
+    "genres": ["fantasy"],
     "name": "Setting Premise",
     "source": "Original content written for Cygnusforge.",
     "entries": [
@@ -5306,6 +5382,7 @@
   {
     "type": "creative_table",
     "id": "region_identity",
+    "genres": ["fantasy"],
     "name": "Region Identity",
     "source": "Original content written for Cygnusforge.",
     "entries": [
@@ -5414,6 +5491,7 @@
   {
     "type": "creative_table",
     "id": "faction",
+    "genres": ["fantasy"],
     "name": "Faction",
     "source": "Original content written for Cygnusforge.",
     "entries": [
@@ -5522,6 +5600,7 @@
   {
     "type": "creative_table",
     "id": "conflict",
+    "genres": ["fantasy"],
     "name": "Conflict",
     "source": "Original content written for Cygnusforge.",
     "entries": [
@@ -5630,6 +5709,7 @@
   {
     "type": "creative_table",
     "id": "mystery",
+    "genres": ["fantasy"],
     "name": "Mystery",
     "source": "Original content written for Cygnusforge.",
     "entries": [
@@ -5738,6 +5818,7 @@
   {
     "type": "creative_table",
     "id": "adventure_hook",
+    "genres": ["fantasy"],
     "name": "Adventure Hook",
     "source": "Original content written for Cygnusforge.",
     "entries": [

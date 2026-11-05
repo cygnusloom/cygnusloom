@@ -150,6 +150,8 @@ class CompendiumEntry:
     tags: tuple[str, ...] = ()
     # A subheading inside its section, such as a template kind or a spell's group.
     group: str = ""
+    # An icon id from the registry, shown beside the entry's heading when it has one.
+    icon: str = ""
 
 
 @dataclass(frozen=True)
@@ -260,6 +262,7 @@ class _Draft:
     source: str = "rules"
     tags: tuple[str, ...] = ()
     group: str = ""
+    icon: str = ""
 
 
 def _build(
@@ -324,7 +327,13 @@ def _build(
         add(
             "places",
             f"place:{name_key(location.name)}",
-            _Draft(name=location.name, text=text, source="world", group="Places"),
+            _Draft(
+                name=location.name,
+                text=text,
+                source="world",
+                group="Places",
+                icon=location.icon or "",
+            ),
             "place",
         )
     for terrain in rule_set.world_terrain.values():
@@ -749,6 +758,7 @@ def _monster_draft(
         text="\n".join(lines),
         source=source,
         group="Monsters",
+        icon=monster.icon,
     )
 
 
@@ -902,6 +912,7 @@ def _feature_item_draft(feature: Feature, source: str, rule_text: Mapping[str, s
         source=source,
         tags=(feature.tag,) if feature.tag else (),
         group=_item_group(feature),
+        icon=feature.icon or "",
     )
 
 
@@ -925,6 +936,7 @@ def _shop_item_draft(item: ShopItem) -> _Draft:
         text="\n".join(lines),
         tags=(item.category,) if item.category else (),
         group=item.category.replace("_", " ").title() if item.category else "Equipment",
+        icon=item.icon,
     )
 
 
@@ -1607,6 +1619,7 @@ def _add_live_places(
             text=summary or "A place you have discovered.",
             source="campaign",
             group="Discovered Places",
+            icon=place.icon or "",
         )
         _alias(aliases, (place.name, name_key(place.name)), key)
 
@@ -1733,6 +1746,7 @@ def _build_section(
                 source=draft.source,
                 tags=draft.tags,
                 group=draft.group,
+                icon=draft.icon,
             )
         )
         ids[key] = ident

@@ -4,15 +4,12 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
 
 # Untriaged Issues
 
-1. Add svg icons to everything that can have icons (monsters, items, location types, etc.). Also add looks_like fields to definitions so that things without icons can inheirit their looks. Make the map much more varied, complete, and visually appealing.
 5. WWN: A dual-partial Adventurer advances on the primary class's chart only: the second partial adds
    no HP, attack, Focus, or art progression, and Effort recognition keys to the primary class.
    Pairing and creation work; combining the two advancement charts does not.
 6. WWN: Faction assets remain table-driven. The project kind and turn tracker are modelled, but the
    book's faction assets and their turns are GM text rather than engine state.
 8. Audit the transcript for cleanliness - we likely don't need announcements about armor values (WWN).
-9. More local maps outside of encounters - for indoor or small-scale locations we should have nice maps that turn into encounter maps at a moments notice. Maybe combine the two concepts. Be able to place props, npcs, objects, etc.
-12. Currently the creativity/lore/story/setting/generation tables in core are heavily fantasy-focused. Let's group them with tags like genre (I think the existing ones will be fantasy, maybe some will be generic) so each ruleset can choose which ones to use. You can also override the choices at campaign creation time (checkboxes in a default-hidden section), though this is not a usual path.
 13. Move the setting/story override into the campaign creation campaign options page; not on the first level pre-creation screen.
 
 # Triaged Issues

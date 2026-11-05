@@ -18,6 +18,7 @@ from cygnusforge.content.definitions import ContentError
 from cygnusforge.content.library import (
     ContentLibrary,
     RuleSet,
+    read_table_genres,
 )
 from cygnusforge.db.models import Campaign, Event
 from cygnusforge.llm.base import (
@@ -25,7 +26,7 @@ from cygnusforge.llm.base import (
     Provider,
     complete,
 )
-from cygnusforge.services import combat
+from cygnusforge.services import combat, encounters
 from cygnusforge.services.common import Conflict, InvalidInput, NotFound, session_scope
 from cygnusforge.services.events import (
     CHARS_PER_TOKEN,
@@ -41,6 +42,8 @@ from cygnusforge.services.events import (
     estimate_tokens,
     events_since,
     is_hidden,
+    load_state,
+    name_key,
     record,
 )
 from cygnusforge.services.names import next_campaign_label
@@ -81,6 +84,19 @@ SUMMARY_SHARE = 0.25
 WORDS_PER_TOKEN = 0.75
 
 
+def _campaign_table_genres(
+    table_genres: Sequence[str] | None, rule_set: RuleSet
+) -> tuple[str, ...]:
+    """The genres a new campaign's generation tables are filtered by. Leaving the choice empty
+    keeps the rule set's own selection; every named genre must be one the engine knows."""
+    if not table_genres:
+        return rule_set.table_genres
+    try:
+        return read_table_genres(list(table_genres), "table genre")
+    except ContentError as error:
+        raise InvalidInput(str(error)) from error
+
+
 def create_campaign(
     engine: Engine,
     library: ContentLibrary,
@@ -91,6 +107,7 @@ def create_campaign(
     rule_set: str,
     model: str,
     setting: str = "",
+    table_genres: Sequence[str] | None = None,
     rng: random.Random | None = None,
 ) -> Campaign:
     name = (name or "").strip()
@@ -110,6 +127,7 @@ def create_campaign(
         raise InvalidInput(
             f"that world only works with the {library.rule_sets[template.rule_set].name} rule set"
         )
+    genres = _campaign_table_genres(table_genres, library.rule_sets[rule_set])
     try:
         content = library.world_content(world_template, rule_set)
     except ContentError as error:
@@ -131,6 +149,7 @@ def create_campaign(
             rule_set=rule_set,
             model=model,
             setting=setting,
+            table_genres=json.dumps(list(genres)),
         )
         db.add(campaign)
         db.flush()
@@ -154,8 +173,65 @@ def create_campaign(
             currency=marketplace.currency if marketplace is not None else "",
             wilderness=library.rule_sets[rule_set].wilderness,
         )
+        _seed_local_maps(db, campaign.id, template, library.rule_sets[rule_set])
         db.refresh(campaign)
         return campaign
+
+
+def _seed_local_maps(db: Any, campaign_id: int, template: Any, rule_set: RuleSet) -> None:
+    """Create the authored local map of every place that names one, and put the NPCs already
+    there on its free cells. A map is created without an encounter, so the player can walk its
+    rooms before a fight and the same map becomes the fight's board."""
+    for spot in template.locations:
+        if not spot.map:
+            continue
+        name = f"{spot.name} local map"
+        encounters.create_map(
+            db,
+            campaign_id,
+            name,
+            spot.name,
+            description=f"A local map of {spot.name}.",
+            template=spot.map,
+            templates=rule_set.encounter_templates,
+        )
+    state = load_state(db, campaign_id)
+    for spot in template.locations:
+        if not spot.map:
+            continue
+        name = f"{spot.name} local map"
+        entry = state.maps.get(name_key(name))
+        if entry is None:
+            continue
+        occupants = set(entry.tokens.values())
+        characters = [
+            character
+            for character in state.characters.values()
+            if character.location is not None
+            and name_key(character.location) == name_key(spot.name)
+        ]
+        for character in characters:
+            for row in range(entry.rows):
+                for column in range(entry.columns):
+                    if (column, row) in occupants:
+                        continue
+                    try:
+                        encounters.place_map_token(
+                            db,
+                            campaign_id,
+                            name,
+                            character.name,
+                            column,
+                            row,
+                            rule_set.encounter_objects,
+                        )
+                    except InvalidInput:
+                        continue
+                    occupants.add((column, row))
+                    break
+                else:
+                    continue
+                break
 
 
 def roll_player_stats(

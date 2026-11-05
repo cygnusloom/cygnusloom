@@ -30,6 +30,37 @@
         <pattern id="{{ prefix }}-{{ p.id }}" width="30" height="30" patternUnits="userSpaceOnUse">
           <path d="M19.8 6.8 l-0.710183 -1.42037 M20.8653 6.8 l0.177546 -1.77546 M21.9305 6.8 l0.798955 -1.33159 M11.7 25.8 l-0.959212 -1.91842 M13.1388 25.8 l0.239803 -2.39803 M14.5776 25.8 l1.07911 -1.79852 M17.7 15.8 l-0.803048 -1.6061 M18.9046 15.8 l0.200762 -2.00762 M20.1091 15.8 l0.903429 -1.50572 M18.7 22.4 l-0.669091 -1.33818 M19.7036 22.4 l0.167273 -1.67273 M20.7073 22.4 l0.752727 -1.25455 M3.7 10.3 l-0.655077 -1.31015 M4.68262 10.3 l0.163769 -1.63769 M5.66523 10.3 l0.736962 -1.22827 M24.7 23.2 l-0.675088 -1.35018 M25.7126 23.2 l0.168772 -1.68772 M26.7253 23.2 l0.759474 -1.26579 M10.2 18.1 l-0.840783 -1.68157 M11.4612 18.1 l0.210196 -2.10196 M12.7223 18.1 l0.945881 -1.57647 M13.6 9.1 l-0.893465 -1.78693 M14.9402 9.1 l0.223366 -2.23366 M16.2804 9.1 l1.00515 -1.67525 M23.6 12.2 l-0.775091 -1.55018 M24.7626 12.2 l0.193773 -1.93773 M25.9253 12.2 l0.871978 -1.4533" fill="none" stroke="{{ p.ink }}" stroke-width="0.5" stroke-linecap="round"/>
         </pattern>
+      {% elif p.shape == "dunes" %}
+        <pattern id="{{ prefix }}-{{ p.id }}" width="38" height="28" patternUnits="userSpaceOnUse">
+          <path d="M2 8 q6 -5 12 0 t12 0 M8 18 q6 -4 12 0 t12 0 M-2 25 q6 -4 12 0 t12 0 M28 3 q5 -3 10 0" fill="none" stroke="{{ p.ink }}" stroke-width="0.55" stroke-linecap="round" stroke-opacity="0.85"/>
+          <circle cx="8" cy="13" r="0.7" fill="{{ p.ink }}"/><circle cx="28" cy="23" r="0.7" fill="{{ p.ink }}"/><circle cx="16" cy="4" r="0.6" fill="{{ p.ink }}"/>
+        </pattern>
+      {% elif p.shape == "crags" %}
+        <pattern id="{{ prefix }}-{{ p.id }}" width="36" height="30" patternUnits="userSpaceOnUse">
+          <path d="M3 21 L8 10 L12 16 L17 6 L21 15 L26 9 L31 21 M7 25 H30 M12 21 L10 26 M21 15 L23 25" fill="none" stroke="{{ p.ink }}" stroke-width="0.55" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.8"/>
+        </pattern>
+      {% elif p.shape == "ice" %}
+        <pattern id="{{ prefix }}-{{ p.id }}" width="32" height="28" patternUnits="userSpaceOnUse">
+          <path d="M5 4 L11 12 L8 20 M17 2 L14 10 L20 16 L17 24 M27 6 L24 14 L30 20 M2 27 H32 M5 4 L2 8 M17 2 L22 4" fill="none" stroke="{{ p.ink }}" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.85"/>
+        </pattern>
+      {% elif p.shape == "flames" %}
+        <pattern id="{{ prefix }}-{{ p.id }}" width="30" height="28" patternUnits="userSpaceOnUse">
+          <path d="M8 22 Q4 16 8 10 Q12 16 10 18 Q14 12 16 6 Q20 14 16 22 Z M24 24 Q21 19 24 15 Q27 20 26 21 Q28 17 30 13 Q33 20 29 25 Z" fill="{{ p.ink }}" fill-opacity="0.55" stroke="{{ p.ink }}" stroke-width="0.45" stroke-linejoin="round"/>
+        </pattern>
+      {% elif p.shape == "canopy" %}
+        <pattern id="{{ prefix }}-{{ p.id }}" width="34" height="32" patternUnits="userSpaceOnUse">
+          <path d="M6 18 Q2 12 8 8 Q14 4 18 10 Q22 6 28 10 Q32 16 26 20 Q20 24 14 21 Q9 23 6 18 Z M18 26 Q14 22 18 18 Q24 22 22 27 Z" fill="{{ p.ink }}" fill-opacity="0.55"/>
+          <circle cx="12" cy="14" r="1" fill="{{ p.ink }}"/><circle cx="24" cy="15" r="1" fill="{{ p.ink }}"/>
+        </pattern>
+      {% elif p.shape == "moor" %}
+        <pattern id="{{ prefix }}-{{ p.id }}" width="34" height="30" patternUnits="userSpaceOnUse">
+          <path d="M5 20 V13 M5 16 L2 13 M5 18 L8 14 M14 24 V16 M14 19 L11 16 M14 22 L17 18 M25 20 V12 M25 16 L22 13 M25 18 L28 14 M8 9 q4 -3 8 0 M20 6 q4 -3 8 0 M18 28 q5 -3 10 0" fill="none" stroke="{{ p.ink }}" stroke-width="0.5" stroke-linecap="round" stroke-opacity="0.85"/>
+        </pattern>
+      {% elif p.shape == "reef" %}
+        <pattern id="{{ prefix }}-{{ p.id }}" width="34" height="30" patternUnits="userSpaceOnUse">
+          <path d="M8 28 V18 M8 22 L4 18 M8 25 L12 20 M18 28 V14 M18 19 L14 15 M18 23 L22 17 M26 28 V20 M26 23 L30 18 M26 26 L23 22" fill="none" stroke="{{ p.ink }}" stroke-width="0.75" stroke-linecap="round"/>
+          <circle cx="8" cy="15" r="1" fill="{{ p.ink }}"/><circle cx="18" cy="11" r="1" fill="{{ p.ink }}"/><circle cx="26" cy="17" r="1" fill="{{ p.ink }}"/><circle cx="14" cy="25" r="0.8" fill="{{ p.ink }}"/>
+        </pattern>
       {% endif %}
     {% endfor %}
   </defs>
@@ -47,14 +78,26 @@
           <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="4" seed="7"/>
           <feColorMatrix type="matrix" values="0 0 0 0 0.96  0 0 0 0 0.97  0 0 0 0 0.98  1.2 0 0 0 -0.35"/>
         </filter>
+        <filter id="{{ prefix }}-grain" filterUnits="userSpaceOnUse" x="-200" y="-200" width="500" height="500">
+          <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="3" seed="11"/>
+          <feColorMatrix type="matrix" values="0 0 0 0 0.42  0 0 0 0 0.34  0 0 0 0 0.22  0.55 0 0 0 -0.2"/>
+        </filter>
       </defs>
-      <rect x="-200" y="-200" width="500" height="500" fill="#b7c6d1"/>
-      <rect class="map-clouds" x="-200" y="-200" width="500" height="500" fill="#000" filter="url(#{{ prefix }}-clouds)"/>
+      <rect x="-200" y="-200" width="500" height="500" fill="#cdbf9e"/>
+      <rect x="-200" y="-200" width="500" height="500" fill="#000" filter="url(#{{ prefix }}-grain)" opacity="0.35"/>
+      <rect class="map-clouds" x="-200" y="-200" width="500" height="500" fill="#000" filter="url(#{{ prefix }}-clouds)" opacity="0.55"/>
+      <g class="map-contours" fill="none" stroke="#6f5f42" stroke-width="0.5" stroke-opacity="0.18">
+        <path d="M-160 -140 Q-80 -180 0 -150 T160 -120 T300 -160"/>
+        <path d="M-180 -80 Q-90 -110 0 -70 T180 -90 T320 -50"/>
+        <path d="M-170 20 Q-100 -10 -20 30 T140 20 T300 50"/>
+        <path d="M-160 110 Q-70 80 10 120 T170 100 T310 140"/>
+        <path d="M-150 200 Q-60 170 20 210 T180 190 T320 220"/>
+      </g>
     </svg>
     <svg class="map-regions" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
       {{ terrain_patterns(view.patterns, prefix) }}
       <defs>
-        {# Soft, slightly ragged edge so terrain fades into the clouds instead of stopping at a hard line. #}
+        {# Soft, slightly ragged edge so terrain fades into the parchment instead of stopping at a hard line. #}
         <filter id="{{ prefix }}-soft" filterUnits="userSpaceOnUse" x="-200" y="-200" width="500" height="500">
           <feTurbulence type="fractalNoise" baseFrequency="0.12" numOctaves="3" seed="3" result="warp"/>
           <feDisplacementMap in="SourceGraphic" in2="warp" scale="9" xChannelSelector="R" yChannelSelector="G" result="ragged"/>
@@ -67,6 +110,11 @@
             {% endfor %}
           </g>
         </mask>
+        <linearGradient id="{{ prefix }}-shade" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stop-color="#2e2620" stop-opacity="0.22"/>
+          <stop offset="0.55" stop-color="#2e2620" stop-opacity="0.03"/>
+          <stop offset="1" stop-color="#f5f0e4" stop-opacity="0.14"/>
+        </linearGradient>
       </defs>
       {% if view.regions %}
         <g class="map-terrain" mask="url(#{{ prefix }}-cover)">
@@ -76,12 +124,23 @@
               {% if region.pattern %}<polygon class="map-texture" points="{% for x, y in region.points %}{{ x }},{{ y }} {% endfor %}" fill="url(#{{ prefix }}-{{ region.pattern }})"></polygon>{% endif %}
             </g>
           {% endfor %}
+          <rect class="map-region-shade" x="-200" y="-200" width="500" height="500" fill="url(#{{ prefix }}-shade)"></rect>
         </g>
       {% endif %}
     </svg>
     {% for marker in view.markers %}
-      <span class="map-marker{% if marker.here %} here{% endif %}" style="left: {{ marker.left }}%; top: {{ marker.top }}%" role="img" aria-label="{{ marker.label }}" data-tip="{{ marker.name }}{% if marker.here %} (you){% endif %}"><img src="{{ place_icon_path(marker.icon) }}" alt=""></span>
+      <span data-label="{{ marker.name }}" class="map-marker{% if marker.here %} here{% endif %}" style="left: {{ marker.left }}%; top: {{ marker.top }}%" role="img" aria-label="{{ marker.label }}" data-tip="{{ marker.name }}{% if marker.here %} (you){% endif %}"><img src="{{ place_icon_path(marker.icon) }}" alt=""></span>
     {% endfor %}
+    <div class="map-compass" aria-hidden="true">
+      <svg viewBox="0 0 40 40">
+        <circle cx="20" cy="20" r="16" fill="none" stroke="#5b4a2a" stroke-width="1.2" stroke-opacity="0.7"/>
+        <path d="M20 5 L23 17 L20 20 L17 17 Z" fill="#8b5e3c"/>
+        <path d="M20 35 L17 23 L20 20 L23 23 Z" fill="#c9b08a"/>
+        <path d="M5 20 L17 17 L20 20 L17 23 Z M35 20 L23 17 L20 20 L23 23 Z" fill="#a99472"/>
+        <text x="20" y="3.4" text-anchor="middle" font-size="5" fill="#2e2620" font-family="serif">N</text>
+      </svg>
+    </div>
+    <div class="map-scalebar" aria-hidden="true"><span></span>{{ (view.radius_km / 2) | round(1) }} km</div>
   </div>
   {% if framed %}<button type="button" class="secondary map-recenter">Recenter</button></div>{% endif %}
   {% if view.markers %}

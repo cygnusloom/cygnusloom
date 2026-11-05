@@ -88,8 +88,10 @@ class PlacesMixin:
         description: str = "",
         template: str = "",
     ) -> dict[str, Any]:
-        """Make a map at a location. A template may supply the size, so `columns` and `rows` are
-        optional, and every tool that makes a map requires its description."""
+        """Make a map at a location. The map is not necessarily an encounter: outside one it is a
+        local map that can hold the player character, NPCs, and props. A template may supply the
+        size, so `columns` and `rows` are optional, and every tool that makes a map requires its
+        description."""
         with session_scope(self.engine) as db:
             return encounters.create_map(
                 db,
@@ -102,6 +104,55 @@ class PlacesMixin:
                 template,
                 self.encounter_templates,
             )
+
+    def create_local_map(
+        self,
+        name: str,
+        location: str,
+        description: str,
+        template: str,
+        columns: int | None = None,
+        rows: int | None = None,
+    ) -> dict[str, Any]:
+        """Make a local map at a location from a layout template. It is used outside an encounter
+        to show characters and props where they stand, and becomes the encounter map when an
+        encounter starts on it."""
+        with session_scope(self.engine) as db:
+            result = encounters.create_map(
+                db,
+                self.campaign_id,
+                name,
+                location,
+                columns,
+                rows,
+                description,
+                template,
+                self.encounter_templates,
+            )
+        result["created"] = "local map"
+        return result
+
+    def place_map_token(self, map: str, name: str, column: int, row: int) -> dict[str, Any]:
+        """Place a character, NPC, or prop token on a local map outside an encounter."""
+        with session_scope(self.engine) as db:
+            return encounters.place_map_token(
+                db,
+                self.campaign_id,
+                map,
+                name,
+                column,
+                row,
+                self.encounter_objects,
+            )
+
+    def remove_map_token(self, map: str, name: str) -> dict[str, Any]:
+        """Remove a token from a local map outside an encounter."""
+        with session_scope(self.engine) as db:
+            return encounters.remove_map_token(db, self.campaign_id, map, name)
+
+    def set_map_cells(self, map: str, cells: list[Mapping[str, Any]]) -> dict[str, Any]:
+        """Set terrain or objects on map cells, inside or outside an encounter."""
+        return self.set_encounter_map_cells(map, cells)
 
     def set_encounter_map_cells(self, map: str, cells: list[Mapping[str, Any]]) -> dict[str, Any]:
         with session_scope(self.engine) as db:

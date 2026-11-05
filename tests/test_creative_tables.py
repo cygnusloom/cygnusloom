@@ -108,6 +108,42 @@ def test_a_rule_set_may_replace_a_core_table_with_entries(tree: Path):
     assert [row.result for row in tables["plot"].rows] == ["x", "y"]
 
 
+def test_a_creative_table_reads_its_genre_tags():
+    table = _load_creative_table(_creative(["a", "b"], genres=["horror"]), "testset")
+    assert table.genres == ("horror",)
+
+
+def _core_creative_with_genres(tree: Path) -> None:
+    _write(
+        tree,
+        {
+            "rulesets/core/creative.json": [
+                {
+                    "type": "creative_table",
+                    "id": "plot",
+                    "entries": ["a", "b", "c"],
+                    "genres": ["fantasy"],
+                }
+            ]
+        },
+    )
+
+
+def test_a_rule_set_patch_keeps_the_core_tables_genres(tree: Path):
+    _core_creative_with_genres(tree)
+    tables = _rule_set_tables(tree, [{"type": "creative_table", "id": "plot", "add": ["d"]}])
+    assert tables["plot"].genres == ("fantasy",)
+
+
+def test_a_rule_set_patch_may_retag_a_core_table(tree: Path):
+    _core_creative_with_genres(tree)
+    tables = _rule_set_tables(
+        tree,
+        [{"type": "creative_table", "id": "plot", "add": ["d"], "genres": ["generic"]}],
+    )
+    assert tables["plot"].genres == ("generic",)
+
+
 def test_a_rule_set_may_define_a_new_creative_table(tree: Path):
     tables = _rule_set_tables(
         tree, [{"type": "creative_table", "id": "heist", "entries": ["vault", "vent"]}]

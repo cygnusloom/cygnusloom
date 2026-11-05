@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Undead</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 28 Q16 10 32 10 Q48 10 48 28 Q48 40 42 44 V54 H36 V46 H32 V56 H26 V46 Q16 40 16 28 Z" fill="#e6ddc9"/><circle cx="24" cy="28" r="4" fill="#2e2620"/><circle cx="40" cy="28" r="4" fill="#2e2620"/><path d="M30 34 L32 39 L34 34 M26 46 V54 M32 46 V56 M38 46 V54"/>
+  </g>
+</svg>

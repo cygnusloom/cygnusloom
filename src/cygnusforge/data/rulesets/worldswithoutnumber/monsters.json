@@ -3,6 +3,7 @@
     "type": "monster",
     "id": "ember_hound",
     "name": "Ember Hound",
+    "looks_like": "beast",
     "description": "A lean hunting beast the colour of banked coals, kept by frontier lords and sometimes found feral in burnt woods. It worries its prey rather than killing outright, breathing a cloud of burning spores into every bite. The venom takes root in the wound and stiffens the flesh from within, so a bitten runner is often caught before the next ridge. (HD 6; MV 50 ft; Inst 6; Skill +2; 2 attacks per action.)",
     "stats": {
       "str": 12,
@@ -48,6 +49,7 @@
     "type": "monster",
     "id": "hollow_guard",
     "name": "Hollow Guard",
+    "looks_like": "construct",
     "description": "An empty suit of a dead house's plate, held upright by the grudge of the soldier who wore it. It stands its post at a door or stair and lets nothing living pass. The fire that took its hall burned it hollow, and flame no longer has any hold on the cold plate. (HD 3; MV 30 ft; Inst 2; Skill +2; 1 attack per action.)",
     "stats": {
       "str": 14,
@@ -90,6 +92,7 @@
     "type": "monster",
     "id": "tide_grasper",
     "name": "Tide Grasper",
+    "looks_like": "aberration",
     "description": "A wet, boneless mass that hauls itself onto rocks at low tide and waits for the water to bring it food. Each of its limbs ends in a ring of hooks, and it lashes four at once without ever showing a head. What it catches it folds into itself and digests slowly, and it remembers the shape of a boat. (HD 8; MV 20 ft (swim 40 ft); Inst 7; Skill +1; 4 attacks per action.)",
     "stats": {
       "str": 18,
@@ -132,6 +135,7 @@
     "type": "monster",
     "id": "rot_shambler",
     "name": "Rot Shambler",
+    "looks_like": "undead",
     "description": "A corpse left too long in wet ground, got up again for no reason anyone can name. It walks with its arms out and its mouth open, and it does not stop for walls, water, or pain. Nothing is behind its eyes but a dull want for warmth. (HD 1; MV 20 ft; Inst 8; Skill +0; 1 attack per action.)",
     "stats": {
       "str": 10,
@@ -168,6 +172,7 @@
     "type": "monster",
     "id": "choir_wraith",
     "name": "Choir Wraith",
+    "looks_like": "undead",
     "description": "The voices of a choir that died together, still singing in the place where they were killed. There is no body to strike, only a cold smear of sound that drifts through rooms and settles on the living. Its song passes through ears and bone alike, and those who hear it too long begin to sing along. (HD 4; MV 30 ft (fly 40 ft); Inst 5; Skill +2; 1 attack per action.)",
     "stats": {
       "str": 16,
@@ -216,6 +221,7 @@
     "type": "monster",
     "id": "grave_moth_swarm",
     "name": "Grave Moth Swarm",
+    "looks_like": "swarm",
     "description": "A soundless cloud of grey moths, each the size of a thumb, drawn to graves and to the breath of sleeping travellers. They settle on whatever is warm, and the heat goes out of it wherever they cling. Their wings leave a fine ash that stains cloth and cannot be washed out. (HD 2; MV 20 ft (fly 30 ft); Inst 9; Skill +0; 1 attack per action.)",
     "stats": {
       "str": 15,
@@ -261,6 +267,7 @@
     "type": "monster",
     "id": "wharf_rat_pack",
     "name": "Wharf Rat Pack",
+    "looks_like": "swarm",
     "description": "A knot of brindle rats grown bold enough to hunt together, common in any town with a low waterfront. They climb a sleeping man as readily as a sack of grain. Where one rat is seen, a dozen are already under the boards. (HD 1; MV 30 ft (climb 20 ft); Inst 8; Skill +1; 1 attack per action.)",
     "stats": {
       "str": 10,
@@ -306,6 +313,7 @@
     "type": "monster",
     "id": "chalk_adder",
     "name": "Chalk Adder",
+    "looks_like": "beast",
     "description": "A pale viper no thicker than a finger, banded in the colour of dry chalk, common in old walls and stone fields. It does not chase; it waits where a hand or a bare foot will come, and it strikes once. Its bite closes the throat and makes the limbs heavy. (HD 1; MV 20 ft; Inst 4; Skill +2; 1 attack per action.)",
     "stats": {
       "str": 10,
@@ -351,6 +359,7 @@
     "type": "monster",
     "id": "reed_stalker",
     "name": "Reed Stalker",
+    "looks_like": "plant-creature",
     "description": "A tall grey heron-like bird that hunts the shallow margins of rivers and flooded fields. It stands motionless among the reeds for hours, then stabs with a beak like a spear-point. It is patient with men and will follow a wounded one for a day. (HD 2; MV 30 ft (fly 40 ft); Inst 4; Skill +2; 1 attack per action.)",
     "stats": {
       "str": 15,
@@ -393,6 +402,7 @@
     "type": "monster",
     "id": "ironback_boar",
     "name": "Ironback Boar",
+    "looks_like": "beast",
     "description": "A squat boar with a ridge of coarse black bristle and a hide like folded leather; old boars carry scars enough to turn a blade. It charges without warning and does not stop for a fence. The meat is good, but the hunting of one is a young man's boast. (HD 3; MV 40 ft; Inst 7; Skill +1; 1 attack per action.)",
     "stats": {
       "str": 14,
@@ -440,6 +450,7 @@
     "type": "monster",
     "id": "salt_jackal",
     "name": "Salt Jackal",
+    "looks_like": "beast",
     "description": "Small dun jackals that run the dry coast in loose packs of five or six, taking goats, gulls, and anything that strays from a fire. They are cowardly alone and fearless together, and they yap without pause while they circle. (HD 2; MV 50 ft; Inst 6; Skill +1; 1 attack per action.)",
     "stats": {
       "str": 15,
@@ -482,6 +493,7 @@
     "type": "monster",
     "id": "gloam_stag",
     "name": "Gloam Stag",
+    "looks_like": "beast",
     "description": "A stag of the deep forest, old past any natural age, its antlers grown into a pale crown and its eyes holding light where none falls. Hunters say it leads them in circles until dark and is then simply gone. It fights only when cornered, and then with a fury that has nothing of the animal in it. (HD 5; MV 60 ft; Inst 5; Skill +1; 2 attacks per action.)",
     "stats": {
       "str": 19,
@@ -527,6 +539,7 @@
     "type": "monster",
     "id": "crag_lion",
     "name": "Crag Lion",
+    "looks_like": "beast",
     "description": "A pale mountain cat that dens in rock clefts above the treeline and comes down when the goats move. It hunts alone, takes the weak animal out of a herd, and gives way to anything that stands its ground. A cornered one goes for the throat and does not let go. (HD 4; MV 50 ft (climb 30 ft); Inst 5; Skill +2; 2 attacks per action.)",
     "stats": {
       "str": 16,
@@ -575,6 +588,7 @@
     "type": "monster",
     "id": "bog_strider",
     "name": "Bog Strider",
+    "looks_like": "beast",
     "description": "A stilt-legged wader as tall as a man, with a beak like a closed knife and a neck that uncoils faster than the eye follows. It wades the flooded fields at dawn and dusk and will spear a dog, a calf, or a child left too near the water. It fears people little, and fire greatly. (HD 3; MV 40 ft; Inst 4; Skill +2; 1 attack per action.)",
     "stats": {
       "str": 14,
@@ -617,6 +631,7 @@
     "type": "monster",
     "id": "mire_lurker",
     "name": "Mire Lurker",
+    "looks_like": "ooze",
     "description": "A broad, flat-headed thing that lies in the shallows with only its eyes above the mud. It takes deer, cattle, and the occasional boatman, and drags what it kills under to soften before eating. The locals stake its pools and do not fish them. (HD 6; MV 30 ft (swim 40 ft); Inst 6; Skill +1; 2 attacks per action.)",
     "stats": {
       "str": 12,
@@ -665,6 +680,7 @@
     "type": "monster",
     "id": "roadside_bandit",
     "name": "Roadside Bandit",
+    "looks_like": "humanoid",
     "description": "An armed man who has found the road pays better than the field. He works in a group of three or four, takes purses and horses, and generally lets travellers go, since killing draws riders. Alone and cornered he will beg, then run. (HD 2; MV 30 ft; Inst 4; Skill +3; 1 attack per action.)",
     "stats": {
       "str": 15,
@@ -707,6 +723,7 @@
     "type": "monster",
     "id": "ashen_cultist",
     "name": "Ashen Cultist",
+    "looks_like": "humanoid",
     "description": "A quiet man or woman in a grey robe, met where old stones are being dug up and carted away. They carry a horn of ash at the belt and do not much mind being hurt. Their god is patient, and so are they. (HD 2; MV 30 ft; Inst 3; Skill +2; 1 attack per action.)",
     "stats": {
       "str": 15,
@@ -750,6 +767,7 @@
     "type": "monster",
     "id": "hired_blade",
     "name": "Hired Blade",
+    "looks_like": "humanoid",
     "description": "A professional soldier between contracts, in a padded coat and a dented helm, with a sword he keeps sharp and a shield he keeps polished. He is not brave for free, but he does not break while he is paid. If the fight turns, he will offer to change sides. (HD 3; MV 30 ft; Inst 3; Skill +2; 1 attack per action.)",
     "stats": {
       "str": 14,
@@ -794,6 +812,7 @@
     "type": "monster",
     "id": "root_witch",
     "name": "Root Witch",
+    "looks_like": "plant-creature",
     "description": "A woman who lives at the edge of a village and is consulted more often than she is liked. She knows the names of roots, keeps a bowl of water for seeing, and can close a wound or open one. She has little patience for armed men in her yard. (HD 4; MV 30 ft; Inst 3; Skill +3; 1 attack per action.)",
     "stats": {
       "str": 16,
@@ -837,6 +856,7 @@
     "type": "monster",
     "id": "village_rabble",
     "name": "Village Rabble",
+    "looks_like": "humanoid",
     "description": "Farmhands and shopkeepers with clubs, bills, and a grievance, gathered by a bell or a shouting man. They are not soldiers and know it; the front rank pushes and the back rank shouts. A charge breaks them, but a stubborn stand makes them dangerous. (HD 1; MV 30 ft; Inst 6; Skill +1; 1 attack per action.)",
     "stats": {
       "str": 10,
@@ -879,6 +899,7 @@
     "type": "monster",
     "id": "bone_picker",
     "name": "Bone Picker",
+    "looks_like": "undead",
     "description": "A crawling assembly of loose bones, drawn together by whatever keeps an old battlefield restless. It has no fixed shape; the ribs part and the skull rolls to the front when it means to bite. It takes the bones of the newly dead and grows a little larger with each. (HD 2; MV 30 ft; Inst 6; Skill +0; 1 attack per action.)",
     "stats": {
       "str": 15,
@@ -921,6 +942,7 @@
     "type": "monster",
     "id": "mud_revenant",
     "name": "Mud Revenant",
+    "looks_like": "undead",
     "description": "A body that sank in the fen and came back up wearing the mud like a coat. It moves slowly, and the wet ground moves with it. Whatever it catches is pulled down into the mire, and the fen keeps it. (HD 4; MV 20 ft; Inst 5; Skill +1; 1 attack per action.)",
     "stats": {
       "str": 16,
@@ -966,6 +988,7 @@
     "type": "monster",
     "id": "stitched_thrall",
     "name": "Stitched Thrall",
+    "looks_like": "construct",
     "description": "Several dead people sewn into one and made to work. The seams are coarse and the parts do not agree on how to move, but it is strong and it does not tire. It follows the last order it was given with terrible literalness. (HD 4; MV 30 ft; Inst 2; Skill +1; 1 attack per action.)",
     "stats": {
       "str": 16,
@@ -1008,6 +1031,7 @@
     "type": "monster",
     "id": "grave_warden",
     "name": "Grave Warden",
+    "looks_like": "undead",
     "description": "The dead keeper of a burial ground, still in the rusted mail he was buried in, still walking his round at dusk. He challenges intruders in a voice full of soil and gives them one chance to leave. Those who run are not followed; those who stay are buried where they fall. (HD 5; MV 30 ft; Inst 3; Skill +3; 1 attack per action.)",
     "stats": {
       "str": 19,
@@ -1052,6 +1076,7 @@
     "type": "monster",
     "id": "fog_wisp",
     "name": "Fog Wisp",
+    "looks_like": "elemental",
     "description": "A cold light the size of a lantern that drifts over wet ground after dark. It has no face and no voice, only a pull that makes walkers follow it off the path. It means no harm, but the bog does. (HD 1; MV 30 ft (fly 40 ft); Inst 7; Skill +1; 1 attack per action.)",
     "stats": {
       "str": 10,
@@ -1094,6 +1119,7 @@
     "type": "monster",
     "id": "barrow_light",
     "name": "Barrow Light",
+    "looks_like": "spirit",
     "description": "The ghost of a lamp carried by someone dead, still burning in a barrow or a ruined tower. It brightens when the living come near and dims when they flee. Its light shows a person what they most want to see, and then it burns them for looking. (HD 2; MV 30 ft (fly); Inst 6; Skill +1; 1 attack per action.)",
     "stats": {
       "str": 15,
@@ -1139,6 +1165,7 @@
     "type": "monster",
     "id": "stone_mourner",
     "name": "Stone Mourner",
+    "looks_like": "construct",
     "description": "A spirit that has soaked into a weathered statue at a crossroads or over a grave and moves it a finger's width at a time. It mourns someone long dead and takes travellers for the one it lost. Its grief makes the air heavy, and the stone hand is very strong. (HD 5; MV 20 ft; Inst 4; Skill +2; 1 attack per action.)",
     "stats": {
       "str": 19,
@@ -1183,6 +1210,7 @@
     "type": "monster",
     "id": "thorn_husk",
     "name": "Thorn Husk",
+    "looks_like": "plant-creature",
     "description": "A man-shaped growth of black thorn and dry vine, raised where someone died badly in a hedge or an old garden. It walks stiffly, shedding spines, and it plants its seeds in what it kills. Cut it and more thorns come; burn it and the smoke stings the eyes. (HD 3; MV 20 ft; Inst 8; Skill +0; 1 attack per action.)",
     "stats": {
       "str": 14,
@@ -1225,6 +1253,7 @@
     "type": "monster",
     "id": "tomb_sovereign",
     "name": "Tomb Sovereign",
+    "looks_like": "undead",
     "description": "A king of a line no one remembers, sitting upright in his mound with his household laid out around him and his sword across his knees. The flesh is long gone, but the mail is still good and the gold is still on his wrists, and when the mound is opened he stands up and expects to be obeyed. He fights the way he ruled: he calls the buried to their feet, then walks into the confusion with the sword. (HD 12; MV 30 ft; Inst 6; Skill +3; 2 attacks per action.)",
     "stats": {
       "str": 17,
@@ -1278,6 +1307,7 @@
     "type": "monster",
     "id": "standing_stone",
     "name": "Standing Stone",
+    "looks_like": "construct",
     "description": "A menhir on the high moor that is not quite a menhir: it has shoulders, and seams where arms should be, and a face worn down to a suggestion. It was set there by an older age to hold a boundary, and it still walks that boundary a step at a time. Anything that crosses the line it crushes methodically, and it stops at the far marker as though a wall stood there. (HD 12; MV 20 ft; Inst 4; Skill +1; 2 attacks per action.)",
     "stats": {
       "str": 17,
@@ -1327,6 +1357,7 @@
     "type": "monster",
     "id": "river_devourer",
     "name": "River Devourer",
+    "looks_like": "beast",
     "description": "A serpent as long as the river is wide, brown as wet clay, that lies in the deep pools and takes cattle off the shingle at dusk. It does not run on land and does not need to; it strikes from the water, coils, and rolls its catch under. Boats that go out late are found holed and empty, with the oars still in the locks. (HD 12; MV 20 ft (swim 50 ft); Inst 5; Skill +2; 2 attacks per action.)",
     "stats": {
       "str": 17,
@@ -1380,6 +1411,7 @@
     "type": "monster",
     "id": "chained_oracle",
     "name": "Chained Oracle",
+    "looks_like": "aberration",
     "description": "Something that was a person once, bound in a ring of iron stakes beneath a fallen temple and kept there by the questions people still come to ask. It answers truthfully and takes a year off the asker for every answer, and it has grown to hate the trade. It shows itself as a tall, smoke-stained figure whose voice comes from the wrong corner of the room. (HD 12; MV 30 ft (fly 30 ft); Inst 8; Skill +3; 1 attack per action.)",
     "stats": {
       "str": 17,
@@ -1428,6 +1460,7 @@
     "type": "monster",
     "id": "wold_drake",
     "name": "Wold Drake",
+    "looks_like": "dragon",
     "description": "A heavy, low-slung drake the size of a barn, with wings too short for clean flight and a throat that rattles like a cracked bell before it breathes. It hunts sheep and shepherds across the open wold and keeps a hoard of nothing but buckles, harness rings, and small bells. It stays in the air as long as it can and lands only to finish what it has already knocked down. (HD 10; MV 30 ft (fly 50 ft); Inst 6; Skill +2; 2 attacks per action.)",
     "stats": {
       "str": 20,
@@ -1482,6 +1515,7 @@
     "type": "monster",
     "id": "mound_breaker",
     "name": "Mound Breaker",
+    "looks_like": "giant",
     "description": "A giant that sleeps in the old barrow field with the clay packed hard over it, and wakes when someone opens a mound that is not theirs. It comes up through the earth, takes anything that shines, and drags the hole shut behind it. It fights by throwing earth and stones first and closes only when the throwing is done. (HD 10; MV 30 ft (burrow 20 ft); Inst 3; Skill +0; 2 attacks per action.)",
     "stats": {
       "str": 20,
@@ -1535,6 +1569,7 @@
     "type": "monster",
     "id": "iron_marshal",
     "name": "Iron Marshal",
+    "looks_like": "construct",
     "description": "A raider chief who has held a hill fort for eleven years and intends to hold it for eleven more. She wears a captured suit of plate over mail, keeps a dozen sworn riders, and fights in the front rank because that is where the plunder is decided. She wants a hall, a name, and a road she can put a toll on, and she will talk before she will spend lives. (HD 10; MV 30 ft; Inst 7; Skill +3; 2 attacks per action.)",
     "stats": {
       "str": 20,
@@ -1590,6 +1625,7 @@
     "type": "monster",
     "id": "tally_keeper",
     "name": "Tally Keeper",
+    "looks_like": "undead",
     "description": "A thin woman in a good grey coat who walks the roads with a ledger under her arm and collects debts of blood, her own and other people's. She is courteous, never raises her voice, and is never without a servant that is not quite a person. She wants every line in the book paid, and she will trade a village for one overdue entry. (HD 10; MV 40 ft; Inst 8; Skill +3; 1 attack per action.)",
     "stats": {
       "str": 20,
@@ -1638,6 +1674,7 @@
     "type": "monster",
     "id": "drowned_bell",
     "name": "Drowned Bell",
+    "looks_like": "undead",
     "description": "A bronze bell that went into the reservoir with its tower and has not stopped ringing since. It hangs in the black water and tolls when the living come near, and the note goes through stone, mud, and bone alike. It wants the water quiet again, and it will drown anyone who stands too long on the shore listening. (HD 10; MV 10 ft (swim 20 ft); Inst 5; Skill +2; 1 attack per action.)",
     "stats": {
       "str": 20,
@@ -1689,6 +1726,7 @@
     "type": "monster",
     "id": "briar_knight",
     "name": "Briar Knight",
+    "looks_like": "plant-creature",
     "description": "A suit of old harness that a hedge grew into and then through, walking on a hundred feet of thorn. It keeps to a ruined orchard and charges anything that comes down the lane, because charging is the one thing it still remembers how to do. It was a knight once, and it rides at its target in a straight line and does not turn. (HD 8; MV 30 ft; Inst 4; Skill +1; 1 attack per action.)",
     "stats": {
       "str": 18,
@@ -1741,6 +1779,7 @@
     "type": "monster",
     "id": "salt_widow",
     "name": "Salt Widow",
+    "looks_like": "humanoid",
     "description": "A pale spider the size of a cart wheel that lives out on the salt pans and comes abroad at dawn when the crust is wet. It spins no web; it spits a grey line that hardens in the air and pins a leg or an arm to the ground. It wants shade and fresh water, and it will take a horse to get them. (HD 8; MV 40 ft (climb 30 ft); Inst 6; Skill +2; 1 attack per action.)",
     "stats": {
       "str": 18,
@@ -1791,6 +1830,7 @@
     "type": "monster",
     "id": "oath_breaker",
     "name": "Oath Breaker",
+    "looks_like": "undead",
     "description": "A man who swore to hold a bridge and then ran, and who has been standing on that bridge ever since. What is left of him is bone in rusted harness, and the rust is the only thing holding the harness together. He stops every traveller and demands the oath he could not keep, and he kills the ones who will not swear it. (HD 8; MV 30 ft; Inst 5; Skill +2; 2 attacks per action.)",
     "stats": {
       "str": 18,
@@ -1846,6 +1886,7 @@
     "type": "monster",
     "id": "grave_tithe",
     "name": "Grave Tithe",
+    "looks_like": "undead",
     "description": "A heap of the newly dead, stacked and bound and walking on a dozen borrowed legs, that goes out at night to collect what the graveyards are owed. It does not eat and does not hate; it carries bodies back to the pit it came out of. It fights by pulling people down and adding them to the pile. (HD 8; MV 20 ft; Inst 3; Skill +0; 3 attacks per action.)",
     "stats": {
       "str": 18,
@@ -1896,6 +1937,7 @@
     "type": "monster",
     "id": "ash_cantor",
     "name": "Ash Cantor",
+    "looks_like": "humanoid",
     "description": "The leader of a cult that burns its dead and sings the smoke into the sky, and a woman who has breathed more of that smoke than any of them. She wears a mask of fired clay, carries a censer on a chain, and preaches that fire only takes what was already dead inside. She wants a whole town converted before winter, and she will burn the town to prove she was right. (HD 8; MV 30 ft; Inst 6; Skill +3; 1 attack per action.)",
     "stats": {
       "str": 18,
@@ -1944,6 +1986,7 @@
     "type": "monster",
     "id": "kiln_servant",
     "name": "Kiln Servant",
+    "looks_like": "construct",
     "description": "A figure of red clay, taller than a man and fired hard as brick, made to carry loads in a potter's yard and never told to stop. It has no face, only the vent where the fire was put in, and it is still warm to the touch. It does not chase; it walks to whatever it was set to guard and takes hold of anything that is not where it belongs. (HD 8; MV 20 ft; Inst 2; Skill +0; 2 attacks per action.)",
     "stats": {
       "str": 18,
@@ -1993,6 +2036,7 @@
     "type": "monster",
     "id": "slough_gorger",
     "name": "Slough Gorger",
+    "looks_like": "ooze",
     "description": "A salamander-shaped beast as long as a cart, wet and mottled, that lies in the mud of a marsh with only its eyes above the water. It takes what comes down to drink and can hold a whole goat in its throat without showing a bulge. It is slow, dull, and very hard to kill, and it wants only warm water and a full belly. (HD 7; MV 20 ft (swim 30 ft); Inst 4; Skill +1; 2 attacks per action.)",
     "stats": {
       "str": 14,
@@ -2046,6 +2090,7 @@
     "type": "monster",
     "id": "seam_creeper",
     "name": "Seam Creeper",
+    "looks_like": "beast",
     "description": "A flat, many-jointed thing that lives in abandoned seams and comes out when the lamps go down. It has six legs, no eyes, and a taste for the salt of sweat and blood. It cannot break a bone but it can take a hand, and it always goes for the one at the back of the line. (HD 7; MV 40 ft (climb 30 ft); Inst 7; Skill +2; 3 attacks per action.)",
     "stats": {
       "str": 14,
@@ -2096,6 +2141,7 @@
     "type": "monster",
     "id": "bone_horse",
     "name": "Bone Horse",
+    "looks_like": "undead",
     "description": "The horse of a dead rider, still saddled, still willing, still pointed down the road it was last turned onto. Its hide is a dry drum over the ribs and the light behind its eyes is not much. It does not bite for hunger; it kicks and tramples whatever stands between it and the road it remembers. (HD 7; MV 50 ft; Inst 3; Skill +1; 2 attacks per action.)",
     "stats": {
       "str": 14,
@@ -2146,6 +2192,7 @@
     "type": "monster",
     "id": "marsh_lamprey",
     "name": "Marsh Lamprey",
+    "looks_like": "beast",
     "description": "A jawless thing as thick as a man's thigh that lives in the standing water of a drowned wood. It fastens on and does not let go, and it will drain a deer over an afternoon. It is drawn to the sound of wading and cannot be shaken off by running. (HD 7; MV 10 ft (swim 40 ft); Inst 5; Skill +2; 1 attack per action.)",
     "stats": {
       "str": 14,
@@ -2196,6 +2243,7 @@
     "type": "monster",
     "id": "gallows_walker",
     "name": "Gallows Walker",
+    "looks_like": "undead",
     "description": "A man hanged at a crossroads and cut down by nobody, who now walks with the rope still on and the drop still in his neck. He is not angry and not hungry; he wants company at the end of a rope. He comes up behind people quietly and has the noose over their heads before they turn round. (HD 7; MV 30 ft; Inst 6; Skill +2; 1 attack per action.)",
     "stats": {
       "str": 14,
@@ -2246,6 +2294,7 @@
     "type": "monster",
     "id": "iron_beak",
     "name": "Iron Beak",
+    "looks_like": "beast",
     "description": "A flightless carrion bird the size of a pony, with a beak like a mason's chisel and a kick that can open a ribcage. It follows armies and hangs about battlefields and gallows fields, and it has learned that a man on his own is slower than a horse. It runs its prey down in a straight line and goes for the belly. (HD 7; MV 50 ft; Inst 4; Skill +1; 2 attacks per action.)",
     "stats": {
       "str": 14,
@@ -2299,6 +2348,7 @@
     "type": "monster",
     "id": "moor_thunder",
     "name": "Moor Thunder",
+    "looks_like": "elemental",
     "description": "A storm that has learned the shape of a tall man and walks the high moor where the standing stones are. It is not the weather's spirit but something that got into the weather, and it crackles when it moves. It wants to be looked at, and it strikes whoever looks longest. (HD 7; MV 40 ft (fly 40 ft); Inst 8; Skill +2; 1 attack per action.)",
     "stats": {
       "str": 14,
@@ -2347,6 +2397,7 @@
     "type": "monster",
     "id": "pit_bear",
     "name": "Pit Bear",
+    "looks_like": "beast",
     "description": "A bear kept for the fighting pits of a river town, blind in one eye and scarred across the muzzle, taught from cubhood that men are meat. It is heavier than a plough horse and has learned to go for the knees first. It wants out, and it has wanted out for a long time. (HD 6; MV 40 ft; Inst 5; Skill +1; 2 attacks per action.)",
     "stats": {
       "str": 12,
@@ -2395,6 +2446,7 @@
     "type": "monster",
     "id": "penitent_zealot",
     "name": "Penitent Zealot",
+    "looks_like": "humanoid",
     "description": "A cultist who has taken a vow of pain and wears the chain of it wrapped around both forearms. He fights with the loose end and does not stop when he is hurt, because being hurt is the proof that he is right. He wants to be martyred in front of witnesses, and he picks the biggest person in the room to make it worth something. (HD 6; MV 30 ft; Inst 6; Skill +2; 2 attacks per action.)",
     "stats": {
       "str": 12,
@@ -2445,6 +2497,7 @@
     "type": "monster",
     "id": "moss_ape",
     "name": "Moss Ape",
+    "looks_like": "beast",
     "description": "A shaggy grey ape that stands taller than a man and carries the moss of the old forest on its back. It hides by standing still, which works far better than it should, and it throws stones with a farmer's arm. It wants the fruit trees and the honey, and it will hold a grove against a whole village. (HD 6; MV 30 ft (climb 30 ft); Inst 6; Skill +2; 2 attacks per action.)",
     "stats": {
       "str": 12,
@@ -2498,6 +2551,7 @@
     "type": "monster",
     "id": "plague_fly_swarm",
     "name": "Plague Fly Swarm",
+    "looks_like": "swarm",
     "description": "A black cloud of flies that came into a town one summer and never dispersed, thick enough to smother a lamp. It goes where the sick are and leaves the sickness behind it. It has no plan and no leader; it wants warmth, wet, and open mouths. (HD 5; MV 20 ft (fly 40 ft); Inst 2; Skill +0; 1 attack per action.)",
     "stats": {
       "str": 19,
@@ -2548,6 +2602,7 @@
     "type": "monster",
     "id": "butcher_shrike",
     "name": "Butcher Shrike",
+    "looks_like": "beast",
     "description": "A grey bird with a heavy hooked beak that hunts the hedgerows and the field margins and keeps a larder of what it kills on thorns. It is bold with people and will go for the eyes of anyone who stoops. It wants the whole hedge line to itself, and it will kill every other hunter in it. (HD 5; MV 40 ft (fly 40 ft); Inst 7; Skill +2; 2 attacks per action.)",
     "stats": {
       "str": 19,
@@ -2598,6 +2653,7 @@
     "type": "monster",
     "id": "well_singer",
     "name": "Well Singer",
+    "looks_like": "spirit",
     "description": "A voice at the bottom of an old well, singing a song with no words that nobody can remember afterwards. It is not cruel, only lonely, and it has been down there a very long time. It draws people to the rim and then down to the water, and it keeps them. (HD 5; MV 10 ft (swim 20 ft); Inst 8; Skill +2; 1 attack per action.)",
     "stats": {
       "str": 19,

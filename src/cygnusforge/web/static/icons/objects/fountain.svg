@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Fountain</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 38 H56 V50 Q32 58 8 50 Z" fill="#9aa1a7"/><path d="M18 38 Q18 26 32 26 Q46 26 46 38" fill="#6fa8c9"/><path d="M32 26 V12 M32 12 Q24 16 24 22 M32 12 Q40 16 40 22 M26 34 Q32 30 38 34" stroke="#4a8fae"/><path d="M14 50 V58 M50 50 V58"/>
+  </g>
+</svg>

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Callable
 from dataclasses import replace
@@ -39,17 +40,21 @@ def _new_campaign(
     world_template: str = "testhollow",
     rule_set: str = "rolltest",
     setting: str = "",
+    table_genres: list[str] | None = None,
 ):
     token = csrf_token(client, "/campaigns/new")
+    data: dict[str, str | list[str]] = {
+        "csrf_token": token,
+        "label": label,
+        "world_template": world_template,
+        "rule_set": rule_set,
+        "setting": setting,
+    }
+    if table_genres is not None:
+        data["table_genres"] = table_genres
     return client.post(
         "/campaigns/new",
-        data={
-            "csrf_token": token,
-            "label": label,
-            "world_template": world_template,
-            "rule_set": rule_set,
-            "setting": setting,
-        },
+        data=data,
         follow_redirects=False,
     )
 
@@ -327,6 +332,50 @@ def test_create_rejects_an_overlong_setting_and_keeps_the_text(
     assert response.status_code == 400
     assert "setting and story must be at most 4000 characters" in response.text
     assert setting in response.text
+
+
+def test_create_stores_the_chosen_table_genres(client_factory: Callable[[], TestClient]):
+    client = _signed_in(client_factory)
+    response = _new_campaign(
+        client,
+        label="Weird west",
+        world_template="twin-lakes",
+        rule_set="cairn2e",
+        table_genres=["generic", "historical"],
+    )
+    assert response.status_code == 303
+    with Session(client.app.state.engine) as db:
+        campaign = db.get(Campaign, _created_campaign_id(response))
+        assert campaign is not None
+        assert json.loads(campaign.table_genres) == ["generic", "historical"]
+
+
+def test_create_keeps_the_rule_sets_table_genres_when_none_are_chosen(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
+    assert response.status_code == 303
+    with Session(client.app.state.engine) as db:
+        campaign = db.get(Campaign, _created_campaign_id(response))
+        assert campaign is not None
+        assert json.loads(campaign.table_genres) == ["generic", "fantasy"]
+
+
+def test_create_rejects_an_unknown_table_genre_and_keeps_the_rest(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    response = _new_campaign(
+        client,
+        world_template="twin-lakes",
+        rule_set="cairn2e",
+        table_genres=["generic", "steampunk"],
+    )
+    assert response.status_code == 400
+    assert "unknown genre" in response.text
+    assert 'name="table_genres" value="generic" checked' in response.text
+    assert 'name="table_genres" value="steampunk"' not in response.text
 
 
 def test_campaign_list_keeps_the_label_editor_behind_a_toggle(

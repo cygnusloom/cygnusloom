@@ -37,7 +37,7 @@
       {% if group.name %}<h4 class="compendium-group">{{ group.name }}</h4>{% endif %}
       {% for entry in group.entries %}
       <article class="compendium-entry" id="{{ entry.id }}" data-compendium-entry data-compendium-text="{{ entry.name }} {{ entry.summary }} {{ entry.text }} {{ entry.tags | join(' ') }} {{ entry.group }}">
-        <h5>{{ entry.name }}</h5>
+        <h5>{% if entry.icon %}<img class="compendium-icon" src="{{ icon_path(entry.icon) }}" alt="">{% endif %}{{ entry.name }}</h5>
         {% if entry.tags or entry.source %}
         <p class="compendium-tags">
           {% if entry.source %}<span class="tag">{{ entry.source }}</span>{% endif %}

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Plateau</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 24 H54 L58 56 H6 Z" fill="#b08a5e"/><path d="M10 24 L16 16 H48 L54 24 M18 34 V40 M30 30 V38 M44 34 V42 M24 46 V52 M40 46 V52"/>
+  </g>
+</svg>

@@ -118,6 +118,11 @@ CORE_TOOLS = {
     "record_setting",
     "record_settings",
     "undo_narration",
+    "create_local_map",
+    "place_map_token",
+    "remove_map_token",
+    "set_map_cells",
+    "list_dice_tables",
 }
 
 
@@ -1232,10 +1237,15 @@ def test_bundled_cairn_prompts_and_cap_are_read():
         "monster_abilities",
         "setting_forge",
         "setting_continuity",
+        "local_maps",
     ]
     core = ContentLibrary.load().core.prompt_fragments
-    assert [fragment.id for fragment in core] == ["setting_forge", "setting_continuity"]
-    assert all(fragment.unwritten_only for fragment in core)
+    assert [fragment.id for fragment in core] == [
+        "setting_forge",
+        "setting_continuity",
+        "local_maps",
+    ]
+    assert all(fragment.unwritten_only for fragment in core if fragment.id != "local_maps")
 
 
 def _monster_definition(**changes: Any) -> Definition:

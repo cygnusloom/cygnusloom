@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Backpack</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 22 Q18 10 32 10 Q46 10 46 22 V54 Q46 58 42 58 H22 Q18 58 18 54 Z" fill="#8b6b4a"/><path d="M24 22 V14 Q24 8 32 8 Q40 8 40 14 V22 M22 38 H42 M10 26 Q8 36 14 42 M54 26 Q56 36 50 42" fill="none"/><rect x="26" y="42" width="12" height="8" fill="#c9b08a"/>
+  </g>
+</svg>

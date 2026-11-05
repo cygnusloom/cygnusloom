@@ -1087,5 +1087,166 @@
         "detail"
       ]
     }
+  },
+  {
+    "type": "tool_call",
+    "id": "create_local_map",
+    "name": "create_local_map",
+    "world_method": "create_local_map",
+    "description": "Create a local map for an indoor or small-scale place, such as a room, tavern, house, temple, crypt, cave, watchtower, market, camp, ship, hall, library, or cellar. A local map is used outside an encounter to show where the player character, NPCs, and props stand; when a fight starts on it, start_encounter on the same map and the tokens already placed carry into the fight. The template supplies the layout, size, and starting terrain.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "A name for the map, unique among maps. A readable name is '<place> local map'."
+        },
+        "location": {
+          "type": "string",
+          "description": "The name of the existing location the map is set in."
+        },
+        "description": {
+          "type": "string",
+          "description": "What the place shows: its rooms, furnishings, cover, and anything else that matters when the player looks around or a fight starts."
+        },
+        "template": {
+          "type": "string",
+          "description": "The id of the layout template, such as tavern, house, temple, crypt, cave, watchtower, market, camp, ship, dungeon_hall, castle_hall, library, cellar, room, or corridor."
+        },
+        "columns": {
+          "type": "integer",
+          "description": "How many cells wide the map is, from 1 to 60. Leave it out to use the template's width."
+        },
+        "rows": {
+          "type": "integer",
+          "description": "How many cells tall the map is, from 1 to 60. Leave it out to use the template's height."
+        }
+      },
+      "required": [
+        "name",
+        "location",
+        "description",
+        "template"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "place_map_token",
+    "name": "place_map_token",
+    "world_method": "place_map_token",
+    "description": "Place a token on a local map outside an encounter: the player character, an NPC at that place, or a prop such as a barrel, cart, or boat. The token shows where it stands and keeps its cell when an encounter starts on the same map. A character must already be at the map's location. The cell must be on the map, free of another token, and not blocked by an object. During an encounter, use place_participant instead.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "map": {
+          "type": "string",
+          "description": "The name of the local map."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the character, NPC, or prop to place."
+        },
+        "column": {
+          "type": "integer",
+          "description": "The cell's column, from 0 at the left edge."
+        },
+        "row": {
+          "type": "integer",
+          "description": "The cell's row, from 0 at the top edge."
+        }
+      },
+      "required": [
+        "map",
+        "name",
+        "column",
+        "row"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "remove_map_token",
+    "name": "remove_map_token",
+    "world_method": "remove_map_token",
+    "description": "Remove a character, NPC, or prop token from a local map outside an encounter. During an encounter, use remove_participant for a character in the fight.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "map": {
+          "type": "string",
+          "description": "The name of the local map."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the token to remove."
+        }
+      },
+      "required": [
+        "map",
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "list_dice_tables",
+    "name": "list_dice_tables",
+    "world_method": "list_dice_tables",
+    "description": "List the dice and creative tables this campaign offers after its genre selection. Use it before roll_tables when you need the table ids, or to see what kind of idea tables the setting supports.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "set_map_cells",
+    "name": "set_map_cells",
+    "world_method": "set_map_cells",
+    "description": "Set the terrain or object on cells of a map, inside or outside an encounter. Use it for fixed furniture, doors, stairs, water, and other props on a local map. A cell with a blocking object cannot be entered.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "map": {
+          "type": "string",
+          "description": "The name of the map."
+        },
+        "cells": {
+          "type": "array",
+          "description": "The cells to change, at most 200 per call. Each cell needs a column and row, and terrain or object or both. Give an empty string for terrain or object to clear it.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "column": {
+                "type": "integer",
+                "description": "The cell's column, from 0 at the left edge."
+              },
+              "row": {
+                "type": "integer",
+                "description": "The cell's row, from 0 at the top edge."
+              },
+              "terrain": {
+                "type": "string",
+                "description": "The terrain id for the cell, such as mud or floor. Empty clears it."
+              },
+              "object": {
+                "type": "string",
+                "description": "The object id on the cell, such as wall or crate. Empty clears it."
+              }
+            },
+            "required": [
+              "column",
+              "row"
+            ]
+          }
+        }
+      },
+      "required": [
+        "map",
+        "cells"
+      ]
+    }
   }
 ]

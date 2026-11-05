@@ -10,6 +10,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from cygnusforge.content.definitions import ContentError
+from cygnusforge.content.icons import resolve_icon
 from cygnusforge.web.icons import (
     ICON_DIR,
     ITEM_KIND_ICONS,
@@ -43,6 +45,51 @@ REQUIRED = {
         "castle",
         "shore",
         "fen",
+        "desert",
+        "tundra",
+        "volcano",
+        "jungle",
+        "glacier",
+        "plateau",
+        "badlands",
+        "farmland",
+        "ocean",
+        "reef",
+        "island",
+        "moor",
+        "steppe",
+    ],
+    "creatures": [
+        "beast",
+        "humanoid",
+        "undead",
+        "dragon",
+        "giant",
+        "ooze",
+        "construct",
+        "elemental",
+        "fey",
+        "swarm",
+        "aberration",
+        "plant-creature",
+        "spirit",
+    ],
+    "places": [
+        "city",
+        "temple",
+        "tower",
+        "tavern",
+        "shop",
+        "farm",
+        "mine",
+        "graveyard",
+        "dungeon",
+        "camp",
+        "port",
+        "library",
+        "market",
+        "arena",
+        "shrine",
     ],
     "objects": [
         "door",
@@ -70,9 +117,32 @@ REQUIRED = {
         "gate",
         "portcullis",
         "hatch",
+        "barrel",
+        "bookshelf",
+        "bench",
+        "throne",
+        "anvil",
+        "cauldron",
+        "fountain",
+        "obelisk",
+        "tent",
     ],
     "items": [
         "weapon",
+        "sword",
+        "axe",
+        "dagger",
+        "spear",
+        "mace",
+        "staff",
+        "wand",
+        "ring",
+        "amulet",
+        "cloak",
+        "boots",
+        "helm",
+        "backpack",
+        "torch-item",
         "bow",
         "shield",
         "armor",
@@ -214,6 +284,46 @@ def test_place_without_icon_uses_fallback():
     assert place_icon_path("forest") == icon_path("forest")
 
 
+def test_looks_like_inherits_an_icon_through_a_chain():
+    entries = {
+        "goblin": (None, "goblin-kind"),
+        "goblin-kind": (None, "beast-kind"),
+        "beast-kind": ("beast", None),
+    }
+    assert resolve_icon(None, "goblin", label="monster", entries=entries) == "beast"
+    # A registered icon id also works as a direct looks_like target.
+    assert resolve_icon(None, "humanoid", label="monster", entries=entries) == "humanoid"
+    assert resolve_icon(None, "npc", label="monster", entries=entries, fallback="monster") == (
+        "npc"
+    )
+
+
+def test_looks_like_rejects_missing_targets_and_cycles():
+    with pytest.raises(ContentError, match="names no icon or definition"):
+        resolve_icon(None, "nowhere", label="monster", entries={})
+    with pytest.raises(ContentError, match="forms a cycle"):
+        resolve_icon(
+            None,
+            "a",
+            label="monster",
+            entries={"a": (None, "b"), "b": (None, "a")},
+        )
+
+
+def test_every_bundled_monster_place_and_item_has_an_icon():
+    library = content_library()
+    registry = _registry()
+    for name, rule_set in library.rule_sets.items():
+        for monster in rule_set.monsters.values():
+            assert monster.icon in registry, f"{name}: {monster.name} has no icon"
+        if rule_set.marketplace is not None:
+            for item in rule_set.marketplace.items:
+                assert item.icon in registry, f"{name}: {item.name} has no icon"
+    for world in library.world_templates.values():
+        for place in world.locations:
+            assert place.icon in registry, f"{world.id}: {place.name} has no icon"
+
+
 def test_campaign_map_draws_a_marker_icon(client_factory: Callable[[], TestClient], app: FastAPI):
     client, campaign_id = _described_campaign(client_factory)
     _tool(
@@ -242,10 +352,11 @@ def test_campaign_pack_draws_item_icons(client_factory: Callable[[], TestClient]
         '<a href="#compendium-items-sword" data-view-link="compendium"><strong>Sword</strong></a>'
         in inventory
     )
-    assert inventory.count('class="item-icon"') == inventory.count(
-        f'src="{icon_path(WEAPON_ICON)}"'
-    )
+    # Each carried item shows the icon its own definition names, not just the weapon fallback.
+    assert f'src="{icon_path("rope")}"' in inventory
+    assert inventory.count('class="item-icon"') >= 2
     assert re.search(
-        r"<li[^>]*>\s*<a[^>]*data-view-link=\"compendium\"[^>]*><strong>Rope</strong></a>",
+        r"<li[^>]*>\s*(?:<img[^>]*>\s*)?<a[^>]*data-view-link=\"compendium\"[^>]*>"
+        r"<strong>Rope</strong></a>",
         inventory,
     )

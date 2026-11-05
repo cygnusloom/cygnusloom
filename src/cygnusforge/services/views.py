@@ -119,6 +119,9 @@ class PackItem:
     ready: bool = True
     equipped: str = ""
     entry: str = ""
+    # The carried item's own icon, when its feature definition names one. Templates fall back to
+    # the icon of the item's kind or damage.
+    icon: str = ""
 
 
 @dataclass(frozen=True)
@@ -519,6 +522,11 @@ def scene_view(
     pack = None
     if pc is not None and inventory is not None:
         armor, shield = pc.equipped_armor, pc.equipped_shield
+        feature_icons = {
+            name_key(feature.name): feature.icon
+            for feature in spec.features.values()
+            if feature.feature_type == "item" and feature.icon
+        }
         items = []
         for item in pc.items:
             equipped = ""
@@ -539,6 +547,7 @@ def scene_view(
                     ready=item.ready,
                     equipped=equipped,
                     entry=links.get(item.name) or links.get(name_key(item.name)) or "",
+                    icon=feature_icons.get(name_key(item.name), ""),
                 )
             )
         pack = PackView(

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Boots</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 8 H34 V38 Q34 46 44 46 H54 V56 H20 Q12 56 12 48 V38 H20 Z" fill="#8b5e3c"/><path d="M12 48 H34 M20 18 H34 M20 28 H34"/>
+  </g>
+</svg>

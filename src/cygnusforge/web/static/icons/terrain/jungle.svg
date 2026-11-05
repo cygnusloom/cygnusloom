@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Jungle</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 56 V24" stroke="#5f7d3f" stroke-width="4"/><path d="M32 28 Q12 26 8 12 Q28 12 32 28 Z M32 22 Q52 20 56 6 Q36 8 32 22 Z M32 40 Q14 42 10 54 Q30 52 32 40 Z M32 34 Q50 36 54 48 Q34 48 32 34 Z" fill="#3f6f3a"/><path d="M44 56 Q40 48 44 42 M20 56 Q24 50 20 44" stroke="#5f7d3f"/>
+  </g>
+</svg>

@@ -234,18 +234,53 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
   position: absolute; left: -200%; top: -200%; width: 500%; height: 500%; pointer-events: none;
 }
 .map-regions { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.map-ground { stroke-opacity: 0.7; stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.map-ground {
+  stroke-opacity: 0.9; stroke-width: 2px; stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 1px 1px rgba(46, 38, 32, 0.35));
+}
 .map-texture { opacity: 0.8; pointer-events: none; }
+.map-region-shade { pointer-events: none; mix-blend-mode: multiply; opacity: 0.9; }
 .map-marker {
   position: absolute; transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1)));
   display: grid; place-items: center; min-width: 1.75rem; height: 1.25rem; box-sizing: border-box;
   padding: 0 0.3rem; white-space: nowrap;
   font-size: 0.7rem; font-weight: 600; border-radius: 999px;
   background: var(--panel); border: 1px solid var(--border);
+  z-index: 3;
 }
 .map-marker.here { color: var(--accent); border-color: var(--accent); }
 .map-marker img { width: 0.9rem; height: 0.9rem; vertical-align: -0.15em; }
+.map-marker::after {
+  content: attr(data-label);
+  position: absolute; top: calc(100% + 0.15rem); left: 50%; transform: translateX(-50%);
+  max-width: 9rem; overflow: hidden; text-overflow: ellipsis;
+  padding: 0.05rem 0.3rem; border-radius: 0.35rem;
+  font-size: 0.6rem; font-weight: 500; line-height: 1.2; color: var(--text);
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  pointer-events: none;
+}
+.world-map::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 1;
+  box-shadow: inset 0 0 2.5rem rgba(46, 38, 32, 0.35);
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(46, 38, 32, 0.18) 100%);
+}
+.map-compass {
+  position: absolute; top: 0.5rem; right: 0.5rem; width: 2.6rem; height: 2.6rem;
+  opacity: 0.85; pointer-events: none; z-index: 2;
+}
+.map-compass svg { width: 100%; height: 100%; }
+.map-scalebar {
+  position: absolute; left: 0.5rem; bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem;
+  padding: 0.15rem 0.4rem; border-radius: 0.4rem; font-size: 0.65rem; color: var(--text);
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  pointer-events: none; z-index: 2;
+}
+.map-scalebar span { display: block; width: 2.4rem; height: 0.25rem; border: 1px solid var(--text); border-top: 0; }
 .item-icon { width: 1rem; height: 1rem; vertical-align: -0.2em; margin-right: 0.35rem; }
+.compendium-icon { width: 1.1rem; height: 1.1rem; vertical-align: -0.2em; margin-right: 0.35rem; }
 .map-token { font-size: 0.6rem; font-weight: 600; line-height: 1; white-space: nowrap; transform: scale(calc(1 / var(--zoom, 1))); }
 .map-tip {
   position: fixed; z-index: 10; pointer-events: none;
@@ -372,6 +407,9 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
   container-type: size;
   position: relative; overflow: hidden; touch-action: none; cursor: grab;
 }
+/* The roster and status below a map can otherwise squeeze the map itself to nothing in a short
+   sidebar. Keep enough height for the board to stay readable, and let the panel scroll. */
+.map-view > .map-frame { min-height: 14rem; }
 .map-frame.panning { cursor: grabbing; }
 .map-frame > .map-recenter { position: absolute; top: 0.5rem; right: 0.5rem; z-index: 1; }
 .map-frame > .map-board { width: min(100cqw, 100cqh); height: auto; max-height: none; min-height: 0; transform-origin: 0 0; }

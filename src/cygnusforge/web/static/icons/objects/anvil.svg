@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Anvil</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 24 H44 Q52 24 56 18 Q58 30 48 34 L40 36 V44 H24 V36 L14 34 Q8 32 8 24 Z" fill="#6e6a62"/><path d="M20 44 H44 V52 H20 Z" fill="#5a5650"/><path d="M14 56 H50 M24 52 V56 M40 52 V56"/>
+  </g>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Tent</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 54 L32 8 L56 54 Z" fill="#c9b08a"/><path d="M32 8 V54 M22 54 L32 34 L42 54" fill="#8b5e3c"/><path d="M8 54 H56"/><path d="M12 18 L8 14 M52 18 L56 14"/>
+  </g>
+</svg>
