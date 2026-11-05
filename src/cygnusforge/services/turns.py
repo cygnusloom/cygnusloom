@@ -15,6 +15,7 @@ from cygnusforge.content.library import (
     RuleSet,
     ToolCall,
     WorldContent,
+    WorldTemplate,
 )
 from cygnusforge.db.models import Campaign, Event
 from cygnusforge.llm.base import (
@@ -315,6 +316,9 @@ class _Run:
     # The world's rules that no place, NPC, or monster attaches. They are listed for the GM as
     # campaign rules, so lookup_rule can read them.
     unattached_rules: Mapping[str, str] = field(default_factory=dict)
+    # The campaign's world, or None when its template is gone. The prompt builders read its
+    # setting to decide whether the GM invents one.
+    world: WorldTemplate | None = None
 
     @property
     def tool_calls(self) -> Mapping[str, ToolCall]:
@@ -420,6 +424,7 @@ def _start_run(
 ) -> _Run:
     provider, model_name = providers(campaign.model)
     world = library.world_content(campaign.world_template, campaign.rule_set)
+    template = library.world_templates.get(campaign.world_template)
     return _Run(
         engine=engine,
         campaign_id=campaign.id,
@@ -438,8 +443,9 @@ def _start_run(
             world,
         ),
         cursor=_newest(engine, campaign.id),
-        opening=opening_prompt(library.world_templates.get(campaign.world_template)),
+        opening=opening_prompt(template),
         unattached_rules=world.unattached_rules,
+        world=template,
     )
 
 
@@ -508,7 +514,7 @@ def _narration_messages(
     if log:
         lines = "\n".join(f"{number}. {line}" for number, line in enumerate(log, 1))
         entry = {"role": "system", "content": f"{heading}\n{lines}"}
-        if messages[-1]["content"] == narrate_instruction(run.rule_set):
+        if messages[-1]["content"] == narrate_instruction(run.rule_set, run.world):
             messages.insert(len(messages) - 1, entry)
         else:
             messages.append(entry)
@@ -733,7 +739,9 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
         {"role": player.role, "content": player.content},
     ]
     round_start = len(context)
-    context.append(ContextPart("system", "State instruction", state_instruction(run.rule_set)))
+    context.append(
+        ContextPart("system", "State instruction", state_instruction(run.rule_set, run.world))
+    )
     events.append(
         TurnBegun(
             head=_dicts([*summary_record, player]),
@@ -762,7 +770,7 @@ async def _write_journal(
     log = _turn_log(run.engine, run.campaign_id, state.journal_through or turn.opener)
     _record(run.engine, run.campaign_id, JournalStarted())
     instruction = journal_instruction(state.clock.day, state.journal)
-    narrate = narrate_instruction(run.rule_set)
+    narrate = narrate_instruction(run.rule_set, run.world)
     view: list[dict[str, Any]] = [
         *(
             m
@@ -791,7 +799,7 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
     """Run the reply until it is recorded or paused. Log entries are yielded as the steps that
     recorded them finish. A pause is recorded before the player hears of it."""
     tools = tool_specs(run.tool_calls)
-    state = {"role": "system", "content": state_instruction(run.rule_set)}
+    state = {"role": "system", "content": state_instruction(run.rule_set, run.world)}
     while True:
         turn = _turn(_state(run.engine, run.campaign_id))
         if turn.queue:
@@ -860,7 +868,10 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                 if turn.speech:
                     _add_speech(messages, context, turn.speech)
                 _add_instruction(
-                    messages, context, "Narrate instruction", narrate_instruction(run.rule_set)
+                    messages,
+                    context,
+                    "Narrate instruction",
+                    narrate_instruction(run.rule_set, run.world),
                 )
                 _record(
                     run.engine,
@@ -910,7 +921,10 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             if turn.speech:
                 _add_speech(messages, context, turn.speech)
             _add_instruction(
-                messages, context, "Narrate instruction", narrate_instruction(run.rule_set)
+                messages,
+                context,
+                "Narrate instruction",
+                narrate_instruction(run.rule_set, run.world),
             )
             _record(
                 run.engine,

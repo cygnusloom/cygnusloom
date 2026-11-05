@@ -26,6 +26,7 @@ from cygnusforge.services.common import NotFound
 from cygnusforge.web.accounts import router as accounts_router
 from cygnusforge.web.admin import router as admin_router
 from cygnusforge.web.campaigns import router as campaigns_router
+from cygnusforge.web.compendium import router as compendium_router
 from cygnusforge.web.rendering import render
 
 SESSION_COOKIE = "cygnusforge_session"
@@ -108,6 +109,7 @@ def create_app(
     app.mount("/static", RevalidatingStaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(accounts_router)
     app.include_router(campaigns_router)
+    app.include_router(compendium_router)
     app.include_router(admin_router)
     return app
 

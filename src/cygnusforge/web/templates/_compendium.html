@@ -1,0 +1,56 @@
+{% if compendium and not compendium.empty %}
+<div class="compendium">
+  <div class="compendium-heading">
+    <p class="compendium-source">
+      {% if compendium.world %}<span>{{ compendium.world.name }}</span>{% endif %}
+      {% if compendium.world and compendium.rule_set %} · {% endif %}
+      {% if compendium.rule_set %}<span>{{ compendium.rule_set.name }}</span>{% endif %}
+    </p>
+    {% if not standalone %}
+    {% if compendium.rule_set and compendium.world %}
+    <a class="compendium-standalone-link" href="/compendium?rule_set={{ compendium.rule_set.id }}&world_template={{ compendium.world.id }}">Open the standalone page</a>
+    {% elif compendium.rule_set %}
+    <a class="compendium-standalone-link" href="/compendium?rule_set={{ compendium.rule_set.id }}">Open the standalone page</a>
+    {% elif compendium.world %}
+    <a class="compendium-standalone-link" href="/compendium?world_template={{ compendium.world.id }}">Open the standalone page</a>
+    {% endif %}
+    {% endif %}
+  </div>
+  <div class="compendium-toolbar">
+    <label class="compendium-search">
+      <span class="visually-hidden">Search the compendium</span>
+      <input type="search" data-filter="#compendium-sections" placeholder="Search the compendium" autocomplete="off">
+    </label>
+  </div>
+  {% if compendium.sections %}
+  <nav class="compendium-toc" aria-label="Compendium sections">
+    {% for section in compendium.sections %}
+    <a href="#section-{{ section.id }}">{{ section.name }}</a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+  <div id="compendium-sections">
+    {% for section in compendium.sections %}
+    <section class="compendium-section" id="section-{{ section.id }}" data-filter-group>
+      <h3>{{ section.name }}</h3>
+      {% for entry in section.entries %}
+      <article class="compendium-entry" id="{{ entry.id }}" data-filter-item data-filter-text="{{ entry.name }} {{ entry.summary }} {{ entry.text }} {{ entry.tags|join(' ') }}">
+        <h4>{{ entry.name }}</h4>
+        {% if entry.tags or entry.source %}
+        <p class="compendium-tags">
+          {% if entry.source %}<span class="tag">{{ entry.source }}</span>{% endif %}
+          {% for tag in entry.tags %}<span class="tag">{{ tag }}</span>{% endfor %}
+        </p>
+        {% endif %}
+        {% if entry.summary %}<p class="compendium-summary">{{ entry.summary }}</p>{% endif %}
+        <div class="compendium-text">{{ entry.text }}</div>
+      </article>
+      {% endfor %}
+    </section>
+    {% endfor %}
+  </div>
+  <p class="muted" data-filter-empty hidden>No compendium entries match that search.</p>
+</div>
+{% else %}
+<p class="muted">No compendium content is available for this world and rule set.</p>
+{% endif %}

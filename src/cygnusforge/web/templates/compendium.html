@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Compendium{% endblock %}
+{% block content %}
+  <section class="card narrow">
+    <h1>Compendium</h1>
+    <form method="get" action="/compendium">
+      <label>
+        Rule set
+        <select name="rule_set">
+          {% for rule_set in rule_sets %}
+            <option value="{{ rule_set.id }}" data-blurb="{{ rule_set.blurb or rule_set.description }}"{% if rule_set.id == selected_rule_set %} selected{% endif %}>{{ rule_set.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <p class="muted" data-blurb-for="rule_set"></p>
+      <label>
+        World
+        <select name="world_template">
+          {% for world in worlds %}
+            <option value="{{ world.id }}"{% if world.rule_set %} data-rule-set="{{ world.rule_set }}"{% endif %} data-blurb="{{ world.blurb or world.description }}"{% if world.id == selected_world %} selected{% endif %}>{{ world.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <p class="muted" data-blurb-for="world_template"></p>
+      <button type="submit">Show</button>
+    </form>
+  </section>
+  {% if compendium and not compendium.empty %}
+  <section class="compendium standalone">
+    {% include "_compendium.html" %}
+  </section>
+  {% else %}
+  <p class="muted">No compendium content is available for this world and rule set.</p>
+  {% endif %}
+{% endblock %}
+{% block scripts %}
+  {{ super() }}
+  <script src="/static/new_campaign.js"></script>
+  <script src="/static/workspace.js"></script>
+{% endblock %}

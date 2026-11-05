@@ -12,6 +12,7 @@
     <nav>
       {% if user %}
         <a href="/campaigns">Campaigns</a>
+        <a href="/compendium">Compendium</a>
         <a href="/account">Account</a>
         {% if is_admin %}<a href="/admin">Admin</a>{% endif %}
         <form method="post" action="/logout" class="inline">

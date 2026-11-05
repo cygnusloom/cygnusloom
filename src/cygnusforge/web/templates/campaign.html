@@ -133,7 +133,7 @@
             </div>
             <div class="tab-panel" role="tabpanel" id="panel-location" aria-labelledby="tab-location">
               {% if scene.location %}
-              <p><strong>{{ scene.location.name }}</strong></p>
+              <p><strong>{% if scene.location_entry %}<a href="#{{ scene.location_entry }}" data-view-link="compendium">{{ scene.location.name }}</a>{% else %}{{ scene.location.name }}{% endif %}</strong></p>
               {% if scene.location.summary %}<p>{{ scene.location.summary }}</p>{% endif %}
               {% endif %}
               <ul>
@@ -141,7 +141,8 @@
                 <li><strong>{{ scene.pc.name }}</strong> <span class="muted">(you)</span></li>
                 {% endif %}
                 {% for npc in scene.npcs %}
-                <li><strong>{{ npc.name }}</strong>{% if npc.defeated %} <span class="muted">(body)</span>{% endif %}</li>
+                {% set creature_entry = creature_links.get(npc.creature, '') if creature_links and npc.creature else '' %}
+                <li><strong>{{ npc.name }}</strong>{% if creature_entry %} <a href="#{{ creature_entry }}" data-view-link="compendium">{{ npc.creature }}</a>{% endif %}{% if npc.defeated %} <span class="muted">(body)</span>{% endif %}</li>
                 {% endfor %}
                 {% for hireling in scene.hirelings %}
                 <li><strong>{{ hireling.name }}</strong> <span class="muted">(hireling of {{ hireling.employer }})</span></li>
@@ -169,6 +170,11 @@
               {% else %}
               <p class="muted">No character sheet yet.</p>
               {% endfor %}
+              {% if scene.abilities %}
+              <p class="compendium-links"><strong>Abilities:</strong>
+                {% for ability in scene.abilities %}{% if not loop.first %} · {% endif %}{% if ability.entry %}<a href="#{{ ability.entry }}" data-view-link="compendium">{{ ability.name }}</a>{% else %}{{ ability.name }}{% endif %}{% endfor %}
+              </p>
+              {% endif %}
             </div>
             <div class="tab-panel" role="tabpanel" id="panel-inventory" aria-labelledby="tab-inventory" hidden>
               {% if scene.pack %}
@@ -180,7 +186,7 @@
               <ul data-inventory>
                 {% for item in scene.pack.items %}
                 <li>
-                  {% set icon = item_icon_id(item.kind, item.damage, item_kind_icons) %}{% if icon %}<img class="item-icon" src="{{ icon_path(icon) }}" alt="">{% endif %}<strong>{{ item.name }}</strong>
+                  {% set icon = item_icon_id(item.kind, item.damage, item_kind_icons) %}{% if icon %}<img class="item-icon" src="{{ icon_path(icon) }}" alt="">{% endif %}{% if item.entry %}<a href="#{{ item.entry }}" data-view-link="compendium"><strong>{{ item.name }}</strong></a>{% else %}<strong>{{ item.name }}</strong>{% endif %}
                   {% if item.size %}{{ item.size }}, {% endif %}{% if item.slots %}{{ item.slots }} slot{{ "" if item.slots == 1 else "s" }}{% else %}no slots{% endif %}
                   {% if item.max_uses > 0 %}· {{ item.uses }} uses left{% endif %}
                   {% if item.kind %}<span class="muted">({{ item.kind|capitalize }})</span>{% endif %}

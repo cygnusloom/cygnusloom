@@ -60,6 +60,7 @@ from cygnusforge.services.campaigns import (
     discard_pending as discard_pending_turn,
 )
 from cygnusforge.services.common import Conflict, InvalidInput, NotFound, session_scope
+from cygnusforge.services.compendium import compendium_view
 from cygnusforge.services.encounters import encounter_view
 from cygnusforge.services.events import last_event_id, load_state, speaker_name
 from cygnusforge.services.tools import check_arguments
@@ -691,6 +692,7 @@ def _campaign_page(
     spec = rule_set.character if rule_set else NO_CHARACTER
     options = rule_set.campaign if rule_set else NO_CAMPAIGN
     world = campaign_world(engine, user.id, campaign.id)
+    compendium = compendium_view(library, campaign.rule_set, campaign.world_template, world.state)
     world_map = map_view(world.state, rule_set.world_terrain if rule_set else None)
     options_pending, character_pending = _creation_pending(world.state, rule_set)
     pc = world.state.pc()
@@ -714,10 +716,18 @@ def _campaign_page(
             campaign=campaign,
             world=library.world_templates.get(campaign.world_template),
             scene=scene_view(
-                world.state, spec, inventory_rules, rule_set.relations if rule_set else None
+                world.state,
+                spec,
+                inventory_rules,
+                rule_set.relations if rule_set else None,
+                item_links=compendium.item_links,
+                ability_links=compendium.ability_links,
+                creature_links=compendium.creature_links,
+                place_links=compendium.place_links,
             ),
             world_map=world_map,
             rule_set=rule_set,
+            compendium=compendium,
             show_options=options_pending,
             options=campaign_view(options) if options_pending else None,
             show_character=character_pending,
@@ -753,11 +763,21 @@ def _campaign_page(
         campaign=campaign,
         world=library.world_templates.get(campaign.world_template),
         scene=scene_view(
-            world.state, spec, inventory_rules, rule_set.relations if rule_set else None
+            world.state,
+            spec,
+            inventory_rules,
+            rule_set.relations if rule_set else None,
+            item_links=compendium.item_links,
+            ability_links=compendium.ability_links,
+            creature_links=compendium.creature_links,
+            place_links=compendium.place_links,
         ),
         world_map=world_map,
         time=time_view(world.state, rule_set.clock if rule_set else None),
         rule_set=rule_set,
+        compendium=compendium,
+        creature_links=compendium.creature_links,
+        place_links=compendium.place_links,
         messages=messages,
         transcript=transcript,
         player_name=pc.name,

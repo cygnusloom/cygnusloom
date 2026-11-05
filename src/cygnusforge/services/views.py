@@ -70,6 +70,18 @@ class KnownNpcView:
     # The NPC is at the player character's location now.
     here: bool
     dead: bool
+    # The bestiary statblock the NPC was built from, and its compendium entry when one exists.
+    creature: str = ""
+    creature_entry: str = ""
+
+
+@dataclass(frozen=True)
+class FeatureLink:
+    """A feature the player character has, and its compendium entry when one exists."""
+
+    id: str
+    name: str
+    entry: str = ""
 
 
 @dataclass(frozen=True)
@@ -86,6 +98,8 @@ class SceneView:
     hirelings: tuple[Character, ...] = ()
     objects: tuple[WorldObject, ...] = ()
     known: tuple[KnownNpcView, ...] = ()
+    abilities: tuple[FeatureLink, ...] = ()
+    location_entry: str = ""
 
 
 @dataclass(frozen=True)
@@ -102,6 +116,7 @@ class PackItem:
     damage: str = ""
     ready: bool = True
     equipped: str = ""
+    entry: str = ""
 
 
 @dataclass(frozen=True)
@@ -464,16 +479,39 @@ def scene_view(
     spec: CharacterSpec,
     inventory: InventoryRules | None = None,
     relations: Mapping[str, RelationRules] | None = None,
+    *,
+    item_links: Mapping[str, str] | None = None,
+    ability_links: Mapping[str, str] | None = None,
+    creature_links: Mapping[str, str] | None = None,
+    place_links: Mapping[str, str] | None = None,
 ) -> SceneView:
     """The player's view. It shows only what is at the player character's location, including any
     hirelings there, and everyone the player has met. The pack shows the player character's items
-    when the rule set has an inventory."""
+    when the rule set has an inventory. The link maps name the compendium entries behind carried
+    items, the player character's features, met NPCs' creatures, and the current place."""
+    links = item_links or {}
+    ability_entries = ability_links or {}
+    creature_entries = creature_links or {}
+    place_entries = place_links or {}
     pc = state.pc()
     location = pc.location if pc is not None else None
     found = state.named(location) if location is not None else None
     place = found if isinstance(found, Place) else None
     npcs = _npcs_at(state, place.name) if place is not None else []
     sheet = _sheet_text(spec, pc).splitlines() if pc is not None else []
+    abilities = ()
+    if pc is not None:
+        abilities = tuple(
+            FeatureLink(
+                id=feature_id,
+                name=feature.name,
+                entry=ability_entries.get(feature_id)
+                or ability_entries.get(name_key(feature.name))
+                or "",
+            )
+            for feature_id, feature in spec.features.items()
+            if feature_id in pc.features and feature.feature_type != "item"
+        )
     pack = None
     if pc is not None and inventory is not None:
         armor, shield = pc.equipped_armor, pc.equipped_shield
@@ -496,6 +534,7 @@ def scene_view(
                     damage=item.damage,
                     ready=item.ready,
                     equipped=equipped,
+                    entry=links.get(item.name) or links.get(name_key(item.name)) or "",
                 )
             )
         pack = PackView(
@@ -510,6 +549,11 @@ def scene_view(
         if c.hireling and place is not None and c.location == place.name
     )
     objects = tuple(visible_objects(state, place.name)) if place is not None else ()
+    location_entry = ""
+    if place is not None:
+        location_entry = (
+            place_entries.get(place.name) or place_entries.get(name_key(place.name)) or ""
+        )
     return SceneView(
         pc=pc,
         location=place,
@@ -519,7 +563,9 @@ def scene_view(
         pack=pack,
         hirelings=hirelings,
         objects=objects,
-        known=_known_npc_views(state, pc, place, relations),
+        known=_known_npc_views(state, pc, place, relations, creature_entries),
+        abilities=abilities,
+        location_entry=location_entry,
     )
 
 
@@ -697,6 +743,7 @@ def _known_npc_views(
     pc: Character | None,
     place: Place | None,
     relations: Mapping[str, RelationRules] | None,
+    creature_links: Mapping[str, str] | None = None,
 ) -> tuple[KnownNpcView, ...]:
     """Everyone the player has met, with the rule set's named relation where the player character
     holds one. A known NPC whose record was removed is left out."""
@@ -712,6 +759,12 @@ def _known_npc_views(
                     rules = relations.get(relation_id) if relations is not None else None
                     relation = rules.label if rules is not None else relation_id.capitalize()
                     break
+        creature = npc.creature
+        creature_entry = ""
+        if creature_links is not None and creature:
+            creature_entry = (
+                creature_links.get(creature) or creature_links.get(name_key(creature)) or ""
+            )
         views.append(
             KnownNpcView(
                 name=knowledge.name,
@@ -725,6 +778,8 @@ def _known_npc_views(
                 location=knowledge.location,
                 here=place is not None and npc.location == place.name,
                 dead=npc.dead,
+                creature=creature,
+                creature_entry=creature_entry,
             )
         )
     views.sort(key=lambda view: view.name.casefold())

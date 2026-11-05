@@ -50,6 +50,16 @@ def tree(tmp_path: Path) -> Path:
 
 
 CORE_CREATIVE_TABLES = ["action", "theme", "plot_twist", "location", "location_descriptor"]
+# The setting tables live in core too, after the core's own, so every rule set can roll them.
+WORLDGEN_CREATIVE_TABLES = [
+    "setting_premise",
+    "region_identity",
+    "faction",
+    "conflict",
+    "mystery",
+    "adventure_hook",
+]
+ALL_CORE_CREATIVE_TABLES = [*CORE_CREATIVE_TABLES, *WORLDGEN_CREATIVE_TABLES]
 
 
 def _rule_set_tables(tree: Path, definitions: list[dict[str, Any]]) -> dict[str, Any]:
@@ -214,7 +224,7 @@ def test_roll_creative_rolls_every_creative_table_by_default(client_factory):
         )
         new = events_since(db, campaign_id, after=last_id)
     rolls = out["rolls"]
-    assert [roll["table"] for roll in rolls] == CORE_CREATIVE_TABLES
+    assert [roll["table"] for roll in rolls] == ALL_CORE_CREATIVE_TABLES
     for roll in rolls:
         assert roll["result"] == CAIRN.dice_tables[roll["table"]].row_for(roll["roll"]).result
     (event,) = [row for row in new if row.kind == TABLES_ROLLED]
@@ -227,7 +237,7 @@ def test_roll_creative_treats_an_empty_list_as_every_creative_table(client_facto
         out = roll_creative(
             db, campaign_id, [], CAIRN.dice_tables, random.Random(3), plus=CAIRN.plus
         )
-    assert [roll["table"] for roll in out["rolls"]] == CORE_CREATIVE_TABLES
+    assert [roll["table"] for roll in out["rolls"]] == ALL_CORE_CREATIVE_TABLES
 
 
 def test_roll_creative_rolls_only_the_named_tables(client_factory):
@@ -270,7 +280,7 @@ def test_the_world_roll_creative_returns_the_rolls_shape(client_factory: Callabl
     live = replace(tools, dice_tables=CAIRN.dice_tables, rng=random.Random(1))
     out = live.roll_creative(None)
     assert list(out) == ["rolls"]
-    assert [roll["table"] for roll in out["rolls"]] == CORE_CREATIVE_TABLES
+    assert [roll["table"] for roll in out["rolls"]] == ALL_CORE_CREATIVE_TABLES
 
 
 def test_a_creative_table_may_credit_its_source():

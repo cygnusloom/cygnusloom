@@ -24,6 +24,7 @@ from tests.test_wwn_advancement import NAME, _campaign, _world_tools
 
 DATA = Path(__file__).resolve().parent.parent / "src" / "cygnusforge" / "data"
 RULE_SET = DATA / "rulesets" / "worldswithoutnumber"
+CORE = DATA / "rulesets" / "core"
 WORLD = DATA / "worlds" / "unwritten-world"
 
 # Words that belong to the setting, the peoples, and the institutions the SRD
@@ -77,7 +78,9 @@ def _wwn() -> ContentLibrary:
 
 def test_no_reserved_setting_text_survives() -> None:
     found: list[str] = []
-    for path in sorted(RULE_SET.glob("*.json")) + sorted(WORLD.glob("*.json")):
+    paths = sorted(RULE_SET.glob("*.json")) + sorted(WORLD.glob("*.json"))
+    paths += sorted(CORE.glob("*.json"))
+    for path in paths:
         text = path.read_text(encoding="utf-8")
         for match in RESERVED.finditer(text):
             line = text.count("\n", 0, match.start()) + 1
@@ -210,7 +213,7 @@ def test_setting_facts_do_not_leak_between_campaigns(client_factory) -> None:
 def test_the_blank_world_carries_no_setting_of_its_own() -> None:
     library = _wwn()
     world = library.world_templates["unwritten-world"]
-    assert world.rule_set == "worldswithoutnumber"
+    assert world.rule_set is None
     assert not world.locations
     assert not world.npcs
     assert not world.definitions

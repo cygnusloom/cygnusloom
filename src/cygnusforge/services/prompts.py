@@ -1,7 +1,8 @@
 """Prompt text and prompt builders shared by the turn orchestrator.
 
 Ruleset-specific wording stays in the ruleset's `prompt_fragments`; the builders here append
-those fragments in the order the ruleset declares. The FakeProvider identifies steps by some of
+those fragments in the order the ruleset declares. A fragment marked `unwritten_only` is left out
+unless the campaign's world has no authored setting. The FakeProvider identifies steps by some of
 this text, so the opening words of each instruction are part of the engine contract.
 """
 
@@ -10,7 +11,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from cygnusforge.content.library import RuleSet, WorldTemplate
+from cygnusforge.content.library import PromptFragment, RuleSet, WorldTemplate
 from cygnusforge.rules.context import brief
 from cygnusforge.services.events import ContextPart
 
@@ -254,7 +255,18 @@ def opening_prompt(template: WorldTemplate | None) -> str:
     )
 
 
-def narrate_instruction(rule_set: RuleSet) -> str:
+def _prompt_fragments(rule_set: RuleSet, world: WorldTemplate | None) -> list[PromptFragment]:
+    """The ruleset's prompt fragments for this campaign, in order. A world with a setting (or an
+    unknown world) never gets the setting-forge instructions."""
+    has_setting = world is None or world.has_setting
+    return [
+        fragment
+        for fragment in rule_set.prompt_fragments
+        if not (fragment.unwritten_only and has_setting)
+    ]
+
+
+def narrate_instruction(rule_set: RuleSet, world: WorldTemplate | None = None) -> str:
     """The narration step's prompt, naming the ruleset's penalty item among what to narrate and
     adding the fragments meant for narration."""
     penalty = f"{rule_set.inventory.penalty_name}, " if rule_set.inventory else ""
@@ -263,14 +275,14 @@ def narrate_instruction(rule_set: RuleSet) -> str:
             NARRATE_INSTRUCTION.format(penalty_clause=penalty),
             *(
                 fragment.text
-                for fragment in rule_set.prompt_fragments
+                for fragment in _prompt_fragments(rule_set, world)
                 if fragment.step in ("narration", "all")
             ),
         ]
     )
 
 
-def state_instruction(rule_set: RuleSet) -> str:
+def state_instruction(rule_set: RuleSet, world: WorldTemplate | None = None) -> str:
     """The state step's prompt: the generic loop text, then the ruleset's state prompt fragments
     in order."""
     return " ".join(
@@ -278,7 +290,7 @@ def state_instruction(rule_set: RuleSet) -> str:
             STATE_INSTRUCTION,
             *(
                 fragment.text
-                for fragment in rule_set.prompt_fragments
+                for fragment in _prompt_fragments(rule_set, world)
                 if fragment.step in ("state", "all")
             ),
             STATE_CLOSING,

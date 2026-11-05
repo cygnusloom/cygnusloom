@@ -1216,8 +1216,12 @@ def test_bundled_cairn_prompts_and_cap_are_read():
         "conditions",
         "hirelings",
         "monster_abilities",
+        "setting_forge",
+        "setting_continuity",
     ]
-    assert ContentLibrary.load().core.prompt_fragments == ()
+    core = ContentLibrary.load().core.prompt_fragments
+    assert [fragment.id for fragment in core] == ["setting_forge", "setting_continuity"]
+    assert all(fragment.unwritten_only for fragment in core)
 
 
 def _monster_definition(**changes: Any) -> Definition:

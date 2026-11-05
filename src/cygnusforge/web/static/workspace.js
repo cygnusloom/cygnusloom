@@ -91,6 +91,30 @@
     });
   });
 
+  // A link can open a compendium entry directly, such as a bookmarked anchor. Show the view
+  // that holds the target before scrolling to it, since a hidden view cannot scroll.
+  const anchored = location.hash && document.querySelector(location.hash);
+  if (anchored) {
+    const view = anchored.closest("[data-view]");
+    if (view) {
+      showView(view.dataset.view);
+      anchored.scrollIntoView({ block: "start" });
+    }
+  }
+
+  // A link inside one view can point at an entry in another, such as an inventory item in the
+  // compendium: switch views first, then scroll to the anchor the link names.
+  document.querySelectorAll("[data-view-link]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      const target = document.querySelector(link.getAttribute("href"));
+      if (!target) return;
+      event.preventDefault();
+      showView(link.dataset.viewLink);
+      target.scrollIntoView({ block: "start" });
+      history.replaceState(null, "", link.getAttribute("href"));
+    });
+  });
+
   // A search box narrows the cards in the region its data-filter names. A group left with no
   // matching card is hidden too, and the page says so when nothing matches at all.
   document.querySelectorAll("[data-filter]").forEach((input) => {
@@ -98,7 +122,11 @@
     if (!target) return;
     const items = Array.from(target.querySelectorAll("[data-filter-item]"));
     const groups = Array.from(target.querySelectorAll("[data-filter-group]"));
-    const empty = document.querySelector("[data-filter-empty]");
+    // The empty message sits beside the filtered region, so each search box reports its own
+    // result instead of whichever message appears first on a page with two searches.
+    const empty =
+      target.parentElement?.querySelector("[data-filter-empty]") ??
+      document.querySelector("[data-filter-empty]");
     const apply = () => {
       const query = input.value.trim().toLocaleLowerCase();
       let shown = 0;

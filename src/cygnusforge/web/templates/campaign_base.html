@@ -8,6 +8,9 @@
     <button type="button" class="sidebar-item" data-view-target="map" aria-pressed="false" aria-label="Map" title="Map"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg></button>
     <button type="button" class="sidebar-item" data-view-target="journal" aria-pressed="false" aria-label="Journal" title="Journal"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z"/></svg></button>
     <button type="button" class="sidebar-item" data-view-target="characters" aria-pressed="false" aria-label="Characters" title="Characters"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
+    {% if compendium %}
+    <button type="button" class="sidebar-item" data-view-target="compendium" aria-pressed="false" aria-label="Compendium" title="Compendium"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 6c-2-1.5-5-2-8-1.5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5v-13c-3-.5-6 0-8 1.5z"/><path d="M12 6v13"/></svg></button>
+    {% endif %}
     {% block sidebar_extra %}{% endblock %}
   </nav>
   <div class="views">
@@ -68,6 +71,7 @@
             <p class="character-facts">
               {% if npc.pronouns %}<span>Pronouns: {{ npc.pronouns }}</span>{% endif %}
               {% if npc.relation %}<span class="character-relation">{{ npc.relation }}</span>{% endif %}
+              {% if npc.creature and npc.creature_entry %}<span>Creature: <a href="#{{ npc.creature_entry }}" data-view-link="compendium">{{ npc.creature }}</a></span>{% endif %}
               {% if npc.here %}<span>Here{% if npc.location %} at {{ npc.location }}{% endif %}</span>{% elif npc.location %}<span>Last known: {{ npc.location }}</span>{% else %}<span>Whereabouts unknown</span>{% endif %}
             </p>
             {% if npc.relationship %}<p><strong>Relationship:</strong> {{ npc.relationship }}</p>{% endif %}
@@ -83,6 +87,12 @@
       </div>
       <p class="muted" data-filter-empty hidden>No characters match that search.</p>
     </section>
+    {% if compendium %}
+    <section class="view compendium-page" data-view="compendium" aria-labelledby="compendium-title" hidden>
+      <h2 id="compendium-title">Compendium</h2>
+      {% include "_compendium.html" %}
+    </section>
+    {% endif %}
   </div>
 </div>
 {% block dialogs %}{% endblock %}

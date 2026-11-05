@@ -277,6 +277,35 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .character-relation { color: var(--accent); font-weight: 600; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
+/* Compendium: reference material for the current world and rule set, in the workspace and on its
+   own page. Entries scroll clear of a linked target's top edge. */
+.compendium-page { overflow-y: auto; }
+.compendium { display: flex; flex-direction: column; gap: 0.75rem; }
+.compendium.standalone { max-width: 60rem; margin: 1rem auto 0; }
+.compendium-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 1rem; }
+.compendium-source { margin: 0; color: var(--muted); }
+.compendium-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.compendium-search { flex: 1 1 18rem; margin: 0; }
+.compendium-search input { width: 100%; max-width: 32rem; }
+.compendium-toc { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; font-size: 0.9rem; }
+.compendium-toc a { color: var(--accent); text-decoration: none; }
+.compendium-toc a:hover, .compendium-toc a:focus-visible { text-decoration: underline; }
+.compendium-section + .compendium-section { margin-top: 1.5rem; }
+.compendium-section > h3 { margin: 0 0 0.5rem; }
+.compendium-entry {
+  padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--panel); scroll-margin-top: 1rem;
+}
+.compendium-entry + .compendium-entry { margin-top: 0.6rem; }
+.compendium-entry[hidden], .compendium-section[hidden] { display: none; }
+.compendium-entry h4 { margin: 0 0 0.25rem; overflow-wrap: anywhere; }
+.compendium-entry a, .compendium-links a { color: var(--accent); }
+.compendium-links { margin: 0.5rem 0 0; }
+.compendium-summary { margin: 0.25rem 0; color: var(--muted); }
+.compendium-text { white-space: pre-line; overflow-wrap: anywhere; }
+.compendium-tags { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 0.25rem 0; }
+.compendium-tags .tag { margin: 0; }
+
 .tabs-panel { display: flex; flex-direction: column; min-height: 0; }
 .tab-list { display: flex; gap: 0.25rem; padding: 0 0.75rem; border-bottom: 1px solid var(--border); }
 .tab {

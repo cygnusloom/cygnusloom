@@ -28,7 +28,9 @@ def test_a_rule_set_without_prompt_fragments_gets_the_generic_loop_text_alone():
 def test_cairn_state_prompt_keeps_its_fragments_in_order():
     prompt = state_instruction(CAIRN)
     fragments = [
-        fragment for fragment in CAIRN.prompt_fragments if fragment.step in ("state", "all")
+        fragment
+        for fragment in CAIRN.prompt_fragments
+        if fragment.step in ("state", "all") and not fragment.unwritten_only
     ]
     positions = [prompt.index(fragment.text) for fragment in fragments]
     assert positions == sorted(positions)

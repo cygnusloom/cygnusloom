@@ -236,9 +236,16 @@ def test_campaign_pack_draws_item_icons(client_factory: Callable[[], TestClient]
 
     start = page.index('id="panel-inventory"')
     inventory = page[start : page.index("</section>", start)]
-    weapon = f'<img class="item-icon" src="{icon_path(WEAPON_ICON)}" alt=""><strong>Sword</strong>'
+    weapon = f'<img class="item-icon" src="{icon_path(WEAPON_ICON)}" alt="">'
     assert weapon in inventory
+    assert (
+        '<a href="#compendium-items-sword" data-view-link="compendium"><strong>Sword</strong></a>'
+        in inventory
+    )
     assert inventory.count('class="item-icon"') == inventory.count(
         f'src="{icon_path(WEAPON_ICON)}"'
     )
-    assert re.search(r"<li[^>]*>\s*<strong>Rope</strong>", inventory)
+    assert re.search(
+        r"<li[^>]*>\s*<a[^>]*data-view-link=\"compendium\"[^>]*><strong>Rope</strong></a>",
+        inventory,
+    )

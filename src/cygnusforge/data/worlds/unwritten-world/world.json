@@ -3,7 +3,6 @@
     "type": "world",
     "id": "unwritten-world",
     "name": "Unwritten World",
-    "rule_set": "worldswithoutnumber",
     "blurb": "A land of small kingdoms, older ruins, and roads that end where the map ends. The GM invents it before play begins.",
     "description": "A blank fantasy setting. Before the opening narration the GM rolls the setting, region, realm, site, and idea tables, decides what the results mean, and records the world with record_setting: its shape, its peoples, its powers, its history, its magic, and the trouble it is in. Then the GM builds the first region, the first settlement, and the people in it. Nothing here is fixed, and the world is whatever the table makes of the first place the player stands."
   }

@@ -159,6 +159,12 @@ class WorldTemplate:
     # world terrain in WorldContent.
     regions: tuple[RegionTemplate, ...] = ()
 
+    @property
+    def has_setting(self) -> bool:
+        """Whether the world carries authored setting material. A world with no places, people,
+        regions, or definitions has no setting, so the GM invents one."""
+        return bool(self.locations or self.npcs or self.regions or self.definitions)
+
 
 @dataclass(frozen=True)
 class WorldContent:
@@ -1257,11 +1263,14 @@ class MagicRules:
 @dataclass(frozen=True)
 class PromptFragment:
     """A rule-set sentence group for the GM prompt, such as how armor absorbs a blow. `step` is
-    "state" for the state step, "narration" for the narration step, or "all" for both."""
+    "state" for the state step, "narration" for the narration step, or "all" for both.
+    `unwritten_only` marks a fragment only for a world with no authored setting, so the GM
+    invents the setting rather than borrowing one."""
 
     id: str
     text: str
     step: str = "state"
+    unwritten_only: bool = False
 
 
 @dataclass(frozen=True)
@@ -3882,13 +3891,18 @@ def _load_prompts(definitions: list[Definition], template: str) -> tuple[PromptF
         label = f"{template}: prompt {d.id!r}"
         if d.id in ids:
             raise ContentError(f"{template}: duplicate prompt {d.id!r}")
-        check_keys(d.data, {"type", "id", "text", "step"}, label)
+        check_keys(d.data, {"type", "id", "text", "step", "unwritten_only"}, label)
         ids.add(d.id)
         step = d.data.get("step", "state")
         if step not in ("state", "narration", "all"):
             raise ContentError(f"{label}: 'step' must be state, narration, or all")
         fragments.append(
-            PromptFragment(id=d.id, text=required_text(d.data, "text", label), step=step)
+            PromptFragment(
+                id=d.id,
+                text=required_text(d.data, "text", label),
+                step=step,
+                unwritten_only=_flag(d.data, "unwritten_only", label),
+            )
         )
     return tuple(fragments)
 
