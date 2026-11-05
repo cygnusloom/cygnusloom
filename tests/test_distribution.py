@@ -21,8 +21,8 @@ def test_distributions_exclude_untracked_runtime_and_private_files(tmp_path: Pat
         "README.md",
         "CREDITS.md",
         ".env.example",
-        "src/cygnusforge/__init__.py",
-        "src/cygnusforge/asset.txt",
+        "src/cygnusloom/__init__.py",
+        "src/cygnusloom/asset.txt",
         "tests/test_example.py",
     ):
         path = project / name
@@ -36,16 +36,16 @@ def test_distributions_exclude_untracked_runtime_and_private_files(tmp_path: Pat
         ".copilot_testing",
         "session.db",
         "session.db-journal",
-        "src/cygnusforge/runtime.log",
-        "src/cygnusforge/runtime/deep.log",
-        "src/cygnusforge/.env",
-        "src/cygnusforge/.env.local",
-        "src/cygnusforge/private.env",
-        "src/cygnusforge/session.db",
-        "src/cygnusforge/session.db-wal",
-        "src/cygnusforge/session.db-journal",
-        "src/cygnusforge/session.sqlite3",
-        "src/cygnusforge/session.sqlite3-wal",
+        "src/cygnusloom/runtime.log",
+        "src/cygnusloom/runtime/deep.log",
+        "src/cygnusloom/.env",
+        "src/cygnusloom/.env.local",
+        "src/cygnusloom/private.env",
+        "src/cygnusloom/session.db",
+        "src/cygnusloom/session.db-wal",
+        "src/cygnusloom/session.db-journal",
+        "src/cygnusloom/session.sqlite3",
+        "src/cygnusloom/session.sqlite3-wal",
     )
     for name in excluded:
         path = project / name
@@ -70,8 +70,8 @@ def test_distributions_exclude_untracked_runtime_and_private_files(tmp_path: Pat
         PurePosixPath("README.md"),
         PurePosixPath("CREDITS.md"),
         PurePosixPath(".env.example"),
-        PurePosixPath("src/cygnusforge/__init__.py"),
-        PurePosixPath("src/cygnusforge/asset.txt"),
+        PurePosixPath("src/cygnusloom/__init__.py"),
+        PurePosixPath("src/cygnusloom/asset.txt"),
         PurePosixPath("tests/test_example.py"),
     } <= paths
     assert not paths.intersection(PurePosixPath(name) for name in excluded)
@@ -80,9 +80,9 @@ def test_distributions_exclude_untracked_runtime_and_private_files(tmp_path: Pat
     with ZipFile(wheel) as binary:
         wheel_paths = {PurePosixPath(name) for name in binary.namelist()}
     assert {
-        PurePosixPath("cygnusforge/__init__.py"),
-        PurePosixPath("cygnusforge/asset.txt"),
-        PurePosixPath("cygnusforge/CREDITS.md"),
+        PurePosixPath("cygnusloom/__init__.py"),
+        PurePosixPath("cygnusloom/asset.txt"),
+        PurePosixPath("cygnusloom/CREDITS.md"),
     } <= wheel_paths
     wheel_excluded = {
         PurePosixPath(name).relative_to("src") for name in excluded if name.startswith("src/")

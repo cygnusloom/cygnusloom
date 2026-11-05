@@ -4,9 +4,9 @@ import json
 import httpx
 import pytest
 
-from cygnusforge.llm.base import ChatReply, LLMError, ToolRequest, complete
-from cygnusforge.llm.openai_compat import OpenAICompatProvider
-from cygnusforge.services.campaigns import _text_message, _tool_call_message
+from cygnusloom.llm.base import ChatReply, LLMError, ToolRequest, complete
+from cygnusloom.llm.openai_compat import OpenAICompatProvider
+from cygnusloom.services.campaigns import _text_message, _tool_call_message
 
 MESSAGES = [{"role": "user", "content": "hi"}]
 TEST_KEY = "sk-test"

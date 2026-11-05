@@ -16,10 +16,10 @@ services:
     extra_hosts:
       - "idp.localhost:host-gateway"
     environment:
-      CYGNUSFORGE_ENVIRONMENT: development
-      CYGNUSFORGE_BASE_URL: http://localhost:${CYGNUSFORGE_APP_PORT:-21872}
-      CYGNUSFORGE_SECURE_COOKIES: "0"
-      CYGNUSFORGE_OIDC_ISSUER: http://idp.localhost:${AUTHENTIK_PORT:-21873}/application/o/cygnusforge/
+      CYGNUSLOOM_ENVIRONMENT: development
+      CYGNUSLOOM_BASE_URL: http://localhost:${CYGNUSLOOM_APP_PORT:-21872}
+      CYGNUSLOOM_SECURE_COOKIES: "0"
+      CYGNUSLOOM_OIDC_ISSUER: http://idp.localhost:${AUTHENTIK_PORT:-21873}/application/o/cygnusloom/
 
   authentik-server:
     # The app container reaches the IdP through Docker's host gateway, so the
@@ -28,12 +28,12 @@ services:
     ports: !override
       - "0.0.0.0:${AUTHENTIK_PORT:-21873}:9000"
     environment:
-      CYGNUSFORGE_BASE_URL: http://localhost:${CYGNUSFORGE_APP_PORT:-21872}
-      CYGNUSFORGE_OIDC_REDIRECT_URI: http://localhost:${CYGNUSFORGE_APP_PORT:-21872}/auth/callback
-      CYGNUSFORGE_OIDC_POST_LOGOUT_URI: http://localhost:${CYGNUSFORGE_APP_PORT:-21872}/login
+      CYGNUSLOOM_BASE_URL: http://localhost:${CYGNUSLOOM_APP_PORT:-21872}
+      CYGNUSLOOM_OIDC_REDIRECT_URI: http://localhost:${CYGNUSLOOM_APP_PORT:-21872}/auth/callback
+      CYGNUSLOOM_OIDC_POST_LOGOUT_URI: http://localhost:${CYGNUSLOOM_APP_PORT:-21872}/login
 
   authentik-worker:
     environment:
-      CYGNUSFORGE_BASE_URL: http://localhost:${CYGNUSFORGE_APP_PORT:-21872}
-      CYGNUSFORGE_OIDC_REDIRECT_URI: http://localhost:${CYGNUSFORGE_APP_PORT:-21872}/auth/callback
-      CYGNUSFORGE_OIDC_POST_LOGOUT_URI: http://localhost:${CYGNUSFORGE_APP_PORT:-21872}/login
+      CYGNUSLOOM_BASE_URL: http://localhost:${CYGNUSLOOM_APP_PORT:-21872}
+      CYGNUSLOOM_OIDC_REDIRECT_URI: http://localhost:${CYGNUSLOOM_APP_PORT:-21872}/auth/callback
+      CYGNUSLOOM_OIDC_POST_LOGOUT_URI: http://localhost:${CYGNUSLOOM_APP_PORT:-21872}/login

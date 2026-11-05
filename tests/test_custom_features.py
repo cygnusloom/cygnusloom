@@ -12,9 +12,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.compendium import compendium_view
-from cygnusforge.services.world import WorldTools
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.compendium import compendium_view
+from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library
 from tests.factories import (
     DEFAULT_PC,

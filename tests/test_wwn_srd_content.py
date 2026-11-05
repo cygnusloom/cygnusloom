@@ -15,14 +15,14 @@ from pathlib import Path
 
 import pytest
 
-from cygnusforge.content.library import ContentLibrary
-from cygnusforge.services import views
-from cygnusforge.services.common import InvalidInput
+from cygnusloom.content.library import ContentLibrary
+from cygnusloom.services import views
+from cygnusloom.services.common import InvalidInput
 from tests import factories
 from tests.conftest import content_library
 from tests.test_wwn_advancement import NAME, _campaign, _world_tools
 
-DATA = Path(__file__).resolve().parent.parent / "src" / "cygnusforge" / "data"
+DATA = Path(__file__).resolve().parent.parent / "src" / "cygnusloom" / "data"
 RULE_SET = DATA / "rulesets" / "worldswithoutnumber"
 CORE = DATA / "rulesets" / "core"
 WORLD = DATA / "worlds" / "unwritten-world"

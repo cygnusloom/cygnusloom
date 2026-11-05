@@ -7,15 +7,15 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import (
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import (
     ObjectPlaced,
     ObjectTaken,
     decode,
     events_since,
     load_state,
 )
-from cygnusforge.services.objects import visible_objects
+from cygnusloom.services.objects import visible_objects
 from tests.test_combat import CAIRN, PC, YARD, _character, _fight
 from tests.test_inventory import CAPACITY, _fill, _used
 

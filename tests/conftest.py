@@ -17,13 +17,13 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, event
 
-from cygnusforge.config import Settings
-from cygnusforge.content.library import DATA_DIR, ContentLibrary
-from cygnusforge.db.session import make_engine
-from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.services.prompts import narrate_instruction
-from cygnusforge.web import app as web_app
-from cygnusforge.web.app import create_app
+from cygnusloom.config import Settings
+from cygnusloom.content.library import DATA_DIR, ContentLibrary
+from cygnusloom.db.session import make_engine
+from cygnusloom.llm.fake import FakeProvider
+from cygnusloom.services.prompts import narrate_instruction
+from cygnusloom.web import app as web_app
+from cygnusloom.web.app import create_app
 
 SECRET = "test-secret-key-0123456789abcdef"
 TOKEN_RE = re.compile(r'name="csrf_token" value="([^"]+)"')
@@ -33,7 +33,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 @functools.cache
 def content_tree() -> Path:
     """The bundled content with the test-only fixtures added. The product never loads it."""
-    root = Path(tempfile.mkdtemp(prefix="cygnusforge-content-"))
+    root = Path(tempfile.mkdtemp(prefix="cygnusloom-content-"))
     atexit.register(shutil.rmtree, root, ignore_errors=True)
     shutil.copytree(
         DATA_DIR,
@@ -70,9 +70,9 @@ def make_app(
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    """Refuse a serial run: the suite is written for pytest-xdist. `CYGNUSFORGE_SERIAL_TESTS=1`
+    """Refuse a serial run: the suite is written for pytest-xdist. `CYGNUSLOOM_SERIAL_TESTS=1`
     allows one, for a debugger."""
-    if hasattr(config, "workerinput") or os.environ.get("CYGNUSFORGE_SERIAL_TESTS") == "1":
+    if hasattr(config, "workerinput") or os.environ.get("CYGNUSLOOM_SERIAL_TESTS") == "1":
         return
     if not getattr(config.option, "numprocesses", None):
         raise pytest.UsageError(

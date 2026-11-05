@@ -7,9 +7,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.config import Settings
-from cygnusforge.db.models import Campaign
-from cygnusforge.services import campaigns as service
+from cygnusloom.config import Settings
+from cygnusloom.db.models import Campaign
+from cygnusloom.services import campaigns as service
 from tests.conftest import csrf_token
 from tests.test_campaigns import _answer, _campaign_id, _pending, _send, _set_model
 from tests.test_context import _saved_message_count

@@ -10,8 +10,8 @@ from collections.abc import Callable
 
 from fastapi.testclient import TestClient
 
-from cygnusforge.services import encounters
-from cygnusforge.services.events import name_key
+from cygnusloom.services import encounters
+from cygnusloom.services.events import name_key
 from tests.conftest import content_library
 from tests.factories import create_campaign, open_campaign, signed_in_client
 from tests.test_encounter_marks import MAP, TOWN, _call, _campaign_id, _place_pc

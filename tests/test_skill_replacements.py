@@ -6,16 +6,16 @@ from dataclasses import replace
 import pytest
 from starlette.datastructures import FormData
 
-from cygnusforge.content.character import (
+from cygnusloom.content.character import (
     CharacterError,
     TableOption,
     build_character,
     character_schema,
     resolve,
 )
-from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.services.tools import check_arguments
-from cygnusforge.web.character_form import creation_view, submission_from_form
+from cygnusloom.content.definitions import ContentError, Definition
+from cygnusloom.services.tools import check_arguments
+from cygnusloom.web.character_form import creation_view, submission_from_form
 
 
 class FirstChoice(random.Random):

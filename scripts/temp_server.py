@@ -9,13 +9,13 @@ import uvicorn
 
 
 def main() -> None:
-    with tempfile.TemporaryDirectory(prefix="cygnusforge-") as tmp:
-        os.environ["CYGNUSFORGE_DATABASE_URL"] = f"sqlite:///{tmp}/cygnusforge.db"
-        os.environ.setdefault("CYGNUSFORGE_LLM_PROVIDERS", "fake/scripted")
-        os.environ.setdefault("CYGNUSFORGE_LLM_DEFAULT_MODEL", "fake/scripted")
-        os.environ.setdefault("CYGNUSFORGE_TEST_LOGIN", "1")
-        os.environ.setdefault("CYGNUSFORGE_TEST_LOGIN_ADMIN", "1")
-        uvicorn.run("cygnusforge.web.app:app_from_env", factory=True, port=8000)
+    with tempfile.TemporaryDirectory(prefix="cygnusloom-") as tmp:
+        os.environ["CYGNUSLOOM_DATABASE_URL"] = f"sqlite:///{tmp}/cygnusloom.db"
+        os.environ.setdefault("CYGNUSLOOM_LLM_PROVIDERS", "fake/scripted")
+        os.environ.setdefault("CYGNUSLOOM_LLM_DEFAULT_MODEL", "fake/scripted")
+        os.environ.setdefault("CYGNUSLOOM_TEST_LOGIN", "1")
+        os.environ.setdefault("CYGNUSLOOM_TEST_LOGIN_ADMIN", "1")
+        uvicorn.run("cygnusloom.web.app:app_from_env", factory=True, port=8000)
 
 
 if __name__ == "__main__":

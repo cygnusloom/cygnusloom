@@ -9,14 +9,14 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.config import Settings
-from cygnusforge.services.campaigns import (
+from cygnusloom.config import Settings
+from cygnusloom.services.campaigns import (
     get_turn_context,
     get_turn_transcript,
     list_messages,
 )
-from cygnusforge.services.events import ChatGM, record
-from cygnusforge.services.prompts import STATE_INSTRUCTION
+from cygnusloom.services.events import ChatGM, record
+from cygnusloom.services.prompts import STATE_INSTRUCTION
 from tests.conftest import NARRATE_TEXT, is_review_messages, without_journal
 from tests.test_campaigns import _answer, _campaign_id, _send, _signed_in
 from tests.test_context import (

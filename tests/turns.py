@@ -10,15 +10,15 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
-from cygnusforge.services import encounters
-from cygnusforge.services.events import (
+from cygnusloom.services import encounters
+from cygnusloom.services.events import (
     PC_KIND,
     ChatGM,
     load_state,
     name_key,
     record,
 )
-from cygnusforge.services.world import WorldTools
+from cygnusloom.services.world import WorldTools
 
 
 def close_reply(db: Session, campaign_id: int) -> None:

@@ -4,7 +4,7 @@ import random
 
 import pytest
 
-from cygnusforge.content.character import (
+from cygnusloom.content.character import (
     NO_CHARACTER,
     CharacterError,
     CharacterSpec,
@@ -20,9 +20,9 @@ from cygnusforge.content.character import (
     resolve,
     roll_stats,
 )
-from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.content.library import ContentLibrary
-from cygnusforge.services.tools import check_arguments
+from cygnusloom.content.definitions import ContentError, Definition
+from cygnusloom.content.library import ContentLibrary
+from cygnusloom.services.tools import check_arguments
 
 LIBRARY = ContentLibrary.load()
 SPEC = LIBRARY.rule_sets["cairn2e"].character

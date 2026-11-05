@@ -18,14 +18,14 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.content.character import Granted
-from cygnusforge.content.library import DamageStep
-from cygnusforge.llm.base import ToolRequest
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.conditions import add_condition, end_condition
-from cygnusforge.services.counters import adjust_counter
-from cygnusforge.services.events import Character
-from cygnusforge.services.tools import Ask, RollAnswer, ToolRun, run_tool
+from cygnusloom.content.character import Granted
+from cygnusloom.content.library import DamageStep
+from cygnusloom.llm.base import ToolRequest
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.conditions import add_condition, end_condition
+from cygnusloom.services.counters import adjust_counter
+from cygnusloom.services.events import Character
+from cygnusloom.services.tools import Ask, RollAnswer, ToolRun, run_tool
 from tests.conftest import content_library
 from tests.factories import create_campaign, create_character, open_campaign, signed_in_client
 from tests.rolls import social_roll

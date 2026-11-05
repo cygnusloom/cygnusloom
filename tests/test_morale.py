@@ -4,10 +4,10 @@ from dataclasses import replace
 
 import pytest
 
-from cygnusforge.content.library import SaveRules
-from cygnusforge.services import encounters
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import FOES_SIDE, MoraleChecked
+from cygnusloom.content.library import SaveRules
+from cygnusloom.services import encounters
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import FOES_SIDE, MoraleChecked
 from tests.test_combat import (
     PC,
     YARD,

@@ -4,9 +4,9 @@ from dataclasses import replace
 
 import pytest
 
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.conditions import end_condition
-from cygnusforge.services.events import current
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.conditions import end_condition
+from cygnusloom.services.events import current
 from tests.factories import (
     DEFAULT_PC,
     Rolls,

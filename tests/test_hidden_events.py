@@ -9,9 +9,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.db.models import Campaign
-from cygnusforge.services.campaigns import campaign_transcript
-from cygnusforge.services.events import (
+from cygnusloom.db.models import Campaign
+from cygnusloom.services.campaigns import campaign_transcript
+from cygnusloom.services.events import (
     EVENT_TYPES,
     GameEvent,
     LocationAdded,

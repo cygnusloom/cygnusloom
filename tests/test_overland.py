@@ -6,12 +6,12 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusforge.content.library import Wilderness
-from cygnusforge.services import clock as clock_service
-from cygnusforge.services import wilderness
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import load_state
-from cygnusforge.services.wilderness import plan_overland
+from cygnusloom.content.library import Wilderness
+from cygnusloom.services import clock as clock_service
+from cygnusloom.services import wilderness
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import load_state
+from cygnusloom.services.wilderness import plan_overland
 from tests.test_combat import CAIRN, PC
 from tests.test_travel import HPP, PARTS, _place
 from tests.test_wilderness_service import _fix_roll, _pc_items, _pc_tools

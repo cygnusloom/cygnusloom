@@ -10,13 +10,13 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from cygnusforge.content.definitions import ContentError
-from cygnusforge.content.library import ContentLibrary
-from cygnusforge.llm.base import ToolRequest
-from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.services.campaigns import _tool_context
-from cygnusforge.services.events import load_state
-from cygnusforge.services.tools import ToolRun, run_tool
+from cygnusloom.content.definitions import ContentError
+from cygnusloom.content.library import ContentLibrary
+from cygnusloom.llm.base import ToolRequest
+from cygnusloom.llm.fake import FakeProvider
+from cygnusloom.services.campaigns import _tool_context
+from cygnusloom.services.events import load_state
+from cygnusloom.services.tools import ToolRun, run_tool
 from tests.conftest import content_library
 from tests.test_character_creation import _cairn_campaign
 from tests.test_content import _core, _world, _write

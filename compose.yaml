@@ -5,13 +5,13 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: cygnusforge
-      POSTGRES_USER: cygnusforge
+      POSTGRES_DB: cygnusloom
+      POSTGRES_USER: cygnusloom
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - app-db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cygnusforge -d cygnusforge"]
+      test: ["CMD-SHELL", "pg_isready -U cygnusloom -d cygnusloom"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -21,22 +21,22 @@ services:
       context: .
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${CYGNUSFORGE_APP_PORT:-21872}:8000"
+      - "127.0.0.1:${CYGNUSLOOM_APP_PORT:-21872}:8000"
     env_file:
       - .env
     environment:
-      CYGNUSFORGE_ENVIRONMENT: production
-      CYGNUSFORGE_BASE_URL: https://${CYGNUSFORGE_DOMAIN}
-      CYGNUSFORGE_DATABASE_URL: postgresql+psycopg://cygnusforge:${POSTGRES_PASSWORD}@db:5432/cygnusforge
-      CYGNUSFORGE_AUTO_CREATE_SCHEMA: "0"
-      CYGNUSFORGE_SECURE_COOKIES: "1"
-      CYGNUSFORGE_OIDC_ISSUER: https://${AUTHENTIK_DOMAIN}/application/o/cygnusforge/
-      CYGNUSFORGE_OIDC_CLIENT_ID: ${CYGNUSFORGE_OIDC_CLIENT_ID}
-      CYGNUSFORGE_OIDC_CLIENT_SECRET: ${CYGNUSFORGE_OIDC_CLIENT_SECRET}
-      CYGNUSFORGE_OIDC_SCOPES: openid email profile groups
-      CYGNUSFORGE_OIDC_ADMIN_CLAIM: groups
-      CYGNUSFORGE_OIDC_ADMIN_VALUES: ${CYGNUSFORGE_ADMIN_GROUP:-cygnusforge-admins}
-      CYGNUSFORGE_OIDC_NAME: ${CYGNUSFORGE_OIDC_NAME:-Cygnus Forge SSO}
+      CYGNUSLOOM_ENVIRONMENT: production
+      CYGNUSLOOM_BASE_URL: https://${CYGNUSLOOM_DOMAIN}
+      CYGNUSLOOM_DATABASE_URL: postgresql+psycopg://cygnusloom:${POSTGRES_PASSWORD}@db:5432/cygnusloom
+      CYGNUSLOOM_AUTO_CREATE_SCHEMA: "0"
+      CYGNUSLOOM_SECURE_COOKIES: "1"
+      CYGNUSLOOM_OIDC_ISSUER: https://${AUTHENTIK_DOMAIN}/application/o/cygnusloom/
+      CYGNUSLOOM_OIDC_CLIENT_ID: ${CYGNUSLOOM_OIDC_CLIENT_ID}
+      CYGNUSLOOM_OIDC_CLIENT_SECRET: ${CYGNUSLOOM_OIDC_CLIENT_SECRET}
+      CYGNUSLOOM_OIDC_SCOPES: openid email profile groups
+      CYGNUSLOOM_OIDC_ADMIN_CLAIM: groups
+      CYGNUSLOOM_OIDC_ADMIN_VALUES: ${CYGNUSLOOM_ADMIN_GROUP:-cygnusloom-admins}
+      CYGNUSLOOM_OIDC_NAME: ${CYGNUSLOOM_OIDC_NAME:-Cygnus Loom SSO}
     depends_on:
       db:
         condition: service_healthy
@@ -94,12 +94,12 @@ services:
       AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD}
       AUTHENTIK_POSTGRESQL__NAME: authentik
       AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
-      CYGNUSFORGE_ADMIN_GROUP: ${CYGNUSFORGE_ADMIN_GROUP:-cygnusforge-admins}
-      CYGNUSFORGE_BASE_URL: https://${CYGNUSFORGE_DOMAIN}
-      CYGNUSFORGE_OIDC_CLIENT_ID: ${CYGNUSFORGE_OIDC_CLIENT_ID}
-      CYGNUSFORGE_OIDC_CLIENT_SECRET: ${CYGNUSFORGE_OIDC_CLIENT_SECRET}
-      CYGNUSFORGE_OIDC_REDIRECT_URI: https://${CYGNUSFORGE_DOMAIN}/auth/callback
-      CYGNUSFORGE_OIDC_POST_LOGOUT_URI: https://${CYGNUSFORGE_DOMAIN}/login
+      CYGNUSLOOM_ADMIN_GROUP: ${CYGNUSLOOM_ADMIN_GROUP:-cygnusloom-admins}
+      CYGNUSLOOM_BASE_URL: https://${CYGNUSLOOM_DOMAIN}
+      CYGNUSLOOM_OIDC_CLIENT_ID: ${CYGNUSLOOM_OIDC_CLIENT_ID}
+      CYGNUSLOOM_OIDC_CLIENT_SECRET: ${CYGNUSLOOM_OIDC_CLIENT_SECRET}
+      CYGNUSLOOM_OIDC_REDIRECT_URI: https://${CYGNUSLOOM_DOMAIN}/auth/callback
+      CYGNUSLOOM_OIDC_POST_LOGOUT_URI: https://${CYGNUSLOOM_DOMAIN}/login
     volumes:
       - ./deploy/authentik/blueprints:/blueprints/custom:ro
       - authentik-media:/media

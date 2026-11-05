@@ -7,14 +7,14 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlmodel import Session, select
 
-import cygnusforge
-from cygnusforge.config import Settings
-from cygnusforge.db.models import Campaign, Event, LlmModel, User
-from cygnusforge.db.session import create_schema, make_engine
-from cygnusforge.services import admin as service
-from cygnusforge.services.accounts import encode_roles, get_or_create_test_user
-from cygnusforge.services.common import Conflict
-from cygnusforge.services.sessions import create_session
+import cygnusloom
+from cygnusloom.config import Settings
+from cygnusloom.db.models import Campaign, Event, LlmModel, User
+from cygnusloom.db.session import create_schema, make_engine
+from cygnusloom.services import admin as service
+from cygnusloom.services.accounts import encode_roles, get_or_create_test_user
+from cygnusloom.services.common import Conflict
+from cygnusloom.services.sessions import create_session
 from tests.conftest import csrf_token, make_app, register
 
 
@@ -99,7 +99,7 @@ def test_dashboard_shows_version(settings: Settings):
 
     page = client.get("/admin")
     assert page.status_code == 200
-    assert f"Cygnus Forge version {cygnusforge.__version__}" in page.text
+    assert f"Cygnus Loom version {cygnusloom.__version__}" in page.text
 
 
 def test_search_users_matches_email_name_and_status(settings: Settings):
@@ -133,7 +133,7 @@ def test_user_detail_includes_campaigns_sessions_and_audit(settings: Settings):
 
 def test_disable_user_revokes_sessions_and_writes_audit(settings: Settings):
     engine = _engine(settings)
-    actor = _user(engine, "admin@example.com", roles=("cygnusforge-admins",))
+    actor = _user(engine, "admin@example.com", roles=("cygnusloom-admins",))
     target = _user(engine, "target@example.com")
     create_session(engine, target.id, auth_time=target.created_at, hours=1)
 
@@ -147,14 +147,14 @@ def test_disable_user_revokes_sessions_and_writes_audit(settings: Settings):
 
 def test_admin_cannot_disable_self(settings: Settings):
     engine = _engine(settings)
-    actor = _user(engine, "admin@example.com", roles=("cygnusforge-admins",))
+    actor = _user(engine, "admin@example.com", roles=("cygnusloom-admins",))
     with pytest.raises(Conflict, match="your own"):
         service.set_user_disabled(engine, actor, actor.id, True)
 
 
 def test_delete_user_requires_campaigns_to_be_moved(settings: Settings):
     engine = _engine(settings)
-    actor = _user(engine, "admin@example.com", roles=("cygnusforge-admins",))
+    actor = _user(engine, "admin@example.com", roles=("cygnusloom-admins",))
     target = _user(engine, "target@example.com")
     _campaign(engine, target)
     with pytest.raises(Conflict, match="campaigns first"):
@@ -163,7 +163,7 @@ def test_delete_user_requires_campaigns_to_be_moved(settings: Settings):
 
 def test_transfer_campaign_changes_owner_and_audits(settings: Settings):
     engine = _engine(settings)
-    actor = _user(engine, "admin@example.com", roles=("cygnusforge-admins",))
+    actor = _user(engine, "admin@example.com", roles=("cygnusloom-admins",))
     first = _user(engine, "first@example.com")
     second = _user(engine, "second@example.com")
     campaign = _campaign(engine, first)
@@ -178,7 +178,7 @@ def test_transfer_campaign_changes_owner_and_audits(settings: Settings):
 
 def test_delete_campaign_removes_events_and_audits(settings: Settings):
     engine = _engine(settings)
-    actor = _user(engine, "admin@example.com", roles=("cygnusforge-admins",))
+    actor = _user(engine, "admin@example.com", roles=("cygnusloom-admins",))
     owner = _user(engine, "owner@example.com")
     campaign = _campaign(engine, owner)
     _event(engine, campaign)

@@ -6,7 +6,7 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 
-import cygnusforge.db.models  # noqa: F401  (registers the tables)
+import cygnusloom.db.models  # noqa: F401  (registers the tables)
 from alembic import context
 
 config = context.config
@@ -14,9 +14,9 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-url = os.environ.get("CYGNUSFORGE_DATABASE_URL") or config.get_main_option("sqlalchemy.url")
+url = os.environ.get("CYGNUSLOOM_DATABASE_URL") or config.get_main_option("sqlalchemy.url")
 if not url:
-    raise RuntimeError("CYGNUSFORGE_DATABASE_URL is required")
+    raise RuntimeError("CYGNUSLOOM_DATABASE_URL is required")
 config.set_main_option("sqlalchemy.url", url)
 
 target_metadata = SQLModel.metadata

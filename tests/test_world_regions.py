@@ -8,10 +8,10 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusforge.services import world
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import Region, is_hidden
-from cygnusforge.services.geometry import clearance, contains, overlaps
+from cygnusloom.services import world
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import Region, is_hidden
+from cygnusloom.services.geometry import clearance, contains, overlaps
 from tests.conftest import content_library
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
 from tests.test_character_creation import _cairn_campaign, _complete_form

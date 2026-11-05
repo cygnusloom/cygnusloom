@@ -15,8 +15,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from cygnusforge.db.models import Event
-from cygnusforge.services.events import CampaignState, load_state
+from cygnusloom.db.models import Event
+from cygnusloom.services.events import CampaignState, load_state
 from tests.conftest import csrf_token, is_review_messages
 from tests.test_campaigns import _campaign_id, _send
 from tests.test_tools import _recording_provider, _saved, _script

@@ -26,5 +26,5 @@ backup() {
   fi
 }
 
-backup db cygnusforge cygnusforge
+backup db cygnusloom cygnusloom
 backup authentik-db authentik authentik

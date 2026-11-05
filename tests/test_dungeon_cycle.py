@@ -11,14 +11,14 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusforge.content.definitions import ContentError
-from cygnusforge.llm.base import ToolRequest
-from cygnusforge.rules.context import ToolContext
-from cygnusforge.services import dungeon
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import events_since
-from cygnusforge.services.tools import ToolRun, run_tool, tool_specs
-from cygnusforge.services.world import WorldTools
+from cygnusloom.content.definitions import ContentError
+from cygnusloom.llm.base import ToolRequest
+from cygnusloom.rules.context import ToolContext
+from cygnusloom.services import dungeon
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import events_since
+from cygnusloom.services.tools import ToolRun, run_tool, tool_specs
+from cygnusloom.services.world import WorldTools
 from tests.test_combat import CAIRN, _fight_client
 from tests.test_world import _db, _state
 

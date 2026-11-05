@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %} · Cygnus Loom</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  <header class="topbar">
+    <a class="brand" href="/">Cygnus Loom</a>
+    <nav>
+      {% if user %}
+        <a href="/campaigns">Campaigns</a>
+        <a href="/compendium">Compendium</a>
+        <a href="/account">Account</a>
+        {% if is_admin %}<a href="/admin">Admin</a>{% endif %}
+        <form method="post" action="/logout" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit">Log out</button>
+        </form>
+      {% else %}
+        <a href="/login">Log in</a>
+      {% endif %}
+    </nav>
+  </header>
+  <main>
+    {% if step_up_done %}<p role="status">Re-authenticated. Repeat the action you were taking.</p>{% endif %}
+    {% if flash %}<p role="{{ 'alert' if flash.kind == 'error' else 'status' }}">{{ flash.message }}</p>{% endif %}
+    {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">
+    <p>
+      Cygnus Loom {{ app_version }} · Copyright (C) 2026 Cygnus Loom contributors ·
+      <a href="{{ website_url }}">cygnusloom.com</a> ·
+      Free software under the <a href="/license">GNU Affero General Public License v3 or later</a>,
+      without warranty{% if source_url %} · <a href="{{ source_url }}">Source</a>{% endif %}
+    </p>
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

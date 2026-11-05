@@ -6,11 +6,11 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.content.library import ContentLibrary
-from cygnusforge.llm.base import LLMError
-from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.services.events import load_state
-from cygnusforge.services.prompts import OPENING_PROMPT, opening_prompt
+from cygnusloom.content.library import ContentLibrary
+from cygnusloom.llm.base import LLMError
+from cygnusloom.llm.fake import FakeProvider
+from cygnusloom.services.events import load_state
+from cygnusloom.services.prompts import OPENING_PROMPT, opening_prompt
 from tests.conftest import csrf_token
 from tests.test_campaigns import (
     _answer,

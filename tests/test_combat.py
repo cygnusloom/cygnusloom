@@ -12,20 +12,20 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusforge.content.character import CounterRef, Skill, Template
-from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.content.library import (
+from cygnusloom.content.character import CounterRef, Skill, Template
+from cygnusloom.content.definitions import ContentError, Definition
+from cygnusloom.content.library import (
     DamageStep,
     MonsterTemplate,
     _hit_pool,
     _load_combat,
     _load_monster,
 )
-from cygnusforge.llm.base import ToolRequest
-from cygnusforge.rules import cairn2e
-from cygnusforge.rules.context import ToolContext
-from cygnusforge.services import encounters
-from cygnusforge.services.combat import (
+from cygnusloom.llm.base import ToolRequest
+from cygnusloom.rules import cairn2e
+from cygnusloom.rules.context import ToolContext
+from cygnusloom.services import encounters
+from cygnusloom.services.combat import (
     Damage,
     _level_damage_bonus,
     _weapon_skill,
@@ -34,8 +34,8 @@ from cygnusforge.services.combat import (
     set_debug_stat,
     set_invincibility,
 )
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import (
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import (
     NPC_KIND,
     ChatGM,
     EncounterEnded,
@@ -46,8 +46,8 @@ from cygnusforge.services.events import (
     events_since,
     record,
 )
-from cygnusforge.services.tools import Ask, RollAnswer, ToolRun, run_tool
-from cygnusforge.services.world import WorldTools
+from cygnusloom.services.tools import Ask, RollAnswer, ToolRun, run_tool
+from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library
 from tests.test_campaigns import _create_character
 from tests.test_character_creation import _cairn_campaign, _complete_form
@@ -1423,7 +1423,7 @@ def test_the_statblock_shows_a_knocked_out_character_in_critical_damage(client_f
 
 
 def test_recovery_says_how_the_character_survived_and_what_it_cost():
-    from cygnusforge.services.events import CharacterRecovered
+    from cygnusloom.services.events import CharacterRecovered
 
     text = CharacterRecovered(
         name=PC, explanation="A passing cart carried her out.", consequence="Her hand is lamed."

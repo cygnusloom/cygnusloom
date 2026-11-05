@@ -8,12 +8,12 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from cygnusforge.content.character import NO_CAMPAIGN
-from cygnusforge.db.models import Event
-from cygnusforge.services import world
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import PC_KIND, load_state
-from cygnusforge.services.injuries import EffectContext, run_effects
+from cygnusloom.content.character import NO_CAMPAIGN
+from cygnusloom.db.models import Event
+from cygnusloom.services import world
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import PC_KIND, load_state
+from cygnusloom.services.injuries import EffectContext, run_effects
 from tests.test_campaigns import _create_character
 from tests.test_character_creation import _complete_form
 from tests.test_combat import CAIRN, PC, _character, _fight, _fight_client, _knock_out_pc

@@ -7,11 +7,11 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from cygnusforge.content.definitions import ContentError
-from cygnusforge.content.library import ContentLibrary
-from cygnusforge.services.events import Item, ItemAdded, LocationAdded, record
-from cygnusforge.services.prompts import system_parts
-from cygnusforge.services.views import present_rules_text, world_state_text
+from cygnusloom.content.definitions import ContentError
+from cygnusloom.content.library import ContentLibrary
+from cygnusloom.services.events import Item, ItemAdded, LocationAdded, record
+from cygnusloom.services.prompts import system_parts
+from cygnusloom.services.views import present_rules_text, world_state_text
 from tests.conftest import content_library
 from tests.test_character_creation import _cairn_campaign
 from tests.test_combat import CAIRN, PC, YARD, _fight

@@ -7,8 +7,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.world import WorldTools
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.world import WorldTools
 from tests.test_campaigns import _create_character
 from tests.test_character_creation import _cairn_campaign, _complete_form
 from tests.test_combat import CAIRN, LIBRARY, PC

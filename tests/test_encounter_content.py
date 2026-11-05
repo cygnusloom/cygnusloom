@@ -5,8 +5,8 @@ from typing import Any
 
 import pytest
 
-from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.content.library import (
+from cygnusloom.content.definitions import ContentError, Definition
+from cygnusloom.content.library import (
     ContentLibrary,
     EncounterCell,
     EncounterTemplate,
@@ -14,7 +14,7 @@ from cygnusforge.content.library import (
     _load_encounter_templates,
     _load_encounter_terrain,
 )
-from cygnusforge.web.icons import _registry
+from cygnusloom.web.icons import _registry
 
 TERRAIN_IDS = {"floor", "grass", "dirt", "shore", "mud", "rubble", "shallow-water"}
 DIFFICULT_TERRAIN = {"mud", "rubble", "shallow-water"}

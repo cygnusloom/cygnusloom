@@ -7,7 +7,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from cygnusforge.services.resolution import (
+from cygnusloom.services.resolution import (
     ROLL_OVER,
     ROLL_UNDER,
     resolve_roll,

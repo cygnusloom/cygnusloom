@@ -6,18 +6,18 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 from starlette.responses import Response
 
-from cygnusforge.auth.claims import OIDCError
-from cygnusforge.auth.oidc import AuthlibOIDC, account_management_url, build_oidc_provider
-from cygnusforge.config import Settings
+from cygnusloom.auth.claims import OIDCError
+from cygnusloom.auth.oidc import AuthlibOIDC, account_management_url, build_oidc_provider
+from cygnusloom.config import Settings
 
-ISSUER = "https://idp.example.com/application/o/cygnusforge"
+ISSUER = "https://idp.example.com/application/o/cygnusloom"
 
 
 def _settings(**overrides) -> Settings:
     values = {
         "secret_key": "test-secret",
         "oidc_issuer": ISSUER,
-        "oidc_client_id": "cygnusforge",
+        "oidc_client_id": "cygnusloom",
         "oidc_client_secret": "secret",
         "oidc_admin_claim": "groups",
     }
@@ -77,14 +77,14 @@ def test_fetch_claims_merges_id_token_and_userinfo():
                 "email_verified": True,
             },
         },
-        userinfo={"groups": ["cygnusforge-admins"]},
+        userinfo={"groups": ["cygnusloom-admins"]},
     )
     claims = asyncio.run(
         _provider(fake).fetch_claims(None, "https://app.example.com/auth/callback")
     )
     assert claims.subject == "abc"
     assert claims.email == "ada@example.com"
-    assert claims.roles == ("cygnusforge-admins",)
+    assert claims.roles == ("cygnusloom-admins",)
     assert claims.id_token == "raw-id-token"
 
 
@@ -102,14 +102,14 @@ def test_fetch_claims_works_when_userinfo_is_unavailable():
                 "sub": "abc",
                 "email": "ada@example.com",
                 "email_verified": True,
-                "groups": ["cygnusforge-admins"],
+                "groups": ["cygnusloom-admins"],
             }
         }
     )
     claims = asyncio.run(
         _provider(fake).fetch_claims(None, "https://app.example.com/auth/callback")
     )
-    assert claims.roles == ("cygnusforge-admins",)
+    assert claims.roles == ("cygnusloom-admins",)
 
 
 def test_logout_url_uses_discovery_metadata():
@@ -125,7 +125,7 @@ def test_logout_url_uses_discovery_metadata():
     parsed = urlparse(url)
     assert f"{parsed.scheme}://{parsed.netloc}{parsed.path}" == "https://idp.example.com/logout"
     assert parse_qs(parsed.query) == {
-        "client_id": ["cygnusforge"],
+        "client_id": ["cygnusloom"],
         "post_logout_redirect_uri": ["https://app.example.com/login"],
         "id_token_hint": ["raw-id-token"],
     }
@@ -138,15 +138,15 @@ def test_provider_is_absent_until_oidc_is_configured():
 
 def test_account_management_url_finds_the_authentik_user_interface():
     assert (
-        account_management_url("https://idp.example.com/application/o/cygnusforge/")
+        account_management_url("https://idp.example.com/application/o/cygnusloom/")
         == "https://idp.example.com/if/user/"
     )
 
 
 def test_account_management_url_finds_the_keycloak_account_console():
     assert (
-        account_management_url("https://idp.example.com/realms/cygnusforge")
-        == "https://idp.example.com/realms/cygnusforge/account/"
+        account_management_url("https://idp.example.com/realms/cygnusloom")
+        == "https://idp.example.com/realms/cygnusloom/account/"
     )
 
 

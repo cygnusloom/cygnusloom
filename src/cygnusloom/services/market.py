@@ -1,0 +1,370 @@
+"""Buying from the rule set's marketplace. Catalogue items cost their listed price. The GM
+prices anything else. Services are paid by the first named character, who covers the whole bill."""
+
+from __future__ import annotations
+
+import math
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
+from typing import Any
+
+from sqlmodel import Session
+
+from cygnusloom.content.character import CharacterSpec
+from cygnusloom.content.library import (
+    CombatRules,
+    Hooks,
+    InventoryRules,
+    Marketplace,
+    ShopItem,
+    ShopService,
+)
+from cygnusloom.services.combat import armor_after, set_armor, set_defense_equipment
+from cygnusloom.services.common import InvalidInput, whole_number
+from cygnusloom.services.events import (
+    ArmorSet,
+    CampaignState,
+    Character,
+    CurrencyChanged,
+    Item,
+    Recovered,
+    load_state,
+    name_key,
+    record,
+    same_item_name,
+)
+from cygnusloom.services.hooks import HookContext, call_hook
+from cygnusloom.services.inventory import (
+    capacity_of,
+    carry_item,
+    character_named,
+    used_slots,
+)
+from cygnusloom.services.recovery import recover
+
+MAX_PRICE = 100_000
+
+
+def _defense_of(
+    combat: CombatRules | None, character: CharacterSpec | None, buyer: Character
+) -> int:
+    """A character's bare Armor Class before any armor: the rule set's base defense plus the
+    buyer's modifier in its defense stat, such as 10 + Dexterity. Zero when the rule set keeps
+    no such defense."""
+    if combat is None or not combat.defense_base:
+        return 0
+    bonus = 0
+    if character is not None and combat.defense_modifier:
+        stat = character.stats.get(combat.defense_modifier)
+        score = buyer.stats.get(combat.defense_modifier)
+        if stat is not None and score is not None:
+            bonus = stat.modifier(score)
+    return combat.defense_base + bonus
+
+
+def listed_item(marketplace: Marketplace, item: str) -> ShopItem | None:
+    return next((listed for listed in marketplace.items if same_item_name(listed.name, item)), None)
+
+
+def _held(character: Character, currency: str) -> int:
+    return character.features.get(currency, 0)
+
+
+def _pay(
+    db: Session,
+    campaign_id: int,
+    marketplace: Marketplace,
+    payer: Character,
+    price: int,
+    cause: str,
+) -> int:
+    """Take the price from the payer's currency. Returns what the payer has left."""
+    held = _held(payer, marketplace.currency)
+    if held < price:
+        raise InvalidInput(
+            f"{payer.name} has {held} {marketplace.currency}, not the {price} this costs"
+        )
+    record(
+        db,
+        campaign_id,
+        CurrencyChanged(name=payer.name, feature=marketplace.currency, amount=-price, cause=cause),
+    )
+    return held - price
+
+
+def buy_item(
+    db: Session,
+    campaign_id: int,
+    marketplace: Marketplace,
+    inventory: InventoryRules,
+    item_sizes: Mapping[str, int],
+    name: str,
+    item: str,
+    price: int | None = None,
+    size: str = "",
+    armor_max: int = 0,
+    combat: CombatRules | None = None,
+    character: CharacterSpec | None = None,
+) -> dict[str, Any]:
+    """A character buys an item. A catalogue item costs its listed price and takes its listed
+    size, and a price or size that disagrees with the listing is refused. Any other item needs a
+    price. Armor changes the buyer's Armor Class as its `armor_mode` says, up to armor_max (0
+    means no cap), using the rule set's base defense and defense modifier. A purchase that would
+    not fit in the inventory is refused, and nothing is paid."""
+    state = load_state(db, campaign_id)
+    buyer = character_named(state, name)
+    listed = listed_item(marketplace, item)
+    if listed is not None:
+        if price is not None and price != listed.price:
+            raise InvalidInput(f"{listed.name} costs {listed.price} in the catalogue, not {price}")
+        if size and size != listed.size:
+            raise InvalidInput(f"{listed.name} is a {listed.size} item, not {size}")
+        price, size = listed.price, listed.size
+    else:
+        if price is None:
+            raise InvalidInput(
+                f"{item} is not in the catalogue. Price it from similar catalogue items and pass "
+                "the price"
+            )
+        size = size or "normal"
+    price = whole_number(price, "price", 0, MAX_PRICE)
+    if size not in item_sizes:
+        raise InvalidInput(f"there is no item size named {size!r}")
+    slots = item_sizes[size]
+    free = capacity_of(buyer, inventory) - used_slots(buyer)
+    if slots > free:
+        raise InvalidInput(
+            f"{buyer.name} has room for {max(free, 0)} slots, and {item} takes {slots}"
+        )
+    left = _pay(db, campaign_id, marketplace, buyer, price, cause=f"buying {item}")
+    uses = listed.uses if listed is not None else 0
+    text = listed.description if listed is not None else ""
+    result = carry_item(
+        db,
+        campaign_id,
+        inventory,
+        buyer.name,
+        Item(
+            item if listed is None else listed.name,
+            size,
+            slots,
+            text=text,
+            uses=uses,
+            max_uses=uses,
+            flags=("shield",) if listed is not None and listed.armor_mode == "shield" else (),
+        ),
+        cause="bought",
+    )
+    if listed is not None and (listed.armor > 0 or listed.armor_mode != "add"):
+        if (
+            combat is not None
+            and combat.defense_base
+            and listed.armor_mode in {"max", "set", "shield"}
+        ):
+            if character is None:
+                raise InvalidInput("equipped defense requires the character rules")
+            if listed.armor_mode == "shield":
+                slot = (
+                    (listed.name, listed.armor)
+                    if listed.armor > buyer.equipped_shield_value
+                    else None
+                )
+                armor = (
+                    set_defense_equipment(db, campaign_id, buyer, character, combat, shield=slot)
+                    if slot is not None
+                    else buyer.armor
+                )
+            else:
+                slot = (
+                    (listed.name, listed.armor)
+                    if listed.armor_mode == "set" or listed.armor > buyer.equipped_armor_value
+                    else None
+                )
+                armor = (
+                    set_defense_equipment(db, campaign_id, buyer, character, combat, armor=slot)
+                    if slot is not None
+                    else buyer.armor
+                )
+        else:
+            defense = _defense_of(combat, character, buyer)
+            armor = armor_after(buyer.armor, listed.armor, listed.armor_mode, defense)
+            if armor_max > 0:
+                armor = min(armor_max, armor)
+            if buyer.defense_tracked and combat is not None and combat.defense_base:
+                set_armor(
+                    db,
+                    campaign_id,
+                    buyer.name,
+                    armor,
+                    armor_max,
+                    spec=character,
+                    rules=combat,
+                )
+            else:
+                record(db, campaign_id, ArmorSet(name=buyer.name, armor=armor))
+        result["armor"] = armor
+    db.commit()
+    result.update({"price": price, "currency_left": left, "currency": marketplace.currency})
+    return result
+
+
+def _find_service(marketplace: Marketplace, service: str) -> ShopService:
+    key = name_key(service)
+    for listed in marketplace.services:
+        if key in (name_key(listed.id), name_key(listed.name)):
+            return listed
+    offered = ", ".join(listed.name for listed in marketplace.services)
+    raise InvalidInput(f"there is no service named {service!r}. The marketplace sells: {offered}")
+
+
+@dataclass(frozen=True)
+class ServiceContext:
+    """What a marketplace service handler gets: the transaction, the service, and its buyers."""
+
+    db: Session
+    campaign_id: int
+    marketplace: Marketplace
+    listed: ShopService
+    buyers: Sequence[Character]
+    payer: Character
+    hooks: Hooks | None
+
+
+@dataclass(frozen=True)
+class ServiceResult:
+    served: list[str]
+    price: int
+    currency_left: int
+
+
+def _deferred(ctx: ServiceContext) -> ServiceResult:
+    raise InvalidInput(f"{ctx.listed.name} is not modelled yet, so the GM must narrate it")
+
+
+def _lodge(ctx: ServiceContext) -> ServiceResult:
+    rooms = math.ceil(len(ctx.buyers) / ctx.listed.fits)
+    total = ctx.listed.price * rooms
+    left = _pay(ctx.db, ctx.campaign_id, ctx.marketplace, ctx.payer, total, cause=ctx.listed.name)
+    call_hook(
+        ctx.hooks,
+        "lodge",
+        HookContext(ctx.db, ctx.campaign_id, ctx.hooks, None),
+        [buyer.name for buyer in ctx.buyers],
+        default=None,
+    )
+    return ServiceResult([buyer.name for buyer in ctx.buyers], total, left)
+
+
+def _restore(ctx: ServiceContext) -> ServiceResult:
+    patients = [
+        buyer
+        for buyer in ctx.buyers
+        if any(buyer.harm.get(stat, 0) > 0 for stat in ctx.listed.restores)
+    ]
+    if not patients:
+        raise InvalidInput(f"nobody named needs {ctx.listed.name}")
+    total = ctx.listed.price * len(patients)
+    left = _pay(ctx.db, ctx.campaign_id, ctx.marketplace, ctx.payer, total, cause=ctx.listed.name)
+    for patient in patients:
+        for stat in ctx.listed.restores:
+            restored = recover(patient, stat, patient.harm.get(stat, 0))
+            if restored:
+                record(
+                    ctx.db,
+                    ctx.campaign_id,
+                    Recovered(
+                        name=patient.name,
+                        stat=stat,
+                        amount=restored,
+                        cause=ctx.listed.name,
+                    ),
+                )
+    return ServiceResult([patient.name for patient in patients], total, left)
+
+
+# The handlers a marketplace service's `effect` may name. Adding a service effect registers it
+# here; the loader accepts exactly these names.
+SHOP_EFFECTS: dict[str, Callable[[ServiceContext], ServiceResult]] = {
+    "deferred": _deferred,
+    "lodge": _lodge,
+    "restore": _restore,
+}
+
+
+def buy_service(
+    db: Session,
+    campaign_id: int,
+    marketplace: Marketplace,
+    names: Sequence[str],
+    service: str,
+    hooks: Hooks | None = None,
+) -> dict[str, Any]:
+    """The named characters buy a service, and the first of them pays for all of it. The
+    service's configured effect handler decides what it does."""
+    listed = _find_service(marketplace, service)
+    handler = SHOP_EFFECTS.get(listed.effect)
+    if handler is None:
+        raise InvalidInput(f"{listed.name} has an unknown effect {listed.effect!r}")
+    if not names:
+        raise InvalidInput("name the characters the service is for")
+    state: CampaignState = load_state(db, campaign_id)
+    seen: dict[str, Character] = {}
+    for named in names:
+        character = character_named(state, named)
+        seen.setdefault(character.name, character)
+    buyers = list(seen.values())
+    result = handler(
+        ServiceContext(
+            db=db,
+            campaign_id=campaign_id,
+            marketplace=marketplace,
+            listed=listed,
+            buyers=buyers,
+            payer=buyers[0],
+            hooks=hooks,
+        )
+    )
+    db.commit()
+    return {
+        "service": listed.name,
+        "served": result.served,
+        "payer": buyers[0].name,
+        "price": result.price,
+        "currency_left": result.currency_left,
+        "currency": marketplace.currency,
+    }
+
+
+def change_currency(
+    db: Session,
+    campaign_id: int,
+    marketplace: Marketplace,
+    name: str,
+    amount: int,
+    cause: str,
+) -> dict[str, Any]:
+    """Give currency to a character (positive) or take it (negative) outside a purchase. Taking
+    refuses if the character lacks the currency, so there is no credit."""
+    amount = whole_number(amount, "the amount", -MAX_PRICE, MAX_PRICE)
+    if amount == 0:
+        raise InvalidInput("the amount must not be zero")
+    character = character_named(load_state(db, campaign_id), name)
+    if amount < 0:
+        left = _pay(db, campaign_id, marketplace, character, -amount, cause=cause)
+    else:
+        record(
+            db,
+            campaign_id,
+            CurrencyChanged(
+                name=character.name, feature=marketplace.currency, amount=amount, cause=cause
+            ),
+        )
+        left = _held(character, marketplace.currency) + amount
+    db.commit()
+    return {
+        "name": character.name,
+        "amount": amount,
+        "currency_left": left,
+        "currency": marketplace.currency,
+        "cause": cause,
+    }

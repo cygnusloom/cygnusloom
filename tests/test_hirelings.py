@@ -7,16 +7,16 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from cygnusforge.db.models import Event
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import (
+from cygnusloom.db.models import Event
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import (
     NPC_KIND,
     PC_KIND,
     CurrencyChanged,
     load_state,
     record,
 )
-from cygnusforge.services.views import scene_view, world_state_text
+from cygnusloom.services.views import scene_view, world_state_text
 from tests.test_campaigns import _create_character
 from tests.test_character_creation import _cairn_campaign, _complete_form
 from tests.test_combat import CAIRN, PC, _character, _tools

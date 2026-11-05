@@ -11,16 +11,16 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.content.library import (
+from cygnusloom.content.definitions import ContentError, Definition
+from cygnusloom.content.library import (
     DATA_DIR,
     ContentLibrary,
     _load_creative_table,
     _patch_creative_table,
 )
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.dice_tables import roll_creative
-from cygnusforge.services.events import decode, events_since
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.dice_tables import roll_creative
+from cygnusloom.services.events import decode, events_since
 from tests.test_combat import CAIRN, _fight
 from tests.test_content import _core, _rule_set, _world, _write
 

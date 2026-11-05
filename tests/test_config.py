@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import pytest
 
-from cygnusforge.config import load_settings
+from cygnusloom.config import load_settings
 
-BASE = {"CYGNUSFORGE_SECRET_KEY": "test-secret-key-0123456789abcdef"}
+BASE = {"CYGNUSLOOM_SECRET_KEY": "test-secret-key-0123456789abcdef"}
 
 
 def test_default_model_is_offered_even_when_not_listed():
     settings = load_settings(
         {
             **BASE,
-            "CYGNUSFORGE_LLM_PROVIDERS": "deepseek/deepseek-flash",
-            "CYGNUSFORGE_LLM_DEFAULT_MODEL": "ollama/gemma4:e2b",
+            "CYGNUSLOOM_LLM_PROVIDERS": "deepseek/deepseek-flash",
+            "CYGNUSLOOM_LLM_DEFAULT_MODEL": "ollama/gemma4:e2b",
         }
     )
     assert settings.llm_default_model == "ollama/gemma4:e2b"
@@ -20,7 +20,7 @@ def test_default_model_is_offered_even_when_not_listed():
 
 
 def test_default_model_alone_is_enough():
-    settings = load_settings({**BASE, "CYGNUSFORGE_LLM_DEFAULT_MODEL": "deepseek/deepseek-flash"})
+    settings = load_settings({**BASE, "CYGNUSLOOM_LLM_DEFAULT_MODEL": "deepseek/deepseek-flash"})
     assert settings.llm_models[0] == "deepseek/deepseek-flash"
     assert settings.llm_default_model == "deepseek/deepseek-flash"
 
@@ -32,13 +32,13 @@ def test_no_models_are_configured_by_default():
 
 
 def test_first_environment_model_is_the_default_when_none_is_named():
-    settings = load_settings({**BASE, "CYGNUSFORGE_LLM_PROVIDERS": "ollama/one, openai/two"})
+    settings = load_settings({**BASE, "CYGNUSLOOM_LLM_PROVIDERS": "ollama/one, openai/two"})
     assert settings.llm_models == ("ollama/one", "openai/two")
     assert settings.llm_default_model == "ollama/one"
 
 
 def test_secret_key_is_required():
-    with pytest.raises(RuntimeError, match="CYGNUSFORGE_SECRET_KEY"):
+    with pytest.raises(RuntimeError, match="CYGNUSLOOM_SECRET_KEY"):
         load_settings({})
 
 
@@ -47,14 +47,14 @@ def test_context_window_defaults_to_32k_tokens():
 
 
 def test_context_window_can_be_set():
-    settings = load_settings({**BASE, "CYGNUSFORGE_LLM_CONTEXT_TOKENS": " 8192 "})
+    settings = load_settings({**BASE, "CYGNUSLOOM_LLM_CONTEXT_TOKENS": " 8192 "})
     assert settings.llm_context_tokens == 8192
 
 
 @pytest.mark.parametrize("value", ["0", "-5", "lots", "1.5", ""])
 def test_context_window_must_be_a_positive_whole_number(value: str):
-    with pytest.raises(RuntimeError, match="CYGNUSFORGE_LLM_CONTEXT_TOKENS"):
-        load_settings({**BASE, "CYGNUSFORGE_LLM_CONTEXT_TOKENS": value})
+    with pytest.raises(RuntimeError, match="CYGNUSLOOM_LLM_CONTEXT_TOKENS"):
+        load_settings({**BASE, "CYGNUSLOOM_LLM_CONTEXT_TOKENS": value})
 
 
 def test_test_login_is_off_by_default():
@@ -63,12 +63,12 @@ def test_test_login_is_off_by_default():
 
 @pytest.mark.parametrize("value", ["1", " TRUE ", "yes", "on"])
 def test_test_login_can_be_enabled(value: str):
-    assert load_settings({**BASE, "CYGNUSFORGE_TEST_LOGIN": value}).test_login is True
+    assert load_settings({**BASE, "CYGNUSLOOM_TEST_LOGIN": value}).test_login is True
 
 
 @pytest.mark.parametrize("value", ["0", "false", "no", "off", ""])
 def test_test_login_stays_off_for_other_values(value: str):
-    assert load_settings({**BASE, "CYGNUSFORGE_TEST_LOGIN": value}).test_login is False
+    assert load_settings({**BASE, "CYGNUSLOOM_TEST_LOGIN": value}).test_login is False
 
 
 def test_debug_panel_is_off_by_default():
@@ -77,19 +77,19 @@ def test_debug_panel_is_off_by_default():
 
 @pytest.mark.parametrize("value", ["1", " TRUE ", "yes", "on"])
 def test_debug_panel_can_be_enabled(value: str):
-    assert load_settings({**BASE, "CYGNUSFORGE_DEBUG_PANEL": value}).debug_panel is True
+    assert load_settings({**BASE, "CYGNUSLOOM_DEBUG_PANEL": value}).debug_panel is True
 
 
 @pytest.mark.parametrize("value", ["0", "false", "no", "off", ""])
 def test_debug_panel_stays_off_for_other_values(value: str):
-    assert load_settings({**BASE, "CYGNUSFORGE_DEBUG_PANEL": value}).debug_panel is False
+    assert load_settings({**BASE, "CYGNUSLOOM_DEBUG_PANEL": value}).debug_panel is False
 
 
 OIDC = {
-    "CYGNUSFORGE_BASE_URL": "https://forge.example.com",
-    "CYGNUSFORGE_OIDC_ISSUER": "https://idp.example.com/application/o/cygnusforge/",
-    "CYGNUSFORGE_OIDC_CLIENT_ID": "cygnusforge",
-    "CYGNUSFORGE_OIDC_CLIENT_SECRET": "secret",
+    "CYGNUSLOOM_BASE_URL": "https://cygnusloom.example.com",
+    "CYGNUSLOOM_OIDC_ISSUER": "https://idp.example.com/application/o/cygnusloom/",
+    "CYGNUSLOOM_OIDC_CLIENT_ID": "cygnusloom",
+    "CYGNUSLOOM_OIDC_CLIENT_SECRET": "secret",
 }
 
 
@@ -98,38 +98,38 @@ def test_oidc_settings_are_read():
         {
             **BASE,
             **OIDC,
-            "CYGNUSFORGE_OIDC_ADMIN_CLAIM": "realm_access.roles",
-            "CYGNUSFORGE_OIDC_ADMIN_VALUES": "forge-admin, forge-owner",
+            "CYGNUSLOOM_OIDC_ADMIN_CLAIM": "realm_access.roles",
+            "CYGNUSLOOM_OIDC_ADMIN_VALUES": "forge-admin, forge-owner",
         }
     )
-    assert settings.oidc_issuer == "https://idp.example.com/application/o/cygnusforge"
+    assert settings.oidc_issuer == "https://idp.example.com/application/o/cygnusloom"
     assert settings.oidc_admin_claim == "realm_access.roles"
     assert settings.oidc_admin_values == ("forge-admin", "forge-owner")
-    assert settings.base_url == "https://forge.example.com"
+    assert settings.base_url == "https://cygnusloom.example.com"
 
 
 def test_secure_cookies_follow_the_base_url():
     assert load_settings({**BASE, **OIDC}).secure_cookies is True
     assert (
-        load_settings({**BASE, "CYGNUSFORGE_BASE_URL": "http://localhost:8000"}).secure_cookies
+        load_settings({**BASE, "CYGNUSLOOM_BASE_URL": "http://localhost:8000"}).secure_cookies
         is False
     )
 
 
 def test_openid_scope_is_always_requested():
-    settings = load_settings({**BASE, **OIDC, "CYGNUSFORGE_OIDC_SCOPES": "email profile"})
+    settings = load_settings({**BASE, **OIDC, "CYGNUSLOOM_OIDC_SCOPES": "email profile"})
     assert settings.oidc_scopes.split()[0] == "openid"
 
 
 def test_production_requires_oidc():
-    with pytest.raises(RuntimeError, match="CYGNUSFORGE_OIDC_ISSUER"):
-        load_settings({**BASE, "CYGNUSFORGE_ENVIRONMENT": "production"})
+    with pytest.raises(RuntimeError, match="CYGNUSLOOM_OIDC_ISSUER"):
+        load_settings({**BASE, "CYGNUSLOOM_ENVIRONMENT": "production"})
 
 
 def test_production_rejects_test_login():
     with pytest.raises(RuntimeError, match="test login"):
         load_settings(
-            {**BASE, **OIDC, "CYGNUSFORGE_ENVIRONMENT": "production", "CYGNUSFORGE_TEST_LOGIN": "1"}
+            {**BASE, **OIDC, "CYGNUSLOOM_ENVIRONMENT": "production", "CYGNUSLOOM_TEST_LOGIN": "1"}
         )
 
 
@@ -139,8 +139,8 @@ def test_production_requires_https():
             {
                 **BASE,
                 **OIDC,
-                "CYGNUSFORGE_BASE_URL": "http://forge.example.com",
-                "CYGNUSFORGE_ENVIRONMENT": "production",
+                "CYGNUSLOOM_BASE_URL": "http://cygnusloom.example.com",
+                "CYGNUSLOOM_ENVIRONMENT": "production",
             }
         )
 
@@ -151,8 +151,8 @@ def test_production_requires_an_https_issuer():
             {
                 **BASE,
                 **OIDC,
-                "CYGNUSFORGE_ENVIRONMENT": "production",
-                "CYGNUSFORGE_OIDC_ISSUER": "http://idp.example.com",
+                "CYGNUSLOOM_ENVIRONMENT": "production",
+                "CYGNUSLOOM_OIDC_ISSUER": "http://idp.example.com",
             }
         )
 
@@ -163,28 +163,28 @@ def test_production_requires_secure_cookies():
             {
                 **BASE,
                 **OIDC,
-                "CYGNUSFORGE_ENVIRONMENT": "production",
-                "CYGNUSFORGE_SECURE_COOKIES": "0",
+                "CYGNUSLOOM_ENVIRONMENT": "production",
+                "CYGNUSLOOM_SECURE_COOKIES": "0",
             }
         )
 
 
 def test_test_login_admin_requires_test_login():
     with pytest.raises(RuntimeError, match="TEST_LOGIN_ADMIN"):
-        load_settings({**BASE, "CYGNUSFORGE_TEST_LOGIN_ADMIN": "1"})
+        load_settings({**BASE, "CYGNUSLOOM_TEST_LOGIN_ADMIN": "1"})
 
 
 def test_unknown_environment_is_rejected():
-    with pytest.raises(RuntimeError, match="CYGNUSFORGE_ENVIRONMENT"):
-        load_settings({**BASE, "CYGNUSFORGE_ENVIRONMENT": "staging"})
+    with pytest.raises(RuntimeError, match="CYGNUSLOOM_ENVIRONMENT"):
+        load_settings({**BASE, "CYGNUSLOOM_ENVIRONMENT": "staging"})
 
 
 @pytest.mark.parametrize("value", ["0", "-1", "lots"])
 def test_session_hours_must_be_positive(value: str):
-    with pytest.raises(RuntimeError, match="CYGNUSFORGE_SESSION_HOURS"):
-        load_settings({**BASE, "CYGNUSFORGE_SESSION_HOURS": value})
+    with pytest.raises(RuntimeError, match="CYGNUSLOOM_SESSION_HOURS"):
+        load_settings({**BASE, "CYGNUSLOOM_SESSION_HOURS": value})
 
 
 def test_auto_create_schema_defaults_off_in_production():
-    settings = load_settings({**BASE, **OIDC, "CYGNUSFORGE_ENVIRONMENT": "production"})
+    settings = load_settings({**BASE, **OIDC, "CYGNUSLOOM_ENVIRONMENT": "production"})
     assert settings.auto_create_schema is False

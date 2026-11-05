@@ -40,14 +40,14 @@ docker compose pull
 docker compose up -d --build --remove-orphans
 docker compose ps
 
-APP_PORT="$(sed -n 's/^CYGNUSFORGE_APP_PORT=//p' .env | head -n 1)"
+APP_PORT="$(sed -n 's/^CYGNUSLOOM_APP_PORT=//p' .env | head -n 1)"
 APP_PORT="${APP_PORT:-21872}"
 
 echo "Local health check:"
 curl -fsS "http://127.0.0.1:$APP_PORT/healthz" ||
   echo "App is still starting; check docker compose logs app."
 
-DOMAIN="$(sed -n 's/^CYGNUSFORGE_DOMAIN=//p' .env | head -n 1)"
+DOMAIN="$(sed -n 's/^CYGNUSLOOM_DOMAIN=//p' .env | head -n 1)"
 if [ -n "$DOMAIN" ]; then
   echo "Public health check:"
   curl -fsS "https://$DOMAIN/healthz" ||

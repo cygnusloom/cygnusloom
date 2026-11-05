@@ -2,35 +2,35 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Cygnus Forge: web server",
+            "name": "Cygnus Loom: web server",
             "type": "debugpy",
             "request": "launch",
             "module": "uvicorn",
             "args": [
-                "cygnusforge.web.app:app_from_env",
+                "cygnusloom.web.app:app_from_env",
                 "--factory",
                 "--reload"
             ],
             "python": "${workspaceFolder}/.venv/bin/python",
             "envFile": "${workspaceFolder}/.devcontainer/devcontainer.env",
             "env": {
-                "CYGNUSFORGE_TEST_LOGIN": "1",
-                "CYGNUSFORGE_TEST_LOGIN_ADMIN": "1"
+                "CYGNUSLOOM_TEST_LOGIN": "1",
+                "CYGNUSLOOM_TEST_LOGIN_ADMIN": "1"
             },
             "console": "integratedTerminal",
             "jinja": true,
             "justMyCode": false
         },
         {
-            "name": "Cygnus Forge: web server (temp database)",
+            "name": "Cygnus Loom: web server (temp database)",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/scripts/temp_server.py",
             "python": "${workspaceFolder}/.venv/bin/python",
             "envFile": "${workspaceFolder}/.devcontainer/devcontainer.env",
             "env": {
-                "CYGNUSFORGE_TEST_LOGIN": "1",
-                "CYGNUSFORGE_TEST_LOGIN_ADMIN": "1"
+                "CYGNUSLOOM_TEST_LOGIN": "1",
+                "CYGNUSLOOM_TEST_LOGIN_ADMIN": "1"
             },
             "console": "integratedTerminal",
             "jinja": true,

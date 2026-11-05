@@ -11,11 +11,11 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.db.models import Campaign
-from cygnusforge.llm.base import LLMError
-from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.rules.dice import is_formula, roll_total
-from cygnusforge.services.campaigns import (
+from cygnusloom.db.models import Campaign
+from cygnusloom.llm.base import LLMError
+from cygnusloom.llm.fake import FakeProvider
+from cygnusloom.rules.dice import is_formula, roll_total
+from cygnusloom.services.campaigns import (
     ChatMessage,
     Logged,
     campaign_log,

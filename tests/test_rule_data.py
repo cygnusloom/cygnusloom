@@ -6,9 +6,9 @@ from typing import Any
 
 import pytest
 
-from cygnusforge.content import library
-from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.content.library import REQUIRED_TABLES
+from cygnusloom.content import library
+from cygnusloom.content.definitions import ContentError, Definition
+from cygnusloom.content.library import REQUIRED_TABLES
 
 
 @dataclass(frozen=True)

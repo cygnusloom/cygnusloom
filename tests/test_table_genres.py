@@ -15,8 +15,8 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.content.library import (
+from cygnusloom.content.definitions import ContentError, Definition
+from cygnusloom.content.library import (
     DATA_DIR,
     TABLE_GENRES,
     ContentLibrary,
@@ -24,9 +24,9 @@ from cygnusforge.content.library import (
     _patch_creative_table,
     effective_table_genres,
 )
-from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.services.campaigns import _tool_context
-from cygnusforge.services.world import WorldTools
+from cygnusloom.llm.fake import FakeProvider
+from cygnusloom.services.campaigns import _tool_context
+from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library
 from tests.factories import campaign_ready
 from tests.support import content_tree

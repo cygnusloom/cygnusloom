@@ -10,8 +10,8 @@ from typing import Any
 
 import pytest
 
-from cygnusforge.content.definitions import ContentError
-from cygnusforge.content.library import ContentLibrary
+from cygnusloom.content.definitions import ContentError
+from cygnusloom.content.library import ContentLibrary
 from tests.support import DEFAULT_RULE_SET, content_tree
 
 

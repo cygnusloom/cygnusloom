@@ -8,10 +8,10 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusforge.content.library import ConditionRules, CounterRules, MoveBand, MoveRules
-from cygnusforge.services import moves as moves_service
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import (
+from cygnusloom.content.library import ConditionRules, CounterRules, MoveBand, MoveRules
+from cygnusloom.services import moves as moves_service
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import (
     ConditionAdded,
     ConditionEnded,
     CounterChanged,

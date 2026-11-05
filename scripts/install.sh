@@ -40,7 +40,7 @@ if [ -f .env ]; then
 fi
 
 if [ -z "$DOMAIN" ]; then
-  read -r -p "App domain (for example cygnus.example.com): " DOMAIN
+  read -r -p "App domain (for example cygnusloom.example.com): " DOMAIN
 fi
 if [ -z "$IDP_DOMAIN" ]; then
   IDP_DOMAIN="idp.$DOMAIN"
@@ -62,7 +62,7 @@ docker compose config --quiet
 docker compose up -d --build --remove-orphans
 docker compose ps
 
-APP_PORT="$(sed -n 's/^CYGNUSFORGE_APP_PORT=//p' .env | head -n 1)"
+APP_PORT="$(sed -n 's/^CYGNUSLOOM_APP_PORT=//p' .env | head -n 1)"
 APP_PORT="${APP_PORT:-21872}"
 IDP_PORT="$(sed -n 's/^AUTHENTIK_PORT=//p' .env | head -n 1)"
 IDP_PORT="${IDP_PORT:-21873}"
@@ -77,7 +77,7 @@ The stack listens only on loopback:
   app:       http://127.0.0.1:$APP_PORT
   Authentik: http://127.0.0.1:$IDP_PORT
 
-Configure your nginx from deploy/nginx/cygnusforge.conf, then reload it. The app will not
+Configure your nginx from deploy/nginx/cygnusloom.conf, then reload it. The app will not
 be reachable at the HTTPS URLs until the proxy is configured.
 
 Initial Authentik login: akadmin
@@ -85,6 +85,6 @@ Password: grep AUTHENTIK_BOOTSTRAP_PASSWORD .env
 
 After signing in:
   1. Change the Authentik password.
-  2. Add akadmin to Directory -> Groups -> cygnusforge-admins -> Users.
+  2. Add akadmin to Directory -> Groups -> cygnusloom-admins -> Users.
   3. Sign in to the app, then open Admin -> Models and add a model.
 EOF

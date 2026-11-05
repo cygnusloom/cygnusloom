@@ -7,9 +7,9 @@ from typing import Any
 
 import pytest
 
-from cygnusforge.content.character import CharacterError, build_character, check_choices, resolve
-from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.content.library import ContentLibrary
+from cygnusloom.content.character import CharacterError, build_character, check_choices, resolve
+from cygnusloom.content.definitions import ContentError, Definition
+from cygnusloom.content.library import ContentLibrary
 from tests.test_content import _core, _world
 
 

@@ -10,16 +10,16 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette.datastructures import FormData
 
-from cygnusforge.content.character import (
+from cygnusloom.content.character import (
     FeatPick,
     TableOption,
     build_character,
     check_choices,
     resolve,
 )
-from cygnusforge.content.definitions import Definition
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.web.character_form import creation_view, submission_from_form
+from cygnusloom.content.definitions import Definition
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.web.character_form import creation_view, submission_from_form
 from tests.test_campaigns import _new_campaign, _signed_in
 
 

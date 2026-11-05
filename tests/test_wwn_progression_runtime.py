@@ -6,15 +6,15 @@ from pathlib import Path
 
 import pytest
 
-from cygnusforge.rules import wwn, wwn_magic
-from cygnusforge.rules.wwn_progression import configure_progression
-from cygnusforge.services.common import InvalidInput
+from cygnusloom.rules import wwn, wwn_magic
+from cygnusloom.rules.wwn_progression import configure_progression
+from cygnusloom.services.common import InvalidInput
 from tests.test_wwn_advancement import NAME, WWN, _campaign, _ctx, _pc, _world_tools
 
 PROGRESSION_PATH = (
     Path(__file__).parents[1]
     / "src"
-    / "cygnusforge"
+    / "cygnusloom"
     / "data"
     / "rulesets"
     / "worldswithoutnumber"

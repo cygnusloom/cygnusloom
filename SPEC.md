@@ -1,4 +1,4 @@
-Cygnus Forge is an RPG engine that uses an AI game master to run the game, with a comprehensive engine to ensure the AI GM plays the game correctly, follows the rules, and keeps track of everything.
+Cygnus Loom is an RPG engine that uses an AI game master to run the game, with a comprehensive engine to ensure the AI GM plays the game correctly, follows the rules, and keeps track of everything.
 
 # Campaigns, Rulesets, and Worlds
 A campaign is a running game instance. It consists of an event log tracking everything that happens - this is the source of truth. Each campaign has a ruleset, which determins how the AI GM can act, how things behave, when dice are used, and so on. A campaign is also based on a world, which is the template for setting up the game world for the player and AI GM to play in.

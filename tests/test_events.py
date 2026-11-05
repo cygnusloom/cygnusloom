@@ -8,9 +8,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.db.models import Campaign, Event
-from cygnusforge.services.campaigns import campaign_log, list_messages
-from cygnusforge.services.events import (
+from cygnusloom.db.models import Campaign, Event
+from cygnusloom.services.campaigns import campaign_log, list_messages
+from cygnusloom.services.events import (
     EVENT_TYPES,
     Channel,
     ChatPlayer,
@@ -31,7 +31,7 @@ from tests.test_campaigns import _campaign_id, _send
 
 
 def test_generic_payloads_apply_to_character_state():
-    from cygnusforge.services.events import CampaignState, Character, ConditionChanged
+    from cygnusloom.services.events import CampaignState, Character, ConditionChanged
 
     state = CampaignState()
     state.characters["hero"] = Character(

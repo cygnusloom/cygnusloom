@@ -8,10 +8,10 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.services import campaigns as campaigns_service
-from cygnusforge.services import world
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import load_state
+from cygnusloom.services import campaigns as campaigns_service
+from cygnusloom.services import world
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import load_state
 from tests.test_campaigns import _create_character, _new_campaign, _send, _signed_in
 
 STAT_SELECT_RE = re.compile(r'<select name="stat-(\w+)"[^>]*>(.*?)</select>', re.DOTALL)

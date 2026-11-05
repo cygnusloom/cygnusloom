@@ -39,14 +39,14 @@ def test_compose_publishes_only_loopback_ports() -> None:
     compose = (ROOT / "compose.yaml").read_text()
     env_example = (ROOT / ".env.example").read_text()
     assert "caddy" not in compose.lower()
-    assert "127.0.0.1:${CYGNUSFORGE_APP_PORT:-21872}:8000" in compose
+    assert "127.0.0.1:${CYGNUSLOOM_APP_PORT:-21872}:8000" in compose
     assert "127.0.0.1:${AUTHENTIK_PORT:-21873}:9000" in compose
-    assert "CYGNUSFORGE_APP_PORT=21872" in env_example
+    assert "CYGNUSLOOM_APP_PORT=21872" in env_example
     assert "AUTHENTIK_PORT=21873" in env_example
 
 
 def test_nginx_sample_proxies_to_the_stack() -> None:
-    config = (ROOT / "deploy" / "nginx" / "cygnusforge.conf").read_text()
+    config = (ROOT / "deploy" / "nginx" / "cygnusloom.conf").read_text()
     assert "proxy_pass http://127.0.0.1:21872;" in config
     assert "proxy_pass http://127.0.0.1:21873;" in config
     assert "proxy_buffering off;" in config
@@ -59,8 +59,8 @@ def test_local_mode_makes_the_idp_reachable_from_the_app() -> None:
 
 
 def test_authentik_application_has_a_launch_url() -> None:
-    blueprint = (ROOT / "deploy" / "authentik" / "blueprints" / "cygnusforge.yaml").read_text()
-    assert "meta_launch_url: !Env CYGNUSFORGE_BASE_URL" in blueprint
+    blueprint = (ROOT / "deploy" / "authentik" / "blueprints" / "cygnusloom.yaml").read_text()
+    assert "meta_launch_url: !Env CYGNUSLOOM_BASE_URL" in blueprint
 
 
 def test_entrypoint_waits_for_database_dns() -> None:

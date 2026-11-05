@@ -12,10 +12,10 @@ from types import SimpleNamespace
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusforge.content.character import CharacterSpec, Sheet, check_choices, resolve
-from cygnusforge.content.library import RuleSet
-from cygnusforge.services.events import Character
-from cygnusforge.services.tools import Ask, RollAnswer, ToolRequest, run_tool
+from cygnusloom.content.character import CharacterSpec, Sheet, check_choices, resolve
+from cygnusloom.content.library import RuleSet
+from cygnusloom.services.events import Character
+from cygnusloom.services.tools import Ask, RollAnswer, ToolRequest, run_tool
 from tests.conftest import content_library
 from tests.factories import (
     choose_campaign_options,

@@ -8,7 +8,7 @@
   "image": "ghcr.io/bare-devcontainer/uv:trixie",
   "remoteUser": "dev",
   "containerEnv": {
-    "CYGNUSFORGE_LLM_OLLAMA_BASE_URL": "http://host.docker.internal:11434/v1"
+    "CYGNUSLOOM_LLM_OLLAMA_BASE_URL": "http://host.docker.internal:11434/v1"
   },
   "forwardPorts": [
     8000

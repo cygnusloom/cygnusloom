@@ -7,11 +7,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlmodel import Session, select
 
-from cygnusforge.auth.claims import OIDCError
-from cygnusforge.config import Settings
-from cygnusforge.db.models import User, UserSession
-from cygnusforge.db.session import make_engine
-from cygnusforge.services.accounts import get_or_create_test_user
+from cygnusloom.auth.claims import OIDCError
+from cygnusloom.config import Settings
+from cygnusloom.db.models import User, UserSession
+from cygnusloom.db.session import make_engine
+from cygnusloom.services.accounts import get_or_create_test_user
 from tests.conftest import csrf_token, login, make_app, register
 from tests.fake_oidc import FakeOIDC, claims
 
@@ -131,7 +131,7 @@ def test_login_is_rate_limited(client: TestClient):
 
 
 def test_oidc_login_creates_account(settings: Settings):
-    fake = FakeOIDC(identity=claims(roles=("cygnusforge-admins",)))
+    fake = FakeOIDC(identity=claims(roles=("cygnusloom-admins",)))
     client = _client(settings, fake)
     response = client.get("/auth/login", follow_redirects=False)
     assert response.status_code == 303
@@ -141,7 +141,7 @@ def test_oidc_login_creates_account(settings: Settings):
     assert response.headers["location"] == "/campaigns"
     assert client.get("/campaigns").status_code == 200
     assert _user_count(settings) == 1
-    assert _roles(settings, "ada@example.com") == '["cygnusforge-admins"]'
+    assert _roles(settings, "ada@example.com") == '["cygnusloom-admins"]'
 
 
 def test_oidc_login_only_keeps_safe_relative_next(settings: Settings):
@@ -166,7 +166,7 @@ def test_oidc_rejects_bad_claims(settings: Settings):
 
 
 def test_oidc_account_is_created_once_and_roles_refresh(settings: Settings):
-    fake = FakeOIDC(identity=claims(roles=("cygnusforge-admins",)))
+    fake = FakeOIDC(identity=claims(roles=("cygnusloom-admins",)))
     first = _client(settings, fake)
     first.get("/auth/callback")
     assert first.get("/admin").status_code == 200
@@ -198,7 +198,7 @@ def test_oidc_disabled_account_cannot_sign_in(settings: Settings):
 
 
 def test_admin_role_comes_from_claims(settings: Settings):
-    client = _client(settings, FakeOIDC(identity=claims(roles=("cygnusforge-admins",))))
+    client = _client(settings, FakeOIDC(identity=claims(roles=("cygnusloom-admins",))))
     client.get("/auth/callback")
     page = client.get("/admin")
     assert page.status_code == 200
@@ -278,7 +278,7 @@ def test_account_page_shows_identity_and_sessions(client: TestClient):
 
 def test_account_page_links_to_the_authentik_user_interface(settings: Settings):
     client = _client(
-        replace(settings, oidc_issuer="https://idp.example.com/application/o/cygnusforge/")
+        replace(settings, oidc_issuer="https://idp.example.com/application/o/cygnusloom/")
     )
     register(client)
     page = client.get("/account").text
@@ -290,7 +290,7 @@ def test_account_page_prefers_a_configured_account_url(settings: Settings):
     client = _client(
         replace(
             settings,
-            oidc_issuer="https://idp.example.com/application/o/cygnusforge/",
+            oidc_issuer="https://idp.example.com/application/o/cygnusloom/",
             oidc_account_url="https://idp.example.com/custom/account",
         )
     )
@@ -308,7 +308,7 @@ def test_account_page_has_no_provider_link_for_an_unknown_issuer(settings: Setti
 
 def test_login_page_links_to_the_authentik_user_interface(settings: Settings):
     client = _client(
-        replace(settings, oidc_issuer="https://idp.example.com/application/o/cygnusforge/"),
+        replace(settings, oidc_issuer="https://idp.example.com/application/o/cygnusloom/"),
         FakeOIDC(),
     )
     page = client.get("/login").text

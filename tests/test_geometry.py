@@ -1,6 +1,6 @@
 import pytest
 
-from cygnusforge.services.geometry import (
+from cygnusloom.services.geometry import (
     clearance,
     contains,
     overlaps,

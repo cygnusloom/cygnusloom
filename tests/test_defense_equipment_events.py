@@ -9,8 +9,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.db.models import Event
-from cygnusforge.services.events import (
+from cygnusloom.db.models import Event
+from cygnusloom.services.events import (
     PC_KIND,
     CampaignState,
     Channel,

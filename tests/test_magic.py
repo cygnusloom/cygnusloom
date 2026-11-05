@@ -8,8 +8,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import SpellCast, current, decode, events_since
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import SpellCast, current, decode, events_since
 from tests.test_combat import (
     PC,
     Rolls,

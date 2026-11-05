@@ -7,12 +7,12 @@ from collections.abc import Callable
 
 from fastapi.testclient import TestClient
 
-from cygnusforge.services.compendium import (
+from cygnusloom.services.compendium import (
     Compendium,
     CompendiumSection,
     compendium_view,
 )
-from cygnusforge.services.events import name_key
+from cygnusloom.services.events import name_key
 from tests import factories
 from tests.conftest import content_library
 

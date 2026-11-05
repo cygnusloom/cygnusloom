@@ -9,15 +9,15 @@ from typing import Any
 
 import pytest
 
-from cygnusforge.content.character import (
+from cygnusloom.content.character import (
     CharacterSpec,
     CounterRef,
     SkillProgression,
     Stat,
     Template,
 )
-from cygnusforge.content.definitions import ContentError
-from cygnusforge.rules.wwn_progression import (
+from cygnusloom.content.definitions import ContentError
+from cygnusloom.rules.wwn_progression import (
     CastingRow,
     ClassTable,
     WWNProgression,
@@ -29,7 +29,7 @@ from cygnusforge.rules.wwn_progression import (
 PROGRESSION_PATH = (
     Path(__file__).parents[1]
     / "src"
-    / "cygnusforge"
+    / "cygnusloom"
     / "data"
     / "rulesets"
     / "worldswithoutnumber"
@@ -48,7 +48,7 @@ def progression_definition() -> dict[str, Any]:
         {
             "type": "python_module",
             "id": "wwn_progression",
-            "module": "cygnusforge.rules.wwn_progression",
+            "module": "cygnusloom.rules.wwn_progression",
         }
     ]
     rule_data = [item for item in definitions if item.get("type") == "rule_data"]

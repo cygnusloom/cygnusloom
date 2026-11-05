@@ -8,10 +8,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from cygnusforge.db.models import Event
-from cygnusforge.llm.base import ChatReply
-from cygnusforge.services.events import CampaignState, load_state
-from cygnusforge.services.prompts import OPENING_PROMPT
+from cygnusloom.db.models import Event
+from cygnusloom.llm.base import ChatReply
+from cygnusloom.services.events import CampaignState, load_state
+from cygnusloom.services.prompts import OPENING_PROMPT
 from tests.conftest import is_journal_messages
 from tests.test_campaigns import (
     _answer,

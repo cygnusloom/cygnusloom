@@ -1,0 +1,56 @@
+[
+  {
+    "type": "python_module",
+    "id": "cairn2e",
+    "module": "cygnusloom.rules.cairn2e"
+  },
+  {
+    "type": "combat",
+    "id": "cairn",
+    "damage": [
+      {"kind": "absorb"},
+      {"kind": "harm", "stat": "hp"},
+      {"kind": "overflow", "stat": "str"}
+    ],
+    "check_die": "1d20",
+    "initiative_stat": "dex",
+    "defeat": {
+      "player_character": "in critical damage",
+      "player_character_dead": "dead",
+      "npc": "dead"
+    },
+    "injuries": {
+      "table": "injuries",
+      "stat": "hp",
+      "trigger": "depleted",
+      "target_kinds": ["pc"]
+    },
+    "outside_harm": ["str", "dex", "wil"],
+    "healing_stat": "hp",
+    "morale": {
+      "save_stat": "wil",
+      "triggers": [
+        {"tag": "first", "when": "lone"},
+        {"tag": "first", "when": "first_casualty"},
+        {"tag": "half", "when": "half_strength"}
+      ],
+      "lone_at": "hp",
+      "retreat_stat": "dex"
+    },
+    "modifiers": {"impaired": "1d4", "enhanced": "1d12"},
+    "unarmed": {"damage": "1d4", "names": ["unarmed", "fists", "bare hands"]},
+    "armor_max": 3,
+    "dying_hours": 1,
+    "aid_items": ["Bandages"],
+    "hit_mode": "auto",
+    "multi_attack": "highest",
+    "save": {"mode": "roll_under", "auto_success": 1, "auto_fail": 20},
+    "initiative_mode": "pass_npcs_fail",
+    "groups": {
+      "incoming_modifier": "impaired",
+      "blast_modifier": "enhanced",
+      "blast_hits_all": true,
+      "break_outcomes": ["defeat", "flee"]
+    }
+  }
+]

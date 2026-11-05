@@ -1,12 +1,12 @@
-# nginx in front of Cygnus Forge
+# nginx in front of Cygnus Loom
 
 The compose stack deliberately contains no TLS proxy. It publishes only:
 
-- `127.0.0.1:21872` — Cygnus Forge
+- `127.0.0.1:21872` — Cygnus Loom
 - `127.0.0.1:21873` — Authentik
 
 Your existing nginx terminates TLS and forwards to those loopback ports. Do not expose
-21872 or 21873 publicly. To use different host ports, set `CYGNUSFORGE_APP_PORT` and
+21872 or 21873 publicly. To use different host ports, set `CYGNUSLOOM_APP_PORT` and
 `AUTHENTIK_PORT` in `.env` and update the two `proxy_pass` lines.
 
 If this host previously ran the bundled Caddy proxy, run `./scripts/update.sh` once. It uses
@@ -16,15 +16,15 @@ and 443 for nginx.
 ## Setup
 
 1. Point both public hostnames at this host in DNS, for example
-   `cygnus.example.com` and `idp.cygnus.example.com`.
-2. Copy `cygnusforge.conf` to `/etc/nginx/conf.d/` and replace the two hostnames plus the
+   `cygnusloom.example.com` and `idp.cygnusloom.example.com`.
+2. Copy `cygnusloom.conf` to `/etc/nginx/conf.d/` and replace the two hostnames plus the
    certificate paths.
 3. Obtain certificates if you do not already have them. The sample uses a webroot at
    `/var/www/html`:
 
    ```sh
    sudo certbot certonly --webroot -w /var/www/html \
-     -d cygnus.example.com -d idp.cygnus.example.com
+     -d cygnusloom.example.com -d idp.cygnusloom.example.com
    ```
 
    If you use separate certificates per hostname, change the `ssl_certificate` lines in
@@ -39,7 +39,7 @@ and 443 for nginx.
 5. Check the app through nginx:
 
    ```sh
-   curl -fsS https://cygnus.example.com/healthz
+   curl -fsS https://cygnusloom.example.com/healthz
    ```
 
 Then open `https://<app-host>/login`. Authentik is at `https://<idp-host>/`.

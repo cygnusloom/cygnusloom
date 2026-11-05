@@ -7,9 +7,9 @@ from dataclasses import replace
 
 from fastapi.testclient import TestClient
 
-from cygnusforge.config import Settings
-from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.rules import wwn
+from cygnusloom.config import Settings
+from cygnusloom.llm.fake import FakeProvider
+from cygnusloom.rules import wwn
 from tests.conftest import csrf_token, make_app
 from tests.test_campaigns import _signed_in
 from tests.test_wwn_advancement import (

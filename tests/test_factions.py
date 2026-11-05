@@ -13,14 +13,14 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from cygnusforge.content.library import TallyRules
-from cygnusforge.db.models import Event
-from cygnusforge.services import factions as factions_service
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.compendium import compendium_view
-from cygnusforge.services.events import TallyReset, decode
-from cygnusforge.services.views import world_state_text
-from cygnusforge.services.world import WorldTools
+from cygnusloom.content.library import TallyRules
+from cygnusloom.db.models import Event
+from cygnusloom.services import factions as factions_service
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.compendium import compendium_view
+from cygnusloom.services.events import TallyReset, decode
+from cygnusloom.services.views import world_state_text
+from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library
 from tests.factories import (
     choose_campaign_options,

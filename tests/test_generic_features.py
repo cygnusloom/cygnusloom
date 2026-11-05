@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.content.character import (
+from cygnusloom.content.character import (
     CharacterError,
     Choose,
     FeatPick,
@@ -23,11 +23,11 @@ from cygnusforge.content.character import (
     feature_pick_options,
     resolve,
 )
-from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.content.library import ContentLibrary
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import Character, NpcAdded, load_state, record
-from cygnusforge.web.character_form import creation_view
+from cygnusloom.content.definitions import ContentError, Definition
+from cygnusloom.content.library import ContentLibrary
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import Character, NpcAdded, load_state, record
+from cygnusloom.web.character_form import creation_view
 from tests.conftest import content_library
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
 from tests.test_wwn_combat import PC, _wwn_campaign

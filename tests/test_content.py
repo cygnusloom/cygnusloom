@@ -10,9 +10,9 @@ from typing import Any
 
 import pytest
 
-from cygnusforge.content.character import NO_CAMPAIGN, TableOption, campaign_schema
-from cygnusforge.content.definitions import ContentError, Definition, read_definitions
-from cygnusforge.content.library import (
+from cygnusloom.content.character import NO_CAMPAIGN, TableOption, campaign_schema
+from cygnusloom.content.definitions import ContentError, Definition, read_definitions
+from cygnusloom.content.library import (
     DATA_DIR,
     TERRAIN_PATTERNS,
     ContentLibrary,
@@ -22,7 +22,7 @@ from cygnusforge.content.library import (
     _load_monster,
     _load_rule_hooks,
 )
-from cygnusforge.services.hooks import HookContext, call_hook
+from cygnusloom.services.hooks import HookContext, call_hook
 from tests.conftest import content_library
 from tests.rolls import SocialRoll, social_roll
 
@@ -349,7 +349,7 @@ def test_a_hook_payload_must_name_non_empty_text():
     ],
 )
 def test_cairn_hook_configurator_validates_consumable_features(feature, message):
-    from cygnusforge.rules.cairn2e import configure_hooks
+    from cygnusloom.rules.cairn2e import configure_hooks
 
     module = ModuleType("cairn2e")
     module.configure_hooks = configure_hooks
@@ -653,11 +653,11 @@ def test_python_module_must_import(tree: Path):
         tree,
         {
             "rulesets/testset/module.json": [
-                {"type": "python_module", "id": "m", "module": "cygnusforge.rules.nope"}
+                {"type": "python_module", "id": "m", "module": "cygnusloom.rules.nope"}
             ]
         },
     )
-    with pytest.raises(ContentError, match="cannot import 'cygnusforge.rules.nope'"):
+    with pytest.raises(ContentError, match="cannot import 'cygnusloom.rules.nope'"):
         ContentLibrary.load(tree)
 
 

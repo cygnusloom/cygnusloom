@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from cygnusforge.content.library import (
+from cygnusloom.content.library import (
     DiceRow,
     DiceTable,
     DieGrowth,
@@ -19,11 +19,11 @@ from cygnusforge.content.library import (
     WildernessEffect,
     WildernessHooks,
 )
-from cygnusforge.db.models import Event
-from cygnusforge.services import clock as clock_service
-from cygnusforge.services import wilderness
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import (
+from cygnusloom.db.models import Event
+from cygnusloom.services import clock as clock_service
+from cygnusloom.services import wilderness
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import (
     ItemAdded,
     ItemRemoved,
     LostRolled,
@@ -34,8 +34,8 @@ from cygnusforge.services.events import (
     load_state,
     record,
 )
-from cygnusforge.services.market import listed_item
-from cygnusforge.services.wilderness import (
+from cygnusloom.services.market import listed_item
+from cygnusloom.services.wilderness import (
     roll_lost,
     roll_weather,
     season_for_day,

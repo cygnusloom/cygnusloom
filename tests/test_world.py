@@ -12,16 +12,16 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from cygnusforge.content.character import NO_CAMPAIGN, TableOption, choice_options, option_fields
-from cygnusforge.content.library import InventoryRules, LocationTemplate, WorldTerrain
-from cygnusforge.db.models import Event
-from cygnusforge.llm.base import ChatReply, ToolRequest
-from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.rules.context import ToolContext, brief
-from cygnusforge.services import world
-from cygnusforge.services.campaigns import SPEECH_ATTEMPTS, list_messages
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import (
+from cygnusloom.content.character import NO_CAMPAIGN, TableOption, choice_options, option_fields
+from cygnusloom.content.library import InventoryRules, LocationTemplate, WorldTerrain
+from cygnusloom.db.models import Event
+from cygnusloom.llm.base import ChatReply, ToolRequest
+from cygnusloom.llm.fake import FakeProvider
+from cygnusloom.rules.context import ToolContext, brief
+from cygnusloom.services import world
+from cygnusloom.services.campaigns import SPEECH_ATTEMPTS, list_messages
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import (
     NPC_KIND,
     CampaignState,
     Character,
@@ -31,7 +31,7 @@ from cygnusforge.services.events import (
     load_state,
     record,
 )
-from cygnusforge.services.tools import ToolRun, run_tool
+from cygnusloom.services.tools import ToolRun, run_tool
 from tests.conftest import content_library, csrf_token
 from tests.factories import (
     campaign_ready,

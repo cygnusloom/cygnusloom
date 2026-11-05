@@ -7,14 +7,14 @@ from typing import Any
 
 import pytest
 
-from cygnusforge.content.definitions import ContentError
-from cygnusforge.content.library import _load_combat
-from cygnusforge.llm.base import ToolRequest
-from cygnusforge.rules import cairn2e
-from cygnusforge.rules.context import ToolContext
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import Struck, decode, events_since
-from cygnusforge.services.tools import ToolRun, run_tool
+from cygnusloom.content.definitions import ContentError
+from cygnusloom.content.library import _load_combat
+from cygnusloom.llm.base import ToolRequest
+from cygnusloom.rules import cairn2e
+from cygnusloom.rules.context import ToolContext
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import Struck, decode, events_since
+from cygnusloom.services.tools import ToolRun, run_tool
 from tests.test_combat import (
     CAIRN,
     LIBRARY,

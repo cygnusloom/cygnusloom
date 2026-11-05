@@ -8,11 +8,11 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.config import Settings
-from cygnusforge.db.models import Campaign
-from cygnusforge.llm.base import ChatReply, LLMError, ToolRequest
-from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.services.campaigns import list_messages
+from cygnusloom.config import Settings
+from cygnusloom.db.models import Campaign
+from cygnusloom.llm.base import ChatReply, LLMError, ToolRequest
+from cygnusloom.llm.fake import FakeProvider
+from cygnusloom.services.campaigns import list_messages
 from tests.conftest import NARRATE_TEXT, csrf_token
 from tests.test_campaigns import _answer, _campaign_id
 from tests.test_context import (

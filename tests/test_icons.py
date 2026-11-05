@@ -10,9 +10,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusforge.content.definitions import ContentError
-from cygnusforge.content.icons import resolve_icon
-from cygnusforge.web.icons import (
+from cygnusloom.content.definitions import ContentError
+from cygnusloom.content.icons import resolve_icon
+from cygnusloom.web.icons import (
     ICON_DIR,
     ITEM_KIND_ICONS,
     PLACE_FALLBACK_ICON,

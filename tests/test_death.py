@@ -8,10 +8,10 @@ import pytest
 from fastapi import FastAPI
 from sqlmodel import Session, select
 
-from cygnusforge.db.models import Event
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.death import begin_dying
-from cygnusforge.services.injuries import EffectContext, run_effects
+from cygnusloom.db.models import Event
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.death import begin_dying
+from cygnusloom.services.injuries import EffectContext, run_effects
 from tests.test_combat import (
     CAIRN,
     PC,

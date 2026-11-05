@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from cygnusforge.auth.claims import (
+from cygnusloom.auth.claims import (
     OIDCError,
     claim_path,
     claim_values,
@@ -21,22 +21,22 @@ def test_claim_path_reads_nested_claims():
 
 
 def test_claim_values_accepts_one_string_or_a_list():
-    assert claim_values("cygnusforge-admins") == ("cygnusforge-admins",)
+    assert claim_values("cygnusloom-admins") == ("cygnusloom-admins",)
     assert claim_values(["b", "a", "a"]) == ("a", "b")
     assert claim_values(None) == ()
 
 
 def test_roles_follow_the_configured_claim():
-    claims = {"groups": ["cygnusforge-admins", "readers"], "roles": ["ignored"]}
-    assert roles_from_claims(claims, "groups") == ("cygnusforge-admins", "readers")
+    claims = {"groups": ["cygnusloom-admins", "readers"], "roles": ["ignored"]}
+    assert roles_from_claims(claims, "groups") == ("cygnusloom-admins", "readers")
     assert roles_from_claims({"realm_access": {"roles": ["owner"]}}, "realm_access.roles") == (
         "owner",
     )
 
 
 def test_admin_role_matching_is_case_insensitive():
-    assert has_admin_role(("Cygnusforge-Admins",), ("cygnusforge-admins",))
-    assert not has_admin_role(("readers",), ("cygnusforge-admins",))
+    assert has_admin_role(("Cygnusloom-Admins",), ("cygnusloom-admins",))
+    assert not has_admin_role(("readers",), ("cygnusloom-admins",))
 
 
 def test_claims_require_the_configured_issuer():
@@ -62,7 +62,7 @@ def test_claims_map_email_name_and_roles():
             "email": "Ada@Example.com",
             "email_verified": "true",
             "name": "Ada Lovelace",
-            "groups": ["cygnusforge-admins"],
+            "groups": ["cygnusloom-admins"],
             "auth_time": 1_700_000_000,
         },
         issuer="https://idp.example.com",
@@ -72,7 +72,7 @@ def test_claims_map_email_name_and_roles():
     assert claims.email == "ada@example.com"
     assert claims.email_verified is True
     assert claims.display_name == "Ada Lovelace"
-    assert claims.roles == ("cygnusforge-admins",)
+    assert claims.roles == ("cygnusloom-admins",)
     assert claims.auth_time == datetime.fromtimestamp(1_700_000_000, UTC)
 
 

@@ -10,10 +10,10 @@ from __future__ import annotations
 import re
 from dataclasses import replace
 
-from cygnusforge.content.library import RuleSet
-from cygnusforge.rules.wwn_progression import require_wwn_progression
-from cygnusforge.services.events import Character
-from cygnusforge.services.inventory import capacity_of, readied_capacity
+from cygnusloom.content.library import RuleSet
+from cygnusloom.rules.wwn_progression import require_wwn_progression
+from cygnusloom.services.events import Character
+from cygnusloom.services.inventory import capacity_of, readied_capacity
 from tests.conftest import content_library
 
 

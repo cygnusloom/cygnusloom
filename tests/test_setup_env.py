@@ -14,23 +14,23 @@ def test_setup_env_generates_secrets_and_sets_names(tmp_path):
     write_env(
         ROOT / ".env.example",
         output,
-        domain="forge.example.com",
+        domain="cygnusloom.example.com",
         idp_domain="idp.example.com",
         email="me@example.com",
     )
     text = output.read_text()
     assert "=change-me" not in text
-    assert "CYGNUSFORGE_DOMAIN=forge.example.com" in text
+    assert "CYGNUSLOOM_DOMAIN=cygnusloom.example.com" in text
     assert "AUTHENTIK_DOMAIN=idp.example.com" in text
     assert "ACME_EMAIL=me@example.com" in text
     assert "AUTHENTIK_BOOTSTRAP_EMAIL=me@example.com" in text
 
     secret_keys = [
-        "CYGNUSFORGE_SECRET_KEY",
+        "CYGNUSLOOM_SECRET_KEY",
         "POSTGRES_PASSWORD",
         "AUTHENTIK_SECRET_KEY",
         "AUTHENTIK_POSTGRES_PASSWORD",
-        "CYGNUSFORGE_OIDC_CLIENT_SECRET",
+        "CYGNUSLOOM_OIDC_CLIENT_SECRET",
         "AUTHENTIK_BOOTSTRAP_PASSWORD",
     ]
     values = [
@@ -48,7 +48,7 @@ def test_setup_env_does_not_overwrite_without_force(tmp_path):
         write_env(
             ROOT / ".env.example",
             output,
-            domain="forge.example.com",
+            domain="cygnusloom.example.com",
             idp_domain="idp.example.com",
             email="me@example.com",
         )

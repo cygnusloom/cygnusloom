@@ -5,9 +5,9 @@ from dataclasses import replace
 import pytest
 from sqlmodel import Session
 
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import load_state
-from cygnusforge.services.market import listed_item
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import load_state
+from cygnusloom.services.market import listed_item
 from tests.test_attack_modifiers import _run, _struck
 from tests.test_campaigns import _create_character
 from tests.test_character_creation import (

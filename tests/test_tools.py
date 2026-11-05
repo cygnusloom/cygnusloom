@@ -8,11 +8,11 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusforge.content.library import PlayerInput, ToolCall
-from cygnusforge.llm.base import ChatReply, ToolRequest
-from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.services.campaigns import list_messages
-from cygnusforge.services.tools import Ask, RollAnswer, TextAnswer, ToolRun, run_tool, tool_specs
+from cygnusloom.content.library import PlayerInput, ToolCall
+from cygnusloom.llm.base import ChatReply, ToolRequest
+from cygnusloom.llm.fake import FakeProvider
+from cygnusloom.services.campaigns import list_messages
+from cygnusloom.services.tools import Ask, RollAnswer, TextAnswer, ToolRun, run_tool, tool_specs
 from tests.conftest import content_library, without_journal
 from tests.factories import answer, campaign_ready, pending_turn, place_pc, send_message
 

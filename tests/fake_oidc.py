@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from fastapi import Request
 from starlette.responses import RedirectResponse, Response
 
-from cygnusforge.auth.claims import IdentityClaims, OIDCError
+from cygnusloom.auth.claims import IdentityClaims, OIDCError
 
 
 def claims(

@@ -1,0 +1,54 @@
+[
+  {"type": "python_module", "id": "wwn", "module": "cygnusloom.rules.wwn"},
+  {"type": "python_module", "id": "wwn_magic", "module": "cygnusloom.rules.wwn_magic"},
+  {
+    "type": "combat",
+    "id": "wwn",
+    "damage": [{"kind": "harm", "stat": "hp"}],
+    "check_die": "1d20",
+    "initiative_stat": "dex",
+    "defeat": {
+      "player_character": "mortally wounded",
+      "player_character_dead": "dead",
+      "important_npc": "mortally wounded",
+      "npc": "dead"
+    },
+    "outside_harm": ["hp"],
+    "healing_stat": "hp",
+    "hit_mode": "roll_vs_defense",
+    "hit_bonus_stat": "attack_bonus",
+    "unskilled_attack_penalty": 2,
+    "attribute_damage": true,
+    "shock_on_miss": true,
+    "minimum_shock_damage": true,
+    "defeat_at_zero": ["hp"],
+    "dying_hours": 1,
+    "dying_rounds": 6,
+    "armor_max": 0,
+    "multi_attack": "each",
+    "defense_base": 10,
+    "defense_modifier": "dex",
+    "natural_one_misses": true,
+    "natural_max_hits": true,
+    "total_defense": 2,
+    "range_bands": {"short": 0, "long": -2},
+    "dual_wield_hit_penalty": -1,
+    "dual_wield_damage_bonus": 2,
+    "surprise_turns": 1,
+    "level_damage": {
+      "template_kind": "class",
+      "templates": [
+        "warrior",
+        "adventurer_expert_warrior",
+        "adventurer_warrior_mage"
+      ],
+      "counter": "level",
+      "divisor": 2
+    },
+    "unarmed": {"damage": "1d2", "names": ["unarmed", "fist", "fists", "punch", "kick"],
+                "attributes": ["str", "dex"], "skill": "punch"},
+    "save": {"mode": "roll_over", "auto_success": null, "auto_fail": null},
+    "initiative": {"die": "1d8", "bonus_stat": "dex", "side": true, "tie": "party"},
+    "initiative_mode": "roll_order"
+  }
+]

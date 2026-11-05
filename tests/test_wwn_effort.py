@@ -15,11 +15,11 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.content.character import derived_stats, resolve
-from cygnusforge.rules import wwn, wwn_magic
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import load_state
-from cygnusforge.services.views import scene_view
+from cygnusloom.content.character import derived_stats, resolve
+from cygnusloom.rules import wwn, wwn_magic
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import load_state
+from cygnusloom.services.views import scene_view
 from tests.test_wwn_advancement import (
     NAME,
     WWN,

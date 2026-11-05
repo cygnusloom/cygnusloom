@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.content.library import _load_rests
-from cygnusforge.services.campaigns import _turn_has_day_end
-from cygnusforge.services.clock import absolute, rest_target
-from cygnusforge.services.common import InvalidInput, session_scope
-from cygnusforge.services.events import RestTaken, events_since
+from cygnusloom.content.definitions import ContentError, Definition
+from cygnusloom.content.library import _load_rests
+from cygnusloom.services.campaigns import _turn_has_day_end
+from cygnusloom.services.clock import absolute, rest_target
+from cygnusloom.services.common import InvalidInput, session_scope
+from cygnusloom.services.events import RestTaken, events_since
 from tests.test_combat import (
     CAIRN,
     PC,

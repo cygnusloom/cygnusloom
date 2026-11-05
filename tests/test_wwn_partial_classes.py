@@ -6,8 +6,8 @@ import random
 
 import pytest
 
-from cygnusforge.content.character import CharacterError, check_choices, resolve
-from cygnusforge.content.library import ContentLibrary
+from cygnusloom.content.character import CharacterError, check_choices, resolve
+from cygnusloom.content.library import ContentLibrary
 
 STATS = {
     "str": 10,

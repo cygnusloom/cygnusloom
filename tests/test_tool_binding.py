@@ -10,11 +10,11 @@ from typing import Any
 
 import pytest
 
-from cygnusforge.content.definitions import ContentError
-from cygnusforge.content.library import ContentLibrary, ToolCall
-from cygnusforge.llm.base import ToolRequest
-from cygnusforge.rules.context import ToolContext
-from cygnusforge.services.tools import ToolRun, run_tool
+from cygnusloom.content.definitions import ContentError
+from cygnusloom.content.library import ContentLibrary, ToolCall
+from cygnusloom.llm.base import ToolRequest
+from cygnusloom.rules.context import ToolContext
+from cygnusloom.services.tools import ToolRun, run_tool
 from tests.conftest import content_library
 from tests.test_library_strictness import _core, _ruleset, _write
 

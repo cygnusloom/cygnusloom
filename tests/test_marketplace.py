@@ -7,10 +7,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.config import Settings
-from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import (
+from cygnusloom.config import Settings
+from cygnusloom.llm.fake import FakeProvider
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import (
     ArmorSet,
     CurrencyChanged,
     ItemAdded,

@@ -11,12 +11,12 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusforge.content.library import EncounterGrid
-from cygnusforge.llm.base import ToolRequest
-from cygnusforge.rules.context import ToolContext, brief
-from cygnusforge.services import encounters
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import (
+from cygnusloom.content.library import EncounterGrid
+from cygnusloom.llm.base import ToolRequest
+from cygnusloom.rules.context import ToolContext, brief
+from cygnusloom.services import encounters
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import (
     NPC_KIND,
     PC_KIND,
     CampaignState,
@@ -29,8 +29,8 @@ from cygnusforge.services.events import (
     token_label,
     token_labels,
 )
-from cygnusforge.services.tools import ToolRun, run_tool
-from cygnusforge.services.world import WorldTools
+from cygnusloom.services.tools import ToolRun, run_tool
+from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library, csrf_token
 from tests.factories import (
     answer,

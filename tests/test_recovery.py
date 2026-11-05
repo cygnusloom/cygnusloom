@@ -4,9 +4,9 @@ from dataclasses import replace
 
 import pytest
 
-from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.content.library import _load_rests
-from cygnusforge.services.events import (
+from cygnusloom.content.definitions import ContentError, Definition
+from cygnusloom.content.library import _load_rests
+from cygnusloom.services.events import (
     PC_KIND,
     CampaignState,
     Character,
@@ -15,7 +15,7 @@ from cygnusforge.services.events import (
     name_key,
     record,
 )
-from cygnusforge.services.recovery import recover
+from cygnusloom.services.recovery import recover
 from tests.test_combat import CAIRN, PC, _character, _fight
 from tests.test_world import _db
 

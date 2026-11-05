@@ -6,9 +6,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.db.models import Campaign
-from cygnusforge.services.campaigns import campaign_log, list_messages
-from cygnusforge.services.events import LocationAdded, load_state, record
+from cygnusloom.db.models import Campaign
+from cygnusloom.services.campaigns import campaign_log, list_messages
+from cygnusloom.services.events import LocationAdded, load_state, record
 from tests.conftest import csrf_token
 from tests.test_campaigns import _campaign_id, _pending, _send, _signed_in
 from tests.test_tools import ROLL, _recording_provider, _script

@@ -1,0 +1,59 @@
+version: 1
+metadata:
+  name: Cygnus Loom
+entries:
+  - model: authentik_core.group
+    id: cygnusloom-admins
+    identifiers:
+      name: !Env CYGNUSLOOM_ADMIN_GROUP
+    attrs:
+      name: !Env CYGNUSLOOM_ADMIN_GROUP
+
+  - model: authentik_providers_oauth2.scopemapping
+    id: cygnusloom-groups
+    identifiers:
+      name: Cygnus Loom groups
+    attrs:
+      name: Cygnus Loom groups
+      scope_name: groups
+      expression: |
+        return {"groups": [group.name for group in request.user.groups.all()]}
+
+  - model: authentik_providers_oauth2.oauth2provider
+    id: cygnusloom-provider
+    identifiers:
+      name: Cygnus Loom
+    attrs:
+      name: Cygnus Loom
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      client_type: confidential
+      client_id: !Env CYGNUSLOOM_OIDC_CLIENT_ID
+      client_secret: !Env CYGNUSLOOM_OIDC_CLIENT_SECRET
+      include_claims_in_id_token: true
+      grant_types:
+        - authorization_code
+        - refresh_token
+      redirect_uris:
+        - matching_mode: strict
+          url: !Env CYGNUSLOOM_OIDC_REDIRECT_URI
+          redirect_uri_type: authorization
+        - matching_mode: strict
+          url: !Env CYGNUSLOOM_OIDC_POST_LOGOUT_URI
+          redirect_uri_type: logout
+      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
+        - !KeyOf cygnusloom-groups
+
+  - model: authentik_core.application
+    id: cygnusloom-app
+    identifiers:
+      slug: cygnusloom
+    attrs:
+      name: Cygnus Loom
+      slug: cygnusloom
+      provider: !KeyOf cygnusloom-provider
+      meta_launch_url: !Env CYGNUSLOOM_BASE_URL

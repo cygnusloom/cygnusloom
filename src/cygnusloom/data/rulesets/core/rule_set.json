@@ -1,0 +1,108 @@
+[
+  {
+    "type": "rule_set",
+    "id": "core",
+    "name": "Core",
+    "description": "Rules every campaign uses: narration, locations, NPCs, notes, and speech. A campaign's own rule set can replace any of these by using the same id."
+  },
+  {
+    "type": "python_module",
+    "id": "core",
+    "module": "cygnusloom.rules.core"
+  },
+  {
+    "type": "rule",
+    "id": "narration",
+    "important": true,
+    "text": "Narrate in the present tense, as the story unfolds: \"Brann pushes the door open\", not \"Brann pushed the door open\". This holds for every beat, including the introduction and every fight. Use the past tense only for events that happened before the current scene, such as a memory or a rumour the characters hear."
+  },
+  {
+    "type": "rule",
+    "id": "lookup",
+    "important": true,
+    "text": "You do not carry the whole world in your head, so look things up. The state above gives only the player character's location and the NPCs there. Use all_at_location to see a place with everyone and everything recorded at it, search_location and search_npc to find places and NPCs by words, search_notes for past events, and get_statblock for a character's stats, features, and fields, and character_options for the values a character field can take. Use these tools liberally: look up anything you need before you act, narrate, or decide an outcome. A statblock is not in your context until you fetch it, so fetch it before any roll or change to a character's abilities. Do not guess what is not in front of you. Your context lists every rule with a brief, and the important rules in full; read the full text of any other rule with lookup_rule. Use list_lookups when you are unsure what you can look up."
+  },
+  {
+    "type": "rule",
+    "id": "locations",
+    "important": true,
+    "text": "Locations are places the characters can be in. Create a location when the story reaches a new place, and give it a name and a description the players can picture. Update a location's description when the place changes. Delete a location only when it no longer belongs in the story, and only once nobody is there; move anyone away first. The player character and every NPC are at exactly one location. Move the player character when they travel. Travel follows the routes in the location descriptions: move the player character only to a place that a route from where they are reaches, and only when the story has taken them that way. Never move them to a place they have not heard of; if the story shows one first (a visible door, a stated exit), use discover_location, then move them there. The exception is forced movement, such as a trap, a teleporter, or a spell: then move them, and the place is discovered on arrival. A route that a location description names to another place is authored: use that link, and do not invent a corridor, passage, or other place between two places an authored route connects. Create a new place only where no authored route connects the two. When an NPC gives directions, discover only the destination the NPC sends the player to; the other places the directions name stay undiscovered until the player hears of them in detail or goes there. Every location has a place on the world map, in kilometers from the map's center (x east, y north), and may be left off it. No two locations share a point: a create or move to a point another location has is refused until you pass force=true, so pass it only when the two places really are the same spot. To correct a position, update the location with its new x and y. To take a place off the map but keep it in the story, update it with off_map set to true. To remove it, use delete_location, and only once nobody is there. A place inside another location, such as a building in a city, is created with parent set to that location; it has no map point of its own and is never pinned. Only a top-level location can hold places, and a location that holds places cannot be deleted until they are removed. The player's map shows only discovered locations. A location is discovered once the player character has been there or has heard about it in detail; use discover_location for the second case. Create a location as discovered only when anyone in the world would know it. Give a position only when where the place lies relative to others is known. Ground on the map is made of regions. When the story needs ground the map does not show, create it with create_region: give six or more corners, with sides of uneven length and turns of uneven angle, following the shape the story describes rather than a plain rectangle. A new region is cut to fit the ground already there. A region stays hidden from the player until they know of it or a discovered place lies inside it."
+  },
+  {
+    "type": "rule",
+    "id": "npcs",
+    "important": true,
+    "text": "NPCs are people (or other creatures) the player character can meet. Create an NPC when the story needs one, place it at a location, and describe who they are. An NPC's description is your own record of who they are and may hold secrets the player has not learned; the player never sees it. The personality, accent, and quirks are what the player character sees of the NPC on meeting them. Update an NPC when they change, and delete one when they leave the story for good. Keep them consistent with what has happened. Only an NPC who is at the player character's location can speak to them. The player character is not an NPC and cannot be updated or removed this way. Use update_npc_knowledge to record what the player learns about an NPC, such as their appearance, a change in how they stand with the player, or where they have gone; the Characters page shows only what that tool records and what the player sees on meeting them."
+  },
+  {
+    "type": "rule",
+    "id": "notes",
+    "important": true,
+    "text": "Notes are for you, the GM. Use them to keep track of events, updates, and situations so you stay consistent: what has happened, promises made, secrets, clues, changes to a place or NPC, and where things stand. Write them as your own record, not as narration for the player. Record a note whenever something changes that you may need later. Update a note when what it records changes, and delete it when it no longer holds. Notes are never narrated to the player. Attach a note to a location or NPC when it is about that subject, and leave it campaign-wide otherwise. Search your notes before continuing a thread or answering a question about past events, so you do not contradict what was established."
+  },
+  {
+    "type": "rule",
+    "id": "journal",
+    "text": "The journal is one text file the player reads: a running record of what has happened in the campaign, in the story's own voice. Before each turn is narrated, a separate journal step writes what the turn changed into the journal: it merges the turn into the current campaign day's passage, corrects earlier passages with an exact find and replace when new facts change them, and deletes passages that no longer belong. Keep one passage per campaign day, and when the journal runs long, condense older days into shorter passages. It is the campaign recap, so keep it accurate. The player only reads the journal, so it never reveals what the player character has not learned or any secret you are keeping. Search it with search_journal, and view line ranges with view_journal, to stay consistent with what the player has been told."
+
+
+  },
+  {
+    "type": "rule",
+    "id": "speech",
+    "important": true,
+    "text": "NPC dialogue is written separately. Never write an NPC's words in the narration yourself. To make an NPC speak, call speak with the NPC's name and what they want to say. Then quote the dialogue exactly as the tool returns it."
+  },
+  {
+    "type": "table",
+    "id": "personality",
+    "options": [
+      "cheerful and talkative",
+      "gruff and suspicious",
+      "patient and gentle",
+      "anxious and easily startled",
+      "proud and quick to take offense",
+      "curious and full of questions",
+      "dry and sarcastic",
+      "warm and protective",
+      "greedy but honest",
+      "solemn and careful with words",
+      "boisterous and generous",
+      "shy and eager to please"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "accent",
+    "options": [
+      "soft and lilting",
+      "clipped and blunt",
+      "drawling and slow",
+      "rolling with long vowels",
+      "sing-song",
+      "rough and rural",
+      "precise and formal",
+      "whispery",
+      "heavy with a hill-country burr",
+      "quick and slurred"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "quirk",
+    "options": [
+      "taps a finger against their lips when thinking",
+      "hums under their breath",
+      "always eats something while talking",
+      "refers to everyone as 'friend'",
+      "counts things under their breath",
+      "never makes eye contact",
+      "speaks in proverbs",
+      "adjusts their clothes constantly",
+      "ends sentences with a question",
+      "keeps glancing at the sky",
+      "collects small bits of mushroom",
+      "tells the same joke twice"
+    ]
+  }
+]

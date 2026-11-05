@@ -1,7 +1,6 @@
-# Authentik setup for Cygnus Forge
+# Authentik setup for Cygnus Loom
 
-The compose stack starts Authentik, its Postgres database, and Redis alongside the app. Cygnus
-Forge never stores passwords or roles; Authentik owns both.
+The compose stack starts Authentik, its Postgres database, and Redis alongside the app. Cygnus Loom never stores passwords or roles; Authentik owns both.
 
 This setup uses **local Authentik accounts only**. There are no Google or Microsoft sources to
 configure. Users sign in with a username and password stored in Authentik.
@@ -20,39 +19,38 @@ configure. Users sign in with a username and password stored in Authentik.
 5. Open `https://<AUTHENTIK_DOMAIN>/` and sign in as `akadmin` with the bootstrap password.
    Change that password in Authentik after signing in; the environment variable is only read on
    the first start.
-6. Grant the Cygnus Forge administrator role: **Directory → Groups → cygnusforge-admins →
+6. Grant the Cygnus Loom administrator role: **Directory → Groups → cygnusloom-admins →
    Users → Add existing user → akadmin**. A user who is not in this group is a normal player.
-7. Open `https://<CYGNUSFORGE_DOMAIN>/login` and continue with the identity provider. You are
+7. Open `https://<CYGNUSLOOM_DOMAIN>/login` and continue with the identity provider. You are
    signed in as `akadmin` and see the Admin link. The account page links back to Authentik's
    user interface for changing your password or MFA.
-8. Open **Admin → Models** and add at least one language model. Cygnus Forge ships with none,
+8. Open **Admin → Models** and add at least one language model. Cygnus Loom ships with none,
    so players cannot create campaigns until this is done.
 
-The bundled blueprint creates the `cygnusforge-admins` group, the OIDC provider, and the Cygnus
-Forge application. Role changes take effect at the next Cygnus Forge sign-in.
+The bundled blueprint creates the `cygnusloom-admins` group, the OIDC provider, and the Cygnus Loom application. Role changes take effect at the next Cygnus Loom sign-in.
 
-The blueprint lives at `deploy/authentik/blueprints/cygnusforge.yaml`. It sets the application's
-Launch URL to `CYGNUSFORGE_BASE_URL`, which makes Cygnus Forge appear on the Authentik user
+The blueprint lives at `deploy/authentik/blueprints/cygnusloom.yaml`. It sets the application's
+Launch URL to `CYGNUSLOOM_BASE_URL`, which makes Cygnus Loom appear on the Authentik user
 dashboard. Check `docker compose logs authentik-worker` if it did not apply; the blueprint schema
 can differ between Authentik releases. The manual equivalent is below.
 
-If Cygnus Forge is missing from **Applications → Applications**, the blueprint was not applied;
+If Cygnus Loom is missing from **Applications → Applications**, the blueprint was not applied;
 check **System → Blueprints** for the error and the worker logs. If it exists in the admin list
 but not on your user dashboard, open the application and set **Launch URL** to the app URL
-(`http://localhost:21872` locally, or `https://<CYGNUSFORGE_DOMAIN>` in production).
+(`http://localhost:21872` locally, or `https://<CYGNUSLOOM_DOMAIN>` in production).
 
 ## Add a player
 
 1. In Authentik open **Directory → Users → Create**.
-2. Set a username, email, and password. Leave the user out of `cygnusforge-admins` for a normal
+2. Set a username, email, and password. Leave the user out of `cygnusloom-admins` for a normal
    player.
-3. Give the user the Cygnus Forge application: **Applications → Cygnus Forge → Policy / Group /
+3. Give the user the Cygnus Loom application: **Applications → Cygnus Loom → Policy / Group /
    User Bindings → Bind existing user**, or add the user to a group that is already bound.
-4. The user opens `https://<CYGNUSFORGE_DOMAIN>/login` and signs in with that username and
+4. The user opens `https://<CYGNUSLOOM_DOMAIN>/login` and signs in with that username and
    password.
 
-To make someone an administrator, add them to `cygnusforge-admins` in Authentik. They must sign
-in to Cygnus Forge again before the new role is visible.
+To make someone an administrator, add them to `cygnusloom-admins` in Authentik. They must sign
+in to Cygnus Loom again before the new role is visible.
 
 ## Local-only server
 
@@ -77,9 +75,9 @@ the nginx sample. The identity provider does not need to be reachable from the p
 
 If the blueprint does not match your Authentik version, create:
 
-- A confidential OAuth2/OpenID provider with client ID `CYGNUSFORGE_OIDC_CLIENT_ID`, the client
-  secret from `.env`, authorization redirect URI `https://<CYGNUSFORGE_DOMAIN>/auth/callback`,
-  and logout redirect URI `https://<CYGNUSFORGE_DOMAIN>/login` (select the matching redirect
+- A confidential OAuth2/OpenID provider with client ID `CYGNUSLOOM_OIDC_CLIENT_ID`, the client
+  secret from `.env`, authorization redirect URI `https://<CYGNUSLOOM_DOMAIN>/auth/callback`,
+  and logout redirect URI `https://<CYGNUSLOOM_DOMAIN>/login` (select the matching redirect
   URI type for each in Authentik 2026.5 and later).
 - Scopes `openid`, `email`, `profile`, and `groups`.
 - A scope mapping named `groups` with:
@@ -90,7 +88,7 @@ If the blueprint does not match your Authentik version, create:
 
 - An application bound to the provider.
 
-Cygnus Forge reads the claim named by `CYGNUSFORGE_OIDC_ADMIN_CLAIM` (default `groups`) and
-compares it with `CYGNUSFORGE_OIDC_ADMIN_VALUES` (default `cygnusforge-admins`). It does not
+Cygnus Loom reads the claim named by `CYGNUSLOOM_OIDC_ADMIN_CLAIM` (default `groups`) and
+compares it with `CYGNUSLOOM_OIDC_ADMIN_VALUES` (default `cygnusloom-admins`). It does not
 write roles back to Authentik.
 

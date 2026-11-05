@@ -5,8 +5,8 @@ from typing import Any
 
 import pytest
 
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import PARTY_SIDE
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import PARTY_SIDE
 from tests.test_combat import (
     PC,
     YARD,

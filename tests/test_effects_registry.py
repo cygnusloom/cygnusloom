@@ -6,9 +6,9 @@ from typing import Any
 
 import pytest
 
-from cygnusforge.content.definitions import ContentError
-from cygnusforge.content.library import EFFECT_RULES, ContentLibrary, _check_effects
-from cygnusforge.services.effects import EFFECT_EXECUTORS
+from cygnusloom.content.definitions import ContentError
+from cygnusloom.content.library import EFFECT_RULES, ContentLibrary, _check_effects
+from cygnusloom.services.effects import EFFECT_EXECUTORS
 from tests.conftest import content_library
 from tests.support import DEFAULT_RULE_SET, content_tree
 

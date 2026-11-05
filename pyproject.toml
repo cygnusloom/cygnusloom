@@ -1,5 +1,5 @@
 [project]
-name = "cygnusforge"
+name = "cygnusloom"
 version = "2.0.0"
 description = "RPG with an AI game master"
 license = "AGPL-3.0-or-later"
@@ -21,7 +21,8 @@ dependencies = [
 ]
 
 [project.urls]
-Source = "https://github.com/linewriter1024/cygnusforge"
+Homepage = "https://cygnusloom.com"
+Source = "https://github.com/cygnusloom/cygnusloom"
 
 [dependency-groups]
 dev = [
@@ -51,10 +52,10 @@ exclude = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/cygnusforge"]
+packages = ["src/cygnusloom"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"CREDITS.md" = "cygnusforge/CREDITS.md"
+"CREDITS.md" = "cygnusloom/CREDITS.md"
 
 [tool.hatch.build.targets.sdist]
 only-include = [

@@ -6,8 +6,8 @@ from typing import Any
 
 import pytest
 
-from cygnusforge.llm.base import ChatReply, LLMError
-from cygnusforge.llm.fake import FakeProvider
+from cygnusloom.llm.base import ChatReply, LLMError
+from cygnusloom.llm.fake import FakeProvider
 
 
 def _decide(messages: list[dict[str, Any]]) -> ChatReply:

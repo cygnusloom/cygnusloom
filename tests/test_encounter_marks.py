@@ -9,12 +9,12 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusforge.content.library import EncounterGrid
-from cygnusforge.llm.base import ToolRequest
-from cygnusforge.services import encounters
-from cygnusforge.services.events import CellMark, load_state, name_key
-from cygnusforge.services.tools import ToolRun, run_tool
-from cygnusforge.web.campaigns import _cell_tip
+from cygnusloom.content.library import EncounterGrid
+from cygnusloom.llm.base import ToolRequest
+from cygnusloom.services import encounters
+from cygnusloom.services.events import CellMark, load_state, name_key
+from cygnusloom.services.tools import ToolRun, run_tool
+from cygnusloom.web.campaigns import _cell_tip
 from tests.conftest import content_library
 from tests.test_campaigns import _campaign_id, _place_pc
 from tests.test_world import _ctx, _db, _state

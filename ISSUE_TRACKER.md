@@ -11,7 +11,6 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
    book's faction assets and their turns are GM text rather than engine state.
 8. Audit the transcript for cleanliness - we likely don't need announcements about armor values (WWN).
 13. Move the setting/story override into the campaign creation campaign options page; not on the first level pre-creation screen.
-14. Rename the game and engine to "Cygnus Loom" "cygnusloom". All references to "Cygnus Forge" must be renamed. I will manually handle renaming the repositories and this project's directory. Backwards compatibility is not a concern; this will be part of 2.0.0. The new URL for the project will be cygnusloom.com, linked on the about page and bottom bar. The new repo is github.com cygnusloom/cygnusloom; update even my .git remote
 
 # Triaged Issues
 

@@ -14,9 +14,9 @@ from typing import Any
 
 import pytest
 
-from cygnusforge.content.definitions import ContentError
-from cygnusforge.content.library import ContentLibrary
-from cygnusforge.services.events import (
+from cygnusloom.content.definitions import ContentError
+from cygnusloom.content.library import ContentLibrary
+from cygnusloom.services.events import (
     NPC_KIND,
     Character,
     Harmed,

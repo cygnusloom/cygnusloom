@@ -8,7 +8,7 @@ import re
 import pytest
 from sqlmodel import Session
 
-from cygnusforge.content.character import (
+from cygnusloom.content.character import (
     CharacterError,
     derived_stats,
     describe,
@@ -16,10 +16,10 @@ from cygnusforge.content.character import (
     resolve,
     skill_pick_options,
 )
-from cygnusforge.content.library import ContentLibrary
-from cygnusforge.rules.wwn_progression import require_wwn_progression
-from cygnusforge.services.events import NPC_KIND, PC_KIND, CampaignState, Character, load_state
-from cygnusforge.services.views import get_statblock, scene_view
+from cygnusloom.content.library import ContentLibrary
+from cygnusloom.rules.wwn_progression import require_wwn_progression
+from cygnusloom.services.events import NPC_KIND, PC_KIND, CampaignState, Character, load_state
+from cygnusloom.services.views import get_statblock, scene_view
 from tests.conftest import content_library
 from tests.factories import WWN_STATS, pinned_stats
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in

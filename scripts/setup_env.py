@@ -39,7 +39,7 @@ def write_env(
         if SECRET_MARKER in line and "=" in line:
             key = line.split("=", 1)[0]
             text = _set(text, key, secrets.token_hex(32))
-    text = _set(text, "CYGNUSFORGE_DOMAIN", domain)
+    text = _set(text, "CYGNUSLOOM_DOMAIN", domain)
     text = _set(text, "AUTHENTIK_DOMAIN", idp_domain)
     text = _set(text, "ACME_EMAIL", email)
     text = _set(text, "AUTHENTIK_BOOTSTRAP_EMAIL", email)

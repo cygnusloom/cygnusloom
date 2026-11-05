@@ -9,11 +9,11 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.content.library import InventoryPool, InventoryRules
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import ItemAdded, current, record
-from cygnusforge.services.market import listed_item
-from cygnusforge.services.world import WorldTools
+from cygnusloom.content.library import InventoryPool, InventoryRules
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import ItemAdded, current, record
+from cygnusloom.services.market import listed_item
+from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library
 from tests.test_combat import CAIRN, PC, _character, _fight, _fight_client
 

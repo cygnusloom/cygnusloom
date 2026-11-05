@@ -12,11 +12,11 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from cygnusforge.content.character import TableOption
-from cygnusforge.content.library import ContentLibrary
-from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.services.campaigns import _tool_context
-from cygnusforge.services.world import WorldTools
+from cygnusloom.content.character import TableOption
+from cygnusloom.content.library import ContentLibrary
+from cygnusloom.llm.fake import FakeProvider
+from cygnusloom.services.campaigns import _tool_context
+from cygnusloom.services.world import WorldTools
 from tests.factories import campaign_ready
 from tests.support import DEFAULT_RULE_SET, DEFAULT_WORLD, content_tree
 

@@ -13,9 +13,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.config import Settings
-from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.services.events import CampaignState, load_state
+from cygnusloom.config import Settings
+from cygnusloom.llm.fake import FakeProvider
+from cygnusloom.services.events import CampaignState, load_state
 from tests.conftest import csrf_token, is_review_messages
 from tests.test_campaigns import _campaign_id, _debug_client_factory
 from tests.test_tools import _saved, _script

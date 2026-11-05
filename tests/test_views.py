@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from cygnusforge.content.library import ClockRules
-from cygnusforge.services.events import CampaignState, Clock
-from cygnusforge.services.views import TimeView, time_view
+from cygnusloom.content.library import ClockRules
+from cygnusloom.services.events import CampaignState, Clock
+from cygnusloom.services.views import TimeView, time_view
 
 
 def test_time_view_reports_the_day_part_and_night() -> None:

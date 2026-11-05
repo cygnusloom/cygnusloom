@@ -25,11 +25,11 @@ from fastapi.testclient import TestClient
 from httpx import Response
 from sqlmodel import Session
 
-from cygnusforge.content.library import RuleSet
-from cygnusforge.services import campaigns as campaigns_service
-from cygnusforge.services import world
-from cygnusforge.services.events import CampaignState, Character, Turn, load_state
-from cygnusforge.services.world import WorldTools
+from cygnusloom.content.library import RuleSet
+from cygnusloom.services import campaigns as campaigns_service
+from cygnusloom.services import world
+from cygnusloom.services.events import CampaignState, Character, Turn, load_state
+from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library, csrf_token, register
 
 DEFAULT_WORLD = "testhollow"

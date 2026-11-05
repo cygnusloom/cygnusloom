@@ -11,11 +11,11 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.llm.base import ChatReply
-from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.services import turns as turns_service
-from cygnusforge.services.campaigns import list_messages
-from cygnusforge.services.events import events_since
+from cygnusloom.llm.base import ChatReply
+from cygnusloom.llm.fake import FakeProvider
+from cygnusloom.services import turns as turns_service
+from cygnusloom.services.campaigns import list_messages
+from cygnusloom.services.events import events_since
 from tests import factories
 
 

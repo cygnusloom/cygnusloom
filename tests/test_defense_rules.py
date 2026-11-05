@@ -4,10 +4,10 @@ from dataclasses import replace
 
 import pytest
 
-from cygnusforge.content.character import DefenseFloor, build_character
-from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.services.combat import equipped_defense
-from cygnusforge.services.events import Character
+from cygnusloom.content.character import DefenseFloor, build_character
+from cygnusloom.content.definitions import ContentError, Definition
+from cygnusloom.services.combat import equipped_defense
+from cygnusloom.services.events import Character
 from tests.factories import rules_for
 
 # The fixture rule set's character spec: a neutral base to hang a defense floor on. Its Resolve

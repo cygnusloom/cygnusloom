@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from cygnusforge.services.prompts import (
+from cygnusloom.services.prompts import (
     JOURNAL_INSTRUCTION,
     OOC_INSTRUCTION,
     STATE_INSTRUCTION,

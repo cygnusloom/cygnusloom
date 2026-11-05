@@ -10,9 +10,9 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusforge.llm.base import ToolRequest
-from cygnusforge.services.events import name_key
-from cygnusforge.services.tools import ToolRun, run_tool
+from cygnusloom.llm.base import ToolRequest
+from cygnusloom.services.events import name_key
+from cygnusloom.services.tools import ToolRun, run_tool
 from tests.test_campaigns import _campaign_id, _place_pc
 from tests.test_world import CAIRN_TOOLS, _ctx, _state
 

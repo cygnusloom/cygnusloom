@@ -5,11 +5,11 @@ from dataclasses import replace
 import pytest
 from sqlmodel import Session, select
 
-from cygnusforge.config import Settings
-from cygnusforge.db.models import LlmModel
-from cygnusforge.db.session import create_schema, make_engine
-from cygnusforge.llm.catalog import ModelCatalog, decrypt_api_key
-from cygnusforge.services.common import Conflict, InvalidInput
+from cygnusloom.config import Settings
+from cygnusloom.db.models import LlmModel
+from cygnusloom.db.session import create_schema, make_engine
+from cygnusloom.llm.catalog import ModelCatalog, decrypt_api_key
+from cygnusloom.services.common import Conflict, InvalidInput
 
 
 def _catalog(settings: Settings) -> tuple[ModelCatalog, object]:

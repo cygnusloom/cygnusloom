@@ -3,8 +3,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from cygnusforge.llm.base import ChatReply
-from cygnusforge.services.campaigns import _repeated_place
+from cygnusloom.llm.base import ChatReply
+from cygnusloom.services.campaigns import _repeated_place
 
 NAMES = ["Farming Path", "The Mossbell Hollow"]
 

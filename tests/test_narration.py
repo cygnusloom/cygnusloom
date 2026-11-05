@@ -11,9 +11,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.services.campaigns import _without_draft
-from cygnusforge.services.events import Channel, decode, events_since, is_hidden, last_event_id
-from cygnusforge.services.prompts import system_parts
+from cygnusloom.services.campaigns import _without_draft
+from cygnusloom.services.events import Channel, decode, events_since, is_hidden, last_event_id
+from cygnusloom.services.prompts import system_parts
 from tests.conftest import content_library
 from tests.test_campaigns import _answer, _campaign_id, _place_pc, _send
 from tests.test_tools import ROLL, _recording_provider, _script

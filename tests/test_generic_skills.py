@@ -8,7 +8,7 @@ import pytest
 from fastapi import FastAPI
 from sqlmodel import Session
 
-from cygnusforge.content.character import (
+from cygnusloom.content.character import (
     CharacterError,
     Feature,
     SkillProgression,
@@ -18,13 +18,13 @@ from cygnusforge.content.character import (
     describe,
     resolve,
 )
-from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.content.library import ContentLibrary, _load_moves
-from cygnusforge.rules import wwn_magic
-from cygnusforge.services import moves
-from cygnusforge.services.combat import _player_bonuses
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import (
+from cygnusloom.content.definitions import ContentError, Definition
+from cygnusloom.content.library import ContentLibrary, _load_moves
+from cygnusloom.rules import wwn_magic
+from cygnusloom.services import moves
+from cygnusloom.services.combat import _player_bonuses
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import (
     Character,
     CheckMade,
     NpcAdded,

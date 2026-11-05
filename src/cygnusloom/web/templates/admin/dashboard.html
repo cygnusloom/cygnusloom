@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Administration{% endblock %}
+{% block content %}
+  {% include "admin/nav.html" %}
+  <section class="card">
+    <h1>Administration</h1>
+    <p class="muted">Cygnus Loom version {{ app_version }}</p>
+    <div class="stats">
+      <div><strong>{{ data.user_count }}</strong><span>accounts</span></div>
+      <div><strong>{{ data.new_users }}</strong><span>new in 7 days</span></div>
+      <div><strong>{{ data.disabled_users }}</strong><span>disabled</span></div>
+      <div><strong>{{ data.campaign_count }}</strong><span>campaigns</span></div>
+      <div><strong>{{ data.event_count }}</strong><span>events</span></div>
+      <div><strong>{{ data.active_sessions }}</strong><span>active sessions</span></div>
+    </div>
+  </section>
+
+  <div class="admin-grid">
+    <section class="card">
+      <h2>Recent accounts</h2>
+      {% if data.recent_users %}
+        <table>
+          <thead><tr><th>Account</th><th>Roles</th><th>Created</th></tr></thead>
+          <tbody>
+            {% for row in data.recent_users %}
+              <tr>
+                <td><a href="/admin/users/{{ row.id }}">{{ row.email or row.subject }}</a></td>
+                <td>{% for role in row.roles|roles %}<span class="tag">{{ role }}</span>{% endfor %}</td>
+                <td>{{ row.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="muted">No accounts yet.</p>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <h2>Recent campaigns</h2>
+      {% if data.recent_campaigns %}
+        <table>
+          <thead><tr><th>Campaign</th><th>Owner</th><th>Events</th></tr></thead>
+          <tbody>
+            {% for row in data.recent_campaigns %}
+              <tr>
+                <td><a href="/admin/campaigns/{{ row.campaign.id }}">{{ row.campaign.name }}</a></td>
+                <td>{{ row.owner_email }}</td>
+                <td>{{ row.event_count }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="muted">No campaigns yet.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Campaigns by model</h2>
+    {% if data.campaigns_by_model %}
+      <table>
+        <thead><tr><th>Model</th><th>Campaigns</th></tr></thead>
+        <tbody>
+          {% for model, count in data.campaigns_by_model %}
+            <tr><td>{{ model }}</td><td>{{ count }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="muted">No campaigns yet.</p>
+    {% endif %}
+  </section>
+{% endblock %}

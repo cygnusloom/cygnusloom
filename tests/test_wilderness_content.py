@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.content.library import (
+from cygnusloom.content.definitions import ContentError, Definition
+from cygnusloom.content.library import (
     DATA_DIR,
     ContentLibrary,
     DieGrowth,

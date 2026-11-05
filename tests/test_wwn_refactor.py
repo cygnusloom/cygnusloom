@@ -14,8 +14,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.content.definitions import ContentError, Definition
-from cygnusforge.content.library import (
+from cygnusloom.content.definitions import ContentError, Definition
+from cygnusloom.content.library import (
     ContentLibrary,
     InitiativeRules,
     Marketplace,
@@ -23,11 +23,11 @@ from cygnusforge.content.library import (
     _load_marketplace,
     _load_tool_call,
 )
-from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.services import campaigns as campaigns_service
-from cygnusforge.services import encounters, inventory, market
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import (
+from cygnusloom.llm.fake import FakeProvider
+from cygnusloom.services import campaigns as campaigns_service
+from cygnusloom.services import encounters, inventory, market
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import (
     ArmorSet,
     ChatGM,
     CurrencyChanged,
@@ -35,8 +35,8 @@ from cygnusforge.services.events import (
     load_state,
     record,
 )
-from cygnusforge.services.views import scene_view, world_state_text
-from cygnusforge.services.world import WorldTools
+from cygnusloom.services.views import scene_view, world_state_text
+from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library
 from tests.factories import WWN_STATS, pinned_stats
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in

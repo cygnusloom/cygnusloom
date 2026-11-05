@@ -9,17 +9,17 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusforge.content.definitions import ContentError
-from cygnusforge.content.library import ContentLibrary
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import (
+from cygnusloom.content.definitions import ContentError
+from cygnusloom.content.library import ContentLibrary
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import (
     NPC_KIND,
     ParticipantJoined,
     last_event_id,
     load_state,
     record,
 )
-from cygnusforge.services.world import WorldTools
+from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library
 from tests.test_character_creation import _cairn_campaign
 from tests.test_combat import PC, _fight, _tools

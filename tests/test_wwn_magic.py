@@ -14,11 +14,11 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.content.character import derived_stats
-from cygnusforge.rules import wwn, wwn_magic
-from cygnusforge.rules.wwn_progression import require_wwn_progression
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import CheckMade, SpellCast, load_state
+from cygnusloom.content.character import derived_stats
+from cygnusloom.rules import wwn, wwn_magic
+from cygnusloom.rules.wwn_progression import require_wwn_progression
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import CheckMade, SpellCast, load_state
 from tests.test_wwn_advancement import (
     LIBRARY,
     NAME,
@@ -458,7 +458,7 @@ def test_every_wwn_tool_loads_and_binds_its_declared_required_parameters() -> No
         call
         for call in WWN.tool_calls.values()
         if call.function is not None
-        and call.function.__module__ in {"cygnusforge.rules.wwn", "cygnusforge.rules.wwn_magic"}
+        and call.function.__module__ in {"cygnusloom.rules.wwn", "cygnusloom.rules.wwn_magic"}
     ]
     assert {call.id for call in calls} == {
         # The WorldTools methods that cannot take the schema's argument names or defaults.
@@ -492,7 +492,7 @@ def test_every_wwn_tool_loads_and_binds_its_declared_required_parameters() -> No
     }
     assert {call.id for call in calls} & KEPT_WWN_WRAPPERS == KEPT_WWN_WRAPPERS
     for call in calls:
-        module = wwn if call.function.__module__ == "cygnusforge.rules.wwn" else wwn_magic
+        module = wwn if call.function.__module__ == "cygnusloom.rules.wwn" else wwn_magic
         assert getattr(module, call.name) is call.function
         assert call.world_method is None
         assert call.takes_context

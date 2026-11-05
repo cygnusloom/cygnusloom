@@ -18,12 +18,12 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.content.character import Feature, Reaction
-from cygnusforge.content.library import CombatRules, ContentLibrary, InjuryEntry, InjuryTable
-from cygnusforge.rules import wwn
-from cygnusforge.services import death, encounters
-from cygnusforge.services.common import InvalidInput
-from cygnusforge.services.events import (
+from cygnusloom.content.character import Feature, Reaction
+from cygnusloom.content.library import CombatRules, ContentLibrary, InjuryEntry, InjuryTable
+from cygnusloom.rules import wwn
+from cygnusloom.services import death, encounters
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import (
     CharacterDying,
     CharacterSaved,
     ChatGM,
@@ -39,9 +39,9 @@ from cygnusforge.services.events import (
     name_key,
     record,
 )
-from cygnusforge.services.tools import Ask, RollAnswer, ToolRequest, run_tool
-from cygnusforge.services.views import scene_view
-from cygnusforge.services.world import WorldTools
+from cygnusloom.services.tools import Ask, RollAnswer, ToolRequest, run_tool
+from cygnusloom.services.views import scene_view
+from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library, csrf_token
 from tests.factories import WWN_STATS, pinned_stats
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
@@ -982,7 +982,7 @@ def test_an_important_npc_is_mortally_wounded_rather_than_killed(client_factory)
 
 
 def test_a_week_of_bed_rest_ends_frail(client_factory):
-    from cygnusforge.services.events import ConditionAdded, record
+    from cygnusloom.services.events import ConditionAdded, record
 
     client, campaign_id, tools = _wwn_campaign(client_factory)
     app = client.app
@@ -1328,7 +1328,7 @@ def test_lookup_condition_returns_its_effects_and_triggers(client_factory):
 def test_healing_restores_harm_and_never_goes_below_zero(client_factory):
     client, campaign_id, tools = _wwn_campaign(client_factory)
     app = client.app
-    from cygnusforge.services.events import Recovered
+    from cygnusloom.services.events import Recovered
 
     tools.harm_character(PC, "hp", 2, "a test wound")
     healed = tools.heal_character(PC, 5, cause="a healing art")
@@ -1343,7 +1343,7 @@ def test_healing_restores_harm_and_never_goes_below_zero(client_factory):
 def test_healing_with_no_harm_records_zero_and_changes_nothing(client_factory):
     client, campaign_id, tools = _wwn_campaign(client_factory)
     app = client.app
-    from cygnusforge.services.events import Recovered
+    from cygnusloom.services.events import Recovered
 
     healed = tools.heal_character(PC, 5, cause="a healing art")
 

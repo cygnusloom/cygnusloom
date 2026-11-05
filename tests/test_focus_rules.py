@@ -4,7 +4,7 @@ import random
 
 import pytest
 
-from cygnusforge.content.character import (
+from cygnusloom.content.character import (
     CharacterError,
     Sheet,
     character_schema,
@@ -12,7 +12,7 @@ from cygnusforge.content.character import (
     feature_pick_options,
     resolve,
 )
-from cygnusforge.services.tools import check_arguments
+from cygnusloom.services.tools import check_arguments
 from tests.conftest import content_library
 
 

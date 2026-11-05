@@ -11,8 +11,8 @@ import json
 
 import pytest
 
-from cygnusforge.content.library import DATA_DIR, ContentLibrary
-from cygnusforge.services.prompts import state_instruction
+from cygnusloom.content.library import DATA_DIR, ContentLibrary
+from cygnusloom.services.prompts import state_instruction
 from tests.conftest import content_library
 
 BUNDLED_RULE_SETS = ("academia-arcana", "cairn2e", "worldswithoutnumber")

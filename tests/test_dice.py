@@ -7,7 +7,7 @@ import random
 
 import pytest
 
-from cygnusforge.rules.dice import FORMULA, is_formula, roll_total
+from cygnusloom.rules.dice import FORMULA, is_formula, roll_total
 
 
 @pytest.mark.parametrize("text", ["1d20", "3d6", "2d8", "1d8+1d8", "2d6+1d4", "2d6+1d4+1d6"])

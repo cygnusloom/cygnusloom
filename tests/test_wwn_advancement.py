@@ -20,14 +20,14 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.content.character import Feature, Granted
-from cygnusforge.content.library import ContentLibrary, LocationTemplate, NpcTemplate
-from cygnusforge.llm.fake import FakeProvider
-from cygnusforge.rules import wwn
-from cygnusforge.services import campaigns as campaigns_service
-from cygnusforge.services import world as world_service
-from cygnusforge.services.common import InvalidInput, session_scope
-from cygnusforge.services.events import (
+from cygnusloom.content.character import Feature, Granted
+from cygnusloom.content.library import ContentLibrary, LocationTemplate, NpcTemplate
+from cygnusloom.llm.fake import FakeProvider
+from cygnusloom.rules import wwn
+from cygnusloom.services import campaigns as campaigns_service
+from cygnusloom.services import world as world_service
+from cygnusloom.services.common import InvalidInput, session_scope
+from cygnusloom.services.events import (
     ArmorSet,
     CharacterDying,
     ConditionAdded,
@@ -42,9 +42,9 @@ from cygnusforge.services.events import (
     name_key,
     record,
 )
-from cygnusforge.services.injuries import EffectContext, run_effects
-from cygnusforge.services.tools import check_arguments
-from cygnusforge.services.world import WorldTools
+from cygnusloom.services.injuries import EffectContext, run_effects
+from cygnusloom.services.tools import check_arguments
+from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library
 from tests.factories import WWN_STATS
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
