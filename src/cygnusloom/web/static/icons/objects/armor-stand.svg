@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Armor stand</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 8 V58 M20 58 H44"/>
+    <path d="M16 26 H48"/>
+    <circle cx="32" cy="12" r="6" fill="#a7adb2"/>
+    <path d="M20 26 Q32 20 44 26 L42 44 Q32 50 22 44 Z" fill="#a7adb2"/>
+  </g>
+</svg>

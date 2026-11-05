@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Fireplace</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 56 V20 H56 V56" fill="#a7adb2"/>
+    <path d="M6 14 H58 V20 H6 Z" fill="#8b5e3c"/>
+    <path d="M20 56 V38 Q32 26 44 38 V56 Z" fill="#2e2620"/>
+    <path d="M28 56 Q28 46 32 40 Q36 46 36 56 Z" fill="#c0503a"/>
+    <path d="M10 30 H18 M46 30 H54 M10 42 H18 M46 42 H54"/>
+  </g>
+</svg>

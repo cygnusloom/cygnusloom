@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Lava field</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 42 Q18 34 32 40 Q46 32 60 42 V56 H4 Z" fill="#2e2620"/>
+    <path d="M10 42 L18 34 L24 42 Z M36 40 L46 30 L52 40 Z" fill="#c0503a"/>
+    <path d="M8 48 Q16 44 24 48 T40 48 T56 48" stroke="#e6b53a"/>
+    <path d="M28 40 L33 28" stroke="#c0503a" stroke-width="4"/>
+  </g>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Small cauldron</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 30 Q16 48 32 52 Q48 48 46 30 Z" fill="#a7adb2"/>
+    <path d="M14 30 H50"/>
+    <path d="M20 29 Q32 8 44 29"/>
+    <path d="M26 52 L24 58 M38 52 L40 58"/>
+  </g>
+</svg>

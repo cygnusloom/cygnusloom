@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Garden</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 44 H56 V56 H8 Z" fill="#8b5e3c"/>
+    <path d="M14 44 V32 M32 44 V26 M50 44 V32"/>
+    <path d="M10 32 H18 L14 22 Z M26 26 H38 L32 14 Z M46 32 H54 L50 22 Z" fill="#c0503a"/>
+    <path d="M18 38 Q12 34 12 42 Q18 42 18 38 Z M36 32 Q42 28 42 36 Q36 36 36 32 Z" fill="#7fae5a"/>
+  </g>
+</svg>

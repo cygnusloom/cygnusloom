@@ -427,17 +427,30 @@ class Turn:
 
 @dataclass(frozen=True)
 class CellMark:
-    """What is on one cell of a map: a terrain id and an object id, each "" for none."""
+    """What is on one cell of a map: a terrain id and an object id, each "" for none.
+
+    The optional fields customize one cell without a new terrain or object: a background
+    colour, a terrain pattern, an icon for the object, and a short label shown in the tooltip
+    and legend."""
 
     terrain: str = ""
     object: str = ""
+    color: str = ""
+    pattern: str = ""
+    icon: str = ""
+    label: str = ""
 
 
 def marks_from_list(items: Iterable[Mapping[str, Any]]) -> dict[tuple[int, int], CellMark]:
-    """Turn event payload marks, a list of {"column", "row", "terrain", "object"}, into a dict."""
+    """Turn event payload marks, a list of {"column", "row", "terrain", "object", ...}, into a dict."""
     return {
         (int(item["column"]), int(item["row"])): CellMark(
-            str(item.get("terrain", "")), str(item.get("object", ""))
+            terrain=str(item.get("terrain") or ""),
+            object=str(item.get("object") or ""),
+            color=str(item.get("color") or ""),
+            pattern=str(item.get("pattern") or ""),
+            icon=str(item.get("icon") or ""),
+            label=str(item.get("label") or ""),
         )
         for item in items
     }
@@ -462,6 +475,12 @@ class EncounterMap:
     tokens: dict[str, tuple[int, int]] = field(default_factory=dict)
     # The id of the map.created event, so the newest map at a place is known on replay.
     created: int = 0
+    # The map's look: a palette and ambient from the rule set, and colour overrides for the
+    # board's ground and grid. Each is "" for the board's default.
+    palette: str = ""
+    ambient: str = ""
+    background_color: str = ""
+    grid_color: str = ""
 
 
 @dataclass

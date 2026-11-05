@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Plant</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 44 H42 L38 58 H26 Z" fill="#8b5e3c"/>
+    <path d="M32 44 V32"/>
+    <path d="M32 36 Q18 34 14 20 Q28 20 32 36 Z" fill="#7fae5a"/>
+    <path d="M32 36 Q46 34 50 20 Q36 20 32 36 Z" fill="#6f9a63"/>
+    <path d="M32 32 Q32 12 40 6 Q44 20 32 32 Z" fill="#7fae5a"/>
+  </g>
+</svg>

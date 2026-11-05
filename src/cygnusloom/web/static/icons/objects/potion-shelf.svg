@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Potion shelf</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 34 H56 V40 H8 Z" fill="#8b5e3c"/>
+    <path d="M12 40 V50 M52 40 V50"/>
+    <path d="M16 20 H24 V34 H16 Z M18 14 H22 V20 H18 Z" fill="#c0503a"/>
+    <path d="M28 16 Q34 16 34 26 Q34 34 28 34 Q22 34 22 26 Q22 16 28 16 Z" fill="#6fa8c9"/>
+    <path d="M28 12 V16"/>
+    <path d="M44 12 H50 V34 H44 Z" fill="#e6b53a"/>
+  </g>
+</svg>

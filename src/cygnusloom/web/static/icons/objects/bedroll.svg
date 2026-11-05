@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Bedroll</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 32 H50 V48 H16 Z" fill="#7fae5a"/>
+    <ellipse cx="50" cy="40" rx="6" ry="8" fill="#6f9a63"/>
+    <ellipse cx="16" cy="40" rx="6" ry="8" fill="#d9b97a"/>
+    <path d="M16 32 Q24 40 16 48 M26 32 V48 M38 32 V48"/>
+  </g>
+</svg>

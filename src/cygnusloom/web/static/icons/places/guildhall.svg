@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Guildhall</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 56 V20 H54 V56 Z" fill="#d9b97a"/>
+    <path d="M6 20 H58 V26 H6 Z" fill="#8b5e3c"/>
+    <path d="M18 30 H24 V46 L21 42 L18 46 Z M40 30 H46 V46 L43 42 L40 46 Z" fill="#c0503a"/>
+    <path d="M28 56 V42 Q32 38 36 42 V56 Z" fill="#8b5e3c"/>
+    <path d="M8 58 H56"/>
+  </g>
+</svg>

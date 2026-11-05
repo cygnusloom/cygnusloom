@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Chandelier</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 4 V18"/>
+    <ellipse cx="32" cy="38" rx="22" ry="6"/>
+    <path d="M10 38 V30 M32 34 V26 M54 38 V30"/>
+    <path d="M6 18 H14 V30 H6 Z M28 14 H36 V26 H28 Z M50 18 H58 V30 H50 Z" fill="#f5f0e4"/>
+    <path d="M10 18 Q14 12 10 6 Q6 12 10 18 Z M32 14 Q36 8 32 2 Q28 8 32 14 Z M54 18 Q58 12 54 6 Q50 12 54 18 Z" fill="#e6b53a"/>
+  </g>
+</svg>

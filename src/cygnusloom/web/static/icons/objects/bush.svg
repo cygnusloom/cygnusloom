@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Bush</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 52 Q2 40 12 34 Q10 20 24 20 Q28 8 40 14 Q52 10 56 24 Q62 32 54 44 Q52 52 44 52 Z" fill="#7fae5a"/>
+    <path d="M18 44 Q22 36 30 40 M38 44 Q42 34 50 40"/>
+  </g>
+</svg>

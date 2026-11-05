@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Castle</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 56 V26 H50 V56 Z" fill="#a7adb2"/>
+    <path d="M10 26 L32 10 L54 26 Z" fill="#8b5e3c"/>
+    <path d="M22 56 V40 Q32 30 42 40 V56 Z" fill="#2e2620"/>
+    <path d="M32 10 V4"/>
+    <path d="M32 4 L44 7 L32 10 Z" fill="#c0503a"/>
+    <path d="M8 56 H56"/>
+  </g>
+</svg>

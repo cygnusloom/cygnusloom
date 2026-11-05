@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Pit</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="32" cy="36" rx="24" ry="14" fill="#2e2620"/>
+    <path d="M14 36 Q32 48 50 36"/>
+    <path d="M10 52 L16 46 L22 52 Z M42 52 L48 46 L54 52 Z" fill="#a7adb2"/>
+    <path d="M6 58 H24 M40 58 H58"/>
+  </g>
+</svg>

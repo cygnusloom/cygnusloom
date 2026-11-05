@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Trapdoor</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 52 L14 20 H50 L58 52 Z" fill="#8b5e3c"/>
+    <path d="M14 46 L20 26 H44 L50 46 Z" fill="#d9b97a"/>
+    <path d="M26 26 L22 46 M38 26 L42 46"/>
+    <circle cx="32" cy="38" r="4" fill="#a7adb2"/>
+  </g>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Jar</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 8 H42 V14 H22 Z" fill="#8b5e3c"/>
+    <path d="M24 14 H40 V20 Q48 28 48 40 Q48 56 32 56 Q16 56 16 40 Q16 28 24 20 Z" fill="#6fa8c9"/>
+    <path d="M20 40 Q26 36 32 40 Q38 44 44 40"/>
+  </g>
+</svg>

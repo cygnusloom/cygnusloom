@@ -366,6 +366,7 @@ def map_fragment(request: Request, campaign_id: int) -> Response:
         encounter_rows=_encounter_rows(encounter) if encounter is not None else [],
         local_map=local_map,
         local_map_rows=_encounter_rows(local_map) if local_map is not None else [],
+        local_map_legend=_map_legend(local_map) if local_map is not None else [],
     )
 
 
@@ -1042,6 +1043,7 @@ def _campaign_page(
         encounter_rows=_encounter_rows(encounter) if encounter is not None else [],
         local_map=local_map,
         local_map_rows=_encounter_rows(local_map) if local_map is not None else [],
+        local_map_legend=_map_legend(local_map) if local_map is not None else [],
         debug_panel=settings.debug_panel,
         debug_currency=rule_set.marketplace.currency if rule_set and rule_set.marketplace else "",
         debug_stats=[(stat.id, stat.name) for stat in spec.stats.values()],
@@ -1081,7 +1083,8 @@ def _creation_pending(state: Any, rule_set: Any) -> tuple[bool, bool]:
 
 def _encounter_rows(encounter: dict[str, Any]) -> list[list[dict[str, Any]]]:
     """The encounter map as rows of cells. Each cell has the background or marked terrain and
-    object under it, and the participant standing on it, if any."""
+    object under it, the cell's own colour, pattern, icon, and label, and the participant
+    standing on it, if any."""
     occupants = {
         tuple(participant["cell"]): participant
         for participant in encounter["participants"]
@@ -1099,20 +1102,35 @@ def _encounter_rows(encounter: dict[str, Any]) -> list[list[dict[str, Any]]]:
             occupant = occupants.get((column, row))
             terrain_name = ground.get("terrain", ground.get("name", ""))
             terrain_rule = ground.get("terrain_rule", ground.get("rule", ""))
+            terrain_color = ground.get("terrain_color", ground.get("color", ""))
+            terrain_pattern = ground.get("terrain_pattern", ground.get("pattern", ""))
+            cell_color = mark.get("cell_color", "")
             blocks = bool(mark.get("blocks", False))
+            label = mark.get("label", "")
             cells.append(
                 {
                     "occupant": occupant,
                     "tip": _cell_tip(
-                        occupant, terrain_name, terrain_rule, mark.get("object", ""), blocks
+                        occupant,
+                        terrain_name,
+                        terrain_rule,
+                        mark.get("object", ""),
+                        blocks,
+                        label,
                     ),
-                    "terrain_color": ground.get("terrain_color", ground.get("color", "")),
+                    "color": cell_color or terrain_color,
+                    "cell_color": cell_color,
+                    "terrain_color": terrain_color,
                     "terrain_name": terrain_name,
+                    "terrain_pattern": terrain_pattern,
+                    "pattern": mark.get("pattern", "") or terrain_pattern,
                     "difficult": bool(ground.get("difficult", False)),
                     "object_icon": mark.get("object_icon", ""),
+                    "icon": mark.get("cell_icon", ""),
                     "object_color": mark.get("object_color", ""),
                     "object_solid": bool(mark.get("object_solid", False)),
                     "object_name": mark.get("object", ""),
+                    "label": label,
                     "blocks": blocks,
                 }
             )
@@ -1126,15 +1144,57 @@ def _cell_tip(
     terrain_rule: str,
     object_name: str = "",
     blocks: bool = False,
+    label: str = "",
 ) -> str:
-    """The hover text for a cell: the token on it, the object, and the ground under it with its
-    rule effect. A blocking object replaces that rule, since nothing can enter the cell."""
+    """The hover text for a cell: the token on it, the cell's label, the object, and the ground
+    under it with its rule effect. A blocking object replaces that rule, since nothing can enter
+    the cell."""
     where = " on ".join(part for part in (object_name, terrain_name) if part)
     if not where:
-        return occupant["name"] if occupant else ""
+        return occupant["name"] if occupant else label
     rule = "Blocks movement: no one can enter this cell." if blocks else terrain_rule
     ground = f"{where}. {rule}" if rule else f"{where}."
-    return f"{occupant['name']} on {ground}" if occupant else ground
+    text = f"{occupant['name']} on {ground}" if occupant else ground
+    return f"{label}: {text}" if label else text
+
+
+def _map_legend(view: dict[str, Any]) -> list[dict[str, str]]:
+    """The unique terrains, objects, and labels on a map, in board order, for its legend."""
+    items: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+
+    def add(kind: str, name: str, color: str = "", icon: str = "", pattern: str = "") -> None:
+        key = (kind, name)
+        if not name or key in seen:
+            return
+        seen.add(key)
+        items.append({"kind": kind, "name": name, "color": color, "icon": icon, "pattern": pattern})
+
+    background = view.get("background") or {}
+    add(
+        "terrain",
+        background.get("name", ""),
+        background.get("color", ""),
+        pattern=background.get("pattern", ""),
+    )
+    for mark in view.get("marked_cells", []):
+        if mark.get("terrain"):
+            add(
+                "terrain",
+                mark["terrain"],
+                mark.get("terrain_color", ""),
+                pattern=mark.get("terrain_pattern", ""),
+            )
+        if mark.get("object"):
+            add(
+                "object",
+                mark["object"],
+                mark.get("object_color", ""),
+                mark.get("cell_icon") or mark.get("object_icon", ""),
+            )
+        if mark.get("label"):
+            add("label", mark["label"], mark.get("cell_color") or mark.get("terrain_color", ""))
+    return items
 
 
 def _roll_key(campaign_id: int) -> str:

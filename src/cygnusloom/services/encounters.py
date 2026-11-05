@@ -8,13 +8,19 @@ from __future__ import annotations
 
 import heapq
 import random
+import re
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from sqlmodel import Session
 
 from cygnusloom.content.character import CharacterSpec
+from cygnusloom.content.definitions import ContentError
+from cygnusloom.content.icons import check_icon
 from cygnusloom.content.library import (
+    MAP_AMBIENTS,
+    MAP_PALETTES,
+    TERRAIN_PATTERNS,
     CombatRules,
     EncounterGrid,
     EncounterObject,
@@ -42,6 +48,8 @@ from cygnusloom.services.events import (
     MapCellsChanged,
     MapCreated,
     MapDeleted,
+    MapExtended,
+    MapStyleChanged,
     MapTokenPlaced,
     MapTokenRemoved,
     MapUpdated,
@@ -66,6 +74,37 @@ MAX_MAP_SIDE = 60
 # The most cells one set_map_cells call may change, and how many ids an error message lists.
 MAX_CELLS_PER_CALL = 200
 MAX_LISTED_IDS = 20
+# A cell label is a short caption for the tooltip and legend.
+MAX_CELL_LABEL = 60
+
+_HEX_COLOR = re.compile(r"#[0-9a-fA-F]{6}")
+
+
+def _hex_color(value: object, label: str) -> str:
+    """A hex colour, or "" when none is given."""
+    if value == "":
+        return ""
+    if not isinstance(value, str) or not _HEX_COLOR.fullmatch(value):
+        raise InvalidInput(f"{label} must be a hex colour like #3a3f47, not {value!r}")
+    return value
+
+
+def _style_id(value: object, allowed: Sequence[str], label: str) -> str:
+    """A palette or ambient id, or "" when none is given."""
+    if value == "":
+        return ""
+    if not isinstance(value, str) or value not in allowed:
+        raise InvalidInput(f"{label} must be one of {', '.join(allowed)}, not {value!r}")
+    return value
+
+
+def _cell_label(value: object) -> str:
+    if not isinstance(value, str):
+        raise InvalidInput("label must be text")
+    text = value.strip()
+    if len(text) > MAX_CELL_LABEL:
+        raise InvalidInput(f"label must be at most {MAX_CELL_LABEL} characters")
+    return text
 
 
 def _size(columns: object, rows: object) -> tuple[int, int]:
@@ -132,7 +171,16 @@ def _id_value(value: object, known: Mapping[str, object], label: str) -> str:
 
 def _mark_dicts(marks: Mapping[tuple[int, int], CellMark]) -> list[dict[str, Any]]:
     return [
-        {"column": column, "row": row, "terrain": mark.terrain, "object": mark.object}
+        {
+            "column": column,
+            "row": row,
+            "terrain": mark.terrain,
+            "object": mark.object,
+            "color": mark.color,
+            "pattern": mark.pattern,
+            "icon": mark.icon,
+            "label": mark.label,
+        }
         for (column, row), mark in sorted(marks.items())
     ]
 
@@ -226,13 +274,18 @@ def create_map(
     description: str = "",
     template: str = "",
     templates: Mapping[str, EncounterTemplate] | None = None,
+    palette: str = "",
+    ambient: str = "",
+    background_color: str = "",
+    grid_color: str = "",
 ) -> dict[str, Any]:
     """Create a map at a location. A map is not necessarily an encounter: outside one it is a
     local map that shows the player character, NPCs, and props where they stand. With a
-    `template`, its size and background come from the template and its cells become marks;
-    `columns` and `rows`, if given, override the template size. Without one, columns and rows are
-    required and the map starts empty. A location may have several maps; the newest is its local
-    map, and an encounter can start on any of them."""
+    `template`, its size, background, and look come from the template and its cells become
+    marks; `columns` and `rows`, if given, override the template size, and a palette, ambient,
+    or colour the caller gives overrides the template's. Without a template, columns and rows
+    are required and the map starts empty. A location may have several maps; the newest is its
+    local map, and an encounter can start on any of them."""
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_MAP_NAME)
     if name_key(name) in state.maps:
@@ -240,11 +293,19 @@ def create_map(
     place = state.named(bounded_text(location, "location", MAX_MAP_NAME))
     if not isinstance(place, Place):
         raise InvalidInput(f"there is no location named {location!r}")
+    chosen_palette = _style_id(palette, MAP_PALETTES, "palette")
+    chosen_ambient = _style_id(ambient, MAP_AMBIENTS, "ambient")
+    chosen_background = _hex_color(background_color, "background_color")
+    chosen_grid = _hex_color(grid_color, "grid_color")
     background = ""
     marks: dict[tuple[int, int], CellMark] = {}
     if template:
         layout = _template_named(templates or {}, template)
         background = layout.background
+        chosen_palette = chosen_palette or layout.palette
+        chosen_ambient = chosen_ambient or layout.ambient
+        chosen_background = chosen_background or layout.background_color
+        chosen_grid = chosen_grid or layout.grid_color
         columns = layout.columns if columns is None else columns
         rows = layout.rows if rows is None else rows
         columns, rows = _size(columns, rows)
@@ -264,6 +325,10 @@ def create_map(
             rows=rows,
             description=description,
             background=background,
+            palette=chosen_palette,
+            ambient=chosen_ambient,
+            background_color=chosen_background,
+            grid_color=chosen_grid,
             marks=_mark_dicts(marks),
         ),
     )
@@ -274,26 +339,66 @@ def create_map(
         "location": place.name,
         "columns": columns,
         "rows": rows,
+        "palette": chosen_palette,
+        "ambient": chosen_ambient,
+        "background_color": chosen_background,
+        "grid_color": chosen_grid,
     }
     if template:
         result["template"] = template
     return result
 
 
+def _added(value: object, label: str) -> int:
+    """How many cells an extension adds; missing or 0 means none."""
+    if value is None:
+        return 0
+    if not _is_int(value) or value < 0:
+        raise InvalidInput(f"{label} must be a whole number of cells, at least 0")
+    return value
+
+
 def update_map(
     db: Session,
     campaign_id: int,
     name: str,
-    columns: int,
-    rows: int,
-    description: str,
+    columns: int | None = None,
+    rows: int | None = None,
+    description: str | None = None,
     new_name: str | None = None,
     location: str | None = None,
+    *,
+    palette: str | None = None,
+    ambient: str | None = None,
+    background: str | None = None,
+    background_color: str | None = None,
+    grid_color: str | None = None,
+    extend_left: int = 0,
+    extend_right: int = 0,
+    extend_up: int = 0,
+    extend_down: int = 0,
+    terrain: Mapping[str, EncounterTerrain] | None = None,
 ) -> dict[str, Any]:
+    """Change a map's size, name, location, description, or look, and extend it on any side.
+
+    An extension shifts every mark, token, and encounter cell by the cells added to the left or
+    top, so nothing is lost. A shrink crops what falls outside and reports how many marks and
+    tokens were dropped. Style changes record their own event so replay keeps the look."""
     state = load_state(db, campaign_id)
     entry = _map_named(state, name)
-    columns, rows = _size(columns, rows)
-    description = bounded_text(description, "description", MAX_MAP_TEXT)
+    base_columns = entry.columns if columns is None else columns
+    base_rows = entry.rows if rows is None else rows
+    base_columns, base_rows = _size(base_columns, base_rows)
+    left = _added(extend_left, "extend_left")
+    right = _added(extend_right, "extend_right")
+    up = _added(extend_up, "extend_up")
+    down = _added(extend_down, "extend_down")
+    new_columns, new_rows = _size(base_columns + left + right, base_rows + up + down)
+    text = (
+        entry.description
+        if description is None
+        else bounded_text(description, "description", MAX_MAP_TEXT)
+    )
     renamed = ""
     if new_name is not None:
         renamed = bounded_text(new_name, "name", MAX_MAP_NAME)
@@ -305,34 +410,104 @@ def update_map(
         if not isinstance(place, Place):
             raise InvalidInput(f"there is no location named {location!r}")
         moved = place.name
+    new_background = (
+        entry.background if background is None else _id_value(background, terrain or {}, "terrain")
+    )
+    new_palette = entry.palette if palette is None else _style_id(palette, MAP_PALETTES, "palette")
+    new_ambient = entry.ambient if ambient is None else _style_id(ambient, MAP_AMBIENTS, "ambient")
+    new_background_color = (
+        entry.background_color
+        if background_color is None
+        else _hex_color(background_color, "background_color")
+    )
+    new_grid_color = (
+        entry.grid_color if grid_color is None else _hex_color(grid_color, "grid_color")
+    )
     in_use = state.encounter is not None and name_key(state.encounter.map) == name_key(entry.name)
     if in_use:
         for who, (column, row) in state.encounter.cells.items():
-            if column >= columns or row >= rows:
+            new_column, new_row = column + left, row + up
+            if new_column >= new_columns or new_row >= new_rows:
                 raise InvalidInput(
                     f"{state.characters[who].name} stands at column {column}, row {row}, "
-                    f"outside the new size of {columns} by {rows}"
+                    f"outside the new size of {new_columns} by {new_rows}"
                 )
-    record(
-        db,
-        campaign_id,
-        MapUpdated(
-            name=entry.name,
-            columns=columns,
-            rows=rows,
-            description=description,
-            new_name=renamed,
-            location=moved,
-        ),
+    dropped_marks = sum(
+        1
+        for (column, row) in entry.marks
+        if not (0 <= column + left < new_columns and 0 <= row + up < new_rows)
     )
+    dropped_tokens = sum(
+        1
+        for (column, row) in entry.tokens.values()
+        if not (0 <= column + left < new_columns and 0 <= row + up < new_rows)
+    )
+    extended = bool(left or right or up or down)
+    if extended:
+        record(
+            db,
+            campaign_id,
+            MapExtended(
+                name=entry.name,
+                columns=new_columns,
+                rows=new_rows,
+                offset_column=left,
+                offset_row=up,
+            ),
+        )
+    styled = (
+        new_background,
+        new_palette,
+        new_ambient,
+        new_background_color,
+        new_grid_color,
+    ) != (
+        entry.background,
+        entry.palette,
+        entry.ambient,
+        entry.background_color,
+        entry.grid_color,
+    )
+    if styled:
+        record(
+            db,
+            campaign_id,
+            MapStyleChanged(
+                name=entry.name,
+                background=new_background,
+                background_color=new_background_color,
+                grid_color=new_grid_color,
+                palette=new_palette,
+                ambient=new_ambient,
+            ),
+        )
+    resized = (new_columns, new_rows) != (entry.columns, entry.rows)
+    if resized and not extended or renamed or moved or description is not None:
+        record(
+            db,
+            campaign_id,
+            MapUpdated(
+                name=entry.name,
+                columns=new_columns,
+                rows=new_rows,
+                description=text,
+                new_name=renamed,
+                location=moved,
+            ),
+        )
     db.commit()
-    return {
+    result: dict[str, Any] = {
         "updated": "encounter map",
         "name": renamed or entry.name,
         "location": moved or entry.location,
-        "columns": columns,
-        "rows": rows,
+        "columns": new_columns,
+        "rows": new_rows,
     }
+    if dropped_marks:
+        result["dropped_marks"] = dropped_marks
+    if dropped_tokens:
+        result["dropped_tokens"] = dropped_tokens
+    return result
 
 
 def set_map_cells(
@@ -343,8 +518,8 @@ def set_map_cells(
     terrain: Mapping[str, EncounterTerrain] | None = None,
     encounter_objects: Mapping[str, EncounterObject] | None = None,
 ) -> dict[str, Any]:
-    """Set the terrain or object on cells of a map. A key left out of a cell keeps its value; an
-    empty string clears it."""
+    """Set a cell's terrain, object, colour, pattern, icon, or label. A key left out of a cell
+    keeps its value; an empty string clears it. A cell with every field empty is removed."""
     state = load_state(db, campaign_id)
     entry = _map_named(state, name)
     if not isinstance(cells, Sequence) or isinstance(cells, str) or not cells:
@@ -355,25 +530,60 @@ def set_map_cells(
     encounter_objects = encounter_objects or {}
     marks = dict(entry.marks)
     touched: set[tuple[int, int]] = set()
+    fields = ("terrain", "object", "color", "pattern", "icon", "label")
     for item in cells:
         if not isinstance(item, Mapping):
-            raise InvalidInput("each cell must be an object with column, row and terrain or object")
+            raise InvalidInput(
+                "each cell must be an object with column, row and a terrain, object, color, "
+                "pattern, icon, or label"
+            )
         column, row = item.get("column"), item.get("row")
         for label, value, size in (("column", column, entry.columns), ("row", row, entry.rows)):
             if not _is_int(value) or not 0 <= value < size:
                 raise InvalidInput(
                     f"{label} must be a whole number from 0 to {size - 1} on {entry.name}"
                 )
-        if "terrain" not in item and "object" not in item:
-            raise InvalidInput(f"the cell at column {column}, row {row} needs terrain or object")
+        if not any(field in item for field in fields):
+            raise InvalidInput(
+                f"the cell at column {column}, row {row} needs a terrain, object, color, "
+                "pattern, icon, or label"
+            )
         cell = (column, row)
         current = marks.get(cell, CellMark())
         new_terrain = current.terrain
         new_object = current.object
+        new_color = current.color
+        new_pattern = current.pattern
+        new_icon = current.icon
+        new_label = current.label
         if "terrain" in item:
             new_terrain = _id_value(item["terrain"], terrain, "terrain")
         if "object" in item:
             new_object = _id_value(item["object"], encounter_objects, "encounter object")
+        if "color" in item:
+            new_color = _hex_color(item["color"], "cell color")
+        if "pattern" in item:
+            pattern = item["pattern"]
+            if not isinstance(pattern, str):
+                raise InvalidInput("cell pattern must be an id given as text")
+            if pattern and pattern not in TERRAIN_PATTERNS:
+                raise InvalidInput(
+                    f"there is no pattern {pattern!r}; the valid ids are "
+                    f"{_id_list({name: name for name in TERRAIN_PATTERNS})}"
+                )
+            new_pattern = pattern
+        if "icon" in item:
+            icon = item["icon"]
+            if not isinstance(icon, str):
+                raise InvalidInput("cell icon must be an id given as text")
+            if icon:
+                try:
+                    check_icon(icon, f"the cell at column {column}, row {row}")
+                except ContentError as exc:
+                    raise InvalidInput(str(exc)) from exc
+            new_icon = icon
+        if "label" in item:
+            new_label = _cell_label(item["label"])
         found = encounter_objects.get(new_object) if new_object else None
         on_this_map = state.encounter is not None and (
             name_key(state.encounter.map) == name_key(entry.name)
@@ -385,7 +595,7 @@ def set_map_cells(
                         f"column {column}, row {row} is occupied by "
                         f"{state.characters[key].name}, so it cannot be walled off"
                     )
-        marks[cell] = CellMark(new_terrain, new_object)
+        marks[cell] = CellMark(new_terrain, new_object, new_color, new_pattern, new_icon, new_label)
         touched.add(cell)
     record(
         db,
@@ -908,6 +1118,7 @@ def _terrain_view(
         "color": found.color if found is not None else "",
         "rule": found.rule if found is not None else "",
         "difficult": found.difficult if found is not None else False,
+        "pattern": (found.pattern or "") if found is not None else "",
     }
 
 
@@ -919,19 +1130,27 @@ def _marked_cells(
     cells = []
     for (column, row), mark in sorted(entry.marks.items()):
         found_object = objects.get(mark.object)
+        found_terrain = terrain.get(mark.terrain)
         cells.append(
             {
                 "column": column,
                 "row": row,
-                "terrain": terrain[mark.terrain].name if mark.terrain in terrain else mark.terrain,
-                "terrain_color": terrain[mark.terrain].color if mark.terrain in terrain else "",
-                "terrain_rule": terrain[mark.terrain].rule if mark.terrain in terrain else "",
+                "terrain": found_terrain.name if found_terrain is not None else mark.terrain,
+                "terrain_color": found_terrain.color if found_terrain is not None else "",
+                "terrain_rule": found_terrain.rule if found_terrain is not None else "",
+                "terrain_pattern": (found_terrain.pattern or "")
+                if found_terrain is not None
+                else "",
                 "object": found_object.name if found_object is not None else mark.object,
                 "object_icon": found_object.icon if found_object is not None else "",
                 "object_color": found_object.color if found_object is not None else "",
                 "object_solid": bool(found_object is not None and found_object.solid),
                 "blocks": bool(found_object is not None and found_object.blocks),
-                "difficult": bool(mark.terrain in terrain and terrain[mark.terrain].difficult),
+                "difficult": bool(found_terrain is not None and found_terrain.difficult),
+                "cell_color": mark.color,
+                "pattern": mark.pattern,
+                "cell_icon": mark.icon,
+                "label": mark.label,
             }
         )
     return cells
@@ -983,6 +1202,10 @@ def encounter_view(
         "rows": entry.rows,
         "background": _terrain_view(entry.background, terrain),
         "marked_cells": _marked_cells(entry, terrain, encounter_objects),
+        "palette": entry.palette,
+        "ambient": entry.ambient,
+        "background_color": entry.background_color,
+        "grid_color": entry.grid_color,
         "round": encounter.round,
         "acting": encounter.acting,
         "awaiting_initiative": awaiting_initiative(state),
@@ -1109,6 +1332,10 @@ def local_map_view(
         "rows": entry.rows,
         "background": _terrain_view(entry.background, terrain),
         "marked_cells": _marked_cells(entry, terrain, encounter_objects),
+        "palette": entry.palette,
+        "ambient": entry.ambient,
+        "background_color": entry.background_color,
+        "grid_color": entry.grid_color,
         "participants": participants,
     }
 

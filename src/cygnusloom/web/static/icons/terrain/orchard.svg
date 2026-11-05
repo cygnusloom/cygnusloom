@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Orchard</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="16" cy="26" r="10" fill="#7fae5a"/>
+    <circle cx="34" cy="20" r="10" fill="#6f9a63"/>
+    <circle cx="50" cy="28" r="9" fill="#7fae5a"/>
+    <path d="M16 36 V50 M34 30 V50 M50 37 V50"/>
+    <path d="M6 52 H58"/>
+  </g>
+</svg>

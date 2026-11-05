@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Village</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 34 H22 V52 H8 Z M24 28 H40 V52 H24 Z M42 36 H56 V52 H42 Z" fill="#d9b97a"/>
+    <path d="M6 34 L15 24 L24 34 Z M22 28 L32 16 L42 28 Z M40 36 L49 26 L58 36 Z" fill="#c0503a"/>
+    <path d="M12 42 H18 V52 H12 Z M30 36 H34 V46 H30 Z M46 42 H52 V52 H46 Z" fill="#2e2620"/>
+    <path d="M4 56 H60"/>
+  </g>
+</svg>

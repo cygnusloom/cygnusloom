@@ -1,4 +1,4 @@
-{% from "macros.html" import map_board, encounter_board, time_strip %}
+{% from "macros.html" import map_board, encounter_board, map_legend, time_strip %}
 {#
   The map panel, kept apart from the page so the turn stream can refresh it while the GM is
   building an encounter. The player watches the board, the roster, and the clock change as the
@@ -61,6 +61,7 @@
       {% endfor %}
     </ul>
     {% endif %}
+    {{ map_legend(local_map_legend, local_map) }}
   </div>
   <div class="tab-panel map-view" role="tabpanel" id="panel-world" aria-labelledby="tab-world" hidden>
     {{ map_board(world_map, framed=true, prefix="tab") }}

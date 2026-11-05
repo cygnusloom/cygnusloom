@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Hay</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 24 H56 V46 H8 Z" fill="#d9b97a"/>
+    <path d="M8 24 Q32 18 56 24"/>
+    <path d="M20 24 V46 M44 24 V46"/>
+    <path d="M14 34 L18 30 M26 38 L30 34 M38 32 L42 28 M48 38 L52 34" stroke="#e6b53a"/>
+  </g>
+</svg>

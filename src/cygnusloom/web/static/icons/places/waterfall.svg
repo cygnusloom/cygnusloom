@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Waterfall</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 10 H26 V56 H4 Z" fill="#a7adb2"/>
+    <path d="M38 10 H60 V56 H38 Z" fill="#a7adb2"/>
+    <path d="M26 10 H38 V54 H26 Z" fill="#6fa8c9"/>
+    <path d="M30 16 V50 M34 12 V52" stroke="#5b9bd1"/>
+    <ellipse cx="32" cy="56" rx="26" ry="6" fill="#6fa8c9"/>
+    <path d="M10 26 H20 M44 34 H54"/>
+  </g>
+</svg>

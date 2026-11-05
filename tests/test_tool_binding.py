@@ -209,7 +209,7 @@ def test_a_bound_tool_needs_a_campaign():
 
 def test_core_migrates_every_wrapper_that_fits_and_keeps_the_rest():
     calls = content_library().core.tool_calls
-    assert len(calls) == 52
+    assert len(calls) == 54
     assert {call_id for call_id, call in calls.items() if call.function is None} == (
         set(calls) - KEPT_PYTHON
     )

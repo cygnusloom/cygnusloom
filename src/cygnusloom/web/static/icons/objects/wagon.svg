@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Wagon</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 26 H44 V40 H6 Z" fill="#8b5e3c"/>
+    <path d="M12 24 Q12 8 24 8 Q36 8 36 24" fill="#f5f0e4"/>
+    <path d="M44 32 L60 40"/>
+    <circle cx="18" cy="46" r="7" fill="#d9b97a"/>
+    <circle cx="48" cy="46" r="7" fill="#d9b97a"/>
+  </g>
+</svg>

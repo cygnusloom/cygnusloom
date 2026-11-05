@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Oasis</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="32" cy="48" rx="24" ry="8" fill="#6fa8c9"/>
+    <path d="M30 46 Q28 28 24 16"/>
+    <path d="M24 16 Q14 10 6 16 Q16 20 24 20 Q16 6 24 4 Q28 12 30 22 Q34 6 42 6 Q42 16 32 24 Q44 16 50 22 Q42 28 30 24 Z" fill="#7fae5a"/>
+    <path d="M8 58 H56"/>
+  </g>
+</svg>

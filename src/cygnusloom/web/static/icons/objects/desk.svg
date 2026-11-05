@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Desk</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 24 H58 V32 H6 Z" fill="#8b5e3c"/>
+    <path d="M10 32 V58 M54 32 V58"/>
+    <path d="M14 34 H26 V50 H14 Z" fill="#d9b97a"/>
+    <path d="M18 42 H22"/>
+    <path d="M36 14 H50 V24 H36 Z" fill="#f5f0e4"/>
+  </g>
+</svg>

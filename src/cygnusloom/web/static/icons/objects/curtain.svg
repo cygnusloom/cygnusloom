@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Curtain</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 10 H58"/>
+    <path d="M14 10 Q10 32 16 56 H28 Q22 32 24 10 Z" fill="#8b5e3c"/>
+    <path d="M50 10 Q54 32 48 56 H36 Q42 32 40 10 Z" fill="#8b5e3c"/>
+    <path d="M18 18 Q16 34 20 48 M22 18 Q20 34 24 48 M46 18 Q48 34 44 48 M42 18 Q44 34 40 48" stroke="#d9b97a"/>
+  </g>
+</svg>

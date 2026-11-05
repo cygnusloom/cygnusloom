@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Academy</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 56 V24 H56 V56" fill="#d9b97a"/>
+    <path d="M4 24 L32 8 L60 24 Z" fill="#8b5e3c"/>
+    <circle cx="32" cy="34" r="8" fill="#6fa8c9"/>
+    <path d="M26 26 V42 M38 26 V42 M24 34 H40"/>
+    <path d="M16 56 V44 H24 V56 Z M40 56 V44 H48 V56 Z" fill="#8b5e3c"/>
+    <path d="M28 56 V46 Q32 42 36 46 V56 Z" fill="#2e2620"/>
+  </g>
+</svg>

@@ -7,6 +7,9 @@ import pytest
 
 from cygnusloom.content.definitions import ContentError, Definition
 from cygnusloom.content.library import (
+    MAP_AMBIENTS,
+    MAP_PALETTES,
+    TERRAIN_PATTERNS,
     ContentLibrary,
     EncounterCell,
     EncounterTemplate,
@@ -16,8 +19,28 @@ from cygnusloom.content.library import (
 )
 from cygnusloom.web.icons import _registry
 
-TERRAIN_IDS = {"floor", "grass", "dirt", "shore", "mud", "rubble", "shallow-water"}
-DIFFICULT_TERRAIN = {"mud", "rubble", "shallow-water"}
+TERRAIN_IDS = {
+    "floor",
+    "grass",
+    "dirt",
+    "shore",
+    "mud",
+    "rubble",
+    "shallow-water",
+    "marble",
+    "wood",
+    "carpet",
+    "sand",
+    "snow",
+    "ice",
+    "lava",
+    "moss",
+    "gravel",
+    "cobblestone",
+    "void",
+    "meadow",
+}
+DIFFICULT_TERRAIN = {"mud", "rubble", "shallow-water", "lava", "void"}
 OBJECT_IDS = {
     "wall",
     "tree",
@@ -49,6 +72,56 @@ OBJECT_IDS = {
     "anvil",
     "cauldron",
     "obelisk",
+    "window",
+    "rug",
+    "curtain",
+    "candle",
+    "lantern",
+    "brazier",
+    "chandelier",
+    "plant",
+    "flower",
+    "mushroom",
+    "bush",
+    "pine",
+    "rock-small",
+    "sack",
+    "pot",
+    "jar",
+    "desk",
+    "chair",
+    "stool",
+    "cabinet",
+    "shelf",
+    "fireplace",
+    "oven",
+    "counter",
+    "keg",
+    "banner",
+    "tapestry",
+    "globe",
+    "telescope",
+    "alchemy-table",
+    "potion-shelf",
+    "crystal",
+    "rune-circle",
+    "portal",
+    "trapdoor",
+    "pit",
+    "bridge",
+    "fence",
+    "hay",
+    "wagon",
+    "bedroll",
+    "hammock",
+    "armor-stand",
+    "weapon-rack",
+    "shrine",
+    "idol",
+    "mirror",
+    "painting",
+    "clock",
+    "cauldron-small",
 }
 BLOCKING_OBJECTS = {
     "wall",
@@ -70,6 +143,21 @@ BLOCKING_OBJECTS = {
     "anvil",
     "cauldron",
     "obelisk",
+    "alchemy-table",
+    "potion-shelf",
+    "pine",
+    "desk",
+    "cabinet",
+    "shelf",
+    "fireplace",
+    "oven",
+    "counter",
+    "keg",
+    "pit",
+    "fence",
+    "hay",
+    "wagon",
+    "shrine",
 }
 TEMPLATE_SIZES = {
     "room": (10, 8),
@@ -90,6 +178,12 @@ TEMPLATE_SIZES = {
     "castle_hall": (16, 12),
     "library": (14, 10),
     "cellar": (12, 8),
+    "great_hall": (20, 14),
+    "dormitory": (16, 10),
+    "alchemy_lab": (12, 10),
+    "courtyard": (18, 14),
+    "market_stall": (10, 8),
+    "crypt_annex": (14, 12),
 }
 
 
@@ -215,6 +309,60 @@ def test_all_rule_sets_see_the_same_encounter_content(library: ContentLibrary) -
         assert rule_set.terrain == library.core.terrain, name
         assert rule_set.encounter_objects == library.core.encounter_objects, name
         assert rule_set.encounter_templates == library.core.encounter_templates, name
+
+
+def test_terrain_patterns_are_valid_and_inked_when_present(library: ContentLibrary) -> None:
+    assert TERRAIN_PATTERNS[:2] == ("waves", "trees")
+    assert {"bricks", "tiles", "wood", "carpet", "snow", "lava", "hexes", "runes"} <= set(
+        TERRAIN_PATTERNS
+    )
+    patterned = [terrain for terrain in library.core.terrain.values() if terrain.pattern]
+    assert patterned
+    for terrain in patterned:
+        assert terrain.pattern in TERRAIN_PATTERNS, terrain
+        assert re.fullmatch(r"#[0-9a-f]{6}", terrain.ink or ""), terrain
+    assert library.core.terrain["marble"].pattern == "tiles"
+    assert library.core.terrain["lava"].difficult
+
+
+def test_palettes_and_ambients_are_unique_and_known(library: ContentLibrary) -> None:
+    assert len(set(MAP_PALETTES)) == len(MAP_PALETTES)
+    assert len(set(MAP_AMBIENTS)) == len(MAP_AMBIENTS)
+    for template in library.core.encounter_templates.values():
+        assert template.palette in {"", *MAP_PALETTES}
+        assert template.ambient in {"", *MAP_AMBIENTS}
+
+
+def test_new_templates_carry_their_look_and_content(library: ContentLibrary) -> None:
+    core = library.core
+    great_hall = core.encounter_templates["great_hall"]
+    assert (great_hall.palette, great_hall.ambient) == ("royal", "torchlit")
+    assert great_hall.background == "marble"
+    assert {cell.object for cell in great_hall.cells} >= {"throne", "brazier", "banner", "rug"}
+    lab = core.encounter_templates["alchemy_lab"]
+    assert (lab.palette, lab.ambient) == ("shadow", "magical")
+    assert {cell.object for cell in lab.cells} >= {"alchemy-table", "potion-shelf", "crystal"}
+    courtyard = core.encounter_templates["courtyard"]
+    assert (courtyard.palette, courtyard.ambient) == ("stone", "day")
+    assert {cell.object for cell in courtyard.cells} >= {"fountain", "bench", "plant"}
+    market = core.encounter_templates["market_stall"]
+    assert (market.palette, market.ambient) == ("parchment", "day")
+    assert {cell.object for cell in market.cells} >= {"counter", "crate", "sack"}
+    crypt = core.encounter_templates["crypt_annex"]
+    assert (crypt.palette, crypt.ambient) == ("shadow", "foggy")
+    assert {cell.object for cell in crypt.cells} >= {"idol", "shrine", "brazier"}
+    dormitory = core.encounter_templates["dormitory"]
+    assert (dormitory.palette, dormitory.ambient) == ("forest", "night")
+    assert {cell.object for cell in dormitory.cells} >= {"bed", "cabinet", "shelf"}
+
+
+def test_object_categories_are_grouped(library: ContentLibrary) -> None:
+    categories = {item.category for item in library.core.encounter_objects.values()}
+    assert {"structure", "furniture", "container", "nature", "decor", "hazard", "magic"} <= (
+        categories
+    )
+    assert library.core.encounter_objects["pit"].category == "hazard"
+    assert library.core.encounter_objects["alchemy-table"].category == "furniture"
 
 
 # Loader validation ------------------------------------------------------------
@@ -364,3 +512,73 @@ def test_duplicate_template_raises() -> None:
     ]
     with pytest.raises(ContentError, match="duplicate encounter template 'box'"):
         _load_encounter_templates(definitions, _load_encounter_terrain(floor, "core"), {}, "core")
+
+
+def test_encounter_terrain_pattern_and_ink_are_validated() -> None:
+    definitions = [
+        _definition(
+            "encounter_terrain",
+            id="tiles",
+            name="Tiles",
+            color="#d9d4c8",
+            rule="Normal ground.",
+            pattern="tiles",
+            ink="#b8b2a4",
+            category="stone",
+        )
+    ]
+    terrain = _load_encounter_terrain(definitions, "core")
+    assert terrain["tiles"].pattern == "tiles"
+    assert terrain["tiles"].ink == "#b8b2a4"
+    assert terrain["tiles"].category == "stone"
+
+    bad_pattern = [
+        _definition(
+            "encounter_terrain",
+            id="tiles",
+            name="Tiles",
+            color="#d9d4c8",
+            rule="Normal ground.",
+            pattern="nope",
+            ink="#b8b2a4",
+        )
+    ]
+    with pytest.raises(ContentError, match="pattern must be one of"):
+        _load_encounter_terrain(bad_pattern, "core")
+
+    ink_without_pattern = [
+        _definition(
+            "encounter_terrain",
+            id="tiles",
+            name="Tiles",
+            color="#d9d4c8",
+            rule="Normal ground.",
+            ink="#b8b2a4",
+        )
+    ]
+    with pytest.raises(ContentError, match="'ink' needs a 'pattern'"):
+        _load_encounter_terrain(ink_without_pattern, "core")
+
+
+def test_encounter_object_icon_must_be_registered() -> None:
+    definitions = [
+        _definition(
+            "encounter_object", id="teapot", name="Teapot", icon="no-such-icon", color="#8a5a3a"
+        )
+    ]
+    with pytest.raises(ContentError, match="'icon' names no icon"):
+        _load_encounter_objects(definitions, "core")
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"palette": "neon"}, "'palette' must be one of"),
+        ({"ambient": "stormy"}, "'ambient' must be one of"),
+        ({"background_color": "white"}, "background_color must be a hex colour"),
+        ({"grid_color": "#12"}, "grid_color must be a hex colour"),
+    ],
+)
+def test_template_style_is_validated(overrides: dict[str, Any], message: str) -> None:
+    with pytest.raises(ContentError, match=re.escape(message)):
+        _load_templates(_template(**overrides))

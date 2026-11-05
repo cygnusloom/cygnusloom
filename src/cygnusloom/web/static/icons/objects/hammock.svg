@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Hammock</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 14 V58 M58 14 V58"/>
+    <path d="M6 24 Q32 54 58 24 Q48 38 32 38 Q16 38 6 24 Z" fill="#d9b97a"/>
+    <path d="M6 24 V18 M58 24 V18"/>
+    <path d="M4 58 H12 M52 58 H60"/>
+  </g>
+</svg>

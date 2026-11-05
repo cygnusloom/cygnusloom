@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Small rock</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 48 L18 32 L30 22 L44 26 L50 38 L42 48 Z" fill="#a7adb2"/>
+    <path d="M30 22 L30 36 L44 26 M30 36 L18 48"/>
+  </g>
+</svg>

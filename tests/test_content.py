@@ -129,6 +129,8 @@ CORE_TOOLS = {
     "record_settings",
     "undo_narration",
     "create_local_map",
+    "update_local_map",
+    "map_options",
     "place_map_token",
     "remove_map_token",
     "set_map_cells",
@@ -940,9 +942,9 @@ def test_bundled_terrain_kinds_have_a_texture_and_ink(tree: Path):
 
 
 def test_terrain_texture_must_be_one_the_engine_draws(tree: Path):
-    bad = {**TESTSET_TERRAIN[0], "pattern": "bricks", "ink": "#000000"}
+    bad = {**TESTSET_TERRAIN[0], "pattern": "plasma", "ink": "#000000"}
     _write(tree, {"rulesets/testset/world_terrain.json": [bad]})
-    with pytest.raises(ContentError, match="pattern must be one of waves, trees"):
+    with pytest.raises(ContentError, match="pattern must be one of "):
         ContentLibrary.load(tree)
 
 

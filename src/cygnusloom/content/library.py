@@ -40,6 +40,7 @@ from cygnusloom.content.icons import (
     FALLBACK_MONSTER,
     FALLBACK_PLACE,
     FALLBACK_WEAPON,
+    check_icon,
     resolve_icon,
 )
 from cygnusloom.rules.dice import FORMULA, PLUS_MODES, is_formula
@@ -539,6 +540,11 @@ class EncounterTerrain:
     rule: str
     # Movement spent to enter one cell of this ground. 1 is normal ground.
     move_cost: int = 1
+    # A texture from TERRAIN_PATTERNS drawn over the colour, in the ink colour.
+    pattern: str | None = None
+    ink: str | None = None
+    # A free-text grouping for map catalogs, such as stone, wood, or hazard.
+    category: str = ""
 
     @property
     def difficult(self) -> bool:
@@ -547,6 +553,7 @@ class EncounterTerrain:
 
 
 # The textures a world terrain kind may be drawn with. The map engine draws each one.
+# Local maps draw the same ids as CSS patterns instead of SVG.
 TERRAIN_PATTERNS = (
     "waves",
     "trees",
@@ -560,6 +567,36 @@ TERRAIN_PATTERNS = (
     "canopy",
     "moor",
     "reef",
+    "bricks",
+    "tiles",
+    "wood",
+    "carpet",
+    "snow",
+    "lava",
+    "hexes",
+    "runes",
+)
+
+# The looks a local map may choose. The CSS colours each palette, and each ambient adds an
+# overlay, so a map's mood is data rather than a rule-set special case.
+MAP_PALETTES = (
+    "parchment",
+    "stone",
+    "forest",
+    "sea",
+    "ember",
+    "frost",
+    "shadow",
+    "royal",
+)
+MAP_AMBIENTS = (
+    "day",
+    "dusk",
+    "night",
+    "torchlit",
+    "foggy",
+    "underwater",
+    "magical",
 )
 
 
@@ -602,6 +639,8 @@ class EncounterObject:
     color: str
     blocks: bool = False
     solid: bool = False
+    # A free-text grouping for map catalogs, such as furniture, nature, or hazard.
+    category: str = ""
 
 
 @dataclass(frozen=True)
@@ -624,6 +663,11 @@ class EncounterTemplate:
     rows: int
     background: str
     cells: tuple[EncounterCell, ...]
+    # The template's suggested look, copied by create_map unless the caller chooses one.
+    palette: str = ""
+    ambient: str = ""
+    background_color: str = ""
+    grid_color: str = ""
 
 
 @dataclass(frozen=True)
@@ -3986,6 +4030,31 @@ def _terrain_pattern(data: Mapping[str, Any], label: str) -> tuple[str | None, s
     return pattern, _color(data, label, "ink")
 
 
+def _encounter_texture(data: Mapping[str, Any], label: str) -> tuple[str | None, str | None]:
+    """A local terrain's optional texture. A pattern needs an ink colour; ink without a
+    pattern would never be drawn, so it is refused rather than ignored."""
+    if "ink" in data and "pattern" not in data:
+        raise ContentError(f"{label}: 'ink' needs a 'pattern'")
+    return _terrain_pattern(data, label) if "pattern" in data else (None, None)
+
+
+def _optional_color(data: Mapping[str, Any], key: str, label: str) -> str:
+    """A hex colour, or "" when the key is absent or empty."""
+    if key not in data or data[key] == "":
+        return ""
+    return _color(data, label, key)
+
+
+def _style_choice(data: Mapping[str, Any], key: str, allowed: Sequence[str], label: str) -> str:
+    """A palette or ambient id from `allowed`, or "" when none is given."""
+    value = data.get(key, "")
+    if value == "":
+        return ""
+    if not isinstance(value, str) or value not in allowed:
+        raise ContentError(f"{label}: {key!r} must be one of {', '.join(allowed)}, not {value!r}")
+    return value
+
+
 def _load_encounter_terrain(
     definitions: list[Definition], template: str
 ) -> dict[str, EncounterTerrain]:
@@ -3998,17 +4067,38 @@ def _load_encounter_terrain(
         label = f"{template}: encounter terrain {d.id}"
         check_keys(
             d.data,
-            {"type", "id", "name", "color", "rule", "move_cost", "difficult"},
+            {
+                "type",
+                "id",
+                "name",
+                "color",
+                "rule",
+                "move_cost",
+                "difficult",
+                "pattern",
+                "ink",
+                "category",
+            },
             label,
         )
+        pattern, ink = _encounter_texture(d.data, label)
         terrain[d.id] = EncounterTerrain(
             id=d.id,
             name=required_text(d.data, "name", label),
             color=_color(d.data, label),
             rule=required_text(d.data, "rule", label),
             move_cost=_terrain_move_cost(d.data, label),
+            pattern=pattern,
+            ink=ink,
+            category=_optional_category(d.data, label),
         )
     return terrain
+
+
+def _optional_category(data: Mapping[str, Any], label: str) -> str:
+    if "category" not in data:
+        return ""
+    return required_text(data, "category", label)
 
 
 def _terrain_move_cost(data: Mapping[str, Any], label: str) -> int:
@@ -4056,16 +4146,17 @@ def _load_encounter_objects(
         label = f"{template}: encounter object {d.id}"
         check_keys(
             d.data,
-            {"type", "id", "name", "icon", "color", "blocks", "solid"},
+            {"type", "id", "name", "icon", "color", "blocks", "solid", "category"},
             label,
         )
         objects[d.id] = EncounterObject(
             id=d.id,
             name=required_text(d.data, "name", label),
-            icon=required_text(d.data, "icon", label),
+            icon=check_icon(required_text(d.data, "icon", label), label),
             color=_color(d.data, label),
             blocks=_flag(d.data, "blocks", label),
             solid=_flag(d.data, "solid", label),
+            category=_optional_category(d.data, label),
         )
     return objects
 
@@ -4085,7 +4176,20 @@ def _load_encounter_templates(
         label = f"{template}: encounter template {d.id}"
         check_keys(
             d.data,
-            {"type", "id", "name", "columns", "rows", "background", "fills", "cells"},
+            {
+                "type",
+                "id",
+                "name",
+                "columns",
+                "rows",
+                "background",
+                "fills",
+                "cells",
+                "palette",
+                "ambient",
+                "background_color",
+                "grid_color",
+            },
             label,
         )
         columns = _map_size(d.data, "columns", label)
@@ -4099,6 +4203,10 @@ def _load_encounter_templates(
                 d.data.get("background"), terrain, "background", "terrain", label, empty_ok=True
             ),
             cells=_paint(d.data, label, columns, rows, terrain, objects),
+            palette=_style_choice(d.data, "palette", MAP_PALETTES, label),
+            ambient=_style_choice(d.data, "ambient", MAP_AMBIENTS, label),
+            background_color=_optional_color(d.data, "background_color", label),
+            grid_color=_optional_color(d.data, "grid_color", label),
         )
     return templates
 

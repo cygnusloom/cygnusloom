@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from cygnusloom.content.library import MAP_AMBIENTS, MAP_PALETTES, TERRAIN_PATTERNS
 from cygnusloom.services import encounters
 from cygnusloom.services.common import (
     session_scope,
@@ -87,11 +88,15 @@ class PlacesMixin:
         rows: int | None = None,
         description: str = "",
         template: str = "",
+        palette: str = "",
+        ambient: str = "",
+        background_color: str = "",
+        grid_color: str = "",
     ) -> dict[str, Any]:
         """Make a map at a location. The map is not necessarily an encounter: outside one it is a
         local map that can hold the player character, NPCs, and props. A template may supply the
-        size, so `columns` and `rows` are optional, and every tool that makes a map requires its
-        description."""
+        size and look, so `columns` and `rows` are optional, and every tool that makes a map
+        requires its description."""
         with session_scope(self.engine) as db:
             return encounters.create_map(
                 db,
@@ -103,6 +108,10 @@ class PlacesMixin:
                 description,
                 template,
                 self.encounter_templates,
+                palette=palette,
+                ambient=ambient,
+                background_color=background_color,
+                grid_color=grid_color,
             )
 
     def create_local_map(
@@ -113,10 +122,14 @@ class PlacesMixin:
         template: str,
         columns: int | None = None,
         rows: int | None = None,
+        palette: str = "",
+        ambient: str = "",
+        background_color: str = "",
+        grid_color: str = "",
     ) -> dict[str, Any]:
         """Make a local map at a location from a layout template. It is used outside an encounter
         to show characters and props where they stand, and becomes the encounter map when an
-        encounter starts on it."""
+        encounter starts on it. The template's palette and ambient are copied unless given."""
         with session_scope(self.engine) as db:
             result = encounters.create_map(
                 db,
@@ -128,6 +141,10 @@ class PlacesMixin:
                 description,
                 template,
                 self.encounter_templates,
+                palette=palette,
+                ambient=ambient,
+                background_color=background_color,
+                grid_color=grid_color,
             )
         result["created"] = "local map"
         return result
@@ -163,16 +180,129 @@ class PlacesMixin:
     def update_encounter_map(
         self,
         name: str,
-        columns: int,
-        rows: int,
-        description: str,
+        columns: int | None = None,
+        rows: int | None = None,
+        description: str | None = None,
         new_name: str | None = None,
         location: str | None = None,
+        palette: str | None = None,
+        ambient: str | None = None,
+        background: str | None = None,
+        background_color: str | None = None,
+        grid_color: str | None = None,
+        extend_left: int = 0,
+        extend_right: int = 0,
+        extend_up: int = 0,
+        extend_down: int = 0,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return encounters.update_map(
-                db, self.campaign_id, name, columns, rows, description, new_name, location
+                db,
+                self.campaign_id,
+                name,
+                columns,
+                rows,
+                description,
+                new_name,
+                location,
+                palette=palette,
+                ambient=ambient,
+                background=background,
+                background_color=background_color,
+                grid_color=grid_color,
+                extend_left=extend_left,
+                extend_right=extend_right,
+                extend_up=extend_up,
+                extend_down=extend_down,
+                terrain=self.terrain,
             )
+
+    def update_local_map(
+        self,
+        map: str,
+        new_name: str | None = None,
+        description: str | None = None,
+        location: str | None = None,
+        columns: int | None = None,
+        rows: int | None = None,
+        extend_left: int = 0,
+        extend_right: int = 0,
+        extend_up: int = 0,
+        extend_down: int = 0,
+        background: str | None = None,
+        background_color: str | None = None,
+        grid_color: str | None = None,
+        palette: str | None = None,
+        ambient: str | None = None,
+    ) -> dict[str, Any]:
+        """Rename, resize, restyle, or extend a local map. Extending left or up shifts every
+        token and mark, so the scene is kept."""
+        with session_scope(self.engine) as db:
+            result = encounters.update_map(
+                db,
+                self.campaign_id,
+                map,
+                columns,
+                rows,
+                description,
+                new_name,
+                location,
+                palette=palette,
+                ambient=ambient,
+                background=background,
+                background_color=background_color,
+                grid_color=grid_color,
+                extend_left=extend_left,
+                extend_right=extend_right,
+                extend_up=extend_up,
+                extend_down=extend_down,
+                terrain=self.terrain,
+            )
+        result["updated"] = "local map"
+        return result
+
+    def map_options(self) -> dict[str, Any]:
+        """The terrains, objects, templates, palettes, ambients, and patterns a map may use."""
+        return {
+            "terrains": [
+                {
+                    "id": terrain.id,
+                    "name": terrain.name,
+                    "color": terrain.color,
+                    "pattern": terrain.pattern or "",
+                    "difficult": terrain.difficult,
+                    "category": terrain.category,
+                }
+                for terrain in sorted(self.terrain.values(), key=lambda entry: entry.id)
+            ],
+            "objects": [
+                {
+                    "id": item.id,
+                    "name": item.name,
+                    "category": item.category,
+                    "blocks": item.blocks,
+                    "solid": item.solid,
+                    "icon": item.icon,
+                }
+                for item in sorted(self.encounter_objects.values(), key=lambda entry: entry.id)
+            ],
+            "templates": [
+                {
+                    "id": template.id,
+                    "name": template.name,
+                    "columns": template.columns,
+                    "rows": template.rows,
+                    "palette": template.palette,
+                    "ambient": template.ambient,
+                }
+                for template in sorted(
+                    self.encounter_templates.values(), key=lambda entry: entry.id
+                )
+            ],
+            "palettes": list(MAP_PALETTES),
+            "ambients": list(MAP_AMBIENTS),
+            "patterns": list(TERRAIN_PATTERNS),
+        }
 
     def delete_encounter_map(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:

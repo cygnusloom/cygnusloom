@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Clock</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="32" cy="28" r="22" fill="#f5f0e4"/>
+    <circle cx="32" cy="28" r="16" stroke="#8b5e3c"/>
+    <path d="M32 18 V28 L40 34" stroke-width="3"/>
+    <path d="M32 6 V10 M32 46 V50 M10 28 H14 M50 28 H54"/>
+    <path d="M28 50 V54 M36 50 V54 M22 58 H42"/>
+  </g>
+</svg>

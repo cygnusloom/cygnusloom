@@ -1153,6 +1153,11 @@ class PromptShown(GameEvent):
         _open_turn(state).prompt = Ask(self.text, self.dice, self.details)
 
 
+def _mark_used(mark: CellMark) -> bool:
+    """Whether a cell mark sets anything. A mark with every field empty clears its cell."""
+    return any((mark.terrain, mark.object, mark.color, mark.pattern, mark.icon, mark.label))
+
+
 @dataclass(frozen=True)
 class MapCreated(GameEvent):
     kind: ClassVar[str] = "map.created"
@@ -1164,7 +1169,11 @@ class MapCreated(GameEvent):
     rows: int
     description: str
     background: str = ""
-    # Each item is {"column", "row", "terrain", "object"}.
+    palette: str = ""
+    ambient: str = ""
+    background_color: str = ""
+    grid_color: str = ""
+    # Each item is {"column", "row", "terrain", "object", "color", "pattern", "icon", "label"}.
     marks: list[dict[str, Any]] = field(default_factory=list)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
@@ -1175,8 +1184,12 @@ class MapCreated(GameEvent):
             rows=self.rows,
             description=self.description,
             background=self.background,
-            marks={k: v for k, v in marks_from_list(self.marks).items() if v.terrain or v.object},
+            marks={k: v for k, v in marks_from_list(self.marks).items() if _mark_used(v)},
             created=event_id,
+            palette=self.palette,
+            ambient=self.ambient,
+            background_color=self.background_color,
+            grid_color=self.grid_color,
         )
 
     def render(self) -> str:
@@ -1228,6 +1241,10 @@ class MapUpdated(GameEvent):
             marks=marks,
             tokens=tokens,
             created=before.created,
+            palette=before.palette,
+            ambient=before.ambient,
+            background_color=before.background_color,
+            grid_color=before.grid_color,
         )
         encounter = state.encounter
         if encounter is not None and name_key(encounter.map) == key:
@@ -1241,20 +1258,104 @@ class MapUpdated(GameEvent):
 
 
 @dataclass(frozen=True)
+class MapStyleChanged(GameEvent):
+    """A map's look changes: its background terrain, palette, ambient, and board colours. The
+    service resolves every field, so apply sets them all rather than merging them."""
+
+    kind: ClassVar[str] = "map.style_changed"
+    hidden: ClassVar[bool] = True
+
+    name: str
+    background: str = ""
+    background_color: str = ""
+    grid_color: str = ""
+    palette: str = ""
+    ambient: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        key = name_key(self.name)
+        before = state.maps.get(key)
+        if before is None:
+            return
+        state.maps[key] = replace(
+            before,
+            background=self.background,
+            background_color=self.background_color,
+            grid_color=self.grid_color,
+            palette=self.palette,
+            ambient=self.ambient,
+        )
+
+    def render(self) -> str:
+        return f"Encounter map restyled: {self.name}."
+
+
+@dataclass(frozen=True)
+class MapExtended(GameEvent):
+    """A map grows on one or more sides. Every mark, token, and encounter cell shifts by the
+    offset of the new top-left corner, so extending left or up keeps the existing scene."""
+
+    kind: ClassVar[str] = "map.extended"
+    hidden: ClassVar[bool] = True
+
+    name: str
+    columns: int
+    rows: int
+    offset_column: int = 0
+    offset_row: int = 0
+
+    def _shift(self, cell: tuple[int, int]) -> tuple[int, int]:
+        return cell[0] + self.offset_column, cell[1] + self.offset_row
+
+    def _inside(self, cell: tuple[int, int]) -> bool:
+        return 0 <= cell[0] < self.columns and 0 <= cell[1] < self.rows
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        key = name_key(self.name)
+        before = state.maps.get(key)
+        if before is None:
+            return
+        marks = {
+            shifted: mark
+            for (column, row), mark in before.marks.items()
+            if self._inside(shifted := self._shift((column, row)))
+        }
+        tokens = {
+            name: shifted
+            for name, cell in before.tokens.items()
+            if self._inside(shifted := self._shift(cell))
+        }
+        state.maps[key] = replace(
+            before, columns=self.columns, rows=self.rows, marks=marks, tokens=tokens
+        )
+        encounter = state.encounter
+        if encounter is not None and name_key(encounter.map) == key:
+            encounter.cells = {
+                name: shifted
+                for name, cell in encounter.cells.items()
+                if self._inside(shifted := self._shift(cell))
+            }
+
+    def render(self) -> str:
+        return f"Encounter map extended: {self.name} ({self.columns} by {self.rows} cells)."
+
+
+@dataclass(frozen=True)
 class MapCellsChanged(GameEvent):
-    """Sets cells of a map. A cell whose terrain and object are both "" is cleared."""
+    """Sets cells of a map. A cell whose terrain, object, colour, pattern, icon, and label are
+    all "" is cleared."""
 
     kind: ClassVar[str] = "map.cells_changed"
     hidden: ClassVar[bool] = True
 
     name: str
-    # Each item is {"column", "row", "terrain", "object"}.
+    # Each item is {"column", "row", "terrain", "object", "color", "pattern", "icon", "label"}.
     marks: list[dict[str, Any]] = field(default_factory=list)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         encounter_map = state.maps[name_key(self.name)]
         for (column, row), mark in marks_from_list(self.marks).items():
-            if mark.terrain or mark.object:
+            if _mark_used(mark):
                 encounter_map.marks[(column, row)] = mark
             else:
                 encounter_map.marks.pop((column, row), None)

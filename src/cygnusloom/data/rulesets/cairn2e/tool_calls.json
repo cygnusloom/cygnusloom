@@ -1330,6 +1330,22 @@
         "template": {
           "type": "string",
           "description": "A standard layout, such as room or corridor. The template sets the size and the starting terrain. Leave it out for an empty map."
+        },
+        "palette": {
+          "type": "string",
+          "description": "A map palette id from map_options, such as parchment, stone, forest, sea, ember, frost, shadow, or royal."
+        },
+        "ambient": {
+          "type": "string",
+          "description": "An ambient look id from map_options: day, dusk, night, torchlit, foggy, underwater, or magical."
+        },
+        "background_color": {
+          "type": "string",
+          "description": "A hex colour for the board's ground, overriding the palette."
+        },
+        "grid_color": {
+          "type": "string",
+          "description": "A hex colour for the board's grid lines, overriding the palette."
         }
       },
       "required": [
@@ -1371,6 +1387,46 @@
         "location": {
           "type": "string",
           "description": "The name of the location the map is in. Leave out to keep the current location."
+        },
+        "palette": {
+          "type": "string",
+          "description": "A map palette id from map_options. Leave out to keep the current palette."
+        },
+        "ambient": {
+          "type": "string",
+          "description": "An ambient look id from map_options. Leave out to keep the current look."
+        },
+        "background": {
+          "type": "string",
+          "description": "A terrain id for the board's background. Leave out to keep it."
+        },
+        "background_color": {
+          "type": "string",
+          "description": "A hex colour for the board's ground. Leave out to keep it."
+        },
+        "grid_color": {
+          "type": "string",
+          "description": "A hex colour for the board's grid lines. Leave out to keep it."
+        },
+        "extend_left": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Add this many columns on the left. Existing marks and tokens shift right."
+        },
+        "extend_right": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Add this many columns on the right."
+        },
+        "extend_up": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Add this many rows at the top. Existing marks and tokens shift down."
+        },
+        "extend_down": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Add this many rows at the bottom."
         }
       },
       "required": [
@@ -1536,6 +1592,22 @@
               "object": {
                 "type": "string",
                 "description": "The object id on the cell, such as wall or crate. Empty clears it."
+              },
+              "color": {
+                "type": "string",
+                "description": "A hex colour for this cell's ground, such as #7a2f3a. Empty clears it."
+              },
+              "pattern": {
+                "type": "string",
+                "description": "A pattern id from map_options, such as tiles, bricks, wood, or runes. Empty clears it."
+              },
+              "icon": {
+                "type": "string",
+                "description": "An icon id from map_options to draw instead of the object's own icon. Empty clears it."
+              },
+              "label": {
+                "type": "string",
+                "description": "A short label for the cell, at most 60 characters, shown in the tooltip and legend. Empty clears it."
               }
             },
             "required": [

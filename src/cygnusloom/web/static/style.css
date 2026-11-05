@@ -612,3 +612,171 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
   .tab-list::-webkit-scrollbar { display: none; }
   .tab { flex: 0 0 auto; }
 }
+
+/* ===== LOCAL MAPS: palettes, ambients, patterns, and the legend ===== */
+
+.encounter-board {
+  --map-bg: var(--field);
+  --map-grid: color-mix(in srgb, var(--border) 70%, transparent);
+  --map-frame: var(--border);
+  --map-accent: var(--accent);
+  background-color: var(--map-bg);
+  border-color: var(--map-frame);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--map-frame) 65%, transparent),
+    0 6px 18px rgba(20, 16, 12, 0.18);
+}
+/* A soft tint for the map's time of day or mood. It sits under every cell. */
+.encounter-board::before {
+  display: block; content: ""; position: absolute; inset: 0;
+  border-radius: inherit; pointer-events: none; z-index: 0;
+}
+/* A faint grid sized to the cells, so the board reads as a map without hiding tokens. */
+.encounter-board::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  z-index: 1; opacity: 0.32;
+  background-image:
+    linear-gradient(var(--map-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--map-grid) 1px, transparent 1px);
+  background-size: calc(100% / var(--columns)) calc(100% / var(--rows));
+}
+.encounter-cell { border-color: color-mix(in srgb, var(--map-grid) 75%, transparent); }
+.encounter-cell .cell-object { z-index: 1; }
+.encounter-cell .map-token { z-index: 2; }
+.encounter-cell.acting { outline: 2px solid var(--map-accent); outline-offset: -2px; }
+.cell-pattern {
+  position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  opacity: 0.42; background-size: 1.1rem 1.1rem;
+}
+
+/* Palette variables. A badge shares the palette's colours. */
+.encounter-board.palette-parchment,
+.map-badge.palette-parchment {
+  --map-bg: #efe3c4; --map-grid: rgba(96, 76, 45, 0.35);
+  --map-frame: #9a7a4c; --map-accent: #8a5a2b;
+}
+.encounter-board.palette-stone,
+.map-badge.palette-stone {
+  --map-bg: #cfccc4; --map-grid: rgba(70, 68, 62, 0.35);
+  --map-frame: #6f6c64; --map-accent: #5c5a54;
+}
+.encounter-board.palette-forest,
+.map-badge.palette-forest {
+  --map-bg: #b9c9a4; --map-grid: rgba(45, 75, 40, 0.35);
+  --map-frame: #4f6b3a; --map-accent: #3f6b35;
+}
+.encounter-board.palette-sea,
+.map-badge.palette-sea {
+  --map-bg: #b8d6dc; --map-grid: rgba(35, 85, 105, 0.3);
+  --map-frame: #2f6f8f; --map-accent: #1f5f7c;
+}
+.encounter-board.palette-ember,
+.map-badge.palette-ember {
+  --map-bg: #dfb79a; --map-grid: rgba(110, 45, 25, 0.3);
+  --map-frame: #8c3d1c; --map-accent: #b0501f;
+}
+.encounter-board.palette-frost,
+.map-badge.palette-frost {
+  --map-bg: #dfeaf2; --map-grid: rgba(80, 110, 135, 0.3);
+  --map-frame: #7fa4b8; --map-accent: #4f7f9a;
+}
+.encounter-board.palette-shadow,
+.map-badge.palette-shadow {
+  --map-bg: #3b3b4a; --map-grid: rgba(180, 180, 220, 0.18);
+  --map-frame: #24242f; --map-accent: #8f7fc0;
+}
+.encounter-board.palette-royal,
+.map-badge.palette-royal {
+  --map-bg: #d9d4c8; --map-grid: rgba(120, 90, 40, 0.3);
+  --map-frame: #8a6a3a; --map-accent: #6b4a8a;
+}
+
+/* Ambient overlays: no animation and no external images. */
+.encounter-board.ambient-day::before {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 250, 220, 0.28), transparent 55%),
+    linear-gradient(180deg, rgba(255, 252, 235, 0.12), transparent 60%);
+}
+.encounter-board.ambient-dusk::before {
+  background:
+    linear-gradient(160deg, rgba(255, 170, 90, 0.26), transparent 55%),
+    radial-gradient(circle at 70% 80%, rgba(120, 70, 120, 0.18), transparent 60%);
+}
+.encounter-board.ambient-night::before {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(70, 105, 180, 0.2), transparent 60%),
+    linear-gradient(180deg, rgba(18, 30, 70, 0.32), rgba(10, 16, 40, 0.22));
+}
+.encounter-board.ambient-torchlit::before {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255, 190, 90, 0.3), transparent 60%),
+    radial-gradient(circle at 20% 80%, rgba(255, 150, 60, 0.18), transparent 40%);
+}
+.encounter-board.ambient-foggy::before {
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(255, 255, 255, 0.35), transparent 70%),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.18));
+}
+.encounter-board.ambient-underwater::before {
+  background:
+    linear-gradient(180deg, rgba(30, 110, 150, 0.3), rgba(20, 70, 110, 0.22)),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.08) 0 2px, transparent 2px 9px);
+}
+.encounter-board.ambient-magical::before {
+  background:
+    radial-gradient(circle at 30% 30%, rgba(170, 120, 255, 0.25), transparent 55%),
+    radial-gradient(circle at 70% 70%, rgba(90, 200, 255, 0.18), transparent 60%);
+}
+
+/* Terrain patterns drawn as low-contrast CSS textures, above the cell colour and below objects. */
+.pattern-waves { background-image: repeating-radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.22) 0 2px, transparent 2px 9px); }
+.pattern-trees { background-image: radial-gradient(circle at 32% 32%, rgba(24, 58, 24, 0.3) 0 22%, transparent 24%), radial-gradient(circle at 72% 70%, rgba(24, 58, 24, 0.24) 0 18%, transparent 20%); background-size: 1.2rem 1.2rem; }
+.pattern-ridges { background-image: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.18) 0 2px, transparent 2px 12px); }
+.pattern-reeds { background-image: repeating-linear-gradient(90deg, rgba(30, 60, 30, 0.22) 0 1px, transparent 1px 7px); }
+.pattern-tufts { background-image: radial-gradient(circle at 50% 62%, rgba(30, 70, 30, 0.26) 0 2px, transparent 3px); background-size: 0.7rem 0.7rem; }
+.pattern-dunes { background-image: repeating-radial-gradient(ellipse at 50% 100%, rgba(255, 255, 255, 0.18) 0 6px, transparent 7px 16px); }
+.pattern-crags { background-image: repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.2) 0 2px, transparent 2px 10px), repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.12) 0 1px, transparent 1px 11px); }
+.pattern-ice { background-image: repeating-linear-gradient(60deg, rgba(255, 255, 255, 0.3) 0 1px, transparent 1px 12px); }
+.pattern-flames { background-image: repeating-linear-gradient(90deg, rgba(255, 140, 40, 0.3) 0 3px, transparent 3px 10px); }
+.pattern-canopy { background-image: radial-gradient(circle at 42% 38%, rgba(20, 60, 25, 0.32) 0 30%, transparent 32%); background-size: 1.4rem 1.4rem; }
+.pattern-moor { background-image: radial-gradient(circle at 50% 50%, rgba(80, 70, 40, 0.2) 0 20%, transparent 22%); background-size: 1rem 1rem; }
+.pattern-reef { background-image: radial-gradient(circle at 30% 40%, rgba(40, 140, 130, 0.3) 0 18%, transparent 20%), radial-gradient(circle at 75% 65%, rgba(40, 140, 130, 0.2) 0 14%, transparent 16%); }
+.pattern-bricks { background-image: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 50%), repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.12) 0 1px, transparent 1px 50%); background-size: 1rem 0.6rem; }
+.pattern-tiles { background-image: repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.12) 0 1px, transparent 1px 14px), repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.14) 0 1px, transparent 1px 14px); }
+.pattern-wood { background-image: repeating-linear-gradient(90deg, rgba(60, 35, 15, 0.2) 0 1px, transparent 1px 14px); }
+.pattern-carpet { background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.12) 0 2px, transparent 2px 8px); }
+.pattern-snow { background-image: radial-gradient(circle, rgba(255, 255, 255, 0.55) 0 1px, transparent 2px); background-size: 0.8rem 0.8rem; }
+.pattern-lava { background-image: radial-gradient(circle at 30% 30%, rgba(255, 120, 40, 0.35) 0 18%, transparent 20%), radial-gradient(circle at 70% 65%, rgba(255, 80, 30, 0.25) 0 14%, transparent 16%); }
+.pattern-hexes { background-image: radial-gradient(circle, transparent 0 4px, rgba(0, 0, 0, 0.12) 5px 6px, transparent 7px); background-size: 0.9rem 0.9rem; }
+.pattern-runes { background-image: repeating-linear-gradient(45deg, rgba(180, 160, 255, 0.28) 0 1px, transparent 1px 10px), repeating-linear-gradient(-45deg, rgba(180, 160, 255, 0.18) 0 1px, transparent 1px 12px); }
+
+/* The local map's key, under the roster. */
+.map-legend {
+  width: 100%; max-width: 32rem; box-sizing: border-box;
+  margin-top: 0.4rem; padding: 0.4rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 0.5rem; background: color-mix(in srgb, var(--panel) 90%, transparent);
+  font-size: 0.7rem;
+}
+.map-theme { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0 0 0.3rem; }
+.map-badge {
+  display: inline-flex; align-items: center; gap: 0.2rem;
+  padding: 0.05rem 0.45rem; border-radius: 999px;
+  border: 1px solid var(--map-frame, var(--border));
+  background: var(--map-bg, var(--field)); color: var(--text);
+  font-weight: 600; letter-spacing: 0.02em;
+}
+.map-legend-list {
+  display: flex; flex-wrap: wrap; gap: 0.2rem 0.7rem;
+  max-height: 7rem; overflow-y: auto;
+  margin: 0; padding: 0; list-style: none;
+}
+.map-legend-item { display: inline-flex; align-items: center; gap: 0.25rem; }
+.map-key {
+  display: inline-grid; place-items: center; flex: none;
+  width: 0.95rem; height: 0.95rem; border-radius: 0.2rem;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background-size: cover; overflow: hidden;
+}
+.map-key img { width: 100%; height: 100%; object-fit: contain; }
+.map-legend .muted { font-size: 0.62rem; }
+.encounter-status strong { color: var(--map-accent, var(--accent)); }

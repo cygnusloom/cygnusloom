@@ -1471,6 +1471,7 @@ LOOKUP_TOOL_NAMES = {
     "list_factions",
     "list_lookups",
     "list_dice_tables",
+    "map_options",
     "roll_creative",
 }
 

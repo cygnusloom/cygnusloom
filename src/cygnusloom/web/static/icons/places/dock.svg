@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Dock</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 50 Q12 46 20 50 T36 50 T52 50 T64 50" stroke="#6fa8c9"/>
+    <path d="M4 58 H60" stroke="#5b9bd1"/>
+    <path d="M6 36 H58 V42 H6 Z" fill="#8b5e3c"/>
+    <path d="M12 42 V56 M26 42 V56 M40 42 V56 M54 42 V56"/>
+  </g>
+</svg>

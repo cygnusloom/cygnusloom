@@ -618,5 +618,395 @@
     "category": "objects",
     "path": "objects/tent.svg",
     "label": "Tent"
+  },
+  "alchemy-table": {
+    "category": "objects",
+    "path": "objects/alchemy-table.svg",
+    "label": "Alchemy table"
+  },
+  "armor-stand": {
+    "category": "objects",
+    "path": "objects/armor-stand.svg",
+    "label": "Armor stand"
+  },
+  "banner": {
+    "category": "objects",
+    "path": "objects/banner.svg",
+    "label": "Banner"
+  },
+  "bedroll": {
+    "category": "objects",
+    "path": "objects/bedroll.svg",
+    "label": "Bedroll"
+  },
+  "brazier": {
+    "category": "objects",
+    "path": "objects/brazier.svg",
+    "label": "Brazier"
+  },
+  "bush": {
+    "category": "objects",
+    "path": "objects/bush.svg",
+    "label": "Bush"
+  },
+  "cabinet": {
+    "category": "objects",
+    "path": "objects/cabinet.svg",
+    "label": "Cabinet"
+  },
+  "candle": {
+    "category": "objects",
+    "path": "objects/candle.svg",
+    "label": "Candle"
+  },
+  "cauldron-small": {
+    "category": "objects",
+    "path": "objects/cauldron-small.svg",
+    "label": "Small cauldron"
+  },
+  "chair": {
+    "category": "objects",
+    "path": "objects/chair.svg",
+    "label": "Chair"
+  },
+  "chandelier": {
+    "category": "objects",
+    "path": "objects/chandelier.svg",
+    "label": "Chandelier"
+  },
+  "clock": {
+    "category": "objects",
+    "path": "objects/clock.svg",
+    "label": "Clock"
+  },
+  "counter": {
+    "category": "objects",
+    "path": "objects/counter.svg",
+    "label": "Counter"
+  },
+  "crystal": {
+    "category": "objects",
+    "path": "objects/crystal.svg",
+    "label": "Crystal"
+  },
+  "curtain": {
+    "category": "objects",
+    "path": "objects/curtain.svg",
+    "label": "Curtain"
+  },
+  "desk": {
+    "category": "objects",
+    "path": "objects/desk.svg",
+    "label": "Desk"
+  },
+  "fence": {
+    "category": "objects",
+    "path": "objects/fence.svg",
+    "label": "Fence"
+  },
+  "fireplace": {
+    "category": "objects",
+    "path": "objects/fireplace.svg",
+    "label": "Fireplace"
+  },
+  "flower": {
+    "category": "objects",
+    "path": "objects/flower.svg",
+    "label": "Flower"
+  },
+  "globe": {
+    "category": "objects",
+    "path": "objects/globe.svg",
+    "label": "Globe"
+  },
+  "hammock": {
+    "category": "objects",
+    "path": "objects/hammock.svg",
+    "label": "Hammock"
+  },
+  "hay": {
+    "category": "objects",
+    "path": "objects/hay.svg",
+    "label": "Hay"
+  },
+  "idol": {
+    "category": "objects",
+    "path": "objects/idol.svg",
+    "label": "Idol"
+  },
+  "jar": {
+    "category": "objects",
+    "path": "objects/jar.svg",
+    "label": "Jar"
+  },
+  "keg": {
+    "category": "objects",
+    "path": "objects/keg.svg",
+    "label": "Keg"
+  },
+  "mirror": {
+    "category": "objects",
+    "path": "objects/mirror.svg",
+    "label": "Mirror"
+  },
+  "mushroom": {
+    "category": "objects",
+    "path": "objects/mushroom.svg",
+    "label": "Mushroom"
+  },
+  "oven": {
+    "category": "objects",
+    "path": "objects/oven.svg",
+    "label": "Oven"
+  },
+  "painting": {
+    "category": "objects",
+    "path": "objects/painting.svg",
+    "label": "Painting"
+  },
+  "pine": {
+    "category": "objects",
+    "path": "objects/pine.svg",
+    "label": "Pine"
+  },
+  "pit": {
+    "category": "objects",
+    "path": "objects/pit.svg",
+    "label": "Pit"
+  },
+  "plant": {
+    "category": "objects",
+    "path": "objects/plant.svg",
+    "label": "Plant"
+  },
+  "portal": {
+    "category": "objects",
+    "path": "objects/portal.svg",
+    "label": "Portal"
+  },
+  "pot": {
+    "category": "objects",
+    "path": "objects/pot.svg",
+    "label": "Pot"
+  },
+  "potion-shelf": {
+    "category": "objects",
+    "path": "objects/potion-shelf.svg",
+    "label": "Potion shelf"
+  },
+  "rock-small": {
+    "category": "objects",
+    "path": "objects/rock-small.svg",
+    "label": "Small rock"
+  },
+  "rug": {
+    "category": "objects",
+    "path": "objects/rug.svg",
+    "label": "Rug"
+  },
+  "rune-circle": {
+    "category": "objects",
+    "path": "objects/rune-circle.svg",
+    "label": "Rune circle"
+  },
+  "sack": {
+    "category": "objects",
+    "path": "objects/sack.svg",
+    "label": "Sack"
+  },
+  "shelf": {
+    "category": "objects",
+    "path": "objects/shelf.svg",
+    "label": "Shelf"
+  },
+  "shrine-object": {
+    "category": "objects",
+    "path": "objects/shrine-object.svg",
+    "label": "Wayside shrine"
+  },
+  "stool": {
+    "category": "objects",
+    "path": "objects/stool.svg",
+    "label": "Stool"
+  },
+  "tapestry": {
+    "category": "objects",
+    "path": "objects/tapestry.svg",
+    "label": "Tapestry"
+  },
+  "telescope": {
+    "category": "objects",
+    "path": "objects/telescope.svg",
+    "label": "Telescope"
+  },
+  "trapdoor": {
+    "category": "objects",
+    "path": "objects/trapdoor.svg",
+    "label": "Trapdoor"
+  },
+  "wagon": {
+    "category": "objects",
+    "path": "objects/wagon.svg",
+    "label": "Wagon"
+  },
+  "weapon-rack": {
+    "category": "objects",
+    "path": "objects/weapon-rack.svg",
+    "label": "Weapon rack"
+  },
+  "window": {
+    "category": "objects",
+    "path": "objects/window.svg",
+    "label": "Window"
+  },
+  "academy": {
+    "category": "places",
+    "path": "places/academy.svg",
+    "label": "Academy"
+  },
+  "barracks": {
+    "category": "places",
+    "path": "places/barracks.svg",
+    "label": "Barracks"
+  },
+  "bridge-place": {
+    "category": "places",
+    "path": "places/bridge-place.svg",
+    "label": "Stone bridge"
+  },
+  "castle-place": {
+    "category": "places",
+    "path": "places/castle-place.svg",
+    "label": "Castle"
+  },
+  "cave-place": {
+    "category": "places",
+    "path": "places/cave-place.svg",
+    "label": "Cave mouth"
+  },
+  "crossroads": {
+    "category": "places",
+    "path": "places/crossroads.svg",
+    "label": "Crossroads"
+  },
+  "dock": {
+    "category": "places",
+    "path": "places/dock.svg",
+    "label": "Dock"
+  },
+  "garden": {
+    "category": "places",
+    "path": "places/garden.svg",
+    "label": "Garden"
+  },
+  "gate-place": {
+    "category": "places",
+    "path": "places/gate-place.svg",
+    "label": "Town gate"
+  },
+  "guildhall": {
+    "category": "places",
+    "path": "places/guildhall.svg",
+    "label": "Guildhall"
+  },
+  "inn": {
+    "category": "places",
+    "path": "places/inn.svg",
+    "label": "Inn"
+  },
+  "lighthouse": {
+    "category": "places",
+    "path": "places/lighthouse.svg",
+    "label": "Lighthouse"
+  },
+  "mill": {
+    "category": "places",
+    "path": "places/mill.svg",
+    "label": "Mill"
+  },
+  "oasis": {
+    "category": "places",
+    "path": "places/oasis.svg",
+    "label": "Oasis"
+  },
+  "observatory": {
+    "category": "places",
+    "path": "places/observatory.svg",
+    "label": "Observatory"
+  },
+  "park": {
+    "category": "places",
+    "path": "places/park.svg",
+    "label": "Park"
+  },
+  "prison": {
+    "category": "places",
+    "path": "places/prison.svg",
+    "label": "Prison"
+  },
+  "ruins-place": {
+    "category": "places",
+    "path": "places/ruins-place.svg",
+    "label": "Ruins"
+  },
+  "village-place": {
+    "category": "places",
+    "path": "places/village-place.svg",
+    "label": "Village"
+  },
+  "waterfall": {
+    "category": "places",
+    "path": "places/waterfall.svg",
+    "label": "Waterfall"
+  },
+  "ashland": {
+    "category": "terrain",
+    "path": "terrain/ashland.svg",
+    "label": "Ashland"
+  },
+  "canyon": {
+    "category": "terrain",
+    "path": "terrain/canyon.svg",
+    "label": "Canyon"
+  },
+  "crystal-field": {
+    "category": "terrain",
+    "path": "terrain/crystal-field.svg",
+    "label": "Crystal field"
+  },
+  "delta": {
+    "category": "terrain",
+    "path": "terrain/delta.svg",
+    "label": "Delta"
+  },
+  "lava-field": {
+    "category": "terrain",
+    "path": "terrain/lava-field.svg",
+    "label": "Lava field"
+  },
+  "marsh": {
+    "category": "terrain",
+    "path": "terrain/marsh.svg",
+    "label": "Marsh"
+  },
+  "meadow": {
+    "category": "terrain",
+    "path": "terrain/meadow.svg",
+    "label": "Meadow"
+  },
+  "orchard": {
+    "category": "terrain",
+    "path": "terrain/orchard.svg",
+    "label": "Orchard"
+  },
+  "snowfield": {
+    "category": "terrain",
+    "path": "terrain/snowfield.svg",
+    "label": "Snowfield"
+  },
+  "vineyard": {
+    "category": "terrain",
+    "path": "terrain/vineyard.svg",
+    "label": "Vineyard"
   }
 }

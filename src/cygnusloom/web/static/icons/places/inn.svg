@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Inn</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 56 V26 H46 V56 Z" fill="#d9b97a"/>
+    <path d="M6 26 L28 8 L50 26 Z" fill="#c0503a"/>
+    <path d="M20 56 V40 H32 V56 Z" fill="#8b5e3c"/>
+    <path d="M44 18 H56 V28 H44 Z" fill="#e6b53a"/>
+    <path d="M42 14 H56 M50 14 V18"/>
+    <path d="M6 58 H58"/>
+  </g>
+</svg>

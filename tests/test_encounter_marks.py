@@ -151,7 +151,7 @@ def test_unknown_template_lists_the_known_ids(client_factory: Callable[[], TestC
         {"name": MAP, "location": TOWN, "description": "A hall.", "template": "castle"},
     )
     assert "there is no encounter template 'castle'" in refused["error"]
-    assert "clearing" in refused["error"] and "shoreline" in refused["error"]
+    assert "clearing" in refused["error"] and "great_hall" in refused["error"]
     assert MAP not in _state(app, campaign_id).maps
 
 
@@ -173,15 +173,15 @@ def test_set_map_cells_validates_ids_bounds_and_shape(client_factory: Callable[[
     client, campaign_id = _started(client_factory, {"columns": 10, "rows": 10})
     app = client.app
 
-    bad_terrain = _paint(app, campaign_id, [{"column": 1, "row": 1, "terrain": "lava"}])
-    assert "there is no terrain 'lava'" in bad_terrain["error"]
+    bad_terrain = _paint(app, campaign_id, [{"column": 1, "row": 1, "terrain": "plasma"}])
+    assert "there is no terrain 'plasma'" in bad_terrain["error"]
     assert "mud" in bad_terrain["error"]
     bad_object = _paint(app, campaign_id, [{"column": 1, "row": 1, "object": "dragon"}])
     assert "there is no encounter object 'dragon'" in bad_object["error"]
     off_map = _paint(app, campaign_id, [{"column": 10, "row": 0, "terrain": "mud"}])
     assert "from 0 to 9" in off_map["error"]
     empty = _paint(app, campaign_id, [{"column": 1, "row": 1}])
-    assert "needs terrain or object" in empty["error"]
+    assert "needs a terrain, object, color, pattern, icon, or label" in empty["error"]
     too_many = _paint(app, campaign_id, [{"column": 0, "row": 0, "terrain": "mud"}] * 201)
     assert "at most 200 cells" in too_many["error"]
     unknown = _call(
@@ -361,6 +361,7 @@ def test_gm_view_lists_the_background_and_marked_cells(client_factory: Callable[
         "color": RULES.terrain["floor"].color,
         "rule": RULES.terrain["floor"].rule,
         "difficult": False,
+        "pattern": "",
     }
     cells = {(cell["column"], cell["row"]): cell for cell in view["marked_cells"]}
     assert len(cells) == 80
@@ -370,12 +371,17 @@ def test_gm_view_lists_the_background_and_marked_cells(client_factory: Callable[
         "terrain": RULES.terrain["floor"].name,
         "terrain_color": RULES.terrain["floor"].color,
         "terrain_rule": RULES.terrain["floor"].rule,
+        "terrain_pattern": "",
         "object": RULES.encounter_objects["wall"].name,
         "object_icon": RULES.encounter_objects["wall"].icon,
         "object_color": RULES.encounter_objects["wall"].color,
         "object_solid": True,
         "blocks": True,
         "difficult": False,
+        "cell_color": "",
+        "pattern": "",
+        "cell_icon": "",
+        "label": "",
     }
     assert cells[(4, 0)]["blocks"] is False
     assert cells[(1, 1)] == {
@@ -384,12 +390,17 @@ def test_gm_view_lists_the_background_and_marked_cells(client_factory: Callable[
         "terrain": RULES.terrain["mud"].name,
         "terrain_color": RULES.terrain["mud"].color,
         "terrain_rule": RULES.terrain["mud"].rule,
+        "terrain_pattern": "",
         "object": "",
         "object_icon": "",
         "object_color": "",
         "object_solid": False,
         "blocks": False,
         "difficult": True,
+        "cell_color": "",
+        "pattern": "",
+        "cell_icon": "",
+        "label": "",
     }
 
 
@@ -464,3 +475,115 @@ def test_a_wall_cannot_be_set_on_a_cell_a_participant_occupies(
     assert refused["error"] == "column 4, row 5 is occupied by Pip, so it cannot be walled off"
     assert _map(app, campaign_id).marks.get((4, 5)) is None
     assert _paint(app, campaign_id, [{"column": 4, "row": 6, "object": "wall"}])["changed"] == 1
+
+
+def test_set_map_cells_paints_a_cell_colour_pattern_icon_and_label(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _started(client_factory, {"columns": 10, "rows": 10})
+    app = client.app
+    result = _paint(
+        app,
+        campaign_id,
+        [
+            {
+                "column": 1,
+                "row": 1,
+                "terrain": "marble",
+                "color": "#123456",
+                "pattern": "tiles",
+                "icon": "window",
+                "label": "Dais",
+            }
+        ],
+    )
+    assert result["changed"] == 1
+    assert _map(app, campaign_id).marks[(1, 1)] == CellMark(
+        "marble", "", "#123456", "tiles", "window", "Dais"
+    )
+    view = encounters.encounter_view(
+        _state(app, campaign_id), CAIRN_GRID, None, RULES.terrain, RULES.encounter_objects
+    )
+    assert view is not None
+    cell = next(cell for cell in view["marked_cells"] if (cell["column"], cell["row"]) == (1, 1))
+    assert cell["cell_color"] == "#123456"
+    assert cell["pattern"] == "tiles"
+    assert cell["cell_icon"] == "window"
+    assert cell["label"] == "Dais"
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert 'class="cell-pattern pattern-tiles"' in page
+    assert 'style="background-color: #123456"' in page
+    assert 'data-label="Dais"' in page
+    assert "Dais: Marble floor." in page
+
+
+def test_set_map_cells_clears_every_field_and_pops_the_mark(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _started(client_factory, {"columns": 10, "rows": 10})
+    app = client.app
+    _paint(
+        app,
+        campaign_id,
+        [
+            {
+                "column": 1,
+                "row": 1,
+                "terrain": "wood",
+                "color": "#654321",
+                "pattern": "wood",
+                "icon": "candle",
+                "label": "Nook",
+            }
+        ],
+    )
+    _paint(
+        app,
+        campaign_id,
+        [
+            {
+                "column": 1,
+                "row": 1,
+                "terrain": "",
+                "color": "",
+                "pattern": "",
+                "icon": "",
+                "label": "",
+            }
+        ],
+    )
+    assert (1, 1) not in _map(app, campaign_id).marks
+
+
+def test_set_map_cells_validates_custom_fields(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _started(client_factory, {"columns": 10, "rows": 10})
+    app = client.app
+    assert (
+        "hex colour" in _paint(app, campaign_id, [{"column": 1, "row": 1, "color": "red"}])["error"]
+    )
+    assert (
+        "no pattern"
+        in _paint(app, campaign_id, [{"column": 1, "row": 1, "pattern": "nope"}])["error"]
+    )
+    assert (
+        "names no icon"
+        in _paint(app, campaign_id, [{"column": 1, "row": 1, "icon": "nope"}])["error"]
+    )
+    assert (
+        "at most 60"
+        in _paint(app, campaign_id, [{"column": 1, "row": 1, "label": "x" * 61}])["error"]
+    )
+    too_short = _paint(app, campaign_id, [{"column": 1, "row": 1, "label": "   "}])
+    assert too_short["changed"] == 1
+
+
+def test_cell_tip_includes_the_label():
+    assert _cell_tip(None, "Marble floor", "Normal.", "", False, "Dais") == (
+        "Dais: Marble floor. Normal."
+    )
+    assert _cell_tip({"name": "Ada"}, "Marble floor", "Normal.", "", False, "Dais") == (
+        "Dais: Ada on Marble floor. Normal."
+    )
+    assert _cell_tip(None, "", "", "", False, "Dais") == "Dais"

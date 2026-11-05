@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Chair</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 6 H28 V32 H18 Z" fill="#8b5e3c"/>
+    <path d="M16 32 H48 V40 H16 Z" fill="#8b5e3c"/>
+    <path d="M18 40 V58 M46 40 V58"/>
+    <path d="M18 14 H28 M18 22 H28"/>
+  </g>
+</svg>

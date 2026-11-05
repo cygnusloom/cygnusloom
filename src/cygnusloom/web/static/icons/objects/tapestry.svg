@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Tapestry</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 8 H58"/>
+    <path d="M12 8 H52 V48 L46 56 H18 L12 48 Z" fill="#8b5e3c"/>
+    <path d="M20 16 H44 V40 H20 Z" stroke="#d9b97a"/>
+    <path d="M32 20 L38 30 L32 40 L26 30 Z" fill="#e6b53a"/>
+    <path d="M20 48 L17 56 M44 48 L47 56"/>
+  </g>
+</svg>

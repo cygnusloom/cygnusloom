@@ -1095,7 +1095,7 @@
     "id": "create_local_map",
     "name": "create_local_map",
     "world_method": "create_local_map",
-    "description": "Create a local map for an indoor or small-scale place, such as a room, tavern, house, temple, crypt, cave, watchtower, market, camp, ship, hall, library, or cellar. A local map is used outside an encounter to show where the player character, NPCs, and props stand; when a fight starts on it, start_encounter on the same map and the tokens already placed carry into the fight. The template supplies the layout, size, and starting terrain.",
+    "description": "Create a local map for an indoor or small-scale place, such as a room, tavern, house, temple, crypt, cave, watchtower, market, camp, ship, hall, library, or cellar. A local map is used outside an encounter to show where the player character, NPCs, and props stand; when a fight starts on it, start_encounter on the same map and the tokens already placed carry into the fight. The template supplies the layout, size, and starting terrain. Use map_options to see the templates, and give a palette, ambient, or board colours when the place's mood matters; without them the template's own look is copied.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -1122,6 +1122,22 @@
         "rows": {
           "type": "integer",
           "description": "How many cells tall the map is, from 1 to 60. Leave it out to use the template's height."
+        },
+        "palette": {
+          "type": "string",
+          "description": "A palette id from map_options, such as parchment, stone, forest, sea, ember, frost, shadow, or royal. Leave it out to use the template's palette."
+        },
+        "ambient": {
+          "type": "string",
+          "description": "An ambient id from map_options, such as day, dusk, night, torchlit, foggy, underwater, or magical. Leave it out to use the template's ambient."
+        },
+        "background_color": {
+          "type": "string",
+          "description": "A hex colour for the board's ground, such as #d9d4c8. Leave it out to use the template's colour."
+        },
+        "grid_color": {
+          "type": "string",
+          "description": "A hex colour for the board's grid lines. Leave it out to use the template's colour."
         }
       },
       "required": [
@@ -1208,7 +1224,7 @@
     "id": "set_map_cells",
     "name": "set_map_cells",
     "world_method": "set_map_cells",
-    "description": "Set the terrain or object on cells of a map, inside or outside an encounter. Use it for fixed furniture, doors, stairs, water, and other props on a local map. A cell with a blocking object cannot be entered.",
+    "description": "Set the terrain, object, colour, pattern, icon, or label of cells on a map, inside or outside an encounter. Use it for fixed furniture, doors, stairs, water, and other props on a local map, and to vary its tiles. Ids come from map_options. A custom colour overrides the terrain colour, a custom icon overrides the object icon, and the label appears in the tooltip and legend. A cell with a blocking object cannot be entered.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -1218,7 +1234,7 @@
         },
         "cells": {
           "type": "array",
-          "description": "The cells to change, at most 200 per call. Each cell needs a column and row, and terrain or object or both. Give an empty string for terrain or object to clear it.",
+          "description": "The cells to change, at most 200 per call. Each cell needs a column and row, and at least one of terrain, object, color, pattern, icon, or label. Give an empty string to clear a field.",
           "items": {
             "type": "object",
             "properties": {
@@ -1237,6 +1253,22 @@
               "object": {
                 "type": "string",
                 "description": "The object id on the cell, such as wall or crate. Empty clears it."
+              },
+              "color": {
+                "type": "string",
+                "description": "A hex colour for this cell's ground, such as #7a2f3a. Empty clears it."
+              },
+              "pattern": {
+                "type": "string",
+                "description": "A pattern id from map_options, such as tiles, bricks, wood, or runes. Empty clears it."
+              },
+              "icon": {
+                "type": "string",
+                "description": "An icon id from map_options to draw instead of the object's own icon. Empty clears it."
+              },
+              "label": {
+                "type": "string",
+                "description": "A short label for the cell, at most 60 characters, shown in the tooltip and legend. Empty clears it."
               }
             },
             "required": [
@@ -1250,6 +1282,100 @@
         "map",
         "cells"
       ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "update_local_map",
+    "name": "update_local_map",
+    "world_method": "update_local_map",
+    "description": "Change a local map: rename it, move it to another location, rewrite its description, resize it, restyle its palette, ambient, background, or board colours, or extend it left, right, up, or down. Extending keeps every mark and token, shifting them by the cells added to the left or top; a fight in progress keeps its cells too. Shrinking crops what falls outside and reports how many marks and tokens were dropped. Use map_options to see the palettes, ambients, terrains, and patterns.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "map": {
+          "type": "string",
+          "description": "The name of the local map."
+        },
+        "new_name": {
+          "type": "string",
+          "description": "A new name for the map, unique among maps. Leave it out to keep the name."
+        },
+        "description": {
+          "type": "string",
+          "description": "A new description of what the place shows. Leave it out to keep the description."
+        },
+        "location": {
+          "type": "string",
+          "description": "The name of the existing location the map is set in. Leave it out to keep the location."
+        },
+        "columns": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The map's new width in cells, from 1 to 60. Leave it out to keep the width."
+        },
+        "rows": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The map's new height in cells, from 1 to 60. Leave it out to keep the height."
+        },
+        "extend_left": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many cells to add on the left. Existing marks and tokens shift right, so nothing is lost."
+        },
+        "extend_right": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many cells to add on the right."
+        },
+        "extend_up": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many cells to add at the top. Existing marks and tokens shift down, so nothing is lost."
+        },
+        "extend_down": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many cells to add at the bottom."
+        },
+        "background": {
+          "type": "string",
+          "description": "The terrain id under every cell without a mark, from map_options. Empty clears the background."
+        },
+        "background_color": {
+          "type": "string",
+          "description": "A hex colour for the board's ground. Empty clears it."
+        },
+        "grid_color": {
+          "type": "string",
+          "description": "A hex colour for the board's grid lines. Empty clears it."
+        },
+        "palette": {
+          "type": "string",
+          "description": "A palette id from map_options. Empty clears it."
+        },
+        "ambient": {
+          "type": "string",
+          "description": "An ambient id from map_options. Empty clears it."
+        }
+      },
+      "required": [
+        "map"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "map_options",
+    "name": "map_options",
+    "world_method": "map_options",
+    "lookup": true,
+    "description": "List the ids a local map can use: its terrains with their colours, patterns, and categories; its objects with their icons, categories, and blocking flags; the layout templates with their sizes and looks; the palettes, ambients, and patterns. Use it before create_local_map, set_map_cells, or update_local_map so every id is real.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
     }
   },
   {

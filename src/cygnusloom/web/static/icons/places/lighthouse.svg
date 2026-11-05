@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Lighthouse</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M24 56 L28 22 H36 L40 56 Z" fill="#f5f0e4"/>
+    <path d="M26 32 H38 M25 44 H39" stroke="#c0503a" stroke-width="4"/>
+    <path d="M26 22 V12 H38 V22" fill="#e6b53a"/>
+    <path d="M24 12 L32 4 L40 12 Z" fill="#c0503a"/>
+    <path d="M22 16 L10 12 M42 16 L54 12" stroke="#e6b53a"/>
+    <path d="M14 58 H50"/>
+  </g>
+</svg>

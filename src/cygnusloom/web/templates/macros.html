@@ -149,13 +149,37 @@
 {%- endmacro %}
 
 {% macro encounter_board(encounter, rows) -%}
-  <div class="map-board encounter-board" role="img" aria-label="Encounter map: {{ encounter.map }}" style="--columns: {{ encounter.columns }}; --rows: {{ encounter.rows }}">
+  <div class="map-board encounter-board{% if encounter.palette %} palette-{{ encounter.palette }}{% endif %}{% if encounter.ambient %} ambient-{{ encounter.ambient }}{% endif %}" role="img" aria-label="Encounter map: {{ encounter.map }}" style="--columns: {{ encounter.columns }}; --rows: {{ encounter.rows }}{% if encounter.background_color %}; --map-bg: {{ encounter.background_color }}{% endif %}{% if encounter.grid_color %}; --map-grid: {{ encounter.grid_color }}{% endif %}">
     {% for row in rows %}
       {% for cell in row %}
         {% set occupant = cell.occupant %}
-        <span class="encounter-cell{% if cell.blocks %} blocked{% endif %}{% if cell.difficult %} difficult{% endif %}{% if occupant %} occupied{% endif %}{% if occupant and occupant.acting %} acting{% endif %}{% if occupant and occupant.defeated %} defeated{% endif %}"{% if cell.terrain_name %} data-terrain="{{ cell.terrain_name }}"{% endif %}{% if cell.terrain_color %} style="background-color: {{ cell.terrain_color }}"{% endif %}{% if cell.tip %} data-tip="{{ cell.tip }}"{% endif %}>{% if cell.object_solid %}<span class="cell-solid" style="background-color: {{ cell.object_color }}" title="{{ cell.object_name }}" role="img" aria-label="{{ cell.object_name }}"></span>{% elif cell.object_icon %}<img class="cell-object" src="{{ icon_path(cell.object_icon) }}" alt="{{ cell.object_name }}" title="{{ cell.object_name }}">{% endif %}{% if occupant %}<span class="map-token">{{ occupant.label }}</span>{% endif %}</span>
+        <span class="encounter-cell{% if cell.blocks %} blocked{% endif %}{% if cell.difficult %} difficult{% endif %}{% if occupant %} occupied{% endif %}{% if occupant and occupant.acting %} acting{% endif %}{% if occupant and occupant.defeated %} defeated{% endif %}"{% if cell.terrain_name %} data-terrain="{{ cell.terrain_name }}"{% endif %}{% if cell.color %} style="background-color: {{ cell.color }}"{% endif %}{% if cell.tip %} data-tip="{{ cell.tip }}"{% endif %}{% if cell.label %} data-label="{{ cell.label }}"{% endif %}>{% if cell.pattern %}<span class="cell-pattern pattern-{{ cell.pattern }}" aria-hidden="true"></span>{% endif %}{% if cell.object_solid %}<span class="cell-solid" style="background-color: {{ cell.object_color }}" title="{{ cell.object_name }}" role="img" aria-label="{{ cell.object_name }}"></span>{% elif cell.object_icon or cell.icon %}<img class="cell-object" src="{{ icon_path(cell.icon or cell.object_icon) }}" alt="{{ cell.object_name or cell.label }}" title="{{ cell.object_name or cell.label }}">{% endif %}{% if occupant %}<span class="map-token">{{ occupant.label }}</span>{% endif %}</span>
       {% endfor %}
     {% endfor %}
+  </div>
+{%- endmacro %}
+
+{# The local map's key: its palette and ambient, then every distinct terrain, object, and label
+   on the board with the colour or icon that marks it. #}
+{% macro map_legend(items, view) -%}
+  <div class="map-legend" aria-label="Map legend">
+    {% if view.palette or view.ambient %}
+      <p class="map-theme">
+        {% if view.palette %}<span class="map-badge palette-{{ view.palette }}">{{ view.palette | capitalize }}</span>{% endif %}
+        {% if view.ambient %}<span class="map-badge ambient-{{ view.ambient }}">{{ view.ambient | capitalize }}</span>{% endif %}
+      </p>
+    {% endif %}
+    {% if items %}
+      <ul class="map-legend-list">
+        {% for item in items %}
+          <li class="map-legend-item">
+            <span class="map-key{% if item.pattern %} pattern-{{ item.pattern }}{% endif %}"{% if item.color %} style="background-color: {{ item.color }}"{% endif %} aria-hidden="true">{% if item.icon %}<img src="{{ icon_path(item.icon) }}" alt="">{% endif %}</span>
+            <span>{{ item.name }}</span>
+            <span class="muted">{{ item.kind }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
   </div>
 {%- endmacro %}
 

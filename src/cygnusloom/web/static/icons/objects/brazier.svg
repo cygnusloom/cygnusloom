@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Brazier</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 30 H52 L48 44 Q32 50 16 44 Z" fill="#a7adb2"/>
+    <path d="M12 30 H52"/>
+    <path d="M18 30 Q20 18 24 30 M28 30 Q32 12 36 30 M40 30 Q44 20 46 30" stroke="#c0503a"/>
+    <path d="M22 46 L16 58 M42 46 L48 58 M32 48 V58"/>
+  </g>
+</svg>

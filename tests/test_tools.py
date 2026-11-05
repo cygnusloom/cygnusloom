@@ -154,6 +154,8 @@ CORE_TOOL_NAMES = {
     "roll_creative",
     "record_setting",
     "create_local_map",
+    "update_local_map",
+    "map_options",
     "place_map_token",
     "remove_map_token",
     "set_map_cells",

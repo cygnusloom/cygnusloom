@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Banner</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 4 V60"/>
+    <path d="M14 10 H52 V42 L33 34 L14 42 Z" fill="#c0503a"/>
+    <path d="M33 15 L40 27 H26 Z" fill="#e6b53a"/>
+    <path d="M8 60 H20"/>
+  </g>
+</svg>

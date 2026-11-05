@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Alchemy table</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 30 H56 V36 H8 Z" fill="#8b5e3c"/>
+    <path d="M12 36 V58 M52 36 V58"/>
+    <path d="M24 8 H36 L34 18 Q44 22 44 28 H16 Q16 22 26 18 Z" fill="#6fa8c9"/>
+    <path d="M19 24 H41" stroke="#7fae5a"/>
+    <path d="M46 16 H52 V30 H46 Z" fill="#e6b53a"/>
+  </g>
+</svg>

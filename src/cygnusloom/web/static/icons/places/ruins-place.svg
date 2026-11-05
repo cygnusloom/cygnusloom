@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Ruins</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 56 V18 H22 V56 Z" fill="#a7adb2"/>
+    <path d="M8 18 H26"/>
+    <path d="M42 56 V32 H50 V56 Z" fill="#a7adb2"/>
+    <path d="M38 32 H54"/>
+    <path d="M28 56 L34 48 L42 56 Z" fill="#a7adb2"/>
+    <path d="M6 58 H58"/>
+  </g>
+</svg>

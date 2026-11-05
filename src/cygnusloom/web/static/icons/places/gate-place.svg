@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Town gate</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 56 V22 H18 V16 H26 V22 H38 V16 H46 V22 H58 V56 Z" fill="#a7adb2"/>
+    <path d="M24 56 V42 Q32 32 40 42 V56 Z" fill="#2e2620"/>
+    <path d="M24 22 V30 M40 22 V30"/>
+    <path d="M4 58 H60"/>
+  </g>
+</svg>
