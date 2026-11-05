@@ -14,6 +14,7 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
    book's faction assets and their turns are GM text rather than engine state.
 8. Audit the transcript for cleanliness - we likely don't need announcements about armor values (WWN).
 9. More local maps outside of encounters - for indoor or small-scale locations we should have nice maps that turn into encounter maps at a moments notice. Maybe combine the two concepts. Be able to place props, npcs, objects, etc.
+12. Currently the creativity/lore/story/setting/generation tables in core are heavily fantasy-focused. Let's group them with tags like genre (I think the existing ones will be fantasy, maybe some will be generic) so each ruleset can choose which ones to use. You can also override the choices at campaign creation time (checkboxes in a default-hidden section), though this is not a usual path.
 
 # Triaged Issues
 
