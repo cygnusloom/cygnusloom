@@ -26,7 +26,7 @@ Run checks with `uv run pytest -n auto` and `uv run ruff check`.
 
 DeepSeek serves an OpenAI-compatible chat completions API, so it plugs in as a normal provider. Create an API key at [platform.deepseek.com](https://platform.deepseek.com) and export it in your shell (or put the export in your shell profile); never commit your key to the repository or paste it into [.env.example](.env.example).
 
-- `deepseek-chat` is the general chat model; `deepseek-reasoner` is the reasoning model. Switch by changing `CYGNUSLOOM_LLM_PROVIDERS` and `CYGNUSLOOM_LLM_DEFAULT_MODEL`.
+- `deepseek-flash` is the usual model. Switch by changing `CYGNUSLOOM_LLM_PROVIDERS` and `CYGNUSLOOM_LLM_DEFAULT_MODEL`.
 - The base URL is always `https://api.deepseek.com/v1`; `CYGNUSLOOM_LLM_DEEPSEEK_API_KEY` and `CYGNUSLOOM_LLM_DEEPSEEK_BASE_URL` follow the `CYGNUSLOOM_LLM_<NAME>_*` convention for any OpenAI-compatible provider.
 - For the Docker deployment, add the same model under **Admin > Models** after signing in; the API key is stored encrypted with `CYGNUSLOOM_SECRET_KEY` in the database, not in `.env`.
 
