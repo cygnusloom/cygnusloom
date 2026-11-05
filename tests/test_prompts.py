@@ -57,6 +57,11 @@ def test_turn_review_instruction_is_generic():
     assert "narration below" in TURN_REVIEW_INSTRUCTION
 
 
+def test_ooc_instruction_does_not_restart_the_ooc_step():
+    assert "call ooc" not in OOC_INSTRUCTION
+    assert "state step already decided" in OOC_INSTRUCTION
+
+
 def test_speech_instruction_without_a_cap_has_no_numeric_limit():
     assert "say it, one sentence where you can." in speech_instruction(None)
 

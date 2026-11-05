@@ -184,7 +184,7 @@ OOC_INSTRUCTION = (
     "more. Do not speak or act for the player character. If their request needs a change to "
     "the world, make it with tool calls first, and "
     "write no text before those calls: text written before a tool call is shown to the player "
-    "right away. If the story should move on after your reply, call ooc with no_narration false."
+    "right away. The state step already decided whether the story continues after this reply."
 )
 _NUMBER_WORDS = ("one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")
 JOURNAL_INSTRUCTION = (

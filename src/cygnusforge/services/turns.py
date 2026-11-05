@@ -112,6 +112,9 @@ NARRATION_ATTEMPTS = 2
 NARRATION_REVIEWS = 2
 # A review step's model rounds: enough to undo, fix the record, and stop.
 REVIEW_ROUNDS = 3
+# The state-step tool that marks a message out of character. The out-of-character step must not
+# be offered it again, or the model can restart that step instead of replying.
+OOC_TOOL = "ooc"
 # The review tool that sets the narration aside.
 UNDO_NARRATION = "undo_narration"
 # The note recorded when a review changed the record without setting the narration aside first.
@@ -1025,6 +1028,11 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
     """Run the reply until it is recorded or paused. Log entries are yielded as the steps that
     recorded them finish. A pause is recorded before the player hears of it."""
     tools = tool_specs(run.tool_calls)
+    ooc_tools = (
+        [spec for spec in tools if spec["function"]["name"] != OOC_TOOL]
+        if tools is not None
+        else None
+    )
     state = {"role": "system", "content": state_instruction(run.rule_set, run.world)}
     while True:
         turn = _turn(_state(run.engine, run.campaign_id))
@@ -1057,7 +1065,7 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             view.append({"role": "system", "content": OOC_INSTRUCTION})
             step: ChatReply | None = None
             async for arrived, item in _stream_with_heartbeat(
-                run.provider.stream(run.model_name, view, tools)
+                run.provider.stream(run.model_name, view, ooc_tools)
             ):
                 if not arrived:
                     yield Status(HEARTBEAT_MESSAGE)
@@ -1067,7 +1075,13 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                     step = item
             if step is None:
                 raise LLMError("the model returned no reply")
-            if step.tool_requests:
+            # The ooc tool is not offered here. A model that calls it anyway must not restart the
+            # out-of-character step; the state step already decided whether the story continues.
+            requests = [request for request in step.tool_requests if request.name != OOC_TOOL]
+            if requests:
+                filtered = ChatReply(
+                    text=step.text, tool_requests=tuple(requests), reasoning=step.reasoning
+                )
                 context = []
                 if step.text:
                     context.append(
@@ -1079,8 +1093,8 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                     run.engine,
                     run.campaign_id,
                     StateStepMade(
-                        requests=[asdict(request) for request in step.tool_requests],
-                        messages=[_tool_call_message(step)],
+                        requests=[asdict(request) for request in requests],
+                        messages=[_tool_call_message(filtered)],
                         context=_dicts(context),
                     ),
                 )

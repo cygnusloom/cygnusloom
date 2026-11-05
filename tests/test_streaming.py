@@ -10,7 +10,8 @@ from sqlmodel import Session
 
 from cygnusforge.config import Settings
 from cygnusforge.db.models import Campaign
-from cygnusforge.llm.base import ChatReply, LLMError
+from cygnusforge.llm.base import ChatReply, LLMError, ToolRequest
+from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.services.campaigns import list_messages
 from tests.conftest import NARRATE_TEXT, csrf_token
 from tests.test_campaigns import _answer, _campaign_id
@@ -216,6 +217,90 @@ def test_out_of_character_reply_can_be_followed_by_the_story(
     assert events[-1]["type"] == "saved"
     assert len(_assistant_ids(app, campaign_id)) == 3
     assert _state(app, campaign_id).turn is None
+
+
+def test_out_of_character_step_is_not_offered_the_ooc_tool(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    client, campaign_id = _campaign_id(client_factory)
+
+    events = _stream(
+        client,
+        campaign_id,
+        _script(
+            {"rounds": [[OOC_THEN_STORY]], "ooc": "Sure, ask away.", "text": "The tide turns."}
+        ),
+    )
+
+    ooc_calls = [
+        call
+        for call in recorder.calls
+        if call["tools"] is not None
+        and call["messages"]
+        and call["messages"][-1]["role"] == "system"
+        and "Out-of-character step." in call["messages"][-1]["content"]
+    ]
+    assert ooc_calls
+    offered = {spec["function"]["name"] for spec in ooc_calls[0]["tools"]}
+    assert "ooc" not in offered
+    assert events[-1]["type"] == "saved"
+
+
+class _OocCallsItself(FakeProvider):
+    """A model that ignores the tool list and calls ooc again from the OOC step."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.ooc_steps = 0
+
+    async def stream(self, model, messages, tools=None):
+        if (
+            messages
+            and messages[-1]["role"] == "system"
+            and "Out-of-character step." in messages[-1]["content"]
+        ):
+            self.ooc_steps += 1
+            self.calls.append(messages)
+            yield ChatReply(
+                text="Sure, ask away.",
+                tool_requests=(
+                    ToolRequest(
+                        id="ooc-again",
+                        name="ooc",
+                        arguments='{"no_narration": false}',
+                    ),
+                ),
+            )
+            return
+        async for item in super().stream(model, messages, tools):
+            yield item
+
+
+def test_an_ooc_restart_request_is_ignored(client_factory: Callable[[], TestClient], app: FastAPI):
+    provider = _OocCallsItself()
+    app.state.providers = lambda model_id: (provider, model_id)
+    client, campaign_id = _campaign_id(client_factory)
+
+    events = _stream(
+        client,
+        campaign_id,
+        _script(
+            {"rounds": [[OOC_THEN_STORY]], "ooc": "Sure, ask away.", "text": "The tide turns."}
+        ),
+    )
+
+    assert provider.ooc_steps == 1
+    assert _deltas(events) == "The tide turns."
+    assert events[-1]["type"] == "saved"
+    assert _state(app, campaign_id).turn is None
+    saved = [
+        message.content
+        for message in list_messages(app.state.engine, campaign_id)
+        if message.role == "assistant"
+    ]
+    assert saved[-2:] == ["Sure, ask away.", "The tide turns."]
 
 
 def test_out_of_character_step_can_roll_and_resume_with_its_reply(
