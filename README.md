@@ -1,6 +1,6 @@
 # Cygnus Loom
 
-Cygnus Loom is a web-based RPG with an AI game master. Create a campaign, choose a world and rule set, and play through chat with characters, maps, and a journal.
+[Cygnus Loom](https://cygnusloom.com) is a web-based RPG with an AI game master. Create a campaign, choose a world and rule set, and play through chat with characters, maps, and a journal.
 
 ## Local development
 
