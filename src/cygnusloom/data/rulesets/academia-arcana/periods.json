@@ -3,12 +3,14 @@
     "type": "period",
     "id": "school-week",
     "label": "school week",
+    "description": "A week of lessons and obligations; reactions and weekly marks reset when it ends.",
     "resets": ["week"]
   },
   {
     "type": "period",
     "id": "school-year",
     "label": "school year",
+    "description": "The end of a school year: the College Cup is decided, stress clears, and every student gains a Year and four Advancement points.",
     "tallies": ["college-cup"],
     "resets": ["week"],
     "effects": [

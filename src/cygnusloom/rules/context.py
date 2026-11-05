@@ -50,6 +50,7 @@ class CoreWorld(Protocol):
         force: bool = False,
         parent: str | None = None,
         icon: str | None = None,
+        summary: str | None = None,
     ) -> dict[str, Any]: ...
 
     def create_region(
@@ -82,12 +83,13 @@ class CoreWorld(Protocol):
     def update_location(
         self,
         name: str,
-        description: str,
+        description: str | None = None,
         x: float | None = None,
         y: float | None = None,
         off_map: bool = False,
         force: bool = False,
         icon: str | None = None,
+        summary: str | None = None,
     ) -> dict[str, Any]: ...
 
     def delete_location(self, name: str) -> dict[str, Any]: ...

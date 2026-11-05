@@ -106,6 +106,7 @@ class PlacesMixin:
         force: bool = False,
         parent: str | None = None,
         icon: str | None = None,
+        summary: str | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return create_location(
@@ -119,6 +120,7 @@ class PlacesMixin:
                 force,
                 parent,
                 icon,
+                summary,
             )
 
     def discover_location(self, name: str, summary: str | None = None) -> dict[str, Any]:
@@ -128,17 +130,22 @@ class PlacesMixin:
     def update_location(
         self,
         name: str,
-        description: str,
+        description: str | None = None,
         x: float | None = None,
         y: float | None = None,
         off_map: bool = False,
         force: bool = False,
         icon: str | None = None,
+        summary: str | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return update_location(
-                db, self.campaign_id, name, description, x, y, off_map, force, icon
+                db, self.campaign_id, name, description, x, y, off_map, force, icon, summary
             )
+
+    def describe_world(self, description: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return describe_world(db, self.campaign_id, description)
 
     def delete_location(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -377,6 +384,7 @@ class PlacesMixin:
                     "blocks": item.blocks,
                     "solid": item.solid,
                     "icon": item.icon,
+                    "description": item.description,
                 }
                 for item in sorted(self.encounter_objects.values(), key=lambda entry: entry.id)
             ],
@@ -388,6 +396,7 @@ class PlacesMixin:
                     "rows": template.rows,
                     "palette": template.palette,
                     "ambient": template.ambient,
+                    "description": template.description,
                 }
                 for template in sorted(
                     self.encounter_templates.values(), key=lambda entry: entry.id

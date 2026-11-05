@@ -94,6 +94,7 @@ CORE_TOOLS = {
     "create_region",
     "update_region",
     "update_world_map",
+    "describe_world",
     "create_npc",
     "update_location",
     "discover_location",

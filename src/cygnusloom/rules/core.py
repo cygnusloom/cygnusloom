@@ -17,6 +17,7 @@ async def create_location(
     force: bool = False,
     parent: str | None = None,
     icon: str | None = None,
+    summary: str | None = None,
 ) -> dict[str, Any]:
     if ctx.check_new_location is not None:
         await ctx.check_new_location(name)
@@ -29,6 +30,7 @@ async def create_location(
         force=force,
         parent=parent,
         icon=icon,
+        summary=summary,
     )
 
 

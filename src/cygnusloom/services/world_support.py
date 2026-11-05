@@ -96,6 +96,7 @@ from cygnusloom.services.events import (
     SettingRecorded,
     StartingItemsTransferred,
     TravelCharged,
+    WorldDescribed,
     WorldMapStyleChanged,
     load_state,
     name_key,
@@ -121,8 +122,10 @@ MAX_STAT = 999
 MAX_TEXT = 2000
 # One setting fact: a short paragraph about a topic, shown to the GM every turn.
 MAX_SETTING = 400
-# A player-facing summary of a place: a sentence or two, not the place's full description.
-MAX_SUMMARY = 300
+# A player-facing summary of a place: a short paragraph, not the place's full description.
+MAX_SUMMARY = 600
+# The player-facing overview of the world, shown in the compendium: a short paragraph.
+MAX_WORLD_DESCRIPTION = 1200
 MAX_QUIRKS = 10
 QUIRKS_PER_NPC = 2
 # A region outline may have at most this many corners.
@@ -184,6 +187,7 @@ def seed_campaign(
                 y=spot.y,
                 parent=None if spot.parent is None else names[spot.parent],
                 icon=spot.icon,
+                summary=spot.summary,
                 rules=list(spot.rules),
                 routes={key: dict(route) for key, route in spot.routes.items()},
             ),
@@ -547,6 +551,7 @@ def create_location(
     force: bool = False,
     parent: str | None = None,
     icon: str | None = None,
+    summary: str | None = None,
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_NAME)
@@ -556,6 +561,7 @@ def create_location(
     if not isinstance(discovered, bool):
         raise InvalidInput("discovered must be true or false")
     icon_id = _place_icon(icon)
+    summary_text = _optional_text(summary, "summary", MAX_SUMMARY)
     px, py = _coordinates(x, y)
     inside = None
     if parent is not None:
@@ -575,6 +581,7 @@ def create_location(
             y=py,
             parent=inside,
             icon=icon_id,
+            summary=summary_text,
         ),
     )
     db.commit()
@@ -1318,23 +1325,33 @@ def update_location(
     db: Session,
     campaign_id: int,
     name: str,
-    description: str,
+    description: str | None = None,
     x: float | None = None,
     y: float | None = None,
     off_map: bool = False,
     force: bool = False,
     icon: str | None = None,
+    summary: str | None = None,
 ) -> dict[str, Any]:
-    """Change a location's description and its map position. Giving x and y moves it. Giving
-    off_map takes it off the map. Without any of these the position stays as it is. Giving an
-    icon changes the map marker; an empty icon goes back to the default marker."""
+    """Change a location's description, player-facing summary, and map position. Giving x and
+    y moves it. Giving off_map takes it off the map. Without any of these the position stays as
+    it is. Giving an icon changes the map marker; an empty icon goes back to the default marker.
+    Leaving the description out keeps it. An empty summary clears it."""
     state = load_state(db, campaign_id)
     where = _place_named(state, name)
-    text = bounded_text(description, "description", MAX_TEXT)
+    text = (
+        where.description
+        if description is None
+        else bounded_text(description, "description", MAX_TEXT)
+    )
     if not isinstance(off_map, bool):
         raise InvalidInput("off_map must be true or false")
     icon_changed = icon is not None
     icon_id = _place_icon(icon) if icon_changed else where.icon
+    summary_changed = summary is not None
+    summary_text = (
+        where.summary if not summary_changed else _optional_text(summary, "summary", MAX_SUMMARY)
+    )
     px, py = _coordinates(x, y)
     if where.parent is not None:
         if px is not None or py is not None:
@@ -1356,6 +1373,8 @@ def update_location(
             y=py,
             icon=icon_id,
             icon_changed=icon_changed,
+            summary=summary_text,
+            summary_changed=summary_changed,
         ),
     )
     db.commit()
@@ -1702,6 +1721,15 @@ def add_note(
         "id": note_id,
         "subject": subject_name if subject_name is not None else CAMPAIGN_WIDE,
     }
+
+
+def describe_world(db: Session, campaign_id: int, description: str) -> dict[str, Any]:
+    """Write or replace the player-facing overview of the world. It is separate from the GM's
+    setting facts, so the player reads only what the GM chose to show, never a secret."""
+    text = bounded_text(description, "description", MAX_WORLD_DESCRIPTION)
+    record(db, campaign_id, WorldDescribed(description=text))
+    db.commit()
+    return {"described": "world", "description": text}
 
 
 def record_setting(db: Session, campaign_id: int, topic: str, detail: str) -> dict[str, Any]:

@@ -1,12 +1,12 @@
 [
-  {"type": "character_field", "id": "physique", "name": "Physique", "table": "physique"},
-  {"type": "character_field", "id": "skin", "name": "Skin", "table": "skin"},
-  {"type": "character_field", "id": "hair", "name": "Hair", "table": "hair"},
-  {"type": "character_field", "id": "face", "name": "Face", "table": "face"},
-  {"type": "character_field", "id": "speech", "name": "Speech", "table": "speech"},
-  {"type": "character_field", "id": "clothing", "name": "Clothing", "table": "clothing"},
-  {"type": "character_field", "id": "virtue", "name": "Virtue", "table": "virtue"},
-  {"type": "character_field", "id": "vice", "name": "Vice", "table": "vice"},
-  {"type": "character_field", "id": "bond", "name": "Bond", "table": "bond"},
-  {"type": "campaign_field", "id": "omen", "name": "Omen", "table": "omen"}
+  {"type": "character_field", "id": "physique", "name": "Physique", "description": "Build and bearing, from frail to towering.", "table": "physique"},
+  {"type": "character_field", "id": "skin", "name": "Skin", "description": "Complexion and visible marks.", "table": "skin"},
+  {"type": "character_field", "id": "hair", "name": "Hair", "description": "Hair colour and style.", "table": "hair"},
+  {"type": "character_field", "id": "face", "name": "Face", "description": "The face others remember.", "table": "face"},
+  {"type": "character_field", "id": "speech", "name": "Speech", "description": "How the character sounds when they speak.", "table": "speech"},
+  {"type": "character_field", "id": "clothing", "name": "Clothing", "description": "What they wear day to day.", "table": "clothing"},
+  {"type": "character_field", "id": "virtue", "name": "Virtue", "description": "A quality they admire in themselves.", "table": "virtue"},
+  {"type": "character_field", "id": "vice", "name": "Vice", "description": "A flaw they cannot quite shake.", "table": "vice"},
+  {"type": "character_field", "id": "bond", "name": "Bond", "description": "The person or promise they hold to.", "table": "bond"},
+  {"type": "campaign_field", "id": "omen", "name": "Omen", "description": "A sign that follows the campaign.", "table": "omen"}
 ]

@@ -223,6 +223,8 @@ class LocationTemplate:
     parent: str | None = None
     # An icon id from the icon registry, shown on the map. Places without one get a default.
     icon: str | None = None
+    # What the player sees of the place, written without secrets. None when it is not authored.
+    summary: str | None = None
     # The ids of rules attached to this place. Their text reaches the GM while the player is here.
     rules: tuple[str, ...] = ()
     # Authored overland routes from this place, by destination location id. Each route's path,
@@ -644,6 +646,8 @@ class EncounterObject:
     color: str
     blocks: bool = False
     solid: bool = False
+    # A short player-facing description, such as what the object is for or how it looks.
+    description: str = ""
     # A free-text grouping for map catalogs, such as furniture, nature, or hazard.
     category: str = ""
 
@@ -673,6 +677,8 @@ class EncounterTemplate:
     ambient: str = ""
     background_color: str = ""
     grid_color: str = ""
+    # A short player-facing description of the layout.
+    description: str = ""
 
 
 @dataclass(frozen=True)
@@ -924,6 +930,8 @@ class PeriodRules:
     id: str
     label: str
     effects: tuple[Mapping[str, Any], ...]
+    # A short player-facing description of when the period ends.
+    description: str = ""
     # The tallies that start over when the period ends, after their final totals are logged.
     tallies: tuple[str, ...] = ()
     # Reaction reset labels this period clears, such as "week".
@@ -1484,6 +1492,8 @@ class ShopService:
     effect: str
     fits: int = 1
     restores: tuple[str, ...] = ()
+    # A short player-facing description of what the service provides.
+    description: str = ""
 
 
 @dataclass(frozen=True)
@@ -1491,6 +1501,8 @@ class Hireling:
     id: str
     name: str
     wage_per_day: int
+    # A short player-facing description of the work the hireling does.
+    description: str = ""
 
 
 @dataclass(frozen=True)
@@ -2276,6 +2288,7 @@ def _load_location(
             "y",
             "parent",
             "icon",
+            "summary",
             "looks_like",
             "rules",
             "routes",
@@ -2304,6 +2317,7 @@ def _load_location(
         y=None if y is None else float(y),
         parent=_optional_text(data, "parent", label),
         icon=icon,
+        summary=_optional_text(data, "summary", label),
         rules=rule_ids(data, label),
         routes=_load_routes(data, label),
         looks_like=looks_like,
@@ -4159,7 +4173,7 @@ def _load_encounter_objects(
         label = f"{template}: encounter object {d.id}"
         check_keys(
             d.data,
-            {"type", "id", "name", "icon", "color", "blocks", "solid", "category"},
+            {"type", "id", "name", "icon", "color", "blocks", "solid", "category", "description"},
             label,
         )
         objects[d.id] = EncounterObject(
@@ -4169,6 +4183,7 @@ def _load_encounter_objects(
             color=_color(d.data, label),
             blocks=_flag(d.data, "blocks", label),
             solid=_flag(d.data, "solid", label),
+            description=_optional_text(d.data, "description", label) or "",
             category=_optional_category(d.data, label),
         )
     return objects
@@ -4202,6 +4217,7 @@ def _load_encounter_templates(
                 "ambient",
                 "background_color",
                 "grid_color",
+                "description",
             },
             label,
         )
@@ -4220,6 +4236,7 @@ def _load_encounter_templates(
             ambient=_style_choice(d.data, "ambient", MAP_AMBIENTS, label),
             background_color=_optional_color(d.data, "background_color", label),
             grid_color=_optional_color(d.data, "grid_color", label),
+            description=_optional_text(d.data, "description", label) or "",
         )
     return templates
 
@@ -5006,7 +5023,7 @@ def _load_marketplace(
         label = f"{template}: service {d.id}"
         check_keys(
             d.data,
-            {"type", "id", "name", "price", "effect", "fits", "restores"},
+            {"type", "id", "name", "price", "effect", "fits", "restores", "description"},
             label,
         )
         effect = required_text(d.data, "effect", label)
@@ -5027,17 +5044,19 @@ def _load_marketplace(
                 effect=effect,
                 fits=fits,
                 restores=restores,
+                description=_optional_text(d.data, "description", label) or "",
             )
         )
     hired = []
     for d in hirelings:
         label = f"{template}: hireling {d.id}"
-        check_keys(d.data, {"type", "id", "name", "wage_per_day"}, label)
+        check_keys(d.data, {"type", "id", "name", "wage_per_day", "description"}, label)
         hired.append(
             Hireling(
                 id=d.id,
                 name=required_text(d.data, "name", label),
                 wage_per_day=_whole(d.data, "wage_per_day", label, 0),
+                description=_optional_text(d.data, "description", label) or "",
             )
         )
     return Marketplace(
@@ -5616,7 +5635,11 @@ def _load_periods(
         label = f"{template}: period {d.id}"
         if d.id in loaded:
             raise ContentError(f"{template}: duplicate period {d.id!r}")
-        check_keys(d.data, {"type", "id", "label", "effects", "tallies", "resets"}, label)
+        check_keys(
+            d.data,
+            {"type", "id", "label", "description", "effects", "tallies", "resets"},
+            label,
+        )
         effects, _ = _check_effects(
             d.data.get("effects", []),
             label,
@@ -5642,6 +5665,7 @@ def _load_periods(
             id=d.id,
             label=required_text(d.data, "label", label),
             effects=effects,
+            description=_optional_text(d.data, "description", label) or "",
             tallies=tuple(reset),
             resets=tuple(resets),
         )

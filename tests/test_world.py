@@ -1944,7 +1944,7 @@ def test_a_discovery_without_a_summary_keeps_the_existing_one(
 def test_a_summary_is_bounded(client_factory: Callable[[], TestClient], app):
     _, campaign_id = _campaign_id(client_factory)
     refused = _tool(
-        app, campaign_id, "discover_location", {"name": "Spore Bridge", "summary": "x" * 301}
+        app, campaign_id, "discover_location", {"name": "Spore Bridge", "summary": "x" * 601}
     )
     assert "summary" in refused["error"]
     assert _state(app, campaign_id).named("Spore Bridge").discovered is False

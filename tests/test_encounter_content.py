@@ -514,6 +514,12 @@ def test_duplicate_template_raises() -> None:
         _load_encounter_templates(definitions, _load_encounter_terrain(floor, "core"), {}, "core")
 
 
+def test_every_object_and_template_has_a_player_description() -> None:
+    core = ContentLibrary.load().core
+    assert all(obj.description.strip() for obj in core.encounter_objects.values())
+    assert all(template.description.strip() for template in core.encounter_templates.values())
+
+
 def test_encounter_terrain_pattern_and_ink_are_validated() -> None:
     definitions = [
         _definition(

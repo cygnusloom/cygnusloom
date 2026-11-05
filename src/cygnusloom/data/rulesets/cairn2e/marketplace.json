@@ -223,7 +223,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Carriage Seat"
+    "description": "A seat in a hired carriage, with room for a trunk."
   },
   {
     "type": "shop_item",
@@ -236,7 +236,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Ship’s Passage"
+    "description": "A berth on a ship, paid in advance."
   },
   {
     "type": "shop_item",
@@ -275,20 +275,19 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Air Bladder"
+    "description": "A sealed bladder of air for breathing underwater."
   },
   {
     "type": "shop_item",
     "id": "antitoxin",
     "name": "Antitoxin",
-    "looks_like": "potion",
     "category": "gear",
     "price": 20,
     "size": "normal",
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Antitoxin"
+    "description": "A bitter draft that fights poison."
   },
   {
     "type": "shop_item",
@@ -327,7 +326,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Book"
+    "description": "A bound book of useful lore."
   },
   {
     "type": "shop_item",
@@ -340,7 +339,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Caltrops"
+    "description": "Spiked iron pieces scattered to lame pursuers."
   },
   {
     "type": "shop_item",
@@ -353,7 +352,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Card Deck"
+    "description": "A worn deck for games of chance."
   },
   {
     "type": "shop_item",
@@ -379,7 +378,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": ""
+    "description": "A stick of chalk for marking walls and paths."
   },
   {
     "type": "shop_item",
@@ -392,7 +391,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Chest"
+    "description": "A sturdy chest with a hasp for a lock."
   },
   {
     "type": "shop_item",
@@ -405,7 +404,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Chisel"
+    "description": "A chisel for cutting stone or wood."
   },
   {
     "type": "shop_item",
@@ -444,7 +443,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Compass"
+    "description": "A brass compass for finding north."
   },
   {
     "type": "shop_item",
@@ -509,7 +508,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Dowsing Rod"
+    "description": "A forked rod that twitches toward water."
   },
   {
     "type": "shop_item",
@@ -535,7 +534,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Fire Oil"
+    "description": "A flask of oil that catches fire easily."
   },
   {
     "type": "shop_item",
@@ -548,7 +547,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Fishing Rod"
+    "description": "A rod, line, and hook for catching fish."
   },
   {
     "type": "shop_item",
@@ -574,7 +573,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": ""
+    "description": "Sturdy gloves for rough work."
   },
   {
     "type": "shop_item",
@@ -587,7 +586,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Grappling Hook"
+    "description": "A hooked iron grapnel for climbing."
   },
   {
     "type": "shop_item",
@@ -600,7 +599,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Lantern"
+    "description": "A hooded lantern that burns oil."
   },
   {
     "type": "shop_item",
@@ -613,7 +612,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Mirror"
+    "description": "A small hand mirror of polished silver."
   },
   {
     "type": "shop_item",
@@ -626,7 +625,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Net"
+    "description": "A weighted net for catching or tripping."
   },
   {
     "type": "shop_item",
@@ -717,7 +716,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Sedative"
+    "description": "A draft that dulls pain and brings sleep."
   },
   {
     "type": "shop_item",
@@ -730,7 +729,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Sewing Kit"
+    "description": "Needles, thread, and a small pair of shears."
   },
   {
     "type": "shop_item",
@@ -756,7 +755,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": ""
+    "description": "A clay pipe for a quiet smoke."
   },
   {
     "type": "shop_item",
@@ -782,7 +781,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Spiked Boots"
+    "description": "Boots with spikes for ice and steep ground."
   },
   {
     "type": "shop_item",
@@ -795,7 +794,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": "Spyglass"
+    "description": "A spyglass for seeing far things close."
   },
   {
     "type": "shop_item",
@@ -860,7 +859,7 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": ""
+    "description": "A shrill whistle to signal or summon."
   },
   {
     "type": "shop_item",
@@ -873,12 +872,13 @@
     "armor": 0,
     "damage": "",
     "uses": 0,
-    "description": ""
+    "description": "Warm, weatherproof clothes for the wild."
   },
   {
     "type": "service",
     "id": "room",
     "name": "Room & Board",
+    "description": "A shared room, a hot meal, and a safe night's sleep.",
     "price": 10,
     "effect": "lodge",
     "fits": 1
@@ -887,6 +887,7 @@
     "type": "service",
     "id": "private_room",
     "name": "Private Room & Board",
+    "description": "A private room with a locked door and a meal.",
     "price": 35,
     "effect": "lodge",
     "fits": 4
@@ -895,6 +896,7 @@
     "type": "service",
     "id": "stable",
     "name": "Stable & Feed",
+    "description": "A dry stall and feed for a horse or mule.",
     "price": 5,
     "effect": "deferred"
   },
@@ -902,6 +904,7 @@
     "type": "service",
     "id": "medical_healing",
     "name": "Medical Healing",
+    "description": "A healer's care for wounds and lingering hurts.",
     "price": 50,
     "effect": "restore",
     "restores": [
@@ -915,72 +918,84 @@
     "type": "hireling",
     "id": "hireling-alchemist",
     "name": "Alchemist",
+    "description": "Mixes reagents, identifies potions, and keeps a careful ledger.",
     "wage_per_day": 30
   },
   {
     "type": "hireling",
     "id": "hireling-animal-handler",
     "name": "Animal Handler",
+    "description": "Calms, feeds, and drives horses and pack animals.",
     "wage_per_day": 5
   },
   {
     "type": "hireling",
     "id": "hireling-blacksmith",
     "name": "Blacksmith",
+    "description": "Repairs metal gear and shoes horses at a portable forge.",
     "wage_per_day": 15
   },
   {
     "type": "hireling",
     "id": "hireling-bodyguard",
     "name": "Bodyguard",
+    "description": "A steady hand in a fight, hired to keep you alive.",
     "wage_per_day": 10
   },
   {
     "type": "hireling",
     "id": "hireling-local-guide",
     "name": "Local Guide",
+    "description": "Knows the roads, tolls, and safe houses nearby.",
     "wage_per_day": 5
   },
   {
     "type": "hireling",
     "id": "hireling-lockpick",
     "name": "Lockpick",
+    "description": "Opens doors and chests that were not meant to open.",
     "wage_per_day": 10
   },
   {
     "type": "hireling",
     "id": "hireling-navigator",
     "name": "Navigator",
+    "description": "Reads charts, stars, and coastlines to keep a party on course.",
     "wage_per_day": 10
   },
   {
     "type": "hireling",
     "id": "hireling-sailor",
     "name": "Sailor",
+    "description": "Handles ropes, sails, and a boat in bad weather.",
     "wage_per_day": 5
   },
   {
     "type": "hireling",
     "id": "hireling-scholar",
     "name": "Scholar",
+    "description": "Reads old languages and knows where to look things up.",
     "wage_per_day": 20
   },
   {
     "type": "hireling",
     "id": "hireling-tracker",
     "name": "Tracker",
+    "description": "Follows trails and reads sign in wild country.",
     "wage_per_day": 5
   },
   {
     "type": "hireling",
     "id": "hireling-trapper",
     "name": "Trapper",
+    "description": "Sets snares, skins game, and finds water.",
     "wage_per_day": 5
   },
   {
     "type": "hireling",
     "id": "hireling-veteran-bodyguard",
     "name": "Veteran Bodyguard",
+    "description": "An old campaigner who has survived worse than this.",
     "wage_per_day": 20
   }
 ]

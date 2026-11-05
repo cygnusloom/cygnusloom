@@ -682,6 +682,7 @@ def world_state_text(
     hooks: Hooks | None = None,
     counters: Mapping[str, CounterRules] | None = None,
     tallies: Mapping[str, TallyRules] | None = None,
+    unwritten_world: bool = False,
 ) -> str:
     """The GM's orientation at the start of a turn: the campaign options, the day, the player
     character and where they are, the NPCs there, the factions and their cup, and any encounter in
@@ -697,6 +698,22 @@ def world_state_text(
     if state.settings:
         lines.append("Setting:")
         lines.extend(f"  {topic}: {detail}" for topic, detail in state.settings.items())
+    if unwritten_world and not state.world_description:
+        lines.append(
+            "Player-facing world overview: not written yet. Write two or three sentences with "
+            "describe_world, with no GM-only secrets, so the compendium can show it."
+        )
+    missing_summaries = sorted(
+        place.name for place in state.places.values() if place.discovered and not place.summary
+    )
+    if missing_summaries:
+        shown = ", ".join(missing_summaries[:12])
+        if len(missing_summaries) > 12:
+            shown += f", and {len(missing_summaries) - 12} more"
+        lines.append(
+            f"Discovered places with no player-facing summary: {shown}. Write one for each with "
+            "update_location's summary, with no GM-only secrets."
+        )
     if state.factions:
         standings = []
         for faction in sorted(state.factions.values(), key=lambda item: item.name.casefold()):

@@ -40,6 +40,10 @@
         "icon": {
           "type": "string",
           "description": "An icon id from map_options' place_icons, shown on the map, such as inn, tower, or temple. Leave it out for the default marker."
+        },
+        "summary": {
+          "type": "string",
+          "description": "A short paragraph the player sees in the compendium: what this place looks or feels like from what they know, with no GM-only secrets, hidden contents, or plot notes. Required in spirit whenever discovered is true. At most 600 characters."
         }
       },
       "required": [
@@ -640,7 +644,7 @@
     "id": "update_location",
     "name": "update_location",
     "world_method": "update_location",
-    "description": "Change a location's description. Move it on the map by giving x and y, or take it off the map by setting off_map to true. A place inside another cannot be given x or y. Its name stays the same. Leave x, y, and off_map out to keep its position. It never moves a character: to take the player character or an NPC into a place, use move_actor. Use delete_location instead to remove the place from the story.",
+    "description": "Change a location's private description, its player-facing summary, or its map position. Move it on the map by giving x and y, or take it off the map by setting off_map to true. A place inside another cannot be given x or y. Its name stays the same. Leave x, y, and off_map out to keep its position, and leave description out to keep it. It never moves a character: to take the player character or an NPC into a place, use move_actor. Use delete_location instead to remove the place from the story.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -650,7 +654,11 @@
         },
         "description": {
           "type": "string",
-          "description": "The new description of the place, in a sentence or two."
+          "description": "The new private description of the place, for your own record. Leave it out to keep the current one."
+        },
+        "summary": {
+          "type": "string",
+          "description": "A short paragraph the player sees in the compendium, with no GM-only secrets. Use this to fill in a discovered place that has no summary yet. An empty string clears it. At most 600 characters."
         },
         "x": {
           "type": "number",
@@ -674,8 +682,7 @@
         }
       },
       "required": [
-        "name",
-        "description"
+        "name"
       ]
     }
   },
@@ -684,7 +691,7 @@
     "id": "discover_location",
     "name": "discover_location",
     "world_method": "discover_location",
-    "description": "Mark an existing location as discovered: the player character has heard about it in detail, or the story has revealed it. A discovered location appears on the player's map. Moving the player character there discovers it too, so use this for places they learn of without going. When an NPC gives directions, discover only the destination; do not discover the other places the directions name. The player sees only the summary, never the location's full description, so pass a summary with no GM-only detail. Keep the summary brief: one short sentence, a rumor or first impression, not a paraphrase of the full description. Giving a summary for a location that is already discovered replaces what the player sees of it.",
+    "description": "Mark an existing location as discovered: the player character has heard about it in detail, or the story has revealed it. A discovered location appears on the player's map. Moving the player character there discovers it too, so use this for places they learn of without going. When an NPC gives directions, discover only the destination; do not discover the other places the directions name. Always pass a summary: it is what the compendium shows the player, and the place's full description is your private record. Write one or two sentences with no GM-only detail, hidden contents, or plot notes. Giving a summary for a location that is already discovered replaces what the player sees of it.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -694,7 +701,7 @@
         },
         "summary": {
           "type": "string",
-          "description": "Optional. One short sentence the player sees of the location, ideally under 120 characters and never more than 300. Do not copy the full description. Write what the player character has heard or can see, not secrets, hidden contents, or the full description. Without it, the player sees only the name."
+          "description": "A short paragraph the player sees in the compendium, ideally under 300 characters and never more than 600. Write what the player character has heard or can see, with no secrets, hidden contents, or plot notes. Never copy the full description."
         }
       },
       "required": [
@@ -1147,6 +1154,25 @@
       },
       "required": [
         "condition"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "describe_world",
+    "name": "describe_world",
+    "world_method": "describe_world",
+    "description": "Write or replace the player-facing overview of the world shown in the compendium. Use it for an unwritten world once its shape is decided, and update it when the story changes what the player would know. Write two or three vivid sentences about the world as its people know it, with no GM secrets, hidden truths, plot notes, or instructions about how the world was invented.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "The player-facing overview: two or three sentences, at most 1200 characters, with no GM-only secrets."
+        }
+      },
+      "required": [
+        "description"
       ]
     }
   },

@@ -605,6 +605,9 @@ class CampaignState:
     notes: list[Note] = field(default_factory=list)
     # Facts about the world the GM invented, by topic, shown to the GM every turn.
     settings: dict[str, str] = field(default_factory=dict)
+    # The player-facing overview of the world shown in the compendium. The GM writes it without
+    # secrets; the full setting stays in `settings`.
+    world_description: str = ""
     # What the player character knows of each met NPC, by name without case.
     known: dict[str, KnownNpc] = field(default_factory=dict)
     # The journal the player reads, oldest first.

@@ -5,7 +5,7 @@
     "name": "Awl",
     "looks_like": "dagger",
     "feature_type": "item",
-    "description": "d6",
+    "description": "A pointed awl for boring leather and wood.",
     "damage": "1d6"
   },
   {
@@ -22,7 +22,7 @@
     "name": "Badge",
     "looks_like": "amulet",
     "feature_type": "item",
-    "description": "",
+    "description": "A small badge of office or membership.",
     "size": "petty"
   },
   {
@@ -31,7 +31,7 @@
     "name": "Bandages",
     "looks_like": "tool",
     "feature_type": "item",
-    "description": "3 uses",
+    "description": "Clean cloth strips for binding wounds.",
     "uses": 3
   },
   {
@@ -40,7 +40,7 @@
     "name": "Black Outfit",
     "looks_like": "cloak",
     "feature_type": "item",
-    "description": "",
+    "description": "Dark, quiet clothing for moving unseen.",
     "size": "petty"
   },
   {
@@ -49,7 +49,7 @@
     "name": "Blank Book",
     "looks_like": "book",
     "feature_type": "item",
-    "description": ""
+    "description": "An empty book of blank pages."
   },
   {
     "type": "feature",
@@ -57,7 +57,7 @@
     "name": "Blessed Tinctures",
     "looks_like": "potion",
     "feature_type": "item",
-    "description": ""
+    "description": "Small vials of blessed medicine."
   },
   {
     "type": "feature",
@@ -65,7 +65,7 @@
     "name": "Boiled Leather",
     "looks_like": "armor",
     "feature_type": "item",
-    "description": "1 Armor",
+    "description": "Leather hardened in wax and water.",
     "armor": 1
   },
   {
@@ -74,7 +74,7 @@
     "name": "Bonesaw",
     "looks_like": "dagger",
     "feature_type": "item",
-    "description": "d6",
+    "description": "A serrated saw for cutting bone.",
     "damage": "1d6"
   },
   {
@@ -83,7 +83,7 @@
     "name": "Bow",
     "looks_like": "bow",
     "feature_type": "item",
-    "description": "d6 damage",
+    "description": "A simple hunting bow.",
     "damage": "1d6",
     "size": "bulky"
   },
@@ -93,7 +93,7 @@
     "name": "Brigandine",
     "looks_like": "armor",
     "feature_type": "item",
-    "description": "1 Armor",
+    "description": "Cloth-backed plates riveted into a jacket.",
     "armor": 1,
     "size": "bulky"
   },
@@ -103,7 +103,7 @@
     "name": "Candle Helmet",
     "looks_like": "helm",
     "feature_type": "item",
-    "description": "+1 Armor, dim, 6 uses",
+    "description": "A helmet with a candle stub for dim light.",
     "uses": 6,
     "armor": 1
   },
@@ -113,7 +113,7 @@
     "name": "Cane Sword",
     "looks_like": "sword",
     "feature_type": "item",
-    "description": "d6",
+    "description": "A sword hidden in a walking cane.",
     "damage": "1d6"
   },
   {
@@ -122,7 +122,7 @@
     "name": "Cart",
     "looks_like": "cart",
     "feature_type": "item",
-    "description": "+4 slots",
+    "description": "A hand cart for hauling gear.",
     "size": "bulky"
   },
   {
@@ -131,7 +131,7 @@
     "name": "Chains",
     "looks_like": "rope",
     "feature_type": "item",
-    "description": "10ft"
+    "description": "Ten feet of heavy iron chain."
   },
   {
     "type": "feature",
@@ -139,7 +139,7 @@
     "name": "Compass",
     "looks_like": "tool",
     "feature_type": "item",
-    "description": ""
+    "description": "A brass compass for finding north."
   },
   {
     "type": "feature",
@@ -147,7 +147,7 @@
     "name": "Costume",
     "looks_like": "cloak",
     "feature_type": "item",
-    "description": ""
+    "description": "Clothes and paint for a disguise or performance."
   },
   {
     "type": "feature",
@@ -155,7 +155,7 @@
     "name": "Crossbow",
     "looks_like": "bow",
     "feature_type": "item",
-    "description": "d8 damage",
+    "description": "A crossbow cocked with a windlass.",
     "damage": "1d8",
     "size": "bulky"
   },
@@ -165,7 +165,7 @@
     "name": "Dagger",
     "looks_like": "dagger",
     "feature_type": "item",
-    "description": "d6",
+    "description": "A short blade for close work.",
     "damage": "1d6"
   },
   {
@@ -174,7 +174,7 @@
     "name": "Fancy Hat",
     "looks_like": "generic-item",
     "feature_type": "item",
-    "description": "",
+    "description": "A fine hat that says you matter.",
     "size": "petty"
   },
   {
@@ -183,7 +183,7 @@
     "name": "Ghillie Suit",
     "looks_like": "cloak",
     "feature_type": "item",
-    "description": ""
+    "description": "A cloak of leaves and netting for hiding outdoors."
   },
   {
     "type": "feature",
@@ -191,7 +191,7 @@
     "name": "Gloves",
     "looks_like": "tool",
     "feature_type": "item",
-    "description": "",
+    "description": "Sturdy gloves for rough work.",
     "size": "petty"
   },
   {
@@ -200,7 +200,7 @@
     "name": "Gold Pieces",
     "looks_like": "coin",
     "feature_type": "item",
-    "description": ""
+    "description": "A purse of gold coins."
   },
   {
     "type": "feature",
@@ -208,7 +208,7 @@
     "name": "Hammer",
     "looks_like": "mace",
     "feature_type": "item",
-    "description": "d6",
+    "description": "A smith's hammer, heavy enough to fight with.",
     "damage": "1d6"
   },
   {
@@ -217,7 +217,7 @@
     "name": "Hand Axe",
     "looks_like": "axe",
     "feature_type": "item",
-    "description": "d6",
+    "description": "A short axe for wood or war.",
     "damage": "1d6"
   },
   {
@@ -226,7 +226,7 @@
     "name": "Healing Salve",
     "looks_like": "potion",
     "feature_type": "item",
-    "description": "restore 1d4 STR, 1 use",
+    "description": "A soothing salve of crushed herbs. Restores 1d4 STR; one use.",
     "uses": 1
   },
   {
@@ -235,7 +235,7 @@
     "name": "Heartroot Salve",
     "looks_like": "potion",
     "feature_type": "item",
-    "description": "restores 1d4 STR, 1 use",
+    "description": "A potent root salve. Restores 1d4 STR; one use.",
     "uses": 1
   },
   {
@@ -244,7 +244,7 @@
     "name": "Heirloom Amulet",
     "looks_like": "amulet",
     "feature_type": "item",
-    "description": "glows in the presence of magic",
+    "description": "An old family amulet that glows near magic.",
     "size": "petty"
   },
   {
@@ -253,7 +253,7 @@
     "name": "Herbs Pouch",
     "looks_like": "tool",
     "feature_type": "item",
-    "description": "restore 1 STR, 3 uses",
+    "description": "Dried herbs for poultices. Restores 1 STR; three uses.",
     "uses": 3
   },
   {
@@ -262,7 +262,7 @@
     "name": "Iron Dagger",
     "looks_like": "dagger",
     "feature_type": "item",
-    "description": "d6",
+    "description": "A plain iron dagger.",
     "damage": "1d6"
   },
   {
@@ -271,7 +271,7 @@
     "name": "Iron Pot",
     "looks_like": "tool",
     "feature_type": "item",
-    "description": ""
+    "description": "A heavy iron cooking pot."
   },
   {
     "type": "feature",
@@ -279,7 +279,7 @@
     "name": "Lantern",
     "looks_like": "lantern-item",
     "feature_type": "item",
-    "description": ""
+    "description": "A hooded lantern that burns oil."
   },
   {
     "type": "feature",
@@ -287,7 +287,7 @@
     "name": "Leather Jerkin",
     "looks_like": "armor",
     "feature_type": "item",
-    "description": "1 Armor",
+    "description": "A supple leather jerkin.",
     "armor": 1
   },
   {
@@ -296,7 +296,7 @@
     "name": "Leather Whip",
     "looks_like": "rope",
     "feature_type": "item",
-    "description": "d6",
+    "description": "A long, cracking leather whip.",
     "damage": "1d6"
   },
   {
@@ -305,7 +305,7 @@
     "name": "Leech",
     "looks_like": "tool",
     "feature_type": "item",
-    "description": "restores 1 STR, 3 uses",
+    "description": "A live leech for drawing bad blood. Restores 1 STR; three uses.",
     "uses": 3
   },
   {
@@ -314,7 +314,7 @@
     "name": "Lockpicks",
     "looks_like": "key",
     "feature_type": "item",
-    "description": ""
+    "description": "Picks and tension tools for opening locks."
   },
   {
     "type": "feature",
@@ -322,7 +322,7 @@
     "name": "Long Sword",
     "looks_like": "sword",
     "feature_type": "item",
-    "description": "d10",
+    "description": "A long, balanced blade.",
     "damage": "1d10",
     "size": "bulky"
   },
@@ -332,7 +332,7 @@
     "name": "Lucky Jerkin",
     "looks_like": "armor",
     "feature_type": "item",
-    "description": "+1 Armor",
+    "description": "A much-patched jerkin that has seen luck.",
     "armor": 1
   },
   {
@@ -341,7 +341,7 @@
     "name": "Lure",
     "looks_like": "tool",
     "feature_type": "item",
-    "description": ""
+    "description": "A bright lure for fishing."
   },
   {
     "type": "feature",
@@ -349,7 +349,7 @@
     "name": "Metal Pail",
     "looks_like": "tool",
     "feature_type": "item",
-    "description": ""
+    "description": "A metal pail for carrying water or slops."
   },
   {
     "type": "feature",
@@ -357,7 +357,7 @@
     "name": "Needle-knife",
     "looks_like": "dagger",
     "feature_type": "item",
-    "description": "d6",
+    "description": "A thin knife for fine work.",
     "damage": "1d6"
   },
   {
@@ -366,7 +366,7 @@
     "name": "Oil Can",
     "looks_like": "tool",
     "feature_type": "item",
-    "description": "6 uses",
+    "description": "A can of lamp oil for a lantern or a fire.",
     "uses": 6
   },
   {
@@ -375,7 +375,7 @@
     "name": "Padded Leather",
     "looks_like": "armor",
     "feature_type": "item",
-    "description": "1 Armor",
+    "description": "Quilted armor of layered cloth and leather.",
     "armor": 1
   },
   {
@@ -384,7 +384,7 @@
     "name": "Pincers",
     "looks_like": "tool",
     "feature_type": "item",
-    "description": ""
+    "description": "Pincers for gripping, pulling, and prying."
   },
   {
     "type": "feature",
@@ -392,7 +392,7 @@
     "name": "Protective Gloves",
     "looks_like": "tool",
     "feature_type": "item",
-    "description": "",
+    "description": "Thick gloves for handling hot or sharp things.",
     "size": "petty"
   },
   {
@@ -401,7 +401,7 @@
     "name": "Quill & Ink",
     "looks_like": "tool",
     "feature_type": "item",
-    "description": ""
+    "description": "A quill and a pot of ink for writing."
   },
   {
     "type": "feature",
@@ -409,7 +409,7 @@
     "name": "Rations",
     "looks_like": "food",
     "feature_type": "item",
-    "description": "3 uses",
+    "description": "Dried food for the road.",
     "uses": 3
   },
   {
@@ -418,7 +418,7 @@
     "name": "Repellent",
     "looks_like": "potion",
     "feature_type": "item",
-    "description": "Wolfsbane, Mugwort, etc."
+    "description": "Bundles of wolfsbane and mugwort to ward off beasts."
   },
   {
     "type": "feature",
@@ -426,7 +426,7 @@
     "name": "Roll of Tin",
     "looks_like": "tool",
     "feature_type": "item",
-    "description": ""
+    "description": "A rolled sheet of thin tin."
   },
   {
     "type": "feature",
@@ -434,7 +434,7 @@
     "name": "Root Knife",
     "looks_like": "dagger",
     "feature_type": "item",
-    "description": "d6",
+    "description": "A curved knife for cutting roots and vines.",
     "damage": "1d6"
   },
   {
@@ -443,7 +443,7 @@
     "name": "Rope",
     "looks_like": "rope",
     "feature_type": "item",
-    "description": "25ft"
+    "description": "Twenty-five feet of hempen rope."
   },
   {
     "type": "feature",
@@ -451,7 +451,7 @@
     "name": "Salt Pouch",
     "looks_like": "tool",
     "feature_type": "item",
-    "description": ""
+    "description": "A pouch of salt for preserving or blessing."
   },
   {
     "type": "feature",
@@ -459,7 +459,7 @@
     "name": "Serrated Knife",
     "looks_like": "dagger",
     "feature_type": "item",
-    "description": "d6",
+    "description": "A saw-edged knife that tears as it cuts.",
     "damage": "1d6"
   },
   {
@@ -468,7 +468,7 @@
     "name": "Sharpened Trowel",
     "looks_like": "dagger",
     "feature_type": "item",
-    "description": "d6",
+    "description": "A mason's trowel filed to a fighting edge.",
     "damage": "1d6"
   },
   {
@@ -477,7 +477,7 @@
     "name": "Short Sword",
     "looks_like": "sword",
     "feature_type": "item",
-    "description": "d6",
+    "description": "A short, handy blade for tight quarters.",
     "damage": "1d6"
   },
   {
@@ -486,7 +486,7 @@
     "name": "Silver Knife",
     "looks_like": "dagger",
     "feature_type": "item",
-    "description": "d6",
+    "description": "A knife of cold silver, kept for things that hate it.",
     "damage": "1d6"
   },
   {
@@ -495,7 +495,7 @@
     "name": "Simple Instrument",
     "looks_like": "tool",
     "feature_type": "item",
-    "description": "Pipes, Lute, etc."
+    "description": "A small pipe, lute, or other portable instrument."
   },
   {
     "type": "feature",
@@ -503,7 +503,7 @@
     "name": "Sling",
     "looks_like": "bow",
     "feature_type": "item",
-    "description": "d6 damage",
+    "description": "A leather sling for throwing stones.",
     "damage": "1d6"
   },
   {
@@ -512,7 +512,7 @@
     "name": "Soporific Darts",
     "looks_like": "bow",
     "feature_type": "item",
-    "description": "STR save or fall asleep, 6 uses",
+    "description": "Darts coated with a sleeping draft. STR save or fall asleep; six uses.",
     "uses": 6
   },
   {
@@ -528,7 +528,7 @@
     "name": "Spring-Loaded trap",
     "looks_like": "generic-item",
     "feature_type": "item",
-    "description": "4 STR damage"
+    "description": "A small spring-loaded trap. Deals 4 STR damage."
   },
   {
     "type": "feature",
@@ -536,7 +536,7 @@
     "name": "Spyglass",
     "looks_like": "tool",
     "feature_type": "item",
-    "description": ""
+    "description": "A spyglass for seeing far things close."
   },
   {
     "type": "feature",
@@ -544,7 +544,7 @@
     "name": "Stained Medical Finery",
     "looks_like": "cloak",
     "feature_type": "item",
-    "description": "",
+    "description": "Bloodstained robes of a field surgeon.",
     "size": "petty"
   },
   {
@@ -553,7 +553,7 @@
     "name": "Stake",
     "looks_like": "dagger",
     "feature_type": "item",
-    "description": "d6",
+    "description": "A sharpened wooden stake.",
     "damage": "1d6"
   },
   {
@@ -562,7 +562,7 @@
     "name": "Tarp",
     "looks_like": "tent",
     "feature_type": "item",
-    "description": ""
+    "description": "A waterproof sheet for shelter or covering."
   },
   {
     "type": "feature",
@@ -570,7 +570,7 @@
     "name": "Torch",
     "looks_like": "torch-item",
     "feature_type": "item",
-    "description": "3 uses",
+    "description": "A pitch-soaked torch.",
     "uses": 3
   },
   {
@@ -579,7 +579,7 @@
     "name": "Trick Playing Cards",
     "looks_like": "tool",
     "feature_type": "item",
-    "description": ""
+    "description": "A marked deck for cheating at cards."
   },
   {
     "type": "feature",
@@ -606,7 +606,7 @@
     "name": "Vestments of the Order",
     "looks_like": "cloak",
     "feature_type": "item",
-    "description": "",
+    "description": "Formal robes marking a holy order.",
     "size": "petty"
   },
   {
@@ -615,6 +615,6 @@
     "name": "Water Shoes",
     "looks_like": "boots",
     "feature_type": "item",
-    "description": ""
+    "description": "Shoes that let you walk across soft ground."
   }
 ]

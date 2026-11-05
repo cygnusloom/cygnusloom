@@ -527,6 +527,7 @@ def _world_text(run: _Run, state: CampaignState) -> str:
         hooks=rule_set.hooks,
         counters=rule_set.counters,
         tallies=rule_set.tallies,
+        unwritten_world=run.world is not None and not run.world.has_setting,
     )
 
 

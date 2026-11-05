@@ -269,6 +269,8 @@ class LocationAdded(GameEvent):
     y: float | None = None
     parent: str | None = None
     icon: str | None = None
+    # What the player sees of the place, written without secrets. None when it was never written.
+    summary: str | None = None
     # The ids of rules attached to the place. Their text reaches the GM while the player is here.
     rules: list[str] = field(default_factory=list)
     # Authored overland routes from this place, by destination location id.
@@ -282,6 +284,7 @@ class LocationAdded(GameEvent):
             _position(self.x, self.y),
             self.parent,
             icon=self.icon,
+            summary=self.summary,
             rules=tuple(self.rules),
             routes={key: dict(route) for key, route in self.routes.items()},
         )
@@ -733,6 +736,22 @@ class SettingRecorded(GameEvent):
 
 
 @dataclass(frozen=True)
+class WorldDescribed(GameEvent):
+    """The player-facing overview of the world, written by the GM without secrets."""
+
+    kind: ClassVar[str] = "world.described"
+    hidden: ClassVar[bool] = True
+
+    description: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.world_description = self.description
+
+    def render(self) -> str:
+        return "World overview written."
+
+
+@dataclass(frozen=True)
 class LocationUpdated(GameEvent):
     """A location's details after an update. The position is the resolved one, and None if the
     place has none. Discovery is not changed here; `LocationDiscovered` does that."""
@@ -745,8 +764,10 @@ class LocationUpdated(GameEvent):
     x: float | None = None
     y: float | None = None
     icon: str | None = None
-    # Old events have no icon field, so only a change touches the place's icon.
+    # Old events have no icon or summary fields, so only a change touches them.
     icon_changed: bool = False
+    summary: str | None = None
+    summary_changed: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         key = name_key(self.name)
@@ -757,6 +778,7 @@ class LocationUpdated(GameEvent):
             description=self.description,
             position=_position(self.x, self.y),
             icon=self.icon if self.icon_changed else before.icon,
+            summary=self.summary if self.summary_changed else before.summary,
         )
 
     def render(self) -> str:
@@ -772,7 +794,13 @@ class LocationDiscovered(GameEvent):
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         key = name_key(self.name)
-        state.places[key] = replace(state.places[key], discovered=True, summary=self.summary)
+        before = state.places[key]
+        # A place created with a player-facing summary keeps it when the move discovers it.
+        state.places[key] = replace(
+            before,
+            discovered=True,
+            summary=before.summary if self.summary is None else self.summary,
+        )
 
     def render(self) -> str:
         return f"Discovered: {self.name}."

@@ -295,14 +295,24 @@ def _build(
             _alias(aliases[category], names or (draft.name, name_key(draft.name)), key)
 
     # The world chapter: the world, its regions, its places, and the kinds of ground and scenery
-    # its maps are built from.
+    # its maps are built from. A campaign's GM-written overview replaces the template's own text,
+    # and an unwritten world never shows the GM's setup instructions to the player.
+    if state is not None and state.world_description:
+        world_text = state.world_description
+        world_summary = _first_sentence(world_text)
+    elif world.has_setting:
+        world_text = world.description
+        world_summary = world.blurb or ""
+    else:
+        world_text = "The world is still taking shape. Its story will fill in as play goes on."
+        world_summary = world.blurb or ""
     add(
         "world",
         "world",
         _Draft(
             name=world.name,
-            summary=world.blurb or "",
-            text=world.description,
+            summary=world_summary,
+            text=world_text,
             source="world",
             group="Overview",
         ),
@@ -311,20 +321,25 @@ def _build(
     for region in world.regions:
         terrain = rule_set.world_terrain.get(region.terrain)
         terrain_name = terrain.name.casefold() if terrain is not None else region.terrain
+        text = f"An area of {terrain_name}."
+        if terrain is not None and terrain.rule:
+            text += f" {terrain.rule}"
         add(
             "places",
             f"region:{region.id}",
             _Draft(
                 name=region.name,
-                text=f"A region of {terrain_name} ground.",
+                text=text,
                 source="world",
                 group="Regions",
             ),
             "place",
         )
     for location in world.locations:
-        if location.parent is None:
-            text = f"A place in {world.name}."
+        if location.summary:
+            text = location.summary
+        elif location.parent is None:
+            text = f"A place in {world.name}. Its story is not written down here yet."
         else:
             parent = location_names.get(location.parent, location.parent)
             text = f"Inside {parent}."
@@ -333,6 +348,7 @@ def _build(
             f"place:{name_key(location.name)}",
             _Draft(
                 name=location.name,
+                summary=location.summary or "",
                 text=text,
                 source="world",
                 group="Places",
@@ -360,18 +376,26 @@ def _build(
         add(
             "terrain",
             f"object:{obj.id}",
-            _Draft(name=obj.name, text=_object_text(obj), group="Encounter Objects"),
+            _Draft(
+                name=obj.name,
+                summary=obj.description,
+                text=_object_text(obj),
+                group="Encounter Objects",
+            ),
         )
     for encounter in rule_set.encounter_templates.values():
+        description = [encounter.description] if encounter.description else []
+        description.append(
+            f"{encounter.columns} columns by {encounter.rows} rows. "
+            f"Background: {encounter.background.replace('-', ' ')}."
+        )
         add(
             "terrain",
             f"map:{encounter.id}",
             _Draft(
                 name=encounter.name,
-                text=(
-                    f"{encounter.columns} columns by {encounter.rows} rows. "
-                    f"Background: {encounter.background}."
-                ),
+                summary=encounter.description,
+                text="\n".join(description),
                 group="Encounter Maps",
             ),
         )
@@ -963,7 +987,8 @@ def _shop_item_draft(item: ShopItem) -> _Draft:
 
 
 def _service_draft(service: ShopService) -> _Draft:
-    lines = [f"Price: {service.price}"]
+    lines = [service.description] if service.description else []
+    lines.append(f"Price: {service.price}")
     if service.fits != 1:
         lines.append(f"Fits: {service.fits} characters")
     if service.restores:
@@ -971,17 +996,19 @@ def _service_draft(service: ShopService) -> _Draft:
     lines.append(f"Effect: {service.effect}")
     return _Draft(
         name=service.name,
-        summary=f"{service.effect.title()} service",
+        summary=service.description or f"{service.effect.title()} service",
         text="\n".join(lines),
         group="Services",
     )
 
 
 def _hireling_draft(hireling: Hireling) -> _Draft:
+    lines = [hireling.description] if hireling.description else []
+    lines.append(f"Wage: {hireling.wage_per_day} per day.")
     return _Draft(
         name=hireling.name,
-        summary=f"{hireling.wage_per_day} per day",
-        text=f"Wage: {hireling.wage_per_day} per day.",
+        summary=hireling.description or f"{hireling.wage_per_day} per day",
+        text="\n".join(lines),
         group="Hirelings",
     )
 
@@ -1303,14 +1330,14 @@ def _advancement_draft(advancement: str, option: AdvancementOption) -> _Draft:
 
 
 def _period_draft(period: PeriodRules) -> _Draft:
-    lines = []
+    lines = [period.description] if period.description else []
     if period.effects:
         lines.append("Effects: " + "; ".join(_effect_text(effect) for effect in period.effects))
     if period.tallies:
         lines.append("Resets tallies: " + ", ".join(period.tallies))
     return _Draft(
         name=period.label,
-        summary="A period that ends for every character at once",
+        summary=period.description or "A period that ends for every character at once",
         text="\n".join(lines),
         group="Periods",
     )
@@ -1593,7 +1620,7 @@ def _encounter_terrain_text(terrain: EncounterTerrain) -> str:
 
 
 def _object_text(obj: EncounterObject) -> str:
-    lines = []
+    lines = [obj.description] if obj.description else []
     if obj.blocks:
         lines.append("Blocks movement: no one can enter this cell.")
     if obj.solid:
