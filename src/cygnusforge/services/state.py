@@ -221,6 +221,8 @@ class Character:
     injuries: list[str] = field(default_factory=list)
     # The value of each counter the character keeps, by counter id. A counter not listed is at its initial value.
     counters: dict[str, int] = field(default_factory=dict)
+    # How many times each limited reaction has been used, keyed "reset:feature:reaction".
+    reaction_uses: dict[str, int] = field(default_factory=dict)
     # How many times each advancement option has been taken, by option id.
     advancements_taken: dict[str, int] = field(default_factory=dict)
     # The names of the character's Friends and Rivals, by relation id, in the order added.

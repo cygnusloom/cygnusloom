@@ -24,6 +24,10 @@ FEATURE_TYPES = ("item", "trait", "spell", "potion", "enchantment", "subject", "
 # its `delta` to that stat's score, that skill's level, or that counter's starting value. An
 # `armor` effect adds its `delta` to the character's armor. A `note` effect only says something.
 FEATURE_EFFECT_OPS = ("stat", "skill", "counter", "armor", "note")
+# When a feature may react to a roll that is already being resolved.
+REACTION_TRIGGERS = ("move", "check", "reaction")
+# What a reaction may do to that roll.
+REACTION_EFFECT_OPS = ("raise_band", "add_total", "set_reaction", "reroll")
 
 
 @dataclass(frozen=True)
@@ -163,12 +167,28 @@ class FeaturePick:
 
 
 @dataclass(frozen=True)
+class Reaction:
+    """A feature's reaction to a roll being resolved. `trigger` names the kind of roll, `when`
+    narrows which rolls it applies to, and `effect` says what it does. A reaction with `uses`
+    above zero may be used that many times before its `reset` label clears its uses, such as
+    "week". `text` is what the log says when it fires; a reaction with no text uses a default."""
+
+    id: str
+    trigger: str
+    when: Mapping[str, Any]
+    effect: Mapping[str, Any]
+    uses: int = 0
+    reset: str = ""
+    text: str = ""
+
+
+@dataclass(frozen=True)
 class Feature:
     """A feature a character can have. An `item` is carried as an inventory item of `size`, with
     `uses` if it is consumed and `armor` added to the character's armor while carried. A `spell`
     is a power the character can cast; how it is cast, and from what, is set by the rule set. A
     feature with no `uses` has none to spend. A feature may carry `effects` that run once when
-    it is granted while a character is created."""
+    it is granted while a character is created, and `reactions` that modify rolls during play."""
 
     id: str
     name: str
@@ -201,6 +221,8 @@ class Feature:
     # The effects run when the feature is granted while a character is created, in the order
     # they are given. See FEATURE_EFFECT_OPS.
     effects: tuple[Mapping[str, Any], ...] = ()
+    # The reactions the feature may take to moves, checks, and reaction rolls. See Reaction.
+    reactions: tuple[Reaction, ...] = ()
     # A passive defense floor, optionally restricted by equipped armor or shields.
     defense_floor: DefenseFloor | None = None
     # A feature that may be taken again as a distinct choice.
@@ -960,6 +982,7 @@ def load_feature(
             data.get("encumbrance_checks", []), "encumbrance_checks", label
         ),
         effects=_feature_effects(data.get("effects", []), label, stats, skills, counters),
+        reactions=_feature_reactions(data.get("reactions", []), label),
         defense_floor=_defense_floor(data.get("defense_floor"), counters, label),
         repeatable=repeatable,
         picks=_feature_picks(data.get("picks", []), stats, skills, label),
@@ -1113,11 +1136,153 @@ def _feature_effects(
     return tuple(checked)
 
 
+def _feature_reactions(entries: object, label: str) -> tuple[Reaction, ...]:
+    """Read a feature's reactions. The trigger-specific filters and effect shape are checked
+    here; the band a `raise_band` names is checked once the rule set's moves are loaded."""
+    if not isinstance(entries, list):
+        raise ContentError(f"{label}: 'reactions' must be a list")
+    checked: list[Reaction] = []
+    seen: set[str] = set()
+    for entry in entries:
+        if not isinstance(entry, Mapping):
+            raise ContentError(f"{label}: each reaction must be an object")
+        _check_reaction_keys(
+            entry,
+            {"id", "trigger", "when", "effect", "uses", "reset", "text"},
+            f"{label}: reaction",
+        )
+        ident = required_text(entry, "id", f"{label}: reaction")
+        if ":" in ident:
+            raise ContentError(f"{label}: reaction id must not contain ':'")
+        if ident in seen:
+            raise ContentError(f"{label}: reaction id {ident!r} is repeated")
+        seen.add(ident)
+        trigger = required_text(entry, "trigger", f"{label}: reaction {ident}")
+        if trigger not in REACTION_TRIGGERS:
+            raise ContentError(
+                f"{label}: reaction {ident} trigger must be one of {', '.join(REACTION_TRIGGERS)}"
+            )
+        when = _reaction_when(entry.get("when", {}), trigger, f"{label}: reaction {ident}")
+        effect = _reaction_effect(entry.get("effect"), trigger, f"{label}: reaction {ident}")
+        uses = entry.get("uses", 0)
+        if isinstance(uses, bool) or not isinstance(uses, int) or uses < 0:
+            raise ContentError(
+                f"{label}: reaction {ident} 'uses' must be a whole number, 0 or more"
+            )
+        reset = entry.get("reset", "")
+        if not isinstance(reset, str):
+            raise ContentError(f"{label}: reaction {ident} 'reset' must be text")
+        if uses and not reset.strip():
+            raise ContentError(f"{label}: reaction {ident} needs a 'reset' when it has 'uses'")
+        if ":" in reset:
+            raise ContentError(f"{label}: reaction {ident} 'reset' must not contain ':'")
+        text = entry.get("text", "")
+        if not isinstance(text, str):
+            raise ContentError(f"{label}: reaction {ident} 'text' must be text")
+        checked.append(
+            Reaction(
+                id=ident,
+                trigger=trigger,
+                when=when,
+                effect=effect,
+                uses=uses,
+                reset=reset,
+                text=text,
+            )
+        )
+    return tuple(checked)
+
+
+def _reaction_when(data: object, trigger: str, label: str) -> Mapping[str, Any]:
+    """Read the filters a reaction applies to a roll. Every trigger understands the total
+    bounds; each also understands the fields of the roll it watches."""
+    if not isinstance(data, Mapping):
+        raise ContentError(f"{label}: 'when' must be an object")
+    allowed = {"min_total", "max_total"}
+    if trigger == "move":
+        allowed |= {"moves", "move_tags", "bands", "stats"}
+    elif trigger == "check":
+        allowed |= {"checks", "skills", "stats", "success"}
+    _check_reaction_keys(data, allowed, f"{label}: when")
+    checked: dict[str, Any] = {}
+    for key in ("moves", "move_tags", "bands", "stats", "checks", "skills"):
+        if key in data:
+            values = _text_list(data[key], f"when.{key}", label)
+            if not values:
+                raise ContentError(f"{label}: 'when.{key}' must not be empty")
+            checked[key] = values
+    for key in ("min_total", "max_total"):
+        if key in data:
+            value = data[key]
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise ContentError(f"{label}: 'when.{key}' must be a whole number")
+            checked[key] = value
+    if "success" in data:
+        if not isinstance(data["success"], bool):
+            raise ContentError(f"{label}: 'when.success' must be true or false")
+        checked["success"] = data["success"]
+    return checked
+
+
+def _reaction_effect(data: object, trigger: str, label: str) -> Mapping[str, Any]:
+    if not isinstance(data, Mapping):
+        raise ContentError(f"{label}: 'effect' must be an object")
+    op = required_text(data, "op", f"{label}: effect")
+    if op not in REACTION_EFFECT_OPS:
+        raise ContentError(
+            f"{label}: effect op {op!r} must be one of {', '.join(REACTION_EFFECT_OPS)}"
+        )
+    if op == "raise_band":
+        if trigger != "move":
+            raise ContentError(f"{label}: raise_band only applies to a move")
+        _check_reaction_keys(data, {"op", "to"}, f"{label}: effect")
+        required_text(data, "to", f"{label}: effect")
+    elif op == "add_total":
+        _check_reaction_keys(data, {"op", "amount"}, f"{label}: effect")
+        amount = data.get("amount")
+        if isinstance(amount, bool) or not isinstance(amount, int) or amount == 0:
+            raise ContentError(f"{label}: add_total 'amount' must be a non-zero whole number")
+    elif op == "set_reaction":
+        if trigger != "reaction":
+            raise ContentError(f"{label}: set_reaction only applies to a reaction roll")
+        _check_reaction_keys(data, {"op", "to"}, f"{label}: effect")
+        required_text(data, "to", f"{label}: effect")
+    else:
+        if trigger != "check":
+            raise ContentError(f"{label}: reroll only applies to a check")
+        _check_reaction_keys(data, {"op", "keep"}, f"{label}: effect")
+        if data.get("keep", "better") not in ("better", "worse"):
+            raise ContentError(f"{label}: reroll 'keep' must be 'better' or 'worse'")
+    return dict(data)
+
+
+def _check_reaction_keys(data: Mapping[str, Any], allowed: Collection[str], label: str) -> None:
+    unknown = sorted(set(data) - set(allowed), key=str)
+    if unknown:
+        names = ", ".join(repr(key) for key in unknown)
+        raise ContentError(f"{label}: unknown key(s) {names}")
+
+
 def _effect_delta(op: Mapping[str, Any], label: str) -> int:
     delta = op.get("delta")
     if not isinstance(delta, int) or isinstance(delta, bool):
         raise ContentError(f"{label}: each effect needs a whole-number 'delta'")
     return delta
+
+
+def reaction_effect_text(reaction: Reaction, feature: Feature) -> str:
+    """What the log says when a reaction fires, in the rule set's own words when it supplies
+    `text`, and otherwise a short sentence naming the feature and its effect."""
+    if reaction.text:
+        return reaction.text
+    effect = reaction.effect
+    if effect["op"] == "raise_band":
+        return f"{feature.name} raises the result to {effect['to']}."
+    if effect["op"] == "add_total":
+        return f"{feature.name} adds {effect['amount']:+d} to the total."
+    if effect["op"] == "set_reaction":
+        return f"{feature.name} makes the reaction {effect['to']}."
+    return f"{feature.name} rerolls the check."
 
 
 def rule_ids(data: Mapping[str, Any], label: str) -> tuple[str, ...]:

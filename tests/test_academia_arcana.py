@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
 import random
 from collections import Counter
 from collections.abc import Callable, Mapping
+from types import SimpleNamespace
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -12,6 +15,7 @@ from fastapi.testclient import TestClient
 from cygnusforge.content.character import CharacterSpec, Sheet, check_choices, resolve
 from cygnusforge.content.library import RuleSet
 from cygnusforge.services.events import Character
+from cygnusforge.services.tools import Ask, RollAnswer, ToolRequest, run_tool
 from tests.conftest import content_library
 from tests.factories import (
     choose_campaign_options,
@@ -100,6 +104,71 @@ def _pc(app: FastAPI, campaign_id: int) -> Character:
     character = open_campaign(app, campaign_id).pc()
     assert character is not None
     return character
+
+
+def test_natural_gift_raises_a_spell_roll_once_per_week(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    _client, campaign_id = _campaign(client_factory)
+    tools = tools_for(app, campaign_id, rule_set=RULE_SET)
+
+    first = tools.roll_move("cast_a_spell", NAME, roll=3)
+    assert first["band"] == "7-9"
+    assert "Natural Gift" in str(first["reaction"])
+    assert _pc(app, campaign_id).reaction_uses == {"week:talent-prodigy:natural-gift": 1}
+
+    second = tools.roll_move("cast_a_spell", NAME, roll=3)
+    assert second["band"] == "6-"
+    assert "reaction" not in second
+
+    tools.end_period("school-week")
+    assert _pc(app, campaign_id).reaction_uses == {}
+    third = tools.roll_move("cast_a_spell", NAME, roll=3)
+    assert third["band"] == "7-9"
+
+
+def test_the_signature_spell_reaction_wins_on_a_signature_move(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    _client, campaign_id = _campaign(client_factory)
+    tools = tools_for(app, campaign_id, rule_set=RULE_SET)
+
+    result = tools.roll_move("signature_spell", NAME, roll=3)
+
+    assert result["band"] == "7-9"
+    assert "Signature Spell" in str(result["reaction"])
+    assert _pc(app, campaign_id).reaction_uses == {"week:signature-spell:signature-spell": 1}
+
+
+def test_academia_move_prompts_for_the_players_own_dice(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    """The player rolls their own 2d6 for a move; the engine adds the stat and resolves the band."""
+    _client, campaign_id = _campaign(client_factory)
+    tools = tools_for(app, campaign_id, rule_set=RULE_SET)
+    ctx = SimpleNamespace(world=tools)
+    request = ToolRequest(
+        id="call_1",
+        name="roll_move",
+        arguments=json.dumps(
+            {
+                "prompt": "Roll to cast your spell.",
+                "move": "cast_a_spell",
+                "character": NAME,
+            }
+        ),
+    )
+
+    ask = asyncio.run(run_tool(_academy().tool_calls, request, None, ctx=ctx))
+    assert isinstance(ask, Ask)
+    assert ask.dice == "2d6"
+    assert "stat" in (ask.details or "")
+
+    run = asyncio.run(run_tool(_academy().tool_calls, request, RollAnswer(8), ctx=ctx))
+    assert not isinstance(run, Ask)
+    result = json.loads(run.output)
+    assert result["roll"] == 8
+    assert result["total"] == 8 + result["bonus"]
 
 
 def _features(spec: CharacterSpec, features: Mapping[str, int], feature_type: str) -> set[str]:

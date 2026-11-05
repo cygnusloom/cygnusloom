@@ -11,9 +11,9 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusforge.content.character import CharacterSpec
+from cygnusforge.content.character import CharacterSpec, Feature
 from cygnusforge.content.library import ALL_STATS, CheckRules, ConditionRules
-from cygnusforge.services import resolution
+from cygnusforge.services import reactions, resolution
 from cygnusforge.services.common import InvalidInput, whole_number
 from cygnusforge.services.conditions import active_conditions
 from cygnusforge.services.events import CheckMade, load_state, name_key, record
@@ -35,6 +35,8 @@ def roll_check(
     cause: str = "",
     conditions: Mapping[str, ConditionRules] | None = None,
     armor_penalty: int = 0,
+    features: Mapping[str, Feature] | None = None,
+    roll: int | None = None,
 ) -> dict[str, Any]:
     """Roll `check` for a character and record what it made. The roll is the check's dice plus the
     skill's level (or the check's untrained penalty when the character has no level in it), the
@@ -42,7 +44,9 @@ def roll_check(
     check; it succeeds at or over the difficulty. A missing difficulty is the check's default,
     and any difficulty is clamped to the check's bounds.
 
-    `skill` or `stat` may be empty for a roll that adds neither."""
+    `skill` or `stat` may be empty for a roll that adds neither. `roll` is the dice total a
+    player reported; when it is None the engine rolls the check's dice. `features` are a world's
+    own feature definitions, in addition to the rule set's, for reactions."""
     found = load_state(db, campaign_id).characters.get(name_key(character))
     if found is None:
         raise InvalidInput(f"there is no character named {character!r}")
@@ -86,15 +90,51 @@ def roll_check(
         for rules in active_conditions(found, conditions or {})
     )
     bonus = skill_bonus + stat_bonus + modifier + condition_modifier + armor_penalty
-    result = resolution.roll_check(
-        rng,
-        check.dice,
-        skill_level=skill_bonus,
-        stat_modifier=stat_bonus,
-        difficulty=target,
-        modifier=modifier + condition_modifier + armor_penalty,
-        plus=plus,
+    if roll is None:
+        result = resolution.roll_check(
+            rng,
+            check.dice,
+            skill_level=skill_bonus,
+            stat_modifier=stat_bonus,
+            difficulty=target,
+            modifier=modifier + condition_modifier + armor_penalty,
+            plus=plus,
+        )
+    else:
+        rolled = whole_number(roll, "roll", 0, 1000)
+        total = rolled + bonus
+        result = resolution.CheckResult(
+            roll=rolled, total=total, difficulty=target, passed=total >= target
+        )
+    triggered = reactions.match_check(
+        found, spec, features, check, skill_id, stat_id, result.total, result.passed
     )
+    if triggered is not None:
+        effect = triggered.reaction.effect
+        if effect["op"] == "reroll":
+            rerolled = resolution.roll_check(
+                rng,
+                check.dice,
+                skill_level=skill_bonus,
+                stat_modifier=stat_bonus,
+                difficulty=target,
+                modifier=modifier + condition_modifier + armor_penalty,
+                plus=plus,
+            )
+            keep = "better" if effect.get("keep", "better") == "better" else "worse"
+            better = (rerolled.passed and not result.passed) or (
+                rerolled.passed == result.passed and rerolled.total > result.total
+            )
+            worse = (result.passed and not rerolled.passed) or (
+                rerolled.passed == result.passed and rerolled.total < result.total
+            )
+            if (keep == "better" and better) or (keep == "worse" and worse):
+                result = rerolled
+        elif effect["op"] == "add_total":
+            total = result.total + int(effect["amount"])
+            result = resolution.CheckResult(
+                roll=result.roll, total=total, difficulty=target, passed=total >= target
+            )
     record(
         db,
         campaign_id,
@@ -116,6 +156,8 @@ def roll_check(
             armor_penalty=armor_penalty,
         ),
     )
+    if triggered is not None:
+        reactions.use(db, campaign_id, found, triggered)
     db.commit()
     return {
         "name": found.name,
@@ -132,4 +174,5 @@ def roll_check(
         "success": result.passed,
         "armor_penalty": armor_penalty,
         "cause": cause,
+        **({"reaction": triggered.text} if triggered is not None else {}),
     }

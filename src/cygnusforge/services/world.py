@@ -616,7 +616,12 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             )
 
     def roll_move(
-        self, move: str, character: str, modifier: int = 0, stat: str | None = None
+        self,
+        move: str,
+        character: str,
+        modifier: int = 0,
+        stat: str | None = None,
+        roll: int | None = None,
     ) -> dict[str, Any]:
         rules = self.moves.get(move)
         if rules is None:
@@ -637,6 +642,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 modifier=modifier,
                 stat=stat,
                 spec=self.character,
+                features=self.features,
+                roll=roll,
             )
 
     def _weapon_feature(self, name: str) -> Feature | None:
@@ -695,6 +702,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         difficulty: int | None = None,
         modifier: int = 0,
         cause: str = "",
+        features: Mapping[str, Feature] | None = None,
+        roll: int | None = None,
     ) -> dict[str, Any]:
         rules = self.checks.get(check)
         if rules is None:
@@ -716,6 +725,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 cause=cause,
                 conditions=self.conditions,
                 armor_penalty=self._armor_check_penalty(db, character, skill),
+                features=features if features is not None else self.features,
+                roll=roll,
             )
 
     def raise_skill(self, name: str, skill: str, level: int, cause: str = "") -> dict[str, Any]:

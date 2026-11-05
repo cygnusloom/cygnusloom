@@ -10,6 +10,7 @@ from typing import Any
 from sqlmodel import Session
 
 from cygnusforge.content.library import ClockRules, Hooks, InventoryRules, RestLength
+from cygnusforge.services import reactions
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import (
     CharacterDied,
@@ -85,6 +86,10 @@ def advance_to(
             new_day=new.day != before.day,
         ),
     )
+    if new.day != before.day:
+        reactions.reset(db, campaign_id, "day", label="a new day")
+    if (new.day - 1) // 7 != (before.day - 1) // 7:
+        reactions.reset(db, campaign_id, "week", label="a new week")
     result: dict[str, Any] = {
         "day": new.day,
         "part": clock_rules.parts[new.part],

@@ -85,6 +85,8 @@ ruleset-specific Python.
 - [x] Add generic factions/colleges events, state, tools, prompts, and compendium.
 - [x] Add period support for resetting dynamic faction tallies.
 - [x] Add feature `stat` effect cap support for Year training picks.
+- [x] Add JSON feature reactions, including move band raises, uses, and period/clock resets.
+- [x] Make Natural Gift and Signature Spell trigger automatically and reset each school week.
 
 ### Content
 - [x] `rule_set.json`, `stats.json`, `character_fields.json`.
@@ -106,4 +108,5 @@ ruleset-specific Python.
 - [x] Character creation tests for Years, playbooks, subjects, and stats.
 - [x] Custom feature and college tests.
 - [x] Year-end advancement and cup reset tests.
+- [x] Reaction trigger, use, and weekly reset tests.
 - [x] Full suite, lint, and a live UI run.

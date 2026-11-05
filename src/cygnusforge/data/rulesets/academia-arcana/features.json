@@ -203,8 +203,19 @@
     "name": "Natural Gift",
     "feature_type": "trait",
     "tag": "talent",
-    "description": "Once per session, when a spell you cast rolls a 6-, treat it as a 7-9 instead. The magic arrives late, sideways, or larger than you meant.",
-    "effects": [{"op": "note", "text": "Once per session, turn a spell's 6- into a 7-9."}]
+    "description": "Once per week, when a spell you cast rolls a 6-, treat it as a 7-9 instead. The magic arrives late, sideways, or larger than you meant.",
+    "effects": [{"op": "note", "text": "Once per week, turn a spell's 6- into a 7-9."}],
+    "reactions": [
+      {
+        "id": "natural-gift",
+        "trigger": "move",
+        "when": {"move_tags": ["spell"], "bands": ["6-"]},
+        "effect": {"op": "raise_band", "to": "7-9"},
+        "uses": 1,
+        "reset": "week",
+        "text": "Natural Gift turns the 6- into a 7-9."
+      }
+    ]
   },
   {
     "type": "feature",
@@ -248,7 +259,18 @@
     "name": "Signature Spell",
     "feature_type": "trait",
     "tag": "talent",
-    "description": "You have a personal spell, written in your Signature Spell field. When you cast it, describe its unmistakable flourish. Once per session, treat a 6- on it as a 7-9.",
-    "effects": [{"op": "note", "text": "Once per session, turn your signature spell's 6- into a 7-9."}]
+    "description": "You have a personal spell, written in your Signature Spell field. When you cast it, describe its unmistakable flourish. Once per week, treat a 6- on it as a 7-9.",
+    "effects": [{"op": "note", "text": "Once per week, turn your signature spell's 6- into a 7-9."}],
+    "reactions": [
+      {
+        "id": "signature-spell",
+        "trigger": "move",
+        "when": {"moves": ["signature_spell"], "bands": ["6-"]},
+        "effect": {"op": "raise_band", "to": "7-9"},
+        "uses": 1,
+        "reset": "week",
+        "text": "Signature Spell turns the 6- into a 7-9."
+      }
+    ]
   }
 ]

@@ -25,6 +25,7 @@ from cygnusforge.rules.wwn_progression import (
     WWNProgression,
     require_wwn_progression,
 )
+from cygnusforge.services import reactions
 from cygnusforge.services.common import InvalidInput, whole_number
 from cygnusforge.services.events import (
     PC_KIND,
@@ -292,18 +293,21 @@ def roll_reaction(
     total = roll + bonus
 
     def action(hc: HookContext) -> dict[str, Any]:
+        nonlocal total
         _, found = _character(hc, character)
-        if total <= 2:
-            reaction = "as aggressively hostile as the situation allows"
-        elif total <= 5:
-            reaction = "more unfriendly and hostile than expected"
-        elif total <= 8:
-            reaction = "as hostile or friendly as they would usually be"
-        elif total <= 11:
-            reaction = "friendlier and more benign than expected"
-        else:
-            reaction = "as friendly and helpful as their nature and the situation permit"
         db, campaign_id = hc.session()
+        override = ""
+        for triggered in reactions.match_reaction_roll(
+            found, ctx.world.character, ctx.world.features, total
+        ):
+            effect = triggered.reaction.effect
+            if effect["op"] == "add_total":
+                total += int(effect["amount"])
+                reactions.use(db, campaign_id, found, triggered)
+            elif effect["op"] == "set_reaction" and not override:
+                override = str(effect["to"])
+                reactions.use(db, campaign_id, found, triggered)
+        reaction = override or _reaction_for_total(total)
         record(
             db,
             campaign_id,
@@ -322,6 +326,19 @@ def roll_reaction(
         }
 
     return ctx.world.with_hook_context(action)
+
+
+def _reaction_for_total(total: int) -> str:
+    """The book's reaction band for a total."""
+    if total <= 2:
+        return "as aggressively hostile as the situation allows"
+    if total <= 5:
+        return "more unfriendly and hostile than expected"
+    if total <= 8:
+        return "as hostile or friendly as they would usually be"
+    if total <= 11:
+        return "friendlier and more benign than expected"
+    return "as friendly and helpful as their nature and the situation permit"
 
 
 def player_attack(

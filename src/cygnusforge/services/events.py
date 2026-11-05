@@ -2433,6 +2433,53 @@ class EffectNoted(GameEvent):
 
 
 @dataclass(frozen=True)
+class ReactionUsed(GameEvent):
+    """A feature reaction changed a roll. The use counts against the reaction's limit until its
+    reset label clears it."""
+
+    kind: ClassVar[str] = "character.reaction_used"
+
+    name: str
+    feature: str
+    feature_name: str
+    reaction: str
+    reset: str
+    text: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        key = f"{self.reset}:{self.feature}:{self.reaction}"
+        character.reaction_uses[key] = character.reaction_uses.get(key, 0) + 1
+
+    def render(self) -> str:
+        return f"{self.name} uses {self.feature_name}: {self.text}"
+
+
+@dataclass(frozen=True)
+class ReactionsReset(GameEvent):
+    """The limited reactions carrying a reset label are available again."""
+
+    kind: ClassVar[str] = "character.reactions_reset"
+    hidden: ClassVar[bool] = True
+
+    name: str
+    reset: str
+    label: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        prefix = f"{self.reset}:"
+        character.reaction_uses = {
+            key: value
+            for key, value in character.reaction_uses.items()
+            if not key.startswith(prefix)
+        }
+
+    def render(self) -> str:
+        return f"{self.name}: {self.label or self.reset} reactions reset."
+
+
+@dataclass(frozen=True)
 class MaxChanged(GameEvent):
     """A stat's maximum score changed from `before` to `after`. `cause` says what changed it."""
 

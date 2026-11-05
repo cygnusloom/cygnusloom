@@ -5,10 +5,14 @@
     "name": "roll_check",
     "world_method": "roll_check",
     "bind": {"check": "skill"},
-    "description": "Roll a skill check for a character: 2d6 plus the skill's level plus the attribute's modifier against a difficulty, 8 by default. An untrained skill counts as -1. Call it whenever an action is uncertain and a skill applies, such as climbing (Exert), spotting an ambush (Notice), or casting a spell under pressure (Magic). Higher difficulties mean harder tasks: 10 is skilled work and 12 or more is formidable. A total equal to or above the difficulty succeeds.",
+    "description": "Ask the player to roll a skill check for their character: 2d6 plus the skill's level plus the attribute's modifier against a difficulty, 8 by default. An untrained skill counts as -1. Call it whenever an action is uncertain and a skill applies, such as climbing (Exert), spotting an ambush (Notice), or casting a spell under pressure (Magic). Higher difficulties mean harder tasks: 10 is skilled work and 12 or more is formidable. A total equal to or above the difficulty succeeds. Write the prompt the player sees, in the GM's voice, inviting the roll. The player presses the roll button; the engine adds the modifiers and records the result.",
     "parameters": {
       "type": "object",
       "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "What the GM says to the player to invite the roll. The player sees this text."
+        },
         "character": {
           "type": "string",
           "description": "The name of the player character making the check."
@@ -49,10 +53,16 @@
         }
       },
       "required": [
+        "prompt",
         "character",
         "skill",
         "stat"
       ]
+    },
+    "player_input": {
+      "param": "roll",
+      "dice": "2d6",
+      "details": "The engine adds the skill and attribute modifiers."
     }
   },
   {

@@ -8,6 +8,12 @@
   },
   {
     "type": "prompt",
+    "id": "player_rolls",
+    "step": "all",
+    "text": "The player rolls their own character's moves. Call roll_move and write the prompt the player sees; never roll their 2d6 yourself. The player's roll button returns the dice, and the engine adds the stat, resolves the band, and triggers any reaction the character has."
+  },
+  {
+    "type": "prompt",
     "id": "opening_day",
     "step": "all",
     "text": "The campaign opens on a school day that matters: arrival, the first feast, the first lesson, or the morning after a mistake. Place the player character in a named place, introduce at least one member of the faculty and one student who will matter, and give the player something to do before the first bell. Do not narrate the whole year; start with one day that is already going wrong in an interesting way."
@@ -40,7 +46,7 @@
     "type": "prompt",
     "id": "year_end",
     "step": "state",
-    "text": "When the school year comes to a close, call end_period with school-year. It raises every character's Year, grants four Advancement points, clears Stress, logs the College Cup's final totals, and resets the cup. Then tell the player to open the character sheet and spend their Advancement points on a stat, a spell, a subject, and a talent. Do not raise stats or teach features by narration alone."
+    "text": "When a full week of story time has passed, call end_period with school-week to clear weekly abilities such as Natural Gift and the Signature Spell. When the school year comes to a close, call end_period with school-year. It raises every character's Year, grants four Advancement points, clears Stress, logs the College Cup's final totals, and resets the cup and weekly abilities. Then tell the player to open the character sheet and spend their Advancement points on a stat, a spell, a subject, and a talent. Do not raise stats or teach features by narration alone."
   },
   {
     "type": "prompt",

@@ -6,6 +6,7 @@
     "description": "When you attempt a spell under pressure, say the incantation, make the gesture, and roll +Practice.",
     "dice": "2d6",
     "stat": "practice",
+    "tags": ["spell"],
     "bands": [
       {
         "label": "10+",
@@ -126,6 +127,7 @@
     "description": "When you face another spellcaster in a formal or informal duel, roll +Practice for each exchange.",
     "dice": "2d6",
     "stat": "practice",
+    "tags": ["spell"],
     "bands": [
       {
         "label": "10+",
@@ -390,6 +392,7 @@
     "description": "When you cast the personal spell written in your Signature Spell field, roll +Practice.",
     "dice": "2d6",
     "stat": "practice",
+    "tags": ["spell"],
     "bands": [
       {
         "label": "10+",

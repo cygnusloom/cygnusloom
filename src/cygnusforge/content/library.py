@@ -322,6 +322,10 @@ class PlayerInput:
     param: str | None = None
     dice: str | None = None
     dice_param: str | None = None
+    # A string argument naming a move or check. The engine knows that move's or check's dice and
+    # asks the player to roll them. The total reaches the function as `param`.
+    move_param: str | None = None
+    check_param: str | None = None
     # A string argument naming the weapon. The engine knows that weapon's dice and asks the player
     # to roll them. With `weapon_roll_param`, that total is passed to the function.
     weapon_param: str | None = None
@@ -871,6 +875,8 @@ class PeriodRules:
     effects: tuple[Mapping[str, Any], ...]
     # The tallies that start over when the period ends, after their final totals are logged.
     tallies: tuple[str, ...] = ()
+    # Reaction reset labels this period clears, such as "week".
+    resets: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -925,6 +931,8 @@ class MoveRules:
     skill_floor: int | None = 0
     # The move is only open once the character holds every stored condition.
     needs_all_conditions: bool = False
+    # Free-form tags a reaction can match, such as "spell" or "social".
+    tags: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -2381,6 +2389,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "flags",
             "encumbrance_checks",
             "effects",
+            "reactions",
             "defense_floor",
             "picks",
             "repeatable",
@@ -2656,6 +2665,7 @@ def _build_rule_set(
     _check_template_grants(character, template)
     moves = _load_moves(definitions, character, frozenset(counters), template)
     checks = _load_checks(definitions, template)
+    _check_feature_reactions(character, moves, checks, template)
     advancements = _load_advancements(
         definitions, character, counters, frozenset(conditions), template
     )
@@ -5385,7 +5395,7 @@ def _load_periods(
         label = f"{template}: period {d.id}"
         if d.id in loaded:
             raise ContentError(f"{template}: duplicate period {d.id!r}")
-        check_keys(d.data, {"type", "id", "label", "effects", "tallies"}, label)
+        check_keys(d.data, {"type", "id", "label", "effects", "tallies", "resets"}, label)
         effects, _ = _check_effects(
             d.data.get("effects", []),
             label,
@@ -5394,8 +5404,13 @@ def _load_periods(
             False,
             counters=frozenset(counters),
         )
-        if not effects:
-            raise ContentError(f"{label}: a period needs 'effects'")
+        resets = _text_list(d.data.get("resets", []), f"{label}: resets")
+        if len(set(resets)) != len(resets):
+            raise ContentError(f"{label}: 'resets' repeats a label")
+        if any(":" in reset for reset in resets):
+            raise ContentError(f"{label}: 'resets' must not contain ':'")
+        if not effects and not resets:
+            raise ContentError(f"{label}: a period needs 'effects' or 'resets'")
         reset = d.data.get("tallies", [])
         if not isinstance(reset, list) or not all(isinstance(t, str) for t in reset):
             raise ContentError(f"{label}: 'tallies' must be a list of tally ids")
@@ -5407,6 +5422,7 @@ def _load_periods(
             label=required_text(d.data, "label", label),
             effects=effects,
             tallies=tuple(reset),
+            resets=tuple(resets),
         )
     return loaded
 
@@ -5548,6 +5564,7 @@ def _load_moves(
                 "skill",
                 "skill_floor",
                 "bands",
+                "tags",
             },
             label,
         )
@@ -5580,6 +5597,9 @@ def _load_moves(
             raise ContentError(f"{label}: 'skill_floor' must be a whole number or null")
         if "skill_floor" in d.data and not skill:
             raise ContentError(f"{label}: 'skill_floor' needs a 'skill'")
+        tags = _text_list(d.data.get("tags", []), f"{label}: tags")
+        if len(set(tags)) != len(tags):
+            raise ContentError(f"{label}: 'tags' repeats a tag")
         moves[d.id] = MoveRules(
             id=d.id,
             label=required_text(d.data, "label", label),
@@ -5591,8 +5611,65 @@ def _load_moves(
             skill=skill,
             skill_floor=skill_floor,
             needs_all_conditions=needs_all,
+            tags=tuple(tags),
         )
     return moves
+
+
+def _check_feature_reactions(
+    character: CharacterSpec,
+    moves: Mapping[str, MoveRules],
+    checks: Mapping[str, CheckRules],
+    template: str,
+) -> None:
+    """Check the parts of a feature reaction that depend on the rule set's other content."""
+    for feature in character.features.values():
+        for reaction in feature.reactions:
+            label = f"{template}: feature {feature.id} reaction {reaction.id}"
+            when = reaction.when
+            for move_id in when.get("moves", ()):
+                if move_id not in moves:
+                    raise ContentError(f"{label}: 'when.moves' names no move ({move_id!r})")
+            for check_id in when.get("checks", ()):
+                if check_id not in checks:
+                    raise ContentError(f"{label}: 'when.checks' names no check ({check_id!r})")
+            for stat in when.get("stats", ()):
+                if stat not in character.stats:
+                    raise ContentError(f"{label}: 'when.stats' names no stat ({stat!r})")
+            for skill in when.get("skills", ()):
+                if skill not in character.skills:
+                    raise ContentError(f"{label}: 'when.skills' names no skill ({skill!r})")
+            if (
+                "min_total" in when
+                and "max_total" in when
+                and when["min_total"] > when["max_total"]
+            ):
+                raise ContentError(f"{label}: 'when.min_total' is above 'when.max_total'")
+            candidates = _reaction_moves(moves, when)
+            if reaction.trigger == "move" and not candidates:
+                raise ContentError(f"{label}: no move matches this reaction's 'when' filters")
+            target = reaction.effect.get("to") if reaction.effect["op"] == "raise_band" else None
+            if target is not None:
+                for move in candidates:
+                    if all(band.label != target for band in move.bands):
+                        raise ContentError(
+                            f"{label}: raise_band target {target!r} is not a band of "
+                            f"move {move.id!r}"
+                        )
+            for band in when.get("bands", ()):
+                if not any(any(b.label == band for b in move.bands) for move in candidates):
+                    raise ContentError(f"{label}: 'when.bands' names no band ({band!r})")
+
+
+def _reaction_moves(moves: Mapping[str, MoveRules], when: Mapping[str, Any]) -> list[MoveRules]:
+    """The moves a reaction's filters can match, in the rule set's file order."""
+    named = set(when.get("moves", ()))
+    tags = set(when.get("move_tags", ()))
+    return [
+        move
+        for move in moves.values()
+        if (not named or move.id in named) and (not tags or tags & set(move.tags))
+    ]
 
 
 def _load_stat_choice(
@@ -6380,6 +6457,8 @@ def _check_player_input(
             "param",
             "dice",
             "dice_param",
+            "move_param",
+            "check_param",
             "weapon_param",
             "weapon_roll_param",
             "details",
@@ -6389,14 +6468,29 @@ def _check_player_input(
     )
     dice = data.get("dice")
     dice_param = data.get("dice_param")
+    move_param = data.get("move_param")
+    check_param = data.get("check_param")
     weapon_param = data.get("weapon_param")
     weapon_roll_param = None
     modifier_param = data.get("modifier_param")
-    sources = [source for source in (dice, dice_param, weapon_param) if source is not None]
+    sources = [
+        source
+        for source in (dice, dice_param, move_param, check_param, weapon_param)
+        if source is not None
+    ]
     if len(sources) != 1:
         raise ContentError(
-            f"{label}: 'player_input' needs exactly one of 'dice', 'dice_param', or 'weapon_param'"
+            f"{label}: 'player_input' needs exactly one of 'dice', 'dice_param', "
+            "'move_param', 'check_param', or 'weapon_param'"
         )
+    for key, value in (("move_param", move_param), ("check_param", check_param)):
+        if value is None:
+            continue
+        schema = parameters["properties"].get(value)
+        if not isinstance(schema, dict) or schema.get("type") != "string":
+            raise ContentError(f"{label}: 'player_input.{key}' must name a string parameter")
+        if value not in parameters.get("required", []):
+            raise ContentError(f"{label}: 'player_input.{key}' must name a required parameter")
     if modifier_param is not None:
         if dice_param is None and weapon_param is None:
             raise ContentError(
@@ -6464,6 +6558,8 @@ def _check_player_input(
     return PlayerInput(
         dice=dice,
         dice_param=dice_param,
+        move_param=move_param,
+        check_param=check_param,
         weapon_param=weapon_param,
         weapon_roll_param=weapon_roll_param,
         param=param,

@@ -1271,6 +1271,14 @@
         "op": "note",
         "text": "Reaction rolls made by encountered beings gain +1 while you are present. Hostile encounters usually allow one round of parley unless there is an ambush or a clear reason for violence."
       }
+    ],
+    "reactions": [
+      {
+        "id": "well-met",
+        "trigger": "reaction",
+        "effect": {"op": "add_total", "amount": 1},
+        "text": "Well Met improves the reaction roll by 1."
+      }
     ]
   },
   {
@@ -1280,11 +1288,22 @@
     "feature_type": "feat",
     "tag": "focus",
     "rank": 2,
-    "description": "Once per session, a reaction roll turns the subject as friendly and helpful as is plausible; this works only once per target.",
+    "description": "Once per week, a reaction roll turns the subject as friendly and helpful as is plausible; this works only once per target.",
     "effects": [
       {
         "op": "note",
-        "text": "Once per session when a reaction roll is made, the subject becomes as friendly and helpful as is plausible; the GM decides why. Works only once per target."
+        "text": "Once per week when a reaction roll is made, the subject becomes as friendly and helpful as is plausible; the GM decides why. Works only once per target."
+      }
+    ],
+    "reactions": [
+      {
+        "id": "well-met-2",
+        "trigger": "reaction",
+        "when": {"max_total": 11},
+        "effect": {"op": "set_reaction", "to": "as friendly and helpful as their nature and the situation permit"},
+        "uses": 1,
+        "reset": "week",
+        "text": "Well Met makes the reaction as friendly and helpful as is plausible."
       }
     ]
   },

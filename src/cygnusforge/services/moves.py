@@ -9,7 +9,7 @@ from collections.abc import Mapping, Sequence
 
 from sqlmodel import Session
 
-from cygnusforge.content.character import CharacterSpec
+from cygnusforge.content.character import CharacterSpec, Feature
 from cygnusforge.content.library import (
     ALL_STATS,
     HIGHEST,
@@ -20,7 +20,8 @@ from cygnusforge.content.library import (
     MoveRules,
 )
 from cygnusforge.rules.dice import roll_total
-from cygnusforge.services.common import InvalidInput
+from cygnusforge.services import reactions
+from cygnusforge.services.common import InvalidInput, whole_number
 from cygnusforge.services.conditions import active_conditions
 from cygnusforge.services.events import (
     Character,
@@ -64,6 +65,8 @@ def make_move(
     stat: str | None = None,
     cause: str = "",
     spec: CharacterSpec | None = None,
+    features: Mapping[str, Feature] | None = None,
+    roll: int | None = None,
 ) -> dict[str, object]:
     """Roll `move` for the character, record the result, and run the band's effects. The effects
     carry their own events, so the outcome shows up in the campaign's history either way. A move
@@ -71,7 +74,9 @@ def make_move(
 
     A rule set with modifier bands and skills passes its `spec`: the stat's contribution is its
     modifier rather than its score, and a move with a `skill` adds that skill's level. Without a
-    spec, the stat's score is added, as a rule set with no modifier bands expects."""
+    spec, the stat's score is added, as a rule set with no modifier bands expects.
+
+    `roll` is the dice total a player reported. When it is None the engine rolls the move's dice."""
     state = load_state(db, campaign_id)
     character = state.characters.get(name_key(name))
     if character is None:
@@ -105,7 +110,10 @@ def make_move(
         raise InvalidInput(
             f"there is no stat named {rolled_stat!r}; choose one of {sorted(character.stats)}"
         )
-    roll = roll_total(move.dice, rng, plus=plus)
+    if roll is None:
+        roll = roll_total(move.dice, rng, plus=plus)
+    else:
+        roll = whole_number(roll, "roll", 0, 1000)
     stat_bonus = 0
     if rolled_stat is not None:
         if spec is not None:
@@ -123,6 +131,23 @@ def make_move(
     bonus = stat_bonus + modifier
     total = roll + bonus
     band = band_for(move, total)
+    triggered = None
+    if spec is not None:
+        triggered = reactions.match_move(
+            character, spec, features, move, band, total, rolled_stat or ""
+        )
+    applied = False
+    if triggered is not None:
+        effect = triggered.reaction.effect
+        if effect["op"] == "raise_band":
+            target = next((b for b in move.bands if b.label == effect["to"]), None)
+            if target is not None and move.bands.index(target) < move.bands.index(band):
+                band = target
+                applied = True
+        elif effect["op"] == "add_total":
+            total += int(effect["amount"])
+            band = band_for(move, total)
+            applied = True
     record(
         db,
         campaign_id,
@@ -138,6 +163,10 @@ def make_move(
             stat=rolled_stat or "",
         ),
     )
+    if triggered is not None and applied:
+        reactions.use(db, campaign_id, character, triggered)
+    else:
+        triggered = None
     db.commit()
     run_effects(
         db,
@@ -152,6 +181,8 @@ def make_move(
     if move.stat == HIGHEST:
         result["stat"] = rolled_stat
     result.update(roll=roll, bonus=bonus, total=total, band=band.label, text=band.text)
+    if triggered is not None:
+        result["reaction"] = triggered.text
     return result
 
 

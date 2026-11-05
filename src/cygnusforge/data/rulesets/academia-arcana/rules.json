@@ -72,7 +72,7 @@
   {
     "type": "rule",
     "id": "signature-spell",
-    "text": "Every character has a signature spell, written in their Signature Spell field. It is a personal expression of their magic, not one of the standard spells. When they cast it, use the Signature Spell move. Once per session, the signature-spell feature lets them treat a 6- on it as a 7-9."
+    "text": "Every character has a signature spell, written in their Signature Spell field. It is a personal expression of their magic, not one of the standard spells. When they cast it, use the Signature Spell move. Once per week, the signature-spell feature lets them treat a 6- on it as a 7-9."
   },
   {
     "type": "rule",

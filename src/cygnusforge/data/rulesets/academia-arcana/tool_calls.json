@@ -23,10 +23,14 @@
     "id": "roll_move",
     "name": "roll_move",
     "world_method": "roll_move",
-    "description": "Roll a move for a player character: 2d6 plus the stat the move uses, plus any condition penalty. For a move that rolls one of several stats, give the stat. Add a modifier for what the story gives, such as +1 for a Friend or -1 from a Condition. Pass the result to the player and narrate the band it lands in.",
+    "description": "Ask the player to roll a move for their character: 2d6 plus the stat the move uses, plus any condition penalty. For a move that rolls one of several stats, give the stat. Add a modifier for what the story gives, such as +1 for a Friend or -1 from a Condition. Write the prompt the player sees, in the GM's voice, inviting the roll. The player presses the roll button; the engine resolves the band and applies its effects.",
     "parameters": {
       "type": "object",
       "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "What the GM says to the player to invite the roll. The player sees this text."
+        },
         "move": {
           "type": "string",
           "enum_from": "moves",
@@ -46,7 +50,12 @@
           "description": "The stat to roll with, for a move that does not name one."
         }
       },
-      "required": ["move", "character"]
+      "required": ["prompt", "move", "character"]
+    },
+    "player_input": {
+      "param": "roll",
+      "move_param": "move",
+      "details": "The engine adds the move's stat and any condition penalty."
     }
   },
   {
@@ -112,7 +121,7 @@
     "id": "end_period",
     "name": "end_period",
     "world_method": "end_period",
-    "description": "End the school year for every living player character. It raises their Year, grants four Advancement points, clears Stress, logs the College Cup's final totals, and resets the cup. Call it only when the year actually ends in the story.",
+    "description": "End a school week or the school year. A week clears weekly reactions such as Natural Gift. The school year raises every living player character's Year, grants four Advancement points, clears Stress, logs the College Cup's final totals, and resets the cup. Call a week when a week of story time has passed, and the year only when the year actually ends.",
     "parameters": {
       "type": "object",
       "properties": {

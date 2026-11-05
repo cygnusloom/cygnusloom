@@ -18,7 +18,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusforge.content.character import Feature
+from cygnusforge.content.character import Feature, Reaction
 from cygnusforge.content.library import CombatRules, ContentLibrary, InjuryEntry, InjuryTable
 from cygnusforge.rules import wwn
 from cygnusforge.services import death, encounters
@@ -29,6 +29,7 @@ from cygnusforge.services.events import (
     ChatGM,
     EncounterTurnBegun,
     EncounterTurnEnded,
+    FeatureLearned,
     Harmed,
     Struck,
     current,
@@ -639,6 +640,112 @@ def test_side_initiative_is_rolled_once_both_sides_have_joined(client_factory):
     assert encounter.settled
     assert set(encounter.sides.values()) == {"party", "foes"}
     assert {name_key(name) for name in encounter.order} == {name_key(PC), name_key(FOE)}
+
+
+def _learn(app: FastAPI, campaign_id: int, feature: str, name: str) -> None:
+    with Session(app.state.engine) as db:
+        record(db, campaign_id, FeatureLearned(name=PC, feature=feature, feature_name=name))
+        db.commit()
+
+
+def _react(tools: WorldTools, rng: random.Random) -> dict[str, Any]:
+    request = ToolRequest(
+        id="call_1",
+        name="roll_reaction",
+        arguments=json.dumps({"character": PC, "cause": "meeting a stranger"}),
+    )
+    run = asyncio.run(
+        run_tool(WWN.tool_calls, request, ctx=SimpleNamespace(world=replace(tools, rng=rng)))
+    )
+    assert not isinstance(run, Ask), run.output
+    return json.loads(run.output)
+
+
+def test_well_met_improves_a_reaction_and_its_second_rank_is_weekly(client_factory):
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    _learn(client.app, campaign_id, "focus_well_met", "Well Met")
+
+    improved = _react(tools, Rolls(3, 3))
+    assert improved["total"] == improved["roll"] + improved["bonus"] + 1
+
+    _learn(client.app, campaign_id, "focus_well_met_2", "Well Met")
+    friendly = _react(tools, Rolls(3, 3))
+    assert friendly["reaction"] == (
+        "as friendly and helpful as their nature and the situation permit"
+    )
+    with Session(client.app.state.engine) as db:
+        character = load_state(db, campaign_id).characters[name_key(PC)]
+    assert character.reaction_uses == {"week:focus_well_met_2:well-met-2": 1}
+
+    ordinary = _react(tools, Rolls(3, 3))
+    assert ordinary["reaction"] != friendly["reaction"]
+
+    tools.advance_time(days=7)
+    friendly_again = _react(tools, Rolls(3, 3))
+    assert friendly_again["reaction"] == friendly["reaction"]
+
+
+def test_a_check_reaction_can_reroll_a_failed_social_check(client_factory):
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    base = WWN.character.features["focus_cultured_2"]
+    reroll = Reaction(
+        id="cultured-reroll",
+        trigger="check",
+        when={"skills": ("convince",), "success": False},
+        effect={"op": "reroll", "keep": "better"},
+        uses=1,
+        reset="week",
+        text="Cultured rerolls the failed check.",
+    )
+    spec = replace(
+        WWN.character,
+        features={**WWN.character.features, base.id: replace(base, reactions=(reroll,))},
+    )
+    tools = replace(tools, character=spec, rng=Rolls(6, 6))
+    _learn(client.app, campaign_id, base.id, base.name)
+
+    result = tools.roll_check("skill", PC, skill="convince", stat="cha", roll=2, difficulty=12)
+
+    assert result["success"] is True
+    assert result["roll"] == 12
+    assert result["reaction"] == "Cultured rerolls the failed check."
+    with Session(client.app.state.engine) as db:
+        character = load_state(db, campaign_id).characters[name_key(PC)]
+    assert character.reaction_uses == {"week:focus_cultured_2:cultured-reroll": 1}
+
+    # The weekly use is spent, so a second failure is not rerolled.
+    failed = tools.roll_check("skill", PC, skill="convince", stat="cha", roll=2, difficulty=12)
+    assert failed["success"] is False
+    assert "reaction" not in failed
+
+
+def test_wwn_skill_check_prompts_for_the_players_own_dice(client_factory):
+    """A skill check is the player's roll, not the engine's."""
+    _client, _campaign_id, tools = _wwn_campaign(client_factory)
+    ctx = SimpleNamespace(world=replace(tools, rng=Rolls(1)))
+    request = ToolRequest(
+        id="call_1",
+        name="roll_check",
+        arguments=json.dumps(
+            {
+                "prompt": "Roll to sneak past the sentry.",
+                "character": PC,
+                "skill": "sneak",
+                "stat": "dex",
+            }
+        ),
+    )
+
+    ask = asyncio.run(run_tool(WWN.tool_calls, request, None, ctx=ctx))
+    assert isinstance(ask, Ask)
+    assert ask.dice == "2d6"
+    assert "skill" in (ask.details or "")
+
+    run = asyncio.run(run_tool(WWN.tool_calls, request, RollAnswer(12), ctx=ctx))
+    assert not isinstance(run, Ask)
+    result = json.loads(run.output)
+    assert result["roll"] == 12
+    assert result["total"] == 12 + result["bonus"]
 
 
 def test_wwn_player_attack_and_save_prompt_for_the_players_own_dice(client_factory):

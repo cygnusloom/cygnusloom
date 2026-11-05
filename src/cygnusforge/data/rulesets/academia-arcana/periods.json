@@ -1,9 +1,16 @@
 [
   {
     "type": "period",
+    "id": "school-week",
+    "label": "school week",
+    "resets": ["week"]
+  },
+  {
+    "type": "period",
     "id": "school-year",
     "label": "school year",
     "tallies": ["college-cup"],
+    "resets": ["week"],
     "effects": [
       {"op": "counter", "id": "year", "delta": 1},
       {"op": "counter", "id": "advancements", "delta": 4},

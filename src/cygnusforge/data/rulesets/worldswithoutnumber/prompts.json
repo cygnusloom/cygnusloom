@@ -28,7 +28,7 @@
   {
     "type": "prompt",
     "id": "player_rolls",
-    "text": "The player rolls their own character's attacks and saves. Call player_attack for an attack and player_roll_save for a save so the player presses the roll button; never roll their d20 yourself. The engine rolls damage and applies Shock. Use these tools in and out of an encounter, and call roll_save only for NPCs."
+    "text": "The player rolls their own character's attacks, saves, and skill checks. Call player_attack for an attack, player_roll_save for a save, and roll_check for a skill check so the player presses the roll button; never roll their dice yourself. The engine rolls damage and applies Shock. Use these tools in and out of an encounter, and call roll_save only for NPCs."
   },
   {
     "type": "prompt",

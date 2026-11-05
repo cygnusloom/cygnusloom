@@ -144,6 +144,20 @@ def _dice_for(
             return ctx.world.attack_dice(weapon, modifier or ""), None
         except InvalidInput as exc:
             return "", str(exc)
+    if player_input.move_param is not None:
+        if ctx is None:
+            return "", "this tool cannot run without a campaign"
+        move = ctx.world.moves.get(str(arguments.get(player_input.move_param, "")))
+        if move is None:
+            return "", "there is no such move"
+        return move.dice, None
+    if player_input.check_param is not None:
+        if ctx is None:
+            return "", "this tool cannot run without a campaign"
+        check = ctx.world.checks.get(str(arguments.get(player_input.check_param, "")))
+        if check is None:
+            return "", "there is no such check"
+        return check.dice, None
     if player_input.dice is not None:
         return player_input.dice, None
     dice = str(arguments.get(player_input.dice_param, ""))

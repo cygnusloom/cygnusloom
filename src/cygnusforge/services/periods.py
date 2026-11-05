@@ -16,6 +16,7 @@ from cygnusforge.content.library import (
     PeriodRules,
     TallyRules,
 )
+from cygnusforge.services import reactions
 from cygnusforge.services.common import InvalidInput
 from cygnusforge.services.events import PC_KIND, PeriodEnded, TallyReset, load_state, record
 from cygnusforge.services.injuries import EffectContext, run_effects
@@ -67,5 +68,7 @@ def end_period(
             cause=f"the {period.label} ends",
             plus=plus,
         )
+    for reset in period.resets:
+        reactions.reset(db, campaign_id, reset, label=period.label)
     db.commit()
     return {"period": period.label, "characters": [c.name for c in pcs]}

@@ -23,6 +23,7 @@ from cygnusforge.content.character import (
     TableOption,
     Template,
     kind_label,
+    reaction_effect_text,
 )
 from cygnusforge.content.definitions import ContentError
 from cygnusforge.content.library import (
@@ -881,6 +882,11 @@ def _feature_text(
     lines.append("; ".join(details))
     for effect in feature.effects:
         lines.append(f"Effect: {_effect_text(effect)}")
+    for reaction in feature.reactions:
+        text = reaction_effect_text(reaction, feature)
+        if reaction.uses:
+            text += f" ({reaction.uses} per {reaction.reset})"
+        lines.append(f"Reaction: {text}")
     for pick in feature.picks:
         choices = ", ".join(pick.choices) or "any"
         text = f"Pick: {pick.label} ({pick.count} from {choices}"

@@ -272,6 +272,81 @@ def test_unknown_nested_character_keys_are_rejected(tree: Path):
         ContentLibrary.load(tree)
 
 
+@pytest.mark.parametrize(
+    "reaction, message",
+    [
+        (
+            {
+                "id": "gift",
+                "trigger": "move",
+                "effect": {"op": "raise_band", "to": "7-9"},
+                "typo": True,
+            },
+            "reaction: unknown key(s) 'typo'",
+        ),
+        (
+            {
+                "id": "gift",
+                "trigger": "move",
+                "effect": {"op": "raise_band", "to": "7-9"},
+                "uses": 1,
+            },
+            "reaction gift needs a 'reset' when it has 'uses'",
+        ),
+        (
+            {
+                "id": "gift",
+                "trigger": "move",
+                "effect": {"op": "set_reaction", "to": "friendly"},
+            },
+            "set_reaction only applies to a reaction roll",
+        ),
+        (
+            {
+                "id": "gift",
+                "trigger": "reaction",
+                "effect": {"op": "add_total", "amount": 0},
+            },
+            "add_total 'amount' must be a non-zero whole number",
+        ),
+        (
+            {
+                "id": "gift",
+                "trigger": "save",
+                "effect": {"op": "add_total", "amount": 1},
+            },
+            "trigger must be one of move, check, reaction",
+        ),
+        (
+            {
+                "id": "gift",
+                "trigger": "move",
+                "when": {"move_tags": ["spell"]},
+                "effect": {"op": "raise_band", "to": "7-9"},
+            },
+            "no move matches this reaction's 'when' filters",
+        ),
+    ],
+)
+def test_feature_reaction_errors_are_rejected(tree: Path, reaction: dict[str, Any], message: str):
+    _write(
+        tree,
+        {
+            "rulesets/testset/features.json": [
+                {
+                    "type": "feature",
+                    "id": "talent",
+                    "name": "Talent",
+                    "feature_type": "trait",
+                    "reactions": [reaction],
+                }
+            ]
+        },
+    )
+    with pytest.raises(ContentError, match=re.escape(message)):
+        ContentLibrary.load(tree)
+
+
 def test_unknown_tool_player_input_keys_are_rejected(tree: Path):
     _write(
         tree,
