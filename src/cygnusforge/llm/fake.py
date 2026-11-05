@@ -14,12 +14,15 @@ the model makes, one list per round. The engine runs them for real, so each name
 in the rule set. A `player_input` tool pauses the turn until the test answers it, so the test
 posts the answer next. Its `text` is the narration. Its `error` raises LLMError; the player's message stays and the reply stays open.
 Within a turn, `chat` calls (the GM's state steps) get the rounds and return no text, and `stream`
-calls (the narration) get `text`. A journal step (its system message starts "Journal step.") gets the
-turn's `journal` rounds, one list of tool calls per round, and no text. A speech step (its system message starts "Speech step.") gets
-the dialogue from the turn's `speech` object, keyed by the speaker's name. A speaker not listed
-there gets the intent back as its dialogue. A newer directive replaces the older one. When the
-script runs out, the provider echoes the last user message. The script lives in the transcript,
-so it needs no server-side state.
+calls (the narration) get `text`. A review that undoes the narration makes the next `stream` call
+get `rewrite` instead. A journal step (its system message starts "Journal step.") gets the
+turn's `journal` rounds, one list of tool calls per round, and no text. A narration review step
+(its system message starts "Narration review step.") gets the turn's `review` passes, one list of
+tool-call rounds per pass; the next pass starts after an undo. A speech step (its system message
+starts "Speech step.") gets the dialogue from the turn's `speech` object, keyed by the speaker's
+name. A speaker not listed there gets the intent back as its dialogue. A newer directive replaces
+the older one. When the script runs out, the provider echoes the last user message. The script
+lives in the transcript, so it needs no server-side state.
 """
 
 from __future__ import annotations
@@ -35,6 +38,8 @@ DIRECTIVE = "__FAKE__:"
 SPEECH_MARKER = "Speech step."
 OOC_MARKER = "Out-of-character step."
 JOURNAL_MARKER = "Journal step."
+REVIEW_MARKER = "Narration review step."
+REVISION_MARKER = "The last narration was set aside because:"
 _decoder = json.JSONDecoder()
 _WORDS = re.compile(r"\s*\S+|\s+")
 
@@ -54,6 +59,9 @@ class FakeProvider:
         self.calls.append(messages)
         if _is_speech(messages):
             return _speech(messages)
+        review_start = _review_start(messages)
+        if review_start is not None:
+            return _review(messages, review_start)
         journal_start = _journal_start(messages)
         if journal_start is not None:
             return _journal(messages, journal_start)
@@ -90,6 +98,42 @@ def _journal_start(messages: list[dict[str, Any]]) -> int | None:
         if message["role"] == "system" and JOURNAL_MARKER in message["content"]:
             return index
     return None
+
+
+def _review_start(messages: list[dict[str, Any]]) -> int | None:
+    """The index of the narration review instruction in the current turn, or None. Tool calls and
+    results follow it within a review step, so it need not be the last message."""
+    last_user = max((i for i, m in enumerate(messages) if m["role"] == "user"), default=-1)
+    for index in range(len(messages) - 1, last_user, -1):
+        message = messages[index]
+        if message["role"] == "system" and REVIEW_MARKER in message["content"]:
+            return index
+    return None
+
+
+def _review(messages: list[dict[str, Any]], start: int) -> ChatReply:
+    """The scripted review pass. A review pass is a list of tool-call rounds; the next pass
+    starts after an undo, which the review steps record as a tool result."""
+    current = _current_turn(messages)
+    turn_index, turn = current if current is not None else (0, {})
+    passes = turn.get("review", [])
+    if not isinstance(passes, list):
+        raise LLMError('"review" must be a list of review passes')
+    # Each undo puts a revision note on the next narration and its review, so the passages tell
+    # which review pass this is.
+    pass_no = sum(
+        1 for m in messages if m["role"] == "system" and REVISION_MARKER in str(m.get("content"))
+    )
+    if pass_no >= len(passes):
+        return ChatReply(text="")
+    rounds = passes[pass_no]
+    if not isinstance(rounds, list):
+        raise LLMError("each review pass must be a list of tool-call rounds")
+    done = sum(1 for m in messages[start + 1 :] if "tool_calls" in m)
+    if done >= len(rounds):
+        return ChatReply(text="")
+    prefix = f"fake_{turn_index}_review{pass_no}_{done}"
+    return ChatReply(text="", tool_requests=_tool_requests(rounds[done], prefix))
 
 
 def _journal(messages: list[dict[str, Any]], start: int) -> ChatReply:
@@ -151,7 +195,12 @@ def _respond(messages: list[dict[str, Any]], decision: bool) -> ChatReply:
     if "error" in turn:
         raise LLMError(str(turn["error"]))
     if not decision:
-        return ChatReply(text=str(turn.get("text", "")))
+        text = turn.get("text", "")
+        if any(
+            m["role"] == "system" and REVISION_MARKER in str(m.get("content")) for m in messages
+        ):
+            text = turn.get("rewrite", text)
+        return ChatReply(text=str(text))
     rounds = _rounds(turn)
     # Tool rounds already taken this turn are the assistant messages with tool calls since
     # the latest user message.

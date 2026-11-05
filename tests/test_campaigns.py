@@ -13,7 +13,13 @@ from cygnusforge.db.models import Campaign, Event
 from cygnusforge.llm.base import ChatReply, LLMError
 from cygnusforge.llm.fake import FakeProvider
 from cygnusforge.services.events import Turn
-from tests.conftest import NARRATE_TEXT, csrf_token, is_journal_messages, make_app
+from tests.conftest import (
+    NARRATE_TEXT,
+    csrf_token,
+    is_journal_messages,
+    is_review_messages,
+    make_app,
+)
 from tests.factories import (
     answer,
     pending_turn,
@@ -228,7 +234,7 @@ def test_model_change_applies_to_the_next_message(
     assert _set_model(client, campaign_id, "ollama/test-model").status_code == 303
     _send(client, campaign_id, "two")
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert used == ["fake/scripted"] * 2 + ["ollama/test-model"] * 2
+    assert used == ["fake/scripted"] * 3 + ["ollama/test-model"] * 3
     assert "from fake/scripted" in page
     assert "from ollama/test-model" in page
 
@@ -473,7 +479,7 @@ def test_history_is_sent_to_the_model(client_factory: Callable[[], TestClient], 
     client, campaign_id = _campaign_id(client_factory)
     _send(client, campaign_id, "first")
     _send(client, campaign_id, "second")
-    last = [c for c in fake.calls if not is_journal_messages(c)][-1]
+    last = [c for c in fake.calls if not is_journal_messages(c) and not is_review_messages(c)][-1]
     assert [m["role"] for m in last] == [
         "system",
         "assistant",

@@ -117,6 +117,7 @@ CORE_TOOLS = {
     "roll_creative",
     "record_setting",
     "record_settings",
+    "undo_narration",
 }
 
 
@@ -1216,6 +1217,7 @@ def test_bundled_cairn_prompts_and_cap_are_read():
         "conditions",
         "hirelings",
         "monster_abilities",
+        "resource_review",
         "setting_forge",
         "setting_continuity",
     ]

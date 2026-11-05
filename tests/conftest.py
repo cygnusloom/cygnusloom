@@ -147,10 +147,15 @@ def client(client_factory: Callable[[], TestClient]) -> TestClient:
 
 
 JOURNAL_STEP = "Journal step."
+REVIEW_STEP = "Narration review step."
 
 
 def is_journal_messages(messages: list[dict[str, Any]]) -> bool:
     return any(m["role"] == "system" and JOURNAL_STEP in (m.get("content") or "") for m in messages)
+
+
+def is_review_messages(messages: list[dict[str, Any]]) -> bool:
+    return any(m["role"] == "system" and REVIEW_STEP in (m.get("content") or "") for m in messages)
 
 
 def without_journal(calls: list[dict[str, Any]]) -> list[dict[str, Any]]:

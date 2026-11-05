@@ -300,7 +300,8 @@ def test_model_rolls_then_narrates_and_only_the_narration_is_saved(
     events = answer(client, campaign_id, "roll")
 
     assert events[-1] == {"type": "saved", "event_id": _saved_ids(app, campaign_id)[-1]}
-    assert len(without_journal(recorder.calls)) == 3
+    assert len(without_journal(recorder.calls)) == 4
+    assert "undo_narration" in {spec["function"]["name"] for spec in recorder.calls[-1]["tools"]}
     tool_messages = [m for m in recorder.calls[1]["messages"] if m["role"] == "tool"]
     assert len(tool_messages) == 1
     result = json.loads(tool_messages[0]["content"])
@@ -342,7 +343,7 @@ def test_state_steps_are_not_capped_at_a_number_of_rounds(
     for _ in range(6):
         answer(client, campaign_id, "roll")
 
-    assert len(without_journal(recorder.calls)) == 8
+    assert len(without_journal(recorder.calls)) == 9
     assert _saved(app, campaign_id)[-1] == ("assistant", "Done.")
 
 

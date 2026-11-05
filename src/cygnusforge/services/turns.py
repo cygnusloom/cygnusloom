@@ -41,8 +41,10 @@ from cygnusforge.services.events import (
     ContextPart,
     GameEvent,
     JournalStarted,
+    NarrationUndone,
     OocStarted,
     PromptShown,
+    ReviewStepMade,
     SpeechWritten,
     StateStepMade,
     SummaryUpdated,
@@ -62,9 +64,11 @@ from cygnusforge.services.events import (
     truncate,
 )
 from cygnusforge.services.prompts import (
+    NARRATION_REVISION,
     OOC_INSTRUCTION,
     journal_instruction,
     narrate_instruction,
+    narration_review_instruction,
     opening_prompt,
     speech_instruction,
     state_instruction,
@@ -75,6 +79,7 @@ from cygnusforge.services.tools import (
     RollAnswer,
     TextAnswer,
     ToolRun,
+    find_tool,
     run_tool,
     tool_specs,
 )
@@ -99,6 +104,15 @@ SPEECH_RETRY = (
 )
 # An empty narration is requested again this many times before the turn fails.
 NARRATION_ATTEMPTS = 2
+# The narration is reviewed after it is written. A review that sets it aside writes the story
+# again, up to this many times; the last narration is accepted without another review.
+NARRATION_REVIEWS = 2
+# A review step's model rounds: enough to undo, fix the record, and stop.
+REVIEW_ROUNDS = 3
+# The review tool that sets the narration aside.
+UNDO_NARRATION = "undo_narration"
+# The note recorded when a review changed the record without setting the narration aside first.
+REVIEW_CHANGED_NOTE = "the review changed the record after the narration was written"
 # A long model call would otherwise leave the player's stream silent, and a silent stream looks
 # exactly like a hung page. Every this many seconds of waiting, the turn sends a status line.
 HEARTBEAT_SECONDS = 15.0
@@ -176,7 +190,13 @@ class NextMessage:
     """The reply goes on in a new message, such as the story after an out-of-character reply."""
 
 
-TurnEvent = Status | Delta | Logged | Prompt | Saved | NextMessage
+@dataclass(frozen=True)
+class Retract:
+    """The reply text streamed so far was set aside and will be written again in the same
+    message."""
+
+
+TurnEvent = Status | Delta | Logged | Prompt | Saved | NextMessage | Retract
 
 
 def _add_instruction(
@@ -499,8 +519,11 @@ def _narration_messages(
     in the turn, so the scene is rebuilt from the state as it is now, which also brings in the
     rules for anything that came into the scene. The turn log follows the conversation, so the
     narration covers each entry. A state step's prose is a draft written before the tools ran, so
-    the narration sees the tool calls but not that prose. `log` replaces the turn's own Log lines."""
+    the narration sees the tool calls but not that prose. `log` replaces the turn's own Log lines.
+    The narration instruction is always last, after the log and any review note, even when a
+    review step added its own tool exchange to the turn."""
     state = _state(run.engine, run.campaign_id)
+    instruction = narrate_instruction(run.rule_set, run.world)
     scene = system_parts(
         run.rule_set.id,
         {**run.rule_set.rules, **run.unattached_rules},
@@ -513,16 +536,23 @@ def _narration_messages(
     )
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": "\n\n".join(p.content for p in scene)},
-        *(_without_draft(m) for m in turn.messages[1:]),
+        *(
+            _without_draft(m)
+            for m in turn.messages[1:]
+            if not (m.get("role") == "system" and m.get("content") == instruction)
+        ),
     ]
     log = _turn_log(run.engine, run.campaign_id, turn.opener) if log is None else log
     if log:
         lines = "\n".join(f"{number}. {line}" for number, line in enumerate(log, 1))
-        entry = {"role": "system", "content": f"{heading}\n{lines}"}
-        if messages[-1]["content"] == narrate_instruction(run.rule_set, run.world):
-            messages.insert(len(messages) - 1, entry)
-        else:
-            messages.append(entry)
+        messages.append({"role": "system", "content": f"{heading}\n{lines}"})
+    if turn.speech:
+        _add_speech(messages, [], turn.speech)
+    if turn.revision:
+        messages.append(
+            {"role": "system", "content": NARRATION_REVISION.format(reason=turn.revision)}
+        )
+    messages.append({"role": "system", "content": instruction})
     return messages
 
 
@@ -802,6 +832,137 @@ async def _write_journal(
             view.append({"role": "tool", "tool_call_id": request.id, "content": result.output})
 
 
+@dataclass(frozen=True)
+class _ReviewResult:
+    """What a narration review decided. `undone` means the narration was set aside and the story
+    must be written again from the record, after any tools the review ran to fix it."""
+
+    undone: bool
+
+
+def _tool_failed(result: ToolRun) -> bool:
+    """Whether a tool result is the error object `run_tool` returns instead of an answer."""
+    try:
+        payload = json.loads(result.output)
+    except (TypeError, ValueError):
+        return True
+    return isinstance(payload, Mapping) and "error" in payload
+
+
+async def _narrate(
+    run: _Run, turn: Turn, result: list[tuple[str, str]]
+) -> AsyncIterator[TurnEvent]:
+    """Stream the narration and put its text and reasoning in `result`. An empty reply is asked
+    for again before the turn fails."""
+    yield Status("Narrating...")
+    messages = _narration_messages(run, turn)
+    reply = ""
+    reasoning = ""
+    for _attempt in range(NARRATION_ATTEMPTS):
+        narration: ChatReply | None = None
+        async for arrived, item in _stream_with_heartbeat(
+            run.provider.stream(run.model_name, messages, None)
+        ):
+            if not arrived:
+                yield Status(HEARTBEAT_MESSAGE)
+            elif isinstance(item, TextDelta):
+                yield Delta(item.text)
+            else:
+                narration = item
+        if narration is None:
+            raise LLMError("the model returned no reply")
+        reply = narration.text.strip()
+        reasoning = narration.reasoning
+        if reply:
+            break
+    if not reply:
+        raise LLMError("the model returned an empty reply")
+    result.append((reply, reasoning))
+
+
+async def _review_narration(
+    run: _Run,
+    turn: Turn,
+    narration: str,
+    reasoning: str,
+    result: list[_ReviewResult],
+) -> AsyncIterator[TurnEvent]:
+    """Check the narration just written against the record. A review that finds a fault calls
+    undo_narration, then may fix the record with the usual tools; the caller writes the story
+    again when `result` says the narration was undone. A review that changes the record without
+    undoing first still sends the story back, since the narration was written from the old state."""
+    tools = tool_specs(run.tool_calls, review_step=True)
+    if tools is None:
+        result.append(_ReviewResult(undone=False))
+        return
+    yield Status("Checking the narration...")
+    view = _narration_messages(run, turn)
+    view.append(_text_message(narration, reasoning))
+    view.append(
+        {"role": "system", "content": narration_review_instruction(run.rule_set, run.world)}
+    )
+    undone = False
+    changed = False
+    for round_no in range(1, REVIEW_ROUNDS + 1):
+        replied: list[ChatReply] = []
+        async for event in _await_with_heartbeat(
+            run.provider.chat(run.model_name, view, tools), replied
+        ):
+            yield event
+        step = replied[0]
+        if not step.tool_requests:
+            break
+        view.append(_tool_call_message(step))
+        messages: list[dict[str, Any]] = [_tool_call_message(step)]
+        context: list[ContextPart] = []
+        if step.text.strip():
+            context.append(
+                ContextPart("assistant", f"Narration review (round {round_no})", step.text)
+            )
+        for request in step.tool_requests:
+            tool_result = await run_tool(run.tool_calls, request, ctx=run.ctx)
+            if isinstance(tool_result, Ask):
+                tool_result = ToolRun(
+                    json.dumps(
+                        {
+                            "error": "the narration review cannot wait for the player; fix "
+                            "what you can without asking, or undo the narration"
+                        }
+                    ),
+                    None,
+                )
+            failed = _tool_failed(tool_result)
+            if not failed and request.name == UNDO_NARRATION:
+                if not undone:
+                    yield Retract()
+                    yield Status("Fixing the story...")
+                undone = True
+            elif not failed:
+                tool = find_tool(run.tool_calls, request.name)
+                if tool is not None and not tool.lookup:
+                    changed = True
+            message = {"role": "tool", "tool_call_id": request.id, "content": tool_result.output}
+            messages.append(message)
+            view.append(message)
+            context.append(
+                ContextPart(
+                    "tool",
+                    f"Result of '{request.name}' (review round {round_no})",
+                    tool_result.output,
+                )
+            )
+        _record(
+            run.engine,
+            run.campaign_id,
+            ReviewStepMade(messages=messages, context=_dicts(context)),
+        )
+    if changed and not undone:
+        _record(run.engine, run.campaign_id, NarrationUndone(reason=REVIEW_CHANGED_NOTE))
+        yield Retract()
+        undone = True
+    result.append(_ReviewResult(undone=undone))
+
+
 async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
     """Run the reply until it is recorded or paused. Log entries are yielded as the steps that
     recorded them finish. A pause is recorded before the player hears of it."""
@@ -955,31 +1116,25 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
     if _turn_has_day_end(run.engine, run.campaign_id, turn.opener):
         async for event in _write_journal(run, turn):
             yield event
-    yield Status("Narrating...")
-    messages = _narration_messages(run, turn)
     reply = ""
-    for _attempt in range(NARRATION_ATTEMPTS):
-        narration: ChatReply | None = None
-        async for arrived, item in _stream_with_heartbeat(
-            run.provider.stream(run.model_name, messages, None)
-        ):
-            if not arrived:
-                yield Status(HEARTBEAT_MESSAGE)
-            elif isinstance(item, TextDelta):
-                yield Delta(item.text)
-            else:
-                narration = item
-        if narration is None:
-            raise LLMError("the model returned no reply")
-        reply = narration.text.strip()
-        if reply:
+    reasoning = ""
+    for review_round in range(NARRATION_REVIEWS + 1):
+        turn = _turn(_state(run.engine, run.campaign_id))
+        written: list[tuple[str, str]] = []
+        async for event in _narrate(run, turn, written):
+            yield event
+        reply, reasoning = written[0]
+        if review_round >= NARRATION_REVIEWS:
             break
-    if not reply:
-        raise LLMError("the model returned an empty reply")
+        reviewed: list[_ReviewResult] = []
+        async for event in _review_narration(run, turn, reply, reasoning, reviewed):
+            yield event
+        if not reviewed[0].undone:
+            break
     event_id = _record(
         run.engine,
         run.campaign_id,
-        ChatGM(content=reply, model=run.model, reasoning=narration.reasoning),
+        ChatGM(content=reply, model=run.model, reasoning=reasoning),
     )
     yield Saved(event_id)
 

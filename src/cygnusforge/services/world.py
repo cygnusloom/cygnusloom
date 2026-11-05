@@ -86,6 +86,7 @@ from cygnusforge.services.events import (
     GrappleStarted,
     Item,
     MaxChanged,
+    NarrationUndone,
     ProjectAbandoned,
     ProjectAdvanced,
     ProjectStarted,
@@ -1604,6 +1605,20 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     def view_journal(self, start_line: int = 1, end_line: int | None = None) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return view_journal(load_state(db, self.campaign_id), start_line, end_line)
+
+    def undo_narration(self, reason: str) -> dict[str, Any]:
+        """Set the narration currently being reviewed aside. The narration was never recorded,
+        so this records only the review's reason for the narration that replaces it."""
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            if state.turn is None or not state.turn.narrating:
+                raise InvalidInput("there is no narration to review")
+            note = bounded_text(reason, "reason", MAX_TEXT).strip()
+            if not note:
+                raise InvalidInput("reason must say what is wrong with the narration")
+            record(db, self.campaign_id, NarrationUndone(reason=note))
+            db.commit()
+        return {"undone": "narration", "reason": note}
 
     def start_project(
         self,

@@ -16,7 +16,7 @@ from cygnusforge.llm.base import ChatReply, LLMError
 from cygnusforge.rules.context import brief
 from cygnusforge.services.events import CampaignState, Channel, load_state
 from cygnusforge.services.prompts import SUMMARY_PROMPT, SYSTEM_PROMPT, system_parts
-from tests.conftest import is_journal_messages, make_app
+from tests.conftest import is_journal_messages, is_review_messages, make_app
 from tests.test_campaigns import _campaign_id, _send
 
 METER_RE = re.compile(r'<span class="muted">([\d,]+) / 32,768</span>')
@@ -197,7 +197,10 @@ def test_no_summary_when_the_chat_is_well_inside_the_window(settings: Settings):
     client, campaign_id = _campaign_id(lambda: TestClient(app))
     for _ in range(3):
         assert _send(client, campaign_id, "x" * 400).status_code == 303
-    assert len([c for c in provider.calls if not is_journal_messages(c)]) == 8
+    assert (
+        len([c for c in provider.calls if not is_journal_messages(c) and not is_review_messages(c)])
+        == 8
+    )
     assert provider.summarizer_calls() == []
     state = _state(app, campaign_id)
     assert state.summary == ""

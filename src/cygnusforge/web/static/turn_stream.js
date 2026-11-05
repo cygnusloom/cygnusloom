@@ -147,6 +147,11 @@
           current.content.textContent += item.text;
           scrollDown();
           break;
+        case "retract":
+          current.content.textContent = "";
+          current.status.hidden = false;
+          scrollDown();
+          break;
         case "next_message":
           current = addBubble("assistant", "Cygnus");
           break;

@@ -337,6 +337,26 @@
   },
   {
     "type": "tool_call",
+    "id": "undo_narration",
+    "name": "undo_narration",
+    "world_method": "undo_narration",
+    "review_step": true,
+    "description": "Set the narration just written aside because it is wrong, incomplete, or contradicts the recorded state and tool results, so the story can be written again. Call this first, then make any tool calls that fix the record; the narration is written again after this step. Give the fault so the new narration corrects it. Do not call this when the narration is sound.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "What is wrong with the narration and what the new one must say instead."
+        }
+      },
+      "required": [
+        "reason"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "all_at_location",
     "name": "all_at_location",
     "world_method": "all_at_location",

@@ -21,6 +21,7 @@ from cygnusforge.services.campaigns import (
     NewCharacter,
     NextMessage,
     Prompt,
+    Retract,
     Saved,
     Status,
     TurnEvent,
@@ -624,6 +625,8 @@ def _line(event: TurnEvent | TurnError) -> str:
             payload = {"type": "saved", "event_id": event_id}
         case NextMessage():
             payload = {"type": "next_message"}
+        case Retract():
+            payload = {"type": "retract"}
         case TurnError(status, message):
             payload = {"type": "error", "status": status, "message": message}
     return json.dumps(payload)

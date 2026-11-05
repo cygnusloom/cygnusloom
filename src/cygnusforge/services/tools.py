@@ -47,11 +47,21 @@ class ToolRun:
 
 
 def tool_specs(
-    tool_calls: Mapping[str, ToolCall], journal_step: bool = False
+    tool_calls: Mapping[str, ToolCall],
+    journal_step: bool = False,
+    review_step: bool = False,
 ) -> list[dict[str, Any]] | None:
     """The tool list for a chat request, or None when there are no tools for it. The journal step
-    gets only its own tools; every other step gets the rest."""
-    selected = [tool for tool in tool_calls.values() if tool.journal_step == journal_step]
+    gets only its own tools; the narration review step gets the usual tools plus its own; every
+    other step gets the usual tools."""
+    if journal_step:
+        selected = [tool for tool in tool_calls.values() if tool.journal_step]
+    elif review_step:
+        selected = [tool for tool in tool_calls.values() if not tool.journal_step]
+    else:
+        selected = [
+            tool for tool in tool_calls.values() if not tool.journal_step and not tool.review_step
+        ]
     if not selected:
         return None
     return [

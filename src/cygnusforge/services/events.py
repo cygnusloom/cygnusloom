@@ -882,6 +882,22 @@ class JournalStarted(GameEvent):
 
 
 @dataclass(frozen=True)
+class NarrationUndone(GameEvent):
+    """A narration review set the just-written narration aside and will write the story again.
+    The narration itself was not recorded, so this only carries the review's reason, which the
+    next narration reads so it does not repeat the fault."""
+
+    kind: ClassVar[str] = "narration.undone"
+    hidden: ClassVar[bool] = True
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    reason: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        _open_turn(state).revision = self.reason
+
+
+@dataclass(frozen=True)
 class ToolRan(GameEvent):
     """A rule-set tool finished during a turn. Its messages and context are what the model is
     sent next. `activity` is the Log text for the tool, if it has any."""
@@ -1075,6 +1091,25 @@ class StateStepMade(GameEvent):
         if not self.requests:
             turn.narrating = True
             turn.speech = []
+
+
+@dataclass(frozen=True)
+class ReviewStepMade(GameEvent):
+    """One narration review step's tool calls and results. The review reads the narration that
+    was just written; its tool calls fix the record, and a narration written again after an undo
+    sees them."""
+
+    kind: ClassVar[str] = "turn.review_step"
+    hidden: ClassVar[bool] = True
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    messages: list[dict[str, Any]]
+    context: list[dict[str, str]]
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        turn = _open_turn(state)
+        turn.messages.extend(self.messages)
+        turn.context.extend(_parts(self.context))
 
 
 @dataclass(frozen=True)

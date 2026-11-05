@@ -73,6 +73,7 @@ def test_each_phase_shows_a_status_and_only_the_narration_is_streamed(
         "Managing state...",
         "Updating the journal...",
         "Narrating...",
+        "Checking the narration...",
     ]
     narrating_at = events.index({"type": "status", "text": "Narrating..."})
     assert _deltas(events[:narrating_at]) == ""
@@ -89,7 +90,13 @@ def test_state_steps_offer_tools_and_the_narration_does_not(
 
     _stream(client, campaign_id, _script({"rounds": [[ADVANCE_DAY]], "text": "Done."}))
 
-    assert [call["tools"] is not None for call in recorder.calls] == [True, True, True, False]
+    assert [call["tools"] is not None for call in recorder.calls] == [
+        True,
+        True,
+        True,
+        False,
+        True,
+    ]
 
 
 def test_compression_is_announced_as_a_status(settings: Settings):

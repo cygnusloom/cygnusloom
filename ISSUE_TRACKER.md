@@ -5,7 +5,6 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
 # Untriaged Issues
 
 1. Add svg icons to everything that can have icons (monsters, items, location types, etc.). Also add looks_like fields to definitions so that things without icons can inheirit their looks. Make the map much more varied, complete, and visually appealing.
-3. The GM can narrate incorrect mechanics even when the recorded state and tool results are correct. In DeepSeek tests it misexplained Vowed armor calculations and said an advancement point remained after it was spent. Improve grounding or validation so player-facing narration follows the engine's results.
 4. Leveling up (if rulesets have that idea, and it requires choices) should be an interactive process.
 5. WWN: A dual-partial Adventurer advances on the primary class's chart only: the second partial adds
    no HP, attack, Focus, or art progression, and Effort recognition keys to the primary class.

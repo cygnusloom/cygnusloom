@@ -232,6 +232,9 @@ class ToolCall:
     lookup: bool = False
     # True for tools only the journal step offers. Every other step leaves them out.
     journal_step: bool = False
+    # True for tools the narration review step adds to the usual tools. The state step leaves
+    # them out.
+    review_step: bool = False
 
 
 @dataclass(frozen=True)
@@ -1263,7 +1266,8 @@ class MagicRules:
 @dataclass(frozen=True)
 class PromptFragment:
     """A rule-set sentence group for the GM prompt, such as how armor absorbs a blow. `step` is
-    "state" for the state step, "narration" for the narration step, or "all" for both.
+    "state" for the state step, "narration" for the narration step, "review" for the narration
+    review step, or "all" for every step.
     `unwritten_only` marks a fragment only for a world with no authored setting, so the GM
     invents the setting rather than borrowing one."""
 
@@ -3894,8 +3898,8 @@ def _load_prompts(definitions: list[Definition], template: str) -> tuple[PromptF
         check_keys(d.data, {"type", "id", "text", "step", "unwritten_only"}, label)
         ids.add(d.id)
         step = d.data.get("step", "state")
-        if step not in ("state", "narration", "all"):
-            raise ContentError(f"{label}: 'step' must be state, narration, or all")
+        if step not in ("state", "narration", "review", "all"):
+            raise ContentError(f"{label}: 'step' must be state, narration, review, or all")
         fragments.append(
             PromptFragment(
                 id=d.id,
@@ -5435,6 +5439,7 @@ def _load_tool_call(
             "character_options",
             "lookup",
             "journal_step",
+            "review_step",
             "npc_hp_tier",
             "travel",
         },
@@ -5487,6 +5492,7 @@ def _load_tool_call(
         takes_context=world_method is None and CONTEXT_ARGUMENT in accepted,
         lookup=_flag(data, "lookup", label),
         journal_step=_flag(data, "journal_step", label),
+        review_step=_flag(data, "review_step", label),
     )
 
 
