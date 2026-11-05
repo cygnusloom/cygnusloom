@@ -346,6 +346,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 self.campaign_id,
                 self.marketplace,
                 self.inventory,
+                self.item_sizes,
                 object_name,
                 character,
                 cause,

@@ -370,7 +370,7 @@ def _raise_stat(
         record(
             db,
             campaign_id,
-            MaxChanged(name=name, stat=stat, before=before, after=after, cause=cause),
+            MaxChanged(name=name, stat=stat, before=before, after=after, cause=cause, label=""),
         )
 
 

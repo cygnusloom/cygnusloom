@@ -1,0 +1,31 @@
+[
+  {
+    "type": "inventory",
+    "id": "academy-pack",
+    "capacity": 10,
+    "penalty_name": "Overloaded",
+    "penalty_lasts": "until you put something down",
+    "penalty_item": "overloaded",
+    "penalty_slots": 0
+  },
+  {
+    "type": "item_size",
+    "id": "tiny",
+    "slots": 0
+  },
+  {
+    "type": "item_size",
+    "id": "small",
+    "slots": 1
+  },
+  {
+    "type": "item_size",
+    "id": "normal",
+    "slots": 1
+  },
+  {
+    "type": "item_size",
+    "id": "bulky",
+    "slots": 2
+  }
+]

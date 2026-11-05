@@ -65,5 +65,17 @@
     "id": "campaign_options",
     "step": "all",
     "text": "Honor the campaign's Time Period, Tone, School Type, Magic Level, Academic Focus, and Weirdness. They are binding creative constraints. A Modern academy has different tools, manners, and dangers from an Ancient one; a Cozy story treats a failed exam differently from a Dark one; a Surreal school may have corridors that remember. When a table result clashes with an option, keep the option and reroll or reinterpret the table."
+  },
+  {
+    "type": "prompt",
+    "id": "move_choice",
+    "step": "all",
+    "text": "When an action calls for a move, choose the move whose trigger matches it and use that move's name. Sneaking past a prefect or breaking a rule is Break Curfew / Bend Rules. A trick or diversion is Play a Prank. If no move fits, resolve the action without a move. Do not rename a move to fit the action."
+  },
+  {
+    "type": "prompt",
+    "id": "carrying",
+    "step": "all",
+    "text": "A student's pack has ten slots: tiny takes none, small and normal take one, and bulky takes two. When the player keeps an object, place it with place_object using the item name and a size, then take_object. An enchanted object is carried like any other object: name the working on it and keep the object's own description."
   }
 ]

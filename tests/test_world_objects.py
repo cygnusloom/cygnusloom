@@ -158,6 +158,25 @@ def test_an_object_is_taken_by_a_part_of_its_short_name(
     assert _visible(app, campaign_id) == []
 
 
+def test_taking_an_object_without_an_item_puts_it_in_the_inventory(
+    client_factory: Callable[[], TestClient],
+):
+    app, campaign_id, tools = _fight(client_factory)
+    tools.place_object(
+        YARD,
+        "a brass hand-lantern with Everlight worked into its glass",
+        False,
+        "a test",
+        name="brass hand-lantern",
+    )
+    result = tools.take_object("brass hand-lantern", PC, "a test")
+    assert result["item"] == "brass hand-lantern"
+    held = next(
+        item for item in _character(app, campaign_id, PC).items if item.name == "brass hand-lantern"
+    )
+    assert held.text == "a brass hand-lantern with Everlight worked into its glass"
+
+
 def test_an_object_is_taken_by_its_full_description(client_factory: Callable[[], TestClient]):
     app, campaign_id, tools = _fight(client_factory)
     tools.place_object(YARD, "a coin purse under a flagstone", False, "a test", currency=2)

@@ -110,5 +110,10 @@
     "id": "enchantments",
     "important": true,
     "text": "An enchantment is a spell that must be placed on a suitable object to be used. The enchantment feature describes the working and the kinds of objects it can be placed on; the enchanted object is the vessel. Placing an enchantment is the Forge an Enchantment move. An enchanted object found in the world is not automatically understood: the characters may need to identify the working, learn its limits, or discover what it was made for. A character may learn an enchantment without owning an object to put it on."
+  },
+  {
+    "type": "rule",
+    "id": "pack",
+    "text": "A student carries a pack of ten slots. Tiny objects take none, small and normal objects take one, and bulky objects take two. An object that is found, bought, stolen, or made is carried like any other; a full pack means something must be left behind. An enchanted object is an object first: carry it, lose it, or have it taken like any other thing."
   }
 ]

@@ -135,6 +135,10 @@ def test_the_ruleset_loads_its_academy_content() -> None:
     assert cup.dynamic
     assert cup.label == "College Cup"
 
+    assert rules.inventory is not None
+    assert rules.inventory.capacity == 10
+    assert rules.item_sizes == {"tiny": 0, "small": 1, "normal": 1, "bulky": 2}
+
     period = rules.periods["school-year"]
     assert period.tallies == ("college-cup",)
     assert any(
@@ -255,3 +259,37 @@ def test_the_college_cup_resets_at_year_end(
     after = tools.list_factions()
     assert {faction["name"] for faction in after} == {"House Ember", "House Tide"}
     assert all(faction["points"] == 0 for faction in after)
+
+
+def test_a_found_enchanted_object_goes_into_the_pack(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client, campaign_id = _campaign(client_factory)
+    tools = tools_for(client.app, campaign_id, rule_set=RULE_SET)
+    tools.create_location("The Stacks", "A library of bone tablets and wax boards.")
+    tools.move_actor(NAME, "The Stacks")
+
+    tools.place_object(
+        "The Stacks",
+        "A battered brass hand-lantern with Everlight worked into its glass.",
+        False,
+        "found behind a fallen shelf",
+        name="brass hand-lantern",
+    )
+    taken = tools.take_object("brass hand-lantern", NAME, "she keeps it")
+
+    assert taken["item"] == "brass hand-lantern"
+    assert any(item.name == "brass hand-lantern" for item in _pc(client.app, campaign_id).items)
+
+
+def test_creation_form_pluralizes_feature_picks(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign(client, world_template=WORLD, rule_set=RULE_SET)
+    choose_campaign_options(client, campaign_id, RULE_SET)
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "Pick 2 potions" in page
+    assert "Pick 1 enchantment" in page
+    assert "Potionss" not in page

@@ -634,7 +634,7 @@
     "id": "place_object",
     "name": "place_object",
     "world_method": "place_object",
-    "description": "Put a world object in a place: a location or an area inside one. It holds what the story has stocked there, such as money, an item, or a described thing. Give a short name a character can take it by, such as 'sealed crate', and a fuller description in contents. Optionally give money or an item name. Set hidden when the object is not yet found; a hidden object cannot be seen or taken. Use this only for treasure or objects the story has placed; do not invent them unprompted. Do not place an object again when the place already holds it: check the objects listed for the place in the scene first, and when the object is already there, leave it be.",
+    "description": "Put a world object in a place: a location or an area inside one. It holds what the story has stocked there, such as money, an item, or a described thing. Give a short name a character can take it by, such as 'sealed crate', and a fuller description in contents. Optionally give money or an item name; when the object can be carried, give item and a valid item_size from the rule set's inventory, or omit item_size to use normal. Set hidden when the object is not yet found; a hidden object cannot be seen or taken. Use this only for treasure or objects the story has placed; do not invent them unprompted. Do not place an object again when the place already holds it: check the objects listed for the place in the scene first, and when the object is already there, leave it be.",
     "parameters": {
       "type": "object",
       "properties": {

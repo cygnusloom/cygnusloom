@@ -2443,12 +2443,16 @@ class MaxChanged(GameEvent):
     before: int
     after: int
     cause: str = ""
+    # What to call the value in the log: "maximum" for a stat with a separate current score,
+    # empty for a plain score.
+    label: str = "maximum"
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.characters[name_key(self.name)].stats[self.stat] = self.after
 
     def render(self) -> str:
-        text = f"{self.name}'s maximum {self.stat.upper()} goes from {self.before} to {self.after}"
+        prefix = f"{self.label} " if self.label else ""
+        text = f"{self.name}'s {prefix}{self.stat.upper()} goes from {self.before} to {self.after}"
         return f"{text} ({self.cause})." if self.cause else f"{text}."
 
 
@@ -2602,7 +2606,7 @@ class TallyReset(GameEvent):
 
     def render(self) -> str:
         totals = ", ".join(f"{self.labels[e]} {v}" for e, v in self.final.items())
-        return f"The {self.label} start over, from final totals of {totals}."
+        return f"{self.label} resets. Final totals: {totals}."
 
 
 @dataclass(frozen=True)
@@ -3310,7 +3314,10 @@ class ObjectPlaced(GameEvent):
     def render(self) -> str | None:
         if self.hidden:
             return None
-        return f"{self.contents} is in {self.place}."
+        text = self.contents.rstrip()
+        if not text.endswith((".", "!", "?")):
+            text += "."
+        return f"{text} It is in {self.place}."
 
 
 @dataclass(frozen=True)

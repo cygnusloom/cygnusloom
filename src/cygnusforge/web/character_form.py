@@ -384,6 +384,13 @@ def _feat_picks_view(spec: CharacterSpec, template: Template) -> list[dict[str, 
     picks = []
     for pick in template.feat_picks:
         label = pick.tag or pick.feature_type or "feature"
+        base = pick.feature_type or label
+        if pick.count == 1:
+            plural = base.removesuffix("s")
+        elif pick.feature_type and base.endswith("s"):
+            plural = base
+        else:
+            plural = f"{base}s"
         picks.append(
             {
                 "id": pick.id,
@@ -392,7 +399,7 @@ def _feat_picks_view(spec: CharacterSpec, template: Template) -> list[dict[str, 
                 "max_rank": pick.max_rank,
                 "advance_repeated_rank": pick.advance_repeated_rank,
                 "hint": (
-                    f"Pick {pick.count} {label}{'s' if pick.count != 1 else ''}"
+                    f"Pick {pick.count} {plural}"
                     + (
                         f" of rank {pick.max_rank} or less"
                         if pick.max_rank not in (None, 0)

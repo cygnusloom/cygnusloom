@@ -102,13 +102,15 @@ def take_object(
     campaign_id: int,
     marketplace: Marketplace | None,
     inventory: InventoryRules | None,
+    item_sizes: Mapping[str, int],
     object_name: str,
     character: str,
     cause: str,
 ) -> dict[str, Any]:
     """A character takes a visible object in the place they are in. Currency goes to that character.
-    An item goes into their inventory, and the take is refused if it does not fit. If several
-    identical objects are here, the one placed first is taken."""
+    An item goes into their inventory, and the take is refused if it does not fit. An object
+    placed without an item is carried as an item named after the object, so a described find is
+    not lost. If several identical objects are here, the one placed first is taken."""
     state = load_state(db, campaign_id)
     taker = character_named(state, character)
     if taker.dead:
@@ -124,14 +126,22 @@ def take_object(
         )
     if obj.currency and marketplace is None:
         raise InvalidInput("this rule set has no currency to hold money")
-    if obj.item:
+    item = obj.item
+    size = obj.item_size
+    slots = obj.item_slots
+    if not item and not obj.currency:
+        item = obj.name or obj.contents
+        size = size or "normal"
+        if size not in item_sizes:
+            raise InvalidInput(f"there is no item size named {size!r}")
+        slots = item_sizes[size]
+    if item:
         if inventory is None:
             raise InvalidInput("this rule set has no inventory to carry an item")
         free = capacity_of(taker, inventory) - used_slots(taker)
-        if obj.item_slots > free:
+        if slots > free:
             raise InvalidInput(
-                f"{taker.name} has room for {max(free, 0)} slots, and {obj.item} takes "
-                f"{obj.item_slots}"
+                f"{taker.name} has room for {max(free, 0)} slots, and {item} takes {slots}"
             )
     if obj.currency and marketplace is not None:
         record(
@@ -141,16 +151,17 @@ def take_object(
                 name=taker.name, feature=marketplace.currency, amount=obj.currency, cause=cause
             ),
         )
-    if obj.item and inventory is not None:
+    if item and inventory is not None:
         carry_item(
             db,
             campaign_id,
             inventory,
             taker.name,
             Item(
-                name=obj.item,
-                size=obj.item_size,
-                slots=obj.item_slots,
+                name=item,
+                size=size,
+                slots=slots,
+                text=obj.contents,
             ),
             cause=cause,
         )
@@ -164,7 +175,7 @@ def take_object(
         "object": _label(obj),
         "character": taker.name,
         "currency": obj.currency,
-        "item": obj.item,
+        "item": item,
     }
 
 
