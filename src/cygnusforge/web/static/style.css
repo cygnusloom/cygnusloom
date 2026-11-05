@@ -317,7 +317,11 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .compendium-group { margin: 1rem 0 0.4rem; font-size: 0.95rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
 .compendium-entry {
   padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 8px;
-  background: var(--panel); scroll-margin-top: 1rem;
+  background: var(--panel); scroll-margin-top: calc(var(--compendium-toolbar-height, 0px) + 1rem);
+}
+/* The workspace view pads its scrollport, which the sticky toolbar clears by the same amount. */
+.compendium-page .compendium-entry {
+  scroll-margin-top: calc(var(--compendium-toolbar-height, 0px) + 2rem);
 }
 .compendium-entry + .compendium-entry { margin-top: 0.6rem; }
 .compendium-entry[hidden], .compendium-section[hidden], .compendium-tab[hidden] { display: none; }

@@ -107,6 +107,26 @@
     if (tab && list && list.selectTab) list.selectTab(tab, false);
   };
 
+  // The compendium toolbar sticks to the top of its view, so an entry scrolled to the top would
+  // sit underneath it. The entries take the toolbar's measured height as their scroll margin;
+  // remeasure when it wraps as the viewport or the tab list changes size.
+  const measureCompendiumToolbars = () => {
+    for (const root of document.querySelectorAll("[data-compendium]")) {
+      const toolbar = root.querySelector(".compendium-toolbar");
+      if (toolbar) {
+        root.style.setProperty("--compendium-toolbar-height", `${toolbar.offsetHeight}px`);
+      }
+    }
+  };
+  measureCompendiumToolbars();
+  window.addEventListener("load", measureCompendiumToolbars);
+  window.addEventListener("resize", measureCompendiumToolbars);
+  if ("ResizeObserver" in window) {
+    document.querySelectorAll("[data-compendium] .compendium-toolbar").forEach((toolbar) => {
+      new ResizeObserver(measureCompendiumToolbars).observe(toolbar);
+    });
+  }
+
   // A link can open a compendium entry directly, such as a bookmarked anchor. Show the view
   // that holds the target before scrolling to it, since a hidden view cannot scroll.
   const openHash = () => {
@@ -115,6 +135,7 @@
     const view = anchored.closest("[data-view]");
     if (view) showView(view.dataset.view);
     revealCompendiumTarget(anchored);
+    measureCompendiumToolbars();
     anchored.scrollIntoView({ block: "start" });
   };
   openHash();
@@ -131,6 +152,7 @@
       event.preventDefault();
       showView(link.dataset.viewLink);
       revealCompendiumTarget(target);
+      measureCompendiumToolbars();
       target.scrollIntoView({ block: "start" });
       history.replaceState(null, "", link.getAttribute("href"));
     });
