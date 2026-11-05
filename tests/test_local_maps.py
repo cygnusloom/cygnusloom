@@ -310,6 +310,7 @@ def test_the_gm_orientation_lists_local_map_positions_and_unplaced_characters(
     assert "- Pip (npc), column 2, row 1." in text
     assert "- Ada (player character), not yet placed." in text
     assert "Place every unplaced character with place_map_token" in text
+    assert "Move a character's token with place_map_token whenever the scene moves them" in text
 
 
 def test_get_statblock_reports_a_local_map_position(

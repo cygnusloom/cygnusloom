@@ -748,6 +748,10 @@ def _local_map_lines(
         lines.append(
             "Place every unplaced character with place_map_token before narrating where they stand."
         )
+    lines.append(
+        "Move a character's token with place_map_token whenever the scene moves them, in this "
+        "state step and before the narration; a token left in the old cell contradicts the scene."
+    )
     return lines
 
 

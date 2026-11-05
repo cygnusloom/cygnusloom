@@ -1137,7 +1137,7 @@
     "id": "place_map_token",
     "name": "place_map_token",
     "world_method": "place_map_token",
-    "description": "Place a token on a local map outside an encounter: the player character, an NPC at that place, or a prop such as a barrel, cart, or boat. The token shows where it stands and keeps its cell when an encounter starts on the same map. A character must already be at the map's location. The cell must be on the map, free of another token, and not blocked by an object. During an encounter, use place_participant instead.",
+    "description": "Place a token on a local map outside an encounter: the player character, an NPC at that place, or a prop such as a barrel, cart, or boat. The token shows where it stands and keeps its cell when an encounter starts on the same map. Placing the same token again moves it; do this whenever the scene moves a character within the map, in the same state step and before the narration. A character must already be at the map's location. The cell must be on the map, free of another token, and not blocked by an object. During an encounter, use place_participant instead.",
     "parameters": {
       "type": "object",
       "properties": {
