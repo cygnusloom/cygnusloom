@@ -1215,8 +1215,8 @@ class StateStepMade(GameEvent):
 @dataclass(frozen=True)
 class ReviewStepMade(GameEvent):
     """One turn review step's tool calls and results. The review reads the actions and narration
-    just written; its tool calls fix the record, and a narration written again after an undo sees
-    them."""
+    just written. Its exchange stays in the turn's context for the rewrite, but is left out of the
+    narration messages: the review is a check, not part of the story."""
 
     kind: ClassVar[str] = "turn.review_step"
     hidden: ClassVar[bool] = True
@@ -1227,7 +1227,6 @@ class ReviewStepMade(GameEvent):
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         turn = _open_turn(state)
-        turn.messages.extend(self.messages)
         turn.context.extend(_parts(self.context))
 
 

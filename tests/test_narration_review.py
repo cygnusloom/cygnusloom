@@ -185,12 +185,14 @@ def test_an_undone_narration_is_retracted_and_written_again(
     narration_calls = _narration_calls(recorder, script)
     assert len(narration_calls) == 2
     assert "The last narration was set aside because:" in json.dumps(narration_calls[1])
+    # The undo ends its review, so the only other review call is the rewrite's pass.
+    assert len(_review_calls(recorder)) == 2
     undone = _undone_events(app, campaign_id)
     assert len(undone) == 1
     assert json.loads(undone[0].payload)["reason"] == UNDO["arguments"]["reason"]
 
 
-def test_a_review_that_changes_the_record_without_undoing_still_rewrites(
+def test_a_review_cannot_change_the_record_before_undoing(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
@@ -207,15 +209,45 @@ def test_a_review_that_changes_the_record_without_undoing_still_rewrites(
 
     assert _send(client, campaign_id, script).status_code == 303
 
-    assert "gate room" in _state(app, campaign_id).places
-    assert len(_narration_calls(recorder, script)) == 2
-    assert _saved(app, campaign_id)[-1] == (
-        "assistant",
-        "The gate opens onto a small room.",
+    # A record change before undo_narration is refused, so a passing narration is not sent back.
+    assert "gate room" not in _state(app, campaign_id).places
+    assert len(_narration_calls(recorder, script)) == 1
+    assert _saved(app, campaign_id)[-1] == ("assistant", "The gate is open.")
+    assert _undone_events(app, campaign_id) == []
+
+
+def test_a_review_that_moves_a_token_does_not_rewrite_or_move_it(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    # A review that fixes a cosmetic record detail used to send a passing narration back. A
+    # record change without undo is now refused, so the narration and the token both stand.
+    client, campaign_id = _campaign_id(client_factory)
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    move = {
+        "name": "place_map_token",
+        "arguments": {
+            "map": "The Ninth Bell local map",
+            "name": "Brenna Vosk",
+            "column": 7,
+            "row": 7,
+        },
+    }
+    script = _script(
+        {
+            "rounds": [[]],
+            "text": "Brenna steps up beside you.",
+            "rewrite": "Brenna is beside you.",
+            "review": [[[move]]],
+        }
     )
-    undone = _undone_events(app, campaign_id)
-    assert len(undone) == 1
-    assert "changed the record" in json.loads(undone[0].payload)["reason"]
+
+    events = _stream(client, campaign_id, script)
+
+    assert [e["type"] for e in events].count("retract") == 0
+    assert len(_narration_calls(recorder, script)) == 1
+    assert _saved(app, campaign_id)[-1] == ("assistant", "Brenna steps up beside you.")
+    assert _undone_events(app, campaign_id) == []
 
 
 def test_a_review_can_undo_and_fix_the_record_before_the_rewrite(
@@ -275,7 +307,7 @@ def test_review_tools_keep_wwn_world_methods_and_drop_speech_and_ooc():
     assert {"speak", "ooc"} & offered == set()
 
 
-def test_the_review_sees_the_state_step_tool_call_result_prose_and_speech(
+def test_the_review_sees_the_record_and_speech_but_not_the_state_step_draft(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
@@ -299,9 +331,8 @@ def test_the_review_sees_the_state_step_tool_call_result_prose_and_speech(
     # The state step's tool call and its result reach the review through the turn messages.
     assert '"name": "speak"' in blob
     assert "dialogue queued for the narration" in blob
-    # The state step's prose is not shown to the narrator, but the review must see it.
-    assert "What the GM did before narrating, for review:" in blob
-    assert "I weigh the warning before narrating." in blob
+    # The state step's prose is a draft, not the record, so the review does not read it.
+    assert "I weigh the warning before narrating." not in blob
     # The review must see the speech step's profile and intent to judge the dialogue.
     assert "Speech step (round 1)" in blob
     assert "Who they are: The village elder" in blob
@@ -332,45 +363,68 @@ def test_the_rewrite_sees_the_reviewers_fault_text(
     assert len(narration_calls) == 2
     rewrite = json.dumps(narration_calls[1])
     assert fault in rewrite
-    assert "Turn review (round 1)" in rewrite
+    assert "Turn review fault (round 1)" in rewrite
     undone = _undone_events(app, campaign_id)
     assert len(undone) == 1
     # The reviewer's explicit undo reason is kept; its whole review is a context note.
     assert json.loads(undone[0].payload)["reason"] == UNDO["arguments"]["reason"]
 
 
-def test_a_changed_record_uses_the_reviewers_words_as_the_reason(
+def test_a_narration_that_writes_a_tool_call_is_retried_and_not_saved(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    fault = "The gate room must exist before the narration names it."
     client, campaign_id = _campaign_id(client_factory)
     recorder = _recording_provider()
-    app.state.providers = lambda model_id: (_ReviewProvider(recorder, fault=fault), model_id)
+    app.state.providers = lambda model_id: (recorder, model_id)
+    markup = (
+        "<｜｜DSML｜｜ calls>\n"
+        '<｜｜DSML｜｜ invoke name="speak">\n'
+        '<｜｜DSML｜｜ parameter name="intent" string="true">Warn them.'
+        "</｜｜DSML｜ ｜ parameter>\n"
+        "</｜｜DSML｜ ｜ invoke>\n"
+        "</｜｜DSML｜｜ calls>"
+    )
     script = _script(
         {
             "rounds": [[]],
-            "text": "The gate is open.",
-            "rewrite": "The gate opens onto a small room.",
-            "review": [[[CREATE_GATE]]],
+            "text": markup,
+            "retry": "Mara warns you about the bridge.",
         }
     )
 
-    assert _send(client, campaign_id, script).status_code == 303
+    events = _stream(client, campaign_id, script)
 
-    undone = _undone_events(app, campaign_id)
-    assert len(undone) == 1
-    assert json.loads(undone[0].payload)["reason"] == fault
-    rewrite = json.dumps(_narration_calls(recorder, script)[1])
-    assert fault in rewrite
+    assert [e["type"] for e in events].count("retract") == 1
+    assert _deltas(events).endswith("Mara warns you about the bridge.")
+    assert _saved(app, campaign_id)[-1] == ("assistant", "Mara warns you about the bridge.")
+    # The malformed attempt is never reviewed or saved.
+    review = _review_calls(recorder)[0]
+    assert markup not in json.dumps(review["messages"])
 
 
-def test_a_failed_undo_still_retracts_and_rewrites(
+def test_a_narration_that_is_always_a_tool_call_fails_without_saving_it(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    fault = "The narration contradicts the record."
     client, campaign_id = _campaign_id(client_factory)
     recorder = _recording_provider()
-    app.state.providers = lambda model_id: (_ReviewProvider(recorder, fault=fault), model_id)
+    app.state.providers = lambda model_id: (recorder, model_id)
+    markup = 'speak({"npc": "Mara Thistledown", "intent": "Warn them about the bridge."})'
+    script = _script({"rounds": [[]], "text": markup})
+
+    response = _send(client, campaign_id, script)
+
+    assert response.status_code == 502
+    assert "wrote a tool call instead of the narration" in response.text
+    assert all(markup not in text for role, text in _saved(app, campaign_id) if role == "assistant")
+
+
+def test_a_malformed_undo_still_retracts_with_a_fallback_reason(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    # A blank undo with no review prose cannot run, but the narration still must not stand.
+    client, campaign_id = _campaign_id(client_factory)
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
     script = _script(
         {
             "rounds": [[]],
@@ -387,7 +441,7 @@ def test_a_failed_undo_still_retracts_and_rewrites(
     assert len(_narration_calls(recorder, script)) == 2
     undone = _undone_events(app, campaign_id)
     assert len(undone) == 1
-    assert json.loads(undone[0].payload)["reason"] == fault
+    assert json.loads(undone[0].payload)["reason"] == "the narration did not match the record"
 
 
 def test_a_passing_review_records_its_verdict_in_the_turn_context(
@@ -420,7 +474,7 @@ def test_a_passing_review_records_its_verdict_in_the_turn_context(
 
 
 @pytest.mark.parametrize("call", [LIST_LOOKUPS, LIST_DICE_TABLES])
-def test_a_read_only_list_tool_does_not_trigger_the_changed_record_rewrite(
+def test_a_read_only_list_tool_does_not_rewrite_the_narration(
     client_factory: Callable[[], TestClient], app: FastAPI, call: dict[str, Any]
 ):
     client, campaign_id = _campaign_id(client_factory)

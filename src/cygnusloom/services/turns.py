@@ -86,7 +86,6 @@ from cygnusloom.services.tools import (
     RollAnswer,
     TextAnswer,
     ToolRun,
-    find_tool,
     run_tool,
     tool_specs,
 )
@@ -101,18 +100,41 @@ from cygnusloom.services.world import (
 
 MAX_NAME = 120
 MAX_MESSAGE = 8000
-# Spoken words never contain angle brackets or call syntax, so either means a tool call was written.
-SPOKEN_MARKUP = re.compile(r"<[^>]*>|\b\w+\(\s*\{")
+# A tool call written as text instead of a structured request shows up as a DSML block, an
+# OpenAI-style special token, an XML invoke/function tag, or `name({...})`. Plain angle brackets
+# alone are not enough: a player may write HTML, and the narration may quote it.
+TOOL_MARKUP = re.compile(
+    r"｜｜DSML｜｜|<\|[^>\n]*\|>|<tool_calls?\b|<function_call\b|<invoke\b|<function\s*=|"
+    r"\b\w+\(\s*\{"
+)
+# An XML tag whose name is a real tool is a tool call written as text, such as
+# `<get_statblock name="Mara"/>`.
+_TAG_NAME = re.compile(r"</?([A-Za-z_][\w-]*)\b")
+
+
+def _is_tool_markup(text: str, tool_names: Iterable[str]) -> bool:
+    if TOOL_MARKUP.search(text):
+        return True
+    names = {name.casefold() for name in tool_names}
+    return any(match.group(1).casefold() in names for match in _TAG_NAME.finditer(text))
+
+
 # An empty speech reply is retried this many times before the step gives up.
 SPEECH_ATTEMPTS = 3
 SPEECH_RETRY = (
     "Your last reply was empty. Write the line now: only the words the speaker says aloud, "
     "one line, and nothing else."
 )
-# An empty narration is requested again this many times before the turn fails.
+# An empty or malformed narration is requested again this many times before the turn fails.
 NARRATION_ATTEMPTS = 2
+NARRATION_RETRY = (
+    "Your last reply was empty or was a tool call written as text, not narration. The tool step "
+    "is over and this step writes prose only. Write the narration now, with no tool calls, and "
+    "use only the queued dialogue already given above for an NPC's words."
+)
 # The narration is reviewed after it is written. A review that sets it aside writes the story
-# again, up to this many times; the last narration is accepted without another review.
+# again, up to this many times; the last narration is accepted without another review, but it
+# must still be non-empty prose rather than a tool call.
 NARRATION_REVIEWS = 2
 # A review step's model rounds: enough to undo, fix the record, and stop.
 REVIEW_ROUNDS = 3
@@ -121,8 +143,8 @@ REVIEW_ROUNDS = 3
 OOC_TOOL = "ooc"
 # The review tool that sets the narration aside.
 UNDO_NARRATION = "undo_narration"
-# The note recorded when a review changed the record without setting the narration aside first.
-REVIEW_CHANGED_NOTE = "the review changed the record after the narration was written"
+# The note recorded when the review set the narration aside but gave no reason.
+REVIEW_UNDONE_NOTE = "the narration did not match the record"
 # A long model call would otherwise leave the player's stream silent, and a silent stream looks
 # exactly like a hung page. Every this many seconds of waiting, the turn sends a status line.
 HEARTBEAT_SECONDS = 15.0
@@ -379,6 +401,7 @@ def _tool_context(
             intent,
             replace,
             rule_set.sentence_cap,
+            (tool.name for tool in rule_set.tool_calls.values()),
         )
 
     def ooc(narrate: bool) -> None:
@@ -567,9 +590,10 @@ def _narration_messages(
         messages.append({"role": "system", "content": f"{heading}\n{lines}"})
     if turn.speech:
         _add_speech(messages, [], turn.speech)
-    # The review's own words are lost from the tool-call messages, which keep no prose. Put them
-    # back for the rewrite so it corrects the fault the reviewer actually named.
-    review_notes = [part for part in turn.context if part.source.startswith("Turn review")]
+    # The review's own words are lost from the tool-call messages, which keep no prose. Put the
+    # latest fault back for the rewrite so it corrects what the reviewer actually named. Passing
+    # verdicts and older faults are left out: they would describe a narration that is gone.
+    review_notes = _review_fault_notes(turn)
     if review_notes:
         notes = "\n\n".join(f"{part.source}:\n{part.content}" for part in review_notes)
         messages.append(
@@ -665,6 +689,7 @@ async def _speak(
     intent: str,
     replace: bool,
     sentence_cap: int | None,
+    tool_names: Iterable[str],
 ) -> None:
     """Ask the speech step for an NPC's words and record them for the narration. The speech step
     sees the conversation as text, without the tool calls, so it writes dialogue rather than
@@ -704,7 +729,7 @@ async def _speak(
         reply = (await complete(provider, model_name, request)).strip()
         if reply:
             break
-    malformed = SPOKEN_MARKUP.search(reply) is not None
+    malformed = _is_tool_markup(reply, tool_names)
     _record(
         engine,
         campaign_id,
@@ -879,13 +904,19 @@ def _tool_failed(result: ToolRun) -> bool:
     return isinstance(payload, Mapping) and "error" in payload
 
 
-# Context sources the narrator never sees: the state step's own prose and the speech step's
-# profile and intent. The review is shown them so it can judge dialogue and actions.
-_REVIEW_ONLY_SOURCES = (
-    "GM state step (round",
-    "GM text (round",
-    "Speech step (round",
-)
+# Context the narration never sees: the speech step's profile and intent. The review is shown it
+# so it can judge whether the narration invented dialogue. The state step's prose is a draft
+# written before its tools ran, not part of the record, so neither the narration nor the review
+# reads it.
+_REVIEW_ONLY_SOURCES = ("Speech step (round",)
+
+
+def _review_fault_notes(turn: Turn) -> list[ContextPart]:
+    """The reviewer's prose from its latest undo. A tool-call message keeps no prose, so this is
+    where the reviewer explains the fault beyond the undo reason. Passing verdicts are left out:
+    they say the narration was sound and would confuse a rewrite."""
+    notes = [part for part in turn.context if part.source.startswith("Turn review fault (round")]
+    return notes[-1:]
 
 
 def _reviewed_undo_request(request: ToolRequest, review_text: str) -> ToolRequest:
@@ -909,14 +940,48 @@ def _reviewed_undo_request(request: ToolRequest, review_text: str) -> ToolReques
 
 def _review_only_context(turn: Turn) -> list[ContextPart]:
     """The parts of the turn's context that the narration is not given. The speech step's profile
-    and intent are included; its reply repeats dialogue the review already has from the queued
+    and intent are included. Its reply repeats dialogue the review already has from the queued
     lines, so only the system part is added."""
     return [
         part
         for part in turn.context
-        if part.source.startswith(_REVIEW_ONLY_SOURCES)
-        and (part.role == "system" or not part.source.startswith("Speech step (round"))
+        if part.source.startswith(_REVIEW_ONLY_SOURCES) and part.role == "system"
     ]
+
+
+def _review_view(run: _Run, turn: Turn) -> list[dict[str, Any]]:
+    """What the review reads before the narration. It leaves out the narration instruction and
+    the narrator's rewrite note, and replaces the latter with a review note naming the fault the
+    rewrite was meant to fix. Earlier reviews' prose is left out: the review judges this narration
+    against the record, not a review of an earlier version."""
+    instruction = narrate_instruction(run.rule_set, run.world)
+    view = [
+        message
+        for message in _narration_messages(run, turn)
+        if not (
+            message.get("role") == "system"
+            and (
+                message.get("content") == instruction
+                or str(message.get("content", "")).startswith(
+                    (
+                        "The last narration was set aside because:",
+                        "The turn review's notes on the narration it set aside:",
+                    )
+                )
+            )
+        )
+    ]
+    if turn.revision:
+        view.append(
+            {
+                "role": "system",
+                "content": "The last narration was set aside because: "
+                + turn.revision
+                + " This narration is the rewrite. Check that it fixes that fault, and judge "
+                "the rest of the turn afresh.",
+            }
+        )
+    return view
 
 
 def _end_npc_encounter_turn(run: _Run, actor: str) -> None:
@@ -1017,9 +1082,10 @@ async def _inject_debug_tool(
 async def _narrate(
     run: _Run, turn: Turn, result: list[tuple[str, str]], forced: str = ""
 ) -> AsyncIterator[TurnEvent]:
-    """Stream the narration and put its text and reasoning in `result`. An empty reply is asked
-    for again before the turn fails. `forced` is the debug panel's injected narration, which is
-    streamed as if the model wrote it; it is not recorded itself, so the review sees it first."""
+    """Stream the narration and put its text and reasoning in `result`. An empty reply, or a
+    reply that is a tool call written as text, is asked for again before the turn fails. `forced`
+    is the debug panel's injected narration, which is streamed as if the model wrote it; it is
+    not recorded itself, so the review sees it first."""
     yield Status("Narrating...")
     if forced:
         yield Delta(forced)
@@ -1028,24 +1094,41 @@ async def _narrate(
     messages = _narration_messages(run, turn)
     reply = ""
     reasoning = ""
-    for _attempt in range(NARRATION_ATTEMPTS):
+    malformed = False
+    for attempt in range(NARRATION_ATTEMPTS):
+        request = (
+            messages
+            if attempt == 0
+            else [*messages, {"role": "system", "content": NARRATION_RETRY}]
+        )
         narration: ChatReply | None = None
+        streamed = False
         async for arrived, item in _stream_with_heartbeat(
-            run.provider.stream(run.model_name, messages, None)
+            run.provider.stream(run.model_name, request, None)
         ):
             if not arrived:
                 yield Status(HEARTBEAT_MESSAGE)
             elif isinstance(item, TextDelta):
+                streamed = True
                 yield Delta(item.text)
             else:
                 narration = item
         if narration is None:
             raise LLMError("the model returned no reply")
-        reply = narration.text.strip()
-        reasoning = narration.reasoning
-        if reply:
+        text = narration.text.strip()
+        malformed = bool(narration.tool_requests) or _is_tool_markup(
+            text, (tool.name for tool in run.tool_calls.values())
+        )
+        if text and not malformed:
+            reply = text
+            reasoning = narration.reasoning
             break
+        if streamed:
+            # The player saw the rejected text; clear it before the retry writes in its place.
+            yield Retract()
     if not reply:
+        if malformed:
+            raise LLMError("the model wrote a tool call instead of the narration")
         raise LLMError("the model returned an empty reply")
     result.append((reply, reasoning))
 
@@ -1058,20 +1141,18 @@ async def _review_narration(
     result: list[_ReviewResult],
 ) -> AsyncIterator[TurnEvent]:
     """Check the narration just written against the record. A review that finds a fault calls
-    undo_narration, then may fix the record with the usual tools; the caller writes the story
-    again when `result` says the narration was undone. A review that changes the record without
-    undoing first still sends the story back, since the narration was written from the old state."""
+    undo_narration; only after that may it use the other tools to correct the record. A record
+    change without an undo is refused, so a passing narration is never sent back just because
+    the review touched the record. The caller writes the story again when `result` says the
+    narration was undone."""
     tools = tool_specs(run.tool_calls, review_step=True)
     if tools is None:
         result.append(_ReviewResult(undone=False))
         return
+    allowed = {spec["function"]["name"] for spec in tools}
+    read_only = {tool.name for tool in run.tool_calls.values() if tool.lookup or tool.review_step}
     yield Status("Reviewing the turn...")
-    view = _narration_messages(run, turn)
-    # The narration instruction says "Do not call tools." The review must call tools, so it is
-    # dropped from the view and the review instruction takes its place.
-    instruction = narrate_instruction(run.rule_set, run.world)
-    if view and view[-1].get("role") == "system" and view[-1].get("content") == instruction:
-        view.pop()
+    view = _review_view(run, turn)
     view.append(_text_message(narration, reasoning))
     hidden = _review_only_context(turn)
     if hidden:
@@ -1079,14 +1160,12 @@ async def _review_narration(
         view.append(
             {
                 "role": "system",
-                "content": "What the GM did before narrating, for review:\n\n" + lines,
+                "content": "The speech step's profiles and intents for the queued dialogue:\n\n"
+                + lines,
             }
         )
     view.append({"role": "system", "content": TURN_REVIEW_INSTRUCTION})
     undone = False
-    changed = False
-    changed_text = ""
-    review_text = ""
     for round_no in range(1, REVIEW_ROUNDS + 1):
         replied: list[ChatReply] = []
         async for event in _await_with_heartbeat(
@@ -1094,8 +1173,7 @@ async def _review_narration(
         ):
             yield event
         step = replied[0]
-        if step.text.strip():
-            review_text = step.text.strip()
+        step_text = step.text.strip()
         if not step.tool_requests:
             context: list[ContextPart] = []
             if step.text.strip():
@@ -1112,41 +1190,71 @@ async def _review_narration(
         messages: list[dict[str, Any]] = [_tool_call_message(step)]
         context = []
         if step.text.strip():
-            context.append(ContextPart("assistant", f"Turn review (round {round_no})", step.text))
+            # Only the prose on an undo round is a fault the rewrite must correct. Prose on a
+            # lookup round is background, and a passing verdict says the narration was sound.
+            label = (
+                "Turn review fault"
+                if any(request.name == UNDO_NARRATION for request in step.tool_requests)
+                else "Turn review"
+            )
+            context.append(ContextPart("assistant", f"{label} (round {round_no})", step.text))
         for request in step.tool_requests:
-            if request.name == UNDO_NARRATION:
-                request = _reviewed_undo_request(request, review_text)
-            tool_result = await run_tool(run.tool_calls, request, ctx=run.ctx)
-            if isinstance(tool_result, Ask):
+            if request.name not in allowed:
+                # The tool list is the review's whole authority. A model that names a world tool
+                # anyway must not change the record after the narration was written.
                 tool_result = ToolRun(
                     json.dumps(
                         {
-                            "error": "the turn review cannot wait for the player; fix what "
-                            "you can without asking, or undo the narration"
+                            "error": "that tool is not available to the turn review; "
+                            "call undo_narration, then use an offered tool to correct the "
+                            "record"
                         }
                     ),
                     None,
                 )
-            failed = _tool_failed(tool_result)
+            elif request.name not in read_only and not undone:
+                # A record change before the narration is set aside would leave the player
+                # reading a story written from the old state. Refuse it instead of guessing.
+                tool_result = ToolRun(
+                    json.dumps(
+                        {
+                            "error": "call undo_narration before changing the record; a "
+                            "passing turn changes nothing"
+                        }
+                    ),
+                    None,
+                )
+            elif request.name == UNDO_NARRATION and undone:
+                tool_result = ToolRun(
+                    json.dumps({"undone": "narration", "reason": step_text}), None
+                )
+            else:
+                if request.name == UNDO_NARRATION:
+                    request = _reviewed_undo_request(request, step_text)
+                tool_result = await run_tool(run.tool_calls, request, ctx=run.ctx)
+            if isinstance(tool_result, Ask):
+                tool_result = ToolRun(
+                    json.dumps(
+                        {
+                            "error": "the turn review cannot wait for the player; undo the "
+                            "narration or pass without asking"
+                        }
+                    ),
+                    None,
+                )
             if request.name == UNDO_NARRATION:
-                if failed:
+                if _tool_failed(tool_result):
                     # The undo tool records nothing when it fails, so the review records the
                     # fault itself and sends the narration back anyway.
                     _record(
                         run.engine,
                         run.campaign_id,
-                        NarrationUndone(reason=review_text or REVIEW_CHANGED_NOTE),
+                        NarrationUndone(reason=step_text or REVIEW_UNDONE_NOTE),
                     )
                 if not undone:
                     yield Retract()
                     yield Status("Fixing the story...")
                 undone = True
-            elif not failed:
-                tool = find_tool(run.tool_calls, request.name)
-                if tool is not None and not tool.lookup:
-                    changed = True
-                    if step.text.strip():
-                        changed_text = step.text.strip()
             message = {"role": "tool", "tool_call_id": request.id, "content": tool_result.output}
             messages.append(message)
             view.append(message)
@@ -1162,14 +1270,10 @@ async def _review_narration(
             run.campaign_id,
             ReviewStepMade(messages=messages, context=_dicts(context)),
         )
-    if changed and not undone:
-        _record(
-            run.engine,
-            run.campaign_id,
-            NarrationUndone(reason=changed_text or REVIEW_CHANGED_NOTE),
-        )
-        yield Retract()
-        undone = True
+        if undone:
+            # The undo records the fault, and any correction belongs in the same reply. Another
+            # round would only let the review rewrite the story or pile on more changes.
+            break
     result.append(_ReviewResult(undone=undone))
 
 

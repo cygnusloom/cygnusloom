@@ -53,11 +53,14 @@ def test_narration_advice_stays_out_of_the_state_prompt():
 def test_turn_review_instruction_is_generic():
     assert TURN_REVIEW_INSTRUCTION.startswith("Turn review step.")
     assert "player's message" in TURN_REVIEW_INSTRUCTION
-    assert "what the GM did" in TURN_REVIEW_INSTRUCTION
     assert "narration below" in TURN_REVIEW_INSTRUCTION
-    assert "Call undo_narration before any other tool" in TURN_REVIEW_INSTRUCTION
-    assert "Prefer the smallest correction" in TURN_REVIEW_INSTRUCTION
-    assert "do not add speculative actions" in TURN_REVIEW_INSTRUCTION
+    assert "Brevity is not a fault" in TURN_REVIEW_INSTRUCTION
+    assert "Call undo_narration before any tool that changes the record" in TURN_REVIEW_INSTRUCTION
+    assert "never add a speculative action" in TURN_REVIEW_INSTRUCTION
+    assert "Do not undo for style" in TURN_REVIEW_INSTRUCTION
+    # The review judges the narration, not the GM's choices in the record.
+    assert "do not add an action the turn did not take" in TURN_REVIEW_INSTRUCTION
+    assert "clearly needed but did not take" not in TURN_REVIEW_INSTRUCTION
 
 
 def test_ooc_instruction_does_not_restart_the_ooc_step():

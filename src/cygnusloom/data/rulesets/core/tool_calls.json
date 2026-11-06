@@ -461,7 +461,7 @@
     "name": "undo_narration",
     "world_method": "undo_narration",
     "review_step": true,
-    "description": "Set the narration just written aside because it is wrong, incomplete, or contradicts the recorded state and tool results, so the story can be written again. Call this first, then make any tool calls that fix the record; the narration is written again after this step. Give the fault so the new narration corrects it. Do not call this when the narration is sound.",
+    "description": "Set the narration just written aside because it would mislead the player about the recorded turn, so the story can be written again. Call this before any tool that changes the record; the narration is written again after this step. Give the fault so the new narration corrects it. Do not call it when the narration is sound.",
     "parameters": {
       "type": "object",
       "properties": {

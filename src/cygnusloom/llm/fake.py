@@ -14,8 +14,10 @@ the model makes, one list per round. The engine runs them for real, so each name
 in the rule set. A `player_input` tool pauses the turn until the test answers it, so the test
 posts the answer next. Its `text` is the narration. Its `error` raises LLMError; the player's message stays and the reply stays open.
 Within a turn, `chat` calls (the GM's state steps) get the rounds and return no text, and `stream`
-calls (the narration) get `text`. A review that undoes the narration makes the next `stream` call
-get `rewrite` instead. A journal step (its system message starts "Journal step.") gets the
+calls (the narration) get `text`. An empty or malformed narration is retried with the turn's
+`retry` text. A review that undoes the narration makes the next `stream` call get `rewrite`
+instead, or `retry` when that rewrite is itself malformed. A journal step (its system message
+starts "Journal step.") gets the
 turn's `journal` rounds, one list of tool calls per round, and no text. A turn review step (its
 system message starts "Turn review step.") gets the turn's `review` passes, one list of
 tool-call rounds per pass; the next pass starts after an undo. A speech step (its system message
@@ -40,6 +42,7 @@ OOC_MARKER = "Out-of-character step."
 JOURNAL_MARKER = "Journal step."
 REVIEW_MARKER = "Turn review step."
 REVISION_MARKER = "The last narration was set aside because:"
+NARRATION_RETRY_MARKER = "Your last reply was empty or was a tool call"
 _decoder = json.JSONDecoder()
 _WORDS = re.compile(r"\s*\S+|\s+")
 
@@ -200,6 +203,11 @@ def _respond(messages: list[dict[str, Any]], decision: bool) -> ChatReply:
             m["role"] == "system" and REVISION_MARKER in str(m.get("content")) for m in messages
         ):
             text = turn.get("rewrite", text)
+        if any(
+            m["role"] == "system" and NARRATION_RETRY_MARKER in str(m.get("content"))
+            for m in messages
+        ):
+            text = turn.get("retry", text)
         return ChatReply(text=str(text))
     rounds = _rounds(turn)
     # Tool rounds already taken this turn are the assistant messages with tool calls since
