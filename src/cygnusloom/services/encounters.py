@@ -1068,6 +1068,25 @@ def begin_turn(db: Session, campaign_id: int, name: str) -> Character:
     return character
 
 
+def begin_player_turn_if_next(db: Session, campaign_id: int) -> Character | None:
+    """Start the next turn when it belongs to a player character.
+
+    A player character's turn opens no GM reply, so there is nothing for the player to start: they
+    act, then press End your turn. NPC turns still wait for the player to press Start, because the
+    GM cannot begin replying until the player asks it to. Does nothing while a reply is open, when
+    someone is already acting, or when initiative is still owed."""
+    state = load_state(db, campaign_id)
+    encounter = state.encounter
+    if encounter is None or state.turn is not None or encounter.acting is not None:
+        return None
+    if initiative_open(state) or not encounter.order:
+        return None
+    upcoming = state.characters[name_key(encounter.order[encounter.up])]
+    if upcoming.kind != PC_KIND:
+        return None
+    return begin_turn(db, campaign_id, upcoming.name)
+
+
 def end_turn(db: Session, campaign_id: int, name: str, by_player: bool) -> dict[str, Any]:
     """End the running turn. The GM ends NPC turns and the player ends their own character's."""
     state = load_state(db, campaign_id)
@@ -1084,6 +1103,8 @@ def end_turn(db: Session, campaign_id: int, name: str, by_player: bool) -> dict[
     state = load_state(db, campaign_id)
     if state.encounter is not None and state.encounter.round > round_before:
         death.tick_dying_rounds(db, campaign_id)
+    # The next player character's turn needs no button press; an NPC's still does.
+    begin_player_turn_if_next(db, campaign_id)
     return {"ended_turn": character.name}
 
 

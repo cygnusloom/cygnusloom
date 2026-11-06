@@ -881,18 +881,19 @@ def _player_character(state: CampaignState) -> Character:
 
 
 def _require_turn(state: CampaignState, actor: Character, force: bool) -> None:
-    """Refuse an attack the attacker has no turn for. An encounter runs on turns: each actor's turn
-    starts when the player presses Start and ends when the player ends it or, for an NPC, when the
-    GM's reply finishes. That makes a turn the only time an actor may strike, so an NPC cannot cut
-    in ahead of its place in the order. `force` lets the GM resolve an action the story needs
-    outside the order, such as an ambush that takes the party unawares."""
+    """Refuse an attack the attacker has no turn for. An encounter runs on turns: a player
+    character's turn starts automatically, an NPC's starts when the player presses Start, and a
+    turn ends when the player ends it or, for an NPC, when the GM's reply finishes. That makes a
+    turn the only time an actor may strike, so an NPC cannot cut in ahead of its place in the
+    order. `force` lets the GM resolve an action the story needs outside the order, such as an
+    ambush that takes the party unawares."""
     encounter = state.encounter
     if force or encounter is None:
         return
     if encounter.acting is None:
         raise InvalidInput(
-            f"no one is taking a turn, so {actor.name} cannot attack: press Start for the next "
-            "turn first, or pass force true when the story needs an action outside the turn order"
+            f"no one is taking a turn, so {actor.name} cannot attack: begin the next turn first, "
+            "or pass force true when the story needs an action outside the turn order"
         )
     if name_key(encounter.acting) != name_key(actor.name):
         raise InvalidInput(

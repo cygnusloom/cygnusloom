@@ -94,3 +94,17 @@ def render(request: Request, name: str, status_code: int = 200, **context: Any) 
         **context,
     }
     return templates.TemplateResponse(request, name, values, status_code=status_code)
+
+
+def render_fragment(request: Request, name: str, **context: Any) -> Response:
+    """Render a page fragment that the page can swap in place.
+
+    It takes only the values its partials need: a fragment has no shell, flash, or account
+    state, and rendering it must not consume a one-time flash meant for the next page load."""
+    values = {"csrf_token": get_csrf(request), **context}
+    return templates.TemplateResponse(
+        request,
+        name,
+        values,
+        headers={"Cache-Control": "no-store"},
+    )

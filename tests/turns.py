@@ -1,9 +1,10 @@
 """Encounter turn helpers for tests.
 
-An encounter runs on turns: the player presses Start for each actor in the order, and an NPC's
-turn ends when the GM's reply finishes. Combat tools refuse an attack by a character who is not
-taking their turn, so a test that attacks sets up the turn the table would have. These helpers
-drive the same engine calls the buttons do, so a test never reaches past the rules it is checking.
+An encounter runs on turns: an NPC's turn waits for the player to press Start, a player
+character's turn starts automatically, and an NPC's turn ends when the GM's reply finishes.
+Combat tools refuse an attack by a character who is not taking their turn, so a test that attacks
+sets up the turn the table would have. These helpers drive the same engine calls the page does,
+so a test never reaches past the rules it is checking.
 """
 
 from __future__ import annotations

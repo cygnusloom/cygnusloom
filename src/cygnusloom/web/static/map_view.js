@@ -41,7 +41,10 @@
     fit(frame, board);
   };
 
+  const attachedFrames = new WeakSet();
   const attach = (frame) => {
+    if (attachedFrames.has(frame)) return;
+    attachedFrames.add(frame);
     const board = frame.firstElementChild;
     if (!board) return;
     frame.title = "Scroll to zoom, drag to pan, double-click to reset";
@@ -143,5 +146,11 @@
   document.addEventListener("wheel", hideTip, { passive: true });
   window.addEventListener("scroll", hideTip, true);
 
-  document.querySelectorAll(".map-frame").forEach(attach);
+  // A live turn replaces the map panels in place, so this is callable again for the fresh
+  // frames. A WeakSet keeps a frame from being wired twice.
+  const initMapViews = (root = document) => {
+    root.querySelectorAll(".map-frame").forEach(attach);
+  };
+  window.initMapViews = initMapViews;
+  initMapViews();
 })();

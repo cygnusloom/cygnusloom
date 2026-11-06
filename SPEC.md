@@ -10,7 +10,7 @@ Cygnus is the AI GM. Cygnus will keep the game on track, following all the rules
 Whenever the player needs to roll some dice, the game will stop and let the player choose to roll their dice (prompted accordingly) or enter a free-form response. This is equivalent to a real game master asking their player to roll the dice, and the player can either roll the dice or respond to the GM in another way.
 
 # Encounters
-Encounters are scenes within the game where simulated time slows down so actions can be resolved according to the ruleset, usually for combat. Actors in encounters will often take turns. The player clicks on a button to start each actors turn. The AI GM will run NPC turns. For their own turn, the player also clicks on a button to end it.
+Encounters are scenes within the game where simulated time slows down so actions can be resolved according to the ruleset, usually for combat. Actors in encounters will often take turns. The player clicks on a button to start an NPC's turn, and the AI GM runs it. The player's own turn starts automatically when it comes up; they click on a button to end it.
 
 # Generic Engine, JSON rules
 The engine should support various rulesets. It should not be a hodgepodge of spaghetti code as new rulesets pile on. Instead, ruleset behavior should be defined in the ruleset JSON. The engine itself must remain clean. Use modular systems with hooks, parameters, and customizable behavior so each ruleset can define how the engine behaves. If custom code is absolutely necessary, it can be contained within each ruleset's python module. However, most RPG concepts are similar enough that they can live within the generic core engine and just be parameterized in the JSON ruleset.

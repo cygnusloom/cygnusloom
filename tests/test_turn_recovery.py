@@ -181,3 +181,42 @@ def test_the_map_fragment_renders_the_panel_on_its_own(
     page = client.get(f"/campaigns/{campaign_id}")
     assert f'data-map-url="/campaigns/{campaign_id}/map"' in page.text
     assert f'data-status-url="/campaigns/{campaign_id}/turn-status"' in page.text
+
+
+def test_a_finished_turn_can_be_rendered_as_a_live_fragment(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    """The stream swaps this fragment in, so it carries every view that a turn can change."""
+    client, campaign_id = factories.campaign_ready_fast(client_factory)
+
+    response = client.get(f"/campaigns/{campaign_id}/live")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert 'data-view="play"' in response.text
+    assert "data-transcript" in response.text
+    assert 'data-view="journal"' in response.text
+    assert 'data-view="characters"' in response.text
+    assert "<html" not in response.text
+    page = client.get(f"/campaigns/{campaign_id}")
+    assert f'data-live-url="/campaigns/{campaign_id}/live"' in page.text
+
+
+def test_the_live_fragment_is_not_readable_for_another_users_campaign(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    owner = factories.signed_in_client(client_factory, email="owner@example.com")
+    campaign_id = factories.create_campaign(owner)
+    stranger = factories.signed_in_client(client_factory, email="stranger@example.com")
+
+    assert stranger.get(f"/campaigns/{campaign_id}/live").status_code == 404
+
+
+def test_the_live_fragment_is_refused_while_the_campaign_is_still_being_created(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    """A creation page has no live region; the page falls back to a normal reload."""
+    client = factories.signed_in_client(client_factory)
+    campaign_id = factories.create_campaign(client)
+
+    assert client.get(f"/campaigns/{campaign_id}/live").status_code == 409

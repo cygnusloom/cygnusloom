@@ -1,14 +1,30 @@
 (() => {
-  const transcript = document.querySelector("[data-transcript]");
-  if (transcript) {
-    transcript.scrollTop = transcript.scrollHeight;
-  }
+  // The turn stream can replace parts of the page when a reply finishes, then call
+  // initWorkspace on the fresh region. Binding once per element keeps the original listeners
+  // from stacking up and keeps the controls that survive a turn working.
+  const bindings = new WeakMap();
+  const boundTabLists = new WeakSet();
+  const boundCompendiums = new WeakSet();
+  const dialogOpeners = new WeakMap();
+  const on = (element, key, type, handler, options) => {
+    if (!element) return;
+    let keys = bindings.get(element);
+    if (!keys) {
+      keys = new Set();
+      bindings.set(element, keys);
+    }
+    if (keys.has(key)) return;
+    keys.add(key);
+    element.addEventListener(type, handler, options);
+  };
 
   // On phones the details panel is a drawer opened from the bottom bar.
   const shell = document.querySelector(".shell");
-  const side = document.querySelector(".side");
   const sideToggle = document.querySelector("[data-side-toggle]");
   const setSide = (open, focus = true) => {
+    // The side panel is replaced in place after a turn, so look it up instead of holding the
+    // old element.
+    const side = document.querySelector(".side");
     if (!shell || !side || !sideToggle) return;
     shell.classList.toggle("show-side", open);
     sideToggle.setAttribute("aria-pressed", String(open));
@@ -16,7 +32,7 @@
     if (open) side.querySelector('[role="tab"]')?.focus();
     else sideToggle.focus();
   };
-  if (side && sideToggle) {
+  if (shell && sideToggle) {
     sideToggle.addEventListener("click", () => setSide(!shell.classList.contains("show-side")));
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape" || document.querySelector("dialog[open]")) return;
@@ -33,6 +49,8 @@
   // the player was reading.
   const initTabs = (root = document) => {
     root.querySelectorAll('[role="tablist"]').forEach((list) => {
+      if (boundTabLists.has(list)) return;
+      boundTabLists.add(list);
       const tabs = Array.from(list.querySelectorAll('[role="tab"]'));
       const select = (tab, focus = true) => {
         for (const other of tabs) {
@@ -47,8 +65,8 @@
       list.selectTab = select;
 
       tabs.forEach((tab, index) => {
-        tab.addEventListener("click", () => select(tab));
-        tab.addEventListener("keydown", (event) => {
+        on(tab, "tab-click", "click", () => select(tab));
+        on(tab, "tab-key", "keydown", (event) => {
           const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
           if (step === undefined) return;
           event.preventDefault();
@@ -62,7 +80,6 @@
       });
     });
   };
-  initTabs();
   window.initWorkspaceTabs = initTabs;
   window.workspaceSelectTab = (id) => {
     const tab = document.getElementById(id);
@@ -95,6 +112,7 @@
       setSide(false, false);
     });
   });
+  window.showWorkspaceView = showView;
 
   // A compendium entry lives inside a tab panel, so opening one also selects its tab.
   const revealCompendiumTarget = (target) => {
@@ -110,22 +128,16 @@
   // The compendium toolbar sticks to the top of its view, so an entry scrolled to the top would
   // sit underneath it. The entries take the toolbar's measured height as their scroll margin;
   // remeasure when it wraps as the viewport or the tab list changes size.
-  const measureCompendiumToolbars = () => {
-    for (const root of document.querySelectorAll("[data-compendium]")) {
-      const toolbar = root.querySelector(".compendium-toolbar");
+  const measureCompendiumToolbars = (root = document) => {
+    for (const compendium of root.querySelectorAll("[data-compendium]")) {
+      const toolbar = compendium.querySelector(".compendium-toolbar");
       if (toolbar) {
-        root.style.setProperty("--compendium-toolbar-height", `${toolbar.offsetHeight}px`);
+        compendium.style.setProperty("--compendium-toolbar-height", `${toolbar.offsetHeight}px`);
       }
     }
   };
-  measureCompendiumToolbars();
-  window.addEventListener("load", measureCompendiumToolbars);
-  window.addEventListener("resize", measureCompendiumToolbars);
-  if ("ResizeObserver" in window) {
-    document.querySelectorAll("[data-compendium] .compendium-toolbar").forEach((toolbar) => {
-      new ResizeObserver(measureCompendiumToolbars).observe(toolbar);
-    });
-  }
+  window.addEventListener("load", () => measureCompendiumToolbars());
+  window.addEventListener("resize", () => measureCompendiumToolbars());
 
   // A link can open a compendium entry directly, such as a bookmarked anchor. Show the view
   // that holds the target before scrolling to it, since a hidden view cannot scroll.
@@ -138,68 +150,72 @@
     measureCompendiumToolbars();
     anchored.scrollIntoView({ block: "start" });
   };
-  openHash();
-  window.addEventListener("hashchange", openHash);
   // Some browsers restore the fragment after the first script pass, so retry once at load.
-  window.addEventListener("load", openHash);
 
   // A link inside one view can point at an entry in another, such as an inventory item in the
   // compendium: switch views first, then scroll to the anchor the link names.
-  document.querySelectorAll("[data-view-link]").forEach((link) => {
-    link.addEventListener("click", (event) => {
-      const target = document.querySelector(link.getAttribute("href"));
-      if (!target) return;
-      event.preventDefault();
-      showView(link.dataset.viewLink);
-      revealCompendiumTarget(target);
-      measureCompendiumToolbars();
-      target.scrollIntoView({ block: "start" });
-      history.replaceState(null, "", link.getAttribute("href"));
+  const bindViewLinks = (root) => {
+    root.querySelectorAll("[data-view-link]").forEach((link) => {
+      on(link, "view-link", "click", (event) => {
+        const target = document.querySelector(link.getAttribute("href"));
+        if (!target) return;
+        event.preventDefault();
+        showView(link.dataset.viewLink);
+        revealCompendiumTarget(target);
+        measureCompendiumToolbars();
+        target.scrollIntoView({ block: "start" });
+        history.replaceState(null, "", link.getAttribute("href"));
+      });
     });
-  });
+  };
 
   // A search box narrows the cards in the region its data-filter names. A group left with no
   // matching card is hidden too, and the page says so when nothing matches at all.
-  document.querySelectorAll("[data-filter]").forEach((input) => {
-    const target = document.querySelector(input.dataset.filter);
-    if (!target) return;
-    const items = Array.from(target.querySelectorAll("[data-filter-item]"));
-    const groups = Array.from(target.querySelectorAll("[data-filter-group]"));
-    // The empty message sits beside the filtered region, so each search box reports its own
-    // result instead of whichever message appears first on a page with two searches.
-    const empty =
-      target.parentElement?.querySelector("[data-filter-empty]") ??
-      document.querySelector("[data-filter-empty]");
-    const apply = () => {
-      const query = input.value.trim().toLocaleLowerCase();
-      let shown = 0;
-      for (const item of items) {
-        const text = (item.dataset.filterText ?? item.textContent ?? "").toLocaleLowerCase();
-        const match = !query || text.includes(query);
-        item.hidden = !match;
-        if (match) shown += 1;
-      }
-      for (const group of groups) {
-        group.hidden = !group.querySelector("[data-filter-item]:not([hidden])");
-      }
-      if (empty) empty.hidden = shown > 0;
-    };
-    input.addEventListener("input", apply);
-    apply();
-  });
+  const bindFilters = (root) => {
+    root.querySelectorAll("[data-filter]").forEach((input) => {
+      const target = document.querySelector(input.dataset.filter);
+      if (!target) return;
+      const items = Array.from(target.querySelectorAll("[data-filter-item]"));
+      const groups = Array.from(target.querySelectorAll("[data-filter-group]"));
+      // The empty message sits beside the filtered region, so each search box reports its own
+      // result instead of whichever message appears first on a page with two searches.
+      const empty =
+        target.parentElement?.querySelector("[data-filter-empty]") ??
+        document.querySelector("[data-filter-empty]");
+      const apply = () => {
+        const query = input.value.trim().toLocaleLowerCase();
+        let shown = 0;
+        for (const item of items) {
+          const text = (item.dataset.filterText ?? item.textContent ?? "").toLocaleLowerCase();
+          const match = !query || text.includes(query);
+          item.hidden = !match;
+          if (match) shown += 1;
+        }
+        for (const group of groups) {
+          group.hidden = !group.querySelector("[data-filter-item]:not([hidden])");
+        }
+        if (empty) empty.hidden = shown > 0;
+      };
+      on(input, "filter", "input", apply);
+      apply();
+    });
+  };
 
   // The compendium search filters every entry, including entries in other tabs, and moves to the
   // first tab with a match when the current one has none.
-  document.querySelectorAll("[data-compendium]").forEach((root) => {
-    const input = root.querySelector("[data-compendium-search]");
-    if (!input) return;
-    const entries = [...root.querySelectorAll("[data-compendium-entry]")];
-    const sections = [...root.querySelectorAll("[data-compendium-section]")];
-    const panels = [...root.querySelectorAll("[data-compendium-panel]")];
-    const tabs = [...root.querySelectorAll("[data-compendium-tab]")];
-    const tabList = root.querySelector('.compendium-tab-list[role="tablist"]');
-    const count = root.querySelector("[data-compendium-count]");
-    const empty = root.querySelector("[data-compendium-empty]");
+  const bindCompendiumSearch = (root) => {
+    root.querySelectorAll("[data-compendium]").forEach((compendium) => {
+      if (boundCompendiums.has(compendium)) return;
+      boundCompendiums.add(compendium);
+      const input = compendium.querySelector("[data-compendium-search]");
+      if (!input) return;
+      const entries = [...compendium.querySelectorAll("[data-compendium-entry]")];
+      const sections = [...compendium.querySelectorAll("[data-compendium-section]")];
+      const panels = [...compendium.querySelectorAll("[data-compendium-panel]")];
+      const tabs = [...compendium.querySelectorAll("[data-compendium-tab]")];
+      const tabList = compendium.querySelector('.compendium-tab-list[role="tablist"]');
+      const count = compendium.querySelector("[data-compendium-count]");
+      const empty = compendium.querySelector("[data-compendium-empty]");
     const total = entries.length;
     const tabCounts = new Map(
       tabs.map((tab) => [tab, tab.querySelector(".compendium-count")?.textContent ?? ""]),
@@ -265,28 +281,38 @@
       if (empty) empty.hidden = matching.size > 0;
     };
 
-    input.addEventListener("input", apply);
-    apply();
-  });
-
-  document.querySelectorAll("[data-dialog-target]").forEach((button) => {
-    const dialog = document.getElementById(button.dataset.dialogTarget);
-    button.addEventListener("click", () => {
-      dialog.showModal();
-      // The browser focuses the first control, which can be at the bottom of a long dialog.
-      const title = dialog.querySelector("h2");
-      if (title) {
-        title.tabIndex = -1;
-        title.focus();
-      }
-      dialog.scrollTop = 0;
+      on(input, "compendium-search", "input", apply);
+      apply();
     });
-    dialog.addEventListener("close", () => button.focus());
+  };
+
+  const bindDialogButtons = (root) => {
+    root.querySelectorAll("[data-dialog-target]").forEach((button) => {
+      const dialog = document.getElementById(button.dataset.dialogTarget);
+      if (!dialog) return;
+      on(button, "dialog-open", "click", () => {
+        dialogOpeners.set(dialog, button);
+        dialog.showModal();
+        // The browser focuses the first control, which can be at the bottom of a long dialog.
+        const title = dialog.querySelector("h2");
+        if (title) {
+          title.tabIndex = -1;
+          title.focus();
+        }
+        dialog.scrollTop = 0;
+      });
+    });
+  };
+  // Dialogs sit outside the regions a turn replaces, so bind their close handlers only once.
+  document.querySelectorAll("dialog").forEach((dialog) => {
+    dialog.addEventListener("close", () => dialogOpeners.get(dialog)?.focus());
     closeOnBackdropClick(dialog);
   });
 
   const turnDialog = document.getElementById("dialog-turn-context");
-  if (turnDialog) {
+  let turnOpener = null;
+  const bindTurnContextButtons = (root) => {
+    if (!turnDialog) return;
     const bodies = {
       context: turnDialog.querySelector("[data-turn-context-body]"),
       transcript: turnDialog.querySelector("[data-turn-transcript-body]"),
@@ -304,10 +330,9 @@
       return null;
     };
     const unavailable = "<p class=\"muted\">Could not load this reply's details.</p>";
-    let opener = null;
-    document.querySelectorAll("[data-turn-context-url]").forEach((button) => {
-      button.addEventListener("click", async () => {
-        opener = button;
+    root.querySelectorAll("[data-turn-context-url]").forEach((button) => {
+      on(button, "turn-context", "click", async () => {
+        turnOpener = button;
         bodies.context.textContent = "Loading…";
         bodies.transcript.textContent = "Loading…";
         turnDialog.showModal();
@@ -316,21 +341,48 @@
           loadFragment(button.dataset.turnTranscriptUrl),
         ]);
         // Ignore replies for a gear that has since been replaced by another click.
-        if (opener !== button) return;
+        if (turnOpener !== button) return;
         bodies.context.innerHTML = context ?? unavailable;
         bodies.transcript.innerHTML = transcript ?? unavailable;
       });
     });
-    turnDialog.addEventListener("close", () => opener?.focus());
-    closeOnBackdropClick(turnDialog);
-  }
+  };
+  if (turnDialog) turnDialog.addEventListener("close", () => turnOpener?.focus());
 
-  const composerInput = document.querySelector(".composer textarea");
-  if (composerInput) {
-    composerInput.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
-      event.preventDefault();
-      composerInput.form.requestSubmit();
+  const bindComposer = (root) => {
+    root.querySelectorAll(".composer textarea").forEach((input) => {
+      on(input, "composer-enter", "keydown", (event) => {
+        if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+        event.preventDefault();
+        input.form.requestSubmit();
+      });
     });
-  }
+  };
+
+  const observedToolbars = new WeakSet();
+  const initWorkspace = (root = document) => {
+    initTabs(root);
+    bindViewLinks(root);
+    bindFilters(root);
+    bindCompendiumSearch(root);
+    bindDialogButtons(root);
+    bindTurnContextButtons(root);
+    bindComposer(root);
+    measureCompendiumToolbars(root);
+    if ("ResizeObserver" in window) {
+      root.querySelectorAll("[data-compendium] .compendium-toolbar").forEach((toolbar) => {
+        if (observedToolbars.has(toolbar)) return;
+        observedToolbars.add(toolbar);
+        new ResizeObserver(() => measureCompendiumToolbars()).observe(toolbar);
+      });
+    }
+  };
+  window.initWorkspace = initWorkspace;
+  initWorkspace();
+  openHash();
+  window.addEventListener("hashchange", openHash);
+  window.addEventListener("load", openHash);
+
+  const transcript = document.querySelector("[data-transcript]");
+  if (transcript) transcript.scrollTop = transcript.scrollHeight;
 })();

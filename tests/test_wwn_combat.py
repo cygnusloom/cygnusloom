@@ -799,8 +799,8 @@ def test_wwn_player_attack_and_save_prompt_for_the_players_own_dice(client_facto
 
 def test_wwn_npc_turn_ends_when_the_gm_reply_finishes(client_factory):
     """Starting a foe's turn runs the GM's reply, and the engine ends the turn when that reply
-    finishes. The player only presses Start for the next actor. WWN rolls side initiative as soon
-    as both sides have joined."""
+    finishes. The next player character's turn then begins on its own. WWN rolls side initiative
+    as soon as both sides have joined."""
     client, campaign_id, tools = _wwn_campaign(client_factory)
     with Session(tools.engine) as db:
         record(db, campaign_id, ChatGM(content="The opening plays out.", model="test"))
@@ -834,11 +834,12 @@ def test_wwn_npc_turn_ends_when_the_gm_reply_finishes(client_factory):
     with Session(tools.engine) as db:
         state = load_state(db, tools.campaign_id)
         assert state.turn is None
-        assert state.encounter.acting is None
+        assert state.encounter.acting == PC
         assert state.encounter.order[state.encounter.up] == PC
     page = client.get(f"/campaigns/{campaign_id}").text
     assert f"End {FOE}'s turn" not in page
-    assert f"Start {PC}'s turn" in page
+    assert f"Start {PC}'s turn" not in page
+    assert "End your turn" in page
 
 
 def test_wwn_player_save_prompt_works_outside_an_encounter(client_factory):
@@ -1129,7 +1130,8 @@ def test_grappling_restricts_both_sides_to_unarmed_attacks(client_factory):
 
 def test_a_wwn_attack_needs_the_attackers_turn(client_factory):
     """A foe may not swing before the player presses Start for its turn, and the player may not
-    swing out of turn either. The GM can force an action the story needs."""
+    swing out of turn either. A player character's turn starts automatically. The GM can force an
+    action the story needs."""
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20)
 

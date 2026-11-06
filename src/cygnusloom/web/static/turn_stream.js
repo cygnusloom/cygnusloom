@@ -2,8 +2,18 @@
   // Forms marked data-confirm (rollback) ask before submitting. This runs even without streaming.
   document.addEventListener("submit", (event) => {
     const form = event.target;
-    if (form instanceof HTMLFormElement && form.dataset.confirm && !window.confirm(form.dataset.confirm)) {
+    if (!(form instanceof HTMLFormElement)) return;
+    if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) {
       event.preventDefault();
+      return;
+    }
+    // Ending a turn can start the next player turn at once, so a second click must not end that
+    // new turn. Let the submission start, then disable the button.
+    const submitter = event.submitter;
+    if (form.hasAttribute("data-once") && submitter) {
+      window.setTimeout(() => {
+        submitter.disabled = true;
+      }, 0);
     }
   });
 
@@ -25,6 +35,7 @@
   const errorBox = document.querySelector(".turn-error");
   const textarea = composer.querySelector("textarea");
   const submit = composer.querySelector('button[type="submit"]');
+  const liveUrl = document.querySelector("[data-live-url]")?.dataset.liveUrl;
   const NOT_SAVED = "The reply was not saved. Your message is still in the box.";
   const FLASH_KEY = "cygnus-turn-error";
   const FOCUS_KEY = "cygnus-focus-composer";
@@ -172,24 +183,190 @@
     window.location.assign(window.location.pathname);
   };
 
-  // Reloading drops focus, so the reloaded page focuses the message box again.
-  const reloadKeepingComposerFocus = () => {
-    sessionStorage.setItem(FOCUS_KEY, "1");
-    reload();
+  const rememberFocus = () => sessionStorage.setItem(FOCUS_KEY, "1");
+
+  // Replace the views with the server's current state instead of navigating. The composer and
+  // transcript elements stay in place, so their handlers and the streaming helpers keep working
+  // and the player keeps their scroll position and focus.
+  const applyLive = (html) => {
+    const template = document.createElement("template");
+    template.innerHTML = html.trim();
+    const freshPlay = template.content.querySelector('[data-view="play"]');
+    const currentPlay = document.querySelector('[data-view="play"]');
+    const freshTranscript = freshPlay?.querySelector("[data-transcript]");
+    if (!freshPlay || !currentPlay || !freshTranscript) return false;
+
+    const selectedTabs = Array.from(
+      document.querySelectorAll('[role="tab"][aria-selected="true"]'),
+      (tab) => tab.id,
+    );
+    const scrolls = new Map();
+    for (const element of document.querySelectorAll(".views [id]")) {
+      if (element.scrollTop) scrolls.set(element.id, element.scrollTop);
+    }
+    const atBottom =
+      transcript.scrollHeight - transcript.scrollTop - transcript.clientHeight < 8;
+    const transcriptTop = transcript.scrollTop;
+
+    transcript.replaceChildren(
+      ...Array.from(freshTranscript.childNodes, (node) => node.cloneNode(true)),
+    );
+    transcript.dataset.gmState = freshTranscript.dataset.gmState;
+    transcript.classList.toggle("show-hidden", Boolean(showHidden?.checked));
+
+    // The encounter prompt and the advancement pause sit between the chat and the composer.
+    for (const selector of [".encounter-turn", ".advancement-pause"]) {
+      currentPlay.querySelector(selector)?.remove();
+      const fresh = freshPlay.querySelector(selector);
+      if (fresh) composer.before(fresh);
+    }
+
+    const currentSide = currentPlay.querySelector(".side");
+    const freshSide = freshPlay.querySelector(".side");
+    if (currentSide && freshSide) {
+      currentSide.innerHTML = freshSide.innerHTML;
+      currentSide.classList.toggle(
+        "in-encounter",
+        freshSide.classList.contains("in-encounter"),
+      );
+    }
+
+    const freshComposer = freshPlay.querySelector("#composer");
+    if (freshComposer) {
+      composer.action = freshComposer.action;
+      composer.dataset.streamAction = freshComposer.dataset.streamAction;
+      composer.dataset.playerName = freshComposer.dataset.playerName;
+      const freshTextarea = freshComposer.querySelector("textarea");
+      if (freshTextarea) {
+        textarea.placeholder = freshTextarea.placeholder;
+        textarea.disabled = freshTextarea.disabled;
+        textarea.readOnly = false;
+      }
+      const freshSubmit = freshComposer.querySelector('button[type="submit"]');
+      if (freshSubmit) submit.disabled = freshSubmit.disabled;
+      const tools = composer.querySelector(".composer-tools");
+      const freshTools = freshComposer.querySelector(".composer-tools");
+      if (tools && freshTools) tools.innerHTML = freshTools.innerHTML;
+    }
+
+    // The views outside Play are part of the same campaign state: the journal, roster, and
+    // compendium can all change during a turn. Rebuild their contents in place so switching to
+    // them after a reply does not show the state from before it.
+    for (const current of document.querySelectorAll(
+      '.views > [data-view]:not([data-view="play"])',
+    )) {
+      const fresh = template.content.querySelector(`[data-view="${current.dataset.view}"]`);
+      if (!fresh) continue;
+      current.innerHTML = fresh.innerHTML;
+      window.initWorkspace?.(current);
+    }
+    window.initWorkspace?.(currentPlay);
+    window.initMapViews?.(document);
+
+    for (const id of selectedTabs) window.workspaceSelectTab?.(id);
+    for (const [id, top] of scrolls) {
+      const element = document.getElementById(id);
+      if (element && element !== transcript) element.scrollTop = top;
+    }
+    transcript.scrollTop = atBottom ? transcript.scrollHeight : transcriptTop;
+    // A campaign saved before player turns started automatically can still be waiting on the
+    // old Begin button. Start it now instead of making the player press it.
+    window.setTimeout(startPendingPlayerTurn, 0);
+    return true;
   };
+
+  let liveRefresh = null;
+  let mapTimer = null;
+  const refreshLive = async ({ focusComposer = false, message = "" } = {}) => {
+    if (!liveUrl) return false;
+    try {
+      const response = await fetch(liveUrl, {
+        credentials: "same-origin",
+        headers: { Accept: "text/html" },
+      });
+      if (!response.ok || response.redirected) return false;
+      if (!applyLive(await response.text())) return false;
+    } catch {
+      return false;
+    }
+    errorBox.hidden = true;
+    if (message) showError(message);
+    if (focusComposer && !textarea.disabled) textarea.focus();
+    return true;
+  };
+
+  // One update at a time: the stream and the status poll can both decide a turn is over.
+  const settle = async (options = {}) => {
+    if (liveRefresh) return liveRefresh;
+    liveRefresh = (async () => {
+      if (mapTimer) {
+        clearTimeout(mapTimer);
+        mapTimer = null;
+      }
+      if (await refreshLive(options)) return;
+      // A page that cannot update in place falls back to the old reload path.
+      if (options.focusComposer) rememberFocus();
+      if (options.message) sessionStorage.setItem(FLASH_KEY, options.message);
+      reload();
+    })();
+    try {
+      await liveRefresh;
+    } finally {
+      liveRefresh = null;
+    }
+  };
+
+  // A player character's turn starts automatically, but a page saved before that rule, or a
+  // state change outside a turn, may still render the old Begin form. Submit it without a page
+  // navigation and then take the fresh state.
+  async function startPlayerTurn(form) {
+    if (form.dataset.starting) return;
+    form.dataset.starting = "1";
+    try {
+      const response = await fetch(form.action, {
+        method: "POST",
+        body: new FormData(form),
+        credentials: "same-origin",
+      });
+      if (!response.ok && !response.redirected) {
+        form.hidden = false;
+        return;
+      }
+    } catch {
+      form.hidden = false;
+      return;
+    } finally {
+      delete form.dataset.starting;
+    }
+    await settle({ focusComposer: true });
+  }
+
+  function startPendingPlayerTurn() {
+    const form = document.querySelector("form[data-auto-start-turn]");
+    if (form) void startPlayerTurn(form);
+  }
 
   // While a reply streams, ask the server whether the turn is still running. A stream can die
   // without ending, or fall silent behind a stalling provider, and the page would then sit on a
-  // disabled composer while the turn is long finished. The poll notices and reloads, which is
-  // how every other turn ends. The first check waits, so a turn that has not been recorded yet
-  // is never mistaken for a finished one.
+  // disabled composer while the turn is long finished. The poll notices and updates the page in
+  // place, the same way every other turn ends. The first check waits, so a turn that has not
+  // been recorded yet is never mistaken for a finished one.
   const STATUS_POLL_MS = 5000;
   const STATUS_FIRST_MS = 10000;
   const statusUrl = document.querySelector("[data-status-url]")?.dataset.statusUrl;
+  let stopWatching = null;
   const watchTurn = () => {
     if (!statusUrl) return;
+    stopWatching?.();
     let stopped = false;
+    let timer = null;
+    stopWatching = () => {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+      timer = null;
+    };
     const tick = async () => {
+      timer = null;
       if (stopped) return;
       try {
         const response = await fetch(statusUrl, {
@@ -198,26 +375,31 @@
         });
         if (response.ok) {
           const { status } = await response.json();
+          if (stopped) return;
           if (status !== "busy") {
             stopped = true;
-            reload();
+            stopWatching = null;
+            settle({ focusComposer: true });
             return;
           }
         }
       } catch {
         // A failed poll is not fatal: the stream may still be alive, so try again.
       }
-      setTimeout(tick, STATUS_POLL_MS);
+      if (!stopped) timer = setTimeout(tick, STATUS_POLL_MS);
     };
-    setTimeout(tick, STATUS_FIRST_MS);
+    timer = setTimeout(tick, STATUS_FIRST_MS);
+  };
+  const stopWatch = () => {
+    stopWatching?.();
+    stopWatching = null;
   };
 
   // Redraw the map while the GM works, so an encounter being built appears as it is built: the
   // board, the joining sides, initiative, and every placement. Redraws are throttled, and the
-  // reload when the turn ends replaces the panel with the server's final state anyway.
+  // live update when the turn ends replaces the panel with the server's final state anyway.
   const MAP_REFRESH_MS = 2500;
   const mapUrl = document.querySelector("[data-map-url]")?.dataset.mapUrl;
-  let mapTimer = null;
   const refreshMap = () => {
     if (!mapUrl || mapTimer) return;
     mapTimer = setTimeout(async () => {
@@ -238,10 +420,11 @@
         fresh
           .closest(".side")
           ?.classList.toggle("in-encounter", Boolean(fresh.querySelector("#panel-encounter")));
-        window.initWorkspaceTabs?.();
+        window.initWorkspaceTabs?.(fresh);
         if (selected) window.workspaceSelectTab?.(selected);
+        window.initMapViews?.(fresh);
       } catch {
-        // A failed redraw is harmless: the next one, or the reload at the end, catches up.
+        // A failed redraw is harmless: the next one, or the live update at the end, catches up.
       }
     }, MAP_REFRESH_MS);
   };
@@ -267,10 +450,12 @@
 
     try {
       await playTurn(composer.dataset.streamAction, data, reply, attempt);
-      reloadKeepingComposerFocus();
+      stopWatch();
+      await settle({ focusComposer: true });
     } catch (error) {
+      stopWatch();
       if (attempt.started) {
-        reloadKeepingComposerFocus();
+        await settle({ focusComposer: true });
         return;
       }
       player.bubble.remove();
@@ -283,7 +468,7 @@
   });
 
   // Answers to the GM's prompt. The answer is stored before the reply continues, so a failure
-  // leaves the server's state correct; reloading shows that state with a Continue button.
+  // leaves the server's state correct; the live update shows that state with a Continue button.
   document.addEventListener("submit", async (event) => {
     const form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
@@ -303,10 +488,12 @@
     const attempt = { started: false };
     try {
       await playTurn(form.action, data, reply, attempt);
-      reload();
+      stopWatch();
+      await settle({ focusComposer: true });
     } catch (error) {
+      stopWatch();
       // An opening that could not start stays on the page with its Continue button, rather than
-      // reloading into another automatic start.
+      // updating into another automatic start.
       if (form.hasAttribute("data-auto-start") && !attempt.started) {
         reply.bubble.remove();
         showError(error instanceof TurnFailure ? error.message : "The GM's reply did not finish. Try again.");
@@ -314,15 +501,15 @@
         setGmState("waiting");
         return;
       }
-      // Once the stream started, the server has recorded the failure and the reloaded page shows
-      // it, so only a failure before the stream needs a flash message.
-      if (!attempt.started) {
-        sessionStorage.setItem(
-          FLASH_KEY,
-          error instanceof TurnFailure ? error.message : "The GM's reply did not finish. Try again.",
-        );
-      }
-      reload();
+      // Once the stream started, the server has recorded the failure and the live update shows
+      // it, so only a failure before the stream needs the message beside the restored state.
+      const message =
+        attempt.started
+          ? ""
+          : error instanceof TurnFailure
+            ? error.message
+            : "The GM's reply did not finish. Try again.";
+      await settle({ focusComposer: true, message });
     }
   });
 
@@ -341,4 +528,5 @@
   // The campaign's opening starts on its own once the character exists: the player waits for it.
   const autoStart = document.querySelector("form[data-auto-start]");
   if (autoStart) autoStart.requestSubmit();
+  else startPendingPlayerTurn();
 })();

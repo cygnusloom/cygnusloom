@@ -175,7 +175,7 @@ def test_a_prompt_paused_npc_turn_ends_when_it_is_resumed(
         )
     assert state.turn is None
     assert state.encounter is not None
-    assert state.encounter.acting is None
+    assert state.encounter.acting == "Ada"
     assert len(ended) == 1
 
 

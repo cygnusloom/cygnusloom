@@ -1,0 +1,79 @@
+{% from "macros.html" import journal_text, map_board, map_places, time_strip %}
+    <section class="view map-page" data-view="map" aria-labelledby="map-title" hidden>
+      <h2 id="map-title">Map</h2>
+      {{ map_board(world_map, framed=true, prefix="side") }}
+      {{ time_strip(time) }}
+      <h3>Places</h3>
+      {{ map_places(world_map) }}
+    </section>
+    <section class="view" data-view="journal" aria-label="Journal" hidden>
+      <h2>Journal</h2>
+      <div class="journal">{{ journal_text(scene.journal) }}</div>
+    </section>
+    <section class="view characters-page" data-view="characters" aria-labelledby="characters-title" hidden>
+      <h2 id="characters-title">Characters</h2>
+      <label class="filter-field">
+        <span class="visually-hidden">Search characters</span>
+        <input type="search" data-filter="#character-list" placeholder="Search by name, personality, relationship, or place" autocomplete="off">
+      </label>
+      <div id="character-list" class="character-list">
+        {% if scene.pc %}
+        <section class="character-group" data-filter-group aria-labelledby="characters-you">
+          <h3 id="characters-you">You</h3>
+          <article class="character-card" data-filter-item>
+            <h4>{{ scene.pc.name }}{% if scene.pc.dead %} <span class="muted">(dead)</span>{% elif scene.pc.retired %} <span class="muted">(left the story)</span>{% endif %}</h4>
+            <p class="character-facts">
+              {% if scene.pc.pronouns %}<span>Pronouns: {{ scene.pc.pronouns }}</span>{% endif %}
+              <span>{% if scene.location %}At {{ scene.location.name }}{% else %}Not yet placed{% endif %}</span>
+            </p>
+            {% if scene.pc.description %}<p>{{ scene.pc.description }}</p>{% endif %}
+          </article>
+        </section>
+        {% endif %}
+        {% if scene.hirelings %}
+        <section class="character-group" data-filter-group aria-labelledby="characters-hirelings">
+          <h3 id="characters-hirelings">Hirelings</h3>
+          {% for hireling in scene.hirelings %}
+          <article class="character-card" data-filter-item>
+            <h4>{{ hireling.name }}{% if hireling.dead %} <span class="muted">(dead)</span>{% endif %}</h4>
+            <p class="character-facts">
+              {% if hireling.pronouns %}<span>Pronouns: {{ hireling.pronouns }}</span>{% endif %}
+              <span>Hired by {{ hireling.employer }}</span>
+              {% if hireling.location %}<span>At {{ hireling.location }}</span>{% endif %}
+            </p>
+            {% if hireling.personality %}<p><strong>Personality:</strong> {{ hireling.personality }}{% if hireling.accent %} · <strong>Accent:</strong> {{ hireling.accent }}{% endif %}</p>{% endif %}
+            {% if hireling.quirks %}<p><strong>Quirks:</strong> {{ hireling.quirks | join("; ") }}</p>{% endif %}
+          </article>
+          {% endfor %}
+        </section>
+        {% endif %}
+        <section class="character-group" data-filter-group aria-labelledby="characters-known">
+          <h3 id="characters-known">People you know</h3>
+          {% for npc in scene.known %}
+          <article class="character-card" data-filter-item>
+            <h4>{{ npc.name }}{% if npc.dead %} <span class="muted">(dead)</span>{% endif %}</h4>
+            <p class="character-facts">
+              {% if npc.pronouns %}<span>Pronouns: {{ npc.pronouns }}</span>{% endif %}
+              {% if npc.relation %}<span class="character-relation">{{ npc.relation }}</span>{% endif %}
+              {% if npc.creature and npc.creature_entry %}<span>Creature: <a href="#{{ npc.creature_entry }}" data-view-link="compendium">{{ npc.creature }}</a></span>{% endif %}
+              {% if npc.here %}<span>Here{% if npc.location %} at {{ npc.location }}{% endif %}</span>{% elif npc.location %}<span>Last known: {{ npc.location }}</span>{% else %}<span>Whereabouts unknown</span>{% endif %}
+            </p>
+            {% if npc.relationship %}<p><strong>Relationship:</strong> {{ npc.relationship }}</p>{% endif %}
+            {% if npc.description %}<p>{{ npc.description }}</p>{% endif %}
+            {% if npc.personality %}<p><strong>Personality:</strong> {{ npc.personality }}</p>{% endif %}
+            {% if npc.accent %}<p><strong>Accent:</strong> {{ npc.accent }}</p>{% endif %}
+            {% if npc.quirks %}<p><strong>Quirks:</strong> {{ npc.quirks | join("; ") }}</p>{% endif %}
+          </article>
+          {% else %}
+          <p class="muted">You have not met anyone yet.</p>
+          {% endfor %}
+        </section>
+      </div>
+      <p class="muted" data-filter-empty hidden>No characters match that search.</p>
+    </section>
+    {% if compendium %}
+    <section class="view compendium-page" data-view="compendium" aria-labelledby="compendium-title" hidden>
+      <h2 id="compendium-title">Compendium</h2>
+      {% include "_compendium.html" %}
+    </section>
+    {% endif %}

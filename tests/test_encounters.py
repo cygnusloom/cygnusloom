@@ -15,6 +15,7 @@ from cygnusloom.content.library import EncounterGrid
 from cygnusloom.llm.base import ToolRequest
 from cygnusloom.rules.context import ToolContext, brief
 from cygnusloom.services import encounters
+from cygnusloom.services import turns as turns_service
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import (
     NPC_KIND,
@@ -388,13 +389,79 @@ def test_npc_turn_is_played_out_and_ends_automatically(
 
     assert lines[-1]["type"] == "saved"
     state = _state(app, campaign_id)
-    # The engine ends the NPC's turn when the reply finishes, so no End button is offered.
+    # The engine ends the NPC's turn when the reply finishes, and Ada's turn starts on its own.
     assert state.turn is None
-    assert state.encounter.acting is None
+    assert state.encounter.acting == "Ada"
     assert state.encounter.up == 1
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "End Pip's turn" not in page
-    assert "Start Ada's turn" in page
+    assert "Start Ada's turn" not in page
+    assert "End your turn" in page
+
+
+def test_a_player_turn_starts_after_the_initiative_prompt_finishes(
+    client_factory: Callable[[], TestClient], monkeypatch
+):
+    """The player rolls initiative inside the GM's reply; when the reply ends, their turn begins."""
+    client, campaign_id = _cairn_campaign(client_factory)
+    created = create_character(
+        client, campaign_id, name="Ada", fields=_complete_form(client, campaign_id)
+    )
+    assert created.status_code == 303
+    answer(client, campaign_id, "continue")
+    app = client.app
+    rounds = [
+        [
+            {
+                "name": "create_location",
+                "arguments": {
+                    "name": "Test Yard",
+                    "description": "A dusty yard.",
+                    "discovered": True,
+                    "summary": "A dusty yard.",
+                },
+            }
+        ],
+        [
+            {
+                "name": "move_actor",
+                "arguments": {"name": "Ada", "location": "Test Yard", "mode": "in_settlement"},
+            }
+        ],
+        [
+            {
+                "name": "create_encounter_map",
+                "arguments": {
+                    "name": "Test Yard Map",
+                    "location": "Test Yard",
+                    "description": "A dusty yard.",
+                    "columns": 6,
+                    "rows": 6,
+                },
+            }
+        ],
+        [{"name": "start_encounter", "arguments": {"map": "Test Yard Map"}}],
+        [{"name": "add_participant", "arguments": {"name": "Ada"}}],
+        [{"name": "player_initiative", "arguments": {"prompt": "Roll initiative."}}],
+    ]
+    script = _script({"rounds": rounds, "text": "The fight begins."})
+    assert send_message(client, campaign_id, script).status_code == 303
+    assert _state(app, campaign_id).encounter.acting is None
+    pending = _state(app, campaign_id).turn
+    assert pending is not None and pending.prompt is not None, pending
+
+    # The reply ends after the roll, so Ada's turn should start without another button.
+    monkeypatch.setattr(turns_service, "roll_total", lambda *args, **kwargs: 1)
+    events = answer(client, campaign_id, "roll")
+
+    assert events[-1]["type"] == "saved"
+    state = _state(app, campaign_id)
+    assert state.turn is None
+    assert state.encounter.order == ["Ada"]
+    assert state.encounter.acting == "Ada"
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "End your turn" in page
+    assert "Start Ada's turn" not in page
 
 
 def test_npc_turn_ends_only_when_the_gm_reply_finishes(
@@ -410,11 +477,11 @@ def test_npc_turn_ends_only_when_the_gm_reply_finishes(
     assert lines[-1]["type"] == "saved"
     state = _state(app, campaign_id)
     assert state.turn is None
-    assert state.encounter.acting is None
+    assert state.encounter.acting == "Ada"
     assert _encounter_post(client, campaign_id, "end", "Pip").status_code == 400
 
 
-def test_player_turn_starts_and_ends_by_button(
+def test_player_turn_starts_automatically_and_ends_by_button(
     client_factory: Callable[[], TestClient],
 ):
     client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
@@ -423,23 +490,21 @@ def test_player_turn_starts_and_ends_by_button(
     _finish_gm_reply(app, campaign_id)
     _end(app, campaign_id, "Pip", by_player=False)
     _finish_gm_reply(app, campaign_id)
-    assert _state(app, campaign_id).encounter.acting is None
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert "Start Ada's turn" in page
-
-    assert _encounter_post(client, campaign_id, "begin", "Ada").status_code == 303
     assert _state(app, campaign_id).encounter.acting == "Ada"
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "Start Ada's turn" not in page
+    assert "End your turn" in page
+
     assert _encounter_post(client, campaign_id, "end", "Ada").status_code == 303
     state = _state(app, campaign_id)
-    assert state.encounter.acting is None
+    # The new round groups the party first, so Ada's next turn starts at once.
+    assert state.encounter.acting == "Ada"
     assert state.encounter.round == 2
 
-    # With only the party left, a direct begin/end round trip reports the ended turn.
+    # With only the party left, ending a player turn still starts the next round's turn.
     _call(app, campaign_id, "remove_participant", {"name": "Pip"})
-    assert _encounter(app, campaign_id).encounter.acting is None
-    _begin(app, campaign_id, "Ada")
     assert _end(app, campaign_id, "Ada", by_player=True) == {"ended_turn": "Ada"}
-    assert _encounter(app, campaign_id).encounter.acting is None
+    assert _encounter(app, campaign_id).encounter.acting == "Ada"
 
 
 def test_turn_buttons_refuse_the_wrong_participant(client_factory: Callable[[], TestClient]):
@@ -485,12 +550,25 @@ def test_campaign_page_shows_the_encounter_board_and_turn_controls(
     _end(app, campaign_id, "Pip", by_player=False)
     _finish_gm_reply(app, campaign_id)
     acting = client.get(f"/campaigns/{campaign_id}").text
-    assert "Start Ada's turn" in acting
-    _begin(app, campaign_id, "Ada")
-    acting = client.get(f"/campaigns/{campaign_id}").text
+    assert "Start Ada's turn" not in acting
     assert "End your turn" in acting
     assert "Start your turn" not in acting
     assert acting.index("End your turn") < acting.index('id="composer"')
+
+
+def test_an_idle_player_turn_gets_an_automatic_begin_form(
+    client_factory: Callable[[], TestClient],
+):
+    """A saved campaign can still be waiting on the old button; the page starts it without one."""
+    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
+    app = client.app
+    _call(app, campaign_id, "remove_participant", {"name": "Pip"})
+
+    assert _encounter(app, campaign_id).encounter.acting is None
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "Starting your turn..." in page
+    assert "data-auto-start-turn" in page
+    assert "Start Ada's turn" not in page
 
 
 def test_campaign_page_has_no_board_or_roster_without_an_encounter(

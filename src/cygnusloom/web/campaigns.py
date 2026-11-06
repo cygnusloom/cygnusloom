@@ -84,7 +84,7 @@ from cygnusloom.web.character_form import (
     submission_from_form,
 )
 from cygnusloom.web.forms import form_text
-from cygnusloom.web.rendering import render
+from cygnusloom.web.rendering import render, render_fragment
 
 router = APIRouter(prefix="/campaigns")
 
@@ -411,6 +411,17 @@ def export_campaign_file(request: Request, campaign_id: int) -> Response:
 def campaign_page(request: Request, campaign_id: int) -> Response:
     user = page_user(request)
     return _campaign_page(request, user, campaign_id)
+
+
+@router.get("/{campaign_id}/live")
+def campaign_live(request: Request, campaign_id: int) -> Response:
+    """The campaign's views on their own, so a finished turn can replace them in place.
+
+    The turn stream used to reload the whole page when the GM finished or asked the player
+    something. On a slow connection that reload is a white screen and a fresh round trip. This
+    fragment carries the same state without the shell, so the player keeps their place."""
+    user = page_user(request)
+    return _campaign_page(request, user, campaign_id, fragment=True)
 
 
 @router.get("/{campaign_id}/turn-status")
@@ -990,6 +1001,7 @@ def _campaign_page(
     draft: str = "",
     setting: str = "",
     table_genres: Sequence[str] | None = None,
+    fragment: bool = False,
 ) -> Response:
     engine = request.app.state.engine
     settings = request.app.state.settings
@@ -1019,6 +1031,9 @@ def _campaign_page(
     options_pending, character_pending = _creation_pending(world.state, rule_set)
     pc = world.state.pc()
     if options_pending or character_pending:
+        if fragment:
+            # The creation page has no live refresh; a reload shows the form again.
+            return PlainTextResponse("This campaign is still being set up.", status_code=409)
         promotable = [
             c
             for c in world.state.characters.values()
@@ -1104,13 +1119,10 @@ def _campaign_page(
         if settings.debug_panel and rule_set is not None
         else (None, None)
     )
-    return render(
-        request,
-        "campaign.html",
-        status_code=status_code,
-        campaign=campaign,
-        world=library.world_templates.get(campaign.world_template),
-        scene=scene_view(
+    values = {
+        "campaign": campaign,
+        "world": library.world_templates.get(campaign.world_template),
+        "scene": scene_view(
             world.state,
             spec,
             inventory_rules,
@@ -1121,39 +1133,43 @@ def _campaign_page(
             place_links=compendium.place_links,
             sheet_links=compendium.sheet_links,
         ),
-        world_map=world_map,
-        time=time_view(world.state, rule_set.clock if rule_set else None),
-        rule_set=rule_set,
-        compendium=compendium,
-        creature_links=compendium.creature_links,
-        place_links=compendium.place_links,
-        messages=messages,
-        transcript=transcript,
-        player_name=pc.name,
-        acting_name=speaker_name(world.state) or pc.name,
-        context=context,
-        error=error,
-        draft=draft,
-        pending=pending_turn(engine, user.id, campaign.id),
-        advancement_due=advancement_due,
-        advancement_available=advancement_available,
-        factions=faction_views(world.state, rule_set.tallies if rule_set else {}),
-        models=request.app.state.catalog.model_ids(),
-        encounter=encounter,
-        encounter_rows=_encounter_rows(encounter) if encounter is not None else [],
-        local_map=local_map,
-        local_map_rows=_encounter_rows(local_map) if local_map is not None else [],
-        local_map_legend=_map_legend(local_map) if local_map is not None else [],
-        debug_panel=settings.debug_panel,
-        debug_currency=rule_set.marketplace.currency if rule_set and rule_set.marketplace else "",
-        debug_stats=[(stat.id, stat.name) for stat in spec.stats.values()],
-        debug_tools=debug_tools,
-        debug_xp=debug_xp,
-        debug_advancement=debug_advancement,
-        debug_injection=world.state.debug_injection,
-        pc_invincible=pc.invincible,
-        item_kind_icons=magic.item_kind_icons if magic is not None else {},
-    )
+        "world_map": world_map,
+        "time": time_view(world.state, rule_set.clock if rule_set else None),
+        "rule_set": rule_set,
+        "compendium": compendium,
+        "creature_links": compendium.creature_links,
+        "place_links": compendium.place_links,
+        "messages": messages,
+        "transcript": transcript,
+        "player_name": pc.name,
+        "acting_name": speaker_name(world.state) or pc.name,
+        "context": context,
+        "draft": draft,
+        "pending": pending_turn(engine, user.id, campaign.id),
+        "advancement_due": advancement_due,
+        "advancement_available": advancement_available,
+        "factions": faction_views(world.state, rule_set.tallies if rule_set else {}),
+        "models": request.app.state.catalog.model_ids(),
+        "encounter": encounter,
+        "encounter_rows": _encounter_rows(encounter) if encounter is not None else [],
+        "local_map": local_map,
+        "local_map_rows": _encounter_rows(local_map) if local_map is not None else [],
+        "local_map_legend": _map_legend(local_map) if local_map is not None else [],
+        "debug_panel": settings.debug_panel,
+        "debug_currency": (
+            rule_set.marketplace.currency if rule_set and rule_set.marketplace else ""
+        ),
+        "debug_stats": [(stat.id, stat.name) for stat in spec.stats.values()],
+        "debug_tools": debug_tools,
+        "debug_xp": debug_xp,
+        "debug_advancement": debug_advancement,
+        "debug_injection": world.state.debug_injection,
+        "pc_invincible": pc.invincible,
+        "item_kind_icons": magic.item_kind_icons if magic is not None else {},
+    }
+    if fragment:
+        return render_fragment(request, "campaign_live.html", **values)
+    return render(request, "campaign.html", status_code=status_code, error=error, **values)
 
 
 def _local_map(state: CampaignState, rule_set: Any) -> dict[str, Any] | None:

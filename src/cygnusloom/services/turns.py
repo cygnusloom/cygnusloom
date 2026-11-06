@@ -948,11 +948,16 @@ def _finish_reply(run: _Run, turn: Turn, reply: str, reasoning: str) -> int:
     too, and a rollback to the reply keeps the turn-end event before it."""
     if turn.actor is not None:
         _end_npc_encounter_turn(run, turn.actor)
-    return _record(
+    event_id = _record(
         run.engine,
         run.campaign_id,
         ChatGM(content=reply, model=run.model, reasoning=reasoning),
     )
+    # With the reply closed, the next player character's turn can start on its own. This also
+    # catches a player's initiative roll that settled the order during the reply.
+    with session_scope(run.engine) as db:
+        encounters.begin_player_turn_if_next(db, run.campaign_id)
+    return event_id
 
 
 def _take_debug_injection(run: _Run) -> DebugInjection | None:
@@ -1519,8 +1524,8 @@ async def start_encounter_turn(
     rng: random.Random | None = None,
 ) -> AsyncIterator[TurnEvent]:
     """Start the NPC whose turn is next in the encounter order. The GM plays it out and it is
-    streamed like a reply. The engine ends the NPC's turn when the reply finishes, so the player
-    only presses Start for another actor's turn."""
+    streamed like a reply. The engine ends the NPC's turn when the reply finishes, and the next
+    player character's turn begins on its own."""
     campaign = _campaigns().get_campaign(engine, owner_id, campaign_id)
     if campaign.model not in allowed_models:
         raise InvalidInput("that model is not available")
@@ -1534,7 +1539,7 @@ async def start_encounter_turn(
             character = encounters.begin_turn(db, campaign.id, name)
         if character.kind == PC_KIND:
             raise InvalidInput(
-                f"{character.name} is a player character; press Start on the page instead"
+                f"{character.name} is a player character; their turn begins on its own"
             )
         run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
         async for event in _guarded(run, _carry_on(run)):
@@ -1542,7 +1547,8 @@ async def start_encounter_turn(
 
 
 def begin_encounter_turn(engine: Engine, owner_id: int, campaign_id: int, name: str) -> None:
-    """Start a player character's turn from the encounter controls. The player then acts in chat
+    """Start a player character's turn explicitly. The turn normally begins on its own when it
+    comes up; this remains for an older page and for a direct retry. The player then acts in chat
     and presses End your turn. Refused while the GM's reply is still open."""
     _campaigns().get_campaign(engine, owner_id, campaign_id)
     with _campaigns()._exclusive(campaign_id):
@@ -1558,8 +1564,8 @@ def begin_encounter_turn(engine: Engine, owner_id: int, campaign_id: int, name: 
 
 def end_encounter_turn(engine: Engine, owner_id: int, campaign_id: int, name: str) -> None:
     """End the acting character's turn from the encounter controls. The player ends their own
-    character's turn and the GM ends an NPC's, but both are button-driven: a reply ending does not
-    advance the order by itself. Refused while the GM's reply is still open."""
+    character's turn and the GM ends an NPC's. The next player character's turn then begins on its
+    own; an NPC's still waits for Start. Refused while the GM's reply is still open."""
     _campaigns().get_campaign(engine, owner_id, campaign_id)
     with _campaigns()._exclusive(campaign_id):
         if _state(engine, campaign_id).turn is not None:
