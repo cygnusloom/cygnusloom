@@ -4,7 +4,7 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
 
 # Untriaged Issues
 
-1. We need to optimize unit tests further. Also, is there a way to constrain their RAM/CPU usage? I don't want them to use more than half of my system's resources.
+1. We need to optimize unit tests further. Also, is there a way to constrain their RAM/CPU usage? I don't want them to use more than half of my system's resources (not counting swap).
 
 # Triaged Issues
 
