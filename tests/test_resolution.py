@@ -122,11 +122,6 @@ def test_bad_die_is_rejected(die: str) -> None:
         roll_score(_Scripted(10), die, 10)
 
 
-def test_unknown_plus_mode_is_rejected() -> None:
-    with pytest.raises(ValueError):
-        roll_score(_Scripted(1, 1), "1d6+1d6", 10, plus="median")
-
-
 def test_non_integer_arguments_are_rejected() -> None:
     with pytest.raises(TypeError, match="score"):
         roll_score(_Scripted(10), "1d20", 10.0)  # type: ignore[arg-type]

@@ -278,6 +278,8 @@ def create_map(
     ambient: str = "",
     background_color: str = "",
     grid_color: str = "",
+    *,
+    state: CampaignState | None = None,
 ) -> dict[str, Any]:
     """Create a map at a location. A map is not necessarily an encounter: outside one it is a
     local map that shows the player character, NPCs, and props where they stand. With a
@@ -285,8 +287,12 @@ def create_map(
     marks; `columns` and `rows`, if given, override the template size, and a palette, ambient,
     or colour the caller gives overrides the template's. Without a template, columns and rows
     are required and the map starts empty. A location may have several maps; the newest is its
-    local map, and an encounter can start on any of them."""
-    state = load_state(db, campaign_id)
+    local map, and an encounter can start on any of them.
+
+    A caller that is already holding the campaign state, and keeping it current, can pass it
+    as `state`; otherwise the state is loaded from the log."""
+    if state is None:
+        state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_MAP_NAME)
     if name_key(name) in state.maps:
         raise InvalidInput(f"there is already an encounter map named {name!r}")
@@ -315,23 +321,20 @@ def create_map(
     else:
         columns, rows = _size(columns, rows)
     description = bounded_text(description, "description", MAX_MAP_TEXT)
-    record(
-        db,
-        campaign_id,
-        MapCreated(
-            name=name,
-            location=place.name,
-            columns=columns,
-            rows=rows,
-            description=description,
-            background=background,
-            palette=chosen_palette,
-            ambient=chosen_ambient,
-            background_color=chosen_background,
-            grid_color=chosen_grid,
-            marks=_mark_dicts(marks),
-        ),
+    event = MapCreated(
+        name=name,
+        location=place.name,
+        columns=columns,
+        rows=rows,
+        description=description,
+        background=background,
+        palette=chosen_palette,
+        ambient=chosen_ambient,
+        background_color=chosen_background,
+        grid_color=chosen_grid,
+        marks=_mark_dicts(marks),
     )
+    event.apply(state, record(db, campaign_id, event))
     db.commit()
     result: dict[str, Any] = {
         "created": "encounter map",
@@ -637,14 +640,18 @@ def place_map_token(
     column: int,
     row: int,
     encounter_objects: Mapping[str, EncounterObject] | None = None,
+    *,
+    state: CampaignState | None = None,
 ) -> dict[str, Any]:
     """Place a token on a local map outside an encounter. A token may be a character, an NPC, or
     a prop; a character must be at the map's location. During an encounter, positions belong to
     `Encounter.cells`, so it refuses and `place_participant` is used instead.
 
     The cell must be on the map and free: a blocking object or another token cannot share it.
-    Placing a token again moves it."""
-    state = load_state(db, campaign_id)
+    Placing a token again moves it. A caller that is already holding the campaign state, and
+    keeping it current, can pass it as `state`; otherwise the state is loaded from the log."""
+    if state is None:
+        state = load_state(db, campaign_id)
     entry = _map_named(state, map_name)
     if _in_encounter_on(state, entry):
         raise InvalidInput(
@@ -681,11 +688,8 @@ def place_map_token(
                 f"column {column}, row {row} is taken by {_token_name(other)} on {entry.name}"
             )
     display = character.name if character is not None else name
-    record(
-        db,
-        campaign_id,
-        MapTokenPlaced(map=entry.name, name=display, column=column, row=row),
-    )
+    event = MapTokenPlaced(map=entry.name, name=display, column=column, row=row)
+    event.apply(state, record(db, campaign_id, event))
     db.commit()
     return {"placed": display, "map": entry.name, "column": column, "row": row}
 

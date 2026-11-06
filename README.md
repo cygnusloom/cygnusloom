@@ -45,7 +45,11 @@ uv run uvicorn --factory cygnusloom.web.app:app_from_env --reload
 
 Open http://127.0.0.1:8000, use the development login, and create a campaign. These variables seed a fresh database only; the admin panel is authoritative afterwards, so manage existing models under **Admin > Models**. Keep a stable `CYGNUSLOOM_SECRET_KEY` across restarts: it encrypts model API keys.
 
-Run checks with `uv run pytest -n auto` and `uv run ruff check`.
+Run checks with `uv run python scripts/test.py` and `uv run ruff check`. The test runner sizes
+its worker pool from the CPU and memory free at the moment, never takes more than half of
+either (swap excluded), and enforces those ceilings where the operating system allows it. A
+bare `pytest` run is refused unless `CYGNUSLOOM_TEST_SETTINGS=1` is set; CI sets that marker and
+runs `pytest -n auto` without limits because its runner is dedicated to the job.
 
 ## Using DeepSeek
 

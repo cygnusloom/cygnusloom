@@ -77,14 +77,20 @@ def make_app(
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    """Refuse a serial run: the suite is written for pytest-xdist. `CYGNUSLOOM_SERIAL_TESTS=1`
-    allows one, for a debugger."""
-    if hasattr(config, "workerinput") or os.environ.get("CYGNUSLOOM_SERIAL_TESTS") == "1":
+    """Refuse a run that did not apply the project's test settings.
+
+    `scripts/test.py` sizes the run to the free CPU and RAM it finds, and sets
+    `CYGNUSLOOM_TEST_SETTINGS=1` once it has done so. CI sets the marker itself because a CI
+    runner is dedicated to the job, and a debugger can set it to run one test.
+    """
+    if hasattr(config, "workerinput") or os.environ.get("CYGNUSLOOM_TEST_SETTINGS") == "1":
         return
-    if not getattr(config.option, "numprocesses", None):
-        raise pytest.UsageError(
-            "You ran the tests serially. This means you haven't read the documentation. Review your instructions."
-        )
+    raise pytest.UsageError(
+        "Run the tests with the project's test runner, which applies this machine's test "
+        "settings: `uv run python scripts/test.py`. For CI or a debugger, set "
+        "CYGNUSLOOM_TEST_SETTINGS=1 and run pytest directly. See README.md, Local development, "
+        "and .github/skills/testing-cygnusloom/SKILL.md."
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -143,9 +149,23 @@ def app(settings: Settings, fake: FakeProvider) -> FastAPI:
 
 
 @pytest.fixture
-def client_factory(app: FastAPI) -> Callable[[], TestClient]:
-    """Each call returns a client with its own cookie jar, i.e. a separate browser."""
-    return lambda: TestClient(app)
+def client_factory(app: FastAPI) -> Iterator[Callable[[], TestClient]]:
+    """Each call returns a client with its own cookie jar, i.e., a separate browser.
+
+    The clients stay entered for the whole test. TestClient otherwise starts a portal thread
+    for every request; keeping it open turns that into one thread per client.
+    """
+    clients: list[TestClient] = []
+
+    def make() -> TestClient:
+        client = TestClient(app)
+        client.__enter__()
+        clients.append(client)
+        return client
+
+    yield make
+    for client in clients:
+        client.__exit__(None, None, None)
 
 
 @pytest.fixture
@@ -188,6 +208,15 @@ def csrf_token(client: TestClient, path: str) -> str:
     match = TOKEN_RE.search(client.get(path).text)
     assert match, f"no csrf token on {path}"
     _CSRF_TOKENS[client] = (cookie, match.group(1))
+    return match.group(1)
+
+
+def remember_csrf_token(client: TestClient, page: str) -> str:
+    """The token on a page a test already fetched. Remembering it avoids fetching the page
+    again just because the fetch changed the session cookie, as a rolled stat does."""
+    match = TOKEN_RE.search(page)
+    assert match, "no csrf token on the page"
+    _CSRF_TOKENS[client] = (_session_cookie(client), match.group(1))
     return match.group(1)
 
 

@@ -179,6 +179,9 @@ def _seed_local_maps(db: Any, campaign_id: int, template: Any, rule_set: RuleSet
     """Create the authored local map of every place that names one, and put the NPCs already
     there on its free cells. A map is created without an encounter, so the player can walk its
     rooms before a fight and the same map becomes the fight's board."""
+    # Loading the state once keeps the seeding linear: replaying the growing log for every map
+    # and every token made a world with authored maps slow to start.
+    state = load_state(db, campaign_id)
     for spot in template.locations:
         if not spot.map:
             continue
@@ -191,8 +194,8 @@ def _seed_local_maps(db: Any, campaign_id: int, template: Any, rule_set: RuleSet
             description=f"A local map of {spot.name}.",
             template=spot.map,
             templates=rule_set.encounter_templates,
+            state=state,
         )
-    state = load_state(db, campaign_id)
     for spot in template.locations:
         if not spot.map:
             continue
@@ -221,6 +224,7 @@ def _seed_local_maps(db: Any, campaign_id: int, template: Any, rule_set: RuleSet
                             column,
                             row,
                             rule_set.encounter_objects,
+                            state=state,
                         )
                     except InvalidInput:
                         continue

@@ -9,6 +9,11 @@ Generally you should test both the automated and UI aspects of the web app to en
 
 ## Automated tests
 
+- Run the suite with `uv run python scripts/test.py`, or `.venv/bin/python scripts/test.py`. It
+  sizes the worker pool from the CPU and memory free at the moment, never takes more than half
+  of either (swap excluded), and enforces those ceilings where the OS allows it. A bare pytest
+  run is refused unless `CYGNUSLOOM_TEST_SETTINGS=1` is set; CI sets it and runs
+  `pytest -n auto`, because a CI runner is dedicated to the job and needs no limits.
 - Use the project's own test runner and linter. Find them in the project config (`pyproject.toml`, `package.json`, `Makefile`) rather than assuming.
 - Never call a real LLM from automated tests. Use the fake or scripted provider, and block real network calls if the test setup supports it.
 - For multi-turn behavior, script the replies with the fake provider's input format instead of mocking inside the code.

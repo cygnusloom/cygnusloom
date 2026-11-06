@@ -30,7 +30,7 @@ from cygnusloom.services import campaigns as campaigns_service
 from cygnusloom.services import world
 from cygnusloom.services.events import CampaignState, Character, ChatGM, Turn, load_state, record
 from cygnusloom.services.world import WorldTools
-from tests.conftest import content_library, csrf_token, register
+from tests.conftest import content_library, csrf_token, register, remember_csrf_token
 
 DEFAULT_WORLD = "testhollow"
 DEFAULT_RULE_SET = "rolltest"
@@ -177,9 +177,9 @@ def create_character(
     first and pass them as ``stat-`` fields.
     """
     # The page rolls the stats into the session when the character is still pending, so load it
-    # before submitting. It also keeps the CSRF token and the roll in sync.
-    client.get(f"/campaigns/{campaign_id}")
-    token = csrf_token(client, f"/campaigns/{campaign_id}")
+    # before submitting. It also carries the CSRF token, which the same page refresh can change.
+    page = client.get(f"/campaigns/{campaign_id}").text
+    token = remember_csrf_token(client, page)
     form = {"csrf_token": token, "name": name}
     if pronouns is not None:
         form["pronouns"] = pronouns

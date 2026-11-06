@@ -33,4 +33,6 @@ jobs:
         run: .venv/bin/ruff check .
 
       - name: Run tests
+        env:
+          CYGNUSLOOM_TEST_SETTINGS: "1"
         run: .venv/bin/python -m pytest -n auto -q

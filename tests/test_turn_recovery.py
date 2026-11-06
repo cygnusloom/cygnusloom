@@ -74,8 +74,10 @@ class _SlowProvider(FakeProvider):
         return await super().chat(model, messages, tools)
 
     async def stream(self, model, messages, tools=None):
+        # One silent delay models a hung stream. Sleeping per word would only make the test
+        # longer, not slow down a phase any more than this does.
+        await asyncio.sleep(self.delay)
         async for item in super().stream(model, messages, tools):
-            await asyncio.sleep(self.delay)
             yield item
 
 
