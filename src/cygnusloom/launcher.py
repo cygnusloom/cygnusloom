@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import ctypes
+import ctypes.util
 import json
 import logging
 import os
 import secrets
+import shutil
 import socket
+import subprocess
 import sys
 import threading
 from collections.abc import MutableMapping
@@ -25,6 +29,8 @@ MAX_LOG_BYTES = 2_000_000
 LOG_BACKUPS = 3
 START_TIMEOUT_SECONDS = 30
 STOP_TIMEOUT_SECONDS = 10
+# Qt/PySide6 require at most this GLIBCXX version. A newer host is backward compatible.
+REQUIRED_GLIBCXX = b"GLIBCXX_3.4.29"
 
 
 def data_dir(override: str | None = None) -> Path:
@@ -94,6 +100,78 @@ def _ignore_model_environment(env: MutableMapping[str, str]) -> None:
             key.startswith("CYGNUSLOOM_LLM_") and key.endswith(("_API_KEY", "_BASE_URL"))
         ):
             del env[key]
+
+
+def _loaded_library_path(soname: str) -> Path | None:
+    """The path the process actually loaded for `soname`, from /proc/self/maps."""
+    try:
+        ctypes.CDLL(soname)
+    except OSError:
+        return None
+    try:
+        lines = Path("/proc/self/maps").read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+    for line in lines:
+        for field in reversed(line.split()):
+            name = Path(field).name
+            if field.startswith("/") and (name == soname or name.startswith(soname + ".")):
+                return Path(field)
+    return None
+
+
+def _library_has_symbol(path: Path, symbol: bytes) -> bool:
+    """Whether a shared library contains a versioned symbol. An unreadable file is treated as
+    usable, so an unusual system is never blocked by the preflight check."""
+    try:
+        return symbol in path.read_bytes()
+    except OSError:
+        return True
+
+
+def _linux_runtime_problem() -> str:
+    """A message when the host's libstdc++ is too old for QtWebEngine, or an empty string."""
+    if not sys.platform.startswith("linux"):
+        return ""
+    soname = ctypes.util.find_library("stdc++") or "libstdc++.so.6"
+    path = _loaded_library_path(soname)
+    if path is None or _library_has_symbol(path, REQUIRED_GLIBCXX):
+        return ""
+    return (
+        "Cygnus Loom needs the system C++ runtime (libstdc++) to provide "
+        "GLIBCXX_3.4.29 or newer. This system's libstdc++ is too old. "
+        "Install or update the C++ runtime, then start the game again."
+    )
+
+
+def _show_error(message: str) -> None:
+    """Show a native error dialog when possible, and always keep the message in stderr."""
+    if sys.platform == "win32":
+        try:
+            ctypes.windll.user32.MessageBoxW(0, message, APP_TITLE, 0x10)
+        except Exception:  # noqa: BLE001, S110 - a native dialog is best effort
+            pass
+    elif sys.platform.startswith("linux"):
+        for command, arguments in (
+            ("zenity", ["--error", "--text", message]),
+            ("kdialog", ["--error", message]),
+        ):
+            executable = shutil.which(command)
+            if executable is None:
+                continue
+            try:
+                subprocess.run(
+                    [executable, *arguments],
+                    check=False,
+                    timeout=60,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            except Exception:  # noqa: BLE001, S110 - a native dialog is best effort
+                pass
+            break
+    if sys.stderr is not None:
+        print(message, file=sys.stderr)
 
 
 class _InstanceLock:
@@ -187,6 +265,11 @@ def play(
 ) -> int:
     if not 0 <= port <= 65535:
         raise ValueError("port must be between 0 and 65535")
+    if not headless:
+        problem = _linux_runtime_problem()
+        if problem:
+            _show_error(problem)
+            return 1
     root = data_dir(data_dir_path)
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
     try:
@@ -199,7 +282,7 @@ def play(
     lock = _InstanceLock(root / "instance.lock")
     if not lock.acquire():
         running = _read_runtime(root)
-        print(
+        _show_error(
             f"Cygnus Loom is already running at {running}."
             if running
             else "Cygnus Loom is already running."
@@ -256,11 +339,11 @@ def play(
             thread.join(timeout=STOP_TIMEOUT_SECONDS)
         return 0
     except DesktopUnavailable as exc:
-        print(str(exc), file=sys.stderr)
+        _show_error(str(exc))
         return 1
     except Exception as exc:
         log.exception("Cygnus Loom failed to start")
-        print(f"Cygnus Loom could not start: {exc}", file=sys.stderr)
+        _show_error(f"Cygnus Loom could not start: {exc}")
         return 1
     finally:
         if server is not None and server.ready.is_set() and not server.should_exit:

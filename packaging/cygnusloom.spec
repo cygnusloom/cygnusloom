@@ -1,4 +1,3 @@
-# -*- mode: python ; coding: utf-8 -*-
 """PyInstaller one-file build for the single-player desktop edition.
 
 Build after `uv sync --group build`:
@@ -11,8 +10,9 @@ is bundled, so the window does not depend on a system webview or browser.
 
 from pathlib import Path
 
-import cygnusloom
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
+
+import cygnusloom
 
 ROOT = Path(SPECPATH).resolve().parent
 PACKAGE = Path(cygnusloom.__file__).resolve().parent
@@ -48,6 +48,21 @@ a = Analysis(
     excludes=["psycopg", "psycopg_binary", "pytest", "tests"],
     noarchive=False,
 )
+
+# The build runner's C++ runtime and fontconfig are older than what many players' rolling
+# desktops ship. Bundling them makes the host's Mesa/EGL drivers resolve against the old
+# copies (for example, GLIBCXX_3.4.32 is missing), so QtWebEngine cannot create a context.
+# Qt/PySide6 need only GLIBCXX_3.4.29, below the glibc 2.35 desktop baseline, so use the
+# host's copies instead. The launcher reports a clear error when the host is too old.
+HOST_LIBRARIES = ("libstdc++.so", "libgcc_s.so", "libfontconfig.so")
+host_libraries = [
+    entry[0] for entry in a.binaries if Path(entry[0]).name.startswith(HOST_LIBRARIES)
+]
+if host_libraries:
+    print("Using the host's system libraries: " + ", ".join(sorted(host_libraries)))
+a.binaries = [
+    entry for entry in a.binaries if not Path(entry[0]).name.startswith(HOST_LIBRARIES)
+]
 pyz = PYZ(a.pure)
 
 exe = EXE(
