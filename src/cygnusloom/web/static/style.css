@@ -507,6 +507,8 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .view { padding: 1rem 1.25rem; overflow-y: auto; }
 .creation { --creation-width: 72rem; padding-inline: max(1.25rem, calc((100% - var(--creation-width)) / 2)); }
 .creation-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: 1rem; align-items: start; }
+/* The campaign option cards and the brief/tables row are separate grids, so space them too. */
+.creation-grid + .creation-grid { margin-top: 1.5rem; }
 .campaign-brief { grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr); }
 .genre-options { display: flex; flex-wrap: wrap; gap: 0.45rem 1rem; }
 .genre-options label { display: flex; align-items: center; gap: 0.4rem; margin: 0; cursor: pointer; }
