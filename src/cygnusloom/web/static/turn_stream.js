@@ -269,8 +269,7 @@
       if (element && element !== transcript) element.scrollTop = top;
     }
     transcript.scrollTop = atBottom ? transcript.scrollHeight : transcriptTop;
-    // A campaign saved before player turns started automatically can still be waiting on the
-    // old Begin button. Start it now instead of making the player press it.
+    // BACKWARDS-COMPATIBILITY: 3 - start a player turn saved before turns auto-started.
     window.setTimeout(startPendingPlayerTurn, 0);
     return true;
   };
@@ -316,9 +315,8 @@
     }
   };
 
-  // A player character's turn starts automatically, but a page saved before that rule, or a
-  // state change outside a turn, may still render the old Begin form. Submit it without a page
-  // navigation and then take the fresh state.
+  // BACKWARDS-COMPATIBILITY: 3 - an old page may still render the Begin form for a player
+  // turn. Submit it without a page navigation and then take the fresh state.
   async function startPlayerTurn(form) {
     if (form.dataset.starting) return;
     form.dataset.starting = "1";
@@ -527,6 +525,10 @@
 
   // The campaign's opening starts on its own once the character exists: the player waits for it.
   const autoStart = document.querySelector("form[data-auto-start]");
-  if (autoStart) autoStart.requestSubmit();
-  else startPendingPlayerTurn();
+  if (autoStart) {
+    autoStart.requestSubmit();
+  } else {
+    // BACKWARDS-COMPATIBILITY: 3 - start an old page's waiting player turn.
+    startPendingPlayerTurn();
+  }
 })();

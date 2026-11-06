@@ -559,7 +559,7 @@ def test_campaign_page_shows_the_encounter_board_and_turn_controls(
 def test_an_idle_player_turn_gets_an_automatic_begin_form(
     client_factory: Callable[[], TestClient],
 ):
-    """A saved campaign can still be waiting on the old button; the page starts it without one."""
+    """BACKWARDS-COMPATIBILITY: 3 - a saved campaign may still wait on the old button."""
     client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
     app = client.app
     _call(app, campaign_id, "remove_participant", {"name": "Pip"})

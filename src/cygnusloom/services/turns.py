@@ -1546,6 +1546,7 @@ async def start_encounter_turn(
             yield event
 
 
+# BACKWARDS-COMPATIBILITY: 3 - old pages may still post to the explicit begin route.
 def begin_encounter_turn(engine: Engine, owner_id: int, campaign_id: int, name: str) -> None:
     """Start a player character's turn explicitly. The turn normally begins on its own when it
     comes up; this remains for an older page and for a direct retry. The player then acts in chat

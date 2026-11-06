@@ -14,3 +14,4 @@ Review the `cygnusloom-philosophy` skill before starting any development task.
 5. Commit once the change is tested. Check ISSUE_TRACKER.md to ensure all related issues are updated or removed.
 6. If you changed anything affecting the database, remove the existing cygnusloom.db file to ensure a fresh state for manual testing.
 7. From 1.0.0 on, keep changes backwards compatible; breaking changes need a major version bump.
+* Mark backwards-compatibility code with a comment like `BACKWARDS-COMPATIBILITY: 3`, naming the major version it can be removed in.

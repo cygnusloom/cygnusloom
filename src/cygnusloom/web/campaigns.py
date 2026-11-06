@@ -837,6 +837,7 @@ async def post_encounter_turn_stream(request: Request, campaign_id: int) -> Resp
     )
 
 
+# BACKWARDS-COMPATIBILITY: 3 - old pages may still post to the explicit begin route.
 @router.post("/{campaign_id}/encounter/turn/begin")
 async def post_encounter_turn_begin(request: Request, campaign_id: int) -> Response:
     """Start a player character's turn. The player then acts and ends it themselves."""
