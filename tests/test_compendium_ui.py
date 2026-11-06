@@ -10,7 +10,7 @@ from collections.abc import Callable
 from fastapi.testclient import TestClient
 
 from tests.factories import (
-    campaign_ready,
+    campaign_ready_fast,
     create_campaign,
     create_character,
     signed_in_client,
@@ -70,7 +70,7 @@ def test_the_standalone_page_notes_third_party_content(
 def test_a_campaign_has_a_compendium_view(
     client_factory: Callable[[], TestClient],
 ):
-    client, campaign_id = campaign_ready(client_factory)
+    client, campaign_id = campaign_ready_fast(client_factory)
     page = client.get(f"/campaigns/{campaign_id}").text
     assert 'data-view-target="compendium"' in page
     assert 'data-view="compendium"' in page

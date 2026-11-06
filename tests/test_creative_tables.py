@@ -21,6 +21,7 @@ from cygnusloom.content.library import (
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.dice_tables import roll_creative
 from cygnusloom.services.events import decode, events_since
+from tests.conftest import bundled_library
 from tests.test_combat import CAIRN, _fight
 from tests.test_content import _core, _rule_set, _world, _write
 
@@ -68,7 +69,7 @@ def _rule_set_tables(tree: Path, definitions: list[dict[str, Any]]) -> dict[str,
 
 
 def test_core_creative_tables_roll_one_die_with_an_entry_per_roll():
-    tables = ContentLibrary.load(DATA_DIR).rule_sets["cairn2e"].dice_tables
+    tables = bundled_library().rule_sets["cairn2e"].dice_tables
     for table_id in CORE_CREATIVE_TABLES:
         table = tables[table_id]
         assert table.creative
@@ -79,7 +80,7 @@ def test_core_creative_tables_roll_one_die_with_an_entry_per_roll():
 
 
 def test_core_offers_the_roll_creative_tool():
-    tools = ContentLibrary.load(DATA_DIR).core.tool_calls
+    tools = bundled_library().core.tool_calls
     assert "roll_creative" in tools
 
 

@@ -8,13 +8,19 @@ from dataclasses import dataclass
 from typing import Any
 
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import (
+    JSONResponse,
+    PlainTextResponse,
+    RedirectResponse,
+    StreamingResponse,
+)
 from starlette.responses import Response
 
 from cygnusloom.auth.deps import page_user, verify_csrf
 from cygnusloom.content.character import NO_CAMPAIGN, NO_CHARACTER, character_schema
 from cygnusloom.db.models import User
 from cygnusloom.llm.base import LLMError
+from cygnusloom.services import campaign_files
 from cygnusloom.services import level_up as level_up_service
 from cygnusloom.services.campaigns import (
     Delta,
@@ -83,9 +89,19 @@ from cygnusloom.web.rendering import render
 router = APIRouter(prefix="/campaigns")
 
 
+def _setup_redirect(request: Request) -> RedirectResponse | None:
+    """Single-player starts in the wizard instead of a dead campaign form."""
+    if request.app.state.settings.single_player and not request.app.state.catalog.model_ids():
+        return RedirectResponse("/setup", status_code=303)
+    return None
+
+
 @router.get("")
 def campaigns_page(request: Request) -> Response:
     user = page_user(request)
+    setup = _setup_redirect(request)
+    if setup is not None:
+        return setup
     campaigns = list_campaigns(request.app.state.engine, user.id)
     return render(request, "campaigns.html", campaigns=campaigns)
 
@@ -93,6 +109,9 @@ def campaigns_page(request: Request) -> Response:
 @router.get("/new")
 def new_campaign_page(request: Request) -> Response:
     user = page_user(request)
+    setup = _setup_redirect(request)
+    if setup is not None:
+        return setup
     if not request.app.state.catalog.model_ids():
         return _new_form(
             request,
@@ -107,6 +126,9 @@ def new_campaign_page(request: Request) -> Response:
 async def create(request: Request) -> Response:
     user = page_user(request)
     await verify_csrf(request)
+    setup = _setup_redirect(request)
+    if setup is not None:
+        return setup
     form = await request.form()
     label = form_text(form, "label")
     world_template = form_text(form, "world_template")
@@ -145,6 +167,44 @@ async def create(request: Request) -> Response:
             table_genres=table_genres,
         )
     return RedirectResponse(f"/campaigns/{campaign.id}", status_code=303)
+
+
+@router.post("/import")
+async def import_campaign_file(request: Request) -> Response:
+    """Rebuild a campaign from a JSON file exported by this or another server."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    upload = form.get("file")
+    if not hasattr(upload, "read"):
+        _flash(request, "Choose a Cygnus Loom campaign .json file.", "error")
+        return RedirectResponse("/campaigns", status_code=303)
+    data = await upload.read(campaign_files.MAX_IMPORT_BYTES + 1)
+    if len(data) > campaign_files.MAX_IMPORT_BYTES:
+        limit = campaign_files.MAX_IMPORT_BYTES // (1024 * 1024)
+        _flash(request, f"That file is larger than {limit} MB.", "error")
+        return RedirectResponse("/campaigns", status_code=303)
+    try:
+        result = campaign_files.import_campaign(
+            request.app.state.engine,
+            request.app.state.content,
+            request.app.state.catalog.model_ids(),
+            request.app.state.catalog.default_model_id(),
+            user.id,
+            data,
+        )
+    except (Conflict, InvalidInput) as exc:
+        _flash(request, f"Could not import the campaign: {exc}", "error")
+        return RedirectResponse("/campaigns", status_code=303)
+    message = f"Imported {result.campaign.name}."
+    if result.model_replaced:
+        message += (
+            f" The model {result.model_replaced} is not on this server; using {result.model_used}."
+        )
+    for warning in result.warnings:
+        message += f" {warning.capitalize()}."
+    _flash(request, message)
+    return RedirectResponse(f"/campaigns/{result.campaign.id}", status_code=303)
 
 
 @router.post("/{campaign_id}/label")
@@ -302,6 +362,28 @@ async def submit_advancement(request: Request, campaign_id: int) -> Response:
     except InvalidInput as exc:
         return _advancement_page(request, user, campaign_id, 400, str(exc))
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
+@router.get("/{campaign_id}/export")
+def export_campaign_file(request: Request, campaign_id: int) -> Response:
+    """Download the campaign row and its complete event log as one JSON file."""
+    user = page_user(request)
+    try:
+        filename, payload = campaign_files.export_campaign(
+            request.app.state.engine, user.id, campaign_id
+        )
+    except Conflict as exc:
+        return PlainTextResponse(str(exc), status_code=409)
+    except InvalidInput as exc:
+        return PlainTextResponse(str(exc), status_code=400)
+    return Response(
+        content=payload,
+        media_type="application/json; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @router.get("/{campaign_id}")

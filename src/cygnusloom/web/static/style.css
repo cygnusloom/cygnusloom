@@ -114,6 +114,12 @@ button.secondary:hover, button.secondary:focus-visible {
 .campaign-label-form label { flex: 1 1 auto; margin: 0; font-size: 0.85rem; color: var(--muted); }
 .campaign-label-form input { margin-top: 0.15rem; }
 .campaign-label-form button { flex: none; }
+.campaign-row > a.campaign-export { flex: none; color: var(--muted); font-size: 0.9rem; }
+.campaign-row > a.campaign-export:hover, .campaign-row > a.campaign-export:focus-visible { color: var(--accent); }
+.campaign-import { display: flex; align-items: flex-end; gap: 0.75rem; flex-wrap: wrap; }
+.campaign-import label { flex: 1 1 240px; margin: 0; }
+.campaign-import input[type="file"] { padding: 0.45rem; }
+.campaign-import button { flex: none; }
 
 .transcript { display: flex; flex-direction: column; gap: 0.75rem; margin: 1rem 0; }
 .message { padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--field); }
@@ -838,3 +844,38 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
 .map-key img { width: 100%; height: 100%; object-fit: contain; }
 .map-legend .muted { font-size: 0.62rem; }
 .encounter-status strong { color: var(--map-accent, var(--accent)); }
+
+/* First-run setup wizard */
+.setup-hero { margin-bottom: 1rem; }
+.setup-kicker {
+  margin: 0 0 0.25rem; color: var(--accent); font-size: 0.8rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+.setup-hero h1 { margin: 0 0 0.5rem; font-size: 2rem; }
+.setup-form h2 { margin-top: 1.5rem; font-size: 1.05rem; }
+.presets {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.75rem; margin: 1rem 0;
+}
+.preset {
+  display: block; margin: 0; padding: 0.85rem 1rem;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--field);
+  cursor: pointer; transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.preset:hover, .preset:focus-within { border-color: var(--accent); }
+.preset:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.preset input[type="radio"] { width: auto; margin: 0 0 0.35rem; padding: 0; }
+.preset strong { display: block; }
+.preset span { display: block; color: var(--muted); font-size: 0.85rem; }
+.preset .preset-docs { margin-top: 0.4rem; color: var(--accent); font-size: 0.8rem; }
+.setup-fields {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0 1rem;
+}
+.setup-fields label[hidden] { display: none; }
+.setup-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+.setup-actions button { margin: 0; }
+.setup-status {
+  min-height: 1.5rem; margin: 0.75rem 0 0; color: var(--muted); white-space: pre-wrap;
+}
+.setup-status:not(:empty) { color: var(--text); }

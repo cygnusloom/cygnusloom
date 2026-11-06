@@ -5,3 +5,10 @@
 - Creative tables from the Ironsworn Rulebook by Shawn Tomkin, licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), via the Datasworn transcription by rsek: https://ironswornrpg.com.
 - The Twin Lakes world uses content from the CAS-1 module *Trouble in Twin Lakes*.
 - Academia Arcana and the Unwritten Academy world are original content written for this project and released under the project's AGPL-3.0-or-later license.
+
+## Desktop edition dependencies
+
+The packaged Windows and Linux builds include PySide6 and QtWebEngine. PySide6 is Copyright
+(C) The Qt Company Ltd. and contributors and is licensed under the GNU Lesser General Public
+License, version 3. QtWebEngine includes Chromium and other third-party components under their
+own licenses. The packaged build includes those license texts.

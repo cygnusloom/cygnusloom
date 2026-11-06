@@ -66,6 +66,8 @@ from cygnusloom.services.world import (
 
 MAX_NAME = 120
 MAX_MESSAGE = 8000
+# A model id is `provider/model`, matching the campaign column.
+MAX_MODEL = 120
 # The player's optional setting/story brief at campaign creation. It is prompt text, not state.
 MAX_SETTING = 4000
 # Spoken words never contain angle brackets or call syntax, so either means a tool call was written.

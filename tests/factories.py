@@ -28,7 +28,7 @@ from sqlmodel import Session
 from cygnusloom.content.library import RuleSet
 from cygnusloom.services import campaigns as campaigns_service
 from cygnusloom.services import world
-from cygnusloom.services.events import CampaignState, Character, Turn, load_state
+from cygnusloom.services.events import CampaignState, Character, ChatGM, Turn, load_state, record
 from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library, csrf_token, register
 
@@ -303,6 +303,29 @@ def campaign_ready(
     created = create_character(client, campaign_id, name=name)
     assert created.status_code == 303, created.text
     answer(client, campaign_id, "continue")
+    return client, campaign_id
+
+
+def campaign_ready_fast(
+    client_factory: Callable[[], TestClient],
+    *,
+    label: str = DEFAULT_LABEL,
+    world_template: str = DEFAULT_WORLD,
+    rule_set: str = DEFAULT_RULE_SET,
+    name: str = DEFAULT_PC,
+) -> tuple[TestClient, int]:
+    """A campaign and character whose opening is closed with a recorded test reply instead of
+    running the model turn. Use it only when a test reads campaign state and never asserts on
+    the opening narration."""
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign(
+        client, label=label, world_template=world_template, rule_set=rule_set
+    )
+    created = create_character(client, campaign_id, name=name)
+    assert created.status_code == 303, created.text
+    with db(client.app) as session:
+        record(session, campaign_id, ChatGM(content="The opening plays out.", model="test"))
+        session.commit()
     return client, campaign_id
 
 

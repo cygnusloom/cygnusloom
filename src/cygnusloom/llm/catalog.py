@@ -208,9 +208,13 @@ class ModelCatalog:
         # An environment-only list becomes editable before the first database change.
         self.seed_from_env()
         with session_scope(self.engine) as db:
-            existing = db.exec(
-                select(LlmModel).where(LlmModel.provider == provider, LlmModel.model == model)
-            ).first()
+            existing = (
+                db.execute(
+                    select(LlmModel).where(LlmModel.provider == provider, LlmModel.model == model)
+                )
+                .scalars()
+                .first()
+            )
             if existing is not None:
                 raise Conflict("that model is already configured")
             if is_default:
@@ -227,6 +231,55 @@ class ModelCatalog:
             )
             db.add(row)
             db.flush()
+            self._ensure_default(db)
+            db.commit()
+            db.refresh(row)
+            return self._spec(row)
+
+    def upsert(
+        self,
+        provider: str,
+        model: str,
+        base_url: str = "",
+        api_key: str = "",
+        *,
+        is_default: bool = True,
+    ) -> ModelSpec:
+        """Add a model, or make an existing row editable again. Used by the setup wizard, so
+        running it twice with the same details is harmless."""
+        provider, model, _ = _identity(provider, model)
+        base_url = _check_base_url(provider, base_url)
+        self.seed_from_env()
+        with session_scope(self.engine) as db:
+            row = (
+                db.execute(
+                    select(LlmModel).where(LlmModel.provider == provider, LlmModel.model == model)
+                )
+                .scalars()
+                .first()
+            )
+            if row is None:
+                row = LlmModel(
+                    provider=provider,
+                    model=model,
+                    base_url=base_url,
+                    api_key=encrypt_api_key(self.settings.secret_key, api_key),
+                    enabled=True,
+                    is_default=False,
+                )
+                db.add(row)
+                db.flush()
+            else:
+                row.base_url = base_url
+                row.enabled = True
+                # A blank key means "keep the stored one", matching the admin page.
+                if api_key:
+                    row.api_key = encrypt_api_key(self.settings.secret_key, api_key)
+                db.add(row)
+            if is_default:
+                for other in db.execute(select(LlmModel)).scalars():
+                    other.is_default = other.id == row.id
+                    db.add(other)
             self._ensure_default(db)
             db.commit()
             db.refresh(row)

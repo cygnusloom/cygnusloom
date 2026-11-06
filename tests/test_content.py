@@ -23,7 +23,7 @@ from cygnusloom.content.library import (
     _load_rule_hooks,
 )
 from cygnusloom.services.hooks import HookContext, call_hook
-from tests.conftest import content_library
+from tests.conftest import bundled_library, content_library
 from tests.rolls import SocialRoll, social_roll
 
 
@@ -173,7 +173,7 @@ def tree(tmp_path: Path) -> Path:
 
 
 def test_bundled_content_loads():
-    library = ContentLibrary.load()
+    library = bundled_library()
     assert set(library.world_templates) == {"twin-lakes", "unwritten-world", "unwritten-academy"}
     assert library.world_templates["twin-lakes"].name == "Twin Lakes"
     twin_lakes = library.world_templates["twin-lakes"]
@@ -378,7 +378,7 @@ def test_cairn_hook_configurator_validates_consumable_features(feature, message)
 
 
 def test_bundled_worlds_say_which_rule_set_they_use():
-    library = ContentLibrary.load()
+    library = bundled_library()
     assert library.world_templates["twin-lakes"].rule_set == "cairn2e"
     assert library.world_templates["unwritten-world"].rule_set is None
     assert library.world_templates["unwritten-academy"].rule_set == "academia-arcana"
@@ -392,12 +392,12 @@ def test_bundled_worlds_say_which_rule_set_they_use():
 
 def test_every_bundled_rule_set_defines_ground_kinds():
     """Every bundled rule set defines ground kinds, so create_region works in its world."""
-    library = ContentLibrary.load()
+    library = bundled_library()
     assert all(rule_set.world_terrain for rule_set in library.rule_sets.values())
 
 
 def test_create_region_asks_for_varied_shapes_cut_to_the_ground():
-    tool = ContentLibrary.load().core.tool_calls["create_region"]
+    tool = bundled_library().core.tool_calls["create_region"]
     assert "six or more corners" in tool.description
     assert "uneven" in tool.description
     assert "cut to fit" in tool.description
@@ -407,7 +407,7 @@ def test_twin_lakes_map_matches_the_module_map():
     """The module's map has no scale bar. It gives travel times instead: Dunston is one hour
     from Isthmus Town, and the White Tower Fens are two hours from either. At four kilometres
     an hour on foot, the placed positions must agree with those times."""
-    places = {loc.id: loc for loc in ContentLibrary.load().world_templates["twin-lakes"].locations}
+    places = {loc.id: loc for loc in bundled_library().world_templates["twin-lakes"].locations}
 
     def km(a: str, b: str) -> float:
         pa, pb = places[a], places[b]
@@ -922,7 +922,7 @@ TESTSET_TERRAIN = [
 
 
 def test_bundled_terrain_and_regions_are_read():
-    library = ContentLibrary.load()
+    library = bundled_library()
     terrain = library.rule_sets["cairn2e"].world_terrain
     lake = terrain["lake"]
     assert (lake.name, lake.color) == ("Lake", "#2d6a8f")
@@ -938,7 +938,7 @@ def test_bundled_terrain_and_regions_are_read():
 
 
 def test_bundled_terrain_kinds_have_a_texture_and_ink(tree: Path):
-    terrain = ContentLibrary.load().rule_sets["cairn2e"].world_terrain
+    terrain = bundled_library().rule_sets["cairn2e"].world_terrain
     assert all(kind.pattern in TERRAIN_PATTERNS for kind in terrain.values())
     assert all(kind.ink and kind.ink.startswith("#") for kind in terrain.values())
     assert (terrain["lake"].pattern, terrain["lake"].ink) == ("waves", "#a9d4ea")
@@ -1157,7 +1157,7 @@ def test_table_options_must_be_text_or_named_text(tree: Path, options: list[Any]
 
 
 def test_cairn_campaign_options_are_the_omen_alone():
-    cairn = ContentLibrary.load().rule_sets["cairn2e"]
+    cairn = bundled_library().rule_sets["cairn2e"]
     assert set(cairn.campaign.fields) == {"omen"}
     assert "omen" in cairn.campaign.tables
     assert "omen" not in cairn.character.fields
@@ -1233,7 +1233,7 @@ def test_sentence_cap_is_read_from_narration(tree: Path):
 
 
 def test_bundled_cairn_prompts_and_cap_are_read():
-    cairn = ContentLibrary.load().rule_sets["cairn2e"]
+    cairn = bundled_library().rule_sets["cairn2e"]
     assert cairn.sentence_cap == 2
     ids = [fragment.id for fragment in cairn.prompt_fragments]
     assert ids == [
@@ -1260,7 +1260,7 @@ def test_bundled_cairn_prompts_and_cap_are_read():
         "setting_continuity",
         "local_maps",
     ]
-    core = ContentLibrary.load().core.prompt_fragments
+    core = bundled_library().core.prompt_fragments
     assert [fragment.id for fragment in core] == [
         "setting_forge",
         "setting_continuity",

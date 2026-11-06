@@ -35,6 +35,7 @@ from tests.conftest import content_library, csrf_token
 from tests.factories import (
     answer,
     campaign_ready,
+    campaign_ready_fast,
     create_character,
     place_pc,
     send_message,
@@ -433,10 +434,7 @@ def test_player_turn_starts_and_ends_by_button(
     assert state.encounter.acting is None
     assert state.encounter.round == 2
 
-
-def test_player_turn_starts_by_button_and_ends_by_button(client_factory: Callable[[], TestClient]):
-    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
-    app = client.app
+    # With only the party left, a direct begin/end round trip reports the ended turn.
     _call(app, campaign_id, "remove_participant", {"name": "Pip"})
     assert _encounter(app, campaign_id).encounter.acting is None
     _begin(app, campaign_id, "Ada")
@@ -495,10 +493,15 @@ def test_campaign_page_shows_the_encounter_board_and_turn_controls(
     assert acting.index("End your turn") < acting.index('id="composer"')
 
 
-def test_campaign_page_has_no_board_without_an_encounter(client_factory: Callable[[], TestClient]):
-    client, campaign_id = campaign_ready(client_factory)
-    assert "encounter-board" not in client.get(f"/campaigns/{campaign_id}").text
-    assert 'id="tab-world"' not in client.get(f"/campaigns/{campaign_id}").text
+def test_campaign_page_has_no_board_or_roster_without_an_encounter(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "encounter-board" not in page
+    assert 'id="tab-world"' not in page
+    assert "encounter-roster" not in page
+    assert 'class="side"' in page
 
 
 def test_token_labels_are_short_initials_or_a_prefix():
@@ -635,15 +638,6 @@ def test_campaign_page_lists_the_encounter_turn_order_under_the_map(
     acting = client.get(f"/campaigns/{campaign_id}").text
     assert '<li class="acting">' in acting
     assert '<span class="roster-state">acting</span>' in acting
-
-
-def test_campaign_page_has_no_roster_or_taller_map_without_an_encounter(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = campaign_ready(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert "encounter-roster" not in page
-    assert 'class="side"' in page
 
 
 def _npc(name: str) -> Character:

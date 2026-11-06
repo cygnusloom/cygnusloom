@@ -17,7 +17,7 @@ from cygnusloom.content.library import ContentLibrary
 from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.services.campaigns import _tool_context
 from cygnusloom.services.world import WorldTools
-from tests.factories import campaign_ready
+from tests.factories import campaign_ready_fast
 from tests.support import DEFAULT_RULE_SET, DEFAULT_WORLD, content_tree
 
 TABLE = "omen"
@@ -30,7 +30,7 @@ def _rule_set_table() -> dict[str, Any]:
 def test_campaign_tools_receive_ruleset_tables_and_inherited_core_tables(
     client_factory, tmp_path: Path
 ):
-    client, campaign_id = campaign_ready(client_factory)
+    client, campaign_id = campaign_ready_fast(client_factory)
     library = ContentLibrary.load(content_tree(tmp_path, definitions=[_rule_set_table()]))
     rule_set = library.rule_sets[DEFAULT_RULE_SET]
     world = library.world_content(DEFAULT_WORLD, rule_set.id)

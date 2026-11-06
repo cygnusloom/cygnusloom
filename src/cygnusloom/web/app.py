@@ -28,6 +28,7 @@ from cygnusloom.web.admin import router as admin_router
 from cygnusloom.web.campaigns import router as campaigns_router
 from cygnusloom.web.compendium import router as compendium_router
 from cygnusloom.web.rendering import render
+from cygnusloom.web.setup import router as setup_router
 
 SESSION_COOKIE = "cygnusloom_session"
 SECURE_SESSION_COOKIE = "__Host-cygnusloom_session"
@@ -61,7 +62,13 @@ def create_app(
         create_schema(app.state.engine)
     app.state.content = content if content is not None else ContentLibrary.load()
     app.state.limiter = RateLimiter()
-    app.state.oidc = oidc_provider if oidc_provider is not None else build_oidc_provider(settings)
+    app.state.oidc = (
+        None
+        if settings.single_player
+        else oidc_provider
+        if oidc_provider is not None
+        else build_oidc_provider(settings)
+    )
     app.state.catalog = ModelCatalog(app.state.engine, settings)
     app.state.catalog.seed_from_env()
     app.state.providers = ProviderFactory(settings, fake=fake_provider, catalog=app.state.catalog)
@@ -108,6 +115,7 @@ def create_app(
     app.add_exception_handler(NotFound, _not_found)
     app.mount("/static", RevalidatingStaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(accounts_router)
+    app.include_router(setup_router)
     app.include_router(campaigns_router)
     app.include_router(compendium_router)
     app.include_router(admin_router)

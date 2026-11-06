@@ -21,10 +21,10 @@ from cygnusloom.content.character import (
     roll_stats,
 )
 from cygnusloom.content.definitions import ContentError, Definition
-from cygnusloom.content.library import ContentLibrary
 from cygnusloom.services.tools import check_arguments
+from tests.conftest import bundled_library
 
-LIBRARY = ContentLibrary.load()
+LIBRARY = bundled_library()
 SPEC = LIBRARY.rule_sets["cairn2e"].character
 PLUS = LIBRARY.rule_sets["cairn2e"].plus
 

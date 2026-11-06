@@ -20,6 +20,7 @@ def test_distributions_exclude_untracked_runtime_and_private_files(tmp_path: Pat
     for name in (
         "README.md",
         "CREDITS.md",
+        "LICENSE",
         ".env.example",
         "src/cygnusloom/__init__.py",
         "src/cygnusloom/asset.txt",

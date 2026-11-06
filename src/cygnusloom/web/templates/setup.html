@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Set up Cygnus Loom{% endblock %}
+{% block content %}
+  <section class="card setup-hero">
+    <p class="setup-kicker">Welcome to Cygnus Loom</p>
+    <h1>Give your game master a mind</h1>
+    <p>
+      Everything runs on this computer. Choose a model below: a free one running locally, a
+      hosted one you already have a key for, or the scripted demo to look around first.
+    </p>
+    {% if models %}
+      <p class="muted">
+        Already configured:
+        {% for model in models %}<span class="tag">{{ model.model_id }}</span>{% endfor %}
+        Saving here makes the new model the default for new campaigns.
+      </p>
+    {% endif %}
+    {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+    <p class="muted">
+      Your database, logs, and model keys stay in
+      <span class="mono">{{ data_dir or "the app's data folder" }}</span>.
+    </p>
+  </section>
+
+  <form id="setup-form" method="post" action="/setup" class="card setup-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <h2>1. Choose a provider</h2>
+    <div class="presets">
+      {% for preset in presets %}
+        <label class="preset">
+          <input type="radio" name="preset" value="{{ preset.key }}"
+                 data-base-url="{{ preset.base_url }}"
+                 data-model="{{ preset.model }}"
+                 data-needs-key="{{ '1' if preset.needs_key else '0' }}"
+                 {% if values.get("preset", "ollama") == preset.key %}checked{% endif %}>
+          <strong>{{ preset.label }}</strong>
+          <span>{{ preset.summary }}</span>
+          {% if preset.docs_url %}
+            <a class="preset-docs" href="{{ preset.docs_url }}" target="_blank"
+               rel="noreferrer" onclick="event.stopPropagation()">Open setup page</a>
+          {% endif %}
+        </label>
+      {% endfor %}
+    </div>
+
+    <h2>2. Connect</h2>
+    <div class="setup-fields">
+      <label>Model name
+        <input type="text" id="model" name="model" value="{{ values.get('model', '') }}"
+               placeholder="llama3.2:3b" autocomplete="off">
+      </label>
+      <label>Base URL
+        <input type="url" id="base_url" name="base_url" value="{{ values.get('base_url', '') }}"
+               placeholder="https://api.example.com/v1" autocomplete="off">
+      </label>
+      <label id="key-field">API key
+        <input type="password" id="api_key" name="api_key" value=""
+               autocomplete="new-password" placeholder="optional for local models">
+      </label>
+    </div>
+    <p class="muted" id="setup-hint"></p>
+
+    <div class="setup-actions">
+      <button type="button" class="secondary" id="detect">Find installed models</button>
+      <button type="button" class="secondary" id="test">Test connection</button>
+      <button type="submit">Save and play</button>
+    </div>
+    <p id="setup-status" class="setup-status" role="status"></p>
+  </form>
+{% endblock %}
+{% block scripts %}
+  <script>
+    (() => {
+      const form = document.getElementById("setup-form");
+      const radios = [...form.querySelectorAll('input[name="preset"]')];
+      const model = document.getElementById("model");
+      const base = document.getElementById("base_url");
+      const keyField = document.getElementById("key-field");
+      const status = document.getElementById("setup-status");
+      const hint = document.getElementById("setup-hint");
+      let edited = false;
+
+      const selected = () => radios.find((radio) => radio.checked) || radios[0];
+
+      function applyPreset() {
+        const radio = selected();
+        if (!radio) return;
+        if (!edited) {
+          base.value = radio.dataset.baseUrl || "";
+          model.value = radio.dataset.model || "";
+        }
+        keyField.hidden = radio.dataset.needsKey !== "1";
+        hint.textContent = radio.dataset.needsKey === "1"
+          ? "The key is stored encrypted in the local database. It is only sent to this provider."
+          : "No API key is needed for this option.";
+      }
+
+      model.addEventListener("input", () => { edited = true; });
+      base.addEventListener("input", () => { edited = true; });
+      radios.forEach((radio) => radio.addEventListener("change", () => {
+        edited = false;
+        applyPreset();
+      }));
+      applyPreset();
+
+      async function post(path) {
+        status.textContent = "Checking…";
+        const response = await fetch(path, { method: "POST", body: new FormData(form) });
+        if (!response.ok) {
+          status.textContent = "The check failed. Try again.";
+          return null;
+        }
+        return response.json();
+      }
+
+      document.getElementById("detect")?.addEventListener("click", async () => {
+        const result = await post("/setup/detect");
+        if (!result) return;
+        if (result.error) { status.textContent = result.error; return; }
+        if (!result.models.length) {
+          status.textContent = "That server did not report any models.";
+          return;
+        }
+        document.getElementById("detected-models")?.remove();
+        const list = document.createElement("datalist");
+        list.id = "detected-models";
+        for (const name of result.models) {
+          const option = document.createElement("option");
+          option.value = name;
+          list.append(option);
+        }
+        document.body.append(list);
+        model.setAttribute("list", "detected-models");
+        model.value = result.models[0];
+        edited = true;
+        status.textContent = `${result.models.length} model(s) found. Pick one above.`;
+      });
+
+      document.getElementById("test")?.addEventListener("click", async () => {
+        const result = await post("/setup/test");
+        if (!result) return;
+        const timing = result.latency_ms ? ` (${result.latency_ms} ms)` : "";
+        status.textContent = `${result.message}${timing}`;
+      });
+    })();
+  </script>
+{% endblock %}

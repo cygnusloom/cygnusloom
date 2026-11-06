@@ -83,6 +83,9 @@ class GameEvent:
     # visibility next to its kind, so there is no central list to update when adding an event.
     hidden: ClassVar[bool] = False
     channel: ClassVar[Channel] = Channel.LOG
+    # Payload fields that hold another event's id, mapped to the kinds that event must have.
+    # Importing a campaign allocates new event ids, so these fields need remapping.
+    id_refs: ClassVar[dict[str, tuple[str, ...]]] = {}
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
@@ -913,6 +916,7 @@ class NpcRemoved(GameEvent):
 class NoteUpdated(GameEvent):
     kind: ClassVar[str] = "note.updated"
     hidden: ClassVar[bool] = True
+    id_refs: ClassVar[dict[str, tuple[str, ...]]] = {"note_id": ("note.added",)}
 
     note_id: int
     text: str
@@ -933,6 +937,7 @@ class NoteUpdated(GameEvent):
 class NoteRemoved(GameEvent):
     kind: ClassVar[str] = "note.removed"
     hidden: ClassVar[bool] = True
+    id_refs: ClassVar[dict[str, tuple[str, ...]]] = {"note_id": ("note.added",)}
 
     note_id: int
     # Kept for the Log, which shows the note that was removed.
@@ -1149,6 +1154,9 @@ class SummaryUpdated(GameEvent):
     kind: ClassVar[str] = "summary.updated"
     hidden: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.INTERNAL
+    id_refs: ClassVar[dict[str, tuple[str, ...]]] = {
+        "through": ("chat.player", "chat.gm"),
+    }
 
     summary: str
     through: int
@@ -3779,6 +3787,7 @@ class ObjectTaken(GameEvent):
     their own events."""
 
     kind: ClassVar[str] = "object.taken"
+    id_refs: ClassVar[dict[str, tuple[str, ...]]] = {"object_id": ("object.placed",)}
 
     object_id: int
     name: str

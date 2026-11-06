@@ -11,9 +11,9 @@ import json
 
 import pytest
 
-from cygnusloom.content.library import DATA_DIR, ContentLibrary
+from cygnusloom.content.library import DATA_DIR
 from cygnusloom.services.prompts import state_instruction
-from tests.conftest import content_library
+from tests.conftest import bundled_library, content_library
 
 BUNDLED_RULE_SETS = ("academia-arcana", "cairn2e", "worldswithoutnumber")
 SETTING_FORGE = "There is no published setting"
@@ -30,7 +30,7 @@ def _own_table_ids(rule_set: str) -> set[str]:
 
 
 def test_core_carries_the_world_creation_tables():
-    tables = ContentLibrary.load().core.dice_tables
+    tables = bundled_library().core.dice_tables
     assert {"significant_terrain", "dungeon_reaction", "village_rationale"} <= set(tables)
     assert "setting_premise" in tables
     assert tables["setting_premise"].creative
@@ -38,14 +38,14 @@ def test_core_carries_the_world_creation_tables():
 
 @pytest.mark.parametrize("rule_set", BUNDLED_RULE_SETS)
 def test_every_bundled_ruleset_inherits_the_core_worldgen_tables(rule_set: str):
-    rules = ContentLibrary.load().rule_sets[rule_set]
+    rules = bundled_library().rule_sets[rule_set]
     assert "significant_terrain" in rules.dice_tables
     assert "setting_premise" in rules.dice_tables
     assert "significant_terrain" not in _own_table_ids(rule_set)
 
 
 def test_core_carries_the_setting_instructions_for_a_blank_world():
-    core = ContentLibrary.load().core.prompt_fragments
+    core = bundled_library().core.prompt_fragments
     assert [fragment.id for fragment in core] == [
         "setting_forge",
         "setting_continuity",
@@ -65,7 +65,7 @@ def test_a_generic_only_rule_set_leaves_the_fantasy_tables_out():
 
 
 def test_the_setting_forge_names_no_table_a_genre_choice_could_hide():
-    core = ContentLibrary.load(DATA_DIR).core
+    core = bundled_library().core
     prompt = next(
         fragment.text for fragment in core.prompt_fragments if fragment.id == "setting_forge"
     )

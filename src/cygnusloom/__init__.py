@@ -51,7 +51,7 @@ def license_text() -> str:
         ]
     except PackageNotFoundError:  # pragma: no cover - running from an unpacked source tree
         pass
-    return _first_text([*installed, SOURCE_TREE / "LICENSE"])
+    return _first_text([PACKAGE_DIR / "LICENSE", *installed, SOURCE_TREE / "LICENSE"])
 
 
 @cache

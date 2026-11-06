@@ -41,7 +41,7 @@ CLASSES_PATH = PROGRESSION_PATH.with_name("classes.json")
 TEMPLATES_PATH = PROGRESSION_PATH.with_name("templates.json")
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def progression_definition() -> dict[str, Any]:
     definitions = json.loads(PROGRESSION_PATH.read_text(encoding="utf-8"))
     assert isinstance(definitions, list)
@@ -319,7 +319,7 @@ def test_runtime_resolver_requires_a_valid_progression(
         require_wwn_progression(SimpleNamespace(rule_data={"progression": {}}))
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def character_spec(progression_definition: dict[str, Any]) -> CharacterSpec:
     return _character_spec(progression_definition)
 

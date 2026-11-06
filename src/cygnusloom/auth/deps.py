@@ -7,7 +7,7 @@ from fastapi import HTTPException, Request
 
 from cygnusloom.auth.claims import has_admin_role
 from cygnusloom.db.models import User, UserSession
-from cygnusloom.services.accounts import user_roles
+from cygnusloom.services.accounts import get_or_create_local_user, user_roles
 from cygnusloom.services.sessions import (
     as_utc,
     create_session,
@@ -41,13 +41,24 @@ def client_ip(request: Request) -> str:
 
 def current_session(request: Request) -> tuple[User, UserSession] | None:
     session_id = request.session.get(SESSION_KEY)
+    if isinstance(session_id, str) and session_id:
+        found = get_session(request.app.state.engine, session_id)
+        if found is not None:
+            return found
+        request.session.pop(SESSION_KEY, None)
+    if request.app.state.settings.single_player:
+        return _local_session(request)
+    return None
+
+
+def _local_session(request: Request) -> tuple[User, UserSession] | None:
+    """Single-player mode has no login page: the local player is signed in on first use."""
+    user = get_or_create_local_user(request.app.state.engine)
+    sign_in(request, user, datetime.now(UTC))
+    session_id = request.session.get(SESSION_KEY)
     if not isinstance(session_id, str) or not session_id:
         return None
-    found = get_session(request.app.state.engine, session_id)
-    if found is None:
-        request.session.pop(SESSION_KEY, None)
-        return None
-    return found
+    return get_session(request.app.state.engine, session_id)
 
 
 def current_user(request: Request) -> User | None:
@@ -66,6 +77,8 @@ def is_admin_user(request: Request, user: User | None) -> bool:
     if user is None:
         return False
     settings = request.app.state.settings
+    if settings.single_player:
+        return True
     return has_admin_role(user_roles(user), settings.oidc_admin_values)
 
 
@@ -78,6 +91,8 @@ def admin_user(request: Request) -> User:
 
 def require_recent_auth(request: Request, next_path: str) -> None:
     """Destructive admin actions need a sign-in inside the step-up window."""
+    if request.app.state.settings.single_player:
+        return
     minutes = request.app.state.settings.step_up_minutes
     if minutes <= 0:
         return

@@ -5,7 +5,10 @@
   <section class="card">
     <div class="heading">
       <h1>Language models</h1>
-      <span class="muted">{{ "database" if source == "database" else "not configured" }}</span>
+      <span>
+        {% if single_player %}<a class="button" href="/setup?force=1">Setup wizard</a>{% endif %}
+        <span class="muted">{{ "database" if source == "database" else "not configured" }}</span>
+      </span>
     </div>
     <p class="muted">
       Cygnus Loom does not provide a model. Add at least one model here before players create

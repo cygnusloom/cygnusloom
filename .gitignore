@@ -3,6 +3,8 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .copilot_testing
+build/
+dist/
 *.db
 *.db-shm
 *.db-wal

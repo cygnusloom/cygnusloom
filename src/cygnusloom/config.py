@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 DEFAULT_MODELS: tuple[str, ...] = ()
 DEFAULT_MODEL = ""
@@ -45,6 +46,8 @@ class Settings:
     secure_cookies: bool = False
     auto_create_schema: bool = True
     test_login_admin: bool = False
+    single_player: bool = False
+    data_dir: str = ""
 
 
 def _csv(value: str) -> tuple[str, ...]:
@@ -124,6 +127,16 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     test_login_admin = _bool(env.get("CYGNUSLOOM_TEST_LOGIN_ADMIN"))
     if test_login_admin and not test_login:
         raise RuntimeError("CYGNUSLOOM_TEST_LOGIN_ADMIN requires CYGNUSLOOM_TEST_LOGIN")
+    single_player = _bool(env.get("CYGNUSLOOM_SINGLE_PLAYER"))
+    if single_player:
+        if environment == "production":
+            raise RuntimeError("CYGNUSLOOM_SINGLE_PLAYER cannot run in production")
+        if test_login or test_login_admin:
+            raise RuntimeError("CYGNUSLOOM_SINGLE_PLAYER has its own local sign-in")
+        if urlsplit(base_url).hostname not in ("127.0.0.1", "localhost", "::1"):
+            raise RuntimeError(
+                "CYGNUSLOOM_BASE_URL must be a loopback address in single-player mode"
+            )
     if environment == "production":
         if test_login or test_login_admin:
             raise RuntimeError("test login must be off in production")
@@ -139,7 +152,8 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         if not oidc_issuer.startswith("https://"):
             raise RuntimeError("CYGNUSLOOM_OIDC_ISSUER must use https in production")
     auto_create = env.get(
-        "CYGNUSLOOM_AUTO_CREATE_SCHEMA", "1" if environment == "development" else "0"
+        "CYGNUSLOOM_AUTO_CREATE_SCHEMA",
+        "1" if environment == "development" or single_player else "0",
     )
     return Settings(
         database_url=env.get("CYGNUSLOOM_DATABASE_URL", "sqlite:///./cygnusloom.db"),
@@ -167,4 +181,6 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         secure_cookies=secure_cookies,
         auto_create_schema=_bool(auto_create),
         test_login_admin=test_login_admin,
+        single_player=single_player,
+        data_dir=env.get("CYGNUSLOOM_DATA_DIR", "").strip(),
     )

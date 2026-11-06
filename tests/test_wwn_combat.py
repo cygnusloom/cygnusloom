@@ -979,6 +979,8 @@ def test_an_important_npc_is_mortally_wounded_rather_than_killed(client_factory)
         npc = load_state(db, campaign_id).characters[name_key("Elder Marrow")]
         assert npc.important is True
         assert (npc.dying_rounds, npc.dead) == (6, False)
+    [harmed] = _events(app, campaign_id, Harmed.kind)
+    assert harmed.status == "mortally wounded"
 
 
 def test_a_week_of_bed_rest_ends_frail(client_factory):

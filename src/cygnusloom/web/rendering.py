@@ -85,6 +85,8 @@ def render(request: Request, name: str, status_code: int = 200, **context: Any) 
         "step_up_done": request.session.pop("step_up_done", False),
         "oidc_account_url": settings.oidc_account_url
         or account_management_url(settings.oidc_issuer),
+        "single_player": settings.single_player,
+        "data_dir": settings.data_dir,
         "app_version": __version__,
         "website_url": WEBSITE_URL,
         "source_url": SOURCE_URL,

@@ -1,0 +1,69 @@
+name: Desktop build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: CygnusLoom-windows-x64
+            path: dist/CygnusLoom.exe
+          - os: ubuntu-22.04
+            artifact: CygnusLoom-linux-x64
+            path: dist/CygnusLoom
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Install build dependencies
+        run: uv sync --frozen --group build
+
+      - name: Build the one-file app
+        run: uv run pyinstaller --clean --noconfirm packaging/cygnusloom.spec
+
+      - name: Smoke test the Linux build
+        if: runner.os == 'Linux'
+        run: |
+          ./dist/CygnusLoom --headless --port 8765 --data-dir "$RUNNER_TEMP/cygnusloom" &
+          pid=$!
+          ready=0
+          for _ in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8765/healthz; then ready=1; break; fi
+            sleep 1
+          done
+          kill "$pid" || true
+          test "$ready" = 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.path }}
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            CygnusLoom-windows-x64/CygnusLoom.exe
+            CygnusLoom-linux-x64/CygnusLoom

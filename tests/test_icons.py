@@ -265,22 +265,24 @@ def test_every_svg_on_disk_is_registered():
     assert on_disk == registered
 
 
-@pytest.mark.parametrize("svg_file", _svg_files(), ids=lambda p: p.name)
-def test_svg_is_well_formed_and_self_contained(svg_file: Path):
-    root = ET.fromstring(svg_file.read_text(encoding="utf-8"))
-    assert root.tag == SVG_NS + "svg"
-    assert root.get("viewBox") == "0 0 64 64"
+def test_every_svg_is_well_formed_and_self_contained():
+    files = _svg_files()
+    assert files, "no SVG icons found"
+    for svg_file in files:
+        root = ET.fromstring(svg_file.read_text(encoding="utf-8"))
+        assert root.tag == SVG_NS + "svg", f"{svg_file.name}: root is not svg"
+        assert root.get("viewBox") == "0 0 64 64", f"{svg_file.name}: wrong viewBox"
 
-    for element in root.iter():
-        tag = element.tag.rsplit("}", 1)[-1]
-        assert tag not in {"script", "image", "foreignObject"}, svg_file.name
-        for name, value in element.attrib.items():
-            local = name.rsplit("}", 1)[-1]
-            if local in {"href", "src"}:
-                assert value.startswith("#"), f"{svg_file.name}: external {local}={value}"
-            if local == "style" or local == "fill" or local == "stroke":
-                assert "url(" not in value or "url(#" in value, svg_file.name
-            assert not _EXTERNAL_REF.search(value), f"{svg_file.name}: {name}={value}"
+        for element in root.iter():
+            tag = element.tag.rsplit("}", 1)[-1]
+            assert tag not in {"script", "image", "foreignObject"}, svg_file.name
+            for name, value in element.attrib.items():
+                local = name.rsplit("}", 1)[-1]
+                if local in {"href", "src"}:
+                    assert value.startswith("#"), f"{svg_file.name}: external {local}={value}"
+                if local == "style" or local == "fill" or local == "stroke":
+                    assert "url(" not in value or "url(#" in value, svg_file.name
+                assert not _EXTERNAL_REF.search(value), f"{svg_file.name}: {name}={value}"
 
 
 def test_icon_path_unknown_id_raises_key_error():

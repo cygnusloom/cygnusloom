@@ -4,8 +4,6 @@ import pytest
 
 from cygnusloom.content.definitions import ContentError, Definition
 from cygnusloom.content.library import (
-    DATA_DIR,
-    ContentLibrary,
     DieGrowth,
     WeatherPenalty,
     WildernessAlternative,
@@ -14,6 +12,7 @@ from cygnusloom.content.library import (
     _load_dice_table,
     _load_wilderness,
 )
+from tests.conftest import bundled_library
 
 WEATHER = {
     "spring": ["Nice", "Fair", "Fair", "Unpleasant", "Inclement", "Extreme"],
@@ -25,16 +24,19 @@ EVENTS = ["Encounter", "Sign", "Environment", "Loss", "Exhaustion", "Discovery"]
 
 
 @pytest.fixture(scope="module")
-def wilderness():
-    rule_set = ContentLibrary.load(DATA_DIR).rule_sets["cairn2e"]
-    assert rule_set.wilderness is not None
-    return rule_set.wilderness
+def cairn():
+    return bundled_library().rule_sets["cairn2e"]
 
 
 @pytest.fixture(scope="module")
-def dice_tables():
-    rule_set = ContentLibrary.load(DATA_DIR).rule_sets["cairn2e"]
-    return rule_set.dice_tables
+def wilderness(cairn):
+    assert cairn.wilderness is not None
+    return cairn.wilderness
+
+
+@pytest.fixture(scope="module")
+def dice_tables(cairn):
+    return cairn.dice_tables
 
 
 def test_the_real_cairn_wilderness_has_five_actions(wilderness):

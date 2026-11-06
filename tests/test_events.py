@@ -299,3 +299,12 @@ def test_a_recorded_reply_clears_the_turns_revision():
     state.turn = Turn(opener=3, text="", begun=True, revision="the old fault")
     ChatGM(content="The story moves on.", model="m").apply(state, 4)
     assert state.turn is None
+
+
+def test_event_id_reference_fields_are_real_payload_fields():
+    """A campaign import remaps every `id_refs` key, so a typo must fail loudly."""
+    from dataclasses import fields
+
+    for kind, cls in EVENT_TYPES.items():
+        declared = {field.name for field in fields(cls)}
+        assert set(cls.id_refs) <= declared, kind

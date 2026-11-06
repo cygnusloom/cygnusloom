@@ -11,15 +11,18 @@
     <a class="brand" href="/">Cygnus Loom</a>
     <nav>
       {% if user %}
+        {% if single_player %}<span class="tag">single-player</span>{% endif %}
         <a href="/campaigns">Campaigns</a>
         <a href="/compendium">Compendium</a>
         <a href="/account">Account</a>
         {% if is_admin %}<a href="/admin">Admin</a>{% endif %}
         <a href="/license">About</a>
-        <form method="post" action="/logout" class="inline">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <button type="submit">Log out</button>
-        </form>
+        {% if not single_player %}
+          <form method="post" action="/logout" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit">Log out</button>
+          </form>
+        {% endif %}
       {% else %}
         <a href="/license">About</a>
         <a href="/login">Log in</a>

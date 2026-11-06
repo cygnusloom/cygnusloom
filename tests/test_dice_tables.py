@@ -9,12 +9,12 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, func, select
 
 from cygnusloom.content.definitions import ContentError, Definition
-from cygnusloom.content.library import DATA_DIR, ContentLibrary, _load_dice_table
+from cygnusloom.content.library import _load_dice_table
 from cygnusloom.db.models import Event
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.dice_tables import roll_tables
 from cygnusloom.services.events import decode, events_since
-from tests.conftest import content_library
+from tests.conftest import bundled_library, content_library
 from tests.test_combat import CAIRN, _fight
 
 TABLES_ROLLED = "dice.tables_rolled"
@@ -44,13 +44,13 @@ def _event_count(db: Session, campaign_id: int) -> int:
 
 
 def test_the_real_cairn_rule_set_loads_its_dice_tables():
-    tables = ContentLibrary.load(DATA_DIR).rule_sets["cairn2e"].dice_tables
+    tables = bundled_library().rule_sets["cairn2e"].dice_tables
     assert {"dungeon_reaction", "die_of_fate", *MONSTER_TABLES} <= set(tables)
     assert tables["dungeon_reaction"].dice == "2d6"
 
 
 def test_cairn_reaction_table_maps_rolls_to_results():
-    reaction = ContentLibrary.load(DATA_DIR).rule_sets["cairn2e"].dice_tables["dungeon_reaction"]
+    reaction = bundled_library().rule_sets["cairn2e"].dice_tables["dungeon_reaction"]
     assert reaction.row_for(2).result == "Hostile"
     assert reaction.row_for(7).result == "Curious"
     assert reaction.row_for(12).result == "Helpful"
@@ -58,7 +58,7 @@ def test_cairn_reaction_table_maps_rolls_to_results():
 
 @pytest.mark.parametrize("table_id", MONSTER_TABLES)
 def test_cairn_monster_tables_have_twenty_rows_covering_one_to_twenty(table_id):
-    table = ContentLibrary.load(DATA_DIR).rule_sets["cairn2e"].dice_tables[table_id]
+    table = bundled_library().rule_sets["cairn2e"].dice_tables[table_id]
     assert table.dice == "1d20"
     assert len(table.rows) == 20
     assert [(row.low, row.high) for row in table.rows] == [(n, n) for n in range(1, 21)]

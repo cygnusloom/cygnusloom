@@ -10,6 +10,7 @@ import pytest
 from cygnusloom.content.character import CharacterError, build_character, check_choices, resolve
 from cygnusloom.content.definitions import ContentError, Definition
 from cygnusloom.content.library import ContentLibrary
+from tests.conftest import bundled_library
 from tests.test_content import _core, _world
 
 
@@ -118,7 +119,7 @@ def test_malformed_template_constraints_are_rejected(overrides: dict[str, Any]):
 
 
 def test_same_worlds_without_number_tradition_cannot_be_chosen_twice():
-    spec = ContentLibrary.load().rule_sets["worldswithoutnumber"].character
+    spec = bundled_library().rule_sets["worldswithoutnumber"].character
     with pytest.raises(CharacterError, match="two different traditions"):
         check_choices(
             spec,

@@ -2003,10 +2003,10 @@ def test_discovered_places_are_marked_in_lookups(client_factory: Callable[[], Te
     assert entry["position_km"] == {"x": 0.6, "y": 0.5}
 
 
-def test_map_shows_only_discovered_places_with_positions(
+def test_map_and_page_show_only_discovered_places_with_positions(
     client_factory: Callable[[], TestClient], app
 ):
-    _, campaign_id = _campaign_id(client_factory)
+    client, campaign_id = _campaign_id(client_factory)
     _give_the_map_ground(app, campaign_id)
     _tool(
         app,
@@ -2050,27 +2050,7 @@ def test_map_shows_only_discovered_places_with_positions(
         "Mossbell Hollow": "MH",
     }
 
-
-def test_map_on_a_fresh_campaign_has_a_default_scale(client_factory: Callable[[], TestClient], app):
-    _, campaign_id = _campaign_id(client_factory)
-    view = world.map_view(_state(app, campaign_id))
-    assert view.radius_km == 1.1
-    assert [m.name for m in view.markers] == ["Mossbell Hollow"]
-
-
-def test_campaign_page_draws_discovered_places_on_the_map(
-    client_factory: Callable[[], TestClient], app
-):
-    client, campaign_id = _described_campaign(client_factory)
-    _tool(
-        app,
-        campaign_id,
-        "move_actor",
-        {"mode": "in_settlement", "name": "Ada", "location": "Mossbell Hollow"},
-    )
-    _tool(app, campaign_id, "discover_location", {"name": "Glowcap Ring"})
     page = client.get(f"/campaigns/{campaign_id}").text
-
     map_view = page[page.index('data-view="map"') : page.index('data-view="journal"')]
     assert (
         'class="map-marker here" style="left: 50.0%; top: 50.0%" role="img" aria-label="MH" '
@@ -2083,6 +2063,13 @@ def test_campaign_page_draws_discovered_places_on_the_map(
     panel = page[page.index('aria-label="Map"') : page.index('id="panel-')]
     assert "map-marker" in panel
     assert "Map placeholder" not in page
+
+
+def test_map_on_a_fresh_campaign_has_a_default_scale(client_factory: Callable[[], TestClient], app):
+    _, campaign_id = _campaign_id(client_factory)
+    view = world.map_view(_state(app, campaign_id))
+    assert view.radius_km == 1.1
+    assert [m.name for m in view.markers] == ["Mossbell Hollow"]
 
 
 def test_map_centers_on_the_player_character_and_says_you_are_here(

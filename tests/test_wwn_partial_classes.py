@@ -7,7 +7,7 @@ import random
 import pytest
 
 from cygnusloom.content.character import CharacterError, check_choices, resolve
-from cygnusloom.content.library import ContentLibrary
+from tests.conftest import bundled_library
 
 STATS = {
     "str": 10,
@@ -24,7 +24,7 @@ STATS = {
 
 
 def _spec():
-    return ContentLibrary.load().rule_sets["worldswithoutnumber"].character
+    return bundled_library().rule_sets["worldswithoutnumber"].character
 
 
 def _choices(**templates: str) -> dict[str, object]:

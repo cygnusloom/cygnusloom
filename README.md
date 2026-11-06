@@ -2,6 +2,31 @@
 
 [Cygnus Loom](https://cygnusloom.com) is a web-based RPG with an AI game master. Create a campaign, choose a world and rule set, and play through chat with characters, maps, and a journal.
 
+## Play the single-player desktop edition
+
+Download `CygnusLoom.exe` (Windows) or `CygnusLoom` (Linux) from
+[Releases](https://github.com/cygnusloom/cygnusloom/releases), run it, and follow the setup
+wizard. Everything runs on your machine: the app creates a local SQLite database, signs you in
+as the local administrator, and asks for one language model. There is no identity provider,
+Docker, or Python install.
+
+- Data lives in `%LOCALAPPDATA%\CygnusLoom` on Windows and
+  `${XDG_DATA_HOME:-~/.local/share}/cygnusloom` on Linux.
+- The wizard offers free local models (Ollama, LM Studio), hosted providers (DeepSeek, OpenAI,
+  OpenRouter), any other OpenAI-compatible endpoint, and a scripted demo.
+- Run it from a checkout with `uv run --extra desktop cygnusloom play`.
+- Build the one-file app with `uv sync --group build` and
+  `uv run pyinstaller packaging/cygnusloom.spec`. The
+  [desktop workflow](.github/workflows/desktop.yml) builds both platforms on version tags.
+- The Linux binary needs glibc 2.35 or newer (Ubuntu 22.04 and later). QtWebEngine is bundled,
+  so no system webview or browser is required.
+
+Campaigns can be exported to a single `.json` file from the campaign list or the campaign's
+settings dialog, and imported on another machine or server. The file contains the campaign
+configuration and its complete event log, including characters, maps, notes, objects, the
+journal, and any pending turn. Import creates a new campaign for the signed-in account; if the
+exported model is not configured on the target server, the default model is used instead.
+
 ## Local development
 
 Requires Python 3.12+, [uv](https://docs.astral.sh/uv/), and OpenSSL:

@@ -17,7 +17,6 @@ from fastapi.testclient import TestClient
 
 from cygnusloom.content.definitions import ContentError, Definition
 from cygnusloom.content.library import (
-    DATA_DIR,
     TABLE_GENRES,
     ContentLibrary,
     _load_creative_table,
@@ -27,8 +26,8 @@ from cygnusloom.content.library import (
 from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.services.campaigns import _tool_context
 from cygnusloom.services.world import WorldTools
-from tests.conftest import content_library
-from tests.factories import campaign_ready
+from tests.conftest import bundled_library, content_library
+from tests.factories import campaign_ready_fast
 from tests.support import content_tree
 from tests.test_campaigns import _new_campaign, _signed_in
 
@@ -170,7 +169,7 @@ def test_a_creative_table_patch_keeps_or_overrides_the_core_genres():
 
 
 def test_the_bundled_rule_sets_offer_generic_and_fantasy_tables():
-    library = ContentLibrary.load(DATA_DIR)
+    library = bundled_library()
     for rule_set_id in ("cairn2e", "worldswithoutnumber", "academia-arcana"):
         rules = library.rule_sets[rule_set_id]
         assert {"generic", "fantasy"} <= set(rules.table_genres)
@@ -180,7 +179,7 @@ def test_the_bundled_rule_sets_offer_generic_and_fantasy_tables():
 
 
 def test_a_campaign_without_a_choice_uses_the_rule_set_default():
-    rules = ContentLibrary.load(DATA_DIR).rule_sets["cairn2e"]
+    rules = bundled_library().rule_sets["cairn2e"]
     assert effective_table_genres("", rules) == ("generic", "fantasy")
     assert effective_table_genres('["horror"]', rules) == ("horror",)
     assert effective_table_genres("not json", rules) == ("generic", "fantasy")
@@ -188,7 +187,7 @@ def test_a_campaign_without_a_choice_uses_the_rule_set_default():
 
 
 def test_the_campaign_genres_filter_the_tables_the_tools_see(client_factory):
-    client, campaign_id = campaign_ready(client_factory)
+    client, campaign_id = campaign_ready_fast(client_factory)
     library = content_library()
     rules = library.rule_sets["cairn2e"]
     world = library.world_content("twin-lakes", "cairn2e")

@@ -19,7 +19,7 @@ from cygnusloom.content.character import (
     resolve,
 )
 from cygnusloom.content.definitions import ContentError, Definition
-from cygnusloom.content.library import ContentLibrary, _load_moves
+from cygnusloom.content.library import _load_moves
 from cygnusloom.rules import wwn_magic
 from cygnusloom.services import moves
 from cygnusloom.services.combat import _player_bonuses
@@ -32,6 +32,7 @@ from cygnusloom.services.events import (
     load_state,
     record,
 )
+from tests.conftest import bundled_library
 from tests.factories import Rolls
 from tests.test_wwn_advancement import _ctx
 from tests.test_wwn_combat import PC, _events, _wwn_campaign
@@ -454,7 +455,7 @@ def test_invalid_skill_progression_is_rejected(levels: Any):
 
 
 def test_bundled_skill_progression_is_defined_by_its_ruleset():
-    progression = ContentLibrary.load().rule_sets["worldswithoutnumber"].character.skill_progression
+    progression = bundled_library().rule_sets["worldswithoutnumber"].character.skill_progression
     assert progression is not None
     assert (
         progression.untrained,
@@ -466,7 +467,7 @@ def test_bundled_skill_progression_is_defined_by_its_ruleset():
 
 def test_combat_distinguishes_training_from_a_negative_skill_level():
     spec = _spec()
-    combat = ContentLibrary.load().rule_sets["worldswithoutnumber"].combat
+    combat = bundled_library().rule_sets["worldswithoutnumber"].combat
     assert combat is not None
     combat = replace(combat, attack=replace(combat.attack, unskilled_attack_penalty=3))
     feature = Feature(

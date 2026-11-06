@@ -19,11 +19,9 @@ from cygnusloom.content.library import ContentLibrary
 from cygnusloom.services.events import (
     NPC_KIND,
     Character,
-    Harmed,
     defeat_status,
 )
 from tests.conftest import content_library
-from tests.test_wwn_combat import _events, _fight
 
 NPC_TABLES = ("personality", "accent", "quirk")
 
@@ -143,16 +141,6 @@ def test_an_important_npc_is_mortally_wounded_not_dead():
     )
     assert defeat_status(npc, combat.defeat) == "mortally wounded"
     assert defeat_status(replace(npc, important=False), combat.defeat) == "dead"
-
-
-def test_an_important_npc_harm_event_reports_a_mortal_wound(client_factory):
-    app, campaign_id, tools = _fight(client_factory)
-    tools.create_npc("Elder Marrow", "Old Yard", "A named elder.", important=True)
-
-    tools.harm_character("Elder Marrow", "hp", 99, "a test wound")
-
-    [harmed] = _events(app, campaign_id, Harmed.kind)
-    assert harmed.status == "mortally wounded"
 
 
 def test_a_future_defeat_label_is_loaded_not_dropped(tree: Path):

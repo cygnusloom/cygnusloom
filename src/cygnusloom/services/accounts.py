@@ -13,6 +13,10 @@ from cygnusloom.services.common import InvalidInput, NotFound, session_scope
 
 TEST_ISSUER = "test"
 TEST_USER_EMAIL = "test-user@example.com"
+LOCAL_ISSUER = "local"
+LOCAL_SUBJECT = "player"
+LOCAL_EMAIL = "player@localhost"
+LOCAL_ROLE = "local-admin"
 
 
 class AccountDisabled(Exception):
@@ -28,6 +32,10 @@ def normalize_email(email: str) -> str:
 
 def is_test_user(user: User) -> bool:
     return user.issuer == TEST_ISSUER
+
+
+def is_local_user(user: User) -> bool:
+    return user.issuer == LOCAL_ISSUER
 
 
 def encode_roles(roles: Iterable[str]) -> str:
@@ -129,6 +137,40 @@ def get_or_create_test_user(
             user.email = email
             if roles is not None:
                 user.roles = encode_roles(roles)
+        user.last_login_at = utcnow()
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user
+
+
+def get_or_create_local_user(engine: Engine) -> User:
+    """The one account behind the single-player edition. It is always an administrator."""
+    with session_scope(engine) as db:
+        user = db.exec(
+            select(User).where(User.issuer == LOCAL_ISSUER, User.subject == LOCAL_SUBJECT)
+        ).first()
+        if user is None:
+            user = User(
+                issuer=LOCAL_ISSUER,
+                subject=LOCAL_SUBJECT,
+                email=LOCAL_EMAIL,
+                email_verified=True,
+                display_name="Local player",
+                roles=encode_roles((LOCAL_ROLE,)),
+                created_at=utcnow(),
+            )
+            db.add(user)
+            try:
+                db.commit()
+            except IntegrityError:
+                # Two tabs can create the local account at the same moment.
+                db.rollback()
+                user = db.exec(
+                    select(User).where(User.issuer == LOCAL_ISSUER, User.subject == LOCAL_SUBJECT)
+                ).first()
+                if user is None:
+                    raise
         user.last_login_at = utcnow()
         db.add(user)
         db.commit()

@@ -10,8 +10,6 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 COPY src ./src
-COPY alembic.ini ./
-COPY alembic ./alembic
 # The wheel force-includes CREDITS.md and ships LICENSE, so both must be here to build.
 COPY CREDITS.md LICENSE ./
 # Install the project from its wheel, so the image imports the packaged files, not src/.
@@ -28,8 +26,6 @@ RUN groupadd --system app && useradd --system --gid app --home-dir /app app
 WORKDIR /app
 
 COPY --from=builder /app/.venv /app/.venv
-COPY --from=builder /app/alembic /app/alembic
-COPY alembic.ini ./alembic.ini
 COPY deploy/entrypoint.sh ./entrypoint.sh
 
 RUN chmod +x ./entrypoint.sh && chown -R app:app /app

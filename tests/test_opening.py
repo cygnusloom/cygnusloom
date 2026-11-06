@@ -6,12 +6,11 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusloom.content.library import ContentLibrary
 from cygnusloom.llm.base import LLMError
 from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.services.events import load_state
 from cygnusloom.services.prompts import OPENING_PROMPT, opening_prompt
-from tests.conftest import csrf_token
+from tests.conftest import bundled_library, csrf_token
 from tests.test_campaigns import (
     _answer,
     _campaign_id,
@@ -24,7 +23,7 @@ from tests.test_campaigns import (
 
 
 def test_opening_starts_the_world_at_its_start_location_with_its_hooks():
-    template = ContentLibrary.load().world_templates["twin-lakes"]
+    template = bundled_library().world_templates["twin-lakes"]
     prompt = opening_prompt(template)
     assert prompt.startswith(OPENING_PROMPT)
     assert "The campaign starts at Isthmus Town (location id isthmus-town)" in prompt

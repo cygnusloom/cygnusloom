@@ -25,7 +25,7 @@ from cygnusloom.services.events import (
     record,
     truncate,
 )
-from tests.factories import campaign_ready
+from tests.factories import campaign_ready, campaign_ready_fast
 
 NO_EQUIPMENT = ("", 0, "", 0, 0)
 
@@ -65,7 +65,7 @@ def _hireling(**values: Any) -> HirelingAdded:
 def test_the_event_is_stored_internally_with_its_payload_and_kept_out_of_the_log(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    _, campaign_id = campaign_ready(client_factory)
+    _, campaign_id = campaign_ready_fast(client_factory)
     event = DefenseEquipmentSet(
         name="Ada",
         equipped_armor="Scale",

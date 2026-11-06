@@ -18,6 +18,7 @@ from cygnusloom.content.library import (
     _load_encounter_terrain,
 )
 from cygnusloom.web.icons import _registry
+from tests.conftest import bundled_library
 
 TERRAIN_IDS = {
     "floor",
@@ -189,7 +190,7 @@ TEMPLATE_SIZES = {
 
 @pytest.fixture(scope="module")
 def library() -> ContentLibrary:
-    return ContentLibrary.load()
+    return bundled_library()
 
 
 def _definition(kind: str, **data: Any) -> Definition:
@@ -515,7 +516,7 @@ def test_duplicate_template_raises() -> None:
 
 
 def test_every_object_and_template_has_a_player_description() -> None:
-    core = ContentLibrary.load().core
+    core = bundled_library().core
     assert all(obj.description.strip() for obj in core.encounter_objects.values())
     assert all(template.description.strip() for template in core.encounter_templates.values())
 

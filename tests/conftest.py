@@ -51,6 +51,13 @@ def content_library() -> ContentLibrary:
     return ContentLibrary.load(content_tree())
 
 
+@functools.cache
+def bundled_library() -> ContentLibrary:
+    """The shipped content without the test-only fixtures, loaded once per process. The library
+    is immutable, so tests that only read it can share one load."""
+    return ContentLibrary.load()
+
+
 # The narration prompt for the rolltest rule set, which has no penalty item.
 NARRATE_TEXT = narrate_instruction(content_library().rule_sets["rolltest"])
 

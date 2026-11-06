@@ -7,7 +7,7 @@ set -eu
 if [ "${CYGNUSLOOM_AUTO_CREATE_SCHEMA:-0}" != "1" ]; then
   attempt=1
   log=/tmp/cygnusloom-migrate.log
-  while ! alembic upgrade head >"$log" 2>&1; do
+  while ! python -m cygnusloom migrate >"$log" 2>&1; do
     if [ "$attempt" -ge 30 ]; then
       echo "database migrations failed after $attempt attempts" >&2
       cat "$log" >&2
