@@ -25,7 +25,7 @@ from cygnusloom.services.events import (
     record,
     truncate,
 )
-from tests.factories import campaign_ready, campaign_ready_fast
+from tests.factories import campaign_ready_fast
 
 NO_EQUIPMENT = ("", 0, "", 0, 0)
 
@@ -93,7 +93,7 @@ def test_the_event_is_stored_internally_with_its_payload_and_kept_out_of_the_log
 def test_replay_gives_the_equipment_and_tracking_in_force_at_each_point(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    _, campaign_id = campaign_ready(client_factory)
+    _, campaign_id = campaign_ready_fast(client_factory)
     with Session(app.state.engine) as db:
         equipped = record(
             db,
@@ -136,7 +136,7 @@ def test_replay_gives_the_equipment_and_tracking_in_force_at_each_point(
 def test_truncating_the_log_rolls_equipment_and_tracking_back(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    _, campaign_id = campaign_ready(client_factory)
+    _, campaign_id = campaign_ready_fast(client_factory)
     with Session(app.state.engine) as db:
         mark = last_event_id(db, campaign_id)
         equipped = record(
@@ -171,7 +171,7 @@ def test_truncating_the_log_rolls_equipment_and_tracking_back(
 def test_a_hireling_replays_with_the_counters_and_armor_it_was_generated_with(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    _, campaign_id = campaign_ready(client_factory)
+    _, campaign_id = campaign_ready_fast(client_factory)
     hired = _hireling(counters={"stamina": 3}, armor=4)
     with Session(app.state.engine) as db:
         hire_id = record(db, campaign_id, hired)

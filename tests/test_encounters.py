@@ -120,7 +120,7 @@ def _encounter_with(
             client.app, campaign_id, "create_location", {"name": TOWN, "description": "A square."}
         )
     else:
-        client, campaign_id = campaign_ready(client_factory)
+        client, campaign_id = campaign_ready_fast(client_factory)
     app = client.app
     place_pc(client, campaign_id, TOWN)
     created = _call(

@@ -32,9 +32,18 @@ def _cairn_campaign(client_factory: Callable[[], TestClient]) -> tuple[TestClien
     return client, campaign_id
 
 
-def _new_cairn_campaign(client: TestClient) -> int:
+def _cairn_campaign_fast(client_factory: Callable[[], TestClient]) -> tuple[TestClient, int]:
+    """A Cairn campaign in the tiny blank world. Use it when the test creates its own places
+    and does not read Twin Lakes' locations, NPCs, or maps."""
+    client = _signed_in(client_factory)
+    campaign_id = _new_cairn_campaign(client, world_template="unwritten-world")
+    _choose_omen(client, campaign_id)
+    return client, campaign_id
+
+
+def _new_cairn_campaign(client: TestClient, world_template: str = "twin-lakes") -> int:
     """A Cairn campaign with nothing chosen yet, so its options and character are both pending."""
-    response = _new_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
+    response = _new_campaign(client, world_template=world_template, rule_set="cairn2e")
     assert response.status_code == 303
     return int(response.headers["location"].rsplit("/", 1)[1])
 

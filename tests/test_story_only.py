@@ -100,7 +100,7 @@ def test_seeding_gives_a_normal_npc_no_story_only_flag(client_factory: Callable[
 
 
 def test_a_story_only_npc_cannot_join_an_encounter(client_factory: Callable[[], TestClient]):
-    _, _, tools = _fight(client_factory)
+    _, _, tools = _fight(client_factory, twin_lakes=True)
     with pytest.raises(InvalidInput, match="has no stats yet"):
         tools.add_participant(STORY)
 
@@ -117,7 +117,7 @@ def test_a_story_only_npc_cannot_be_attacked_by_the_public_api(
 ):
     # add_participant refuses a story-only NPC, so it is never in the order and the public attack
     # path stops at the participant lookup before reaching the stats guard.
-    _, _, tools = _fight(client_factory)
+    _, _, tools = _fight(client_factory, twin_lakes=True)
     take_turn(tools, PC)
     with pytest.raises(InvalidInput, match="is not in the encounter"):
         tools.player_attack(STORY, "Sword")
@@ -128,7 +128,7 @@ def test_a_story_only_npc_in_the_order_is_refused_as_target_and_attacker(
 ):
     # Force the participant into the encounter straight through the event log, so the stats guard
     # in _living is what refuses it.
-    app, campaign_id, tools = _fight(client_factory)
+    app, campaign_id, tools = _fight(client_factory, twin_lakes=True)
     tools.create_monster(
         "Grave Thing",
         YARD,

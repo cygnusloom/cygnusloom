@@ -26,7 +26,7 @@ TEXT = {CHOKING: "The Ash Phantom chokes with its hand."}
 
 
 def _with_vuk_in_the_yard(client_factory: Callable[[], TestClient]):
-    app, campaign_id, _ = _fight(client_factory)
+    app, campaign_id, _ = _fight(client_factory, twin_lakes=True)
     state = _state(app, campaign_id)
     pc = state.pc()
     assert pc is not None and pc.location is not None

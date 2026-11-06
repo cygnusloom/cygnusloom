@@ -14,7 +14,13 @@ from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.services.campaigns import list_messages
 from cygnusloom.services.tools import Ask, RollAnswer, TextAnswer, ToolRun, run_tool, tool_specs
 from tests.conftest import content_library, without_journal
-from tests.factories import answer, campaign_ready, pending_turn, place_pc, send_message
+from tests.factories import (
+    answer,
+    campaign_ready_fast,
+    pending_turn,
+    place_pc,
+    send_message,
+)
 
 ROLL = {
     "name": "social_roll",
@@ -298,7 +304,7 @@ def _saved(app: FastAPI, campaign_id: int) -> list[tuple[str, str]]:
 def test_model_rolls_then_narrates_and_only_the_narration_is_saved(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    client, campaign_id = campaign_ready(client_factory)
+    client, campaign_id = campaign_ready_fast(client_factory)
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
     script = _script({"rounds": [[ROLL]], "text": "Well rolled."})
@@ -332,7 +338,7 @@ def test_model_rolls_then_narrates_and_only_the_narration_is_saved(
 def test_bad_tool_arguments_go_back_to_the_model(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    client, campaign_id = campaign_ready(client_factory)
+    client, campaign_id = campaign_ready_fast(client_factory)
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
     bad = {
@@ -353,7 +359,7 @@ def test_bad_tool_arguments_go_back_to_the_model(
 def test_state_steps_are_not_capped_at_a_number_of_rounds(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    client, campaign_id = campaign_ready(client_factory)
+    client, campaign_id = campaign_ready_fast(client_factory)
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
     script = _script({"rounds": [[ROLL]] * 6, "text": "Done."})
@@ -375,7 +381,7 @@ SPEAK = {
 def test_npc_dialogue_is_queued_for_the_narration_not_sent_as_a_tool_result(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
-    client, campaign_id = campaign_ready(client_factory)
+    client, campaign_id = campaign_ready_fast(client_factory)
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
     place_pc(client, campaign_id)

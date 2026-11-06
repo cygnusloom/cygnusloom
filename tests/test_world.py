@@ -34,7 +34,7 @@ from cygnusloom.services.events import (
 from cygnusloom.services.tools import ToolRun, run_tool
 from tests.conftest import content_library, csrf_token
 from tests.factories import (
-    campaign_ready,
+    campaign_ready_fast,
     create_campaign,
     create_character,
     place_pc,
@@ -63,7 +63,7 @@ MAP_GROUND = {"lake": WorldTerrain(id="lake", name="Lake", color="#3f6f8f", rule
 
 def _campaign_id(client_factory: Callable[[], TestClient]) -> tuple[TestClient, int]:
     """A signed-in client and a campaign past its opening turn, from the shared factory."""
-    return campaign_ready(client_factory)
+    return campaign_ready_fast(client_factory)
 
 
 def _values(table: str) -> list[str]:

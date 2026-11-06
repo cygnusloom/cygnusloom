@@ -50,7 +50,7 @@ from cygnusloom.services.tools import Ask, RollAnswer, ToolRun, run_tool
 from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library
 from tests.test_campaigns import _create_character
-from tests.test_character_creation import _cairn_campaign, _complete_form
+from tests.test_character_creation import _cairn_campaign, _cairn_campaign_fast, _complete_form
 from tests.test_world import _db, _state
 from tests.turns import take_turn
 
@@ -115,18 +115,28 @@ def _set_condition(tools: WorldTools, name: str, deprived: bool, cause: str = ""
 
 
 def _fight(
-    client_factory: Callable[[], TestClient], rolled: bool = True
+    client_factory: Callable[[], TestClient],
+    rolled: bool = True,
+    *,
+    twin_lakes: bool = False,
 ) -> tuple[FastAPI, int, WorldTools]:
     """A Cairn campaign with Mara in the yard, the yard mapped, and an encounter under way. Unless
-    `rolled` is False, Mara has rolled for initiative, and the order is set."""
-    client, campaign_id, tools = _fight_client(client_factory, rolled)
+    `rolled` is False, Mara has rolled for initiative, and the order is set. `twin_lakes` seeds
+    the shipped world for tests that read its NPCs or places."""
+    client, campaign_id, tools = _fight_client(client_factory, rolled, twin_lakes=twin_lakes)
     return client.app, campaign_id, tools
 
 
 def _fight_client(
-    client_factory: Callable[[], TestClient], rolled: bool = True
+    client_factory: Callable[[], TestClient],
+    rolled: bool = True,
+    *,
+    twin_lakes: bool = False,
 ) -> tuple[TestClient, int, WorldTools]:
-    client, campaign_id = _cairn_campaign(client_factory)
+    if twin_lakes:
+        client, campaign_id = _cairn_campaign(client_factory)
+    else:
+        client, campaign_id = _cairn_campaign_fast(client_factory)
     created = _create_character(
         client, campaign_id, name=PC, fields=_complete_form(client, campaign_id)
     )
@@ -853,8 +863,8 @@ def test_an_npc_named_after_a_statblock_takes_its_stats(client_factory):
 
 
 def test_a_world_npc_linked_to_a_statblock_is_seeded_with_its_stats(client_factory):
-    app, campaign_id, _ = _fight(client_factory)
-    fasha = _character(app, campaign_id, "Fasha")
+    client, campaign_id = _cairn_campaign(client_factory)
+    fasha = _character(client.app, campaign_id, "Fasha")
     assert fasha.stats == {"hp": 6, "str": 14, "dex": 13, "wil": 5}
     assert fasha.creature == "Fasha"
     assert fasha.attacks == {"fists": "1d8+1d8", "hook knife": "1d6"}
