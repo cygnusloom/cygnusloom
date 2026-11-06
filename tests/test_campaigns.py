@@ -39,17 +39,14 @@ def _new_campaign(
     label: str = "Test chat",
     world_template: str = "testhollow",
     rule_set: str = "rolltest",
-    table_genres: list[str] | None = None,
 ):
     token = csrf_token(client, "/campaigns/new")
-    data: dict[str, str | list[str]] = {
+    data: dict[str, str] = {
         "csrf_token": token,
         "label": label,
         "world_template": world_template,
         "rule_set": rule_set,
     }
-    if table_genres is not None:
-        data["table_genres"] = table_genres
     return client.post(
         "/campaigns/new",
         data=data,
@@ -64,13 +61,16 @@ def _create_character(
     fields: dict[str, str] | None = None,
     pronouns: str | None = "she/her",
     setting: str | None = None,
+    table_genres: list[str] | None = None,
 ):
     token = csrf_token(client, f"/campaigns/{campaign_id}")
-    form = {"csrf_token": token, "name": name, **(fields or {})}
+    form: dict[str, str | list[str]] = {"csrf_token": token, "name": name, **(fields or {})}
     if pronouns is not None:
         form["pronouns"] = pronouns
     if setting is not None:
         form["setting"] = setting
+    if table_genres is not None:
+        form["table_genres"] = table_genres
     return client.post(
         f"/campaigns/{campaign_id}/creation",
         data=form,
@@ -299,12 +299,16 @@ def test_setting_belongs_to_the_campaign_options_creation_page(
     client = _signed_in(client_factory)
     first_page = client.get("/campaigns/new").text
     assert 'name="setting"' not in first_page
+    assert 'name="table_genres"' not in first_page
     response = _new_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
     campaign_id = _created_campaign_id(response)
     page = client.get(f"/campaigns/{campaign_id}").text
     assert 'name="setting" rows="6" maxlength="4000"' in page
+    assert 'name="table_genres"' in page
     assert page.index("Campaign options") < page.index('name="setting"')
+    assert page.index("Campaign options") < page.index("Creative and lore tables")
     assert page.index('name="setting"') < page.index("Your character")
+    assert page.index("Creative and lore tables") < page.index("Your character")
     assert "Blank is ignored." in page
 
 
@@ -352,48 +356,45 @@ def test_create_rejects_an_overlong_setting_and_keeps_the_text(
         assert campaign.setting == ""
 
 
-def test_create_stores_the_chosen_table_genres(client_factory: Callable[[], TestClient]):
+def test_creation_stores_the_chosen_table_genres(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
-    response = _new_campaign(
-        client,
-        label="Weird west",
-        world_template="twin-lakes",
-        rule_set="cairn2e",
-        table_genres=["generic", "historical"],
-    )
+    response = _new_campaign(client, label="Weird west")
     assert response.status_code == 303
+    campaign_id = _created_campaign_id(response)
+    created = _create_character(client, campaign_id, table_genres=["generic", "historical"])
+    assert created.status_code == 303
     with Session(client.app.state.engine) as db:
-        campaign = db.get(Campaign, _created_campaign_id(response))
+        campaign = db.get(Campaign, campaign_id)
         assert campaign is not None
         assert json.loads(campaign.table_genres) == ["generic", "historical"]
 
 
-def test_create_keeps_the_rule_sets_table_genres_when_none_are_chosen(
+def test_creation_keeps_the_rule_sets_table_genres_when_none_are_chosen(
     client_factory: Callable[[], TestClient],
 ):
     client = _signed_in(client_factory)
-    response = _new_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
+    response = _new_campaign(client)
     assert response.status_code == 303
+    campaign_id = _created_campaign_id(response)
+    assert _create_character(client, campaign_id).status_code == 303
     with Session(client.app.state.engine) as db:
-        campaign = db.get(Campaign, _created_campaign_id(response))
+        campaign = db.get(Campaign, campaign_id)
         assert campaign is not None
-        assert json.loads(campaign.table_genres) == ["generic", "fantasy"]
+        assert json.loads(campaign.table_genres) == ["generic"]
 
 
-def test_create_rejects_an_unknown_table_genre_and_keeps_the_rest(
+def test_creation_rejects_an_unknown_table_genre_and_keeps_the_rest(
     client_factory: Callable[[], TestClient],
 ):
     client = _signed_in(client_factory)
-    response = _new_campaign(
-        client,
-        world_template="twin-lakes",
-        rule_set="cairn2e",
-        table_genres=["generic", "steampunk"],
-    )
-    assert response.status_code == 400
-    assert "unknown genre" in response.text
-    assert 'name="table_genres" value="generic" checked' in response.text
-    assert 'name="table_genres" value="steampunk"' not in response.text
+    response = _new_campaign(client)
+    assert response.status_code == 303
+    campaign_id = _created_campaign_id(response)
+    created = _create_character(client, campaign_id, table_genres=["generic", "steampunk"])
+    assert created.status_code == 400
+    assert "unknown genre" in created.text
+    assert 'name="table_genres" value="generic" checked' in created.text
+    assert 'name="table_genres" value="steampunk"' not in created.text
 
 
 def test_campaign_list_keeps_the_label_editor_behind_a_toggle(
@@ -512,9 +513,9 @@ def test_new_campaign_form_puts_credits_in_third_party_descriptions(
     client = _signed_in(client_factory)
     response = _new_campaign(
         client,
+        label="x" * 121,
         world_template="twin-lakes",
         rule_set="cairn2e",
-        table_genres=["steampunk"],
     )
     assert response.status_code == 400
     page = response.text

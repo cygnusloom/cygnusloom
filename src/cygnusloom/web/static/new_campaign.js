@@ -5,7 +5,6 @@
 
   const worldOptions = [...worldSelect.options];
   const labelInput = document.querySelector('input[name="label"]');
-  const genreInputs = [...document.querySelectorAll('input[name="table_genres"]')];
   const defaultLabels = new Set(
     worldOptions.map((option) => option.dataset.label).filter(Boolean),
   );
@@ -43,21 +42,9 @@
     refreshLabel();
   };
 
-  // The rule set's defaults are the checkboxes the form starts on. Changing the rule set checks
-  // its own default genres, the same way a fresh form would.
-  const refreshGenres = () => {
-    if (!genreInputs.length) return;
-    const genres = (ruleSetSelect.selectedOptions[0]?.dataset.genres ?? "")
-      .split(",")
-      .filter(Boolean);
-    const checked = new Set(genres);
-    for (const input of genreInputs) input.checked = checked.has(input.value);
-  };
-
   ruleSetSelect.addEventListener("change", () => {
     refreshWorlds();
     showBlurb(ruleSetSelect, "rule_set");
-    refreshGenres();
   });
   worldSelect.addEventListener("change", () => {
     showBlurb(worldSelect, "world_template");

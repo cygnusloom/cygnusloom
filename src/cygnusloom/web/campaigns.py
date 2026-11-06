@@ -133,7 +133,6 @@ async def create(request: Request) -> Response:
     label = form_text(form, "label")
     world_template = form_text(form, "world_template")
     rule_set = form_text(form, "rule_set")
-    table_genres = [value for value in form.getlist("table_genres") if isinstance(value, str)]
     catalog = request.app.state.catalog
     models = catalog.model_ids()
     if not models:
@@ -153,7 +152,6 @@ async def create(request: Request) -> Response:
             world_template,
             rule_set,
             catalog.default_model_id(),
-            table_genres=table_genres,
         )
     except InvalidInput as exc:
         return _new_form(
@@ -164,7 +162,6 @@ async def create(request: Request) -> Response:
             label=label,
             world_template=world_template,
             rule_set=rule_set,
-            table_genres=table_genres,
         )
     return RedirectResponse(f"/campaigns/{campaign.id}", status_code=303)
 
@@ -278,6 +275,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
     library = request.app.state.content
     key = _roll_key(campaign_id)
     setting = ""
+    table_genres: list[str] | None = None
     try:
         campaign = get_campaign(engine, user.id, campaign_id)
         state = campaign_world(engine, user.id, campaign_id).state
@@ -286,10 +284,15 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
         )
         if not options_pending and not character_pending:
             raise InvalidInput("this campaign's options and player character are already set")
+        initial_setup = state.pc() is None
         # Read the brief even for a replacement character so an error can show it again, but only
         # apply it before the campaign's first player character exists. A replacement character
         # must not rewrite the campaign's setting and story.
         setting = form_text(form, "setting")
+        if initial_setup:
+            table_genres = [
+                value for value in form.getlist("table_genres") if isinstance(value, str)
+            ]
         options = None
         if options_pending:
             options = campaign_submission_from_form(campaign_spec(library, campaign), form)
@@ -305,6 +308,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
                     400,
                     "Your stats were rolled again. Review them and create your character.",
                     setting=setting,
+                    table_genres=table_genres,
                 )
             spec = character_spec(library, campaign)
             submitted = submission_from_form(spec, form)
@@ -324,12 +328,29 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             campaign_id,
             options=options,
             character=character,
-            setting=setting if state.pc() is None else None,
+            setting=setting if initial_setup else None,
+            table_genres=table_genres,
         )
     except InvalidInput as exc:
-        return _campaign_page(request, user, campaign_id, 400, str(exc), setting=setting)
+        return _campaign_page(
+            request,
+            user,
+            campaign_id,
+            400,
+            str(exc),
+            setting=setting,
+            table_genres=table_genres,
+        )
     except Conflict as exc:
-        return _campaign_page(request, user, campaign_id, 409, str(exc), setting=setting)
+        return _campaign_page(
+            request,
+            user,
+            campaign_id,
+            409,
+            str(exc),
+            setting=setting,
+            table_genres=table_genres,
+        )
     if character is not None:
         request.session.pop(key, None)
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
@@ -889,7 +910,6 @@ def _new_form(
     label: str = "",
     world_template: str = "",
     rule_set: str = "",
-    table_genres: Sequence[str] | None = None,
 ) -> Response:
     library = request.app.state.content
     # The rule set comes first and decides which worlds are offered, so start from a rule set
@@ -907,13 +927,6 @@ def _new_form(
         world_template = (preferred or worlds)[0].id if worlds else ""
     chosen_rule_set = library.rule_sets.get(rule_set)
     chosen_world = library.world_templates.get(world_template)
-    # A fresh form starts on the rule set's own genres. A form shown again after an error keeps
-    # what the player checked, so the correction is the only thing they have to make.
-    selected_table_genres = (
-        tuple(table_genres)
-        if table_genres
-        else (chosen_rule_set.table_genres if chosen_rule_set else ())
-    )
     default_labels = default_campaign_labels(request.app.state.engine, library, user.id)
     return render(
         request,
@@ -921,8 +934,6 @@ def _new_form(
         status_code=status_code,
         error=error,
         campaign_label=label or default_labels.get(world_template, ""),
-        table_genres=library.available_table_genres,
-        selected_table_genres=selected_table_genres,
         world_labels=default_labels,
         world_templates=library.world_templates.values(),
         rule_sets=library.rule_sets.values(),
@@ -978,6 +989,7 @@ def _campaign_page(
     error: str = "",
     draft: str = "",
     setting: str = "",
+    table_genres: Sequence[str] | None = None,
 ) -> Response:
     engine = request.app.state.engine
     settings = request.app.state.settings
@@ -1042,6 +1054,12 @@ def _campaign_page(
             show_options=options_pending,
             show_setting=pc is None,
             campaign_setting=setting or campaign.setting,
+            table_genres=library.available_table_genres,
+            selected_table_genres=(
+                tuple(table_genres)
+                if table_genres
+                else (rule_set.table_genres if rule_set is not None else ())
+            ),
             options=campaign_view(options) if options_pending else None,
             show_character=character_pending,
             character=character,

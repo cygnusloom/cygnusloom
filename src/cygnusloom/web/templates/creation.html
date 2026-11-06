@@ -53,13 +53,22 @@
       </div>
       {% endif %}
       {% if show_setting %}
-      <div class="creation-grid">
+      <div class="creation-grid campaign-brief">
         <section class="creation-panel" aria-labelledby="panel-setting">
           <h3 id="panel-setting">Setting / story (optional)</h3>
           <label>
             <textarea name="setting" rows="6" maxlength="4000" placeholder="Describe the kind of setting or story you want to play. Leave blank to let the world and rule set lead." aria-labelledby="panel-setting">{{ campaign_setting }}</textarea>
           </label>
           <p class="muted">Tell Cygnus what kind of world or story you want. Blank is ignored.</p>
+        </section>
+        <section class="creation-panel table-genres" aria-labelledby="panel-table-genres">
+          <h3 id="panel-table-genres">Creative and lore tables</h3>
+          <p class="muted">These genres choose which generation tables the GM is offered. The rule set's own choice is checked; leave it alone unless you want a different kind of setting.</p>
+          <div class="genre-options">
+            {% for genre in table_genres %}
+              <label><input type="checkbox" name="table_genres" value="{{ genre }}"{% if genre in selected_table_genres %} checked{% endif %}> {{ genre.replace("-", " ").capitalize() }}</label>
+            {% endfor %}
+          </div>
         </section>
       </div>
       {% endif %}

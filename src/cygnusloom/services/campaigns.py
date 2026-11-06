@@ -268,11 +268,12 @@ def save_creation(
     options: Mapping[str, Any] | None = None,
     character: NewCharacter | None = None,
     setting: str | None = None,
+    table_genres: Sequence[str] | None = None,
 ) -> None:
-    """Save the campaign options, the player character, and the setting and story together, so
-    either all of them are saved or none is. A part left as None is not saved. The character
-    needs the options first. The setting is captured on the campaign-options creation page, not
-    when the campaign is first made."""
+    """Save the campaign options, the player character, the setting and story, and the table
+    genres together, so either all of them are saved or none is. A part left as None is not
+    saved. The character needs the options first. The setting and genres are captured on the
+    campaign-options creation page, not when the campaign is first made."""
     campaign = get_campaign(engine, owner_id, campaign_id)
     spec = campaign_spec(library, campaign)
     brief = None
@@ -280,11 +281,20 @@ def save_creation(
         brief = (setting or "").strip()
         if len(brief) > MAX_SETTING:
             raise InvalidInput(f"setting and story must be at most {MAX_SETTING} characters")
+    genres = None
+    if table_genres is not None:
+        rule_set = library.rule_sets.get(campaign.rule_set)
+        if rule_set is None:
+            raise InvalidInput("that campaign's rule set is no longer available")
+        genres = _campaign_table_genres(table_genres, rule_set)
     with _exclusive(campaign_id), session_scope(engine) as db:
-        if brief is not None:
+        if brief is not None or genres is not None:
             stored = db.get(Campaign, campaign_id)
             if stored is not None:
-                stored.setting = brief
+                if brief is not None:
+                    stored.setting = brief
+                if genres is not None:
+                    stored.table_genres = json.dumps(list(genres))
         if options is not None:
             set_campaign_options(db, campaign_id, spec, options)
         if character is not None:

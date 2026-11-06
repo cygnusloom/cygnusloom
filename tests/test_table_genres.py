@@ -2,7 +2,8 @@
 
 A table's `genres` says which settings it fits. A rule set offers an inherited core table when
 it is untagged, tagged `generic`, or shares a tag with the rule set's selection. A campaign may
-narrow the rule set's choice at creation, which filters the tables the GM's tools see.
+narrow the rule set's choice in its creation options, which filters the tables the GM's tools
+see.
 """
 
 from __future__ import annotations
@@ -29,7 +30,7 @@ from cygnusloom.services.world import WorldTools
 from tests.conftest import bundled_library, content_library
 from tests.factories import campaign_ready_fast
 from tests.support import content_tree
-from tests.test_campaigns import _new_campaign, _signed_in
+from tests.test_campaigns import _create_character, _new_campaign, _signed_in
 
 
 def _dice_table(ident: str, genres: list[str] | None = None) -> dict[str, Any]:
@@ -222,14 +223,19 @@ def test_the_campaign_genres_filter_the_tables_the_tools_see(client_factory):
     assert "setting_premise" in default.dice_tables
 
 
-def test_the_new_campaign_form_hides_the_genre_picker(client_factory):
+def test_the_creative_table_picker_lives_in_the_campaign_options(client_factory):
     client = _signed_in(client_factory)
-    page = client.get("/campaigns/new").text
-    start = page.index('<details class="table-genres">')
-    end = page.index("</details>", start)
+    first_page = client.get("/campaigns/new").text
+    assert 'name="table_genres"' not in first_page
+
+    response = _new_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
+    assert response.status_code == 303
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    page = client.get(f"/campaigns/{campaign_id}").text
+    start = page.index('<section class="creation-panel table-genres"')
+    end = page.index("</section>", start)
     section = page[start:end]
-    assert "<summary>Creative and lore tables</summary>" in section
-    assert "Optional." in section
+    assert '<h3 id="panel-table-genres">Creative and lore tables</h3>' in section
     available = content_library().available_table_genres
     for genre in available:
         assert f'name="table_genres" value="{genre}"' in section
@@ -238,34 +244,30 @@ def test_the_new_campaign_form_hides_the_genre_picker(client_factory):
     # The form starts on the selected rule set's own choice: the bundled sets are generic+fantasy.
     assert 'name="table_genres" value="generic" checked' in section
     assert 'name="table_genres" value="fantasy" checked' in section
-    assert " open" not in page[start : start + len('<details class="table-genres">')]
+    assert page.index("Campaign options") < page.index("Creative and lore tables")
+    assert page.index("Creative and lore tables") < page.index("Your character")
 
 
 def test_a_campaign_may_choose_genres_the_rule_set_has_no_tables_for(
     client_factory: Callable[[], TestClient],
 ):
     client = _signed_in(client_factory)
-    response = _new_campaign(
-        client,
-        world_template="twin-lakes",
-        rule_set="cairn2e",
-        table_genres=["generic", "historical"],
-    )
+    response = _new_campaign(client)
     assert response.status_code == 303
-    assert response.headers["location"].startswith("/campaigns/")
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    created = _create_character(client, campaign_id, table_genres=["generic", "historical"])
+    assert created.status_code == 303
 
 
 def test_an_unknown_genre_is_refused_and_the_rest_stay_checked(
     client_factory: Callable[[], TestClient],
 ):
     client = _signed_in(client_factory)
-    response = _new_campaign(
-        client,
-        world_template="twin-lakes",
-        rule_set="cairn2e",
-        table_genres=["generic", "steampunk"],
-    )
-    assert response.status_code == 400
-    assert "unknown genre" in response.text
-    assert 'name="table_genres" value="generic" checked' in response.text
-    assert 'value="steampunk"' not in response.text
+    response = _new_campaign(client)
+    assert response.status_code == 303
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    created = _create_character(client, campaign_id, table_genres=["generic", "steampunk"])
+    assert created.status_code == 400
+    assert "unknown genre" in created.text
+    assert 'name="table_genres" value="generic" checked' in created.text
+    assert 'value="steampunk"' not in created.text
