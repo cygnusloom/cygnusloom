@@ -45,7 +45,7 @@ from cygnusloom.content.library import (
     WorldTerrain,
 )
 from cygnusloom.rules.context import brief
-from cygnusloom.rules.dice import is_formula
+from cygnusloom.rules.dice import is_formula, roll_total
 from cygnusloom.services import clock as clock_service
 from cygnusloom.services import combat
 from cygnusloom.services import inventory as inventory_service
@@ -397,9 +397,11 @@ def _carry_granted_kit(
     marketplace: Marketplace | None,
     inventory: InventoryRules | None,
     item_sizes: Mapping[str, int] | None,
+    rng: random.Random,
 ) -> tuple[tuple[str, int], tuple[str, int], int]:
     """Carry what the chosen templates grant: catalogue items, starting money, and the armor and
-    shield already worn. Returns the equipped armor and shield the kit gives, and the silver."""
+    shield already worn. Returns the equipped armor and shield the kit gives, and the silver.
+    A kind left unchosen may roll starting silver instead, such as 3d6 × 10 for a kit."""
     armor: tuple[str, int] = ("", 0)
     shield: tuple[str, int] = ("", 0)
     silver = 0
@@ -443,6 +445,19 @@ def _carry_granted_kit(
                 db, campaign_id, marketplace, name, grant.silver, "starting silver"
             )
             silver += grant.silver
+    chosen_kinds = {
+        spec.templates[template_id].kind
+        for template_id in sheet.templates.values()
+        if template_id in spec.templates
+    }
+    if spec.starting_silver is not None and spec.starting_silver.kind not in chosen_kinds:
+        if marketplace is None:
+            raise InvalidInput("this rule set has no marketplace to grant starting silver")
+        amount = roll_total(spec.starting_silver.dice, rng) * spec.starting_silver.multiplier
+        market_service.change_currency(
+            db, campaign_id, marketplace, name, amount, "starting silver"
+        )
+        silver += amount
     return armor, shield, silver
 
 
@@ -514,7 +529,7 @@ def create_player_character(
         defense=bool(combat_rules is not None and combat_rules.defense_base),
     )
     granted_armor, granted_shield, _ = _carry_granted_kit(
-        db, campaign_id, name, sheet, spec, marketplace, inventory, item_sizes
+        db, campaign_id, name, sheet, spec, marketplace, inventory, item_sizes, rng
     )
     if granted_armor[0]:
         equipped_armor = granted_armor

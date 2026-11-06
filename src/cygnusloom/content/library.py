@@ -27,6 +27,7 @@ from cygnusloom.content.character import (
     build_character,
     character_schema,
     load_feature,
+    load_starting_silver,
     rule_ids,
 )
 from cygnusloom.content.definitions import (
@@ -2577,6 +2578,8 @@ FEAT_PICK_KEYS = frozenset(
         "count",
         "tag",
         "tags",
+        "tags_from",
+        "unique",
         "feature_type",
         "max_rank",
         "exclude",
@@ -2697,6 +2700,7 @@ def _build_rule_set(
             "skill_progression",
             "ordered_feature_tags",
             "optional_templates",
+            "starting_silver",
             "condition_ends",
             "npc_hp",
             "npc_hp_stat",
@@ -2741,6 +2745,7 @@ def _build_rule_set(
         skill_progression=head.data.get("skill_progression"),
         ordered_feature_tags=head.data.get("ordered_feature_tags", []),
         icon_entries=feature_icons,
+        starting_silver=load_starting_silver(head.data.get("starting_silver"), label),
     )
     optional_templates = _names(head.data, "optional_templates", label)
     character = replace(character, optional_kinds=optional_templates)

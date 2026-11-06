@@ -10,6 +10,7 @@ from sqlmodel import Session
 
 from cygnusloom.content.character import (
     CharacterError,
+    check_choices,
     derived_stats,
     describe,
     feature_pick_options,
@@ -489,6 +490,51 @@ def test_a_starting_kit_hands_over_the_books_gear(client_factory):
     assert "Staff" in scholar.grant.items
 
 
+def test_a_character_can_roll_starting_silver_instead_of_taking_a_kit(client_factory):
+    """The book lets a player take a package or roll 3d6 x 10 silver instead. A blank kit
+    choice means the roll, and the character carries no package gear."""
+    client = _signed_in(client_factory)
+    response = _new_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    with pinned_stats(WWN_STATS):
+        page = client.get(f"/campaigns/{campaign_id}").text
+    fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
+    fields.update(_choices(page))
+    fields.update(_picks(page))
+    fields.update(
+        {
+            "template-class": "warrior",
+            "template-kit": "",
+            "pick-feature-class_focus_any-0": "focus_die_hard",
+            "pick-feature-class_focus_warrior-0": "focus_alert",
+        }
+    )
+    fields = _named_picks(fields)
+    created = _create_character(client, campaign_id, name="Wren", fields=fields)
+    assert created.status_code == 303, created.text
+    with Session(client.app.state.engine) as db:
+        pc = load_state(db, campaign_id).pc()
+    assert pc is not None
+    assert "kit" not in pc.templates
+    assert not pc.items
+    assert pc.equipped_armor == "" and pc.equipped_shield == ""
+    assert 30 <= pc.features["silver"] <= 180
+
+
+def test_the_creation_page_offers_starting_silver_as_a_kit_choice(client_factory):
+    client = _signed_in(client_factory)
+    response = _new_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert 'name="template-kit" value=""' in page
+    assert "Starting silver" in page
+    assert "3d6" in page
+
+
 def test_a_spell_pick_offers_only_spells() -> None:
     spec = _wwn().rule_sets["worldswithoutnumber"].character
     for template in spec.templates.values():
@@ -499,3 +545,36 @@ def test_a_spell_pick_offers_only_spells() -> None:
             assert options
             assert all(feature.feature_type == "spell" for feature in options)
             assert all(feature.rank == 1 for feature in options)
+
+
+def test_an_elementalist_extra_art_pick_excludes_the_granted_arts() -> None:
+    spec = _wwn().rule_sets["worldswithoutnumber"].character
+    for template_id in ("elementalist", "elementalist_partial"):
+        pick = next(
+            pick
+            for pick in spec.templates[template_id].feat_picks
+            if pick.id == "tradition_art_elementalist"
+        )
+        offered = {feature.id for feature in feature_pick_options(spec, pick)}
+        assert "art_elemental_resilience" not in offered
+        assert "art_elemental_sparks" not in offered
+
+
+def test_a_spell_cannot_be_taken_by_two_traditions() -> None:
+    spec = _wwn().rule_sets["worldswithoutnumber"].character
+    submitted = {
+        "templates": {
+            "class": "adventurer_mage_mage",
+            "tradition": "high_mage_partial",
+            "tradition2": "necromancer_partial_2",
+        },
+        "feature_picks": {
+            "tradition_art_high": ["art_arcane_lexicon"],
+            "tradition_spells_high": ["spell_coruscating_coffin"],
+            "tradition2_art_necromancer": ["art_bonetalker"],
+            "tradition2_spells_necromancer": ["spell_coruscating_coffin"],
+        },
+    }
+
+    with pytest.raises(CharacterError, match="already part of this character"):
+        check_choices(spec, submitted)

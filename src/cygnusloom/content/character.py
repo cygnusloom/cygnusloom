@@ -284,6 +284,11 @@ class FeatPick:
     tags: tuple[str, ...] = ()
     # The feature type the pick offers, such as "spell" or "feat". Empty means any type.
     feature_type: str = ""
+    # Restrict this pick to the tags of the features chosen in another pick of its template,
+    # such as spells that belong to the character's chosen subjects.
+    tags_from: str = ""
+    # A feature taken by one pick cannot be taken by another, except to advance its rank.
+    unique: bool = False
     # A repeated ranked feature can advance to its next rank instead of adding another copy.
     advance_repeated_rank: bool = False
 
@@ -307,6 +312,18 @@ class TemplateGrant:
     items: tuple[str, ...] = ()
     silver: int = 0
     equip: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class StartingSilver:
+    """Money a character starts with instead of a template of `kind`, such as rolling 3d6 × 10
+    silver when no equipment package is chosen."""
+
+    kind: str
+    label: str
+    description: str
+    dice: str
+    multiplier: int = 1
 
 
 @dataclass(frozen=True)
@@ -391,6 +408,8 @@ class CharacterSpec:
     ordered_feature_tags: tuple[str, ...] = ()
     # Template kinds a character may leave unchosen, such as a magical tradition only mages need.
     optional_kinds: tuple[str, ...] = ()
+    # Money a character rolls when a template kind, such as a starting kit, is left unchosen.
+    starting_silver: StartingSilver | None = None
 
     def kinds(self) -> list[str]:
         return sorted({t.kind for t in self.templates.values()})
@@ -440,6 +459,7 @@ def build_character(
     skill_progression: object = None,
     ordered_feature_tags: object = (),
     icon_entries: Mapping[str, tuple[str | None, str | None]] | None = None,
+    starting_silver: StartingSilver | None = None,
 ) -> CharacterSpec:
     """Build the character spec from a rule set's definitions. `tables` are already loaded.
     `icon_entries` maps a feature id to its raw (icon, looks_like) so one feature may borrow
@@ -524,6 +544,12 @@ def build_character(
                 f"{template}: character_field {item.id!r} knows {item.knows!r}, "
                 "which is no feature type"
             )
+    if starting_silver is not None and starting_silver.kind not in {
+        item.kind for item in templates.values()
+    }:
+        raise ContentError(
+            f"{template}: starting_silver names no template kind ({starting_silver.kind!r})"
+        )
     return CharacterSpec(
         stats=stats,
         templates=templates,
@@ -534,6 +560,7 @@ def build_character(
         skills=skills,
         skill_progression=levels,
         ordered_feature_tags=ordered_tags,
+        starting_silver=starting_silver,
     )
 
 
@@ -1416,6 +1443,36 @@ def _text_items(value: object, label: str) -> tuple[str, ...]:
     return tuple(item.strip() for item in value)
 
 
+def load_starting_silver(value: object, label: str) -> StartingSilver | None:
+    """Money rolled instead of choosing a template of `kind`, such as a starting kit."""
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label}: 'starting_silver' must be an object")
+    unknown = sorted(set(value) - {"kind", "label", "description", "dice", "multiplier"})
+    if unknown:
+        raise ContentError(f"{label}: 'starting_silver' has unknown keys: {', '.join(unknown)}")
+    kind = required_text(value, "kind", f"{label}: starting_silver")
+    dice = required_text(value, "dice", f"{label}: starting_silver")
+    if not is_formula(dice) or "+" in dice or "-" in dice:
+        raise ContentError(f"{label}: starting_silver 'dice' must be one dice term such as '3d6'")
+    multiplier = value.get("multiplier", 1)
+    if isinstance(multiplier, bool) or not isinstance(multiplier, int) or multiplier < 1:
+        raise ContentError(f"{label}: starting_silver 'multiplier' must be a whole number")
+    label_text = value.get("label", "Starting silver")
+    description = value.get("description", "")
+    for key, text in (("label", label_text), ("description", description)):
+        if not isinstance(text, str):
+            raise ContentError(f"{label}: starting_silver {key!r} must be text")
+    return StartingSilver(
+        kind=kind,
+        label=label_text.strip() or "Starting silver",
+        description=description.strip(),
+        dice=dice,
+        multiplier=multiplier,
+    )
+
+
 def _template_compatibility(value: object, label: str) -> dict[str, tuple[str, ...]]:
     if not isinstance(value, Mapping):
         raise ContentError(f"{label}: 'compatible_with' must map kinds to template ids")
@@ -1540,6 +1597,7 @@ def _feat_picks(value: object, label: str) -> tuple[FeatPick, ...]:
         raise ContentError(f"{label}: 'feat_picks' must be a list")
     picks: list[FeatPick] = []
     ids: set[str] = set()
+    order: list[str] = []
     for item in value:
         pick_label = f"{label}: feature pick"
         if not isinstance(item, Mapping):
@@ -1548,6 +1606,7 @@ def _feat_picks(value: object, label: str) -> tuple[FeatPick, ...]:
         if ident in ids:
             raise ContentError(f"{label}: feature pick {ident!r} is listed twice")
         ids.add(ident)
+        order.append(ident)
         count = item.get("count")
         if isinstance(count, bool) or not isinstance(count, int) or count < 1:
             raise ContentError(f"{pick_label} {ident!r}: 'count' must be a whole number, 1 or more")
@@ -1562,6 +1621,15 @@ def _feat_picks(value: object, label: str) -> tuple[FeatPick, ...]:
         feature_type = item.get("feature_type", "")
         if not isinstance(feature_type, str):
             raise ContentError(f"{pick_label} {ident!r}: 'feature_type' must be text")
+        tags_from = item.get("tags_from", "")
+        if not isinstance(tags_from, str):
+            raise ContentError(f"{pick_label} {ident!r}: 'tags_from' must be text")
+        if tags_from and tags_from not in order[:-1]:
+            raise ContentError(f"{pick_label} {ident!r}: 'tags_from' must name an earlier pick")
+        # A spell is learned once, so spell picks are distinct across the character by default.
+        unique = item.get("unique", feature_type == "spell")
+        if not isinstance(unique, bool):
+            raise ContentError(f"{pick_label} {ident!r}: 'unique' must be boolean")
         max_rank = item.get("max_rank")
         if max_rank is not None and (
             isinstance(max_rank, bool) or not isinstance(max_rank, int) or max_rank < 0
@@ -1581,6 +1649,8 @@ def _feat_picks(value: object, label: str) -> tuple[FeatPick, ...]:
                 exclude=_text_ids(item.get("exclude", []), "exclude", pick_label),
                 tags=tags,
                 feature_type=feature_type,
+                tags_from=tags_from,
+                unique=unique,
                 advance_repeated_rank=advance_repeated_rank,
             )
         )
@@ -2021,17 +2091,44 @@ def _check_skill_picks(spec: CharacterSpec, submitted: Mapping[str, Any]) -> Non
 
 def _check_feature_picks(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
     """The feature ids a submitted `feature_picks` object gives must be features of the pick's
-    tag and rank, may not repeat, and may not outnumber the pick's count."""
+    tag and rank, may not repeat, and may not outnumber the pick's count. A feature already
+    granted by a template, or already chosen by another pick, may only be taken again when it
+    is repeatable or when this pick can advance it to its next rank."""
     given = _pick_object(submitted.get("feature_picks", {}), "feature_picks")
+    taken: dict[str, int] = {}
+    templates = [
+        spec.templates[template_id]
+        for template_id in submitted.get("templates", {}).values()
+        if template_id in spec.templates
+    ]
+    for template in templates:
+        for granted in template.features:
+            taken[granted.feature] = taken.get(granted.feature, 0) + 1
     seen: set[str] = set()
-    for template_id in submitted.get("templates", {}).values():
-        template = spec.templates.get(template_id)
-        if template is None:
-            continue
+    chosen_by_pick: dict[str, list[str]] = {}
+    for template in templates:
         for pick in template.feat_picks:
             features = given.get(pick.id, [])
             seen.add(pick.id)
-            _selected_feature_pick(spec, pick, features)
+            allowed_tags = None
+            if pick.tags_from and features:
+                source = chosen_by_pick.get(pick.tags_from)
+                if not source:
+                    raise CharacterError(
+                        f"feature pick {pick.id!r} needs a choice for {pick.tags_from!r} first"
+                    )
+                allowed_tags = {spec.features[feature_id].tag for feature_id in source}
+            chosen = _selected_feature_pick(spec, pick, features, allowed_tags=allowed_tags)
+            chosen_by_pick[pick.id] = chosen
+            for feature_id in chosen:
+                feature = spec.features[feature_id]
+                if taken.get(feature_id, 0) > 0:
+                    can_advance = pick.advance_repeated_rank and bool(
+                        feature_next_ranks(spec, pick, feature)
+                    )
+                    if pick.unique and not feature.repeatable and not can_advance:
+                        raise CharacterError(f"{feature.name!r} is already part of this character")
+                taken[feature_id] = taken.get(feature_id, 0) + 1
     unknown = set(given) - seen
     if unknown:
         raise CharacterError(f"no feature pick named {min(unknown)!r}")
@@ -2064,7 +2161,13 @@ def _check_feature_repeats(spec: CharacterSpec, submitted: Mapping[str, Any]) ->
                 )
 
 
-def _selected_feature_pick(spec: CharacterSpec, pick: FeatPick, chosen: object) -> list[str]:
+def _selected_feature_pick(
+    spec: CharacterSpec,
+    pick: FeatPick,
+    chosen: object,
+    *,
+    allowed_tags: Collection[str] | None = None,
+) -> list[str]:
     if not isinstance(chosen, list) or not all(isinstance(item, str) for item in chosen):
         raise CharacterError(f"feature pick {pick.id!r} must be a list of feature ids")
     if len(chosen) > pick.count:
@@ -2073,7 +2176,9 @@ def _selected_feature_pick(spec: CharacterSpec, pick: FeatPick, chosen: object) 
         )
     if len(set(chosen)) != len(chosen):
         raise CharacterError(f"feature pick {pick.id!r} repeats a feature")
-    offered = {feature.id for feature in feature_pick_options(spec, pick)}
+    offered = {
+        feature.id for feature in feature_pick_options(spec, pick, allowed_tags=allowed_tags)
+    }
     for feature_id in chosen:
         if feature_id not in offered:
             raise CharacterError(_not_offered(spec, pick, feature_id))
@@ -2350,11 +2455,22 @@ def resolve(
             fields[field_spec.id] = _field_value(spec, field_spec, given_fields, fields, rng)
     for field_spec in restricted:
         fields[field_spec.id] = _field_value(spec, field_spec, given_fields, fields, rng)
-    feat_picks = [
-        (pick, _selected_feature_pick(spec, pick, given_feature_picks.get(pick.id, [])))
-        for template_id in templates.values()
-        for pick in spec.templates[template_id].feat_picks
-    ]
+    feat_picks: list[tuple[FeatPick, list[str]]] = []
+    selected_by_pick: dict[str, list[str]] = {}
+    for template_id in templates.values():
+        for pick in spec.templates[template_id].feat_picks:
+            chosen_given = given_feature_picks.get(pick.id, [])
+            allowed_tags = None
+            if pick.tags_from and chosen_given:
+                source = selected_by_pick.get(pick.tags_from)
+                if not source:
+                    raise CharacterError(
+                        f"feature pick {pick.id!r} needs a choice for {pick.tags_from!r} first"
+                    )
+                allowed_tags = {spec.features[feature_id].tag for feature_id in source}
+            chosen = _selected_feature_pick(spec, pick, chosen_given, allowed_tags=allowed_tags)
+            selected_by_pick[pick.id] = chosen
+            feat_picks.append((pick, chosen))
     reserved = {feature for _, chosen in feat_picks for feature in chosen}
     feature_slots: list[tuple[str, tuple[str, ...]]] = []
     tagged_planned: dict[tuple[str, str], int] = {}
@@ -2956,14 +3072,18 @@ def skill_pick_options(spec: CharacterSpec, pick: SkillPick) -> tuple[tuple[str,
     )
 
 
-def feature_pick_options(spec: CharacterSpec, pick: FeatPick) -> tuple[Feature, ...]:
+def feature_pick_options(
+    spec: CharacterSpec, pick: FeatPick, *, allowed_tags: Collection[str] | None = None
+) -> tuple[Feature, ...]:
     """The features a pick offers: those whose tag is one of the pick's, whose rank is at most
-    its `max_rank` when one is given, and that it does not exclude."""
+    its `max_rank` when one is given, and that it does not exclude. An `allowed_tags` set, from
+    another pick, further narrows the tags the pick may offer."""
     tags = pick.tags or ((pick.tag,) if pick.tag else ())
     return tuple(
         feature
         for feature in spec.features.values()
         if (not tags or feature.tag in tags)
+        and (allowed_tags is None or feature.tag in allowed_tags)
         and (not pick.feature_type or feature.feature_type == pick.feature_type)
         and (pick.max_rank is None or feature.rank <= pick.max_rank)
         and feature.id not in pick.exclude

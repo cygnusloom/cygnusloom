@@ -236,10 +236,11 @@
   {% endfor %}
 {%- endmacro %}
 
-{% macro choice(name, value, title, detail=None, data_select=None, freeform=false, group=None, data_compatible_with=None, data_template_requirements=None, data_choice_key=None) -%}
+{% macro choice(name, value, title, detail=None, data_select=None, freeform=false, group=None, data_compatible_with=None, data_template_requirements=None, data_choice_key=None, summary=None, grants=None) -%}
   <label class="choice"{% if data_compatible_with is not none %} data-compatible-with='{{ data_compatible_with|tojson }}'{% endif %}{% if data_template_requirements is not none %} data-template-requirements='{{ data_template_requirements|tojson }}'{% endif %}>
-    <input type="radio" name="{{ name }}" value="{{ value }}" data-title="{{ title }}"{% if data_select %} data-template-select="{{ data_select }}"{% endif %}{% if data_choice_key is not none %} data-choice-key="{{ data_choice_key }}"{% endif %}{% if freeform %} data-freeform{% endif %}{% if group %} data-group="{{ group }}"{% endif %}>
+    <input type="radio" name="{{ name }}" value="{{ value }}" data-title="{{ title }}"{% if summary %} data-summary="{{ summary }}"{% endif %}{% if data_select %} data-template-select="{{ data_select }}"{% endif %}{% if data_choice_key is not none %} data-choice-key="{{ data_choice_key }}"{% endif %}{% if freeform %} data-freeform{% endif %}{% if group %} data-group="{{ group }}"{% endif %}>
     <span>{{ title }}</span>
+    {% if grants %}<span class="choice-grants">{% for grant in grants %}<span class="tag">{{ grant }}</span>{% endfor %}</span>{% endif %}
     {% if detail %}<span class="muted choice-detail">{{ detail }}</span>{% endif %}
   </label>
 {%- endmacro %}
@@ -247,13 +248,17 @@
 {# The chosen value stays on one line; the full list of options opens in a dialog. #}
 {% macro choice_picker(name, label, description=None) -%}
   <div class="choice-picker">
-    <output class="choice-summary" data-summary-for="{{ name }}">Not chosen</output>
+    <div class="choice-state">
+      <output class="choice-summary" data-summary-for="{{ name }}">Not chosen</output>
+      <span class="muted choice-summary-detail" data-summary-detail-for="{{ name }}"></span>
+    </div>
     {{ dice_button(name, label|lower) }}
     <button type="button" class="secondary" data-open-choice="choice-dialog-{{ name }}" aria-haspopup="dialog">Choose</button>
   </div>
   <dialog id="choice-dialog-{{ name }}" class="app-dialog choice-dialog" aria-labelledby="choice-dialog-{{ name }}-title">
     <h2 id="choice-dialog-{{ name }}-title">{{ label }}</h2>
     {% if description %}<p class="muted">{{ description }}</p>{% endif %}
+    <input type="search" class="choice-search" data-choice-search placeholder="Search {{ label|lower }}" aria-label="Search {{ label|lower }}">
     <div class="choice-list">{{ caller() }}</div>
     <div class="dialog-actions">
       <button type="button" class="secondary" data-close-choice>Done</button>
@@ -266,9 +271,10 @@
 {% macro choice_panel(name, label, options, description=None, restriction=None) -%}
   <fieldset class="creation-panel" data-choice-panel="{{ name }}" data-choice-label="{{ label }}" aria-labelledby="panel-{{ name }}"{% if restriction %} data-restrict-field="field-{{ restriction.field }}" data-restrict-values='{{ restriction['values']|tojson }}' data-restrict-groups='{{ restriction['groups']|tojson }}'{% endif %}>
     <h3 id="panel-{{ name }}">{{ label }}</h3>
+    {% if description %}<p class="muted panel-hint">{{ description }}</p>{% endif %}
     {% call choice_picker(name, label, description) %}
       {% for option in options %}
-        {{ choice(name, option.value, option.title, option.detail, group=option.group) }}
+        {{ choice(name, option.value, option.title, option.detail, group=option.group, summary=option.summary) }}
       {% endfor %}
     {% endcall %}
   </fieldset>
@@ -277,10 +283,40 @@
 {% macro text_panel(name, label, description="") -%}
   <section class="creation-panel" aria-labelledby="panel-{{ name }}">
     <h3 id="panel-{{ name }}">{{ label }}</h3>
+    {% if description %}<p class="muted panel-hint">{{ description }}</p>{% endif %}
     <label>
       <textarea name="{{ name }}" rows="3" maxlength="2000" placeholder="{{ description }}" aria-labelledby="panel-{{ name }}"></textarea>
     </label>
   </section>
+{%- endmacro %}
+
+{# A skill or feature pick: a readable summary, a dice button, and a searchable dialog of rich
+   options. The native select stays in the form for submission and for the constraint script. #}
+{% macro pick_control(name, label, hint=None, select_attributes="") -%}
+  <div class="pick-control" data-pick-control="{{ name }}">
+    <div class="pick-heading">
+      <span class="pick-label">{{ label }}</span>
+      {{ dice_button(name, label|lower, attribute="data-roll-pick") }}
+      <button type="button" class="secondary" data-open-pick="pick-dialog-{{ name }}" aria-haspopup="dialog">Choose</button>
+    </div>
+    <div class="pick-summary">
+      <output class="pick-summary-value" data-pick-summary-for="{{ name }}">Roll one</output>
+      <span class="muted pick-summary-detail" data-pick-detail-for="{{ name }}"></span>
+    </div>
+    <select name="{{ name }}" class="pick-native" data-pick-source {{ select_attributes }}>
+      {{ caller() }}
+    </select>
+  </div>
+  <dialog id="pick-dialog-{{ name }}" class="app-dialog choice-dialog pick-dialog" aria-labelledby="pick-dialog-{{ name }}-title">
+    <h2 id="pick-dialog-{{ name }}-title">{{ label }}</h2>
+    {% if hint %}<p class="muted">{{ hint }}</p>{% endif %}
+    <input type="search" class="choice-search" data-pick-search placeholder="Search {{ label|lower }}" aria-label="Search {{ label|lower }}">
+    <div class="pick-options" data-pick-options></div>
+    <div class="dialog-actions">
+      <button type="button" class="secondary" data-clear-pick>Leave to roll</button>
+      <button type="button" class="secondary" data-close-choice>Done</button>
+    </div>
+  </dialog>
 {%- endmacro %}
 
 {% macro dice_button(name, label, attribute="data-dice-for") -%}

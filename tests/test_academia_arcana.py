@@ -9,10 +9,17 @@ from collections import Counter
 from collections.abc import Callable, Mapping
 from types import SimpleNamespace
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusloom.content.character import CharacterSpec, Sheet, check_choices, resolve
+from cygnusloom.content.character import (
+    CharacterError,
+    CharacterSpec,
+    Sheet,
+    check_choices,
+    resolve,
+)
 from cygnusloom.content.library import RuleSet
 from cygnusloom.services.events import Character
 from cygnusloom.services.tools import Ask, RollAnswer, ToolRequest, run_tool
@@ -362,3 +369,25 @@ def test_creation_form_pluralizes_feature_picks(
     assert "Pick 2 potions" in page
     assert "Pick 1 enchantment" in page
     assert "Potionss" not in page
+
+
+def test_creation_form_limits_spells_to_the_chosen_subjects(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign(client, world_template=WORLD, rule_set=RULE_SET)
+    choose_campaign_options(client, campaign_id, RULE_SET)
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert 'data-tags-from="subjects"' in page
+    assert 'data-feature-tag="Charms"' in page
+    assert "Choose subjects first" in page
+
+
+def test_a_creation_spell_must_belong_to_a_chosen_subject() -> None:
+    rules = _academy()
+    submitted = _submitted()
+    submitted["feature_picks"]["subjects"] = ["subject-warding"]
+
+    with pytest.raises(CharacterError, match="no spell tagged"):
+        check_choices(rules.character, submitted)

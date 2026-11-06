@@ -527,7 +527,8 @@ def test_feature_pick_labels_use_the_configured_kind_or_a_generic_fallback(
     adept = next(item for item in calling["templates"] if item["id"] == "adept")
 
     assert adept["feat_picks"][0]["tag"] == label
-    assert adept["feat_picks"][0]["hint"].startswith(f"Pick 2 {label}s")
+    plural = {"focus": "foci", "spell": "spells"}.get(label, f"{label}s")
+    assert adept["feat_picks"][0]["hint"].startswith(f"Pick 2 {plural}")
 
 
 def test_wwn_multitag_spell_picks_are_labeled_in_the_creation_form(
@@ -542,7 +543,45 @@ def test_wwn_multitag_spell_picks_are_labeled_in_the_creation_form(
     picks = page.split('data-pick-selects="tradition_spells_elementalist"', 1)[1]
     picks = picks.split("</fieldset>", 1)[0]
 
-    assert "<h3>Spell</h3>" in picks
-    assert "Randomize spell" in picks
+    assert "<h3>Spells</h3>" in picks
+    assert "Randomize spells" in picks
     assert "Pick 4 spells of rank 1 or less" in picks
     assert "Spell 1" in picks
+
+
+def test_creation_page_shows_template_grants_and_rich_pick_controls(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    response = _new_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    assert 'class="choice-grants"' in page
+    assert "Killing Blow" in page
+    assert "Craft 1" in page
+    assert 'data-pick-control="pick-skill-' in page
+    assert "data-open-pick=" in page
+    assert "data-pick-search" in page
+    assert "data-detail=" in page
+    assert "Catch small details" in page
+    assert "(learning_" not in page
+
+
+def test_creation_page_renders_stats_as_swap_cards(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    response = _new_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    assert 'data-stat-group="attributes"' in page
+    assert "data-stat-bands=" in page
+    assert "data-stat-modifier" in page
+    assert "data-reset-stats" in page
+    assert '<input type="hidden" name="stat-str"' in page

@@ -20,6 +20,13 @@
       }
     },
     "optional_templates": ["tradition2"],
+    "starting_silver": {
+      "kind": "kit",
+      "label": "Starting silver",
+      "description": "Take no equipment package and roll 3d6, multiplied by 10, for starting silver to spend on gear or keep.",
+      "dice": "3d6",
+      "multiplier": 10
+    },
     "condition_ends": ["rest", "extended_rest", "scene", "day", "magic"],
     "npc_hp_stat": "hp",
     "npc_hp": {

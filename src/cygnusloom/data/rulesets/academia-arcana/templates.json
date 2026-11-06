@@ -68,17 +68,18 @@
     "counters": {"year": 0},
     "feat_picks": [
       {
-        "id": "spells",
-        "count": 2,
-        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
-        "feature_type": "spell",
-        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
-      },
-      {
         "id": "subjects",
         "count": 1,
         "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
         "feature_type": "subject"
+      },
+      {
+        "id": "spells",
+        "count": 2,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "tags_from": "subjects",
+        "feature_type": "spell",
+        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
       },
       {"id": "potions", "count": 1, "tag": "Potions", "feature_type": "potion"},
       {"id": "enchantments", "count": 1, "tag": "Enchantments", "feature_type": "enchantment"}
@@ -93,17 +94,18 @@
     "counters": {"year": 1},
     "feat_picks": [
       {
-        "id": "spells",
-        "count": 3,
-        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
-        "feature_type": "spell",
-        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
-      },
-      {
         "id": "subjects",
         "count": 1,
         "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
         "feature_type": "subject"
+      },
+      {
+        "id": "spells",
+        "count": 3,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "tags_from": "subjects",
+        "feature_type": "spell",
+        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
       },
       {"id": "potions", "count": 2, "tag": "Potions", "feature_type": "potion"},
       {"id": "enchantments", "count": 1, "tag": "Enchantments", "feature_type": "enchantment"}
@@ -118,17 +120,18 @@
     "counters": {"year": 2},
     "feat_picks": [
       {
-        "id": "spells",
-        "count": 4,
-        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
-        "feature_type": "spell",
-        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
-      },
-      {
         "id": "subjects",
         "count": 2,
         "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
         "feature_type": "subject"
+      },
+      {
+        "id": "spells",
+        "count": 4,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "tags_from": "subjects",
+        "feature_type": "spell",
+        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
       },
       {"id": "potions", "count": 2, "tag": "Potions", "feature_type": "potion"},
       {"id": "enchantments", "count": 1, "tag": "Enchantments", "feature_type": "enchantment"},
@@ -144,17 +147,18 @@
     "counters": {"year": 3},
     "feat_picks": [
       {
-        "id": "spells",
-        "count": 5,
-        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
-        "feature_type": "spell",
-        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
-      },
-      {
         "id": "subjects",
         "count": 2,
         "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
         "feature_type": "subject"
+      },
+      {
+        "id": "spells",
+        "count": 5,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "tags_from": "subjects",
+        "feature_type": "spell",
+        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
       },
       {"id": "potions", "count": 3, "tag": "Potions", "feature_type": "potion"},
       {"id": "enchantments", "count": 2, "tag": "Enchantments", "feature_type": "enchantment"},
@@ -170,17 +174,18 @@
     "counters": {"year": 4},
     "feat_picks": [
       {
-        "id": "spells",
-        "count": 6,
-        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
-        "feature_type": "spell",
-        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
-      },
-      {
         "id": "subjects",
         "count": 3,
         "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
         "feature_type": "subject"
+      },
+      {
+        "id": "spells",
+        "count": 6,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "tags_from": "subjects",
+        "feature_type": "spell",
+        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
       },
       {"id": "potions", "count": 3, "tag": "Potions", "feature_type": "potion"},
       {"id": "enchantments", "count": 2, "tag": "Enchantments", "feature_type": "enchantment"},
@@ -196,17 +201,18 @@
     "counters": {"year": 5},
     "feat_picks": [
       {
-        "id": "spells",
-        "count": 7,
-        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
-        "feature_type": "spell",
-        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
-      },
-      {
         "id": "subjects",
         "count": 3,
         "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
         "feature_type": "subject"
+      },
+      {
+        "id": "spells",
+        "count": 7,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "tags_from": "subjects",
+        "feature_type": "spell",
+        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
       },
       {"id": "potions", "count": 4, "tag": "Potions", "feature_type": "potion"},
       {"id": "enchantments", "count": 2, "tag": "Enchantments", "feature_type": "enchantment"},
@@ -222,17 +228,18 @@
     "counters": {"year": 6},
     "feat_picks": [
       {
-        "id": "spells",
-        "count": 8,
-        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
-        "feature_type": "spell",
-        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
-      },
-      {
         "id": "subjects",
         "count": 4,
         "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
         "feature_type": "subject"
+      },
+      {
+        "id": "spells",
+        "count": 8,
+        "tags": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+        "tags_from": "subjects",
+        "feature_type": "spell",
+        "exclude": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"]
       },
       {"id": "potions", "count": 4, "tag": "Potions", "feature_type": "potion"},
       {"id": "enchantments", "count": 3, "tag": "Enchantments", "feature_type": "enchantment"},

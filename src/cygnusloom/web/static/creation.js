@@ -7,15 +7,28 @@
     choices.push(radio);
     templateChoicesByKind.set(radio.dataset.templateSelect, choices);
   }
+  // The order the panels appear in the page. A later kind is downstream of an earlier one, so
+  // changing an earlier choice may clear a later one, but not the other way around.
+  const panelKindOrder = new Map();
+  for (const radio of templateRadios) {
+    const kind = radio.dataset.templateSelect;
+    if (!panelKindOrder.has(kind)) panelKindOrder.set(kind, panelKindOrder.size);
+  }
 
-  // Only the tables of the chosen template are shown. Hidden tables are skipped on submit.
+  // Only the tables of the chosen template are shown. A table from another template is also
+  // cleared, so a stale hidden choice cannot drive restriction or tag logic later.
   const revealTables = (kind) => {
     const chosen = templateRadios.find(
       (radio) => radio.checked && radio.dataset.templateSelect === kind,
     );
     for (const group of document.querySelectorAll("[data-template-group]")) {
-      if (group.dataset.templateGroup === kind) {
-        group.hidden = !chosen || group.dataset.template !== chosen.value;
+      if (group.dataset.templateGroup !== kind) continue;
+      const shown = Boolean(chosen) && group.dataset.template === chosen.value;
+      group.hidden = !shown;
+      if (shown) continue;
+      for (const radio of group.querySelectorAll('input[type="radio"]:checked')) {
+        radio.checked = false;
+        refreshSummary(radio.name);
       }
     }
   };
@@ -30,6 +43,14 @@
     );
     output.textContent = chosen ? chosen.dataset.title : "Not chosen";
     output.classList.toggle("is-chosen", Boolean(chosen));
+    const detail = [...document.querySelectorAll("[data-summary-detail-for]")].find(
+      (item) => item.dataset.summaryDetailFor === name,
+    );
+    if (detail) {
+      detail.textContent = chosen
+        ? chosen.dataset.summary || chosen.closest("label.choice")?.querySelector(".choice-detail")?.textContent || ""
+        : "";
+    }
   };
 
   const selectedTemplates = () => {
@@ -40,43 +61,156 @@
     return selected;
   };
 
+  // Picks use a native select for form submission and for the constraint logic, and a custom
+  // summary and dialog for reading the options. The dialog is built from the select so the two
+  // can never disagree about the offered values.
+  const pickControls = [...document.querySelectorAll("[data-pick-control]")];
+  const pickControlsByName = new Map(
+    pickControls.map((control) => [control.dataset.pickControl, control]),
+  );
+
+  const pickSelect = (control) => control.querySelector("select[data-pick-source]");
+  const pickDetail = (option) => option?.dataset.detail || option?.dataset.description || "";
+
+  const buildPickDialog = (control) => {
+    const select = pickSelect(control);
+    const dialog = document.getElementById(`pick-dialog-${control.dataset.pickControl}`);
+    const container = dialog?.querySelector("[data-pick-options]");
+    if (!select || !container) return;
+    container.replaceChildren();
+    let group = null;
+    const openGroup = (title, tag = "") => {
+      const section = document.createElement("div");
+      section.className = "pick-group";
+      section.dataset.tag = tag;
+      if (title) {
+        const heading = document.createElement("p");
+        heading.className = "pick-group-title";
+        heading.textContent = title;
+        section.append(heading);
+      }
+      container.append(section);
+      group = section;
+      return section;
+    };
+    const addOption = (option) => {
+      if (!option.value || !group) return;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "choice pick-option";
+      button.dataset.value = option.value;
+      button.dataset.title = option.dataset.title || option.textContent;
+      button.dataset.detail = pickDetail(option);
+      const title = document.createElement("span");
+      title.className = "pick-title";
+      title.textContent = button.dataset.title;
+      button.append(title);
+      if (button.dataset.detail) {
+        const detail = document.createElement("span");
+        detail.className = "muted choice-detail";
+        detail.textContent = button.dataset.detail;
+        button.append(detail);
+      }
+      const rank = option.dataset.rank;
+      if (rank && rank !== "0") {
+        const badge = document.createElement("span");
+        badge.className = "tag";
+        badge.textContent = `Rank ${rank}`;
+        button.append(badge);
+      }
+      group.append(button);
+    };
+    for (const child of select.children) {
+      if (child instanceof HTMLOptGroupElement) {
+        openGroup(child.label, child.dataset.tag || "");
+        for (const option of child.querySelectorAll("option")) addOption(option);
+      } else if (child instanceof HTMLOptionElement) {
+        if (!group) openGroup("");
+        addOption(child);
+      }
+    }
+  };
+
+  const filterPickOptions = (dialog) => {
+    const query = dialog.querySelector("[data-pick-search]")?.value.trim().toLowerCase() ?? "";
+    for (const group of dialog.querySelectorAll(".pick-group")) {
+      let offered = false;
+      for (const button of group.querySelectorAll(".pick-option")) {
+        const matches = !query || button.textContent.toLowerCase().includes(query);
+        button.hidden = !matches;
+        if (matches && !button.disabled) offered = true;
+      }
+      group.hidden = !offered;
+    }
+  };
+
+  const filterChoiceOptions = (dialog) => {
+    const query = dialog.querySelector("[data-choice-search]")?.value.trim().toLowerCase() ?? "";
+    for (const choice of dialog.querySelectorAll(".choice-list .choice")) {
+      choice.classList.toggle(
+        "search-hidden",
+        Boolean(query) && !choice.textContent.toLowerCase().includes(query),
+      );
+    }
+  };
+
+  const syncPickControl = (control) => {
+    const select = pickSelect(control);
+    if (!select) return;
+    const option = select.selectedOptions[0];
+    const summary = control.querySelector("[data-pick-summary-for]");
+    if (summary) {
+      summary.textContent = option?.value
+        ? option.dataset.title || option.textContent
+        : "Roll one";
+      summary.classList.toggle("is-chosen", Boolean(option?.value));
+    }
+    const detail = control.querySelector("[data-pick-detail-for]");
+    if (detail) detail.textContent = option?.value ? pickDetail(option) : "";
+    const dialog = document.getElementById(`pick-dialog-${control.dataset.pickControl}`);
+    if (!dialog) return;
+    for (const button of dialog.querySelectorAll(".pick-option")) {
+      const source = [...select.options].find((item) => item.value === button.dataset.value);
+      button.disabled = !source || source.disabled;
+      button.classList.toggle("is-selected", button.dataset.value === select.value);
+    }
+    filterPickOptions(dialog);
+  };
+
+  const syncPickControls = () => {
+    for (const control of pickControls) syncPickControl(control);
+  };
+
+  const syncReplacementDetails = () => {
+    for (const row of document.querySelectorAll("[data-replacement-row]")) {
+      const select = row.querySelector("select");
+      const detail = row.querySelector("[data-replacement-detail]");
+      if (select && detail) detail.textContent = pickDetail(select.selectedOptions[0]);
+    }
+  };
+
+  const choosePickValue = (control, value) => {
+    const select = pickSelect(control);
+    if (!select) return;
+    select.value = value;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+
+  const openPickDialog = (control) => {
+    const dialog = document.getElementById(`pick-dialog-${control.dataset.pickControl}`);
+    if (!dialog || dialog.open) return;
+    const search = dialog.querySelector("[data-pick-search]");
+    if (search) search.value = "";
+    syncPickControl(control);
+    dialog.showModal();
+    dialog.querySelector(".pick-option.is-selected:not([hidden])")?.scrollIntoView({ block: "nearest" });
+    search?.focus();
+  };
+
   const templateData = (radio, name, fallback) => {
     const value = radio.closest("label.choice")?.dataset[name];
     return value ? JSON.parse(value) : fallback;
   };
-
-  const compatibilityGraph = new Map(
-    [...templateChoicesByKind.keys()].map((kind) => [kind, new Set()]),
-  );
-  for (const radio of templateRadios) {
-    const gates = compatibilityGraph.get(radio.dataset.templateSelect);
-    for (const kind of Object.keys(templateData(radio, "compatibleWith", {}))) {
-      if (compatibilityGraph.has(kind)) gates.add(kind);
-    }
-  }
-  const reachableKinds = (start) => {
-    const reached = new Set([start]);
-    const pending = [start];
-    while (pending.length > 0) {
-      for (const kind of compatibilityGraph.get(pending.pop()) ?? []) {
-        if (reached.has(kind)) continue;
-        reached.add(kind);
-        pending.push(kind);
-      }
-    }
-    return reached;
-  };
-  const compatibilityReachability = new Map(
-    [...compatibilityGraph.keys()].map((kind) => [kind, reachableKinds(kind)]),
-  );
-  const compatibilityComponent = (start) =>
-    new Set(
-      [...compatibilityGraph.keys()].filter(
-        (kind) =>
-          compatibilityReachability.get(start)?.has(kind) &&
-          compatibilityReachability.get(kind)?.has(start),
-      ),
-    );
 
   const activeRequirements = (selected) =>
     [...selected.values()].flatMap((radio) =>
@@ -167,10 +301,53 @@
   };
 
   const compatible = (radio, selected) => {
-    const assignment = new Map(selected);
     const kind = radio.dataset.templateSelect;
-    for (const cycleKind of compatibilityComponent(kind)) assignment.delete(cycleKind);
+    const candidateIndex = panelKindOrder.get(kind) ?? 0;
+    const downstream = (otherKind) =>
+      (panelKindOrder.get(otherKind) ?? 0) > candidateIndex;
+    const assignment = new Map(selected);
+    // A candidate may replace the selections it gates (later kinds), but never its own gates
+    // (earlier kinds). That keeps an irrelevant tradition hidden while the chosen class rules
+    // it out, while still letting a class2 choice replace a tradition chosen before it.
+    for (const [gateKind, allowed] of Object.entries(
+      templateData(radio, "compatibleWith", {}),
+    )) {
+      const gate = assignment.get(gateKind);
+      if (gate && downstream(gateKind) && !allowed.includes(gate.value)) {
+        assignment.delete(gateKind);
+      }
+    }
+    for (const requirement of templateData(radio, "templateRequirements", [])) {
+      const shared = requirement.kinds
+        .map((requiredKind) => assignment.get(requiredKind))
+        .find(
+          (other) =>
+            other &&
+            other !== radio &&
+            downstream(other.dataset.templateSelect) &&
+            requirement.distinct &&
+            choiceKey(other) === choiceKey(radio),
+        );
+      if (shared) assignment.delete(shared.dataset.templateSelect);
+    }
+    assignment.delete(kind);
     assignment.set(kind, radio);
+    for (const other of [...assignment.values()]) {
+      const otherKind = other.dataset.templateSelect;
+      if (otherKind === kind || !downstream(otherKind)) continue;
+      const gates = templateData(other, "compatibleWith", {});
+      if (kind in gates && !gates[kind].includes(radio.value)) {
+        assignment.delete(otherKind);
+        continue;
+      }
+      const conflict = templateData(other, "templateRequirements", []).some(
+        (requirement) =>
+          requirement.kinds.includes(kind) &&
+          requirement.distinct &&
+          choiceKey(other) === choiceKey(radio),
+      );
+      if (conflict) assignment.delete(otherKind);
+    }
     return hasFeasibleCompletion(assignment);
   };
 
@@ -181,6 +358,7 @@
   };
 
   const refreshTemplateChoices = (changedRadio = null) => {
+    let anyCleared = false;
     for (let pass = 0; pass <= templateRadios.length; pass++) {
       let cleared = false;
       const selectedAtStart = selectedTemplates();
@@ -208,6 +386,7 @@
         } else {
           clearTemplateChoice(radio);
           cleared = true;
+          anyCleared = true;
         }
       }
 
@@ -230,6 +409,7 @@
             if (radio === keep) continue;
             clearTemplateChoice(radio);
             cleared = true;
+            anyCleared = true;
           }
         }
         if (cleared) selected = selectedTemplates();
@@ -256,7 +436,10 @@
       const none = panel.querySelector('input[type="radio"][value=""]');
       if (none) {
         none.closest("label.choice").hidden = required;
-        if (required && none.checked) clearTemplateChoice(none);
+        if (required && none.checked) {
+          clearTemplateChoice(none);
+          anyCleared = true;
+        }
       }
 
       let offered = Boolean(none && !required);
@@ -273,11 +456,15 @@
         );
         const allowed = compatible(radio, selected) && !duplicate;
         radio.closest("label.choice").hidden = !allowed;
-        if (!allowed && radio.checked) clearTemplateChoice(radio);
+        if (!allowed && radio.checked) {
+          clearTemplateChoice(radio);
+          anyCleared = true;
+        }
         if (allowed) offered = true;
       }
       panel.hidden = !offered;
     }
+    return anyCleared;
   };
 
   // Firefox can restore radio state on reload, so summaries are rebuilt from the DOM at load.
@@ -289,23 +476,30 @@
   );
   for (const kind of kinds) revealTables(kind);
   refreshTemplateChoices();
+  for (const control of pickControls) buildPickDialog(control);
+  syncPickControls();
+  syncReplacementDetails();
 
   // Tagged feature picks offer only the group matching the selected field.
   const refreshTaggedPicks = () => {
     for (const fieldset of document.querySelectorAll("[data-tag-field]")) {
       const selectedTag = document.querySelector(`input[type="radio"][name="${fieldset.dataset.tagField}"]:checked`);
       const skipped = selectedTag !== null && JSON.parse(fieldset.dataset.skipTags || "[]").includes(selectedTag.value);
-      fieldset.hidden = skipped;
-      fieldset.disabled = skipped;
-      for (const group of fieldset.querySelectorAll("optgroup")) {
-        const offered = !skipped && selectedTag !== null && group.dataset.tag === selectedTag.value;
+      const groups = [...fieldset.querySelectorAll("optgroup")];
+      const offeredTag = !skipped && selectedTag !== null &&
+        groups.some((group) => group.dataset.tag === selectedTag.value && group.querySelector("option"));
+      fieldset.hidden = !offeredTag;
+      fieldset.disabled = !offeredTag;
+      for (const group of groups) {
+        const offered = offeredTag && group.dataset.tag === selectedTag.value;
         group.hidden = !offered;
         for (const option of group.children) option.disabled = !offered;
       }
       for (const select of fieldset.querySelectorAll("select")) {
-        if (skipped || select.selectedOptions[0]?.disabled) select.value = "";
+        if (!offeredTag || select.selectedOptions[0]?.disabled) select.value = "";
       }
     }
+    syncPickControls();
   };
   const refreshSkillPickOptions = () => {
     if (!form?.hasAttribute("data-skill-first-level")) return;
@@ -349,6 +543,29 @@
         }
       }
     }
+    syncPickControls();
+  };
+  // A pick may take its allowed tags from an earlier pick, such as spells from chosen subjects.
+  const featureTagsFrom = (fieldset) => {
+    const sourceId = fieldset.dataset.tagsFrom;
+    if (!sourceId) return null;
+    const source = [...document.querySelectorAll(`[data-pick-selects="${sourceId}"]`)].find(
+      (item) => !item.closest("[hidden]"),
+    );
+    const tags = new Set();
+    if (source) {
+      for (const select of source.querySelectorAll("select")) {
+        const tag = select.selectedOptions[0]?.dataset.featureTag;
+        if (tag) tags.add(tag);
+      }
+    }
+    return tags;
+  };
+  const refreshFeatureSourceHints = () => {
+    for (const fieldset of document.querySelectorAll("[data-tags-from]")) {
+      const hint = fieldset.querySelector("[data-feature-source-hint]");
+      if (hint) hint.hidden = featureTagsFrom(fieldset).size > 0;
+    }
   };
   const refreshFeaturePickOptions = () => {
     const taken = new Map();
@@ -356,16 +573,15 @@
     for (const fieldset of document.querySelectorAll('[data-pick-kind="feature"]')) {
       const hidden = Boolean(fieldset.closest("[hidden]"));
       const advance = fieldset.dataset.advanceRepeatedRank === "true";
+      const mustBeDistinct = advance || fieldset.dataset.unique === "true";
+      const allowedTags = featureTagsFrom(fieldset);
       const withinPick = new Set();
       for (const row of fieldset.querySelectorAll("[data-feature-pick-row]")) {
         const select = row.querySelector("[data-feature-choice]");
-        const description = row.querySelector("[data-feature-description]");
         const modeLabel = row.querySelector("[data-feature-repeat-mode]");
         const mode = modeLabel.querySelector("select");
         if (hidden) {
           select.value = "";
-          description.textContent = "";
-          description.hidden = true;
           mode.value = "";
           modeLabel.hidden = true;
           mode.disabled = true;
@@ -373,18 +589,18 @@
         }
         for (const option of select.options) {
           const previouslyTaken = taken.get(option.value) ?? 0;
-          const exhausted = option.dataset.ordered === "true" &&
-            option.dataset.repeatable !== "true" &&
-            (option.dataset.hasNextRank !== "true" || advanced.has(option.value));
+          const repeatable = option.dataset.repeatable === "true";
+          const canAdvance = advance && option.dataset.hasNextRank === "true" &&
+            !advanced.has(option.value);
           option.disabled = Boolean(option.value) && (
-            withinPick.has(option.value) || (advance && previouslyTaken > 0 && exhausted)
+            withinPick.has(option.value) ||
+            (previouslyTaken > 0 && mustBeDistinct && !repeatable && !canAdvance) ||
+            (allowedTags !== null && !allowedTags.has(option.dataset.featureTag))
           );
         }
         if (select.selectedOptions[0]?.disabled) select.value = "";
         const option = select.selectedOptions[0];
         const value = select.value;
-        description.textContent = value ? option.dataset.description || "" : "";
-        description.hidden = !description.textContent;
         const previouslyTaken = taken.get(value) ?? 0;
         const mayChooseRepeat = Boolean(value) && advance && previouslyTaken > 0 &&
           option.dataset.repeatable === "true" && option.dataset.hasNextRank === "true";
@@ -404,6 +620,8 @@
         }
       }
     }
+    refreshFeatureSourceHints();
+    syncPickControls();
   };
   // A restricted choice offers only its options in the allowed groups while its gate is unchosen
   // or takes one of the gate's values. An option it rules out is disabled, and a pick of it is
@@ -428,22 +646,37 @@
   refreshSkillPickOptions();
   refreshFeaturePickOptions();
 
+  document.addEventListener("input", (event) => {
+    const pickSearch = event.target.closest("[data-pick-search]");
+    if (pickSearch) {
+      filterPickOptions(pickSearch.closest(".pick-dialog"));
+      return;
+    }
+    const choiceSearch = event.target.closest("[data-choice-search]");
+    if (choiceSearch) filterChoiceOptions(choiceSearch.closest(".choice-dialog"));
+  });
+
   document.addEventListener("change", (event) => {
     const target = event.target;
     if (target instanceof HTMLSelectElement) {
       if (target.closest('[data-pick-kind="skill"]')) refreshSkillPickOptions();
       if (target.closest('[data-pick-kind="feature"]')) refreshFeaturePickOptions();
+      if (target.matches("[data-pick-source]")) syncPickControls();
+      if (target.closest("[data-replacement-row]")) syncReplacementDetails();
       return;
     }
     const radio = target;
     if (!(radio instanceof HTMLInputElement) || radio.type !== "radio") return;
     refreshSummary(radio.name);
-    refreshTemplateChoices(radio);
+    const adjusted = refreshTemplateChoices(radio);
+    const note = document.querySelector("[data-choice-note]");
+    if (note) note.hidden = !adjusted;
     refreshRestrictions();
     refreshTaggedPicks();
     if (radio.dataset.templateSelect) revealTables(radio.dataset.templateSelect);
     refreshSkillPickOptions();
     refreshFeaturePickOptions();
+    syncPickControls();
     radio.closest("[data-choice-panel]")?.classList.remove("is-missing");
   });
 
@@ -451,9 +684,13 @@
   const openDialog = (id) => {
     const dialog = document.getElementById(id);
     if (!dialog || dialog.open) return;
+    const search = dialog.querySelector("[data-choice-search]");
+    if (search) search.value = "";
+    for (const choice of dialog.querySelectorAll(".choice")) choice.classList.remove("search-hidden");
     dialog.showModal();
     const chosen = dialog.querySelector('input[type="radio"]:checked');
     chosen?.closest(".choice")?.scrollIntoView({ block: "nearest" });
+    search?.focus();
   };
 
   const rollChoice = (name) => {
@@ -486,7 +723,7 @@
     input.value = names[Math.floor(Math.random() * names.length)];
   };
 
-  const templateKindOrder = () => {
+  function templateKindOrder() {
     const kinds = [...new Set(templateRadios.map((radio) => radio.dataset.templateSelect))];
     const dependencies = new Map(kinds.map((kind) => [kind, new Set()]));
     for (const radio of templateRadios) {
@@ -517,7 +754,7 @@
       }
     }
     return new Map(ordered.map((kind, index) => [kind, index]));
-  };
+  }
 
   // Rolls the visible choices. A template comes before its tables, so rolling it first reveals the
   // tables it needs, and dependent template kinds follow their gates. A restricted choice is rolled
@@ -559,36 +796,123 @@
     return items;
   };
 
-  // Each swap group is rerolled within the rules the server checks. A group assigned from a pool
-  // takes its values in any order. A rolled group keeps its roll, or swaps one pair of its values.
+  // Stats are stored in hidden inputs so the cards can show the roll and its modifier. A rolled
+  // group may trade one pair of values; an assigned group may be arranged in any order. Reset
+  // restores the rolled values, which the server also uses to validate the submission.
+  const statCards = [...document.querySelectorAll("[data-stat-card]")];
+  const statGroups = new Map();
+  for (const card of statCards) {
+    if (!card.dataset.statGroup) continue;
+    const members = statGroups.get(card.dataset.statGroup) ?? [];
+    members.push(card);
+    statGroups.set(card.dataset.statGroup, members);
+  }
+  const statHint = document.querySelector("[data-stat-hint]");
+  const setStatHint = (text) => {
+    if (statHint) statHint.textContent = text;
+  };
+  const statValueOf = (card) =>
+    Number(card.querySelector('input[name^="stat-"]')?.value ?? card.dataset.statRolled ?? 0);
+  const setStatValue = (card, value) => {
+    const input = card.querySelector('input[name^="stat-"]');
+    if (input) input.value = String(value);
+    const output = card.querySelector("[data-stat-value]");
+    if (output) output.textContent = String(value);
+    const modifier = card.querySelector("[data-stat-modifier]");
+    if (!modifier) return;
+    const bands = JSON.parse(card.dataset.statBands || "[]");
+    if (bands.length === 0) {
+      modifier.hidden = true;
+      modifier.textContent = "";
+      return;
+    }
+    let amount = 0;
+    for (const [minimum, modifierAmount] of bands) {
+      if (value >= Number(minimum)) amount = Number(modifierAmount);
+    }
+    modifier.hidden = false;
+    modifier.textContent = `${amount >= 0 ? "+" : ""}${amount}`;
+  };
+  const changedStatGroups = new Map();
+  let selectedStat = null;
+  const clearStatSelection = () => {
+    if (!selectedStat) return;
+    selectedStat.classList.remove("is-selected");
+    selectedStat.querySelector("[data-stat-select]")?.setAttribute("aria-pressed", "false");
+    selectedStat = null;
+  };
+  const selectStat = (card) => {
+    clearStatSelection();
+    selectedStat = card;
+    card.classList.add("is-selected");
+    card.querySelector("[data-stat-select]")?.setAttribute("aria-pressed", "true");
+  };
+  const statGroupIsAssigned = (members) =>
+    members.some((card) => card.hasAttribute("data-stat-assigned"));
+  const defaultStatHint = () =>
+    "Select two attributes to trade their values. A rolled group allows one swap.";
+  const resetStats = () => {
+    clearStatSelection();
+    changedStatGroups.clear();
+    for (const card of statCards) setStatValue(card, Number(card.dataset.statRolled));
+    setStatHint(defaultStatHint());
+  };
+  const swapStats = (card) => {
+    const group = card.dataset.statGroup;
+    const members = statGroups.get(group) ?? [];
+    if (selectedStat === card) {
+      clearStatSelection();
+      setStatHint(defaultStatHint());
+      return;
+    }
+    if (!selectedStat) {
+      selectStat(card);
+      setStatHint("Now choose the attribute to trade with.");
+      return;
+    }
+    if (selectedStat.dataset.statGroup !== group) {
+      selectStat(card);
+      setStatHint("Now choose the attribute to trade with.");
+      return;
+    }
+    if (!statGroupIsAssigned(members) && changedStatGroups.get(group)) {
+      clearStatSelection();
+      setStatHint("This group allows one swap. Reset stats to try another.");
+      return;
+    }
+    const left = statValueOf(selectedStat);
+    const right = statValueOf(card);
+    setStatValue(selectedStat, right);
+    setStatValue(card, left);
+    if (!statGroupIsAssigned(members)) changedStatGroups.set(group, true);
+    clearStatSelection();
+    setStatHint(
+      statGroupIsAssigned(members)
+        ? "Values can be arranged in any order."
+        : "One swap used. Reset restores the rolled values.",
+    );
+  };
+
   const randomizeStats = () => {
-    const groups = new Map();
-    for (const select of document.querySelectorAll("select[data-stat-group]")) {
-      const members = groups.get(select.dataset.statGroup) ?? [];
-      members.push(select);
-      groups.set(select.dataset.statGroup, members);
-    }
-    for (const members of groups.values()) {
-      const rolled = members.map((select) => select.dataset.statRolled);
-      let values;
-      if (members[0].hasAttribute("data-stat-assigned")) {
-        values = shuffle([...rolled]);
-      } else {
-        const pairs = [];
-        for (let i = 0; i < rolled.length; i++) {
-          for (let j = i + 1; j < rolled.length; j++) pairs.push([i, j]);
-        }
-        values = [...rolled];
-        const pick = Math.floor(Math.random() * (pairs.length + 1));
-        if (pick < pairs.length) {
-          const [i, j] = pairs[pick];
-          [values[i], values[j]] = [values[j], values[i]];
-        }
+    clearStatSelection();
+    for (const [group, members] of statGroups) {
+      const rolled = members.map((card) => Number(card.dataset.statRolled));
+      let values = [...rolled];
+      if (statGroupIsAssigned(members)) {
+        values = shuffle(values);
+      } else if (values.length > 1 && Math.random() < 0.5) {
+        const first = Math.floor(Math.random() * values.length);
+        let second = Math.floor(Math.random() * (values.length - 1));
+        if (second >= first) second++;
+        [values[first], values[second]] = [values[second], values[first]];
       }
-      members.forEach((select, index) => {
-        select.value = values[index];
-      });
+      members.forEach((card, index) => setStatValue(card, values[index]));
+      changedStatGroups.set(
+        group,
+        members.some((card, index) => Number(card.dataset.statRolled) !== values[index]),
+      );
     }
+    setStatHint("Random swap applied. Reset restores the rolled values.");
   };
 
   // Do not select the same tagged feature twice.
@@ -603,6 +927,7 @@
       select.value = offered.length > 0 ? offered[Math.floor(Math.random() * offered.length)] : "";
       if (select.value !== "") taken.add(select.value);
     }
+    syncPickControls();
   };
 
   // Each skill or feature pick takes a value it offers. Feature picks of one pick do not repeat a
@@ -635,6 +960,7 @@
       if (skillPicks) refreshSkillPickOptions();
       else refreshFeaturePickOptions();
     }
+    syncPickControls();
   };
 
   // Tagged feature picks follow their fields; the name is rolled after all choices.
@@ -647,6 +973,8 @@
     for (const fieldset of document.querySelectorAll("[data-pick-selects]")) {
       if (!fieldset.closest("[hidden]")) randomizePicks(fieldset, onlyUnchosen);
     }
+    syncPickControls();
+    syncReplacementDetails();
     const input = form?.querySelector('input[name="name"]');
     if (onlyUnchosen && input?.value.trim()) return;
     rollName();
@@ -664,6 +992,7 @@
         row.querySelector("span").textContent = `Replacement ${rows.children.length + 1}`;
         row.querySelector("select").value = "";
         rows.append(row);
+        syncReplacementDetails();
       }
       return;
     }
@@ -674,6 +1003,65 @@
       const outside =
         event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;
       if (outside) target.close();
+      return;
+    }
+
+    const pickOpener = target.closest("[data-open-pick]");
+    if (pickOpener) {
+      const control = pickControlsByName.get(
+        pickOpener.dataset.openPick.replace(/^pick-dialog-/, ""),
+      );
+      if (control) openPickDialog(control);
+      return;
+    }
+
+    const pickOption = target.closest(".pick-option");
+    if (pickOption) {
+      const control = pickControlsByName.get(
+        pickOption.closest(".pick-dialog")?.id.replace(/^pick-dialog-/, "") ?? "",
+      );
+      if (control) {
+        choosePickValue(control, pickOption.dataset.value);
+        pickOption.closest("dialog")?.close();
+      }
+      return;
+    }
+
+    const clearPick = target.closest("[data-clear-pick]");
+    if (clearPick) {
+      const control = pickControlsByName.get(
+        clearPick.closest(".pick-dialog")?.id.replace(/^pick-dialog-/, "") ?? "",
+      );
+      if (control) {
+        choosePickValue(control, "");
+        clearPick.closest("dialog")?.close();
+      }
+      return;
+    }
+
+    const rollPick = target.closest("[data-roll-pick]");
+    if (rollPick) {
+      const control = rollPick.closest("[data-pick-control]");
+      const select = control ? pickSelect(control) : null;
+      if (control && select) {
+        const offered = [...select.options].filter(
+          (option) => option.value !== "" && !option.disabled,
+        );
+        if (offered.length > 0) {
+          choosePickValue(control, offered[Math.floor(Math.random() * offered.length)].value);
+        }
+      }
+      return;
+    }
+
+    const statButton = target.closest("[data-stat-select]");
+    if (statButton) {
+      swapStats(statButton.closest("[data-stat-card]"));
+      return;
+    }
+
+    if (target.closest("[data-reset-stats]")) {
+      resetStats();
       return;
     }
 

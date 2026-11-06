@@ -462,7 +462,13 @@
       { "feature": "art_elemental_sparks", "quantity": "1" }
     ],
     "feat_picks": [
-      { "id": "tradition_art_elementalist", "count": 1, "tag": "elementalist", "max_rank": 0 },
+      {
+        "id": "tradition_art_elementalist",
+        "count": 1,
+        "tag": "elementalist",
+        "max_rank": 0,
+        "exclude": ["art_elemental_resilience", "art_elemental_sparks"]
+      },
       {
         "id": "tradition_spells_elementalist",
         "count": 4,
@@ -493,7 +499,13 @@
       { "feature": "art_elemental_sparks", "quantity": "1" }
     ],
     "feat_picks": [
-      { "id": "tradition_art_elementalist", "count": 1, "tag": "elementalist", "max_rank": 0 },
+      {
+        "id": "tradition_art_elementalist",
+        "count": 1,
+        "tag": "elementalist",
+        "max_rank": 0,
+        "exclude": ["art_elemental_resilience", "art_elemental_sparks"]
+      },
       {
         "id": "tradition_spells_elementalist",
         "count": 2,
