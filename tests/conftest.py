@@ -174,11 +174,24 @@ def client(client_factory: Callable[[], TestClient]) -> TestClient:
 
 
 JOURNAL_STEP = "Journal step."
+JOURNAL_REVIEW_STEP = "Journal and review step."
 REVIEW_STEP = "Turn review step."
 
 
 def is_journal_messages(messages: list[dict[str, Any]]) -> bool:
     return any(m["role"] == "system" and JOURNAL_STEP in (m.get("content") or "") for m in messages)
+
+
+def is_journal_edit_messages(messages: list[dict[str, Any]]) -> bool:
+    """A pure journal step or the combined journal and review step."""
+    return any(
+        m["role"] == "system"
+        and (
+            JOURNAL_STEP in (m.get("content") or "")
+            or JOURNAL_REVIEW_STEP in (m.get("content") or "")
+        )
+        for m in messages
+    )
 
 
 def is_review_messages(messages: list[dict[str, Any]]) -> bool:

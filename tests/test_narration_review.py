@@ -153,7 +153,7 @@ def test_a_sound_narration_passes_review_and_is_saved_once(
     assert "Ada waits." in json.dumps(review["messages"])
     offered = {spec["function"]["name"] for spec in review["tools"]}
     assert "undo_narration" in offered
-    assert "append_journal" not in offered
+    assert {"append_journal", "replace_in_journal"} <= offered
     assert _saved(app, campaign_id)[-1] == ("assistant", "Ada waits.")
     assert _undone_events(app, campaign_id) == []
 
@@ -275,7 +275,7 @@ def test_a_review_can_undo_and_fix_the_record_before_the_rewrite(
     assert len(_undone_events(app, campaign_id)) == 1
 
 
-def test_review_offers_the_usual_tools_and_no_journal_tools(
+def test_review_offers_the_usual_tools_and_the_journal_tools(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
@@ -294,8 +294,10 @@ def test_review_offers_the_usual_tools_and_no_journal_tools(
         "add_note",
         "move_actor",
         "undo_narration",
+        "append_journal",
+        "replace_in_journal",
     } <= offered
-    assert {"speak", "ooc", "append_journal", "replace_in_journal"} & offered == set()
+    assert {"speak", "ooc"} & offered == set()
 
 
 def test_review_tools_keep_wwn_world_methods_and_drop_speech_and_ooc():

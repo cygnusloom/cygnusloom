@@ -73,8 +73,10 @@ from cygnusloom.services.level_up import advancement_due
 from cygnusloom.services.prompts import (
     NARRATION_REVISION,
     OOC_INSTRUCTION,
+    OPENING_REPLY_INSTRUCTION,
     TURN_REVIEW_INSTRUCTION,
     journal_instruction,
+    journal_review_instruction,
     narrate_instruction,
     opening_prompt,
     speech_instruction,
@@ -949,7 +951,12 @@ def _review_only_context(turn: Turn) -> list[ContextPart]:
     ]
 
 
-def _review_view(run: _Run, turn: Turn) -> list[dict[str, Any]]:
+def _review_view(
+    run: _Run,
+    turn: Turn,
+    log: list[str] | None = None,
+    heading: str = "Turn log, in order:",
+) -> list[dict[str, Any]]:
     """What the review reads before the narration. It leaves out the narration instruction and
     the narrator's rewrite note, and replaces the latter with a review note naming the fault the
     rewrite was meant to fix. Earlier reviews' prose is left out: the review judges this narration
@@ -957,7 +964,7 @@ def _review_view(run: _Run, turn: Turn) -> list[dict[str, Any]]:
     instruction = narrate_instruction(run.rule_set, run.world)
     view = [
         message
-        for message in _narration_messages(run, turn)
+        for message in _narration_messages(run, turn, log=log, heading=heading)
         if not (
             message.get("role") == "system"
             and (
@@ -1139,20 +1146,42 @@ async def _review_narration(
     narration: str,
     reasoning: str,
     result: list[_ReviewResult],
+    journal: bool = False,
 ) -> AsyncIterator[TurnEvent]:
     """Check the narration just written against the record. A review that finds a fault calls
     undo_narration; only after that may it use the other tools to correct the record. A record
     change without an undo is refused, so a passing narration is never sent back just because
     the review touched the record. The caller writes the story again when `result` says the
-    narration was undone."""
+    narration was undone. With `journal`, the same step first brings the journal up to date, so a
+    normal turn needs one model call for both instead of a separate journal call."""
     tools = tool_specs(run.tool_calls, review_step=True)
     if tools is None:
         result.append(_ReviewResult(undone=False))
         return
+    journal_tools = tool_specs(run.tool_calls, journal_step=True) or []
+    journal = journal and bool(journal_tools)
+    journal_names: set[str] = set()
+    if journal:
+        tools = [*tools, *journal_tools]
+        journal_names = {spec["function"]["name"] for spec in journal_tools}
     allowed = {spec["function"]["name"] for spec in tools}
     read_only = {tool.name for tool in run.tool_calls.values() if tool.lookup or tool.review_step}
-    yield Status("Reviewing the turn...")
-    view = _review_view(run, turn)
+    yield Status(
+        "Updating the journal and reviewing the turn..." if journal else "Reviewing the turn..."
+    )
+    journal_state = None
+    if journal:
+        # The journal covers the log since the last journal step, which can reach back past this
+        # turn after an out-of-character reply or a failed reply. Read that log before this step's
+        # JournalStarted marks it covered.
+        journal_state = _state(run.engine, run.campaign_id)
+        log = _turn_log(run.engine, run.campaign_id, journal_state.journal_through or turn.opener)
+        _record(run.engine, run.campaign_id, JournalStarted())
+        view = _review_view(
+            run, turn, log=log, heading="Log since the journal was last written, in order:"
+        )
+    else:
+        view = _review_view(run, turn)
     view.append(_text_message(narration, reasoning))
     hidden = _review_only_context(turn)
     if hidden:
@@ -1164,7 +1193,17 @@ async def _review_narration(
                 + lines,
             }
         )
-    view.append({"role": "system", "content": TURN_REVIEW_INSTRUCTION})
+    if journal and journal_state is not None:
+        view.append(
+            {
+                "role": "system",
+                "content": journal_review_instruction(
+                    journal_state.clock.day, journal_state.journal
+                ),
+            }
+        )
+    else:
+        view.append({"role": "system", "content": TURN_REVIEW_INSTRUCTION})
     undone = False
     for round_no in range(1, REVIEW_ROUNDS + 1):
         replied: list[ChatReply] = []
@@ -1212,9 +1251,10 @@ async def _review_narration(
                     ),
                     None,
                 )
-            elif request.name not in read_only and not undone:
+            elif request.name not in read_only and request.name not in journal_names and not undone:
                 # A record change before the narration is set aside would leave the player
-                # reading a story written from the old state. Refuse it instead of guessing.
+                # reading a story written from the old state. Refuse it instead of guessing. The
+                # journal is the exception: it is written from the record, not the narration.
                 tool_result = ToolRun(
                     json.dumps(
                         {
@@ -1315,7 +1355,14 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             view = list(turn.messages)
             if turn.speech:
                 view.append(_queued_dialogue_note(turn.speech))
-            view.append({"role": "system", "content": OOC_INSTRUCTION})
+            # An opening is not an out-of-character question: the opening instruction is already
+            # the user message, so ask for the introduction instead of a GM answer about rules.
+            view.append(
+                {
+                    "role": "system",
+                    "content": OPENING_REPLY_INSTRUCTION if turn.opening else OOC_INSTRUCTION,
+                }
+            )
             step: ChatReply | None = None
             async for arrived, item in _stream_with_heartbeat(
                 run.provider.stream(run.model_name, view, ooc_tools)
@@ -1446,9 +1493,8 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
         turn = _turn(_state(run.engine, run.campaign_id))
     elif injection is not None and injection.mode == "narration":
         forced_narration = injection.text
-    if _turn_has_day_end(run.engine, run.campaign_id, turn.opener):
-        async for event in _write_journal(run, turn):
-            yield event
+    # The journal is updated every turn, in the same model call as the first review. Only the
+    # campaign opening writes it before there is a narration to review.
     reply = ""
     reasoning = ""
     for review_round in range(NARRATION_REVIEWS + 1):
@@ -1465,7 +1511,9 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
         if review_round >= NARRATION_REVIEWS:
             break
         reviewed: list[_ReviewResult] = []
-        async for event in _review_narration(run, turn, reply, reasoning, reviewed):
+        async for event in _review_narration(
+            run, turn, reply, reasoning, reviewed, journal=review_round == 0
+        ):
             yield event
         if not reviewed[0].undone:
             break

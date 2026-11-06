@@ -1,16 +1,16 @@
 {% from "macros.html" import journal_text, map_board, map_places, time_strip %}
-    <section class="view map-page" data-view="map" aria-labelledby="map-title" hidden>
+    <section class="view map-page" id="view-map" data-view="map" aria-labelledby="map-title" hidden>
       <h2 id="map-title">Map</h2>
       {{ map_board(world_map, framed=true, prefix="side") }}
       {{ time_strip(time) }}
       <h3>Places</h3>
       {{ map_places(world_map) }}
     </section>
-    <section class="view" data-view="journal" aria-label="Journal" hidden>
+    <section class="view" id="view-journal" data-view="journal" aria-label="Journal" hidden>
       <h2>Journal</h2>
       <div class="journal">{{ journal_text(scene.journal) }}</div>
     </section>
-    <section class="view characters-page" data-view="characters" aria-labelledby="characters-title" hidden>
+    <section class="view characters-page" id="view-characters" data-view="characters" aria-labelledby="characters-title" hidden>
       <h2 id="characters-title">Characters</h2>
       <label class="filter-field">
         <span class="visually-hidden">Search characters</span>
@@ -72,7 +72,7 @@
       <p class="muted" data-filter-empty hidden>No characters match that search.</p>
     </section>
     {% if compendium %}
-    <section class="view compendium-page" data-view="compendium" aria-labelledby="compendium-title" hidden>
+    <section class="view compendium-page" id="view-compendium" data-view="compendium" aria-labelledby="compendium-title" hidden>
       <h2 id="compendium-title">Compendium</h2>
       {% include "_compendium.html" %}
     </section>

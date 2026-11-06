@@ -231,12 +231,15 @@ def test_use_item_refuses_a_relic(client_factory):
 def test_the_campaign_page_lists_the_pack(client_factory: Callable[[], TestClient]):
     client, campaign_id, tools = _fight_client(client_factory, rolled=False)
     tools.give_item(PC, "Rope")
+    tools.change_currency(PC, 17, cause="test")
+    gold = _character(client.app, campaign_id, PC).features["gold"]
     page = client.get(f"/campaigns/{campaign_id}").text
     assert 'id="tab-inventory"' in page
     start = page.index('id="panel-inventory"')
     inventory = page[start : page.index("</section>", start)]
     assert f"Carrying {_used(client.app, campaign_id)} of {CAPACITY} slots." in inventory
     assert "<strong>Rope</strong>" in inventory
+    assert f"<strong>{gold}</strong> Gold Pieces" in inventory
 
 
 def _empty_pack(app: FastAPI, campaign_id: int, tools: WorldTools) -> None:

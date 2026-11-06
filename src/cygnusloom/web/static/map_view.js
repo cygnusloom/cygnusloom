@@ -47,7 +47,7 @@
     attachedFrames.add(frame);
     const board = frame.firstElementChild;
     if (!board) return;
-    frame.title = "Scroll to zoom, drag to pan, double-click to reset";
+    frame.title = "Pinch or scroll to zoom, drag to pan, double-tap to reset";
 
     const reset = () => {
       Object.assign(stateOf(board), { scale: 1, left: null, top: null });
@@ -62,23 +62,100 @@
     }, { passive: false });
 
     let lastPointer = null;
+    const pointed = new Map();
+    let pinch = null;
+    let moved = false;
+    let tapTarget = null;
+    let lastTap = null;
+    const pinchAt = () => {
+      const [a, b] = [...pointed.values()];
+      return {
+        distance: Math.hypot(a.x - b.x, a.y - b.y),
+        x: (a.x + b.x) / 2,
+        y: (a.y + b.y) / 2,
+      };
+    };
     frame.addEventListener("pointerdown", (event) => {
       if (event.button !== 0 || event.target.closest?.("button")) return;
-      lastPointer = { x: event.clientX, y: event.clientY };
-      frame.setPointerCapture(event.pointerId);
+      pointed.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      // Synthetic pointers and a few embedded browsers refuse capture; the pointer map alone
+      // is enough to keep dragging and pinching inside the frame.
+      try {
+        frame.setPointerCapture(event.pointerId);
+      } catch {
+        // Keep handling the pointer without capture.
+      }
+      if (pointed.size === 1) {
+        lastPointer = { x: event.clientX, y: event.clientY };
+        moved = false;
+        tapTarget = event.target.closest?.(".map-frame [data-tip]") ?? null;
+      } else if (pointed.size === 2) {
+        pinch = pinchAt();
+        lastPointer = null;
+      } else {
+        pinch = null;
+      }
       frame.classList.add("panning");
     });
     frame.addEventListener("pointermove", (event) => {
+      if (!pointed.has(event.pointerId)) return;
+      pointed.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pointed.size >= 2) {
+        const next = pinchAt();
+        if (pinch && next.distance > 0 && pinch.distance > 0) {
+          const rect = frame.getBoundingClientRect();
+          zoomAt(
+            frame,
+            board,
+            next.distance / pinch.distance,
+            next.x - rect.left,
+            next.y - rect.top,
+          );
+          const state = stateOf(board);
+          state.left += next.x - pinch.x;
+          state.top += next.y - pinch.y;
+          fit(frame, board);
+        }
+        pinch = next;
+        moved = true;
+        return;
+      }
       if (!lastPointer) return;
+      const dx = event.clientX - lastPointer.x;
+      const dy = event.clientY - lastPointer.y;
+      if (Math.abs(dx) + Math.abs(dy) > 2) moved = true;
       const state = stateOf(board);
-      state.left += event.clientX - lastPointer.x;
-      state.top += event.clientY - lastPointer.y;
+      state.left += dx;
+      state.top += dy;
       lastPointer = { x: event.clientX, y: event.clientY };
       fit(frame, board);
     });
-    const endPan = () => {
-      lastPointer = null;
-      frame.classList.remove("panning");
+    const endPan = (event) => {
+      pointed.delete(event.pointerId);
+      pinch = pointed.size === 2 ? pinchAt() : null;
+      if (pointed.size === 1) {
+        const [remaining] = pointed.values();
+        lastPointer = { x: remaining.x, y: remaining.y };
+      }
+      if (pointed.size === 0) {
+        lastPointer = null;
+        frame.classList.remove("panning");
+      }
+      if (event.type !== "pointerup" || pointed.size !== 0) return;
+      // A tap, not a drag: show the token or region tip and detect a double tap.
+      if (!moved && tapTarget) showTip(tapTarget, event);
+      const now = Date.now();
+      const double =
+        !moved &&
+        lastTap &&
+        now - lastTap.time < 350 &&
+        Math.hypot(event.clientX - lastTap.x, event.clientY - lastTap.y) < 30;
+      if (double) {
+        reset();
+        lastTap = null;
+      } else {
+        lastTap = { time: now, x: event.clientX, y: event.clientY };
+      }
     };
     frame.addEventListener("pointerup", endPan);
     frame.addEventListener("pointercancel", endPan);

@@ -39,7 +39,9 @@ from cygnusloom.llm.base import ChatReply, LLMError, TextDelta, ToolRequest
 DIRECTIVE = "__FAKE__:"
 SPEECH_MARKER = "Speech step."
 OOC_MARKER = "Out-of-character step."
+OPENING_REPLY_MARKER = "Opening reply."
 JOURNAL_MARKER = "Journal step."
+JOURNAL_REVIEW_MARKER = "Journal and review step."
 REVIEW_MARKER = "Turn review step."
 REVISION_MARKER = "The last narration was set aside because:"
 NARRATION_RETRY_MARKER = "Your last reply was empty or was a tool call"
@@ -62,6 +64,9 @@ class FakeProvider:
         self.calls.append(messages)
         if _is_speech(messages):
             return _speech(messages)
+        combined_start = _journal_review_start(messages)
+        if combined_start is not None:
+            return _journal_review(messages, combined_start)
         review_start = _review_start(messages)
         if review_start is not None:
             return _review(messages, review_start)
@@ -103,6 +108,16 @@ def _journal_start(messages: list[dict[str, Any]]) -> int | None:
     return None
 
 
+def _journal_review_start(messages: list[dict[str, Any]]) -> int | None:
+    """The index of the combined journal and review instruction, or None."""
+    last_user = max((i for i, m in enumerate(messages) if m["role"] == "user"), default=-1)
+    for index in range(len(messages) - 1, last_user, -1):
+        message = messages[index]
+        if message["role"] == "system" and JOURNAL_REVIEW_MARKER in message["content"]:
+            return index
+    return None
+
+
 def _review_start(messages: list[dict[str, Any]]) -> int | None:
     """The index of the turn review instruction in the current turn, or None. Tool calls and
     results follow it within a review step, so it need not be the last message."""
@@ -112,6 +127,37 @@ def _review_start(messages: list[dict[str, Any]]) -> int | None:
         if message["role"] == "system" and REVIEW_MARKER in message["content"]:
             return index
     return None
+
+
+def _journal_review(messages: list[dict[str, Any]], start: int) -> ChatReply:
+    """The scripted combined step: journal tool-call rounds first, then the review passes."""
+    current = _current_turn(messages)
+    turn_index, turn = current if current is not None else (0, {})
+    journal_rounds = turn.get("journal", [])
+    if not isinstance(journal_rounds, list):
+        raise LLMError('"journal" must be a list of tool-call lists')
+    passes = turn.get("review", [])
+    if not isinstance(passes, list):
+        raise LLMError('"review" must be a list of review passes')
+    done = sum(1 for m in messages[start + 1 :] if "tool_calls" in m)
+    if done < len(journal_rounds):
+        prefix = f"fake_{turn_index}_journal{done}"
+        return ChatReply(text="", tool_requests=_tool_requests(journal_rounds[done], prefix))
+    # The narration may have been undone once already; the rewrite's review is a plain review
+    # call, so its pass number still counts the revision notes in the conversation.
+    pass_no = sum(
+        1 for m in messages if m["role"] == "system" and REVISION_MARKER in str(m.get("content"))
+    )
+    if pass_no >= len(passes):
+        return ChatReply(text="")
+    rounds = passes[pass_no]
+    if not isinstance(rounds, list):
+        raise LLMError("each review pass must be a list of tool-call rounds")
+    review_done = done - len(journal_rounds)
+    if review_done >= len(rounds):
+        return ChatReply(text="")
+    prefix = f"fake_{turn_index}_review{pass_no}_{review_done}"
+    return ChatReply(text="", tool_requests=_tool_requests(rounds[review_done], prefix))
 
 
 def _review(messages: list[dict[str, Any]], start: int) -> ChatReply:
@@ -226,7 +272,9 @@ def _is_ooc(messages: list[dict[str, Any]]) -> bool:
     return (
         bool(messages)
         and messages[-1]["role"] == "system"
-        and OOC_MARKER in messages[-1]["content"]
+        and (
+            OOC_MARKER in messages[-1]["content"] or OPENING_REPLY_MARKER in messages[-1]["content"]
+        )
     )
 
 

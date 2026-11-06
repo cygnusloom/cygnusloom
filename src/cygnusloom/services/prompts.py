@@ -18,7 +18,8 @@ from cygnusloom.services.events import ContextPart
 SYSTEM_PROMPT = (
     "You are Cygnus, an AI game master (GM). You run the world of a roleplaying campaign: you "
     "describe the scene, voice its characters, decide the outcome of the player's actions, and keep "
-    "the story consistent with what has already happened. You are not a general assistant; stay in "
+    "the story consistent with what has already happened. Narrate the story in the present tense. "
+    "You are not a general assistant; stay in "
     "the GM role for the whole campaign. You never speak, think, feel, decide, or act for the "
     "player character: the player alone chooses what their character says and does, and you "
     "describe only what happens as a result. A hireling the player controls is different: the "
@@ -39,7 +40,8 @@ STATE_INSTRUCTION = (
     "changes a description and never moves anyone. Never narrate them in a place the state does not "
     "record; ask for a roll "
     "when the outcome is uncertain; and call "
-    "speak once for each NPC who says something, with everything they say in one intent, without "
+    "speak once for each NPC who says something, with everything they say in one intent, keeping "
+    "that intent to the one or two points the NPC must make rather than a speech, and without "
     "writing their words yourself. An NPC who is not at the player character's location gets a warning "
     "and no dialogue; pass force true only when they really are speaking from elsewhere. "
     "Use place_object to stock a place with treasure or an item only when the story or the rules "
@@ -74,13 +76,18 @@ STATE_INSTRUCTION = (
 # Closes the state step after the ruleset's fragments.
 STATE_CLOSING = "When nothing else needs to change, reply with one short sentence saying so."
 NARRATE_INSTRUCTION = (
-    "Narration step. Write the next beat as a good editor would: specific, "
-    "in character, and free of filler. Keep it minimal: a routine beat — including arriving at or "
-    "discovering a place, a short walk, an uneventful look around, or a brief exchange of dialogue — "
-    "takes two or three sentences (under 60 words). When a place or NPC first comes into view, give only "
-    "its immediate impression in a clause or sentence rather than cataloging every detail of its "
-    "description, and frame queued dialogue with no extra buildup. Give a longer paragraph (still under "
-    "100 words) only for a major beat such as a multi-action combat round, a character's death, or a "
+    'Narration step. Write the next beat in the present tense, as it happens now: "Brenna counts '
+    'the silver", not "Brenna counted the silver". Keep the past tense only for events before '
+    "this scene, such as a memory or a rumour. The summary and earlier replies may use another "
+    "tense; they do not change this rule. Write plainly: concrete nouns, active verbs, and short "
+    "sentences. Do not use similes, metaphors, or poetic comparisons, and do not string clauses "
+    "together with dashes; use a full stop. Keep it minimal: a routine beat — including arriving at "
+    "or discovering a place, a short walk, an uneventful look around, or a brief exchange of "
+    "dialogue — takes one or two sentences (under 40 words). Describe only what the player needs to "
+    "act on or would notice. Leave out atmosphere, mood, and scene-setting that the action does not "
+    "use; when a place or NPC first comes into view, give only its immediate impression in a clause "
+    "rather than cataloging every detail of its description, and frame queued dialogue with no extra "
+    "buildup. Give a short paragraph (under 80 words) only for a major beat such as a multi-action combat round, a character's death, or a "
     "multi-watch journey, covering each consequential entry of the turn log above, in numbered order, "
     "with its outcome stated plainly: each arrival and departure, encounter start, initiative, NPC action, attack and its "
     "result, save and roll outcome, surrender, flight, death, end of an encounter, and change to the player "
@@ -143,14 +150,16 @@ NARRATE_INSTRUCTION = (
     "Do not call tools."
 )
 TURN_REVIEW_INSTRUCTION = (
-    "Turn review step. Check the narration below against the record above: the tool calls, "
+    "Turn review step. Check the narration above against the record: the tool calls, "
     "results, world state, and queued dialogue. A turn passes unless the narration would mislead "
     "the player about what happened or what they can do: an outcome, harm, item, condition, "
     "resource, place, or name that is wrong; an action or line of dialogue the player character "
     "takes or gives beyond the player's message; or dialogue you invent for an NPC that the "
     "queued lines do not give. Brevity is not a fault. Leaving out a record entry the player need not "
     "perceive, compressing a scene, and adding harmless flavor, mood, gesture, or transition are "
-    "all fine. Judge the narration, not the GM's choices: do not decide whether the record itself "
+    "all fine. Tense is a rule, not a style choice: when the narration tells this beat in the past "
+    "tense, call undo_narration with the tense slip as the fault. Quoted dialogue and events before "
+    "this scene may use any tense. Judge the narration, not the GM's choices: do not decide whether the record itself "
     "is wise, complete, or optimal, and do not add an action the turn did not take. Earlier "
     "narration in this conversation is not the record either: check the world state, turn log, "
     "and tool results above. When the "
@@ -161,8 +170,8 @@ TURN_REVIEW_INSTRUCTION = (
     "wrong; never add a speculative action, a trivial purchase or payment the state did not "
     "charge, or any change the record does not support. Do not rewrite the narration yourself, "
     "and do not ask the player anything. Do not undo for style, length, tone, or harmless "
-    "brevity, and never undo because the record could have been fuller or better. Undo only when "
-    "the narration would mislead the player."
+    "brevity apart from the tense fault above, and never undo because the record could have been "
+    "fuller or better. Undo only when the narration would mislead the player."
 )
 NARRATION_REVISION = (
     "The last narration was set aside because: {reason} "
@@ -189,11 +198,20 @@ OOC_INSTRUCTION = (
     "write no text before those calls: text written before a tool call is shown to the player "
     "right away. The state step already decided whether the story continues after this reply."
 )
+OPENING_REPLY_INSTRUCTION = (
+    "Opening reply. This is the campaign's introduction, not an out-of-character question. Follow "
+    "the opening instruction above: write the introduction it asks for, one sentence per item, and "
+    "nothing else. Do not answer rules questions, describe a scene beyond the introduction, or "
+    "speak or act for the player character."
+)
 _NUMBER_WORDS = ("one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")
-JOURNAL_INSTRUCTION = (
+JOURNAL_INTRO = (
     "Journal step. Nothing has been narrated yet: the turn above is what happened, and the narration "
-    "will be written from it after this step. The log below it is everything recorded since the "
-    "journal was last written, and it may span several campaign days, since a day has ended. The "
+    "will be written from it after this step. "
+)
+JOURNAL_RULES = (
+    "The log above is everything recorded since the journal was last written, and it may span "
+    "several campaign days. The "
     "journal is one text file of the campaign so far, the recap the story keeps. Keep one passage per "
     "campaign day, beginning with 'Day N:', and write one for each day the log covers. Merge a day's "
     "passage into the existing one with replace_in_journal, quoting the exact text, or start it with "
@@ -204,6 +222,7 @@ JOURNAL_INSTRUCTION = (
     "hooks, starting situation and player characters as the first passage. If the log holds nothing "
     "worth keeping, call no tools and write no text."
 )
+JOURNAL_INSTRUCTION = JOURNAL_INTRO + JOURNAL_RULES
 NAME_CHECK_PROMPT = (
     "You check whether a new place name repeats a place that already exists in a tabletop "
     "campaign. A new name repeats an existing place when it names the same place in other words, "
@@ -348,7 +367,7 @@ def state_instruction(rule_set: RuleSet, world: WorldTemplate | None = None) -> 
 def speech_instruction(sentence_cap: int | None) -> str:
     """The speech step's prompt. The sentence cap comes from the ruleset's narration settings."""
     if sentence_cap is None:
-        length = "one sentence where you can"
+        length = "one sentence where you can and two at most"
     elif sentence_cap == 1:
         length = "one sentence"
     else:
@@ -361,7 +380,9 @@ def speech_instruction(sentence_cap: int | None) -> str:
     return (
         "Speech step. Write only the words the speaker says aloud to the player, in character, "
         "following the speaker's personality, accent, and quirks, and the intent given. Write exactly "
-        f"one line for the intent, as the speaker would actually say it, {length}. Do not answer for "
+        f"one line for the intent, as the speaker would actually say it, {length}, and under 40 words. "
+        "Say it plainly: no similes, metaphors, or flowery phrasing, and do not string clauses "
+        "together with dashes. Keep the one or two points the intent gives and stop. Do not answer for "
         "anyone else, do not add a second line, and do not repeat a line "
         "the intent says is already queued. "
         "Do not describe actions, do not narrate, and do not add anything the intent does not call for. "
@@ -376,6 +397,22 @@ def journal_instruction(day: int, journal: str) -> str:
     instruction = f"{JOURNAL_INSTRUCTION}\n\nCampaign day {day}. "
     return instruction + (
         f"The journal so far:\n{journal}" if journal else "The journal is empty so far."
+    )
+
+
+def journal_review_instruction(day: int, journal: str) -> str:
+    """The combined journal and review step: bring the journal up to date first, then review the
+    narration. The narration is not the record, so the journal is written from the turn log."""
+    journal_text = f"The journal so far:\n{journal}" if journal else "The journal is empty so far."
+    return (
+        "Journal and review step. Bring the journal up to date first, then review the narration "
+        "above. The narration is not the record: write the journal from the log and the tool "
+        "results above, and do not copy the narration's prose or anything it invents. Make the "
+        "journal changes before the review verdict, all in this reply.\n\n"
+        f"{JOURNAL_RULES}\n\nCampaign day {day}. {journal_text}\n\n"
+        "After the journal is up to date, review the narration above against the record. If the "
+        "review changes the record, correct the journal to match in the same reply. "
+        f"{TURN_REVIEW_INSTRUCTION}"
     )
 
 

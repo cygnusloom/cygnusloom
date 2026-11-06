@@ -208,6 +208,11 @@
               {% if scene.pc and scene.pc.defense_tracked %}
               <p>Armor: {{ scene.pc.armor }} · Worn: {{ scene.pc.equipped_armor or "none" }} · Wielded shield: {{ scene.pc.equipped_shield or "none" }}</p>
               {% endif %}
+              {% if scene.currency %}
+              <p class="inventory-currency">
+                {% for coin in scene.currency %}{% if not loop.first %} · {% endif %}{% if coin.icon %}<img class="item-icon" src="{{ icon_path(coin.icon) }}" alt="">{% endif %}<strong>{{ coin.amount }}</strong> {{ coin.name }}{% endfor %}
+              </p>
+              {% endif %}
               {% if scene.pack.items %}
               <ul data-inventory>
                 {% for item in scene.pack.items %}

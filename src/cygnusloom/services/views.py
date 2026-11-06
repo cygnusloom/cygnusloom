@@ -98,6 +98,7 @@ class SceneView:
     sheet: list[str]
     journal: str = ""
     pack: PackView | None = None
+    currency: tuple[CurrencyView, ...] = ()
     hirelings: tuple[Character, ...] = ()
     objects: tuple[WorldObject, ...] = ()
     known: tuple[KnownNpcView, ...] = ()
@@ -135,6 +136,15 @@ class PackView:
     used: int
     capacity: int
     has_readied: bool = False
+
+
+@dataclass(frozen=True)
+class CurrencyView:
+    """One kind of coin the player character carries, such as the rule set's silver or gold."""
+
+    name: str
+    amount: int
+    icon: str = ""
 
 
 @dataclass(frozen=True)
@@ -647,6 +657,19 @@ def scene_view(
         for c in state.characters.values()
         if c.hireling and place is not None and c.location == place.name
     )
+    currency = ()
+    if pc is not None:
+        currency = tuple(
+            CurrencyView(
+                name=feature.name,
+                amount=pc.features[feature_id],
+                icon=feature.icon or "",
+            )
+            for feature_id, feature in spec.features.items()
+            if feature.feature_type == "item"
+            and feature.looks_like == "coin"
+            and feature_id in pc.features
+        )
     objects = tuple(visible_objects(state, place.name)) if place is not None else ()
     location_entry = ""
     if place is not None:
@@ -660,6 +683,7 @@ def scene_view(
         sheet=sheet,
         journal=state.journal,
         pack=pack,
+        currency=currency,
         hirelings=hirelings,
         objects=objects,
         known=_known_npc_views(state, pc, place, relations, creature_entries),

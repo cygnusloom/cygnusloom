@@ -166,7 +166,7 @@ def test_narrator_is_told_not_to_invent_times_distances_or_street_names(
     assert "Name no street, square, alley, or route" in system
 
 
-def test_narrator_keeps_routine_beats_under_sixty_words(
+def test_narrator_keeps_routine_beats_under_forty_words(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
@@ -176,9 +176,11 @@ def test_narrator_keeps_routine_beats_under_sixty_words(
     _send(client, campaign_id, _script({"rounds": [[]], "text": "The lane is quiet."}))
 
     system = _system_text(_narrator(recorder))
-    assert "takes two or three sentences (under 60 words)" in system
+    assert "takes one or two sentences (under 40 words)" in system
     assert "including arriving at or discovering a place" in system
     assert "or a brief exchange of dialogue" in system
+    assert "Write the next beat in the present tense" in system
+    assert "Do not use similes, metaphors, or poetic comparisons" in system
 
 
 def test_present_tense_narration_is_an_important_core_rule() -> None:

@@ -349,12 +349,27 @@
   };
   if (turnDialog) turnDialog.addEventListener("close", () => turnOpener?.focus());
 
+  // On phones the message box starts at one row and grows with what is typed, up to a point.
+  // Desktop keeps its three-row box.
+  const autosizeComposer = (input) => {
+    if (!window.matchMedia("(max-width: 700px)").matches) {
+      input.style.height = "";
+      return;
+    }
+    input.style.height = "auto";
+    input.style.height = `${Math.min(input.scrollHeight, 128)}px`;
+  };
   const bindComposer = (root) => {
     root.querySelectorAll(".composer textarea").forEach((input) => {
       on(input, "composer-enter", "keydown", (event) => {
         if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
         event.preventDefault();
         input.form.requestSubmit();
+      });
+      on(input, "composer-autosize", "input", () => autosizeComposer(input));
+      // The submit handler clears the box after this listener runs, so measure on the next frame.
+      on(input.form, "composer-autosize-reset", "submit", () => {
+        requestAnimationFrame(() => autosizeComposer(input));
       });
     });
   };

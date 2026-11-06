@@ -461,7 +461,11 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
 .tab-panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 1rem 1.25rem; }
 .tab-panel[hidden] { display: none; }
-.map-panel > .tab-list { width: calc(100% + 1rem); margin: -0.5rem -0.5rem 0; }
+/* The map panel's own tabs are chrome, not part of the board: never let the map squeeze them. */
+.map-panel > .tab-list {
+  flex: none; align-self: stretch; align-items: center; min-height: 2.5rem;
+  width: calc(100% + 1rem); margin: -0.5rem -0.5rem 0;
+}
 .map-view {
   flex: 1 1 auto; align-self: stretch; min-height: 0; width: 100%;
   display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
@@ -626,7 +630,7 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
   .shell.show-side .side {
     display: grid;
     position: fixed;
-    inset: 0 0 calc(3.4rem + env(safe-area-inset-bottom)) 0;
+    inset: 0 0 calc(var(--mobile-bar, 3.4rem) + env(safe-area-inset-bottom)) 0;
     z-index: 5;
     background: var(--bg);
     grid-template-rows: 42% minmax(0, 1fr);
@@ -638,11 +642,45 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
 
 /* Phones: compact chrome, single-column details, scrollable data tables, touch-sized forms. */
 @media (max-width: 700px) {
+  body.workspace-page { --mobile-bar: 3.12rem; }
   .topbar { flex-wrap: wrap; gap: 0.5rem; padding: 0.5rem 0.75rem; }
   .brand { white-space: nowrap; }
   nav { flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem 0.7rem; font-size: 0.875rem; }
   nav a, nav button { white-space: nowrap; }
   nav button { padding: 0.3rem 0.55rem; }
+
+  /* A campaign fills the phone screen. The top bar stays one scrollable row instead of wrapping
+     into three, and the chat header, composer, and message cards tighten up so the transcript
+     keeps most of the height. */
+  body.workspace-page .topbar { flex-wrap: nowrap; gap: 0.5rem; padding: 0.3rem 0.6rem; }
+  body.workspace-page .topbar .brand { font-size: 0.85rem; }
+  body.workspace-page .topbar nav {
+    flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; justify-content: flex-start;
+    gap: 0.8rem; font-size: 0.8rem; overflow-x: auto; scrollbar-width: none;
+  }
+  body.workspace-page .topbar nav::-webkit-scrollbar { display: none; }
+  body.workspace-page .topbar nav button { padding: 0.1rem 0; }
+
+  .map-panel { justify-content: flex-start; }
+  .map-view > .map-frame { min-height: 10rem; }
+
+  .chat { padding: 0.5rem 0.75rem 0.35rem; }
+  .chat-title { flex: none; font-size: 1.05rem; line-height: 1.25; }
+  .chat > .muted {
+    flex: none; min-width: 0; margin: 0.1rem 0 0; font-size: 0.75rem; line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .chat .transcript { gap: 0.45rem; margin: 0.4rem 0; overscroll-behavior: contain; }
+  .message { padding: 0.5rem 0.65rem; }
+  .message .role { font-size: 0.72rem; }
+  .log-line { font-size: 0.72rem; }
+  .encounter-turn { padding: 0.15rem 0; }
+  .advancement-pause {
+    margin: 0.35rem 0.75rem; padding: 0.45rem 0.6rem; font-size: 0.85rem;
+  }
+  body.workspace-page .sidebar {
+    gap: 0.15rem; padding: 0.15rem 0.4rem calc(0.15rem + env(safe-area-inset-bottom));
+  }
 
   main { margin: 1rem auto; padding: 0 1rem; }
   .card { padding: 1rem; overflow-x: auto; }
@@ -669,14 +707,20 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
   .stats div { padding: 0.6rem 0.75rem; }
   .stats strong { font-size: 1.25rem; }
 
-  /* 16px or larger stops iOS Safari from zooming when a field gets focus. */
+  /* 16px or larger stops iOS Safari from zooming when a field gets focus. The message box
+     starts at one row and grows with the text, so it does not reserve empty space. */
   input, select, textarea { font-size: 16px; }
-  .composer textarea { flex: none; font-size: 16px; min-height: 5.5rem; }
-
-  .composer { flex-direction: column; align-items: stretch; }
-  .composer-actions { flex-direction: row; align-items: center; justify-content: space-between; }
-  .composer-tools { flex: 1 1 auto; }
-  .composer-actions button[type="submit"] { flex: 0 0 auto; min-width: 6rem; padding-block: 0.65rem; }
+  .composer { flex-direction: column; align-items: stretch; gap: 0.35rem; }
+  .composer textarea {
+    flex: none; font-size: 16px; height: 2.5rem; min-height: 2.5rem; max-height: 8rem;
+    overflow-y: auto; padding-block: 0.45rem;
+  }
+  .composer-actions { flex-direction: row; align-items: center; justify-content: space-between; gap: 0.35rem; }
+  .composer-tools { flex: 1 1 auto; gap: 0.4rem; }
+  .composer-settings { width: 2.25rem; height: 2.25rem; }
+  .composer-actions button[type="submit"] { flex: 0 0 auto; min-width: 5.25rem; padding-block: 0.45rem; }
+  .context-meter { font-size: 0.68rem; }
+  .context-meter meter { width: 3.5rem; }
   .pending-prompt form { flex-wrap: wrap; }
   .pending-prompt textarea { flex-basis: 100%; }
 
