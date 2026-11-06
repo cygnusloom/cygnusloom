@@ -105,6 +105,37 @@ class Campaign(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utcnow)
 
 
+class CampaignMember(SQLModel, table=True):
+    """A player an owner shared a campaign with. The owner is implicit and never needs a row.
+    A membership gives the account access to play; it is configuration, not part of the log, so
+    removing it takes the account's access without changing the story. A removed row is kept with
+    `removed_at` set, so an active join code cannot let that account walk back in."""
+
+    __tablename__ = "campaign_member"
+    __table_args__ = (UniqueConstraint("campaign_id", "user_id"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    campaign_id: int = Field(foreign_key="campaign.id", index=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    created_at: datetime = Field(default_factory=utcnow)
+    removed_at: datetime | None = Field(default=None)
+
+
+class CampaignInvite(SQLModel, table=True):
+    """A shareable join code for a campaign. A code stays usable by any signed-in account until
+    the owner deactivates it; deactivating it never removes an existing member."""
+
+    __tablename__ = "campaign_invite"
+
+    id: int | None = Field(default=None, primary_key=True)
+    campaign_id: int = Field(foreign_key="campaign.id", index=True)
+    code: str = Field(index=True, unique=True, max_length=64)
+    label: str = Field(default="", max_length=120)
+    created_by: int = Field(foreign_key="user.id")
+    created_at: datetime = Field(default_factory=utcnow)
+    active: bool = Field(default=True)
+
+
 class Event(SQLModel, table=True):
     """One entry in a campaign's log of what happened. Events are only appended, or removed
     from the end by a rollback. See `cygnusloom.services.events`.

@@ -19,7 +19,7 @@ from typing import Any, ClassVar
 from sqlalchemy import delete, func
 from sqlmodel import Session, select
 
-from cygnusloom.db.models import Event
+from cygnusloom.db.models import Campaign, Event
 from cygnusloom.llm.base import ToolRequest
 from cygnusloom.services.state import (  # noqa: F401
     CAMPAIGN_WIDE,
@@ -134,7 +134,11 @@ def load_state(db: Session, campaign_id: int, before: int | None = None) -> Camp
     statement = select(Event).where(Event.campaign_id == campaign_id)
     if before is not None:
         statement = statement.where(Event.id < before)
-    state = CampaignState()
+    # The owner is configuration rather than part of the log, but a character with no recorded
+    # player belongs to it, so the fold needs it once.
+    state = CampaignState(
+        owner_id=db.exec(select(Campaign.owner_id).where(Campaign.id == campaign_id)).one_or_none()
+    )
     for row in db.exec(statement.order_by(Event.seq)):
         event = decode(row)
         event.apply(state, row.id or 0)
@@ -406,6 +410,10 @@ class PcAdded(GameEvent):
     counters: dict[str, int] = field(default_factory=dict)
     skills: dict[str, int] = field(default_factory=dict)
     attack_shock: dict[str, list[int]] = field(default_factory=dict)
+    # The account that plays the character, and its display name. Older logs leave these out,
+    # and those characters belong to the campaign owner.
+    player_id: int | None = None
+    player_name: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.characters[name_key(self.name)] = Character(
@@ -424,12 +432,15 @@ class PcAdded(GameEvent):
             counters=dict(self.counters),
             skills=dict(self.skills),
             attack_shock={name: list(pair) for name, pair in self.attack_shock.items()},
+            player_id=self.player_id,
+            player_name=self.player_name,
         )
 
     def render(self) -> str:
+        who = f", played by {self.player_name}" if self.player_name else ""
         if self.location is None:
-            return f"{self.name} is ready to begin, not yet placed at a location."
-        return f"{self.name} begins at {self.location}."
+            return f"{self.name} is ready to begin{who}, not yet placed at a location."
+        return f"{self.name} begins at {self.location}{who}."
 
 
 @dataclass(frozen=True)
@@ -626,23 +637,47 @@ class HirelingDismissed(GameEvent):
 @dataclass(frozen=True)
 class HirelingPromoted(GameEvent):
     """A hireling takes over as the player character after the old one died. It keeps its sheet
-    and gear and stops being paid by its employer."""
+    and gear and stops being paid by its employer. The account that played the old character
+    plays the promoted one."""
 
     kind: ClassVar[str] = "hireling.promoted"
 
     name: str
     employer: str
+    player_id: int | None = None
+    player_name: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
         character.hireling = False
         character.employer = ""
         character.wage = 0
+        character.player_id = self.player_id
+        character.player_name = self.player_name
 
     def render(self) -> str:
         return (
             f"{self.name} takes up the player character's part, leaving {self.employer}'s company."
         )
+
+
+@dataclass(frozen=True)
+class PcUnclaimed(GameEvent):
+    """A player left the campaign and their character stays in the story. The character has no
+    player; any player at the table may act for them and the GM keeps them in the party."""
+
+    kind: ClassVar[str] = "pc.unclaimed"
+
+    name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.player_id = None
+        character.player_name = ""
+        character.unclaimed = True
+
+    def render(self) -> str:
+        return f"{self.name} has no player; the table shares the part."
 
 
 @dataclass(frozen=True)
@@ -1072,17 +1107,25 @@ class SpeechWritten(GameEvent):
 @dataclass(frozen=True)
 class ChatPlayer(GameEvent):
     """The player's message. A message sent while no turn is open starts one; a message sent while
-    a turn is open answers its prompt. `speaker` is the character the message speaks for."""
+    a turn is open answers its prompt. `speaker` is the character the message speaks for, and
+    `player_id`/`player_name` identify the account at the table that wrote it."""
 
     kind: ClassVar[str] = "chat.player"
     channel: ClassVar[Channel] = Channel.TRANSCRIPT
 
     content: str
     speaker: str | None = None
+    player_id: int | None = None
+    player_name: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         if state.turn is None:
-            state.turn = Turn(opener=event_id, text=self.content)
+            state.turn = Turn(
+                opener=event_id,
+                text=self.content,
+                player_id=self.player_id,
+                player_name=self.player_name,
+            )
 
     def render(self) -> str:
         return self.content
@@ -1091,15 +1134,25 @@ class ChatPlayer(GameEvent):
 @dataclass(frozen=True)
 class OpeningStarted(GameEvent):
     """The campaign's opening: the GM's first turn, which begins before the player acts. It is
-    recorded with the player character, so the campaign is never left without its opening."""
+    recorded with the player character, so the campaign is never left without its opening. A
+    replacement character has its own opening, played by the player who made it."""
 
     kind: ClassVar[str] = "turn.opening"
     hidden: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.INTERNAL
 
+    player_id: int | None = None
+    player_name: str = ""
+
     def apply(self, state: CampaignState, event_id: int) -> None:
         if state.turn is None:
-            state.turn = Turn(opener=event_id, text="", opening=True)
+            state.turn = Turn(
+                opener=event_id,
+                text="",
+                opening=True,
+                player_id=self.player_id,
+                player_name=self.player_name,
+            )
 
 
 @dataclass(frozen=True)

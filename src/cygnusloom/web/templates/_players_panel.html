@@ -1,0 +1,101 @@
+{% if not single_player %}
+<section class="players-panel" aria-label="Players">
+  <h2>Players</h2>
+  <ul class="member-list">
+    {% for member in members %}
+    <li class="member">
+      <p class="member-name">
+        <strong>{{ member.display_name }}</strong>
+        {% if member.owner %}<span class="muted">(owner)</span>{% elif member.user_id == viewer_id %}<span class="muted">(you)</span>{% endif %}
+      </p>
+      {% if member.character %}
+      <p class="muted">{{ member.character }}{% if member.character_out_of_play %} (out of play){% endif %}{% if member.unclaimed %} (shared by the table){% endif %}</p>
+      {% else %}
+      <p class="muted">No character yet</p>
+      {% endif %}
+      {% if is_owner and not member.owner %}
+      <details class="member-remove">
+        <summary>Remove player</summary>
+        <form method="post" action="/campaigns/{{ campaign.id }}/members/{{ member.user_id }}/remove" data-confirm="Remove {{ member.display_name }} from this campaign?">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <p class="muted">When they leave, their character can leave the story too, or stay as a part the whole table shares.</p>
+          <label><input type="radio" name="character" value="keep" checked> Keep the character at the table</label>
+          <label><input type="radio" name="character" value="retire"> Their character leaves the story</label>
+          <button type="submit" class="danger">Remove player</button>
+        </form>
+      </details>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+
+  {% if removed_members %}
+  <div class="removed-players">
+    <h3>Removed players</h3>
+    <ul class="member-list">
+      {% for member in removed_members %}
+      <li class="member">
+        <p class="member-name"><strong>{{ member.display_name }}</strong></p>
+        {% if member.character %}<p class="muted">{{ member.character }}{% if member.character_out_of_play %} (out of play){% endif %}</p>{% endif %}
+        <form method="post" action="/campaigns/{{ campaign.id }}/members/{{ member.user_id }}/readd">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="secondary">Invite back</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% if unclaimed %}
+  <div class="unclaimed">
+    <h3>Shared characters</h3>
+    <ul class="member-list">
+      {% for name in unclaimed %}
+      <li class="member"><p class="member-name"><strong>{{ name }}</strong></p><p class="muted">No player; the whole table shares the part.</p></li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% if is_owner %}
+  <div class="invites">
+    <h3>Invite links</h3>
+    {% if invites %}
+    <ul class="invite-list">
+      {% for invite in invites %}
+      <li>
+        {% if invite.label %}<strong>{{ invite.label }}</strong>{% endif %}
+        <code class="invite-code">{{ request.base_url }}join/{{ invite.code }}</code>
+        <form method="post" action="/campaigns/{{ campaign.id }}/share/{{ invite.id }}/deactivate">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="secondary">Deactivate</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="muted">Players who already joined stay when a link is deactivated.</p>
+    {% else %}
+    <p class="muted">No active invite links.</p>
+    {% endif %}
+    <form method="post" action="/campaigns/{{ campaign.id }}/share" class="invite-create">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Label (optional) <input type="text" name="label" maxlength="120" placeholder="For example, the Tuesday group"></label>
+      <button type="submit">Create invite link</button>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if is_owner and debug_panel %}
+  <div class="debug-share">
+    <h3>Debug: add a player</h3>
+    <p class="muted">Put an account at the table without a join link. A new email makes a local test account that can sign in with the development login.</p>
+    <form method="post" action="/campaigns/{{ campaign.id }}/debug/member">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Account email <input type="email" name="email" required placeholder="player@example.com"></label>
+      <button type="submit">Add player</button>
+    </form>
+  </div>
+  {% endif %}
+</section>
+{% endif %}

@@ -8,10 +8,14 @@
     </div>
     {% if campaigns %}
       <ul class="campaigns">
-        {% for campaign in campaigns %}
+        {% for card in campaigns %}
+          {% set campaign = card.campaign %}
           <li>
             <div class="campaign-row">
               <a href="/campaigns/{{ campaign.id }}">{{ campaign.name }}</a>
+              {% if card.shared %}
+              <span class="campaign-shared">Shared by {{ card.owner_name or card.owner_email }}</span>
+              {% else %}
               <a class="campaign-export" href="/campaigns/{{ campaign.id }}/export">Export</a>
               <details class="campaign-label">
                 <summary aria-label="Edit label for {{ campaign.name }}">Edit label</summary>
@@ -30,6 +34,7 @@
                   <button type="submit" class="danger">Delete campaign</button>
                 </form>
               </details>
+              {% endif %}
             </div>
           </li>
         {% endfor %}

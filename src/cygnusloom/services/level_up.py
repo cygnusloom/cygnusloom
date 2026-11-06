@@ -71,14 +71,15 @@ def level_ready(
     return pc.counters.get(rules.xp_counter, counters[rules.xp_counter].initial) >= track[level]
 
 
-def advancement_due(state: Any, rule_set: RuleSet) -> bool:
-    """Whether the player must choose an advancement before the game continues.
+def advancement_due(state: Any, rule_set: RuleSet, pc: Character | None = None) -> bool:
+    """Whether this player must choose an advancement before the game continues. Without `pc`,
+    the campaign's primary player character is checked.
 
     A level whose XP threshold is reached pauses play. So does a point of an Advancement pool,
     because taking it is the player's choice. Unspent skill points and similar optional training
     do not pause play.
     """
-    pc = state.pc()
+    pc = pc if pc is not None else state.pc()
     if pc is None or pc.out_of_play or pc.kind != PC_KIND:
         return False
     for rules in rule_set.level_ups.values():
@@ -96,11 +97,14 @@ def page_view(
     campaign_id: int,
     rule_set: RuleSet,
     world: WorldContent,
+    pc_name: str | None = None,
 ) -> AdvancementPage | None:
-    """The page for the player character's next advancement, or None when none is available."""
+    """The page for one player character's next advancement, or None when none is available.
+    Without `pc_name`, the campaign's primary player character is used; a shared campaign passes
+    the viewing player's character name."""
     with session_scope(engine) as db:
         state = load_state(db, campaign_id)
-    pc = state.pc()
+    pc = state.characters.get(name_key(pc_name)) if pc_name else state.pc()
     if pc is None or pc.out_of_play or pc.kind != PC_KIND:
         return None
     level_rules = next(iter(rule_set.level_ups.values()), None)
@@ -308,9 +312,10 @@ def apply_page(
     rule_set: RuleSet,
     world: WorldContent,
     form: Mapping[str, Any],
+    pc_name: str | None = None,
 ) -> None:
     """Apply the player's level-up or training choices after validating every one."""
-    view = page_view(engine, campaign_id, rule_set, world)
+    view = page_view(engine, campaign_id, rule_set, world, pc_name)
     if view is None:
         raise InvalidInput("there is no advancement to take")
     ctx = tool_context(engine, campaign_id, rule_set, world)
@@ -616,10 +621,10 @@ def character_from(engine: Engine, campaign_id: int, name: str) -> Character | N
 
 
 def debug_grant_options(
-    state: Any, rule_set: RuleSet
+    state: Any, rule_set: RuleSet, pc: Character | None = None
 ) -> tuple[Mapping[str, Any] | None, Mapping[str, Any] | None]:
     """The XP or Advancement a debug control can grant, or None when the rule set has neither."""
-    pc = state.pc()
+    pc = pc if pc is not None else state.pc()
     if pc is None or pc.kind != PC_KIND:
         return None, None
     xp = None

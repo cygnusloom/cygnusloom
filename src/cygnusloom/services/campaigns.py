@@ -20,7 +20,7 @@ from cygnusloom.content.library import (
     RuleSet,
     read_table_genres,
 )
-from cygnusloom.db.models import Campaign, Event
+from cygnusloom.db.models import Campaign, CampaignInvite, CampaignMember, Event, User
 from cygnusloom.llm.base import (
     LLMError,
     Provider,
@@ -292,7 +292,11 @@ def save_creation(
             raise InvalidInput("that campaign's rule set is no longer available")
         genres = _campaign_table_genres(table_genres, rule_set)
     with _exclusive(campaign_id), session_scope(engine) as db:
-        if brief is not None or genres is not None:
+        state = load_state(db, campaign_id)
+        # Only the campaign's first character sets the shared options, setting, and genres. A
+        # player joining a campaign already under way makes their character and nothing else.
+        first_character = not state.pcs()
+        if (brief is not None or genres is not None) and first_character:
             stored = db.get(Campaign, campaign_id)
             if stored is not None:
                 if brief is not None:
@@ -303,6 +307,11 @@ def save_creation(
             set_campaign_options(db, campaign_id, spec, options)
         if character is not None:
             rule_set = library.rule_sets[campaign.rule_set]
+            previous = state.player_character(owner_id)
+            # A replacement for this player's out-of-play character gets an opening turn again.
+            # A player joining a campaign already under way does not; the GM meets them on the
+            # next turn through the world state.
+            opening = first_character or previous is not None
             create_player_character(
                 db,
                 campaign_id,
@@ -323,6 +332,9 @@ def save_creation(
                 pronouns=character.pronouns,
                 plus=rule_set.plus,
                 combat_rules=rule_set.combat,
+                player_id=owner_id,
+                player_name=_player_name(db, owner_id),
+                opening=opening,
             )
         db.commit()
 
@@ -333,7 +345,13 @@ def promote_hireling_to_character(
     """After the player character died, a living hireling takes over as the player character."""
     get_campaign(engine, owner_id, campaign_id)
     with _exclusive(campaign_id), session_scope(engine) as db:
-        return promote_hireling(db, campaign_id, name)
+        return promote_hireling(
+            db,
+            campaign_id,
+            name,
+            player_id=owner_id,
+            player_name=_player_name(db, owner_id),
+        )
 
 
 def character_spec(library: ContentLibrary, campaign: Campaign) -> CharacterSpec:
@@ -351,6 +369,7 @@ def campaign_spec(library: ContentLibrary, campaign: Campaign) -> CampaignSpec:
 
 
 def list_campaigns(engine: Engine, owner_id: int) -> list[Campaign]:
+    """The campaigns this account owns. Shared campaigns are listed by `visible_campaigns`."""
     with session_scope(engine) as db:
         query = (
             select(Campaign)
@@ -360,13 +379,89 @@ def list_campaigns(engine: Engine, owner_id: int) -> list[Campaign]:
         return list(db.exec(query).all())
 
 
-def get_campaign(engine: Engine, owner_id: int, campaign_id: int) -> Campaign:
-    """Other accounts' campaigns look the same as missing ones, so nothing leaks."""
+@dataclass(frozen=True)
+class CampaignCard:
+    """One campaign on the list, with the account that owns it and the viewer's part in it."""
+
+    campaign: Campaign
+    owner_name: str = ""
+    owner_email: str = ""
+    shared: bool = False
+
+
+def visible_campaigns(engine: Engine, user_id: int) -> list[CampaignCard]:
+    """Every campaign the account can open: its own first, then the ones shared with it."""
+    with session_scope(engine) as db:
+        owned = db.exec(
+            select(Campaign)
+            .where(Campaign.owner_id == user_id)
+            .order_by(Campaign.created_at.desc(), Campaign.id.desc())
+        ).all()
+        shared = db.exec(
+            select(Campaign)
+            .join(CampaignMember, CampaignMember.campaign_id == Campaign.id)
+            .where(
+                CampaignMember.user_id == user_id,
+                CampaignMember.removed_at.is_(None),
+            )
+            .order_by(Campaign.created_at.desc(), Campaign.id.desc())
+        ).all()
+        owners = {
+            row.id: row
+            for row in db.exec(
+                select(User).where(User.id.in_({c.owner_id for c in [*owned, *shared]}))
+            ).all()
+        }
+        cards = [CampaignCard(campaign=campaign) for campaign in owned]
+        for campaign in shared:
+            owner = owners.get(campaign.owner_id)
+            cards.append(
+                CampaignCard(
+                    campaign=campaign,
+                    owner_name=(owner.display_name or owner.email) if owner else "",
+                    owner_email=owner.email if owner else "",
+                    shared=True,
+                )
+            )
+        return cards
+
+
+def get_campaign(engine: Engine, user_id: int, campaign_id: int) -> Campaign:
+    """A campaign the account may play: its own, or one shared with it. Anything else looks
+    exactly like a missing campaign, so nothing leaks."""
     with session_scope(engine) as db:
         campaign = db.get(Campaign, campaign_id)
-        if campaign is None or campaign.owner_id != owner_id:
+        if campaign is None:
+            raise NotFound("campaign not found")
+        if campaign.owner_id == user_id:
+            return campaign
+        member = db.exec(
+            select(CampaignMember.id).where(
+                CampaignMember.campaign_id == campaign_id,
+                CampaignMember.user_id == user_id,
+                CampaignMember.removed_at.is_(None),
+            )
+        ).first()
+        if member is None:
             raise NotFound("campaign not found")
         return campaign
+
+
+def get_owned_campaign(engine: Engine, user_id: int, campaign_id: int) -> Campaign:
+    """A campaign the account owns. Configuration and destructive controls use this, so a
+    member who can play cannot rename, switch the model, export, or delete it."""
+    with session_scope(engine) as db:
+        campaign = db.get(Campaign, campaign_id)
+        if campaign is None or campaign.owner_id != user_id:
+            raise NotFound("campaign not found")
+        return campaign
+
+
+def _player_name(db: Any, user_id: int) -> str:
+    user = db.get(User, user_id)
+    if user is None:
+        return ""
+    return (user.display_name or user.email or "").strip()
 
 
 def default_campaign_labels(
@@ -394,6 +489,12 @@ _busy_lock = threading.Lock()
 _busy_campaigns: set[int] = set()
 
 
+def turn_busy(campaign_id: int) -> bool:
+    """Whether this process is writing a turn for the campaign right now."""
+    with _busy_lock:
+        return campaign_id in _busy_campaigns
+
+
 @contextmanager
 def _exclusive(campaign_id: int) -> Iterator[None]:
     with _busy_lock:
@@ -415,6 +516,12 @@ def delete_campaign(engine: Engine, owner_id: int, campaign_id: int) -> None:
         if campaign is None or campaign.owner_id != owner_id:
             raise NotFound("campaign not found")
         db.execute(Event.__table__.delete().where(Event.campaign_id == campaign_id))
+        db.execute(
+            CampaignMember.__table__.delete().where(CampaignMember.campaign_id == campaign_id)
+        )
+        db.execute(
+            CampaignInvite.__table__.delete().where(CampaignInvite.campaign_id == campaign_id)
+        )
         db.delete(campaign)
         db.commit()
 
@@ -430,7 +537,7 @@ def set_campaign_model(
     paused waiting for the player."""
     if model not in allowed_models:
         raise InvalidInput("that model is not available")
-    get_campaign(engine, owner_id, campaign_id)
+    get_owned_campaign(engine, owner_id, campaign_id)
     with _exclusive(campaign_id), session_scope(engine) as db:
         campaign = db.get(Campaign, campaign_id)
         assert campaign is not None
@@ -447,7 +554,7 @@ def set_campaign_label(engine: Engine, owner_id: int, campaign_id: int, label: s
     label = (label or "").strip()
     if not label or len(label) > MAX_NAME:
         raise InvalidInput(f"label must be 1 to {MAX_NAME} characters")
-    get_campaign(engine, owner_id, campaign_id)
+    get_owned_campaign(engine, owner_id, campaign_id)
     with session_scope(engine) as db:
         campaign = db.get(Campaign, campaign_id)
         assert campaign is not None
@@ -562,6 +669,8 @@ class ChatMessage:
     model: str | None = None
     speaker: str | None = None
     reasoning: str = ""
+    player_id: int | None = None
+    player_name: str = ""
 
 
 def list_messages(engine: Engine, campaign_id: int) -> list[ChatMessage]:
@@ -598,7 +707,12 @@ def _chat_message(row: Event) -> ChatMessage:
     event = decode(row)
     if isinstance(event, ChatPlayer):
         return ChatMessage(
-            id=row.id or 0, role="user", content=event.content, speaker=event.speaker
+            id=row.id or 0,
+            role="user",
+            content=event.content,
+            speaker=event.speaker,
+            player_id=event.player_id,
+            player_name=event.player_name,
         )
     if isinstance(event, ChatGM):
         return ChatMessage(

@@ -6,6 +6,7 @@
     {% if error %}<p role="alert">{{ error }}</p>{% endif %}
     {% if oidc_enabled %}
       <form method="get" action="/auth/login">
+        {% if next_path %}<input type="hidden" name="next" value="{{ next_path }}">{% endif %}
         <button type="submit">Continue with {{ oidc_name }}</button>
       </form>
       <p>Accounts, passwords, multi-factor authentication, and roles are managed by {{ oidc_name }}.</p>
@@ -20,6 +21,7 @@
       <p><strong>Development login</strong></p>
       <form method="post" action="/login/test-user">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        {% if next_path %}<input type="hidden" name="next" value="{{ next_path }}">{% endif %}
         <label>
           Test account email
           <input type="email" name="email" value="{{ email }}" placeholder="test-user@example.com">

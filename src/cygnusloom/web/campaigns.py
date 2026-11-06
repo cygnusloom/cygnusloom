@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass
@@ -14,6 +15,7 @@ from fastapi.responses import (
     RedirectResponse,
     StreamingResponse,
 )
+from sqlalchemy.exc import SQLAlchemyError
 from starlette.responses import Response
 
 from cygnusloom.auth.deps import page_user, verify_csrf
@@ -43,9 +45,9 @@ from cygnusloom.services.campaigns import (
     default_campaign_labels,
     end_encounter_turn,
     get_campaign,
+    get_owned_campaign,
     get_turn_context,
     get_turn_transcript,
-    list_campaigns,
     list_messages,
     pending_turn,
     promote_hireling_to_character,
@@ -62,6 +64,8 @@ from cygnusloom.services.campaigns import (
     set_debug_stat,
     start_encounter_turn,
     stream_message,
+    turn_busy,
+    visible_campaigns,
 )
 from cygnusloom.services.campaigns import (
     delete_campaign as delete_campaign_service,
@@ -72,8 +76,25 @@ from cygnusloom.services.campaigns import (
 from cygnusloom.services.common import Conflict, InvalidInput, NotFound, session_scope
 from cygnusloom.services.compendium import compendium_view
 from cygnusloom.services.encounters import encounter_view, local_map_view
-from cygnusloom.services.events import CampaignState, last_event_id, load_state, speaker_name
+from cygnusloom.services.events import (
+    PC_KIND,
+    CampaignState,
+    last_event_id,
+    load_state,
+    name_key,
+    speaker_name,
+)
 from cygnusloom.services.factions import faction_views
+from cygnusloom.services.membership import (
+    add_member,
+    create_invite,
+    deactivate_invite,
+    list_invites,
+    list_members,
+    list_removed_members,
+    merge_debug_member,
+    remove_member,
+)
 from cygnusloom.services.tools import check_arguments
 from cygnusloom.services.views import map_view, scene_view, time_view
 from cygnusloom.web.character_form import (
@@ -102,7 +123,7 @@ def campaigns_page(request: Request) -> Response:
     setup = _setup_redirect(request)
     if setup is not None:
         return setup
-    campaigns = list_campaigns(request.app.state.engine, user.id)
+    campaigns = visible_campaigns(request.app.state.engine, user.id)
     return render(request, "campaigns.html", campaigns=campaigns)
 
 
@@ -219,13 +240,96 @@ async def change_campaign_label(request: Request, campaign_id: int) -> Response:
     return RedirectResponse("/campaigns", status_code=303)
 
 
+@router.post("/{campaign_id}/share")
+async def share_campaign(request: Request, campaign_id: int) -> Response:
+    """Make a join code the owner can send to other players."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    try:
+        get_owned_campaign(request.app.state.engine, user.id, campaign_id)
+        create_invite(
+            request.app.state.engine,
+            user.id,
+            campaign_id,
+            form_text(form, "label"),
+        )
+    except InvalidInput as exc:
+        _flash(request, str(exc), "error")
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
+@router.post("/{campaign_id}/share/{invite_id}/deactivate")
+async def deactivate_campaign_invite(
+    request: Request, campaign_id: int, invite_id: int
+) -> Response:
+    """Stop a join code from letting anyone else in. Existing members stay."""
+    user = page_user(request)
+    await verify_csrf(request)
+    deactivate_invite(request.app.state.engine, user.id, campaign_id, invite_id)
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
+@router.post("/{campaign_id}/members/{member_id}/readd")
+async def readd_campaign_member(request: Request, campaign_id: int, member_id: int) -> Response:
+    """Put a removed player back at the table without a new join code."""
+    user = page_user(request)
+    await verify_csrf(request)
+    get_owned_campaign(request.app.state.engine, user.id, campaign_id)
+    add_member(request.app.state.engine, campaign_id, member_id)
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
+@router.post("/{campaign_id}/members/{member_id}/remove")
+async def remove_campaign_member(request: Request, campaign_id: int, member_id: int) -> Response:
+    """Take a player off the campaign, choosing whether their character leaves the story."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    retire = form_text(form, "character") == "retire"
+    try:
+        remove_member(
+            request.app.state.engine,
+            user.id,
+            campaign_id,
+            member_id,
+            retire_character=retire,
+        )
+    except InvalidInput as exc:
+        _flash(request, str(exc), "error")
+        return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
+@router.post("/{campaign_id}/debug/member")
+async def debug_add_campaign_member(request: Request, campaign_id: int) -> Response:
+    """Debug helper: put another account at the table without a join code. The owner can then
+    sign in as that account in another browser to test a second player."""
+    settings = request.app.state.settings
+    if not settings.debug_panel:
+        raise NotFound("not found")
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    try:
+        merge_debug_member(
+            request.app.state.engine,
+            user.id,
+            campaign_id,
+            form_text(form, "email"),
+        )
+    except InvalidInput as exc:
+        _flash(request, str(exc), "error")
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
 @router.post("/{campaign_id}/delete")
 async def delete_campaign(request: Request, campaign_id: int) -> Response:
     """Delete one of the player's own campaigns after they type its label to confirm."""
     user = page_user(request)
     await verify_csrf(request)
     form = await request.form()
-    campaign = get_campaign(request.app.state.engine, user.id, campaign_id)
+    campaign = get_owned_campaign(request.app.state.engine, user.id, campaign_id)
     if form_text(form, "confirm").strip() != campaign.name:
         _flash(request, "Type the campaign label exactly to confirm deletion.", "error")
         return RedirectResponse("/campaigns", status_code=303)
@@ -280,14 +384,14 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
         campaign = get_campaign(engine, user.id, campaign_id)
         state = campaign_world(engine, user.id, campaign_id).state
         options_pending, character_pending = _creation_pending(
-            state, library.rule_sets.get(campaign.rule_set)
+            state, library.rule_sets.get(campaign.rule_set), user.id
         )
         if not options_pending and not character_pending:
             raise InvalidInput("this campaign's options and player character are already set")
-        initial_setup = state.pc() is None
+        initial_setup = not state.pcs()
         # Read the brief even for a replacement character so an error can show it again, but only
         # apply it before the campaign's first player character exists. A replacement character
-        # must not rewrite the campaign's setting and story.
+        # or a player joining later must not rewrite the campaign's setting and story.
         setting = form_text(form, "setting")
         if initial_setup:
             table_genres = [
@@ -378,8 +482,16 @@ async def submit_advancement(request: Request, campaign_id: int) -> Response:
             request, user, campaign_id, 400, "that rule set is no longer available"
         )
     world = library.world_content(campaign.world_template, campaign.rule_set)
+    viewer_pc = campaign_world(engine, user.id, campaign.id).state.player_character(user.id)
     try:
-        level_up_service.apply_page(engine, campaign.id, rule_set, world, dict(form))
+        level_up_service.apply_page(
+            engine,
+            campaign.id,
+            rule_set,
+            world,
+            dict(form),
+            viewer_pc.name if viewer_pc is not None else None,
+        )
     except InvalidInput as exc:
         return _advancement_page(request, user, campaign_id, 400, str(exc))
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
@@ -435,18 +547,114 @@ def turn_status(request: Request, campaign_id: int) -> Response:
     user = page_user(request)
     engine = request.app.state.engine
     get_campaign(engine, user.id, campaign_id)
+    return JSONResponse(_turn_snapshot(engine, campaign_id))
+
+
+def _newest_event(engine: Any, campaign_id: int) -> int:
     with session_scope(engine) as db:
-        turn = load_state(db, campaign_id).turn
-        newest = last_event_id(db, campaign_id)
+        return last_event_id(db, campaign_id)
+
+
+def _turn_snapshot(
+    engine: Any,
+    campaign_id: int,
+    *,
+    newest_event: int | None = None,
+    busy: bool | None = None,
+) -> dict[str, Any]:
+    """What every page needs to know about the table: the newest event and whose turn it is.
+    Both the status endpoint and the live stream send this shape. `newest_event` and `busy`
+    may be passed when the caller just read them, which spares a second query."""
+    if newest_event is None:
+        newest_event = _newest_event(engine, campaign_id)
+    if busy is None:
+        busy = turn_busy(campaign_id)
+    with session_scope(engine) as db:
+        state = load_state(db, campaign_id)
+    newest = newest_event
+    turn = state.turn
     if turn is None:
         status = "idle"
+    elif busy:
+        status = "busy"
     elif turn.failed is not None:
         status = "failed"
     elif turn.prompt is not None:
         status = "prompt"
     else:
         status = "busy"
-    return JSONResponse({"status": status, "event": newest})
+    actor_id = turn.player_id if turn is not None else None
+    actor = turn.player_name if turn is not None else ""
+    if state.encounter is not None and state.encounter.acting:
+        acting = state.characters.get(name_key(state.encounter.acting))
+        if acting is not None:
+            if acting.kind == PC_KIND:
+                actor_id = state.owner_of(acting)
+                actor = acting.player_name or acting.name
+            else:
+                # The GM plays an NPC's turn; no player owns it.
+                actor_id = None
+                actor = acting.name
+    return {
+        "status": status,
+        "event": newest,
+        "turn": turn.opener if turn is not None else 0,
+        "actor_id": actor_id,
+        "actor": actor,
+        "pending_for": turn.player_id if turn is not None and turn.prompt else None,
+    }
+
+
+@router.get("/{campaign_id}/events")
+def campaign_events(request: Request, campaign_id: int) -> Response:
+    """A live stream of the campaign's newest event and whose turn it is.
+
+    Every player's page watches this, so a turn one player starts updates the whole table
+    without a reload. The stream sends a snapshot whenever it changes, checked against the
+    database so a turn written by another server process is seen too."""
+    user = page_user(request)
+    engine = request.app.state.engine
+    get_campaign(engine, user.id, campaign_id)
+    return StreamingResponse(
+        _event_lines(engine, campaign_id),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+async def _event_lines(engine: Any, campaign_id: int) -> AsyncIterator[str]:
+    last_payload = ""
+    last_key: tuple[int, bool] | None = None
+    heartbeat = 0
+    while True:
+        try:
+            newest = _newest_event(engine, campaign_id)
+            busy = turn_busy(campaign_id)
+            key = (newest, busy)
+            if key != last_key:
+                last_key = key
+                # Only replay the log when something has actually changed. An idle stream
+                # otherwise costs one small query a second, however long the campaign is.
+                snapshot = _turn_snapshot(engine, campaign_id, newest_event=newest, busy=busy)
+                payload = json.dumps(snapshot)
+                if payload != last_payload:
+                    last_payload = payload
+                    heartbeat = 0
+                    yield f"data: {payload}\n\n"
+                    await asyncio.sleep(1.0)
+                    continue
+        except SQLAlchemyError:
+            # The database may be gone. End the stream; the page's next action tells the player.
+            return
+        heartbeat += 1
+        if heartbeat >= 15:
+            heartbeat = 0
+            yield ": keep-alive\n\n"
+        await asyncio.sleep(1.0)
 
 
 @router.get("/{campaign_id}/map")
@@ -463,6 +671,7 @@ def map_fragment(request: Request, campaign_id: int) -> Response:
     campaign = get_campaign(engine, user.id, campaign_id)
     rule_set = library.rule_sets.get(campaign.rule_set)
     world = campaign_world(engine, user.id, campaign.id)
+    viewer_pc = world.state.player_character(user.id)
     encounter = encounter_view(
         world.state,
         rule_set.grid if rule_set else None,
@@ -470,11 +679,11 @@ def map_fragment(request: Request, campaign_id: int) -> Response:
         rule_set.terrain if rule_set else None,
         rule_set.encounter_objects if rule_set else None,
     )
-    local_map = _local_map(world.state, rule_set)
+    local_map = _local_map(world.state, rule_set, viewer_pc)
     return render(
         request,
         "campaign_map.html",
-        world_map=map_view(world.state, rule_set.world_terrain if rule_set else None),
+        world_map=map_view(world.state, rule_set.world_terrain if rule_set else None, pc=viewer_pc),
         time=time_view(world.state, rule_set.clock if rule_set else None),
         encounter=encounter,
         encounter_rows=_encounter_rows(encounter) if encounter is not None else [],
@@ -713,6 +922,8 @@ async def rollback(request: Request, campaign_id: int, event_id: int) -> Respons
     await verify_csrf(request)
     try:
         rollback_to(request.app.state.engine, user.id, campaign_id, event_id)
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
     except Conflict as exc:
         return _campaign_page(request, user, campaign_id, 409, str(exc))
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
@@ -978,7 +1189,14 @@ def _advancement_page(
             request, user, campaign_id, 400, "that rule set is no longer available"
         )
     world = library.world_content(campaign.world_template, campaign.rule_set)
-    view = level_up_service.page_view(engine, campaign.id, rule_set, world)
+    viewer_pc = campaign_world(engine, user.id, campaign.id).state.player_character(user.id)
+    view = level_up_service.page_view(
+        engine,
+        campaign.id,
+        rule_set,
+        world,
+        viewer_pc.name if viewer_pc is not None else None,
+    )
     if view is None:
         return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
     return render(
@@ -1026,11 +1244,20 @@ def _campaign_page(
     magic = rule_set.magic if rule_set is not None else None
     spec = rule_set.character if rule_set else NO_CHARACTER
     options = rule_set.campaign if rule_set else NO_CAMPAIGN
+    # Read the newest event before folding the state. If another player writes in between,
+    # the state includes that event and the live stream sees a newer one, so the page catches
+    # up instead of believing it is current.
+    with session_scope(engine) as db:
+        newest = last_event_id(db, campaign.id)
     world = campaign_world(engine, user.id, campaign.id)
     compendium = compendium_view(library, campaign.rule_set, campaign.world_template, world.state)
-    world_map = map_view(world.state, rule_set.world_terrain if rule_set else None)
-    options_pending, character_pending = _creation_pending(world.state, rule_set)
-    pc = world.state.pc()
+    viewer_pc = world.state.player_character(user.id)
+    world_map = map_view(world.state, rule_set.world_terrain if rule_set else None, pc=viewer_pc)
+    options_pending, character_pending = _creation_pending(world.state, rule_set, user.id)
+    is_owner = campaign.owner_id == user.id
+    members = list_members(engine, campaign.id, world.state)
+    invites = list_invites(engine, campaign.id) if is_owner else []
+    removed_members = list_removed_members(engine, campaign.id, world.state) if is_owner else []
     if options_pending or character_pending:
         if fragment:
             # The creation page has no live refresh; a reload shows the form again.
@@ -1058,6 +1285,7 @@ def _campaign_page(
                 spec,
                 inventory_rules,
                 rule_set.relations if rule_set else None,
+                pc=viewer_pc,
                 item_links=compendium.item_links,
                 ability_links=compendium.ability_links,
                 creature_links=compendium.creature_links,
@@ -1068,7 +1296,7 @@ def _campaign_page(
             rule_set=rule_set,
             compendium=compendium,
             show_options=options_pending,
-            show_setting=pc is None,
+            show_setting=not world.state.pcs(),
             campaign_setting=setting or campaign.setting,
             table_genres=library.available_table_genres,
             selected_table_genres=(
@@ -1079,21 +1307,37 @@ def _campaign_page(
             options=campaign_view(options) if options_pending else None,
             show_character=character_pending,
             character=character,
-            fallen=pc,
+            fallen=viewer_pc,
             promotable=promotable,
+            is_owner=is_owner,
+            viewer_id=user.id,
+            members=members,
+            invites=invites,
+            removed_members=removed_members,
+            unclaimed=[c.name for c in world.state.pcs() if c.unclaimed],
             error=error,
         )
     messages = list_messages(engine, campaign.id)
     transcript = campaign_transcript(engine, user.id, campaign.id)
     world_content = library.world_content(campaign.world_template, campaign.rule_set)
+    pending = pending_turn(engine, user.id, campaign.id)
     advancement_due = (
-        level_up_service.advancement_due(world.state, rule_set) if rule_set is not None else False
+        level_up_service.advancement_due(world.state, rule_set, viewer_pc)
+        if rule_set is not None
+        else False
     )
     advancement_available = False
     if rule_set is not None:
         try:
             advancement_available = (
-                level_up_service.page_view(engine, campaign.id, rule_set, world_content) is not None
+                level_up_service.page_view(
+                    engine,
+                    campaign.id,
+                    rule_set,
+                    world_content,
+                    viewer_pc.name if viewer_pc is not None else None,
+                )
+                is not None
             )
         except InvalidInput:
             advancement_available = False
@@ -1114,12 +1358,15 @@ def _campaign_page(
         rule_set.terrain if rule_set else None,
         rule_set.encounter_objects if rule_set else None,
     )
-    local_map = _local_map(world.state, rule_set)
+    local_map = _local_map(world.state, rule_set, viewer_pc)
     debug_xp, debug_advancement = (
-        level_up_service.debug_grant_options(world.state, rule_set)
+        level_up_service.debug_grant_options(world.state, rule_set, viewer_pc)
         if settings.debug_panel and rule_set is not None
         else (None, None)
     )
+    player_name = viewer_pc.name if viewer_pc is not None else ""
+    acting_name = speaker_name(world.state, user.id) or player_name
+    interact = _interaction_state(world.state, user.id, pending, is_owner=is_owner)
     values = {
         "campaign": campaign,
         "world": library.world_templates.get(campaign.world_template),
@@ -1128,6 +1375,7 @@ def _campaign_page(
             spec,
             inventory_rules,
             rule_set.relations if rule_set else None,
+            pc=viewer_pc,
             item_links=compendium.item_links,
             ability_links=compendium.ability_links,
             creature_links=compendium.creature_links,
@@ -1142,11 +1390,11 @@ def _campaign_page(
         "place_links": compendium.place_links,
         "messages": messages,
         "transcript": transcript,
-        "player_name": pc.name,
-        "acting_name": speaker_name(world.state) or pc.name,
+        "player_name": player_name,
+        "acting_name": acting_name,
         "context": context,
         "draft": draft,
-        "pending": pending_turn(engine, user.id, campaign.id),
+        "pending": pending,
         "advancement_due": advancement_due,
         "advancement_available": advancement_available,
         "factions": faction_views(world.state, rule_set.tallies if rule_set else {}),
@@ -1165,19 +1413,103 @@ def _campaign_page(
         "debug_xp": debug_xp,
         "debug_advancement": debug_advancement,
         "debug_injection": world.state.debug_injection,
-        "pc_invincible": pc.invincible,
+        "pc_invincible": viewer_pc.invincible if viewer_pc is not None else False,
         "item_kind_icons": magic.item_kind_icons if magic is not None else {},
+        "is_owner": is_owner,
+        "viewer_id": user.id,
+        "members": members,
+        "invites": invites,
+        "removed_members": removed_members,
+        "unclaimed": [c.name for c in world.state.pcs() if c.unclaimed],
+        "last_event": newest,
+        "turn_status": interact["status"],
+        "waiting_for": interact["waiting_for"],
+        "composer_blocked": interact["composer_blocked"],
+        "pending_for_viewer": interact["pending_for_viewer"],
+        "auto_start": interact["auto_start"],
+        "encounter_control": interact["encounter_control"],
     }
     if fragment:
         return render_fragment(request, "campaign_live.html", **values)
     return render(request, "campaign.html", status_code=status_code, error=error, **values)
 
 
-def _local_map(state: CampaignState, rule_set: Any) -> dict[str, Any] | None:
-    """The map of the place the player character is in, if the place has one."""
+@dataclass(frozen=True)
+class _Interaction:
+    """Who may act now, for the page's controls and the live refresh."""
+
+    status: str
+    waiting_for: str = ""
+    composer_blocked: bool = False
+    pending_for_viewer: bool = True
+    auto_start: bool = False
+    # "end", "start", or "" for the encounter controls.
+    encounter_control: str = ""
+
+
+def _interaction_state(state: CampaignState, user_id: int, pending: Any, *, is_owner: bool) -> dict:
+    """The page's view of whose turn it is. Every player sees the same turn, but only the
+    player whose character is acting may post. The owner may also end anyone's turn."""
+    status = "busy" if state.turn is not None else "idle"
+    if pending is not None and pending.prompt is not None:
+        status = "prompt"
+    elif pending is not None and pending.error is not None:
+        status = "failed"
+    pending_for_viewer = pending is None or pending.player_id in (None, user_id)
+    waiting_for = ""
+    other_turn = False
+    if pending is not None and not pending_for_viewer:
+        waiting_for = f"{pending.player_name or 'Another player'} must answer the GM."
+        other_turn = True
+    open_turn = state.turn
+    if open_turn is not None and open_turn.player_id not in (None, user_id):
+        waiting_for = f"{open_turn.player_name or 'Another player'} is taking a turn."
+        other_turn = True
+    control = ""
+    encounter = state.encounter
+    if encounter is not None:
+        actor = state.characters.get(name_key(encounter.acting)) if encounter.acting else None
+        if actor is not None and actor.kind == PC_KIND:
+            mine = state.owned_by(actor, user_id)
+            if not mine:
+                waiting_for = f"It is {actor.name}'s turn."
+                other_turn = True
+            if mine or is_owner:
+                control = "end"
+        elif actor is not None:
+            waiting_for = f"The GM is playing {actor.name}'s turn."
+            other_turn = True
+        elif encounter.order and encounter.up < len(encounter.order):
+            upcoming = state.characters.get(name_key(encounter.order[encounter.up]))
+            if upcoming is not None:
+                if upcoming.kind == PC_KIND:
+                    mine = state.owned_by(upcoming, user_id)
+                    if not mine:
+                        waiting_for = f"Waiting for {upcoming.name}'s turn."
+                        other_turn = True
+                else:
+                    control = "start"
+    auto_start = bool(
+        pending is not None
+        and pending.auto_continue
+        and (pending.player_id == user_id or (pending.player_id is None and is_owner))
+    )
+    composer_blocked = pending is not None or other_turn
+    return {
+        "status": status,
+        "waiting_for": waiting_for,
+        "composer_blocked": composer_blocked,
+        "pending_for_viewer": pending_for_viewer,
+        "auto_start": auto_start,
+        "encounter_control": control,
+    }
+
+
+def _local_map(state: CampaignState, rule_set: Any, player: Any = None) -> dict[str, Any] | None:
+    """The map of the place the viewing player's character is in, if the place has one."""
     if rule_set is None:
         return None
-    player = state.pc()
+    player = player if player is not None else state.pc()
     if player is None:
         return None
     return local_map_view(
@@ -1190,11 +1522,11 @@ def _local_map(state: CampaignState, rule_set: Any) -> dict[str, Any] | None:
     )
 
 
-def _creation_pending(state: Any, rule_set: Any) -> tuple[bool, bool]:
-    """Whether the campaign options and the player character still need creating. Options can
+def _creation_pending(state: Any, rule_set: Any, user_id: int) -> tuple[bool, bool]:
+    """Whether the campaign options and this player's character still need creating. Options can
     only be pending while there is no player character, so a campaign is set up in one pass."""
     options = rule_set.campaign if rule_set else NO_CAMPAIGN
-    pc = state.pc()
+    pc = state.player_character(user_id)
     return bool(options.fields) and not state.options, pc is None or pc.out_of_play
 
 

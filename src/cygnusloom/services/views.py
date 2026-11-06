@@ -350,11 +350,11 @@ def speaker_profile(state: CampaignState, name: str, spec: CharacterSpec) -> str
     return "\n".join(lines)
 
 
-def _map_place(state: CampaignState) -> Place | None:
+def _map_place(state: CampaignState, pc: Character | None = None) -> Place | None:
     """The place the map marks as the player's: the player character's own place, or the nearest
     place above it that has a position. None when there is no player character or no placed place
     above it."""
-    pc = state.pc()
+    pc = pc if pc is not None else state.pc()
     name = pc.location if pc is not None else None
     seen: set[str] = set()
     while name is not None and name_key(name) not in seen:
@@ -390,7 +390,12 @@ def time_view(state: CampaignState, clock: ClockRules | None) -> TimeView | None
     )
 
 
-def map_view(state: CampaignState, terrain: Mapping[str, WorldTerrain] | None = None) -> MapView:
+def map_view(
+    state: CampaignState,
+    terrain: Mapping[str, WorldTerrain] | None = None,
+    *,
+    pc: Character | None = None,
+) -> MapView:
     """The player's map. Only discovered places appear on it. Every region is drawn, but only known
     regions are named, and only they set the map's reach. Each marker is placed on a square centered
     on the player character's place, sized to fit the farthest discovered place or known region
@@ -401,8 +406,9 @@ def map_view(state: CampaignState, terrain: Mapping[str, WorldTerrain] | None = 
         (place for place in state.places.values() if place.discovered),
         key=lambda place: name_key(place.name),
     )
-    # The map centers on the player's place, and marks it as theirs.
-    marked = _map_place(state)
+    # The map centers on the viewing player's place, and marks it as theirs.
+    viewer = pc if pc is not None else state.pc()
+    marked = _map_place(state, viewer)
     marked_name = marked.name if marked is not None else None
     center = None if marked is None or marked.position is None else marked.position
     cx, cy = (center.x, center.y) if center is not None else (0.0, 0.0)
@@ -415,8 +421,7 @@ def map_view(state: CampaignState, terrain: Mapping[str, WorldTerrain] | None = 
         + [max(abs(x - cx), abs(y - cy)) for x, y in corners]
     )
     radius = reach * MAP_MARGIN
-    pc = state.pc()
-    at = pc.location if pc is not None else None
+    at = viewer.location if viewer is not None else None
     labels = token_labels(place.name for place in places)
     markers = [
         MapMarker(
@@ -581,6 +586,7 @@ def scene_view(
     inventory: InventoryRules | None = None,
     relations: Mapping[str, RelationRules] | None = None,
     *,
+    pc: Character | None = None,
     item_links: Mapping[str, str] | None = None,
     ability_links: Mapping[str, str] | None = None,
     creature_links: Mapping[str, str] | None = None,
@@ -596,7 +602,7 @@ def scene_view(
     creature_entries = creature_links or {}
     place_entries = place_links or {}
     sheet_entries = sheet_links or {}
-    pc = state.pc()
+    pc = pc if pc is not None else state.pc()
     location = pc.location if pc is not None else None
     found = state.named(location) if location is not None else None
     place = found if isinstance(found, Place) else None
@@ -711,14 +717,22 @@ def world_state_text(
     """The GM's orientation at the start of a turn: the campaign options, the day, the player
     character and where they are, the NPCs there, the factions and their cup, and any encounter in
     progress. The rest is looked up with the lookup tools."""
+    pcs = state.pcs()
     pc = state.pc()
     if pc is None:
         return ""
+    multiplayer = len(pcs) > 1
     lines = [
         f"Campaign {campaign.fields[field_id].name.lower()}: {value}."
         for field_id, value in state.options.items()
         if field_id in campaign.fields
     ]
+    if multiplayer:
+        lines.append(
+            "Several players share this campaign. Each player message names the character it "
+            "speaks for and the account that wrote it. Address the players together, and never "
+            "speak or act for any player character."
+        )
     if state.settings:
         lines.append("Setting:")
         lines.extend(f"  {topic}: {detail}" for topic, detail in state.settings.items())
@@ -770,47 +784,12 @@ def world_state_text(
         if clock_rules.hours_per_part > 1:
             when += f", hour {state.clock.hour + 1} of {clock_rules.hours_per_part}"
         lines.append(f"It is {when}.")
-    if pc.pronouns:
-        lines.append(f"Pronouns: {pc.name}, {pc.pronouns}.")
-    if pc.defense_tracked:
-        lines.append(
-            f"Armor: {pc.armor}; worn armor: {pc.equipped_armor or 'none'}; "
-            f"wielded shield: {pc.equipped_shield or 'none'}."
-        )
-    if pc.dead:
-        where = f" the body lies at {pc.location}." if pc.location is not None else ""
-        lines.append(f"Player character {pc.name} is dead;{where}".rstrip(".") + ".")
-    elif pc.location is None:
-        lines.append(
-            f"Player character: {pc.name}, not yet placed; place them with move_actor on your first turn."
-        )
-    else:
-        lines.append(f"Player character: {pc.name}, at {pc.location}.")
-        names = [
-            f"{npc.name} (story only, no stats yet)" if npc.story_only else npc.name
-            for npc in _npcs_at(state, pc.location)
-        ]
-        lines.append(f"NPCs here: {', '.join(names) if names else 'none'}.")
-        for npc in _npcs_at(state, pc.location):
-            if npc.pronouns:
-                lines.append(f"Pronouns: {npc.name}, {npc.pronouns}.")
-        things = [o.contents for o in visible_objects(state, pc.location)]
-        if things:
-            lines.append(f"Objects here: {'; '.join(things)}.")
-        here = _place_named(state, pc.location)
-        if here.parent is not None:
-            lines.append(f"{here.name} is inside {here.parent}.")
-        inside = [_place_named(state, name) for name in _children_of(state, here.name)]
-        if inside:
-            rooms = ", ".join(
-                f"{room.name} ({'discovered' if room.discovered else 'not yet discovered'})"
-                for room in inside
-            )
-            lines.append(f"Places inside {here.name}: {rooms}.")
+    lines.extend(_player_lines(state, pcs))
     hirelings = [c for c in state.characters.values() if c.hireling]
     if hirelings:
+        controller = "the players" if multiplayer else "the player"
         lines.append(
-            "Hirelings, controlled by the player: "
+            f"Hirelings, controlled by {controller}: "
             + "; ".join(
                 f"{h.name}, at {h.location or 'no location'}, hired by {h.employer} "
                 f"at {h.wage} a day"
@@ -824,11 +803,133 @@ def world_state_text(
     wind = _npcs_in_the_wind(state)
     if wind:
         lines.append(f"NPCs in the wind, at no location: {', '.join(wind)}.")
-    lines.extend(_status_lines(pc, conditions, inventory, hooks, counters))
+    if multiplayer:
+        for player in pcs:
+            if player.retired:
+                continue
+            for line in _status_lines(player, conditions, inventory, hooks, counters):
+                lines.append(f"{player.name}: {line}")
+    elif not pc.retired:
+        lines.extend(_status_lines(pc, conditions, inventory, hooks, counters))
     lines.extend(_encounter_lines(state, grid, combat, terrain, encounter_objects))
     if state.encounter is None:
-        lines.extend(_local_map_lines(state, grid, terrain, encounter_objects, pc))
+        if multiplayer:
+            seen: set[str] = set()
+            for player in pcs:
+                if player.retired or player.location is None or player.location in seen:
+                    continue
+                seen.add(player.location)
+                lines.extend(_local_map_lines(state, grid, terrain, encounter_objects, player))
+        else:
+            lines.extend(_local_map_lines(state, grid, terrain, encounter_objects, pc))
     return "\n".join(lines)
+
+
+def _player_controller(character: Character) -> str:
+    """How the GM should refer to the account that plays a character."""
+    if character.unclaimed:
+        return "shared by the table"
+    if character.player_name:
+        return f"played by {character.player_name}"
+    return "played by the campaign owner"
+
+
+def _player_lines(state: CampaignState, pcs: Sequence[Character]) -> list[str]:
+    """The player character section of the GM's orientation. A single-player campaign keeps the
+    original wording exactly; a shared campaign lists every player, where they are, and the
+    people and things at each of their places."""
+    if len(pcs) <= 1:
+        pc = pcs[0] if pcs else None
+        if pc is None:
+            return []
+        lines: list[str] = []
+        if pc.pronouns:
+            lines.append(f"Pronouns: {pc.name}, {pc.pronouns}.")
+        if pc.defense_tracked:
+            lines.append(
+                f"Armor: {pc.armor}; worn armor: {pc.equipped_armor or 'none'}; "
+                f"wielded shield: {pc.equipped_shield or 'none'}."
+            )
+        if pc.dead:
+            where = f" the body lies at {pc.location}." if pc.location is not None else ""
+            lines.append(f"Player character {pc.name} is dead;{where}".rstrip(".") + ".")
+        elif pc.retired:
+            lines.append(f"Player character {pc.name} has left the story.")
+        elif pc.location is None:
+            lines.append(
+                f"Player character: {pc.name}, not yet placed; place them with move_actor on "
+                "your first turn."
+            )
+        else:
+            lines.append(f"Player character: {pc.name}, at {pc.location}.")
+            lines.extend(_place_here_lines(state, pc.location, "NPCs here", "Objects here"))
+        return lines
+
+    lines = ["Player characters:"]
+    for pc in pcs:
+        lines.append(f"- {pc.name} ({_player_controller(pc)}).")
+        if pc.pronouns:
+            lines.append(f"  Pronouns: {pc.name}, {pc.pronouns}.")
+        if pc.defense_tracked:
+            lines.append(
+                f"  Armor: {pc.name}, {pc.armor}; worn armor: {pc.equipped_armor or 'none'}; "
+                f"wielded shield: {pc.equipped_shield or 'none'}."
+            )
+        if pc.dead:
+            where = f" the body lies at {pc.location}." if pc.location is not None else ""
+            lines.append(f"  {pc.name} is dead;{where}".rstrip(".") + ".")
+        elif pc.retired:
+            lines.append(f"  {pc.name} has left the story.")
+        elif pc.location is None:
+            lines.append(
+                f"  {pc.name} is not yet placed; bring them into the scene with move_actor at "
+                "the next suitable moment."
+            )
+        else:
+            lines.append(f"  {pc.name} is at {pc.location}.")
+    seen_locations: set[str] = set()
+    for pc in pcs:
+        if pc.retired or pc.location is None or pc.location in seen_locations:
+            continue
+        seen_locations.add(pc.location)
+        lines.extend(
+            _place_here_lines(
+                state,
+                pc.location,
+                f"NPCs at {pc.location}",
+                f"Objects at {pc.location}",
+            )
+        )
+    return lines
+
+
+def _place_here_lines(
+    state: CampaignState, location: str, npc_heading: str, object_heading: str
+) -> list[str]:
+    """The NPCs, their pronouns, the objects, and the nested places at one location."""
+    lines: list[str] = []
+    names = [
+        f"{npc.name} (story only, no stats yet)" if npc.story_only else npc.name
+        for npc in _npcs_at(state, location)
+    ]
+    lines.append(f"{npc_heading}: {', '.join(names) if names else 'none'}.")
+    for npc in _npcs_at(state, location):
+        if npc.pronouns:
+            lines.append(f"Pronouns: {npc.name}, {npc.pronouns}.")
+    things = [o.contents for o in visible_objects(state, location)]
+    if things:
+        lines.append(f"{object_heading}: {'; '.join(things)}.")
+    here = _place_named(state, location)
+    if here.parent is not None:
+        lines.append(f"{here.name} is inside {here.parent}.")
+    inside = [_place_named(state, name) for name in _children_of(state, here.name)]
+    if inside:
+        rooms = ", ".join(
+            f"{room.name} ({'discovered' if room.discovered else 'not yet discovered'})"
+            for room in inside
+        )
+        lines.append(f"Places inside {here.name}: {rooms}.")
+    return lines
 
 
 def _local_map_lines(

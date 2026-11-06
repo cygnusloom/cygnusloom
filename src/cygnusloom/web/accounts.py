@@ -64,6 +64,7 @@ def _login_page(
     status_code: int = 200,
     error: str | None = None,
     email: str = "",
+    next_path: str = "",
 ) -> Response:
     settings = request.app.state.settings
     provider = request.app.state.oidc
@@ -77,6 +78,7 @@ def _login_page(
         test_login=settings.test_login,
         error=error,
         email=email,
+        next_path=next_path,
     )
 
 
@@ -87,9 +89,10 @@ def home() -> Response:
 
 @router.get("/login")
 def login_page(request: Request) -> Response:
+    next_path = _safe_next(request.query_params.get("next"))
     if current_user(request) is not None:
-        return RedirectResponse("/campaigns", status_code=303)
-    return _login_page(request)
+        return RedirectResponse(next_path, status_code=303)
+    return _login_page(request, next_path=next_path if next_path != "/campaigns" else "")
 
 
 @router.get("/auth/login")
@@ -155,6 +158,7 @@ async def login_as_test_user(request: Request) -> Response:
     await verify_csrf(request)
     form = await request.form()
     email = form_text(form, "email") or TEST_USER_EMAIL
+    next_path = _safe_next(form_text(form, "next"))
     try:
         user = get_or_create_test_user(
             request.app.state.engine,
@@ -164,7 +168,7 @@ async def login_as_test_user(request: Request) -> Response:
     except InvalidInput as exc:
         return _login_page(request, status_code=400, error=str(exc), email=email)
     sign_in(request, user, datetime.now(UTC))
-    return RedirectResponse("/campaigns", status_code=303)
+    return RedirectResponse(next_path, status_code=303)
 
 
 @router.post("/logout")

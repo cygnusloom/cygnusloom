@@ -12,7 +12,16 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import Engine, func, or_, select
 
-from cygnusloom.db.models import AdminAudit, Campaign, Event, User, UserSession, utcnow
+from cygnusloom.db.models import (
+    AdminAudit,
+    Campaign,
+    CampaignInvite,
+    CampaignMember,
+    Event,
+    User,
+    UserSession,
+    utcnow,
+)
 from cygnusloom.services.accounts import decode_roles, get_user
 from cygnusloom.services.common import (
     Conflict,
@@ -528,6 +537,13 @@ def transfer_campaign(
         new_owner = owners[0]
         before = campaign.owner_id
         campaign.owner_id = new_owner.id or before
+        # The new owner is implicit, so any membership row for them would be redundant.
+        db.execute(
+            CampaignMember.__table__.delete().where(
+                CampaignMember.campaign_id == campaign_id,
+                CampaignMember.user_id == campaign.owner_id,
+            )
+        )
         db.add(campaign)
         db.commit()
     record_audit(
@@ -549,6 +565,12 @@ def delete_campaign(engine: Engine, actor: User, campaign_id: int, *, ip: str = 
         name = campaign.name
         owner_id = campaign.owner_id
         db.execute(Event.__table__.delete().where(Event.campaign_id == campaign_id))
+        db.execute(
+            CampaignMember.__table__.delete().where(CampaignMember.campaign_id == campaign_id)
+        )
+        db.execute(
+            CampaignInvite.__table__.delete().where(CampaignInvite.campaign_id == campaign_id)
+        )
         db.delete(campaign)
         db.commit()
     record_audit(

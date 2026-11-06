@@ -5,6 +5,12 @@
 <section class="view creation" data-view="play" aria-labelledby="creation-title">
   <h1 id="creation-title">{{ campaign.name }}</h1>
   <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
+  {% if is_owner and not single_player %}
+  <details class="share-campaign">
+    <summary>Share this campaign</summary>
+    {% include "_players_panel.html" %}
+  </details>
+  {% endif %}
   {% if show_character and fallen %}
   <section class="death-screen" aria-labelledby="death-title">
     <h2 id="death-title">{{ fallen.name }} is dead</h2>

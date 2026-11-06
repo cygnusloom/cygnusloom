@@ -27,6 +27,18 @@ configuration and its complete event log, including characters, maps, notes, obj
 journal, and any pending turn. Import creates a new campaign for the signed-in account; if the
 exported model is not configured on the target server, the default model is used instead.
 
+## Play with other people
+
+A campaign belongs to one account, and the owner can share it from the Players tab. Each share
+creates a join link; the owner can deactivate links at any time, and players who already joined
+stay at the table. Every player makes their own character, and the AI GM sees everyone who
+joins and brings them into the story. Out of combat, any player can send the next message. In
+an encounter, a player acts for their own character on that character's turn, and only that
+player can answer its prompts. Every player's page follows the campaign live through a
+server-sent event stream, so a turn one player starts appears for the whole table without a
+reload. The owner can remove a player and choose whether that player's character leaves the
+story or stays as a shared, unclaimed part.
+
 ## Local development
 
 Requires Python 3.12+, [uv](https://docs.astral.sh/uv/), and OpenSSL:

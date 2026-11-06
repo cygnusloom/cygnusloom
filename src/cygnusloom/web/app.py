@@ -29,6 +29,7 @@ from cygnusloom.web.campaigns import router as campaigns_router
 from cygnusloom.web.compendium import router as compendium_router
 from cygnusloom.web.rendering import render
 from cygnusloom.web.setup import router as setup_router
+from cygnusloom.web.sharing import router as sharing_router
 
 SESSION_COOKIE = "cygnusloom_session"
 SECURE_SESSION_COOKIE = "__Host-cygnusloom_session"
@@ -116,6 +117,7 @@ def create_app(
     app.mount("/static", RevalidatingStaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(accounts_router)
     app.include_router(setup_router)
+    app.include_router(sharing_router)
     app.include_router(campaigns_router)
     app.include_router(compendium_router)
     app.include_router(admin_router)
@@ -134,7 +136,14 @@ def app_from_env() -> FastAPI:
 
 
 async def _login_redirect(request: Request, exc: LoginRequired) -> RedirectResponse:
-    return RedirectResponse("/login", status_code=303)
+    # A share link opened while signed out comes back after sign-in. The campaign list is the
+    # default destination, so it keeps the plain /login address.
+    target = request.url.path
+    if request.url.query:
+        target = f"{target}?{request.url.query}"
+    if not target.startswith("/join/"):
+        return RedirectResponse("/login", status_code=303)
+    return RedirectResponse(f"/login?next={quote(target)}", status_code=303)
 
 
 async def _forbidden(request: Request, exc: AdminRequired) -> Response:

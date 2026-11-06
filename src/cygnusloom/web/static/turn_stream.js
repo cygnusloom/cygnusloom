@@ -39,6 +39,8 @@
   const NOT_SAVED = "The reply was not saved. Your message is still in the box.";
   const FLASH_KEY = "cygnus-turn-error";
   const FOCUS_KEY = "cygnus-focus-composer";
+  // True while this page is streaming its own turn, so the background live check leaves it alone.
+  let localTurn = false;
 
   class TurnFailure extends Error {}
 
@@ -212,10 +214,13 @@
       ...Array.from(freshTranscript.childNodes, (node) => node.cloneNode(true)),
     );
     transcript.dataset.gmState = freshTranscript.dataset.gmState;
+    transcript.dataset.lastEvent = freshTranscript.dataset.lastEvent;
+    transcript.dataset.turnStatus = freshTranscript.dataset.turnStatus;
     transcript.classList.toggle("show-hidden", Boolean(showHidden?.checked));
 
-    // The encounter prompt and the advancement pause sit between the chat and the composer.
-    for (const selector of [".encounter-turn", ".advancement-pause"]) {
+    // The encounter prompt, the advancement pause, and the waiting note sit between the chat
+    // and the composer.
+    for (const selector of [".encounter-turn", ".advancement-pause", ".turn-note"]) {
       currentPlay.querySelector(selector)?.remove();
       const fresh = freshPlay.querySelector(selector);
       if (fresh) composer.before(fresh);
@@ -236,6 +241,7 @@
       composer.action = freshComposer.action;
       composer.dataset.streamAction = freshComposer.dataset.streamAction;
       composer.dataset.playerName = freshComposer.dataset.playerName;
+      composer.dataset.blocked = freshComposer.dataset.blocked;
       const freshTextarea = freshComposer.querySelector("textarea");
       if (freshTextarea) {
         textarea.placeholder = freshTextarea.placeholder;
@@ -436,6 +442,7 @@
     const data = new FormData(composer);
     errorBox.hidden = true;
     textarea.value = "";
+    localTurn = true;
     setBusy(true);
     watchTurn();
     // Disabling the Send button drops focus, so move it back to the message box.
@@ -462,6 +469,8 @@
       showError(error instanceof TurnFailure ? error.message : NOT_SAVED);
       setBusy(false);
       textarea.focus();
+    } finally {
+      localTurn = false;
     }
   });
 
@@ -480,6 +489,7 @@
     // Encounter turn forms have no pending block, so their own controls are disabled instead.
     const controls = (form.closest("[data-pending]") ?? form).querySelectorAll("button, textarea");
     for (const control of controls) control.disabled = true;
+    localTurn = true;
     setGmState("busy");
     watchTurn();
     const reply = addBubble("assistant", "Cygnus");
@@ -508,8 +518,61 @@
             ? error.message
             : "The GM's reply did not finish. Try again.";
       await settle({ focusComposer: true, message });
+    } finally {
+      localTurn = false;
     }
   });
+
+  // Every player's page watches the campaign, not just the page that started the turn. When the
+  // newest event or whose turn it is changes, the page reloads its views in place, so a turn by
+  // another player appears without a manual refresh. A server-sent event stream carries the
+  // change as soon as it is written; a browser without EventSource falls back to checking.
+  let pendingSnapshot = null;
+  const applySnapshot = (latest) => {
+    if (localTurn) return;
+    if (liveRefresh) {
+      // Keep the newest state for once the update in flight finishes.
+      pendingSnapshot = latest;
+      return;
+    }
+    const eventChanged = Number(latest.event || 0) !== Number(transcript.dataset.lastEvent || 0);
+    const statusChanged = (latest.status || "") !== (transcript.dataset.turnStatus || "");
+    if (!eventChanged && !statusChanged) return;
+    refreshLive().finally(() => {
+      const next = pendingSnapshot;
+      pendingSnapshot = null;
+      if (next) applySnapshot(next);
+    });
+  };
+
+  const eventsUrl = document.querySelector("[data-events-url]")?.dataset.eventsUrl;
+  if (eventsUrl && window.EventSource) {
+    const source = new EventSource(eventsUrl);
+    source.addEventListener("message", (event) => {
+      try {
+        applySnapshot(JSON.parse(event.data));
+      } catch {
+        // A malformed event is ignored; the next snapshot is a full one.
+      }
+    });
+  } else if (statusUrl) {
+    const LIVE_POLL_MS = 2500;
+    const pollCampaign = async () => {
+      if (!localTurn && !liveRefresh) {
+        try {
+          const response = await fetch(statusUrl, {
+            credentials: "same-origin",
+            headers: { Accept: "application/json" },
+          });
+          if (response.ok) applySnapshot(await response.json());
+        } catch {
+          // A failed check is harmless; the next one catches up.
+        }
+      }
+      window.setTimeout(pollCampaign, LIVE_POLL_MS);
+    };
+    window.setTimeout(pollCampaign, LIVE_POLL_MS);
+  }
 
   if (sessionStorage.getItem(FOCUS_KEY)) {
     sessionStorage.removeItem(FOCUS_KEY);

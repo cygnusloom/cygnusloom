@@ -982,3 +982,36 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
   min-height: 1.5rem; margin: 0.75rem 0 0; color: var(--muted); white-space: pre-wrap;
 }
 .setup-status:not(:empty) { color: var(--text); }
+
+/* Campaign sharing */
+.turn-note {
+  margin: 0.5rem 0 0; color: var(--muted); font-size: 0.9rem; text-align: right;
+}
+.campaign-shared { color: var(--muted); font-size: 0.85rem; }
+.players-panel h2, .players-panel h3 { margin-bottom: 0.35rem; }
+.players-panel h2 { font-size: 1rem; }
+.players-panel h3 { font-size: 0.9rem; margin-top: 1rem; }
+.member-list, .invite-list { list-style: none; margin: 0; padding: 0; }
+.member { padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+.member:last-child { border-bottom: 0; }
+.member-name { margin: 0; }
+.member p { margin: 0.2rem 0; }
+.member-remove { margin-top: 0.35rem; }
+.member-remove form { margin-top: 0.4rem; }
+.member-remove label { display: block; margin: 0.25rem 0; }
+.invite-list li { padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+.invite-list li:last-child { border-bottom: 0; }
+.invite-code {
+  display: block; margin: 0.25rem 0; padding: 0.3rem 0.4rem;
+  background: var(--field); border-radius: 4px; font-size: 0.78rem;
+  overflow-wrap: anywhere; user-select: all;
+}
+.invite-create { margin-top: 0.6rem; }
+.invite-create label { display: block; margin-bottom: 0.4rem; }
+.share-campaign { margin: 0.75rem 0; }
+.share-campaign > summary { cursor: pointer; color: var(--accent); }
+.share-campaign .players-panel {
+  margin-top: 0.5rem; padding: 0.75rem 1rem;
+  border: 1px solid var(--border); border-radius: 8px;
+}
+.debug-share { margin-top: 1rem; }

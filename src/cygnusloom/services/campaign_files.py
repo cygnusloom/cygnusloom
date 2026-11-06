@@ -21,7 +21,13 @@ from cygnusloom import __version__
 from cygnusloom.content.definitions import ContentError
 from cygnusloom.content.library import ContentLibrary, read_table_genres
 from cygnusloom.db.models import Campaign, Event, utcnow
-from cygnusloom.services.campaigns import MAX_MODEL, MAX_NAME, MAX_SETTING, _exclusive, get_campaign
+from cygnusloom.services.campaigns import (
+    MAX_MODEL,
+    MAX_NAME,
+    MAX_SETTING,
+    _exclusive,
+    get_owned_campaign,
+)
 from cygnusloom.services.common import Conflict, InvalidInput, session_scope
 from cygnusloom.services.events import EVENT_TYPES, Channel, GameEvent, load_state
 from cygnusloom.services.names import next_campaign_label
@@ -62,7 +68,7 @@ def export_filename(campaign: Campaign) -> str:
 
 def export_campaign(engine: Engine, owner_id: int, campaign_id: int) -> tuple[str, bytes]:
     """The campaign's file name and JSON bytes. Refused while its GM is still writing."""
-    campaign = get_campaign(engine, owner_id, campaign_id)
+    campaign = get_owned_campaign(engine, owner_id, campaign_id)
     with _exclusive(campaign_id), session_scope(engine) as db:
         rows = list(
             db.execute(
@@ -198,6 +204,12 @@ def import_campaign(
                 if field_name in entry.payload:
                     entry.payload[field_name] = old_to_new[entry.payload[field_name]]
                     changed = True
+            # Account ids do not travel between servers. Every character in an imported
+            # campaign belongs to the account importing it, which can share it again.
+            if entry.kind in ("pc.added", "hireling.promoted", "turn.opening"):
+                entry.payload["player_id"] = owner_id
+                entry.payload["player_name"] = ""
+                changed = True
             if changed:
                 row.payload = json.dumps(entry.payload, ensure_ascii=False, separators=(",", ":"))
                 db.add(row)

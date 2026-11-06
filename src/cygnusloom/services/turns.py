@@ -38,6 +38,7 @@ from cygnusloom.services.events import (
     PC_KIND,
     CampaignState,
     Channel,
+    Character,
     ChatGM,
     ChatPlayer,
     ClockAdvanced,
@@ -266,11 +267,16 @@ def _text_message(content: str, reasoning: str) -> dict[str, Any]:
     return {"role": "assistant", "content": content, "reasoning_content": reasoning}
 
 
-def _history_message(m: ChatMessage) -> dict[str, Any]:
-    """A chat message as the model sees it. A GM reply keeps the reasoning it was written with."""
+def _history_message(m: ChatMessage, multiplayer: bool = False) -> dict[str, Any]:
+    """A chat message as the model sees it. A GM reply keeps the reasoning it was written with.
+    In a campaign with several players, each player message names the character it speaks for
+    and the account that wrote it, so the GM can tell the players apart."""
     if m.role == "assistant":
         return _text_message(m.content, m.reasoning)
-    return {"role": m.role, "content": m.content}
+    who = ""
+    if multiplayer and m.speaker:
+        who = f"{m.speaker} ({m.player_name})" if m.player_name else m.speaker
+    return {"role": m.role, "content": f"{who}: {m.content}" if who else m.content}
 
 
 def _tool_call_message(step: ChatReply) -> dict[str, Any]:
@@ -376,6 +382,10 @@ class _Run:
     # The setting and story the player asked for at creation, or blank. It is prompt guidance,
     # not world state.
     setting: str = ""
+    # The account answering this turn's prompt, when a player does. An opening or an NPC's turn
+    # has none, and any player at the table may continue it.
+    player_id: int | None = None
+    player_name: str = ""
 
     @property
     def tool_calls(self) -> Mapping[str, ToolCall]:
@@ -485,6 +495,8 @@ def _start_run(
     campaign: Campaign,
     context_tokens: int,
     rng: random.Random | None,
+    player_id: int | None = None,
+    player_name: str = "",
 ) -> _Run:
     provider, model_name = providers(campaign.model)
     world = library.world_content(campaign.world_template, campaign.rule_set)
@@ -512,6 +524,8 @@ def _start_run(
         unattached_rules=world.unattached_rules,
         world=template,
         setting=campaign.setting,
+        player_id=player_id,
+        player_name=player_name,
     )
 
 
@@ -537,6 +551,12 @@ def _turn_has_day_end(engine: Engine, campaign_id: int, opener: int) -> bool:
         if isinstance(event, ClockAdvanced) and event.new_day:
             return True
     return False
+
+
+def _multiplayer(state: CampaignState) -> bool:
+    """Whether more than one player character is at the table. A shared campaign whose other
+    players have not made a character yet plays exactly like a single-player one."""
+    return len(state.pcs()) > 1
 
 
 def _world_text(run: _Run, state: CampaignState) -> str:
@@ -811,6 +831,15 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
         label = "Encounter instruction"
     else:
         label = "This message (player)"
+    # With several players at the table, the GM needs to know whose character is acting and
+    # which account wrote the message.
+    multiplayer = _multiplayer(state)
+    if multiplayer and not turn.opening and turn.player_id is not None:
+        speaker = speaker_name(state, turn.player_id)
+        who = f"{speaker} ({turn.player_name})" if turn.player_name else speaker
+        if who:
+            message = f"{who}: {message}"
+            label = f"This message (player {who})"
     player = ContextPart("user", label, message)
     system = system_parts(
         rule_set.id,
@@ -829,7 +858,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     context = [*system, *_campaigns().tool_definition_parts(rule_set), *conversation]
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": "\n\n".join(p.content for p in system)},
-        *(_history_message(m) for m in history),
+        *(_history_message(m, multiplayer) for m in history),
         {"role": player.role, "content": player.content},
     ]
     round_start = len(context)
@@ -1541,8 +1570,17 @@ async def _answer(run: _Run, answer: RollAnswer | TextAnswer | None) -> AsyncIte
         for entry in _flush(run):
             yield entry
         if isinstance(answer, TextAnswer):
-            speaker = speaker_name(_state(run.engine, run.campaign_id))
-            _record(run.engine, run.campaign_id, ChatPlayer(content=answer.text, speaker=speaker))
+            speaker = speaker_name(_state(run.engine, run.campaign_id), run.player_id)
+            _record(
+                run.engine,
+                run.campaign_id,
+                ChatPlayer(
+                    content=answer.text,
+                    speaker=speaker,
+                    player_id=run.player_id,
+                    player_name=run.player_name,
+                ),
+            )
     async for event in _carry_on(run):
         yield event
 
@@ -1557,6 +1595,42 @@ async def _guarded(run: _Run, steps: AsyncIterator[TurnEvent]) -> AsyncIterator[
         message = str(exc) if isinstance(exc, LLMError) else "an unexpected error"
         _record(run.engine, run.campaign_id, TurnFailed(error=message))
         raise
+
+
+def _player_display(engine: Engine, user_id: int) -> str:
+    """The account's display name for the transcript and the GM's attribution."""
+    from cygnusloom.services.accounts import get_user
+
+    user = get_user(engine, user_id)
+    return (user.display_name or user.email or "").strip()
+
+
+def _character_to_play(state: CampaignState, user_id: int) -> Character:
+    """The character this account plays, checked for playability. Raises InvalidInput with the
+    reason when the player cannot act, so the page and the turn endpoint give the same answer."""
+    player = state.player_character(user_id)
+    if player is None:
+        raise InvalidInput("create your character before playing")
+    if player.out_of_play:
+        reason = "is dead" if player.dead else "has left the story"
+        raise InvalidInput(f"your character {reason}: choose a new character or a hireling first")
+    return player
+
+
+def _check_encounter_turn(state: CampaignState, user_id: int) -> None:
+    """In an encounter a player acts only on their own character's turn. While an NPC's turn is
+    running the GM plays it; while another player's character is acting, that player acts."""
+    encounter = state.encounter
+    if encounter is None or encounter.acting is None:
+        return
+    acting = state.characters.get(name_key(encounter.acting))
+    if acting is None:
+        return
+    if acting.kind == PC_KIND:
+        if not state.owned_by(acting, user_id):
+            raise InvalidInput(f"it is {acting.name}'s turn")
+        return
+    raise InvalidInput(f"{acting.name} is taking their turn; the GM plays it")
 
 
 async def stream_message(
@@ -1598,19 +1672,30 @@ async def stream_message(
         if rule_set is None:
             raise InvalidInput("that campaign's rule set is no longer available")
         current = _state(engine, campaign.id)
-        player = current.pc()
-        if player is None:
-            raise InvalidInput("create your character before playing")
-        if player.out_of_play:
-            state = "is dead" if player.dead else "has left the story"
-            raise InvalidInput(
-                f"your character {state}: choose a new character or a hireling first"
-            )
-        if advancement_due(current, rule_set):
+        player = _character_to_play(current, owner_id)
+        _check_encounter_turn(current, owner_id)
+        if advancement_due(current, rule_set, player):
             raise InvalidInput("level up or choose your Advancement before sending another message")
-        run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
-        speaker = speaker_name(_state(engine, campaign.id))
-        _record(engine, campaign.id, ChatPlayer(content=text, speaker=speaker))
+        run = _start_run(
+            engine,
+            providers,
+            library,
+            rule_set,
+            campaign,
+            context_tokens,
+            rng,
+        )
+        speaker = speaker_name(current, owner_id)
+        _record(
+            engine,
+            campaign.id,
+            ChatPlayer(
+                content=text,
+                speaker=speaker,
+                player_id=owner_id,
+                player_name=_player_display(engine, owner_id),
+            ),
+        )
         async for event in _guarded(run, _carry_on(run)):
             yield event
 
@@ -1639,6 +1724,9 @@ async def resume_turn(
         turn = _state(engine, campaign.id).turn
         if turn is None:
             raise InvalidInput("there is no reply waiting for an answer")
+        if turn.player_id is not None and turn.player_id != owner_id:
+            who = turn.player_name or "another player"
+            raise InvalidInput(f"{who} must answer this reply")
         rule_set = library.rule_sets.get(campaign.rule_set)
         if rule_set is None:
             raise InvalidInput("that campaign's rule set is no longer available")
@@ -1659,7 +1747,17 @@ async def resume_turn(
             answer = TextAnswer(clean)
         else:
             raise InvalidInput("that action is not available")
-        run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
+        run = _start_run(
+            engine,
+            providers,
+            library,
+            rule_set,
+            campaign,
+            context_tokens,
+            rng,
+            player_id=owner_id,
+            player_name=_player_display(engine, owner_id),
+        )
         async for event in _guarded(run, _answer(run, answer)):
             yield event
 
@@ -1685,7 +1783,8 @@ async def start_encounter_turn(
         rule_set = library.rule_sets.get(campaign.rule_set)
         if rule_set is None:
             raise InvalidInput("that campaign's rule set is no longer available")
-        if advancement_due(_state(engine, campaign.id), rule_set):
+        current = _state(engine, campaign.id)
+        if advancement_due(current, rule_set, current.player_character(owner_id)):
             raise InvalidInput("level up or choose your Advancement before starting a turn")
         with session_scope(engine) as db:
             character = encounters.begin_turn(db, campaign.id, name)
@@ -1705,7 +1804,8 @@ def begin_encounter_turn(engine: Engine, owner_id: int, campaign_id: int, name: 
     and presses End your turn. Refused while the GM's reply is still open."""
     _campaigns().get_campaign(engine, owner_id, campaign_id)
     with _campaigns()._exclusive(campaign_id):
-        if _state(engine, campaign_id).turn is not None:
+        state = _state(engine, campaign_id)
+        if state.turn is not None:
             raise InvalidInput("the GM's reply is unfinished; finish it before starting a turn")
         with session_scope(engine) as db:
             character = encounters.begin_turn(db, campaign_id, name)
@@ -1713,6 +1813,28 @@ def begin_encounter_turn(engine: Engine, owner_id: int, campaign_id: int, name: 
             raise InvalidInput(
                 f"{character.name} is not a player character; start their turn from the page"
             )
+        if not state.owned_by(character, owner_id):
+            raise InvalidInput(f"{character.name} is another player's character")
+
+
+def _end_turn_as(
+    engine: Engine, owner_id: int, campaign_id: int, name: str, by_player: bool
+) -> None:
+    """End a character's turn for this account. A player ends their own character's turn; the
+    campaign owner may also end anyone's, so a table is never stuck on a disconnected player."""
+    campaign = _campaigns().get_campaign(engine, owner_id, campaign_id)
+    with _campaigns()._exclusive(campaign_id):
+        state = _state(engine, campaign_id)
+        if state.turn is not None:
+            raise InvalidInput("the GM's reply is unfinished; finish it before ending the turn")
+        character = state.characters.get(name_key(name))
+        if character is None:
+            raise InvalidInput(f"there is no character named {name!r}")
+        owner_override = campaign.owner_id == owner_id
+        if by_player and not owner_override and not state.owned_by(character, owner_id):
+            raise InvalidInput(f"{character.name} is another player's character")
+        with session_scope(engine) as db:
+            encounters.end_turn(db, campaign_id, name, by_player=by_player)
 
 
 def end_encounter_turn(engine: Engine, owner_id: int, campaign_id: int, name: str) -> None:
@@ -1720,24 +1842,16 @@ def end_encounter_turn(engine: Engine, owner_id: int, campaign_id: int, name: st
     character's turn and the GM ends an NPC's. The next player character's turn then begins on its
     own; an NPC's still waits for Start. Refused while the GM's reply is still open."""
     _campaigns().get_campaign(engine, owner_id, campaign_id)
-    with _campaigns()._exclusive(campaign_id):
-        if _state(engine, campaign_id).turn is not None:
-            raise InvalidInput("the GM's reply is unfinished; finish it before ending the turn")
-        with session_scope(engine) as db:
-            character = load_state(db, campaign_id).characters.get(name_key(name))
-            if character is None:
-                raise InvalidInput(f"there is no character named {name!r}")
-            encounters.end_turn(db, campaign_id, name, by_player=character.kind == PC_KIND)
+    state = _state(engine, campaign_id)
+    character = state.characters.get(name_key(name))
+    if character is None:
+        raise InvalidInput(f"there is no character named {name!r}")
+    _end_turn_as(engine, owner_id, campaign_id, name, by_player=character.kind == PC_KIND)
 
 
 def end_player_turn(engine: Engine, owner_id: int, campaign_id: int, name: str) -> None:
     """End a player character's turn. Refused while the GM's reply is still open."""
-    _campaigns().get_campaign(engine, owner_id, campaign_id)
-    with _campaigns()._exclusive(campaign_id):
-        if _state(engine, campaign_id).turn is not None:
-            raise InvalidInput("the GM's reply is unfinished; finish it before ending your turn")
-        with session_scope(engine) as db:
-            encounters.end_turn(db, campaign_id, name, by_player=True)
+    _end_turn_as(engine, owner_id, campaign_id, name, by_player=True)
 
 
 @dataclass(frozen=True)
@@ -1750,6 +1864,9 @@ class PendingView:
     error: str | None = None
     opening: bool = False
     auto_continue: bool = False
+    # The player the open reply belongs to, or None when any player may answer it.
+    player_id: int | None = None
+    player_name: str = ""
 
 
 def pending_turn(engine: Engine, owner_id: int, campaign_id: int) -> PendingView | None:
@@ -1763,13 +1880,20 @@ def pending_turn(engine: Engine, owner_id: int, campaign_id: int) -> PendingView
     if turn is None:
         return None
     if turn.prompt is not None:
-        return PendingView(prompt=turn.prompt, opening=turn.opening)
+        return PendingView(
+            prompt=turn.prompt,
+            opening=turn.opening,
+            player_id=turn.player_id,
+            player_name=turn.player_name,
+        )
     auto = turn.opening and turn.failed is None
     return PendingView(
         prompt=None,
         error=turn.failed or "The GM's reply did not finish.",
         opening=turn.opening,
         auto_continue=auto,
+        player_id=turn.player_id,
+        player_name=turn.player_name,
     )
 
 
@@ -1799,8 +1923,10 @@ async def send_message(
 
 def rollback_to(engine: Engine, owner_id: int, campaign_id: int, event_id: int) -> None:
     """Return the campaign to just after the GM reply `event_id`. Later events are removed,
-    including any open reply."""
-    _campaigns().get_campaign(engine, owner_id, campaign_id)
+    including any open reply. Only the owner may rewrite the shared log."""
+    campaign = _campaigns().get_campaign(engine, owner_id, campaign_id)
+    if campaign.owner_id != owner_id:
+        raise InvalidInput("only the campaign owner can roll back the story")
     with _campaigns()._exclusive(campaign_id), session_scope(engine) as db:
         event = db.get(Event, event_id)
         if event is None or event.campaign_id != campaign_id or event.kind != ChatGM.kind:
@@ -1813,13 +1939,19 @@ def discard_pending(engine: Engine, owner_id: int, campaign_id: int) -> None:
     """Remove the open reply and the player's message that started it, so the player can send
     the message again. Used when a reply cannot be continued. The opening cannot be discarded: it
     is recorded with the player character, and it is continued instead."""
-    _campaigns().get_campaign(engine, owner_id, campaign_id)
+    campaign = _campaigns().get_campaign(engine, owner_id, campaign_id)
     with _campaigns()._exclusive(campaign_id), session_scope(engine) as db:
         turn = load_state(db, campaign_id).turn
         if turn is None:
             raise NotFound("there is no open reply to discard")
         if turn.opening:
             raise InvalidInput("the campaign's opening cannot be discarded; continue it instead")
+        if (
+            turn.player_id is not None
+            and turn.player_id != owner_id
+            and campaign.owner_id != owner_id
+        ):
+            raise InvalidInput("only the player whose reply it is can discard it")
         truncate(db, campaign_id, turn.opener - 1)
         db.commit()
 

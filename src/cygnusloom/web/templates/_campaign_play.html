@@ -1,22 +1,24 @@
-    <div class="workspace" data-view="play" data-live-url="/campaigns/{{ campaign.id }}/live" data-status-url="/campaigns/{{ campaign.id }}/turn-status" data-map-url="/campaigns/{{ campaign.id }}/map">
+    <div class="workspace" data-view="play" data-live-url="/campaigns/{{ campaign.id }}/live" data-status-url="/campaigns/{{ campaign.id }}/turn-status" data-events-url="/campaigns/{{ campaign.id }}/events" data-map-url="/campaigns/{{ campaign.id }}/map">
       <section class="chat" aria-label="Chat">
           <h1 class="chat-title">{{ campaign.name }}</h1>
           <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
-          <div class="transcript" data-transcript data-gm-state="{{ 'busy' if pending and pending.auto_continue else 'waiting' }}">
+          <div class="transcript" data-transcript data-gm-state="{{ 'busy' if pending and pending.auto_continue else 'waiting' }}" data-last-event="{{ last_event }}" data-turn-status="{{ turn_status }}">
             {% for message in transcript %}
               {% if message.role == "log" %}
               <div class="log-line{% if message.hidden %} hidden-event{% endif %}">{{ message.content }}</div>
               {% else %}
               <div class="message {{ message.role }}">
                 <div class="message-header">
-                  <span class="role">{% if message.role == "assistant" %}Cygnus{% elif message.role == "user" %}{{ message.speaker or player_name }} (you){% else %}{{ message.role }}{% endif %}{% if message.model %} · <span class="muted">{{ message.model }}</span>{% endif %}</span>
+                  <span class="role">{% if message.role == "assistant" %}Cygnus{% elif message.role == "user" %}{{ message.speaker or player_name }}{% if message.player_id is none %}{% if is_owner %} (you){% endif %}{% elif message.player_id == viewer_id %} (you){% else %} · <span class="muted">{{ message.player_name or 'another player' }}</span>{% endif %}{% else %}{{ message.role }}{% endif %}{% if message.model %} · <span class="muted">{{ message.model }}</span>{% endif %}</span>
                   {% if message.role == "assistant" %}
                   <div class="message-tools">
                   <button type="button" class="message-gear" data-turn-context-url="/campaigns/{{ campaign.id }}/messages/{{ message.id }}/context" data-turn-transcript-url="/campaigns/{{ campaign.id }}/messages/{{ message.id }}/transcript" aria-label="Show details for this reply" title="Show details for this reply"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+                  {% if is_owner %}
                   <form method="post" action="/campaigns/{{ campaign.id }}/messages/{{ message.id }}/rollback" class="rollback-form" data-confirm="Roll back to right after this reply? Later messages, Log entries, and any pending prompt will be deleted.">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <button type="submit" class="message-rollback" aria-label="Roll back to this reply" title="Roll back to this reply"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>
                   </form>
+                  {% endif %}
                   </div>
                   {% endif %}
                 </div>
@@ -31,6 +33,7 @@
                   <div class="pending-prompt">
                     <div class="content">{{ pending.prompt.text | markdown }}</div>
                     {% if pending.prompt.details %}<p class="pending-details muted">{{ pending.prompt.details }}</p>{% endif %}
+                    {% if pending_for_viewer %}
                     <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action>
                       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                       <input type="hidden" name="kind" value="roll">
@@ -42,28 +45,39 @@
                       <textarea name="content" rows="2" required maxlength="8000" placeholder="Or describe what you do instead"></textarea>
                       <button type="submit">Send</button>
                     </form>
+                    {% else %}
+                    <p class="muted">{{ pending.player_name or 'Another player' }} must answer the GM.</p>
+                    {% endif %}
                   </div>
                 {% elif pending.auto_continue %}
                   <div class="pending-prompt">
                     <p class="muted">The GM is opening the campaign.</p>
-                    <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action data-auto-start>
+                    {% if pending_for_viewer %}
+                    <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action{% if auto_start %} data-auto-start{% endif %}>
                       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                       <input type="hidden" name="kind" value="continue">
                       <button type="submit">Continue</button>
                     </form>
+                    {% else %}
+                    <p class="muted">{{ pending.player_name or 'Another player' }} is opening the game.</p>
+                    {% endif %}
                   </div>
                 {% else %}
                   <div class="pending-prompt">
                     <p class="muted">{{ pending.error }}</p>
+                    {% if pending_for_viewer %}
                     <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action>
                       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                       <input type="hidden" name="kind" value="continue">
                       <button type="submit">Continue</button>
                     </form>
+                    {% else %}
+                    <p class="muted">{{ pending.player_name or 'Another player' }} must continue this reply.</p>
+                    {% endif %}
                   </div>
                 {% endif %}
-                {% if not pending.opening %}
-                <form method="post" action="/campaigns/{{ campaign.id }}/pending/discard" data-confirm="Discard this reply and your message? It cannot be undone.">
+                {% if not pending.opening and (pending_for_viewer or is_owner) %}
+                <form method="post" action="/campaigns/{{ campaign.id }}/pending/discard" data-confirm="Discard this reply and the message that started it? It cannot be undone.">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                   <button type="submit">Discard reply</button>
                 </form>
@@ -79,28 +93,34 @@
           {% set next = encounter.participants | selectattr("next") | first %}
           {% if actor or next %}
           <div class="encounter-turn">
-            {% if actor and actor.is_pc %}
-              <p>It is your turn. Send a message to act, then end your turn.{% if encounter.moves_left is not none %} {{ encounter.moves_left }} of {{ encounter.move_cells }} cells of movement left.{% endif %}</p>
+            {% if encounter_control == "end" and actor %}
+              {% if actor.is_pc and (player_name == actor.name or is_owner) %}
+              <p>{{ "It is your turn." if player_name == actor.name else "End " ~ actor.name ~ "'s turn when the table is ready to move on." }} Send a message to act, then end the turn.{% if encounter.moves_left is not none %} {{ encounter.moves_left }} of {{ encounter.move_cells }} cells of movement left.{% endif %}</p>
+              {% else %}
+              <p class="muted">{{ actor.name }} is taking their turn.</p>
+              {% endif %}
               <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/end" data-once>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="name" value="{{ actor.name }}">
-                <button type="submit"{% if pending %} disabled{% endif %}>End your turn</button>
+                <button type="submit"{% if pending %} disabled{% endif %}>End {{ "your" if player_name == actor.name else actor.name ~ "'s" }} turn</button>
+              </form>
+            {% elif encounter_control == "start" and next %}
+              <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/stream" data-encounter-turn>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="name" value="{{ next.name }}">
+                <button type="submit"{% if pending %} disabled{% endif %}>Start {{ next.name }}'s turn</button>
               </form>
             {% elif actor %}
               <p class="muted">{{ actor.name }} is taking their turn. The turn ends when the GM finishes it.</p>
+            {% elif waiting_for %}
+              <p class="muted">{{ waiting_for }}</p>
             {% elif next.is_pc and not pending %}
               {# BACKWARDS-COMPATIBILITY: 3 - start a player turn saved before turns auto-started. #}
               <p class="muted">Starting your turn...</p>
               <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/begin" data-auto-start-turn hidden>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="name" value="{{ next.name }}">
-                <button type="submit">Begin your turn</button>
-              </form>
-            {% elif not next.is_pc %}
-              <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/stream" data-encounter-turn>
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <input type="hidden" name="name" value="{{ next.name }}">
-                <button type="submit"{% if pending %} disabled{% endif %}>Start {{ next.name }}'s turn</button>
+                <button type="submit">Begin the turn</button>
               </form>
             {% endif %}
           </div>
@@ -109,9 +129,10 @@
           {% if advancement_due %}
           <p class="advancement-pause" role="status">Your character has advancement choices to make. <a href="/campaigns/{{ campaign.id }}/advancement">Level up or choose an Advancement</a> before continuing.</p>
           {% endif %}
-          <form method="post" action="/campaigns/{{ campaign.id }}/messages" data-stream-action="/campaigns/{{ campaign.id }}/messages/stream" data-player-name="{{ acting_name }}" class="composer" id="composer">
+          {% if waiting_for %}<p class="turn-note" data-turn-note role="status">{{ waiting_for }}</p>{% else %}<p class="turn-note" data-turn-note role="status" hidden></p>{% endif %}
+          <form method="post" action="/campaigns/{{ campaign.id }}/messages" data-stream-action="/campaigns/{{ campaign.id }}/messages/stream" data-player-name="{{ acting_name }}" data-blocked="{{ '1' if (pending or advancement_due or composer_blocked) else '0' }}" class="composer" id="composer">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <textarea name="content" rows="3" required maxlength="8000" placeholder="{{ ('Level up first' if advancement_due else ('Answer the GM above first' if pending.prompt else 'Continue the reply first')) if (pending or advancement_due) else 'Message' }}"{% if pending or advancement_due %} disabled{% endif %}>{{ draft }}</textarea>
+            <textarea name="content" rows="3" required maxlength="8000" placeholder="{{ ('Level up first' if advancement_due else (waiting_for if waiting_for else ('Answer the GM above first' if pending else 'Message'))) }}"{% if pending or advancement_due or composer_blocked %} disabled{% endif %}>{{ draft }}</textarea>
             <div class="composer-actions">
               <div class="composer-tools">
                 <span class="context-meter" aria-label="Context usage" title="Estimated prompt size against the context window. At {{ '{:,}'.format(context.summary_at) }} tokens, older messages are summarized and the newest ones stay verbatim.">
@@ -120,7 +141,7 @@
                 </span>
                 <button type="button" class="composer-settings" data-dialog-target="dialog-settings" aria-haspopup="dialog" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
               </div>
-              <button type="submit"{% if pending or advancement_due %} disabled{% endif %}>Send</button>
+              <button type="submit"{% if pending or advancement_due or composer_blocked %} disabled{% endif %}>Send</button>
             </div>
           </form>
         </section>
@@ -134,6 +155,7 @@
               <button type="button" class="tab" role="tab" id="tab-character" aria-controls="panel-character" aria-selected="false" tabindex="-1">Character</button>
               {% if factions %}<button type="button" class="tab" role="tab" id="tab-factions" aria-controls="panel-factions" aria-selected="false" tabindex="-1">Factions</button>{% endif %}
               <button type="button" class="tab" role="tab" id="tab-inventory" aria-controls="panel-inventory" aria-selected="false" tabindex="-1">Inventory</button>
+              {% if not single_player %}<button type="button" class="tab" role="tab" id="tab-players" aria-controls="panel-players" aria-selected="false" tabindex="-1">Players</button>{% endif %}
               {% if debug_panel %}<button type="button" class="tab" role="tab" id="tab-debug" aria-controls="panel-debug" aria-selected="false" tabindex="-1">Debug</button>{% endif %}
             </div>
             <div class="tab-panel" role="tabpanel" id="panel-location" aria-labelledby="tab-location">
@@ -234,6 +256,11 @@
               <p class="muted">No inventory yet.</p>
               {% endif %}
             </div>
+            {% if not single_player %}
+            <div class="tab-panel" role="tabpanel" id="panel-players" aria-labelledby="tab-players" hidden>
+              {% include "_players_panel.html" %}
+            </div>
+            {% endif %}
             {% if debug_panel %}
             <div class="tab-panel" role="tabpanel" id="panel-debug" aria-labelledby="tab-debug" hidden>
               <p class="muted">Debug buffs for testing. Only offered when CYGNUSLOOM_DEBUG_PANEL is set.</p>

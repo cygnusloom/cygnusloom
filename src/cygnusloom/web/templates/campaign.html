@@ -23,21 +23,33 @@
   <form method="post" action="/campaigns/{{ campaign.id }}/model">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <h2 id="dialog-settings-title">Settings</h2>
+    {% if is_owner %}
     <fieldset class="model-options">
       <legend class="muted">Used for every reply in this campaign, starting with the next one</legend>
       {% for model in models %}
         <label><input type="radio" name="model" value="{{ model }}"{% if model == campaign.model %} checked{% endif %}> {{ model }}</label>
       {% endfor %}
     </fieldset>
+    {% else %}
+    <p class="muted">The campaign owner chooses the model for every reply.</p>
+    {% endif %}
     <label class="show-hidden-option"><input type="checkbox" data-show-hidden> Show hidden events</label>
+    {% if is_owner %}
     <div class="dialog-actions">
       <button type="submit" formmethod="dialog" formnovalidate>Cancel</button>
       <button type="submit">Save</button>
     </div>
+    {% else %}
+    <div class="dialog-actions">
+      <button type="submit" formmethod="dialog" formnovalidate>Close</button>
+    </div>
+    {% endif %}
   </form>
+  {% if is_owner %}
   <p class="muted">
     <a href="/campaigns/{{ campaign.id }}/export">Export this campaign as JSON</a>
   </p>
+  {% endif %}
 </dialog>
 {% endblock %}
 {% block scripts %}

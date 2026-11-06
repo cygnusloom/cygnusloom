@@ -482,16 +482,21 @@ def create_player_character(
     pronouns: str,
     plus: str,
     combat_rules: CombatRules | None = None,
+    player_id: int | None = None,
+    player_name: str = "",
+    opening: bool = True,
 ) -> dict[str, Any]:
     """Make the player character from the player's choices. `rolled` are the stats rolled for
     this character; the player may only keep them or swap within a swap group. Starting item
     features are carried as inventory items, spell features as the rule set's magic items, and the armor they
     give is worn. A template that grants a starting kit hands over its items, money, and equipment
-    the same way. The currency stays a count. The pronouns are how the GM refers to the character."""
+    the same way. The currency stays a count. The pronouns are how the GM refers to the character.
+    `player_id` is the account that plays it. `opening` starts the GM's opening turn for a new
+    campaign or a replacement character; a player joining a running campaign does not need one."""
     state = load_state(db, campaign_id)
-    current = state.pc()
-    if current is not None and not current.dead:
-        raise InvalidInput("the player character already exists")
+    current = state.player_character(player_id) if player_id is not None else state.pc()
+    if current is not None and not current.out_of_play:
+        raise InvalidInput("your player character already exists")
     if campaign.fields and not state.options:
         raise InvalidInput("the campaign options must be chosen before the player character")
     name = bounded_text(name, "name", MAX_NAME)
@@ -511,7 +516,17 @@ def create_player_character(
     fields = _sheet_fields(sheet)
     starting = fields["features"]
     carried = _take_starting_items(spec, starting, inventory, item_sizes, magic, currency)
-    record(db, campaign_id, PcAdded(name=name, pronouns=pronouns, **fields))
+    record(
+        db,
+        campaign_id,
+        PcAdded(
+            name=name,
+            pronouns=pronouns,
+            player_id=player_id,
+            player_name=player_name,
+            **fields,
+        ),
+    )
     # A rule set whose armor is its defense gives an unarmored character a base AC, such as
     # 10 + Dexterity. Focus and other feature effects add to the armor the carried features give.
     armor = defense_base
@@ -551,7 +566,12 @@ def create_player_character(
     elif armor:
         cap = armor_max or combat.UNCAPPED_ARMOR
         record(db, campaign_id, ArmorSet(name=name, armor=min(armor, cap)))
-    record(db, campaign_id, OpeningStarted())
+    if opening:
+        record(
+            db,
+            campaign_id,
+            OpeningStarted(player_id=player_id, player_name=player_name),
+        )
     return {"created": "pc", "name": name, "location": None}
 
 
@@ -1049,11 +1069,18 @@ def dismiss_hireling(db: Session, campaign_id: int, name: str, cause: str) -> di
     return {"dismissed": hireling.name, "employer": employer}
 
 
-def promote_hireling(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
-    """After the player character died, a living hireling takes over as the player character."""
+def promote_hireling(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    player_id: int | None = None,
+    player_name: str = "",
+) -> dict[str, Any]:
+    """After the player character died, a living hireling takes over as the player character.
+    The account that played the dead character plays the promoted one."""
     state = load_state(db, campaign_id)
-    current = state.pc()
-    if current is not None and not current.dead:
+    current = state.player_character(player_id) if player_id is not None else state.pc()
+    if current is not None and not current.out_of_play:
         raise InvalidInput("the player character is still alive")
     hireling = state.characters.get(name_key(name))
     if hireling is None or not hireling.hireling:
@@ -1061,7 +1088,16 @@ def promote_hireling(db: Session, campaign_id: int, name: str) -> dict[str, Any]
     if hireling.dead or hireling.dying_hours is not None or hireling.dying_rounds is not None:
         raise InvalidInput(f"{hireling.name} cannot take up the part: they are not able to act")
     employer = hireling.employer
-    record(db, campaign_id, HirelingPromoted(name=hireling.name, employer=employer))
+    record(
+        db,
+        campaign_id,
+        HirelingPromoted(
+            name=hireling.name,
+            employer=employer,
+            player_id=player_id,
+            player_name=player_name,
+        ),
+    )
     db.commit()
     return {"promoted": hireling.name, "employer": employer}
 

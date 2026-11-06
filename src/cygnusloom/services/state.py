@@ -336,6 +336,14 @@ class Character:
     dead: bool = False
     # The character has left the story, and the player plays someone else. It can come back later.
     retired: bool = False
+    # The account that plays this character. None means the campaign's owner, unless the
+    # character was deliberately unclaimed when a player left.
+    player_id: int | None = None
+    # The player's display name at the time they joined, for the GM and the transcript.
+    player_name: str = ""
+    # The character has no player and the table shares the part. Owners can leave a character
+    # behind when they remove its player.
+    unclaimed: bool = False
 
     @property
     def out_of_play(self) -> bool:
@@ -455,6 +463,10 @@ class Turn:
     failed: str | None = None
     # The NPC whose encounter turn this reply plays out, or None for a reply to the player.
     actor: str | None = None
+    # The account whose message opened this turn, or None for an opening or an NPC's turn. Only
+    # that player answers the turn's prompts and continues it.
+    player_id: int | None = None
+    player_name: str = ""
 
 
 @dataclass(frozen=True)
@@ -598,6 +610,9 @@ class CampaignState:
     """The campaign as its log says it is now. Keys of `places` and `characters` are the names
     without case, so places and characters share one namespace."""
 
+    # The account that owns the campaign. A player character with no `player_id` belongs to
+    # the owner, which keeps campaigns recorded before sharing worked exactly as they did.
+    owner_id: int | None = None
     places: dict[str, Place] = field(default_factory=dict)
     characters: dict[str, Character] = field(default_factory=dict)
     # World objects by the id of the event that placed them.
@@ -653,21 +668,60 @@ class CampaignState:
             return self.places[key]
         return self.characters.get(key)
 
+    def pcs(self) -> list[Character]:
+        """Every player character in play, in the order they joined. Hirelings are not player
+        characters even though the table may control them."""
+        return [c for c in self.characters.values() if c.kind == PC_KIND and not c.hireling]
+
+    def player_character(self, player_id: int) -> Character | None:
+        """The character this account plays: their living one if there is one, otherwise their
+        out-of-play one so the page can offer a replacement or a hireling. Characters recorded
+        before campaigns were shared belong to the owner."""
+        owned = [c for c in self.pcs() if self.owner_of(c) == player_id]
+        return next((c for c in owned if not c.out_of_play), owned[0] if owned else None)
+
+    def players(self) -> list[Character]:
+        """Every player character that still has a player, including unclaimed ones."""
+        return self.pcs()
+
+    def owner_of(self, character: Character) -> int | None:
+        """The account that plays a character. A character without a recorded player belongs
+        to the campaign owner; an unclaimed character has no owner at all."""
+        if character.unclaimed:
+            return None
+        return character.player_id if character.player_id is not None else self.owner_id
+
+    def owned_by(self, character: Character, player_id: int) -> bool:
+        """Whether this account may act for the character. An unclaimed character is the whole
+        table's, so any player may take its part."""
+        if character.unclaimed:
+            return True
+        return self.owner_of(character) in (None, player_id)
+
     def pc(self) -> Character | None:
-        """The player's character: the living one if there is one, otherwise the dead one."""
-        pcs = [c for c in self.characters.values() if c.kind == PC_KIND and not c.hireling]
-        return next((c for c in pcs if not c.out_of_play), next(iter(pcs), None))
+        """The campaign's primary player character: the owner's living one if there is one,
+        otherwise the owner's dead one, and failing that the first player character. Anything
+        that shows one character to the player should prefer `player_character` instead."""
+        pcs = self.pcs()
+        owned = [c for c in pcs if self.owner_of(c) == self.owner_id]
+        candidates = owned or pcs
+        return next((c for c in candidates if not c.out_of_play), next(iter(candidates), None))
 
 
-def speaker_name(state: CampaignState) -> str | None:
-    """Whose turn the player's next message speaks for: the acting PC or hireling in an encounter,
-    else the player character. None when there is no player character."""
+def speaker_name(state: CampaignState, player_id: int | None = None) -> str | None:
+    """Whose turn the player's next message speaks for: the acting PC or hireling in an encounter
+    when it belongs to this player, else the player's own character. None when there is no
+    character to speak for."""
     encounter = state.encounter
     if encounter is not None and encounter.acting is not None:
         acting = state.characters.get(name_key(encounter.acting))
-        if acting is not None and acting.kind == PC_KIND:
+        if (
+            acting is not None
+            and acting.kind == PC_KIND
+            and (player_id is None or state.owned_by(acting, player_id))
+        ):
             return acting.name
-    pc = state.pc()
+    pc = state.player_character(player_id) if player_id is not None else state.pc()
     return pc.name if pc is not None else None
 
 

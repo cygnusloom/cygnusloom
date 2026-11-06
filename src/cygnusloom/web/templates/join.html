@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Join {{ campaign.name }}{% endblock %}
+{% block content %}
+  <section class="card narrow">
+    <h1>Join {{ campaign.name }}</h1>
+    {% if label %}<p class="muted">{{ label }}</p>{% endif %}
+    <p>{{ owner_name }} invited you to play {{ campaign.name }}, a {{ campaign.rule_set }} campaign.</p>
+    <p class="muted">Joining lets you create your own character and take part in every turn. You can leave the table whenever the owner removes you.</p>
+    <form method="post" action="/join/{{ code }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit">Join campaign</button>
+    </form>
+    <p><a href="/campaigns">Back to campaigns</a></p>
+  </section>
+{% endblock %}
