@@ -181,6 +181,12 @@ button.secondary:hover, button.secondary:focus-visible {
    height; the first sidebar button expands it again. */
 body.workspace-page { height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 body.workspace-page:not(.menu-open) .topbar { display: none; }
+/* The open menu floats over the content beside the sidebar, so the sidebar and its menu button
+   stay put instead of being pushed down. */
+body.workspace-page.menu-open .topbar {
+  position: fixed; inset: 0 0 auto calc(3.5rem + 1px); z-index: 10;
+  box-shadow: 0 6px 18px rgba(20, 16, 12, 0.25);
+}
 body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; }
 
@@ -717,6 +723,11 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
     z-index: 5;
     background: var(--bg);
     grid-template-rows: 50% minmax(0, 1fr);
+  }
+  /* The menu opens just above the bottom bar that holds its button. */
+  body.workspace-page.menu-open .topbar {
+    inset: auto 0 calc(var(--mobile-bar, 3.4rem) + env(safe-area-inset-bottom)) 0;
+    box-shadow: 0 -6px 18px rgba(20, 16, 12, 0.25);
   }
   .location-panel.with-roster { grid-template-columns: minmax(0, 1fr); gap: 0.5rem 0; }
   .location-roster {
