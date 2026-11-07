@@ -697,6 +697,8 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
 /* Dialogs stay inside the viewport; long context and transcript panes scroll inside them. */
 .app-dialog { max-height: calc(100dvh - 2rem); overflow-y: auto; }
 .turn-context-dialog form { display: flex; flex-direction: column; }
+/* The reply tabs keep their height; the context pane below takes the squeeze and scrolls. */
+.turn-context-dialog .tab-list { flex: none; }
 
 /* Tablets and phones: the workspace becomes one column with a bottom bar, and the details
    panel opens over the chat from the sidebar instead of sharing the width. */
