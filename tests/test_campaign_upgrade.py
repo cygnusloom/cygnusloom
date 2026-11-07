@@ -11,7 +11,7 @@ from cygnusloom.db.models import Campaign, Event
 from cygnusloom.services.events import CampaignUpgraded, ChatGM
 from cygnusloom.services.views import world_state_text
 from tests.conftest import csrf_token
-from tests.factories import campaign_ready_fast, open_campaign, rules_for
+from tests.factories import campaign_ready_fast, open_campaign, rules_for, send_message
 
 
 def _campaign(client_factory: Callable[[], TestClient]) -> tuple[TestClient, int]:
@@ -122,6 +122,38 @@ def test_upgrading_again_records_nothing_new(client_factory: Callable[[], TestCl
     assert _upgrade(client, campaign_id).status_code == 303
 
     assert len(_upgrade_events(client, campaign_id)) == 1
+
+
+def test_the_story_continues_normally_after_upgrading(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _campaign(client_factory)
+    _set_version(client, campaign_id, "3.0.0")
+    assert _upgrade(client, campaign_id).status_code == 303
+
+    script = json.dumps({"turns": [{"text": "The market stirs.\n\nHalta waits."}]})
+    response = send_message(client, campaign_id, f"__FAKE__:{script}")
+
+    assert response.status_code == 303, response.text
+    state = open_campaign(client.app, campaign_id)
+    assert state.turn is None
+    with Session(client.app.state.engine) as db:
+        replies = list(
+            db.exec(
+                select(Event)
+                .where(Event.campaign_id == campaign_id, Event.kind == ChatGM.kind)
+                .order_by(Event.seq)
+            )
+        )
+        begun = list(
+            db.exec(
+                select(Event)
+                .where(Event.campaign_id == campaign_id, Event.kind == "turn.begun")
+                .order_by(Event.seq)
+            )
+        )
+    assert json.loads(replies[-1].payload)["content"] == "The market stirs.\n\nHalta waits."
+    assert "Game upgrade (out of character)" in json.dumps(json.loads(begun[-1].payload))
 
 
 def test_a_campaign_with_no_recorded_version_can_be_upgraded(
