@@ -3,12 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#15171c">
   <title>{% block title %}{% endblock %} · Cygnus Loom</title>
+  <link rel="icon" href="/static/brand/cygnus-loom.svg" type="image/svg+xml">
+  <link rel="icon" href="/static/brand/cygnus-loom-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/static/brand/cygnus-loom-180.png">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="{% block body_class %}{% endblock %}">
   <header class="topbar" id="site-menu">
-    <a class="brand" href="/">Cygnus Loom</a>
+    <a class="brand" href="/">
+      <img src="/static/brand/cygnus-loom.svg" alt="" width="26" height="26">
+      <span>Cygnus Loom</span>
+    </a>
     <nav>
       {% if user %}
         {% if single_player %}<span class="tag">single-player</span>{% endif %}

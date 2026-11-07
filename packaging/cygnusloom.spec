@@ -8,6 +8,7 @@ The result is `dist/CygnusLoom.exe` on Windows and `dist/CygnusLoom` on Linux. Q
 is bundled, so the window does not depend on a system webview or browser.
 """
 
+import sys
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
@@ -16,6 +17,13 @@ import cygnusloom
 
 ROOT = Path(SPECPATH).resolve().parent
 PACKAGE = Path(cygnusloom.__file__).resolve().parent
+
+# The Windows executable icon. The Qt window icon is set from the same brand asset at runtime.
+EXE_ICON = (
+    PACKAGE / "web" / "static" / "brand" / "cygnus-loom.ico"
+    if sys.platform == "win32"
+    else None
+)
 
 # Templates, static files, rulesets/worlds, CREDITS, and LICENSE.
 datas = collect_data_files("cygnusloom")
@@ -77,4 +85,5 @@ exe = EXE(
     strip=False,
     upx=False,
     console=False,
+    icon=str(EXE_ICON) if EXE_ICON and EXE_ICON.is_file() else None,
 )

@@ -64,6 +64,14 @@ def test_authentik_application_has_a_launch_url() -> None:
     assert "meta_launch_url: !Env CYGNUSLOOM_BASE_URL" in blueprint
 
 
+def test_authentik_application_uses_the_cygnus_loom_icon() -> None:
+    blueprint = (ROOT / "deploy" / "authentik" / "blueprints" / "cygnusloom.yaml").read_text()
+    assert (
+        'meta_icon: !Format ["%s/static/brand/cygnus-loom.svg", !Env CYGNUSLOOM_BASE_URL]'
+        in blueprint
+    )
+
+
 def test_the_blueprint_creates_the_fixed_credit_exempt_group() -> None:
     blueprint = (ROOT / "deploy" / "authentik" / "blueprints" / "cygnusloom.yaml").read_text()
     assert "id: cygnusloom-credit-exempt" in blueprint

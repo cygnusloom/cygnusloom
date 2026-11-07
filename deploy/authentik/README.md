@@ -33,8 +33,11 @@ Loom application. Role changes take effect at the next Cygnus Loom sign-in.
 
 The blueprint lives at `deploy/authentik/blueprints/cygnusloom.yaml`. It sets the application's
 Launch URL to `CYGNUSLOOM_BASE_URL`, which makes Cygnus Loom appear on the Authentik user
-dashboard. Check `docker compose logs authentik-worker` if it did not apply; the blueprint schema
-can differ between Authentik releases. The manual equivalent is below.
+dashboard. It also sets the application icon to
+`<CYGNUSLOOM_BASE_URL>/static/brand/cygnus-loom.svg`, which the app serves publicly, so the
+dashboard tile uses the Cygnus Loom mark. Check `docker compose logs authentik-worker` if it did
+not apply; the blueprint schema can differ between Authentik releases. The manual equivalent is
+below.
 
 `scripts/update.sh` re-applies the blueprint after `docker compose up` and retries briefly while
 Authentik starts, so an existing installation gains groups added to the blueprint, such as

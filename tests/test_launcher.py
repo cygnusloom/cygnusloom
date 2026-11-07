@@ -105,6 +105,13 @@ def test_window_state_file_lives_in_the_data_dir(tmp_path):
     assert desktop.window_state_path(tmp_path) == tmp_path / "window.ini"
 
 
+def test_the_desktop_window_icon_is_shipped():
+    icon = desktop.brand_icon_path()
+
+    assert icon.is_file()
+    assert icon.name == "cygnus-loom-256.png"
+
+
 def test_a_first_launch_uses_the_default_window_size():
     window = _FakeWindow()
 
@@ -166,6 +173,17 @@ def test_the_desktop_spec_uses_the_host_system_libraries():
     assert "libgcc_s.so" in text
     assert "libfontconfig.so" in text
     assert "a.binaries = [" in text
+
+
+def test_the_desktop_spec_uses_the_brand_icon():
+    spec = Path(__file__).resolve().parents[1] / "packaging" / "cygnusloom.spec"
+    text = spec.read_text(encoding="utf-8")
+
+    assert "cygnus-loom.ico" in text
+    assert "icon=str(EXE_ICON)" in text
+    assert desktop.brand_icon_path().parent == (
+        Path(__file__).resolve().parents[1] / "src" / "cygnusloom" / "web" / "static" / "brand"
+    )
 
 
 def test_the_desktop_edition_does_not_inherit_models_from_the_shell():

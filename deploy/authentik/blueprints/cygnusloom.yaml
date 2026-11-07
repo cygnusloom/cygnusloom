@@ -71,6 +71,7 @@ entries:
       slug: cygnusloom
       provider: !KeyOf cygnusloom-provider
       meta_launch_url: !Env CYGNUSLOOM_BASE_URL
+      meta_icon: !Format ["%s/static/brand/cygnus-loom.svg", !Env CYGNUSLOOM_BASE_URL]
 
   - model: authentik_stages_prompt.prompt
     id: cygnusloom-enrollment-field-username

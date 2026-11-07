@@ -16,10 +16,17 @@ MIN_WIDTH = 960
 MIN_HEIGHT = 640
 # The window's size, position, and mode are remembered here, beside the game's other data.
 WINDOW_STATE_FILE = "window.ini"
+# The taskbar and window icon shared with the web favicon.
+BRAND_ICON_FILE = Path(__file__).parent / "web" / "static" / "brand" / "cygnus-loom-256.png"
 
 
 class DesktopUnavailable(RuntimeError):
     """PySide6 is not installed in a source checkout."""
+
+
+def brand_icon_path() -> Path:
+    """The app icon used by the single-player window."""
+    return BRAND_ICON_FILE
 
 
 def window_state_path(data_dir: Path) -> Path:
@@ -56,7 +63,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
     """Open the game window and block until it closes. Returns the Qt exit code."""
     try:
         from PySide6.QtCore import QSettings, QUrl
-        from PySide6.QtGui import QDesktopServices
+        from PySide6.QtGui import QDesktopServices, QIcon
         from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
         from PySide6.QtWebEngineWidgets import QWebEngineView
         from PySide6.QtWidgets import QApplication, QMainWindow
@@ -82,6 +89,8 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
     app = QApplication.instance() or QApplication(sys.argv[:1])
     app.setApplicationName(title)
     app.setApplicationDisplayName(title)
+    icon = QIcon(str(brand_icon_path()))
+    app.setWindowIcon(icon)
 
     web_dir = data_dir / "webview"
     cache_dir = web_dir / "cache"
@@ -96,6 +105,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
 
     window = QMainWindow()
     window.setWindowTitle(title)
+    window.setWindowIcon(icon)
     view = QWebEngineView(window)
     view.setPage(LocalPage(profile, view))
     view.setUrl(QUrl(url))

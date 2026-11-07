@@ -21,7 +21,8 @@ body {
 
 a { color: var(--accent); }
 nav a, .brand { color: var(--text); text-decoration: none; }
-.brand { font-weight: 700; }
+.brand { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; }
+.brand img { flex: none; width: 1.6em; height: 1.6em; }
 
 .topbar {
   display: flex;
