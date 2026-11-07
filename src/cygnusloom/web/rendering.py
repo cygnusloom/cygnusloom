@@ -101,7 +101,11 @@ def render_fragment(request: Request, name: str, **context: Any) -> Response:
 
     It takes only the values its partials need: a fragment has no shell, flash, or account
     state, and rendering it must not consume a one-time flash meant for the next page load."""
-    values = {"csrf_token": get_csrf(request), **context}
+    values = {
+        "csrf_token": get_csrf(request),
+        "single_player": request.app.state.settings.single_player,
+        **context,
+    }
     return templates.TemplateResponse(
         request,
         name,

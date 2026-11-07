@@ -208,7 +208,10 @@ def account_page(request: Request) -> Response:
 @router.get("/credits")
 def credits_page(request: Request) -> Response:
     """A placeholder for buying credits. Payment is not integrated, so the page tells the
-    player to ask an administrator."""
+    player to ask an administrator. Single-player accounts are always exempt, so the page is
+    not part of that edition."""
+    if request.app.state.settings.single_player:
+        raise NotFound("credits are not used in single-player mode")
     return render(request, "credits.html", user=page_user(request))
 
 

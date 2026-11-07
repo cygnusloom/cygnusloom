@@ -32,6 +32,7 @@
     <p class="muted">Cygnus Loom does not edit roles. Change group membership in the identity provider; it takes effect at the next sign-in.</p>
   </section>
 
+  {% if not single_player %}
   <section class="card">
     <div class="heading">
       <h2>Credits</h2>
@@ -49,6 +50,7 @@
       <button type="submit">Save balance</button>
     </form>
   </section>
+  {% endif %}
 
   <section class="card">
     <h2>Moderation</h2>

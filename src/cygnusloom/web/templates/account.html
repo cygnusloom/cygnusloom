@@ -20,8 +20,10 @@
       </dd>
       <dt>Campaigns</dt>
       <dd>{{ campaign_count }}</dd>
-      <dt>Credit balance</dt>
-      <dd>{{ user.credit_balance }} credits · <a href="/credits">Need more credits?</a></dd>
+      {% if not single_player %}
+        <dt>Credit balance</dt>
+        <dd>{{ user.credit_balance }} credits · <a href="/credits">Need more credits?</a></dd>
+      {% endif %}
       {% if single_player %}
         <dt>Data folder</dt>
         <dd class="mono">{{ data_dir or "set by the launcher" }}</dd>

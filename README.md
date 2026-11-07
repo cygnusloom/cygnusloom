@@ -43,11 +43,12 @@ story or stays as a shared, unclaimed part.
 
 Each account has a credit balance. An administrator sets a flat price per AI GM reply on every
 model under **Admin > Models**, and the campaign owner pays that price when a reply is saved.
-The price is shown in the campaign's model picker. Administrators, the single-player account, and
-members of the `cygnusloom-credit-exempt` group are exempt; a server administrator adds an account
-to that group in Authentik. Only campaigns the exempt account owns are exempt. A debug campaign
-can force charges to test the flow. Payment is not integrated: an administrator grants credits by
-setting an account's balance on its admin page.
+The price is shown in the campaign's model picker; the single-player edition hides all credit
+information because that account is always exempt. Administrators and members of the
+`cygnusloom-credit-exempt` group are also exempt; a server administrator adds an account to that
+group in Authentik. Only campaigns the exempt account owns are exempt. A debug campaign can force
+charges to test the flow. Payment is not integrated: an administrator grants credits by setting
+an account's balance on its admin page.
 
 The models page also shows measured token use per model (input, cached input, output, reasoning,
 and estimated calls) so an administrator can choose a fair reply price. A provider that does not

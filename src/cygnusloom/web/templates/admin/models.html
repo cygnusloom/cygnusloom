@@ -39,8 +39,10 @@
         <dd class="mono">{{ row.base_url or "provider default" }}</dd>
         <dt>API key</dt>
         <dd>{{ "configured" if row.api_key_set else "not configured" }}</dd>
+        {% if not single_player %}
         <dt>Credits per reply</dt>
         <dd>{{ row.credits_per_turn if row.credits_per_turn else "free" }}</dd>
+        {% endif %}
         <dt>Stream usage</dt>
         <dd>{{ "requested" if row.stream_usage else "not requested" }}</dd>
       </dl>
@@ -57,11 +59,13 @@
             <input type="password" name="api_key" autocomplete="new-password"
                    placeholder="{{ 'leave blank to keep current' if row.api_key_set else 'optional' }}">
           </label>
+          {% if not single_player %}
           <label>
             Credits per reply
             <input type="number" name="credits_per_turn" min="0" step="1"
                    value="{{ row.credits_per_turn }}" required>
           </label>
+          {% endif %}
           <label class="show-hidden-option">
             <input type="checkbox" name="stream_usage" value="1" {% if row.stream_usage %}checked{% endif %}>
             Request token usage in streamed replies
@@ -127,10 +131,12 @@
         API key
         <input type="password" name="api_key" autocomplete="new-password" placeholder="optional">
       </label>
+      {% if not single_player %}
       <label>
         Credits per reply
         <input type="number" name="credits_per_turn" min="0" step="1" value="0" required>
       </label>
+      {% endif %}
       <label class="show-hidden-option">
         <input type="checkbox" name="stream_usage" value="1" checked>
         Request token usage in streamed replies
@@ -155,16 +161,16 @@
       <span class="muted">Token counts from completed AI GM replies</span>
     </div>
     <p class="muted">
-      These are the actual tokens each model used, when the provider reports them. Use the
-      averages per reply to choose the credits-per-reply price above. Estimates are marked; a
-      provider that reports no usage is about four characters per token.
+      These are the actual tokens each model used, when the provider reports them.
+      {% if not single_player %}Use the averages per reply to choose the credits-per-reply price above.{% endif %}
+      Estimates are marked; a provider that reports no usage is about four characters per token.
     </p>
     {% if usage %}
       <table>
         <thead>
           <tr>
             <th>Model</th><th>Calls</th><th>Replies</th><th>Avg input</th><th>Avg cached</th>
-            <th>Avg output</th><th>Estimated calls</th><th>Credits charged</th>
+            <th>Avg output</th><th>Estimated calls</th>{% if not single_player %}<th>Credits charged</th>{% endif %}
           </tr>
         </thead>
         <tbody>
@@ -177,7 +183,7 @@
               <td>{{ row.avg_cached_tokens }}</td>
               <td>{{ row.avg_output_tokens }}</td>
               <td>{{ row.estimated_calls }}</td>
-              <td>{{ row.credits_charged }}</td>
+              {% if not single_player %}<td>{{ row.credits_charged }}</td>{% endif %}
             </tr>
           {% endfor %}
         </tbody>

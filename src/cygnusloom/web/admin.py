@@ -321,7 +321,10 @@ async def update_model(request: Request, row_id: int) -> Response:
             row_id,
             base_url=form_text(form, "base_url"),
             api_key=api_key,
-            credits_per_turn=_turn_price(form),
+            # The single-player page hides prices, so keep whatever was stored.
+            credits_per_turn=(
+                None if request.app.state.settings.single_player else _turn_price(form)
+            ),
             stream_usage=form_text(form, "stream_usage") == "1",
             enabled=form_text(form, "enabled") == "1",
             make_default=form_text(form, "is_default") == "1",

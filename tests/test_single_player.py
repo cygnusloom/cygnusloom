@@ -9,6 +9,7 @@ from cygnusloom.db.models import User
 from cygnusloom.db.session import make_engine
 from cygnusloom.services.accounts import LOCAL_ISSUER, LOCAL_ROLE, user_roles
 from tests.conftest import SECRET, csrf_token, make_app
+from tests.factories import create_campaign
 
 BASE = {"CYGNUSLOOM_SECRET_KEY": SECRET}
 
@@ -100,6 +101,58 @@ def test_single_player_account_page_describes_the_local_player(tmp_path):
     assert "local single-player account" in page.text
     assert "Data folder" in page.text
     assert "Sign out everywhere" not in page.text
+
+
+def test_single_player_shows_no_credit_information(tmp_path):
+    settings = _settings(tmp_path, debug_panel=True)
+    app = make_app(settings)
+    client = TestClient(app)
+
+    account = client.get("/account")
+    assert account.status_code == 200
+    assert "credit" not in account.text.lower()
+
+    campaign_id = create_campaign(client, label="Solo")
+    campaign = client.get(f"/campaigns/{campaign_id}")
+    assert campaign.status_code == 200
+    assert "credits per reply" not in campaign.text
+    assert 'class="credit-meter"' not in campaign.text
+    assert 'href="/credits"' not in campaign.text
+    assert "Save credits" not in campaign.text
+
+    models = client.get("/admin/models")
+    assert models.status_code == 200
+    assert "credit" not in models.text.lower()
+
+    users = client.get("/admin/users")
+    assert users.status_code == 200
+    assert "credit" not in users.text.lower()
+
+    user = _users(settings)[0]
+    detail = client.get(f"/admin/users/{user.id}")
+    assert detail.status_code == 200
+    assert "credit" not in detail.text.lower()
+
+    assert client.get("/credits").status_code == 404
+
+
+def test_single_player_model_update_keeps_the_hidden_price(tmp_path):
+    settings = _settings(tmp_path)
+    app = make_app(settings)
+    client = TestClient(app)
+    spec = app.state.catalog.all_specs()[0]
+    assert spec.row_id is not None
+    app.state.catalog.update(spec.row_id, base_url="", credits_per_turn=7)
+    token = csrf_token(client, "/admin/models")
+
+    response = client.post(
+        f"/admin/models/{spec.row_id}/update",
+        data={"csrf_token": token, "base_url": "", "stream_usage": "1", "enabled": "1"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert app.state.catalog.all_specs()[0].credits_per_turn == 7
 
 
 def test_single_player_admin_actions_skip_step_up(tmp_path):

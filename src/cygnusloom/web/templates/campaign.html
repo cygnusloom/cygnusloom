@@ -28,19 +28,21 @@
       <legend class="muted">Used for every reply in this campaign, starting with the next one</legend>
       {% for spec in models %}
         <label><input type="radio" name="model" value="{{ spec.model_id }}"{% if spec.model_id == campaign.model %} checked{% endif %}> {{ spec.model_id }}
-          <span class="muted">{% if spec.credits_per_turn %}· {{ spec.credits_per_turn }} credits per reply{% else %}· free{% endif %}</span></label>
+          {% if not single_player %}<span class="muted">{% if spec.credits_per_turn %}· {{ spec.credits_per_turn }} credits per reply{% else %}· free{% endif %}</span>{% endif %}</label>
       {% endfor %}
     </fieldset>
-    {% if credit_price <= 0 %}
-      <p class="muted">This model is free.</p>
-    {% elif credits_exempt %}
-      <p class="muted">Administrators, the single-player account, and credit-exempt accounts are not charged for replies.</p>
-    {% else %}
-      <p class="muted">The campaign owner's balance is <strong>{{ credit_balance }}</strong> credits. The current model costs {{ credit_price }} credits per reply.</p>
-      {% if credits_blocked %}<p role="alert">{{ credit_message }} <a href="/credits">Get more credits</a></p>{% endif %}
+    {% if not single_player %}
+      {% if credit_price <= 0 %}
+        <p class="muted">This model is free.</p>
+      {% elif credits_exempt %}
+        <p class="muted">Administrators, the single-player account, and credit-exempt accounts are not charged for replies.</p>
+      {% else %}
+        <p class="muted">The campaign owner's balance is <strong>{{ credit_balance }}</strong> credits. The current model costs {{ credit_price }} credits per reply.</p>
+        {% if credits_blocked %}<p role="alert">{{ credit_message }} <a href="/credits">Get more credits</a></p>{% endif %}
+      {% endif %}
     {% endif %}
     {% else %}
-    <p class="muted">The campaign owner chooses the model for every reply.{% if credit_price %} {{ campaign.model }} costs {{ credit_price }} credits per reply and the owner has {{ credit_balance }} credits.{% else %} {{ campaign.model }} is free.{% endif %}</p>
+    <p class="muted">The campaign owner chooses the model for every reply.{% if credit_price and not single_player %} {{ campaign.model }} costs {{ credit_price }} credits per reply and the owner has {{ credit_balance }} credits.{% elif not single_player %} {{ campaign.model }} is free.{% endif %}</p>
     {% endif %}
     <label class="show-hidden-option"><input type="checkbox" data-show-hidden> Show hidden events</label>
     {% if is_owner %}
