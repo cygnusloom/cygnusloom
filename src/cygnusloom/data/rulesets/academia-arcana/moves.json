@@ -16,7 +16,12 @@
       {
         "label": "7-9",
         "min": 7,
-        "text": "The magic works, but choose one: you draw unwanted attention; it has a minor unintended side effect; or it drains you, and you mark 1 Stress."
+        "text": "The magic works, but choose one: you draw unwanted attention; it has a minor unintended side effect; or it drains you, and you mark 1 Stress.",
+        "choices": [
+          {"id": "attention", "label": "Draw unwanted attention", "text": "Someone notices the casting.", "effects": [{"op": "note", "text": "The casting draws unwanted attention."}]},
+          {"id": "side-effect", "label": "A minor unintended side effect", "text": "The spell twists in a small way.", "effects": [{"op": "note", "text": "The spell has a minor unintended side effect."}]},
+          {"id": "stress", "label": "Mark 1 Stress", "text": "The working drains you.", "effects": [{"op": "counter", "id": "stress", "delta": 1}]}
+        ]
       },
       {
         "label": "6-",
@@ -64,7 +69,12 @@
       {
         "label": "7-9",
         "min": 7,
-        "text": "It works, but it is unstable, temporary, or missing a rare final ingredient. Choose one; the GM says what it means."
+        "text": "It works, but it is unstable, temporary, or missing a rare final ingredient. Choose one; the GM says what it means.",
+        "choices": [
+          {"id": "unstable", "label": "It is unstable", "text": "The batch works for now, but it is volatile.", "effects": [{"op": "note", "text": "The batch is unstable."}]},
+          {"id": "temporary", "label": "It is temporary", "text": "The batch loses its strength soon.", "effects": [{"op": "note", "text": "The batch is temporary."}]},
+          {"id": "ingredient", "label": "Missing a rare final ingredient", "text": "The batch needs one more ingredient.", "effects": [{"op": "note", "text": "The batch is missing a rare final ingredient."}]}
+        ]
       },
       {
         "label": "6-",
@@ -137,7 +147,12 @@
       {
         "label": "7-9",
         "min": 7,
-        "text": "Choose one: both spells land; both miss and the exchange resets; or you land a hit but take a cost, such as a Condition, a lost wand, or a marked uniform."
+        "text": "Choose one: both spells land; both miss and the exchange resets; or you land a hit but take a cost, such as a Condition, a lost wand, or a marked uniform.",
+        "choices": [
+          {"id": "both-land", "label": "Both spells land", "text": "The exchange costs both duelists.", "effects": [{"op": "note", "text": "Both spells land in the duel."}]},
+          {"id": "both-miss", "label": "Both miss and the exchange resets", "text": "Neither spell lands; begin again.", "effects": [{"op": "note", "text": "Both spells miss and the duel resets."}]},
+          {"id": "cost", "label": "Land a hit but take a cost", "text": "You strike, and the cost is a Condition, a lost wand, or a marked uniform.", "effects": [{"op": "note", "text": "A hit lands, with a cost."}]}
+        ]
       },
       {
         "label": "6-",
@@ -209,7 +224,12 @@
       {
         "label": "7-9",
         "min": 7,
-        "text": "You hold, but choose one: you take a Condition; someone else takes the harm; or the threat backs off and comes back later."
+        "text": "You hold, but choose one: you take a Condition; someone else takes the harm; or the threat backs off and comes back later.",
+        "choices": [
+          {"id": "condition", "label": "You take a Condition", "text": "The effort leaves its mark on you.", "effects": [{"op": "note", "text": "The character takes a Condition."}]},
+          {"id": "other-harm", "label": "Someone else takes the harm", "text": "You hold, but another is hurt.", "effects": [{"op": "note", "text": "Someone else takes the harm."}]},
+          {"id": "returns", "label": "The threat backs off and returns later", "text": "The danger is delayed, not gone.", "effects": [{"op": "note", "text": "The threat backs off and will return."}]}
+        ]
       },
       {
         "label": "6-",
@@ -257,7 +277,12 @@
       {
         "label": "7-9",
         "min": 7,
-        "text": "Choose one: it does something unexpected but helpful; its effect is weaker or shorter; or using it costs you, and you mark 1 Stress."
+        "text": "Choose one: it does something unexpected but helpful; its effect is weaker or shorter; or using it costs you, and you mark 1 Stress.",
+        "choices": [
+          {"id": "helpful-surprise", "label": "Something unexpected but helpful", "text": "The object surprises you in a useful way.", "effects": [{"op": "note", "text": "The object does something unexpected but helpful."}]},
+          {"id": "weaker", "label": "Its effect is weaker or shorter", "text": "The object works, but not for long.", "effects": [{"op": "note", "text": "The object's effect is weaker or shorter."}]},
+          {"id": "stress", "label": "Mark 1 Stress", "text": "Using it costs you.", "effects": [{"op": "counter", "id": "stress", "delta": 1}]}
+        ]
       },
       {
         "label": "6-",
@@ -281,7 +306,12 @@
       {
         "label": "7-9",
         "min": 7,
-        "text": "You make it, but choose one: it has a side effect; it will spoil by the next scene; or you need one more ingredient to stabilize it."
+        "text": "You make it, but choose one: it has a side effect; it will spoil by the next scene; or you need one more ingredient to stabilize it.",
+        "choices": [
+          {"id": "side-effect", "label": "It has a side effect", "text": "The potion works, with a side effect.", "effects": [{"op": "note", "text": "The potion has a side effect."}]},
+          {"id": "spoils", "label": "It will spoil by the next scene", "text": "The potion will not keep.", "effects": [{"op": "note", "text": "The potion will spoil by the next scene."}]},
+          {"id": "ingredient", "label": "You need one more ingredient", "text": "The potion needs stabilizing.", "effects": [{"op": "note", "text": "The potion needs one more ingredient to stabilize."}]}
+        ]
       },
       {
         "label": "6-",
@@ -305,7 +335,12 @@
       {
         "label": "7-9",
         "min": 7,
-        "text": "It works, but choose one: the object has a flaw the GM names; the working is tied to one person or place; or it will fade after a few uses."
+        "text": "It works, but choose one: the object has a flaw the GM names; the working is tied to one person or place; or it will fade after a few uses.",
+        "choices": [
+          {"id": "flaw", "label": "The object has a flaw", "text": "The GM names the flaw.", "effects": [{"op": "note", "text": "The enchanted object has a flaw that the GM names."}]},
+          {"id": "tied", "label": "Tied to one person or place", "text": "The working will not travel.", "effects": [{"op": "note", "text": "The working is tied to one person or place."}]},
+          {"id": "fades", "label": "It will fade after a few uses", "text": "The enchantment is temporary.", "effects": [{"op": "note", "text": "The enchantment will fade after a few uses."}]}
+        ]
       },
       {
         "label": "6-",
@@ -329,7 +364,12 @@
       {
         "label": "7-9",
         "min": 7,
-        "text": "You learn enough to pass, but choose one: you are exhausted; you neglected a friend; or you missed a topic the GM names."
+        "text": "You learn enough to pass, but choose one: you are exhausted; you neglected a friend; or you missed a topic the GM names.",
+        "choices": [
+          {"id": "exhausted", "label": "You are exhausted", "text": "The study leaves you spent.", "effects": [{"op": "note", "text": "The character is exhausted."}]},
+          {"id": "neglected", "label": "You neglected a friend", "text": "Someone close went without you.", "effects": [{"op": "note", "text": "The character neglected a friend."}]},
+          {"id": "missed-topic", "label": "You missed a topic", "text": "The GM names the gap.", "effects": [{"op": "note", "text": "The character missed a topic the GM names."}]}
+        ]
       },
       {
         "label": "6-",
@@ -402,7 +442,12 @@
       {
         "label": "7-9",
         "min": 7,
-        "text": "It works, but choose one: it is more dramatic than you wanted; it costs you 1 Stress; or someone who should not have seen it did."
+        "text": "It works, but choose one: it is more dramatic than you wanted; it costs you 1 Stress; or someone who should not have seen it did.",
+        "choices": [
+          {"id": "dramatic", "label": "It is more dramatic than you wanted", "text": "The flourish gets away from you.", "effects": [{"op": "note", "text": "The signature spell is more dramatic than intended."}]},
+          {"id": "stress", "label": "It costs you 1 Stress", "text": "The casting drains you.", "effects": [{"op": "counter", "id": "stress", "delta": 1}]},
+          {"id": "seen", "label": "Someone who should not have seen it did", "text": "There was a witness.", "effects": [{"op": "note", "text": "A witness sees the signature spell."}]}
+        ]
       },
       {
         "label": "6-",

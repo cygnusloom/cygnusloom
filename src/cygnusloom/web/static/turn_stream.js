@@ -553,7 +553,7 @@
     const data = new FormData(form);
     const kind = data.get("kind");
     const answer = String(data.get("content") || "").trim();
-    if (kind === "text" && !answer) return;
+    if ((kind === "text" || kind === "choice") && !answer) return;
 
     // Encounter turn forms have no pending block, so their own controls are disabled instead.
     const controls = (form.closest("[data-pending]") ?? form).querySelectorAll("button, textarea");

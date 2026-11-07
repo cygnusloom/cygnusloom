@@ -18,6 +18,7 @@ from cygnusloom.services.conditions import end_condition
 from cygnusloom.services.events import (
     PC_KIND,
     Character,
+    CharacterSaved,
     SaveRolled,
     current,
     defeat_status,
@@ -123,13 +124,47 @@ def player_save(
     rng: random.Random | None = None,
     plus: str = "sum",
     spec: CharacterSpec | None = None,
+    stat: str = "",
+    cause: str = "",
 ) -> dict[str, Any]:
     """The save a player character owes after harm overflowed, rolled by the player. Passing it
-    ends any fatal condition the character has, such as Doomed, when the rule set defines it."""
+    ends any fatal condition the character has, such as Doomed, when the rule set defines it.
+
+    A `stat` names a hazard save instead, such as one a trap or a spell calls for. It is
+    recorded as a CharacterSaved with its `cause`; a failure only records the result and never
+    defeats the character."""
     state = load_state(db, campaign_id)
     pc = state.pc()
-    if pc is None or pc.save_due is None:
-        raise InvalidInput("no player character owes a save")
+    if pc is None:
+        raise InvalidInput("no player character owes a save; name the stat for a hazard save")
+    if pc.save_due is None:
+        if not stat:
+            raise InvalidInput("no player character owes a save; name the stat for a hazard save")
+        known = spec.stats if spec is not None else pc.stats
+        if stat not in known:
+            raise InvalidInput(f"there is no stat named {stat!r}")
+        roll = whole_number(roll, "roll", 1, combat.check_sides)
+        result = resolve_save(combat, current(pc, stat), rng=rng, roll=roll, plus=plus)
+        record(
+            db,
+            campaign_id,
+            CharacterSaved(
+                name=pc.name,
+                stat=stat,
+                roll=result.roll,
+                score=result.score,
+                passed=result.passed,
+                cause=cause,
+            ),
+        )
+        db.commit()
+        return {
+            "character": pc.name,
+            "stat": stat,
+            "roll": result.roll,
+            "score": result.score,
+            "passed": result.passed,
+        }
     roll = whole_number(roll, "roll", 1, combat.check_sides)
     stat = pc.save_due
     result = resolve_save(combat, current(pc, stat), rng=rng, roll=roll, plus=plus)

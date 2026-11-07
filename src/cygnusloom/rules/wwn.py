@@ -1442,3 +1442,106 @@ def _armor_total(ctx: ToolContext, character: str, spec: CharacterSpec) -> int:
         return found.armor or 10 + dexterity
 
     return ctx.world.with_hook_context(action)
+
+
+_WWN_TERRAIN_SPEED = {
+    "plains": 3.0,
+    "light_forest": 2.0,
+    "desert": 2.0,
+    "dense_forest": 1.5,
+    "rugged_hills": 1.5,
+    "swamp": 1.0,
+    "mountains": 0.5,
+    "broken_highland": 0.5,
+}
+_WWN_WEATHER_FACTOR = {"clear": 1.0, "foul": 0.5, "deep_snow": 0.1}
+_WWN_FORAGE_DIFFICULTY = {
+    "light_forest": 8,
+    "dense_forest": 8,
+    "plains": 9,
+    "rugged_hills": 9,
+    "swamp": 9,
+    "desert": 12,
+    "mountains": 14,
+    "broken_highland": 14,
+}
+
+
+def travel(
+    character: str,
+    destination: str,
+    terrain: str,
+    road: bool = False,
+    weather: str = "clear",
+    days: int = 1,
+    travelers: int = 1,
+    reason: str = "",
+    *,
+    ctx: ToolContext,
+) -> dict[str, Any]:
+    """Travel overland by the WWN rules: a ten-hour march at the terrain's speed, doubled on a
+    road, halved in foul weather, or reduced to a tenth in deep snow. The engine moves the
+    character and advances the clock; the returned supply and privation figures are what the GM
+    applies with use_item, add_strain, and the usual bookkeeping."""
+    if terrain not in _WWN_TERRAIN_SPEED:
+        raise InvalidInput(
+            f"there is no terrain {terrain!r}; use one of {sorted(_WWN_TERRAIN_SPEED)}"
+        )
+    if weather not in _WWN_WEATHER_FACTOR:
+        raise InvalidInput(
+            f"there is no weather {weather!r}; use one of {sorted(_WWN_WEATHER_FACTOR)}"
+        )
+    if isinstance(days, bool) or not isinstance(days, int) or not 1 <= days <= 30:
+        raise InvalidInput("days must be a whole number from 1 to 30")
+    if isinstance(travelers, bool) or not isinstance(travelers, int) or not 1 <= travelers <= 20:
+        raise InvalidInput("travelers must be a whole number from 1 to 20")
+    speed = _WWN_TERRAIN_SPEED[terrain]
+    if road:
+        speed *= 2
+    speed *= _WWN_WEATHER_FACTOR[weather]
+    miles_per_day = round(speed * 10, 2)
+    miles = round(miles_per_day * days, 2)
+    moved = ctx.world.move_actor(character, location=destination)
+    clock = ctx.world.advance_time(hours=10 * days)
+    food = days * travelers
+    water = days * travelers
+    firewood = days * 4
+    return {
+        "character": character,
+        "destination": destination,
+        "terrain": terrain,
+        "road": road,
+        "weather": weather,
+        "days": days,
+        "travelers": travelers,
+        "reason": reason,
+        "speed_mph": round(speed, 2),
+        "miles_per_day": miles_per_day,
+        "miles": miles,
+        "hours": 10 * days,
+        "move": moved,
+        "clock": clock,
+        "supplies": {
+            "food": food,
+            "water": water,
+            "firewood": firewood,
+            "note": "Each person needs a day's food and water, and the party needs four "
+            "firewood per night.",
+        },
+        "forage": {
+            "takes": "half a day",
+            "check": "Wis/Survive",
+            "difficulty": _WWN_FORAGE_DIFFICULTY[terrain],
+            "yield": "1d6 units plus the group's Survive levels, minimum 1",
+            "note": "A full day of foraging adds -2 to the difficulty; each further day in "
+            "the same hex adds +1.",
+        },
+        "privation": {
+            "food": "A first day without food costs no Strain; each consecutive day adds 1.",
+            "water": "A first day without water adds 2 Strain; each further day adds 3.",
+            "night": "A harsh night without shelter or fire adds 1 Strain.",
+            "note": "Strain above the maximum calls for a Physical save or death by dawn. "
+            "No healing, spell recovery, or nightly Strain loss until a full day with food, "
+            "water, and warm sleep.",
+        },
+    }

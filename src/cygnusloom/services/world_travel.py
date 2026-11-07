@@ -42,6 +42,25 @@ class TravelMixin:
             with session_scope(self.engine) as db:
                 actor = _character_named(load_state(db, self.campaign_id), name)
             if actor.kind == PC_KIND:
+                if self.wilderness is None:
+                    # A rule set with no wilderness subsystem still needs to move the party.
+                    # Put them at the destination and let the GM narrate the journey, using
+                    # the rule set's own travel guidance or a dedicated tool.
+                    with session_scope(self.engine) as db:
+                        result = move_actor(
+                            db,
+                            self.campaign_id,
+                            name,
+                            location,
+                            mode=IN_SETTLEMENT,
+                            clock_rules=self.clock_rules,
+                            hooks=self.hooks,
+                            inventory=self.inventory,
+                        )
+                    result["note"] = (
+                        "This rule set does not track wilderness; the GM narrates the journey."
+                    )
+                    return result
                 return self._overland_move(actor.name, location, route)
         with session_scope(self.engine) as db:
             return move_actor(

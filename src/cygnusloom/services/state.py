@@ -666,7 +666,23 @@ class CampaignState:
         key = name_key(name)
         if key in self.places:
             return self.places[key]
-        return self.characters.get(key)
+        if key in self.characters:
+            return self.characters[key]
+        # A world's authored ids use hyphens, like "isthmus-town", while the place is named
+        # "Isthmus Town". Fall back to a key that ignores case, punctuation, and separators so
+        # either form finds the same object.
+        loose = alias_key(name)
+        for place in self.places.values():
+            if alias_key(place.name) == loose:
+                return place
+        return next(
+            (
+                character
+                for character in self.characters.values()
+                if alias_key(character.name) == loose
+            ),
+            None,
+        )
 
     def pcs(self) -> list[Character]:
         """Every player character in play, in the order they joined. Hirelings are not player
@@ -727,6 +743,11 @@ def speaker_name(state: CampaignState, player_id: int | None = None) -> str | No
 
 def name_key(name: str) -> str:
     return name.strip().casefold()
+
+
+def alias_key(name: str) -> str:
+    """A loose name key for matching authored ids such as "isthmus-town" to "Isthmus Town"."""
+    return re.sub(r"[^a-z0-9]+", "", name.casefold())
 
 
 def _player_present(state: CampaignState) -> Character | None:

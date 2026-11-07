@@ -37,6 +37,7 @@ from cygnusloom.services.combat import (
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import (
     NPC_KIND,
+    CharacterSaved,
     ChatGM,
     EncounterEnded,
     MaxChanged,
@@ -1254,6 +1255,80 @@ def test_a_player_save_is_refused_when_none_is_owed(client_factory):
     _, _, tools = _fight(client_factory)
     with pytest.raises(InvalidInput, match="no player character owes a save"):
         tools.player_save(5)
+
+
+def _saved_events(app: FastAPI, campaign_id: int) -> list[CharacterSaved]:
+    with _db(app) as db:
+        return [
+            decode(row) for row in events_since(db, campaign_id) if row.kind == CharacterSaved.kind
+        ]
+
+
+def test_a_hazard_save_with_a_stat_rolls_and_records_character_saved(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+
+    result = tools.player_save(1, stat="dex", cause="a falling stone")
+
+    pc = _character(app, campaign_id, PC)
+    assert result == {
+        "character": PC,
+        "stat": "dex",
+        "roll": 1,
+        "score": pc.stats["dex"],
+        "passed": True,
+    }
+    [saved] = _saved_events(app, campaign_id)
+    assert (saved.name, saved.stat, saved.roll, saved.score, saved.passed, saved.cause) == (
+        PC,
+        "dex",
+        1,
+        pc.stats["dex"],
+        True,
+        "a falling stone",
+    )
+    assert pc.save_due is None
+    assert pc.defeated is False
+
+
+def test_a_failed_hazard_save_does_not_defeat_the_player_character(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+
+    result = tools.player_save(20, stat="str", cause="a trap")
+
+    assert result["passed"] is False
+    pc = _character(app, campaign_id, PC)
+    assert pc.save_due is None
+    assert pc.defeated is False
+    [saved] = _saved_events(app, campaign_id)
+    assert (saved.stat, saved.passed, saved.cause) == ("str", False, "a trap")
+
+
+def test_a_hazard_save_refuses_a_stat_the_rule_set_does_not_have(client_factory):
+    _, _, tools = _fight(client_factory)
+    with pytest.raises(InvalidInput, match="there is no stat named 'luck'"):
+        tools.player_save(1, stat="luck", cause="a test")
+
+
+def test_a_hazard_save_rolls_through_the_player_prompt(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    ctx = SimpleNamespace(world=tools)
+    request = ToolRequest(
+        id="call_1",
+        name="player_save",
+        arguments=json.dumps({"stat": "wil", "cause": "a haunting", "prompt": "Roll a WIL save."}),
+    )
+
+    ask = asyncio.run(run_tool(CAIRN.tool_calls, request, None, ctx=ctx))
+    assert isinstance(ask, Ask)
+    assert ask.dice == "1d20"
+
+    run = asyncio.run(run_tool(CAIRN.tool_calls, request, RollAnswer(1), ctx=ctx))
+    assert not isinstance(run, Ask)
+    result = json.loads(run.output)
+    assert "error" not in result
+    assert (result["stat"], result["roll"], result["passed"]) == ("wil", 1, True)
+    [saved] = _saved_events(app, campaign_id)
+    assert (saved.stat, saved.passed, saved.cause) == ("wil", True, "a haunting")
 
 
 @pytest.mark.parametrize(("save_roll", "passed"), [(4, False), (5, True), (6, True)])

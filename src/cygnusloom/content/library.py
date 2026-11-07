@@ -847,18 +847,22 @@ class AdvancementOption:
     effects: tuple[Mapping[str, Any], ...]
     # The feature the option lets the character learn, or None when it teaches none.
     learn: LearnRules | None = None
+    # The highest value a picked stat may reach, or None when the effect sets no cap.
+    maximum: int | None = None
 
 
 @dataclass(frozen=True)
 class LearnRules:
     """A feature an option lets a character learn: one of `feature_type`, optionally restricted to
-    the tag held by the character field `tag_field`, and never one of `exclude`. Existing features
-    may be learned again only if repeatable."""
+    the tag held by the character field `tag_field`, never one of `exclude`, and never a feature
+    whose tag matches one of the character fields in `exclude_tag_fields`. Existing features may
+    be learned again only if repeatable."""
 
     feature_type: str
     tag: str = ""
     tag_field: str = ""
     exclude: tuple[str, ...] = ()
+    exclude_tag_fields: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -962,14 +966,27 @@ class RelationRules:
 
 
 @dataclass(frozen=True)
+class MoveChoice:
+    """One cost or consequence a player may pick for a move band. Choice effects run only when the
+    player picks that choice; the band's own effects always run."""
+
+    id: str
+    label: str
+    text: str = ""
+    effects: tuple[Mapping[str, Any], ...] = ()
+
+
+@dataclass(frozen=True)
 class MoveBand:
     """One outcome of a move. The first band whose `min` the total reaches applies, so bands run from
-    the highest `min` down. The last band has no `min` and takes whatever is left."""
+    the highest `min` down. The last band has no `min` and takes whatever is left. A band with
+    `choices` pauses for the player to pick one before the reply continues."""
 
     label: str
     text: str
     min: int | None
     effects: tuple[Mapping[str, Any], ...]
+    choices: tuple[MoveChoice, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -5336,6 +5353,16 @@ def _load_advancements(
             )
             if picks and not any(op.get("stat") == PICKED for op in effects):
                 raise ContentError(f"{olabel}: 'picks' is set, but no effect uses the pick")
+            maximum = next(
+                (
+                    op["cap"]
+                    for op in effects
+                    if op.get("stat") == PICKED
+                    and isinstance(op.get("cap"), int)
+                    and not isinstance(op.get("cap"), bool)
+                ),
+                None,
+            )
             options[value] = AdvancementOption(
                 value=value,
                 label=required_text(option, "label", olabel),
@@ -5344,6 +5371,7 @@ def _load_advancements(
                 picks=picks,
                 effects=effects,
                 learn=_load_learn(option.get("learn"), character, olabel),
+                maximum=maximum,
             )
         loaded[d.id] = AdvancementRules(
             id=d.id,
@@ -5606,7 +5634,9 @@ def _load_learn(data: object, character: CharacterSpec, label: str) -> LearnRule
     if data is None:
         return None
     data = check_object_keys(
-        data, {"feature_type", "tag", "tag_field", "exclude"}, f"{label}: 'learn'"
+        data,
+        {"feature_type", "tag", "tag_field", "exclude", "exclude_tag_fields"},
+        f"{label}: 'learn'",
     )
     feature_type = required_text(data, "feature_type", label)
     if feature_type not in {f.feature_type for f in character.features.values()}:
@@ -5622,7 +5652,22 @@ def _load_learn(data: object, character: CharacterSpec, label: str) -> LearnRule
         if field_spec is None or field_spec.table is None:
             raise ContentError(f"{label}: 'learn' needs a table field named {tag_field!r}")
     exclude = _texts(data.get("exclude", []), f"{label}: 'learn' exclude")
-    return LearnRules(feature_type=feature_type, tag=tag, tag_field=tag_field, exclude=exclude)
+    exclude_tag_fields = _texts(
+        data.get("exclude_tag_fields", []), f"{label}: 'learn' exclude_tag_fields"
+    )
+    for field_id in exclude_tag_fields:
+        field_spec = character.fields.get(field_id)
+        if field_spec is None or field_spec.table is None:
+            raise ContentError(
+                f"{label}: 'learn' needs a table field named {field_id!r} in exclude_tag_fields"
+            )
+    return LearnRules(
+        feature_type=feature_type,
+        tag=tag,
+        tag_field=tag_field,
+        exclude=exclude,
+        exclude_tag_fields=exclude_tag_fields,
+    )
 
 
 def _load_periods(
@@ -5956,7 +6001,7 @@ def _load_bands(
     for index, band in enumerate(value):
         if not isinstance(band, Mapping):
             raise ContentError(f"{label}: each band must be an object")
-        check_keys(band, {"label", "text", "min", "effects"}, label)
+        check_keys(band, {"label", "text", "min", "effects", "choices"}, label)
         last = index == len(value) - 1
         minimum = band.get("min")
         if last and minimum is not None:
@@ -5973,15 +6018,63 @@ def _load_bands(
         text = band.get("text", "")
         if not isinstance(text, str):
             raise ContentError(f"{label}: band 'text' must be text")
+        choices = _load_choices(
+            band.get("choices"), character, conditions, counters, f"{label}: band {index + 1}"
+        )
         bands.append(
             MoveBand(
                 label=required_text(band, "label", label),
                 text=text,
                 min=minimum,
                 effects=effects,
+                choices=choices,
             )
         )
     return tuple(bands)
+
+
+def _load_choices(
+    value: object,
+    character: CharacterSpec,
+    conditions: frozenset[str],
+    counters: frozenset[str],
+    label: str,
+) -> tuple[MoveChoice, ...]:
+    """The costs a player may pick for a move band, each with its own effects."""
+    if value is None:
+        return ()
+    if not isinstance(value, list) or not value:
+        raise ContentError(f"{label}: 'choices' must be a non-empty list")
+    choices: list[MoveChoice] = []
+    seen: set[str] = set()
+    for entry in value:
+        if not isinstance(entry, Mapping):
+            raise ContentError(f"{label}: each choice must be an object")
+        check_keys(entry, {"id", "label", "text", "effects"}, f"{label}: choice")
+        choice_id = required_text(entry, "id", f"{label}: choice")
+        if choice_id in seen:
+            raise ContentError(f"{label}: choice {choice_id!r} is repeated")
+        seen.add(choice_id)
+        text = entry.get("text", "")
+        if not isinstance(text, str):
+            raise ContentError(f"{label}: choice {choice_id!r} 'text' must be text")
+        effects, _ = _check_effects(
+            entry.get("effects", []),
+            f"{label}: choice {choice_id}",
+            character,
+            conditions,
+            False,
+            counters=counters,
+        )
+        choices.append(
+            MoveChoice(
+                id=choice_id,
+                label=required_text(entry, "label", f"{label}: choice {choice_id}"),
+                text=text,
+                effects=effects,
+            )
+        )
+    return tuple(choices)
 
 
 def _load_derived(value: object, character: CharacterSpec, label: str) -> DerivedRule | None:

@@ -233,7 +233,7 @@
     "id": "player_save",
     "name": "player_save",
     "world_method": "player_save",
-    "description": "Ask the player character to make the save they owe after their Strength was used up. The player rolls a d20 and the engine decides whether it passed. Use it when the player character's statblock shows a save due.",
+    "description": "Ask the player character to make a save. The player rolls a d20 and the engine decides whether it passed. Use it when the player character's statblock shows a save due after their Strength was used up, or for a hazard save such as a trap or a spell by passing the stat it tests.",
     "player_input": {
       "dice": "1d20",
       "param": "roll",
@@ -245,6 +245,19 @@
         "prompt": {
           "type": "string",
           "description": "What the player is asked to do, such as 'Make your Strength save.'"
+        },
+        "stat": {
+          "type": "string",
+          "enum": [
+            "str",
+            "dex",
+            "wil"
+          ],
+          "description": "For a hazard save: the stat to roll against. Leave it out for a save the character owes after their Strength was used up."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What the hazard save is for, such as 'a falling stone'. Recorded with the result."
         }
       },
       "required": [

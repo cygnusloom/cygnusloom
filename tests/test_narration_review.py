@@ -21,6 +21,7 @@ from cygnusloom.llm.base import ChatReply
 from cygnusloom.services.campaigns import get_turn_context
 from cygnusloom.services.events import CampaignState, load_state
 from cygnusloom.services.tools import tool_specs
+from cygnusloom.services.world_support import MAX_JOURNAL_DAY_WORDS, MAX_JOURNAL_WORDS
 from tests.conftest import content_library, csrf_token, is_review_messages
 from tests.test_campaigns import _campaign_id, _place_pc, _send
 from tests.test_tools import _recording_provider, _saved, _saved_ids, _script
@@ -298,6 +299,13 @@ def test_review_offers_the_usual_tools_and_the_journal_tools(
         "replace_in_journal",
     } <= offered
     assert {"speak", "ooc"} & offered == set()
+    instruction = next(
+        m["content"]
+        for m in review["messages"]
+        if m["role"] == "system" and "Journal and review step." in (m.get("content") or "")
+    )
+    assert f"{MAX_JOURNAL_DAY_WORDS} words" in instruction
+    assert f"{MAX_JOURNAL_WORDS:,} words" in instruction
 
 
 def test_review_tools_keep_wwn_world_methods_and_drop_speech_and_ooc():

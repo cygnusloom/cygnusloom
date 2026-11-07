@@ -25,7 +25,10 @@ from cygnusloom.services.common import InvalidInput, whole_number
 from cygnusloom.services.conditions import active_conditions
 from cygnusloom.services.events import (
     Character,
+    MoveChoiceMade,
     MoveMade,
+    decode,
+    events_since,
     load_state,
     modifier_value,
     name_key,
@@ -181,8 +184,135 @@ def make_move(
     if move.stat == HIGHEST:
         result["stat"] = rolled_stat
     result.update(roll=roll, bonus=bonus, total=total, band=band.label, text=band.text)
+    if band.choices:
+        # The player picks one before the reply goes on. Their effects run in choose_option, not
+        # here, so the roll alone never spends the cost of the band.
+        result["choices"] = [
+            {"id": choice.id, "label": choice.label, "text": choice.text} for choice in band.choices
+        ]
     if triggered is not None:
         result["reaction"] = triggered.text
+    return result
+
+
+def choose_option(
+    db: Session,
+    campaign_id: int,
+    moves: Mapping[str, MoveRules],
+    move: str,
+    band: str,
+    choice: str,
+    rng: random.Random,
+    *,
+    plus: str,
+    combat: CombatRules | None,
+    conditions: Mapping[str, ConditionRules],
+    counters: Mapping[str, CounterRules],
+    spec: CharacterSpec | None = None,
+) -> dict[str, object]:
+    """Pick one of the choices a move band offered, and run its effects. `move` is the move's id
+    or label, as `make_move` returns it. The choice must belong to a band the character's roll
+    reached in the open turn, and a band takes only one choice: asking again returns the choice
+    already made without recording or applying it twice."""
+    rules = _find_move(moves, move)
+    chosen_band = _find_band(rules, band)
+    if chosen_band is None or not chosen_band.choices:
+        raise InvalidInput(f"{rules.label} has no choices in the band {band!r}")
+    option = next((item for item in chosen_band.choices if item.id == choice), None)
+    if option is None:
+        option = next(
+            (
+                item
+                for item in chosen_band.choices
+                if item.label.casefold() == choice.strip().casefold()
+            ),
+            None,
+        )
+    if option is None:
+        offered = ", ".join(item.id for item in chosen_band.choices)
+        raise InvalidInput(f"{rules.label} has no choice named {choice!r}; choose one of {offered}")
+    state = load_state(db, campaign_id)
+    turn = state.turn
+    if turn is None:
+        raise InvalidInput("there is no reply in progress to choose for")
+    made: MoveMade | None = None
+    picked: MoveChoiceMade | None = None
+    for row in events_since(db, campaign_id, turn.opener):
+        event = decode(row)
+        if not isinstance(event, MoveChoiceMade | MoveMade):
+            continue
+        if name_key(event.move) != name_key(rules.label) or event.band != chosen_band.label:
+            continue
+        if isinstance(event, MoveChoiceMade):
+            picked = event
+        elif isinstance(event, MoveMade):
+            made = event
+    if picked is not None:
+        # A resent answer must not record or apply the choice again.
+        return _choice_result(rules, chosen_band, made, picked.choice, picked.label, picked.text)
+    if made is None:
+        raise InvalidInput(
+            f"roll {rules.label} into the {chosen_band.label} band before choosing from it"
+        )
+    record(
+        db,
+        campaign_id,
+        MoveChoiceMade(
+            name=made.name,
+            move=rules.label,
+            band=chosen_band.label,
+            choice=option.id,
+            label=option.label,
+            text=option.text,
+        ),
+    )
+    db.commit()
+    run_effects(
+        db,
+        campaign_id,
+        made.name,
+        option.effects,
+        EffectContext(rng=rng, combat=combat, counters=counters, conditions=conditions, spec=spec),
+        f"{rules.label}: {option.label}",
+        plus=plus,
+    )
+    return _choice_result(rules, chosen_band, made, option.id, option.label, option.text)
+
+
+def _find_move(moves: Mapping[str, MoveRules], move: str) -> MoveRules:
+    """The move named by id, or else by label, as the roll result reports it."""
+    found = moves.get(move)
+    if found is not None:
+        return found
+    wanted = move.strip().casefold()
+    found = next((item for item in moves.values() if item.label.casefold() == wanted), None)
+    if found is None:
+        raise InvalidInput(f"there is no move named {move!r}")
+    return found
+
+
+def _find_band(move: MoveRules, band: str) -> MoveBand | None:
+    """The move's band with the given label, ignoring case."""
+    wanted = band.strip().casefold()
+    return next((item for item in move.bands if item.label.casefold() == wanted), None)
+
+
+def _choice_result(
+    move: MoveRules,
+    band: MoveBand,
+    made: MoveMade | None,
+    choice: str,
+    label: str,
+    text: str,
+) -> dict[str, object]:
+    """What the model is told after the player picks a choice: the roll it belongs to and the
+    pick, so it can narrate the cost."""
+    result: dict[str, object] = {"move": move.label}
+    if made is not None:
+        result.update(
+            roll=made.roll, bonus=made.bonus, total=made.total, band=band.label, text=made.text
+        )
+    result.update(choice=choice, choice_label=label, choice_text=text)
     return result
 
 

@@ -1,6 +1,14 @@
 [
   {
     "type": "feature",
+    "id": "silver",
+    "name": "Silver Pieces",
+    "looks_like": "coin",
+    "feature_type": "item",
+    "description": "A purse of silver coins, the coin of the school town."
+  },
+  {
+    "type": "feature",
     "id": "subject-charms",
     "name": "Charms",
     "feature_type": "subject",

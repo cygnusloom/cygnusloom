@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
+import difflib
 import inspect
 import json
 import logging
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from cygnusloom.content.library import CONTEXT_ARGUMENT, PROMPT_ARGUMENT, PlayerInput, ToolCall
+from cygnusloom.content.library import (
+    CONTEXT_ARGUMENT,
+    PROMPT_ARGUMENT,
+    MoveChoice,
+    PlayerInput,
+    ToolCall,
+)
 from cygnusloom.llm.base import LLMError, ToolRequest
 from cygnusloom.rules.context import ToolContext
 from cygnusloom.rules.dice import is_formula
@@ -26,11 +34,18 @@ _REVIEW_STEP_EXCLUDED = frozenset({"speak", "ooc"})
 
 @dataclass(frozen=True)
 class Ask:
-    """The tool needs the player to roll `dice` or type a reply to `text` first."""
+    """The tool needs the player to roll `dice` or type a reply to `text` first. A prompt with
+    `choices` is a move band's cost the player picks after the roll; `move`, `band`, `roll`, and
+    `total` identify the roll the choice belongs to."""
 
     text: str
     dice: str
     details: str | None = None
+    choices: tuple[MoveChoice | Mapping[str, str], ...] = ()
+    move: str = ""
+    band: str = ""
+    roll: int = 0
+    total: int = 0
 
 
 @dataclass(frozen=True)
@@ -41,6 +56,13 @@ class RollAnswer:
 @dataclass(frozen=True)
 class TextAnswer:
     text: str
+
+
+@dataclass(frozen=True)
+class ChoiceAnswer:
+    """The player picked one of the choices a move band offered."""
+
+    choice: str
 
 
 @dataclass(frozen=True)
@@ -92,21 +114,23 @@ def find_tool(tool_calls: Mapping[str, ToolCall], name: str) -> ToolCall | None:
 async def run_tool(
     tool_calls: Mapping[str, ToolCall],
     request: ToolRequest,
-    answer: RollAnswer | TextAnswer | None = None,
+    answer: RollAnswer | TextAnswer | ChoiceAnswer | None = None,
     ctx: ToolContext | None = None,
 ) -> ToolRun | Ask:
     """Run one requested tool.
 
     A tool with `player_input` needs an answer first. Without one this returns an `Ask`
-    for the player. Problems are returned as an `error` object rather than raised, so the
-    model can recover. Provider failures (`LLMError`) are raised, because the turn cannot go on."""
+    for the player. When a move's result offers choices, the same `Ask` carries them so the
+    player can pick the cost of the band the roll reached. Problems are returned as an `error`
+    object rather than raised, so the model can recover. Provider failures (`LLMError`) are
+    raised, because the turn cannot go on."""
     tool = find_tool(tool_calls, request.name)
     if tool is None:
-        return ToolRun(_error(f"there is no tool named {request.name!r}"), None)
-    try:
-        arguments = json.loads(request.arguments)
-    except ValueError:
-        return ToolRun(_error("the arguments were not valid JSON"), None)
+        return ToolRun(_error(_unknown_tool(tool_calls, request.name)), None)
+    arguments, problem = _parse_arguments(request.arguments)
+    if problem:
+        return ToolRun(_error(problem), None)
+    arguments = _coerce_arguments(tool.parameters, arguments)
     problem = check_arguments(tool.parameters, arguments)
     if problem:
         return ToolRun(_error(problem), None)
@@ -126,16 +150,223 @@ async def run_tool(
             dice=dice,
             details=_details(tool, shown),
         )
+    prompt_text = str(arguments.get(PROMPT_ARGUMENT, ""))
+    details = _details(tool, arguments)
     arguments.pop(PROMPT_ARGUMENT, None)
     if isinstance(answer, TextAnswer):
         return ToolRun(json.dumps({"player_text": answer.text}), None)
+    if isinstance(answer, ChoiceAnswer):
+        return ToolRun(_error("that tool does not take a choice"), None)
     if tool.player_input.dice_param:
         arguments.pop(tool.player_input.dice_param, None)
     if tool.player_input.param is not None:
         arguments[tool.player_input.param] = answer.total
     if tool.player_input.weapon_roll_param is not None:
         arguments[tool.player_input.weapon_roll_param] = answer.total
-    return await _call(tool, arguments, ctx)
+    result = await _call(tool, arguments, ctx)
+    # A move band may offer the player a cost to choose. The roll has happened, so the engine
+    # asks which one the player picks instead of ending the tool here. The band's own text is
+    # shown with the prompt, so the player reads the outcome they are choosing within.
+    if isinstance(answer, RollAnswer) and tool.player_input.move_param is not None:
+        payload = _json_object(result.output)
+        choices = payload.get("choices") if payload is not None else None
+        if isinstance(choices, list) and choices:
+            band_text = str(payload.get("text", "")).strip()
+            text = f"{prompt_text}\n\n{band_text}".strip() if band_text else prompt_text
+            return Ask(
+                text=text,
+                dice="",
+                details=details,
+                choices=tuple(choices),
+                move=str(payload.get("move", "")),
+                band=str(payload.get("band", "")),
+                roll=_whole(payload.get("roll")),
+                total=_whole(payload.get("total")),
+            )
+    return result
+
+
+def _unknown_tool(tool_calls: Mapping[str, ToolCall], name: str) -> str:
+    """The error for a tool name that is not offered, naming the closest ones if any."""
+    names = [tool.name for tool in tool_calls.values()]
+    close = difflib.get_close_matches(name, names, n=3, cutoff=0.5)
+    if close:
+        options = ", ".join(repr(option) for option in close)
+        return f"there is no tool named {name!r}; did you mean {options}?"
+    return f"there is no tool named {name!r}"
+
+
+def _parse_arguments(raw: str) -> tuple[Any, str | None]:
+    """Parse a tool call's arguments. Models sometimes send a trailing comma or wrap the object
+    in a JSON string, so those two slips are repaired before the schema check."""
+    text = raw
+    for _ in range(3):
+        try:
+            value = json.loads(text)
+        except (TypeError, ValueError):
+            repaired = re.sub(r",\s*([}\]])", r"\1", text)
+            if repaired == text:
+                return None, "the arguments were not valid JSON"
+            text = repaired
+            continue
+        if isinstance(value, str) and value.lstrip().startswith(("{", "[")):
+            text = value
+            continue
+        return value, None
+    return None, "the arguments were not valid JSON"
+
+
+def _coerce_arguments(schema: Mapping[str, Any], arguments: Any) -> Any:
+    """Fit a model's arguments to the tool's schema where that is unambiguous: a string where a
+    list belongs, a numeric string where a number belongs, a JSON string where an object belongs,
+    and enum spellings that differ only in case or separators. Anything still wrong is left for
+    `check_arguments` to report."""
+    if not isinstance(arguments, Mapping):
+        return arguments
+    properties = schema.get("properties", {})
+    return {
+        name: _coerce_value(properties[name], value)
+        if isinstance(properties.get(name), Mapping)
+        else value
+        for name, value in arguments.items()
+    }
+
+
+def _coerce_value(schema: Mapping[str, Any], value: Any) -> Any:
+    expected = schema.get("type")
+    if expected == "object":
+        if isinstance(value, str):
+            parsed = _json_or_none(value)
+            if isinstance(parsed, Mapping):
+                value = parsed
+        if isinstance(value, Mapping):
+            value = _coerce_arguments(schema, value)
+    elif expected == "array":
+        value = _as_list(value)
+        items = schema.get("items")
+        if isinstance(items, Mapping) and isinstance(value, list):
+            value = [_coerce_value(items, item) for item in value]
+    elif expected == "integer":
+        value = _as_integer(value)
+    elif expected == "number":
+        value = _as_number(value)
+    elif expected == "boolean":
+        value = _as_boolean(value)
+    elif expected == "string":
+        value = _as_string(value)
+    if "enum" in schema:
+        value = _enum_match(value, schema["enum"])
+    return value
+
+
+def _json_or_none(text: str) -> Any:
+    try:
+        return json.loads(text)
+    except (TypeError, ValueError):
+        return None
+
+
+def _as_list(value: Any) -> Any:
+    if isinstance(value, list):
+        return value
+    if isinstance(value, tuple):
+        return list(value)
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return []
+        parsed = _json_or_none(text)
+        if isinstance(parsed, list):
+            return parsed
+        return [part.strip() for part in re.split(r"[,\n]", text) if part.strip()]
+    return [value]
+
+
+def _as_integer(value: Any) -> Any:
+    if isinstance(value, (bool, int)):
+        return value
+    if isinstance(value, float):
+        return int(value) if value.is_integer() else value
+    if not isinstance(value, str):
+        return value
+    text = value.strip()
+    try:
+        return int(text)
+    except ValueError:
+        pass
+    try:
+        number = float(text)
+    except ValueError:
+        return value
+    return int(number) if number.is_integer() else value
+
+
+def _as_number(value: Any) -> Any:
+    if isinstance(value, (bool, int, float)):
+        return value
+    if not isinstance(value, str):
+        return value
+    try:
+        return int(value.strip())
+    except ValueError:
+        pass
+    try:
+        return float(value.strip())
+    except ValueError:
+        return value
+
+
+def _as_boolean(value: Any) -> Any:
+    if not isinstance(value, str):
+        return value
+    lowered = value.strip().lower()
+    if lowered == "true":
+        return True
+    if lowered == "false":
+        return False
+    return value
+
+
+def _as_string(value: Any) -> Any:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return str(value)
+    return value
+
+
+def _enum_match(value: Any, options: Any) -> Any:
+    """An enum value the model spelled differently but unambiguously, such as `Deep Snow` for
+    `deep_snow`."""
+    if not isinstance(options, list) or value in options:
+        return value
+    if not isinstance(value, str):
+        return value
+    key = _normal(value)
+    for option in options:
+        if isinstance(option, str) and _normal(option) == key:
+            return option
+    matches = difflib.get_close_matches(value, [str(option) for option in options], n=1, cutoff=0.8)
+    if matches:
+        return next(option for option in options if str(option) == matches[0])
+    return value
+
+
+def _normal(text: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", text.lower())
+
+
+def _json_object(output: str) -> Mapping[str, Any] | None:
+    """The JSON object a tool returned, or None when it did not return one."""
+    try:
+        payload = json.loads(output)
+    except (TypeError, ValueError):
+        return None
+    return payload if isinstance(payload, Mapping) else None
+
+
+def _whole(value: object) -> int:
+    return value if isinstance(value, int) and not isinstance(value, bool) else 0
 
 
 def _dice_for(
@@ -270,13 +501,22 @@ def _check_object(schema: Mapping[str, Any], value: Mapping[str, Any], path: str
     for name, item in value.items():
         child = _child(path, name)
         if name not in properties:
-            return f"unknown argument {child!r}"
+            return _unknown_argument(child, name, properties)
         spec = properties[name]
         if isinstance(spec, dict):
             problem = _check_value(spec, item, child)
             if problem:
                 return problem
     return None
+
+
+def _unknown_argument(child: str, name: str, properties: Mapping[str, Any]) -> str:
+    allowed = ", ".join(repr(option) for option in sorted(properties))
+    if not allowed:
+        return f"unknown argument {child!r}; this tool takes no arguments"
+    hint = difflib.get_close_matches(name, list(properties), n=1, cutoff=0.6)
+    suggestion = f"did you mean {hint[0]!r}? " if hint else ""
+    return f"unknown argument {child!r}; {suggestion}this tool takes {allowed}"
 
 
 def _check_value(schema: Mapping[str, Any], value: Any, path: str) -> str | None:

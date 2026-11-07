@@ -80,8 +80,20 @@
   },
   {
     "type": "prompt",
+    "id": "band_choices",
+    "step": "all",
+    "text": "When a move's band offers choices, the engine asks the player which one they pick after the roll. Do not choose for the player and do not narrate one of the options as if it had already happened. Once they pick, narrate that choice as the cost of the band."
+  },
+  {
+    "type": "prompt",
     "id": "carrying",
     "step": "all",
     "text": "A student's pack has ten slots: tiny takes none, small and normal take one, and bulky takes two. When the player keeps an object, place it with place_object using the item name and a size, then take_object. An enchanted object is carried like any other object: name the working on it and keep the object's own description."
+  },
+  {
+    "type": "prompt",
+    "id": "downtime_and_market",
+    "step": "all",
+    "text": "Use rest with length downtime for a week of real rest; it ends Burnout and other conditions that end on downtime. Use advance_time for ordinary time passing, but never both for the same interval. Use search_marketplace and buy_item for shopping; prices are in silver, and change_currency awards or takes silver. The school year still ends through end_period, not through either tool."
   }
 ]

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import random
+import re
 from collections import Counter
 from collections.abc import Callable, Mapping
 from types import SimpleNamespace
@@ -21,17 +22,24 @@ from cygnusloom.content.character import (
     resolve,
 )
 from cygnusloom.content.library import RuleSet
-from cygnusloom.services.events import Character
+from cygnusloom.services import level_up as level_up_service
+from cygnusloom.services import turns as turns_service
+from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.events import Character, MoveChoiceMade, MoveMade, decode, events_since
 from cygnusloom.services.tools import Ask, RollAnswer, ToolRequest, run_tool
 from tests.conftest import content_library
 from tests.factories import (
+    answer,
     choose_campaign_options,
     create_campaign,
     create_character,
+    db,
     open_campaign,
+    send_message,
     signed_in_client,
     tools_for,
 )
+from tests.test_tools import _script
 
 RULE_SET = "academia-arcana"
 WORLD = "unwritten-academy"
@@ -90,17 +98,19 @@ def _creation_fields() -> dict[str, str]:
 
 
 def _campaign(
-    client_factory: Callable[[], TestClient], *, name: str = NAME
+    client_factory: Callable[[], TestClient], *, name: str = NAME, major: str = "Charms"
 ) -> tuple[TestClient, int]:
     """A signed-in client and a campaign with one Year 1 Prodigy made through the app."""
     client = signed_in_client(client_factory)
     campaign_id = create_campaign(client, world_template=WORLD, rule_set=RULE_SET)
     choose_campaign_options(client, campaign_id, RULE_SET)
+    fields = _creation_fields()
+    fields["field-major"] = major
     created = create_character(
         client,
         campaign_id,
         name=name,
-        fields=_creation_fields(),
+        fields=fields,
         templates={"playbook": "prodigy", "starting_year": "year-1"},
     )
     assert created.status_code == 303, created.text
@@ -111,6 +121,16 @@ def _pc(app: FastAPI, campaign_id: int) -> Character:
     character = open_campaign(app, campaign_id).pc()
     assert character is not None
     return character
+
+
+def _advancement_page(app: FastAPI, campaign_id: int):
+    return level_up_service.page_view(
+        app.state.engine,
+        campaign_id,
+        _academy(),
+        content_library().world_content(WORLD, RULE_SET),
+        NAME,
+    )
 
 
 def test_natural_gift_raises_a_spell_roll_once_per_week(
@@ -178,6 +198,74 @@ def test_academia_move_prompts_for_the_players_own_dice(
     assert result["total"] == 8 + result["bonus"]
 
 
+def test_a_seven_to_nine_spell_asks_the_player_to_choose(
+    client_factory: Callable[[], TestClient], app: FastAPI, monkeypatch: pytest.MonkeyPatch
+):
+    """A 7-9 spell waits for the player's pick; the choice applies its effects once."""
+    client, campaign_id = _campaign(client_factory)
+    answer(client, campaign_id, "continue")
+    script = _script(
+        {
+            "rounds": [
+                [
+                    {
+                        "name": "roll_move",
+                        "arguments": {
+                            "prompt": "Roll to cast your spell.",
+                            "move": "cast_a_spell",
+                            "character": NAME,
+                        },
+                    }
+                ]
+            ],
+            "text": "The spell takes hold.",
+        }
+    )
+    assert send_message(client, campaign_id, script).status_code == 303
+    assert _pc(app, campaign_id).counters.get("stress", 0) == 0
+
+    # Practice is +2, so a reported 5 reaches the 7-9 band.
+    monkeypatch.setattr(turns_service, "roll_total", lambda *args, **kwargs: 5)
+    events = answer(client, campaign_id, "roll")
+
+    assert events[-1]["type"] == "prompt"
+    turn = open_campaign(app, campaign_id).turn
+    assert turn is not None and turn.prompt is not None
+    assert [
+        str(choice["id"]) if isinstance(choice, Mapping) else choice.id
+        for choice in turn.prompt.choices
+    ] == [
+        "attention",
+        "side-effect",
+        "stress",
+    ]
+    assert "choose one" in turn.prompt.text
+    with db(app) as session:
+        made = [
+            decode(row) for row in events_since(session, campaign_id) if row.kind == MoveMade.kind
+        ]
+    assert len(made) == 1
+
+    events = answer(client, campaign_id, "choice", "stress")
+
+    assert events[-1]["type"] == "saved"
+    assert _pc(app, campaign_id).counters.get("stress", 0) == 1
+    with db(app) as session:
+        chosen = [
+            event
+            for event in (
+                decode(row)
+                for row in events_since(session, campaign_id)
+                if row.kind == MoveChoiceMade.kind
+            )
+            if isinstance(event, MoveChoiceMade)
+        ]
+    assert [(event.choice, event.band) for event in chosen] == [("stress", "7-9")]
+
+    rejected = answer(client, campaign_id, "choice", "attention")
+    assert rejected[-1]["type"] == "error"
+
+
 def _features(spec: CharacterSpec, features: Mapping[str, int], feature_type: str) -> set[str]:
     return {feature for feature in features if spec.features[feature].feature_type == feature_type}
 
@@ -214,6 +302,13 @@ def test_the_ruleset_loads_its_academy_content() -> None:
     assert rules.inventory is not None
     assert rules.inventory.capacity == 10
     assert rules.item_sizes == {"tiny": 0, "small": 1, "normal": 1, "bulky": 2}
+
+    assert rules.clock is not None
+    assert rules.clock.wage_currency == "silver"
+    assert rules.rests
+    assert rules.marketplace is not None
+    assert rules.marketplace.currency == "silver"
+    assert rules.character.features["silver"].name == "Silver Pieces"
 
     period = rules.periods["school-year"]
     assert period.tallies == ("college-cup",)
@@ -313,6 +408,119 @@ def test_year_end_advances_the_year_and_grants_four_advancements(
     assert spent.stats["theory"] == STAT_POOL["theory"] + 1
     assert {"tidy-room", "subject-transfiguration", "talent-scholar"} <= set(spent.features)
     assert spent.counters["advancements"] == 0
+
+
+def test_a_stat_at_its_advancement_cap_is_not_offered(
+    client_factory: Callable[[], TestClient], app: FastAPI
+) -> None:
+    _client, campaign_id = _campaign(client_factory)
+    tools = tools_for(app, campaign_id, rule_set=RULE_SET)
+    tools.end_period("school-year")
+    for _ in range(3):
+        tools.take_advancement(NAME, "stat", stat="theory")
+    assert _pc(app, campaign_id).stats["theory"] == 4
+
+    page = _advancement_page(app, campaign_id)
+
+    assert page is not None and page.kind == level_up_service.OPTION
+    stat_option = next(option for option in page.options if option["value"] == "stat")
+    assert "theory" not in {stat["id"] for stat in stat_option["stats"]}
+    assert "practice" in {stat["id"] for stat in stat_option["stats"]}
+
+
+def test_advancement_refuses_a_stat_past_its_cap_without_spending_a_point(
+    client_factory: Callable[[], TestClient], app: FastAPI
+) -> None:
+    _client, campaign_id = _campaign(client_factory)
+    tools = tools_for(app, campaign_id, rule_set=RULE_SET)
+    tools.end_period("school-year")
+    for _ in range(3):
+        tools.take_advancement(NAME, "stat", stat="theory")
+    before = _pc(app, campaign_id)
+
+    with pytest.raises(InvalidInput, match="already at 4"):
+        tools.take_advancement(NAME, "stat", stat="theory")
+
+    after = _pc(app, campaign_id)
+    assert after.stats["theory"] == 4
+    assert after.counters["advancements"] == before.counters["advancements"] == 1
+    assert after.advancements_taken == before.advancements_taken == {"stat": 3}
+
+
+def test_the_major_subject_is_not_offered_or_learned(
+    client_factory: Callable[[], TestClient], app: FastAPI
+) -> None:
+    _client, campaign_id = _campaign(client_factory, major="Illusion")
+    tools = tools_for(app, campaign_id, rule_set=RULE_SET)
+    tools.end_period("school-year")
+    before = _pc(app, campaign_id)
+
+    page = _advancement_page(app, campaign_id)
+
+    assert page is not None and page.kind == level_up_service.OPTION
+    subject_option = next(option for option in page.options if option["value"] == "subject")
+    known = {feature["id"] for feature in subject_option["features"]}
+    assert "subject-illusion" not in known
+    assert "subject-transfiguration" in known
+
+    with pytest.raises(InvalidInput, match="needs a subject"):
+        tools.take_advancement(NAME, "subject", feature="subject-illusion")
+
+    after = _pc(app, campaign_id)
+    assert after.counters["advancements"] == before.counters["advancements"] == 4
+    assert after.advancements_taken == {}
+    assert after.features == before.features
+
+
+def test_the_character_tab_shows_active_conditions(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client, campaign_id = _campaign(client_factory)
+    tools = tools_for(client.app, campaign_id, rule_set=RULE_SET)
+    tools.add_condition(NAME, "burnout", "too much study")
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    assert re.search(r"Conditions: (?:<a[^>]*>)?Burnout", page)
+
+
+def test_school_year_stops_at_seven(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client, campaign_id = _campaign(client_factory)
+    tools = tools_for(client.app, campaign_id, rule_set=RULE_SET)
+
+    for _ in range(8):
+        tools.end_period("school-year")
+
+    assert _pc(client.app, campaign_id).counters["year"] == 7
+
+
+def test_downtime_rest_ends_burnout(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client, campaign_id = _campaign(client_factory)
+    tools = tools_for(client.app, campaign_id, rule_set=RULE_SET)
+    tools.add_condition(NAME, "burnout", "too much study")
+
+    tools.rest("downtime", reason="a week away from the bench")
+
+    assert "burnout" not in _pc(client.app, campaign_id).conditions
+
+
+def test_the_academy_market_sells_for_silver(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client, campaign_id = _campaign(client_factory)
+    tools = tools_for(client.app, campaign_id, rule_set=RULE_SET)
+    tools.change_currency(NAME, 10, "a test purse")
+
+    result = tools.buy_item(NAME, "Candle")
+
+    assert result["price"] == 1
+    assert result["currency"] == "silver"
+    assert result["currency_left"] == 9
+    assert "Candle" in [item.name for item in _pc(client.app, campaign_id).items]
 
 
 def test_the_college_cup_resets_at_year_end(

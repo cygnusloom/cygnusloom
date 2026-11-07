@@ -34,11 +34,22 @@
                     <div class="content">{{ pending.prompt.text | markdown }}</div>
                     {% if pending.prompt.details %}<p class="pending-details muted">{{ pending.prompt.details }}</p>{% endif %}
                     {% if pending_for_viewer %}
+                    {% for choice in pending.prompt.choices %}
+                    <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action>
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                      <input type="hidden" name="kind" value="choice">
+                      <input type="hidden" name="content" value="{{ choice.id }}">
+                      <button type="submit">{{ choice.label }}</button>
+                      {% if choice.text %}<p class="muted">{{ choice.text }}</p>{% endif %}
+                    </form>
+                    {% endfor %}
+                    {% if pending.prompt.dice %}
                     <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action>
                       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                       <input type="hidden" name="kind" value="roll">
                       <button type="submit">Roll {{ pending.prompt.dice }}</button>
                     </form>
+                    {% endif %}
                     <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action>
                       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                       <input type="hidden" name="kind" value="text">

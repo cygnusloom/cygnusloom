@@ -11,16 +11,25 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from cygnusloom.content.definitions import ContentError
-from cygnusloom.content.library import ContentLibrary, CounterRules, MoveBand, MoveRules
+from cygnusloom.content.library import (
+    ContentLibrary,
+    CounterRules,
+    MoveBand,
+    MoveChoice,
+    MoveRules,
+)
 from cygnusloom.services import moves as moves_service
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import (
     Character,
+    ChatPlayer,
     EffectNoted,
+    MoveChoiceMade,
     MoveMade,
     decode,
     events_since,
     modifier_value,
+    record,
 )
 from tests.factories import DEFAULT_PC, Rolls, character_named, db, rules_for, scene, tools_for
 from tests.test_content import _core, _rule_set, _world, _write
@@ -186,6 +195,33 @@ def test_move_needs_a_label(tree: Path):
         _load_move(tree, label="")
 
 
+def test_move_band_choices_are_read(tree: Path):
+    rules = _load_move(
+        tree,
+        bands=[
+            {
+                "label": "Strong",
+                "min": 10,
+                "text": "It works.",
+                "choices": [
+                    {
+                        "id": "note",
+                        "label": "Write it down",
+                        "text": "The choice leaves a mark.",
+                        "effects": [{"op": "note", "text": "The choice was made."}],
+                    }
+                ],
+            },
+            {"label": "Weak", "text": "It fails."},
+        ],
+    )
+    [choice] = rules.bands[0].choices
+    assert choice.id == "note"
+    assert choice.label == "Write it down"
+    assert choice.text == "The choice leaves a mark."
+    assert choice.effects == ({"op": "note", "text": "The choice was made."},)
+
+
 def _move_for_fight(*, stat: str | None = None, effects: tuple = ()) -> MoveRules:
     return MoveRules(
         id="roll",
@@ -323,6 +359,104 @@ def test_world_tools_refuse_an_unknown_move(client_factory: Callable[[], TestCli
     tools = replace(tools_for(app, campaign_id), moves={"roll": _move_for_fight()})
     with pytest.raises(InvalidInput, match="there is no move named 'climb'"):
         tools.roll_move("climb", PC)
+
+
+CHOICE = MoveChoice(
+    id="note",
+    label="Write it down",
+    text="The choice leaves a mark.",
+    effects=(({"op": "note", "text": "The choice was made."}),),
+)
+
+
+def _choice_move() -> MoveRules:
+    return _move(
+        bands=(
+            _band("Strong", 10, "It works."),
+            MoveBand(
+                label="Mixed",
+                text="It works, at a cost.",
+                min=7,
+                effects=(),
+                choices=(CHOICE,),
+            ),
+            _band("Weak", None, "It fails."),
+        )
+    )
+
+
+def _open_turn(app: FastAPI, campaign_id: int) -> None:
+    with db(app) as session:
+        record(session, campaign_id, ChatPlayer(content="I try the move."))
+        session.commit()
+
+
+def _choose(app: FastAPI, campaign_id: int, move: MoveRules, choice: str) -> dict:
+    with db(app) as session:
+        return moves_service.choose_option(
+            session,
+            campaign_id,
+            {"roll": move},
+            "roll",
+            "Mixed",
+            choice,
+            Rolls(),
+            plus=ROLLTEST.plus,
+            combat=ROLLTEST.combat,
+            conditions=ROLLTEST.conditions,
+            counters=ROLLTEST.counters,
+        )
+
+
+def test_a_band_with_choices_waits_for_the_player(client_factory: Callable[[], TestClient]):
+    app, campaign_id, _ = scene(client_factory)
+    result = _roll(app, campaign_id, _choice_move(), Rolls(4, 4))
+    assert result["band"] == "Mixed"
+    assert result["choices"] == [
+        {"id": "note", "label": "Write it down", "text": "The choice leaves a mark."}
+    ]
+    with db(app) as session:
+        notes = [
+            decode(row)
+            for row in events_since(session, campaign_id)
+            if row.kind == EffectNoted.kind
+        ]
+    assert notes == []
+
+
+def test_choosing_an_option_applies_its_effects_once(client_factory: Callable[[], TestClient]):
+    app, campaign_id, _ = scene(client_factory)
+    _open_turn(app, campaign_id)
+    move = _choice_move()
+    _roll(app, campaign_id, move, Rolls(4, 4))
+
+    first = _choose(app, campaign_id, move, "note")
+    second = _choose(app, campaign_id, move, "note")
+
+    assert (first["choice"], first["band"], first["total"]) == ("note", "Mixed", 8)
+    assert second["choice"] == "note"
+    with db(app) as session:
+        chosen = [
+            decode(row)
+            for row in events_since(session, campaign_id)
+            if row.kind == MoveChoiceMade.kind
+        ]
+        notes = [
+            decode(row)
+            for row in events_since(session, campaign_id)
+            if row.kind == EffectNoted.kind
+        ]
+    assert [(event.choice, event.band) for event in chosen] == [("note", "Mixed")]
+    assert [note.text for note in notes] == ["The choice was made."]
+
+
+def test_choosing_an_unknown_option_is_refused(client_factory: Callable[[], TestClient]):
+    app, campaign_id, _ = scene(client_factory)
+    _open_turn(app, campaign_id)
+    move = _choice_move()
+    _roll(app, campaign_id, move, Rolls(4, 4))
+    with pytest.raises(InvalidInput, match="no choice named 'nope'"):
+        _choose(app, campaign_id, move, "nope")
 
 
 def _load_testset(tree: Path, *definitions: dict[str, Any]):

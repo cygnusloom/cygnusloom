@@ -108,3 +108,10 @@ def test_wwn_healer_and_vowed_commit_their_own_effort_pools() -> None:
     progression = require_wwn_progression(_wwn())
     assert progression.tradition_effort_stats["healer"] == "effort_healer"
     assert progression.tradition_effort_stats["vowed"] == "effort_vowed"
+
+
+def test_wwn_uses_the_source_travel_rules() -> None:
+    rules = _wwn()
+    assert rules.wilderness is None
+    assert "travel" in rules.tool_calls
+    assert rules.tool_calls["travel"].function is not None

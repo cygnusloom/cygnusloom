@@ -9,6 +9,7 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
+from difflib import get_close_matches
 from typing import Any
 
 from cygnusloom.content.character import CampaignSpec, CharacterSpec, Sheet, describe
@@ -586,6 +587,7 @@ def scene_view(
     inventory: InventoryRules | None = None,
     relations: Mapping[str, RelationRules] | None = None,
     *,
+    conditions: Mapping[str, ConditionRules] | None = None,
     pc: Character | None = None,
     item_links: Mapping[str, str] | None = None,
     ability_links: Mapping[str, str] | None = None,
@@ -608,6 +610,8 @@ def scene_view(
     place = found if isinstance(found, Place) else None
     npcs = _npcs_at(state, place.name) if place is not None else []
     sheet = _sheet_text(spec, pc).splitlines() if pc is not None else []
+    if pc is not None and conditions is not None:
+        sheet += _status_lines(pc, conditions, None, None, None)
     abilities = ()
     if pc is not None:
         abilities = tuple(
@@ -1241,8 +1245,13 @@ def _is_statblock_default(spec: CharacterSpec, stat: str) -> bool:
 
 def _place_named(state: CampaignState, name: str) -> Place:
     entry = state.named(name)
+    if isinstance(entry, Character):
+        raise InvalidInput(f"{entry.name!r} is a character, not a location")
     if not isinstance(entry, Place):
-        raise InvalidInput(f"there is no location named {name!r}")
+        names = [place.name for place in state.places.values()]
+        hint = get_close_matches(name, names, n=3, cutoff=0.6)
+        extra = f"; did you mean {', '.join(repr(option) for option in hint)}?" if hint else ""
+        raise InvalidInput(f"there is no location named {name!r}{extra}")
     return entry
 
 
@@ -1252,6 +1261,11 @@ def _children_of(state: CampaignState, name: str) -> list[str]:
 
 def _character_named(state: CampaignState, name: str) -> Character:
     entry = state.named(name)
+    if isinstance(entry, Place):
+        raise InvalidInput(f"{entry.name!r} is a location, not a character")
     if not isinstance(entry, Character):
-        raise InvalidInput(f"there is no character named {name!r}")
+        names = [character.name for character in state.characters.values()]
+        hint = get_close_matches(name, names, n=3, cutoff=0.6)
+        extra = f"; did you mean {', '.join(repr(option) for option in hint)}?" if hint else ""
+        raise InvalidInput(f"there is no character named {name!r}{extra}")
     return entry

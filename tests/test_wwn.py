@@ -490,6 +490,42 @@ def test_a_starting_kit_hands_over_the_books_gear(client_factory):
     assert "Staff" in scholar.grant.items
 
 
+def test_a_starting_kit_that_overflows_marks_the_character_overloaded(client_factory):
+    """The kit is handed over even when the pools cannot hold it, so the character ends up over
+    total capacity and carries the Overloaded penalty."""
+    client = _signed_in(client_factory)
+    response = _new_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    with pinned_stats({**WWN_STATS, "str": 4}):
+        page = client.get(f"/campaigns/{campaign_id}").text
+    fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
+    fields.update(_choices(page))
+    fields.update(_picks(page))
+    fields.update(
+        {
+            "template-class": "warrior",
+            "template-kit": "pkg_armored_warrior",
+            "pick-feature-class_focus_any-0": "focus_die_hard",
+            "pick-feature-class_focus_warrior-0": "focus_alert",
+        }
+    )
+    fields = _named_picks(fields)
+    created = _create_character(client, campaign_id, name="Wren", fields=fields)
+    error = re.search(r'<p class="form-error"[^>]*>(.*?)</p>', created.text, re.DOTALL)
+    assert created.status_code == 303, error.group(1) if error else "no error"
+    with Session(client.app.state.engine) as db:
+        pc = load_state(db, campaign_id).pc()
+    assert pc is not None
+    rules = _wwn().rule_sets["worldswithoutnumber"].inventory
+    assert rules is not None
+    # Strength 4 gives 4 Stowed slots and 2 Readied slots.
+    assert pc.stats["str"] == 4
+    assert sum(item.slots for item in pc.items) > 6
+    assert [item.kind for item in pc.items].count(rules.penalty_item) == 1
+
+
 def test_a_character_can_roll_starting_silver_instead_of_taking_a_kit(client_factory):
     """The book lets a player take a package or roll 3d6 x 10 silver instead. A blank kit
     choice means the roll, and the character carries no package gear."""

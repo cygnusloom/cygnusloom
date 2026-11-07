@@ -1,5 +1,13 @@
 [
   {
+    "type": "feature",
+    "id": "daily-ration",
+    "name": "Daily Ration",
+    "feature_type": "item",
+    "size": "normal",
+    "description": "A day's food and water for one person."
+  },
+  {
     "type": "inventory",
     "id": "wwn",
     "pools": [
@@ -1023,6 +1031,19 @@
     "damage": "",
     "uses": 0,
     "description": "A week of preserved food. Encumbrance 4."
+  },
+  {
+    "type": "shop_item",
+    "id": "shop_daily_ration",
+    "name": "Daily Ration",
+    "looks_like": "tool",
+    "category": "gear",
+    "price": 1,
+    "size": "normal",
+    "armor": 0,
+    "damage": "",
+    "uses": 0,
+    "description": "A day's food and water for one person. Encumbrance 1."
   },
   {
     "type": "shop_item",

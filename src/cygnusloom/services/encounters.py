@@ -10,6 +10,7 @@ import heapq
 import random
 import re
 from collections.abc import Callable, Mapping, Sequence
+from difflib import get_close_matches
 from typing import Any
 
 from sqlmodel import Session
@@ -122,8 +123,35 @@ def _is_int(value: object) -> bool:
 def _map_named(state: CampaignState, name: str) -> EncounterMap:
     entry = state.maps.get(name_key(name))
     if entry is None:
-        raise InvalidInput(f"there is no encounter map named {name!r}")
+        names = [encounter_map.name for encounter_map in state.maps.values()]
+        hint = get_close_matches(name, names, n=3, cutoff=0.6)
+        extra = f"; did you mean {', '.join(repr(option) for option in hint)}?" if hint else ""
+        raise InvalidInput(f"there is no encounter map named {name!r}{extra}")
     return entry
+
+
+def _map_space(
+    entry: EncounterMap,
+    cells: Mapping[str, tuple[int, int]],
+    objects: Mapping[str, EncounterObject],
+) -> dict[str, Any]:
+    """How big a map is and how much of it is still free, so a placement result tells the GM
+    where the next token can go."""
+    occupied = set(cells.values())
+    free = 0
+    for column in range(entry.columns):
+        for row in range(entry.rows):
+            if (column, row) in occupied:
+                continue
+            if _blocks(entry, (column, row), objects):
+                continue
+            free += 1
+    return {
+        "columns": entry.columns,
+        "rows": entry.rows,
+        "free_cells": free,
+        "occupied": len(occupied),
+    }
 
 
 def _encounter(state: CampaignState) -> Encounter:
@@ -294,8 +322,12 @@ def create_map(
     if state is None:
         state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_MAP_NAME)
-    if name_key(name) in state.maps:
-        raise InvalidInput(f"there is already an encounter map named {name!r}")
+    existing = state.maps.get(name_key(name))
+    if existing is not None:
+        raise InvalidInput(
+            f"there is already a map named {existing.name!r} at {existing.location!r}; "
+            "use update_local_map to change it, or choose another name"
+        )
     place = state.named(bounded_text(location, "location", MAX_MAP_NAME))
     if not isinstance(place, Place):
         raise InvalidInput(f"there is no location named {location!r}")
@@ -691,7 +723,14 @@ def place_map_token(
     event = MapTokenPlaced(map=entry.name, name=display, column=column, row=row)
     event.apply(state, record(db, campaign_id, event))
     db.commit()
-    return {"placed": display, "map": entry.name, "column": column, "row": row}
+    result: dict[str, Any] = {
+        "placed": display,
+        "map": entry.name,
+        "column": column,
+        "row": row,
+    }
+    result.update(_map_space(entry, entry.tokens, encounter_objects or {}))
+    return result
 
 
 def remove_map_token(db: Session, campaign_id: int, map_name: str, name: str) -> dict[str, Any]:
@@ -988,13 +1027,18 @@ def place_participant(
     after = _moves_left(encounter, grid)
     if after is not None:
         after -= cost
-    return {
+    cells = dict(encounter.cells)
+    cells[name_key(character.name)] = (column, row)
+    result: dict[str, Any] = {
         "placed": character.name,
+        "map": entry.name,
         "column": column,
         "row": row,
         "cost": cost,
         "moves_left": after,
     }
+    result.update(_map_space(entry, cells, encounter_objects or {}))
+    return result
 
 
 def _initiative_window(encounter: Encounter) -> bool:

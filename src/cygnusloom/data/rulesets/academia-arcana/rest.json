@@ -1,0 +1,41 @@
+[
+  {
+    "type": "rest",
+    "id": "academy",
+    "lengths": {
+      "moments": {
+        "hours": 1,
+        "full": false,
+        "restores": [],
+        "clears": [],
+        "ends": []
+      },
+      "night": {
+        "until": "morning",
+        "stop_at": {
+          "morning": "night"
+        },
+        "full": true,
+        "restores": [],
+        "clears": [],
+        "ends": [
+          "rest"
+        ],
+        "upkeep": false
+      },
+      "downtime": {
+        "days": 7,
+        "until": "morning",
+        "full": true,
+        "restores": [],
+        "clears": [],
+        "ends": [
+          "rest",
+          "downtime"
+        ],
+        "upkeep": false
+      }
+    },
+    "interrupted": "moments"
+  }
+]

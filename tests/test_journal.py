@@ -10,8 +10,14 @@ from sqlmodel import Session, select
 
 from cygnusloom.db.models import Event
 from cygnusloom.llm.base import ChatReply
-from cygnusloom.services.events import CampaignState, load_state
-from cygnusloom.services.prompts import OOC_INSTRUCTION, OPENING_PROMPT, OPENING_REPLY_INSTRUCTION
+from cygnusloom.services.events import CampaignState, JournalAppended, load_state, record
+from cygnusloom.services.prompts import (
+    JOURNAL_RULES,
+    OOC_INSTRUCTION,
+    OPENING_PROMPT,
+    OPENING_REPLY_INSTRUCTION,
+)
+from cygnusloom.services.world_support import MAX_JOURNAL_DAY_WORDS, MAX_JOURNAL_WORDS
 from tests.conftest import is_journal_edit_messages, is_journal_messages
 from tests.test_campaigns import (
     _answer,
@@ -53,9 +59,9 @@ def test_the_gm_appends_replaces_and_deletes_text_in_the_journal(
         app, campaign_id, "append_journal", {"text": "Day 1: Ada crossed the Spore Bridge."}
     )
     assert added == {"added": "journal", "day": 1}
-    _tool(app, campaign_id, "append_journal", {"text": "Day 1: Old Hob kept the key."})
+    _tool(app, campaign_id, "append_journal", {"text": "Day 2: Old Hob kept the key."})
     assert _journal_state(app, campaign_id).journal == (
-        "Day 1: Ada crossed the Spore Bridge.\nDay 1: Old Hob kept the key."
+        "Day 1: Ada crossed the Spore Bridge.\nDay 2: Old Hob kept the key."
     )
 
     replaced = _tool(
@@ -76,7 +82,7 @@ def test_the_gm_appends_replaces_and_deletes_text_in_the_journal(
         app,
         campaign_id,
         "replace_in_journal",
-        {"old_text": "Day 1: Old Hob kept the key.", "new_text": ""},
+        {"old_text": "Day 2: Old Hob kept the key.", "new_text": ""},
     )
     assert deleted == {"replaced": "journal", "deleted": True}
     assert (
@@ -110,17 +116,17 @@ def test_search_is_fuzzy_and_returns_the_lines_around_each_match(
     _, campaign_id = _campaign_id(client_factory)
     for line in [
         "Day 1: Ada reached the village.",
-        "Day 1: The Spore Bridge groaned.",
-        "Day 2: Old Hob kept the key.",
-        "Day 3: Ada crossed the bridge at dawn.",
+        "Day 2: The Spore Bridge groaned.",
+        "Day 3: Old Hob kept the key.",
+        "Day 4: Ada crossed the bridge at dawn.",
     ]:
         _tool(app, campaign_id, "append_journal", {"text": line})
 
     found = _tool(app, campaign_id, "search_journal", {"query": "bridje", "context": 0})
     assert found == {
         "passages": [
-            {"from_line": 2, "to_line": 2, "text": "Day 1: The Spore Bridge groaned."},
-            {"from_line": 4, "to_line": 4, "text": "Day 3: Ada crossed the bridge at dawn."},
+            {"from_line": 2, "to_line": 2, "text": "Day 2: The Spore Bridge groaned."},
+            {"from_line": 4, "to_line": 4, "text": "Day 4: Ada crossed the bridge at dawn."},
         ]
     }
     wide = _tool(app, campaign_id, "search_journal", {"query": "bridge", "context": 1})
@@ -129,8 +135,8 @@ def test_search_is_fuzzy_and_returns_the_lines_around_each_match(
             "from_line": 1,
             "to_line": 4,
             "text": (
-                "Day 1: Ada reached the village.\nDay 1: The Spore Bridge groaned.\n"
-                "Day 2: Old Hob kept the key.\nDay 3: Ada crossed the bridge at dawn."
+                "Day 1: Ada reached the village.\nDay 2: The Spore Bridge groaned.\n"
+                "Day 3: Old Hob kept the key.\nDay 4: Ada crossed the bridge at dawn."
             ),
         }
     ]
@@ -160,15 +166,81 @@ def test_journal_edits_and_views_reject_bad_input(
     )
 
 
-def test_the_journal_is_not_capped_in_length(
+def _day_passage(day: int, words: int) -> str:
+    """A day's passage of exactly `words` words, counting the 'Day N:' heading."""
+    return f"Day {day}: " + " ".join(["fact"] * (words - 2))
+
+
+def test_a_day_over_the_word_budget_is_refused(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     _, campaign_id = _campaign_id(client_factory)
-    chunk = "x" * 1900
-    for _ in range(20):
-        assert "error" not in _tool(app, campaign_id, "append_journal", {"text": chunk})
-    viewed = _tool(app, campaign_id, "view_journal", {"start_line": 20, "end_line": 20})
-    assert viewed["lines"][0]["text"] == chunk
+    text = _day_passage(1, MAX_JOURNAL_DAY_WORDS + 1)
+
+    refused = _tool(app, campaign_id, "append_journal", {"text": text})
+
+    assert "error" in refused
+    assert f"Day 1 has {MAX_JOURNAL_DAY_WORDS + 1} words" in refused["error"]
+    assert _journal_state(app, campaign_id).journal == ""
+
+
+def test_a_second_passage_for_the_same_day_is_refused(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "append_journal", {"text": "Day 1: Ada crossed the bridge."})
+
+    refused = _tool(app, campaign_id, "append_journal", {"text": "Day 1: Ada came back."})
+
+    assert "error" in refused
+    assert "Day 1 has 2 passages" in refused["error"]
+    assert _journal_state(app, campaign_id).journal == "Day 1: Ada crossed the bridge."
+
+
+def test_the_total_journal_word_budget_is_refused(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    _, campaign_id = _campaign_id(client_factory)
+    days = MAX_JOURNAL_WORDS // MAX_JOURNAL_DAY_WORDS
+    for day in range(1, days + 1):
+        assert "error" not in _tool(
+            app, campaign_id, "append_journal", {"text": _day_passage(day, MAX_JOURNAL_DAY_WORDS)}
+        )
+    assert len(_journal_state(app, campaign_id).journal.split()) == MAX_JOURNAL_WORDS
+
+    refused = _tool(app, campaign_id, "append_journal", {"text": _day_passage(days + 1, 3)})
+
+    assert "error" in refused
+    assert f"the journal has {MAX_JOURNAL_WORDS + 3} words" in refused["error"]
+    assert len(_journal_state(app, campaign_id).journal.split()) == MAX_JOURNAL_WORDS
+
+
+def test_shortening_an_over_budget_journal_is_always_allowed(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    _, campaign_id = _campaign_id(client_factory)
+    long_day = _day_passage(1, MAX_JOURNAL_DAY_WORDS + 50)
+    with Session(app.state.engine) as db:
+        record(db, campaign_id, JournalAppended(text=long_day))
+        db.commit()
+    assert len(_journal_state(app, campaign_id).journal.split()) > MAX_JOURNAL_DAY_WORDS
+
+    shortened = _tool(
+        app,
+        campaign_id,
+        "replace_in_journal",
+        {"old_text": long_day, "new_text": "Day 1: Ada crossed the bridge."},
+    )
+
+    assert "error" not in shortened
+    assert _journal_state(app, campaign_id).journal == "Day 1: Ada crossed the bridge."
+
+
+def test_the_journal_prompt_states_the_same_budget():
+    assert f"{MAX_JOURNAL_DAY_WORDS} words" in JOURNAL_RULES
+    assert f"{MAX_JOURNAL_WORDS:,} words" in JOURNAL_RULES
+    assert "never append a second passage for the same day" in JOURNAL_RULES
+    assert "condense the older days first" in JOURNAL_RULES
 
 
 def test_a_routine_turn_updates_the_journal_in_the_same_call_as_the_review(

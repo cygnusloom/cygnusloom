@@ -116,9 +116,10 @@ def take_rest(
                 )
     if rest.full and rest.clears:
         clear_items(db, campaign_id, [c.name for c in recovering], rest.clears)
-    if combat is not None and conditions and rng is not None:
+    if conditions is not None and rng is not None:
         # The rest definition names the condition triggers it counts as, such as "rest" or
-        # "extended_rest"; the engine does not infer them from the length or fullness.
+        # "extended_rest"; the engine does not infer them from the length or fullness. A
+        # rule set without combat rules, such as a school game, still ends conditions this way.
         triggers = rest.ends
         for character in recovering:
             for cid in list(character.conditions):

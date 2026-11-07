@@ -1302,7 +1302,9 @@ class OocStarted(GameEvent):
 
 @dataclass(frozen=True)
 class PromptShown(GameEvent):
-    """The open turn is waiting for the player to roll or type a reply."""
+    """The open turn is waiting for the player to roll or type a reply. A prompt with `choices`
+    is a move band's cost the player picks after the roll; `move`, `band`, `roll`, and `total`
+    identify the roll it belongs to."""
 
     kind: ClassVar[str] = "turn.prompted"
     hidden: ClassVar[bool] = True
@@ -1311,9 +1313,24 @@ class PromptShown(GameEvent):
     text: str
     dice: str
     details: str | None = None
+    # Each choice is {"id", "label", "text"} from the move band the roll reached.
+    choices: list[dict[str, str]] = field(default_factory=list)
+    move: str = ""
+    band: str = ""
+    roll: int = 0
+    total: int = 0
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        _open_turn(state).prompt = Ask(self.text, self.dice, self.details)
+        _open_turn(state).prompt = Ask(
+            self.text,
+            self.dice,
+            self.details,
+            choices=tuple(self.choices),
+            move=self.move,
+            band=self.band,
+            roll=self.roll,
+            total=self.total,
+        )
 
 
 def _mark_used(mark: CellMark) -> bool:
@@ -3454,6 +3471,31 @@ class MoveMade(GameEvent):
             text = f"{text}. {self.text}"
         if self.cause:
             text = f"{text} ({self.cause})"
+        return text if text.endswith((".", "!", "?")) else f"{text}."
+
+
+@dataclass(frozen=True)
+class MoveChoiceMade(GameEvent):
+    """The player picked one of the costs a move band offered. The choice's effects are recorded
+    as their own events, after this one."""
+
+    kind: ClassVar[str] = "move.choice_made"
+
+    name: str
+    move: str
+    band: str
+    choice: str
+    label: str = ""
+    text: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        return None
+
+    def render(self) -> str:
+        chosen = self.label or self.choice
+        text = f"{self.name} chooses {chosen} for {self.move} ({self.band})"
+        if self.text:
+            text = f"{text}. {self.text}"
         return text if text.endswith((".", "!", "?")) else f"{text}."
 
 

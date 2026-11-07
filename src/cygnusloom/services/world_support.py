@@ -103,7 +103,7 @@ from cygnusloom.services.events import (
     record,
 )
 from cygnusloom.services.geometry import clearance, overlaps, polygon_problem, uncovered
-from cygnusloom.services.state import WORLD_MAP_PALETTES
+from cygnusloom.services.state import WORLD_MAP_PALETTES, normalize_journal
 from cygnusloom.services.tools import check_arguments
 from cygnusloom.services.views import (
     _character_named,
@@ -653,8 +653,12 @@ def create_region(
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_NAME)
-    if name_key(name) in state.regions:
-        raise InvalidInput(f"there is already a region named {name!r}")
+    existing = state.regions.get(name_key(name))
+    if existing is not None:
+        raise InvalidInput(
+            f"there is already a region named {name!r}; it is {existing.terrain} ground. "
+            "Use update_region to change it, or choose another name"
+        )
     if terrain not in kinds:
         choices = ", ".join(sorted(kinds)) or "none"
         raise InvalidInput(f"{terrain!r} is not a terrain kind. The terrain kinds are: {choices}.")
@@ -1860,11 +1864,58 @@ def search_notes(state: CampaignState, query: str) -> dict[str, list[dict[str, A
     return {"notes": matches}
 
 
+def _journal_words(text: str) -> int:
+    return len(text.split())
+
+
+def _journal_passages(journal: str) -> dict[int, list[str]]:
+    """The journal's passages by campaign day. Each runs from its 'Day N:' heading to the next
+    heading; text before the first heading belongs to no day."""
+    headings = list(re.finditer(r"^[ \t]*Day\s+(\d+)\s*:", journal, re.IGNORECASE | re.MULTILINE))
+    passages: dict[int, list[str]] = {}
+    for index, heading in enumerate(headings):
+        end = headings[index + 1].start() if index + 1 < len(headings) else len(journal)
+        passages.setdefault(int(heading.group(1)), []).append(journal[heading.start() : end])
+    return passages
+
+
+def _check_journal_budget(current: str, prospective: str) -> None:
+    """Refuse a journal edit that breaks the length budget unless it shortens the journal.
+
+    A journal that already runs long must stay editable, so shortening or replacing text is
+    always allowed. Only 'Day N:' passages are checked, which leaves the opening's first passage
+    free to be written before it has a day heading."""
+    if _journal_words(prospective) <= _journal_words(current):
+        return
+    passages = _journal_passages(prospective)
+    for day, entries in sorted(passages.items()):
+        if len(entries) > 1:
+            raise InvalidInput(
+                f"Day {day} has {len(entries)} passages, a duplicate day heading; a campaign "
+                "day gets one passage, so rewrite the existing passage with replace_in_journal "
+                "instead of appending a second one"
+            )
+    for day, entries in sorted(passages.items()):
+        words = sum(_journal_words(entry) for entry in entries)
+        if words > MAX_JOURNAL_DAY_WORDS:
+            raise InvalidInput(
+                f"Day {day} has {words} words, over the {MAX_JOURNAL_DAY_WORDS}-word limit for "
+                "one day; condense it with replace_in_journal and keep only the important facts"
+            )
+    words = _journal_words(prospective)
+    if words > MAX_JOURNAL_WORDS:
+        raise InvalidInput(
+            f"the journal has {words} words, over the {MAX_JOURNAL_WORDS}-word limit; condense "
+            "the older days first"
+        )
+
+
 def append_journal(db: Session, campaign_id: int, text: str) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     added = bounded_text(text, "text", MAX_TEXT).strip()
     if not added:
         raise InvalidInput("text must hold what to add to the journal")
+    _check_journal_budget(state.journal, normalize_journal(f"{state.journal}\n{added}"))
     record(db, campaign_id, JournalAppended(text=added))
     db.commit()
     return {"added": "journal", "day": state.clock.day}
@@ -1887,6 +1938,7 @@ def replace_in_journal(
         )
     if count > 1:
         raise InvalidInput(f"old_text matches {count} places; quote more of it so it matches once")
+    _check_journal_budget(state.journal, normalize_journal(state.journal.replace(old, new, 1)))
     record(db, campaign_id, JournalReplaced(old_text=old, new_text=new))
     db.commit()
     return {"replaced": "journal", "deleted": new == ""}
@@ -2104,8 +2156,17 @@ def _check_sheet_text(sheet: Sheet) -> None:
 
 
 def _ensure_free_name(state: CampaignState, name: str) -> None:
-    if state.named(name) is not None:
-        raise InvalidInput(f"the name {name!r} is already used by a location or character")
+    existing = state.named(name)
+    if isinstance(existing, Place):
+        raise InvalidInput(
+            f"the name {name!r} is already used by the location {existing.name!r}; "
+            "use update_location to change it, or choose another name"
+        )
+    if isinstance(existing, Character):
+        raise InvalidInput(
+            f"the name {name!r} is already used by the character {existing.name!r}; "
+            "use update_npc to change it, or choose another name"
+        )
 
 
 def _ensure_no_same_place(state: CampaignState, name: str) -> None:
@@ -2187,6 +2248,8 @@ def _note_with_id(state: CampaignState, note_id: int) -> Note:
 
 
 MAX_MARKET_RESULTS = 20
+MAX_JOURNAL_WORDS = 2000
+MAX_JOURNAL_DAY_WORDS = 100
 MAX_JOURNAL_RESULTS = 5
 MAX_JOURNAL_CONTEXT = 3
 JOURNAL_VIEW_LINES = 50

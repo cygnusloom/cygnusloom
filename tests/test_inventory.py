@@ -12,6 +12,7 @@ from sqlmodel import Session
 from cygnusloom.content.library import InventoryPool, InventoryRules
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import ItemAdded, current, record
+from cygnusloom.services.inventory import carry_listed
 from cygnusloom.services.market import listed_item
 from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library
@@ -334,3 +335,78 @@ def test_a_named_stowed_pool_refuses_an_item_that_does_not_fit(client_factory):
 
     with pytest.raises(InvalidInput, match="Stowed pool is full"):
         tools.give_item(PC, "Anvil", size="bulky")
+
+
+def _carry_past_the_pool(app: FastAPI, campaign_id: int, tools: WorldTools, item: str) -> None:
+    """Grant a catalogue item past its pool's capacity, as a starting kit's overflow grant does."""
+    rules = tools.inventory
+    assert rules is not None
+    listed = listed_item(CAIRN.marketplace, item)
+    assert listed is not None
+    with Session(app.state.engine) as db:
+        carry_listed(db, campaign_id, rules, tools.item_sizes, PC, listed, overflow=True)
+        db.commit()
+
+
+def _tight_pools(tools: WorldTools) -> WorldTools:
+    """Two named pools holding one slot each, so a single bulky item spills the pack."""
+    return replace(
+        tools,
+        inventory=replace(
+            _pooled(tools).inventory,
+            pools=(
+                InventoryPool(id="readied", name="Readied", ready=True, capacity=1),
+                InventoryPool(id="stowed", name="Stowed", capacity=1),
+            ),
+        ),
+    )
+
+
+def test_a_named_pool_character_over_capacity_gains_one_overload(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools = _tight_pools(tools)
+    _empty_pack(app, campaign_id, tools)
+    tools.give_item(PC, "Lantern")
+    _carry_past_the_pool(app, campaign_id, tools, "Cart")
+
+    kinds = [i.kind for i in _character(app, campaign_id, PC).items]
+    assert kinds.count("Overload") == 1
+
+
+def test_dropping_back_within_capacity_clears_the_overload(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools = _tight_pools(tools)
+    _empty_pack(app, campaign_id, tools)
+    tools.give_item(PC, "Lantern")
+    _carry_past_the_pool(app, campaign_id, tools, "Cart")
+    assert "Overload" in [i.kind for i in _character(app, campaign_id, PC).items]
+
+    result = tools.drop_item(PC, "Cart")
+    kinds = [i.kind for i in _character(app, campaign_id, PC).items]
+    assert "Overload" not in kinds
+    assert result["slots_used"] == 1
+    assert result["capacity"] == 2
+
+
+def test_a_zero_slot_item_fits_in_an_over_full_stowed_pool(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools = _pooled(tools)
+    _empty_pack(app, campaign_id, tools)
+    tools.give_item(PC, "Ladder", size="bulky")
+    _carry_past_the_pool(app, campaign_id, tools, "Cart")
+    _carry_past_the_pool(app, campaign_id, tools, "Cart")
+    assert len([i for i in _character(app, campaign_id, PC).items if i.name == "Cart"]) == 2
+
+    result = tools.give_item(PC, "Coin", size="petty")
+    assert result["pool"] == "stowed"
+    assert "Coin" in [i.name for i in _character(app, campaign_id, PC).items]
+
+
+def test_add_penalty_twice_adds_one_penalty(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools.add_penalty(PC, "a spell")
+    second = tools.add_penalty(PC, "a spell")
+
+    penalties = [i for i in _character(app, campaign_id, PC).items if i.kind == "fatigue"]
+    assert len(penalties) == 1
+    assert second["already"] is True

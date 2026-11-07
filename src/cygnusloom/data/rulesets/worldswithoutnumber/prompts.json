@@ -91,5 +91,10 @@
     "id": "projects_and_factions",
     "step": "state",
     "text": "Track Projects, Magic Workings, and spell research with start_project, advance_project, and list_projects. Pick a target that matches the book's difficulty, advance only when the time, silver, and rolls are actually spent, and put what the advance bought in the note. Model factions as engine state, not prose: create_faction records the faction, add_faction_asset gives it a book asset such as Infantry, Smugglers, or Farmers, and faction_asset_acted records each asset's one action for the current faction turn. Use damage_faction_asset and repair_faction_asset for hit points, and take_faction_turn to close the turn and ready every asset. Never leave a long effort, faction asset, or faction turn only in prose."
+  },
+  {
+    "type": "prompt",
+    "id": "travel",
+    "text": "Use travel for overland journeys between distant places. A travel day is ten hours of marching; the tool computes the pace from the terrain, road, and weather, moves the character, and advances the clock. Apply the returned food, water, and firewood needs with use_item; when the party lacks them, apply the returned privation rules with add_strain. Foraging takes half a day and a Wis/Survive check at the returned difficulty; use roll_check and grant what the roll earns. Do not use move_actor with mode overland for a long journey, and do not advance the clock again for the same travel."
   }
 ]

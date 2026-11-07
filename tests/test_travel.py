@@ -67,6 +67,14 @@ def test_isthmus_town_to_dunston_on_foot_takes_about_an_hour(client_factory):
     assert abs(result["minutes"] - 60) <= 1
 
 
+def test_a_world_id_is_an_alias_for_the_place_name(client_factory):
+    _, _, tools = _pc_campaign(client_factory)
+
+    result = tools.move_actor(PC, "isthmus-town")
+
+    assert result["location"] == "Isthmus Town"
+
+
 def test_a_road_leg_is_faster_than_a_foot_leg_over_the_same_distance(client_factory):
     _, _, tools = _pc_campaign(client_factory)
     _place(tools, "Start", 0, 0)

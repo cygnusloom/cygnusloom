@@ -137,6 +137,71 @@
   },
   {
     "type": "tool_call",
+    "id": "travel",
+    "name": "travel",
+    "python_module": "wwn",
+    "function": "travel",
+    "description": "Travel overland by the WWN rules. A day is ten hours of marching; base speed is 3 mph on plains, 2 in light forest or desert, 1.5 in dense forest or rugged hills, 1 in swamp, and 0.5 in mountains or broken highland. A road doubles the pace, foul weather halves it, and deep snow reduces it to a tenth. The engine moves the character and advances the clock. Apply the returned food, water, firewood, and privation figures with use_item, add_strain, and the usual bookkeeping; foraging takes half a day and a Wis/Survive check at the returned difficulty.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The player character making the journey."
+        },
+        "destination": {
+          "type": "string",
+          "description": "The place the party travels to."
+        },
+        "terrain": {
+          "type": "string",
+          "enum": [
+            "plains",
+            "light_forest",
+            "desert",
+            "dense_forest",
+            "rugged_hills",
+            "swamp",
+            "mountains",
+            "broken_highland"
+          ],
+          "description": "The hardest terrain on the route."
+        },
+        "road": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when the route follows a road, which doubles the pace."
+        },
+        "weather": {
+          "type": "string",
+          "enum": ["clear", "foul", "deep_snow"],
+          "default": "clear",
+          "description": "Foul weather halves the pace; deep snow reduces it to a tenth."
+        },
+        "days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30,
+          "default": 1,
+          "description": "Whole days of travel, from 1 to 30. Defaults to 1."
+        },
+        "travelers": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "default": 1,
+          "description": "How many people are travelling, for supply needs. Defaults to 1."
+        },
+        "reason": {
+          "type": "string",
+          "description": "A short note on the journey, for the log."
+        }
+      },
+      "required": ["character", "destination", "terrain"]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "roll_initiative",
     "name": "roll_initiative",
     "world_method": "roll_side_initiative",

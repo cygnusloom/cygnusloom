@@ -891,6 +891,12 @@ def _require_turn(state: CampaignState, actor: Character, force: bool) -> None:
     if force or encounter is None:
         return
     if encounter.acting is None:
+        # A player character whose turn is next may act before that turn is opened. Side
+        # initiative settles the order with nobody acting, and the player should not have to
+        # press Start for their own character.
+        upcoming = encounter.order[encounter.up] if encounter.up < len(encounter.order) else ""
+        if actor.kind == PC_KIND and upcoming and name_key(upcoming) == name_key(actor.name):
+            return
         raise InvalidInput(
             f"no one is taking a turn, so {actor.name} cannot attack: begin the next turn first, "
             "or pass force true when the story needs an action outside the turn order"

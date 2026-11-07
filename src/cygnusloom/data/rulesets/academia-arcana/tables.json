@@ -55,5 +55,28 @@
     "id": "weirdness",
     "name": "Weirdness",
     "options": ["Grounded", "Strange", "Surreal"]
+  },
+  {
+    "type": "table",
+    "id": "student-names",
+    "name": "Student Names",
+    "options": [
+      "Elowen",
+      "Tamsin",
+      "Corin",
+      "Hesper",
+      "Merrit",
+      "Sable",
+      "Perpetua",
+      "Endicott",
+      "Ilse",
+      "Wren",
+      "Ash",
+      "Rowan",
+      "Lark",
+      "Maren",
+      "Cass",
+      "Ivy"
+    ]
   }
 ]

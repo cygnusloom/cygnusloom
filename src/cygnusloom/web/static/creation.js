@@ -719,8 +719,9 @@
       sources.flatMap((list) => [...list.querySelectorAll("li")].map((item) => item.textContent));
     let names = namesOf(lists.filter((list) => chosen.has(list.dataset.nameSource)));
     if (names.length === 0) names = namesOf(lists);
-    if (!input || names.length === 0) return;
+    if (!input || names.length === 0) return false;
     input.value = names[Math.floor(Math.random() * names.length)];
+    return true;
   };
 
   function templateKindOrder() {
@@ -977,7 +978,7 @@
     syncReplacementDetails();
     const input = form?.querySelector('input[name="name"]');
     if (onlyUnchosen && input?.value.trim()) return;
-    rollName();
+    if (!rollName() && input && !input.value.trim()) input.focus();
   };
 
   document.addEventListener("click", (event) => {

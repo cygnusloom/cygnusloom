@@ -608,6 +608,28 @@ def test_an_unplaced_player_sees_no_location_or_npcs(client_factory: Callable[[]
     assert scene.npcs == []
 
 
+def test_the_scene_sheet_shows_conditions_when_the_rule_set_passes_them(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _described_campaign(client_factory)
+    tools = world.WorldTools(
+        engine=app.state.engine,
+        campaign_id=campaign_id,
+        tables=TABLES,
+        rng=random.Random(0),
+        character=SPEC,
+        plus="sum",
+        conditions=CONTRACT.conditions,
+    )
+    tools.add_condition("Ada", "shaken", "a test")
+
+    state = _state(app, campaign_id)
+    view = world.scene_view(state, SPEC, conditions=CONTRACT.conditions)
+
+    assert "Conditions: Shaken" in view.sheet
+    assert not any(line.startswith("Conditions:") for line in world.scene_view(state, SPEC).sheet)
+
+
 def test_the_pack_lists_items_with_uses_slots_and_capacity(
     client_factory: Callable[[], TestClient], app
 ):

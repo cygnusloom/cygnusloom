@@ -119,6 +119,47 @@ def readied_capacity(character: Character, rules: InventoryRules) -> int:
     return max(0, current(character, rules.readied_stat) // rules.readied_divisor)
 
 
+def penalty_item(rules: InventoryRules) -> Item:
+    """The item a rule set uses to mark its penalty, such as Overloaded or Fatigue."""
+    return Item(rules.penalty_name, "", rules.penalty_slots, kind=rules.penalty_item)
+
+
+def carries_penalty(character: Character, rules: InventoryRules) -> bool:
+    """Whether the character already carries the rule set's penalty item."""
+    return any(item.kind == rules.penalty_item for item in character.items)
+
+
+def _add_penalty_event(
+    db: Session, campaign_id: int, character: Character, rules: InventoryRules, cause: str
+) -> None:
+    """Record the penalty item directly, without routing through `carry_item`, so adding it
+    cannot recurse into the capacity check that asked for it."""
+    penalty = penalty_item(rules)
+    record(
+        db,
+        campaign_id,
+        ItemAdded(
+            name=character.name,
+            item=penalty.name,
+            size=penalty.size,
+            slots=penalty.slots,
+            kind_of_item=penalty.kind,
+            cause=cause,
+            ready=False,
+        ),
+    )
+
+
+def _remove_penalty_event(
+    db: Session, campaign_id: int, character: Character, rules: InventoryRules
+) -> None:
+    record(
+        db,
+        campaign_id,
+        ItemRemoved(name=character.name, item=rules.penalty_name, kind_of_item=rules.penalty_item),
+    )
+
+
 def set_ready(
     db: Session,
     campaign_id: int,
@@ -175,10 +216,10 @@ def set_ready(
 
 
 def character_named(state: CampaignState, name: str) -> Character:
-    character = state.characters.get(name_key(name))
-    if character is None:
+    entry = state.named(name)
+    if not isinstance(entry, Character):
         raise InvalidInput(f"there is no character named {name!r}")
-    return character
+    return entry
 
 
 def carry_item(
@@ -210,7 +251,8 @@ def carry_item(
         if pool is None:
             raise InvalidInput(f"there is no inventory pool for {item.size!r}")
         used = pool_usage(character, rules, pool.id)
-        if used + item.slots > pool_capacity(character, rules, pool.id):
+        # An item that takes no slots always fits, even in a pool that is already over capacity.
+        if item.slots > 0 and used + item.slots > pool_capacity(character, rules, pool.id):
             if not overflow:
                 raise InvalidInput(
                     f"{character.name}'s {pool.name} pool is full: {used} of "
@@ -239,10 +281,22 @@ def carry_item(
             cause=cause,
         ),
     )
+    # A named-pool character over total capacity gains the rule set's penalty item. The check is
+    # made once here so the starting kit's `overflow` items trigger it too. Adding the penalty
+    # itself never triggers another.
+    penalized = False
+    if (
+        rules.pools
+        and item.kind != rules.penalty_item
+        and after > capacity
+        and not carries_penalty(character, rules)
+    ):
+        _add_penalty_event(db, campaign_id, character, rules, "carrying too much")
+        penalized = True
     result: dict[str, Any] = {
         "name": character.name,
         "item": item.name,
-        "slots_used": after,
+        "slots_used": after + (rules.penalty_slots if penalized else 0),
         "capacity": capacity,
     }
     if rules.pools and pool is not None:
@@ -373,7 +427,27 @@ def fits_listed(
 def add_penalty(
     db: Session, campaign_id: int, rules: InventoryRules, name: str, cause: str
 ) -> dict[str, Any]:
-    penalty = Item(rules.penalty_name, "", rules.penalty_slots, kind=rules.penalty_item)
+    """Add the rule set's penalty item, once. Calling it again for a character who already
+    carries the penalty changes nothing, so a penalty applied twice does not stack."""
+    character = character_named(load_state(db, campaign_id), name)
+    if carries_penalty(character, rules):
+        result: dict[str, Any] = {
+            "name": character.name,
+            "item": rules.penalty_name,
+            "slots_used": used_slots(character),
+            "capacity": capacity_of(character, rules),
+            "already": True,
+        }
+        if rules.pools:
+            penalty = penalty_item(rules)
+            pool_id = item_pool_id(character, rules, penalty)
+            result.update(
+                pool=pool_id,
+                pool_slots=pool_usage(character, rules, pool_id),
+                pool_capacity=pool_capacity(character, rules, pool_id),
+            )
+        return result
+    penalty = penalty_item(rules)
     result = carry_item(db, campaign_id, rules, name, penalty, cause=cause)
     db.commit()
     return result
@@ -382,6 +456,8 @@ def add_penalty(
 def drop_item(
     db: Session, campaign_id: int, rules: InventoryRules, name: str, item: str
 ) -> dict[str, Any]:
+    """Drop one carried item. Dropping gear that brings a named-pool inventory back within its
+    total capacity also clears the penalty item. The penalty itself cannot be dropped."""
     state = load_state(db, campaign_id)
     character = character_named(state, name)
     held = next((i for i in character.items if name_key(i.name) == name_key(item)), None)
@@ -389,16 +465,21 @@ def drop_item(
         raise InvalidInput(f"{character.name} carries no {item!r}")
     if held.kind == rules.penalty_item:
         raise InvalidInput(f"{character.name}'s {rules.penalty_name} lasts {rules.penalty_lasts}")
+    capacity = capacity_of(character, rules)
+    remaining = used_slots(character) - held.slots
     record(
         db,
         campaign_id,
         ItemRemoved(name=character.name, item=held.name, kind_of_item=held.kind),
     )
+    if rules.pools and remaining <= capacity and carries_penalty(character, rules):
+        _remove_penalty_event(db, campaign_id, character, rules)
+        remaining -= rules.penalty_slots
     return {
         "name": character.name,
         "item": held.name,
-        "slots_used": used_slots(character) - held.slots,
-        "capacity": capacity_of(character, rules),
+        "slots_used": remaining,
+        "capacity": capacity,
     }
 
 

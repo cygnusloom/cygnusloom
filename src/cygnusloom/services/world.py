@@ -649,6 +649,24 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 roll=roll,
             )
 
+    def choose_move_option(self, move: str, band: str, choice: str) -> dict[str, Any]:
+        """Pick one of the choices a move band offered the player after their roll."""
+        with session_scope(self.engine) as db:
+            return moves_service.choose_option(
+                db,
+                self.campaign_id,
+                self.moves,
+                move,
+                band,
+                choice,
+                self.rng,
+                plus=self.plus,
+                combat=self.combat,
+                conditions=self.conditions,
+                counters=self.counters,
+                spec=self.character,
+            )
+
     def _weapon_feature(self, name: str) -> Feature | None:
         """The feature a player character's attack with `name` uses: the rule set's weapon feature
         of that name that deals damage, looked up among the character's features first and then
@@ -1337,8 +1355,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     def modifier_dice(self, modifier: str) -> str | None:
         return attack_modifiers.modifier_dice(self._rules().modifiers, modifier)
 
-    def player_save(self, roll: int = 0) -> dict[str, Any]:
-        """Record the player's own d20 for a save the combat rules have marked due."""
+    def player_save(self, roll: int = 0, stat: str = "", cause: str = "") -> dict[str, Any]:
+        """Record the player's own d20 for a save the combat rules have marked due, or for a
+        hazard save against the named stat."""
         with session_scope(self.engine) as db:
             return combat.player_save(
                 db,
@@ -1349,6 +1368,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 rng=self.rng,
                 plus=self.plus,
                 spec=self.character,
+                stat=stat,
+                cause=cause,
             )
 
     def player_initiative(self, roll: int = 0) -> dict[str, Any]:

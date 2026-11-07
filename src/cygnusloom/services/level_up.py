@@ -272,17 +272,24 @@ def option_views(
                 {"id": stat.id, "name": stat.name}
                 for stat in spec.stats.values()
                 if stat.derived is None
+                and (option.maximum is None or pc.stats.get(stat.id, stat.low) < option.maximum)
             ]
         features: list[dict[str, str]] = []
         if option.learn is not None:
             learn = option.learn
             tag = learn.tag or (pc.fields.get(learn.tag_field, "") if learn.tag_field else "")
             restrict = bool(learn.tag or learn.tag_field)
+            excluded_tags = {
+                pc.fields[field_id]
+                for field_id in learn.exclude_tag_fields
+                if pc.fields.get(field_id)
+            }
             features = [
                 {"id": feature.id, "name": feature.name}
                 for feature in spec.features.values()
                 if feature.feature_type == learn.feature_type
                 and (not restrict or feature.tag == tag)
+                and feature.tag not in excluded_tags
                 and feature.id not in learn.exclude
                 and (feature.repeatable or feature.id not in pc.features)
             ]

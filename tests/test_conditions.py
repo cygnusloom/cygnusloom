@@ -4,12 +4,14 @@ from dataclasses import replace
 
 import pytest
 
+from cygnusloom.services import world
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.conditions import end_condition
 from cygnusloom.services.events import current
 from tests.factories import (
     DEFAULT_PC,
     Rolls,
+    open_campaign,
     scene,
 )
 from tests.factories import (
@@ -237,6 +239,26 @@ def test_add_condition_leaves_a_held_condition_as_it_is(client_factory):
     tools.add_condition(ADA, "shaken", "another thunderclap")
 
     assert _character(app, campaign_id, ADA).conditions == ["shaken"]
+
+
+def test_the_player_sheet_shows_active_conditions(client_factory):
+    app, campaign_id, tools = scene(client_factory)
+    tools.add_condition(ADA, "shaken", "a thunderclap")
+
+    view = world.scene_view(
+        open_campaign(app, campaign_id), tools.character, conditions=tools.conditions
+    )
+
+    assert "Conditions: Shaken" in view.sheet
+
+
+def test_the_player_sheet_has_no_conditions_line_without_conditions_rules(client_factory):
+    app, campaign_id, tools = scene(client_factory)
+    tools.add_condition(ADA, "shaken", "a thunderclap")
+
+    view = world.scene_view(open_campaign(app, campaign_id), tools.character)
+
+    assert not any(line.startswith("Conditions:") for line in view.sheet)
 
 
 def test_add_condition_refuses_a_derived_condition(client_factory):

@@ -60,6 +60,19 @@ def test_a_local_map_is_created_without_starting_an_encounter(
     assert state.encounter is None
 
 
+def test_a_duplicate_map_name_points_at_the_existing_map(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, TOWN)
+    _create_local_map(client, campaign_id)
+
+    duplicate = _create_local_map(client, campaign_id)
+
+    assert "already a map named" in duplicate["error"]
+    assert TOWN in duplicate["error"]
+
+
 def test_a_token_marks_where_an_npc_stands_and_carries_into_the_encounter(
     client_factory: Callable[[], TestClient],
 ):
@@ -79,6 +92,10 @@ def test_a_token_marks_where_an_npc_stands_and_carries_into_the_encounter(
         {"map": MAP, "name": "Pip", "column": 3, "row": 4},
     )
     assert placed["placed"] == "Pip"
+    assert placed["columns"] == 14
+    assert placed["rows"] == 10
+    assert placed["occupied"] == 1
+    assert placed["free_cells"] > 0
     state = open_campaign(client.app, campaign_id)
     assert state.maps[name_key(MAP)].tokens[name_key("Pip")] == (3, 4)
 

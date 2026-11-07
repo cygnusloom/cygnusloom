@@ -480,6 +480,7 @@ def test_every_wwn_tool_loads_and_binds_its_declared_required_parameters() -> No
         "roll_reaction",
         "instinct_check",
         "rest",
+        "travel",
         # Worlds Without Number magic.
         "prepare_spells",
         "cast_spell",

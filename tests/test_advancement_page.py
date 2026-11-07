@@ -11,6 +11,16 @@ from cygnusloom.config import Settings
 from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.rules import wwn
 from tests.conftest import csrf_token, make_app
+from tests.factories import tools_for
+from tests.test_academia_arcana import (
+    NAME as ACADEMIA_NAME,
+)
+from tests.test_academia_arcana import (
+    RULE_SET as ACADEMIA_RULE_SET,
+)
+from tests.test_academia_arcana import (
+    _campaign as _academia_campaign,
+)
 from tests.test_campaigns import _signed_in
 from tests.test_wwn_advancement import (
     NAME,
@@ -64,6 +74,23 @@ def test_a_ready_level_shows_its_automatic_gains_and_picks(
     assert "Skill points" in page
     assert "Focus" in page
     assert "level up to 2" in page.lower()
+
+
+def test_the_advancement_page_hides_a_capped_stat_and_the_major_subject(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client, campaign_id = _academia_campaign(client_factory, major="Illusion")
+    tools = tools_for(client.app, campaign_id, rule_set=ACADEMIA_RULE_SET)
+    tools.end_period("school-year")
+    for _ in range(3):
+        tools.take_advancement(ACADEMIA_NAME, "stat", stat="theory")
+
+    page = _page(client, campaign_id)
+
+    assert '<option value="theory">' not in page
+    assert '<option value="subject-illusion">' not in page
+    assert '<option value="practice">' in page
+    assert '<option value="subject-transfiguration">' in page
 
 
 def test_a_dual_partial_level_page_shows_the_combined_chart(

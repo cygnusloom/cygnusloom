@@ -1149,6 +1149,45 @@ def test_a_wwn_attack_needs_the_attackers_turn(client_factory):
     assert hit["target"] == FOE
 
 
+def test_a_next_up_player_character_may_attack_while_none_is_acting(client_factory):
+    """Side initiative settles the order with nobody acting. The player character whose turn is
+    next may strike without pressing Start; an NPC, or a player character who is not next, still
+    needs their turn."""
+    _client, campaign_id, tools = _wwn_campaign(client_factory)
+    tools.create_location(YARD, "Cobbles around a dry well.")
+    tools.move_actor(PC, YARD)
+    tools.create_encounter_map(MAP, YARD, 10, 10, "Open cobbles.")
+    tools.start_encounter(MAP)
+    tools.add_participant(PC)
+    # The party rolls 8 and the foes 1, so the player character's turn is next.
+    _foe(replace(tools, rng=Rolls(8, 1)), hp=20)
+
+    with Session(tools.engine) as db:
+        encounter = load_state(db, campaign_id).encounter
+    assert encounter is not None
+    assert encounter.settled
+    assert encounter.acting is None
+    assert encounter.order[encounter.up] == PC
+
+    hit = tools.player_attack(FOE, "Short Sword", attack_roll=20, damage_roll=5)
+    assert hit["target"] == FOE
+
+    # Once the turn passes to the foe, the player character is no longer next, and an NPC still
+    # needs its own turn.
+    with Session(tools.engine) as db:
+        encounters.begin_turn(db, campaign_id, PC)
+        encounters.end_turn(db, campaign_id, PC, by_player=True)
+    with Session(tools.engine) as db:
+        encounter = load_state(db, campaign_id).encounter
+    assert encounter is not None
+    assert encounter.acting is None
+    assert encounter.order[encounter.up] == FOE
+    with pytest.raises(InvalidInput, match="no one is taking a turn"):
+        tools.player_attack(FOE, "Short Sword", attack_roll=20, damage_roll=5)
+    with pytest.raises(InvalidInput, match="no one is taking a turn"):
+        tools.attack(FOE, "Claw", PC)
+
+
 def test_a_surprised_character_loses_a_turn_before_acting(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20)

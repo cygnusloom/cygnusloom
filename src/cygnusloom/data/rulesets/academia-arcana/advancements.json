@@ -25,7 +25,7 @@
         "value": "subject",
         "label": "Take a new subject",
         "text": "Take a subject you have not studied before. You gain its +1 and may learn its magic.",
-        "learn": {"feature_type": "subject"}
+        "learn": {"feature_type": "subject", "exclude_tag_fields": ["major"]}
       },
       {
         "value": "talent",

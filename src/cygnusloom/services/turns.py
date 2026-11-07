@@ -86,6 +86,7 @@ from cygnusloom.services.prompts import (
 )
 from cygnusloom.services.tools import (
     Ask,
+    ChoiceAnswer,
     RollAnswer,
     TextAnswer,
     ToolRun,
@@ -329,6 +330,31 @@ def _tool_ran(round_no: int, request: ToolRequest, result: ToolRun) -> ToolRan:
             ]
         ),
         activity=result.activity,
+    )
+
+
+def _choice_fields(choice: object) -> dict[str, str]:
+    """One prompt choice's id, label, and text, from a MoveChoice or the JSON the tool returned."""
+    if isinstance(choice, Mapping):
+        return {key: str(choice.get(key, "")) for key in ("id", "label", "text")}
+    return {
+        "id": str(getattr(choice, "id", "")),
+        "label": str(getattr(choice, "label", "")),
+        "text": str(getattr(choice, "text", "")),
+    }
+
+
+def _prompt_shown(ask: Ask) -> PromptShown:
+    """The event that stores a prompt, so a reload or another player sees it."""
+    return PromptShown(
+        text=ask.text,
+        dice=ask.dice,
+        details=ask.details,
+        choices=[_choice_fields(choice) for choice in ask.choices],
+        move=ask.move,
+        band=ask.band,
+        roll=ask.roll,
+        total=ask.total,
     )
 
 
@@ -1366,7 +1392,7 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                 _record(
                     run.engine,
                     run.campaign_id,
-                    PromptShown(result.text, result.dice, result.details),
+                    _prompt_shown(result),
                 )
                 for entry in _flush(run):
                     yield entry
@@ -1559,12 +1585,38 @@ async def _carry_on(run: _Run) -> AsyncIterator[TurnEvent]:
         yield event
 
 
-async def _answer(run: _Run, answer: RollAnswer | TextAnswer | None) -> AsyncIterator[TurnEvent]:
-    """Give the waiting tool the player's answer, record its result, then carry the reply on."""
-    if answer is not None:
+async def _answer(
+    run: _Run, answer: RollAnswer | TextAnswer | ChoiceAnswer | None
+) -> AsyncIterator[TurnEvent]:
+    """Give the waiting tool the player's answer, record its result, then carry the reply on. A
+    choice runs the move band's chosen effects instead of the tool again, since the roll already
+    happened. A tool that answers with a band's choices pauses here for the player to pick one."""
+    if isinstance(answer, ChoiceAnswer):
+        turn = _turn(_state(run.engine, run.campaign_id))
+        request = turn.queue[0]
+        prompt = turn.prompt
+        if prompt is None or not prompt.choices:
+            raise InvalidInput("there is no choice to make")
+        result = run.ctx.world.choose_move_option(prompt.move, prompt.band, answer.choice)
+        _record(
+            run.engine,
+            run.campaign_id,
+            _tool_ran(turn.rounds, request, ToolRun(json.dumps(result), None)),
+        )
+        for entry in _flush(run):
+            yield entry
+    elif answer is not None:
         turn = _turn(_state(run.engine, run.campaign_id))
         request = turn.queue[0]
         result = await run_tool(run.tool_calls, request, answer, ctx=run.ctx)
+        if isinstance(result, Ask) and result.choices:
+            # The roll reached a band the player must choose within. The tool result is recorded
+            # when they pick, so the queue and the prompt stay until then.
+            _record(run.engine, run.campaign_id, _prompt_shown(result))
+            for entry in _flush(run):
+                yield entry
+            yield Prompt(result.text, result.dice, result.details)
+            return
         assert isinstance(result, ToolRun)
         _record(run.engine, run.campaign_id, _tool_ran(turn.rounds, request, result))
         for entry in _flush(run):
@@ -1714,9 +1766,10 @@ async def resume_turn(
 ) -> AsyncIterator[TurnEvent]:
     """Continue an open reply with the player's answer, using the campaign's current model.
 
-    `action` is "roll" to roll the prompt's dice, "text" to answer with free-form `text`, or
-    "continue" to retry a reply that stopped on an error or was interrupted. The answer is
-    recorded before the reply continues, so a failure later does not roll again."""
+    `action` is "roll" to roll the prompt's dice, "choice" to pick one of the move band choices
+    the prompt offers, "text" to answer with free-form `text`, or "continue" to retry a reply
+    that stopped on an error or was interrupted. The answer is recorded before the reply
+    continues, so a failure later does not roll again."""
     campaign = _campaigns().get_campaign(engine, owner_id, campaign_id)
     if campaign.model not in allowed_models:
         raise InvalidInput("that model is not available")
@@ -1730,14 +1783,31 @@ async def resume_turn(
         rule_set = library.rule_sets.get(campaign.rule_set)
         if rule_set is None:
             raise InvalidInput("that campaign's rule set is no longer available")
-        answer: RollAnswer | TextAnswer | None = None
+        answer: RollAnswer | TextAnswer | ChoiceAnswer | None = None
         if action == "continue":
             if turn.prompt is not None:
                 raise InvalidInput("answer the GM's prompt first")
         elif turn.prompt is None:
             raise InvalidInput("there is nothing to answer")
         elif action == "roll":
+            if turn.prompt.choices:
+                raise InvalidInput("choose one of the move's options before rolling again")
             answer = RollAnswer(roll_total(turn.prompt.dice, rng, plus=rule_set.plus))
+        elif action == "choice":
+            if not turn.prompt.choices:
+                raise InvalidInput("there is no choice to make")
+            clean = (text or "").strip()
+            offered = {
+                _choice_fields(choice)["id"]: _choice_fields(choice)["label"]
+                for choice in turn.prompt.choices
+            }
+            if not clean:
+                raise InvalidInput("choose one of: " + ", ".join(offered))
+            if clean not in offered:
+                raise InvalidInput(
+                    f"there is no choice named {clean!r}; choose one of " + ", ".join(offered)
+                )
+            answer = ChoiceAnswer(clean)
         elif action == "text":
             clean = (text or "").strip()
             if not clean:

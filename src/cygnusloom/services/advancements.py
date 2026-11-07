@@ -69,6 +69,16 @@ def take_advancement(
         raise InvalidInput(f"{option.label} needs a stat; choose one of {sorted(character.stats)}")
     if not option.picks and stat is not None:
         raise InvalidInput(f"{option.label} does not take a stat")
+    if (
+        option.picks
+        and stat is not None
+        and option.maximum is not None
+        and character.stats.get(stat, 0) >= option.maximum
+    ):
+        raise InvalidInput(
+            f"{character.name}'s {stat} is already at {option.maximum}; "
+            f"{option.label} cannot raise it further"
+        )
     counter = counters[advancements.counter]
     points = character.counters.get(advancements.counter, counter.initial)
     if points < 1:
@@ -158,11 +168,17 @@ def _learnable(
         return None
     tag = learn.tag or (character.fields.get(learn.tag_field, "") if learn.tag_field else "")
     restrict = bool(learn.tag or learn.tag_field)
+    excluded_tags = {
+        character.fields[field_id]
+        for field_id in learn.exclude_tag_fields
+        if character.fields.get(field_id)
+    }
     candidates = sorted(
         f.name
         for f in features.values()
         if f.feature_type == learn.feature_type
         and (not restrict or f.tag == tag)
+        and f.tag not in excluded_tags
         and f.id not in learn.exclude
         and (f.repeatable or f.id not in character.features)
     )
@@ -171,6 +187,7 @@ def _learnable(
         chosen is None
         or chosen.feature_type != learn.feature_type
         or (restrict and chosen.tag != tag)
+        or chosen.tag in excluded_tags
         or chosen.id in learn.exclude
     ):
         raise InvalidInput(f"{label} needs a {learn.feature_type}; choose one of {candidates}")

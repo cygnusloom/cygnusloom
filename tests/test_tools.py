@@ -213,6 +213,57 @@ def test_social_roll_takes_a_free_form_reply_instead_of_a_roll():
     assert run.activity is None
 
 
+def _move_tools(*, choices: bool) -> dict[str, ToolCall]:
+    def cast(move: str, roll: int) -> dict[str, Any]:
+        result: dict[str, Any] = {
+            "move": "Cast a Spell",
+            "roll": roll,
+            "total": roll + 2,
+            "band": "7-9",
+            "text": "The magic works, but choose one.",
+        }
+        if choices:
+            result["choices"] = [
+                {"id": "stress", "label": "Mark 1 Stress", "text": "The working drains you."}
+            ]
+        return result
+
+    schema = {
+        "type": "object",
+        "properties": {"prompt": {"type": "string"}, "move": {"type": "string"}},
+        "required": ["prompt", "move"],
+    }
+    tool = ToolCall(
+        id="move",
+        name="move",
+        description="A test move.",
+        parameters=schema,
+        function=cast,
+        player_input=PlayerInput(move_param="move", param="roll"),
+    )
+    return {"move": tool}
+
+
+MOVE_ARGUMENTS = '{"prompt": "Roll to cast.", "move": "cast_a_spell"}'
+
+
+def test_a_move_roll_with_choices_asks_the_player_to_pick():
+    ask = _call(_move_tools(choices=True), _request("move", MOVE_ARGUMENTS), RollAnswer(8))
+    assert isinstance(ask, Ask)
+    assert ask.choices == (
+        {"id": "stress", "label": "Mark 1 Stress", "text": "The working drains you."},
+    )
+    assert (ask.move, ask.band, ask.roll, ask.total) == ("Cast a Spell", "7-9", 8, 10)
+    assert ask.dice == ""
+    assert ask.text == "Roll to cast.\n\nThe magic works, but choose one."
+
+
+def test_a_move_roll_without_choices_returns_its_result():
+    run = _call(_move_tools(choices=False), _request("move", MOVE_ARGUMENTS), RollAnswer(8))
+    assert isinstance(run, ToolRun)
+    assert json.loads(run.output)["band"] == "7-9"
+
+
 def test_social_roll_needs_a_prompt_for_the_player():
     error = _error_of(
         _run(_roll_tools(), _request("social_roll", '{"relationship": 2, "circumstance": 0}'))
@@ -257,6 +308,59 @@ def test_arguments_are_checked_before_the_tool_runs():
     for arguments, expected in cases.items():
         assert expected in _error_of(_run(tools, _request("t", arguments)))
     assert calls == []
+
+
+def test_arguments_are_fitted_to_the_schema_before_the_check():
+    schema = {
+        "type": "object",
+        "properties": {
+            "words": {"type": "array", "items": {"type": "string"}},
+            "count": {"type": "integer"},
+            "loud": {"type": "boolean"},
+            "note": {"type": "object", "properties": {"text": {"type": "string"}}},
+            "weather": {"type": "string", "enum": ["deep_snow", "clear"]},
+        },
+        "required": ["words", "count", "loud", "note", "weather"],
+    }
+    tool = ToolCall(
+        id="t",
+        name="t",
+        description="A test tool.",
+        parameters=schema,
+        function=lambda **kwargs: kwargs,
+    )
+    arguments = json.dumps(
+        {
+            "words": "brave, curious",
+            "count": "3",
+            "loud": "true",
+            "note": '{"text": 7}',
+            "weather": "Deep Snow",
+        }
+    )
+
+    result = json.loads(_run({"t": tool}, _request("t", arguments)))
+
+    assert result == {
+        "words": ["brave", "curious"],
+        "count": 3,
+        "loud": True,
+        "note": {"text": "7"},
+        "weather": "deep_snow",
+    }
+
+
+def test_a_trailing_comma_or_json_string_is_repaired():
+    tools = _tool(lambda n: {"n": n})
+
+    assert json.loads(_run(tools, _request("t", '{"n": 2,}'))) == {"n": 2}
+    assert json.loads(_run(tools, _request("t", '"{\\"n\\": 3}"'))) == {"n": 3}
+
+
+def test_an_unknown_tool_suggests_a_close_name():
+    error = _error_of(_run(_roll_tools(), _request("social_role", "{}")))
+    assert "there is no tool named 'social_role'" in error
+    assert "'social_roll'" in error
 
 
 def _recording_provider() -> Any:
