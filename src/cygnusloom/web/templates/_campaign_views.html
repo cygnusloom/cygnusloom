@@ -6,9 +6,27 @@
       <h3>Places</h3>
       {{ map_places(world_map) }}
     </section>
-    <section class="view" id="view-journal" data-view="journal" aria-label="Journal" hidden>
-      <h2>Journal</h2>
-      <div class="journal">{{ journal_text(scene.journal) }}</div>
+    <section class="view" id="view-journal" data-view="journal" aria-labelledby="journal-title" hidden>
+      <h2 id="journal-title">Journal</h2>
+      <div class="tab-list" role="tablist" aria-label="Journal views">
+        <button type="button" class="tab" role="tab" id="journal-tab-journey" aria-controls="journal-panel-journey" aria-selected="true">Journey</button>
+        <button type="button" class="tab" role="tab" id="journal-tab-story" aria-controls="journal-panel-story" aria-selected="false" tabindex="-1">Story</button>
+      </div>
+      <div class="journal-tab-panel" role="tabpanel" id="journal-panel-journey" aria-labelledby="journal-tab-journey">
+        <div class="journal">{{ journal_text(scene.journal) }}</div>
+      </div>
+      <div class="journal-tab-panel" role="tabpanel" id="journal-panel-story" aria-labelledby="journal-tab-story" hidden>
+        {% if story and story.storylines %}
+        {% for storyline in story.storylines %}
+        <article class="storyline{% if not storyline.active %} is-inactive{% endif %}">
+          <h3>{{ storyline.name }} <span class="story-status">{{ "Focused" if storyline.focused else ("Active" if storyline.active else "Deactivated") }}</span></h3>
+          {% if storyline.summary %}<p>{{ storyline.summary }}</p>{% endif %}
+        </article>
+        {% endfor %}
+        {% else %}
+        <p class="muted">No storylines yet. The GM adds one as the story begins.</p>
+        {% endif %}
+      </div>
     </section>
     <section class="view characters-page" id="view-characters" data-view="characters" aria-labelledby="characters-title" hidden>
       <h2 id="characters-title">Characters</h2>

@@ -51,6 +51,7 @@ from cygnusloom.services.state import (  # noqa: F401
     Project,
     Region,
     RestRecord,
+    Storyline,
     Turn,
     WorldMapStyle,
     WorldObject,
@@ -1016,6 +1017,102 @@ class NoteRemoved(GameEvent):
 
     def render(self) -> str:
         return f"Note removed: {self.text}"
+
+
+@dataclass(frozen=True)
+class StorylineCreated(GameEvent):
+    """A plot thread begins. Its name and summary are player-facing; the rest is the GM's own
+    record and may hold secrets. A storyline's id is the id of this event."""
+
+    kind: ClassVar[str] = "storyline.created"
+    hidden: ClassVar[bool] = True
+
+    name: str
+    summary: str
+    plot: str = ""
+    characters: list[str] = field(default_factory=list)
+    locations: list[str] = field(default_factory=list)
+    objects: list[str] = field(default_factory=list)
+    notes: str = ""
+    # Focus the new storyline even when another one already has the focus.
+    focus: bool = False
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        first_active = not state.active_storylines()
+        state.storylines[event_id] = Storyline(
+            id=event_id,
+            name=self.name,
+            summary=self.summary,
+            plot=self.plot,
+            characters=tuple(self.characters),
+            locations=tuple(self.locations),
+            objects=tuple(self.objects),
+            notes=self.notes,
+        )
+        if self.focus or first_active:
+            state.focus_storyline_id = event_id
+
+    def render(self) -> str:
+        return f"Storyline created: {self.name}."
+
+
+@dataclass(frozen=True)
+class StorylineUpdated(GameEvent):
+    """A storyline's fields after an update. The values are the resolved ones, not the changes.
+    Deactivating the focused storyline leaves no focus; the oldest active one takes over."""
+
+    kind: ClassVar[str] = "storyline.updated"
+    hidden: ClassVar[bool] = True
+    id_refs: ClassVar[dict[str, tuple[str, ...]]] = {"storyline_id": ("storyline.created",)}
+
+    storyline_id: int
+    name: str
+    summary: str
+    plot: str
+    characters: list[str]
+    locations: list[str]
+    objects: list[str]
+    notes: str
+    active: bool
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        old = state.storylines.get(self.storyline_id)
+        if old is None:
+            return
+        state.storylines[self.storyline_id] = Storyline(
+            id=old.id,
+            name=self.name,
+            summary=self.summary,
+            plot=self.plot,
+            characters=tuple(self.characters),
+            locations=tuple(self.locations),
+            objects=tuple(self.objects),
+            notes=self.notes,
+            active=self.active,
+        )
+        if not self.active and state.focus_storyline_id == self.storyline_id:
+            state.focus_storyline_id = None
+
+    def render(self) -> str:
+        return f"Storyline updated: {self.name}."
+
+
+@dataclass(frozen=True)
+class StorylineFocused(GameEvent):
+    """The storyline the GM is now focused on, as the main plot of the moment."""
+
+    kind: ClassVar[str] = "storyline.focused"
+    hidden: ClassVar[bool] = True
+    id_refs: ClassVar[dict[str, tuple[str, ...]]] = {"storyline_id": ("storyline.created",)}
+
+    storyline_id: int
+    name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.focus_storyline_id = self.storyline_id
+
+    def render(self) -> str:
+        return f"Storyline focused: {self.name}."
 
 
 @dataclass(frozen=True)

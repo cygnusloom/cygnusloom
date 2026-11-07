@@ -410,6 +410,22 @@ class Note:
 
 
 @dataclass(frozen=True)
+class Storyline:
+    """A plot thread the GM tracks. Its name and summary are player-facing; the plot, cast, places,
+    objects, and notes are the GM's own record and may hold secrets."""
+
+    id: int
+    name: str
+    summary: str = ""
+    plot: str = ""
+    characters: tuple[str, ...] = ()
+    locations: tuple[str, ...] = ()
+    objects: tuple[str, ...] = ()
+    notes: str = ""
+    active: bool = True
+
+
+@dataclass(frozen=True)
 class KnownNpc:
     """What the player character knows of an NPC: the details the player has seen or been told,
     how the NPC stands with the player, and where the player last knew the NPC to be. The GM's
@@ -639,6 +655,10 @@ class CampaignState:
     journal: str = ""
     # The event that began the last journal step. The next one writes from the log after it.
     journal_through: int = 0
+    # Storylines by the id of the storyline.created event that began them.
+    storylines: dict[int, Storyline] = field(default_factory=dict)
+    # The storyline the GM is focused on. The first active one is focused when this is unset.
+    focus_storyline_id: int | None = None
     # A one-shot fault the debug panel forces into the next GM turn, or None.
     debug_injection: DebugInjection | None = None
     # Options shared by the whole campaign, keyed by field id. Empty until they are chosen.
@@ -700,6 +720,19 @@ class CampaignState:
         """Every player character in play, in the order they joined. Hirelings are not player
         characters even though the table may control them."""
         return [c for c in self.characters.values() if c.kind == PC_KIND and not c.hireling]
+
+    def active_storylines(self) -> list[Storyline]:
+        """The storylines still in play, oldest first."""
+        return [storyline for storyline in self.storylines.values() if storyline.active]
+
+    def focused_storyline(self) -> Storyline | None:
+        """The storyline the GM is focused on: the chosen one while it is active, otherwise the
+        oldest active one. None when no storyline is active."""
+        focused = self.storylines.get(self.focus_storyline_id or -1)
+        if focused is not None and focused.active:
+            return focused
+        active = self.active_storylines()
+        return active[0] if active else None
 
     def player_character(self, player_id: int) -> Character | None:
         """The character this account plays: their living one if there is one, otherwise their

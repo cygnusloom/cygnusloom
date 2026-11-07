@@ -95,6 +95,10 @@ from cygnusloom.services.events import (
     SeasonSet,
     SettingRecorded,
     StartingItemsTransferred,
+    Storyline,
+    StorylineCreated,
+    StorylineFocused,
+    StorylineUpdated,
     TravelCharged,
     WorldDescribed,
     WorldMapStyleChanged,
@@ -128,6 +132,10 @@ MAX_SUMMARY = 600
 MAX_WORLD_DESCRIPTION = 1200
 MAX_QUIRKS = 10
 QUIRKS_PER_NPC = 2
+# The most storylines the GM may keep active at once: one focused and two secondary.
+MAX_ACTIVE_STORYLINES = 3
+MAX_STORYLINE_RESULTS = 10
+MAX_STORYLINE_LINKS = 20
 # A region outline may have at most this many corners.
 MAX_REGION_CORNERS = 200
 # A region label, or a place icon's caption, stays short enough for the map.
@@ -1862,6 +1870,245 @@ def search_notes(state: CampaignState, query: str) -> dict[str, list[dict[str, A
         if _has_words(words, note.subject, note.text):
             matches.append({"id": note.id, "subject": note.subject, "text": note.text})
     return {"notes": matches}
+
+
+def _storyline_named(state: CampaignState, reference: object) -> Storyline:
+    """The storyline with this name, or with this id when the name finds none."""
+    text = bounded_text(reference, "storyline", MAX_NAME)
+    loose = name_key(text)
+    for storyline in state.storylines.values():
+        if name_key(storyline.name) == loose:
+            return storyline
+    if text.isdigit():
+        storyline = state.storylines.get(int(text))
+        if storyline is not None:
+            return storyline
+    raise InvalidInput(
+        f"there is no storyline named {text!r}; use search_storylines to find it by name or id"
+    )
+
+
+def _storyline_links(value: Sequence[str] | None, label: str) -> list[str] | None:
+    """A list of names or short descriptions for one storyline field, or None when it is left
+    unchanged by an update."""
+    if value is None:
+        return None
+    if isinstance(value, str) or len(value) > MAX_STORYLINE_LINKS:
+        raise InvalidInput(f"{label} must be a list of up to {MAX_STORYLINE_LINKS} short texts")
+    return [bounded_text(item, f"each {label} entry", MAX_NAME) for item in value]
+
+
+def _storyline_text(value: object, label: str, limit: int) -> str:
+    """A storyline field an update may clear: None keeps it, and an empty string clears it."""
+    if value is None:
+        raise InvalidInput(f"{label} must be text")
+    if not isinstance(value, str):
+        raise InvalidInput(f"{label} must be text")
+    text = value.strip()
+    if len(text) > limit:
+        raise InvalidInput(f"{label} must be at most {limit} characters")
+    return text
+
+
+def _storyline_payload(state: CampaignState, storyline: Storyline) -> dict[str, Any]:
+    focused = state.focused_storyline()
+    return {
+        "id": storyline.id,
+        "name": storyline.name,
+        "summary": storyline.summary,
+        "plot": storyline.plot,
+        "characters": list(storyline.characters),
+        "locations": list(storyline.locations),
+        "objects": list(storyline.objects),
+        "notes": storyline.notes,
+        "active": storyline.active,
+        "focused": focused is not None and focused.id == storyline.id,
+    }
+
+
+def create_storyline(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    summary: str,
+    plot: str | None = None,
+    characters: Sequence[str] | None = None,
+    locations: Sequence[str] | None = None,
+    objects: Sequence[str] | None = None,
+    notes: str | None = None,
+    focus: bool = False,
+) -> dict[str, Any]:
+    """Begin a storyline. Its name and summary are the player-facing ones; the remaining fields
+    are the GM's private record. The first active storyline takes the focus, and `focus` moves it
+    to this one even when another storyline is already focused."""
+    state = load_state(db, campaign_id)
+    name = bounded_text(name, "name", MAX_NAME)
+    summary = bounded_text(summary, "summary", MAX_SUMMARY)
+    if any(name_key(storyline.name) == name_key(name) for storyline in state.storylines.values()):
+        raise InvalidInput(f"a storyline named {name!r} already exists; update it instead")
+    active = state.active_storylines()
+    if len(active) >= MAX_ACTIVE_STORYLINES:
+        names = ", ".join(storyline.name for storyline in active)
+        raise InvalidInput(
+            f"{MAX_ACTIVE_STORYLINES} storylines are already active ({names}); deactivate one "
+            "with deactivate_storyline before creating another"
+        )
+    storyline_id = record(
+        db,
+        campaign_id,
+        StorylineCreated(
+            name=name,
+            summary=summary,
+            plot=_storyline_text(plot, "plot", MAX_TEXT) if plot is not None else "",
+            characters=_storyline_links(characters, "characters") or [],
+            locations=_storyline_links(locations, "locations") or [],
+            objects=_storyline_links(objects, "objects") or [],
+            notes=_storyline_text(notes, "notes", MAX_TEXT) if notes is not None else "",
+            focus=focus,
+        ),
+    )
+    db.commit()
+    return {
+        "created": "storyline",
+        "id": storyline_id,
+        "name": name,
+        "active": True,
+        "focused": focus or not active,
+    }
+
+
+def update_storyline(
+    db: Session,
+    campaign_id: int,
+    storyline: str,
+    name: str | None = None,
+    summary: str | None = None,
+    plot: str | None = None,
+    characters: Sequence[str] | None = None,
+    locations: Sequence[str] | None = None,
+    objects: Sequence[str] | None = None,
+    notes: str | None = None,
+    active: bool | None = None,
+) -> dict[str, Any]:
+    """Change any of a storyline's fields. A field left out stays as it is; an empty string or
+    list clears it. Reactivating a storyline counts it against the three-active limit."""
+    state = load_state(db, campaign_id)
+    old = _storyline_named(state, storyline)
+    if all(
+        value is None
+        for value in (name, summary, plot, characters, locations, objects, notes, active)
+    ):
+        raise InvalidInput("give at least one storyline field to update")
+    if active is not None and not isinstance(active, bool):
+        raise InvalidInput("active must be true or false")
+    new_name = old.name if name is None else bounded_text(name, "name", MAX_NAME)
+    if name is not None and name_key(new_name) != name_key(old.name):
+        for other in state.storylines.values():
+            if other.id != old.id and name_key(other.name) == name_key(new_name):
+                raise InvalidInput(f"another storyline is already named {new_name!r}")
+    new_active = old.active if active is None else active
+    if new_active and not old.active:
+        active_storylines = state.active_storylines()
+        if len(active_storylines) >= MAX_ACTIVE_STORYLINES:
+            names = ", ".join(item.name for item in active_storylines)
+            raise InvalidInput(
+                f"{MAX_ACTIVE_STORYLINES} storylines are already active ({names}); deactivate "
+                "one before reactivating this storyline"
+            )
+    record(
+        db,
+        campaign_id,
+        StorylineUpdated(
+            storyline_id=old.id,
+            name=new_name,
+            summary=old.summary
+            if summary is None
+            else _storyline_text(summary, "summary", MAX_SUMMARY),
+            plot=old.plot if plot is None else _storyline_text(plot, "plot", MAX_TEXT),
+            characters=list(old.characters)
+            if characters is None
+            else _storyline_links(characters, "characters") or [],
+            locations=list(old.locations)
+            if locations is None
+            else _storyline_links(locations, "locations") or [],
+            objects=list(old.objects)
+            if objects is None
+            else _storyline_links(objects, "objects") or [],
+            notes=old.notes if notes is None else _storyline_text(notes, "notes", MAX_TEXT),
+            active=new_active,
+        ),
+    )
+    db.commit()
+    state = load_state(db, campaign_id)
+    return {"updated": "storyline", **_storyline_payload(state, state.storylines[old.id])}
+
+
+def focus_storyline(db: Session, campaign_id: int, storyline: str) -> dict[str, Any]:
+    """Make one active storyline the main plot of the moment."""
+    state = load_state(db, campaign_id)
+    story = _storyline_named(state, storyline)
+    if not story.active:
+        raise InvalidInput(
+            f"{story.name!r} is deactivated; make it active with update_storyline before focusing it"
+        )
+    record(db, campaign_id, StorylineFocused(storyline_id=story.id, name=story.name))
+    db.commit()
+    return {"focused": story.name, "id": story.id}
+
+
+def deactivate_storyline(db: Session, campaign_id: int, storyline: str) -> dict[str, Any]:
+    """Take a storyline out of play. It leaves the active list and the turn context, the Story
+    page shows it as deactivated, and search_storylines still finds it. The oldest remaining
+    active storyline takes over the focus when this one had it."""
+    state = load_state(db, campaign_id)
+    story = _storyline_named(state, storyline)
+    if not story.active:
+        return {"deactivated": story.name, "id": story.id, "already": True}
+    record(
+        db,
+        campaign_id,
+        StorylineUpdated(
+            storyline_id=story.id,
+            name=story.name,
+            summary=story.summary,
+            plot=story.plot,
+            characters=list(story.characters),
+            locations=list(story.locations),
+            objects=list(story.objects),
+            notes=story.notes,
+            active=False,
+        ),
+    )
+    db.commit()
+    state = load_state(db, campaign_id)
+    focused = state.focused_storyline()
+    return {
+        "deactivated": story.name,
+        "id": story.id,
+        "focused": focused.name if focused is not None else None,
+    }
+
+
+def search_storylines(state: CampaignState, query: str) -> dict[str, list[dict[str, Any]]]:
+    """Storylines whose name, summary, plot, cast, places, objects, or notes contain every word
+    of `query`. Deactivated storylines are included, since the turn context leaves them out."""
+    words = _words(query)
+    matches = [
+        _storyline_payload(state, storyline)
+        for storyline in state.storylines.values()
+        if _has_words(
+            words,
+            storyline.name,
+            storyline.summary,
+            storyline.plot,
+            storyline.notes,
+            *storyline.characters,
+            *storyline.locations,
+            *storyline.objects,
+        )
+    ]
+    matches.sort(key=lambda item: (not item["active"], item["id"]))
+    return {"storylines": matches[:MAX_STORYLINE_RESULTS]}
 
 
 def _journal_words(text: str) -> int:

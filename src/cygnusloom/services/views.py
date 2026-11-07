@@ -80,6 +80,25 @@ class KnownNpcView:
 
 
 @dataclass(frozen=True)
+class StorylineView:
+    """One storyline on the player-facing Story page. Only the name and summary are shown;
+    the GM's private plot, cast, places, objects, and notes stay hidden."""
+
+    name: str
+    summary: str
+    active: bool
+    focused: bool
+
+
+@dataclass(frozen=True)
+class StoryView:
+    """The player-facing Story page: every storyline, focused first, then the other active
+    threads, then deactivated ones."""
+
+    storylines: tuple[StorylineView, ...] = ()
+
+
+@dataclass(frozen=True)
 class FeatureLink:
     """A feature the player character has, and its compendium entry when one exists."""
 
@@ -581,6 +600,31 @@ def _region_pattern_style(region: Region, kind: WorldTerrain | None) -> tuple[st
     return region.pattern or "", ink
 
 
+def story_view(state: CampaignState) -> StoryView:
+    """The player-facing Story page. The focused thread comes first, the other active threads
+    follow, and deactivated threads come last. Only names and summaries are exposed; the GM's
+    private fields stay private."""
+    focused = state.focused_storyline()
+    active = [
+        storyline
+        for storyline in state.active_storylines()
+        if focused is None or storyline.id != focused.id
+    ]
+    inactive = [storyline for storyline in state.storylines.values() if not storyline.active]
+    ordered = ([focused] if focused is not None else []) + active + inactive
+    return StoryView(
+        storylines=tuple(
+            StorylineView(
+                name=storyline.name,
+                summary=storyline.summary,
+                active=storyline.active,
+                focused=focused is not None and storyline.id == focused.id,
+            )
+            for storyline in ordered
+        )
+    )
+
+
 def scene_view(
     state: CampaignState,
     spec: CharacterSpec,
@@ -797,6 +841,7 @@ def world_state_text(
         if clock_rules.hours_per_part > 1:
             when += f", hour {state.clock.hour + 1} of {clock_rules.hours_per_part}"
         lines.append(f"It is {when}.")
+    lines.extend(_storyline_lines(state))
     lines.extend(_player_lines(state, pcs))
     hirelings = [c for c in state.characters.values() if c.hireling]
     if hirelings:
@@ -836,6 +881,33 @@ def world_state_text(
         else:
             lines.extend(_local_map_lines(state, grid, terrain, encounter_objects, pc))
     return "\n".join(lines)
+
+
+def _storyline_lines(state: CampaignState) -> list[str]:
+    """The active storylines for the GM's turn orientation. The focused one comes first; inactive
+    storylines are left out and must be found with search_storylines."""
+    active = state.active_storylines()
+    if not active:
+        return []
+    focused = state.focused_storyline()
+    ordered = ([focused] if focused is not None else []) + [
+        storyline for storyline in active if focused is None or storyline.id != focused.id
+    ]
+    lines = ["Storylines (the focused one is the main plot; the others are secondary):"]
+    for storyline in ordered:
+        role = "focused" if focused is not None and storyline.id == focused.id else "secondary"
+        lines.append(f"- [{storyline.id}] {storyline.name} ({role}): {storyline.summary}")
+        if storyline.plot:
+            lines.append(f"  Plot: {storyline.plot}")
+        if storyline.characters:
+            lines.append(f"  Characters: {', '.join(storyline.characters)}")
+        if storyline.locations:
+            lines.append(f"  Locations: {', '.join(storyline.locations)}")
+        if storyline.objects:
+            lines.append(f"  Objects: {', '.join(storyline.objects)}")
+        if storyline.notes:
+            lines.append(f"  Notes: {storyline.notes}")
+    return lines
 
 
 def _player_controller(character: Character) -> str:

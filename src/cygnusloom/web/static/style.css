@@ -502,6 +502,13 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
 .tab-panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 1rem 1.25rem; }
 .tab-panel[hidden] { display: none; }
+/* The journal's Journey and Story tabs share the scrollable view instead of a fixed panel. */
+.journal-tab-panel { padding-top: 0.75rem; }
+.journal-tab-panel[hidden] { display: none; }
+.storyline + .storyline { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+.storyline h3 { margin: 0 0 0.35rem; font-size: 1rem; }
+.storyline.is-inactive { opacity: 0.65; }
+.story-status { margin-left: 0.35rem; padding: 0.05rem 0.45rem; border: 1px solid var(--border); border-radius: 999px; font-size: 0.75rem; font-weight: normal; color: var(--muted); vertical-align: middle; }
 /* The map panel's own tabs are chrome, not part of the board: never let the map squeeze them. */
 .map-panel > .tab-list {
   flex: none; align-self: stretch; align-items: center; min-height: 2.5rem;

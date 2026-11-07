@@ -202,6 +202,37 @@ class CoreWorld(Protocol):
 
     def search_notes(self, query: str) -> dict[str, list[dict[str, Any]]]: ...
 
+    def create_storyline(
+        self,
+        name: str,
+        summary: str,
+        plot: str | None = None,
+        characters: Sequence[str] | None = None,
+        locations: Sequence[str] | None = None,
+        objects: Sequence[str] | None = None,
+        notes: str | None = None,
+        focus: bool = False,
+    ) -> dict[str, Any]: ...
+
+    def update_storyline(
+        self,
+        storyline: str,
+        name: str | None = None,
+        summary: str | None = None,
+        plot: str | None = None,
+        characters: Sequence[str] | None = None,
+        locations: Sequence[str] | None = None,
+        objects: Sequence[str] | None = None,
+        notes: str | None = None,
+        active: bool | None = None,
+    ) -> dict[str, Any]: ...
+
+    def focus_storyline(self, storyline: str) -> dict[str, Any]: ...
+
+    def deactivate_storyline(self, storyline: str) -> dict[str, Any]: ...
+
+    def search_storylines(self, query: str) -> dict[str, list[dict[str, Any]]]: ...
+
     def all_at_location(self, location: str | None = None) -> dict[str, Any]: ...
 
     def search_location(self, query: str) -> dict[str, list[dict[str, Any]]]: ...

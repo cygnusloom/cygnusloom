@@ -23,6 +23,9 @@ from cygnusloom.services.events import (
     NoteUpdated,
     ObjectPlaced,
     ObjectTaken,
+    StorylineCreated,
+    StorylineFocused,
+    StorylineUpdated,
     SummaryUpdated,
     record,
 )
@@ -90,6 +93,44 @@ def _add_referenced_events(app: FastAPI, campaign_id: int, *, close: bool = True
             session,
             campaign_id,
             NoteRemoved(note_id=removed_id, text="Scratch this."),
+        )
+        heir_id = record(
+            session,
+            campaign_id,
+            StorylineCreated(
+                name="The Missing Heir",
+                summary="The heir is missing.",
+                plot="The witch took him.",
+                characters=["Mara"],
+                locations=["The mill"],
+                objects=["A brass key"],
+                notes="The key opens the cellar.",
+            ),
+        )
+        record(
+            session,
+            campaign_id,
+            StorylineFocused(storyline_id=heir_id, name="The Missing Heir"),
+        )
+        salt_id = record(
+            session,
+            campaign_id,
+            StorylineCreated(name="The Salt Road", summary="The road is closed."),
+        )
+        record(
+            session,
+            campaign_id,
+            StorylineUpdated(
+                storyline_id=salt_id,
+                name="The Salt Road",
+                summary="The road is closed.",
+                plot="",
+                characters=[],
+                locations=[],
+                objects=[],
+                notes="",
+                active=False,
+            ),
         )
         object_id = record(
             session,
@@ -173,6 +214,40 @@ def test_export_and_import_round_trip(
     assert [(note.subject, note.text) for note in source.notes] == [
         (note.subject, note.text) for note in target.notes
     ]
+    assert [
+        (
+            storyline.name,
+            storyline.summary,
+            storyline.plot,
+            storyline.characters,
+            storyline.locations,
+            storyline.objects,
+            storyline.notes,
+            storyline.active,
+        )
+        for storyline in source.storylines.values()
+    ] == [
+        (
+            storyline.name,
+            storyline.summary,
+            storyline.plot,
+            storyline.characters,
+            storyline.locations,
+            storyline.objects,
+            storyline.notes,
+            storyline.active,
+        )
+        for storyline in target.storylines.values()
+    ]
+    assert (
+        source.storylines[source.focus_storyline_id].name
+        if source.focus_storyline_id is not None
+        else None
+    ) == (
+        target.storylines[target.focus_storyline_id].name
+        if target.focus_storyline_id is not None
+        else None
+    )
     assert sorted((obj.place, obj.contents, obj.item) for obj in source.objects.values()) == sorted(
         (obj.place, obj.contents, obj.item) for obj in target.objects.values()
     )
@@ -270,6 +345,18 @@ def test_import_remaps_event_id_references(
         if json.loads(row.payload)["contents"] == "A brass key."
     )
     assert json.loads(grouped["object.taken"][0].payload)["object_id"] == placed.id
+    heir = next(
+        row
+        for row in grouped["storyline.created"]
+        if json.loads(row.payload)["name"] == "The Missing Heir"
+    )
+    assert json.loads(grouped["storyline.focused"][0].payload)["storyline_id"] == heir.id
+    salt = next(
+        row
+        for row in grouped["storyline.created"]
+        if json.loads(row.payload)["name"] == "The Salt Road"
+    )
+    assert json.loads(grouped["storyline.updated"][0].payload)["storyline_id"] == salt.id
     chat = grouped["chat.player"][0]
     assert json.loads(grouped["summary.updated"][0].payload)["through"] == chat.id
 

@@ -4,7 +4,8 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
 
 # Untriaged Issues
 
-None.
+* Add a (n hours/days ago (YYYY-mm-dd)) indicator to the campaigns list for when the last event was.
+* The single player window should remember if it was maximized, etc.
 
 # Triaged Issues
 

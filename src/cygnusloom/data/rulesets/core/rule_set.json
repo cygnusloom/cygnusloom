@@ -54,6 +54,12 @@
     "text": "NPC dialogue is written separately. Never write an NPC's words in the narration yourself. To make an NPC speak, call speak with the NPC's name and what they want to say. Then quote the dialogue exactly as the tool returns it. Speak only when the moment turns on what is said: the player character speaks to an NPC, an NPC must give information, or a scene needs an exchange. Routine actions and observations are description, not dialogue. An NPC the player has not addressed speaks unprompted only when their personality makes it likely and the moment calls for it. When in doubt, they stay silent."
   },
   {
+    "type": "rule",
+    "id": "storylines",
+    "important": true,
+    "text": "Storylines are structured plot threads: a player-facing name and running summary, plus your private plot, characters, locations, objects, and notes. Create one with create_storyline when a thread begins, and keep its summary current with update_storyline as the story moves; the player reads the name and summary in the Story tab, so they must never hold a secret. Keep exactly one storyline focused: the thread the player is most interested in and the main plot of the moment. Other active storylines are secondary: they can come up occasionally, at the edge of the scene, or in a mention, but they must not take over the focused one. Keep at most three active storylines, one focused and up to two secondary. Before adding a fourth, deactivate the one that no longer matters with deactivate_storyline. When the player acts on or asks about a different active storyline, focus that storyline with focus_storyline; the focused thread is the one the player is following now, not the one that mattered last turn. Deactivate a storyline once it resolves or stops mattering; it leaves the active list and the turn context, the Story page shows it as deactivated, and search_storylines still finds it. Search for a storyline before creating one that may already exist. The campaign opening creates the first storyline from the adventure's hooks."
+  },
+  {
     "type": "table",
     "id": "personality",
     "options": [

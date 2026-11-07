@@ -364,6 +364,181 @@
   },
   {
     "type": "tool_call",
+    "id": "create_storyline",
+    "name": "create_storyline",
+    "world_method": "create_storyline",
+    "description": "Begin a storyline: a structured plot thread that keeps the campaign's stories coherent. The name and summary are player-facing and must carry no secrets; the plot, characters, locations, objects, and notes are your own record and may hold them. At most three storylines may be active at once. The first active storyline becomes the focused one; pass focus true to make this one the main plot now. The result includes the storyline's id.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "A short, player-friendly name for the storyline, such as 'The Missing Heir'."
+        },
+        "summary": {
+          "type": "string",
+          "description": "A brief player-facing summary of the storyline so far, with no secrets. Keep it current with update_storyline as the story moves."
+        },
+        "plot": {
+          "type": "string",
+          "description": "Optional. What is happening in this storyline, where it is going, and what the stakes are. This is your private record and may hold secrets."
+        },
+        "characters": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional. The characters involved, by name."
+        },
+        "locations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional. The places involved, by name or short description."
+        },
+        "objects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional. The objects, clues, or treasures involved."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional. Anything else you need to remember about this storyline."
+        },
+        "focus": {
+          "type": "boolean",
+          "description": "Set true to make this the focused storyline, the main plot of the moment. Without it, the first active storyline is focused automatically."
+        }
+      },
+      "required": [
+        "name",
+        "summary"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "update_storyline",
+    "name": "update_storyline",
+    "world_method": "update_storyline",
+    "description": "Change a storyline as the story moves. Leave a field out to keep it as it is, pass an empty string or list to clear it, or give a new value. Use the storyline's name or its id. Set active false to deactivate it, or active true to bring a deactivated storyline back; at most three may be active. Keep its player-facing summary current whenever the plot advances.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "storyline": {
+          "type": "string",
+          "description": "The storyline's name or id."
+        },
+        "name": {
+          "type": "string",
+          "description": "Optional. A new player-friendly name."
+        },
+        "summary": {
+          "type": "string",
+          "description": "Optional. The new player-facing summary, with no secrets."
+        },
+        "plot": {
+          "type": "string",
+          "description": "Optional. The new private plot and stakes."
+        },
+        "characters": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional. The characters involved, by name."
+        },
+        "locations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional. The places involved."
+        },
+        "objects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional. The objects, clues, or treasures involved."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional. Anything else you need to remember about this storyline."
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Set false to deactivate the storyline, or true to reactivate it."
+        }
+      },
+      "required": [
+        "storyline"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "focus_storyline",
+    "name": "focus_storyline",
+    "world_method": "focus_storyline",
+    "description": "Make one active storyline the focused one: the main plot of the moment and the thread the player is most interested in. The previously focused storyline stays active as a secondary thread. A deactivated storyline must be made active with update_storyline before it can be focused.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "storyline": {
+          "type": "string",
+          "description": "The name or id of the active storyline to focus."
+        }
+      },
+      "required": [
+        "storyline"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "deactivate_storyline",
+    "name": "deactivate_storyline",
+    "world_method": "deactivate_storyline",
+    "description": "Take a storyline out of play when it is resolved or no longer matters. It leaves the active list and the turn context, and the Story page shows it as deactivated. search_storylines still finds it, and update_storyline can make it active again. If it was focused, the oldest remaining active storyline takes over the focus.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "storyline": {
+          "type": "string",
+          "description": "The name or id of the storyline to deactivate."
+        }
+      },
+      "required": [
+        "storyline"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "search_storylines",
+    "name": "search_storylines",
+    "world_method": "search_storylines",
+    "lookup": true,
+    "description": "Find storylines by words in their name, summary, plot, characters, locations, objects, or notes. Deactivated storylines are included even though the turn context leaves them out. Use it to recall a dormant thread or to check whether a storyline already exists before creating one. Each result includes the id, the active and focused flags, and every field.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Words to look for."
+        }
+      },
+      "required": [
+        "query"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "append_journal",
     "name": "append_journal",
     "world_method": "append_journal",

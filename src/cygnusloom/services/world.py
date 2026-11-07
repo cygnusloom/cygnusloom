@@ -1765,6 +1765,70 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         with session_scope(self.engine) as db:
             return search_notes(load_state(db, self.campaign_id), query)
 
+    def create_storyline(
+        self,
+        name: str,
+        summary: str,
+        plot: str | None = None,
+        characters: Sequence[str] | None = None,
+        locations: Sequence[str] | None = None,
+        objects: Sequence[str] | None = None,
+        notes: str | None = None,
+        focus: bool = False,
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return create_storyline(
+                db,
+                self.campaign_id,
+                name,
+                summary,
+                plot,
+                characters,
+                locations,
+                objects,
+                notes,
+                focus,
+            )
+
+    def update_storyline(
+        self,
+        storyline: str,
+        name: str | None = None,
+        summary: str | None = None,
+        plot: str | None = None,
+        characters: Sequence[str] | None = None,
+        locations: Sequence[str] | None = None,
+        objects: Sequence[str] | None = None,
+        notes: str | None = None,
+        active: bool | None = None,
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return update_storyline(
+                db,
+                self.campaign_id,
+                storyline,
+                name,
+                summary,
+                plot,
+                characters,
+                locations,
+                objects,
+                notes,
+                active,
+            )
+
+    def focus_storyline(self, storyline: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return focus_storyline(db, self.campaign_id, storyline)
+
+    def deactivate_storyline(self, storyline: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return deactivate_storyline(db, self.campaign_id, storyline)
+
+    def search_storylines(self, query: str) -> dict[str, list[dict[str, Any]]]:
+        with session_scope(self.engine) as db:
+            return search_storylines(load_state(db, self.campaign_id), query)
+
     def append_journal(self, text: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return append_journal(db, self.campaign_id, text)

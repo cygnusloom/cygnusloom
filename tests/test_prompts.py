@@ -3,6 +3,7 @@ from __future__ import annotations
 from cygnusloom.services.prompts import (
     JOURNAL_INSTRUCTION,
     OOC_INSTRUCTION,
+    OPENING_PROMPT,
     STATE_INSTRUCTION,
     TURN_REVIEW_INSTRUCTION,
     journal_instruction,
@@ -115,6 +116,32 @@ def test_state_prompt_keeps_dialogue_for_moments_that_turn_on_speech():
     assert "An NPC the player has not addressed" in text
     assert "personality makes it likely" in text
     assert "when in doubt, keep them silent" in text
+
+
+def test_state_prompt_keeps_the_active_storylines_current():
+    text = state_instruction(rules_for())
+    assert "Keep the active storylines current" in text
+    assert "update_storyline" in text
+    assert "player-facing summary" in text
+    assert "make it the focus with focus_storyline" in text
+    assert "not the one that mattered last turn" in text
+
+
+def test_core_storyline_rule_explains_focus_and_the_active_limit():
+    text = content_library().core.rules["storylines"]
+    assert "player-facing name and running summary" in text
+    assert "Keep exactly one storyline focused" in text
+    assert "at most three active storylines" in text
+    assert "deactivate_storyline" in text
+    assert "search_storylines" in text
+    assert "never hold a secret" in text
+
+
+def test_the_opening_creates_and_focuses_the_first_storyline():
+    text = OPENING_PROMPT
+    assert "create_storyline" in text
+    assert "first storyline from the adventure's hooks" in text
+    assert "focus it" in text
 
 
 def test_narration_does_not_invent_dialogue_when_none_is_queued():

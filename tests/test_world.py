@@ -1481,6 +1481,7 @@ def test_campaign_options_are_stored_once_and_checked(
 
 LOOKUP_TOOL_NAMES = {
     "search_notes",
+    "search_storylines",
     "search_journal",
     "view_journal",
     "all_at_location",

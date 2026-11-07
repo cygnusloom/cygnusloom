@@ -102,7 +102,7 @@ from cygnusloom.services.membership import (
     remove_member,
 )
 from cygnusloom.services.tools import check_arguments
-from cygnusloom.services.views import map_view, scene_view, time_view
+from cygnusloom.services.views import map_view, scene_view, story_view, time_view
 from cygnusloom.web.character_form import (
     campaign_submission_from_form,
     campaign_view,
@@ -1383,6 +1383,7 @@ def _campaign_page(
             world_map=world_map,
             rule_set=rule_set,
             compendium=compendium,
+            story=story_view(world.state),
             show_options=options_pending,
             show_setting=not world.state.pcs(),
             campaign_setting=setting or campaign.setting,
@@ -1478,6 +1479,7 @@ def _campaign_page(
         ),
         "world_map": world_map,
         "time": time_view(world.state, rule_set.clock if rule_set else None),
+        "story": story_view(world.state),
         "rule_set": rule_set,
         "compendium": compendium,
         "creature_links": compendium.creature_links,
