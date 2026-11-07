@@ -102,7 +102,7 @@ Requires Docker Compose, Python 3, two hostnames, and an HTTPS reverse proxy. Th
   --email you@example.com
 ```
 
-Configure nginx for both hostnames using the [nginx guide](deploy/nginx/README.md). Sign in to Authentik as `akadmin` using the bootstrap password in `.env`, add the account to `cygnusloom-admins`, then sign in to Cygnus Loom and add a model under **Admin > Models**. See the [Authentik guide](deploy/authentik/README.md) for user setup and troubleshooting.
+Configure nginx for both hostnames using the [nginx guide](deploy/nginx/README.md). Sign in to Authentik as `akadmin` using the bootstrap password in `.env`, add the account to `cygnusloom-admins`, then sign in to Cygnus Loom and add a model under **Admin > Models**. See the [Authentik guide](deploy/authentik/README.md) for user setup and troubleshooting. Server administrators can create single-use invitation links in Authentik for invite-only player accounts; the guide has the steps.
 
 For a local Docker test without DNS or TLS:
 

@@ -1,14 +1,14 @@
 # Player registration plan
 
-Status: planned, not implemented. Working design and implementation plan for self-service player
-accounts.
+Status: the Authentik invitation-only flow is implemented. Open signup, the Cygnus
+new-user-login gate, and the admin Registration page are planned.
 
 ## Current state
 
 Cygnus Loom delegates every credential to Authentik. `/login` only starts the OIDC flow, and
 `provision_user` mirrors a verified identity into the local `user` table on the first callback.
-There is no `/register` route, no signup link, and no way for a new player to create an account
-without an administrator doing it in Authentik.
+There is no `/register` route and no app signup link. The blueprint now ships an invitation-only
+Authentik flow, so an administrator can invite a player with a single-use link.
 
 - `src/cygnusloom/web/accounts.py` has `/login` and `/auth/login`, but no registration entry.
 - `src/cygnusloom/services/accounts.py` creates the local account from OIDC claims; the app never
@@ -21,7 +21,8 @@ without an administrator doing it in Authentik.
   database-backed config table; today's admin configuration is limited to accounts, campaigns,
   models, and audit.
 - The compose stack runs Authentik 2026.5.3. The blueprint creates `cygnusloom-admins`,
-  `cygnusloom-credit-exempt`, the OIDC provider, and the application, but no enrollment flow.
+  `cygnusloom-credit-exempt`, `cygnusloom-players`, the OIDC provider, the application, and the
+  invitation-gated `cygnusloom-enrollment-invite` flow.
 - The application has no policy binding, so any identity from Authentik can sign in. Authentik's
   account creation is the real gate.
 - `_login_redirect` already sends a signed-out visitor from `/join/<code>` to
@@ -82,19 +83,18 @@ without an administrator doing it in Authentik.
   `allow_new_users`. No row means disabled, so an upgraded database starts closed. Existing
   accounts always sign in; a new identity carrying the administrator role is allowed so the
   first administrator can bootstrap.
-- **Invite-only is an Authentik flow.** A third flow, `cygnusloom-enrollment-invite`, starts with
-  an Invitation stage whose "Continue flow without invitation" setting is off. The administrator
-  creates single-use invitations for that flow and shares the generated `?itoken=` links.
-  Cygnus Loom never sees or stores the token.
+- **Invite-only is an Authentik flow.** `cygnusloom-enrollment-invite` starts with an Invitation
+  stage whose "Continue flow without invitation" setting is off. The administrator creates
+  single-use invitations for that flow and shares the generated `?itoken=` links. Cygnus Loom
+  never sees or stores the token.
 - **Invite-only is not advertised on `/login`.** Leave `CYGNUSLOOM_OIDC_SIGNUP_URL` blank; the
   Authentik invitation link is the entry point. Open mode keeps the URL-driven login link.
 - **Gate every enrollment path.** If the Google source or any other Authentik source is enabled,
   its source-enrollment flow must also require an invitation, or the source must be disabled.
   Otherwise Google login bypasses invite-only.
-- **Three shipped flows.** `cygnusloom-enrollment` is open with the email stage;
-  `cygnusloom-enrollment-open` is open without it; `cygnusloom-enrollment-invite` is
-  invitation-gated with the email stage. Operators without SMTP can omit the email stage from
-  the invite flow, because the single-use invitation is already proof of intent.
+- **Flows.** `cygnusloom-enrollment-invite` is implemented and invitation-gated; it ships
+  without an email stage because the single-use invitation is already proof of intent. The open
+  flows `cygnusloom-enrollment` and `cygnusloom-enrollment-open` are planned for open signup.
 - **Signup entry points.** Open mode uses `/login` and campaign join links with the signup URL.
   `/register` is a thin redirect route driven only by the signup URL that preserves a safe
   `next` path through the Authentik flow. Invite-only mode uses the Authentik invitation link
@@ -232,9 +232,9 @@ Add to `deploy/authentik/blueprints/cygnusloom.yaml`:
   cannot configure SMTP point `CYGNUSLOOM_OIDC_SIGNUP_URL` at this flow.
 - **Invitation stage `cygnusloom-enrollment-invitation`.** `Continue flow without invitation` is
   off, so a missing, expired, or used token stops the flow.
-- **Flow `cygnusloom-enrollment-invite`.** Public (no authentication required), bound in order:
-  invitation, prompt, email, user-write, user-login. Operators without SMTP omit the email
-  stage.
+- **Flow `cygnusloom-enrollment-invite`.** Implemented. Public (no authentication required),
+  bound in order: invitation, prompt-account, prompt-profile, user-write, user-login. Add an
+  email stage if the deployment wants email verification in addition to the invitation.
 - **Invitations are per-person Authentik objects.** The administrator creates them for
   `cygnusloom-enrollment-invite`, marks them single-use, and optionally sets an expiry. The
   blueprint does not create invitations.
@@ -276,16 +276,19 @@ them to both `authentik-server` and `authentik-worker` through the shared enviro
 `scripts/setup_env.py` does not prompt for SMTP. New installations can set the keys in `.env`
 after setup; `deploy/authentik/README.md` explains getting an app password from a mail provider.
 
-Operators without SMTP have three supported paths:
+The invite flow ships without an email stage, so it works without SMTP; the single-use
+invitation is the proof of invitation. Add an email stage after the user-write stage if you also
+want email verification.
 
-1. **Open flow without email.** Point `CYGNUSLOOM_OIDC_SIGNUP_URL` at
+Operators without SMTP have these paths:
+
+1. **Invite flow.** Use the shipped `cygnusloom-enrollment-invite` flow as-is. The email address
+   is unverified, but the single-use invitation proves the invite.
+2. **Open flow without email.** Point `CYGNUSLOOM_OIDC_SIGNUP_URL` at
    `cygnusloom-enrollment-open` and leave the flow enabled in Authentik. Do not add the flow to
    the identification stage; the app remains the advertised entry point. Accounts have
    unverified emails. This is acceptable for a private or trusted deployment but weakens abuse
    protection.
-2. **Invite flow without email.** Deny the open flows, use `cygnusloom-enrollment-invite`
-   without the email stage, and leave the invite flow available. The single-use invitation is
-   the proof of invitation, although the email address is unverified.
 3. **Google source.** Add a Google OAuth source in Authentik and a source-enrollment flow that
    adds users to `cygnusloom-players`. Google supplies a verified email, so the email stage is
    unnecessary. The Cygnus Loom login page needs no change; Authentik shows the source on its
@@ -457,9 +460,9 @@ Automated tests:
   - The default state on a fresh database is disabled.
 - `tests/test_migrations.py`: the new table exists and absence of a row means disabled.
 - `tests/test_deploy_scripts.py`:
-  - The blueprint contains `cygnusloom-players`, the open flows, the invite flow, the email stage
-    in the verified flows, and the invitation stage with
-    `continue_flow_without_invitation: false`.
+  - The blueprint contains `cygnusloom-players`, the invite flow, the invitation stage with
+    `continue_flow_without_invitation: false`, and the user-write stage that adds invitees to
+    the players group. The open flows are not part of this slice.
   - The blueprint does not change the identification stage.
   - `.env.example` documents `CYGNUSLOOM_OIDC_SIGNUP_URL` and the Authentik email keys, and does
     not add a signup enable variable.
@@ -508,7 +511,8 @@ Invite-only verification:
 - `deploy/authentik/README.md`:
   - Replace the primary "Add a player" instructions with "Let players create their own accounts".
   - Keep manual creation as the fallback for closed deployments and troubleshooting.
-  - Document the open and invite flows, SMTP settings, and the Google source alternative.
+  - Document the implemented invite flow, the planned open flows, SMTP settings, and the Google
+    source alternative.
   - Explain the two layers: Authentik controls account creation, and `/admin/registration`
     controls whether a new Authentik identity can sign in. The Cygnus toggle starts closed; the
     Authentik flow is enabled or disabled by the operator.
@@ -547,6 +551,9 @@ Invite-only verification:
    the credit and admin checks.
 7. Optional: a local-only mail catcher in `compose.local.yaml` for testing the verified flow
    without a real mail provider.
+
+The invite flow (step 4) is implemented and live-tested against Authentik 2026.5.3. The remaining
+steps are planned.
 
 ## Future work
 

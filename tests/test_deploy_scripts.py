@@ -72,6 +72,31 @@ def test_the_blueprint_creates_the_fixed_credit_exempt_group() -> None:
     assert "!Env" not in entry
 
 
+def test_the_blueprint_creates_an_invite_only_enrollment_flow() -> None:
+    blueprint = (ROOT / "deploy" / "authentik" / "blueprints" / "cygnusloom.yaml").read_text()
+    assert "id: cygnusloom-players" in blueprint
+    assert "name: cygnusloom-players" in blueprint
+    entry = blueprint.split("id: cygnusloom-players", 1)[1].split("- model:", 1)[0]
+    assert "!Env" not in entry
+    assert "id: cygnusloom-enrollment-invite" in blueprint
+    assert "slug: cygnusloom-enrollment-invite" in blueprint
+    assert "designation: enrollment" in blueprint
+    assert "authentication: require_unauthenticated" in blueprint
+    assert "authentik_stages_invitation.invitationstage" in blueprint
+    assert "continue_flow_without_invitation: false" in blueprint
+    assert "create_users_group: !KeyOf cygnusloom-players" in blueprint
+    assert (
+        "target: !KeyOf cygnusloom-enrollment-invite\n"
+        "      stage: !KeyOf cygnusloom-enrollment-invitation\n"
+        "      order: 5"
+    ) in blueprint
+    assert (
+        "target: !KeyOf cygnusloom-enrollment-invite\n"
+        "      stage: !KeyOf cygnusloom-enrollment-user-write\n"
+        "      order: 20"
+    ) in blueprint
+
+
 def test_update_script_applies_the_blueprint_explicitly() -> None:
     update = (ROOT / "scripts" / "update.sh").read_text()
     applied = (

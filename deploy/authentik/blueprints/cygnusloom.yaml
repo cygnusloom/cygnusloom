@@ -16,6 +16,13 @@ entries:
     attrs:
       name: cygnusloom-credit-exempt
 
+  - model: authentik_core.group
+    id: cygnusloom-players
+    identifiers:
+      name: cygnusloom-players
+    attrs:
+      name: cygnusloom-players
+
   - model: authentik_providers_oauth2.scopemapping
     id: cygnusloom-groups
     identifiers:
@@ -64,3 +71,147 @@ entries:
       slug: cygnusloom
       provider: !KeyOf cygnusloom-provider
       meta_launch_url: !Env CYGNUSLOOM_BASE_URL
+
+  - model: authentik_stages_prompt.prompt
+    id: cygnusloom-enrollment-field-username
+    identifiers:
+      name: cygnusloom-enrollment-field-username
+    attrs:
+      field_key: username
+      label: Username
+      type: username
+      required: true
+      placeholder: Username
+      placeholder_expression: false
+      order: 0
+
+  - model: authentik_stages_prompt.prompt
+    id: cygnusloom-enrollment-field-password
+    identifiers:
+      name: cygnusloom-enrollment-field-password
+    attrs:
+      field_key: password
+      label: Password
+      type: password
+      required: true
+      placeholder: Password
+      placeholder_expression: false
+      order: 0
+
+  - model: authentik_stages_prompt.prompt
+    id: cygnusloom-enrollment-field-password-repeat
+    identifiers:
+      name: cygnusloom-enrollment-field-password-repeat
+    attrs:
+      field_key: password_repeat
+      label: Password (repeat)
+      type: password
+      required: true
+      placeholder: Password (repeat)
+      placeholder_expression: false
+      order: 1
+
+  - model: authentik_stages_prompt.prompt
+    id: cygnusloom-enrollment-field-name
+    identifiers:
+      name: cygnusloom-enrollment-field-name
+    attrs:
+      field_key: name
+      label: Name
+      type: text
+      required: true
+      placeholder: Name
+      placeholder_expression: false
+      order: 0
+
+  - model: authentik_stages_prompt.prompt
+    id: cygnusloom-enrollment-field-email
+    identifiers:
+      name: cygnusloom-enrollment-field-email
+    attrs:
+      field_key: email
+      label: Email
+      type: email
+      required: true
+      placeholder: Email
+      placeholder_expression: false
+      order: 1
+
+  - model: authentik_stages_prompt.promptstage
+    id: cygnusloom-enrollment-prompt-account
+    identifiers:
+      name: cygnusloom-enrollment-prompt-account
+    attrs:
+      fields:
+        - !KeyOf cygnusloom-enrollment-field-username
+        - !KeyOf cygnusloom-enrollment-field-password
+        - !KeyOf cygnusloom-enrollment-field-password-repeat
+
+  - model: authentik_stages_prompt.promptstage
+    id: cygnusloom-enrollment-prompt-profile
+    identifiers:
+      name: cygnusloom-enrollment-prompt-profile
+    attrs:
+      fields:
+        - !KeyOf cygnusloom-enrollment-field-name
+        - !KeyOf cygnusloom-enrollment-field-email
+
+  - model: authentik_stages_invitation.invitationstage
+    id: cygnusloom-enrollment-invitation
+    identifiers:
+      name: cygnusloom-enrollment-invitation
+    attrs:
+      continue_flow_without_invitation: false
+
+  - model: authentik_stages_user_write.userwritestage
+    id: cygnusloom-enrollment-user-write
+    identifiers:
+      name: cygnusloom-enrollment-user-write
+    attrs:
+      user_creation_mode: always_create
+      create_users_group: !KeyOf cygnusloom-players
+
+  - model: authentik_stages_user_login.userloginstage
+    id: cygnusloom-enrollment-user-login
+    identifiers:
+      name: cygnusloom-enrollment-user-login
+
+  - model: authentik_flows.flow
+    id: cygnusloom-enrollment-invite
+    identifiers:
+      slug: cygnusloom-enrollment-invite
+    attrs:
+      name: Cygnus Loom invitation enrollment
+      title: Create your Cygnus Loom account
+      designation: enrollment
+      authentication: require_unauthenticated
+
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf cygnusloom-enrollment-invite
+      stage: !KeyOf cygnusloom-enrollment-invitation
+      order: 5
+
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf cygnusloom-enrollment-invite
+      stage: !KeyOf cygnusloom-enrollment-prompt-account
+      order: 10
+
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf cygnusloom-enrollment-invite
+      stage: !KeyOf cygnusloom-enrollment-prompt-profile
+      order: 11
+
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf cygnusloom-enrollment-invite
+      stage: !KeyOf cygnusloom-enrollment-user-write
+      order: 20
+
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf cygnusloom-enrollment-invite
+      stage: !KeyOf cygnusloom-enrollment-user-login
+      order: 100

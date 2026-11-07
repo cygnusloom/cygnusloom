@@ -27,9 +27,9 @@ configure. Users sign in with a username and password stored in Authentik.
 8. Open **Admin → Models** and add at least one language model. Cygnus Loom ships with none,
    so players cannot create campaigns until this is done.
 
-The bundled blueprint creates the `cygnusloom-admins` and `cygnusloom-credit-exempt`
-groups, the OIDC provider, and the Cygnus Loom application. Role changes take effect at the
-next Cygnus Loom sign-in.
+The bundled blueprint creates the `cygnusloom-admins`, `cygnusloom-credit-exempt`, and
+`cygnusloom-players` groups, the invitation enrollment flow, the OIDC provider, and the Cygnus
+Loom application. Role changes take effect at the next Cygnus Loom sign-in.
 
 The blueprint lives at `deploy/authentik/blueprints/cygnusloom.yaml`. It sets the application's
 Launch URL to `CYGNUSLOOM_BASE_URL`, which makes Cygnus Loom appear on the Authentik user
@@ -46,7 +46,37 @@ check **System → Blueprints** for the error and the worker logs. If it exists 
 but not on your user dashboard, open the application and set **Launch URL** to the app URL
 (`http://localhost:21872` locally, or `https://<CYGNUSLOOM_DOMAIN>` in production).
 
-## Add a player
+## Invite-only accounts
+
+The blueprint creates the `cygnusloom-enrollment-invite` flow. It starts with an Invitation
+stage, so no one can create an account without an invitation. Invitations are single-use; create
+one per player.
+
+1. Apply the blueprint with `./scripts/update.sh` (or the manual command above).
+2. In Authentik open **Directory → Invitations → Create**. Give the invitation a name, choose
+   **Cygnus Loom invitation enrollment** (`cygnusloom-enrollment-invite`), enable **Single use**,
+   and optionally set an expiry.
+3. Copy the generated invitation link. It looks like
+   `https://<AUTHENTIK_DOMAIN>/if/flow/cygnusloom-enrollment-invite/?itoken=<token>`. Append
+   `&next=` with the URL-encoded Cygnus Loom login address to return the player after enrollment,
+   for example `&next=https%3A%2F%2F<CYGNUSLOOM_DOMAIN>%2Fauth%2Flogin`. For a campaign join page,
+   encode `https://<CYGNUSLOOM_DOMAIN>/auth/login?next=/join/<code>` instead.
+4. Share the link privately. The player chooses a username, password, name, and email and is
+   added to `cygnusloom-players`. Reusing the link fails.
+5. The player opens Cygnus Loom and signs in normally.
+
+If you are already signed in to Authentik, open the invitation link in a private window; the
+enrollment flow requires an unauthenticated session. If you have added policy bindings to the
+Cygnus Loom application, bind `cygnusloom-players` to it so invited players can sign in.
+
+The invite flow does not send a verification email, so it works without SMTP. The single-use
+invitation is the proof that the account was invited. If you add a Google or other source to
+Authentik, give its source-enrollment flow an Invitation stage too; otherwise the source
+bypasses invite-only.
+
+## Add a player manually
+
+Use this when you do not want to issue an invitation link.
 
 1. In Authentik open **Directory → Users → Create**.
 2. Set a username, email, and password. Leave the user out of `cygnusloom-admins` for a normal
@@ -55,6 +85,7 @@ but not on your user dashboard, open the application and set **Launch URL** to t
    the Authentik username or email.
 3. Give the user the Cygnus Loom application: **Applications → Cygnus Loom → Policy / Group /
    User Bindings → Bind existing user**, or add the user to a group that is already bound.
+   Optionally add the user to `cygnusloom-players` so they are grouped with invited players.
 4. The user opens `https://<CYGNUSLOOM_DOMAIN>/login` and signs in with that username and
    password.
 
@@ -113,6 +144,9 @@ If the blueprint does not match your Authentik version, create:
   ```
 
 - An application bound to the provider.
+- The `cygnusloom-players` group, prompt stages, Invitation stage, and
+  `cygnusloom-enrollment-invite` flow if you want invite-only accounts. The bundled blueprint is
+  the reference.
 
 Cygnus Loom reads the claim named by `CYGNUSLOOM_OIDC_ADMIN_CLAIM` (default `groups`) and
 compares it with `CYGNUSLOOM_OIDC_ADMIN_VALUES` (default `cygnusloom-admins`). It does not
