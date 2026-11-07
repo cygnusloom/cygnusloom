@@ -4,18 +4,7 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
 
 # Untriaged Issues
 
-1. Add a `cygnusloom-credit-exempt` role that exempts its members from credit usage. The exemption
-   belongs in `services/credits.is_exempt` and applies to the campaign owner, who pays for every AI
-   GM reply; a member of someone else's campaign should not exempt that campaign. The role name is
-   fixed; do not make it configurable like the admin roles. Add the group to the bundled Authentik
-   blueprint and cover it in the credits docs.
-
-2. Actors on the local/encounter maps are hard to see; they should have a circular token base.
-   Today `encounter_board` renders each occupant as a bare `.map-token` name label inside its
-   `.encounter-cell` (`src/cygnusloom/web/templates/macros.html`, styled in
-   `src/cygnusloom/web/static/style.css`), so a token has no shape of its own. Give each actor a
-   round miniature-style base behind the label that reads at the fitted zoom, and keep the
-   existing acting/defeated styling legible on it.
+None.
 
 # Triaged Issues
 

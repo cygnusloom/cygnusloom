@@ -9,6 +9,13 @@ entries:
     attrs:
       name: !Env CYGNUSLOOM_ADMIN_GROUP
 
+  - model: authentik_core.group
+    id: cygnusloom-credit-exempt
+    identifiers:
+      name: cygnusloom-credit-exempt
+    attrs:
+      name: cygnusloom-credit-exempt
+
   - model: authentik_providers_oauth2.scopemapping
     id: cygnusloom-groups
     identifiers:

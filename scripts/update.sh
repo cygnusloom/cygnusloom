@@ -38,6 +38,23 @@ fi
 
 docker compose pull
 docker compose up -d --build --remove-orphans
+
+# Apply the bundled blueprint explicitly so groups added to it since the last install (such as
+# cygnusloom-credit-exempt) exist immediately, instead of waiting for Authentik's own scan.
+# Authentik may still be starting, so retry for about a minute; failure only warns and never
+# aborts the update.
+blueprint_applied=0
+for _attempt in {1..30}; do
+  if docker compose exec -T authentik-server ak apply_blueprint /blueprints/custom/cygnusloom.yaml; then
+    blueprint_applied=1
+    break
+  fi
+  sleep 2
+done
+if [ "$blueprint_applied" -eq 0 ]; then
+  echo "Warning: could not apply the Authentik blueprint; new groups may be missing. Check docker compose logs authentik-server." >&2
+fi
+
 docker compose ps
 
 APP_PORT="$(sed -n 's/^CYGNUSLOOM_APP_PORT=//p' .env | head -n 1)"

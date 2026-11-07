@@ -64,6 +64,24 @@ def test_authentik_application_has_a_launch_url() -> None:
     assert "meta_launch_url: !Env CYGNUSLOOM_BASE_URL" in blueprint
 
 
+def test_the_blueprint_creates_the_fixed_credit_exempt_group() -> None:
+    blueprint = (ROOT / "deploy" / "authentik" / "blueprints" / "cygnusloom.yaml").read_text()
+    assert "id: cygnusloom-credit-exempt" in blueprint
+    assert "name: cygnusloom-credit-exempt" in blueprint
+    entry = blueprint.split("id: cygnusloom-credit-exempt", 1)[1].split("- model:", 1)[0]
+    assert "!Env" not in entry
+
+
+def test_update_script_applies_the_blueprint_explicitly() -> None:
+    update = (ROOT / "scripts" / "update.sh").read_text()
+    applied = (
+        "docker compose exec -T authentik-server ak apply_blueprint "
+        "/blueprints/custom/cygnusloom.yaml"
+    )
+    assert applied in update
+    assert update.index("docker compose up -d --build --remove-orphans") < update.index(applied)
+
+
 def test_entrypoint_waits_for_database_dns() -> None:
     entrypoint = ROOT / "deploy" / "entrypoint.sh"
     subprocess.run(["sh", "-n", str(entrypoint)], check=True, capture_output=True, text=True)

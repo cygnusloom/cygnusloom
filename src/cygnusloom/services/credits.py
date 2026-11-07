@@ -1,8 +1,9 @@
 """Credits for AI GM replies, measured token usage, and the append-only balance ledger.
 
 A campaign owner pays a flat price per completed AI GM reply, set on the model
-(`LlmModel.credits_per_turn`). Administrators and the single-player account are exempt unless a
-debug campaign forces charges. Payment is not handled here; an administrator grants credits.
+(`LlmModel.credits_per_turn`). Administrators, the single-player account, and members of the
+fixed `cygnusloom-credit-exempt` role are exempt unless a debug campaign forces charges. Payment
+is not handled here; an administrator grants credits.
 
 Every model call is measured. When the provider reports exact usage it is stored as is; otherwise
 the meter estimates from the text so the system still works with providers that omit usage. The
@@ -33,6 +34,8 @@ ADMIN_REASON = "admin"
 DEBUG_REASON = "debug"
 MAX_BALANCE = 1_000_000_000
 MAX_TURN_PRICE = 1_000_000
+# Fixed by the bundled Authentik blueprint, unlike the configurable administrator roles.
+CREDIT_EXEMPT_ROLE = "cygnusloom-credit-exempt"
 
 
 def validate_credits(value: int, *, label: str = "credits") -> int:
@@ -74,9 +77,16 @@ def _admin_values(settings: Settings | None) -> tuple[str, ...]:
     return settings.oidc_admin_values if settings is not None else DEFAULT_ADMIN_VALUES
 
 
+def _has_credit_exempt_role(roles: Iterable[str]) -> bool:
+    wanted = CREDIT_EXEMPT_ROLE.casefold()
+    return any(role.casefold() == wanted for role in roles)
+
+
 def is_exempt(engine: Engine, settings: Settings | None, campaign: Campaign) -> bool:
-    """Administrators and single-player accounts are not charged. A debug campaign can force
-    charges so the flow can be tested with an administrator's own account."""
+    """Administrators, single-player accounts, and accounts in the credit-exempt role are not
+    charged. The role is read from the campaign owner, who pays for every reply, so joining
+    someone else's campaign does not exempt it. A debug campaign can force charges so the flow
+    can be tested with an exempt account."""
     if campaign.force_credit_charges:
         return False
     if settings is not None and settings.single_player:
@@ -85,7 +95,8 @@ def is_exempt(engine: Engine, settings: Settings | None, campaign: Campaign) -> 
         user = db.get(User, campaign.owner_id)
         if user is None:
             return False
-        return has_admin_role(user_roles(user), _admin_values(settings))
+        roles = user_roles(user)
+        return has_admin_role(roles, _admin_values(settings)) or _has_credit_exempt_role(roles)
 
 
 def can_afford(engine: Engine, settings: Settings | None, campaign: Campaign) -> bool:

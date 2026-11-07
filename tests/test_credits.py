@@ -10,7 +10,8 @@ from sqlmodel import Session, select
 from cygnusloom.config import Settings
 from cygnusloom.db.models import Campaign, CreditEntry, Event, LlmModel, LlmUsage, User
 from cygnusloom.db.session import create_schema, make_engine
-from cygnusloom.services import credits
+from cygnusloom.services import credits, membership
+from cygnusloom.services.accounts import encode_roles
 from cygnusloom.services.events import ChatGM
 from tests.conftest import csrf_token, make_app, register
 from tests.factories import campaign_ready_fast, send_message
@@ -41,6 +42,14 @@ def _balance(app: FastAPI, email: str) -> int:
 def _count_events(app: FastAPI, campaign_id: int) -> int:
     with Session(app.state.engine) as session:
         return len(session.exec(select(Event).where(Event.campaign_id == campaign_id)).all())
+
+
+def _set_roles(app: FastAPI, email: str, roles: tuple[str, ...]) -> None:
+    with Session(app.state.engine) as session:
+        user = session.exec(select(User).where(User.email == email)).one()
+        user.roles = encode_roles(roles)
+        session.add(user)
+        session.commit()
 
 
 def test_a_completed_reply_charges_the_owner_and_measures_usage(client_factory, app: FastAPI):
@@ -118,6 +127,61 @@ def test_an_administrator_is_exempt_until_a_debug_campaign_forces_charges(settin
 
     assert send_message(client, campaign_id, REPLY).status_code == 303
     assert _balance(app, "ada@example.com") == 0
+
+
+def test_a_credit_exempt_owner_is_exempt_even_with_no_credits(client_factory, app: FastAPI):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    _set_price(app, "fake/scripted", 5)
+    _set_roles(app, "ada@example.com", ("CygnusLoom-Credit-Exempt",))
+    assert _balance(app, "ada@example.com") == 0
+    with Session(app.state.engine) as session:
+        campaign = session.get(Campaign, campaign_id)
+        assert campaign is not None
+        assert credits.is_exempt(app.state.engine, app.state.settings, campaign)
+
+    assert send_message(client, campaign_id, REPLY).status_code == 303
+    assert _balance(app, "ada@example.com") == 0
+
+
+def test_a_credit_exempt_member_does_not_exempt_the_owners_campaign(client_factory, app: FastAPI):
+    _, campaign_id = campaign_ready_fast(client_factory)
+    _set_price(app, "fake/scripted", 5)
+    with Session(app.state.engine) as session:
+        guest = User(
+            issuer="test",
+            subject="guest@example.com",
+            email="guest@example.com",
+            email_verified=True,
+            display_name="Guest",
+            roles=encode_roles(("CygnusLoom-Credit-Exempt",)),
+        )
+        session.add(guest)
+        session.commit()
+        session.refresh(guest)
+        assert guest.id is not None
+        guest_id = guest.id
+    membership.add_member(app.state.engine, campaign_id, guest_id)
+    assert membership.is_member(app.state.engine, guest_id, campaign_id)
+    with Session(app.state.engine) as session:
+        campaign = session.get(Campaign, campaign_id)
+        assert campaign is not None
+        assert not credits.is_exempt(app.state.engine, app.state.settings, campaign)
+
+
+def test_force_credit_charges_overrides_the_credit_exempt_role(client_factory, app: FastAPI):
+    _, campaign_id = campaign_ready_fast(client_factory)
+    _set_roles(app, "ada@example.com", ("CygnusLoom-Credit-Exempt",))
+    with Session(app.state.engine) as session:
+        campaign = session.get(Campaign, campaign_id)
+        assert campaign is not None
+        assert credits.is_exempt(app.state.engine, app.state.settings, campaign)
+        campaign.force_credit_charges = True
+        session.add(campaign)
+        session.commit()
+    with Session(app.state.engine) as session:
+        campaign = session.get(Campaign, campaign_id)
+        assert campaign is not None
+        assert not credits.is_exempt(app.state.engine, app.state.settings, campaign)
 
 
 def test_single_player_is_exempt_unless_forced(tmp_path):
@@ -248,4 +312,7 @@ def test_the_credits_page_asks_the_administrator_and_is_linked_from_account(
     assert credits_page.status_code == 200
     assert "Ask the administrator of this server to add credits" in credits_page.text
     assert "<strong>0</strong> credits" in credits_page.text
+    assert "A server administrator can add an account to the" in credits_page.text
+    assert "cygnusloom-credit-exempt" in credits_page.text
+    assert "Only campaigns that account owns are exempt." in credits_page.text
     assert "not charged" not in credits_page.text

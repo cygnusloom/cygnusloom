@@ -27,12 +27,19 @@ configure. Users sign in with a username and password stored in Authentik.
 8. Open **Admin → Models** and add at least one language model. Cygnus Loom ships with none,
    so players cannot create campaigns until this is done.
 
-The bundled blueprint creates the `cygnusloom-admins` group, the OIDC provider, and the Cygnus Loom application. Role changes take effect at the next Cygnus Loom sign-in.
+The bundled blueprint creates the `cygnusloom-admins` and `cygnusloom-credit-exempt`
+groups, the OIDC provider, and the Cygnus Loom application. Role changes take effect at the
+next Cygnus Loom sign-in.
 
 The blueprint lives at `deploy/authentik/blueprints/cygnusloom.yaml`. It sets the application's
 Launch URL to `CYGNUSLOOM_BASE_URL`, which makes Cygnus Loom appear on the Authentik user
 dashboard. Check `docker compose logs authentik-worker` if it did not apply; the blueprint schema
 can differ between Authentik releases. The manual equivalent is below.
+
+`scripts/update.sh` re-applies the blueprint after `docker compose up` and retries briefly while
+Authentik starts, so an existing installation gains groups added to the blueprint, such as
+`cygnusloom-credit-exempt`. If the apply fails the update only warns; check **System →
+Blueprints** for the error or run the command from the upgrade note below by hand.
 
 If Cygnus Loom is missing from **Applications → Applications**, the blueprint was not applied;
 check **System → Blueprints** for the error and the worker logs. If it exists in the admin list
@@ -51,6 +58,23 @@ but not on your user dashboard, open the application and set **Launch URL** to t
 
 To make someone an administrator, add them to `cygnusloom-admins` in Authentik. They must sign
 in to Cygnus Loom again before the new role is visible.
+
+## Exempt an account from credits
+
+To let an account use AI GM replies without spending credits, add it to
+`cygnusloom-credit-exempt`: **Directory → Groups → cygnusloom-credit-exempt → Users → Add
+existing user**. The account must sign in to Cygnus Loom again before the group appears in its
+stored roles. Only campaigns that account owns are exempt; joining another player's campaign
+does not exempt that campaign. A debug campaign can still force charges.
+
+Existing installations created before this group existed can create it by re-applying the
+blueprint:
+
+```sh
+docker compose exec -T authentik-server ak apply_blueprint /blueprints/custom/cygnusloom.yaml
+```
+
+`scripts/update.sh` runs this command for you after an upgrade, with a short retry loop.
 
 ## Local-only server
 

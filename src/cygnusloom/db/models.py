@@ -24,8 +24,9 @@ class User(SQLModel, table=True):
     email_verified: bool = Field(default=False)
     display_name: str = Field(default="", max_length=120)
     roles: str = Field(default="[]", sa_column=Column(Text, nullable=False))
-    # Credits a player spends on AI GM replies. Administrators and the single-player account are
-    # exempt, so the balance is informational for them unless a debug campaign forces charges.
+    # Credits a player spends on AI GM replies. Administrators, the single-player account, and
+    # credit-exempt accounts are exempt, so the balance is informational for them unless a debug
+    # campaign forces charges.
     credit_balance: int = Field(default=0)
     disabled: bool = Field(default=False)
     created_at: datetime = Field(default_factory=utcnow)
@@ -143,7 +144,7 @@ class Campaign(SQLModel, table=True):
     asked for at creation; it reaches the GM's prompt every turn and is blank when the player left
     it out. `table_genres` is the optional JSON list of genres the player narrowed the generation
     tables to at creation; blank means the rule set's own choice. `force_credit_charges` is a
-    debug-panel switch that charges an otherwise exempt administrator account in this campaign."""
+    debug-panel switch that charges an otherwise exempt account in this campaign."""
 
     __tablename__ = "campaign"
 

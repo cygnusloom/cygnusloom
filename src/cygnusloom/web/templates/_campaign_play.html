@@ -325,7 +325,7 @@
                 <label>Balance <input type="number" name="balance" min="0" value="{{ credit_balance }}" required></label>
                 <label class="show-hidden-option">
                   <input type="checkbox" name="force" value="1" {% if campaign.force_credit_charges %}checked{% endif %}>
-                  Charge credits even for administrators in this campaign
+                  Charge credits even for exempt accounts in this campaign
                 </label>
                 <button type="submit">Save credits</button>
               </form>
