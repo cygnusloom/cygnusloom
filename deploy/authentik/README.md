@@ -60,7 +60,9 @@ one per player.
    `https://<AUTHENTIK_DOMAIN>/if/flow/cygnusloom-enrollment-invite/?itoken=<token>`. Append
    `&next=` with the URL-encoded Cygnus Loom login address to return the player after enrollment,
    for example `&next=https%3A%2F%2F<CYGNUSLOOM_DOMAIN>%2Fauth%2Flogin`. For a campaign join page,
-   encode `https://<CYGNUSLOOM_DOMAIN>/auth/login?next=/join/<code>` instead.
+   encode `https://<CYGNUSLOOM_DOMAIN>/auth/login?next=/join/<code>` instead. If you skip `next`,
+   enrollment still succeeds, but Authentik sends the external user to its own user interface and
+   shows "Permission denied"; open the Cygnus Loom login page instead.
 4. Share the link privately. The player chooses a username, password, name, and email and is
    added to `cygnusloom-players`. Reusing the link fails.
 5. The player opens Cygnus Loom and signs in normally.
