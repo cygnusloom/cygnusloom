@@ -87,6 +87,12 @@ Authentik flow, so an administrator can invite a player with a single-use link.
   stage whose "Continue flow without invitation" setting is off. The administrator creates
   single-use invitations for that flow and shares the generated `?itoken=` links. Cygnus Loom
   never sees or stores the token.
+- **Invited users are internal Authentik users.** The user-write stage sets
+  `user_type: internal`, so the Cygnus Loom Account page's link to Authentik's user interface
+  works. The account still has no administrator permissions.
+- **Enrollment redirects automatically.** An expression policy bound to the invite flow sets the
+  final redirect to `CYGNUSLOOM_BASE_URL/auth/login`, honoring a `next` value only when it starts
+  with the app base URL.
 - **Invite-only is not advertised on `/login`.** Leave `CYGNUSLOOM_OIDC_SIGNUP_URL` blank; the
   Authentik invitation link is the entry point. Open mode keeps the URL-driven login link.
 - **Gate every enrollment path.** If the Google source or any other Authentik source is enabled,
@@ -193,8 +199,9 @@ sign the player into the wrong campaign.
 
 1. An administrator creates a single-use Authentik invitation for
    `cygnusloom-enrollment-invite`, optionally with an expiry. The generated link contains
-   `?itoken=...`. If the player should land on a campaign join page, the administrator appends
-   `&next=<app>/auth/login?next=/join/<code>`.
+   `?itoken=...`. The flow redirects to the app's `/auth/login` after enrollment. An optional
+   `&next=` can point at a campaign join page; the redirect policy honors it only when it starts
+   with the app base URL.
 2. The invited player opens the link. The Invitation stage accepts the token once; a second
    attempt is rejected. The player chooses a username, email, name, and password, verifies the
    email if the flow has the email stage, and gets an account in `cygnusloom-players`.
@@ -224,7 +231,8 @@ Add to `deploy/authentik/blueprints/cygnusloom.yaml`:
   name (display name), password.
 - **Email stage `cygnusloom-enrollment-email`.** Uses Authentik's global email settings, verifies
   the address, and activates the user on success. Token lifetime uses the Authentik default.
-- **User-write stage.** Creates the user and adds it to `cygnusloom-players`.
+- **User-write stage.** Creates an internal Authentik user and adds it to
+  `cygnusloom-players`.
 - **User-login stage.** Signs the new user in at Authentik so the OIDC round trip can finish.
 - **Flow `cygnusloom-enrollment`.** Public (no authentication required), bound in order:
   prompt, email, user-write, user-login.
@@ -235,6 +243,9 @@ Add to `deploy/authentik/blueprints/cygnusloom.yaml`:
 - **Flow `cygnusloom-enrollment-invite`.** Implemented. Public (no authentication required),
   bound in order: invitation, prompt-account, prompt-profile, user-write, user-login. Add an
   email stage if the deployment wants email verification in addition to the invitation.
+- **Redirect policy `cygnusloom-enrollment-redirect`.** An expression policy bound to the flow
+  sets the final redirect to `CYGNUSLOOM_BASE_URL/auth/login`, or to a `next` value that starts
+  with the app base URL.
 - **Invitations are per-person Authentik objects.** The administrator creates them for
   `cygnusloom-enrollment-invite`, marks them single-use, and optionally sets an expiry. The
   blueprint does not create invitations.
@@ -415,6 +426,8 @@ page, and the payments plan adds self-service purchases later.
   refuses the resulting first login.
 - Invite-only is enforced entirely by Authentik. Cygnus Loom sees only a normal OIDC identity and
   cannot tell whether an invitation was used. Invited users still need new user logins on.
+- Invited users are internal Authentik users so they can use the account page. They still have
+  no administrator permissions; Authentik's admin interface remains separate.
 - Every enrollment path must be gated. The open password flows and the Google or any other
   Authentik source-enrollment flow without the Invitation stage bypass invite-only.
 - Invitations are single-use bearer secrets. Create one per person, set an expiry where possible,
@@ -498,13 +511,15 @@ Invite-only verification:
 1. Leave `CYGNUSLOOM_OIDC_SIGNUP_URL` blank, deny the open flows, turn new user logins on, and
    create a single-use invitation for `cygnusloom-enrollment-invite` in Authentik.
 2. Open the invitation link in a private browser. Confirm the invitation step, complete
-   enrollment, and land in Cygnus Loom.
+   enrollment, and land in Cygnus Loom automatically.
 3. Reuse the same link in another private browser; Authentik rejects it.
 4. Open the invite flow URL without `itoken`; Authentik rejects it.
 5. Turn new user logins off, create another invitation, and confirm enrollment succeeds at
    Authentik but the first Cygnus Loom sign-in is rejected.
 6. If Google is enabled, confirm a first-time Google user is rejected unless the source flow is
    invitation-gated.
+7. Open the Account page and follow "Manage your account"; confirm the Authentik user page loads
+   for the invited account.
 
 ## Docs
 

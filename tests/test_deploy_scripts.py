@@ -84,7 +84,14 @@ def test_the_blueprint_creates_an_invite_only_enrollment_flow() -> None:
     assert "authentication: require_unauthenticated" in blueprint
     assert "authentik_stages_invitation.invitationstage" in blueprint
     assert "continue_flow_without_invitation: false" in blueprint
+    assert "user_type: internal" in blueprint
     assert "create_users_group: !KeyOf cygnusloom-players" in blueprint
+    assert "authentik_policies_expression.expressionpolicy" in blueprint
+    assert "id: cygnusloom-enrollment-redirect" in blueprint
+    assert "policy: !KeyOf cygnusloom-enrollment-redirect" in blueprint
+    assert "target: !KeyOf cygnusloom-enrollment-user-login-binding" in blueprint
+    assert "authentik/flows/get" in blueprint
+    assert "/auth/login" in blueprint
     username_field = blueprint.split("id: cygnusloom-enrollment-field-username", 1)[1].split(
         "- model:", 1
     )[0]

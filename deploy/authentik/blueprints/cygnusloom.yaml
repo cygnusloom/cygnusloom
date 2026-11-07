@@ -169,6 +169,7 @@ entries:
       name: cygnusloom-enrollment-user-write
     attrs:
       user_creation_mode: always_create
+      user_type: internal
       create_users_group: !KeyOf cygnusloom-players
 
   - model: authentik_stages_user_login.userloginstage
@@ -185,6 +186,16 @@ entries:
       title: Create your Cygnus Loom account
       designation: enrollment
       authentication: require_unauthenticated
+
+  - model: authentik_policies_expression.expressionpolicy
+    id: cygnusloom-enrollment-redirect
+    identifiers:
+      name: cygnusloom-enrollment-redirect
+    attrs:
+      expression: !Format [
+        "base_url = \"%s\"\nnext_url = None\nif request.http_request:\n    next_url = request.http_request.session.get(\"authentik/flows/get\", {}).get(\"next\")\nif not next_url or not next_url.startswith(base_url + \"/\"):\n    next_url = base_url + \"/auth/login\"\ncontext[\"flow_plan\"].context[\"redirect\"] = next_url\nreturn True",
+        !Env CYGNUSLOOM_BASE_URL,
+      ]
 
   - model: authentik_flows.flowstagebinding
     identifiers:
@@ -211,7 +222,23 @@ entries:
       order: 20
 
   - model: authentik_flows.flowstagebinding
+    id: cygnusloom-enrollment-user-login-binding
     identifiers:
       target: !KeyOf cygnusloom-enrollment-invite
       stage: !KeyOf cygnusloom-enrollment-user-login
       order: 100
+
+  - model: authentik_policies.policybinding
+    identifiers:
+      policy: !KeyOf cygnusloom-enrollment-redirect
+      target: !KeyOf cygnusloom-enrollment-user-login-binding
+      order: 0
+
+  # Remove the earlier flow-level binding so upgrades do not keep a policy that runs before
+  # the flow plan exists.
+  - model: authentik_policies.policybinding
+    state: absent
+    identifiers:
+      policy: !KeyOf cygnusloom-enrollment-redirect
+      target: !KeyOf cygnusloom-enrollment-invite
+      order: 0

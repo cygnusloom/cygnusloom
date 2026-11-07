@@ -57,15 +57,16 @@ one per player.
    **Cygnus Loom invitation enrollment** (`cygnusloom-enrollment-invite`), enable **Single use**,
    and optionally set an expiry.
 3. Copy the generated invitation link. It looks like
-   `https://<AUTHENTIK_DOMAIN>/if/flow/cygnusloom-enrollment-invite/?itoken=<token>`. Append
-   `&next=` with the URL-encoded Cygnus Loom login address to return the player after enrollment,
-   for example `&next=https%3A%2F%2F<CYGNUSLOOM_DOMAIN>%2Fauth%2Flogin`. For a campaign join page,
-   encode `https://<CYGNUSLOOM_DOMAIN>/auth/login?next=/join/<code>` instead. If you skip `next`,
-   enrollment still succeeds, but Authentik sends the external user to its own user interface and
-   shows "Permission denied"; open the Cygnus Loom login page instead.
-4. Share the link privately. The player chooses a username, password, name, and email and is
-   added to `cygnusloom-players`. Reusing the link fails.
-5. The player opens Cygnus Loom and signs in normally.
+   `https://<AUTHENTIK_DOMAIN>/if/flow/cygnusloom-enrollment-invite/?itoken=<token>`. The flow
+   redirects to `CYGNUSLOOM_BASE_URL/auth/login` automatically after enrollment. To land on a
+   campaign join page instead, append `&next=` with the URL-encoded app login URL, including its
+   own `next=/join/<code>` value. The policy only honors a `next` that starts with the app base
+   URL.
+4. Share the link privately. The player chooses a username, password, name, and email, is added
+   to `cygnusloom-players`, and is returned to Cygnus Loom. Reusing the link fails.
+5. The player can change their email, password, and MFA from the Account page; it links to
+   Authentik's user interface. Invited accounts are created as internal Authentik users so that
+   page works.
 
 If you are already signed in to Authentik, open the invitation link in a private window; the
 enrollment flow requires an unauthenticated session. If you have added policy bindings to the
