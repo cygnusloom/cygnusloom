@@ -4,7 +4,11 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
 
 # Untriaged Issues
 
-None.
+1. Add a `cygnusloom-credit-exempt` role that exempts its members from credit usage. The exemption
+   belongs in `services/credits.is_exempt` and applies to the campaign owner, who pays for every AI
+   GM reply; a member of someone else's campaign should not exempt that campaign. Consider making
+   the role name configurable like the admin roles (`CYGNUSLOOM_OIDC_ADMIN_VALUES`), adding the
+   group to the bundled Authentik blueprint, and covering it in the credits docs.
 
 # Triaged Issues
 
