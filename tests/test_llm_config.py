@@ -93,6 +93,40 @@ def test_disabling_or_deleting_the_default_moves_the_default(settings: Settings)
     assert catalog.default_model_id() == "ollama/test-model"
 
 
+def test_model_turn_price_and_stream_usage_are_stored_and_preserved(settings: Settings):
+    catalog, engine = _catalog(settings)
+    spec = catalog.add(
+        "openai",
+        "gpt-4o-mini",
+        "https://api.openai.com/v1",
+        credits_per_turn=12,
+        stream_usage=False,
+    )
+    assert spec.credits_per_turn == 12
+    assert spec.stream_usage is False
+
+    updated = catalog.update(
+        spec.row_id or 0, base_url="https://api.openai.com/v1", credits_per_turn=3
+    )
+    assert updated.credits_per_turn == 3
+    assert updated.stream_usage is False
+
+    updated = catalog.update(
+        spec.row_id or 0, base_url="https://api.openai.com/v1", stream_usage=True
+    )
+    assert updated.stream_usage is True
+    assert updated.credits_per_turn == 3
+
+    with Session(engine) as db:
+        row = db.get(LlmModel, spec.row_id)
+    assert row is not None
+    assert row.credits_per_turn == 3
+    assert row.stream_usage is True
+
+    with pytest.raises(InvalidInput, match="credits per turn"):
+        catalog.add("openai", "bad-price", "https://api.openai.com/v1", credits_per_turn=-1)
+
+
 def test_model_validation_rejects_bad_providers_and_missing_base_urls(settings: Settings):
     catalog, _ = _catalog(settings)
     with pytest.raises(InvalidInput, match="provider"):

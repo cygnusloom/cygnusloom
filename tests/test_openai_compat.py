@@ -13,9 +13,15 @@ TEST_KEY = "sk-test"
 TOOLS = [{"type": "function", "function": {"name": "social_roll", "parameters": {}}}]
 
 
-def _provider(handler) -> OpenAICompatProvider:
+def _provider(handler, *, stream_usage: bool = True) -> OpenAICompatProvider:
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-    return OpenAICompatProvider("testprov", "https://example.test/v1", TEST_KEY, client=client)
+    return OpenAICompatProvider(
+        "testprov",
+        "https://example.test/v1",
+        TEST_KEY,
+        client=client,
+        stream_usage=stream_usage,
+    )
 
 
 def _json_reply(message: dict) -> httpx.Response:
@@ -196,6 +202,93 @@ def test_stream_with_a_malformed_event_is_an_error():
 
     with pytest.raises(LLMError, match="malformed stream event"):
         asyncio.run(_collect(_provider(handler)))
+
+
+def test_non_stream_reply_includes_reported_usage():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": "ready"}}],
+                "usage": {
+                    "prompt_tokens": 37,
+                    "completion_tokens": 12,
+                    "prompt_tokens_details": {"cached_tokens": 4},
+                    "completion_tokens_details": {"reasoning_tokens": 10},
+                },
+            },
+        )
+
+    reply = asyncio.run(_provider(handler).chat("deepseek-flash", MESSAGES))
+
+    assert reply.usage is not None
+    assert reply.usage.input_tokens == 37
+    assert reply.usage.output_tokens == 12
+    assert reply.usage.cached_tokens == 4
+    assert reply.usage.reasoning_tokens == 10
+
+
+def test_stream_requests_usage_and_reads_the_final_usage_chunk():
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["body"] = json.loads(request.content)
+        return _events(
+            _chunk({"content": "Hel"}),
+            _chunk({"content": "lo."}),
+            json.dumps(
+                {
+                    "choices": [],
+                    "usage": {
+                        "prompt_tokens": 37,
+                        "completion_tokens": 14,
+                        "prompt_cache_hit_tokens": 5,
+                        "prompt_cache_miss_tokens": 32,
+                        "completion_tokens_details": {"reasoning_tokens": 12},
+                    },
+                }
+            ),
+        )
+
+    items = asyncio.run(_collect(_provider(handler)))
+
+    assert seen["body"]["stream_options"] == {"include_usage": True}
+    assert items[-1].usage is not None
+    assert items[-1].usage.input_tokens == 37
+    assert items[-1].usage.output_tokens == 14
+    assert items[-1].usage.cached_tokens == 5
+    assert items[-1].usage.reasoning_tokens == 12
+
+
+def test_stream_usage_can_be_turned_off():
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["body"] = json.loads(request.content)
+        return _events(_chunk({"content": "ok"}))
+
+    asyncio.run(_collect(_provider(handler, stream_usage=False)))
+
+    assert "stream_options" not in seen["body"]
+
+
+def test_stream_retries_without_usage_when_the_provider_rejects_it():
+    bodies = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        bodies.append(body)
+        if "stream_options" in body:
+            return httpx.Response(400, json={"error": "unknown field stream_options"})
+        return _events(_chunk({"content": "ok"}))
+
+    items = asyncio.run(_collect(_provider(handler)))
+
+    assert len(bodies) == 2
+    assert "stream_options" in bodies[0]
+    assert "stream_options" not in bodies[1]
+    assert items[-1].text == "ok"
+    assert items[-1].usage is None
 
 
 def test_stream_reports_an_error_event_from_the_provider():

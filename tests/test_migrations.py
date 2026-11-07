@@ -15,13 +15,30 @@ def test_migrations_create_the_full_schema(tmp_path, monkeypatch):
     command.upgrade(config, "head")
 
     tables = set(inspect(make_engine(url)).get_table_names())
-    assert {"user", "campaign", "event", "user_session", "admin_audit", "llm_model"} <= tables
+    assert {
+        "user",
+        "campaign",
+        "event",
+        "user_session",
+        "admin_audit",
+        "llm_model",
+        "llm_usage",
+        "credit_entry",
+    } <= tables
     campaign_columns = {
         column["name"] for column in inspect(make_engine(url)).get_columns("campaign")
     }
     assert "setting" in campaign_columns
     assert "table_genres" in campaign_columns
     assert "game_version" in campaign_columns
+    assert "force_credit_charges" in campaign_columns
+    user_columns = {column["name"] for column in inspect(make_engine(url)).get_columns("user")}
+    assert "credit_balance" in user_columns
+    model_columns = {
+        column["name"] for column in inspect(make_engine(url)).get_columns("llm_model")
+    }
+    assert "credits_per_turn" in model_columns
+    assert "stream_usage" in model_columns
 
 
 def test_migrations_can_be_reversed(tmp_path, monkeypatch):

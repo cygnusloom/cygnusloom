@@ -19,7 +19,7 @@
     {% if rows %}
       <table>
         <thead>
-          <tr><th>Account</th><th>Roles</th><th>Status</th><th>Campaigns</th><th>Sessions</th><th>Last sign-in</th><th>Created</th></tr>
+          <tr><th>Account</th><th>Roles</th><th>Status</th><th>Credits</th><th>Campaigns</th><th>Sessions</th><th>Last sign-in</th><th>Created</th></tr>
         </thead>
         <tbody>
           {% for row in rows %}
@@ -30,6 +30,7 @@
               </td>
               <td>{% for role in row.user.roles|roles %}<span class="tag">{{ role }}</span>{% endfor %}</td>
               <td>{{ "disabled" if row.user.disabled else "active" }}</td>
+              <td>{{ row.user.credit_balance }}</td>
               <td>{{ row.campaign_count }}</td>
               <td>{{ row.active_sessions }}</td>
               <td>{{ row.user.last_login_at.strftime("%Y-%m-%d %H:%M") if row.user.last_login_at else "never" }}</td>

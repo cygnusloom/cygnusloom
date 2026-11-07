@@ -39,6 +39,19 @@ server-sent event stream, so a turn one player starts appears for the whole tabl
 reload. The owner can remove a player and choose whether that player's character leaves the
 story or stays as a shared, unclaimed part.
 
+## Credits
+
+Each account has a credit balance. An administrator sets a flat price per AI GM reply on every
+model under **Admin > Models**, and the campaign owner pays that price when a reply is saved.
+The price is shown in the campaign's model picker. Administrators and the single-player account
+are exempt, and a debug campaign can force charges to test the flow. Payment is not integrated:
+an administrator grants credits by setting an account's balance on its admin page.
+
+The models page also shows measured token use per model (input, cached input, output, reasoning,
+and estimated calls) so an administrator can choose a fair reply price. A provider that does not
+report usage is estimated at about four characters per token. Streamed usage requests can be
+turned off per model for OpenAI-compatible servers that reject the `stream_options` field.
+
 ## Local development
 
 Requires Python 3.12+, [uv](https://docs.astral.sh/uv/), and OpenSSL:

@@ -39,6 +39,10 @@
         <dd class="mono">{{ row.base_url or "provider default" }}</dd>
         <dt>API key</dt>
         <dd>{{ "configured" if row.api_key_set else "not configured" }}</dd>
+        <dt>Credits per reply</dt>
+        <dd>{{ row.credits_per_turn if row.credits_per_turn else "free" }}</dd>
+        <dt>Stream usage</dt>
+        <dd>{{ "requested" if row.stream_usage else "not requested" }}</dd>
       </dl>
       {% if row.row_id %}
         <form method="post" action="/admin/models/{{ row.row_id }}/update" class="admin-form">
@@ -52,6 +56,15 @@
             API key
             <input type="password" name="api_key" autocomplete="new-password"
                    placeholder="{{ 'leave blank to keep current' if row.api_key_set else 'optional' }}">
+          </label>
+          <label>
+            Credits per reply
+            <input type="number" name="credits_per_turn" min="0" step="1"
+                   value="{{ row.credits_per_turn }}" required>
+          </label>
+          <label class="show-hidden-option">
+            <input type="checkbox" name="stream_usage" value="1" {% if row.stream_usage %}checked{% endif %}>
+            Request token usage in streamed replies
           </label>
           <label class="show-hidden-option">
             <input type="checkbox" name="clear_api_key" value="1"> Clear API key
@@ -114,6 +127,14 @@
         API key
         <input type="password" name="api_key" autocomplete="new-password" placeholder="optional">
       </label>
+      <label>
+        Credits per reply
+        <input type="number" name="credits_per_turn" min="0" step="1" value="0" required>
+      </label>
+      <label class="show-hidden-option">
+        <input type="checkbox" name="stream_usage" value="1" checked>
+        Request token usage in streamed replies
+      </label>
       <label class="show-hidden-option">
         <input type="checkbox" name="is_default" value="1"> Make default
       </label>
@@ -126,5 +147,43 @@
       <span class="mono">fake</span>. For Ollama on the Docker host, use an address the app
       container can reach, not <span class="mono">localhost</span>.
     </p>
+  </section>
+
+  <section class="card">
+    <div class="heading">
+      <h2>Measured usage</h2>
+      <span class="muted">Token counts from completed AI GM replies</span>
+    </div>
+    <p class="muted">
+      These are the actual tokens each model used, when the provider reports them. Use the
+      averages per reply to choose the credits-per-reply price above. Estimates are marked; a
+      provider that reports no usage is about four characters per token.
+    </p>
+    {% if usage %}
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th><th>Calls</th><th>Replies</th><th>Avg input</th><th>Avg cached</th>
+            <th>Avg output</th><th>Estimated calls</th><th>Credits charged</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in usage %}
+            <tr>
+              <td class="mono">{{ row.model }}</td>
+              <td>{{ row.calls }}</td>
+              <td>{{ row.replies }}</td>
+              <td>{{ row.avg_input_tokens }}</td>
+              <td>{{ row.avg_cached_tokens }}</td>
+              <td>{{ row.avg_output_tokens }}</td>
+              <td>{{ row.estimated_calls }}</td>
+              <td>{{ row.credits_charged }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="muted">No replies have been measured yet.</p>
+    {% endif %}
   </section>
 {% endblock %}

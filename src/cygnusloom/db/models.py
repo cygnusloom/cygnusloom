@@ -24,6 +24,9 @@ class User(SQLModel, table=True):
     email_verified: bool = Field(default=False)
     display_name: str = Field(default="", max_length=120)
     roles: str = Field(default="[]", sa_column=Column(Text, nullable=False))
+    # Credits a player spends on AI GM replies. Administrators and the single-player account are
+    # exempt, so the balance is informational for them unless a debug campaign forces charges.
+    credit_balance: int = Field(default=0)
     disabled: bool = Field(default=False)
     created_at: datetime = Field(default_factory=utcnow)
     last_login_at: datetime | None = Field(default=None)
@@ -31,7 +34,12 @@ class User(SQLModel, table=True):
 
 class LlmModel(SQLModel, table=True):
     """A language model an administrator made available. `provider` and `model` form the id
-    `provider/model` used by campaigns. API keys are encrypted with the application secret."""
+    `provider/model` used by campaigns. API keys are encrypted with the application secret.
+
+    `credits_per_turn` is the average price of one completed AI GM reply with this model. It is
+    shown in the campaign's model picker and deducted from the campaign owner's balance.
+    `stream_usage` asks the provider for token counts in streamed replies; turn it off for an
+    OpenAI-compatible server that rejects the `stream_options` request field."""
 
     __tablename__ = "llm_model"
     __table_args__ = (UniqueConstraint("provider", "model"),)
@@ -41,8 +49,51 @@ class LlmModel(SQLModel, table=True):
     model: str = Field(max_length=120)
     base_url: str = Field(default="", max_length=500)
     api_key: str = Field(default="", sa_column=Column(Text, nullable=False))
+    credits_per_turn: int = Field(default=0)
+    stream_usage: bool = Field(default=True)
     enabled: bool = Field(default=True)
     is_default: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class LlmUsage(SQLModel, table=True):
+    """Measured token use for one model call. Rows are grouped by `reply_event_id` so an
+    administrator can see what a completed AI GM reply actually costs. Usage is kept for exempt
+    accounts too, which makes it the source for choosing each model's `credits_per_turn`.
+    User and campaign ids are snapshots: deleting either does not erase the measurement."""
+
+    __tablename__ = "llm_usage"
+
+    id: int | None = Field(default=None, primary_key=True)
+    campaign_id: int = Field(index=True)
+    user_id: int = Field(index=True)
+    reply_event_id: int | None = Field(default=None, index=True)
+    model: str = Field(default="", index=True, max_length=120)
+    input_tokens: int = Field(default=0)
+    output_tokens: int = Field(default=0)
+    cached_tokens: int = Field(default=0)
+    reasoning_tokens: int = Field(default=0)
+    # True when the provider reported no usage and the counts were estimated from text.
+    estimated: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class CreditEntry(SQLModel, table=True):
+    """An append-only change to an account's credit balance. `balance_after` makes the history
+    readable even after later charges, and `event_id` links a turn charge to the GM reply it paid
+    for so a rollback can refund it. User and campaign ids are snapshots."""
+
+    __tablename__ = "credit_entry"
+
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    campaign_id: int | None = Field(default=None, index=True)
+    event_id: int | None = Field(default=None, index=True)
+    model: str = Field(default="", max_length=120)
+    delta: int
+    balance_after: int
+    reason: str = Field(max_length=32)
+    note: str = Field(default="", sa_column=Column(Text, nullable=False))
     created_at: datetime = Field(default_factory=utcnow)
 
 
@@ -91,7 +142,8 @@ class Campaign(SQLModel, table=True):
     the campaign can be upgraded. `setting` is the optional free-form setting or story the player
     asked for at creation; it reaches the GM's prompt every turn and is blank when the player left
     it out. `table_genres` is the optional JSON list of genres the player narrowed the generation
-    tables to at creation; blank means the rule set's own choice."""
+    tables to at creation; blank means the rule set's own choice. `force_credit_charges` is a
+    debug-panel switch that charges an otherwise exempt administrator account in this campaign."""
 
     __tablename__ = "campaign"
 
@@ -104,6 +156,7 @@ class Campaign(SQLModel, table=True):
     game_version: str = Field(default="", max_length=64)
     setting: str = Field(default="", sa_column=Column(Text, nullable=False))
     table_genres: str = Field(default="", sa_column=Column(Text, nullable=False))
+    force_credit_charges: bool = Field(default=False)
     created_at: datetime = Field(default_factory=utcnow)
 
 

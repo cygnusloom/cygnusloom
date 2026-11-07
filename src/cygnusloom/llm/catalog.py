@@ -17,6 +17,7 @@ from cygnusloom.services.common import Conflict, InvalidInput, NotFound, session
 
 _PROVIDER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 _MAX_MODEL_ID = 120
+_MAX_TURN_PRICE = 1_000_000
 
 
 def _fernet(secret: str) -> Fernet:
@@ -42,7 +43,10 @@ def decrypt_api_key(secret: str, value: str) -> str:
 @dataclass(frozen=True)
 class ModelSpec:
     """One configured model. `api_key` is decrypted for the provider factory and must never be
-    put in a template; `api_key_set` is the only key information the admin page shows."""
+    put in a template; `api_key_set` is the only key information the admin page shows.
+
+    `credits_per_turn` is shown in the campaign model picker. `stream_usage` asks the provider
+    for exact token counts in streamed replies; usage measurements never affect the charge."""
 
     row_id: int | None
     provider: str
@@ -50,6 +54,8 @@ class ModelSpec:
     base_url: str
     api_key: str
     api_key_set: bool
+    credits_per_turn: int
+    stream_usage: bool
     enabled: bool
     is_default: bool
 
@@ -80,6 +86,12 @@ def _check_base_url(provider: str, base_url: str) -> str:
     return base_url
 
 
+def _check_turn_price(value: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= _MAX_TURN_PRICE:
+        raise InvalidInput(f"credits per turn must be a whole number from 0 to {_MAX_TURN_PRICE}")
+    return value
+
+
 class ModelCatalog:
     """Reads the current model list. Changes are made by administrators through the admin UI."""
 
@@ -108,6 +120,8 @@ class ModelCatalog:
                     base_url=self.settings.provider_base_urls.get(provider, ""),
                     api_key=self.settings.provider_api_keys.get(provider, ""),
                     api_key_set=bool(self.settings.provider_api_keys.get(provider)),
+                    credits_per_turn=0,
+                    stream_usage=True,
                     enabled=True,
                     is_default=model_id == default,
                 )
@@ -121,6 +135,8 @@ class ModelCatalog:
                 base_url=first.base_url,
                 api_key=first.api_key,
                 api_key_set=first.api_key_set,
+                credits_per_turn=first.credits_per_turn,
+                stream_usage=first.stream_usage,
                 enabled=first.enabled,
                 is_default=True,
             )
@@ -134,6 +150,8 @@ class ModelCatalog:
             base_url=row.base_url,
             api_key=decrypt_api_key(self.settings.secret_key, row.api_key),
             api_key_set=bool(row.api_key),
+            credits_per_turn=row.credits_per_turn,
+            stream_usage=row.stream_usage,
             enabled=row.enabled,
             is_default=row.is_default,
         )
@@ -170,6 +188,19 @@ class ModelCatalog:
                 return spec.base_url or None, spec.api_key or None
         return None, None
 
+    def stream_usage(self, model_id: str) -> bool:
+        """Whether this model should ask for token usage in streamed replies."""
+        provider, separator, model = model_id.partition("/")
+        if not separator:
+            return True
+        with session_scope(self.engine) as db:
+            value = db.execute(
+                select(LlmModel.stream_usage).where(
+                    LlmModel.provider == provider, LlmModel.model == model
+                )
+            ).scalar_one_or_none()
+        return True if value is None else bool(value)
+
     def seed_from_env(self) -> int:
         """Copy the environment list into an empty catalog, once. Existing rows are never
         overwritten, so administrator edits survive restarts."""
@@ -186,6 +217,8 @@ class ModelCatalog:
                         model=spec.model,
                         base_url=spec.base_url,
                         api_key=encrypt_api_key(self.settings.secret_key, spec.api_key),
+                        credits_per_turn=spec.credits_per_turn,
+                        stream_usage=spec.stream_usage,
                         enabled=True,
                         is_default=spec.is_default,
                         created_at=utcnow(),
@@ -201,10 +234,13 @@ class ModelCatalog:
         base_url: str = "",
         api_key: str = "",
         *,
+        credits_per_turn: int = 0,
+        stream_usage: bool = True,
         is_default: bool = False,
     ) -> ModelSpec:
         provider, model, _ = _identity(provider, model)
         base_url = _check_base_url(provider, base_url)
+        credits_per_turn = _check_turn_price(credits_per_turn)
         # An environment-only list becomes editable before the first database change.
         self.seed_from_env()
         with session_scope(self.engine) as db:
@@ -226,6 +262,8 @@ class ModelCatalog:
                 model=model,
                 base_url=base_url,
                 api_key=encrypt_api_key(self.settings.secret_key, api_key),
+                credits_per_turn=credits_per_turn,
+                stream_usage=stream_usage,
                 enabled=True,
                 is_default=is_default,
             )
@@ -243,12 +281,17 @@ class ModelCatalog:
         base_url: str = "",
         api_key: str = "",
         *,
+        credits_per_turn: int | None = None,
+        stream_usage: bool | None = None,
         is_default: bool = True,
     ) -> ModelSpec:
         """Add a model, or make an existing row editable again. Used by the setup wizard, so
-        running it twice with the same details is harmless."""
+        running it twice with the same details is harmless. Pricing settings are left alone when
+        the caller omits them."""
         provider, model, _ = _identity(provider, model)
         base_url = _check_base_url(provider, base_url)
+        if credits_per_turn is not None:
+            credits_per_turn = _check_turn_price(credits_per_turn)
         self.seed_from_env()
         with session_scope(self.engine) as db:
             row = (
@@ -264,6 +307,8 @@ class ModelCatalog:
                     model=model,
                     base_url=base_url,
                     api_key=encrypt_api_key(self.settings.secret_key, api_key),
+                    credits_per_turn=credits_per_turn or 0,
+                    stream_usage=True if stream_usage is None else stream_usage,
                     enabled=True,
                     is_default=False,
                 )
@@ -275,6 +320,10 @@ class ModelCatalog:
                 # A blank key means "keep the stored one", matching the admin page.
                 if api_key:
                     row.api_key = encrypt_api_key(self.settings.secret_key, api_key)
+                if credits_per_turn is not None:
+                    row.credits_per_turn = credits_per_turn
+                if stream_usage is not None:
+                    row.stream_usage = stream_usage
                 db.add(row)
             if is_default:
                 for other in db.execute(select(LlmModel)).scalars():
@@ -291,6 +340,8 @@ class ModelCatalog:
         *,
         base_url: str,
         api_key: str | None = None,
+        credits_per_turn: int | None = None,
+        stream_usage: bool | None = None,
         enabled: bool = True,
         make_default: bool = False,
     ) -> ModelSpec:
@@ -302,6 +353,10 @@ class ModelCatalog:
             row.enabled = enabled
             if api_key is not None:
                 row.api_key = encrypt_api_key(self.settings.secret_key, api_key)
+            if credits_per_turn is not None:
+                row.credits_per_turn = _check_turn_price(credits_per_turn)
+            if stream_usage is not None:
+                row.stream_usage = stream_usage
             if make_default:
                 for other in db.execute(select(LlmModel)).scalars():
                     other.is_default = False

@@ -13,6 +13,7 @@ from cygnusloom.auth.deps import (
     verify_csrf,
 )
 from cygnusloom.services import admin as service
+from cygnusloom.services import credits as credit_service
 from cygnusloom.services.common import Conflict, InvalidInput, NotFound
 from cygnusloom.web.forms import form_text
 from cygnusloom.web.rendering import render
@@ -42,6 +43,14 @@ def _back(url: str) -> RedirectResponse:
 def _error(request: Request, url: str, exc: Exception) -> RedirectResponse:
     _flash(request, str(exc), "error")
     return _back(url)
+
+
+def _turn_price(form) -> int:
+    raw = form_text(form, "credits_per_turn").strip() or "0"
+    try:
+        return int(raw)
+    except ValueError:
+        raise InvalidInput("credits per turn must be a whole number")
 
 
 @router.get("")
@@ -259,6 +268,7 @@ def models_page(request: Request) -> Response:
         admin=admin,
         rows=catalog.all_specs(),
         source=catalog.source(),
+        usage=credit_service.usage_by_model(request.app.state.engine),
     )
 
 
@@ -273,6 +283,8 @@ async def add_model(request: Request) -> Response:
             form_text(form, "model"),
             form_text(form, "base_url"),
             form_text(form, "api_key"),
+            credits_per_turn=_turn_price(form),
+            stream_usage=form_text(form, "stream_usage") == "1",
             is_default=form_text(form, "is_default") == "1",
         )
     except (Conflict, InvalidInput, NotFound) as exc:
@@ -283,7 +295,11 @@ async def add_model(request: Request) -> Response:
         action="model.added",
         target_type="model",
         target_id=spec.model_id,
-        details={"default": spec.is_default},
+        details={
+            "default": spec.is_default,
+            "credits_per_turn": spec.credits_per_turn,
+            "stream_usage": spec.stream_usage,
+        },
         ip=client_ip(request),
     )
     _flash(request, f"Added {spec.model_id}.")
@@ -305,6 +321,8 @@ async def update_model(request: Request, row_id: int) -> Response:
             row_id,
             base_url=form_text(form, "base_url"),
             api_key=api_key,
+            credits_per_turn=_turn_price(form),
+            stream_usage=form_text(form, "stream_usage") == "1",
             enabled=form_text(form, "enabled") == "1",
             make_default=form_text(form, "is_default") == "1",
         )
@@ -316,7 +334,12 @@ async def update_model(request: Request, row_id: int) -> Response:
         action="model.updated",
         target_type="model",
         target_id=updated.model_id,
-        details={"enabled": updated.enabled, "default": updated.is_default},
+        details={
+            "enabled": updated.enabled,
+            "default": updated.is_default,
+            "credits_per_turn": updated.credits_per_turn,
+            "stream_usage": updated.stream_usage,
+        },
         ip=client_ip(request),
     )
     _flash(request, f"Saved {spec.model_id}.")
@@ -391,6 +414,26 @@ async def delete_model(request: Request, row_id: int) -> Response:
     )
     _flash(request, f"Deleted {spec.model_id}.")
     return _back("/admin/models")
+
+
+@router.post("/users/{user_id}/credits")
+async def set_user_credits(request: Request, user_id: int) -> Response:
+    admin = admin_user(request)
+    require_recent_auth(request, f"/admin/users/{user_id}")
+    await verify_csrf(request)
+    form = await request.form()
+    try:
+        balance = int(form_text(form, "balance"))
+        service.set_user_credits(
+            request.app.state.engine, admin, user_id, balance, ip=client_ip(request)
+        )
+    except ValueError:
+        _flash(request, "Balance must be a whole number.", "error")
+        return _back(f"/admin/users/{user_id}")
+    except (Conflict, InvalidInput, NotFound) as exc:
+        return _error(request, f"/admin/users/{user_id}", exc)
+    _flash(request, f"Credit balance set to {balance}.")
+    return _back(f"/admin/users/{user_id}")
 
 
 @router.get("/audit")

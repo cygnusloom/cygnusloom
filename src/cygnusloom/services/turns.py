@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import random
 import re
 from collections.abc import AsyncIterator, Awaitable, Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Engine
+from sqlalchemy import Engine, select
 
 from cygnusloom import __version__
 from cygnusloom.content.library import (
@@ -34,6 +35,12 @@ from cygnusloom.rules.context import ToolContext, brief
 from cygnusloom.rules.dice import roll_total
 from cygnusloom.services import encounters
 from cygnusloom.services.common import InvalidInput, NotFound, session_scope
+from cygnusloom.services.credits import (
+    CreditPolicy,
+    MeteredProvider,
+    UsageMeter,
+    refund_replies,
+)
 from cygnusloom.services.events import (
     NPC_KIND,
     PC_KIND,
@@ -104,6 +111,8 @@ if TYPE_CHECKING:
 from cygnusloom.services.world import (
     WorldTools,
 )
+
+logger = logging.getLogger(__name__)
 
 MAX_NAME = 120
 MAX_MESSAGE = 8000
@@ -371,6 +380,20 @@ def _record(engine: Engine, campaign_id: int, *events: GameEvent) -> int:
     return event_id
 
 
+def _after_reply(run: _Run, event_id: int) -> None:
+    """Finish a GM reply's accounting: attach its measured usage, then charge its price. Usage
+    is recorded even for an exempt account so administrators can see real model cost. A reply
+    that is already saved must not be lost if accounting fails; the failure is logged."""
+    try:
+        run.meter.assign(event_id)
+    except Exception:
+        logger.exception("could not record model usage for reply %s", event_id)
+    try:
+        run.credits.charge(event_id)
+    except Exception:
+        logger.exception("could not charge credits for reply %s", event_id)
+
+
 def _state(engine: Engine, campaign_id: int, before: int | None = None) -> CampaignState:
     with session_scope(engine) as db:
         return load_state(db, campaign_id, before)
@@ -399,6 +422,8 @@ class _Run:
     context_tokens: int
     provider: Provider
     model_name: str
+    credits: CreditPolicy
+    meter: UsageMeter
     ctx: ToolContext
     cursor: int
     opening: str
@@ -528,20 +553,26 @@ def _start_run(
     player_name: str = "",
 ) -> _Run:
     provider, model_name = providers(campaign.model)
+    settings = getattr(providers, "settings", None)
+    credits = CreditPolicy.for_campaign(engine, settings, campaign)
+    meter = UsageMeter(engine, campaign.id or 0, campaign.owner_id, campaign.model)
+    metered = MeteredProvider(provider, meter)
     world = library.world_content(campaign.world_template, campaign.rule_set)
     template = library.world_templates.get(campaign.world_template)
     return _Run(
         engine=engine,
-        campaign_id=campaign.id,
+        campaign_id=campaign.id or 0,
         model=campaign.model,
         rule_set=rule_set,
         context_tokens=context_tokens,
-        provider=provider,
+        provider=metered,
         model_name=model_name,
+        credits=credits,
+        meter=meter,
         ctx=_tool_context(
             engine,
             rng if rng is not None else random.Random(),
-            provider,
+            metered,
             model_name,
             campaign.id,
             rule_set,
@@ -1088,6 +1119,7 @@ def _finish_reply(run: _Run, turn: Turn, reply: str, reasoning: str) -> int:
         run.campaign_id,
         ChatGM(content=reply, model=run.model, reasoning=reasoning),
     )
+    _after_reply(run, event_id)
     # With the reply closed, the next player character's turn can start on its own. This also
     # catches a player's initiative roll that settled the order during the reply.
     with session_scope(run.engine) as db:
@@ -1485,7 +1517,7 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                     "Narrate instruction",
                     narrate_instruction(run.rule_set, run.world),
                 )
-                _record(
+                event_id = _record(
                     run.engine,
                     run.campaign_id,
                     StateStepMade(requests=[], messages=messages, context=_dicts(context)),
@@ -1496,6 +1528,7 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                         reasoning=step.reasoning,
                     ),
                 )
+                _after_reply(run, event_id)
                 yield NextMessage()
                 continue
             if turn.opening:
@@ -1506,6 +1539,7 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                 run.campaign_id,
                 ChatGM(content=reply, model=run.model, reasoning=step.reasoning),
             )
+            _after_reply(run, event_id)
             yield Saved(event_id)
             return
         yield Status("Managing state...")
@@ -1754,6 +1788,7 @@ async def stream_message(
             context_tokens,
             rng,
         )
+        run.credits.require()
         speaker = speaker_name(current, owner_id)
         _record(
             engine,
@@ -1845,6 +1880,10 @@ async def resume_turn(
             player_id=owner_id,
             player_name=_player_display(engine, owner_id),
         )
+        # An opening has not made any model calls yet, so it is a new reply and needs credit. A
+        # turn that already started is allowed to finish even if the balance has since fallen.
+        if not turn.begun:
+            run.credits.require()
         async for event in _guarded(run, _answer(run, answer)):
             yield event
 
@@ -1874,6 +1913,8 @@ async def upgrade_campaign(
         rule_set = library.rule_sets.get(campaign.rule_set)
         if rule_set is None:
             raise InvalidInput("that campaign's rule set is no longer available")
+        run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
+        run.credits.require()
         with session_scope(engine) as db:
             row = db.get(Campaign, campaign_id)
             assert row is not None
@@ -1886,7 +1927,6 @@ async def upgrade_campaign(
                 CampaignUpgraded(from_version=previous, to_version=__version__),
             )
             db.commit()
-        run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
         async for _ in _guarded(run, _carry_on(run)):
             pass
 
@@ -1915,13 +1955,14 @@ async def start_encounter_turn(
         current = _state(engine, campaign.id)
         if advancement_due(current, rule_set, current.player_character(owner_id)):
             raise InvalidInput("level up or choose your Advancement before starting a turn")
+        run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
+        run.credits.require()
         with session_scope(engine) as db:
             character = encounters.begin_turn(db, campaign.id, name)
         if character.kind == PC_KIND:
             raise InvalidInput(
                 f"{character.name} is a player character; their turn begins on its own"
             )
-        run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
         async for event in _guarded(run, _carry_on(run)):
             yield event
 
@@ -2064,6 +2105,18 @@ def rollback_to(engine: Engine, owner_id: int, campaign_id: int, event_id: int) 
         event = db.get(Event, event_id)
         if event is None or event.campaign_id != campaign_id or event.kind != ChatGM.kind:
             raise NotFound("message not found")
+        removed = (
+            db.exec(
+                select(Event.id).where(
+                    Event.campaign_id == campaign_id,
+                    Event.id > event_id,
+                    Event.kind == ChatGM.kind,
+                )
+            )
+            .scalars()
+            .all()
+        )
+        refund_replies(db, removed)
         truncate(db, campaign_id, event_id)
         db.commit()
 

@@ -19,11 +19,25 @@ class ToolRequest:
 
 
 @dataclass(frozen=True)
+class TokenUsage:
+    """The tokens a provider says one call used. `cached_tokens` is part of the input count;
+    `reasoning_tokens` is part of the output count. A provider that reports no usage leaves this
+    out, and the credit meter estimates from the text instead."""
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cached_tokens: int = 0
+    reasoning_tokens: int = 0
+
+
+@dataclass(frozen=True)
 class ChatReply:
     text: str
     tool_requests: Sequence[ToolRequest] = field(default_factory=tuple)
     # Thinking-mode models must get this back on the tool-call message that produced it.
     reasoning: str = ""
+    # Exact counts when the provider reports them, so administrators can see real usage.
+    usage: TokenUsage | None = None
 
 
 @dataclass(frozen=True)

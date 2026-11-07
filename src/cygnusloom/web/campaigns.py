@@ -23,6 +23,7 @@ from cygnusloom.content.character import NO_CAMPAIGN, NO_CHARACTER, character_sc
 from cygnusloom.db.models import User
 from cygnusloom.llm.base import LLMError
 from cygnusloom.services import campaign_files
+from cygnusloom.services import credits as credit_service
 from cygnusloom.services import level_up as level_up_service
 from cygnusloom.services.campaigns import (
     Delta,
@@ -60,6 +61,7 @@ from cygnusloom.services.campaigns import (
     send_message,
     set_campaign_label,
     set_campaign_model,
+    set_debug_credits,
     set_debug_currency,
     set_debug_injection,
     set_debug_invincibility,
@@ -871,6 +873,30 @@ async def grant_debug_advancement(request: Request, campaign_id: int) -> Respons
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
+@router.post("/{campaign_id}/debug/credits")
+async def change_debug_credits(request: Request, campaign_id: int) -> Response:
+    settings = request.app.state.settings
+    if not settings.debug_panel:
+        raise NotFound("not found")
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    try:
+        balance = int(form_text(form, "balance"))
+        set_debug_credits(
+            request.app.state.engine,
+            user.id,
+            campaign_id,
+            balance,
+            force=form_text(form, "force") == "1",
+        )
+    except ValueError:
+        return _campaign_page(request, user, campaign_id, 400, "balance must be a whole number")
+    except (InvalidInput, NotFound) as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
 @router.post("/{campaign_id}/debug/currency")
 async def change_debug_currency(request: Request, campaign_id: int) -> Response:
     settings = request.app.state.settings
@@ -1440,6 +1466,13 @@ def _campaign_page(
         world_content.rules,
         unattached_world_rules=world_content.unattached_rules,
     )
+    credit_price = credit_service.model_price(engine, campaign.model)
+    credit_balance = credit_service.balance(engine, campaign.owner_id)
+    credits_exempt = credit_price <= 0 or credit_service.is_exempt(engine, settings, campaign)
+    credits_ok = credits_exempt or credit_balance >= credit_price
+    credit_message = (
+        "" if credits_ok else credit_service.shortfall_message(engine, campaign, credit_price)
+    )
     encounter = encounter_view(
         world.state,
         rule_set.grid if rule_set else None,
@@ -1494,7 +1527,12 @@ def _campaign_page(
         "advancement_due": advancement_due,
         "advancement_available": advancement_available,
         "factions": faction_views(world.state, rule_set.tallies if rule_set else {}),
-        "models": request.app.state.catalog.model_ids(),
+        "models": request.app.state.catalog.specs(),
+        "credit_price": credit_price,
+        "credit_balance": credit_balance,
+        "credits_exempt": credits_exempt,
+        "credits_blocked": not credits_ok,
+        "credit_message": credit_message,
         "encounter": encounter,
         "encounter_rows": _encounter_rows(encounter) if encounter is not None else [],
         "local_map": local_map,
@@ -1524,7 +1562,7 @@ def _campaign_page(
         "waiting_for": interact["waiting_for"],
         "composer_blocked": interact["composer_blocked"],
         "pending_for_viewer": interact["pending_for_viewer"],
-        "auto_start": interact["auto_start"],
+        "auto_start": interact["auto_start"] and credits_ok,
         "encounter_control": interact["encounter_control"],
     }
     if fragment:

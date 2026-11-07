@@ -29,6 +29,7 @@ from cygnusloom.llm.base import (
     complete,
 )
 from cygnusloom.services import combat, encounters
+from cygnusloom.services import credits as credit_service
 from cygnusloom.services.common import Conflict, InvalidInput, NotFound, session_scope
 from cygnusloom.services.events import (
     CHARS_PER_TOKEN,
@@ -705,6 +706,29 @@ def set_debug_currency(
     get_campaign(engine, owner_id, campaign_id)
     with _exclusive(campaign_id), session_scope(engine) as db:
         return combat.add_debug_currency(db, campaign_id, name, feature, amount)
+
+
+def set_debug_credits(
+    engine: Engine, owner_id: int, campaign_id: int, balance: int, *, force: bool
+) -> None:
+    """Set the campaign owner's credit balance and choose whether an administrator is charged in
+    this campaign. Debug-only; the normal admin page handles real accounts."""
+    campaign = get_owned_campaign(engine, owner_id, campaign_id)
+    credit_service.set_balance(
+        engine,
+        campaign.owner_id,
+        balance,
+        reason=credit_service.DEBUG_REASON,
+        note=f"debug panel, campaign {campaign.id}",
+        campaign_id=campaign.id,
+        actor_id=owner_id,
+    )
+    with session_scope(engine) as db:
+        row = db.get(Campaign, campaign.id)
+        assert row is not None
+        row.force_credit_charges = force
+        db.add(row)
+        db.commit()
 
 
 def set_debug_injection(

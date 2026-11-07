@@ -26,12 +26,21 @@
     {% if is_owner %}
     <fieldset class="model-options">
       <legend class="muted">Used for every reply in this campaign, starting with the next one</legend>
-      {% for model in models %}
-        <label><input type="radio" name="model" value="{{ model }}"{% if model == campaign.model %} checked{% endif %}> {{ model }}</label>
+      {% for spec in models %}
+        <label><input type="radio" name="model" value="{{ spec.model_id }}"{% if spec.model_id == campaign.model %} checked{% endif %}> {{ spec.model_id }}
+          <span class="muted">{% if spec.credits_per_turn %}· {{ spec.credits_per_turn }} credits per reply{% else %}· free{% endif %}</span></label>
       {% endfor %}
     </fieldset>
+    {% if credit_price <= 0 %}
+      <p class="muted">This model is free.</p>
+    {% elif credits_exempt %}
+      <p class="muted">Administrator and single-player accounts are not charged for replies.</p>
     {% else %}
-    <p class="muted">The campaign owner chooses the model for every reply.</p>
+      <p class="muted">The campaign owner's balance is <strong>{{ credit_balance }}</strong> credits. The current model costs {{ credit_price }} credits per reply.</p>
+      {% if credits_blocked %}<p role="alert">{{ credit_message }}</p>{% endif %}
+    {% endif %}
+    {% else %}
+    <p class="muted">The campaign owner chooses the model for every reply.{% if credit_price %} {{ campaign.model }} costs {{ credit_price }} credits per reply and the owner has {{ credit_balance }} credits.{% else %} {{ campaign.model }} is free.{% endif %}</p>
     {% endif %}
     <label class="show-hidden-option"><input type="checkbox" data-show-hidden> Show hidden events</label>
     {% if is_owner %}

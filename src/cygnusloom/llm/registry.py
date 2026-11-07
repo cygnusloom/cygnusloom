@@ -21,16 +21,22 @@ class ProviderFactory:
         self._settings = settings
         self._fake = fake
         self._catalog = catalog
-        self._cache: dict[tuple[str, str | None, str | None], Provider] = {}
+        self._cache: dict[tuple[str, str | None, str | None, bool], Provider] = {}
+
+    @property
+    def settings(self) -> Settings:
+        """The deployment settings, used by credit exemption checks."""
+        return self._settings
 
     def __call__(self, model_id: str) -> tuple[Provider, str]:
         name, sep, model = model_id.partition("/")
         if not sep or not model:
             raise LLMError(f"model id {model_id!r} must look like provider/model")
         base_url, api_key = self._config(name)
-        cache_key = (name, base_url, api_key)
+        stream_usage = self._catalog.stream_usage(model_id) if self._catalog else True
+        cache_key = (name, base_url, api_key, stream_usage)
         if cache_key not in self._cache:
-            self._cache[cache_key] = self._build(name, base_url, api_key)
+            self._cache[cache_key] = self._build(name, base_url, api_key, stream_usage)
         return self._cache[cache_key], model
 
     def _config(self, name: str) -> tuple[str | None, str | None]:
@@ -40,9 +46,11 @@ class ProviderFactory:
         base_url = self._settings.provider_base_urls.get(name) or DEFAULT_BASE_URLS.get(name)
         return base_url, self._settings.provider_api_keys.get(name)
 
-    def _build(self, name: str, base_url: str | None, api_key: str | None) -> Provider:
+    def _build(
+        self, name: str, base_url: str | None, api_key: str | None, stream_usage: bool
+    ) -> Provider:
         if name == "fake":
             return self._fake or FakeProvider()
         if base_url is None:
             raise LLMError(f"no provider configured for {name!r}")
-        return OpenAICompatProvider(name, base_url, api_key=api_key)
+        return OpenAICompatProvider(name, base_url, api_key=api_key, stream_usage=stream_usage)

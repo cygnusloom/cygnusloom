@@ -19,7 +19,7 @@
           </div>
           {% endif %}
           <div class="transcript-wrap">
-          <div class="transcript" data-transcript data-gm-state="{{ 'busy' if gm_busy or (pending and pending.auto_continue) else 'waiting' }}" data-last-event="{{ last_event }}" data-turn-status="{{ turn_status }}">
+          <div class="transcript" data-transcript data-gm-state="{{ 'busy' if gm_busy or (pending and pending.auto_continue and auto_start) else 'waiting' }}" data-last-event="{{ last_event }}" data-turn-status="{{ turn_status }}">
             {% for message in transcript %}
               {% if message.role == "log" %}
               <div class="log-line{% if message.hidden %} hidden-event{% endif %}">{{ message.content }}</div>
@@ -87,6 +87,7 @@
                 {% elif pending.auto_continue %}
                   <div class="pending-prompt">
                     <p class="muted">The GM is opening the campaign.</p>
+                    {% if credits_blocked %}<p role="alert">{{ credit_message }}</p>{% endif %}
                     {% if pending_for_viewer %}
                     <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action{% if auto_start %} data-auto-start{% endif %}>
                       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -125,6 +126,7 @@
           <button type="button" class="jump-to-bottom" data-jump-to-bottom hidden aria-label="Jump to newest messages" title="Jump to newest messages"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v15"/><path d="m5 12 7 7 7-7"/></svg></button>
           </div>
           <p class="turn-error" role="alert" hidden></p>
+          {% if credits_blocked %}<p class="turn-note" role="alert">{{ credit_message }}</p>{% endif %}
           {% if encounter %}
           {% set actor = encounter.participants | selectattr("acting") | first %}
           {% set next = encounter.participants | selectattr("next") | first %}
@@ -145,7 +147,7 @@
               <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/stream" data-encounter-turn>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="name" value="{{ next.name }}">
-                <button type="submit"{% if pending %} disabled{% endif %}>Start {{ next.name }}'s turn</button>
+                <button type="submit"{% if pending or credits_blocked %} disabled{% endif %}>Start {{ next.name }}'s turn</button>
               </form>
             {% elif actor %}
               <p class="muted">{{ actor.name }} is taking their turn. The turn ends when the GM finishes it.</p>
@@ -168,9 +170,9 @@
           {% endif %}
           {% if waiting_for %}<p class="turn-note" data-turn-note role="status">{{ waiting_for }}</p>{% else %}<p class="turn-note" data-turn-note role="status" hidden></p>{% endif %}
           <p class="typing-note" data-typing-note role="status" hidden></p>
-          <form method="post" action="/campaigns/{{ campaign.id }}/messages" data-stream-action="/campaigns/{{ campaign.id }}/messages/stream" data-player-name="{{ acting_name }}" data-blocked="{{ '1' if (pending or advancement_due or composer_blocked) else '0' }}" class="composer" id="composer"{% if members|length > 1 %} data-typing-url="/campaigns/{{ campaign.id }}/typing" data-viewer-id="{{ viewer_id }}"{% endif %}>
+          <form method="post" action="/campaigns/{{ campaign.id }}/messages" data-stream-action="/campaigns/{{ campaign.id }}/messages/stream" data-player-name="{{ acting_name }}" data-blocked="{{ '1' if (pending or advancement_due or composer_blocked or credits_blocked) else '0' }}" class="composer" id="composer"{% if members|length > 1 %} data-typing-url="/campaigns/{{ campaign.id }}/typing" data-viewer-id="{{ viewer_id }}"{% endif %}>
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <textarea name="content" rows="3" required maxlength="8000" placeholder="{{ ('Level up first' if advancement_due else (waiting_for if waiting_for else ('Answer the GM above first' if pending else 'Message'))) }}"{% if pending or advancement_due or composer_blocked %} disabled{% endif %}>{{ draft }}</textarea>
+            <textarea name="content" rows="3" required maxlength="8000" placeholder="{{ ('Add credits to continue' if credits_blocked else ('Level up first' if advancement_due else (waiting_for if waiting_for else ('Answer the GM above first' if pending else 'Message')))) }}"{% if pending or advancement_due or composer_blocked or credits_blocked %} disabled{% endif %}>{{ draft }}</textarea>
             <div class="composer-actions">
               <div class="composer-tools">
                 <span class="context-meter" aria-label="Context usage" title="Estimated prompt size against the context window. At {{ '{:,}'.format(context.summary_at) }} tokens, older messages are summarized and the newest ones stay verbatim.">
@@ -179,7 +181,7 @@
                 </span>
                 <button type="button" class="composer-settings" data-dialog-target="dialog-settings" aria-haspopup="dialog" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
               </div>
-              <button type="submit"{% if pending or advancement_due or composer_blocked %} disabled{% endif %}>Send</button>
+              <button type="submit"{% if pending or advancement_due or composer_blocked or credits_blocked %} disabled{% endif %}>Send</button>
             </div>
           </form>
         </section>
@@ -310,6 +312,16 @@
             {% if debug_panel %}
             <div class="tab-panel" role="tabpanel" id="panel-debug" aria-labelledby="tab-debug" hidden>
               <p class="muted">Debug buffs for testing. Only offered when CYGNUSLOOM_DEBUG_PANEL is set.</p>
+              <form method="post" action="/campaigns/{{ campaign.id }}/debug/credits">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <p>Credits for the campaign owner. The current model costs {{ credit_price }} credits per reply.</p>
+                <label>Balance <input type="number" name="balance" min="0" value="{{ credit_balance }}" required></label>
+                <label class="show-hidden-option">
+                  <input type="checkbox" name="force" value="1" {% if campaign.force_credit_charges %}checked{% endif %}>
+                  Charge credits even for administrators in this campaign
+                </label>
+                <button type="submit">Save credits</button>
+              </form>
               <form method="post" action="/campaigns/{{ campaign.id }}/debug/invincibility">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="name" value="{{ player_name }}">

@@ -22,6 +22,7 @@ from cygnusloom.db.models import (
     UserSession,
     utcnow,
 )
+from cygnusloom.services import credits as credit_service
 from cygnusloom.services.accounts import decode_roles, get_user
 from cygnusloom.services.common import (
     Conflict,
@@ -400,6 +401,34 @@ def record_audit(
     with session_scope(engine) as db:
         db.add(row)
         db.commit()
+
+
+def set_user_credits(
+    engine: Engine, actor: User, user_id: int, balance: int, *, ip: str = ""
+) -> int:
+    """Set an account's credit balance. Payment is handled outside Cygnus Loom, so an
+    administrator is the only source of credits."""
+    user = get_user(engine, user_id)
+    balance = credit_service.validate_credits(balance)
+    previous = user.credit_balance
+    credit_service.set_balance(
+        engine,
+        user_id,
+        balance,
+        reason=credit_service.ADMIN_REASON,
+        note=f"set by administrator {actor.email or actor.id}",
+        actor_id=actor.id,
+    )
+    record_audit(
+        engine,
+        actor=actor,
+        action="user.credits_set",
+        target_type="user",
+        target_id=str(user_id),
+        details={"before": previous, "after": balance},
+        ip=ip,
+    )
+    return balance
 
 
 def set_user_disabled(

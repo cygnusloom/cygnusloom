@@ -33,6 +33,23 @@
   </section>
 
   <section class="card">
+    <div class="heading">
+      <h2>Credits</h2>
+      <span class="tag">{{ detail.user.credit_balance }} credits</span>
+    </div>
+    <p class="muted">
+      One reply price is deducted from this balance for every completed AI GM reply in a
+      campaign this account owns. Administrators and the single-player account are exempt.
+      Payment is handled outside Cygnus Loom, so an administrator adds credits here.
+    </p>
+    <form method="post" action="/admin/users/{{ detail.user.id }}/credits" class="admin-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Set balance <input type="number" name="balance" min="0" value="{{ detail.user.credit_balance }}" required></label>
+      <button type="submit">Save balance</button>
+    </form>
+  </section>
+
+  <section class="card">
     <h2>Moderation</h2>
     <div class="admin-actions">
       {% if detail.user.id != admin.id %}
