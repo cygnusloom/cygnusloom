@@ -916,15 +916,22 @@ def _player_lines(state: CampaignState, pcs: Sequence[Character]) -> list[str]:
     return lines
 
 
+def _npc_state_name(npc: Character) -> str:
+    """An NPC as the turn orientation lists them: the name and the traits a player can see. The
+    personality is there so the GM can weigh how likely the NPC is to speak unprompted."""
+    tags = ["story only, no stats yet"] if npc.story_only else []
+    if npc.personality and not npc.dead:
+        tags.append(npc.personality)
+    return f"{npc.name} ({'; '.join(tags)})" if tags else npc.name
+
+
 def _place_here_lines(
     state: CampaignState, location: str, npc_heading: str, object_heading: str
 ) -> list[str]:
-    """The NPCs, their pronouns, the objects, and the nested places at one location."""
+    """The NPCs, their personalities, their pronouns, the objects, and the nested places at one
+    location."""
     lines: list[str] = []
-    names = [
-        f"{npc.name} (story only, no stats yet)" if npc.story_only else npc.name
-        for npc in _npcs_at(state, location)
-    ]
+    names = [_npc_state_name(npc) for npc in _npcs_at(state, location)]
     lines.append(f"{npc_heading}: {', '.join(names) if names else 'none'}.")
     for npc in _npcs_at(state, location):
         if npc.pronouns:

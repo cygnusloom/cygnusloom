@@ -612,7 +612,7 @@
     "name": "speak",
     "python_module": "core",
     "function": "speak",
-    "description": "Get the exact words an NPC says. A separate step writes the dialogue from the NPC's personality, accent, and quirks, so give the intent, not the words. The NPC should be at the player character's location; if not, nothing is written and a warning is returned, unless force is true. In combat, speak only for a line that changes what the player must decide. Quote the returned dialogue as it is.",
+    "description": "Get the exact words an NPC says. A separate step writes the dialogue from the NPC's personality, accent, and quirks, so give the intent, not the words. Speak sparingly: call it only when the player character is speaking to this NPC or the NPC must say something the player needs to hear; most actions need description, not dialogue. An NPC the player has not addressed speaks unprompted only when their personality makes it likely. The NPC should be at the player character's location; if not, nothing is written and a warning is returned, unless force is true. In combat, speak only for a line that changes what the player must decide. Quote the returned dialogue as it is.",
     "parameters": {
       "type": "object",
       "properties": {

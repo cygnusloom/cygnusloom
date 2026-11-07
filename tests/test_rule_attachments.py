@@ -136,7 +136,7 @@ def test_nothing_attached_gives_no_text(client_factory: Callable[[], TestClient]
 def test_a_story_only_npc_here_is_marked_in_the_world_state(
     client_factory: Callable[[], TestClient],
 ):
-    _, _, state, _ = _with_vuk_in_the_yard(client_factory)
+    _, _, state, vuk = _with_vuk_in_the_yard(client_factory)
     text = world_state_text(
         state,
         CAIRN.campaign,
@@ -146,7 +146,7 @@ def test_a_story_only_npc_here_is_marked_in_the_world_state(
         clock_rules=CAIRN.clock,
         inventory=CAIRN.inventory,
     )
-    assert f"{VUK} (story only, no stats yet)" in text
+    assert f"{VUK} (story only, no stats yet; {vuk.personality})" in text
 
 
 def test_present_rules_get_their_own_system_part():

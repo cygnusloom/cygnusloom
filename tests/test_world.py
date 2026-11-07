@@ -481,9 +481,10 @@ def test_moving_the_player_changes_the_world_state(client_factory: Callable[[], 
         {"mode": "in_settlement", "name": "Ada", "location": "Glowcap Ring"},
     )
     assert moved == {"moved": "Ada", "location": "Glowcap Ring"}
+    brin = _actors(app, campaign_id)["Brin Gallowcap"]
     text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
     assert "Player character: Ada, at Glowcap Ring." in text
-    assert "NPCs here: Brin Gallowcap." in text
+    assert f"NPCs here: Brin Gallowcap ({brin.personality})." in text
 
 
 def test_moving_needs_a_known_character_and_location(client_factory: Callable[[], TestClient], app):
@@ -533,8 +534,9 @@ def test_an_npc_can_go_into_the_wind_and_be_brought_back(
         {"mode": "in_settlement", "name": "Brin Gallowcap", "location": "Glowcap Ring"},
     )
     assert back == {"moved": "Brin Gallowcap", "location": "Glowcap Ring"}
+    brin = _actors(app, campaign_id)["Brin Gallowcap"]
     text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
-    assert "NPCs here: Brin Gallowcap." in text
+    assert f"NPCs here: Brin Gallowcap ({brin.personality})." in text
     assert "in the wind" not in text
 
 

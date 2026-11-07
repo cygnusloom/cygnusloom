@@ -51,7 +51,7 @@
     "type": "rule",
     "id": "speech",
     "important": true,
-    "text": "NPC dialogue is written separately. Never write an NPC's words in the narration yourself. To make an NPC speak, call speak with the NPC's name and what they want to say. Then quote the dialogue exactly as the tool returns it."
+    "text": "NPC dialogue is written separately. Never write an NPC's words in the narration yourself. To make an NPC speak, call speak with the NPC's name and what they want to say. Then quote the dialogue exactly as the tool returns it. Speak only when the moment turns on what is said: the player character speaks to an NPC, an NPC must give information, or a scene needs an exchange. Routine actions and observations are description, not dialogue. An NPC the player has not addressed speaks unprompted only when their personality makes it likely and the moment calls for it. When in doubt, they stay silent."
   },
   {
     "type": "table",

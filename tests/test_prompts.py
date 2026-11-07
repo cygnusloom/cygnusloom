@@ -100,6 +100,30 @@ def test_speech_instruction_asks_for_plain_unhurried_lines():
     assert "Keep the one or two points the intent gives and stop" in text
 
 
+def test_speech_instruction_asks_for_plain_modern_speech():
+    text = speech_instruction(None)
+    assert "not a character in an old novel" in text
+    assert "everyday words, contractions" in text
+    assert "no old-fashioned or literary words" in text
+    assert "Ignore the style of the narration" in text
+
+
+def test_state_prompt_keeps_dialogue_for_moments_that_turn_on_speech():
+    text = state_instruction(rules_for())
+    assert "Call speak only when the moment turns on what is said" in text
+    assert "Most actions need no dialogue at all" in text
+    assert "An NPC the player has not addressed" in text
+    assert "personality makes it likely" in text
+    assert "when in doubt, keep them silent" in text
+
+
+def test_narration_does_not_invent_dialogue_when_none_is_queued():
+    text = narrate_instruction(CAIRN)
+    assert "when no lines are queued, no NPC speaks in the narration" in text
+    assert "Do not invent an NPC's greeting, remark, or reply" in text
+    assert "not archaic or old-fashioned ones" in text
+
+
 def test_every_rule_set_narrates_in_plain_present_tense():
     """The tense and plain-prose rules belong to the engine, not to one world or rule set."""
     for rule_set_id, rule_set in content_library().rule_sets.items():
