@@ -492,6 +492,17 @@
         fresh
           .closest(".side")
           ?.classList.toggle("in-encounter", Boolean(fresh.querySelector("#panel-encounter")));
+        // The roster lives in the Location tab; the map response carries its fresh copy.
+        const freshRoster = template.content.querySelector("[data-map-roster]");
+        const locationPanel = document.querySelector("#panel-location");
+        const currentRoster = locationPanel?.querySelector("[data-map-roster]");
+        if (freshRoster) {
+          if (currentRoster) currentRoster.replaceWith(freshRoster);
+          else locationPanel?.append(freshRoster);
+        } else {
+          currentRoster?.remove();
+        }
+        locationPanel?.classList.toggle("with-roster", Boolean(freshRoster));
         window.initWorkspaceTabs?.(fresh);
         if (selected) window.workspaceSelectTab?.(selected);
         window.initMapViews?.(fresh);

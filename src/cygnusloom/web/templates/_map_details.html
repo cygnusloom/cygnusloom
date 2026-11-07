@@ -1,0 +1,44 @@
+{# The map's caption and who is on it: turn order during a fight, or cells outside one. It sits
+   in the Location tab beside the place's details, so the board keeps the whole map panel. #}
+{% if encounter %}
+<div class="map-caption">
+  <p><strong>{{ encounter.map }}</strong> <span class="muted">{{ encounter.location }}, round {{ encounter.round }}</span></p>
+  {% if encounter.description %}<p class="muted">{{ encounter.description }}</p>{% endif %}
+  {% if not encounter.participants %}<p class="muted">No one has joined yet.</p>{% endif %}
+</div>
+{% if encounter.participants %}
+<p><strong>Turn order</strong></p>
+<ul class="encounter-roster" aria-label="Turn order">
+  {% for participant in encounter.participants %}
+  <li{% if participant.acting %} class="acting"{% endif %}>
+    <span class="muted">{{ participant.number }}.</span>
+    <strong>{{ participant.name }}</strong>
+    {% if participant.creature %}<span class="muted">{{ participant.creature }}</span>{% endif %}
+    {% if participant.is_pc %}<span class="muted">(you)</span>{% endif %}
+    {% if participant.status %}<span class="roster-status">{{ participant.status }}</span>{% endif %}
+    {% if participant.acting %}<span class="roster-state">acting</span>{% elif participant.next %}<span class="roster-state muted">next</span>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% elif local_map %}
+<div class="map-caption">
+  <p><strong>{{ local_map.map }}</strong> <span class="muted">{{ local_map.location }}</span></p>
+  {% if local_map.description %}<p class="muted">{{ local_map.description }}</p>{% endif %}
+</div>
+{% if local_map.participants %}
+<p><strong>People and props here</strong></p>
+<ul class="encounter-roster" aria-label="People and props here">
+  {% for participant in local_map.participants %}
+  <li>
+    <span class="muted">{{ participant.number }}.</span>
+    <strong>{{ participant.name }}</strong>
+    {% if participant.creature %}<span class="muted">{{ participant.creature }}</span>{% endif %}
+    {% if participant.is_pc %}<span class="muted">(you)</span>{% endif %}
+    {% if participant.cell %}<span class="muted">column {{ participant.cell[0] }}, row {{ participant.cell[1] }}</span>{% else %}<span class="muted">not yet placed</span>{% endif %}
+    {% if participant.status %}<span class="roster-status">{{ participant.status }}</span>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% endif %}

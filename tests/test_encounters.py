@@ -733,7 +733,7 @@ def test_campaign_page_says_when_no_one_is_on_the_encounter_map(
     assert '<span class="map-token">Pip</span>' in page
 
 
-def test_campaign_page_lists_the_encounter_turn_order_under_the_map(
+def test_campaign_page_lists_the_encounter_turn_order_in_the_location_panel(
     client_factory: Callable[[], TestClient],
 ):
     client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
@@ -743,9 +743,10 @@ def test_campaign_page_lists_the_encounter_turn_order_under_the_map(
 
     page = client.get(f"/campaigns/{campaign_id}").text
     assert 'class="side in-encounter"' in page
+    assert 'class="tab-panel location-panel with-roster"' in page
     roster = page[page.index('class="encounter-roster"') :]
     assert roster.index("Pip") < roster.index("Ada")
-    assert page.index('class="encounter-roster"') < page.index('aria-label="Panels"')
+    assert page.index('aria-label="Panels"') < page.index('class="encounter-roster"')
 
     _begin(app, campaign_id, "Pip")
     _finish_gm_reply(app, campaign_id)

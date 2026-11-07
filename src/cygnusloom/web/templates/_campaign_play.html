@@ -186,33 +186,41 @@
               {% if not single_player %}<button type="button" class="tab" role="tab" id="tab-players" aria-controls="panel-players" aria-selected="false" tabindex="-1">Players</button>{% endif %}
               {% if debug_panel %}<button type="button" class="tab" role="tab" id="tab-debug" aria-controls="panel-debug" aria-selected="false" tabindex="-1">Debug</button>{% endif %}
             </div>
-            <div class="tab-panel" role="tabpanel" id="panel-location" aria-labelledby="tab-location">
-              {% if scene.location %}
-              <p><strong>{% if scene.location_entry %}<a href="#{{ scene.location_entry }}" data-view-link="compendium">{{ scene.location.name }}</a>{% else %}{{ scene.location.name }}{% endif %}</strong></p>
-              {% if scene.location.summary %}<p>{{ scene.location.summary }}</p>{% endif %}
-              {% endif %}
-              <ul>
-                {% if scene.pc %}
-                <li><strong>{{ scene.pc.name }}</strong> <span class="muted">(you)</span></li>
+            {% set map_details = encounter or local_map %}
+            <div class="tab-panel location-panel{% if map_details %} with-roster{% endif %}" role="tabpanel" id="panel-location" aria-labelledby="tab-location">
+              <div class="location-details">
+                {% if scene.location %}
+                <p><strong>{% if scene.location_entry %}<a href="#{{ scene.location_entry }}" data-view-link="compendium">{{ scene.location.name }}</a>{% else %}{{ scene.location.name }}{% endif %}</strong></p>
+                {% if scene.location.summary %}<p>{{ scene.location.summary }}</p>{% endif %}
                 {% endif %}
-                {% for npc in scene.npcs %}
-                {% set creature_entry = creature_links.get(npc.creature, '') if creature_links and npc.creature else '' %}
-                <li><strong>{{ npc.name }}</strong>{% if creature_entry %} <a href="#{{ creature_entry }}" data-view-link="compendium">{{ npc.creature }}</a>{% endif %}{% if npc.defeated %} <span class="muted">(body)</span>{% endif %}</li>
-                {% endfor %}
-                {% for hireling in scene.hirelings %}
-                <li><strong>{{ hireling.name }}</strong> <span class="muted">(hireling of {{ hireling.employer }})</span></li>
-                {% endfor %}
-              </ul>
-              {% if scene.objects %}
-              <p><strong>Objects here</strong></p>
-              <ul>
-                {% for object in scene.objects %}
-                <li>{{ object.contents }}</li>
-                {% endfor %}
-              </ul>
-              {% endif %}
-              {% if not scene.location %}
-              <p class="muted">Not yet at a location.</p>
+                <ul>
+                  {% if scene.pc %}
+                  <li><strong>{{ scene.pc.name }}</strong> <span class="muted">(you)</span></li>
+                  {% endif %}
+                  {% for npc in scene.npcs %}
+                  {% set creature_entry = creature_links.get(npc.creature, '') if creature_links and npc.creature else '' %}
+                  <li><strong>{{ npc.name }}</strong>{% if creature_entry %} <a href="#{{ creature_entry }}" data-view-link="compendium">{{ npc.creature }}</a>{% endif %}{% if npc.defeated %} <span class="muted">(body)</span>{% endif %}</li>
+                  {% endfor %}
+                  {% for hireling in scene.hirelings %}
+                  <li><strong>{{ hireling.name }}</strong> <span class="muted">(hireling of {{ hireling.employer }})</span></li>
+                  {% endfor %}
+                </ul>
+                {% if scene.objects %}
+                <p><strong>Objects here</strong></p>
+                <ul>
+                  {% for object in scene.objects %}
+                  <li>{{ object.contents }}</li>
+                  {% endfor %}
+                </ul>
+                {% endif %}
+                {% if not scene.location %}
+                <p class="muted">Not yet at a location.</p>
+                {% endif %}
+              </div>
+              {% if map_details %}
+              <div class="location-roster" data-map-roster>
+                {% include "_map_details.html" %}
+              </div>
               {% endif %}
             </div>
             <div class="tab-panel" role="tabpanel" id="panel-character" aria-labelledby="tab-character" hidden>

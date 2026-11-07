@@ -727,7 +727,7 @@ def map_fragment(request: Request, campaign_id: int) -> Response:
         encounter_rows=_encounter_rows(encounter) if encounter is not None else [],
         local_map=local_map,
         local_map_rows=_encounter_rows(local_map) if local_map is not None else [],
-        local_map_legend=_map_legend(local_map) if local_map is not None else [],
+        map_fragment=True,
     )
 
 
@@ -1468,7 +1468,6 @@ def _campaign_page(
         "encounter_rows": _encounter_rows(encounter) if encounter is not None else [],
         "local_map": local_map,
         "local_map_rows": _encounter_rows(local_map) if local_map is not None else [],
-        "local_map_legend": _map_legend(local_map) if local_map is not None else [],
         "debug_panel": settings.debug_panel,
         "debug_currency": (
             rule_set.marketplace.currency if rule_set and rule_set.marketplace else ""
@@ -1670,45 +1669,6 @@ def _cell_tip(
     ground = f"{where}. {rule}" if rule else f"{where}."
     text = f"{occupant['name']} on {ground}" if occupant else ground
     return f"{label}: {text}" if label else text
-
-
-def _map_legend(view: dict[str, Any]) -> list[dict[str, str]]:
-    """The unique terrains, objects, and labels on a map, in board order, for its legend."""
-    items: list[dict[str, str]] = []
-    seen: set[tuple[str, str]] = set()
-
-    def add(kind: str, name: str, color: str = "", icon: str = "", pattern: str = "") -> None:
-        key = (kind, name)
-        if not name or key in seen:
-            return
-        seen.add(key)
-        items.append({"kind": kind, "name": name, "color": color, "icon": icon, "pattern": pattern})
-
-    background = view.get("background") or {}
-    add(
-        "terrain",
-        background.get("name", ""),
-        background.get("color", ""),
-        pattern=background.get("pattern", ""),
-    )
-    for mark in view.get("marked_cells", []):
-        if mark.get("terrain"):
-            add(
-                "terrain",
-                mark["terrain"],
-                mark.get("terrain_color", ""),
-                pattern=mark.get("terrain_pattern", ""),
-            )
-        if mark.get("object"):
-            add(
-                "object",
-                mark["object"],
-                mark.get("object_color", ""),
-                mark.get("cell_icon") or mark.get("object_icon", ""),
-            )
-        if mark.get("label"):
-            add("label", mark["label"], mark.get("cell_color") or mark.get("terrain_color", ""))
-    return items
 
 
 def _roll_key(campaign_id: int) -> str:

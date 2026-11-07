@@ -1370,7 +1370,7 @@
     "id": "set_map_cells",
     "name": "set_map_cells",
     "world_method": "set_map_cells",
-    "description": "Set the terrain, object, colour, pattern, icon, or label of cells on a map, inside or outside an encounter. Use it for fixed furniture, doors, stairs, water, and other props on a local map, and to vary its tiles. Ids come from map_options. A custom colour overrides the terrain colour, a custom icon overrides the object icon, and the label appears in the tooltip and legend. A cell with a blocking object cannot be entered.",
+    "description": "Set the terrain, object, colour, pattern, icon, or label of cells on a map, inside or outside an encounter. Use it for fixed furniture, doors, stairs, water, and other props on a local map, and to vary its tiles. Ids come from map_options. A custom colour overrides the terrain colour, a custom icon overrides the object icon, and the label appears in the tooltip. A cell with a blocking object cannot be entered.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -1414,7 +1414,7 @@
               },
               "label": {
                 "type": "string",
-                "description": "A short label for the cell, at most 60 characters, shown in the tooltip and legend. Empty clears it."
+                "description": "A short label for the cell, at most 60 characters, shown in the tooltip. Empty clears it."
               }
             },
             "required": [

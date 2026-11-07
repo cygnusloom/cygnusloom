@@ -398,6 +398,9 @@ def test_the_campaign_page_offers_the_local_map_tab(
     assert 'id="tab-local"' in page
     assert "Local map" in page
     assert MAP in page
+    # The map's caption sits in the Location tab, not in the map panel.
+    description = "The common room, with its tables and hearth."
+    assert page.index('aria-label="Panels"') < page.index(description)
 
 
 def test_a_bundled_world_seeds_its_authored_local_maps(
@@ -629,7 +632,7 @@ def test_shrinking_reports_the_marks_and_tokens_it_drops(
     assert not entry.marks and not entry.tokens
 
 
-def test_the_local_map_panel_shows_the_palette_ambient_pattern_and_legend(
+def test_the_local_map_panel_shows_the_palette_ambient_and_pattern(
     client_factory: Callable[[], TestClient],
 ):
     client, campaign_id = _campaign_id(client_factory)
@@ -656,8 +659,7 @@ def test_the_local_map_panel_shows_the_palette_ambient_pattern_and_legend(
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "palette-royal" in page
     assert "ambient-torchlit" in page
-    assert 'class="map-legend"' in page
-    assert "Royal" in page and "Torchlit" in page
+    assert "map-legend" not in page
     assert 'class="cell-pattern pattern-runes"' in page
     assert 'style="background-color: #123456"' in page
     assert 'data-label="Dais"' in page

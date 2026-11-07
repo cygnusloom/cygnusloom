@@ -75,7 +75,7 @@ MAX_MAP_SIDE = 60
 # The most cells one set_map_cells call may change, and how many ids an error message lists.
 MAX_CELLS_PER_CALL = 200
 MAX_LISTED_IDS = 20
-# A cell label is a short caption for the tooltip and legend.
+# A cell label is a short caption for the tooltip.
 MAX_CELL_LABEL = 60
 
 _HEX_COLOR = re.compile(r"#[0-9a-fA-F]{6}")

@@ -200,30 +200,6 @@
   </div>
 {%- endmacro %}
 
-{# The local map's key: its palette and ambient, then every distinct terrain, object, and label
-   on the board with the colour or icon that marks it. #}
-{% macro map_legend(items, view) -%}
-  <div class="map-legend" aria-label="Map legend">
-    {% if view.palette or view.ambient %}
-      <p class="map-theme">
-        {% if view.palette %}<span class="map-badge palette-{{ view.palette }}">{{ view.palette | capitalize }}</span>{% endif %}
-        {% if view.ambient %}<span class="map-badge ambient-{{ view.ambient }}">{{ view.ambient | capitalize }}</span>{% endif %}
-      </p>
-    {% endif %}
-    {% if items %}
-      <ul class="map-legend-list">
-        {% for item in items %}
-          <li class="map-legend-item">
-            <span class="map-key{% if item.pattern %} pattern-{{ item.pattern }}{% endif %}"{% if item.color %} style="background-color: {{ item.color }}"{% endif %} aria-hidden="true">{% if item.icon %}<img src="{{ icon_path(item.icon) }}" alt="">{% endif %}</span>
-            <span>{{ item.name }}</span>
-            <span class="muted">{{ item.kind }}</span>
-          </li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-  </div>
-{%- endmacro %}
-
 {% macro map_places(view) -%}
   {% for place in view.places %}
     <div class="map-place">

@@ -811,7 +811,7 @@ def test_the_roster_shows_the_statblock_beside_a_monster(client_factory):
     tools.create_monster("Rover", YARD, template="blink-dog")
     tools.add_participant("Rover")
     page = client.get(f"/campaigns/{campaign_id}").text
-    roster = page[page.index('class="encounter-roster"') : page.index('aria-label="Panels"')]
+    roster = page[page.index('class="encounter-roster"') :]
     assert "<strong>Rover</strong>" in roster
     assert '<span class="muted">Blink Dog</span>' in roster
 
@@ -1536,7 +1536,7 @@ def test_a_defeated_foe_stays_on_the_map_as_a_body(client_factory):
     take_turn(tools, "Grave Thing")
     _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 1)
     page = client.get(f"/campaigns/{campaign_id}").text
-    roster = page[page.index('class="encounter-roster"') : page.index('aria-label="Panels"')]
+    roster = page[page.index('class="encounter-roster"') :]
     assert '<span class="roster-status">dead</span>' in roster
     assert "encounter-cell occupied defeated" in page
 

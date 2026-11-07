@@ -1620,7 +1620,7 @@
               },
               "label": {
                 "type": "string",
-                "description": "A short label for the cell, at most 60 characters, shown in the tooltip and legend. Empty clears it."
+                "description": "A short label for the cell, at most 60 characters, shown in the tooltip. Empty clears it."
               }
             },
             "required": [

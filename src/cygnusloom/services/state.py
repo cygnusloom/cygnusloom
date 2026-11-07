@@ -477,8 +477,7 @@ class CellMark:
     """What is on one cell of a map: a terrain id and an object id, each "" for none.
 
     The optional fields customize one cell without a new terrain or object: a background
-    colour, a terrain pattern, an icon for the object, and a short label shown in the tooltip
-    and legend."""
+    colour, a terrain pattern, an icon for the object, and a short label shown in the tooltip."""
 
     terrain: str = ""
     object: str = ""

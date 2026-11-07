@@ -177,8 +177,10 @@ button.secondary:hover, button.secondary:focus-visible {
 .show-hidden-option { display: flex; align-items: center; gap: 0.5rem; margin: 0.75rem 0 0; }
 .show-hidden-option input[type="checkbox"] { width: auto; margin: 0; padding: 0; }
 
-/* Campaign workspace: full-height split view. */
+/* Campaign workspace: full-height split view. The site menu folds away so the table gets the
+   height; the first sidebar button expands it again. */
 body.workspace-page { height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+body.workspace-page:not(.menu-open) .topbar { display: none; }
 body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; }
 
@@ -187,8 +189,10 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .chat .transcript { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .chat .composer { flex-shrink: 0; }
 
-.side { display: grid; grid-template-rows: 40% minmax(0, 1fr); min-height: 0; }
-.side.in-encounter { grid-template-rows: 60% minmax(0, 1fr); }
+.side {
+  display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 50% minmax(0, 1fr);
+  min-height: 0;
+}
 .map-panel {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem;
   min-height: 0; padding: 0.5rem; border-bottom: 1px solid var(--border); overflow: hidden;
@@ -299,8 +303,6 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .encounter-turn { flex-shrink: 0; padding: 0.25rem 0; }
 .encounter-turn p { margin: 0 0 0.25rem; }
 .encounter-turn form { margin: 0.25rem 0; }
-.encounter-status p { margin: 0.25rem 0; }
-.encounter-status form { margin: 0.25rem 0; }
 .map-origin {
   position: absolute; left: 50%; top: 50%; width: 0.75rem; height: 0.75rem;
   transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1))); border: 1px dashed var(--muted); border-radius: 50%;
@@ -410,14 +412,14 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
   border-bottom: 1px solid var(--border);
 }
 .compendium-tab-list {
-  flex: 1 1 0; min-width: 0; max-width: 100%; flex-wrap: wrap; row-gap: 0.25rem;
+  flex: 1 1 0; min-width: 0; max-width: 100%;
   padding: 0; border-bottom: none;
 }
 .compendium-tab { white-space: nowrap; }
 .compendium-count {
-  display: inline-block; min-width: 1.3rem; margin-left: 0.2rem; padding: 0 0.3rem;
+  display: inline-block; min-width: 1.3em; margin-left: 0.2em; padding: 0 0.3em;
   border-radius: 999px; background: var(--field); color: var(--muted);
-  font-size: 0.75rem; line-height: 1.35rem; text-align: center;
+  font-size: 0.75em; line-height: 1.35em; text-align: center;
 }
 .compendium-tab[aria-selected="true"] .compendium-count { color: var(--accent); }
 .compendium-search { flex: 0 1 18rem; margin: 0; }
@@ -451,7 +453,7 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
   .compendium-picker-form button { width: 100%; }
   .compendium-toolbar { flex-direction: column; align-items: stretch; }
   .compendium-tab-list {
-    flex: 0 0 auto; width: 100%; min-width: 0; flex-wrap: nowrap; overflow-x: auto;
+    flex: 0 0 auto; width: 100%; min-width: 0;
     margin: 0 -0.25rem; padding: 0 0.25rem;
   }
   .compendium-search { flex-basis: auto; }
@@ -460,8 +462,18 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 
 
 .tabs-panel { display: flex; flex-direction: column; min-height: 0; }
-.tab-list { display: flex; gap: 0.25rem; padding: 0 0.75rem; border-bottom: 1px solid var(--border); }
+/* The tab bar keeps its natural height; the panel below takes the squeeze. */
+.tabs-panel > .tab-list { flex: none; }
+/* Tab bars stay on one line and scroll sideways when they overflow, without a visible scrollbar.
+   Vertical overflow is hidden so a squeezed bar never grows a second scrollbar. */
+.tab-list {
+  display: flex; flex-wrap: nowrap; gap: 0.25rem;
+  padding: 0 0.75rem; border-bottom: 1px solid var(--border);
+  overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
+}
+.tab-list::-webkit-scrollbar { display: none; }
 .tab {
+  flex: 0 0 auto; white-space: nowrap;
   background: transparent;
   color: var(--muted);
   border: none;
@@ -477,10 +489,11 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
   flex: none; align-self: stretch; align-items: center; min-height: 2.5rem;
   width: calc(100% + 1rem); margin: -0.5rem -0.5rem 0;
 }
+/* The board shrinks to fit its panel instead of the panel scrolling. */
 .map-view {
   flex: 1 1 auto; align-self: stretch; min-height: 0; width: 100%;
   display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
-  padding: 0.5rem 0 0; overflow-y: auto;
+  padding: 0.5rem 0 0; overflow: hidden;
 }
 .map-frame {
   flex: 1 1 auto; min-height: 0; width: 100%;
@@ -488,21 +501,25 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
   container-type: size;
   position: relative; overflow: hidden; touch-action: none; cursor: grab;
 }
-/* The roster and status below a map can otherwise squeeze the map itself to nothing in a short
-   sidebar. Keep enough height for the board to stay readable, and let the panel scroll. */
-.map-view > .map-frame { min-height: 14rem; }
 .map-frame.panning { cursor: grabbing; }
 .map-frame > .map-recenter { position: absolute; top: 0.5rem; right: 0.5rem; z-index: 1; }
 .map-frame > .map-board { width: min(100cqw, 100cqh); height: auto; max-height: none; min-height: 0; transform-origin: 0 0; }
 .map-frame > .encounter-board { width: min(100cqw, calc(100cqh * var(--columns) / var(--rows))); }
-.map-view > .encounter-status { flex: none; width: 100%; }
-.map-view .encounter-status p { text-align: center; }
+/* The Location tab splits in half when a map is in play: the place on the left, the map's
+   caption and the people and props on it (or the fight's turn order) on the right. */
+.location-panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 1.25rem; align-content: start; }
+.location-panel.with-roster { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.location-details, .location-roster { min-width: 0; }
+.location-roster { border-left: 1px solid var(--border); padding-left: 1rem; }
+.map-caption { margin: 0 0 0.5rem; }
+.map-caption p { margin: 0 0 0.25rem; }
+.map-caption strong { color: var(--accent); }
 .encounter-roster {
-  flex: 0 1 auto; min-height: 0; max-height: 40%; overflow-y: auto;
-  box-sizing: border-box; width: 100%; margin: 0; padding: 0.25rem 0 0; list-style: none;
-  border-top: 1px solid var(--border);
+  box-sizing: border-box; width: 100%; margin: 0; padding: 0; list-style: none;
 }
-.encounter-roster li { display: flex; gap: 0.35rem; align-items: baseline; padding: 0.2rem 0.5rem; }
+.encounter-roster li {
+  display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: baseline; padding: 0.2rem 0;
+}
 .encounter-roster li.acting { color: var(--accent); }
 .roster-state { margin-left: auto; font-size: 0.8rem; }
 .roster-status { font-size: 0.8rem; color: var(--muted); font-style: italic; }
@@ -699,9 +716,13 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
     inset: 0 0 calc(var(--mobile-bar, 3.4rem) + env(safe-area-inset-bottom)) 0;
     z-index: 5;
     background: var(--bg);
-    grid-template-rows: 42% minmax(0, 1fr);
+    grid-template-rows: 50% minmax(0, 1fr);
   }
-  .shell.show-side .side.in-encounter { grid-template-rows: 55% minmax(0, 1fr); }
+  .location-panel.with-roster { grid-template-columns: minmax(0, 1fr); gap: 0.5rem 0; }
+  .location-roster {
+    border-left: 0; padding-left: 0;
+    border-top: 1px solid var(--border); padding-top: 0.5rem;
+  }
   /* The bottom bar owns this edge of the screen; the account page carries the notice instead. */
   body.workspace-page .site-footer { display: none; }
 }
@@ -728,7 +749,6 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
   body.workspace-page .topbar nav button { padding: 0.1rem 0; }
 
   .map-panel { justify-content: flex-start; }
-  .map-view > .map-frame { min-height: 10rem; }
 
   .chat { padding: 0.5rem 0.75rem 0.35rem; }
   .chat-title { flex: none; font-size: 1.05rem; line-height: 1.25; }
@@ -792,13 +812,9 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
   .context-meter meter { width: 3.5rem; }
   .pending-prompt form { flex-wrap: wrap; }
   .pending-prompt textarea { flex-basis: 100%; }
-
-  .tab-list { overflow-x: auto; scrollbar-width: none; }
-  .tab-list::-webkit-scrollbar { display: none; }
-  .tab { flex: 0 0 auto; }
 }
 
-/* ===== LOCAL MAPS: palettes, ambients, patterns, and the legend ===== */
+/* ===== LOCAL MAPS: palettes, ambients, and patterns ===== */
 
 .encounter-board {
   --map-bg: var(--field);
@@ -833,44 +849,36 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
   opacity: 0.42; background-size: 1.1rem 1.1rem;
 }
 
-/* Palette variables. A badge shares the palette's colours. */
-.encounter-board.palette-parchment,
-.map-badge.palette-parchment {
+/* Palette variables. */
+.encounter-board.palette-parchment {
   --map-bg: #efe3c4; --map-grid: rgba(96, 76, 45, 0.35);
   --map-frame: #9a7a4c; --map-accent: #8a5a2b;
 }
-.encounter-board.palette-stone,
-.map-badge.palette-stone {
+.encounter-board.palette-stone {
   --map-bg: #cfccc4; --map-grid: rgba(70, 68, 62, 0.35);
   --map-frame: #6f6c64; --map-accent: #5c5a54;
 }
-.encounter-board.palette-forest,
-.map-badge.palette-forest {
+.encounter-board.palette-forest {
   --map-bg: #b9c9a4; --map-grid: rgba(45, 75, 40, 0.35);
   --map-frame: #4f6b3a; --map-accent: #3f6b35;
 }
-.encounter-board.palette-sea,
-.map-badge.palette-sea {
+.encounter-board.palette-sea {
   --map-bg: #b8d6dc; --map-grid: rgba(35, 85, 105, 0.3);
   --map-frame: #2f6f8f; --map-accent: #1f5f7c;
 }
-.encounter-board.palette-ember,
-.map-badge.palette-ember {
+.encounter-board.palette-ember {
   --map-bg: #dfb79a; --map-grid: rgba(110, 45, 25, 0.3);
   --map-frame: #8c3d1c; --map-accent: #b0501f;
 }
-.encounter-board.palette-frost,
-.map-badge.palette-frost {
+.encounter-board.palette-frost {
   --map-bg: #dfeaf2; --map-grid: rgba(80, 110, 135, 0.3);
   --map-frame: #7fa4b8; --map-accent: #4f7f9a;
 }
-.encounter-board.palette-shadow,
-.map-badge.palette-shadow {
+.encounter-board.palette-shadow {
   --map-bg: #3b3b4a; --map-grid: rgba(180, 180, 220, 0.18);
   --map-frame: #24242f; --map-accent: #8f7fc0;
 }
-.encounter-board.palette-royal,
-.map-badge.palette-royal {
+.encounter-board.palette-royal {
   --map-bg: #d9d4c8; --map-grid: rgba(120, 90, 40, 0.3);
   --map-frame: #8a6a3a; --map-accent: #6b4a8a;
 }
@@ -933,38 +941,6 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
 .pattern-lava { background-image: radial-gradient(circle at 30% 30%, rgba(255, 120, 40, 0.35) 0 18%, transparent 20%), radial-gradient(circle at 70% 65%, rgba(255, 80, 30, 0.25) 0 14%, transparent 16%); }
 .pattern-hexes { background-image: radial-gradient(circle, transparent 0 4px, rgba(0, 0, 0, 0.12) 5px 6px, transparent 7px); background-size: 0.9rem 0.9rem; }
 .pattern-runes { background-image: repeating-linear-gradient(45deg, rgba(180, 160, 255, 0.28) 0 1px, transparent 1px 10px), repeating-linear-gradient(-45deg, rgba(180, 160, 255, 0.18) 0 1px, transparent 1px 12px); }
-
-/* The local map's key, under the roster. */
-.map-legend {
-  width: 100%; max-width: 32rem; box-sizing: border-box;
-  margin-top: 0.4rem; padding: 0.4rem 0.55rem;
-  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-  border-radius: 0.5rem; background: color-mix(in srgb, var(--panel) 90%, transparent);
-  font-size: 0.7rem;
-}
-.map-theme { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0 0 0.3rem; }
-.map-badge {
-  display: inline-flex; align-items: center; gap: 0.2rem;
-  padding: 0.05rem 0.45rem; border-radius: 999px;
-  border: 1px solid var(--map-frame, var(--border));
-  background: var(--map-bg, var(--field)); color: var(--text);
-  font-weight: 600; letter-spacing: 0.02em;
-}
-.map-legend-list {
-  display: flex; flex-wrap: wrap; gap: 0.2rem 0.7rem;
-  max-height: 7rem; overflow-y: auto;
-  margin: 0; padding: 0; list-style: none;
-}
-.map-legend-item { display: inline-flex; align-items: center; gap: 0.25rem; }
-.map-key {
-  display: inline-grid; place-items: center; flex: none;
-  width: 0.95rem; height: 0.95rem; border-radius: 0.2rem;
-  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-  background-size: cover; overflow: hidden;
-}
-.map-key img { width: 100%; height: 100%; object-fit: contain; }
-.map-legend .muted { font-size: 0.62rem; }
-.encounter-status strong { color: var(--map-accent, var(--accent)); }
 
 /* First-run setup wizard */
 .setup-hero { margin-bottom: 1rem; }

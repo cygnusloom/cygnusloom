@@ -696,6 +696,8 @@ def test_campaign_page_has_sidebar_controls(client_factory: Callable[[], TestCli
     assert 'data-view-target="characters"' in page
     assert 'data-view="characters"' in page
     assert "data-side-toggle" in page
+    assert "data-menu-toggle" in page
+    assert 'id="site-menu"' in page
     assert '<dialog id="dialog-characters"' not in page
     assert 'data-drawer-target="drawer-notes"' not in page
     assert '<aside class="drawer" id="drawer-notes"' not in page

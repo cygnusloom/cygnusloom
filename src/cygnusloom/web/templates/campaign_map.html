@@ -1,8 +1,9 @@
-{% from "macros.html" import map_board, encounter_board, map_legend, time_strip %}
+{% from "macros.html" import map_board, encounter_board, time_strip %}
 {#
   The map panel, kept apart from the page so the turn stream can refresh it while the GM is
-  building an encounter. The player watches the board, the roster, and the clock change as the
-  GM works, instead of seeing the finished scene only after the reply lands.
+  building an encounter. The player watches the board and the clock change as the GM works,
+  and the same response refreshes the map's caption and roster in the Location tab, instead
+  of seeing the finished scene only after the reply lands.
 #}
 <section class="map-panel" aria-label="Map">
   {% if encounter %}
@@ -12,26 +13,6 @@
   </div>
   <div class="tab-panel map-view" role="tabpanel" id="panel-encounter" aria-labelledby="tab-encounter">
     <div class="map-frame">{{ encounter_board(encounter, encounter_rows) }}</div>
-    <div class="encounter-status">
-      <p><strong>{{ encounter.map }}</strong> <span class="muted">{{ encounter.location }}, round {{ encounter.round }}</span></p>
-      {% if not encounter.participants %}
-      <p class="muted">No one has joined yet.</p>
-      {% endif %}
-    </div>
-    {% if encounter.participants %}
-    <ul class="encounter-roster" aria-label="Turn order">
-      {% for participant in encounter.participants %}
-      <li{% if participant.acting %} class="acting"{% endif %}>
-        <span class="muted">{{ participant.number }}.</span>
-        <strong>{{ participant.name }}</strong>
-        {% if participant.creature %}<span class="muted">{{ participant.creature }}</span>{% endif %}
-        {% if participant.is_pc %}<span class="muted">(you)</span>{% endif %}
-        {% if participant.status %}<span class="roster-status">{{ participant.status }}</span>{% endif %}
-        {% if participant.acting %}<span class="roster-state">acting</span>{% elif participant.next %}<span class="roster-state muted">next</span>{% endif %}
-      </li>
-      {% endfor %}
-    </ul>
-    {% endif %}
   </div>
   <div class="tab-panel map-view" role="tabpanel" id="panel-world" aria-labelledby="tab-world" hidden>
     {{ map_board(world_map, framed=true, prefix="tab") }}
@@ -43,25 +24,6 @@
   </div>
   <div class="tab-panel map-view" role="tabpanel" id="panel-local" aria-labelledby="tab-local">
     <div class="map-frame">{{ encounter_board(local_map, local_map_rows) }}</div>
-    <div class="encounter-status">
-      <p><strong>{{ local_map.map }}</strong> <span class="muted">{{ local_map.location }}</span></p>
-      <p class="muted">A local map of the place you are in. If a fight starts here, this same map becomes the encounter board.</p>
-    </div>
-    {% if local_map.participants %}
-    <ul class="encounter-roster" aria-label="People and props here">
-      {% for participant in local_map.participants %}
-      <li>
-        <span class="muted">{{ participant.number }}.</span>
-        <strong>{{ participant.name }}</strong>
-        {% if participant.creature %}<span class="muted">{{ participant.creature }}</span>{% endif %}
-        {% if participant.is_pc %}<span class="muted">(you)</span>{% endif %}
-        {% if participant.cell %}<span class="muted">column {{ participant.cell[0] }}, row {{ participant.cell[1] }}</span>{% else %}<span class="muted">not yet placed</span>{% endif %}
-        {% if participant.status %}<span class="roster-status">{{ participant.status }}</span>{% endif %}
-      </li>
-      {% endfor %}
-    </ul>
-    {% endif %}
-    {{ map_legend(local_map_legend, local_map) }}
   </div>
   <div class="tab-panel map-view" role="tabpanel" id="panel-world" aria-labelledby="tab-world" hidden>
     {{ map_board(world_map, framed=true, prefix="tab") }}
@@ -71,3 +33,5 @@
   {% endif %}
   {{ time_strip(time) }}
 </section>
+{# The live map refresh also carries the map's caption and roster, which live in the Location tab. #}
+{% if map_fragment and (encounter or local_map) %}<div class="location-roster" data-map-roster>{% include "_map_details.html" %}</div>{% endif %}

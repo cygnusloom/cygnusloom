@@ -28,6 +28,7 @@
     if (!shell || !side || !sideToggle) return;
     shell.classList.toggle("show-side", open);
     sideToggle.setAttribute("aria-pressed", String(open));
+    if (open) setMenu(false, false);
     if (!focus) return;
     if (open) side.querySelector('[role="tab"]')?.focus();
     else sideToggle.focus();
@@ -41,6 +42,28 @@
     const wide = window.matchMedia("(min-width: 901px)");
     wide.addEventListener("change", (event) => {
       if (event.matches) setSide(false, false);
+    });
+  }
+
+  // The campaign workspace folds the site menu away; its first sidebar button expands it.
+  const menuToggle = document.querySelector("[data-menu-toggle]");
+  const setMenu = (open, focus = true) => {
+    document.body.classList.toggle("menu-open", open);
+    menuToggle?.setAttribute("aria-expanded", String(open));
+    if (!focus) return;
+    if (open) document.querySelector("#site-menu a, #site-menu button")?.focus();
+    else menuToggle?.focus();
+  };
+  if (menuToggle) {
+    menuToggle.addEventListener("click", () => {
+      const open = !document.body.classList.contains("menu-open");
+      // The details drawer sits above the page, so it would hide the menu; close it first.
+      if (open) setSide(false, false);
+      setMenu(open);
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || document.querySelector("dialog[open]")) return;
+      if (document.body.classList.contains("menu-open")) setMenu(false, false);
     });
   }
 
@@ -61,6 +84,7 @@
           if (panel) panel.hidden = !selected;
         }
         if (focus) tab.focus();
+        else tab.scrollIntoView({ block: "nearest", inline: "nearest" });
       };
       list.selectTab = select;
 
@@ -78,6 +102,29 @@
           select(tabs[next]);
         });
       });
+
+      // The scrollbar is hidden, and a mouse has no way to drag it, so the wheel scrolls the
+      // bar sideways while some tabs are out of view. At the ends the page scrolls as usual.
+      on(
+        list,
+        "tab-wheel",
+        "wheel",
+        (event) => {
+          if (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) return;
+          if (list.scrollWidth <= list.clientWidth) return;
+          const raw =
+            Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+          if (!raw) return;
+          const atStart = list.scrollLeft <= 0;
+          const atEnd = list.scrollLeft + list.clientWidth >= list.scrollWidth - 1;
+          if ((raw < 0 && atStart) || (raw > 0 && atEnd)) return;
+          const scale =
+            event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? list.clientWidth : 1;
+          event.preventDefault();
+          list.scrollLeft += raw * scale;
+        },
+        { passive: false },
+      );
     });
   };
   window.initWorkspaceTabs = initTabs;
