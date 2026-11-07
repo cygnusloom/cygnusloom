@@ -13,6 +13,9 @@
           <li>
             <div class="campaign-row">
               <a href="/campaigns/{{ campaign.id }}">{{ campaign.name }}</a>
+              {% if campaign.game_version != app_version %}
+              <span class="campaign-upgrade">Upgrade available</span>
+              {% endif %}
               {% if card.shared %}
               <span class="campaign-shared">Shared by {{ card.owner_name or card.owner_email }}</span>
               {% else %}

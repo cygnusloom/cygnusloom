@@ -21,6 +21,7 @@ def test_migrations_create_the_full_schema(tmp_path, monkeypatch):
     }
     assert "setting" in campaign_columns
     assert "table_genres" in campaign_columns
+    assert "game_version" in campaign_columns
 
 
 def test_migrations_can_be_reversed(tmp_path, monkeypatch):

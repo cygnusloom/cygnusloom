@@ -2,6 +2,22 @@
       <section class="chat" aria-label="Chat">
           <h1 class="chat-title">{{ campaign.name }}</h1>
           <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
+          {% if campaign.game_version != app_version %}
+          <div class="game-upgrade" role="status">
+            <p><strong>Game updated.</strong>
+              {% if campaign.game_version %}This campaign was last upgraded for version {{ campaign.game_version }}; the game is now {{ app_version }}.
+              {% else %}This campaign began before the game recorded versions; the game is now {{ app_version }}.
+              {% endif %}Upgrading tells the GM, out of character, that the rules and instructions may have changed.</p>
+            {% if is_owner %}
+            <form method="post" action="/campaigns/{{ campaign.id }}/upgrade">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit">Upgrade campaign</button>
+            </form>
+            {% else %}
+            <p class="muted">The campaign owner can upgrade it.</p>
+            {% endif %}
+          </div>
+          {% endif %}
           <div class="transcript" data-transcript data-gm-state="{{ 'busy' if pending and pending.auto_continue else 'waiting' }}" data-last-event="{{ last_event }}" data-turn-status="{{ turn_status }}">
             {% for message in transcript %}
               {% if message.role == "log" %}
@@ -87,7 +103,7 @@
                     {% endif %}
                   </div>
                 {% endif %}
-                {% if not pending.opening and (pending_for_viewer or is_owner) %}
+                {% if not pending.opening and not pending.upgrade and (pending_for_viewer or is_owner) %}
                 <form method="post" action="/campaigns/{{ campaign.id }}/pending/discard" data-confirm="Discard this reply and the message that started it? It cannot be undone.">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                   <button type="submit">Discard reply</button>

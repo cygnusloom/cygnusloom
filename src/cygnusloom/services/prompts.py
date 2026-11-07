@@ -218,6 +218,13 @@ OOC_INSTRUCTION = (
     "write no text before those calls: text written before a tool call is shown to the player "
     "right away. The state step already decided whether the story continues after this reply."
 )
+UPGRADE_REPLY_INSTRUCTION = (
+    "Game upgrade notice. The game has just updated this campaign to the running version. "
+    "Reply out of character in one short paragraph, telling the player the campaign is now on "
+    "the current game version and that the rules, instructions, and tools may have changed. "
+    "Do not narrate a scene, speak or act for the player character, call tools, or ask the player "
+    "to do anything. The upgrade is already recorded; this reply only announces it."
+)
 OPENING_REPLY_INSTRUCTION = (
     "Opening reply. This is the campaign's introduction, not an out-of-character question. Follow "
     "the opening instruction above: write the introduction it asks for, one sentence per item, and "

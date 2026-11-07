@@ -137,6 +137,14 @@ def test_members_cannot_use_owner_only_controls(client_factory: Callable[[], Tes
     )
     assert (
         guest.post(
+            f"/campaigns/{campaign_id}/upgrade",
+            data={"csrf_token": token},
+            follow_redirects=False,
+        ).status_code
+        == 404
+    )
+    assert (
+        guest.post(
             f"/campaigns/{campaign_id}/delete",
             data={"csrf_token": token, "confirm": "anything"},
             follow_redirects=False,

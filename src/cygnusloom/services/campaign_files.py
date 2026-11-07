@@ -112,6 +112,7 @@ def export_campaign(engine: Engine, owner_id: int, campaign_id: int) -> tuple[st
             "world_template": campaign.world_template,
             "rule_set": campaign.rule_set,
             "model": campaign.model,
+            "game_version": campaign.game_version,
             "setting": campaign.setting,
             "table_genres": genres,
             "created_at": as_utc(campaign.created_at).isoformat(),
@@ -133,7 +134,12 @@ def import_campaign(
     """Rebuild a campaign from an exported file under `owner_id`."""
     document = _parse_document(data)
     campaign_data, entries = _read_document(document)
-    config = _read_campaign(campaign_data, library)
+    exported_app_version = document.get("app_version")
+    config = _read_campaign(
+        campaign_data,
+        library,
+        exported_app_version if isinstance(exported_app_version, str) else "",
+    )
     allowed = set(allowed_models)
     model = config["model"]
     model_replaced = ""
@@ -169,6 +175,7 @@ def import_campaign(
             world_template=config["world_template"],
             rule_set=config["rule_set"],
             model=model,
+            game_version=config["game_version"],
             setting=config["setting"],
             table_genres=json.dumps(list(config["table_genres"])),
             created_at=config["created_at"],
@@ -384,7 +391,9 @@ def _text(data: dict[str, Any], key: str, limit: int) -> str:
     return value
 
 
-def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, Any]:
+def _read_campaign(
+    data: dict[str, Any], library: ContentLibrary, exported_app_version: str = ""
+) -> dict[str, Any]:
     world_template = _text(data, "world_template", MAX_COLUMN)
     rule_set = _text(data, "rule_set", MAX_COLUMN)
     if world_template not in library.world_templates:
@@ -421,11 +430,19 @@ def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, A
     else:
         genres = rules.table_genres
     created_at = _read_time(data.get("created_at"), "campaign")
+    # An exported campaign that records its version carries the key even when the value is
+    # blank, meaning it began before version tracking. Only a file from an older app, which has
+    # no key at all, falls back to the app version that exported it.
+    if "game_version" in data:
+        game_version = _text(data, "game_version", MAX_COLUMN)
+    else:
+        game_version = exported_app_version or __version__
     return {
         "name": _text(data, "name", MAX_NAME),
         "world_template": world_template,
         "rule_set": rule_set,
         "model": _text(data, "model", MAX_MODEL),
+        "game_version": game_version,
         "setting": _text(data, "setting", MAX_SETTING),
         "table_genres": genres,
         "created_at": created_at,

@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Engine
 
+from cygnusloom import __version__
 from cygnusloom.content.library import (
     ContentLibrary,
     RuleSet,
@@ -37,6 +38,7 @@ from cygnusloom.services.events import (
     NPC_KIND,
     PC_KIND,
     CampaignState,
+    CampaignUpgraded,
     Channel,
     Character,
     ChatGM,
@@ -76,6 +78,7 @@ from cygnusloom.services.prompts import (
     OOC_INSTRUCTION,
     OPENING_REPLY_INSTRUCTION,
     TURN_REVIEW_INSTRUCTION,
+    UPGRADE_REPLY_INSTRUCTION,
     journal_instruction,
     journal_review_instruction,
     narrate_instruction,
@@ -856,6 +859,8 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
             events.append(SummaryUpdated(summary=summary, through=watermark))
     if turn.opening:
         label = "Opening instruction"
+    elif turn.upgrade:
+        label = "Game upgrade notice"
     elif turn.actor is not None:
         label = "Encounter instruction"
     else:
@@ -1415,15 +1420,19 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                 view.append(_queued_dialogue_note(turn.speech))
             # An opening is not an out-of-character question: the opening instruction is already
             # the user message, so ask for the introduction instead of a GM answer about rules.
-            view.append(
-                {
-                    "role": "system",
-                    "content": OPENING_REPLY_INSTRUCTION if turn.opening else OOC_INSTRUCTION,
-                }
-            )
+            # An upgrade notice gets its own instruction and offers no tools: it only announces
+            # the new version.
+            if turn.upgrade:
+                instruction = UPGRADE_REPLY_INSTRUCTION
+            elif turn.opening:
+                instruction = OPENING_REPLY_INSTRUCTION
+            else:
+                instruction = OOC_INSTRUCTION
+            view.append({"role": "system", "content": instruction})
+            offered_tools = None if turn.upgrade else ooc_tools
             step: ChatReply | None = None
             async for arrived, item in _stream_with_heartbeat(
-                run.provider.stream(run.model_name, view, ooc_tools)
+                run.provider.stream(run.model_name, view, offered_tools)
             ):
                 if not arrived:
                     yield Status(HEARTBEAT_MESSAGE)
@@ -1435,7 +1444,12 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                 raise LLMError("the model returned no reply")
             # The ooc tool is not offered here. A model that calls it anyway must not restart the
             # out-of-character step; the state step already decided whether the story continues.
-            requests = [request for request in step.tool_requests if request.name != OOC_TOOL]
+            # An upgrade reply never changes the record.
+            requests = (
+                []
+                if turn.upgrade
+                else [request for request in step.tool_requests if request.name != OOC_TOOL]
+            )
             if requests:
                 filtered = ChatReply(
                     text=step.text, tool_requests=tuple(requests), reasoning=step.reasoning
@@ -1835,6 +1849,48 @@ async def resume_turn(
             yield event
 
 
+async def upgrade_campaign(
+    engine: Engine,
+    providers: ProviderFactory,
+    allowed_models: Iterable[str],
+    library: ContentLibrary,
+    context_tokens: int,
+    owner_id: int,
+    campaign_id: int,
+    rng: random.Random | None = None,
+) -> None:
+    """Move the owner's campaign to the running game version and let the GM announce it out of
+    character. The upgrade is recorded even if the model reply fails, so a failed announcement
+    stays open and can be continued. Refused while another reply is open."""
+    campaign = _campaigns().get_owned_campaign(engine, owner_id, campaign_id)
+    if campaign.model not in allowed_models:
+        raise InvalidInput("that model is not available")
+    with _campaigns()._exclusive(campaign_id):
+        state = _state(engine, campaign_id)
+        if state.turn is not None:
+            raise InvalidInput("finish the open reply before upgrading the campaign")
+        if campaign.game_version == __version__:
+            return
+        rule_set = library.rule_sets.get(campaign.rule_set)
+        if rule_set is None:
+            raise InvalidInput("that campaign's rule set is no longer available")
+        with session_scope(engine) as db:
+            row = db.get(Campaign, campaign_id)
+            assert row is not None
+            previous = row.game_version
+            row.game_version = __version__
+            db.add(row)
+            record(
+                db,
+                campaign_id,
+                CampaignUpgraded(from_version=previous, to_version=__version__),
+            )
+            db.commit()
+        run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
+        async for _ in _guarded(run, _carry_on(run)):
+            pass
+
+
 async def start_encounter_turn(
     engine: Engine,
     providers: ProviderFactory,
@@ -1937,6 +1993,8 @@ class PendingView:
     error: str | None = None
     opening: bool = False
     auto_continue: bool = False
+    # The open reply announces a game upgrade and must be continued, not discarded.
+    upgrade: bool = False
     # The player the open reply belongs to, or None when any player may answer it.
     player_id: int | None = None
     player_name: str = ""
@@ -1956,6 +2014,7 @@ def pending_turn(engine: Engine, owner_id: int, campaign_id: int) -> PendingView
         return PendingView(
             prompt=turn.prompt,
             opening=turn.opening,
+            upgrade=turn.upgrade,
             player_id=turn.player_id,
             player_name=turn.player_name,
         )
@@ -1965,6 +2024,7 @@ def pending_turn(engine: Engine, owner_id: int, campaign_id: int) -> PendingView
         error=turn.failed or "The GM's reply did not finish.",
         opening=turn.opening,
         auto_continue=auto,
+        upgrade=turn.upgrade,
         player_id=turn.player_id,
         player_name=turn.player_name,
     )
@@ -2019,6 +2079,8 @@ def discard_pending(engine: Engine, owner_id: int, campaign_id: int) -> None:
             raise NotFound("there is no open reply to discard")
         if turn.opening:
             raise InvalidInput("the campaign's opening cannot be discarded; continue it instead")
+        if turn.upgrade:
+            raise InvalidInput("the game upgrade notice cannot be discarded; continue it instead")
         if (
             turn.player_id is not None
             and turn.player_id != owner_id

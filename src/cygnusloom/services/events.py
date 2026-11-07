@@ -42,6 +42,7 @@ from cygnusloom.services.state import (  # noqa: F401
     EncounterMap,
     Faction,
     FactionAsset,
+    GameUpgrade,
     Item,
     KnownNpc,
     Note,
@@ -456,6 +457,38 @@ class CampaignOptionsChosen(GameEvent):
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.options = dict(self.options)
+
+
+@dataclass(frozen=True)
+class CampaignUpgraded(GameEvent):
+    """The campaign moved to a new game version. The GM is told out of character; the player's
+    transcript hides the entry, and the story is not narrated as if it happened in the world."""
+
+    kind: ClassVar[str] = "campaign.upgraded"
+    hidden: ClassVar[bool] = True
+    channel: ClassVar[Channel] = Channel.LOG
+
+    from_version: str
+    to_version: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.upgrade = GameUpgrade(self.from_version, self.to_version)
+        before = self.from_version or "an earlier version"
+        if state.turn is None:
+            state.turn = Turn(
+                opener=event_id,
+                text=(
+                    f"The game has been upgraded from version {before} to "
+                    f"{self.to_version}. Acknowledge the upgrade out of character."
+                ),
+                ooc=True,
+                ooc_narrate=False,
+                upgrade=True,
+            )
+
+    def render(self) -> str:
+        before = self.from_version or "an earlier version"
+        return f"The game was upgraded from version {before} to {self.to_version}."
 
 
 @dataclass(frozen=True)
