@@ -1,0 +1,1 @@
+Add an issue to the ISSUE_TRACKER.md. Add it to the untriaged issues. Ask the user clarifying questions if needed, but don't go too deep. Commit it and only it.
