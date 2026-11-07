@@ -11,5 +11,3 @@ None.
 Order below is the work order. Each entry lists the decisions made in triage.
 
 None.
-
-The credit payment design and work plan live in [docs/PAYMENTS_PLAN.md](docs/PAYMENTS_PLAN.md).
