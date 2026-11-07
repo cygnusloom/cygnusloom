@@ -18,6 +18,32 @@
     element.addEventListener(type, handler, options);
   };
 
+  // A sideways-scrolling bar hides its scrollbar, and a mouse has no way to drag it, so the
+  // wheel scrolls the bar while some content is out of view. At the ends the page scrolls as
+  // usual.
+  const bindWheelScroll = (element) => {
+    on(
+      element,
+      "wheel-scroll",
+      "wheel",
+      (event) => {
+        if (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) return;
+        if (element.scrollWidth <= element.clientWidth) return;
+        const raw =
+          Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+        if (!raw) return;
+        const atStart = element.scrollLeft <= 0;
+        const atEnd = element.scrollLeft + element.clientWidth >= element.scrollWidth - 1;
+        if ((raw < 0 && atStart) || (raw > 0 && atEnd)) return;
+        const scale =
+          event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? element.clientWidth : 1;
+        event.preventDefault();
+        element.scrollLeft += raw * scale;
+      },
+      { passive: false },
+    );
+  };
+
   // On phones the details panel is a drawer opened from the bottom bar.
   const shell = document.querySelector(".shell");
   const sideToggle = document.querySelector("[data-side-toggle]");
@@ -103,28 +129,7 @@
         });
       });
 
-      // The scrollbar is hidden, and a mouse has no way to drag it, so the wheel scrolls the
-      // bar sideways while some tabs are out of view. At the ends the page scrolls as usual.
-      on(
-        list,
-        "tab-wheel",
-        "wheel",
-        (event) => {
-          if (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) return;
-          if (list.scrollWidth <= list.clientWidth) return;
-          const raw =
-            Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
-          if (!raw) return;
-          const atStart = list.scrollLeft <= 0;
-          const atEnd = list.scrollLeft + list.clientWidth >= list.scrollWidth - 1;
-          if ((raw < 0 && atStart) || (raw > 0 && atEnd)) return;
-          const scale =
-            event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? list.clientWidth : 1;
-          event.preventDefault();
-          list.scrollLeft += raw * scale;
-        },
-        { passive: false },
-      );
+      bindWheelScroll(list);
     });
   };
   window.initWorkspaceTabs = initTabs;

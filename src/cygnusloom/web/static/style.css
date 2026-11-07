@@ -752,11 +752,12 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
      keeps most of the height. */
   body.workspace-page .topbar { flex-wrap: nowrap; gap: 0.5rem; padding: 0.3rem 0.6rem; }
   body.workspace-page .topbar .brand { font-size: 0.85rem; }
+  /* The menu is only on screen while open, so its links may wrap and grow the bar taller
+     instead of hiding behind a sideways scroll. */
   body.workspace-page .topbar nav {
-    flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; justify-content: flex-start;
-    gap: 0.8rem; font-size: 0.8rem; overflow-x: auto; scrollbar-width: none;
+    flex: 1 1 auto; min-width: 0; flex-wrap: wrap; justify-content: flex-start;
+    gap: 0.2rem 0.8rem; font-size: 0.8rem;
   }
-  body.workspace-page .topbar nav::-webkit-scrollbar { display: none; }
   body.workspace-page .topbar nav button { padding: 0.1rem 0; }
 
   .map-panel { justify-content: flex-start; }
