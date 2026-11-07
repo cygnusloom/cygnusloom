@@ -24,10 +24,12 @@ Order below is the work order. Each entry lists the decisions made in triage.
    - One currency on the provider config (lower-case ISO 4217); every pack inherits it.
    - Checkout return and webhook URLs use the existing `CYGNUSLOOM_BASE_URL`; the admin page
      shows the full webhook URL to register with the provider.
-   - Refunds and chargebacks are issued in the provider's dashboard; the app never deducts
-     automatically. They mark the payment `needs_review` (the `payment_event` records whether it
-     was a refund or dispute), and an admin either claws back credits (the balance may go
-     negative) or dismisses the review.
+   - Refunds and chargebacks are issued in the provider's dashboard and clawed back
+     automatically, even when the balance goes negative; a negative balance already blocks new
+     turns. Partial refunds claw back a prorated share, multiple refunds deduct only the delta,
+     and a dispute that closes as won restores the disputed credits. A payment that was never
+     granted (for example after an amount mismatch) is never clawed back. There is no manual
+     refund review.
    - Purchased credits never expire.
    - Exempt accounts (administrators, single-player) see no purchase or auto top-up controls.
    - Payments are optional. With no provider configured, `/credits` keeps today's "ask an
@@ -51,16 +53,18 @@ Order below is the work order. Each entry lists the decisions made in triage.
    - `credit_pack`: `label`, `credits`, `price_minor`, `enabled`, `sort`. Validation: at least 1
      credit, positive price, whole minor units.
    - `payment`: `user_id`, `provider`, `pack_id`, `credits`, `amount_minor`, `currency`,
-     `external_id`, `kind` (`checkout`/`auto_topup`), `status`
+     `checkout_id`, `external_id` (the provider payment/charge id used by later events),
+     `granted_credits`, `refunded_minor`, `clawed_back_credits`, `kind`
+     (`checkout`/`auto_topup`), `status`
      (`pending`/`paid`/`needs_action`/`failed`/`expired`/`refunded`/`disputed`/`needs_review`),
-     `reviewed_at`, `reviewed_by`, `note`, timestamps. Unique `(provider, external_id)`.
+     `note`, timestamps. Unique `(provider, external_id)`.
    - `payment_event`: `provider`, `event_id`, `payment_id`, `kind`, `received_at`; unique
      `(provider, event_id)` for webhook idempotency.
    - `payment_customer`: `user_id`, `provider`, `customer_id`, `payment_method`,
      `auto_topup`, `pack_id`, `threshold`, `consecutive_failures`, `last_error`, timestamps;
      unique `(user_id, provider)`.
-   - `credit_entry` gains a nullable indexed `payment_id`; reasons `purchase` and
-     `purchase-refund`.
+   - `credit_entry` gains nullable indexed `payment_id` and `payment_event_id`; reasons
+     `purchase`, `purchase-refund`, and `dispute-return`.
    - Add `grant_credits()` beside `charge_reply()` using an atomic
      `credit_balance = credit_balance + amount` plus a ledger row. Do not reuse `set_balance()`
      for purchases; it writes an absolute value and loses concurrent grants.
@@ -68,8 +72,8 @@ Order below is the work order. Each entry lists the decisions made in triage.
    **Buying a pack**
    1. `/credits` shows the balance, recent ledger entries, and enabled packs.
    2. `POST /credits/checkout` creates a `pending` payment, then the adapter opens a Stripe
-      Checkout Session (`mode=payment`, inline price, `client_reference_id`/metadata = payment
-      id, `Idempotency-Key: payment-<id>`), then redirects.
+      Checkout Session (`mode=payment`, inline price, `client_reference_id` and PaymentIntent
+      metadata = payment id, `Idempotency-Key: payment-<id>`), then redirects.
    3. `POST /payments/webhook/{provider}` is public (no login or CSRF), verifies the raw-body
       signature, and is the only place that grants credits. In one transaction it inserts
       `payment_event` (duplicate → reply 200 and stop), re-checks the reported amount, currency,
@@ -77,9 +81,14 @@ Order below is the work order. Each entry lists the decisions made in triage.
       `paid`, and calls `grant_credits()`. Unknown events get 200.
    4. The return URL only shows status; it never grants.
    5. Pending payments expire after 24 hours. A "re-check with provider" action uses `fetch`.
-   6. Refunds and disputes (`charge.refunded` and dispute events) set `needs_review` and leave
-      the decision to an admin: claw back (negative `credit_entry`) or dismiss. Both outcomes set
-      `reviewed_at`/`reviewed_by` and are audited.
+   6. Refunds and disputes claw back automatically in the webhook transaction. `charge.refunded`
+      deducts the prorated credits for the cumulative refunded amount (only the delta since the
+      last event). A dispute deducts credits prorated by the disputed amount, capped at the
+      credits not already clawed back; a dispute closed as won restores exactly what that
+      dispute deducted. Each clawback is a `purchase-refund` ledger entry linked to the payment
+      and provider event, may take the balance negative, and runs only up to `granted_credits`.
+      A refund of a payment that was never granted changes no balance, and a refund for a
+      deleted account is recorded without a balance change.
 
    **Auto top-up**
    - The player picks a pack and a credit threshold, then completes a Setup-mode Checkout to save
@@ -100,15 +109,18 @@ Order below is the work order. Each entry lists the decisions made in triage.
      mode" badge for test keys. Changing provider or clearing credentials is blocked while a
      payment is pending.
    - Packs: add/edit/enable/delete with a "credits for price" preview.
-   - Payments: search/filter by status, account, pack, amount, and external id; actions re-check,
-     claw back or dismiss a refund review, and expire a pending payment.
+   - Payments: search/filter by status, account, pack, amount, and external id; actions are
+     re-check with the provider and expire a pending payment. Refunds and disputes need no admin
+     action; `needs_review` only marks a webhook whose amount, currency, or payment id did not
+     match the stored payment.
    - Every mutation requires recent auth and CSRF and writes an `AdminAudit` entry with secrets
      redacted.
 
    **Testing**
    - `tests/test_payments.py`: disabled state; config CRUD, encryption at rest, secret masking;
      pack validation; checkout creation; webhook grants exactly once on replay; bad signature;
-     amount/currency mismatch; unknown event; refund/dispute review and clawback; the pending
+     amount/currency mismatch; unknown event; full and partial refund clawback with cumulative
+     refunds, dispute created/won/lost, and a refund of an ungranted payment; the pending
      provider-switch block; auto top-up success, `requires_action`, and the failure counter;
      exempt accounts see no controls.
    - The fake adapter's checkout URL is an internal pay/cancel page available only when the fake
