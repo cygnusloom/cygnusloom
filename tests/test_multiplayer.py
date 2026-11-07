@@ -110,9 +110,59 @@ def test_a_share_link_joins_the_campaign_and_lists_it_for_the_player(
     list_page = guest.get("/campaigns")
     assert "Shared by" in list_page.text
     assert OWNER.split("@")[0] in list_page.text
+    assert OWNER not in list_page.text
+    assert GUEST not in list_page.text
 
     members = list_members(owner.app.state.engine, campaign_id)
-    assert [m.email for m in members] == [OWNER, GUEST]
+    assert [m.display_name for m in members] == [OWNER.split("@")[0], GUEST.split("@")[0]]
+
+
+def test_character_events_store_the_account_id_not_a_display_name(
+    client_factory: Callable[[], TestClient],
+):
+    owner, _guest, campaign_id, _ = _joined_campaign(client_factory)
+    app = owner.app
+    with db(app) as session:
+        rows = session.exec(
+            select(Event).where(Event.campaign_id == campaign_id, Event.kind == "pc.added")
+        ).all()
+    payloads = [json.loads(row.payload) for row in rows]
+    assert payloads
+    assert all("player_name" not in payload for payload in payloads)
+    assert {payload["player_id"] for payload in payloads} == {
+        _account(app, OWNER).id,
+        _account(app, GUEST).id,
+    }
+
+
+def test_a_display_name_change_reaches_old_messages_and_the_gm(
+    client_factory: Callable[[], TestClient], fake
+):
+    owner, guest, campaign_id, _ = _joined_campaign(client_factory)
+    app = owner.app
+    guest_id = _account(app, GUEST).id
+
+    script = json.dumps({"turns": [{"text": "Brenna studies the room."}]})
+    assert send_message(guest, campaign_id, f"__FAKE__:{script}").status_code == 303
+
+    with db(app) as session:
+        user = session.get(User, guest_id)
+        assert user is not None
+        user.display_name = "Ashen Fox 4821"
+        session.add(user)
+        session.commit()
+
+    # The transcript resolves the name from the account id, so the old message shows the new
+    # name and never the account's email.
+    page = owner.get(f"/campaigns/{campaign_id}").text
+    assert "Ashen Fox 4821" in page
+    assert GUEST not in page
+
+    script = json.dumps({"turns": [{"text": "Ada waits."}]})
+    assert send_message(owner, campaign_id, f"__FAKE__:{script}").status_code == 303
+    flat = json.dumps(fake.calls[-1])
+    assert "Ashen Fox 4821" in flat
+    assert GUEST not in flat
 
 
 def test_members_cannot_use_owner_only_controls(client_factory: Callable[[], TestClient]):
@@ -208,11 +258,14 @@ def test_each_player_creates_their_own_character_and_any_player_advances_the_sto
     latest = json.loads(rows[0].payload)
     assert latest["speaker"] == "Brenna"
     assert latest["player_id"] == _account(app, GUEST).id
+    # The log stores the account id, not a display name that could go stale or leak an email.
+    assert "player_name" not in latest
 
     # The GM's prompt names every player and attributes the message to its account.
     flat = json.dumps(fake.calls[-1])
     assert "Several players share this campaign" in flat
     assert "Brenna (guest)" in flat
+    assert GUEST not in flat
 
     # The owner can then move the story forward too, in the same campaign.
     script = json.dumps({"turns": [{"text": "Ada follows her in."}]})

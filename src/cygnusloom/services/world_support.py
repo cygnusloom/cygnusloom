@@ -491,7 +491,6 @@ def create_player_character(
     plus: str,
     combat_rules: CombatRules | None = None,
     player_id: int | None = None,
-    player_name: str = "",
     opening: bool = True,
 ) -> dict[str, Any]:
     """Make the player character from the player's choices. `rolled` are the stats rolled for
@@ -531,7 +530,6 @@ def create_player_character(
             name=name,
             pronouns=pronouns,
             player_id=player_id,
-            player_name=player_name,
             **fields,
         ),
     )
@@ -578,7 +576,7 @@ def create_player_character(
         record(
             db,
             campaign_id,
-            OpeningStarted(player_id=player_id, player_name=player_name),
+            OpeningStarted(player_id=player_id),
         )
     return {"created": "pc", "name": name, "location": None}
 
@@ -1086,7 +1084,6 @@ def promote_hireling(
     campaign_id: int,
     name: str,
     player_id: int | None = None,
-    player_name: str = "",
 ) -> dict[str, Any]:
     """After the player character died, a living hireling takes over as the player character.
     The account that played the dead character plays the promoted one."""
@@ -1107,7 +1104,6 @@ def promote_hireling(
             name=hireling.name,
             employer=employer,
             player_id=player_id,
-            player_name=player_name,
         ),
     )
     db.commit()

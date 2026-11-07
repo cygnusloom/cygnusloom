@@ -6,12 +6,19 @@ account, including its roles, comes from the validated ID token and userinfo res
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
 _TRUE = ("1", "true", "yes", "on")
+_EMAIL_LIKE = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
+
+
+def looks_like_email(value: str) -> bool:
+    """Whether a value is an email address rather than a player name."""
+    return bool(_EMAIL_LIKE.fullmatch((value or "").strip()))
 
 
 class OIDCError(Exception):
@@ -95,13 +102,18 @@ def claims_from_mapping(
     if not subject:
         raise OIDCError("the identity provider did not return a subject")
     email = str(data.get("email") or "").strip().lower()
-    display_name = str(data.get("name") or data.get("preferred_username") or email or subject)
+    # Never use the email as a player name. A provider that sends no usable name leaves this
+    # blank, and the account gets a generated display name instead.
+    raw_name = str(data.get("name") or "").strip()
+    if not raw_name or looks_like_email(raw_name):
+        raw_name = str(data.get("preferred_username") or "").strip()
+    display_name = "" if looks_like_email(raw_name) else raw_name
     return IdentityClaims(
         issuer=actual_issuer,
         subject=subject,
         email=email,
         email_verified=_truthy(data.get("email_verified")),
-        display_name=display_name.strip()[:120],
+        display_name=display_name[:120],
         roles=roles_from_claims(data, admin_claim),
         auth_time=_auth_time(data.get("auth_time")),
         raw=dict(data),

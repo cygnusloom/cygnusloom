@@ -6,9 +6,9 @@ from collections.abc import Callable
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 
-from cygnusloom.db.models import Campaign, Event
+from cygnusloom.db.models import Campaign, Event, User
 from cygnusloom.services.campaigns import campaign_log, list_messages
 from cygnusloom.services.events import (
     EVENT_TYPES,
@@ -140,6 +140,30 @@ def test_a_player_message_keeps_the_character_it_spoke_for(
     messages = {m.id: m for m in list_messages(app.state.engine, campaign_id)}
     assert messages[spoken].speaker == "Bram"
     assert messages[legacy].speaker is None
+
+
+def test_state_resolves_player_names_from_the_account(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    with Session(app.state.engine) as db:
+        user = db.exec(select(User).where(User.email == "ada@example.com")).one()
+        user.display_name = "Moss Lantern 7301"
+        db.add(user)
+        # An old log stored a name snapshot, which could be an email. The fold ignores it and
+        # uses the account's current display name.
+        row = db.exec(
+            select(Event).where(Event.campaign_id == campaign_id, Event.kind == "pc.added")
+        ).one()
+        payload = json.loads(row.payload)
+        payload["player_name"] = "ada@example.com"
+        row.payload = json.dumps(payload)
+        db.add(row)
+        db.commit()
+    with Session(app.state.engine) as db:
+        state = load_state(db, campaign_id)
+    assert state.characters["ada"].player_name == "Moss Lantern 7301"
+    assert client.get(f"/campaigns/{campaign_id}").status_code == 200
 
 
 def test_truncate_removes_later_events_and_the_state_follows(

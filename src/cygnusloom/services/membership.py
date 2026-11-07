@@ -17,6 +17,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from cygnusloom.db.models import Campaign, CampaignInvite, CampaignMember, User, utcnow
+from cygnusloom.services.accounts import public_name
 from cygnusloom.services.common import InvalidInput, NotFound, session_scope
 from cygnusloom.services.events import (
     CharacterRetired,
@@ -35,7 +36,6 @@ class MemberView:
 
     user_id: int
     display_name: str
-    email: str
     owner: bool = False
     joined_at: datetime | None = None
     character: str = ""
@@ -95,10 +95,6 @@ def is_removed(engine: Engine, user_id: int, campaign_id: int) -> bool:
         return row is not None and row.removed_at is not None
 
 
-def display_name(user: User) -> str:
-    return (user.display_name or user.email or f"account {user.id}").strip()
-
-
 def list_members(engine: Engine, campaign_id: int, state=None) -> list[MemberView]:
     """The owner first, then every member in the order they joined, with the character each
     account currently plays. Pass the already folded `state` when the caller has it, so the
@@ -121,7 +117,6 @@ def list_members(engine: Engine, campaign_id: int, state=None) -> list[MemberVie
             MemberView(
                 user_id=campaign.owner_id,
                 display_name=_user_name(db, campaign.owner_id),
-                email=_user_email(db, campaign.owner_id),
                 owner=True,
                 character=owner_character.name if owner_character is not None else "",
                 character_out_of_play=bool(owner_character and owner_character.out_of_play),
@@ -133,8 +128,7 @@ def list_members(engine: Engine, campaign_id: int, state=None) -> list[MemberVie
             members.append(
                 MemberView(
                     user_id=user.id or 0,
-                    display_name=display_name(user),
-                    email=user.email,
+                    display_name=public_name(user),
                     joined_at=member.created_at,
                     character=character.name if character is not None else "",
                     character_out_of_play=bool(character and character.out_of_play),
@@ -164,8 +158,7 @@ def list_removed_members(engine: Engine, campaign_id: int, state=None) -> list[M
             removed.append(
                 MemberView(
                     user_id=user.id or 0,
-                    display_name=display_name(user),
-                    email=user.email,
+                    display_name=public_name(user),
                     joined_at=member.created_at,
                     character=character.name if character is not None else "",
                     character_out_of_play=bool(character and character.out_of_play),
@@ -176,12 +169,7 @@ def list_removed_members(engine: Engine, campaign_id: int, state=None) -> list[M
 
 def _user_name(db, user_id: int) -> str:
     user = db.get(User, user_id)
-    return display_name(user) if user is not None else f"account {user_id}"
-
-
-def _user_email(db, user_id: int) -> str:
-    user = db.get(User, user_id)
-    return user.email if user is not None else ""
+    return public_name(user) if user is not None else f"account {user_id}"
 
 
 def list_invites(engine: Engine, campaign_id: int) -> list[InviteView]:

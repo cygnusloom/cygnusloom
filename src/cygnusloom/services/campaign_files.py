@@ -211,11 +211,13 @@ def import_campaign(
                 if field_name in entry.payload:
                     entry.payload[field_name] = old_to_new[entry.payload[field_name]]
                     changed = True
-            # Account ids do not travel between servers. Every character in an imported
-            # campaign belongs to the account importing it, which can share it again.
-            if entry.kind in ("pc.added", "hireling.promoted", "turn.opening"):
+            # Account ids do not travel between servers. Every character and message in an
+            # imported campaign belongs to the account importing it, which can share it again.
+            if entry.kind in ("pc.added", "hireling.promoted", "turn.opening", "chat.player"):
                 entry.payload["player_id"] = owner_id
-                entry.payload["player_name"] = ""
+                # BACKWARDS-COMPATIBILITY: 3 - older exports stored a player name snapshot.
+                # New events store only the account id.
+                entry.payload.pop("player_name", None)
                 changed = True
             if changed:
                 row.payload = json.dumps(entry.payload, ensure_ascii=False, separators=(",", ":"))

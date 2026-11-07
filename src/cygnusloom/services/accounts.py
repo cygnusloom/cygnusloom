@@ -7,9 +7,10 @@ from sqlalchemy import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
-from cygnusloom.auth.claims import IdentityClaims
+from cygnusloom.auth.claims import IdentityClaims, looks_like_email
 from cygnusloom.db.models import User, utcnow
 from cygnusloom.services.common import InvalidInput, NotFound, session_scope
+from cygnusloom.services.names import random_display_name
 
 TEST_ISSUER = "test"
 TEST_USER_EMAIL = "test-user@example.com"
@@ -17,6 +18,55 @@ LOCAL_ISSUER = "local"
 LOCAL_SUBJECT = "player"
 LOCAL_EMAIL = "player@localhost"
 LOCAL_ROLE = "local-admin"
+
+MAX_DISPLAY_NAME = 120
+
+
+def clean_display_name(value: str) -> str:
+    """A display name safe to show other players, or "" when the value is blank or an email."""
+    name = (value or "").strip()
+    if not name or looks_like_email(name):
+        return ""
+    return name[:MAX_DISPLAY_NAME]
+
+
+def public_name(user: User | None) -> str:
+    """The name other players and the GM see. The account's email is never used."""
+    if user is None:
+        return ""
+    return public_name_for(user.id, user.display_name)
+
+
+def public_name_for(user_id: int | None, display_name: str) -> str:
+    """A stored display name for a player, with a neutral fallback when it is missing."""
+    name = clean_display_name(display_name)
+    if name:
+        return name
+    return f"account {user_id}" if user_id is not None else "another player"
+
+
+def set_display_name(engine: Engine, user_id: int, value: str) -> User:
+    """Change the public name of an account. Players choose this on the Account page."""
+    name = (value or "").strip()
+    if not name:
+        raise InvalidInput("display name is required")
+    if len(name) > MAX_DISPLAY_NAME:
+        raise InvalidInput(f"display name must be at most {MAX_DISPLAY_NAME} characters")
+    if looks_like_email(name):
+        raise InvalidInput("choose a display name, not an email address")
+    with session_scope(engine) as db:
+        user = db.get(User, user_id)
+        if user is None:
+            raise NotFound("account not found")
+        user.display_name = name
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user
+
+
+def _initial_display_name(claims: IdentityClaims) -> str:
+    return clean_display_name(claims.display_name) or random_display_name()
 
 
 class AccountDisabled(Exception):
@@ -70,7 +120,7 @@ def provision_user(engine: Engine, claims: IdentityClaims) -> User:
                 subject=subject,
                 email=claims.email[:255],
                 email_verified=claims.email_verified,
-                display_name=claims.display_name[:120],
+                display_name=_initial_display_name(claims),
                 roles=encode_roles(claims.roles),
                 created_at=utcnow(),
             )
@@ -80,7 +130,10 @@ def provision_user(engine: Engine, claims: IdentityClaims) -> User:
                 raise AccountDisabled("this account has been disabled")
             user.email = claims.email[:255]
             user.email_verified = claims.email_verified
-            user.display_name = claims.display_name[:120]
+            # A player's chosen display name belongs to them. The provider only seeds one the
+            # first time, and a blank or email-looking legacy value is replaced.
+            if not clean_display_name(user.display_name):
+                user.display_name = _initial_display_name(claims)
             user.roles = encode_roles(claims.roles)
         user.last_login_at = utcnow()
         db.add(user)
@@ -99,7 +152,8 @@ def provision_user(engine: Engine, claims: IdentityClaims) -> User:
                 raise AccountDisabled("this account has been disabled")
             user.email = claims.email[:255]
             user.email_verified = claims.email_verified
-            user.display_name = claims.display_name[:120]
+            if not clean_display_name(user.display_name):
+                user.display_name = _initial_display_name(claims)
             user.roles = encode_roles(claims.roles)
             user.last_login_at = utcnow()
             db.add(user)
@@ -129,12 +183,16 @@ def get_or_create_test_user(
                 subject=email,
                 email=email,
                 email_verified=True,
-                display_name=email.split("@", 1)[0],
+                display_name=clean_display_name(email.split("@", 1)[0]) or random_display_name(),
                 roles=encode_roles(roles or ()),
             )
             db.add(user)
         else:
             user.email = email
+            if not clean_display_name(user.display_name):
+                user.display_name = (
+                    clean_display_name(email.split("@", 1)[0]) or random_display_name()
+                )
             if roles is not None:
                 user.roles = encode_roles(roles)
         user.last_login_at = utcnow()

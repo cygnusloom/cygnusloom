@@ -39,6 +39,10 @@ server-sent event stream, so a turn one player starts appears for the whole tabl
 reload. The owner can remove a player and choose whether that player's character leaves the
 story or stays as a shared, unclaimed part.
 
+Every account has a display name, seeded from the identity provider or generated from random
+words with a four-digit number. A player can change it on the Account page. Other players and
+the GM see only that display name; email addresses stay private to administrators.
+
 ## Credits
 
 Each account has a credit balance. An administrator sets a flat price per AI GM reply on every

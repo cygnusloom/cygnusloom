@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import random
+import re
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
@@ -12,6 +14,7 @@ from cygnusloom.config import Settings
 from cygnusloom.db.models import User, UserSession
 from cygnusloom.db.session import make_engine
 from cygnusloom.services.accounts import get_or_create_test_user
+from cygnusloom.services.names import random_display_name
 from tests.conftest import csrf_token, login, make_app, register
 from tests.fake_oidc import FakeOIDC, claims
 
@@ -142,6 +145,68 @@ def test_oidc_login_creates_account(settings: Settings):
     assert client.get("/campaigns").status_code == 200
     assert _user_count(settings) == 1
     assert _roles(settings, "ada@example.com") == '["cygnusloom-admins"]'
+
+
+def test_random_display_names_end_with_a_four_digit_number():
+    name = random_display_name(random.Random(0))
+    assert re.fullmatch(r"[A-Z][a-z]+ [A-Z][a-z]+ \d{4}", name)
+
+
+def test_oidc_login_generates_a_display_name_when_the_provider_sends_none(
+    settings: Settings,
+):
+    client = _client(settings, FakeOIDC(identity=claims(display_name="")))
+    client.get("/auth/callback")
+    with Session(client.app.state.engine) as db:
+        user = db.exec(select(User).where(User.email == "ada@example.com")).one()
+    assert re.fullmatch(r"[A-Z][a-z]+ [A-Z][a-z]+ \d{4}", user.display_name)
+    assert "ada@example.com" not in user.display_name
+
+
+def test_a_chosen_display_name_survives_later_sign_ins(settings: Settings):
+    fake = FakeOIDC(identity=claims())
+    client = _client(settings, fake)
+    client.get("/auth/callback")
+    with Session(client.app.state.engine) as db:
+        user = db.exec(select(User).where(User.email == "ada@example.com")).one()
+        user.display_name = "Rowan Hart 1234"
+        db.add(user)
+        db.commit()
+
+    fake.identity = claims(display_name="Provider Name")
+    other = _client(settings, fake)
+    other.get("/auth/callback")
+    with Session(other.app.state.engine) as db:
+        user = db.exec(select(User).where(User.email == "ada@example.com")).one()
+    assert user.display_name == "Rowan Hart 1234"
+
+
+def test_account_page_changes_the_display_name(client: TestClient):
+    register(client)
+    token = csrf_token(client, "/account")
+    response = client.post(
+        "/account/display-name",
+        data={"csrf_token": token, "display_name": "Rowan Hart 1234"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    page = client.get("/account")
+    assert "Rowan Hart 1234" in page.text
+    assert "Display name saved." in page.text
+
+
+def test_account_display_name_rejects_an_email_address(client: TestClient):
+    register(client)
+    token = csrf_token(client, "/account")
+    response = client.post(
+        "/account/display-name",
+        data={"csrf_token": token, "display_name": "leak@example.com"},
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+    assert "not an email address" in response.text
+    page = client.get("/account")
+    assert 'value="ada"' in page.text
 
 
 def test_oidc_login_only_keeps_safe_relative_next(settings: Settings):

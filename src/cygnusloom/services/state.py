@@ -339,7 +339,8 @@ class Character:
     # The account that plays this character. None means the campaign's owner, unless the
     # character was deliberately unclaimed when a player left.
     player_id: int | None = None
-    # The player's display name at the time they joined, for the GM and the transcript.
+    # The account's current display name, filled in when the log is folded. Events store only
+    # the account id, so a name change reaches every character and message.
     player_name: str = ""
     # The character has no player and the table shares the part. Owners can leave a character
     # behind when they remove its player.
@@ -485,6 +486,7 @@ class Turn:
     # The account whose message opened this turn, or None for an opening or an NPC's turn. Only
     # that player answers the turn's prompts and continues it.
     player_id: int | None = None
+    # The account's current display name, filled in when the log is folded.
     player_name: str = ""
 
 

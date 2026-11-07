@@ -30,6 +30,7 @@ from cygnusloom.llm.base import (
 )
 from cygnusloom.services import combat, encounters
 from cygnusloom.services import credits as credit_service
+from cygnusloom.services.accounts import public_name
 from cygnusloom.services.common import Conflict, InvalidInput, NotFound, session_scope
 from cygnusloom.services.events import (
     CHARS_PER_TOKEN,
@@ -337,7 +338,6 @@ def save_creation(
                 plus=rule_set.plus,
                 combat_rules=rule_set.combat,
                 player_id=owner_id,
-                player_name=_player_name(db, owner_id),
                 opening=opening,
             )
         db.commit()
@@ -354,7 +354,6 @@ def promote_hireling_to_character(
             campaign_id,
             name,
             player_id=owner_id,
-            player_name=_player_name(db, owner_id),
         )
 
 
@@ -389,7 +388,6 @@ class CampaignCard:
 
     campaign: Campaign
     owner_name: str = ""
-    owner_email: str = ""
     shared: bool = False
     # When the campaign's newest event happened, and that time as the list shows it.
     last_event_at: datetime | None = None
@@ -469,8 +467,7 @@ def visible_campaigns(engine: Engine, user_id: int) -> list[CampaignCard]:
             cards.append(
                 CampaignCard(
                     campaign=campaign,
-                    owner_name=(owner.display_name or owner.email) if owner else "",
-                    owner_email=owner.email if owner else "",
+                    owner_name=public_name(owner),
                     shared=True,
                     last_event_at=last_event,
                     last_activity=last_activity_text(last_event),
@@ -508,13 +505,6 @@ def get_owned_campaign(engine: Engine, user_id: int, campaign_id: int) -> Campai
         if campaign is None or campaign.owner_id != user_id:
             raise NotFound("campaign not found")
         return campaign
-
-
-def _player_name(db: Any, user_id: int) -> str:
-    user = db.get(User, user_id)
-    if user is None:
-        return ""
-    return (user.display_name or user.email or "").strip()
 
 
 def default_campaign_labels(
@@ -800,7 +790,8 @@ class ChatMessage:
 def list_messages(engine: Engine, campaign_id: int) -> list[ChatMessage]:
     with session_scope(engine) as db:
         rows = events_since(db, campaign_id, channel=Channel.TRANSCRIPT)
-        return [_chat_message(row) for row in rows]
+        names, owner_name = _chat_names(db, campaign_id, rows)
+        return [_chat_message(row, names, owner_name) for row in rows]
 
 
 def campaign_transcript(
@@ -815,8 +806,10 @@ def campaign_transcript(
             (row.id or 0 for row in events_since(db, campaign_id) if row.kind != TurnFailed.kind),
             default=0,
         )
+        transcript_rows = events_since(db, campaign_id, channel=Channel.TRANSCRIPT)
+        names, owner_name = _chat_names(db, campaign_id, transcript_rows)
         items: list[ChatMessage | LogLine] = [
-            _chat_message(row) for row in events_since(db, campaign_id, channel=Channel.TRANSCRIPT)
+            _chat_message(row, names, owner_name) for row in transcript_rows
         ]
         for row in events_since(db, campaign_id, channel=Channel.LOG):
             event = decode(row)
@@ -827,16 +820,33 @@ def campaign_transcript(
     return sorted(items, key=lambda item: item.id)
 
 
-def _chat_message(row: Event) -> ChatMessage:
+def _chat_names(db: Any, campaign_id: int, rows: Sequence[Event]) -> tuple[dict[int, str], str]:
+    """Current display names for the accounts that wrote the chat, keyed by account id. The
+    event payload stores only the id, so a name change reaches old messages too."""
+    owner_id = db.exec(select(Campaign.owner_id).where(Campaign.id == campaign_id)).one_or_none()
+    player_ids = {owner_id} if owner_id is not None else set()
+    for row in rows:
+        event = decode(row)
+        if isinstance(event, ChatPlayer) and event.player_id is not None:
+            player_ids.add(event.player_id)
+    if not player_ids:
+        return {}, ""
+    users = db.exec(select(User).where(User.id.in_(player_ids))).all()
+    names = {user.id or 0: public_name(user) for user in users}
+    return names, names.get(owner_id or 0, "")
+
+
+def _chat_message(row: Event, names: dict[int, str], owner_name: str) -> ChatMessage:
     event = decode(row)
     if isinstance(event, ChatPlayer):
+        player_name = owner_name if event.player_id is None else names.get(event.player_id, "")
         return ChatMessage(
             id=row.id or 0,
             role="user",
             content=event.content,
             speaker=event.speaker,
             player_id=event.player_id,
-            player_name=event.player_name,
+            player_name=player_name,
         )
     if isinstance(event, ChatGM):
         return ChatMessage(

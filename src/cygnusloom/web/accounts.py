@@ -22,6 +22,7 @@ from cygnusloom.services.accounts import (
     AccountDisabled,
     get_or_create_test_user,
     provision_user,
+    set_display_name,
     user_roles,
 )
 from cygnusloom.services.campaigns import list_campaigns
@@ -203,6 +204,21 @@ def account_page(request: Request) -> Response:
         campaign_count=len(list_campaigns(engine, user.id)),
         current_session_id=found[1].id if found is not None else "",
     )
+
+
+@router.post("/account/display-name")
+async def update_display_name(request: Request) -> Response:
+    """Change the name other players and the GM see. The account's email stays private."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    try:
+        set_display_name(request.app.state.engine, user.id or 0, form_text(form, "display_name"))
+    except InvalidInput as exc:
+        request.session["flash"] = {"message": str(exc), "kind": "error"}
+    else:
+        request.session["flash"] = {"message": "Display name saved.", "kind": "info"}
+    return RedirectResponse("/account", status_code=303)
 
 
 @router.get("/credits")

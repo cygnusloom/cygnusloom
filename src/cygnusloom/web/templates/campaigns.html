@@ -18,7 +18,7 @@
               <span class="campaign-upgrade">Upgrade available</span>
               {% endif %}
               {% if card.shared %}
-              <span class="campaign-shared">Shared by {{ card.owner_name or card.owner_email }}</span>
+              <span class="campaign-shared">Shared by {{ card.owner_name or 'another player' }}</span>
               {% else %}
               <a class="campaign-export" href="/campaigns/{{ campaign.id }}/export">Export</a>
               <details class="campaign-label">

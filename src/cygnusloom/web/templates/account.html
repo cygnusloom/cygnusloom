@@ -4,9 +4,17 @@
   <section class="card narrow">
     <h1>Your account</h1>
     <dl class="details">
-      <dt>Name</dt>
-      <dd>{{ user.display_name or user.email or user.subject }}</dd>
-      <dt>Email</dt>
+      <dt>Display name</dt>
+      <dd>
+        <form method="post" action="/account/display-name" class="display-name-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="text" name="display_name" value="{{ user.display_name }}" maxlength="120"
+                 autocomplete="nickname" required aria-label="Display name">
+          <button type="submit">Save</button>
+        </form>
+        <p class="muted">Other players and the GM see this name. Your email address stays private.</p>
+      </dd>
+      <dt>Email (private)</dt>
       <dd>{{ user.email or "not provided" }}{% if user.email_verified %} (verified){% endif %}</dd>
       <dt>Identity</dt>
       <dd>{{ user.issuer }}</dd>

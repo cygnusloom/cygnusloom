@@ -25,6 +25,7 @@ from cygnusloom.llm.base import LLMError
 from cygnusloom.services import campaign_files
 from cygnusloom.services import credits as credit_service
 from cygnusloom.services import level_up as level_up_service
+from cygnusloom.services.accounts import public_name
 from cygnusloom.services.campaigns import (
     Delta,
     Logged,
@@ -96,7 +97,6 @@ from cygnusloom.services.membership import (
     add_member,
     create_invite,
     deactivate_invite,
-    display_name,
     list_invites,
     list_members,
     list_removed_members,
@@ -575,7 +575,7 @@ async def typing_heartbeat(request: Request, campaign_id: int) -> Response:
     else:
         # The composer renders the name server-side, so the hint names the character the player
         # speaks for without folding the campaign log on every keystroke.
-        name = form_text(form, "name").strip() or display_name(user)
+        name = form_text(form, "name").strip() or public_name(user)
         request.app.state.typing.note(campaign.id, user.id, name)
     return Response(status_code=204)
 

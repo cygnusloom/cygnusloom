@@ -50,7 +50,9 @@ but not on your user dashboard, open the application and set **Launch URL** to t
 
 1. In Authentik open **Directory → Users → Create**.
 2. Set a username, email, and password. Leave the user out of `cygnusloom-admins` for a normal
-   player.
+   player. The username is only for signing in to Authentik; Cygnus Loom gives the account its
+   own display name, which the player can change on the Account page. Other players never see
+   the Authentik username or email.
 3. Give the user the Cygnus Loom application: **Applications → Cygnus Loom → Policy / Group /
    User Bindings → Bind existing user**, or add the user to a group that is already bound.
 4. The user opens `https://<CYGNUSLOOM_DOMAIN>/login` and signs in with that username and

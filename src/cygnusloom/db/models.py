@@ -11,8 +11,10 @@ def utcnow() -> datetime:
 class User(SQLModel, table=True):
     """An account mirrored from the identity provider. Cygnus Loom never stores credentials.
 
-    The provider's issuer and subject identify the account; email is only a label and can
-    change. `roles` is a JSON list snapshotted from the ID token at the last sign-in."""
+    The provider's issuer and subject identify the account; email is private and only
+    administrators see it. `display_name` is the player-chosen name other players and the GM
+    see; it is seeded from the provider's name or generated from random words. `roles` is a
+    JSON list snapshotted from the ID token at the last sign-in."""
 
     __tablename__ = "user"
     __table_args__ = (UniqueConstraint("issuer", "subject"),)

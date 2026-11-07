@@ -437,9 +437,9 @@ class _Run:
     # not world state.
     setting: str = ""
     # The account answering this turn's prompt, when a player does. An opening or an NPC's turn
-    # has none, and any player at the table may continue it.
+    # has none, and any player at the table may continue it. Its display name is resolved from
+    # the account when the log is folded, so a name change reaches an open turn.
     player_id: int | None = None
-    player_name: str = ""
 
     @property
     def tool_calls(self) -> Mapping[str, ToolCall]:
@@ -550,7 +550,6 @@ def _start_run(
     context_tokens: int,
     rng: random.Random | None,
     player_id: int | None = None,
-    player_name: str = "",
 ) -> _Run:
     provider, model_name = providers(campaign.model)
     settings = getattr(providers, "settings", None)
@@ -585,7 +584,6 @@ def _start_run(
         world=template,
         setting=campaign.setting,
         player_id=player_id,
-        player_name=player_name,
     )
 
 
@@ -1681,7 +1679,6 @@ async def _answer(
                     content=answer.text,
                     speaker=speaker,
                     player_id=run.player_id,
-                    player_name=run.player_name,
                 ),
             )
     async for event in _carry_on(run):
@@ -1698,14 +1695,6 @@ async def _guarded(run: _Run, steps: AsyncIterator[TurnEvent]) -> AsyncIterator[
         message = str(exc) if isinstance(exc, LLMError) else "an unexpected error"
         _record(run.engine, run.campaign_id, TurnFailed(error=message))
         raise
-
-
-def _player_display(engine: Engine, user_id: int) -> str:
-    """The account's display name for the transcript and the GM's attribution."""
-    from cygnusloom.services.accounts import get_user
-
-    user = get_user(engine, user_id)
-    return (user.display_name or user.email or "").strip()
 
 
 def _character_to_play(state: CampaignState, user_id: int) -> Character:
@@ -1797,7 +1786,6 @@ async def stream_message(
                 content=text,
                 speaker=speaker,
                 player_id=owner_id,
-                player_name=_player_display(engine, owner_id),
             ),
         )
         async for event in _guarded(run, _carry_on(run)):
@@ -1878,7 +1866,6 @@ async def resume_turn(
             context_tokens,
             rng,
             player_id=owner_id,
-            player_name=_player_display(engine, owner_id),
         )
         # An opening has not made any model calls yet, so it is a new reply and needs credit. A
         # turn that already started is allowed to finish even if the balance has since fallen.

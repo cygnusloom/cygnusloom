@@ -76,14 +76,53 @@ def test_claims_map_email_name_and_roles():
     assert claims.auth_time == datetime.fromtimestamp(1_700_000_000, UTC)
 
 
-def test_claims_fall_back_to_email_for_display_name():
+def test_claims_do_not_use_email_as_a_display_name():
     claims = claims_from_mapping(
         {"iss": "https://idp.example.com", "sub": "abc", "email": "ada@example.com"},
         issuer="https://idp.example.com",
         admin_claim="groups",
     )
-    assert claims.display_name == "ada@example.com"
+    assert claims.display_name == ""
     assert claims.email_verified is False
+
+
+def test_claims_use_a_provider_name_but_not_an_email_shaped_one():
+    named = claims_from_mapping(
+        {
+            "iss": "https://idp.example.com",
+            "sub": "abc",
+            "email": "ada@example.com",
+            "name": "Ada Lovelace",
+        },
+        issuer="https://idp.example.com",
+        admin_claim="groups",
+    )
+    assert named.display_name == "Ada Lovelace"
+
+    email_shaped = claims_from_mapping(
+        {
+            "iss": "https://idp.example.com",
+            "sub": "abc",
+            "email": "ada@example.com",
+            "preferred_username": "ada@example.com",
+        },
+        issuer="https://idp.example.com",
+        admin_claim="groups",
+    )
+    assert email_shaped.display_name == ""
+
+    username_fallback = claims_from_mapping(
+        {
+            "iss": "https://idp.example.com",
+            "sub": "abc",
+            "email": "ada@example.com",
+            "name": "ada@example.com",
+            "preferred_username": "ada",
+        },
+        issuer="https://idp.example.com",
+        admin_claim="groups",
+    )
+    assert username_fallback.display_name == "ada"
 
 
 def test_auth_time_defaults_to_now_when_missing():
