@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Need more credits?{% endblock %}
+{% block content %}
+  <section class="card narrow">
+    <h1>Need more credits?</h1>
+    <p>Your account has <strong>{{ user.credit_balance }}</strong> credits.</p>
+    <p>
+      Ask the administrator of this server to add credits to your account. Each AI GM reply
+      uses the price the administrator set for the campaign's model.
+    </p>
+    <p><a href="/campaigns">Back to your campaigns</a></p>
+  </section>
+{% endblock %}

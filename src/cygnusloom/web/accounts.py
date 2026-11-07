@@ -205,6 +205,13 @@ def account_page(request: Request) -> Response:
     )
 
 
+@router.get("/credits")
+def credits_page(request: Request) -> Response:
+    """A placeholder for buying credits. Payment is not integrated, so the page tells the
+    player to ask an administrator."""
+    return render(request, "credits.html", user=page_user(request))
+
+
 @router.post("/account/sessions/revoke")
 async def revoke_sessions(request: Request) -> Response:
     user = page_user(request)

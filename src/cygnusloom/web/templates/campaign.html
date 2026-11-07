@@ -37,7 +37,7 @@
       <p class="muted">Administrator and single-player accounts are not charged for replies.</p>
     {% else %}
       <p class="muted">The campaign owner's balance is <strong>{{ credit_balance }}</strong> credits. The current model costs {{ credit_price }} credits per reply.</p>
-      {% if credits_blocked %}<p role="alert">{{ credit_message }}</p>{% endif %}
+      {% if credits_blocked %}<p role="alert">{{ credit_message }} <a href="/credits">Get more credits</a></p>{% endif %}
     {% endif %}
     {% else %}
     <p class="muted">The campaign owner chooses the model for every reply.{% if credit_price %} {{ campaign.model }} costs {{ credit_price }} credits per reply and the owner has {{ credit_balance }} credits.{% else %} {{ campaign.model }} is free.{% endif %}</p>

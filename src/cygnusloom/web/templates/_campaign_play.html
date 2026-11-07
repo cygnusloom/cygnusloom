@@ -87,7 +87,7 @@
                 {% elif pending.auto_continue %}
                   <div class="pending-prompt">
                     <p class="muted">The GM is opening the campaign.</p>
-                    {% if credits_blocked %}<p role="alert">{{ credit_message }}</p>{% endif %}
+                    {% if credits_blocked %}<p role="alert">{{ credit_message }} <a href="/credits">Get more credits</a></p>{% endif %}
                     {% if pending_for_viewer %}
                     <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action{% if auto_start %} data-auto-start{% endif %}>
                       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -126,7 +126,7 @@
           <button type="button" class="jump-to-bottom" data-jump-to-bottom hidden aria-label="Jump to newest messages" title="Jump to newest messages"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v15"/><path d="m5 12 7 7 7-7"/></svg></button>
           </div>
           <p class="turn-error" role="alert" hidden></p>
-          {% if credits_blocked %}<p class="turn-note" role="alert">{{ credit_message }}</p>{% endif %}
+          {% if credits_blocked %}<p class="turn-note" role="alert">{{ credit_message }} <a href="/credits">Get more credits</a></p>{% endif %}
           {% if encounter %}
           {% set actor = encounter.participants | selectattr("acting") | first %}
           {% set next = encounter.participants | selectattr("next") | first %}
@@ -175,10 +175,17 @@
             <textarea name="content" rows="3" required maxlength="8000" placeholder="{{ ('Add credits to continue' if credits_blocked else ('Level up first' if advancement_due else (waiting_for if waiting_for else ('Answer the GM above first' if pending else 'Message')))) }}"{% if pending or advancement_due or composer_blocked or credits_blocked %} disabled{% endif %}>{{ draft }}</textarea>
             <div class="composer-actions">
               <div class="composer-tools">
+                {% if credit_price > 0 and not credits_exempt %}
+                <a class="credit-meter" href="/credits" aria-label="Credit balance" title="Credit balance against this model's price of {{ credit_price }} credits per reply. Need more credits?">
+                  <meter min="0" max="{{ credit_price }}" value="{{ credit_balance }}"></meter>
+                  <span class="muted">{{ credit_balance }} / {{ credit_price }} credits</span>
+                </a>
+                {% else %}
                 <span class="context-meter" aria-label="Context usage" title="Estimated prompt size against the context window. At {{ '{:,}'.format(context.summary_at) }} tokens, older messages are summarized and the newest ones stay verbatim.">
                   <meter min="0" max="{{ context.limit }}" value="{{ context.used }}" low="{{ context.summary_at }}" high="{{ context.summary_at }}"></meter>
                   <span class="muted">{{ '{:,}'.format(context.used) }} / {{ '{:,}'.format(context.limit) }}</span>
                 </span>
+                {% endif %}
                 <button type="button" class="composer-settings" data-dialog-target="dialog-settings" aria-haspopup="dialog" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
               </div>
               <button type="submit"{% if pending or advancement_due or composer_blocked or credits_blocked %} disabled{% endif %}>Send</button>

@@ -221,3 +221,31 @@ def test_the_model_picker_shows_each_models_price_and_balance(client_factory, ap
     assert "4 credits per reply" in page
     assert "free" in page
     assert "The campaign owner's balance is <strong>0</strong> credits." in page
+    assert 'class="credit-meter"' in page
+    assert "0 / 4 credits" in page
+    assert 'class="context-meter"' not in page
+    assert 'href="/credits"' in page
+
+    _set_price(app, "fake/scripted", 0)
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    assert 'class="context-meter"' in page
+    assert 'class="credit-meter"' not in page
+
+
+def test_the_credits_page_asks_the_administrator_and_is_linked_from_account(
+    client_factory, app: FastAPI
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    _set_price(app, "fake/scripted", 4)
+
+    campaign_page = client.get(f"/campaigns/{campaign_id}").text
+    account_page = client.get("/account").text
+    credits_page = client.get("/credits")
+
+    assert 'href="/credits"' in campaign_page
+    assert 'href="/credits"' in account_page
+    assert credits_page.status_code == 200
+    assert "Ask the administrator of this server to add credits" in credits_page.text
+    assert "<strong>0</strong> credits" in credits_page.text
+    assert "not charged" not in credits_page.text
