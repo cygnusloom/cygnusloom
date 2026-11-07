@@ -603,7 +603,10 @@ def _world_text(run: _Run, state: CampaignState) -> str:
 
 
 def _narration_messages(
-    run: _Run, turn: Turn, log: list[str] | None = None, heading: str = "Turn log, in order:"
+    run: _Run,
+    turn: Turn,
+    log: list[str] | None = None,
+    heading: str = "Turn log, everything in this turn so far, in order:",
 ) -> list[dict[str, Any]]:
     """What the narration step reads. The turn's opening system message predates the moves made
     in the turn, so the scene is rebuilt from the state as it is now, which also brings in the
@@ -1010,7 +1013,7 @@ def _review_view(
     run: _Run,
     turn: Turn,
     log: list[str] | None = None,
-    heading: str = "Turn log, in order:",
+    heading: str = "Turn log, everything in this turn so far, in order:",
 ) -> list[dict[str, Any]]:
     """What the review reads before the narration. It leaves out the narration instruction and
     the narrator's rewrite note, and replaces the latter with a review note naming the fault the

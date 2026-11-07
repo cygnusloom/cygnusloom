@@ -60,7 +60,9 @@ def test_every_log_line_the_player_sees_is_in_the_narration(
     narrator = json.dumps(_narrator(recorder), ensure_ascii=False)
     missing = [line for line in shown if line not in narrator]
     assert not missing, f"the narrator was not given these Log lines: {missing}"
-    assert "Turn log, in order:\n1. " in _system_text(_narrator(recorder))
+    assert "Turn log, everything in this turn so far, in order:\n1. " in _system_text(
+        _narrator(recorder)
+    )
 
 
 def test_tool_call_messages_lose_their_draft_prose_for_the_narrator():

@@ -57,11 +57,17 @@ def test_turn_review_instruction_is_generic():
     assert "player's message" in TURN_REVIEW_INSTRUCTION
     assert "narration above" in TURN_REVIEW_INSTRUCTION
     assert "Brevity is not a fault" in TURN_REVIEW_INSTRUCTION
+    assert "coverage is" in TURN_REVIEW_INSTRUCTION
+    assert "a recorded event the player can perceive that the narration leaves out" in (
+        TURN_REVIEW_INSTRUCTION
+    )
+    assert "Formatting is also a fault" in TURN_REVIEW_INSTRUCTION
     assert "Tense is a rule, not a style choice" in TURN_REVIEW_INSTRUCTION
     assert "call undo_narration with the tense slip as the fault" in TURN_REVIEW_INSTRUCTION
     assert "Call undo_narration before any tool that changes the record" in TURN_REVIEW_INSTRUCTION
     assert "never add a speculative action" in TURN_REVIEW_INSTRUCTION
     assert "Do not undo for style" in TURN_REVIEW_INSTRUCTION
+    assert "tense, coverage, and formatting faults" in TURN_REVIEW_INSTRUCTION
     # The review judges the narration, not the GM's choices in the record.
     assert "do not add an action the turn did not take" in TURN_REVIEW_INSTRUCTION
     assert "clearly needed but did not take" not in TURN_REVIEW_INSTRUCTION
@@ -103,6 +109,24 @@ def test_every_rule_set_narrates_in_plain_present_tense():
         assert "Do not use similes, metaphors, or poetic comparisons" in text, rule_set_id
         assert "under 40 words" in text, rule_set_id
         assert "under 80 words" in text, rule_set_id
+
+
+def test_narration_covers_every_perceived_event_since_the_player_acted():
+    text = narrate_instruction(CAIRN)
+    assert "the turn log is the complete record" in text
+    assert "must account for every entry the player can perceive" in text
+    assert "Do not skip an entry just to stay short" in text
+    assert "include every arrival, departure, move, roll and save outcome" in text
+    assert "a later entry never happens before an earlier one" in text
+
+
+def test_narration_separates_beats_and_dialogue_into_paragraphs():
+    text = narrate_instruction(CAIRN)
+    assert "short paragraphs separated by a blank line" in text
+    assert "Start a new paragraph when the beat, scene, or speaker changes" in text
+    assert "never put the whole turn in one block" in text
+    assert "Give each line its own paragraph" in text
+    assert "Never put dialogue in block quotes, bullet points, labels" in text
 
 
 def test_speech_instruction_falls_back_to_digits_above_the_word_table():
