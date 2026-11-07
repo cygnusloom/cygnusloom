@@ -41,6 +41,11 @@ Authentik starts, so an existing installation gains groups added to the blueprin
 `cygnusloom-credit-exempt`. If the apply fails the update only warns; check **System →
 Blueprints** for the error or run the command from the upgrade note below by hand.
 
+The Authentik server and worker wait for Docker DNS to resolve `authentik-db` and
+`authentik-redis` before starting. If an older installation still hangs with `Temporary failure
+in name resolution`, run `docker compose restart authentik-server authentik-worker` or run
+`./scripts/update.sh` again.
+
 If Cygnus Loom is missing from **Applications → Applications**, the blueprint was not applied;
 check **System → Blueprints** for the error and the worker logs. If it exists in the admin list
 but not on your user dashboard, open the application and set **Launch URL** to the app URL
@@ -49,13 +54,14 @@ but not on your user dashboard, open the application and set **Launch URL** to t
 ## Invite-only accounts
 
 The blueprint creates the `cygnusloom-enrollment-invite` flow. It starts with an Invitation
-stage, so no one can create an account without an invitation. Invitations are single-use; create
-one per player.
+stage, so no one can create an account without an invitation. Invitations are single-use by
+default; create one per player. Clearing **Single use** makes a reusable signup link until it
+expires, so set a short expiry and share it only with the intended group.
 
 1. Apply the blueprint with `./scripts/update.sh` (or the manual command above).
 2. In Authentik open **Directory → Invitations → Create**. Give the invitation a name, choose
-   **Cygnus Loom invitation enrollment** (`cygnusloom-enrollment-invite`), enable **Single use**,
-   and optionally set an expiry.
+   **Cygnus Loom invitation enrollment** (`cygnusloom-enrollment-invite`), enable **Single use**
+   (recommended), and set an expiry.
 3. Copy the generated invitation link. It looks like
    `https://<AUTHENTIK_DOMAIN>/if/flow/cygnusloom-enrollment-invite/?itoken=<token>`. The flow
    redirects to `CYGNUSLOOM_BASE_URL/auth/login` automatically after enrollment. To land on a

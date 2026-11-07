@@ -84,6 +84,7 @@ services:
     image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server:2026.5.3}
     restart: unless-stopped
     command: server
+    entrypoint: ["/bin/sh", "/wait-for-dns.sh"]
     ports:
       - "127.0.0.1:${AUTHENTIK_PORT:-21873}:9000"
     environment: &authentik-env
@@ -101,6 +102,7 @@ services:
       CYGNUSLOOM_OIDC_REDIRECT_URI: https://${CYGNUSLOOM_DOMAIN}/auth/callback
       CYGNUSLOOM_OIDC_POST_LOGOUT_URI: https://${CYGNUSLOOM_DOMAIN}/login
     volumes:
+      - ./deploy/authentik/wait-for-dns.sh:/wait-for-dns.sh:ro
       - ./deploy/authentik/blueprints:/blueprints/custom:ro
       - authentik-media:/media
       - authentik-certs:/certs
@@ -124,11 +126,13 @@ services:
     image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server:2026.5.3}
     restart: unless-stopped
     command: worker
+    entrypoint: ["/bin/sh", "/wait-for-dns.sh"]
     environment:
       <<: *authentik-env
       AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL:?set AUTHENTIK_BOOTSTRAP_EMAIL in .env}
       AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD:?set AUTHENTIK_BOOTSTRAP_PASSWORD in .env}
     volumes:
+      - ./deploy/authentik/wait-for-dns.sh:/wait-for-dns.sh:ro
       - ./deploy/authentik/blueprints:/blueprints/custom:ro
       - authentik-media:/media
       - authentik-certs:/certs

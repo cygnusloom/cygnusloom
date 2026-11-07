@@ -116,6 +116,19 @@ def test_the_blueprint_creates_an_invite_only_enrollment_flow() -> None:
     ) in blueprint
 
 
+def test_authentik_waits_for_docker_dns() -> None:
+    compose = (ROOT / "compose.yaml").read_text()
+    assert compose.count("./deploy/authentik/wait-for-dns.sh:/wait-for-dns.sh:ro") == 2
+    assert compose.count('entrypoint: ["/bin/sh", "/wait-for-dns.sh"]') == 2
+    script_path = ROOT / "deploy" / "authentik" / "wait-for-dns.sh"
+    subprocess.run(["sh", "-n", str(script_path)], check=True, capture_output=True, text=True)
+    script = script_path.read_text()
+    assert "gethostbyname" in script
+    assert "authentik-db" in script
+    assert "authentik-redis" in script
+    assert 'exec dumb-init -- ak "$@"' in script
+
+
 def test_update_script_applies_the_blueprint_explicitly() -> None:
     update = (ROOT / "scripts" / "update.sh").read_text()
     applied = (
