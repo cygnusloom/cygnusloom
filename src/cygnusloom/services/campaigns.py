@@ -8,9 +8,10 @@ from collections import defaultdict
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import Engine
+from sqlalchemy import Engine, func
 from sqlmodel import select
 
 from cygnusloom import __version__
@@ -389,6 +390,32 @@ class CampaignCard:
     owner_name: str = ""
     owner_email: str = ""
     shared: bool = False
+    # When the campaign's newest event happened, and that time as the list shows it.
+    last_event_at: datetime | None = None
+    last_activity: str = ""
+
+
+def last_activity_text(when: datetime | None, now: datetime | None = None) -> str:
+    """A relative time with its date, such as '3 hours ago (2026-11-07)'. A database time
+    without a timezone is taken as UTC."""
+    if when is None:
+        return ""
+    when = when.replace(tzinfo=UTC) if when.tzinfo is None else when.astimezone(UTC)
+    now = now or datetime.now(UTC)
+    now = now.replace(tzinfo=UTC) if now.tzinfo is None else now.astimezone(UTC)
+    seconds = max(0, int((now - when).total_seconds()))
+    if seconds < 60:
+        relative = "just now"
+    elif seconds < 3600:
+        minutes = seconds // 60
+        relative = f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+    elif seconds < 86400:
+        hours = seconds // 3600
+        relative = f"{hours} hour{'s' if hours != 1 else ''} ago"
+    else:
+        days = seconds // 86400
+        relative = f"{days} day{'s' if days != 1 else ''} ago"
+    return f"{relative} ({when.strftime('%Y-%m-%d')})"
 
 
 def visible_campaigns(engine: Engine, user_id: int) -> list[CampaignCard]:
@@ -414,15 +441,38 @@ def visible_campaigns(engine: Engine, user_id: int) -> list[CampaignCard]:
                 select(User).where(User.id.in_({c.owner_id for c in [*owned, *shared]}))
             ).all()
         }
-        cards = [CampaignCard(campaign=campaign) for campaign in owned]
+        campaign_ids = [c.id for c in [*owned, *shared] if c.id is not None]
+        last_events: dict[int, datetime] = {}
+        if campaign_ids:
+            last_events = {
+                campaign_id: last_event
+                for campaign_id, last_event in db.exec(
+                    select(Event.campaign_id, func.max(Event.created_at))
+                    .where(Event.campaign_id.in_(campaign_ids))
+                    .group_by(Event.campaign_id)
+                ).all()
+            }
+        cards: list[CampaignCard] = []
+        for campaign in owned:
+            last_event = last_events.get(campaign.id or 0) or campaign.created_at
+            cards.append(
+                CampaignCard(
+                    campaign=campaign,
+                    last_event_at=last_event,
+                    last_activity=last_activity_text(last_event),
+                )
+            )
         for campaign in shared:
             owner = owners.get(campaign.owner_id)
+            last_event = last_events.get(campaign.id or 0) or campaign.created_at
             cards.append(
                 CampaignCard(
                     campaign=campaign,
                     owner_name=(owner.display_name or owner.email) if owner else "",
                     owner_email=owner.email if owner else "",
                     shared=True,
+                    last_event_at=last_event,
+                    last_activity=last_activity_text(last_event),
                 )
             )
         return cards

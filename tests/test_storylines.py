@@ -220,6 +220,53 @@ def test_deactivating_the_focused_storyline_hides_it_from_context_and_promotes_t
     assert _state(app, campaign_id).storylines[second["id"]].active is True
 
 
+def test_splitting_a_storyline_is_an_update_and_a_create(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    app = client.app
+    created = _create(
+        app,
+        campaign_id,
+        name="Two Missing",
+        summary="Aldra and Jandy are both missing from Isthmus Town.",
+        plot="Both searches begin in town, but they lead to different places.",
+    )
+    _tool(
+        app,
+        campaign_id,
+        "update_storyline",
+        {
+            "storyline": "Two Missing",
+            "name": "The Missing Heir",
+            "summary": "Aldra disappeared after leaving the Butcher after dark.",
+            "plot": "Aldra's ledger points to the smuggling at the inn.",
+        },
+    )
+    split = _create(
+        app,
+        campaign_id,
+        name="The Missing Tithe",
+        summary="Jandy and the tithe never reached the Cities.",
+        plot="The tithe trail leads into the Wood.",
+    )
+
+    state = _state(app, campaign_id)
+    assert [story.name for story in state.active_storylines()] == [
+        "The Missing Heir",
+        "The Missing Tithe",
+    ]
+    # Splitting keeps the original thread focused and the new thread secondary.
+    assert state.focused_storyline() is not None
+    assert state.focused_storyline().id == created["id"]
+    assert split["focused"] is False
+    view = story_view(state)
+    assert [(item.name, item.focused) for item in view.storylines] == [
+        ("The Missing Heir", True),
+        ("The Missing Tithe", False),
+    ]
+
+
 def test_updating_a_storyline_keeps_fields_left_out_and_can_clear_them(
     client_factory: Callable[[], TestClient],
 ):

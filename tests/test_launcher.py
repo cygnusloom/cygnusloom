@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from cygnusloom import cli, launcher
+from cygnusloom import cli, desktop, launcher
 
 
 def test_data_dir_uses_an_explicit_override(tmp_path):
@@ -48,6 +48,99 @@ def test_one_process_holds_the_instance_lock(tmp_path):
 def test_free_port_is_usable():
     port = launcher._free_port("127.0.0.1")
     assert 1 <= port <= 65535
+
+
+class _FakeSettings:
+    def __init__(self, values: dict | None = None):
+        self.values = dict(values or {})
+        self.synced = False
+
+    def value(self, key, default=None, type=None):
+        return self.values.get(key, default)
+
+    def setValue(self, key, value):
+        self.values[key] = value
+
+    def sync(self):
+        self.synced = True
+
+
+class _FakeWindow:
+    def __init__(self):
+        self.geometry = None
+        self.resized = None
+        self.minimum = None
+        self.mode = None
+
+    def restoreGeometry(self, geometry):
+        self.geometry = geometry
+        return True
+
+    def resize(self, width, height):
+        self.resized = (width, height)
+
+    def setMinimumSize(self, width, height):
+        self.minimum = (width, height)
+
+    def show(self):
+        self.mode = "normal"
+
+    def showMaximized(self):
+        self.mode = "maximized"
+
+    def showFullScreen(self):
+        self.mode = "fullscreen"
+
+    def saveGeometry(self):
+        return b"saved geometry"
+
+    def isMaximized(self):
+        return self.mode == "maximized"
+
+    def isFullScreen(self):
+        return self.mode == "fullscreen"
+
+
+def test_window_state_file_lives_in_the_data_dir(tmp_path):
+    assert desktop.window_state_path(tmp_path) == tmp_path / "window.ini"
+
+
+def test_a_first_launch_uses_the_default_window_size():
+    window = _FakeWindow()
+
+    desktop.restore_window_state(_FakeSettings(), window)
+
+    assert window.resized == (desktop.WINDOW_WIDTH, desktop.WINDOW_HEIGHT)
+    assert window.minimum == (desktop.MIN_WIDTH, desktop.MIN_HEIGHT)
+    assert window.mode == "normal"
+
+
+def test_the_window_remembers_its_geometry_and_maximized_state():
+    settings = _FakeSettings({"geometry": b"old geometry", "maximized": True})
+    window = _FakeWindow()
+
+    desktop.restore_window_state(settings, window)
+
+    assert window.geometry == b"old geometry"
+    assert window.mode == "maximized"
+
+    desktop.save_window_state(settings, window)
+    assert settings.values == {
+        "geometry": b"saved geometry",
+        "maximized": True,
+        "fullscreen": False,
+    }
+    assert settings.synced is True
+
+
+def test_a_full_screen_window_is_restored_full_screen():
+    window = _FakeWindow()
+
+    desktop.restore_window_state(
+        _FakeSettings({"geometry": b"old geometry", "fullscreen": True}), window
+    )
+
+    assert window.mode == "fullscreen"
 
 
 def test_library_symbol_probe_reads_the_file(tmp_path):

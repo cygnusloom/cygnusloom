@@ -4,6 +4,7 @@ import json
 import re
 from collections.abc import Callable
 from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -13,6 +14,7 @@ from cygnusloom.config import Settings
 from cygnusloom.db.models import Campaign, Event
 from cygnusloom.llm.base import ChatReply, LLMError
 from cygnusloom.llm.fake import FakeProvider
+from cygnusloom.services.campaigns import last_activity_text
 from cygnusloom.services.events import Turn
 from tests.conftest import (
     NARRATE_TEXT,
@@ -174,6 +176,27 @@ def test_create_campaign_and_list_it(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
     assert _new_campaign(client, label="Sandbox").status_code == 303
     assert "Sandbox" in client.get("/campaigns").text
+
+
+def test_last_activity_text_shows_a_relative_time_and_date():
+    now = datetime(2026, 11, 7, 12, 0, tzinfo=UTC)
+    assert last_activity_text(now - timedelta(seconds=20), now) == "just now (2026-11-07)"
+    assert last_activity_text(now - timedelta(minutes=5), now) == "5 minutes ago (2026-11-07)"
+    assert last_activity_text(now - timedelta(hours=1), now) == "1 hour ago (2026-11-07)"
+    assert last_activity_text(now - timedelta(days=2), now) == "2 days ago (2026-11-05)"
+    # A database time without a timezone is taken as UTC.
+    assert last_activity_text(datetime(2026, 11, 7, 11, 0), now) == "1 hour ago (2026-11-07)"
+    assert last_activity_text(None, now) == ""
+
+
+def test_campaign_list_shows_when_the_last_event_was(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    assert _new_campaign(client, label="Active game").status_code == 303
+    page = client.get("/campaigns").text
+    assert 'class="campaign-activity"' in page
+    assert re.search(r"(?:just now|\d+ (?:minute|hour|day)s? ago) \(\d{4}-\d{2}-\d{2}\)", page)
 
 
 def test_delete_campaign_removes_it_and_its_events(client_factory: Callable[[], TestClient]):

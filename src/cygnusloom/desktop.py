@@ -8,21 +8,54 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 820
 MIN_WIDTH = 960
 MIN_HEIGHT = 640
+# The window's size, position, and mode are remembered here, beside the game's other data.
+WINDOW_STATE_FILE = "window.ini"
 
 
 class DesktopUnavailable(RuntimeError):
     """PySide6 is not installed in a source checkout."""
 
 
+def window_state_path(data_dir: Path) -> Path:
+    """Where the desktop window remembers its size, position, and mode."""
+    return data_dir / WINDOW_STATE_FILE
+
+
+def restore_window_state(settings: Any, window: Any) -> None:
+    """Restore the saved geometry and show the window in its saved mode. A first launch gets
+    the default size."""
+    geometry = settings.value("geometry")
+    if geometry is not None:
+        window.restoreGeometry(geometry)
+    else:
+        window.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
+    window.setMinimumSize(MIN_WIDTH, MIN_HEIGHT)
+    if bool(settings.value("fullscreen", False, type=bool)):
+        window.showFullScreen()
+    elif bool(settings.value("maximized", False, type=bool)):
+        window.showMaximized()
+    else:
+        window.show()
+
+
+def save_window_state(settings: Any, window: Any) -> None:
+    """Remember the window's geometry and whether it was maximized or full screen."""
+    settings.setValue("geometry", window.saveGeometry())
+    settings.setValue("maximized", window.isMaximized())
+    settings.setValue("fullscreen", window.isFullScreen())
+    settings.sync()
+
+
 def run_window(url: str, title: str, data_dir: Path) -> int:
     """Open the game window and block until it closes. Returns the Qt exit code."""
     try:
-        from PySide6.QtCore import QUrl
+        from PySide6.QtCore import QSettings, QUrl
         from PySide6.QtGui import QDesktopServices
         from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
         from PySide6.QtWebEngineWidgets import QWebEngineView
@@ -67,7 +100,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
     view.setPage(LocalPage(profile, view))
     view.setUrl(QUrl(url))
     window.setCentralWidget(view)
-    window.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
-    window.setMinimumSize(MIN_WIDTH, MIN_HEIGHT)
-    window.show()
+    settings = QSettings(str(window_state_path(data_dir)), QSettings.Format.IniFormat)
+    restore_window_state(settings, window)
+    app.aboutToQuit.connect(lambda: save_window_state(settings, window))
     return app.exec()

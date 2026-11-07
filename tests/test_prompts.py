@@ -127,7 +127,7 @@ def test_state_prompt_keeps_the_active_storylines_current():
     assert "not the one that mattered last turn" in text
 
 
-def test_core_storyline_rule_explains_focus_and_the_active_limit():
+def test_core_storyline_rule_explains_focus_the_active_limit_and_splitting():
     text = content_library().core.rules["storylines"]
     assert "player-facing name and running summary" in text
     assert "Keep exactly one storyline focused" in text
@@ -135,13 +135,16 @@ def test_core_storyline_rule_explains_focus_and_the_active_limit():
     assert "deactivate_storyline" in text
     assert "search_storylines" in text
     assert "never hold a secret" in text
+    assert "split it" in text
+    assert "update the original" in text
 
 
-def test_the_opening_creates_and_focuses_the_first_storyline():
+def test_the_opening_creates_storylines_for_each_distinct_thread():
     text = OPENING_PROMPT
-    assert "create_storyline" in text
-    assert "first storyline from the adventure's hooks" in text
-    assert "focus it" in text
+    assert "one for each distinct thread" in text
+    assert "split it" in text
+    assert "creating the other with create_storyline" in text
+    assert "focus the one the opening starts with" in text
 
 
 def test_narration_does_not_invent_dialogue_when_none_is_queued():
