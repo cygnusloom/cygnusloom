@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import select
 
 from cygnusloom.db.models import CampaignInvite, Event, User
+from cygnusloom.services import campaigns as campaigns_service
 from cygnusloom.services import encounters
 from cygnusloom.services import turns as turns_service
 from cygnusloom.services.common import InvalidInput
@@ -521,6 +522,97 @@ def test_typing_is_limited_to_the_campaigns_members(
     )
     assert response.status_code == 404
     assert owner.get(f"/campaigns/{campaign_id}/turn-status").json()["typing"] == []
+
+
+def test_a_running_turn_is_shown_to_every_page(
+    client_factory: Callable[[], TestClient],
+):
+    """A second device sees the GM working, its status line, and the reply as it is written."""
+    client = signed_in_client(client_factory, OWNER)
+    campaign_id = create_campaign(client)
+    assert create_character(client, campaign_id, name="Ada").status_code == 303
+
+    # The campaign's opening gives it an open turn; the busy block stands in for the reply
+    # that a first device is streaming right now.
+    with campaigns_service._exclusive(campaign_id):
+        campaigns_service.set_turn_activity(campaign_id, "Narrating...")
+        campaigns_service.append_turn_reply(campaign_id, "The door creaks open.")
+
+        snapshot = client.get(f"/campaigns/{campaign_id}/turn-status").json()
+        assert snapshot["status"] == "busy"
+        assert snapshot["running"] is True
+        assert snapshot["activity"] == "Narrating..."
+        assert snapshot["reply"] == "The door creaks open."
+
+        page = client.get(f"/campaigns/{campaign_id}/live")
+        assert page.status_code == 200
+        assert 'data-gm-state="busy"' in page.text
+        assert "data-gm-working" in page.text
+        assert "Narrating..." in page.text
+        assert "The door creaks open." in page.text
+        assert "data-jump-to-bottom" in page.text
+        composer = page.text.split('id="composer"', 1)[1]
+        assert "<textarea" in composer
+        assert "disabled" in composer.split("</form>", 1)[0]
+
+
+def test_the_live_stream_carries_ai_activity_and_the_streamed_reply(
+    client_factory: Callable[[], TestClient],
+):
+    owner = signed_in_client(client_factory, OWNER)
+    campaign_id = create_campaign(owner)
+    assert create_character(owner, campaign_id, name="Ada").status_code == 303
+    engine = owner.app.state.engine
+
+    async def snapshots():
+        with campaigns_service._exclusive(campaign_id):
+            campaigns_service.set_turn_activity(campaign_id, "Narrating...")
+            campaigns_service.append_turn_reply(campaign_id, "The door creaks open.")
+            stream = campaigns_web._event_lines(engine, campaign_id, owner.app.state.typing)
+            first = await anext(stream)
+            campaigns_service.set_turn_activity(campaign_id, "Writing dialogue...")
+            campaigns_service.append_turn_reply(campaign_id, " A voice answers.")
+            second = await anext(stream)
+            await stream.aclose()
+            return first, second
+
+    first, second = asyncio.run(snapshots())
+    first_payload = json.loads(first.removeprefix("data: "))
+    second_payload = json.loads(second.removeprefix("data: "))
+    assert first_payload["status"] == "busy"
+    assert first_payload["running"] is True
+    assert first_payload["activity"] == "Narrating..."
+    assert first_payload["reply"] == "The door creaks open."
+    assert second_payload["activity"] == "Writing dialogue..."
+    assert second_payload["reply"] == "The door creaks open. A voice answers."
+
+
+def test_the_turn_stream_records_activity_and_the_partial_reply(
+    client_factory: Callable[[], TestClient],
+):
+    owner = signed_in_client(client_factory, OWNER)
+    campaign_id = create_campaign(owner)
+
+    async def run():
+        async def events():
+            yield campaigns_service.Status("Narrating...")
+            yield campaigns_service.Delta("The door ")
+            yield campaigns_service.Delta("creaks.")
+            assert campaigns_service.turn_progress(campaign_id) == (
+                "Narrating...",
+                "The door creaks.",
+            )
+            yield campaigns_service.Retract()
+            assert campaigns_service.turn_progress(campaign_id) == ("Narrating...", "")
+            yield campaigns_service.Delta("A new sentence.")
+            yield campaigns_service.Saved(1)
+            assert campaigns_service.turn_progress(campaign_id) == ("Narrating...", "")
+
+        with campaigns_service._exclusive(campaign_id):
+            lines = [line async for line in campaigns_web._turn_lines(events(), campaign_id)]
+        assert lines[0] == '{"type": "status", "text": "Narrating..."}\n'
+
+    asyncio.run(run())
 
 
 def test_the_live_stream_carries_typing_without_a_campaign_event(

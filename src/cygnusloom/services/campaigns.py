@@ -491,10 +491,56 @@ _busy_lock = threading.Lock()
 _busy_campaigns: set[int] = set()
 
 
+@dataclass
+class _LiveTurn:
+    """What the running turn is doing, for every other page at the table.
+
+    It is a hint, like a typing indicator: it changes while the GM works and disappears when the
+    turn ends. The saved reply is the source of truth; a page replaces this with the stored
+    message when the live snapshot reaches it."""
+
+    activity: str = ""
+    reply: str = ""
+
+
+_live_turns: dict[int, _LiveTurn] = {}
+
+
 def turn_busy(campaign_id: int) -> bool:
     """Whether this process is writing a turn for the campaign right now."""
     with _busy_lock:
         return campaign_id in _busy_campaigns
+
+
+def turn_progress(campaign_id: int) -> tuple[str, str]:
+    """The running turn's latest status line and the narration streamed so far."""
+    with _busy_lock:
+        live = _live_turns.get(campaign_id)
+        return (live.activity, live.reply) if live is not None else ("", "")
+
+
+def set_turn_activity(campaign_id: int, text: str) -> None:
+    """Record what the GM is doing, so another player's page can show the same status."""
+    with _busy_lock:
+        live = _live_turns.get(campaign_id)
+        if live is not None:
+            live.activity = text
+
+
+def append_turn_reply(campaign_id: int, text: str) -> None:
+    """Add streamed narration, so another player's page can follow the reply as it is written."""
+    with _busy_lock:
+        live = _live_turns.get(campaign_id)
+        if live is not None:
+            live.reply += text
+
+
+def clear_turn_reply(campaign_id: int) -> None:
+    """Drop the streamed narration, such as when the GM sets it aside to write it again."""
+    with _busy_lock:
+        live = _live_turns.get(campaign_id)
+        if live is not None:
+            live.reply = ""
 
 
 @contextmanager
@@ -503,11 +549,13 @@ def _exclusive(campaign_id: int) -> Iterator[None]:
         if campaign_id in _busy_campaigns:
             raise Conflict("the GM is still working on this campaign; try again when it finishes")
         _busy_campaigns.add(campaign_id)
+        _live_turns[campaign_id] = _LiveTurn()
     try:
         yield
     finally:
         with _busy_lock:
             _busy_campaigns.discard(campaign_id)
+            _live_turns.pop(campaign_id, None)
 
 
 def delete_campaign(engine: Engine, owner_id: int, campaign_id: int) -> None:

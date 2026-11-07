@@ -192,8 +192,20 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 
 .chat { display: flex; flex-direction: column; min-height: 0; padding: 1rem 1.25rem; border-right: 1px solid var(--border); }
 .chat-title { margin: 0; font-size: 1.25rem; overflow-wrap: anywhere; }
+.chat .transcript-wrap { position: relative; display: flex; flex: 1 1 auto; min-height: 0; }
 .chat .transcript { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .chat .composer { flex-shrink: 0; }
+.jump-to-bottom {
+  position: absolute; right: 0.75rem; bottom: 0.75rem; z-index: 2;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2.25rem; height: 2.25rem; padding: 0;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: var(--panel); color: var(--text); cursor: pointer;
+  box-shadow: 0 4px 12px rgba(20, 16, 12, 0.35);
+}
+.jump-to-bottom[hidden] { display: none; }
+.jump-to-bottom:hover, .jump-to-bottom:focus-visible { border-color: var(--accent); color: var(--accent); }
+.jump-to-bottom svg { width: 1.15rem; height: 1.15rem; }
 
 .side {
   display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 50% minmax(0, 1fr);

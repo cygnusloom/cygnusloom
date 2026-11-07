@@ -34,12 +34,14 @@ from cygnusloom.services.campaigns import (
     Saved,
     Status,
     TurnEvent,
+    append_turn_reply,
     begin_encounter_turn,
     campaign_spec,
     campaign_transcript,
     campaign_world,
     character_spec,
     clear_debug_injection,
+    clear_turn_reply,
     context_usage,
     create_campaign,
     default_campaign_labels,
@@ -62,9 +64,11 @@ from cygnusloom.services.campaigns import (
     set_debug_injection,
     set_debug_invincibility,
     set_debug_stat,
+    set_turn_activity,
     start_encounter_turn,
     stream_message,
     turn_busy,
+    turn_progress,
     upgrade_campaign,
     visible_campaigns,
 )
@@ -587,17 +591,23 @@ def _turn_snapshot(
     newest_event: int | None = None,
     busy: bool | None = None,
     typers: tuple[Typer, ...] | None = None,
+    activity: str | None = None,
+    reply: str | None = None,
 ) -> dict[str, Any]:
-    """What every page needs to know about the table: the newest event, whose turn it is, and
-    who is typing. Both the status endpoint and the live stream send this shape. `newest_event`,
-    `busy`, and `typers` may be passed when the caller just read them, which spares a second
-    query."""
+    """What every page needs to know about the table: the newest event, whose turn it is, who
+    is typing, and what the GM is doing. Both the status endpoint and the live stream send this
+    shape. `newest_event`, `busy`, `typers`, `activity`, and `reply` may be passed when the
+    caller just read them, which spares a second query."""
     if newest_event is None:
         newest_event = _newest_event(engine, campaign_id)
     if busy is None:
         busy = turn_busy(campaign_id)
     if typers is None:
         typers = typing.active(campaign_id)
+    if activity is None or reply is None:
+        live_activity, live_reply = turn_progress(campaign_id)
+        activity = live_activity if activity is None else activity
+        reply = live_reply if reply is None else reply
     with session_scope(engine) as db:
         state = load_state(db, campaign_id)
     newest = newest_event
@@ -612,6 +622,7 @@ def _turn_snapshot(
         status = "prompt"
     else:
         status = "busy"
+    running = busy and turn is not None
     actor_id = turn.player_id if turn is not None else None
     actor = turn.player_name if turn is not None else ""
     if state.encounter is not None and state.encounter.acting:
@@ -626,12 +637,15 @@ def _turn_snapshot(
                 actor = acting.name
     return {
         "status": status,
+        "running": running,
         "event": newest,
         "turn": turn.opener if turn is not None else 0,
         "actor_id": actor_id,
         "actor": actor,
         "pending_for": turn.player_id if turn is not None and turn.prompt else None,
         "typing": [{"id": typer.user_id, "name": typer.name} for typer in typers],
+        "activity": activity,
+        "reply": reply,
     }
 
 
@@ -658,14 +672,15 @@ def campaign_events(request: Request, campaign_id: int) -> Response:
 
 async def _event_lines(engine: Any, campaign_id: int, typing: TypingRegistry) -> AsyncIterator[str]:
     last_payload = ""
-    last_key: tuple[int, bool, tuple[Typer, ...]] | None = None
+    last_key: tuple[int, bool, tuple[Typer, ...], str, str] | None = None
     heartbeat = 0
     while True:
         try:
             newest = _newest_event(engine, campaign_id)
             busy = turn_busy(campaign_id)
             typers = typing.active(campaign_id)
-            key = (newest, busy, typers)
+            activity, reply = turn_progress(campaign_id) if busy else ("", "")
+            key = (newest, busy, typers, activity, reply)
             if key != last_key:
                 last_key = key
                 # Only replay the log when something has actually changed. An idle stream
@@ -677,6 +692,8 @@ async def _event_lines(engine: Any, campaign_id: int, typing: TypingRegistry) ->
                     newest_event=newest,
                     busy=busy,
                     typers=typers,
+                    activity=activity,
+                    reply=reply,
                 )
                 payload = json.dumps(snapshot)
                 if payload != last_payload:
@@ -1039,7 +1056,7 @@ async def post_message_stream(request: Request, campaign_id: int) -> Response:
         text,
     )
     return StreamingResponse(
-        _turn_lines(events),
+        _turn_lines(events, campaign_id),
         media_type="application/x-ndjson",
         headers={"Cache-Control": "no-cache"},
     )
@@ -1080,7 +1097,7 @@ async def post_pending_stream(request: Request, campaign_id: int) -> Response:
         text,
     )
     return StreamingResponse(
-        _turn_lines(events),
+        _turn_lines(events, campaign_id),
         media_type="application/x-ndjson",
         headers={"Cache-Control": "no-cache"},
     )
@@ -1105,7 +1122,7 @@ async def post_encounter_turn_stream(request: Request, campaign_id: int) -> Resp
         name,
     )
     return StreamingResponse(
-        _turn_lines(events),
+        _turn_lines(events, campaign_id),
         media_type="application/x-ndjson",
         headers={"Cache-Control": "no-cache"},
     )
@@ -1143,9 +1160,16 @@ async def post_encounter_turn_end(request: Request, campaign_id: int) -> Respons
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
-async def _turn_lines(events: AsyncIterator[TurnEvent]) -> AsyncIterator[str]:
+async def _turn_lines(events: AsyncIterator[TurnEvent], campaign_id: int) -> AsyncIterator[str]:
     try:
         async for event in events:
+            match event:
+                case Status(text):
+                    set_turn_activity(campaign_id, text)
+                case Delta(text):
+                    append_turn_reply(campaign_id, text)
+                case Retract() | NextMessage() | Saved():
+                    clear_turn_reply(campaign_id)
             yield _line(event) + "\n"
     except InvalidInput as exc:
         yield _line(TurnError(400, str(exc))) + "\n"
@@ -1430,7 +1454,12 @@ def _campaign_page(
     )
     player_name = viewer_pc.name if viewer_pc is not None else ""
     acting_name = speaker_name(world.state, user.id) or player_name
-    interact = _interaction_state(world.state, user.id, pending, is_owner=is_owner)
+    # A running turn is visible to every page, including a second tab of the account that
+    # started it. The busy flag is in-process, like the typing hints; a page that misses it
+    # still catches the saved reply through the live stream's newest event.
+    gm_busy = turn_busy(campaign.id) and world.state.turn is not None
+    gm_activity, gm_reply = turn_progress(campaign.id) if gm_busy else ("", "")
+    interact = _interaction_state(world.state, user.id, pending, is_owner=is_owner, busy=gm_busy)
     values = {
         "campaign": campaign,
         "world": library.world_templates.get(campaign.world_template),
@@ -1487,6 +1516,9 @@ def _campaign_page(
         "unclaimed": [c.name for c in world.state.pcs() if c.unclaimed],
         "last_event": newest,
         "turn_status": interact["status"],
+        "gm_busy": gm_busy,
+        "gm_activity": gm_activity,
+        "gm_reply": gm_reply,
         "waiting_for": interact["waiting_for"],
         "composer_blocked": interact["composer_blocked"],
         "pending_for_viewer": interact["pending_for_viewer"],
@@ -1511,7 +1543,9 @@ class _Interaction:
     encounter_control: str = ""
 
 
-def _interaction_state(state: CampaignState, user_id: int, pending: Any, *, is_owner: bool) -> dict:
+def _interaction_state(
+    state: CampaignState, user_id: int, pending: Any, *, is_owner: bool, busy: bool = False
+) -> dict:
     """The page's view of whose turn it is. Every player sees the same turn, but only the
     player whose character is acting may post. The owner may also end anyone's turn."""
     status = "busy" if state.turn is not None else "idle"
@@ -1558,7 +1592,7 @@ def _interaction_state(state: CampaignState, user_id: int, pending: Any, *, is_o
         and pending.auto_continue
         and (pending.player_id == user_id or (pending.player_id is None and is_owner))
     )
-    composer_blocked = pending is not None or other_turn
+    composer_blocked = pending is not None or other_turn or busy
     return {
         "status": status,
         "waiting_for": waiting_for,

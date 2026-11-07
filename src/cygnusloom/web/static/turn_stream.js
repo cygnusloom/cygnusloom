@@ -29,6 +29,30 @@
     syncShowHidden();
   }
 
+  // The transcript follows new content only while the reader is at the bottom. Scrolling up
+  // leaves their place alone and reveals the jump button.
+  const jumpButton = document.querySelector("[data-jump-to-bottom]");
+  const NEAR_BOTTOM_PX = 32;
+  let followBottom = true;
+  const atBottom = () =>
+    !transcript ||
+    transcript.scrollHeight - transcript.scrollTop - transcript.clientHeight <= NEAR_BOTTOM_PX;
+  const updateJump = () => {
+    if (jumpButton) jumpButton.hidden = atBottom();
+  };
+  const syncFollow = () => {
+    followBottom = atBottom();
+    updateJump();
+  };
+  transcript?.addEventListener("scroll", syncFollow, { passive: true });
+  window.addEventListener("resize", updateJump);
+  jumpButton?.addEventListener("click", () => {
+    followBottom = true;
+    if (transcript) transcript.scrollTop = transcript.scrollHeight;
+    updateJump();
+  });
+  syncFollow();
+
   const composer = document.getElementById("composer");
   if (!composer || !composer.dataset.streamAction || !window.ReadableStream) return;
 
@@ -77,8 +101,10 @@
     return { bubble, content, status, statusText };
   };
 
+  // Keep the reader at the bottom, unless they scrolled up to read something earlier.
   const scrollDown = () => {
-    transcript.scrollTop = transcript.scrollHeight;
+    if (followBottom) transcript.scrollTop = transcript.scrollHeight;
+    updateJump();
   };
 
   // Log entries sit in the chat just before the reply they belong to.
@@ -217,6 +243,7 @@
         case "log":
           appendLog(item.text, item.hidden, current.bubble);
           refreshMap();
+          scrollDown();
           break;
         case "delta":
           current.status.hidden = true;
@@ -269,8 +296,7 @@
     for (const element of document.querySelectorAll(".views [id]")) {
       if (element.scrollTop) scrolls.set(element.id, element.scrollTop);
     }
-    const atBottom =
-      transcript.scrollHeight - transcript.scrollTop - transcript.clientHeight < 8;
+    const wasAtBottom = atBottom();
     const transcriptTop = transcript.scrollTop;
 
     transcript.replaceChildren(
@@ -342,7 +368,9 @@
       const element = document.getElementById(id);
       if (element && element !== transcript) element.scrollTop = top;
     }
-    transcript.scrollTop = atBottom ? transcript.scrollHeight : transcriptTop;
+    transcript.scrollTop = wasAtBottom ? transcript.scrollHeight : transcriptTop;
+    followBottom = wasAtBottom;
+    updateJump();
     // BACKWARDS-COMPATIBILITY: 3 - start a player turn saved before turns auto-started.
     window.setTimeout(startPendingPlayerTurn, 0);
     return true;
@@ -607,18 +635,53 @@
   // newest event or whose turn it is changes, the page reloads its views in place, so a turn by
   // another player appears without a manual refresh. A server-sent event stream carries the
   // change as soon as it is written; a browser without EventSource falls back to checking.
+  const GM_WORKING = "The GM is working...";
+  const setGmWorking = (text) => {
+    const label = document.querySelector("[data-gm-working-text]");
+    if (label) label.textContent = text || GM_WORKING;
+  };
+  const setGmReply = (text) => {
+    let content = document.querySelector("[data-gm-reply]");
+    if (!text) {
+      content?.remove();
+      return;
+    }
+    if (!content) {
+      const bubble = document.querySelector("[data-gm-working]");
+      if (!bubble) return;
+      content = document.createElement("div");
+      content.className = "content";
+      content.setAttribute("data-gm-reply", "");
+      bubble.querySelector(".turn-status")?.before(content);
+    }
+    if (content.textContent !== text) {
+      content.textContent = text;
+      scrollDown();
+    }
+  };
+
   let pendingSnapshot = null;
   const applySnapshot = (latest) => {
     applyTyping(latest.typing);
     if (localTurn) return;
+    const status = String(latest.status || "");
+    const running = Boolean(latest.running);
+    if (running) {
+      setGmWorking(String(latest.activity || ""));
+      setGmReply(String(latest.reply || ""));
+    }
     if (liveRefresh) {
       // Keep the newest state for once the update in flight finishes.
       pendingSnapshot = latest;
       return;
     }
     const eventChanged = Number(latest.event || 0) !== Number(transcript.dataset.lastEvent || 0);
-    const statusChanged = (latest.status || "") !== (transcript.dataset.turnStatus || "");
-    if (!eventChanged && !statusChanged) return;
+    const statusChanged = status !== (transcript.dataset.turnStatus || "");
+    // A running turn must carry its working line, and a finished one must replace it with the
+    // stored message or the pending prompt in a fresh view.
+    const working = document.querySelector("[data-gm-working]");
+    const workingChanged = running ? !working : Boolean(working);
+    if (!eventChanged && !statusChanged && !workingChanged) return;
     refreshLive().finally(() => {
       const next = pendingSnapshot;
       pendingSnapshot = null;

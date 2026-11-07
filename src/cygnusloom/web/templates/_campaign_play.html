@@ -18,7 +18,8 @@
             {% endif %}
           </div>
           {% endif %}
-          <div class="transcript" data-transcript data-gm-state="{{ 'busy' if pending and pending.auto_continue else 'waiting' }}" data-last-event="{{ last_event }}" data-turn-status="{{ turn_status }}">
+          <div class="transcript-wrap">
+          <div class="transcript" data-transcript data-gm-state="{{ 'busy' if gm_busy or (pending and pending.auto_continue) else 'waiting' }}" data-last-event="{{ last_event }}" data-turn-status="{{ turn_status }}">
             {% for message in transcript %}
               {% if message.role == "log" %}
               <div class="log-line{% if message.hidden %} hidden-event{% endif %}">{{ message.content }}</div>
@@ -42,6 +43,13 @@
               </div>
               {% endif %}
             {% endfor %}
+            {% if gm_busy %}
+              <div class="message assistant streaming gm-working" data-gm-working>
+                <div class="message-header"><span class="role">Cygnus</span></div>
+                {% if gm_reply %}<div class="content" data-gm-reply>{{ gm_reply }}</div>{% endif %}
+                <div class="turn-status" role="status"><span class="spinner" aria-hidden="true"></span><span data-gm-working-text>{{ gm_activity or "The GM is working..." }}</span></div>
+              </div>
+            {% endif %}
             {% if pending %}
               <div class="message assistant" data-pending>
                 <div class="message-header"><span class="role">Cygnus</span></div>
@@ -110,9 +118,11 @@
                 </form>
                 {% endif %}
               </div>
-            {% elif not messages %}
+            {% elif not messages and not gm_busy %}
               <p class="muted">Say something to start the conversation.</p>
             {% endif %}
+          </div>
+          <button type="button" class="jump-to-bottom" data-jump-to-bottom hidden aria-label="Jump to newest messages" title="Jump to newest messages"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v15"/><path d="m5 12 7 7 7-7"/></svg></button>
           </div>
           <p class="turn-error" role="alert" hidden></p>
           {% if encounter %}
