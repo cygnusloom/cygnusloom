@@ -30,6 +30,9 @@ Order below is the work order. Each entry lists the decisions made in triage.
      and a dispute that closes as won restores the disputed credits. A payment that was never
      granted (for example after an amount mismatch) is never clawed back. There is no manual
      refund review.
+   - A chargeback evidence pack is generated per payment: account identity, checkout evidence,
+     terms acceptance, delivery, and every charged turn after the purchase. The pack is archived
+     so later account or campaign deletion cannot erase the evidence.
    - Purchased credits never expire.
    - Exempt accounts (administrators, single-player) see no purchase or auto top-up controls.
    - Payments are optional. With no provider configured, `/credits` keeps today's "ask an
@@ -45,24 +48,27 @@ Order below is the work order. Each entry lists the decisions made in triage.
    the provider needs no pre-created products.
 
    **Tables** (new migration after 0008)
-   - `payment_config` (single row): `provider`, `enabled`, `currency`, `config`
-     (Fernet-encrypted JSON holding only the adapter's declared fields), `updated_at`,
-     `updated_by`. Empty `provider` means payments are off. Secrets use a domain-separated key
-     like `llm/catalog.py` (`cygnusloom-payment:<secret>`) and are never rendered back; the form
-     shows set/not-set and a clear checkbox.
+   - `payment_config` (single row): `provider`, `enabled`, `currency`, `terms_url`,
+     `refund_policy_url`, `config` (Fernet-encrypted JSON holding only the adapter's declared
+     fields), `updated_at`, `updated_by`. Empty `provider` means payments are off. Secrets use a
+     domain-separated key like `llm/catalog.py` (`cygnusloom-payment:<secret>`) and are never
+     rendered back; the form shows set/not-set and a clear checkbox.
    - `credit_pack`: `label`, `credits`, `price_minor`, `enabled`, `sort`. Validation: at least 1
      credit, positive price, whole minor units.
    - `payment`: `user_id`, `provider`, `pack_id`, `credits`, `amount_minor`, `currency`,
      `checkout_id`, `external_id` (the provider payment/charge id used by later events),
-     `granted_credits`, `refunded_minor`, `clawed_back_credits`, `kind`
+     `receipt_url`, `customer_ip`, `customer_user_agent`, `session_id`, `terms_version`,
+     `terms_accepted_at`, `granted_credits`, `refunded_minor`, `clawed_back_credits`, `kind`
      (`checkout`/`auto_topup`), `status`
      (`pending`/`paid`/`needs_action`/`failed`/`expired`/`refunded`/`disputed`/`needs_review`),
      `note`, timestamps. Unique `(provider, external_id)`.
    - `payment_event`: `provider`, `event_id`, `payment_id`, `kind`, `received_at`; unique
      `(provider, event_id)` for webhook idempotency.
    - `payment_customer`: `user_id`, `provider`, `customer_id`, `payment_method`,
-     `auto_topup`, `pack_id`, `threshold`, `consecutive_failures`, `last_error`, timestamps;
-     unique `(user_id, provider)`.
+     `auto_topup`, `pack_id`, `threshold`, `consent_at`, `terms_version`, `setup_session_id`,
+     `consecutive_failures`, `last_error`, timestamps; unique `(user_id, provider)`.
+   - `payment_evidence`: `payment_id` (unique), `created_at`, `created_by`, `content` (JSON
+     snapshot of a generated chargeback pack, including reply excerpts or hashes).
    - `credit_entry` gains nullable indexed `payment_id` and `payment_event_id`; reasons
      `purchase`, `purchase-refund`, and `dispute-return`.
    - Add `grant_credits()` beside `charge_reply()` using an atomic
@@ -71,14 +77,17 @@ Order below is the work order. Each entry lists the decisions made in triage.
 
    **Buying a pack**
    1. `/credits` shows the balance, recent ledger entries, and enabled packs.
-   2. `POST /credits/checkout` creates a `pending` payment, then the adapter opens a Stripe
-      Checkout Session (`mode=payment`, inline price, `client_reference_id` and PaymentIntent
-      metadata = payment id, `Idempotency-Key: payment-<id>`), then redirects.
+   2. Checkout requires accepting the terms and refund policy. `POST /credits/checkout` creates
+      a `pending` payment and snapshots the terms version, acceptance time, client IP, user
+      agent, and login session id, then the adapter opens a Stripe Checkout Session
+      (`mode=payment`, inline price, `client_reference_id` and PaymentIntent metadata = payment
+      id, `Idempotency-Key: payment-<id>`), then redirects.
    3. `POST /payments/webhook/{provider}` is public (no login or CSRF), verifies the raw-body
       signature, and is the only place that grants credits. In one transaction it inserts
       `payment_event` (duplicate → reply 200 and stop), re-checks the reported amount, currency,
       and payment id against the stored payment (mismatch → `needs_review`, grant nothing), sets
-      `paid`, and calls `grant_credits()`. Unknown events get 200.
+      `paid`, calls `grant_credits()`, and stores the provider receipt URL. Unknown events get
+      200.
    4. The return URL only shows status; it never grants.
    5. Pending payments expire after 24 hours. A "re-check with provider" action uses `fetch`.
    6. Refunds and disputes claw back automatically in the webhook transaction. `charge.refunded`
@@ -92,7 +101,8 @@ Order below is the work order. Each entry lists the decisions made in triage.
 
    **Auto top-up**
    - The player picks a pack and a credit threshold, then completes a Setup-mode Checkout to save
-     a card; the webhook stores the provider customer and payment method.
+     a card; the webhook stores the provider customer and payment method, plus the consent time,
+     terms version, and setup session id for chargeback evidence.
    - At the start of a turn, when the owner's balance is below the threshold, the app attempts
      one off-session charge for the chosen pack (the idempotency key includes the account and
      pack). Success grants credits and the turn continues; `requires_action` stores a completion
@@ -105,16 +115,34 @@ Order below is the work order. Each entry lists the decisions made in triage.
 
    **Admin page** (`/admin/payments`, new nav entry)
    - Provider: choose from registered adapters, dynamic fields from `fields`, enable toggle,
-     currency, test connection (`check()`), and the webhook URL with a copy button. Show a "test
-     mode" badge for test keys. Changing provider or clearing credentials is blocked while a
-     payment is pending.
+     currency, terms and refund-policy URLs (required before payments can be enabled), test
+     connection (`check()`), and the webhook URL with a copy button. Show a "test mode" badge for
+     test keys. Changing provider or clearing credentials is blocked while a payment is pending.
    - Packs: add/edit/enable/delete with a "credits for price" preview.
    - Payments: search/filter by status, account, pack, amount, and external id; actions are
-     re-check with the provider and expire a pending payment. Refunds and disputes need no admin
-     action; `needs_review` only marks a webhook whose amount, currency, or payment id did not
-     match the stored payment.
+     re-check with the provider, expire a pending payment, and generate the chargeback evidence
+     pack. Refunds and disputes need no admin action; `needs_review` only marks a webhook whose
+     amount, currency, or payment id did not match the stored payment.
    - Every mutation requires recent auth and CSRF and writes an `AdminAudit` entry with secrets
      redacted.
+
+   **Chargeback evidence pack**
+   - Generated per payment from `Payment`, `PaymentEvent`, `CreditEntry`, `LlmUsage`, `Event`,
+     and `Campaign`. It contains the account identity (issuer/subject and verified email at
+     purchase), checkout IP/user agent/session, terms version and acceptance time, the receipt
+     link, and the purchase's pack, credits, amount, currency, and provider references.
+   - A balance timeline shows the purchase grant, admin grants, every turn charge, and refunds or
+     clawbacks. A usage table lists each charged turn after the purchase with time, campaign,
+     player, model, credits, token usage, and a short reply excerpt or hash.
+   - Provider details (billing name/address, card brand/last4, 3DS result, Radar risk) are
+     fetched live through `fetch` and included when available; a failed fetch is noted in the
+     pack, not fatal.
+   - Generating a pack archives an immutable JSON snapshot in `payment_evidence`; the admin view
+     renders it and links the receipt. Generation is audited.
+   - This proves delivery and use for "product not received"; it cannot prove cardholder
+     authorization for a fraudulent dispute, which rests on 3DS/Radar and the card network.
+   - `Payment`, `CreditEntry`, `PaymentEvent`, and `PaymentEvidence` keep snapshot ids and must
+     survive account and campaign deletion; archived reply excerpts preserve usage evidence.
 
    **Testing**
    - `tests/test_payments.py`: disabled state; config CRUD, encryption at rest, secret masking;
@@ -122,7 +150,9 @@ Order below is the work order. Each entry lists the decisions made in triage.
      amount/currency mismatch; unknown event; full and partial refund clawback with cumulative
      refunds, dispute created/won/lost, and a refund of an ungranted payment; the pending
      provider-switch block; auto top-up success, `requires_action`, and the failure counter;
-     exempt accounts see no controls.
+     exempt accounts see no controls; checkout evidence snapshots; the evidence pack's contents
+     and totals; an archived pack that survives campaign and account deletion; a failed provider
+     fetch still producing the app-side pack; auto top-up consent appearing in the pack.
    - The fake adapter's checkout URL is an internal pay/cancel page available only when the fake
      adapter is registered (tests/dev), so the live UI test can exercise the whole flow without
      `stripe`.
@@ -130,5 +160,6 @@ Order below is the work order. Each entry lists the decisions made in triage.
 
    **Docs and cleanup**
    - Update the README credits section (currently says payment is not integrated), the
-     `/credits` page copy, and the admin help text.
+     `/credits` page copy, and the admin help text, including the evidence pack and the privacy
+     note for stored checkout IP/user agent and terms acceptance.
    - After the migration, delete the local `cygnusloom.db` for a fresh manual-test state.
