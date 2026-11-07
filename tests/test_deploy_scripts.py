@@ -85,6 +85,18 @@ def test_the_blueprint_creates_an_invite_only_enrollment_flow() -> None:
     assert "authentik_stages_invitation.invitationstage" in blueprint
     assert "continue_flow_without_invitation: false" in blueprint
     assert "create_users_group: !KeyOf cygnusloom-players" in blueprint
+    username_field = blueprint.split("id: cygnusloom-enrollment-field-username", 1)[1].split(
+        "- model:", 1
+    )[0]
+    password_field = blueprint.split("id: cygnusloom-enrollment-field-password\n", 1)[1].split(
+        "- model:", 1
+    )[0]
+    password_repeat_field = blueprint.split("id: cygnusloom-enrollment-field-password-repeat", 1)[
+        1
+    ].split("- model:", 1)[0]
+    assert "order: 0" in username_field
+    assert "order: 1" in password_field
+    assert "order: 2" in password_repeat_field
     assert (
         "target: !KeyOf cygnusloom-enrollment-invite\n"
         "      stage: !KeyOf cygnusloom-enrollment-invitation\n"

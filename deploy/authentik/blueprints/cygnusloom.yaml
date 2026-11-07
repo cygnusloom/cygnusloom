@@ -96,7 +96,7 @@ entries:
       required: true
       placeholder: Password
       placeholder_expression: false
-      order: 0
+      order: 1
 
   - model: authentik_stages_prompt.prompt
     id: cygnusloom-enrollment-field-password-repeat
@@ -109,7 +109,7 @@ entries:
       required: true
       placeholder: Password (repeat)
       placeholder_expression: false
-      order: 1
+      order: 2
 
   - model: authentik_stages_prompt.prompt
     id: cygnusloom-enrollment-field-name
