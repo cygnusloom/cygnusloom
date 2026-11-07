@@ -1,6 +1,6 @@
 [project]
 name = "cygnusloom"
-version = "3.1.4"
+version = "3.2.0"
 description = "RPG with an AI game master"
 license = "AGPL-3.0-or-later"
 license-files = ["LICENSE"]
