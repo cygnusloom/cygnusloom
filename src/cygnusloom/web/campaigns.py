@@ -89,6 +89,7 @@ from cygnusloom.services.membership import (
     add_member,
     create_invite,
     deactivate_invite,
+    display_name,
     list_invites,
     list_members,
     list_removed_members,
@@ -106,6 +107,7 @@ from cygnusloom.web.character_form import (
 )
 from cygnusloom.web.forms import form_text
 from cygnusloom.web.rendering import render, render_fragment
+from cygnusloom.web.typing import Typer, TypingRegistry
 
 router = APIRouter(prefix="/campaigns")
 
@@ -547,7 +549,28 @@ def turn_status(request: Request, campaign_id: int) -> Response:
     user = page_user(request)
     engine = request.app.state.engine
     get_campaign(engine, user.id, campaign_id)
-    return JSONResponse(_turn_snapshot(engine, campaign_id))
+    return JSONResponse(_turn_snapshot(engine, campaign_id, request.app.state.typing))
+
+
+@router.post("/{campaign_id}/typing")
+async def typing_heartbeat(request: Request, campaign_id: int) -> Response:
+    """Record that the player is composing a message, or that they stopped.
+
+    Typing is a hint, not campaign state: the composer sends it while the box holds text, and it
+    expires on its own. Every page receives it in the live snapshot it already watches."""
+    user = page_user(request)
+    engine = request.app.state.engine
+    campaign = get_campaign(engine, user.id, campaign_id)
+    await verify_csrf(request)
+    form = await request.form()
+    if form_text(form, "active") == "0":
+        request.app.state.typing.stop(campaign.id, user.id)
+    else:
+        # The composer renders the name server-side, so the hint names the character the player
+        # speaks for without folding the campaign log on every keystroke.
+        name = form_text(form, "name").strip() or display_name(user)
+        request.app.state.typing.note(campaign.id, user.id, name)
+    return Response(status_code=204)
 
 
 def _newest_event(engine: Any, campaign_id: int) -> int:
@@ -558,17 +581,22 @@ def _newest_event(engine: Any, campaign_id: int) -> int:
 def _turn_snapshot(
     engine: Any,
     campaign_id: int,
+    typing: TypingRegistry,
     *,
     newest_event: int | None = None,
     busy: bool | None = None,
+    typers: tuple[Typer, ...] | None = None,
 ) -> dict[str, Any]:
-    """What every page needs to know about the table: the newest event and whose turn it is.
-    Both the status endpoint and the live stream send this shape. `newest_event` and `busy`
-    may be passed when the caller just read them, which spares a second query."""
+    """What every page needs to know about the table: the newest event, whose turn it is, and
+    who is typing. Both the status endpoint and the live stream send this shape. `newest_event`,
+    `busy`, and `typers` may be passed when the caller just read them, which spares a second
+    query."""
     if newest_event is None:
         newest_event = _newest_event(engine, campaign_id)
     if busy is None:
         busy = turn_busy(campaign_id)
+    if typers is None:
+        typers = typing.active(campaign_id)
     with session_scope(engine) as db:
         state = load_state(db, campaign_id)
     newest = newest_event
@@ -602,6 +630,7 @@ def _turn_snapshot(
         "actor_id": actor_id,
         "actor": actor,
         "pending_for": turn.player_id if turn is not None and turn.prompt else None,
+        "typing": [{"id": typer.user_id, "name": typer.name} for typer in typers],
     }
 
 
@@ -616,7 +645,7 @@ def campaign_events(request: Request, campaign_id: int) -> Response:
     engine = request.app.state.engine
     get_campaign(engine, user.id, campaign_id)
     return StreamingResponse(
-        _event_lines(engine, campaign_id),
+        _event_lines(engine, campaign_id, request.app.state.typing),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -626,20 +655,28 @@ def campaign_events(request: Request, campaign_id: int) -> Response:
     )
 
 
-async def _event_lines(engine: Any, campaign_id: int) -> AsyncIterator[str]:
+async def _event_lines(engine: Any, campaign_id: int, typing: TypingRegistry) -> AsyncIterator[str]:
     last_payload = ""
-    last_key: tuple[int, bool] | None = None
+    last_key: tuple[int, bool, tuple[Typer, ...]] | None = None
     heartbeat = 0
     while True:
         try:
             newest = _newest_event(engine, campaign_id)
             busy = turn_busy(campaign_id)
-            key = (newest, busy)
+            typers = typing.active(campaign_id)
+            key = (newest, busy, typers)
             if key != last_key:
                 last_key = key
                 # Only replay the log when something has actually changed. An idle stream
                 # otherwise costs one small query a second, however long the campaign is.
-                snapshot = _turn_snapshot(engine, campaign_id, newest_event=newest, busy=busy)
+                snapshot = _turn_snapshot(
+                    engine,
+                    campaign_id,
+                    typing,
+                    newest_event=newest,
+                    busy=busy,
+                    typers=typers,
+                )
                 payload = json.dumps(snapshot)
                 if payload != last_payload:
                     last_payload = payload

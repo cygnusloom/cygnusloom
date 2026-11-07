@@ -105,6 +105,69 @@
     errorBox.hidden = false;
   };
 
+  // "X is typing" hints. A hint is sent at most every couple of seconds while the box holds
+  // text, and expires on the server when the player stops. Other players' hints arrive in the
+  // live snapshots, so this page never polls for them.
+  const typingNote = document.querySelector("[data-typing-note]");
+  const viewerId = Number(composer.dataset.viewerId || 0);
+  const TYPING_EVERY_MS = 2000;
+  let typingSentAt = 0;
+  let typingShown = false;
+  const sendTyping = (active) => {
+    const url = composer.dataset.typingUrl;
+    if (!url) return;
+    const token = composer.querySelector('input[name="csrf_token"]');
+    const data = new FormData();
+    data.set("csrf_token", token ? token.value : "");
+    data.set("active", active ? "1" : "0");
+    data.set("name", composer.dataset.playerName || "");
+    fetch(url, { method: "POST", body: data, credentials: "same-origin", keepalive: true }).catch(
+      () => {
+        // A missed hint is harmless; the next keystroke sends another one.
+      },
+    );
+  };
+  const stopTyping = () => {
+    typingSentAt = 0;
+    if (!typingShown) return;
+    typingShown = false;
+    sendTyping(false);
+  };
+  const noteTyping = () => {
+    if (textarea.disabled || textarea.readOnly) return;
+    if (!textarea.value.trim()) {
+      stopTyping();
+      return;
+    }
+    const now = Date.now();
+    if (typingShown && now - typingSentAt < TYPING_EVERY_MS) return;
+    typingSentAt = now;
+    typingShown = true;
+    sendTyping(true);
+  };
+  const applyTyping = (typers) => {
+    if (!typingNote) return;
+    const selfId = Number(composer.dataset.viewerId || viewerId);
+    const names = (Array.isArray(typers) ? typers : [])
+      .filter((typer) => Number(typer?.id) !== selfId && typer?.name)
+      .map((typer) => String(typer.name));
+    if (!names.length) {
+      typingNote.hidden = true;
+      typingNote.textContent = "";
+      return;
+    }
+    const text =
+      names.length === 1
+        ? `${names[0]} is typing…`
+        : names.length === 2
+          ? `${names[0]} and ${names[1]} are typing…`
+          : `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]} are typing…`;
+    typingNote.textContent = text;
+    typingNote.hidden = false;
+  };
+  textarea.addEventListener("input", noteTyping);
+  window.addEventListener("pagehide", stopTyping);
+
   const readLines = async (body, onLine) => {
     const reader = body.getReader();
     const decoder = new TextDecoder();
@@ -223,7 +286,8 @@
     for (const selector of [".encounter-turn", ".advancement-pause", ".turn-note"]) {
       currentPlay.querySelector(selector)?.remove();
       const fresh = freshPlay.querySelector(selector);
-      if (fresh) composer.before(fresh);
+      // The typing note stays in place, so the fresh waiting note goes above it.
+      if (fresh) (selector === ".turn-note" && typingNote ? typingNote : composer).before(fresh);
     }
 
     const currentSide = currentPlay.querySelector(".side");
@@ -242,6 +306,10 @@
       composer.dataset.streamAction = freshComposer.dataset.streamAction;
       composer.dataset.playerName = freshComposer.dataset.playerName;
       composer.dataset.blocked = freshComposer.dataset.blocked;
+      if (freshComposer.dataset.typingUrl) {
+        composer.dataset.typingUrl = freshComposer.dataset.typingUrl;
+        composer.dataset.viewerId = freshComposer.dataset.viewerId;
+      }
       const freshTextarea = freshComposer.querySelector("textarea");
       if (freshTextarea) {
         textarea.placeholder = freshTextarea.placeholder;
@@ -442,6 +510,7 @@
     const data = new FormData(composer);
     errorBox.hidden = true;
     textarea.value = "";
+    stopTyping();
     localTurn = true;
     setBusy(true);
     watchTurn();
@@ -529,6 +598,7 @@
   // change as soon as it is written; a browser without EventSource falls back to checking.
   let pendingSnapshot = null;
   const applySnapshot = (latest) => {
+    applyTyping(latest.typing);
     if (localTurn) return;
     if (liveRefresh) {
       // Keep the newest state for once the update in flight finishes.

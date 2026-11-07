@@ -20,6 +20,7 @@ from cygnusloom.services.membership import (
     list_members,
     merge_debug_member,
 )
+from cygnusloom.web import campaigns as campaigns_web
 from tests.conftest import csrf_token
 from tests.factories import (
     create_campaign,
@@ -454,3 +455,90 @@ def test_the_same_account_cannot_make_a_second_character(
     assert again.status_code == 400
     state = open_campaign(owner.app, campaign_id)
     assert [c.name for c in state.pcs()] == ["Ada"]
+
+
+def test_a_typing_player_is_shown_to_the_rest_of_the_table(
+    client_factory: Callable[[], TestClient],
+):
+    owner, guest, campaign_id, _ = _joined_campaign(client_factory)
+    guest_id = _account(owner.app, GUEST).id
+    token = csrf_token(guest, "/campaigns")
+    typing = guest.post(
+        f"/campaigns/{campaign_id}/typing",
+        data={"csrf_token": token, "active": "1", "name": "Brenna"},
+        follow_redirects=False,
+    )
+    assert typing.status_code == 204
+    snapshot = owner.get(f"/campaigns/{campaign_id}/turn-status").json()
+    assert snapshot["typing"] == [{"id": guest_id, "name": "Brenna"}]
+    # The page carries the endpoint and the note the composer's script uses.
+    page = owner.get(f"/campaigns/{campaign_id}").text
+    assert f'data-typing-url="/campaigns/{campaign_id}/typing"' in page
+    assert "data-typing-note" in page
+
+    # Clearing the box or sending the message stops the hint at once.
+    stopped = guest.post(
+        f"/campaigns/{campaign_id}/typing",
+        data={"csrf_token": token, "active": "0"},
+        follow_redirects=False,
+    )
+    assert stopped.status_code == 204
+    assert owner.get(f"/campaigns/{campaign_id}/turn-status").json()["typing"] == []
+
+
+def test_a_single_player_campaign_has_no_typing_control(
+    client_factory: Callable[[], TestClient],
+):
+    owner = signed_in_client(client_factory, OWNER)
+    campaign_id = create_campaign(owner)
+    assert create_character(owner, campaign_id, name="Ada").status_code == 303
+    _close_opening(owner, campaign_id)
+    page = owner.get(f"/campaigns/{campaign_id}").text
+    assert "data-typing-url" not in page
+
+
+def test_typing_is_limited_to_the_campaigns_members(
+    client_factory: Callable[[], TestClient],
+):
+    owner, _guest, campaign_id, _ = _joined_campaign(client_factory)
+    stranger = signed_in_client(client_factory, "stranger@example.com")
+    response = stranger.post(
+        f"/campaigns/{campaign_id}/typing",
+        data={
+            "csrf_token": csrf_token(stranger, "/campaigns"),
+            "active": "1",
+            "name": "Mallory",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 404
+    assert owner.get(f"/campaigns/{campaign_id}/turn-status").json()["typing"] == []
+
+
+def test_the_live_stream_carries_typing_without_a_campaign_event(
+    client_factory: Callable[[], TestClient],
+):
+    owner, _guest, campaign_id, _ = _joined_campaign(client_factory)
+    app = owner.app
+    guest_id = _account(app, GUEST).id
+    owner_id = _account(app, OWNER).id
+    typing = app.state.typing
+    typing.note(campaign_id, guest_id, "Brenna")
+
+    async def snapshots():
+        stream = campaigns_web._event_lines(app.state.engine, campaign_id, typing)
+        first = await anext(stream)
+        # A second player starts typing; no campaign event or turn change happens.
+        typing.note(campaign_id, owner_id, "Ada")
+        second = await anext(stream)
+        await stream.aclose()
+        return first, second
+
+    first, second = asyncio.run(snapshots())
+    assert json.loads(first.removeprefix("data: "))["typing"] == [
+        {"id": guest_id, "name": "Brenna"}
+    ]
+    assert json.loads(second.removeprefix("data: "))["typing"] == [
+        {"id": guest_id, "name": "Brenna"},
+        {"id": owner_id, "name": "Ada"},
+    ]

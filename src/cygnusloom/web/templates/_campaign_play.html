@@ -130,7 +130,8 @@
           <p class="advancement-pause" role="status">Your character has advancement choices to make. <a href="/campaigns/{{ campaign.id }}/advancement">Level up or choose an Advancement</a> before continuing.</p>
           {% endif %}
           {% if waiting_for %}<p class="turn-note" data-turn-note role="status">{{ waiting_for }}</p>{% else %}<p class="turn-note" data-turn-note role="status" hidden></p>{% endif %}
-          <form method="post" action="/campaigns/{{ campaign.id }}/messages" data-stream-action="/campaigns/{{ campaign.id }}/messages/stream" data-player-name="{{ acting_name }}" data-blocked="{{ '1' if (pending or advancement_due or composer_blocked) else '0' }}" class="composer" id="composer">
+          <p class="typing-note" data-typing-note role="status" hidden></p>
+          <form method="post" action="/campaigns/{{ campaign.id }}/messages" data-stream-action="/campaigns/{{ campaign.id }}/messages/stream" data-player-name="{{ acting_name }}" data-blocked="{{ '1' if (pending or advancement_due or composer_blocked) else '0' }}" class="composer" id="composer"{% if members|length > 1 %} data-typing-url="/campaigns/{{ campaign.id }}/typing" data-viewer-id="{{ viewer_id }}"{% endif %}>
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <textarea name="content" rows="3" required maxlength="8000" placeholder="{{ ('Level up first' if advancement_due else (waiting_for if waiting_for else ('Answer the GM above first' if pending else 'Message'))) }}"{% if pending or advancement_due or composer_blocked %} disabled{% endif %}>{{ draft }}</textarea>
             <div class="composer-actions">

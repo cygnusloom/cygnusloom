@@ -987,6 +987,11 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
 .turn-note {
   margin: 0.5rem 0 0; color: var(--muted); font-size: 0.9rem; text-align: right;
 }
+.typing-note {
+  margin: 0.35rem 0 0; color: var(--muted); font-size: 0.85rem; font-style: italic;
+  text-align: right;
+}
+.typing-note[hidden] { display: none; }
 .campaign-shared { color: var(--muted); font-size: 0.85rem; }
 .players-panel h2, .players-panel h3 { margin-bottom: 0.35rem; }
 .players-panel h2 { font-size: 1rem; }
