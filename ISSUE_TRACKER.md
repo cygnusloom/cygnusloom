@@ -4,7 +4,7 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
 
 # Untriaged Issues
 
-None.
+1. The journal gets WAY too long. The day's entry gets updated regularly, yes, but it should remain a simple summary with only important facts and events.
 
 # Triaged Issues
 
