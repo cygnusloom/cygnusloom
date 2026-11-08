@@ -150,12 +150,15 @@ class PackItem:
 
 @dataclass(frozen=True)
 class PackView:
-    """The player character's items in carried order, with the slots used and the capacity."""
+    """The player character's items in carried order, with the slots used and the capacity.
+    `tracked` is False when the campaign does not enforce inventory space, so the page says the
+    space is not tracked instead of showing a limit."""
 
     items: list[PackItem]
     used: int
     capacity: int
     has_readied: bool = False
+    tracked: bool = True
 
 
 @dataclass(frozen=True)
@@ -241,6 +244,7 @@ def get_statblock(
     inventory: InventoryRules | None = None,
     hooks: Hooks | None = None,
     counters: Mapping[str, CounterRules] | None = None,
+    track_inventory: bool = True,
 ) -> dict[str, Any]:
     """A character's stats, template, features, and fields, one line each. Works for the player
     character and for NPCs. With a rule set's `combat`, the armor, attacks, harm, and status follow.
@@ -253,7 +257,7 @@ def get_statblock(
         lines.insert(0, f"Description: {character.description}")
     if combat is not None:
         lines += _combat_lines(character, spec, combat)
-    lines += _status_lines(character, conditions, inventory, hooks, counters)
+    lines += _status_lines(character, conditions, inventory, hooks, counters, track_inventory)
     for key, choices in character.feature_choices.items():
         lines.append(f"Feature choice {key}: {', '.join(choices)}")
     result = {
@@ -321,6 +325,7 @@ def _status_lines(
     inventory: InventoryRules | None,
     hooks: Hooks | None,
     counters: Mapping[str, CounterRules] | None = None,
+    track_inventory: bool = True,
 ) -> list[str]:
     """The character's conditions, counters, injuries, the rule set's status lines, and what they carry. Each part
     shows only when the rule set has it, or when the character has something to report."""
@@ -344,9 +349,12 @@ def _status_lines(
     )
     if inventory is not None:
         used = inventory_service.used_slots(character)
-        capacity = inventory_service.capacity_of(character, inventory)
-        flag = " (over capacity)" if used > capacity else ""
-        lines.append(f"Inventory: {used} of {capacity} slots{flag}")
+        if not track_inventory:
+            lines.append(f"Inventory: not tracked ({used} slots carried)")
+        else:
+            capacity = inventory_service.capacity_of(character, inventory)
+            flag = " (over capacity)" if used > capacity else ""
+            lines.append(f"Inventory: {used} of {capacity} slots{flag}")
         carried = ", ".join(item.name for item in character.items)
         lines.append(f"Carrying: {carried or 'nothing'}")
     return lines
@@ -638,6 +646,7 @@ def scene_view(
     creature_links: Mapping[str, str] | None = None,
     place_links: Mapping[str, str] | None = None,
     sheet_links: Mapping[str, str] | None = None,
+    track_inventory: bool = True,
 ) -> SceneView:
     """The player's view. It shows only what is at the player character's location, including any
     hirelings there, and everyone the player has met. The pack shows the player character's items
@@ -705,6 +714,7 @@ def scene_view(
             used=inventory_service.used_slots(pc),
             capacity=inventory_service.capacity_of(pc, inventory, spec),
             has_readied=bool(inventory.readied_stat or any(pool.ready for pool in inventory.pools)),
+            tracked=track_inventory,
         )
     hirelings = tuple(
         c
@@ -761,6 +771,7 @@ def world_state_text(
     counters: Mapping[str, CounterRules] | None = None,
     tallies: Mapping[str, TallyRules] | None = None,
     unwritten_world: bool = False,
+    track_inventory: bool = True,
 ) -> str:
     """The GM's orientation at the start of a turn: the campaign options, the day, the player
     character and where they are, the NPCs there, the factions and their cup, and any encounter in
@@ -865,10 +876,17 @@ def world_state_text(
         for player in pcs:
             if player.retired:
                 continue
-            for line in _status_lines(player, conditions, inventory, hooks, counters):
+            for line in _status_lines(
+                player, conditions, inventory, hooks, counters, track_inventory
+            ):
                 lines.append(f"{player.name}: {line}")
     elif not pc.retired:
-        lines.extend(_status_lines(pc, conditions, inventory, hooks, counters))
+        lines.extend(_status_lines(pc, conditions, inventory, hooks, counters, track_inventory))
+    if inventory is not None and not track_inventory:
+        lines.append(
+            "Inventory space is not tracked in this campaign; characters may carry anything "
+            "reasonable, so do not refuse a possession for its slots."
+        )
     lines.extend(_encounter_lines(state, grid, combat, terrain, encounter_objects))
     if state.encounter is None:
         if multiplayer:

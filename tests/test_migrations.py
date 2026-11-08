@@ -36,6 +36,7 @@ def test_migrations_create_the_full_schema(tmp_path, monkeypatch):
     assert "table_genres" in campaign_columns
     assert "game_version" in campaign_columns
     assert "force_credit_charges" in campaign_columns
+    assert "use_inventory_space" in campaign_columns
     user_columns = {column["name"] for column in inspect(make_engine(url)).get_columns("user")}
     assert "credit_balance" in user_columns
     model_columns = {
@@ -44,6 +45,44 @@ def test_migrations_create_the_full_schema(tmp_path, monkeypatch):
     assert "credits_per_turn" in model_columns
     assert "stream_usage" in model_columns
     assert "calculator_json" in model_columns
+
+
+def test_the_inventory_space_column_defaults_to_true(tmp_path, monkeypatch):
+    """Existing campaigns keep the rule set's inventory limits when the column is added."""
+    url = f"sqlite:///{tmp_path / 'inventory-space.db'}"
+    monkeypatch.setenv("CYGNUSLOOM_DATABASE_URL", url)
+    config = migration_config(url)
+    command.upgrade(config, "head")
+
+    engine = make_engine(url)
+    user = sa.Table("user", sa.MetaData(), autoload_with=engine)
+    campaign = sa.Table("campaign", sa.MetaData(), autoload_with=engine)
+    with engine.begin() as connection:
+        owner_id = connection.execute(
+            user.insert().values(
+                issuer="test",
+                subject="owner",
+                email="owner@example.com",
+                email_verified=False,
+                display_name="Owner",
+                roles="[]",
+                credit_balance=0,
+                disabled=False,
+                created_at=datetime.now(UTC),
+            )
+        ).inserted_primary_key[0]
+        connection.execute(
+            campaign.insert().values(
+                owner_id=owner_id,
+                name="Existing campaign",
+                world_template="testhollow",
+                rule_set="rolltest",
+                model="fake/scripted",
+                created_at=datetime.now(UTC),
+            )
+        )
+        value = connection.execute(sa.select(campaign.c.use_inventory_space)).scalar_one()
+    assert value is True
 
 
 def test_migrations_can_be_reversed(tmp_path, monkeypatch):

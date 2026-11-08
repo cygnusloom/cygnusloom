@@ -149,7 +149,9 @@ class Campaign(SQLModel, table=True):
     asked for at creation; it reaches the GM's prompt every turn and is blank when the player left
     it out. `table_genres` is the optional JSON list of genres the player narrowed the generation
     tables to at creation; blank means the rule set's own choice. `force_credit_charges` is a
-    debug-panel switch that charges an otherwise exempt account in this campaign."""
+    debug-panel switch that charges an otherwise exempt account in this campaign.
+    `use_inventory_space` is a per-campaign switch, on by default, for the rule set's slot limits;
+    turning it off lets characters carry anything reasonable."""
 
     __tablename__ = "campaign"
 
@@ -163,6 +165,7 @@ class Campaign(SQLModel, table=True):
     setting: str = Field(default="", sa_column=Column(Text, nullable=False))
     table_genres: str = Field(default="", sa_column=Column(Text, nullable=False))
     force_credit_charges: bool = Field(default=False)
+    use_inventory_space: bool = Field(default=True)
     created_at: datetime = Field(default_factory=utcnow)
 
 

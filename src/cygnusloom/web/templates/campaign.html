@@ -57,6 +57,17 @@
     {% endif %}
   </form>
   {% if is_owner %}
+  <form method="post" action="/campaigns/{{ campaign.id }}/inventory-space" class="settings-inventory">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <fieldset class="model-options">
+      <legend class="muted">Inventory space</legend>
+      <label><input type="checkbox" name="use_inventory_space" value="1"{% if campaign.use_inventory_space %} checked{% endif %}> Track item slots and their limits</label>
+    </fieldset>
+    <p class="muted">When this is off, characters may carry anything reasonable: no capacity checks, no penalty item, and no drain from a full pack.</p>
+    <div class="dialog-actions">
+      <button type="submit">Save inventory setting</button>
+    </div>
+  </form>
   <p class="muted">
     <a href="/campaigns/{{ campaign.id }}/export">Export this campaign as JSON</a>
   </p>

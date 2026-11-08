@@ -14,6 +14,7 @@ from cygnusloom.services.common import (
 from cygnusloom.services.events import (
     load_state,
 )
+from cygnusloom.services.inventory import tracks_inventory
 from cygnusloom.services.views import (
     get_statblock,
     speaker_profile,
@@ -219,6 +220,7 @@ class PeopleMixin:
                 self.inventory,
                 self.hooks,
                 self.counters,
+                track_inventory=tracks_inventory(db, self.campaign_id),
             )
 
     def character_options(self, field: str | None = None) -> dict[str, Any]:
