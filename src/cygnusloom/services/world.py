@@ -325,6 +325,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         item: str | None = None,
         item_size: str = "",
         name: str = "",
+        item_text: str = "",
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return objects_service.place_object(
@@ -340,6 +341,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 item,
                 item_size,
                 name,
+                item_text,
             )
 
     def take_object(self, object_name: str, character: str, cause: str) -> dict[str, Any]:

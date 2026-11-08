@@ -610,6 +610,8 @@ class WorldObject:
     contents: str
     currency: int = 0
     item: str = ""
+    # The item's own description, separate from the object's `contents`.
+    item_text: str = ""
     item_size: str = ""
     item_slots: int = 0
     hidden: bool = False

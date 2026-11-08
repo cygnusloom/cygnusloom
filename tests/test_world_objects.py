@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
+from types import SimpleNamespace
 
 import pytest
 from fastapi import FastAPI
@@ -9,6 +11,7 @@ from sqlmodel import Session
 
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import (
+    CampaignState,
     ObjectPlaced,
     ObjectTaken,
     decode,
@@ -20,6 +23,10 @@ from tests.test_combat import CAIRN, PC, YARD, _character, _fight
 from tests.test_inventory import CAPACITY, _fill, _used
 
 CURRENCY = CAIRN.marketplace.currency
+NICHE = (
+    "a reliquary niche cut into the wall, its arch carved with interlocking rings, "
+    "its shelf heaped with the wax drippings of candles burnt long ago"
+)
 
 
 def _gold(app: FastAPI, campaign_id: int, name: str = PC) -> int:
@@ -48,7 +55,15 @@ def test_placing_gold_and_an_item_shows_them_in_the_place(
 
 def test_placing_an_object_records_an_event(client_factory: Callable[[], TestClient]):
     app, campaign_id, tools = _fight(client_factory)
-    tools.place_object(YARD, "a coin purse", False, "a test", currency=5)
+    tools.place_object(
+        YARD,
+        "a coin purse",
+        False,
+        "a test",
+        currency=5,
+        item="silver ring",
+        item_text="a plain silver ring",
+    )
     [placed] = _events(app, campaign_id, ObjectPlaced)
     assert (placed.place, placed.contents, placed.currency, placed.hidden) == (
         YARD,
@@ -56,6 +71,7 @@ def test_placing_an_object_records_an_event(client_factory: Callable[[], TestCli
         5,
         False,
     )
+    assert (placed.item, placed.item_text) == ("silver ring", "a plain silver ring")
 
 
 def test_taking_gold_pays_the_character_and_removes_the_object(
@@ -78,6 +94,8 @@ def test_taking_an_item_puts_it_in_the_inventory(client_factory: Callable[[], Te
     assert _used(app, campaign_id) == before + 1
     assert any(i.name == "Lantern" for i in _character(app, campaign_id, PC).items)
     assert _visible(app, campaign_id) == []
+    [placed] = _events(app, campaign_id, ObjectPlaced)
+    assert placed.item_text == ""
 
 
 def test_taking_an_object_records_an_event(client_factory: Callable[[], TestClient]):
@@ -175,6 +193,57 @@ def test_taking_an_object_without_an_item_puts_it_in_the_inventory(
         item for item in _character(app, campaign_id, PC).items if item.name == "brass hand-lantern"
     )
     assert held.text == "a brass hand-lantern with Everlight worked into its glass"
+
+
+def test_an_item_carries_its_own_description_not_the_objects(
+    client_factory: Callable[[], TestClient],
+):
+    app, campaign_id, tools = _fight(client_factory)
+    tools.place_object(
+        YARD,
+        NICHE,
+        False,
+        "a test",
+        item="brass key",
+        item_text="a small brass key green with verdigris",
+        name="reliquary niche",
+    )
+    result = tools.take_object("reliquary niche", PC, "a test")
+    assert result["item"] == "brass key"
+    held = next(item for item in _character(app, campaign_id, PC).items if item.name == "brass key")
+    assert held.text == "a small brass key green with verdigris"
+
+
+def test_an_explicit_item_without_item_text_has_no_text(
+    client_factory: Callable[[], TestClient],
+):
+    app, campaign_id, tools = _fight(client_factory)
+    tools.place_object(YARD, NICHE, False, "a test", item="brass key", name="reliquary niche")
+    tools.take_object("reliquary niche", PC, "a test")
+    held = next(item for item in _character(app, campaign_id, PC).items if item.name == "brass key")
+    assert held.text == ""
+
+
+def test_an_object_placed_event_without_item_text_still_decodes():
+    payload = json.dumps(
+        {
+            "place": YARD,
+            "contents": NICHE,
+            "currency": 0,
+            "item": "brass key",
+            "item_size": "normal",
+            "item_slots": 1,
+            "hidden": False,
+            "cause": "a test",
+            "name": "reliquary niche",
+        }
+    )
+    event = decode(SimpleNamespace(kind=ObjectPlaced.kind, payload=payload))
+    state = CampaignState()
+    event.apply(state, 42)
+    placed = state.objects[42]
+    assert placed.item == "brass key"
+    assert placed.item_text == ""
 
 
 def test_an_object_is_taken_by_its_full_description(client_factory: Callable[[], TestClient]):
