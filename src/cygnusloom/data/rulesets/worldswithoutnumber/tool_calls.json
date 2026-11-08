@@ -96,7 +96,7 @@
     "name": "gain_xp",
     "python_module": "wwn",
     "function": "gain_xp",
-    "description": "Add Experience Points to a character's XP total. Award about 3 XP for a successful session on the fast track, or 6 on the slow track. Fast thresholds are 3, 6, 12, 18, 27, 39, 54, 72, and 93; slow thresholds are 6, 15, 24, 36, 51, 69, 87, 105, and 139. When the total reaches the next threshold the tool records a note that the character may level up; it does not raise the level itself.",
+    "description": "Add Experience Points to a character's XP total. The campaign's experience track, or an explicit rate override, sets the thresholds. When the total reaches the next threshold the tool records a note that the character may level up; it does not raise the level itself.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -116,7 +116,7 @@
         },
         "rate": {
           "type": "string",
-          "enum": ["fast", "slow"],
+          "enum_from": "xp_tracks",
           "description": "An explicit track override. Leave it out to use the track chosen for the campaign."
         }
       },
@@ -158,7 +158,7 @@
         },
         "rate": {
           "type": "string",
-          "enum": ["fast", "slow"],
+          "enum_from": "xp_tracks",
           "description": "An explicit track override. Leave it out to use the track chosen for the campaign."
         }
       },

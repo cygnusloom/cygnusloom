@@ -17,6 +17,7 @@ from cygnusloom.content.character import (
     derived_stats,
     feature_pick_options,
 )
+from cygnusloom.content.library import LevelGrants
 from cygnusloom.rules.context import ToolContext
 from cygnusloom.rules.dice import roll_total
 from cygnusloom.rules.wwn_progression import (
@@ -40,9 +41,6 @@ from cygnusloom.services.events import (
 )
 from cygnusloom.services.hooks import HookContext
 
-MAX_ATTRIBUTE = 18
-
-
 # The character mark that records committed Effort, keyed by duration and then tradition:
 # {"scene": {"high": 1}, "day": {"necromancer": 2}}.
 EFFORT_MARK = "effort_committed"
@@ -56,15 +54,6 @@ def class_table(class_id: str, progression: WWNProgression) -> ClassTable:
         options = ", ".join(sorted(progression.class_tables))
         raise InvalidInput(f"there is no class table for {class_id!r}; the classes are: {options}")
     return found
-
-
-# A class that grants an art tradition of its own, including a second partial class.
-_CLASS_TRADITIONS = {
-    "healer": "healer",
-    "healer_partial_2": "healer",
-    "vowed": "vowed",
-    "vowed_partial_2": "vowed",
-}
 
 
 def class_ids(found: Any) -> list[str]:
@@ -134,7 +123,7 @@ def tradition_tag(tradition: str, progression: WWNProgression) -> str:
     return tradition_data(tradition, progression)[0]
 
 
-def tradition_ids(found: Any) -> list[str]:
+def tradition_ids(found: Any, progression: WWNProgression) -> list[str]:
     """Every art tradition a character has. A Mage/Mage Adventurer has two, and a Healer or
     Vowed has one from its class, whether that class is the primary or the second partial one."""
     ids = [
@@ -143,14 +132,16 @@ def tradition_ids(found: Any) -> list[str]:
         if found.templates.get(kind)
     ]
     for class_id in class_ids(found):
-        tradition = _CLASS_TRADITIONS.get(class_id)
-        if tradition is not None and tradition not in ids:
+        tradition = class_table(class_id, progression).tradition
+        if tradition and tradition not in ids:
             ids.append(tradition)
     return ids
 
 
 def tradition_tags(found: Any, progression: WWNProgression) -> list[str]:
-    return [tradition_tag(tradition, progression) for tradition in tradition_ids(found)]
+    return [
+        tradition_tag(tradition, progression) for tradition in tradition_ids(found, progression)
+    ]
 
 
 def tradition_effort_stat(tradition: str, progression: WWNProgression) -> str:
@@ -410,11 +401,27 @@ def player_attack(
     )
 
 
-def _xp_rate(ctx: ToolContext, rate: str = "") -> str:
+def xp_track(progression: WWNProgression, rate: str) -> tuple[int, ...]:
+    """The experience thresholds of one named track from the progression data."""
+    track = progression.xp.get(rate)
+    if track is None:
+        options = ", ".join(sorted(progression.xp))
+        raise InvalidInput(
+            f"there is no experience track named {rate!r}; the tracks are: {options}"
+        )
+    return track
+
+
+def _xp_rate(ctx: ToolContext, progression: WWNProgression, rate: str = "") -> str:
     """The campaign's experience track, or the explicit override the GM gave."""
-    chosen = rate or str(ctx.world.campaign_options().get("xp_rate", "fast"))
-    if chosen not in ("fast", "slow"):
-        raise InvalidInput("the experience track must be 'fast' or 'slow'")
+    chosen = rate or str(ctx.world.campaign_options().get("xp_rate", ""))
+    if not chosen:
+        chosen = next(iter(progression.xp))
+    if chosen not in progression.xp:
+        options = ", ".join(sorted(progression.xp))
+        raise InvalidInput(
+            f"there is no experience track named {chosen!r}; the tracks are: {options}"
+        )
     return chosen
 
 
@@ -430,9 +437,9 @@ def gain_xp(
     threshold, note that the GM may call `level_up`; experience never levels a character by
     itself."""
     value = whole_number(amount, "amount", 0, 1_000_000)
-    rate = _xp_rate(ctx, rate)
     progression = require_wwn_progression(ctx.world)
-    table = progression.xp_slow if rate == "slow" else progression.xp_fast
+    rate = _xp_rate(ctx, progression, rate)
+    table = xp_track(progression, rate)
 
     def validate_level(hc: HookContext) -> int:
         _, found = _character(hc, character)
@@ -475,126 +482,15 @@ def gain_xp(
     return ctx.world.with_hook_context(action)
 
 
-def apply_level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str, Any]:
-    """Raise a character one level, if their experience reaches the next threshold. Rolls the
-    class hit dice for the new level's HP as the book says, sets the class attack bonus, adds
-    three skill points (four for an Expert or partial Expert), grants any focus or art pick due,
-    raises a spellcaster's castings, and recomputes the derived stats (saves, Strain, Effort)."""
-    rate = _xp_rate(ctx, rate)
+def _level_facts(
+    character: str,
+    ctx: ToolContext,
+    progression: WWNProgression,
+    rate: str,
+) -> dict[str, Any]:
+    """Everything a level projection needs, read once and without changing anything."""
     spec = ctx.world.character
-    progression = require_wwn_progression(ctx.world)
-    table_xp = progression.xp_slow if rate == "slow" else progression.xp_fast
-
-    def read(hc: HookContext) -> dict[str, Any]:
-        _, found = _character(hc, character)
-        level = found.counters.get("level", 1)
-        level = _chart_level(level, progression, found.name, "experience")
-        xp = found.counters.get("xp", 0)
-        if level >= progression.max_level:
-            raise InvalidInput(
-                f"{found.name} is already at the highest level, {progression.max_level}"
-            )
-        threshold = table_xp[level]
-        if xp < threshold:
-            raise InvalidInput(
-                f"{found.name} has {xp} experience; level {level + 1} needs {threshold} on the "
-                f"{rate} track"
-            )
-        if not class_ids(found):
-            raise InvalidInput(f"{found.name} has no class, so has no level to gain")
-        return {
-            "level": level,
-            "class_ids": class_ids(found),
-            "table": advancement_table(found, progression),
-            "casting_class": casting_class_id(found, progression),
-            "traditions": tradition_ids(found),
-            "hp": found.stats.get("hp", 0),
-            "con": spec.modifier(found.stats, "con"),
-            "stats": dict(found.stats),
-            "skills": dict(found.skills),
-            "features": set(found.features),
-        }
-
-    found = ctx.world.with_hook_context(read)
-    level = int(found["level"])
-    new_level = level + 1
-    table: ClassTable = found["table"]
-    ctx.world.adjust_counter(character, "level", 1)
-    # The book rerolls the class hit dice for the new level, adding Constitution to each die,
-    # and keeps the old total plus one when the reroll is no better.
-    rolled = roll_total(f"{new_level}d{table.hit_die}", ctx.world.rng)
-    new_hp = rolled + new_level * (table.hp_constant + int(found["con"]))
-    gained = max(1, new_hp)
-    if gained <= int(found["hp"]):
-        gained = int(found["hp"]) + 1
-    if "focus_die_hard" in found["features"]:
-        gained += 2
-    ctx.world.set_stat_max(character, "hp", gained, cause=f"level {new_level}")
-    ctx.world.set_stat_max(
-        character, "attack_bonus", table.attack[new_level - 1], cause=f"level {new_level}"
-    )
-    points = 4 if table.quick_learner else 3
-    ctx.world.adjust_counter(character, "skill_points", points)
-    focus_picks = 1 if new_level in table.focus_levels else 0
-    if focus_picks:
-        ctx.world.adjust_counter(character, "focus_picks", focus_picks)
-    casting_class = str(found["casting_class"] or found["class_ids"][0])
-    art_picks = sum(
-        _art_picks(casting_class, tradition, new_level, progression)
-        for tradition in found["traditions"]
-    )
-    if art_picks:
-        ctx.world.adjust_counter(character, "art_picks", art_picks)
-    casting = (
-        casting_row(str(found["casting_class"]), new_level, progression)
-        if found["casting_class"] is not None
-        else None
-    )
-    if casting is not None:
-        ctx.world.set_stat_max(character, "castings", casting.casts, cause=f"level {new_level}")
-    spell_picks = _spell_picks(casting_class, casting, progression)
-    if spell_picks:
-        ctx.world.adjust_counter(character, "spell_picks", spell_picks)
-    _recompute_derived(ctx, character, spec, cause=f"level {new_level}")
-    return {
-        "character": character,
-        "level": new_level,
-        "hp": gained,
-        "attack_bonus": table.attack[new_level - 1],
-        "skill_points": points,
-        "focus_picks": focus_picks,
-        "art_picks": art_picks,
-        "spell_picks": spell_picks,
-        "castings": casting.casts if casting is not None else None,
-        "rate": rate,
-    }
-
-
-def _spell_picks(class_id: str, casting: CastingRow | None, progression: WWNProgression) -> int:
-    """The new spells a level grants: two for a full High Mage, one for every other spellcaster."""
-    if casting is None:
-        return 0
-    table_id = progression.casting_class_tables.get(class_id.strip().casefold())
-    return 2 if table_id == "full_mage" else 1
-
-
-def _art_picks(class_id: str, tradition: str, level: int, progression: WWNProgression) -> int:
-    """The art picks a class chart grants at a level: a full Mage uses the full chart, while a
-    partial class, including a second partial class, uses the partial chart."""
-    tag = tradition_tag(tradition, progression)
-    if not tag:
-        return 0
-    full_chart = class_id.strip().casefold() == "mage"
-    levels = progression.art_levels_full if full_chart else progression.art_levels_partial
-    return 1 if level in levels.get(tag, frozenset()) else 0
-
-
-def level_up_summary(character: str, ctx: ToolContext) -> dict[str, Any]:
-    """What the next level grants before it is taken, so the level-up page can show the automatic
-    gains and the size of each pick pool the player will spend."""
-    progression = require_wwn_progression(ctx.world)
-    rate = _xp_rate(ctx)
-    table_xp = progression.xp_slow if rate == "slow" else progression.xp_fast
+    table_xp = xp_track(progression, rate)
 
     def read(hc: HookContext) -> dict[str, Any]:
         _, found = _character(hc, character)
@@ -610,67 +506,177 @@ def level_up_summary(character: str, ctx: ToolContext) -> dict[str, Any]:
                 f"{found.name} has {xp} experience; level {level + 1} needs {threshold} on the "
                 f"{rate} track"
             )
-        if not class_ids(found):
+        ids = class_ids(found)
+        if not ids:
             raise InvalidInput(f"{found.name} has no class, so has no level to gain")
+        level_hp_bonus = sum(
+            spec.features[feature_id].level_hp_bonus * count
+            for feature_id, count in found.features.items()
+            if feature_id in spec.features
+        )
         return {
+            "name": found.name,
             "level": level,
             "xp": xp,
             "threshold": threshold,
-            "class_ids": class_ids(found),
+            "class_ids": ids,
             "table": advancement_table(found, progression),
             "casting_class": casting_class_id(found, progression),
-            "traditions": tradition_ids(found),
-            "rate": rate,
+            "traditions": tradition_ids(found, progression),
+            "hp": found.stats.get("hp", 0),
+            "con": spec.modifier(found.stats, "con"),
+            "level_hp_bonus": level_hp_bonus,
         }
 
-    found = ctx.world.with_hook_context(read)
+    return ctx.world.with_hook_context(read)
+
+
+def project_level(
+    found: Mapping[str, Any], progression: WWNProgression, *, rate: str
+) -> LevelGrants:
+    """Project one new level's gains without rolling dice or changing the character.
+
+    Both the page summary and the applied level use this one projection, so their automatic
+    gains and pick pools can never disagree.
+    """
     level = int(found["level"])
     new_level = level + 1
     table: ClassTable = found["table"]
-    points = 4 if table.quick_learner else 3
-    focus_picks = 1 if new_level in table.focus_levels else 0
     casting_class = str(found["casting_class"] or found["class_ids"][0])
-    art_picks = sum(
-        _art_picks(casting_class, tradition, new_level, progression)
-        for tradition in found["traditions"]
-    )
     casting = (
         casting_row(str(found["casting_class"]), new_level, progression)
         if found["casting_class"] is not None
         else None
     )
-    spell_picks = _spell_picks(casting_class, casting, progression)
+    pools = {
+        "skill_points": 4 if table.quick_learner else 3,
+        "focus_picks": 1 if new_level in table.focus_levels else 0,
+        "art_picks": sum(
+            _art_picks(casting_class, tradition, new_level, progression)
+            for tradition in found["traditions"]
+        ),
+        "spell_picks": _spell_picks(str(found["casting_class"] or ""), progression),
+    }
     attack = table.attack[new_level - 1]
+    values = {
+        "hp_dice": table.hit_die,
+        "hp_constant": table.hp_constant,
+        "con": int(found["con"]),
+        "old_hp": int(found["hp"]),
+        "level_hp_bonus": int(found["level_hp_bonus"]),
+        "attack_bonus": attack,
+        "castings": casting.casts if casting is not None else None,
+    }
     lines = [
         f"Hit points: rerolled for level {new_level} (the old total plus one if the roll is worse).",
         f"Attack bonus: {attack}.",
-        f"Skill points: {points}.",
+        f"Skill points: {pools['skill_points']}.",
     ]
-    if focus_picks:
-        lines.append(f"Focus pick: {focus_picks}.")
-    if art_picks:
-        lines.append(f"Art pick: {art_picks}.")
-    if spell_picks:
-        lines.append(f"Spell pick: {spell_picks}.")
+    if pools["focus_picks"]:
+        lines.append(f"Focus pick: {pools['focus_picks']}.")
+    if pools["art_picks"]:
+        lines.append(f"Art pick: {pools['art_picks']}.")
+    if pools["spell_picks"]:
+        lines.append(f"Spell pick: {pools['spell_picks']}.")
     if casting is not None:
         lines.append(f"Castings: {casting.casts}.")
     lines.append("Saving throws improve by one.")
+    return LevelGrants(
+        level=level,
+        new_level=new_level,
+        xp=int(found["xp"]),
+        threshold=int(found["threshold"]),
+        rate=rate,
+        pools=pools,
+        values=values,
+        lines=tuple(lines),
+    )
+
+
+def apply_level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str, Any]:
+    """Raise a character one level, if their experience reaches the next threshold. Rolls the
+    class hit dice for the new level's HP as the book says, sets the class attack bonus, adds
+    the skill points the class grants, grants any focus or art pick due, raises a spellcaster's
+    castings, and recomputes the derived stats (saves, Strain, Effort)."""
+    progression = require_wwn_progression(ctx.world)
+    rate = _xp_rate(ctx, progression, rate)
+    spec = ctx.world.character
+    found = _level_facts(character, ctx, progression, rate)
+    grants = project_level(found, progression, rate=rate)
+    new_level = grants.new_level
+    ctx.world.adjust_counter(character, "level", 1)
+    # The book rerolls the class hit dice for the new level, adding Constitution to each die,
+    # and keeps the old total plus one when the reroll is no better.
+    rolled = roll_total(f"{new_level}d{grants.values['hp_dice']}", ctx.world.rng)
+    new_hp = rolled + new_level * (int(grants.values["hp_constant"]) + int(grants.values["con"]))
+    gained = max(1, new_hp)
+    if gained <= int(grants.values["old_hp"]):
+        gained = int(grants.values["old_hp"]) + 1
+    gained += int(grants.values["level_hp_bonus"])
+    ctx.world.set_stat_max(character, "hp", gained, cause=f"level {new_level}")
+    ctx.world.set_stat_max(
+        character,
+        "attack_bonus",
+        int(grants.values["attack_bonus"]),
+        cause=f"level {new_level}",
+    )
+    for counter in ("skill_points", "focus_picks", "art_picks", "spell_picks"):
+        amount = grants.granted(counter)
+        if amount:
+            ctx.world.adjust_counter(character, counter, amount)
+    castings = grants.values.get("castings")
+    if castings is not None:
+        ctx.world.set_stat_max(character, "castings", int(castings), cause=f"level {new_level}")
+    _recompute_derived(ctx, character, spec, cause=f"level {new_level}")
     return {
         "character": character,
-        "level": level,
+        "level": new_level,
+        "old_level": grants.level,
         "new_level": new_level,
-        "xp": found["xp"],
-        "threshold": found["threshold"],
+        "hp": gained,
+        "attack_bonus": grants.values["attack_bonus"],
+        "skill_points": grants.pools["skill_points"],
+        "focus_picks": grants.pools["focus_picks"],
+        "art_picks": grants.pools["art_picks"],
+        "spell_picks": grants.pools["spell_picks"],
+        "castings": castings,
         "rate": rate,
-        "attack_bonus": attack,
-        "castings": casting.casts if casting is not None else None,
-        "lines": lines,
-        "grants": {
-            "skill_points": points,
-            "focus_picks": focus_picks,
-            "art_picks": art_picks,
-            "spell_picks": spell_picks,
-        },
+        "grants": dict(grants.pools),
+    }
+
+
+def _spell_picks(casting_class: str, progression: WWNProgression) -> int:
+    """The new spells a level grants, as the class's casting table configures."""
+    table_id = progression.casting_class_tables.get(casting_class.strip().casefold())
+    if table_id is None:
+        return 0
+    return progression.casting_tables[table_id].spell_picks
+
+
+def _art_picks(class_id: str, tradition: str, level: int, progression: WWNProgression) -> int:
+    """The art picks a class chart grants at a level: a full Mage uses the full chart, while a
+    partial class, including a second partial class, uses the partial chart."""
+    tag = tradition_tag(tradition, progression)
+    if not tag:
+        return 0
+    chart = (
+        progression.art_levels_full
+        if class_table(class_id, progression).art_chart == "full"
+        else progression.art_levels_partial
+    )
+    return 1 if level in chart.get(tag, frozenset()) else 0
+
+
+def level_up_summary(character: str, ctx: ToolContext) -> dict[str, Any]:
+    """What the next level grants before it is taken, so the level-up page can show the automatic
+    gains and the size of each pick pool the player will spend."""
+    progression = require_wwn_progression(ctx.world)
+    rate = _xp_rate(ctx, progression)
+    found = _level_facts(character, ctx, progression, rate)
+    grants = project_level(found, progression, rate=rate)
+    return {
+        "character": character,
+        **grants.as_summary(),
     }
 
 
@@ -914,8 +920,8 @@ def spend_skill_point(character: str, skill: str, ctx: ToolContext) -> dict[str,
         new_level = (
             before + 1 if spec.skill_trained(found.skills, skill) else skill_progression.first_level
         )
-        cost = SKILL_LEVEL_COSTS.get(new_level)
-        needs_level = progression.skill_level_minimums.get(new_level)
+        cost = progression.skill_costs.get(new_level)
+        needs_level = progression.skill_minimums.get(new_level)
         if (
             new_level > skill_progression.maximum
             or new_level > progression.max_skill_level
@@ -955,17 +961,11 @@ def spend_skill_point(character: str, skill: str, ctx: ToolContext) -> dict[str,
     }
 
 
-# Skill-point costs by target skill level.
-SKILL_LEVEL_COSTS: Mapping[int, int] = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5}
-# The minimum character level for each attribute boost, in the order they are bought.
-ATTRIBUTE_BOOST_MINIMUMS: tuple[int, ...] = (2, 2, 3, 6, 9)
-
-
 def improve_attribute(character: str, stat: str, ctx: ToolContext) -> dict[str, Any]:
-    """Spend skill points on a permanent +1 to one of the six attributes. The first boost costs
-    one point, the second two, and so on to five, and each has its own minimum character level.
-    A character can buy five boosts in total."""
+    """Spend skill points on a permanent +1 to one of the six attributes. The progression data
+    sets each boost's cost, minimum character level, and the attribute maximum."""
     spec = ctx.world.character
+    progression = require_wwn_progression(ctx.world)
     if stat not in spec.stats or spec.stats[stat].derived is not None:
         options = ", ".join(s for s in spec.stats if spec.stats[s].derived is None)
         raise InvalidInput(f"there is no attribute named {stat!r}; the attributes are: {options}")
@@ -973,10 +973,14 @@ def improve_attribute(character: str, stat: str, ctx: ToolContext) -> dict[str, 
     def read(hc: HookContext) -> dict[str, int]:
         _, found = _character(hc, character)
         boosts = found.counters.get("attribute_boosts", 0)
-        if boosts >= len(ATTRIBUTE_BOOST_MINIMUMS):
-            raise InvalidInput(f"{found.name} has already bought all five attribute boosts")
-        cost = boosts + 1
-        needs_level = ATTRIBUTE_BOOST_MINIMUMS[boosts]
+        next_step = boosts + 1
+        if next_step not in progression.attribute_costs:
+            raise InvalidInput(
+                f"{found.name} has already bought all {max(progression.attribute_costs)} "
+                f"attribute boosts"
+            )
+        cost = progression.attribute_costs[next_step]
+        needs_level = progression.attribute_minimums[next_step]
         level = found.counters.get("level", 1)
         if level < needs_level:
             raise InvalidInput(
@@ -989,9 +993,10 @@ def improve_attribute(character: str, stat: str, ctx: ToolContext) -> dict[str, 
                 f"the next attribute boost costs {cost} skill points; {found.name} has {points}"
             )
         value = found.stats.get(stat, 0)
-        if value >= MAX_ATTRIBUTE:
+        if value >= progression.attribute_maximum:
             raise InvalidInput(
-                f"{found.name}'s {spec.stats[stat].name} is already at {MAX_ATTRIBUTE}"
+                f"{found.name}'s {spec.stats[stat].name} is already at "
+                f"{progression.attribute_maximum}"
             )
         return {"boosts": boosts, "cost": cost, "value": value}
 
@@ -1015,6 +1020,7 @@ def learn_focus(character: str, focus: str, ctx: ToolContext) -> dict[str, Any]:
     """Spend a focus pick on a focus. A second rank needs the first rank already held. The focus's
     creation effects are applied through the world's tools."""
     spec = ctx.world.character
+    progression = require_wwn_progression(ctx.world)
     feature = spec.features.get(focus)
     if feature is None:
         raise InvalidInput(f"there is no feature named {focus!r}")
@@ -1056,21 +1062,21 @@ def learn_focus(character: str, focus: str, ctx: ToolContext) -> dict[str, Any]:
             stat = str(effect["id"])
             if stat not in spec.stats:
                 raise InvalidInput(f"{feature.name} names no stat {stat!r}")
-            value = min(MAX_ATTRIBUTE, stats.get(stat, 0) + delta)
+            value = min(progression.attribute_maximum, stats.get(stat, 0) + delta)
             ctx.world.set_stat_max(character, stat, value, cause=f"the focus {feature.name}")
             stats[stat] = value
         elif op == "skill":
             skill = str(effect["id"])
             if skill not in spec.skills:
                 raise InvalidInput(f"{feature.name} names no skill {skill!r}")
-            progression = spec.skill_progression
-            if progression is None:
+            skill_progression = spec.skill_progression
+            if skill_progression is None:
                 raise InvalidInput("the rule set has no skill progression")
             before = spec.skill_level(skills, skill)
             if spec.skill_trained(skills, skill):
-                value = min(progression.maximum, before + delta)
+                value = min(skill_progression.maximum, before + delta)
             elif delta > 0:
-                value = min(progression.maximum, progression.first_level + delta - 1)
+                value = min(skill_progression.maximum, skill_progression.first_level + delta - 1)
             else:
                 value = before + delta
             if value > before:

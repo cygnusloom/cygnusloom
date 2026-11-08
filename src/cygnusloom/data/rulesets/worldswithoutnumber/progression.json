@@ -39,7 +39,8 @@
         "hp_constant": -1,
         "attack": [0, 0, 0, 0, 1, 1, 1, 1, 1, 2],
         "focus_levels": [2, 5, 7, 10],
-        "quick_learner": false
+        "quick_learner": false,
+        "art_chart": "full"
       },
       {
         "id": "healer",
@@ -47,7 +48,8 @@
         "hp_constant": -1,
         "attack": [0, 0, 0, 0, 1, 1, 1, 1, 1, 2],
         "focus_levels": [2, 5, 7, 10],
-        "quick_learner": false
+        "quick_learner": false,
+        "tradition": "healer"
       },
       {
         "id": "vowed",
@@ -55,7 +57,8 @@
         "hp_constant": 0,
         "attack": [0, 1, 1, 2, 2, 3, 3, 4, 4, 5],
         "focus_levels": [2, 5, 7, 10],
-        "quick_learner": true
+        "quick_learner": true,
+        "tradition": "vowed"
       },
       {
         "id": "adventurer_expert_warrior",
@@ -119,7 +122,8 @@
         "hp_constant": -1,
         "attack": [0, 0, 0, 0, 1, 1, 1, 1, 1, 2],
         "focus_levels": [2, 5, 7, 10],
-        "quick_learner": false
+        "quick_learner": false,
+        "tradition": "healer"
       },
       {
         "id": "vowed_partial_2",
@@ -127,7 +131,8 @@
         "hp_constant": 0,
         "attack": [0, 1, 1, 2, 2, 3, 3, 4, 4, 5],
         "focus_levels": [2, 5, 7, 10],
-        "quick_learner": true
+        "quick_learner": true,
+        "tradition": "vowed"
       }
     ],
     "xp": {
@@ -135,7 +140,10 @@
       "slow": [0, 6, 15, 24, 36, 51, 69, 87, 105, 139]
     },
     "casting": {
-      "full_mage": [
+      "full_mage": {
+        "spell_picks": 2,
+        "full_caster": true,
+        "rows": [
         { "level": 1, "max_spell_level": 1, "casts": 1, "prepared": 3 },
         { "level": 2, "max_spell_level": 1, "casts": 1, "prepared": 3 },
         { "level": 3, "max_spell_level": 2, "casts": 2, "prepared": 4 },
@@ -146,8 +154,12 @@
         { "level": 8, "max_spell_level": 4, "casts": 4, "prepared": 9 },
         { "level": 9, "max_spell_level": 5, "casts": 5, "prepared": 10 },
         { "level": 10, "max_spell_level": 5, "casts": 6, "prepared": 12 }
-      ],
-      "partial_mage": [
+        ]
+      },
+      "partial_mage": {
+        "spell_picks": 1,
+        "full_caster": false,
+        "rows": [
         { "level": 1, "max_spell_level": 1, "casts": 1, "prepared": 2 },
         { "level": 2, "max_spell_level": 1, "casts": 1, "prepared": 3 },
         { "level": 3, "max_spell_level": 1, "casts": 1, "prepared": 3 },
@@ -158,8 +170,12 @@
         { "level": 8, "max_spell_level": 2, "casts": 3, "prepared": 7 },
         { "level": 9, "max_spell_level": 3, "casts": 4, "prepared": 8 },
         { "level": 10, "max_spell_level": 3, "casts": 4, "prepared": 9 }
-      ],
-      "dual_mage": [
+        ]
+      },
+      "dual_mage": {
+        "spell_picks": 1,
+        "full_caster": false,
+        "rows": [
         { "level": 1, "max_spell_level": 1, "casts": 1, "prepared": 3 },
         { "level": 2, "max_spell_level": 1, "casts": 1, "prepared": 4 },
         { "level": 3, "max_spell_level": 1, "casts": 2, "prepared": 5 },
@@ -170,7 +186,8 @@
         { "level": 8, "max_spell_level": 3, "casts": 4, "prepared": 12 },
         { "level": 9, "max_spell_level": 3, "casts": 4, "prepared": 13 },
         { "level": 10, "max_spell_level": 4, "casts": 5, "prepared": 15 }
-      ]
+        ]
+      }
     },
     "casting_classes": {
       "mage": "full_mage",
@@ -217,12 +234,34 @@
         "vowed": [2, 4, 5, 6, 8, 10]
       }
     },
-    "skill_level_minimums": {
+    "skill_costs": {
+      "0": 1,
+      "1": 2,
+      "2": 3,
+      "3": 4,
+      "4": 5
+    },
+    "skill_minimums": {
       "0": 1,
       "1": 1,
       "2": 3,
       "3": 6,
       "4": 9
-    }
+    },
+    "attribute_costs": {
+      "1": 1,
+      "2": 2,
+      "3": 3,
+      "4": 4,
+      "5": 5
+    },
+    "attribute_minimums": {
+      "1": 2,
+      "2": 2,
+      "3": 3,
+      "4": 6,
+      "5": 9
+    },
+    "attribute_maximum": 18
   }
 ]
