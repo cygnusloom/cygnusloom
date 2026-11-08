@@ -193,7 +193,11 @@ def _parse_reply(name: str, data: Any) -> ChatReply:
 
 
 def _parse_usage(raw: Any) -> TokenUsage | None:
-    """Token counts from either OpenAI's `usage` object or DeepSeek's cache fields."""
+    """Token counts from either OpenAI's `usage` object or DeepSeek's cache fields.
+
+    Both APIs count cached input inside `prompt_tokens`; `cached_tokens` /
+    `prompt_cache_hit_tokens` is the cached subset, not an extra count. Likewise,
+    `reasoning_tokens` is part of `completion_tokens`."""
     if not isinstance(raw, Mapping):
         return None
     prompt_details = raw.get("prompt_tokens_details")

@@ -8,6 +8,8 @@
       <span class="tag">{{ "disabled" if detail.user.disabled else "active" }}</span>
     </div>
     <dl class="details">
+      <dt>Account ID</dt>
+      <dd class="mono">{{ detail.user.id }}</dd>
       <dt>Name</dt>
       <dd>{{ detail.user.display_name or "—" }}</dd>
       <dt>Email verified</dt>

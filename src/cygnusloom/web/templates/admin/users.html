@@ -8,7 +8,13 @@
       <span class="muted">{{ total }} account(s)</span>
     </div>
     <form method="get" action="/admin/users" class="admin-search">
-      <input type="search" name="q" value="{{ query }}" placeholder="Email, name, or subject">
+      <div class="user-search">
+        <input type="search" name="q" value="{{ query }}" placeholder="Account ID, email, name, or subject"
+               autocomplete="off" role="combobox" aria-autocomplete="list"
+               aria-controls="user-search-results" aria-expanded="false"
+               data-user-search data-user-search-url="/admin/users/search">
+        <ul id="user-search-results" class="user-search-results" role="listbox" hidden></ul>
+      </div>
       <select name="status">
         <option value="" {% if not status %}selected{% endif %}>All statuses</option>
         <option value="active" {% if status == "active" %}selected{% endif %}>Active</option>
@@ -16,14 +22,16 @@
       </select>
       <button type="submit">Search</button>
     </form>
+    <p class="muted">Search by account ID, email, display name, or identity-provider subject. Suggestions open the matching account.</p>
     {% if rows %}
       <table>
         <thead>
-          <tr><th>Account</th><th>Roles</th><th>Status</th>{% if not single_player %}<th>Credits</th>{% endif %}<th>Campaigns</th><th>Sessions</th><th>Last sign-in</th><th>Created</th></tr>
+          <tr><th>ID</th><th>Account</th><th>Roles</th><th>Status</th>{% if not single_player %}<th>Credits</th>{% endif %}<th>Campaigns</th><th>Sessions</th><th>Last sign-in</th><th>Created</th></tr>
         </thead>
         <tbody>
           {% for row in rows %}
             <tr>
+              <td class="mono">{{ row.user.id }}</td>
               <td>
                 <a href="/admin/users/{{ row.user.id }}">{{ row.user.email or row.user.subject }}</a>
                 {% if row.user.display_name %}<div class="muted">{{ row.user.display_name }}</div>{% endif %}
@@ -48,4 +56,7 @@
       <p class="muted">No accounts match.</p>
     {% endif %}
   </section>
+{% endblock %}
+{% block scripts %}
+  <script src="/static/admin_users.js"></script>
 {% endblock %}

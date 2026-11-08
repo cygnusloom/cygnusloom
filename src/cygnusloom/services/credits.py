@@ -15,6 +15,7 @@ from __future__ import annotations
 import math
 from collections.abc import AsyncIterator, Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import Engine, case, func, select, update
@@ -419,68 +420,114 @@ class MeteredProvider:
 
 @dataclass(frozen=True)
 class ModelUsage:
-    """Per-model totals for the administrator's pricing table."""
+    """Per-model totals for the administrator's pricing table.
+
+    Token figures use only calls where the provider reported exact usage. Calls without a usage
+    report are counted separately and never estimated into these totals. Input is split into
+    cache hits and cache misses; output includes reasoning tokens as a subset."""
 
     model: str
     calls: int
     replies: int
-    input_tokens: int
-    cached_tokens: int
+    reported_replies: int
+    cache_hit_tokens: int
+    cache_miss_tokens: int
     output_tokens: int
     reasoning_tokens: int
-    estimated_calls: int
+    unreported_calls: int
     credits_charged: int
 
     @property
-    def avg_input_tokens(self) -> int:
-        return math.ceil(self.input_tokens / self.replies) if self.replies else 0
+    def has_reported_usage(self) -> bool:
+        return self.reported_replies > 0
 
     @property
-    def avg_cached_tokens(self) -> int:
-        return math.ceil(self.cached_tokens / self.replies) if self.replies else 0
+    def reported_calls(self) -> int:
+        return self.calls - self.unreported_calls
+
+    def _average(self, total: int) -> int:
+        return math.ceil(total / self.reported_replies) if self.reported_replies else 0
+
+    @property
+    def avg_cache_hit_input_tokens(self) -> int:
+        return self._average(self.cache_hit_tokens)
+
+    @property
+    def avg_cache_miss_input_tokens(self) -> int:
+        return self._average(self.cache_miss_tokens)
 
     @property
     def avg_output_tokens(self) -> int:
-        return math.ceil(self.output_tokens / self.replies) if self.replies else 0
+        return self._average(self.output_tokens)
+
+    @property
+    def avg_reasoning_tokens(self) -> int:
+        return self._average(self.reasoning_tokens)
 
 
-def usage_by_model(engine: Engine) -> tuple[ModelUsage, ...]:
-    """Measured calls and completed replies per model, plus the credits actually charged. This is
-    the data an administrator uses to set a model's turn price."""
+def usage_by_model(
+    engine: Engine, *, since: datetime | None = None, until: datetime | None = None
+) -> tuple[ModelUsage, ...]:
+    """Reported calls and completed replies per model, plus the credits actually charged. This is
+    the data an administrator uses to set a model's turn price. `since` is inclusive and `until`
+    is exclusive; both are compared against the UTC timestamps stored on usage and charge rows."""
+    usage_filters = []
+    charge_filters = [CreditEntry.reason == TURN_REASON]
+    if since is not None:
+        usage_filters.append(LlmUsage.created_at >= since)
+        charge_filters.append(CreditEntry.created_at >= since)
+    if until is not None:
+        usage_filters.append(LlmUsage.created_at < until)
+        charge_filters.append(CreditEntry.created_at < until)
+    reported = LlmUsage.estimated.is_(False)
     with session_scope(engine) as db:
         usage_rows = db.execute(
             select(
                 LlmUsage.model,
                 func.count(LlmUsage.id),
                 func.count(func.distinct(LlmUsage.reply_event_id)),
-                func.coalesce(func.sum(LlmUsage.input_tokens), 0),
-                func.coalesce(func.sum(LlmUsage.cached_tokens), 0),
-                func.coalesce(func.sum(LlmUsage.output_tokens), 0),
-                func.coalesce(func.sum(LlmUsage.reasoning_tokens), 0),
+                func.count(func.distinct(case((reported, LlmUsage.reply_event_id), else_=None))),
+                func.coalesce(func.sum(case((reported, LlmUsage.cached_tokens), else_=0)), 0),
+                func.coalesce(func.sum(case((reported, LlmUsage.input_tokens), else_=0)), 0),
+                func.coalesce(func.sum(case((reported, LlmUsage.output_tokens), else_=0)), 0),
+                func.coalesce(func.sum(case((reported, LlmUsage.reasoning_tokens), else_=0)), 0),
                 func.coalesce(func.sum(case((LlmUsage.estimated.is_(True), 1), else_=0)), 0),
             )
+            .where(*usage_filters)
             .group_by(LlmUsage.model)
             .order_by(LlmUsage.model)
         ).all()
         charge_rows = db.execute(
             select(CreditEntry.model, func.coalesce(func.sum(-CreditEntry.delta), 0))
-            .where(CreditEntry.reason == TURN_REASON)
+            .where(*charge_filters)
             .group_by(CreditEntry.model)
         ).all()
     charges = {str(model): int(amount or 0) for model, amount in charge_rows}
     rows = []
-    for model, calls, replies, input_tokens, cached, output, reasoning, estimated in usage_rows:
+    for (
+        model,
+        calls,
+        replies,
+        reported_replies,
+        cache_hit,
+        input_tokens,
+        output,
+        reasoning,
+        unreported,
+    ) in usage_rows:
         name = str(model)
+        cache_miss = max(int(input_tokens) - int(cache_hit), 0)
         rows.append(
             ModelUsage(
                 model=name,
                 calls=int(calls),
                 replies=int(replies),
-                input_tokens=int(input_tokens),
-                cached_tokens=int(cached),
+                reported_replies=int(reported_replies),
+                cache_hit_tokens=int(cache_hit),
+                cache_miss_tokens=cache_miss,
                 output_tokens=int(output),
                 reasoning_tokens=int(reasoning),
-                estimated_calls=int(estimated),
+                unreported_calls=int(unreported),
                 credits_charged=charges.pop(name, 0),
             )
         )
@@ -493,11 +540,12 @@ def usage_by_model(engine: Engine) -> tuple[ModelUsage, ...]:
                     model=model,
                     calls=0,
                     replies=0,
-                    input_tokens=0,
-                    cached_tokens=0,
+                    reported_replies=0,
+                    cache_hit_tokens=0,
+                    cache_miss_tokens=0,
                     output_tokens=0,
                     reasoning_tokens=0,
-                    estimated_calls=0,
+                    unreported_calls=0,
                     credits_charged=charged,
                 )
             )

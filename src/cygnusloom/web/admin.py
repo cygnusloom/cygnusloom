@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import UTC, date, datetime, time, timedelta
+
 from fastapi import APIRouter, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.responses import Response
 
 from cygnusloom.auth.deps import (
@@ -19,6 +22,81 @@ from cygnusloom.web.forms import form_text
 from cygnusloom.web.rendering import render
 
 router = APIRouter(prefix="/admin")
+
+
+@dataclass(frozen=True)
+class UsagePeriod:
+    """The date window selected on the measured-usage card. Dates are UTC calendar days; the
+    end of a range includes the whole final day."""
+
+    mode: str
+    start: str
+    end: str
+    since: datetime | None
+    until: datetime | None
+    label: str
+    error: str = ""
+
+
+def _parse_date(value: str) -> date | None:
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _usage_period(request: Request) -> UsagePeriod:
+    mode = request.query_params.get("period", "all").strip().lower()
+    start_raw = request.query_params.get("start", "").strip()
+    end_raw = request.query_params.get("end", "").strip()
+    if mode not in {"all", "from", "between"}:
+        mode = "all"
+    if mode == "from":
+        start = _parse_date(start_raw)
+        if start is None:
+            return UsagePeriod(
+                mode, start_raw, end_raw, None, None, "All time", "Choose a valid start date."
+            )
+        return UsagePeriod(
+            mode,
+            start.isoformat(),
+            end_raw,
+            datetime.combine(start, time.min, tzinfo=UTC),
+            None,
+            f"From {start.isoformat()} (UTC)",
+        )
+    if mode == "between":
+        start = _parse_date(start_raw)
+        end = _parse_date(end_raw)
+        if start is None or end is None:
+            return UsagePeriod(
+                mode,
+                start_raw,
+                end_raw,
+                None,
+                None,
+                "All time",
+                "Choose valid start and end dates.",
+            )
+        if start > end:
+            return UsagePeriod(
+                mode,
+                start.isoformat(),
+                end.isoformat(),
+                None,
+                None,
+                "All time",
+                "The start date must not be after the end date.",
+            )
+        return UsagePeriod(
+            mode,
+            start.isoformat(),
+            end.isoformat(),
+            datetime.combine(start, time.min, tzinfo=UTC),
+            datetime.combine(end + timedelta(days=1), time.min, tzinfo=UTC),
+            f"{start.isoformat()} to {end.isoformat()} (UTC)",
+        )
+    return UsagePeriod("all", start_raw, end_raw, None, None, "All time")
 
 
 def _page(request: Request) -> int:
@@ -53,6 +131,17 @@ def _turn_price(form) -> int:
         raise InvalidInput("credits per turn must be a whole number")
 
 
+def _owner_id(form) -> int:
+    raw = form_text(form, "owner_id").strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        raise InvalidInput("choose the new owner by account ID")
+    if value <= 0:
+        raise InvalidInput("choose the new owner by account ID")
+    return value
+
+
 @router.get("")
 def dashboard(request: Request) -> Response:
     admin = admin_user(request)
@@ -83,6 +172,32 @@ def users(request: Request) -> Response:
         page=page,
         query=query,
         status=status,
+    )
+
+
+@router.get("/users/search")
+def search_accounts(request: Request) -> Response:
+    """Account suggestions for the administrators' searcher. It uses the same lookup as the
+    accounts page, so an id, email, display name, or identity-provider subject all work."""
+    admin_user(request)
+    query = request.query_params.get("q", "").strip()
+    if not query:
+        return JSONResponse({"users": []})
+    rows, _ = service.search_users(request.app.state.engine, query, "", 1, service.PAGE_SIZE)
+    return JSONResponse(
+        {
+            "users": [
+                {
+                    "id": row.user.id,
+                    "display_name": row.user.display_name,
+                    "email": row.user.email,
+                    "subject": row.user.subject,
+                    "disabled": row.user.disabled,
+                    "campaigns": row.campaign_count,
+                }
+                for row in rows
+            ]
+        }
     )
 
 
@@ -228,7 +343,7 @@ async def transfer_campaign(request: Request, campaign_id: int) -> Response:
             request.app.state.engine,
             admin,
             campaign_id,
-            form_text(form, "owner_email"),
+            _owner_id(form),
             ip=client_ip(request),
         )
     except (Conflict, InvalidInput, NotFound) as exc:
@@ -262,13 +377,19 @@ async def delete_campaign(request: Request, campaign_id: int) -> Response:
 def models_page(request: Request) -> Response:
     admin = admin_user(request)
     catalog = request.app.state.catalog
+    period = _usage_period(request)
+    usage = credit_service.usage_by_model(
+        request.app.state.engine, since=period.since, until=period.until
+    )
     return render(
         request,
         "admin/models.html",
         admin=admin,
         rows=catalog.all_specs(),
         source=catalog.source(),
-        usage=credit_service.usage_by_model(request.app.state.engine),
+        usage=usage,
+        usage_by_model={row.model: row for row in usage},
+        period=period,
     )
 
 

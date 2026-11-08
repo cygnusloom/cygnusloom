@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
+from datetime import UTC, datetime
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -52,6 +53,129 @@ def _set_roles(app: FastAPI, email: str, roles: tuple[str, ...]) -> None:
         session.commit()
 
 
+def test_model_usage_averages_treat_cache_and_reasoning_as_subsets():
+    usage = credits.ModelUsage(
+        model="provider/model",
+        calls=4,
+        replies=3,
+        reported_replies=2,
+        cache_hit_tokens=41,
+        cache_miss_tokens=60,
+        output_tokens=61,
+        reasoning_tokens=21,
+        unreported_calls=1,
+        credits_charged=0,
+    )
+    assert usage.reported_calls == 3
+    assert usage.has_reported_usage is True
+    assert usage.avg_cache_hit_input_tokens == 21
+    assert usage.avg_cache_miss_input_tokens == 30
+    assert usage.avg_output_tokens == 31
+    assert usage.avg_reasoning_tokens == 11
+
+
+def test_usage_by_model_excludes_estimates_and_filters_by_time(app: FastAPI):
+    with Session(app.state.engine) as session:
+        session.add_all(
+            [
+                LlmUsage(
+                    campaign_id=1,
+                    user_id=1,
+                    reply_event_id=101,
+                    model="provider/model",
+                    input_tokens=1000,
+                    cached_tokens=400,
+                    output_tokens=300,
+                    reasoning_tokens=100,
+                    estimated=False,
+                    created_at=datetime(2026, 1, 10, 12, tzinfo=UTC),
+                ),
+                LlmUsage(
+                    campaign_id=1,
+                    user_id=1,
+                    reply_event_id=102,
+                    model="provider/model",
+                    input_tokens=500,
+                    cached_tokens=100,
+                    output_tokens=200,
+                    reasoning_tokens=0,
+                    estimated=False,
+                    created_at=datetime(2026, 2, 10, 12, tzinfo=UTC),
+                ),
+                LlmUsage(
+                    campaign_id=1,
+                    user_id=1,
+                    reply_event_id=103,
+                    model="provider/model",
+                    input_tokens=99999,
+                    cached_tokens=0,
+                    output_tokens=99999,
+                    reasoning_tokens=0,
+                    estimated=True,
+                    created_at=datetime(2026, 2, 15, 12, tzinfo=UTC),
+                ),
+                LlmUsage(
+                    campaign_id=1,
+                    user_id=1,
+                    reply_event_id=104,
+                    model="fake/scripted",
+                    input_tokens=88888,
+                    cached_tokens=0,
+                    output_tokens=77777,
+                    reasoning_tokens=0,
+                    estimated=True,
+                    created_at=datetime(2026, 2, 15, 12, tzinfo=UTC),
+                ),
+            ]
+        )
+        session.commit()
+
+    rows = credits.usage_by_model(app.state.engine)
+    usage = next(row for row in rows if row.model == "provider/model")
+    assert usage.calls == 3
+    assert usage.replies == 3
+    assert usage.reported_replies == 2
+    assert usage.reported_calls == 2
+    assert usage.cache_hit_tokens == 500
+    assert usage.cache_miss_tokens == 1000
+    assert usage.output_tokens == 500
+    assert usage.reasoning_tokens == 100
+    assert usage.unreported_calls == 1
+    assert usage.has_reported_usage is True
+    assert usage.avg_cache_hit_input_tokens == 250
+    assert usage.avg_cache_miss_input_tokens == 500
+    assert usage.avg_output_tokens == 250
+    assert usage.avg_reasoning_tokens == 50
+
+    fake = next(row for row in rows if row.model == "fake/scripted")
+    assert fake.has_reported_usage is False
+    assert fake.unreported_calls == 1
+    assert fake.avg_cache_hit_input_tokens == 0
+    assert fake.avg_cache_miss_input_tokens == 0
+
+    later = next(
+        row
+        for row in credits.usage_by_model(app.state.engine, since=datetime(2026, 2, 1, tzinfo=UTC))
+        if row.model == "provider/model"
+    )
+    assert later.calls == 2
+    assert later.reported_replies == 1
+    assert later.cache_hit_tokens == 100
+    assert later.cache_miss_tokens == 400
+    assert later.unreported_calls == 1
+    assert later.avg_cache_miss_input_tokens == 400
+
+    january = next(
+        row
+        for row in credits.usage_by_model(app.state.engine, until=datetime(2026, 2, 1, tzinfo=UTC))
+        if row.model == "provider/model"
+    )
+    assert january.calls == 1
+    assert january.reported_replies == 1
+    assert january.unreported_calls == 0
+    assert january.avg_cache_miss_input_tokens == 600
+
+
 def test_a_completed_reply_charges_the_owner_and_measures_usage(client_factory, app: FastAPI):
     client, campaign_id = campaign_ready_fast(client_factory)
     _set_price(app, "fake/scripted", 5)
@@ -81,7 +205,8 @@ def test_a_completed_reply_charges_the_owner_and_measures_usage(client_factory, 
     )
     assert summary.replies == 1
     assert summary.calls == len(usage)
-    assert summary.estimated_calls == len(usage)
+    assert summary.unreported_calls == len(usage)
+    assert summary.has_reported_usage is False
     assert summary.credits_charged == 5
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,7 +10,7 @@ from sqlmodel import Session, select
 
 import cygnusloom
 from cygnusloom.config import Settings
-from cygnusloom.db.models import Campaign, Event, LlmModel, User
+from cygnusloom.db.models import Campaign, Event, LlmModel, LlmUsage, User
 from cygnusloom.db.session import create_schema, make_engine
 from cygnusloom.services import admin as service
 from cygnusloom.services.accounts import encode_roles, get_or_create_test_user
@@ -24,11 +25,17 @@ def _engine(settings: Settings):
     return engine
 
 
-def _user(engine, email: str, roles: tuple[str, ...] = (), disabled: bool = False) -> User:
+def _user(
+    engine,
+    email: str,
+    roles: tuple[str, ...] = (),
+    disabled: bool = False,
+    subject: str | None = None,
+) -> User:
     with Session(engine) as db:
         user = User(
             issuer="test",
-            subject=email,
+            subject=subject or email,
             email=email,
             email_verified=True,
             display_name=email.split("@", 1)[0],
@@ -116,6 +123,11 @@ def test_search_users_matches_email_name_and_status(settings: Settings):
     assert total == 1
     assert rows[0].user.email == "ada@example.com"
 
+    ada = _user(engine, "ada2@example.com")
+    rows, total = service.search_users(engine, f"#{ada.id}")
+    assert total == 1
+    assert rows[0].user.id == ada.id
+
 
 def test_user_detail_includes_campaigns_sessions_and_audit(settings: Settings):
     engine = _engine(settings)
@@ -168,12 +180,24 @@ def test_transfer_campaign_changes_owner_and_audits(settings: Settings):
     second = _user(engine, "second@example.com")
     campaign = _campaign(engine, first)
 
-    service.transfer_campaign(engine, actor, campaign.id, second.email)
+    service.transfer_campaign(engine, actor, campaign.id, second.id)
     detail = service.campaign_detail(engine, campaign.id)
     assert detail.owner.email == "second@example.com"
     entries, total = service.audit_entries(engine)
     assert total == 1
     assert entries[0].action == "campaign.transferred"
+
+
+def test_transfer_campaign_uses_account_id_when_emails_match(settings: Settings):
+    engine = _engine(settings)
+    actor = _user(engine, "admin@example.com", roles=("cygnusloom-admins",))
+    first = _user(engine, "shared@example.com", subject="first-identity")
+    second = _user(engine, "shared@example.com", subject="second-identity")
+    campaign = _campaign(engine, first)
+
+    service.transfer_campaign(engine, actor, campaign.id, second.id)
+    detail = service.campaign_detail(engine, campaign.id)
+    assert detail.owner.id == second.id
 
 
 def test_delete_campaign_removes_events_and_audits(settings: Settings):
@@ -206,6 +230,7 @@ def test_admin_panel_lists_and_manages_accounts(settings: Settings):
     assert page.status_code == 200
     assert "A Dark Night" in page.text
     assert "Roles (from the identity provider)" in page.text
+    assert "Account ID" in page.text
 
     campaigns = client.get("/admin/campaigns?q=Dark")
     assert campaigns.status_code == 200
@@ -231,6 +256,57 @@ def test_admin_panel_lists_and_manages_accounts(settings: Settings):
     assert response.status_code == 303
     with Session(engine) as db:
         assert db.get(Campaign, campaign.id) is None
+
+
+def test_admin_user_search_suggestions_match_by_id(settings: Settings):
+    client = _admin_client(settings)
+    register(client, "admin@example.com")
+    engine = _engine(settings)
+    target = get_or_create_test_user(engine, "target@example.com")
+
+    response = client.get(f"/admin/users/search?q={target.id}")
+    assert response.status_code == 200
+    users = response.json()["users"]
+    assert users[0]["id"] == target.id
+    assert users[0]["email"] == "target@example.com"
+
+    assert client.get("/admin/users/search?q=").json() == {"users": []}
+
+
+def test_admin_can_transfer_a_campaign_by_account_id(settings: Settings):
+    client = _admin_client(settings)
+    register(client, "admin@example.com")
+    engine = _engine(settings)
+    owner = get_or_create_test_user(engine, "owner@example.com")
+    new_owner = get_or_create_test_user(engine, "new-owner@example.com")
+    campaign = _campaign(engine, owner, "A Dark Night")
+
+    token = csrf_token(client, f"/admin/campaigns/{campaign.id}")
+    response = client.post(
+        f"/admin/campaigns/{campaign.id}/transfer",
+        data={"csrf_token": token, "owner_id": str(new_owner.id)},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert service.campaign_detail(engine, campaign.id).owner.id == new_owner.id
+
+
+def test_transfer_rejects_a_non_numeric_account_id(settings: Settings):
+    client = _admin_client(settings)
+    register(client, "admin@example.com")
+    engine = _engine(settings)
+    owner = get_or_create_test_user(engine, "owner@example.com")
+    campaign = _campaign(engine, owner, "A Dark Night")
+
+    token = csrf_token(client, f"/admin/campaigns/{campaign.id}")
+    response = client.post(
+        f"/admin/campaigns/{campaign.id}/transfer",
+        data={"csrf_token": token, "owner_id": "not-a-number"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == f"/admin/campaigns/{campaign.id}"
+    assert service.campaign_detail(engine, campaign.id).owner.id == owner.id
 
 
 def test_admin_panel_requires_confirmation_text(settings: Settings):
@@ -274,6 +350,10 @@ def test_admin_model_page_lists_and_adds_models(settings: Settings):
     assert page.status_code == 200
     assert "fake/scripted" in page.text
     assert "ollama/test-model" in page.text
+    assert "Cache hit input" in page.text
+    assert "Cache miss input" in page.text
+    assert "Cost calculator" in page.text
+    assert "Peak" in page.text and "Off-peak" in page.text
 
     token = csrf_token(client, "/admin/models")
     response = client.post(
@@ -301,6 +381,83 @@ def test_admin_model_page_lists_and_adds_models(settings: Settings):
 
     audit = client.get("/admin/audit")
     assert "model.added" in audit.text
+
+
+def test_admin_models_page_hides_estimated_token_counts(settings: Settings):
+    client = _admin_client(settings)
+    register(client, "admin@example.com")
+    engine = _engine(settings)
+    with Session(engine) as db:
+        db.add(
+            LlmUsage(
+                campaign_id=1,
+                user_id=1,
+                reply_event_id=1,
+                model="fake/scripted",
+                input_tokens=987654,
+                cached_tokens=123456,
+                output_tokens=555555,
+                reasoning_tokens=0,
+                estimated=True,
+                created_at=datetime(2026, 1, 15, tzinfo=UTC),
+            )
+        )
+        db.commit()
+
+    page = client.get("/admin/models")
+    assert page.status_code == 200
+    assert "usage not reported" in page.text
+    assert "1 unreported" in page.text
+    assert "987654" not in page.text
+    assert "555555" not in page.text
+
+
+def test_admin_models_page_filters_usage_by_date(settings: Settings):
+    client = _admin_client(settings)
+    register(client, "admin@example.com")
+    engine = _engine(settings)
+    with Session(engine) as db:
+        db.add_all(
+            [
+                LlmUsage(
+                    campaign_id=1,
+                    user_id=1,
+                    reply_event_id=1,
+                    model="fake/scripted",
+                    input_tokens=111111,
+                    output_tokens=0,
+                    estimated=False,
+                    created_at=datetime(2026, 1, 15, tzinfo=UTC),
+                ),
+                LlmUsage(
+                    campaign_id=1,
+                    user_id=1,
+                    reply_event_id=2,
+                    model="fake/scripted",
+                    input_tokens=222222,
+                    output_tokens=0,
+                    estimated=False,
+                    created_at=datetime(2026, 2, 15, tzinfo=UTC),
+                ),
+            ]
+        )
+        db.commit()
+
+    from_start = client.get("/admin/models?period=from&start=2026-02-01")
+    assert from_start.status_code == 200
+    assert "From 2026-02-01 (UTC)" in from_start.text
+    assert "222222" in from_start.text
+    assert "111111" not in from_start.text
+
+    between = client.get("/admin/models?period=between&start=2026-01-01&end=2026-01-31")
+    assert between.status_code == 200
+    assert "2026-01-01 to 2026-01-31 (UTC)" in between.text
+    assert "111111" in between.text
+    assert "222222" not in between.text
+
+    invalid = client.get("/admin/models?period=between&start=2026-02-01&end=2026-01-01")
+    assert invalid.status_code == 200
+    assert "start date must not be after" in invalid.text
 
 
 def test_admin_model_page_requires_confirmation_to_delete(settings: Settings):

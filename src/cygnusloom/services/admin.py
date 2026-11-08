@@ -10,7 +10,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from sqlalchemy import Engine, func, or_, select
+from sqlalchemy import Engine, String, cast, func, or_, select
 
 from cygnusloom.db.models import (
     AdminAudit,
@@ -193,15 +193,19 @@ def search_users(
     page: int = 1,
     per_page: int = PAGE_SIZE,
 ) -> tuple[tuple[UserSummary, ...], int]:
+    """Find accounts by any detail an administrator knows: account id, email, display name,
+    or identity-provider subject. The account page and the campaign transfer picker share this
+    search, so both accept the same queries."""
     page = max(1, page)
     conditions = []
     if query.strip():
-        like = f"%{query.strip().lower()}%"
+        like = f"%{query.strip().lstrip('#').lower()}%"
         conditions.append(
             or_(
                 func.lower(User.email).like(like),
                 func.lower(User.display_name).like(like),
                 func.lower(User.subject).like(like),
+                cast(User.id, String).like(like),
             )
         )
     if status == "disabled":
@@ -549,21 +553,21 @@ def set_campaign_model(
 
 
 def transfer_campaign(
-    engine: Engine, actor: User, campaign_id: int, owner_email: str, *, ip: str = ""
+    engine: Engine, actor: User, campaign_id: int, owner_id: int, *, ip: str = ""
 ) -> None:
-    email = owner_email.strip().lower()
-    if not email:
-        raise InvalidInput("enter the new owner's email")
+    """Make an account the campaign owner. Accounts are chosen by numeric id because email
+    addresses are not unique across identity providers."""
+    if isinstance(owner_id, bool) or not isinstance(owner_id, int) or owner_id <= 0:
+        raise InvalidInput("choose the new owner by account ID")
     with session_scope(engine) as db:
         campaign = db.get(Campaign, campaign_id)
         if campaign is None:
             raise NotFound("campaign not found")
-        owners = db.execute(select(User).where(func.lower(User.email) == email)).scalars().all()
-        if not owners:
-            raise NotFound("no account has that email")
-        if len(owners) > 1:
-            raise Conflict("more than one account has that email")
-        new_owner = owners[0]
+        new_owner = db.get(User, owner_id)
+        if new_owner is None:
+            raise NotFound("account not found")
+        if campaign.owner_id == new_owner.id:
+            raise Conflict("that account already owns this campaign")
         before = campaign.owner_id
         campaign.owner_id = new_owner.id or before
         # The new owner is implicit, so any membership row for them would be redundant.

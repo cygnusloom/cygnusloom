@@ -9,7 +9,10 @@
     </div>
     <dl class="details">
       <dt>Owner</dt>
-      <dd><a href="/admin/users/{{ detail.owner.id }}">{{ detail.owner.email or detail.owner.subject }}</a></dd>
+      <dd>
+        <a href="/admin/users/{{ detail.owner.id }}">{{ detail.owner.display_name or detail.owner.email or detail.owner.subject }}</a>
+        <span class="muted">Account #{{ detail.owner.id }}{% if detail.owner.email %} · {{ detail.owner.email }}{% endif %}</span>
+      </dd>
       <dt>World template</dt>
       <dd>{{ detail.campaign.world_template }}</dd>
       <dt>Rule set</dt>
@@ -81,9 +84,26 @@
     </form>
     <form method="post" action="/admin/campaigns/{{ detail.campaign.id }}/transfer" class="admin-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <label>New owner's email <input type="email" name="owner_email" required></label>
+      <label>New owner's account ID
+        <input type="number" id="transfer-owner-id" name="owner_id" min="1" step="1"
+               required autocomplete="off">
+      </label>
+      <div class="user-search">
+        <label>Find an account
+          <input type="search" placeholder="Account ID, email, name, or subject"
+                 autocomplete="off" role="combobox" aria-autocomplete="list"
+                 aria-controls="transfer-user-results" aria-expanded="false"
+                 data-user-search data-user-search-url="/admin/users/search"
+                 data-user-search-target="transfer-owner-id"
+                 data-user-search-enter="select">
+        </label>
+        <ul id="transfer-user-results" class="user-search-results" role="listbox" hidden></ul>
+      </div>
       <button type="submit">Transfer</button>
     </form>
+    <p class="muted">Accounts are identified by account ID because two accounts can share an
+       email address. Use Find an account to look one up by ID, email, display name, or
+       identity-provider subject.</p>
     <details class="danger-zone">
       <summary>Delete this campaign</summary>
       <p>This deletes every event in the campaign. Type <strong>{{ detail.campaign.name }}</strong> to confirm.</p>
@@ -94,4 +114,7 @@
       </form>
     </details>
   </section>
+{% endblock %}
+{% block scripts %}
+  <script src="/static/admin_users.js"></script>
 {% endblock %}

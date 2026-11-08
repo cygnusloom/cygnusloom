@@ -22,12 +22,14 @@
   </section>
 
   {% for row in rows %}
+    {% set model_usage = usage_by_model.get(row.model_id) %}
     <section class="card">
       <div class="heading">
         <h2>{{ row.model_id }}</h2>
         <span>
           {% if row.is_default %}<span class="tag">default</span>{% endif %}
           <span class="tag">{{ "enabled" if row.enabled else "disabled" }}</span>
+          <button type="button" class="secondary" data-dialog-open="cost-calculator-{{ loop.index }}">Cost calculator</button>
         </span>
       </div>
       <dl class="details">
@@ -46,6 +48,85 @@
         <dt>Stream usage</dt>
         <dd>{{ "requested" if row.stream_usage else "not requested" }}</dd>
       </dl>
+
+      <dialog id="cost-calculator-{{ loop.index }}" class="app-dialog cost-calculator"
+              data-calculator aria-labelledby="cost-calculator-title-{{ loop.index }}">
+        <div class="heading">
+          <h2 id="cost-calculator-title-{{ loop.index }}">Cost calculator · {{ row.model_id }}</h2>
+          <button type="button" class="secondary" data-dialog-close>Close</button>
+        </div>
+        <p class="muted">
+          {% if model_usage and model_usage.has_reported_usage %}
+            Prefilled from {{ model_usage.reported_replies }} reported
+            {{ "reply" if model_usage.reported_replies == 1 else "replies" }}
+            {% if period.mode == "all" %}across all time{% else %}in the selected period ({{ period.label }}){% endif %}.
+            Token counts are rounded-up averages per reply. Edit them to try another usage mix.
+          {% else %}
+            No provider-reported token usage
+            {% if period.mode == "all" %}has been recorded for this model{% else %}was recorded for this model in the selected period{% endif %}.
+            Enter token counts per reply to calculate manually.
+          {% endif %}
+        </p>
+        <p class="muted">
+          Cache hit input is the part of the prompt served from the provider's prompt cache;
+          cache miss input is the rest. Output includes reasoning (thinking) tokens.
+        </p>
+        <div class="calculator-fields">
+          <label>Cache hit input tokens per reply
+            <input type="number" min="0" step="1" data-calc="hit-tokens"
+                   value="{{ model_usage.avg_cache_hit_input_tokens if model_usage else 0 }}">
+          </label>
+          <label>Cache miss input tokens per reply
+            <input type="number" min="0" step="1" data-calc="miss-tokens"
+                   value="{{ model_usage.avg_cache_miss_input_tokens if model_usage else 0 }}">
+          </label>
+          <label>Output tokens per reply
+            <input type="number" min="0" step="1" data-calc="output-tokens"
+                   value="{{ model_usage.avg_output_tokens if model_usage else 0 }}">
+          </label>
+          <p class="muted calculator-note">
+            Reasoning tokens are included in output{% if model_usage %}
+            (average {{ model_usage.avg_reasoning_tokens }} per reported reply){% endif %}.
+          </p>
+        </div>
+        <fieldset class="calculator-prices">
+          <legend>Token prices per 1M tokens</legend>
+          <table>
+            <thead><tr><th>Token type</th><th>Peak</th><th>Off-peak</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>Cache hit input</td>
+                <td><input type="number" min="0" step="any" value="0" data-calc="hit-peak" aria-label="Peak cache hit input price per 1M tokens"></td>
+                <td><input type="number" min="0" step="any" value="0" data-calc="hit-off-peak" aria-label="Off-peak cache hit input price per 1M tokens"></td>
+              </tr>
+              <tr>
+                <td>Cache miss input</td>
+                <td><input type="number" min="0" step="any" value="0" data-calc="miss-peak" aria-label="Peak cache miss input price per 1M tokens"></td>
+                <td><input type="number" min="0" step="any" value="0" data-calc="miss-off-peak" aria-label="Off-peak cache miss input price per 1M tokens"></td>
+              </tr>
+              <tr>
+                <td>Output</td>
+                <td><input type="number" min="0" step="any" value="0" data-calc="output-peak" aria-label="Peak output price per 1M tokens"></td>
+                <td><input type="number" min="0" step="any" value="0" data-calc="output-off-peak" aria-label="Off-peak output price per 1M tokens"></td>
+              </tr>
+            </tbody>
+          </table>
+        </fieldset>
+        <label>Share of usage at peak
+          <input type="number" min="0" max="100" step="1" value="100" data-calc="peak-share"> %
+        </label>
+        <dl class="details calculator-results">
+          <dt>Peak cost per reply</dt><dd data-calc-result="peak">—</dd>
+          <dt>Off-peak cost per reply</dt><dd data-calc-result="off-peak">—</dd>
+          <dt>Blended cost per reply</dt><dd data-calc-result="blended">—</dd>
+          <dt>Blended cost per 1,000 replies</dt><dd data-calc-result="thousand">—</dd>
+        </dl>
+        <p class="muted">
+          Enter prices in your provider's currency. This calculator does not convert currencies
+          {% if not single_player %}or credits{% endif %}.
+        </p>
+      </dialog>
+
       {% if row.row_id %}
         <form method="post" action="/admin/models/{{ row.row_id }}/update" class="admin-form">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -158,31 +239,75 @@
   <section class="card">
     <div class="heading">
       <h2>Measured usage</h2>
-      <span class="muted">Token counts from completed AI GM replies</span>
+      <span class="muted">Provider-reported token counts from completed AI GM replies</span>
     </div>
+    <form method="get" action="/admin/models" class="usage-filter" data-usage-filter>
+      <label>Period
+        <select name="period" data-usage-period>
+          <option value="all" {% if period.mode == "all" %}selected{% endif %}>All time</option>
+          <option value="from" {% if period.mode == "from" %}selected{% endif %}>From a date onward</option>
+          <option value="between" {% if period.mode == "between" %}selected{% endif %}>Between two dates</option>
+        </select>
+      </label>
+      <label>From <input type="date" name="start" value="{{ period.start }}" data-usage-start></label>
+      <label>To <input type="date" name="end" value="{{ period.end }}" data-usage-end></label>
+      <button type="submit">Apply</button>
+    </form>
     <p class="muted">
-      These are the actual tokens each model used, when the provider reports them.
-      {% if not single_player %}Use the averages per reply to choose the credits-per-reply price above.{% endif %}
-      Estimates are marked; a provider that reports no usage is about four characters per token.
+      Showing: {{ period.label }}. Dates are UTC.
+      {% if period.error %}<span role="alert">{{ period.error }} Showing all time instead.</span>{% endif %}
+    </p>
+    <p class="muted">
+      Token figures use only calls where the provider reported exact usage. Calls without a
+      report are counted separately and are never estimated into the token columns. Input is
+      split into Cache hit input, the part of the prompt served from the provider's prompt
+      cache, and Cache miss input, the rest. Output includes reasoning (thinking) tokens.
+      Averages are per reported reply, across every model call that reply made; a reply can make
+      several calls, for example while using tools, so Calls can be higher than Replies.
+    </p>
+    <p class="muted">
+      {% if not single_player %}
+        Use the per-reply averages to choose the credits-per-reply price above, or open a model's
+        Cost calculator to convert peak and off-peak token prices into a cost per reply.
+      {% else %}
+        Open a model's Cost calculator to convert peak and off-peak token prices into a cost per
+        reply.
+      {% endif %}
     </p>
     {% if usage %}
-      <table>
+      <table class="usage-table">
         <thead>
           <tr>
-            <th>Model</th><th>Calls</th><th>Replies</th><th>Avg input</th><th>Avg cached</th>
-            <th>Avg output</th><th>Estimated calls</th>{% if not single_player %}<th>Credits charged</th>{% endif %}
+            <th>Model</th><th>Calls</th><th>Replies</th>
+            <th>Avg cache hit input / reply</th><th>Avg cache miss input / reply</th>
+            <th>Avg output / reply</th>{% if not single_player %}<th>Credits charged</th>{% endif %}
           </tr>
         </thead>
         <tbody>
           {% for row in usage %}
             <tr>
-              <td class="mono">{{ row.model }}</td>
-              <td>{{ row.calls }}</td>
-              <td>{{ row.replies }}</td>
-              <td>{{ row.avg_input_tokens }}</td>
-              <td>{{ row.avg_cached_tokens }}</td>
-              <td>{{ row.avg_output_tokens }}</td>
-              <td>{{ row.estimated_calls }}</td>
+              <td class="mono">
+                {{ row.model }}
+                {% if not row.has_reported_usage %}<div><span class="tag">usage not reported</span></div>{% endif %}
+              </td>
+              <td>
+                {{ row.calls }}
+                {% if row.unreported_calls %}<div class="table-note">{{ row.unreported_calls }} unreported</div>{% endif %}
+              </td>
+              <td>
+                {{ row.replies }}
+                {% if row.reported_replies and row.reported_replies != row.replies %}<div class="table-note">{{ row.reported_replies }} reported</div>{% endif %}
+              </td>
+              {% if row.has_reported_usage %}
+                <td>{{ row.avg_cache_hit_input_tokens }}</td>
+                <td>{{ row.avg_cache_miss_input_tokens }}</td>
+                <td>
+                  {{ row.avg_output_tokens }}
+                  {% if row.avg_reasoning_tokens %}<div class="table-note">incl. {{ row.avg_reasoning_tokens }} reasoning</div>{% endif %}
+                </td>
+              {% else %}
+                <td colspan="3" class="muted">No provider-reported token usage.</td>
+              {% endif %}
               {% if not single_player %}<td>{{ row.credits_charged }}</td>{% endif %}
             </tr>
           {% endfor %}
@@ -192,4 +317,7 @@
       <p class="muted">No replies have been measured yet.</p>
     {% endif %}
   </section>
+{% endblock %}
+{% block scripts %}
+  <script src="/static/admin_models.js"></script>
 {% endblock %}
