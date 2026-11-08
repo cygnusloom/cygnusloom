@@ -69,21 +69,22 @@ def take_advancement(
         raise InvalidInput(f"{option.label} needs a stat; choose one of {sorted(character.stats)}")
     if not option.picks and stat is not None:
         raise InvalidInput(f"{option.label} does not take a stat")
+    maximum = option.maximum_for(character.counters)
     if (
         option.picks
         and stat is not None
-        and option.maximum is not None
-        and character.stats.get(stat, 0) >= option.maximum
+        and maximum is not None
+        and character.stats.get(stat, 0) >= maximum
     ):
         raise InvalidInput(
-            f"{character.name}'s {stat} is already at {option.maximum}; "
+            f"{character.name}'s {stat} is already at {maximum}; "
             f"{option.label} cannot raise it further"
         )
     counter = counters[advancements.counter]
     points = character.counters.get(advancements.counter, counter.initial)
     if points < 1:
         raise InvalidInput(f"{character.name} has no {advancements.label} to spend")
-    learned = _learnable(option.label, option.learn, character, feature, features or {})
+    learned = _learnable(option.label, option.learn, character, feature, features or {}, spec)
     if learned is not None and learned.defense_floor is not None:
         if combat is None or not combat.defense_base or spec is None:
             raise InvalidInput("a defense feature requires equipped defense rules")
@@ -153,19 +154,16 @@ def take_advancement(
     }
 
 
-def _learnable(
-    label: str,
+def learnable_features(
     learn: LearnRules | None,
     character: Character,
-    feature: str | None,
     features: Mapping[str, Feature],
-) -> Feature | None:
-    """The feature an option teaches, checked against the character: it must be of the option's
-    type and carry the tag of the character's field; nonrepeatable features must be new."""
+    spec: CharacterSpec | None = None,
+) -> tuple[Feature, ...]:
+    """The features an option may teach this character, in stable order. The page and the
+    validator both use this, so a shown option is always accepted."""
     if learn is None:
-        if feature is not None:
-            raise InvalidInput(f"{label} does not take a feature")
-        return None
+        return ()
     tag = learn.tag or (character.fields.get(learn.tag_field, "") if learn.tag_field else "")
     restrict = bool(learn.tag or learn.tag_field)
     excluded_tags = {
@@ -173,24 +171,42 @@ def _learnable(
         for field_id in learn.exclude_tag_fields
         if character.fields.get(field_id)
     }
-    candidates = sorted(
-        f.name
-        for f in features.values()
-        if f.feature_type == learn.feature_type
-        and (not restrict or f.tag == tag)
-        and f.tag not in excluded_tags
-        and f.id not in learn.exclude
-        and (f.repeatable or f.id not in character.features)
-    )
+    candidates: list[Feature] = []
+    for candidate in features.values():
+        if candidate.feature_type != learn.feature_type:
+            continue
+        if restrict and candidate.tag != tag:
+            continue
+        if candidate.tag in excluded_tags or candidate.id in learn.exclude:
+            continue
+        if candidate.id in character.features and not candidate.repeatable:
+            continue
+        if spec is not None:
+            try:
+                check_ordered_feature_rank(spec, candidate, character.features)
+            except CharacterError:
+                continue
+        candidates.append(candidate)
+    return tuple(sorted(candidates, key=lambda item: (item.name.casefold(), item.id)))
+
+
+def _learnable(
+    label: str,
+    learn: LearnRules | None,
+    character: Character,
+    feature: str | None,
+    features: Mapping[str, Feature],
+    spec: CharacterSpec | None = None,
+) -> Feature | None:
+    """The feature an option teaches, checked against the character: it must be of the option's
+    type and carry the tag of the character's field; nonrepeatable features must be new."""
+    if learn is None:
+        if feature is not None:
+            raise InvalidInput(f"{label} does not take a feature")
+        return None
+    candidates = learnable_features(learn, character, features, spec)
     chosen = features.get(feature or "")
-    if (
-        chosen is None
-        or chosen.feature_type != learn.feature_type
-        or (restrict and chosen.tag != tag)
-        or chosen.tag in excluded_tags
-        or chosen.id in learn.exclude
-    ):
-        raise InvalidInput(f"{label} needs a {learn.feature_type}; choose one of {candidates}")
-    if chosen.id in character.features and not chosen.repeatable:
-        raise InvalidInput(f"{character.name} already has {chosen.name}")
+    if chosen is None or chosen not in candidates:
+        names = ", ".join(candidate.name for candidate in candidates)
+        raise InvalidInput(f"{label} needs a {learn.feature_type}; choose one of {names}")
     return chosen

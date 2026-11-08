@@ -830,7 +830,7 @@ def test_function_parameter_with_default_may_be_left_out_of_the_schema(tree: Pat
     assert "social" in ContentLibrary.load(tree).rule_sets["testset"].tool_calls
 
 
-def test_roll_type_is_no_longer_read(tree: Path):
+def test_an_unknown_definition_type_is_an_error(tree: Path):
     _write(
         tree,
         {
@@ -840,7 +840,8 @@ def test_roll_type_is_no_longer_read(tree: Path):
             ]
         },
     )
-    assert ContentLibrary.load(tree).rule_sets["testset"].tool_calls == {}
+    with pytest.raises(ContentError, match="unknown definition type"):
+        ContentLibrary.load(tree)
 
 
 def test_core_rules_and_tables_reach_every_rule_set(tree: Path):

@@ -492,40 +492,6 @@ class CampaignOptionsChosen(GameEvent):
         state.options = dict(self.options)
 
 
-# BACKWARDS-COMPATIBILITY: 3 - old logs and exports contain campaign.upgraded.
-# Campaigns always load the running game's rules and content, so nothing records this any more.
-# It stays so old logs decode, and it opens a turn like it did then: the turn events that followed
-# it call `_open_turn`, which raises when no turn is open.
-@dataclass(frozen=True)
-class CampaignUpgraded(GameEvent):
-    """A campaign moved to a new game version, recorded before campaigns loaded the running game
-    directly. The transcript hides the entry and no story is narrated for it."""
-
-    kind: ClassVar[str] = "campaign.upgraded"
-    hidden: ClassVar[bool] = True
-    channel: ClassVar[Channel] = Channel.LOG
-
-    from_version: str
-    to_version: str
-
-    def apply(self, state: CampaignState, event_id: int) -> None:
-        before = self.from_version or "an earlier version"
-        if state.turn is None:
-            state.turn = Turn(
-                opener=event_id,
-                text=(
-                    f"The game has been upgraded from version {before} to "
-                    f"{self.to_version}. Acknowledge the upgrade out of character."
-                ),
-                ooc=True,
-                ooc_narrate=False,
-            )
-
-    def render(self) -> str:
-        before = self.from_version or "an earlier version"
-        return f"The game was upgraded from version {before} to {self.to_version}."
-
-
 @dataclass(frozen=True)
 class NpcAdded(GameEvent):
     kind: ClassVar[str] = "npc.added"
@@ -4118,11 +4084,14 @@ class SpellCast(GameEvent):
     name: str
     spell: str
     source: str
+    model: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         return None
 
     def render(self) -> str:
+        if self.model == "move":
+            return f"{self.name} casts {self.spell} with {self.source}."
         return f"{self.name} casts {self.spell} from a {self.source}."
 
 

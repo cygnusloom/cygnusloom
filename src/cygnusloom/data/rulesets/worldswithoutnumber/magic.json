@@ -1,0 +1,12 @@
+[
+  {
+    "type": "magic",
+    "id": "wwn",
+    "model": "prepared",
+    "prepared": {
+      "castings_stat": "castings",
+      "prepared_mark": "prepared",
+      "effort_mark": "effort_committed"
+    }
+  }
+]

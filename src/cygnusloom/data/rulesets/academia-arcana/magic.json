@@ -1,0 +1,11 @@
+[
+  {
+    "type": "magic",
+    "id": "academy",
+    "model": "move",
+    "move": {
+      "move": "cast_a_spell",
+      "spell_field": "spell"
+    }
+  }
+]

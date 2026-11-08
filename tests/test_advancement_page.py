@@ -98,14 +98,13 @@ def test_the_advancement_page_hides_a_capped_stat_and_the_major_subject(
     client, campaign_id = _academia_campaign(client_factory, major="Illusion")
     tools = tools_for(client.app, campaign_id, rule_set=ACADEMIA_RULE_SET)
     tools.end_period("school-year")
-    for _ in range(3):
-        tools.take_advancement(ACADEMIA_NAME, "stat", stat="theory")
+    tools.take_advancement(ACADEMIA_NAME, "stat", stat="theory")
 
     page = _page(client, campaign_id)
 
     assert '<option value="theory">' not in page
     assert '<option value="subject-illusion">' not in page
-    assert '<option value="practice">' in page
+    assert '<option value="alchemy">' in page
     assert '<option value="subject-transfiguration">' in page
 
 

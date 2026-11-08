@@ -514,6 +514,7 @@ def _tool_context(
         npc_hp=rule_set.npc_hp,
         npc_hp_stat=rule_set.npc_hp_stat,
         travel=rule_set.travel,
+        journey=rule_set.journey,
         wilderness=rule_set.wilderness,
         world_terrain=rule_set.world_terrain,
     )

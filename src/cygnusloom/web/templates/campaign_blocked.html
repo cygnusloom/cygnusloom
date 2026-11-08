@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{{ campaign.name }}{% endblock %}
+{% block content %}
+  <section class="card">
+    <div class="heading">
+      <h1>{{ campaign.name }}</h1>
+      <a class="button secondary" href="/campaigns">Back to campaigns</a>
+    </div>
+    <p class="muted">{{ campaign.world_template }} · {{ campaign.rule_set }}</p>
+    <div class="settings-section" role="alert">
+      <p>
+        <strong>This campaign was made for Cygnus Loom {{ campaign.major_version }}.</strong>
+        Cygnus Loom 4.0 cannot play it because the campaign contract changed.
+        The campaign is intact and can still be exported.
+      </p>
+      {% if is_owner %}
+      <p><a class="button" href="/campaigns/{{ campaign.id }}/export">Export this campaign as JSON</a></p>
+      {% endif %}
+    </div>
+  </section>
+{% endblock %}

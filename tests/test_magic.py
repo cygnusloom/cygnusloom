@@ -119,10 +119,14 @@ def test_spell_item_kinds_determine_cast_results_and_events(
 ):
     app, campaign_id, tools = _fight(client_factory)
     assert tools.magic is not None
+    assert tools.magic.item is not None
     rules = replace(
         tools.magic,
-        reusable=replace(tools.magic.reusable, kind="grimoire"),
-        single_use=replace(tools.magic.single_use, kind="sigil"),
+        item=replace(
+            tools.magic.item,
+            reusable=replace(tools.magic.reusable, kind="grimoire"),
+            single_use=replace(tools.magic.single_use, kind="sigil"),
+        ),
     )
     tools = replace(tools, magic=rules)
     tools.give_spell_item(PC, SPELL, TEXT, role=role)

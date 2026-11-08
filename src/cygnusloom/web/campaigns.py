@@ -52,6 +52,7 @@ from cygnusloom.services.campaigns import (
     get_owned_campaign,
     get_turn_context,
     get_turn_transcript,
+    is_playable,
     list_messages,
     pending_turn,
     promote_hireling_to_character,
@@ -831,15 +832,6 @@ async def change_internal_thinking(request: Request, campaign_id: int) -> Respon
     return RedirectResponse(f"/campaigns/{campaign_id}#view-settings", status_code=303)
 
 
-# BACKWARDS-COMPATIBILITY: 3 - old pages may still post the upgrade form.
-@router.post("/{campaign_id}/upgrade")
-async def upgrade_campaign_page(request: Request, campaign_id: int) -> Response:
-    user = page_user(request)
-    await verify_csrf(request)
-    get_owned_campaign(request.app.state.engine, user.id, campaign_id)
-    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
-
-
 @router.post("/{campaign_id}/debug/invincibility")
 async def change_debug_invincibility(request: Request, campaign_id: int) -> Response:
     settings = request.app.state.settings
@@ -1440,7 +1432,15 @@ def _campaign_page(
     engine = request.app.state.engine
     settings = request.app.state.settings
     library = request.app.state.content
-    campaign = get_campaign(engine, user.id, campaign_id)
+    campaign = get_campaign(engine, user.id, campaign_id, playable=False)
+    if not is_playable(campaign):
+        return render(
+            request,
+            "campaign_blocked.html",
+            status_code=status_code,
+            campaign=campaign,
+            is_owner=campaign.owner_id == user.id,
+        )
     rule_set = library.rule_sets.get(campaign.rule_set)
     debug_tools = (
         sorted(

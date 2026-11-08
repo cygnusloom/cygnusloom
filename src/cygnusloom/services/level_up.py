@@ -22,6 +22,7 @@ from cygnusloom.content.library import (
     WorldContent,
 )
 from cygnusloom.rules.context import ToolContext
+from cygnusloom.services.advancements import learnable_features
 from cygnusloom.services.common import InvalidInput, session_scope
 from cygnusloom.services.events import PC_KIND, Character, load_state, name_key
 from cygnusloom.services.world import WorldTools
@@ -275,31 +276,23 @@ def option_views(
             continue
         stats = []
         if option.picks:
+            maximum = option.maximum_for(pc.counters)
             stats = [
                 {"id": stat.id, "name": stat.name}
                 for stat in spec.stats.values()
                 if stat.derived is None
-                and (option.maximum is None or pc.stats.get(stat.id, stat.low) < option.maximum)
+                and (maximum is None or pc.stats.get(stat.id, stat.low) < maximum)
             ]
-        features: list[dict[str, str]] = []
-        if option.learn is not None:
-            learn = option.learn
-            tag = learn.tag or (pc.fields.get(learn.tag_field, "") if learn.tag_field else "")
-            restrict = bool(learn.tag or learn.tag_field)
-            excluded_tags = {
-                pc.fields[field_id]
-                for field_id in learn.exclude_tag_fields
-                if pc.fields.get(field_id)
+        features: list[dict[str, str]] = [
+            {
+                "id": feature.id,
+                "name": feature.name,
+                "description": feature.description,
+                "rank": str(feature.rank),
+                "repeatable": "true" if feature.repeatable else "",
             }
-            features = [
-                {"id": feature.id, "name": feature.name}
-                for feature in spec.features.values()
-                if feature.feature_type == learn.feature_type
-                and (not restrict or feature.tag == tag)
-                and feature.tag not in excluded_tags
-                and feature.id not in learn.exclude
-                and (feature.repeatable or feature.id not in pc.features)
-            ]
+            for feature in learnable_features(option.learn, pc, spec.features, spec)
+        ]
         views.append(
             {
                 "value": option.value,
@@ -621,6 +614,7 @@ def tool_context(
         npc_hp=rule_set.npc_hp,
         npc_hp_stat=rule_set.npc_hp_stat,
         travel=rule_set.travel,
+        journey=rule_set.journey,
         wilderness=rule_set.wilderness,
         world_terrain=rule_set.world_terrain,
     )

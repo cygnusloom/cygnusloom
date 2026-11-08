@@ -34,6 +34,7 @@ from cygnusloom.content.library import (
     FactionAssetDefinition,
     Hooks,
     InventoryRules,
+    JourneyRules,
     MagicRules,
     Marketplace,
     MonsterTemplate,
@@ -188,6 +189,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     npc_hp_stat: str | None = None
     # The rule set's travel modes and default leg, or None when it does not charge travel time.
     travel: Travel | None = None
+    # The rule set's whole-day journey model, or None when travel is not measured that way.
+    journey: JourneyRules | None = None
     # The rule set's wilderness calendar, weather, and Wilderness Actions, or None when it has none.
     wilderness: Wilderness | None = None
     # The kinds of ground a world map's regions can be, by id.
@@ -568,7 +571,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 name,
                 item,
                 target,
-                self.magic.charged.kind if self.magic is not None else "",
+                self.magic.charged.kind
+                if self.magic is not None and self.magic.item is not None
+                else "",
                 plus=self.plus,
                 spec=self.character,
             )
@@ -593,6 +598,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         self, name: str, spell: str, description: str, *, role: Literal["reusable", "single_use"]
     ) -> dict[str, Any]:
         magic = _required(self.magic, "magic")
+        if magic.item is None:
+            raise InvalidInput("this rule set does not use item magic")
         if role == "reusable":
             item_kind = magic.reusable
         elif role == "single_use":
@@ -646,6 +653,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         modifier: int = 0,
         stat: str | None = None,
         roll: int | None = None,
+        spell: str = "",
     ) -> dict[str, Any]:
         rules = self.moves.get(move)
         if rules is None:
@@ -668,6 +676,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 spec=self.character,
                 features=self.features,
                 roll=roll,
+                magic=self.magic,
+                spell=spell,
             )
 
     def choose_move_option(self, move: str, band: str, choice: str) -> dict[str, Any]:

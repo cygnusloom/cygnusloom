@@ -278,7 +278,8 @@ def _starting_item(
 ) -> Item:
     """The inventory item a starting feature becomes: a magic item for a spell, else the item."""
     if feature.feature_type == "spell":
-        assert magic is not None
+        if magic is None or magic.item is None:
+            raise InvalidInput("this rule set's spells are not item magic")
         return Item(
             feature.name,
             magic.reusable.size,
@@ -315,7 +316,11 @@ def _take_starting_items(
             feature = spec.features[feature_id]
             if feature_id != currency and (
                 feature.feature_type == "item"
-                or (feature.feature_type == "spell" and magic is not None)
+                or (
+                    feature.feature_type == "spell"
+                    and magic is not None
+                    and magic.item is not None
+                )
             ):
                 carried.append((feature, starting.pop(feature_id)))
     return carried

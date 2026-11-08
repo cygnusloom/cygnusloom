@@ -416,16 +416,15 @@ def test_a_stat_at_its_advancement_cap_is_not_offered(
     _client, campaign_id = _campaign(client_factory)
     tools = tools_for(app, campaign_id, rule_set=RULE_SET)
     tools.end_period("school-year")
-    for _ in range(3):
-        tools.take_advancement(NAME, "stat", stat="theory")
-    assert _pc(app, campaign_id).stats["theory"] == 4
+    tools.take_advancement(NAME, "stat", stat="theory")
+    assert _pc(app, campaign_id).stats["theory"] == 2
 
     page = _advancement_page(app, campaign_id)
 
     assert page is not None and page.kind == level_up_service.OPTION
     stat_option = next(option for option in page.options if option["value"] == "stat")
     assert "theory" not in {stat["id"] for stat in stat_option["stats"]}
-    assert "practice" in {stat["id"] for stat in stat_option["stats"]}
+    assert "alchemy" in {stat["id"] for stat in stat_option["stats"]}
 
 
 def test_advancement_refuses_a_stat_past_its_cap_without_spending_a_point(
@@ -434,17 +433,16 @@ def test_advancement_refuses_a_stat_past_its_cap_without_spending_a_point(
     _client, campaign_id = _campaign(client_factory)
     tools = tools_for(app, campaign_id, rule_set=RULE_SET)
     tools.end_period("school-year")
-    for _ in range(3):
-        tools.take_advancement(NAME, "stat", stat="theory")
+    tools.take_advancement(NAME, "stat", stat="theory")
     before = _pc(app, campaign_id)
 
-    with pytest.raises(InvalidInput, match="already at 4"):
+    with pytest.raises(InvalidInput, match="already at 2"):
         tools.take_advancement(NAME, "stat", stat="theory")
 
     after = _pc(app, campaign_id)
-    assert after.stats["theory"] == 4
-    assert after.counters["advancements"] == before.counters["advancements"] == 1
-    assert after.advancements_taken == before.advancements_taken == {"stat": 3}
+    assert after.stats["theory"] == 2
+    assert after.counters["advancements"] == before.counters["advancements"] == 3
+    assert after.advancements_taken == before.advancements_taken == {"stat": 1}
 
 
 def test_the_major_subject_is_not_offered_or_learned(

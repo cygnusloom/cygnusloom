@@ -16,6 +16,7 @@ from cygnusloom.content.library import (
     CombatRules,
     ConditionRules,
     CounterRules,
+    MagicRules,
     MoveBand,
     MoveRules,
 )
@@ -27,6 +28,7 @@ from cygnusloom.services.events import (
     Character,
     MoveChoiceMade,
     MoveMade,
+    SpellCast,
     decode,
     events_since,
     load_state,
@@ -70,6 +72,8 @@ def make_move(
     spec: CharacterSpec | None = None,
     features: Mapping[str, Feature] | None = None,
     roll: int | None = None,
+    magic: MagicRules | None = None,
+    spell: str = "",
 ) -> dict[str, object]:
     """Roll `move` for the character, record the result, and run the band's effects. The effects
     carry their own events, so the outcome shows up in the campaign's history either way. A move
@@ -172,6 +176,22 @@ def make_move(
         reactions.use(db, campaign_id, character, triggered)
     else:
         triggered = None
+    if (
+        magic is not None
+        and magic.model == "move"
+        and magic.move is not None
+        and move.id == magic.move.move
+    ):
+        record(
+            db,
+            campaign_id,
+            SpellCast(
+                name=character.name,
+                spell=spell or move.label,
+                source=move.label,
+                model="move",
+            ),
+        )
     db.commit()
     run_effects(
         db,

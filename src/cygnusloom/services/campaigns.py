@@ -399,6 +399,8 @@ class CampaignCard:
     # When the campaign's newest event happened, and that time as the list shows it.
     last_event_at: datetime | None = None
     last_activity: str = ""
+    # False for a campaign from another major version: export stays available, play does not.
+    playable: bool = True
 
 
 def last_activity_text(when: datetime | None, now: datetime | None = None) -> str:
@@ -466,6 +468,7 @@ def visible_campaigns(engine: Engine, user_id: int) -> list[CampaignCard]:
                     campaign=campaign,
                     last_event_at=last_event,
                     last_activity=last_activity_text(last_event),
+                    playable=is_playable(campaign),
                 )
             )
         for campaign in shared:
@@ -478,6 +481,7 @@ def visible_campaigns(engine: Engine, user_id: int) -> list[CampaignCard]:
                     shared=True,
                     last_event_at=last_event,
                     last_activity=last_activity_text(last_event),
+                    playable=is_playable(campaign),
                 )
             )
         return cards

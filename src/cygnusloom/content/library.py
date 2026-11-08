@@ -17,11 +17,13 @@ from types import ModuleType
 from typing import Any
 
 from cygnusloom.content.character import (
+    DEFAULT_FEATURE_TYPES,
     FEATURE_TYPES,
     CampaignSpec,
     CharacterSpec,
     CounterRef,
     Feature,
+    FeatureTypeRules,
     TableOption,
     build_campaign,
     build_character,
@@ -395,6 +397,25 @@ class Travel:
     def default_mode(self) -> str:
         """The mode a move uses when none is named: the first one the rule set lists."""
         return next(iter(self.modes))
+
+
+@dataclass(frozen=True)
+class JourneyRules:
+    """An overland journey measured in whole travel days. WWN's model: a day is ten hours of
+    marching, terrain and weather scale the pace, and the return value lists supplies and
+    foraging. Cairn's watch-by-watch journey remains in Wilderness."""
+
+    model: str = "terrain_days"
+    day_hours: int = 10
+    terrain_speeds: Mapping[str, float] = field(default_factory=dict)
+    road_multiplier: float = 2.0
+    weather_factors: Mapping[str, float] = field(default_factory=dict)
+    forage_difficulty: Mapping[str, int] = field(default_factory=dict)
+    food_per_traveler_day: int = 1
+    water_per_traveler_day: int = 1
+    firewood_per_day: int = 4
+    max_days: int = 30
+    max_travelers: int = 20
 
 
 @dataclass(frozen=True)
@@ -834,6 +855,21 @@ class CounterRules:
 
 
 @dataclass(frozen=True)
+class CounterCap:
+    """A stat cap that depends on a counter, such as Academia's Year cap: +2 in Years 1-3,
+    +3 in Years 4-6, and +4 in Year 7."""
+
+    counter: str
+    bands: Mapping[int, int]
+
+    def maximum_for(self, counters: Mapping[str, int]) -> int | None:
+        value = counters.get(self.counter)
+        if value is None:
+            return None
+        return self.bands.get(int(value))
+
+
+@dataclass(frozen=True)
 class AdvancementOption:
     """One thing an Advancement can buy. `limit` is how many times a character may take it, or None
     when unlimited. `picks` says the option takes a stat the player names, which its effects reach
@@ -847,8 +883,13 @@ class AdvancementOption:
     effects: tuple[Mapping[str, Any], ...]
     # The feature the option lets the character learn, or None when it teaches none.
     learn: LearnRules | None = None
-    # The highest value a picked stat may reach, or None when the effect sets no cap.
-    maximum: int | None = None
+    # The highest value a picked stat may reach, a counter-banded cap, or None for no cap.
+    maximum: int | CounterCap | None = None
+
+    def maximum_for(self, counters: Mapping[str, int]) -> int | None:
+        if isinstance(self.maximum, CounterCap):
+            return self.maximum.maximum_for(counters)
+        return self.maximum
 
 
 @dataclass(frozen=True)
@@ -1586,20 +1627,70 @@ class ItemKind:
 
 
 @dataclass(frozen=True)
-class MagicRules:
-    """The item kinds magic uses, by role. `reusable` holds a spell that is cast again and again,
-    and each cast of it pays `cast_penalty` items. `single_use` is one spent cast of a spell.
-    `charged` has uses that a recharge restores. The rule set names each kind and size in data."""
+class ItemMagic:
+    """Cairn-style item magic: a reusable spellbook, a single-use scroll, and a charged relic."""
 
     reusable: ItemKind
     single_use: ItemKind
     charged: ItemKind
     cast_penalty: int
 
+
+@dataclass(frozen=True)
+class PreparedMagic:
+    """WWN-style prepared magic. A caster prepares spells, spends castings, and commits Effort."""
+
+    castings_stat: str = "castings"
+    prepared_mark: str = "prepared"
+    effort_mark: str = "effort_committed"
+
+
+@dataclass(frozen=True)
+class MoveMagic:
+    """Academia-style move magic: a spell is cast through a named move."""
+
+    move: str = "cast_a_spell"
+    spell_field: str = "spell"
+
+
+@dataclass(frozen=True)
+class MagicRules:
+    """One of the engine's magic models. `model` selects the adapter; the matching field carries
+    that adapter's data. Item magic keeps the historical `reusable`/`single_use`/`charged`
+    properties so existing item tools and call sites stay unchanged."""
+
+    model: str = "item"
+    item: ItemMagic | None = None
+    prepared: PreparedMagic | None = None
+    move: MoveMagic | None = None
+
+    def _item(self) -> ItemMagic:
+        if self.item is None:
+            raise ContentError("this rule set does not use item magic")
+        return self.item
+
+    @property
+    def reusable(self) -> ItemKind:
+        return self._item().reusable
+
+    @property
+    def single_use(self) -> ItemKind:
+        return self._item().single_use
+
+    @property
+    def charged(self) -> ItemKind:
+        return self._item().charged
+
+    @property
+    def cast_penalty(self) -> int:
+        return self._item().cast_penalty
+
     @property
     def item_kind_icons(self) -> dict[str, str]:
         """The icon each item kind names in the rule set's data, by kind."""
-        kinds = (self.reusable, self.single_use, self.charged)
+        if self.item is None:
+            return {}
+        kinds = (self.item.reusable, self.item.single_use, self.item.charged)
         return {k.kind: k.icon for k in kinds if k.icon is not None}
 
 
@@ -1659,6 +1750,7 @@ class TimeRules:
     rests: Mapping[str, RestLength] = field(default_factory=dict)
     interrupted_rest: str = ""
     travel: Travel | None = None
+    journey: JourneyRules | None = None
     wilderness: Wilderness | None = None
 
 
@@ -1854,6 +1946,14 @@ class RuleSet:
         return self.time.travel
 
     @property
+    def journey(self) -> JourneyRules | None:
+        return self.time.journey
+
+    @property
+    def feature_types(self) -> Mapping[str, Any]:
+        return self.character.feature_types
+
+    @property
     def wilderness(self) -> Wilderness | None:
         return self.time.wilderness
 
@@ -1961,6 +2061,61 @@ def _check_directory_id(template: str, ident: str) -> None:
 
 
 WORLD_TYPES = ("monster", "table", "dice_table", "creative_table", "feature", "rule")
+# Every definition type a rule set loader consumes. A definition with another type is a content
+# error instead of being silently dropped.
+RULE_SET_DEFINITION_TYPES = frozenset(
+    {
+        "rule_set",
+        "python_module",
+        "rule",
+        "table",
+        "stat",
+        "skill",
+        "character_field",
+        "campaign_field",
+        "feature",
+        "feature_type",
+        "template",
+        "injury_table",
+        "combat",
+        "encounter_grid",
+        "monster",
+        "condition",
+        "counter",
+        "advancement",
+        "level_up",
+        "period",
+        "tally",
+        "relation",
+        "move",
+        "check",
+        "rest",
+        "clock",
+        "item_size",
+        "inventory",
+        "magic",
+        "marketplace",
+        "shop_item",
+        "service",
+        "hireling",
+        "hooks",
+        "prompt",
+        "narration",
+        "travel",
+        "journey",
+        "wilderness",
+        "encounter_terrain",
+        "encounter_object",
+        "encounter_template",
+        "world_terrain",
+        "project",
+        "faction_asset",
+        "rule_data",
+        "tool_call",
+        "dice_table",
+        "creative_table",
+    }
+)
 STATBLOCK_KEYS = ("stats", "armor", "attacks")
 
 
@@ -2749,6 +2904,9 @@ def _build_rule_set(
 ) -> RuleSet:
     head = _single(definitions, "rule_set", template)
     _check_directory_id(template, head.id)
+    unknown = sorted({d.type for d in definitions} - RULE_SET_DEFINITION_TYPES)
+    if unknown:
+        raise ContentError(f"{template}: unknown definition type(s) {', '.join(unknown)}")
     label = f"{template}: rule_set"
     check_keys(
         head.data,
@@ -2800,6 +2958,7 @@ def _build_rule_set(
             raise ContentError(f"{template}: missing table {name!r}")
     table_names = {d.id: _table_label(d, template) for d in definitions if d.type == "table"}
     feature_icons = _icon_entries(definitions, "feature", template)
+    feature_types = _load_feature_types(definitions, template)
     character = build_character(
         definitions,
         tables,
@@ -2809,7 +2968,14 @@ def _build_rule_set(
         ordered_feature_tags=head.data.get("ordered_feature_tags", []),
         icon_entries=feature_icons,
         starting_silver=load_starting_silver(head.data.get("starting_silver"), label),
+        feature_types=feature_types,
     )
+    for feature in character.features.values():
+        if feature.feature_type not in feature_types:
+            raise ContentError(
+                f"{template}: feature {feature.id!r} uses unknown feature_type "
+                f"{feature.feature_type!r}"
+            )
     optional_templates = _names(head.data, "optional_templates", label)
     character = replace(character, optional_kinds=optional_templates)
     campaign = build_campaign(definitions, tables, table_names, template)
@@ -2902,6 +3068,7 @@ def _build_rule_set(
     prompt_fragments = _load_prompts(definitions, template)
     sentence_cap = _load_sentence_cap(definitions, template)
     travel = _load_travel(definitions, template)
+    journey = _load_journey(definitions, template)
     terrain = _load_encounter_terrain(definitions, template)
     encounter_objects = _load_encounter_objects(definitions, template)
     encounter_templates = _load_encounter_templates(
@@ -2988,6 +3155,7 @@ def _build_rule_set(
             rests=rests,
             interrupted_rest=interrupted_rest,
             travel=travel,
+            journey=journey,
             wilderness=wilderness,
         ),
         items=ItemRules(
@@ -3034,6 +3202,71 @@ def _load_travel(definitions: list[Definition], template: str) -> Travel | None:
         modes=modes,
         default_leg_minutes=_whole(default, "minutes", default_label, 1),
         default_leg_note=required_text(default, "note", default_label),
+    )
+
+
+def _load_journey(definitions: list[Definition], template: str) -> JourneyRules | None:
+    definition = _single_optional(definitions, "journey", template)
+    if definition is None:
+        return None
+    label = f"{template}: journey {definition.id}"
+    check_keys(
+        definition.data,
+        {
+            "type",
+            "id",
+            "model",
+            "day_hours",
+            "terrain_speeds",
+            "road_multiplier",
+            "weather_factors",
+            "forage_difficulty",
+            "food_per_traveler_day",
+            "water_per_traveler_day",
+            "firewood_per_day",
+            "max_days",
+            "max_travelers",
+        },
+        label,
+    )
+    model = _optional_text(definition.data, "model", label) or "terrain_days"
+    if model != "terrain_days":
+        raise ContentError(f"{label}: 'model' must be terrain_days")
+
+    def numbers(key: str, *, whole: bool) -> dict[str, float]:
+        raw = definition.data.get(key, {})
+        if not isinstance(raw, Mapping) or not raw:
+            raise ContentError(f"{label}: {key!r} must be a non-empty object")
+        loaded: dict[str, float] = {}
+        for name, value in raw.items():
+            if not isinstance(name, str) or not name:
+                raise ContentError(f"{label}: {key!r} names must be non-empty strings")
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+                raise ContentError(f"{label}: {key!r} values must be numbers above 0")
+            if whole and int(value) != value:
+                raise ContentError(f"{label}: {key!r} values must be whole numbers")
+            loaded[name] = float(value)
+        return loaded
+
+    terrain_speeds = numbers("terrain_speeds", whole=False)
+    weather_factors = numbers("weather_factors", whole=False)
+    forage = numbers("forage_difficulty", whole=True)
+    if set(terrain_speeds) != set(forage):
+        raise ContentError(
+            f"{label}: 'terrain_speeds' and 'forage_difficulty' must name the same terrains"
+        )
+    return JourneyRules(
+        model=model,
+        day_hours=_whole(definition.data, "day_hours", label, 1),
+        terrain_speeds=terrain_speeds,
+        road_multiplier=float(definition.data.get("road_multiplier", 2.0)),
+        weather_factors=weather_factors,
+        forage_difficulty={name: int(value) for name, value in forage.items()},
+        food_per_traveler_day=_whole(definition.data, "food_per_traveler_day", label, 0),
+        water_per_traveler_day=_whole(definition.data, "water_per_traveler_day", label, 0),
+        firewood_per_day=_whole(definition.data, "firewood_per_day", label, 0),
+        max_days=_whole(definition.data, "max_days", label, 1),
+        max_travelers=_whole(definition.data, "max_travelers", label, 1),
     )
 
 
@@ -4846,19 +5079,72 @@ def _load_magic(
     label = f"{template}: magic {definition.id}"
     check_keys(
         definition.data,
-        {"type", "id", "reusable", "single_use", "charged", "cast_penalty"},
+        {
+            "type",
+            "id",
+            "model",
+            "item",
+            "prepared",
+            "move",
+            "reusable",
+            "single_use",
+            "charged",
+            "cast_penalty",
+        },
         label,
     )
-    reusable = _load_item_kind(definition.data, "reusable", label, item_sizes, sized=True)
-    single_use = _load_item_kind(definition.data, "single_use", label, item_sizes, sized=True)
-    charged = _load_item_kind(definition.data, "charged", label, item_sizes, sized=False)
-    if len({reusable.kind, single_use.kind, charged.kind}) != 3:
-        raise ContentError(f"{label}: magic item roles must use distinct kinds")
+    model = definition.data.get("model", "item")
+    if model not in ("item", "prepared", "move"):
+        raise ContentError(f"{label}: 'model' must be item, prepared, or move")
+    if model == "item":
+        if "item" in definition.data:
+            item_data = check_object_keys(
+                definition.data["item"],
+                {"reusable", "single_use", "charged", "cast_penalty"},
+                f"{label}: item",
+            )
+        else:
+            item_data = definition.data
+        reusable = _load_item_kind(item_data, "reusable", label, item_sizes, sized=True)
+        single_use = _load_item_kind(item_data, "single_use", label, item_sizes, sized=True)
+        charged = _load_item_kind(item_data, "charged", label, item_sizes, sized=False)
+        if len({reusable.kind, single_use.kind, charged.kind}) != 3:
+            raise ContentError(f"{label}: magic item roles must use distinct kinds")
+        return MagicRules(
+            model="item",
+            item=ItemMagic(
+                reusable=reusable,
+                single_use=single_use,
+                charged=charged,
+                cast_penalty=_whole(item_data, "cast_penalty", label, 0),
+            ),
+        )
+    if model == "prepared":
+        prepared_data = check_object_keys(
+            definition.data.get("prepared", {}),
+            {"castings_stat", "prepared_mark", "effort_mark"},
+            f"{label}: prepared",
+        )
+        return MagicRules(
+            model="prepared",
+            prepared=PreparedMagic(
+                castings_stat=_optional_text(prepared_data, "castings_stat", label)
+                or "castings",
+                prepared_mark=_optional_text(prepared_data, "prepared_mark", label)
+                or "prepared",
+                effort_mark=_optional_text(prepared_data, "effort_mark", label)
+                or "effort_committed",
+            ),
+        )
+    move_data = check_object_keys(
+        definition.data.get("move", {}), {"move", "spell_field"}, f"{label}: move"
+    )
     return MagicRules(
-        reusable=reusable,
-        single_use=single_use,
-        charged=charged,
-        cast_penalty=_whole(definition.data, "cast_penalty", label, 0),
+        model="move",
+        move=MoveMagic(
+            move=_optional_text(move_data, "move", label) or "cast_a_spell",
+            spell_field=_optional_text(move_data, "spell_field", label) or "spell",
+        ),
     )
 
 
@@ -5409,16 +5695,18 @@ def _load_advancements(
             )
             if picks and not any(op.get("stat") == PICKED for op in effects):
                 raise ContentError(f"{olabel}: 'picks' is set, but no effect uses the pick")
-            maximum = next(
-                (
-                    op["cap"]
-                    for op in effects
-                    if op.get("stat") == PICKED
-                    and isinstance(op.get("cap"), int)
-                    and not isinstance(op.get("cap"), bool)
-                ),
-                None,
-            )
+            maximum: int | CounterCap | None = None
+            for op in effects:
+                if op.get("stat") != PICKED:
+                    continue
+                cap = op.get("cap")
+                if isinstance(cap, int) and not isinstance(cap, bool):
+                    maximum = cap
+                elif isinstance(cap, Mapping):
+                    maximum = CounterCap(
+                        counter=required_text(cap, "counter", olabel),
+                        bands={int(k): int(v) for k, v in cap["bands"].items()},
+                    )
             options[value] = AdvancementOption(
                 value=value,
                 label=required_text(option, "label", olabel),
@@ -5838,6 +6126,44 @@ def _load_periods(
             description=_optional_text(d.data, "description", label) or "",
             tallies=tuple(reset),
             resets=tuple(resets),
+        )
+    return loaded
+
+
+def _load_feature_types(
+    definitions: list[Definition], template: str
+) -> dict[str, FeatureTypeRules]:
+    """Every feature type the rule set offers. The seven engine defaults remain available unless
+    the rule set relabels or replaces them by id."""
+    loaded: dict[str, FeatureTypeRules] = dict(DEFAULT_FEATURE_TYPES)
+    for d in definitions:
+        if d.type != "feature_type":
+            continue
+        label = f"{template}: feature_type {d.id}"
+        check_keys(
+            d.data,
+            {
+                "type",
+                "id",
+                "name",
+                "plural",
+                "group",
+                "rank_label",
+                "tag_label",
+                "unique",
+                "inventory",
+            },
+            label,
+        )
+        loaded[d.id] = FeatureTypeRules(
+            id=d.id,
+            name=required_text(d.data, "name", label),
+            plural=_optional_text(d.data, "plural", label) or "",
+            group=_optional_text(d.data, "group", label) or "",
+            rank_label=_optional_text(d.data, "rank_label", label) or "",
+            tag_label=_optional_text(d.data, "tag_label", label) or "",
+            unique=_flag_default(d.data, "unique", label, False),
+            inventory=_flag_default(d.data, "inventory", label, False),
         )
     return loaded
 
@@ -6349,8 +6675,38 @@ def _check_raise_stat(op: Mapping[str, Any], check: _EffectCheck) -> None:
     if not isinstance(amount, int) or isinstance(amount, bool) or amount < 1:
         raise ContentError(f"{check.label}: raise_stat 'delta' must be a positive whole number")
     cap = op.get("cap")
-    if not isinstance(cap, int) or isinstance(cap, bool) or cap < 1:
-        raise ContentError(f"{check.label}: raise_stat 'cap' must be a positive whole number")
+    if isinstance(cap, int) and not isinstance(cap, bool) and cap >= 1:
+        return
+    if isinstance(cap, Mapping):
+        counter = required_text(cap, "counter", check.label)
+        if check.counters is None or counter not in check.counters:
+            raise ContentError(
+                f"{check.label}: raise_stat cap names no counter ({counter!r})"
+            )
+        bands = cap.get("bands")
+        if not isinstance(bands, Mapping) or not bands:
+            raise ContentError(f"{check.label}: raise_stat cap 'bands' must be a non-empty object")
+        for key, value in bands.items():
+            try:
+                year = int(key)
+            except (TypeError, ValueError) as exc:
+                raise ContentError(
+                    f"{check.label}: raise_stat cap bands must map whole years to positive caps"
+                ) from exc
+            if (
+                isinstance(key, bool)
+                or year < 0
+                or isinstance(value, bool)
+                or not isinstance(value, int)
+                or value < 1
+            ):
+                raise ContentError(
+                    f"{check.label}: raise_stat cap bands must map whole years to positive caps"
+                )
+        return
+    raise ContentError(
+        f"{check.label}: raise_stat 'cap' must be a positive whole number or a counter cap"
+    )
 
 
 @dataclass(frozen=True)

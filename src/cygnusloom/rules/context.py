@@ -265,7 +265,12 @@ class CoreWorld(Protocol):
     def view_journal(self, start_line: int = 1, end_line: int | None = None) -> dict[str, Any]: ...
 
     def roll_move(
-        self, move: str, character: str, modifier: int = 0, stat: str | None = None
+        self,
+        move: str,
+        character: str,
+        modifier: int = 0,
+        stat: str | None = None,
+        spell: str = "",
     ) -> dict[str, Any]: ...
 
     def choose_move_option(self, move: str, band: str, choice: str) -> dict[str, Any]:

@@ -1469,29 +1469,6 @@ def _armor_total(ctx: ToolContext, character: str, spec: CharacterSpec) -> int:
     return ctx.world.with_hook_context(action)
 
 
-_WWN_TERRAIN_SPEED = {
-    "plains": 3.0,
-    "light_forest": 2.0,
-    "desert": 2.0,
-    "dense_forest": 1.5,
-    "rugged_hills": 1.5,
-    "swamp": 1.0,
-    "mountains": 0.5,
-    "broken_highland": 0.5,
-}
-_WWN_WEATHER_FACTOR = {"clear": 1.0, "foul": 0.5, "deep_snow": 0.1}
-_WWN_FORAGE_DIFFICULTY = {
-    "light_forest": 8,
-    "dense_forest": 8,
-    "plains": 9,
-    "rugged_hills": 9,
-    "swamp": 9,
-    "desert": 12,
-    "mountains": 14,
-    "broken_highland": 14,
-}
-
-
 def travel(
     character: str,
     destination: str,
@@ -1508,29 +1485,38 @@ def travel(
     road, halved in foul weather, or reduced to a tenth in deep snow. The engine moves the
     character and advances the clock; the returned supply and privation figures are what the GM
     applies with use_item, add_strain, and the usual bookkeeping."""
-    if terrain not in _WWN_TERRAIN_SPEED:
+    journey = ctx.world.journey
+    if journey is None:
+        raise InvalidInput("this rule set does not use whole-day journeys")
+    if terrain not in journey.terrain_speeds:
         raise InvalidInput(
-            f"there is no terrain {terrain!r}; use one of {sorted(_WWN_TERRAIN_SPEED)}"
+            f"there is no terrain {terrain!r}; use one of {sorted(journey.terrain_speeds)}"
         )
-    if weather not in _WWN_WEATHER_FACTOR:
+    if weather not in journey.weather_factors:
         raise InvalidInput(
-            f"there is no weather {weather!r}; use one of {sorted(_WWN_WEATHER_FACTOR)}"
+            f"there is no weather {weather!r}; use one of {sorted(journey.weather_factors)}"
         )
-    if isinstance(days, bool) or not isinstance(days, int) or not 1 <= days <= 30:
-        raise InvalidInput("days must be a whole number from 1 to 30")
-    if isinstance(travelers, bool) or not isinstance(travelers, int) or not 1 <= travelers <= 20:
-        raise InvalidInput("travelers must be a whole number from 1 to 20")
-    speed = _WWN_TERRAIN_SPEED[terrain]
+    if isinstance(days, bool) or not isinstance(days, int) or not 1 <= days <= journey.max_days:
+        raise InvalidInput(f"days must be a whole number from 1 to {journey.max_days}")
+    if (
+        isinstance(travelers, bool)
+        or not isinstance(travelers, int)
+        or not 1 <= travelers <= journey.max_travelers
+    ):
+        raise InvalidInput(
+            f"travelers must be a whole number from 1 to {journey.max_travelers}"
+        )
+    speed = journey.terrain_speeds[terrain]
     if road:
-        speed *= 2
-    speed *= _WWN_WEATHER_FACTOR[weather]
-    miles_per_day = round(speed * 10, 2)
+        speed *= journey.road_multiplier
+    speed *= journey.weather_factors[weather]
+    miles_per_day = round(speed * journey.day_hours, 2)
     miles = round(miles_per_day * days, 2)
     moved = ctx.world.move_actor(character, location=destination)
-    clock = ctx.world.advance_time(hours=10 * days)
-    food = days * travelers
-    water = days * travelers
-    firewood = days * 4
+    clock = ctx.world.advance_time(hours=journey.day_hours * days)
+    food = days * travelers * journey.food_per_traveler_day
+    water = days * travelers * journey.water_per_traveler_day
+    firewood = days * journey.firewood_per_day
     return {
         "character": character,
         "destination": destination,
@@ -1543,20 +1529,23 @@ def travel(
         "speed_mph": round(speed, 2),
         "miles_per_day": miles_per_day,
         "miles": miles,
-        "hours": 10 * days,
+        "hours": journey.day_hours * days,
         "move": moved,
         "clock": clock,
         "supplies": {
             "food": food,
             "water": water,
             "firewood": firewood,
-            "note": "Each person needs a day's food and water, and the party needs four "
-            "firewood per night.",
+            "note": (
+                f"Each person needs {journey.food_per_traveler_day} day's food and "
+                f"{journey.water_per_traveler_day} water, and the party needs "
+                f"{journey.firewood_per_day} firewood per night."
+            ),
         },
         "forage": {
             "takes": "half a day",
             "check": "Wis/Survive",
-            "difficulty": _WWN_FORAGE_DIFFICULTY[terrain],
+            "difficulty": journey.forage_difficulty[terrain],
             "yield": "1d6 units plus the group's Survive levels, minimum 1",
             "note": "A full day of foraging adds -2 to the difficulty; each further day in "
             "the same hex adds +1.",

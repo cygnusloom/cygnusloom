@@ -359,7 +359,14 @@ def _raise_stat(
     assert stat is not None
     character = load_state(db, campaign_id).characters[name_key(name)]
     before = character.stats.get(stat, 0)
-    after = min(op["cap"], before + op["delta"])
+    cap = op["cap"]
+    if isinstance(cap, Mapping):
+        counter = str(cap["counter"])
+        bands = cap["bands"]
+        cap = int(bands.get(str(character.counters.get(counter, 0)), 0)) or None
+    if cap is None:
+        return
+    after = min(int(cap), before + op["delta"])
     if after <= before:
         record(
             db,

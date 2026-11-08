@@ -1029,6 +1029,8 @@ def _marketplace_draft(marketplace: Marketplace, spec: CharacterSpec) -> _Draft:
 
 
 def _magic_drafts(magic: MagicRules) -> list[tuple[str, _Draft]]:
+    if magic.item is None:
+        return []
     drafts = []
     for role, kind in (
         ("reusable", magic.reusable),

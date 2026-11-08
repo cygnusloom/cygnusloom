@@ -48,6 +48,10 @@
           "type": "string",
           "enum_from": "stats",
           "description": "The stat to roll with, for a move that does not name one."
+        },
+        "spell": {
+          "type": "string",
+          "description": "The spell being cast, when the move is a spell."
         }
       },
       "required": ["prompt", "move", "character"]

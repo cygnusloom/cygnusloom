@@ -212,29 +212,6 @@ def test_the_campaign_pages_offer_no_game_upgrade(client_factory: Callable[[], T
         assert "Game updated." not in page
 
 
-def test_the_retired_upgrade_route_answers_an_old_page_without_changing_anything(
-    client_factory: Callable[[], TestClient],
-):
-    """An old page may still post the upgrade form. The route redirects and records nothing."""
-    client = _signed_in(client_factory)
-    response = _new_campaign(client, label="Old page")
-    assert response.status_code == 303
-    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-    with Session(client.app.state.engine) as db:
-        before = last_event_id(db, campaign_id)
-
-    response = client.post(
-        f"/campaigns/{campaign_id}/upgrade",
-        data={"csrf_token": csrf_token(client, "/campaigns")},
-        follow_redirects=False,
-    )
-
-    assert response.status_code == 303
-    assert response.headers["location"] == f"/campaigns/{campaign_id}"
-    with Session(client.app.state.engine) as db:
-        assert last_event_id(db, campaign_id) == before
-
-
 def test_delete_campaign_removes_it_and_its_events(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
     response = _new_campaign(client, label="Doomed")

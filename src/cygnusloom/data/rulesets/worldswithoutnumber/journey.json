@@ -1,0 +1,39 @@
+[
+  {
+    "type": "journey",
+    "id": "wwn",
+    "model": "terrain_days",
+    "day_hours": 10,
+    "road_multiplier": 2,
+    "terrain_speeds": {
+      "plains": 3.0,
+      "light_forest": 2.0,
+      "desert": 2.0,
+      "dense_forest": 1.5,
+      "rugged_hills": 1.5,
+      "swamp": 1.0,
+      "mountains": 0.5,
+      "broken_highland": 0.5
+    },
+    "weather_factors": {
+      "clear": 1.0,
+      "foul": 0.5,
+      "deep_snow": 0.1
+    },
+    "forage_difficulty": {
+      "light_forest": 8,
+      "dense_forest": 8,
+      "plains": 9,
+      "rugged_hills": 9,
+      "swamp": 9,
+      "desert": 12,
+      "mountains": 14,
+      "broken_highland": 14
+    },
+    "food_per_traveler_day": 1,
+    "water_per_traveler_day": 1,
+    "firewood_per_day": 4,
+    "max_days": 30,
+    "max_travelers": 20
+  }
+]

@@ -267,6 +267,7 @@ def tools_for(
         npc_hp=rules.npc_hp,
         npc_hp_stat=rules.npc_hp_stat,
         travel=rules.travel,
+        journey=rules.journey,
         wilderness=rules.wilderness,
         world_terrain=rules.world_terrain,
     )

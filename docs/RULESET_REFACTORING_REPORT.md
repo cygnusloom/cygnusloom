@@ -1,6 +1,6 @@
 # Ruleset Refactoring Audit
 
-**Version:** Cygnus Loom 3.7.0  
+**Version:** Cygnus Loom 4.0.0  
 **Date:** 2026-11-08  
 **Scope:** `core`, `cairn2e`, `worldswithoutnumber`, `academia-arcana`, the content loader, the rules/engine services, and the test contracts that constrain them.  
 **Status:** Initial audit was read-only. The refactor is being implemented on the 4.0 branch.
@@ -516,37 +516,32 @@ This turns silent typos into diagnostics (S-11) and gives a fourth ruleset a cle
 
 ## 8. Backward-compatibility guardrails
 
-### 8.1 Persisted content ids (must not be renamed without aliases/migrations)
+### 8.1 Campaigns and content ids
 
-- Stat ids, skill ids, feature ids, template ids, pick ids, condition ids, counter ids, relation ids, item size ids, period/tally ids.
-- `Character.templates`, `Character.features`, `Character.skills`, `Character.harm`, `Character.counters`, `Character.feature_choices`, `Character.advancements_taken`.
-- Item size ids and item names in `ItemAdded.item`.
-- Condition/counter keys in events.
-- World terrain ids in `RegionAdded.terrain`; map cell terrain/object ids.
-- Rest length ids in `RestTaken.length`.
-- Class ids in `level_damage.templates`.
-- Rule-set directory ids (campaigns store only the directory id).
+- 4.0 does **not** preserve campaign compatibility. Every campaign row declares `major_version`; a campaign from another major stays stored and exportable but is refused by every play route.
+- Content ids may be renamed freely at the 4.0 boundary. Persisted ids are frozen again after 4.0 ships; any later rename needs a campaign-major bump, not an alias.
+- Existing databases must still migrate. `0014_campaign_major_version` stamps pre-4.0 rows as major 3, so they become non-playable instead of silently running under different rules.
+- Importing another major's file stores its events opaquely and skips replay; the campaign remains exportable.
 
 ### 8.2 Events and exports
 
-- Adding event fields must use defaults; never rename/remove existing fields.
-- New event kinds break older builds (`EVENT_TYPES` lookup and export import reject unknown kinds). Prefer optional fields; if a new kind is unavoidable, bump the export version and keep a v1 reader.
-- Preserve `SpellCast`, `RestTaken`, `MoveMade`, `MoveChoiceMade`, `PeriodEnded`, `RelationChanged`, `TallyChanged`, `TallyReset`, `Project*`, `Faction*` payloads.
-- Register `id_refs` for any new event payload referencing another event id.
-- Keep legacy decoders (`CampaignUpgraded`) until the next major.
+- Event fields added in 4.0 must have defaults, but old event kinds and legacy decoders are not preserved.
+- The export document carries `campaign.major_version`. A missing key means 3, the last major that wrote format 1 without it.
+- Import of another major accepts unknown event kinds, skips required-field/reference checks and state replay, and warns that the campaign is non-playable.
+- New event kinds are allowed in 4.0; bump `EXPORT_VERSION` only if the document shape itself becomes incompatible.
+- `SpellCast` now carries an optional `model` so move magic can share the event.
 
 ### 8.3 Tools and routes
 
-- Keep tool ids and old argument names where possible; make removed arguments optional.
-- Keep `/model`, `/inventory-space`, `/label`, `/delete`, `/export`, and the no-op `/upgrade` route.
-- Keep the `rest` tool id even if WWN semantics move to a party call.
-- Keep old prompt fragment ids where behavior/tests depend on them.
+- Tool ids may change in 4.0; they are frozen after release.
+- The retired `/upgrade` route and the `CampaignUpgraded` decoder are removed at 4.0.
+- `rest` remains a tool id, but WWN's implementation is party-level.
+- Prompt fragment ids may be renamed; the 4.0 prompt set is the new contract.
 
 ### 8.4 Content loading
 
-- Content without `extends`/`patch` must behave exactly as today.
-- The defaults layer must not create a second singleton definition.
-- Unknown types should warn or fail, but third-party content needs an opt-out window.
+- Unknown definition types fail at load instead of being silently dropped.
+- A defaults layer and `extends`/`patch` remain the preferred authoring path; bundled data may also be deduplicated directly at the 4.0 boundary.
 - Fixture and shipped content share one id namespace; don’t name a bundled rule set `rolltest`/`testhollow`.
 
 ---

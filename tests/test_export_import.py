@@ -75,6 +75,35 @@ def _imported_id(response) -> int:
     return int(response.headers["location"].rsplit("/", 1)[-1])
 
 
+def test_the_export_declares_the_campaign_major(client_factory, tmp_path, settings):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    document = json.loads(_export(client, campaign_id).content)
+    assert document["campaign"]["major_version"] == 4
+
+
+def test_another_major_imports_but_cannot_be_played(client_factory, tmp_path, settings):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    document = json.loads(_export(client, campaign_id).content)
+    document["campaign"]["major_version"] = 3
+    payload = json.dumps(document).encode()
+
+    target = _target_client(_target_app(tmp_path, settings))
+    response = _import(target, payload)
+    imported_id = _imported_id(response)
+
+    page = target.get(f"/campaigns/{imported_id}")
+    assert page.status_code == 200
+    assert "cannot play it" in page.text
+    assert target.post(
+        f"/campaigns/{imported_id}/messages",
+        data={"csrf_token": csrf_token(target, f"/campaigns/{imported_id}"), "content": "Hello"},
+        follow_redirects=False,
+    ).status_code == 409
+
+    exported = json.loads(_export(target, imported_id).content)
+    assert exported["campaign"]["major_version"] == 3
+
+
 def _add_referenced_events(app: FastAPI, campaign_id: int, *, close: bool = True) -> None:
     with db(app) as session:
         note_id = record(
@@ -275,66 +304,36 @@ def test_export_and_import_round_trip(
         assert len(_events(target_app, new_id)) == len(document["events"])
 
 
-def test_an_old_export_with_a_game_upgrade_still_imports(
+def test_an_old_major_export_stores_its_events_opaque(
     tmp_path, settings: Settings, client_factory: Callable[[], TestClient]
 ):
-    """Old files record the campaign's version and a campaign.upgraded event whose turn events
-    follow. Campaigns load the running game, so the key is ignored and the log still folds."""
+    """A removed event kind from another major is kept verbatim, but the log is not replayed."""
     client, campaign_id = campaign_ready_fast(client_factory)
     document = _export(client, campaign_id).json()
-    document["campaign"]["game_version"] = "3.0.0"
+    document["campaign"]["major_version"] = 3
     last = document["events"][-1]
-    created_at = last["created_at"]
-    document["events"].extend(
-        [
-            {
-                "seq": last["seq"] + 1,
-                "id": last["id"] + 1,
-                "kind": "campaign.upgraded",
-                "created_at": created_at,
-                "payload": {"from_version": "3.0.0", "to_version": "3.6.0"},
-            },
-            {
-                "seq": last["seq"] + 2,
-                "id": last["id"] + 2,
-                "kind": "turn.begun",
-                "created_at": created_at,
-                "payload": {"head": [], "context": [], "messages": [], "round_start": 0},
-            },
-            {
-                "seq": last["seq"] + 3,
-                "id": last["id"] + 3,
-                "kind": "chat.gm",
-                "created_at": created_at,
-                "payload": {
-                    "content": "The campaign is now on the current game version.",
-                    "model": "test",
-                    "final": False,
-                },
-            },
-            {
-                "seq": last["seq"] + 4,
-                "id": last["id"] + 4,
-                "kind": "chat.gm",
-                "created_at": created_at,
-                "payload": {"content": "The yard is quiet.", "model": "test"},
-            },
-        ]
+    document["events"].append(
+        {
+            "seq": last["seq"] + 1,
+            "id": last["id"] + 1,
+            "kind": "campaign.upgraded",
+            "created_at": last["created_at"],
+            "payload": {"from_version": "3.0.0", "to_version": "3.6.0"},
+        }
     )
     document["source"]["event_count"] = len(document["events"])
-    document["source"]["last_event_id"] = last["id"] + 4
+    document["source"]["last_event_id"] = last["id"] + 1
 
     target_app = _target_app(tmp_path, settings)
     new_id = _imported_id(_import(_target_client(target_app), json.dumps(document).encode()))
 
-    imported = open_campaign(target_app, new_id)
-    assert imported.turn is None
-    replies = _by_kind(target_app, new_id)["chat.gm"]
-    assert [json.loads(row.payload)["content"] for row in replies[-2:]] == [
-        "The campaign is now on the current game version.",
-        "The yard is quiet.",
-    ]
-    assert _by_kind(target_app, new_id)["campaign.upgraded"]
+    with db(target_app) as session:
+        campaign = session.get(Campaign, new_id)
+        assert campaign is not None and campaign.major_version == 3
+        kinds = list(
+            session.exec(select(Event.kind).where(Event.campaign_id == new_id)).all()
+        )
+    assert "campaign.upgraded" in kinds
 
 
 def test_import_remaps_event_id_references(

@@ -1,0 +1,27 @@
+[
+  {
+    "type": "feature_type",
+    "id": "feat",
+    "name": "Art",
+    "plural": "Arts",
+    "group": "Arts",
+    "rank_label": "Level"
+  },
+  {
+    "type": "feature_type",
+    "id": "spell",
+    "name": "Spell",
+    "plural": "Spells",
+    "group": "Spells",
+    "rank_label": "Rank",
+    "tag_label": "Subject",
+    "unique": true
+  },
+  {
+    "type": "feature_type",
+    "id": "subject",
+    "name": "Subject",
+    "plural": "Subjects",
+    "group": "Subjects"
+  }
+]

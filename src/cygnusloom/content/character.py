@@ -20,6 +20,37 @@ from cygnusloom.content.icons import FALLBACK_ITEM, FALLBACK_WEAPON, resolve_ico
 from cygnusloom.rules.dice import FORMULA, is_formula, roll_total
 
 FEATURE_TYPES = ("item", "trait", "spell", "potion", "enchantment", "subject", "feat")
+
+
+@dataclass(frozen=True)
+class FeatureTypeRules:
+    """How one ruleset names and groups a kind of feature. The engine's seven defaults cover
+    the bundled rulesets; a ruleset may add its own or relabel one (Academia calls feats Arts)."""
+
+    id: str
+    name: str
+    plural: str = ""
+    group: str = ""
+    rank_label: str = ""
+    tag_label: str = ""
+    unique: bool = False
+    inventory: bool = False
+
+
+DEFAULT_FEATURE_TYPES: Mapping[str, FeatureTypeRules] = {
+    "item": FeatureTypeRules("item", "Item", "Items", "Items", inventory=True),
+    "trait": FeatureTypeRules("trait", "Trait", "Traits", "Traits"),
+    "spell": FeatureTypeRules(
+        "spell", "Spell", "Spells", "Spells", rank_label="Rank", tag_label="Tradition",
+        unique=True,
+    ),
+    "potion": FeatureTypeRules("potion", "Potion", "Potions", "Potions"),
+    "enchantment": FeatureTypeRules(
+        "enchantment", "Enchantment", "Enchantments", "Enchantments"
+    ),
+    "subject": FeatureTypeRules("subject", "Subject", "Subjects", "Subjects"),
+    "feat": FeatureTypeRules("feat", "Feat", "Feats", "Feats", rank_label="Rank"),
+}
 # The effects a feature may run when it is granted. A `stat`, `skill`, or `counter` effect adds
 # its `delta` to that stat's score, that skill's level, or that counter's starting value. An
 # `armor` effect adds its `delta` to the character's armor. A `note` effect only says something.
@@ -412,6 +443,10 @@ class CharacterSpec:
     optional_kinds: tuple[str, ...] = ()
     # Money a character rolls when a template kind, such as a starting kit, is left unchosen.
     starting_silver: StartingSilver | None = None
+    # The feature types this rule set offers, keyed by id. Defaults cover the seven core types.
+    feature_types: Mapping[str, FeatureTypeRules] = field(
+        default_factory=lambda: dict(DEFAULT_FEATURE_TYPES)
+    )
 
     def kinds(self) -> list[str]:
         return sorted({t.kind for t in self.templates.values()})
@@ -462,6 +497,7 @@ def build_character(
     ordered_feature_tags: object = (),
     icon_entries: Mapping[str, tuple[str | None, str | None]] | None = None,
     starting_silver: StartingSilver | None = None,
+    feature_types: Mapping[str, FeatureTypeRules] | None = None,
 ) -> CharacterSpec:
     """Build the character spec from a rule set's definitions. `tables` are already loaded.
     `icon_entries` maps a feature id to its raw (icon, looks_like) so one feature may borrow
@@ -539,9 +575,9 @@ def build_character(
                 )
     _check_fields(fields, tables, template)
     _check_pick_fields(templates, fields, tables, template)
-    feature_types = {feature.feature_type for feature in features.values()}
+    used_feature_types = {feature.feature_type for feature in features.values()}
     for item in fields.values():
-        if item.knows is not None and item.knows not in feature_types:
+        if item.knows is not None and item.knows not in used_feature_types:
             raise ContentError(
                 f"{template}: character_field {item.id!r} knows {item.knows!r}, "
                 "which is no feature type"
@@ -563,6 +599,7 @@ def build_character(
         skill_progression=levels,
         ordered_feature_tags=ordered_tags,
         starting_silver=starting_silver,
+        feature_types=dict(feature_types or DEFAULT_FEATURE_TYPES),
     )
 
 
