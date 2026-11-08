@@ -135,6 +135,7 @@ CORE_TOOL_NAMES = {
     "delete_location",
     "update_npc",
     "update_npc_knowledge",
+    "describe_character",
     "delete_npc",
     "change_currency",
     "place_object",

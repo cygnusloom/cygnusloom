@@ -66,6 +66,7 @@ from cygnusloom.services.events import (
     CampaignOptionsChosen,
     CampaignState,
     Character,
+    CharacterSummarized,
     HirelingAdded,
     HirelingDismissed,
     HirelingPromoted,
@@ -1600,10 +1601,41 @@ def update_npc_knowledge(
             if relationship is None
             else bounded_text(relationship, "relationship", MAX_NAME),
             location=where,
+            summary=known.summary,
         ),
     )
     db.commit()
     return {"updated": "npc knowledge", "name": npc.name}
+
+
+def describe_character(db: Session, campaign_id: int, name: str, summary: str) -> dict[str, Any]:
+    """Write or refresh the brief, player-facing summary of what the player knows of a character.
+    A player character or hireling keeps it on their record; for an NPC it is what the player
+    knows, so the entry is created if the player had not met them yet."""
+    state = load_state(db, campaign_id)
+    character = _character_named(state, name)
+    text = bounded_text(summary, "summary", MAX_SUMMARY)
+    if character.kind == PC_KIND or character.hireling:
+        record(db, campaign_id, CharacterSummarized(name=character.name, summary=text))
+    else:
+        known = state.known.get(name_key(character.name), KnownNpc(name=character.name))
+        record(
+            db,
+            campaign_id,
+            NpcKnown(
+                name=character.name,
+                description=known.description,
+                personality=known.personality,
+                accent=known.accent,
+                quirks=list(known.quirks),
+                pronouns=known.pronouns,
+                relationship=known.relationship,
+                location=known.location,
+                summary=text,
+            ),
+        )
+    db.commit()
+    return {"described": character.name}
 
 
 def delete_npc(db: Session, campaign_id: int, name: str) -> dict[str, Any]:

@@ -74,6 +74,8 @@ class KnownNpcView:
     # The NPC is at the player character's location now.
     here: bool
     dead: bool
+    # The short player-facing summary of what the player knows of the NPC.
+    summary: str = ""
     # The bestiary statblock the NPC was built from, and its compendium entry when one exists.
     creature: str = ""
     creature_entry: str = ""
@@ -820,6 +822,28 @@ def world_state_text(
             f"Discovered places with no player-facing summary: {shown}. Write one for each with "
             "update_location's summary, with no GM-only secrets."
         )
+    missing_character_summaries = sorted(
+        [
+            character.name
+            for character in state.characters.values()
+            if (character.kind == PC_KIND or character.hireling) and not character.summary
+        ]
+        + [
+            knowledge.name
+            for key, knowledge in state.known.items()
+            if not knowledge.summary
+            and key in state.characters
+            and state.characters[key].kind == NPC_KIND
+        ]
+    )
+    if missing_character_summaries:
+        shown = ", ".join(missing_character_summaries[:12])
+        if len(missing_character_summaries) > 12:
+            shown += f", and {len(missing_character_summaries) - 12} more"
+        lines.append(
+            f"Characters with no player-facing summary: {shown}. Write one for each with "
+            "describe_character, with no GM-only secrets."
+        )
     if state.factions:
         standings = []
         for faction in sorted(state.factions.values(), key=lambda item: item.name.casefold()):
@@ -1221,6 +1245,7 @@ def _known_npc_views(
                 location=knowledge.location,
                 here=place is not None and npc.location == place.name,
                 dead=npc.dead,
+                summary=knowledge.summary,
                 creature=creature,
                 creature_entry=creature_entry,
             )

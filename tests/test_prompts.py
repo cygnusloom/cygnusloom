@@ -127,6 +127,13 @@ def test_state_prompt_keeps_the_active_storylines_current():
     assert "not the one that mattered last turn" in text
 
 
+def test_state_prompt_keeps_character_summaries_current():
+    text = state_instruction(rules_for())
+    assert "Keep each character's player-facing summary current" in text
+    assert "describe_character" in text
+    assert "keep the summary brief and free of GM-only secrets" in text
+
+
 def test_core_storyline_rule_explains_focus_the_active_limit_and_splitting():
     text = content_library().core.rules["storylines"]
     assert "player-facing name and running summary" in text

@@ -942,6 +942,24 @@ class LocationRemoved(GameEvent):
 
 
 @dataclass(frozen=True)
+class CharacterSummarized(GameEvent):
+    """The short player-facing summary of what the player knows of a character. It is separate
+    from the GM's private description, so the player reads only what the GM chose to show."""
+
+    kind: ClassVar[str] = "character.summarized"
+    hidden: ClassVar[bool] = True
+
+    name: str
+    summary: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].summary = self.summary
+
+    def render(self) -> str:
+        return f"Character summary updated: {self.name}."
+
+
+@dataclass(frozen=True)
 class NpcUpdated(GameEvent):
     """An NPC's details after an update. The values are the resolved ones, not the changes."""
 
@@ -982,11 +1000,14 @@ class NpcKnown(GameEvent):
     pronouns: str | None = None
     relationship: str = ""
     location: str | None = None
+    # Older logs have no summary field, so its default keeps them decoding.
+    summary: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.known[name_key(self.name)] = KnownNpc(
             name=self.name,
             description=self.description,
+            summary=self.summary,
             personality=self.personality,
             accent=self.accent,
             quirks=tuple(self.quirks),

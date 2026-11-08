@@ -10,7 +10,9 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from cygnusloom.content.character import NO_CAMPAIGN
 from cygnusloom.llm.base import ToolRequest
+from cygnusloom.services import world
 from cygnusloom.services.events import name_key
 from cygnusloom.services.tools import ToolRun, run_tool
 from tests.test_campaigns import _campaign_id, _place_pc
@@ -75,6 +77,12 @@ def test_a_secret_in_an_npc_description_is_not_shown_to_the_player(
         campaign_id,
         "update_npc_knowledge",
         {"name": "Vale", "description": "A flour-dusted baker with a quick laugh."},
+    )
+    _tool(
+        app,
+        campaign_id,
+        "describe_character",
+        {"name": "Vale", "summary": "A flour-dusted baker with a quick laugh."},
     )
     page = client.get(f"/campaigns/{campaign_id}").text
     characters = _characters_section(page)
@@ -174,6 +182,10 @@ def test_update_npc_knowledge_records_a_relationship_a_place_and_a_rumor(
     # The player was never told a personality, so none is known.
     assert hob.personality == ""
 
+    summary = "A toll-keeper with a lantern and a long memory."
+    _tool(app, campaign_id, "describe_character", {"name": "Old Hob", "summary": summary})
+    assert _state(app, campaign_id).known[name_key("Old Hob")].summary == summary
+
     _tool(
         app,
         campaign_id,
@@ -184,6 +196,7 @@ def test_update_npc_knowledge_records_a_relationship_a_place_and_a_rumor(
     assert hob.relationship == "friendly, owes a debt"
     assert hob.description == "A toll-keeper on the Spore Bridge."
     assert hob.location == "Spore Bridge"
+    assert hob.summary == summary
 
 
 def test_update_npc_knowledge_refuses_an_empty_change_or_unknown_place(
@@ -223,10 +236,19 @@ def test_a_dismissed_hireling_joins_the_people_the_player_knows(
     )
     assert name_key("Wick") not in _state(app, campaign_id).known
 
+    summary = "A lantern-bearer who keeps to the back roads."
+    _tool(
+        app,
+        campaign_id,
+        "describe_character",
+        {"name": "Wick", "summary": summary},
+    )
     _tool(app, campaign_id, "dismiss_hireling", {"name": "Wick", "cause": "The pay ran out."})
     wick = _state(app, campaign_id).known[name_key("Wick")]
-    # The hireling's own description stays a GM record, like any NPC's.
+    # The hireling's own description stays a GM record, like any NPC's, but the summary the
+    # player read while Wick was in the company stays with them.
     assert wick.description == ""
+    assert wick.summary == summary
     assert wick.location == "Glowcap Ring"
 
 
@@ -241,6 +263,13 @@ def test_characters_page_shows_known_people_and_their_last_known_place(
         "update_npc_knowledge",
         {"name": "Brin Gallowcap", "relationship": "friendly, owes a debt"},
     )
+    summary = "A sharp-eyed forager who trades mushroom caps and gossip."
+    _tool(
+        app,
+        campaign_id,
+        "describe_character",
+        {"name": "Brin Gallowcap", "summary": summary},
+    )
 
     page = client.get(f"/campaigns/{campaign_id}").text
     assert 'data-view-target="characters"' in page
@@ -252,7 +281,12 @@ def test_characters_page_shows_known_people_and_their_last_known_place(
     assert "friendly, owes a debt" in characters
     assert "Here at Glowcap Ring" in characters
     assert "Mara Thistledown" not in characters
-    assert _state(app, campaign_id).known[name_key("Brin Gallowcap")].personality in characters
+    assert summary in characters
+    known = _state(app, campaign_id).known[name_key("Brin Gallowcap")]
+    assert known.personality
+    assert known.personality not in characters
+    for quirk in known.quirks:
+        assert quirk not in characters
 
     _tool(
         app,
@@ -264,3 +298,104 @@ def test_characters_page_shows_known_people_and_their_last_known_place(
     assert "Brin Gallowcap" in characters
     assert "Last known: Glowcap Ring" in characters
     assert "Mara Thistledown" in characters
+
+
+def test_describe_character_summarizes_the_player_character_and_hirelings(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, "Glowcap Ring")
+    player_summary = "Ada reads the stars and keeps her promises."
+    assert _tool(
+        app, campaign_id, "describe_character", {"name": PC, "summary": player_summary}
+    ) == {"described": PC}
+
+    _tool(
+        app,
+        campaign_id,
+        "hire_hireling",
+        {"name": "Wick", "employer": PC, "wage": 1, "description": "A lantern-bearer."},
+    )
+    hireling_summary = "A quiet lantern-bearer who knows the old roads."
+    assert _tool(
+        app,
+        campaign_id,
+        "describe_character",
+        {"name": "Wick", "summary": hireling_summary},
+    ) == {"described": "Wick"}
+
+    characters = _characters_section(client.get(f"/campaigns/{campaign_id}").text)
+    assert player_summary in characters
+    assert hireling_summary in characters
+    # The GM's own record of the hireling stays off the page.
+    assert "A lantern-bearer." not in characters
+
+
+def test_an_npc_summary_is_kept_when_the_player_meets_them_again(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, "Glowcap Ring")
+    _tool(
+        app,
+        campaign_id,
+        "update_npc",
+        {"name": "Brin Gallowcap", "description": "The cult's secret go-between."},
+    )
+    summary = "A sharp-eyed forager who knows every path in the ring."
+    _tool(
+        app,
+        campaign_id,
+        "describe_character",
+        {"name": "Brin Gallowcap", "summary": summary},
+    )
+    assert _state(app, campaign_id).known[name_key("Brin Gallowcap")].summary == summary
+
+    # Coming back to Brin refreshes the traits the player sees but keeps the summary.
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": PC, "location": "Mossbell Hollow"},
+    )
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": PC, "location": "Glowcap Ring"},
+    )
+    assert _state(app, campaign_id).known[name_key("Brin Gallowcap")].summary == summary
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+    characters = _characters_section(page)
+    assert summary in characters
+    assert "The cult's secret go-between." not in page
+    assert "cult" not in characters
+
+
+def test_describe_character_refuses_a_blank_summary(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    _, campaign_id = _campaign_id(client_factory)
+    blank = _tool(app, campaign_id, "describe_character", {"name": PC, "summary": "   "})
+    assert "summary must be 1 to 600 characters" in blank["error"]
+
+
+def test_the_gm_is_reminded_to_write_missing_character_summaries(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, "Glowcap Ring")
+    text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
+    assert "Characters with no player-facing summary: Ada, Brin Gallowcap" in text
+    assert "describe_character, with no GM-only secrets" in text
+
+    _tool(app, campaign_id, "describe_character", {"name": PC, "summary": "The seeker."})
+    _tool(
+        app,
+        campaign_id,
+        "describe_character",
+        {"name": "Brin Gallowcap", "summary": "A forager from the ring."},
+    )
+    text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
+    assert "Characters with no player-facing summary" not in text
