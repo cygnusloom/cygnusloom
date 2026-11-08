@@ -59,7 +59,6 @@ from cygnusloom.services.campaigns import (
     roll_player_stats,
     rollback_to,
     save_creation,
-    send_message,
     set_campaign_label,
     set_campaign_model,
     set_debug_credits,
@@ -114,6 +113,7 @@ from cygnusloom.web.character_form import (
 )
 from cygnusloom.web.forms import form_text
 from cygnusloom.web.rendering import render, render_fragment
+from cygnusloom.web.turn_jobs import TurnJob, TurnJobRegistry
 from cygnusloom.web.typing import Typer, TypingRegistry
 
 router = APIRouter(prefix="/campaigns")
@@ -1042,23 +1042,32 @@ async def post_message(request: Request, campaign_id: int) -> Response:
     form = await request.form()
     text = form_text(form, "content")
     settings = request.app.state.settings
+    events = stream_message(
+        request.app.state.engine,
+        request.app.state.providers,
+        request.app.state.catalog.model_ids(),
+        request.app.state.content,
+        settings.llm_context_tokens,
+        user.id,
+        campaign_id,
+        text,
+    )
     try:
-        await send_message(
-            request.app.state.engine,
-            request.app.state.providers,
-            request.app.state.catalog.model_ids(),
-            request.app.state.content,
-            settings.llm_context_tokens,
-            user.id,
-            campaign_id,
-            text,
-        )
-    except InvalidInput as exc:
-        return _campaign_page(request, user, campaign_id, 400, str(exc), text)
+        job = _start_turn_job(request, campaign_id, events)
     except Conflict as exc:
         return _campaign_page(request, user, campaign_id, 409, str(exc), text)
-    except LLMError as exc:
-        return _campaign_page(request, user, campaign_id, 502, str(exc), text)
+    # The turn owns itself from here. Waiting on it is shielded, so a page that goes away
+    # leaves the reply running and the next load reads it from the log.
+    await job.wait()
+    error = job.error
+    if isinstance(error, InvalidInput):
+        return _campaign_page(request, user, campaign_id, 400, str(error), text)
+    if isinstance(error, Conflict):
+        return _campaign_page(request, user, campaign_id, 409, str(error), text)
+    if isinstance(error, LLMError):
+        return _campaign_page(request, user, campaign_id, 502, str(error), text)
+    if isinstance(error, NotFound):
+        raise error
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
@@ -1081,8 +1090,12 @@ async def post_message_stream(request: Request, campaign_id: int) -> Response:
         campaign_id,
         text,
     )
+    try:
+        job = _start_turn_job(request, campaign_id, events)
+    except Conflict as exc:
+        return _refused_stream(str(exc))
     return StreamingResponse(
-        _turn_lines(events, campaign_id),
+        job.follow(),
         media_type="application/x-ndjson",
         headers={"Cache-Control": "no-cache"},
     )
@@ -1122,8 +1135,12 @@ async def post_pending_stream(request: Request, campaign_id: int) -> Response:
         action,
         text,
     )
+    try:
+        job = _start_turn_job(request, campaign_id, events)
+    except Conflict as exc:
+        return _refused_stream(str(exc))
     return StreamingResponse(
-        _turn_lines(events, campaign_id),
+        job.follow(),
         media_type="application/x-ndjson",
         headers={"Cache-Control": "no-cache"},
     )
@@ -1147,8 +1164,12 @@ async def post_encounter_turn_stream(request: Request, campaign_id: int) -> Resp
         campaign_id,
         name,
     )
+    try:
+        job = _start_turn_job(request, campaign_id, events)
+    except Conflict as exc:
+        return _refused_stream(str(exc))
     return StreamingResponse(
-        _turn_lines(events, campaign_id),
+        job.follow(),
         media_type="application/x-ndjson",
         headers={"Cache-Control": "no-cache"},
     )
@@ -1186,7 +1207,32 @@ async def post_encounter_turn_end(request: Request, campaign_id: int) -> Respons
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
-async def _turn_lines(events: AsyncIterator[TurnEvent], campaign_id: int) -> AsyncIterator[str]:
+def _start_turn_job(
+    request: Request, campaign_id: int, events: AsyncIterator[TurnEvent]
+) -> TurnJob:
+    """Hand the turn to a task of its own, so closing the page no longer cancels it."""
+    registry: TurnJobRegistry = request.app.state.turn_jobs
+    return registry.start(campaign_id, events, _turn_lines)
+
+
+async def _one_line(event: TurnError) -> AsyncIterator[str]:
+    yield _line(event) + "\n"
+
+
+def _refused_stream(message: str) -> StreamingResponse:
+    """A 409 the page reads like any other turn stream: one NDJSON error line, HTTP 200."""
+    return StreamingResponse(
+        _one_line(TurnError(409, message)),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+async def _turn_lines(
+    events: AsyncIterator[TurnEvent],
+    campaign_id: int,
+    errors: list[Exception] | None = None,
+) -> AsyncIterator[str]:
     try:
         async for event in events:
             match event:
@@ -1198,12 +1244,20 @@ async def _turn_lines(events: AsyncIterator[TurnEvent], campaign_id: int) -> Asy
                     clear_turn_reply(campaign_id)
             yield _line(event) + "\n"
     except InvalidInput as exc:
+        if errors is not None:
+            errors.append(exc)
         yield _line(TurnError(400, str(exc))) + "\n"
     except NotFound as exc:
+        if errors is not None:
+            errors.append(exc)
         yield _line(TurnError(404, str(exc))) + "\n"
     except Conflict as exc:
+        if errors is not None:
+            errors.append(exc)
         yield _line(TurnError(409, str(exc))) + "\n"
     except LLMError as exc:
+        if errors is not None:
+            errors.append(exc)
         yield _line(TurnError(502, str(exc))) + "\n"
 
 

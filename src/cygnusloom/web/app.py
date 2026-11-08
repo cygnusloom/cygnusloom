@@ -30,6 +30,7 @@ from cygnusloom.web.compendium import router as compendium_router
 from cygnusloom.web.rendering import render
 from cygnusloom.web.setup import router as setup_router
 from cygnusloom.web.sharing import router as sharing_router
+from cygnusloom.web.turn_jobs import TurnJobRegistry
 from cygnusloom.web.typing import TypingRegistry
 
 SESSION_COOKIE = "cygnusloom_session"
@@ -65,6 +66,7 @@ def create_app(
     app.state.content = content if content is not None else ContentLibrary.load()
     app.state.limiter = RateLimiter()
     app.state.typing = TypingRegistry()
+    app.state.turn_jobs = TurnJobRegistry()
     app.state.oidc = (
         None
         if settings.single_player
