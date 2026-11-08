@@ -16,6 +16,8 @@
 - Done: campaign major-version boundary and migration/export/import handling; capability manifest and tool/prompt gates; defaults layer and `extends`/`patch`/`remove`/`disabled`; definition-type and feature-type registries; magic `item`/`prepared`/`move` facade; common `SpellCast` for move magic; party-level rest with `after_rest`; data-driven clock week and WWN journey; single XP source, `LevelGrants`/`project_level`, progression-data costs, data-driven Die Hard and caster classification; year-banded Academia caps; shared learnable-feature filter; faction cap in data; condition-trigger validation; dead combat-helper removal; version 4.0.0.
 - Still open after this pass: full bundling/tool-prompt data deduplication, item/shop definition unification and inventory `slot` metadata, one effect-op registry, multiple advancement/level-up selectors, compendium label data, and world-feature validation. These are tracked by the report's remaining phases, not claimed as complete.
 
+**Verification:** the full suite passes at **3059 tests**. Live DeepSeek sessions covered a WWN opening, one party rest (one `RestTaken`, one `ClockAdvanced`), a one-day journey, a Cairn opening and turn, and an Academia opening plus a move-based spell cast (one `MoveMade`, one `SpellCast` with `model: "move"`).
+
 ---
 
 ## Contents
