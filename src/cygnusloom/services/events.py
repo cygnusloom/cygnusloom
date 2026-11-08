@@ -43,7 +43,6 @@ from cygnusloom.services.state import (  # noqa: F401
     EncounterMap,
     Faction,
     FactionAsset,
-    GameUpgrade,
     Item,
     KnownNpc,
     Note,
@@ -493,10 +492,14 @@ class CampaignOptionsChosen(GameEvent):
         state.options = dict(self.options)
 
 
+# BACKWARDS-COMPATIBILITY: 3 - old logs and exports contain campaign.upgraded.
+# Campaigns always load the running game's rules and content, so nothing records this any more.
+# It stays so old logs decode, and it opens a turn like it did then: the turn events that followed
+# it call `_open_turn`, which raises when no turn is open.
 @dataclass(frozen=True)
 class CampaignUpgraded(GameEvent):
-    """The campaign moved to a new game version. The GM is told out of character; the player's
-    transcript hides the entry, and the story is not narrated as if it happened in the world."""
+    """A campaign moved to a new game version, recorded before campaigns loaded the running game
+    directly. The transcript hides the entry and no story is narrated for it."""
 
     kind: ClassVar[str] = "campaign.upgraded"
     hidden: ClassVar[bool] = True
@@ -506,7 +509,6 @@ class CampaignUpgraded(GameEvent):
     to_version: str
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        state.upgrade = GameUpgrade(self.from_version, self.to_version)
         before = self.from_version or "an earlier version"
         if state.turn is None:
             state.turn = Turn(
@@ -517,7 +519,6 @@ class CampaignUpgraded(GameEvent):
                 ),
                 ooc=True,
                 ooc_narrate=False,
-                upgrade=True,
             )
 
     def render(self) -> str:

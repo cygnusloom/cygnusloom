@@ -14,9 +14,6 @@
             <div class="campaign-row">
               <a href="/campaigns/{{ campaign.id }}">{{ campaign.name }}</a>
               {% if card.last_activity %}<span class="campaign-activity" title="{{ card.last_event_at.strftime('%Y-%m-%d %H:%M UTC') if card.last_event_at else '' }}">{{ card.last_activity }}</span>{% endif %}
-              {% if campaign.game_version != app_version %}
-              <span class="campaign-upgrade">Upgrade available</span>
-              {% endif %}
               {% if card.shared %}
               <span class="campaign-shared">Shared by {{ card.owner_name or 'another player' }}</span>
               {% else %}

@@ -792,15 +792,6 @@ def world_state_text(
             "speaks for and the account that wrote it. Address the players together, and never "
             "speak or act for any player character."
         )
-    if state.upgrade is not None:
-        before = state.upgrade.from_version or "an earlier version"
-        lines.append(
-            "Game upgrade (out of character): this campaign was played under game version "
-            f"{before} and has been upgraded to {state.upgrade.to_version}. The rules, "
-            "instructions, and tools above are the current game's; follow them from now on. What "
-            "the record already says happened stays as it happened. Do not narrate this upgrade "
-            "or mention version numbers in the story unless the player asks about it."
-        )
     if state.settings:
         lines.append("Setting:")
         lines.extend(f"  {topic}: {detail}" for topic, detail in state.settings.items())

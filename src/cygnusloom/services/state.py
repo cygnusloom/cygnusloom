@@ -470,9 +470,6 @@ class Turn:
     # is narrated after that reply only when `ooc_narrate` is set.
     ooc: bool = False
     ooc_narrate: bool = True
-    # This turn was opened by a game upgrade, not a player message. The GM acknowledges it out
-    # of character.
-    upgrade: bool = False
     prompt: Ask | None = None
     # NPC lines written this turn that the narration has not seen yet: {"speaker", "dialogue"}.
     speech: list[dict[str, str]] = field(default_factory=list)
@@ -625,14 +622,6 @@ class DebugInjection:
     text: str = ""
 
 
-@dataclass(frozen=True)
-class GameUpgrade:
-    """The latest game version a campaign was moved to, and the version it left."""
-
-    from_version: str
-    to_version: str
-
-
 @dataclass
 class CampaignState:
     """The campaign as its log says it is now. Keys of `places` and `characters` are the names
@@ -665,8 +654,6 @@ class CampaignState:
     debug_injection: DebugInjection | None = None
     # Options shared by the whole campaign, keyed by field id. Empty until they are chosen.
     options: dict[str, str] = field(default_factory=dict)
-    # The latest move to a new game version, which the GM is told out of character.
-    upgrade: GameUpgrade | None = None
     # Long-running efforts by name without case, such as projects, research, and faction turns.
     projects: dict[str, Project] = field(default_factory=dict)
     summary: str = ""

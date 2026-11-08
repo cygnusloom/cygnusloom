@@ -14,7 +14,6 @@ from typing import Any
 from sqlalchemy import Engine, func
 from sqlmodel import select
 
-from cygnusloom import __version__
 from cygnusloom.content.character import CampaignSpec, CharacterSpec, roll_stats
 from cygnusloom.content.definitions import ContentError
 from cygnusloom.content.library import (
@@ -150,7 +149,6 @@ def create_campaign(
             world_template=world_template,
             rule_set=rule_set,
             model=model,
-            game_version=__version__,
             table_genres=json.dumps(list(genres)),
         )
         db.add(campaign)
@@ -1052,5 +1050,4 @@ from cygnusloom.services.turns import (  # noqa: F401
     send_message,
     start_encounter_turn,
     stream_message,
-    upgrade_campaign,
 )

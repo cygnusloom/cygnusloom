@@ -15,7 +15,7 @@ from cygnusloom.db.models import Campaign, Event
 from cygnusloom.llm.base import ChatReply, LLMError
 from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.services.campaigns import last_activity_text
-from cygnusloom.services.events import Turn
+from cygnusloom.services.events import Turn, last_event_id
 from tests.conftest import (
     NARRATE_TEXT,
     csrf_token,
@@ -25,6 +25,7 @@ from tests.conftest import (
 )
 from tests.factories import (
     answer,
+    campaign_ready_fast,
     pending_turn,
     place_pc,
     send_message,
@@ -197,6 +198,41 @@ def test_campaign_list_shows_when_the_last_event_was(
     page = client.get("/campaigns").text
     assert 'class="campaign-activity"' in page
     assert re.search(r"(?:just now|\d+ (?:minute|hour|day)s? ago) \(\d{4}-\d{2}-\d{2}\)", page)
+
+
+def test_the_campaign_pages_offer_no_game_upgrade(client_factory: Callable[[], TestClient]):
+    """Campaigns always load the running game, so nothing offers to upgrade one."""
+    client, campaign_id = campaign_ready_fast(client_factory)
+
+    campaign_page = client.get(f"/campaigns/{campaign_id}").text
+    assert 'data-view="play"' in campaign_page
+    for page in (campaign_page, client.get("/campaigns").text):
+        assert "Upgrade campaign" not in page
+        assert "Upgrade available" not in page
+        assert "Game updated." not in page
+
+
+def test_the_retired_upgrade_route_answers_an_old_page_without_changing_anything(
+    client_factory: Callable[[], TestClient],
+):
+    """An old page may still post the upgrade form. The route redirects and records nothing."""
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, label="Old page")
+    assert response.status_code == 303
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    with Session(client.app.state.engine) as db:
+        before = last_event_id(db, campaign_id)
+
+    response = client.post(
+        f"/campaigns/{campaign_id}/upgrade",
+        data={"csrf_token": csrf_token(client, "/campaigns")},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == f"/campaigns/{campaign_id}"
+    with Session(client.app.state.engine) as db:
+        assert last_event_id(db, campaign_id) == before
 
 
 def test_delete_campaign_removes_it_and_its_events(client_factory: Callable[[], TestClient]):

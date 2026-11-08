@@ -186,6 +186,7 @@ def test_members_cannot_use_owner_only_controls(client_factory: Callable[[], Tes
         ).status_code
         == 404
     )
+    # The upgrade control is gone, but an old page may still post it. The route stays owner-only.
     assert (
         guest.post(
             f"/campaigns/{campaign_id}/upgrade",

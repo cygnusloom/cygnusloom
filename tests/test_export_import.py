@@ -8,7 +8,6 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from cygnusloom import __version__
 from cygnusloom.config import Settings
 from cygnusloom.db.models import Campaign, Event, User
 from cygnusloom.llm.fake import FakeProvider
@@ -192,7 +191,7 @@ def test_export_and_import_round_trip(
     assert document["format"] == "cygnusloom.campaign"
     assert document["version"] == 1
     assert document["campaign"]["world_template"] == "testhollow"
-    assert document["campaign"]["game_version"] == __version__
+    assert "game_version" not in document["campaign"]
     assert document["source"]["event_count"] == len(document["events"])
     assert "owner_id" not in document["campaign"]
     assert "api_key" not in json.dumps(document)
@@ -270,38 +269,72 @@ def test_export_and_import_round_trip(
         assert campaign.world_template == "testhollow"
         assert campaign.rule_set == "rolltest"
         assert campaign.model == "fake/scripted"
-        assert campaign.game_version == __version__
         owner = session.get(User, campaign.owner_id)
         assert owner is not None
         assert owner.email == "ada@example.com"
         assert len(_events(target_app, new_id)) == len(document["events"])
 
 
-def test_import_uses_the_exported_app_version_when_the_file_has_no_game_version(
+def test_an_old_export_with_a_game_upgrade_still_imports(
     tmp_path, settings: Settings, client_factory: Callable[[], TestClient]
 ):
+    """Old files record the campaign's version and a campaign.upgraded event whose turn events
+    follow. Campaigns load the running game, so the key is ignored and the log still folds."""
     client, campaign_id = campaign_ready_fast(client_factory)
     document = _export(client, campaign_id).json()
-    document["app_version"] = "3.0.3"
-    document["campaign"].pop("game_version", None)
+    document["campaign"]["game_version"] = "3.0.0"
+    last = document["events"][-1]
+    created_at = last["created_at"]
+    document["events"].extend(
+        [
+            {
+                "seq": last["seq"] + 1,
+                "id": last["id"] + 1,
+                "kind": "campaign.upgraded",
+                "created_at": created_at,
+                "payload": {"from_version": "3.0.0", "to_version": "3.6.0"},
+            },
+            {
+                "seq": last["seq"] + 2,
+                "id": last["id"] + 2,
+                "kind": "turn.begun",
+                "created_at": created_at,
+                "payload": {"head": [], "context": [], "messages": [], "round_start": 0},
+            },
+            {
+                "seq": last["seq"] + 3,
+                "id": last["id"] + 3,
+                "kind": "chat.gm",
+                "created_at": created_at,
+                "payload": {
+                    "content": "The campaign is now on the current game version.",
+                    "model": "test",
+                    "final": False,
+                },
+            },
+            {
+                "seq": last["seq"] + 4,
+                "id": last["id"] + 4,
+                "kind": "chat.gm",
+                "created_at": created_at,
+                "payload": {"content": "The yard is quiet.", "model": "test"},
+            },
+        ]
+    )
+    document["source"]["event_count"] = len(document["events"])
+    document["source"]["last_event_id"] = last["id"] + 4
 
     target_app = _target_app(tmp_path, settings)
-    target_client = _target_client(target_app)
-    new_id = _imported_id(_import(target_client, json.dumps(document).encode()))
+    new_id = _imported_id(_import(_target_client(target_app), json.dumps(document).encode()))
 
-    with Session(target_app.state.engine) as session:
-        imported = session.get(Campaign, new_id)
-        assert imported is not None
-        assert imported.game_version == "3.0.3"
-
-    # A new export keeps an explicitly blank version blank: it began before tracking, so it
-    # should still offer the upgrade rather than inherit the version that exported it.
-    document["campaign"]["game_version"] = ""
-    blank_id = _imported_id(_import(target_client, json.dumps(document).encode()))
-    with Session(target_app.state.engine) as session:
-        blank = session.get(Campaign, blank_id)
-        assert blank is not None
-        assert blank.game_version == ""
+    imported = open_campaign(target_app, new_id)
+    assert imported.turn is None
+    replies = _by_kind(target_app, new_id)["chat.gm"]
+    assert [json.loads(row.payload)["content"] for row in replies[-2:]] == [
+        "The campaign is now on the current game version.",
+        "The yard is quiet.",
+    ]
+    assert _by_kind(target_app, new_id)["campaign.upgraded"]
 
 
 def test_import_remaps_event_id_references(

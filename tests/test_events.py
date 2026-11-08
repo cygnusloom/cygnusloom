@@ -12,15 +12,18 @@ from cygnusloom.db.models import Campaign, Event, User
 from cygnusloom.services.campaigns import campaign_log, list_messages
 from cygnusloom.services.events import (
     EVENT_TYPES,
+    CampaignUpgraded,
     Channel,
     ChatPlayer,
     GameEvent,
     LocationAdded,
     NoteAdded,
     NpcAdded,
+    OocStarted,
     Place,
     ResourceChanged,
     StatChanged,
+    TurnBegun,
     decode,
     last_event_id,
     load_state,
@@ -310,6 +313,30 @@ def test_faction_asset_and_turn_events_apply_and_replay_safely():
     FactionAssetActed(faction_id="missing", asset_id="none").apply(state, 9)
     FactionAssetDamaged(faction_id="league", asset_id="none", amount=1).apply(state, 10)
     FactionTurnTaken(faction_id="missing", turn=3).apply(state, 11)
+
+
+def test_a_legacy_game_upgrade_still_folds_and_opens_its_turn(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    """Old logs recorded campaign.upgraded before the turn it announced. The event stays so those
+    logs decode and the turn events after it still find a turn open."""
+    _, campaign_id = _campaign_id(client_factory)
+    with Session(app.state.engine) as db:
+        upgrade_id = record(
+            db,
+            campaign_id,
+            CampaignUpgraded(from_version="3.0.0", to_version="3.6.0"),
+        )
+        record(db, campaign_id, TurnBegun(head=[], context=[], messages=[], round_start=0))
+        record(db, campaign_id, OocStarted(narrate=False))
+        db.commit()
+        state = load_state(db, campaign_id)
+
+    assert state.turn is not None
+    assert state.turn.opener == upgrade_id
+    assert state.turn.begun
+    assert state.turn.ooc
+    assert not state.turn.ooc_narrate
 
 
 def test_a_recorded_reply_clears_the_turns_revision():
