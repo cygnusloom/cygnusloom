@@ -361,7 +361,15 @@ class World(CoreWorld, Protocol):
 
     def advance_time(self, days: int = 0, parts: int = 0, hours: int = 0) -> dict[str, Any]: ...
 
-    def rest(self, length: str, interrupted: bool = False, reason: str = "") -> dict[str, Any]: ...
+    def rest(
+        self,
+        length: str,
+        interrupted: bool = False,
+        reason: str = "",
+        scope: str = "party",
+        character: str = "",
+        advance_clock: bool | None = None,
+    ) -> dict[str, Any]: ...
 
     def rest_history(self) -> dict[str, Any]: ...
 

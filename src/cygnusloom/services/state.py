@@ -598,6 +598,8 @@ class RestRecord:
     full: bool
     interrupted: bool
     reason: str
+    scope: str = "party"
+    name: str = ""
 
 
 @dataclass(frozen=True)

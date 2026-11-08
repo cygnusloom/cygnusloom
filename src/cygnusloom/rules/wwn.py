@@ -1258,20 +1258,28 @@ def rest(
     """Take a rest through the world, then apply the rule set's recovery: a night restores hit
     points equal to the character's level, one point of System Strain, all spell castings, and
     scene and day Effort. A shorter rest restores scene Effort only."""
-    progression = require_wwn_progression(ctx.world)
-    result = ctx.world.rest(length, interrupted=interrupted, reason=reason)
-    return {
-        **result,
-        **_rest_recovery(character, ctx, length, interrupted, progression),
-    }
+    # Rest is party-level. Calling it once per character used to advance the clock once per
+    # character; the after_rest hook now recovers every party member from one call.
+    return ctx.world.rest(length, interrupted=interrupted, reason=reason)
 
 
 def recover_after_rest(character: str, ctx: ToolContext) -> dict[str, Any]:
-    """Apply a night's recovery without advancing the clock, for a rest the GM tracked elsewhere.
-    A night restores hit points equal to the character's level, one System Strain, every spell
-    casting, and the Effort committed for a scene or a day."""
+    """Apply one character's night recovery without advancing the clock."""
     progression = require_wwn_progression(ctx.world)
     return _rest_recovery(character, ctx, "night", False, progression)
+
+
+def after_rest(
+    hc: HookContext,
+    name: str,
+    length: str,
+    start: int,
+    end: int,
+    interrupted: bool,
+) -> None:
+    """WWN recovery, run once per party member after a party rest has already moved the clock."""
+    progression = require_wwn_progression(hc)
+    _recover_with_hook(hc, name, length, interrupted, progression)
 
 
 def _rest_recovery(
@@ -1281,59 +1289,70 @@ def _rest_recovery(
     interrupted: bool,
     progression: WWNProgression,
 ) -> dict[str, Any]:
-    """Record a rest's recovery: the night's hit points, Strain, and castings, and the Effort
-    whose duration ends with the rest."""
+    """Apply one character's recovery through a hook context, without moving the clock."""
 
     def action(hc: HookContext) -> dict[str, Any]:
-        _, found = _character(hc, character)
-        db, campaign_id = hc.session()
-        restored: dict[str, int] = {}
-
-        def recover(stat: str, amount: int, why: str) -> None:
-            if amount <= 0 or stat not in found.stats:
-                return
-            record(
-                db,
-                campaign_id,
-                StatRestored(name=found.name, stat=stat, amount=amount, cause=why),
-            )
-            restored[stat] = restored.get(stat, 0) + amount
-
-        durations = (
-            ("scene", "day") if length in ("night", "extended") and not interrupted else ("scene",)
-        )
-        marks = found.marks.get(EFFORT_MARK) or {}
-        effort_recoveries: list[tuple[str, str, int]] = []
-        for duration in durations:
-            for tradition, amount in (marks.get(duration) or {}).items():
-                stat = tradition_effort_stat(str(tradition), progression)
-                if not stat:
-                    raise InvalidInput(f"there is no Effort pool for the tradition {tradition!r}")
-                if stat not in found.stats:
-                    raise InvalidInput(f"{found.name} has no {stat} stat")
-                effort_recoveries.append((duration, stat, int(amount)))
-        kept = {duration: dict(held) for duration, held in marks.items()}
-
-        if length in ("night", "extended") and not interrupted:
-            nights = 7 if length == "extended" else 1
-            if length == "extended" or "frail" not in found.conditions:
-                recover("hp", found.counters.get("level", 1) * nights, f"a {length}'s rest")
-                recover("strain", nights, f"a {length}'s rest")
-            recover("castings", found.harm.get("castings", 0), f"a {length}'s rest")
-        for duration, stat, amount in effort_recoveries:
-            recover(stat, amount, f"{duration} Effort after a {length}'s rest")
-        for duration in durations:
-            kept.pop(duration, None)
-        if kept != marks:
-            hc.set_mark(
-                found.name,
-                EFFORT_MARK,
-                kept or None,
-                f"{found.name}'s {', '.join(durations)} Effort returns after a {length}'s rest.",
-            )
-        return {"character": found.name, "restored": restored}
+        return _recover_with_hook(hc, character, length, interrupted, progression)
 
     return ctx.world.with_hook_context(action)
+
+
+def _recover_with_hook(
+    hc: HookContext,
+    character: str,
+    length: str,
+    interrupted: bool,
+    progression: WWNProgression,
+) -> dict[str, Any]:
+    """Record a rest's recovery: the night's hit points, Strain, and castings, and the Effort
+    whose duration ends with the rest."""
+    _, found = _character(hc, character)
+    db, campaign_id = hc.session()
+    restored: dict[str, int] = {}
+
+    def recover(stat: str, amount: int, why: str) -> None:
+        if amount <= 0 or stat not in found.stats:
+            return
+        record(
+            db,
+            campaign_id,
+            StatRestored(name=found.name, stat=stat, amount=amount, cause=why),
+        )
+        restored[stat] = restored.get(stat, 0) + amount
+
+    durations = (
+        ("scene", "day") if length in ("night", "extended") and not interrupted else ("scene",)
+    )
+    marks = found.marks.get(EFFORT_MARK) or {}
+    effort_recoveries: list[tuple[str, str, int]] = []
+    for duration in durations:
+        for tradition, amount in (marks.get(duration) or {}).items():
+            stat = tradition_effort_stat(str(tradition), progression)
+            if not stat:
+                raise InvalidInput(f"there is no Effort pool for the tradition {tradition!r}")
+            if stat not in found.stats:
+                raise InvalidInput(f"{found.name} has no {stat} stat")
+            effort_recoveries.append((duration, stat, int(amount)))
+    kept = {duration: dict(held) for duration, held in marks.items()}
+
+    if length in ("night", "extended") and not interrupted:
+        nights = 7 if length == "extended" else 1
+        if length == "extended" or "frail" not in found.conditions:
+            recover("hp", found.counters.get("level", 1) * nights, f"a {length}'s rest")
+            recover("strain", nights, f"a {length}'s rest")
+        recover("castings", found.harm.get("castings", 0), f"a {length}'s rest")
+    for duration, stat, amount in effort_recoveries:
+        recover(stat, amount, f"{duration} Effort after a {length}'s rest")
+    for duration in durations:
+        kept.pop(duration, None)
+    if kept != marks:
+        hc.set_mark(
+            found.name,
+            EFFORT_MARK,
+            kept or None,
+            f"{found.name}'s {', '.join(durations)} Effort returns after a {length}'s rest.",
+        )
+    return {"character": found.name, "restored": restored}
 
 
 def _character(hc: HookContext, name: str) -> tuple[Any, Any]:

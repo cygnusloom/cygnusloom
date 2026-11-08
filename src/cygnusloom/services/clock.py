@@ -88,7 +88,8 @@ def advance_to(
     )
     if new.day != before.day:
         reactions.reset(db, campaign_id, "day", label="a new day")
-    if (new.day - 1) // 7 != (before.day - 1) // 7:
+    week_days = max(1, clock_rules.week_days)
+    if (new.day - 1) // week_days != (before.day - 1) // week_days:
         reactions.reset(db, campaign_id, "week", label="a new week")
     result: dict[str, Any] = {
         "day": new.day,

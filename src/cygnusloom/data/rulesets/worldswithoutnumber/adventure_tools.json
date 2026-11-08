@@ -540,7 +540,7 @@
     "name": "rest",
     "python_module": "wwn",
     "function": "rest",
-    "description": "Record a rest for one character. A night's rest restores hit points equal to their level, one point of System Strain, all spell castings, and scene and day Effort. A few moments restores scene Effort only. A week of bed rest restores all hit points and Strain and ends Frail. The rest moves the clock itself. Frail characters recover no hit points or Strain from a single night.",
+    "description": "Record one party rest. Every player character recovers: a night restores hit points equal to their level, one point of System Strain, all spell castings, and scene and day Effort. A few moments restores scene Effort only. A week of bed rest restores all hit points and Strain and ends Frail. The rest moves the clock once. Frail characters recover no hit points or Strain from a single night.",
     "parameters": {
       "type": "object",
       "properties": {

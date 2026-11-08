@@ -1359,6 +1359,8 @@ class ClockRules:
     wage_currency: str = ""
     # How many hours each part of the day holds. Hours count the time a dying character has left.
     hours_per_part: int = 1
+    # The length of the reset week. Seven by default; a rule set can name another cycle.
+    week_days: int = 7
 
 
 @dataclass(frozen=True)
@@ -4459,7 +4461,7 @@ def _load_clock(definitions: list[Definition], template: str) -> ClockRules | No
     label = f"{template}: clock {definition.id}"
     check_keys(
         definition.data,
-        {"type", "id", "parts", "stale_days", "wage_currency", "hours_per_part"},
+        {"type", "id", "parts", "stale_days", "wage_currency", "hours_per_part", "week_days"},
         label,
     )
     parts = _names(definition.data, "parts", label)
@@ -4474,11 +4476,17 @@ def _load_clock(definitions: list[Definition], template: str) -> ClockRules | No
         if "hours_per_part" in definition.data
         else 1
     )
+    week_days = (
+        _whole(definition.data, "week_days", label, 1)
+        if "week_days" in definition.data
+        else 7
+    )
     return ClockRules(
         parts=parts,
         stale_days=stale_days,
         wage_currency=wage_currency,
         hours_per_part=hours_per_part,
+        week_days=week_days,
     )
 
 

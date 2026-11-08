@@ -239,7 +239,15 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 hours,
             )
 
-    def rest(self, length: str, interrupted: bool = False, reason: str = "") -> dict[str, Any]:
+    def rest(
+        self,
+        length: str,
+        interrupted: bool = False,
+        reason: str = "",
+        scope: str = "party",
+        character: str = "",
+        advance_clock: bool | None = None,
+    ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return rests_service.take_rest(
                 db,
@@ -257,6 +265,10 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 rng=self.rng,
                 plus=self.plus,
                 spec=self.character,
+                rule_data=self.rule_data,
+                scope=scope,
+                character=character,
+                advance_clock=advance_clock,
             )
 
     def rest_history(self) -> dict[str, Any]:
@@ -265,7 +277,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
 
     def with_hook_context(self, action: Callable[[HookContext], T]) -> T:
         with session_scope(self.engine) as db:
-            result = action(HookContext(db, self.campaign_id, self.hooks, self.inventory))
+            result = action(
+                HookContext(db, self.campaign_id, self.hooks, self.inventory, self.rule_data)
+            )
             db.commit()
             return result
 

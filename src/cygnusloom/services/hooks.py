@@ -5,7 +5,8 @@ hooks definition and live in the rule set's Python module."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -24,6 +25,9 @@ class HookContext:
     campaign_id: int | None
     hooks: Hooks | None
     inventory: InventoryRules | None
+    # The rule set's structured data, so a hook such as WWN's after_rest can resolve its own
+    # progression without holding a World service.
+    rule_data: Mapping[str, object] = field(default_factory=dict)
 
     @classmethod
     def for_rendering(cls, hooks: Hooks | None, inventory: InventoryRules | None) -> HookContext:

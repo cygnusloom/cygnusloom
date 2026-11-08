@@ -3911,6 +3911,8 @@ class RestTaken(GameEvent):
     reason: str
     day: int
     part: str
+    scope: str = "party"
+    name: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.rests.append(
@@ -3921,12 +3923,15 @@ class RestTaken(GameEvent):
                 full=self.full,
                 interrupted=self.interrupted,
                 reason=self.reason,
+                scope=self.scope,
+                name=self.name,
             )
         )
 
     def render(self) -> str:
         interrupted = ", interrupted" if self.interrupted else ""
-        return f"The party rests ({self.length}{interrupted}): {self.reason.rstrip('.!? ')}."
+        who = self.name or "The party"
+        return f"{who} rests ({self.length}{interrupted}): {self.reason.rstrip('.!? ')}."
 
 
 @dataclass(frozen=True)

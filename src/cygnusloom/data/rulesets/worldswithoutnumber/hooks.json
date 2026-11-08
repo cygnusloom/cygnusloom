@@ -1,0 +1,8 @@
+[
+  {
+    "type": "hooks",
+    "id": "wwn",
+    "python_module": "wwn",
+    "after_rest": "after_rest"
+  }
+]
