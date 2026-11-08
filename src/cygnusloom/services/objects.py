@@ -54,10 +54,12 @@ def place_object(
     item: str | None = None,
     item_size: str = "",
     name: str = "",
+    item_text: str = "",
 ) -> dict[str, Any]:
     """Put an object in a place: a short name to take it by, a description, and optionally currency
-    or an item. Currency needs the rule set's currency. An item takes its size's slots, and the size
-    defaults to normal."""
+    or an item. `contents` describes the object or find; `item_text` describes the item itself when
+    one is present. Currency needs the rule set's currency. An item takes its size's slots, and the
+    size defaults to normal."""
     state = load_state(db, campaign_id)
     found = state.named(place)
     if not isinstance(found, Place):
@@ -70,6 +72,7 @@ def place_object(
     if currency and marketplace is None:
         raise InvalidInput("this rule set has no currency to hold money")
     item = (item or "").strip()
+    item_text = item_text.strip()
     size, slots = "", 0
     if item:
         size = item_size or "normal"
@@ -84,6 +87,7 @@ def place_object(
             contents=contents,
             currency=currency,
             item=item,
+            item_text=item_text,
             item_size=size,
             item_slots=slots,
             hidden=hidden,
@@ -99,6 +103,7 @@ def place_object(
         "contents": contents,
         "currency": currency,
         "item": item,
+        "item_text": item_text,
         "hidden": hidden,
     }
 
@@ -115,9 +120,10 @@ def take_object(
 ) -> dict[str, Any]:
     """A character takes a visible object in the place they are in. Currency goes to that character.
     An item goes into their inventory, and the take is refused if it does not fit, unless the
-    campaign does not track inventory space. An object placed without an item is carried as an
-    item named after the object, so a described find is not lost. If several identical objects are
-    here, the one placed first is taken."""
+    campaign does not track inventory space. An explicit item is carried with its own description
+    (`item_text`), never the object's `contents`. An object placed without an item is carried as an
+    item named after the object with the object's own description, because the object itself is the
+    find. If several identical objects are here, the one placed first is taken."""
     state = load_state(db, campaign_id)
     taker = character_named(state, character)
     tracked = tracks_inventory(db, campaign_id)
@@ -135,10 +141,13 @@ def take_object(
     if obj.currency and marketplace is None:
         raise InvalidInput("this rule set has no currency to hold money")
     item = obj.item
+    text = obj.item_text
     size = obj.item_size
     slots = obj.item_slots
     if not item and not obj.currency:
         item = obj.name or obj.contents
+        # The object itself is the find, so its own description is the item's.
+        text = obj.contents
         size = size or "normal"
         if size not in item_sizes:
             raise InvalidInput(f"there is no item size named {size!r}")
@@ -170,7 +179,7 @@ def take_object(
                 name=item,
                 size=size,
                 slots=slots,
-                text=obj.contents,
+                text=text,
             ),
             cause=cause,
         )

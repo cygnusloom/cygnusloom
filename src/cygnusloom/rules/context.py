@@ -186,6 +186,7 @@ class CoreWorld(Protocol):
         item: str | None = None,
         item_size: str = "",
         name: str = "",
+        item_text: str = "",
     ) -> dict[str, Any]: ...
 
     def take_object(self, object_name: str, character: str, cause: str) -> dict[str, Any]: ...

@@ -4027,6 +4027,8 @@ class ObjectPlaced(GameEvent):
     contents: str
     currency: int = 0
     item: str = ""
+    # BACKWARDS-COMPATIBILITY: 3 - old object.placed events and exports have no item_text.
+    item_text: str = ""
     item_size: str = ""
     item_slots: int = 0
     hidden: bool = False
@@ -4040,6 +4042,7 @@ class ObjectPlaced(GameEvent):
             contents=self.contents,
             currency=self.currency,
             item=self.item,
+            item_text=self.item_text,
             item_size=self.item_size,
             item_slots=self.item_slots,
             hidden=self.hidden,
