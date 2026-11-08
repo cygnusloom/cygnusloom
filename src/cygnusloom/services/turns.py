@@ -436,6 +436,8 @@ class _Run:
     # The setting and story the player asked for at creation, or blank. It is prompt guidance,
     # not world state.
     setting: str = ""
+    # Whether the campaign enforces inventory space. Off means anything reasonable is carried.
+    tracks_inventory: bool = True
     # The account answering this turn's prompt, when a player does. An opening or an NPC's turn
     # has none, and any player at the table may continue it. Its display name is resolved from
     # the account when the log is folded, so a name change reaches an open turn.
@@ -583,6 +585,7 @@ def _start_run(
         unattached_rules=world.unattached_rules,
         world=template,
         setting=campaign.setting,
+        tracks_inventory=campaign.use_inventory_space,
         player_id=player_id,
     )
 
@@ -631,6 +634,7 @@ def _world_text(run: _Run, state: CampaignState) -> str:
         counters=rule_set.counters,
         tallies=rule_set.tallies,
         unwritten_world=run.world is not None and not run.world.has_setting,
+        track_inventory=run.tracks_inventory,
     )
 
 

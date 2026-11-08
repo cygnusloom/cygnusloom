@@ -281,7 +281,7 @@
             {% endif %}
             <div class="tab-panel" role="tabpanel" id="panel-inventory" aria-labelledby="tab-inventory" hidden>
               {% if scene.pack %}
-              <p>Carrying {{ scene.pack.used }} of {{ scene.pack.capacity }} slots.</p>
+              <p>{% if scene.pack.tracked %}Carrying {{ scene.pack.used }} of {{ scene.pack.capacity }} slots.{% else %}Carrying {{ scene.pack.used }} slots; inventory space is not tracked.{% endif %}</p>
               {% if scene.pc and scene.pc.defense_tracked %}
               <p>Armor: {{ scene.pc.armor }} · Worn: {{ scene.pc.equipped_armor or "none" }} · Wielded shield: {{ scene.pc.equipped_shield or "none" }}</p>
               {% endif %}

@@ -11,6 +11,7 @@ from sqlmodel import Session
 
 from cygnusloom.content.character import CharacterSpec
 from cygnusloom.content.library import InventoryPool, InventoryRules, ShopItem
+from cygnusloom.db.models import Campaign
 from cygnusloom.rules.dice import is_formula
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import (
@@ -28,6 +29,13 @@ from cygnusloom.services.events import (
     record,
     same_item_name,
 )
+
+
+def tracks_inventory(db: Session, campaign_id: int) -> bool:
+    """Whether this campaign enforces the rule set's inventory space. A campaign whose row is
+    missing keeps the rule set's limits, so a caller outside a stored campaign is unaffected."""
+    campaign = db.get(Campaign, campaign_id)
+    return campaign is None or campaign.use_inventory_space
 
 
 def capacity_of(
@@ -169,8 +177,10 @@ def set_ready(
     ready: bool,
 ) -> dict[str, Any]:
     """Ready or stow one carried item. Readying is refused when the Readied pool has no room;
-    a size that belongs in the Stowed pool cannot be readied."""
+    a size that belongs in the Stowed pool cannot be readied. A campaign that does not track
+    inventory space skips the capacity checks but keeps the physical size rule."""
     character = character_named(load_state(db, campaign_id), name)
+    tracked = tracks_inventory(db, campaign_id)
     held = next((i for i in character.items if same_item_name(i.name, item)), None)
     if held is None:
         raise InvalidInput(f"{character.name} carries no {item!r}")
@@ -182,14 +192,17 @@ def set_ready(
         if ready and held.size in rules.size_pools and mapped is not None and not mapped.ready:
             raise InvalidInput(f"{held.name} is too bulky to keep readied")
         current = item_pool_id(character, rules, held)
-        if current != target.id and pool_usage(character, rules, target.id) + held.slots > (
-            pool_capacity(character, rules, target.id)
+        if (
+            tracked
+            and current != target.id
+            and pool_usage(character, rules, target.id) + held.slots
+            > pool_capacity(character, rules, target.id)
         ):
             raise InvalidInput(
                 f"{character.name}'s {target.name} pool has no room for {held.name}; "
                 f"it holds {pool_capacity(character, rules, target.id)} slots"
             )
-    elif ready and not held.ready:
+    elif tracked and ready and not held.ready:
         capacity = readied_capacity(character, rules)
         if rules.readied_stat and readied_slots(character) + held.slots > capacity:
             raise InvalidInput(
@@ -235,8 +248,10 @@ def carry_item(
     """Add an item and drain the full stat if this fills the inventory. A rule set with named
     pools refuses an item its pool cannot hold, unless `overflow` allows it, which the starting kit
     and a wilderness bounty use so gear the book hands out is never lost to a full pack. A single-pool rule
-    set adds it over capacity and says so."""
+    set adds it over capacity and says so. A campaign that does not track inventory space records
+    the item without any capacity refusal, penalty item, or full-pack drain."""
     character = character_named(load_state(db, campaign_id), name)
+    tracked = tracks_inventory(db, campaign_id)
     capacity = capacity_of(character, rules)
     before = used_slots(character)
     after = before + item.slots
@@ -252,7 +267,11 @@ def carry_item(
             raise InvalidInput(f"there is no inventory pool for {item.size!r}")
         used = pool_usage(character, rules, pool.id)
         # An item that takes no slots always fits, even in a pool that is already over capacity.
-        if item.slots > 0 and used + item.slots > pool_capacity(character, rules, pool.id):
+        if (
+            tracked
+            and item.slots > 0
+            and used + item.slots > pool_capacity(character, rules, pool.id)
+        ):
             if not overflow:
                 raise InvalidInput(
                     f"{character.name}'s {pool.name} pool is full: {used} of "
@@ -286,7 +305,8 @@ def carry_item(
     # itself never triggers another.
     penalized = False
     if (
-        rules.pools
+        tracked
+        and rules.pools
         and item.kind != rules.penalty_item
         and after > capacity
         and not carries_penalty(character, rules)
@@ -307,7 +327,7 @@ def carry_item(
         )
         if over_pool:
             result["over_capacity"] = True
-    if not rules.pools and rules.full_stat and before < capacity <= after:
+    if tracked and not rules.pools and rules.full_stat and before < capacity <= after:
         record(
             db,
             campaign_id,
@@ -316,7 +336,7 @@ def carry_item(
             ),
         )
         result["drained"] = rules.full_stat
-    if not rules.pools and after > capacity:
+    if tracked and not rules.pools and after > capacity:
         result["over_capacity"] = True
     return result
 
@@ -413,6 +433,8 @@ def fits_listed(
     capacity. Nothing is recorded."""
     if listed.size not in item_sizes:
         raise InvalidInput(f"there is no item size named {listed.size!r}")
+    if not tracks_inventory(db, campaign_id):
+        return True
     character = character_named(load_state(db, campaign_id), name)
     if rules.pools:
         pool = pool_for_size(rules, listed.size)

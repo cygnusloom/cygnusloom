@@ -38,6 +38,7 @@ from cygnusloom.services.inventory import (
     capacity_of,
     carry_item,
     character_named,
+    tracks_inventory,
     used_slots,
 )
 from cygnusloom.services.recovery import recover
@@ -110,9 +111,11 @@ def buy_item(
     size, and a price or size that disagrees with the listing is refused. Any other item needs a
     price. Armor changes the buyer's Armor Class as its `armor_mode` says, up to armor_max (0
     means no cap), using the rule set's base defense and defense modifier. A purchase that would
-    not fit in the inventory is refused, and nothing is paid."""
+    not fit in the inventory is refused, and nothing is paid, unless the campaign does not track
+    inventory space."""
     state = load_state(db, campaign_id)
     buyer = character_named(state, name)
+    tracked = tracks_inventory(db, campaign_id)
     listed = listed_item(marketplace, item)
     if listed is not None:
         if price is not None and price != listed.price:
@@ -131,11 +134,12 @@ def buy_item(
     if size not in item_sizes:
         raise InvalidInput(f"there is no item size named {size!r}")
     slots = item_sizes[size]
-    free = capacity_of(buyer, inventory) - used_slots(buyer)
-    if slots > free:
-        raise InvalidInput(
-            f"{buyer.name} has room for {max(free, 0)} slots, and {item} takes {slots}"
-        )
+    if tracked:
+        free = capacity_of(buyer, inventory) - used_slots(buyer)
+        if slots > free:
+            raise InvalidInput(
+                f"{buyer.name} has room for {max(free, 0)} slots, and {item} takes {slots}"
+            )
     left = _pay(db, campaign_id, marketplace, buyer, price, cause=f"buying {item}")
     uses = listed.uses if listed is not None else 0
     text = listed.description if listed is not None else ""

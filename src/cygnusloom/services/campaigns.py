@@ -639,6 +639,23 @@ def set_campaign_model(
         return campaign
 
 
+def set_campaign_inventory_space(
+    engine: Engine, owner_id: int, campaign_id: int, enabled: bool
+) -> Campaign:
+    """Turn the rule set's inventory space on or off for the campaign. Off means capacity is not
+    checked: characters may carry anything reasonable, no penalty item is added, and a full pack
+    drains nothing. Existing items are left as they are."""
+    get_owned_campaign(engine, owner_id, campaign_id)
+    with _exclusive(campaign_id), session_scope(engine) as db:
+        campaign = db.get(Campaign, campaign_id)
+        assert campaign is not None
+        campaign.use_inventory_space = enabled
+        db.add(campaign)
+        db.commit()
+        db.refresh(campaign)
+        return campaign
+
+
 def set_campaign_label(engine: Engine, owner_id: int, campaign_id: int, label: str) -> Campaign:
     """Change the label the campaign list shows. The label is only the player's name for the
     campaign; it is not part of the log."""
@@ -925,6 +942,7 @@ def context_usage(
                 hooks=rule_set.hooks if rule_set else None,
                 counters=rule_set.counters if rule_set else None,
                 tallies=rule_set.tallies if rule_set else None,
+                track_inventory=campaign.use_inventory_space,
             ),
             present_rules_text(state, all_rules),
             campaign.setting,

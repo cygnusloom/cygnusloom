@@ -60,6 +60,7 @@ from cygnusloom.services.campaigns import (
     rollback_to,
     save_creation,
     send_message,
+    set_campaign_inventory_space,
     set_campaign_label,
     set_campaign_model,
     set_debug_credits,
@@ -771,6 +772,26 @@ async def change_model(request: Request, campaign_id: int) -> Response:
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
+@router.post("/{campaign_id}/inventory-space")
+async def change_inventory_space(request: Request, campaign_id: int) -> Response:
+    """Turn the rule set's inventory space on or off for the owner's campaign."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    try:
+        set_campaign_inventory_space(
+            request.app.state.engine,
+            user.id,
+            campaign_id,
+            form_text(form, "use_inventory_space") == "1",
+        )
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
 @router.post("/{campaign_id}/upgrade")
 async def upgrade_campaign_page(request: Request, campaign_id: int) -> Response:
     """Move the owner's campaign to the running game version and let the GM announce it."""
@@ -1405,6 +1426,7 @@ def _campaign_page(
                 creature_links=compendium.creature_links,
                 place_links=compendium.place_links,
                 sheet_links=compendium.sheet_links,
+                track_inventory=campaign.use_inventory_space,
             ),
             world_map=world_map,
             rule_set=rule_set,
@@ -1509,6 +1531,7 @@ def _campaign_page(
             creature_links=compendium.creature_links,
             place_links=compendium.place_links,
             sheet_links=compendium.sheet_links,
+            track_inventory=campaign.use_inventory_space,
         ),
         "world_map": world_map,
         "time": time_view(world.state, rule_set.clock if rule_set else None),

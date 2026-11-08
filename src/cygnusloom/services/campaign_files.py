@@ -115,6 +115,7 @@ def export_campaign(engine: Engine, owner_id: int, campaign_id: int) -> tuple[st
             "game_version": campaign.game_version,
             "setting": campaign.setting,
             "table_genres": genres,
+            "use_inventory_space": campaign.use_inventory_space,
             "created_at": as_utc(campaign.created_at).isoformat(),
         },
         "events": events,
@@ -178,6 +179,7 @@ def import_campaign(
             game_version=config["game_version"],
             setting=config["setting"],
             table_genres=json.dumps(list(config["table_genres"])),
+            use_inventory_space=config["use_inventory_space"],
             created_at=config["created_at"],
         )
         db.add(campaign)
@@ -431,6 +433,11 @@ def _read_campaign(
             raise InvalidInput(str(error)) from error
     else:
         genres = rules.table_genres
+    # A file exported before the option existed keeps the rule set's limits, as the campaign it
+    # came from did.
+    use_inventory_space = data.get("use_inventory_space", True)
+    if not isinstance(use_inventory_space, bool):
+        raise InvalidInput("use_inventory_space must be true or false")
     created_at = _read_time(data.get("created_at"), "campaign")
     # An exported campaign that records its version carries the key even when the value is
     # blank, meaning it began before version tracking. Only a file from an older app, which has
@@ -447,6 +454,7 @@ def _read_campaign(
         "game_version": game_version,
         "setting": _text(data, "setting", MAX_SETTING),
         "table_genres": genres,
+        "use_inventory_space": use_inventory_space,
         "created_at": created_at,
     }
 

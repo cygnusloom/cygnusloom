@@ -22,7 +22,13 @@ from cygnusloom.services.events import (
     name_key,
     record,
 )
-from cygnusloom.services.inventory import capacity_of, carry_item, character_named, used_slots
+from cygnusloom.services.inventory import (
+    capacity_of,
+    carry_item,
+    character_named,
+    tracks_inventory,
+    used_slots,
+)
 from cygnusloom.services.market import MAX_PRICE
 
 
@@ -108,11 +114,13 @@ def take_object(
     cause: str,
 ) -> dict[str, Any]:
     """A character takes a visible object in the place they are in. Currency goes to that character.
-    An item goes into their inventory, and the take is refused if it does not fit. An object
-    placed without an item is carried as an item named after the object, so a described find is
-    not lost. If several identical objects are here, the one placed first is taken."""
+    An item goes into their inventory, and the take is refused if it does not fit, unless the
+    campaign does not track inventory space. An object placed without an item is carried as an
+    item named after the object, so a described find is not lost. If several identical objects are
+    here, the one placed first is taken."""
     state = load_state(db, campaign_id)
     taker = character_named(state, character)
+    tracked = tracks_inventory(db, campaign_id)
     if taker.dead:
         raise InvalidInput(f"{taker.name} is dead")
     visible = visible_objects(state, taker.location)
@@ -138,11 +146,12 @@ def take_object(
     if item:
         if inventory is None:
             raise InvalidInput("this rule set has no inventory to carry an item")
-        free = capacity_of(taker, inventory) - used_slots(taker)
-        if slots > free:
-            raise InvalidInput(
-                f"{taker.name} has room for {max(free, 0)} slots, and {item} takes {slots}"
-            )
+        if tracked:
+            free = capacity_of(taker, inventory) - used_slots(taker)
+            if slots > free:
+                raise InvalidInput(
+                    f"{taker.name} has room for {max(free, 0)} slots, and {item} takes {slots}"
+                )
     if obj.currency and marketplace is not None:
         record(
             db,
