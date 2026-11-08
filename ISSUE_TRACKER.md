@@ -4,7 +4,8 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
 
 # Untriaged Issues
 
-None.
+* Zooming the map on mobile is very slow, needs a performance check.
+* The characters page should clearly mark deceased characters and move them out of the way.
 
 # Triaged Issues
 
