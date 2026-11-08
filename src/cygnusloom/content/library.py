@@ -953,6 +953,9 @@ class TallyRules:
     # entries from campaign state, such as the colleges the GM invents.
     entries: Mapping[str, str]
     dynamic: bool = False
+    # The most entries a dynamic tally may hold, or None for no limit. Academia's College Cup
+    # caps colleges at five; the generic faction service does not own that number.
+    max_entries: int | None = None
 
 
 @dataclass(frozen=True)
@@ -1695,6 +1698,8 @@ class RuleSet:
     items: ItemRules = field(default_factory=ItemRules)
     # The rule set's code hooks, or None when the rule set has none.
     hooks: Hooks | None = None
+    # Triggers that may end a condition, from the rule set head.
+    condition_ends: tuple[str, ...] = ()
     # A short line shown when choosing the rule set on the create campaign page.
     blurb: str | None = None
     # True when the rule set is imported from a third-party source; the UI links to the credits.
@@ -2948,6 +2953,7 @@ def _build_rule_set(
             marketplace=marketplace,
         ),
         hooks=hooks,
+        condition_ends=condition_ends,
         rule_data=rule_data,
     )
 
@@ -5738,8 +5744,13 @@ def _load_tallies(definitions: list[Definition], template: str) -> dict[str, Tal
         label = f"{template}: tally {d.id}"
         if d.id in loaded:
             raise ContentError(f"{template}: duplicate tally {d.id!r}")
-        check_keys(d.data, {"type", "id", "label", "entries", "dynamic"}, label)
+        check_keys(
+            d.data, {"type", "id", "label", "entries", "dynamic", "max_entries"}, label
+        )
         dynamic = _flag_default(d.data, "dynamic", label, False)
+        max_entries = (
+            _whole(d.data, "max_entries", label, 1) if "max_entries" in d.data else None
+        )
         raw = d.data.get("entries", [])
         if not isinstance(raw, list):
             raise ContentError(f"{label}: 'entries' must be a list")
@@ -5759,6 +5770,7 @@ def _load_tallies(definitions: list[Definition], template: str) -> dict[str, Tal
             label=required_text(d.data, "label", label),
             entries=entries,
             dynamic=dynamic,
+            max_entries=max_entries,
         )
     return loaded
 

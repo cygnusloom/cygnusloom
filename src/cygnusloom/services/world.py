@@ -176,6 +176,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     rests: Mapping[str, RestLength] = field(default_factory=dict)
     interrupted_rest: str = ""
     hooks: Hooks | None = None
+    condition_ends: tuple[str, ...] = ()
     inventory: InventoryRules | None = None
     item_sizes: Mapping[str, int] = field(default_factory=dict)
     magic: MagicRules | None = None
@@ -265,6 +266,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 rng=self.rng,
                 plus=self.plus,
                 spec=self.character,
+                condition_ends=self.condition_ends,
                 rule_data=self.rule_data,
                 scope=scope,
                 character=character,
@@ -1722,6 +1724,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 self.rng,
                 plus=self.plus,
                 spec=self.character,
+                condition_ends=self.condition_ends,
             )
 
     def retreat(self, name: str, safe: bool) -> dict[str, Any]:

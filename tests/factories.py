@@ -258,6 +258,7 @@ def tools_for(
         rests=rules.rests,
         interrupted_rest=rules.interrupted_rest,
         hooks=rules.hooks,
+        condition_ends=rules.condition_ends,
         inventory=rules.inventory,
         item_sizes=rules.item_sizes,
         magic=rules.magic,

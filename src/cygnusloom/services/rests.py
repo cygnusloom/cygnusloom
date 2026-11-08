@@ -4,7 +4,7 @@ A character a rule set holds back (see the held_back hook) recovers nothing unti
 from __future__ import annotations
 
 import random
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from sqlmodel import Session
@@ -53,6 +53,7 @@ def take_rest(
     rng: random.Random | None = None,
     plus: str = "sum",
     spec: CharacterSpec | None = None,
+    condition_ends: Sequence[str] = (),
     rule_data: Mapping[str, object] | None = None,
     scope: str = "party",
     character: str = "",
@@ -175,6 +176,7 @@ def take_rest(
                         rng,
                         plus=plus,
                         spec=spec,
+                        condition_ends=condition_ends,
                     )
     result["recovered"] = [c.name for c in recovering]
     db.commit()

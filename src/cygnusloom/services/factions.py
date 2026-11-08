@@ -35,7 +35,6 @@ from cygnusloom.services.state import CampaignState, Faction, FactionAsset
 
 MAX_NAME = 120
 MAX_TEXT = 2000
-MAX_FACTIONS = 5
 _SLUG = re.compile(r"[^a-z0-9]+")
 
 
@@ -100,9 +99,10 @@ def create_faction(
     chosen = _dynamic_tally(tallies, tally)
     if chosen is not None:
         members = [existing for existing in state.factions.values() if existing.tally == chosen.id]
-        if len(members) >= MAX_FACTIONS:
+        if chosen.max_entries is not None and len(members) >= chosen.max_entries:
             raise InvalidInput(
-                f"{chosen.label} already has {MAX_FACTIONS} factions; rename or remove one first"
+                f"{chosen.label} already has {chosen.max_entries} factions; "
+                "rename or remove one first"
             )
         tally_id = chosen.id
         faction_id = _unique_id(state, faction_name)

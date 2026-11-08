@@ -78,7 +78,7 @@ def test_a_condition_names_only_its_own_triggers(client_factory):
     app, campaign_id, tools = scene(client_factory)
     tools.add_condition(ADA, "shaken", "a test")
 
-    with pytest.raises(InvalidInput, match="ends by rest, scene, not by magic"):
+    with pytest.raises(InvalidInput, match="not a condition-ending trigger"):
         tools.end_condition(ADA, "shaken", "magic")
     assert _character(app, campaign_id, ADA).conditions == ["shaken"]
 

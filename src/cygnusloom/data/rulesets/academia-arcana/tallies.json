@@ -4,6 +4,7 @@
     "id": "college-cup",
     "label": "College Cup",
     "entries": [],
-    "dynamic": true
+    "dynamic": true,
+    "max_entries": 5
   }
 ]

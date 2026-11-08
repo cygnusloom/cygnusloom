@@ -505,6 +505,7 @@ def _tool_context(
         rests=rule_set.rests,
         interrupted_rest=rule_set.interrupted_rest,
         hooks=rule_set.hooks,
+        condition_ends=rule_set.condition_ends,
         inventory=rule_set.inventory,
         item_sizes=rule_set.item_sizes,
         magic=rule_set.magic,

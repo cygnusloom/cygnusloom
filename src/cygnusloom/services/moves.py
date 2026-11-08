@@ -107,7 +107,9 @@ def make_move(
                 f"{character.name} still lacks {', '.join(missing)}"
             )
     rolled_stat = (
-        best_stat(character, move.stat_choice) if move.stat == HIGHEST else move.stat or stat
+        best_stat(character, move.stat_choice, spec)
+        if move.stat == HIGHEST
+        else move.stat or stat
     )
     if rolled_stat is not None and rolled_stat not in character.stats:
         raise InvalidInput(
@@ -316,6 +318,11 @@ def _choice_result(
     return result
 
 
-def best_stat(character: Character, choice: Sequence[str]) -> str:
-    """The stat in `choice` with the highest modifier, the first one listed on a tie."""
+def best_stat(
+    character: Character, choice: Sequence[str], spec: CharacterSpec | None = None
+) -> str:
+    """The stat in `choice` with the highest modifier, the first one listed on a tie. When the
+    rule set has modifier bands, compare the same modifier the roll will add, not the raw score."""
+    if spec is not None:
+        return max(choice, key=lambda stat: spec.modifier(character.stats, stat))
     return max(choice, key=lambda stat: modifier_value(character, stat))
