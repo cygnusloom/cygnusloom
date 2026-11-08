@@ -14,6 +14,7 @@ from typing import Any
 from sqlalchemy import Engine, func
 from sqlmodel import select
 
+from cygnusloom import CAMPAIGN_MAJOR_VERSION
 from cygnusloom.content.character import CampaignSpec, CharacterSpec, roll_stats
 from cygnusloom.content.definitions import ContentError
 from cygnusloom.content.library import (
@@ -71,6 +72,10 @@ MAX_NAME = 120
 MAX_MESSAGE = 8000
 # A model id is `provider/model`, matching the campaign column.
 MAX_MODEL = 120
+
+
+class NotPlayable(Conflict):
+    """A campaign from another major version. Its row and log stay intact and exportable."""
 # The campaign-wide settings the AI GM may change during a turn, and only on the owner's
 # explicit request.
 TURN_SETTINGS = {"inventory_space"}
@@ -151,6 +156,7 @@ def create_campaign(
             name=name,
             world_template=world_template,
             rule_set=rule_set,
+            major_version=CAMPAIGN_MAJOR_VERSION,
             model=model,
             table_genres=json.dumps(list(genres)),
         )
@@ -477,24 +483,38 @@ def visible_campaigns(engine: Engine, user_id: int) -> list[CampaignCard]:
         return cards
 
 
-def get_campaign(engine: Engine, user_id: int, campaign_id: int) -> Campaign:
+def is_playable(campaign: Campaign) -> bool:
+    """Whether this engine can play the campaign. Other-major campaigns stay exportable."""
+    return campaign.major_version == CAMPAIGN_MAJOR_VERSION
+
+
+def get_campaign(
+    engine: Engine, user_id: int, campaign_id: int, *, playable: bool = True
+) -> Campaign:
     """A campaign the account may play: its own, or one shared with it. Anything else looks
-    exactly like a missing campaign, so nothing leaks."""
+    exactly like a missing campaign, so nothing leaks. `playable=False` is for the export and
+    blocked-page paths, which must still reach another major's campaign."""
     with session_scope(engine) as db:
         campaign = db.get(Campaign, campaign_id)
         if campaign is None:
             raise NotFound("campaign not found")
-        if campaign.owner_id == user_id:
-            return campaign
-        member = db.exec(
-            select(CampaignMember.id).where(
-                CampaignMember.campaign_id == campaign_id,
-                CampaignMember.user_id == user_id,
-                CampaignMember.removed_at.is_(None),
-            )
-        ).first()
-        if member is None:
+        allowed = campaign.owner_id == user_id
+        if not allowed:
+            member = db.exec(
+                select(CampaignMember.id).where(
+                    CampaignMember.campaign_id == campaign_id,
+                    CampaignMember.user_id == user_id,
+                    CampaignMember.removed_at.is_(None),
+                )
+            ).first()
+            allowed = member is not None
+        if not allowed:
             raise NotFound("campaign not found")
+        if playable and not is_playable(campaign):
+            raise NotPlayable(
+                f"this campaign was made for Cygnus Loom {campaign.major_version}; "
+                f"Cygnus Loom {CAMPAIGN_MAJOR_VERSION} can export it but not play it"
+            )
         return campaign
 
 

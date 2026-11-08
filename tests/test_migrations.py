@@ -38,6 +38,7 @@ def test_migrations_create_the_full_schema(tmp_path, monkeypatch):
     assert "game_version" not in campaign_columns
     assert "force_credit_charges" in campaign_columns
     assert "use_inventory_space" in campaign_columns
+    assert "major_version" in campaign_columns
     user_columns = {column["name"] for column in inspect(make_engine(url)).get_columns("user")}
     assert "credit_balance" in user_columns
     assert "show_internal_thinking" in user_columns
@@ -100,6 +101,38 @@ def test_migrations_can_be_reversed(tmp_path, monkeypatch):
     assert "campaign" not in tables
 
 
+def test_existing_campaigns_become_non_playable(tmp_path, monkeypatch):
+    """3.x campaigns stay stored and exportable, but must not become playable under 4.0."""
+    url = f"sqlite:///{tmp_path / 'campaign-major.db'}"
+    monkeypatch.setenv("CYGNUSLOOM_DATABASE_URL", url)
+    config = migration_config(url)
+    command.upgrade(config, "0013_user_show_internal_thinking")
+    with make_engine(url).begin() as connection:
+        connection.execute(
+            sa.text(
+                "INSERT INTO user (id, issuer, subject, email, email_verified, display_name, "
+                "show_internal_thinking, roles, credit_balance, disabled, created_at) "
+                "VALUES (1, 'issuer', 'subject', 'old@example.com', 1, 'Old', 0, '[]', 0, 0, "
+                "CURRENT_TIMESTAMP)"
+            )
+        )
+        connection.execute(
+            sa.text(
+                "INSERT INTO campaign "
+                "(owner_id, name, world_template, rule_set, model, setting, table_genres, "
+                "force_credit_charges, use_inventory_space, created_at) "
+                "VALUES (1, 'Old', 'unwritten-world', 'cairn2e', 'fake/scripted', '', '', 0, 1, "
+                "CURRENT_TIMESTAMP)"
+            )
+        )
+
+    command.upgrade(config, "head")
+
+    with make_engine(url).connect() as connection:
+        major = connection.execute(sa.text("SELECT major_version FROM campaign")).scalar_one()
+    assert major == 3
+
+
 def test_every_revision_id_fits_alembics_version_column():
     """Alembic stores revision ids in VARCHAR(32), and Postgres enforces it."""
     script = ScriptDirectory.from_config(migration_config("sqlite:///unused.db"))
@@ -127,7 +160,7 @@ def test_a_legacy_long_revision_id_is_rewritten(tmp_path, monkeypatch):
         version = connection.execute(
             sa.text("SELECT version_num FROM alembic_version")
         ).scalar_one()
-    assert version == "0013_user_show_internal_thinking"
+    assert version == "0014_campaign_major_version"
     campaign_columns = {
         column["name"] for column in inspect(make_engine(url)).get_columns("campaign")
     }

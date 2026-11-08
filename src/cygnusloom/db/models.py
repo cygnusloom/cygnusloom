@@ -162,6 +162,9 @@ class Campaign(SQLModel, table=True):
     name: str = Field(max_length=120)
     world_template: str = Field(max_length=64)
     rule_set: str = Field(max_length=64)
+    # The campaign contract's major version. Rows from another major remain stored and
+    # exportable, but the engine will not play them.
+    major_version: int = Field(default=4)
     model: str = Field(max_length=120)
     setting: str = Field(default="", sa_column=Column(Text, nullable=False))
     table_genres: str = Field(default="", sa_column=Column(Text, nullable=False))

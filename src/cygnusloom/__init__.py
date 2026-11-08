@@ -9,6 +9,10 @@ PACKAGE_DIR = Path(__file__).resolve().parent
 # The repository root when the package runs from a source tree instead of an installed wheel.
 SOURCE_TREE = PACKAGE_DIR.parents[1]
 
+# Campaigns are a versioned contract. A campaign created by another major version is kept and
+# exported, but the engine refuses to play it. Bump this only with a breaking campaign change.
+CAMPAIGN_MAJOR_VERSION = 4
+
 
 def _project_url(label: str) -> str:
     """A `[project.urls]` entry, recorded in the installed distribution's metadata."""

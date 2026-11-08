@@ -17,7 +17,7 @@ from typing import Any
 
 from sqlalchemy import Engine, select
 
-from cygnusloom import __version__
+from cygnusloom import CAMPAIGN_MAJOR_VERSION, __version__
 from cygnusloom.content.definitions import ContentError
 from cygnusloom.content.library import ContentLibrary, read_table_genres
 from cygnusloom.db.models import Campaign, Event, utcnow
@@ -57,7 +57,10 @@ class _Entry:
     kind: str
     payload: dict[str, Any]
     created_at: datetime
-    cls: type[GameEvent]
+    channel: str
+    # None for an event from another major version: the payload is kept verbatim but cannot be
+    # decoded by this engine.
+    cls: type[GameEvent] | None
 
 
 def export_filename(campaign: Campaign) -> str:
@@ -111,6 +114,7 @@ def export_campaign(engine: Engine, owner_id: int, campaign_id: int) -> tuple[st
             "name": campaign.name,
             "world_template": campaign.world_template,
             "rule_set": campaign.rule_set,
+            "major_version": campaign.major_version,
             "model": campaign.model,
             "setting": campaign.setting,
             "table_genres": genres,
@@ -133,12 +137,17 @@ def import_campaign(
 ) -> ImportResult:
     """Rebuild a campaign from an exported file under `owner_id`."""
     document = _parse_document(data)
-    campaign_data, entries = _read_document(document)
+    campaign_data, entries, major_version = _read_document(document)
     config = _read_campaign(campaign_data, library)
     allowed = set(allowed_models)
     model = config["model"]
     model_replaced = ""
     warnings: list[str] = []
+    if major_version != CAMPAIGN_MAJOR_VERSION:
+        warnings.append(
+            f"this campaign was made for Cygnus Loom {major_version}; it can be exported "
+            f"but not played by Cygnus Loom {CAMPAIGN_MAJOR_VERSION}"
+        )
     if model not in allowed:
         if default_model:
             model_replaced, model = model, default_model
@@ -169,6 +178,7 @@ def import_campaign(
             name=_unique_name(name, existing),
             world_template=config["world_template"],
             rule_set=config["rule_set"],
+            major_version=major_version,
             model=model,
             setting=config["setting"],
             table_genres=json.dumps(list(config["table_genres"])),
@@ -185,7 +195,7 @@ def import_campaign(
                 Event(
                     campaign_id=campaign.id,
                     seq=index + 1,
-                    channel=entry.cls.channel.value,
+                    channel=entry.channel,
                     kind=entry.kind,
                     payload=json.dumps(entry.payload, ensure_ascii=False, separators=(",", ":")),
                     created_at=entry.created_at,
@@ -200,28 +210,28 @@ def import_campaign(
             ).all()
         }
         old_to_new = {entry.source_id: new_by_seq[index + 1] for index, entry in enumerate(entries)}
+        opaque = major_version != CAMPAIGN_MAJOR_VERSION
         for row, entry in zip(rows, entries, strict=True):
             changed = False
-            for field_name in entry.cls.id_refs:
-                if field_name in entry.payload:
-                    entry.payload[field_name] = old_to_new[entry.payload[field_name]]
+            if not opaque:
+                for field_name in entry.cls.id_refs:
+                    if field_name in entry.payload:
+                        entry.payload[field_name] = old_to_new[entry.payload[field_name]]
+                        changed = True
+                # Account ids do not travel between servers. Every character and message in an
+                # imported campaign belongs to the account importing it, which can share it again.
+                if entry.kind in ("pc.added", "hireling.promoted", "turn.opening", "chat.player"):
+                    entry.payload["player_id"] = owner_id
                     changed = True
-            # Account ids do not travel between servers. Every character and message in an
-            # imported campaign belongs to the account importing it, which can share it again.
-            if entry.kind in ("pc.added", "hireling.promoted", "turn.opening", "chat.player"):
-                entry.payload["player_id"] = owner_id
-                # BACKWARDS-COMPATIBILITY: 3 - older exports stored a player name snapshot.
-                # New events store only the account id.
-                entry.payload.pop("player_name", None)
-                changed = True
             if changed:
                 row.payload = json.dumps(entry.payload, ensure_ascii=False, separators=(",", ":"))
                 db.add(row)
         db.flush()
-        try:
-            load_state(db, campaign.id)
-        except Exception as exc:
-            raise InvalidInput(f"the campaign log could not be replayed: {exc}") from exc
+        if not opaque:
+            try:
+                load_state(db, campaign.id)
+            except Exception as exc:
+                raise InvalidInput(f"the campaign log could not be replayed: {exc}") from exc
         db.commit()
         db.refresh(campaign)
     return ImportResult(
@@ -267,7 +277,7 @@ def _parse_document(data: bytes) -> dict[str, Any]:
 
 def _read_document(
     document: dict[str, Any],
-) -> tuple[dict[str, Any], list[_Entry]]:
+) -> tuple[dict[str, Any], list[_Entry], int]:
     if document.get("format") != EXPORT_FORMAT:
         raise InvalidInput("that is not a Cygnus Loom campaign file")
     version = document.get("version")
@@ -279,21 +289,24 @@ def _read_document(
         raise InvalidInput("the file has no campaign details")
     if not isinstance(events_data, list):
         raise InvalidInput("the file has no event list")
+    major_version = campaign_data.get("major_version", 3)
+    if type(major_version) is not int or major_version < 1:
+        raise InvalidInput("the campaign's major_version must be a positive whole number")
     source = document.get("source")
     if isinstance(source, dict):
         declared = source.get("event_count")
         if declared is not None and declared != len(events_data):
             raise InvalidInput("the file's event count does not match its event list")
-    entries = _read_entries(events_data)
+    entries = _read_entries(events_data, opaque=major_version != CAMPAIGN_MAJOR_VERSION)
     if isinstance(source, dict):
         declared_last = source.get("last_event_id")
         last = entries[-1].source_id if entries else 0
         if declared_last is not None and declared_last != last:
             raise InvalidInput("the file's last event id does not match its event list")
-    return campaign_data, entries
+    return campaign_data, entries, major_version
 
 
-def _read_entries(events_data: list[Any]) -> list[_Entry]:
+def _read_entries(events_data: list[Any], *, opaque: bool = False) -> list[_Entry]:
     if len(events_data) > MAX_IMPORT_EVENTS:
         raise InvalidInput(f"the file has more than {MAX_IMPORT_EVENTS} events")
     entries: list[_Entry] = []
@@ -316,19 +329,21 @@ def _read_entries(events_data: list[Any]) -> list[_Entry]:
             raise InvalidInput(f"{where}: event id {source_id} appears twice")
         seen_ids.add(source_id)
         kind = raw.get("kind")
-        if not isinstance(kind, str) or kind not in EVENT_TYPES:
+        if not isinstance(kind, str) or (not opaque and kind not in EVENT_TYPES):
             raise InvalidInput(f"{where}: unknown event kind {kind!r}")
         payload = raw.get("payload")
         if not isinstance(payload, dict):
             raise InvalidInput(f"{where}: payload must be an object")
-        channel = raw.get("channel")
-        if channel is not None and channel not in _CHANNELS:
+        channel = raw.get("channel") or Channel.LOG.value
+        if channel not in _CHANNELS:
             raise InvalidInput(f"{where}: unknown channel {channel!r}")
-        cls = EVENT_TYPES[kind]
-        _check_required(cls, payload, where)
+        cls = None if opaque else EVENT_TYPES[kind]
+        if cls is not None:
+            _check_required(cls, payload, where)
         created_at = _read_time(raw.get("created_at"), where)
-        entries.append(_Entry(source_id, seq, kind, payload, created_at, cls))
-    _check_references(entries)
+        entries.append(_Entry(source_id, seq, kind, payload, created_at, channel, cls))
+    if not opaque:
+        _check_references(entries)
     return entries
 
 
@@ -347,6 +362,8 @@ def _check_required(cls: type[GameEvent], payload: dict[str, Any], where: str) -
 def _check_references(entries: list[_Entry]) -> None:
     index_by_id = {entry.source_id: index for index, entry in enumerate(entries)}
     for index, entry in enumerate(entries):
+        if entry.cls is None:
+            continue
         for field_name, target_kinds in entry.cls.id_refs.items():
             if field_name not in entry.payload:
                 continue
@@ -430,8 +447,6 @@ def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, A
     if not isinstance(use_inventory_space, bool):
         raise InvalidInput("use_inventory_space must be true or false")
     created_at = _read_time(data.get("created_at"), "campaign")
-    # BACKWARDS-COMPATIBILITY: 3 - old files carry campaign.game_version. Campaigns always load
-    # the running game's rules and content, so the key is ignored like any other unknown key.
     return {
         "name": _text(data, "name", MAX_NAME),
         "world_template": world_template,
