@@ -81,6 +81,9 @@ STATE_INSTRUCTION = (
     "short player-facing summary. When the player acts on or asks about a different active "
     "storyline, make it the focus with focus_storyline in this same step, before you narrate: the "
     "focused thread is the one the player is following now, not the one that mattered last turn. "
+    "Keep each character's player-facing summary current: when this action changes what the "
+    "player knows of a character, write or refresh it with describe_character in this step, and "
+    "keep the summary brief and free of GM-only secrets. "
     "Do not narrate here; the narration comes in the next step. When several changes do not depend on "
     "each other, make every one of their tool calls in this same reply: three NPCs, a location and "
     "its people, or a pile of setting facts are one round, not one round each. Every extra round "
@@ -238,13 +241,6 @@ OOC_INSTRUCTION = (
     "the world, make it with tool calls first, and "
     "write no text before those calls: text written before a tool call is shown to the player "
     "right away. The state step already decided whether the story continues after this reply."
-)
-UPGRADE_REPLY_INSTRUCTION = (
-    "Game upgrade notice. The game has just updated this campaign to the running version. "
-    "Reply out of character in one short paragraph, telling the player the campaign is now on "
-    "the current game version and that the rules, instructions, and tools may have changed. "
-    "Do not narrate a scene, speak or act for the player character, call tools, or ask the player "
-    "to do anything. The upgrade is already recorded; this reply only announces it."
 )
 OPENING_REPLY_INSTRUCTION = (
     "Opening reply. This is the campaign's introduction, not an out-of-character question. Follow "

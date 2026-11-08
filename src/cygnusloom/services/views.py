@@ -74,6 +74,8 @@ class KnownNpcView:
     # The NPC is at the player character's location now.
     here: bool
     dead: bool
+    # The short player-facing summary of what the player knows of the NPC.
+    summary: str = ""
     # The bestiary statblock the NPC was built from, and its compendium entry when one exists.
     creature: str = ""
     creature_entry: str = ""
@@ -792,15 +794,6 @@ def world_state_text(
             "speaks for and the account that wrote it. Address the players together, and never "
             "speak or act for any player character."
         )
-    if state.upgrade is not None:
-        before = state.upgrade.from_version or "an earlier version"
-        lines.append(
-            "Game upgrade (out of character): this campaign was played under game version "
-            f"{before} and has been upgraded to {state.upgrade.to_version}. The rules, "
-            "instructions, and tools above are the current game's; follow them from now on. What "
-            "the record already says happened stays as it happened. Do not narrate this upgrade "
-            "or mention version numbers in the story unless the player asks about it."
-        )
     if state.settings:
         lines.append("Setting:")
         lines.extend(f"  {topic}: {detail}" for topic, detail in state.settings.items())
@@ -819,6 +812,28 @@ def world_state_text(
         lines.append(
             f"Discovered places with no player-facing summary: {shown}. Write one for each with "
             "update_location's summary, with no GM-only secrets."
+        )
+    missing_character_summaries = sorted(
+        [
+            character.name
+            for character in state.characters.values()
+            if (character.kind == PC_KIND or character.hireling) and not character.summary
+        ]
+        + [
+            knowledge.name
+            for key, knowledge in state.known.items()
+            if not knowledge.summary
+            and key in state.characters
+            and state.characters[key].kind == NPC_KIND
+        ]
+    )
+    if missing_character_summaries:
+        shown = ", ".join(missing_character_summaries[:12])
+        if len(missing_character_summaries) > 12:
+            shown += f", and {len(missing_character_summaries) - 12} more"
+        lines.append(
+            f"Characters with no player-facing summary: {shown}. Write one for each with "
+            "describe_character, with no GM-only secrets."
         )
     if state.factions:
         standings = []
@@ -1221,6 +1236,7 @@ def _known_npc_views(
                 location=knowledge.location,
                 here=place is not None and npc.location == place.name,
                 dead=npc.dead,
+                summary=knowledge.summary,
                 creature=creature,
                 creature_entry=creature_entry,
             )

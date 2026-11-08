@@ -34,7 +34,7 @@ def test_migrations_create_the_full_schema(tmp_path, monkeypatch):
     }
     assert "setting" in campaign_columns
     assert "table_genres" in campaign_columns
-    assert "game_version" in campaign_columns
+    assert "game_version" not in campaign_columns
     assert "force_credit_charges" in campaign_columns
     assert "use_inventory_space" in campaign_columns
     user_columns = {column["name"] for column in inspect(make_engine(url)).get_columns("user")}

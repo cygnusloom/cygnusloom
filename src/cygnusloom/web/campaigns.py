@@ -72,7 +72,6 @@ from cygnusloom.services.campaigns import (
     stream_message,
     turn_busy,
     turn_progress,
-    upgrade_campaign,
     visible_campaigns,
 )
 from cygnusloom.services.campaigns import (
@@ -792,28 +791,12 @@ async def change_inventory_space(request: Request, campaign_id: int) -> Response
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
+# BACKWARDS-COMPATIBILITY: 3 - old pages may still post the upgrade form.
 @router.post("/{campaign_id}/upgrade")
 async def upgrade_campaign_page(request: Request, campaign_id: int) -> Response:
-    """Move the owner's campaign to the running game version and let the GM announce it."""
     user = page_user(request)
     await verify_csrf(request)
-    settings = request.app.state.settings
-    try:
-        await upgrade_campaign(
-            request.app.state.engine,
-            request.app.state.providers,
-            request.app.state.catalog.model_ids(),
-            request.app.state.content,
-            settings.llm_context_tokens,
-            user.id,
-            campaign_id,
-        )
-    except InvalidInput as exc:
-        return _campaign_page(request, user, campaign_id, 400, str(exc))
-    except Conflict as exc:
-        return _campaign_page(request, user, campaign_id, 409, str(exc))
-    except LLMError as exc:
-        return _campaign_page(request, user, campaign_id, 502, str(exc))
+    get_owned_campaign(request.app.state.engine, user.id, campaign_id)
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 

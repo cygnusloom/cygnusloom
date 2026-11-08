@@ -226,6 +226,9 @@ class Character:
     personality: str
     accent: str
     quirks: list[str]
+    # The short player-facing description of what the player knows of this character, shown on
+    # the Characters page. The GM's private `description` stays separate and may hold secrets.
+    summary: str = ""
     # How the GM refers to the character, such as "she/her". None if it was never recorded.
     pronouns: str | None = None
     # The character options, resolved when the character was created. See content/character.py.
@@ -434,6 +437,8 @@ class KnownNpc:
 
     name: str
     description: str = ""
+    # What the player knows of the NPC in a short player-facing paragraph.
+    summary: str = ""
     personality: str = ""
     accent: str = ""
     quirks: tuple[str, ...] = ()
@@ -470,9 +475,6 @@ class Turn:
     # is narrated after that reply only when `ooc_narrate` is set.
     ooc: bool = False
     ooc_narrate: bool = True
-    # This turn was opened by a game upgrade, not a player message. The GM acknowledges it out
-    # of character.
-    upgrade: bool = False
     prompt: Ask | None = None
     # NPC lines written this turn that the narration has not seen yet: {"speaker", "dialogue"}.
     speech: list[dict[str, str]] = field(default_factory=list)
@@ -625,14 +627,6 @@ class DebugInjection:
     text: str = ""
 
 
-@dataclass(frozen=True)
-class GameUpgrade:
-    """The latest game version a campaign was moved to, and the version it left."""
-
-    from_version: str
-    to_version: str
-
-
 @dataclass
 class CampaignState:
     """The campaign as its log says it is now. Keys of `places` and `characters` are the names
@@ -665,8 +659,6 @@ class CampaignState:
     debug_injection: DebugInjection | None = None
     # Options shared by the whole campaign, keyed by field id. Empty until they are chosen.
     options: dict[str, str] = field(default_factory=dict)
-    # The latest move to a new game version, which the GM is told out of character.
-    upgrade: GameUpgrade | None = None
     # Long-running efforts by name without case, such as projects, research, and faction turns.
     projects: dict[str, Project] = field(default_factory=dict)
     summary: str = ""
@@ -810,9 +802,15 @@ def _remember_npc(state: CampaignState, npc: Character) -> None:
     themselves, sounds, and behaves. The NPC's own description is a GM record that may hold
     secrets, so it is never copied here; only what the GM records with update_npc_knowledge is."""
     before = state.known.get(name_key(npc.name))
+    # A summary the player was already told stays, and a hireling dismissed into the world keeps
+    # the player-facing summary it had while it was in the company.
+    summary = before.summary if before is not None else ""
+    if not summary:
+        summary = npc.summary
     state.known[name_key(npc.name)] = KnownNpc(
         name=npc.name,
         description=before.description if before is not None else "",
+        summary=summary,
         personality=npc.personality,
         accent=npc.accent,
         quirks=tuple(npc.quirks),

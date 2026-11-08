@@ -166,6 +166,10 @@ class PeopleMixin:
                 location=location,
             )
 
+    def describe_character(self, name: str, summary: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return describe_character(db, self.campaign_id, name, summary)
+
     def delete_npc(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return delete_npc(db, self.campaign_id, name)
