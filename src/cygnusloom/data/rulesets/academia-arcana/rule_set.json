@@ -5,6 +5,22 @@
     "name": "Academia Arcana",
     "blurb": "Students at a school of magic: lessons, colleges, friendships, forbidden shelves, and the trouble magic makes.",
     "description": "A Powered by the Apocalypse magic-school game. Students learn spells, potions, and enchantments, take on classroom and campus challenges, navigate college politics, and research magic of their own. The GM invents the academy, its colleges, its faculty, and its current trouble at the start of play.",
+    "capabilities": {
+      "magic": "move",
+      "travel": "none",
+      "wilderness": false,
+      "dungeon": false,
+      "social": [
+        "conditions",
+        "counters",
+        "moves",
+        "relations",
+        "tallies",
+        "factions",
+        "projects",
+        "periods"
+      ]
+    },
     "plus": "sum",
     "table_genres": ["generic", "fantasy", "magicschool"],
     "condition_ends": ["rest", "downtime", "scene"]
