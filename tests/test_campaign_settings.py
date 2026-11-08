@@ -326,3 +326,12 @@ def test_the_gm_cannot_change_the_model_through_the_tool(
     assert _campaign(app, campaign_id).model == "fake/scripted"
     results = _tool_results(_tool_runs(app, campaign_id))
     assert any("must be one of: inventory_space" in result for result in results)
+
+
+def test_a_hidden_settings_view_is_refreshed_after_a_turn(
+    client_factory: Callable[[], TestClient],
+):
+    """A setting the GM changes mid-turn is current when the player opens Settings."""
+    client, _ = campaign_ready_fast(client_factory)
+    script = client.get("/static/turn_stream.js").text
+    assert 'current.dataset.view === "settings" && !current.hidden' in script

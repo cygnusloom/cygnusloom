@@ -348,11 +348,13 @@
 
     // The views outside Play are part of the same campaign state: the journal, roster, and
     // compendium can all change during a turn. Rebuild their contents in place so switching to
-    // them after a reply does not show the state from before it. Settings is left alone so
-    // unsaved form input is not wiped.
+    // them after a reply does not show the state from before it. A hidden Settings view is
+    // refreshed too, so a setting the GM changed mid-turn is current when the player opens it;
+    // a visible one is left alone so unsaved form input is not wiped.
     for (const current of document.querySelectorAll(
-      '.views > [data-view]:not([data-view="play"]):not([data-view="settings"])',
+      '.views > [data-view]:not([data-view="play"])',
     )) {
+      if (current.dataset.view === "settings" && !current.hidden) continue;
       const fresh = template.content.querySelector(`[data-view="${current.dataset.view}"]`);
       if (!fresh) continue;
       current.innerHTML = fresh.innerHTML;
