@@ -41,13 +41,16 @@ DEFAULT_FEATURE_TYPES: Mapping[str, FeatureTypeRules] = {
     "item": FeatureTypeRules("item", "Item", "Items", "Items", inventory=True),
     "trait": FeatureTypeRules("trait", "Trait", "Traits", "Traits"),
     "spell": FeatureTypeRules(
-        "spell", "Spell", "Spells", "Spells", rank_label="Rank", tag_label="Tradition",
+        "spell",
+        "Spell",
+        "Spells",
+        "Spells",
+        rank_label="Rank",
+        tag_label="Tradition",
         unique=True,
     ),
     "potion": FeatureTypeRules("potion", "Potion", "Potions", "Potions"),
-    "enchantment": FeatureTypeRules(
-        "enchantment", "Enchantment", "Enchantments", "Enchantments"
-    ),
+    "enchantment": FeatureTypeRules("enchantment", "Enchantment", "Enchantments", "Enchantments"),
     "subject": FeatureTypeRules("subject", "Subject", "Subjects", "Subjects"),
     "feat": FeatureTypeRules("feat", "Feat", "Feats", "Feats", rank_label="Rank"),
 }
@@ -1008,7 +1011,11 @@ def load_feature(
     if not isinstance(repeatable, bool):
         raise ContentError(f"{label}: 'repeatable' must be a boolean")
     level_hp_bonus = data.get("level_hp_bonus", 0)
-    if isinstance(level_hp_bonus, bool) or not isinstance(level_hp_bonus, int) or level_hp_bonus < 0:
+    if (
+        isinstance(level_hp_bonus, bool)
+        or not isinstance(level_hp_bonus, int)
+        or level_hp_bonus < 0
+    ):
         raise ContentError(f"{label}: 'level_hp_bonus' must be a whole number, 0 or more")
     if shock and "shock_ac" not in data:
         raise ContentError(f"{label}: 'shock' needs a 'shock_ac'")

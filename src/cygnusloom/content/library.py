@@ -2108,9 +2108,7 @@ class ContentLibrary:
         if core_dir is None:
             raise ContentError(f"missing the {CORE_RULE_SET!r} rule set")
         defaults = _load_defaults(data_dir)
-        core_own, core_removed = _resolve_definitions(
-            read_definitions(core_dir), {}, CORE_RULE_SET
-        )
+        core_own, core_removed = _resolve_definitions(read_definitions(core_dir), {}, CORE_RULE_SET)
         core_capabilities = _infer_capabilities(core_own, permissive=True)
         core_definitions = _merge_defaults(
             core_own,
@@ -2120,9 +2118,7 @@ class ContentLibrary:
             capabilities=core_capabilities,
             gate=False,
         )
-        core = _build_rule_set(
-            core_definitions, CORE_RULE_SET, capabilities=core_capabilities
-        )
+        core = _build_rule_set(core_definitions, CORE_RULE_SET, capabilities=core_capabilities)
         rule_sets = {
             d.name: _load_rule_set(d, core_definitions, defaults)
             for d in rule_set_dirs
@@ -2281,7 +2277,9 @@ def _load_capabilities(value: object, label: str) -> Capabilities:
     )
 
 
-def _infer_capabilities(definitions: Iterable[Definition], *, permissive: bool = False) -> Capabilities:
+def _infer_capabilities(
+    definitions: Iterable[Definition], *, permissive: bool = False
+) -> Capabilities:
     """The capabilities a rule set's definitions imply, for a head with no `capabilities` block.
 
     The inference is only metadata for a rule set that declares no capabilities: inheritance is
@@ -2296,9 +2294,7 @@ def _infer_capabilities(definitions: Iterable[Definition], *, permissive: bool =
             magic = model if model in MAGIC_CAPABILITIES else "item"
             break
     travel = "none"
-    if any(d.type == "journey" for d in defs):
-        travel = "terrain"
-    elif any(d.type == "travel" for d in defs):
+    if any(d.type in ("journey", "travel") for d in defs):
         travel = "terrain"
     elif any(d.type == "wilderness" for d in defs):
         travel = "watches"
@@ -2350,7 +2346,9 @@ def _inherited_definition_enabled(
     return _definition_enabled(capabilities, requires, enabled_by)
 
 
-def _read_gate(data: Mapping[str, Any], label: str) -> tuple[tuple[str, ...], dict[str, tuple[Any, ...]]]:
+def _read_gate(
+    data: Mapping[str, Any], label: str
+) -> tuple[tuple[str, ...], dict[str, tuple[Any, ...]]]:
     """Read a definition's `requires` and `enabled_by`, validating every capability path and
     value against the rule set's capability model."""
     raw_requires = data.get("requires", [])
@@ -2373,9 +2371,7 @@ def _read_gate(data: Mapping[str, Any], label: str) -> tuple[tuple[str, ...], di
     enabled: dict[str, tuple[Any, ...]] = {}
     for path, raw_values in raw_enabled.items():
         if path not in CAPABILITY_PATHS:
-            raise ContentError(
-                f"{label}: 'enabled_by' names unknown capability path {path!r}"
-            )
+            raise ContentError(f"{label}: 'enabled_by' names unknown capability path {path!r}")
         if "." in path:
             raise ContentError(
                 f"{label}: 'enabled_by' cannot name {path!r}; use 'requires' for social systems"
@@ -3208,9 +3204,7 @@ def _strip_meta(data: Mapping[str, Any], kind: str = "") -> dict[str, Any]:
     return {key: value for key, value in data.items() if key not in meta}
 
 
-def _overlay_data(
-    base: Mapping[str, Any], own: Mapping[str, Any], label: str
-) -> dict[str, Any]:
+def _overlay_data(base: Mapping[str, Any], own: Mapping[str, Any], label: str) -> dict[str, Any]:
     """Overlay one definition on another: a nested object merges key by key, and every other
     value, including a list, replaces the base value."""
     result = {key: copy.deepcopy(value) for key, value in base.items()}
@@ -3295,9 +3289,7 @@ def _parse_extends(
         raise ContentError(
             f"{label}: 'extends' names {key[0]} {key[1]!r}, which {CORE_RULE_SET} does not define"
         )
-    raise ContentError(
-        f"{label}: 'extends' names {key[0]} {key[1]!r}, which no definition defines"
-    )
+    raise ContentError(f"{label}: 'extends' names {key[0]} {key[1]!r}, which no definition defines")
 
 
 def _resolve_definitions(
@@ -3326,11 +3318,7 @@ def _resolve_definitions(
         label = f"{template}: {definition.type} {definition.id}"
         data = dict(definition.data)
         disabled = data.pop("disabled", False)
-        remove = (
-            data.pop("remove", False)
-            if definition.type != "creative_table"
-            else False
-        )
+        remove = data.pop("remove", False) if definition.type != "creative_table" else False
         for flag_name, flag in (("disabled", disabled), ("remove", remove)):
             if not isinstance(flag, bool):
                 raise ContentError(f"{label}: {flag_name!r} must be true or false")
@@ -3357,9 +3345,7 @@ def _resolve_definitions(
         try:
             if extends is not None:
                 from_own, base_key = _parse_extends(extends, own_by_key, base_by_key, label)
-                base_definition = (
-                    resolve(base_key) if from_own else base_by_key[base_key]
-                )
+                base_definition = resolve(base_key) if from_own else base_by_key[base_key]
                 if base_definition is None:
                     raise ContentError(
                         f"{label}: 'extends' names {base_key[0]} {base_key[1]!r}, which is "
@@ -3549,10 +3535,7 @@ def _load_rule_set(
         if d.type != "rule_set"
         and (d.type, d.id) not in own_keys
         and (d.type, d.id) not in removed
-        and (
-            declared is None
-            or _inherited_definition_enabled(d, capabilities, template)
-        )
+        and (declared is None or _inherited_definition_enabled(d, capabilities, template))
         and (
             d.type not in ("dice_table", "creative_table")
             or table_genre_offered(_definition_genres(d, template), genres)
@@ -5384,9 +5367,7 @@ def _load_prompts(
         raw = d.data.get("supersedes", [])
         if isinstance(raw, str):
             raw = [raw]
-        if not isinstance(raw, list) or not all(
-            isinstance(item, str) and item for item in raw
-        ):
+        if not isinstance(raw, list) or not all(isinstance(item, str) and item for item in raw):
             raise ContentError(
                 f"{template}: prompt {d.id!r}: 'supersedes' must be a list of prompt ids"
             )
@@ -5858,10 +5839,8 @@ def _load_magic(
         return MagicRules(
             model="prepared",
             prepared=PreparedMagic(
-                castings_stat=_optional_text(prepared_data, "castings_stat", label)
-                or "castings",
-                prepared_mark=_optional_text(prepared_data, "prepared_mark", label)
-                or "prepared",
+                castings_stat=_optional_text(prepared_data, "castings_stat", label) or "castings",
+                prepared_mark=_optional_text(prepared_data, "prepared_mark", label) or "prepared",
                 effort_mark=_optional_text(prepared_data, "effort_mark", label)
                 or "effort_committed",
             ),
@@ -6943,13 +6922,9 @@ def _load_tallies(definitions: list[Definition], template: str) -> dict[str, Tal
         label = f"{template}: tally {d.id}"
         if d.id in loaded:
             raise ContentError(f"{template}: duplicate tally {d.id!r}")
-        check_keys(
-            d.data, {"type", "id", "label", "entries", "dynamic", "max_entries"}, label
-        )
+        check_keys(d.data, {"type", "id", "label", "entries", "dynamic", "max_entries"}, label)
         dynamic = _flag_default(d.data, "dynamic", label, False)
-        max_entries = (
-            _whole(d.data, "max_entries", label, 1) if "max_entries" in d.data else None
-        )
+        max_entries = _whole(d.data, "max_entries", label, 1) if "max_entries" in d.data else None
         raw = d.data.get("entries", [])
         if not isinstance(raw, list):
             raise ContentError(f"{label}: 'entries' must be a list")
@@ -7447,9 +7422,7 @@ def _check_raise_stat(op: Mapping[str, Any], check: _EffectCheck) -> None:
     if isinstance(cap, Mapping):
         counter = required_text(cap, "counter", check.label)
         if check.counters is None or counter not in check.counters:
-            raise ContentError(
-                f"{check.label}: raise_stat cap names no counter ({counter!r})"
-            )
+            raise ContentError(f"{check.label}: raise_stat cap names no counter ({counter!r})")
         bands = cap.get("bands")
         if not isinstance(bands, Mapping) or not bands:
             raise ContentError(f"{check.label}: raise_stat cap 'bands' must be a non-empty object")
@@ -8294,9 +8267,7 @@ def _check_schema_node(node: object, label: str, *, root: bool = False) -> None:
             if not source:
                 raise ContentError(f"{label}: schema 'enum_from' must name a source")
         elif not isinstance(source, Mapping):
-            raise ContentError(
-                f"{label}: schema 'enum_from' must be a source name or an object"
-            )
+            raise ContentError(f"{label}: schema 'enum_from' must be a source name or an object")
     if "items" in node:
         if kind != "array":
             raise ContentError(f"{label}: schema 'items' needs an array property")
@@ -8320,8 +8291,7 @@ def _check_schema_node(node: object, label: str, *, root: bool = False) -> None:
             raise ContentError(f"{label}: schema 'required' needs an object property")
         required = node["required"]
         if not isinstance(required, list) or not all(
-            isinstance(item, str) and item in (node.get("properties") or {})
-            for item in required
+            isinstance(item, str) and item in (node.get("properties") or {}) for item in required
         ):
             raise ContentError(f"{label}: 'required' must list names from 'properties'")
         if len(set(required)) != len(required):
@@ -8340,27 +8310,17 @@ def _check_schema_node(node: object, label: str, *, root: bool = False) -> None:
         for key in ("minimum", "maximum"):
             if key in node and not _schema_value_matches(node[key], "number"):
                 raise ContentError(f"{label}: schema {key!r} must be a number")
-        if (
-            "minimum" in node
-            and "maximum" in node
-            and node["minimum"] > node["maximum"]
-        ):
+        if "minimum" in node and "maximum" in node and node["minimum"] > node["maximum"]:
             raise ContentError(f"{label}: schema 'minimum' is above 'maximum'")
     elif any(key in node for key in ("minimum", "maximum")):
         raise ContentError(f"{label}: schema 'minimum' and 'maximum' need a number property")
     if kind == "string":
         for key in ("minLength", "maxLength"):
             if key in node and (
-                not isinstance(node[key], int)
-                or isinstance(node[key], bool)
-                or node[key] < 0
+                not isinstance(node[key], int) or isinstance(node[key], bool) or node[key] < 0
             ):
                 raise ContentError(f"{label}: schema {key!r} must be a whole number, 0 or more")
-        if (
-            "minLength" in node
-            and "maxLength" in node
-            and node["minLength"] > node["maxLength"]
-        ):
+        if "minLength" in node and "maxLength" in node and node["minLength"] > node["maxLength"]:
             raise ContentError(f"{label}: schema 'minLength' is above 'maxLength'")
         if "pattern" in node:
             if not isinstance(node["pattern"], str):
@@ -8374,16 +8334,10 @@ def _check_schema_node(node: object, label: str, *, root: bool = False) -> None:
     if kind == "array":
         for key in ("minItems", "maxItems"):
             if key in node and (
-                not isinstance(node[key], int)
-                or isinstance(node[key], bool)
-                or node[key] < 0
+                not isinstance(node[key], int) or isinstance(node[key], bool) or node[key] < 0
             ):
                 raise ContentError(f"{label}: schema {key!r} must be a whole number, 0 or more")
-        if (
-            "minItems" in node
-            and "maxItems" in node
-            and node["minItems"] > node["maxItems"]
-        ):
+        if "minItems" in node and "maxItems" in node and node["minItems"] > node["maxItems"]:
             raise ContentError(f"{label}: schema 'minItems' is above 'maxItems'")
     elif any(key in node for key in ("minItems", "maxItems")):
         raise ContentError(f"{label}: schema item bounds need an array property")

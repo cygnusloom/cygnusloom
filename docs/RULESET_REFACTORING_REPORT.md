@@ -12,6 +12,10 @@
 - Legacy content ids, event decoders, import aliases, and compatibility shims are removed rather than preserved.
 - Where the published source and current behavior differ, the published Cairn 2e / Worlds Without Number source wins. Academia Arcana has no separate published source; its current design is canonical unless a written reference is supplied.
 
+**Implementation status on `4.0-ruleset-refactor`:**
+- Done: campaign major-version boundary and migration/export/import handling; capability manifest and tool/prompt gates; defaults layer and `extends`/`patch`/`remove`/`disabled`; definition-type and feature-type registries; magic `item`/`prepared`/`move` facade; common `SpellCast` for move magic; party-level rest with `after_rest`; data-driven clock week and WWN journey; single XP source, `LevelGrants`/`project_level`, progression-data costs, data-driven Die Hard and caster classification; year-banded Academia caps; shared learnable-feature filter; faction cap in data; condition-trigger validation; dead combat-helper removal; version 4.0.0.
+- Still open after this pass: full bundling/tool-prompt data deduplication, item/shop definition unification and inventory `slot` metadata, one effect-op registry, multiple advancement/level-up selectors, compendium label data, and world-feature validation. These are tracked by the report's remaining phases, not claimed as complete.
+
 ---
 
 ## Contents

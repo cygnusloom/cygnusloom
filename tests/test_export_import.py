@@ -94,11 +94,17 @@ def test_another_major_imports_but_cannot_be_played(client_factory, tmp_path, se
     page = target.get(f"/campaigns/{imported_id}")
     assert page.status_code == 200
     assert "cannot play it" in page.text
-    assert target.post(
-        f"/campaigns/{imported_id}/messages",
-        data={"csrf_token": csrf_token(target, f"/campaigns/{imported_id}"), "content": "Hello"},
-        follow_redirects=False,
-    ).status_code == 409
+    assert (
+        target.post(
+            f"/campaigns/{imported_id}/messages",
+            data={
+                "csrf_token": csrf_token(target, f"/campaigns/{imported_id}"),
+                "content": "Hello",
+            },
+            follow_redirects=False,
+        ).status_code
+        == 409
+    )
 
     exported = json.loads(_export(target, imported_id).content)
     assert exported["campaign"]["major_version"] == 3
@@ -330,9 +336,7 @@ def test_an_old_major_export_stores_its_events_opaque(
     with db(target_app) as session:
         campaign = session.get(Campaign, new_id)
         assert campaign is not None and campaign.major_version == 3
-        kinds = list(
-            session.exec(select(Event.kind).where(Event.campaign_id == new_id)).all()
-        )
+        kinds = list(session.exec(select(Event.kind).where(Event.campaign_id == new_id)).all())
     assert "campaign.upgraded" in kinds
 
 

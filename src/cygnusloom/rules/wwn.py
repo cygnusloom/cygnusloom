@@ -1503,9 +1503,7 @@ def travel(
         or not isinstance(travelers, int)
         or not 1 <= travelers <= journey.max_travelers
     ):
-        raise InvalidInput(
-            f"travelers must be a whole number from 1 to {journey.max_travelers}"
-        )
+        raise InvalidInput(f"travelers must be a whole number from 1 to {journey.max_travelers}")
     speed = journey.terrain_speeds[terrain]
     if road:
         speed *= journey.road_multiplier

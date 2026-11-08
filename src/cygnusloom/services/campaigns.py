@@ -76,6 +76,8 @@ MAX_MODEL = 120
 
 class NotPlayable(Conflict):
     """A campaign from another major version. Its row and log stay intact and exportable."""
+
+
 # The campaign-wide settings the AI GM may change during a turn, and only on the owner's
 # explicit request.
 TURN_SETTINGS = {"inventory_space"}

@@ -317,9 +317,7 @@ def _take_starting_items(
             if feature_id != currency and (
                 feature.feature_type == "item"
                 or (
-                    feature.feature_type == "spell"
-                    and magic is not None
-                    and magic.item is not None
+                    feature.feature_type == "spell" and magic is not None and magic.item is not None
                 )
             ):
                 carried.append((feature, starting.pop(feature_id)))

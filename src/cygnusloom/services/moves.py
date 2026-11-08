@@ -111,9 +111,7 @@ def make_move(
                 f"{character.name} still lacks {', '.join(missing)}"
             )
     rolled_stat = (
-        best_stat(character, move.stat_choice, spec)
-        if move.stat == HIGHEST
-        else move.stat or stat
+        best_stat(character, move.stat_choice, spec) if move.stat == HIGHEST else move.stat or stat
     )
     if rolled_stat is not None and rolled_stat not in character.stats:
         raise InvalidInput(

@@ -125,15 +125,15 @@ def take_rest(
     held = {c.name: call_hook(hooks, "held_back", hc, c.name, default="") for c in party}
     recovering = [c for c in party if not held[c.name]]
     result["held_back"] = [c.name for c in party if held[c.name]]
-    for character in recovering:
+    for member in recovering:
         for stat in rest.restores:
-            restored = recover(character, stat, character.harm.get(stat, 0))
+            restored = recover(member, stat, member.harm.get(stat, 0))
             if restored:
                 record(
                     db,
                     campaign_id,
                     Recovered(
-                        name=character.name,
+                        name=member.name,
                         stat=stat,
                         amount=restored,
                         restores=list(rest.restores),
@@ -158,8 +158,8 @@ def take_rest(
         # "extended_rest"; the engine does not infer them from the length or fullness. A
         # rule set without combat rules, such as a school game, still ends conditions this way.
         triggers = rest.ends
-        for character in recovering:
-            for cid in list(character.conditions):
+        for member in recovering:
+            for cid in list(member.conditions):
                 cond_rules = conditions.get(cid)
                 if cond_rules is None:
                     continue
@@ -168,7 +168,7 @@ def take_rest(
                     end_condition(
                         db,
                         campaign_id,
-                        character.name,
+                        member.name,
                         cid,
                         how,
                         combat,

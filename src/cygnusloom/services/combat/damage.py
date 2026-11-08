@@ -7,7 +7,7 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusloom.content.character import CharacterSpec, Feature
+from cygnusloom.content.character import CharacterSpec
 from cygnusloom.content.library import (
     CombatRules,
     DamageStep,
@@ -17,7 +17,6 @@ from cygnusloom.services.combat.constants import (
     MAX_CAUSE_TEXT,
     MAX_DAMAGE,
     MAX_RECOVERY_TEXT,
-    NO_UNSKILLED_PENALTY,
 )
 from cygnusloom.services.common import InvalidInput, bounded_text, whole_number
 from cygnusloom.services.events import (
@@ -119,102 +118,6 @@ def _require_impaired(target: Character, modifier: str, combat: CombatRules) -> 
     required = combat.groups.incoming_modifier
     if modifier != required:
         raise InvalidInput(f"{target.name} is a group; attacks on it must be {required}")
-
-
-def _stat_bonus(combat: CombatRules, character: Character, stat: str) -> int:
-    """What one of the rule set's attack stats adds, such as a hit or damage bonus. A rule set
-    that names no stat adds nothing."""
-    return current(character, stat) if stat else 0
-
-
-def _attribute_modifier(
-    spec: CharacterSpec | None, character: Character, attributes: Sequence[str]
-) -> int:
-    """The best of the weapon's attribute modifiers, or 0 when the rule set has no attributes."""
-    if spec is None:
-        return 0
-    scores = [
-        spec.modifier(character.stats, stat) for stat in attributes if stat in character.stats
-    ]
-    return max(scores) if scores else 0
-
-
-def _weapon_skill(combat: CombatRules, weapon: str, feature: Feature | None) -> str:
-    """The skill an attack with `weapon` rolls: the weapon's own when it has one, the unarmed
-    skill for an unarmed strike, and no skill for a rule set with neither."""
-    if feature is not None and feature.skill:
-        return feature.skill
-    if name_key(weapon) in combat.unarmed_names:
-        return combat.unarmed_skill
-    return ""
-
-
-def _player_bonuses(
-    combat: CombatRules,
-    character: Character,
-    weapon: str,
-    spec: CharacterSpec | None,
-    feature: Feature | None,
-) -> WeaponBonuses:
-    """What a player character's attack with `weapon` adds, from the rule set's combat fields, the
-    weapon's skill and attributes, and the character's skills. A rule set with no spec adds
-    nothing, so its attacks stay exactly as they were."""
-    if spec is None:
-        return WeaponBonuses()
-    unarmed = name_key(weapon) in combat.unarmed_names
-    attributes = (
-        feature.attributes
-        if feature is not None and feature.attributes
-        else combat.unarmed_attributes
-        if unarmed
-        else ()
-    )
-    attribute = _attribute_modifier(spec, character, attributes)
-    damage_bonus = _stat_bonus(combat, character, combat.damage_bonus_stat)
-    to_hit = _stat_bonus(combat, character, combat.hit_bonus_stat) + attribute
-    damage = damage_bonus
-    class_bonus = _level_damage_bonus(combat, character, spec)
-    damage += class_bonus
-    skill = _weapon_skill(combat, weapon, feature)
-    if skill and skill in spec.skills:
-        level = spec.skill_level(character.skills, skill)
-        if spec.skill_trained(character.skills, skill):
-            to_hit += level
-            if unarmed:
-                damage += level
-        elif not (feature is not None and NO_UNSKILLED_PENALTY in feature.flags):
-            to_hit -= combat.unskilled_attack_penalty
-    if combat.attribute_damage and attributes:
-        damage += attribute
-    shock = 0
-    shock_ac = 0
-    if feature is not None and feature.shock:
-        shock = feature.shock + attribute + damage_bonus + class_bonus
-        shock_ac = feature.shock_ac
-    return WeaponBonuses(to_hit=to_hit, damage=damage, shock=shock, shock_ac=shock_ac)
-
-
-def _level_damage_bonus(combat: CombatRules, character: Character, spec: CharacterSpec) -> int:
-    """The damage the configured template's counter adds, rounded up by its divisor."""
-    rules = combat.level_damage
-    if rules is None:
-        return 0
-    counter = spec.counters.get(rules.counter)
-    if counter is None:
-        return 0
-    if character.templates.get(rules.template_kind, "") not in rules.templates:
-        return 0
-    level = character.counters.get(rules.counter, counter.initial)
-    return -(-level // rules.divisor)
-
-
-def _attack_shock(source: Character, name: str) -> tuple[int, int]:
-    """The shock one of a character's attacks does, and the armor it shocks through, or zeros when
-    the attack has none."""
-    pair = source.attack_shock.get(name) or ()
-    if len(pair) < 2:
-        return 0, 0
-    return int(pair[0]), int(pair[1])
 
 
 def _harm_stat(combat: CombatRules) -> str | None:

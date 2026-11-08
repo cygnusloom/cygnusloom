@@ -15,7 +15,7 @@ from cygnusloom.db.models import Campaign, Event
 from cygnusloom.llm.base import ChatReply, LLMError
 from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.services.campaigns import last_activity_text
-from cygnusloom.services.events import Turn, last_event_id
+from cygnusloom.services.events import Turn
 from tests.conftest import (
     NARRATE_TEXT,
     csrf_token,
@@ -31,6 +31,12 @@ from tests.factories import (
     send_message,
     signed_in_client,
 )
+
+
+def test_the_campaign_major_matches_the_package_version():
+    import cygnusloom
+
+    assert int(cygnusloom.__version__.split(".", 1)[0]) == cygnusloom.CAMPAIGN_MAJOR_VERSION
 
 
 def _signed_in(client_factory: Callable[[], TestClient], email: str = "ada@example.com"):
