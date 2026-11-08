@@ -5,7 +5,7 @@ transcript of each reply. It belongs to the account, not to a campaign, and star
 new player sees the story without the GM's bookkeeping.
 
 Revision ID: 0013_user_show_internal_thinking
-Revises: 0012_remove_campaign_game_version
+Revises: 0012_remove_game_version
 Create Date: 2026-11-08
 
 """
@@ -18,7 +18,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0013_user_show_internal_thinking"
-down_revision: str | None = "0012_remove_campaign_game_version"
+down_revision: str | None = "0012_remove_game_version"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

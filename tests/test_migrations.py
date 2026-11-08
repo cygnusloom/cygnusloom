@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 
 import sqlalchemy as sa
 from alembic import command
+from alembic.script import ScriptDirectory
 from sqlalchemy import inspect
 
 from cygnusloom.cli import migration_config
@@ -97,6 +98,59 @@ def test_migrations_can_be_reversed(tmp_path, monkeypatch):
     tables = set(inspect(make_engine(url)).get_table_names())
     assert "user" not in tables
     assert "campaign" not in tables
+
+
+def test_every_revision_id_fits_alembics_version_column():
+    """Alembic stores revision ids in VARCHAR(32), and Postgres enforces it."""
+    script = ScriptDirectory.from_config(migration_config("sqlite:///unused.db"))
+    for revision in script.walk_revisions():
+        assert len(revision.revision) <= 32, revision.revision
+
+
+def test_a_legacy_long_revision_id_is_rewritten(tmp_path, monkeypatch):
+    """A database that recorded 3.7.0's long id still upgrades to the shortened revision."""
+    url = f"sqlite:///{tmp_path / 'legacy-revision.db'}"
+    monkeypatch.setenv("CYGNUSLOOM_DATABASE_URL", url)
+    config = migration_config(url)
+    command.upgrade(config, "0011_campaign_inventory_space")
+    # SQLite applied 0012 under the old id, then recorded the id that PostgreSQL rejects.
+    with make_engine(url).begin() as connection:
+        connection.execute(sa.text("ALTER TABLE campaign DROP COLUMN game_version"))
+        connection.execute(
+            sa.text("UPDATE alembic_version SET version_num = :old"),
+            {"old": "0012_remove_campaign_game_version"},
+        )
+
+    command.upgrade(config, "head")
+
+    with make_engine(url).connect() as connection:
+        version = connection.execute(
+            sa.text("SELECT version_num FROM alembic_version")
+        ).scalar_one()
+    assert version == "0013_user_show_internal_thinking"
+    campaign_columns = {
+        column["name"] for column in inspect(make_engine(url)).get_columns("campaign")
+    }
+    assert "game_version" not in campaign_columns
+    user_columns = {column["name"] for column in inspect(make_engine(url)).get_columns("user")}
+    assert "show_internal_thinking" in user_columns
+
+
+def test_upgrading_from_0011_applies_the_shortened_0012(tmp_path, monkeypatch):
+    """The failed PostgreSQL upgrade left the database at 0011; the shortened id now runs."""
+    url = f"sqlite:///{tmp_path / 'from-0011.db'}"
+    monkeypatch.setenv("CYGNUSLOOM_DATABASE_URL", url)
+    config = migration_config(url)
+    command.upgrade(config, "0011_campaign_inventory_space")
+
+    command.upgrade(config, "head")
+
+    campaign_columns = {
+        column["name"] for column in inspect(make_engine(url)).get_columns("campaign")
+    }
+    assert "game_version" not in campaign_columns
+    user_columns = {column["name"] for column in inspect(make_engine(url)).get_columns("user")}
+    assert "show_internal_thinking" in user_columns
 
 
 def test_display_name_migration_replaces_email_names(tmp_path, monkeypatch):
