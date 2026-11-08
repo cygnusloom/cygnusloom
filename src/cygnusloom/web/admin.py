@@ -45,6 +45,16 @@ def _parse_date(value: str) -> date | None:
         return None
 
 
+def _parse_clock(value: str) -> time | None:
+    cleaned = value.strip()
+    if not cleaned:
+        return None
+    try:
+        return time.fromisoformat(cleaned)
+    except ValueError:
+        raise InvalidInput("peak hours must use HH:MM")
+
+
 def _usage_period(request: Request) -> UsagePeriod:
     mode = request.query_params.get("period", "all").strip().lower()
     start_raw = request.query_params.get("start", "").strip()
@@ -378,6 +388,7 @@ def models_page(request: Request) -> Response:
     admin = admin_user(request)
     catalog = request.app.state.catalog
     period = _usage_period(request)
+    rows = catalog.all_specs()
     usage = credit_service.usage_by_model(
         request.app.state.engine, since=period.since, until=period.until
     )
@@ -385,11 +396,74 @@ def models_page(request: Request) -> Response:
         request,
         "admin/models.html",
         admin=admin,
-        rows=catalog.all_specs(),
+        rows=rows,
         source=catalog.source(),
         usage=usage,
-        usage_by_model={row.model: row for row in usage},
+        # Each configured model's card owns a calculator dialog. The usage table links to the
+        # same dialog, which loads exact usage for the selected period when it opens.
+        calculator_ids={
+            spec.model_id: f"cost-calculator-{index}" for index, spec in enumerate(rows, start=1)
+        },
         period=period,
+    )
+
+
+@router.get("/models/usage")
+def model_usage_breakdown(request: Request) -> Response:
+    """Exact reported usage for one model, optionally split by UTC peak hours. The calculator
+    uses these totals so its cost figures are based on real calls, not a guessed share."""
+    admin_user(request)
+    model = request.query_params.get("model", "").strip()
+    if not model:
+        return JSONResponse({"error": "model is required"}, status_code=400)
+    period = _usage_period(request)
+    try:
+        peak_start = _parse_clock(request.query_params.get("peak_start", ""))
+        peak_end = _parse_clock(request.query_params.get("peak_end", ""))
+        breakdown = credit_service.usage_breakdown(
+            request.app.state.engine,
+            model,
+            since=period.since,
+            until=period.until,
+            peak_start=peak_start,
+            peak_end=peak_end,
+        )
+    except InvalidInput as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+    def slice_json(value: credit_service.UsageSlice) -> dict[str, int]:
+        return {
+            "calls": value.calls,
+            "replies": value.replies,
+            "cache_hit_tokens": value.cache_hit_tokens,
+            "cache_miss_tokens": value.cache_miss_tokens,
+            "output_tokens": value.output_tokens,
+            "reasoning_tokens": value.reasoning_tokens,
+        }
+
+    return JSONResponse(
+        {
+            "model": breakdown.model,
+            "period": {
+                "mode": period.mode,
+                "start": period.start,
+                "end": period.end,
+                "label": period.label,
+            },
+            "peak_hours": (
+                {
+                    "start": peak_start.strftime("%H:%M"),
+                    "end": peak_end.strftime("%H:%M"),
+                }
+                if peak_start is not None and peak_end is not None
+                else None
+            ),
+            "totals": slice_json(breakdown.totals),
+            "peak": slice_json(breakdown.peak) if breakdown.peak is not None else None,
+            "off_peak": (
+                slice_json(breakdown.off_peak) if breakdown.off_peak is not None else None
+            ),
+        }
     )
 
 

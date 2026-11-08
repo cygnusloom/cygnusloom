@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, time
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
@@ -174,6 +175,70 @@ def test_usage_by_model_excludes_estimates_and_filters_by_time(app: FastAPI):
     assert january.reported_replies == 1
     assert january.unreported_calls == 0
     assert january.avg_cache_miss_input_tokens == 600
+
+
+def test_usage_breakdown_splits_peak_hours_across_midnight(app: FastAPI):
+    rows = [
+        (201, 1000, 200, 100, 10, datetime(2026, 1, 1, 23, 30, tzinfo=UTC), False),
+        (202, 500, 0, 50, 0, datetime(2026, 1, 2, 1, 30, tzinfo=UTC), False),
+        (203, 300, 100, 25, 5, datetime(2026, 1, 2, 12, 0, tzinfo=UTC), False),
+        (204, 99999, 0, 99999, 0, datetime(2026, 1, 2, 23, 45, tzinfo=UTC), True),
+    ]
+    with Session(app.state.engine) as session:
+        for reply, input_tokens, cached, output, reasoning, created_at, estimated in rows:
+            session.add(
+                LlmUsage(
+                    campaign_id=1,
+                    user_id=1,
+                    reply_event_id=reply,
+                    model="provider/model",
+                    input_tokens=input_tokens,
+                    cached_tokens=cached,
+                    output_tokens=output,
+                    reasoning_tokens=reasoning,
+                    estimated=estimated,
+                    created_at=created_at,
+                )
+            )
+        session.commit()
+
+    breakdown = credits.usage_breakdown(
+        app.state.engine,
+        "provider/model",
+        peak_start=time(22, 0),
+        peak_end=time(6, 0),
+    )
+    assert breakdown.totals.calls == 3
+    assert breakdown.totals.replies == 3
+    assert breakdown.totals.cache_hit_tokens == 300
+    assert breakdown.totals.cache_miss_tokens == 1500
+    assert breakdown.totals.output_tokens == 175
+    assert breakdown.totals.reasoning_tokens == 15
+    assert breakdown.peak is not None and breakdown.peak.calls == 2
+    assert breakdown.peak.cache_hit_tokens == 200
+    assert breakdown.peak.cache_miss_tokens == 1300
+    assert breakdown.peak.output_tokens == 150
+    assert breakdown.peak.reasoning_tokens == 10
+    assert breakdown.off_peak is not None and breakdown.off_peak.calls == 1
+    assert breakdown.off_peak.cache_hit_tokens == 100
+    assert breakdown.off_peak.cache_miss_tokens == 200
+    assert breakdown.off_peak.output_tokens == 25
+    assert breakdown.off_peak.reasoning_tokens == 5
+
+    plain = credits.usage_breakdown(app.state.engine, "provider/model")
+    assert plain.peak is None
+    assert plain.off_peak is None
+    assert plain.totals == breakdown.totals
+
+    with pytest.raises(credits.InvalidInput, match="must differ"):
+        credits.usage_breakdown(
+            app.state.engine,
+            "provider/model",
+            peak_start=time(9, 0),
+            peak_end=time(9, 0),
+        )
+    with pytest.raises(credits.InvalidInput, match="together"):
+        credits.usage_breakdown(app.state.engine, "provider/model", peak_start=time(9, 0))
 
 
 def test_a_completed_reply_charges_the_owner_and_measures_usage(client_factory, app: FastAPI):

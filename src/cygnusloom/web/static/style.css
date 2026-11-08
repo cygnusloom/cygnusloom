@@ -730,12 +730,16 @@ th { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-s
 .usage-filter label { flex: 0 1 auto; margin: 0; }
 .usage-filter select { min-width: 12rem; }
 .usage-filter input[type="date"] { width: auto; }
-/* The cost calculator turns per-reply token counts and provider prices into a reply price. */
+/* The cost calculator prices exact reported usage, optionally split by peak hours. */
 .cost-calculator { width: min(46rem, calc(100% - 2rem)); max-height: 88vh; overflow-y: auto; }
 .cost-calculator .heading h2 { margin: 0; font-size: 1.1rem; }
-.calculator-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0.75rem; }
-.calculator-fields label { margin: 0; }
-.calculator-note { grid-column: 1 / -1; margin: 0; }
+.calculator-peak { margin: 1rem 0 0; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; }
+.calculator-peak legend { padding: 0 0.35rem; color: var(--muted); }
+.calculator-timefields { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.calculator-timefields label { flex: 1 1 10rem; margin: 0; }
+.calculator-peak p:last-child { margin-bottom: 0; }
+.calculator-usage table { margin-top: 0.25rem; }
+.calculator-usage [data-calc-averages] { margin-bottom: 0; }
 .calculator-prices { margin: 1rem 0 0; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; }
 .calculator-prices legend { padding: 0 0.35rem; color: var(--muted); }
 .calculator-prices table { margin-top: 0.25rem; }
@@ -744,6 +748,13 @@ th { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-s
 .calculator-results dd { font-family: ui-monospace, Menlo, monospace; }
 .table-note { margin-top: 0.15rem; color: var(--muted); font-size: 0.78rem; font-weight: 400; }
 .usage-table .tag { white-space: nowrap; }
+.usage-table .table-action {
+  margin-top: 0.25rem; padding: 0.05rem 0.4rem; font-size: 0.78rem; font-weight: 500;
+  background: transparent; color: var(--accent); border-color: transparent;
+}
+.usage-table .table-action:hover, .usage-table .table-action:focus-visible {
+  border-color: var(--accent);
+}
 .admin-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 .pager { display: flex; gap: 1rem; align-items: center; margin-top: 1rem; color: var(--muted); }
 .danger { background: var(--danger); color: #fff; }

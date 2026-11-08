@@ -22,7 +22,6 @@
   </section>
 
   {% for row in rows %}
-    {% set model_usage = usage_by_model.get(row.model_id) %}
     <section class="card">
       <div class="heading">
         <h2>{{ row.model_id }}</h2>
@@ -50,80 +49,107 @@
       </dl>
 
       <dialog id="cost-calculator-{{ loop.index }}" class="app-dialog cost-calculator"
-              data-calculator aria-labelledby="cost-calculator-title-{{ loop.index }}">
+              data-calculator
+              data-usage-url="/admin/models/usage?model={{ row.model_id|urlencode }}&period={{ period.mode|urlencode }}&start={{ period.start|urlencode }}&end={{ period.end|urlencode }}"
+              aria-labelledby="cost-calculator-title-{{ loop.index }}">
         <div class="heading">
           <h2 id="cost-calculator-title-{{ loop.index }}">Cost calculator · {{ row.model_id }}</h2>
           <button type="button" class="secondary" data-dialog-close>Close</button>
         </div>
         <p class="muted">
-          {% if model_usage and model_usage.has_reported_usage %}
-            Prefilled from {{ model_usage.reported_replies }} reported
-            {{ "reply" if model_usage.reported_replies == 1 else "replies" }}
-            {% if period.mode == "all" %}across all time{% else %}in the selected period ({{ period.label }}){% endif %}.
-            Token counts are rounded-up averages per reply. Edit them to try another usage mix.
-          {% else %}
-            No provider-reported token usage
-            {% if period.mode == "all" %}has been recorded for this model{% else %}was recorded for this model in the selected period{% endif %}.
-            Enter token counts per reply to calculate manually.
-          {% endif %}
+          These costs use the exact token usage reported by the provider for {{ period.label }}.
+          Calls without a usage report are not included. Costs are in your provider's currency.
         </p>
-        <p class="muted">
-          Cache hit input is the part of the prompt served from the provider's prompt cache;
-          cache miss input is the rest. Output includes reasoning (thinking) tokens.
-        </p>
-        <div class="calculator-fields">
-          <label>Cache hit input tokens per reply
-            <input type="number" min="0" step="1" data-calc="hit-tokens"
-                   value="{{ model_usage.avg_cache_hit_input_tokens if model_usage else 0 }}">
-          </label>
-          <label>Cache miss input tokens per reply
-            <input type="number" min="0" step="1" data-calc="miss-tokens"
-                   value="{{ model_usage.avg_cache_miss_input_tokens if model_usage else 0 }}">
-          </label>
-          <label>Output tokens per reply
-            <input type="number" min="0" step="1" data-calc="output-tokens"
-                   value="{{ model_usage.avg_output_tokens if model_usage else 0 }}">
-          </label>
-          <p class="muted calculator-note">
-            Reasoning tokens are included in output{% if model_usage %}
-            (average {{ model_usage.avg_reasoning_tokens }} per reported reply){% endif %}.
+        <fieldset class="calculator-peak">
+          <legend>Peak hours (optional, UTC)</legend>
+          <div class="calculator-timefields">
+            <label>From <input type="time" data-calc="peak-start"></label>
+            <label>To <input type="time" data-calc="peak-end"></label>
+          </div>
+          <p class="muted">
+            Leave both blank for a single price. A peak range may cross midnight, for example
+            22:00 to 06:00.
           </p>
+        </fieldset>
+        <p class="muted" data-calc-status role="status">Loading reported usage…</p>
+        <p class="form-error" data-calc-error hidden></p>
+        <div class="calculator-usage" data-calc-usage hidden>
+          <table>
+            <thead>
+              <tr>
+                <th>Reported usage</th>
+                <th data-usage-peak>Peak</th>
+                <th data-usage-off-peak>Off-peak</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Cache hit input</td>
+                <td data-usage="peak-hit">—</td>
+                <td data-usage="off-hit">—</td>
+                <td data-usage="total-hit">—</td>
+              </tr>
+              <tr>
+                <td>Cache miss input</td>
+                <td data-usage="peak-miss">—</td>
+                <td data-usage="off-miss">—</td>
+                <td data-usage="total-miss">—</td>
+              </tr>
+              <tr>
+                <td>Output</td>
+                <td data-usage="peak-output">—</td>
+                <td data-usage="off-output">—</td>
+                <td data-usage="total-output">—</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="muted" data-calc-averages hidden></p>
         </div>
         <fieldset class="calculator-prices">
           <legend>Token prices per 1M tokens</legend>
           <table>
-            <thead><tr><th>Token type</th><th>Peak</th><th>Off-peak</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Token type</th>
+                <th data-price-heading="primary">Price</th>
+                <th data-price-heading="off-peak" hidden>Off-peak</th>
+              </tr>
+            </thead>
             <tbody>
               <tr>
                 <td>Cache hit input</td>
-                <td><input type="number" min="0" step="any" value="0" data-calc="hit-peak" aria-label="Peak cache hit input price per 1M tokens"></td>
-                <td><input type="number" min="0" step="any" value="0" data-calc="hit-off-peak" aria-label="Off-peak cache hit input price per 1M tokens"></td>
+                <td><input type="number" min="0" step="any" value="0" data-calc="hit-peak" aria-label="Cache hit input price per 1M tokens"></td>
+                <td data-price-cell="off-peak" hidden><input type="number" min="0" step="any" value="0" data-calc="hit-off-peak" aria-label="Off-peak cache hit input price per 1M tokens"></td>
               </tr>
               <tr>
                 <td>Cache miss input</td>
-                <td><input type="number" min="0" step="any" value="0" data-calc="miss-peak" aria-label="Peak cache miss input price per 1M tokens"></td>
-                <td><input type="number" min="0" step="any" value="0" data-calc="miss-off-peak" aria-label="Off-peak cache miss input price per 1M tokens"></td>
+                <td><input type="number" min="0" step="any" value="0" data-calc="miss-peak" aria-label="Cache miss input price per 1M tokens"></td>
+                <td data-price-cell="off-peak" hidden><input type="number" min="0" step="any" value="0" data-calc="miss-off-peak" aria-label="Off-peak cache miss input price per 1M tokens"></td>
               </tr>
               <tr>
                 <td>Output</td>
-                <td><input type="number" min="0" step="any" value="0" data-calc="output-peak" aria-label="Peak output price per 1M tokens"></td>
-                <td><input type="number" min="0" step="any" value="0" data-calc="output-off-peak" aria-label="Off-peak output price per 1M tokens"></td>
+                <td><input type="number" min="0" step="any" value="0" data-calc="output-peak" aria-label="Output price per 1M tokens"></td>
+                <td data-price-cell="off-peak" hidden><input type="number" min="0" step="any" value="0" data-calc="output-off-peak" aria-label="Off-peak output price per 1M tokens"></td>
               </tr>
             </tbody>
           </table>
         </fieldset>
-        <label>Share of usage at peak
-          <input type="number" min="0" max="100" step="1" value="100" data-calc="peak-share"> %
-        </label>
         <dl class="details calculator-results">
-          <dt>Peak cost per reply</dt><dd data-calc-result="peak">—</dd>
-          <dt>Off-peak cost per reply</dt><dd data-calc-result="off-peak">—</dd>
-          <dt>Blended cost per reply</dt><dd data-calc-result="blended">—</dd>
-          <dt>Blended cost per 1,000 replies</dt><dd data-calc-result="thousand">—</dd>
+          <dt data-calc-peak-result hidden>Peak cost</dt>
+          <dd data-calc-result="peak" hidden>—</dd>
+          <dt data-calc-peak-result hidden>Off-peak cost</dt>
+          <dd data-calc-result="off-peak" hidden>—</dd>
+          <dt>Total cost</dt>
+          <dd data-calc-result="total">—</dd>
+          <dt>Cost per reported reply</dt>
+          <dd data-calc-result="per-reply">—</dd>
+          <dt>Cost per 1,000 replies</dt>
+          <dd data-calc-result="thousand">—</dd>
         </dl>
         <p class="muted">
-          Enter prices in your provider's currency. This calculator does not convert currencies
-          {% if not single_player %}or credits{% endif %}.
+          This calculator does not convert currencies{% if not single_player %}
+          or credits{% endif %}.
         </p>
       </dialog>
 
@@ -289,6 +315,8 @@
               <td class="mono">
                 {{ row.model }}
                 {% if not row.has_reported_usage %}<div><span class="tag">usage not reported</span></div>{% endif %}
+                {% set calculator_id = calculator_ids.get(row.model) %}
+                {% if calculator_id %}<div><button type="button" class="table-action" data-dialog-open="{{ calculator_id }}">Calculate</button></div>{% endif %}
               </td>
               <td>
                 {{ row.calls }}

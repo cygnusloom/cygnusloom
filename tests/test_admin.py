@@ -353,6 +353,9 @@ def test_admin_model_page_lists_and_adds_models(settings: Settings):
     assert "Cache hit input" in page.text
     assert "Cache miss input" in page.text
     assert "Cost calculator" in page.text
+    assert "Peak hours" in page.text
+    assert 'data-calc="peak-start"' in page.text
+    assert "Share of usage at peak" not in page.text
     assert "Peak" in page.text and "Off-peak" in page.text
 
     token = csrf_token(client, "/admin/models")
@@ -408,8 +411,65 @@ def test_admin_models_page_hides_estimated_token_counts(settings: Settings):
     assert page.status_code == 200
     assert "usage not reported" in page.text
     assert "1 unreported" in page.text
+    assert "Calculate" in page.text
     assert "987654" not in page.text
     assert "555555" not in page.text
+
+
+def test_admin_model_usage_breakdown_supports_peak_hours(settings: Settings):
+    client = _admin_client(settings)
+    register(client, "admin@example.com")
+    engine = _engine(settings)
+    with Session(engine) as db:
+        db.add_all(
+            [
+                LlmUsage(
+                    campaign_id=1,
+                    user_id=1,
+                    reply_event_id=1,
+                    model="fake/scripted",
+                    input_tokens=1000,
+                    output_tokens=100,
+                    estimated=False,
+                    created_at=datetime(2026, 1, 1, 23, 0, tzinfo=UTC),
+                ),
+                LlmUsage(
+                    campaign_id=1,
+                    user_id=1,
+                    reply_event_id=2,
+                    model="fake/scripted",
+                    input_tokens=500,
+                    cached_tokens=100,
+                    output_tokens=50,
+                    estimated=False,
+                    created_at=datetime(2026, 1, 2, 12, 0, tzinfo=UTC),
+                ),
+            ]
+        )
+        db.commit()
+
+    response = client.get(
+        "/admin/models/usage?model=fake/scripted&period=all&peak_start=22:00&peak_end=06:00"
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["peak_hours"] == {"start": "22:00", "end": "06:00"}
+    assert body["totals"]["calls"] == 2
+    assert body["totals"]["cache_hit_tokens"] == 100
+    assert body["totals"]["cache_miss_tokens"] == 1400
+    assert body["peak"]["calls"] == 1
+    assert body["peak"]["cache_miss_tokens"] == 1000
+    assert body["off_peak"]["calls"] == 1
+    assert body["off_peak"]["cache_hit_tokens"] == 100
+    assert body["off_peak"]["cache_miss_tokens"] == 400
+
+    plain = client.get("/admin/models/usage?model=fake/scripted&period=all")
+    assert plain.status_code == 200
+    assert plain.json()["peak"] is None
+    assert plain.json()["off_peak"] is None
+
+    missing = client.get("/admin/models/usage?model=fake/scripted&period=all&peak_start=22:00")
+    assert missing.status_code == 400
 
 
 def test_admin_models_page_filters_usage_by_date(settings: Settings):

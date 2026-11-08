@@ -15,7 +15,7 @@ from __future__ import annotations
 import math
 from collections.abc import AsyncIterator, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, time
 from typing import Any
 
 from sqlalchemy import Engine, case, func, select, update
@@ -463,6 +463,129 @@ class ModelUsage:
     @property
     def avg_reasoning_tokens(self) -> int:
         return self._average(self.reasoning_tokens)
+
+
+@dataclass(frozen=True)
+class UsageSlice:
+    """Reported token use for one group of calls, such as all calls or the peak-hours slice."""
+
+    calls: int
+    replies: int
+    cache_hit_tokens: int
+    cache_miss_tokens: int
+    output_tokens: int
+    reasoning_tokens: int
+
+
+@dataclass(frozen=True)
+class UsageBreakdown:
+    """Exact reported usage for a model, optionally split into peak and off-peak hours."""
+
+    model: str
+    totals: UsageSlice
+    peak: UsageSlice | None
+    off_peak: UsageSlice | None
+
+    @property
+    def has_reported_usage(self) -> bool:
+        return self.totals.calls > 0
+
+
+class _UsageAccumulator:
+    """Builds one UsageSlice while keeping reply ids distinct."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+        self.reply_ids: set[int] = set()
+        self.cache_hit_tokens = 0
+        self.cache_miss_tokens = 0
+        self.output_tokens = 0
+        self.reasoning_tokens = 0
+
+    def add(
+        self,
+        reply_id: int | None,
+        input_tokens: int,
+        cached_tokens: int,
+        output_tokens: int,
+        reasoning_tokens: int,
+    ) -> None:
+        self.calls += 1
+        if reply_id is not None:
+            self.reply_ids.add(reply_id)
+        self.cache_hit_tokens += cached_tokens
+        self.cache_miss_tokens += max(input_tokens - cached_tokens, 0)
+        self.output_tokens += output_tokens
+        self.reasoning_tokens += reasoning_tokens
+
+    def freeze(self) -> UsageSlice:
+        return UsageSlice(
+            calls=self.calls,
+            replies=len(self.reply_ids),
+            cache_hit_tokens=self.cache_hit_tokens,
+            cache_miss_tokens=self.cache_miss_tokens,
+            output_tokens=self.output_tokens,
+            reasoning_tokens=self.reasoning_tokens,
+        )
+
+
+def _within_peak(clock: time, start: time, end: time) -> bool:
+    """Whether a UTC clock time falls in the peak window. A window whose start is later than
+    its end runs across midnight."""
+    if start <= end:
+        return start <= clock < end
+    return clock >= start or clock < end
+
+
+def usage_breakdown(
+    engine: Engine,
+    model: str,
+    *,
+    since: datetime | None = None,
+    until: datetime | None = None,
+    peak_start: time | None = None,
+    peak_end: time | None = None,
+) -> UsageBreakdown:
+    """Exact reported usage for one model in a time window, optionally split by UTC peak hours.
+    The calculator uses the totals so it can price peak and off-peak calls without guessing a
+    share. Estimated rows are excluded."""
+    if (peak_start is None) != (peak_end is None):
+        raise InvalidInput("peak start and end must be provided together")
+    if peak_start is not None and peak_start == peak_end:
+        raise InvalidInput("peak start and end must differ")
+    filters = [LlmUsage.model == model, LlmUsage.estimated.is_(False)]
+    if since is not None:
+        filters.append(LlmUsage.created_at >= since)
+    if until is not None:
+        filters.append(LlmUsage.created_at < until)
+    with session_scope(engine) as db:
+        rows = db.execute(
+            select(
+                LlmUsage.created_at,
+                LlmUsage.reply_event_id,
+                LlmUsage.input_tokens,
+                LlmUsage.cached_tokens,
+                LlmUsage.output_tokens,
+                LlmUsage.reasoning_tokens,
+            ).where(*filters)
+        ).all()
+    totals = _UsageAccumulator()
+    peak = _UsageAccumulator() if peak_start is not None else None
+    off_peak = _UsageAccumulator() if peak_start is not None else None
+    for created_at, reply_id, input_tokens, cached, output, reasoning in rows:
+        values = (reply_id, int(input_tokens), int(cached), int(output), int(reasoning))
+        totals.add(*values)
+        if peak is not None and off_peak is not None and peak_end is not None:
+            if _within_peak(created_at.time(), peak_start, peak_end):
+                peak.add(*values)
+            else:
+                off_peak.add(*values)
+    return UsageBreakdown(
+        model=model,
+        totals=totals.freeze(),
+        peak=peak.freeze() if peak is not None else None,
+        off_peak=off_peak.freeze() if off_peak is not None else None,
+    )
 
 
 def usage_by_model(
