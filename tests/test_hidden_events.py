@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from cygnusloom.db.models import Campaign
+from cygnusloom.services.accounts import set_show_internal_thinking
 from cygnusloom.services.campaigns import campaign_transcript
 from cygnusloom.services.events import (
     EVENT_TYPES,
@@ -96,7 +97,7 @@ def test_the_transcript_flags_hidden_log_lines(
     assert flags["Note about Far Ledge: Check the ropes."] is True
 
 
-def test_hidden_lines_are_marked_in_the_page_and_the_checkbox_is_unchecked(
+def test_hidden_lines_are_marked_and_shown_only_with_the_preference(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
@@ -105,29 +106,43 @@ def test_hidden_lines_are_marked_in_the_page_and_the_checkbox_is_unchecked(
         record(db, campaign_id, LocationDiscovered(name="Far Ledge"))
         record(db, campaign_id, NoteAdded(text="Check the ropes.", subject="Far Ledge"))
         db.commit()
+        owner_id = db.get(Campaign, campaign_id).owner_id
 
     page = client.get(f"/campaigns/{campaign_id}").text
 
-    assert '<input type="checkbox" data-show-hidden> Show hidden events' in page
     assert '<div class="log-line">Discovered: Far Ledge.</div>' in page
     assert '<div class="log-line hidden-event">Note about Far Ledge: Check the ropes.</div>' in page
+    assert 'class="transcript"' in page
+    assert 'class="transcript show-hidden"' not in page
+    assert 'data-show-thinking="0"' in page
     assert "data-transcript" in page
     assert 'data-gm-state="waiting"' in page
 
+    set_show_internal_thinking(app.state.engine, owner_id, True)
+    page = client.get(f"/campaigns/{campaign_id}").text
 
-def test_the_show_hidden_checkbox_sits_in_the_settings_dialog(
+    assert 'class="transcript show-hidden"' in page
+    assert 'data-show-thinking="1"' in page
+
+
+def test_the_thinking_checkbox_lives_on_the_settings_page(
     client_factory: Callable[[], TestClient],
 ):
     client, campaign_id = _campaign_id(client_factory)
     page = client.get(f"/campaigns/{campaign_id}").text
 
-    dialog_start = page.index('<dialog id="dialog-settings"')
-    dialog_end = page.index("</dialog>", dialog_start)
-    checkbox = page.index("data-show-hidden>")
-    assert dialog_start < checkbox < dialog_end
+    assert 'id="view-settings"' in page
+    assert 'data-view-target="settings"' in page
+    assert page.index('id="view-settings"') < page.index('name="show_internal_thinking"')
+    assert "Show internal GM thinking" in page
+    assert (
+        "Shows the GM's hidden Log lines and lets you open the Context and Transcript of each reply."
+        in page
+    )
+    assert '<dialog id="dialog-settings"' not in page
 
 
-def test_the_stylesheet_hides_hidden_lines_until_the_checkbox_shows_them(
+def test_the_stylesheet_hides_hidden_lines_until_the_preference_shows_them(
     client_factory: Callable[[], TestClient],
 ):
     client, _ = _campaign_id(client_factory)
@@ -135,11 +150,13 @@ def test_the_stylesheet_hides_hidden_lines_until_the_checkbox_shows_them(
     assert ".transcript:not(.show-hidden) .hidden-event { display: none; }" in css
 
 
-def test_the_show_hidden_checkbox_starts_unchecked_and_is_never_stored(
+def test_the_old_show_hidden_checkbox_is_gone_and_never_reset_by_the_script(
     client_factory: Callable[[], TestClient],
 ):
-    client, _ = _campaign_id(client_factory)
+    client, campaign_id = _campaign_id(client_factory)
     script = client.get("/static/turn_stream.js").text
-    assert "showHidden.checked = false;" in script
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "showHidden.checked = false;" not in script
+    assert "data-show-hidden" not in script
+    assert "data-show-hidden" not in page
     assert "localStorage" not in script
-    assert "sessionStorage.setItem(SHOW" not in script

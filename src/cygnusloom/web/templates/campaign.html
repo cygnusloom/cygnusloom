@@ -2,11 +2,13 @@
 {% block title %}{{ campaign.name }}{% endblock %}
 {% block sidebar_extra %}
     <button type="button" class="sidebar-item" data-side-toggle aria-pressed="false" aria-label="Details" title="Details"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg></button>
+    <button type="button" class="sidebar-item" data-view-target="settings" aria-pressed="false" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
 {% endblock %}
 {% block play %}
     {% include "_campaign_play.html" %}
 {% endblock %}
 {% block dialogs %}
+{% if show_internal_thinking %}
 <dialog id="dialog-turn-context" class="app-dialog turn-context-dialog" aria-labelledby="dialog-turn-context-title">
   <form method="dialog">
     <h2 id="dialog-turn-context-title">Reply details</h2>
@@ -19,60 +21,7 @@
     <button type="submit">Close</button>
   </form>
 </dialog>
-<dialog id="dialog-settings" class="app-dialog" aria-labelledby="dialog-settings-title">
-  <form method="post" action="/campaigns/{{ campaign.id }}/model">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <h2 id="dialog-settings-title">Settings</h2>
-    {% if is_owner %}
-    <fieldset class="model-options">
-      <legend class="muted">Used for every reply in this campaign, starting with the next one</legend>
-      {% for spec in models %}
-        <label><input type="radio" name="model" value="{{ spec.model_id }}"{% if spec.model_id == campaign.model %} checked{% endif %}> {{ spec.model_id }}
-          {% if not single_player %}<span class="muted">{% if spec.credits_per_turn %}· {{ spec.credits_per_turn }} credits per reply{% else %}· free{% endif %}</span>{% endif %}</label>
-      {% endfor %}
-    </fieldset>
-    {% if not single_player %}
-      {% if credit_price <= 0 %}
-        <p class="muted">This model is free.</p>
-      {% elif credits_exempt %}
-        <p class="muted">Administrators, the single-player account, and credit-exempt accounts are not charged for replies.</p>
-      {% else %}
-        <p class="muted">The campaign owner's balance is <strong>{{ credit_balance }}</strong> credits. The current model costs {{ credit_price }} credits per reply.</p>
-        {% if credits_blocked %}<p role="alert">{{ credit_message }} <a href="/credits">Get more credits</a></p>{% endif %}
-      {% endif %}
-    {% endif %}
-    {% else %}
-    <p class="muted">The campaign owner chooses the model for every reply.{% if credit_price and not single_player %} {{ campaign.model }} costs {{ credit_price }} credits per reply and the owner has {{ credit_balance }} credits.{% elif not single_player %} {{ campaign.model }} is free.{% endif %}</p>
-    {% endif %}
-    <label class="show-hidden-option"><input type="checkbox" data-show-hidden> Show hidden events</label>
-    {% if is_owner %}
-    <div class="dialog-actions">
-      <button type="submit" formmethod="dialog" formnovalidate>Cancel</button>
-      <button type="submit">Save</button>
-    </div>
-    {% else %}
-    <div class="dialog-actions">
-      <button type="submit" formmethod="dialog" formnovalidate>Close</button>
-    </div>
-    {% endif %}
-  </form>
-  {% if is_owner %}
-  <form method="post" action="/campaigns/{{ campaign.id }}/inventory-space" class="settings-inventory">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <fieldset class="model-options">
-      <legend class="muted">Inventory space</legend>
-      <label><input type="checkbox" name="use_inventory_space" value="1"{% if campaign.use_inventory_space %} checked{% endif %}> Track item slots and their limits</label>
-    </fieldset>
-    <p class="muted">When this is off, characters may carry anything reasonable: no capacity checks, no penalty item, and no drain from a full pack.</p>
-    <div class="dialog-actions">
-      <button type="submit">Save inventory setting</button>
-    </div>
-  </form>
-  <p class="muted">
-    <a href="/campaigns/{{ campaign.id }}/export">Export this campaign as JSON</a>
-  </p>
-  {% endif %}
-</dialog>
+{% endif %}
 {% endblock %}
 {% block scripts %}
   {{ super() }}

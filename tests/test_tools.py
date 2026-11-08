@@ -168,6 +168,7 @@ CORE_TOOL_NAMES = {
     "list_lookups",
     "roll_creative",
     "record_setting",
+    "set_campaign_setting",
     "create_local_map",
     "update_local_map",
     "map_options",

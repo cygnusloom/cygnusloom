@@ -18,16 +18,6 @@
   });
 
   const transcript = document.querySelector("[data-transcript]");
-  // The "Show hidden events" checkbox toggles a class; the CSS hides .hidden-event lines otherwise.
-  const showHidden = document.querySelector("[data-show-hidden]");
-  const syncShowHidden = () => {
-    if (transcript && showHidden) transcript.classList.toggle("show-hidden", showHidden.checked);
-  };
-  if (showHidden) {
-    showHidden.checked = false;
-    showHidden.addEventListener("change", syncShowHidden);
-    syncShowHidden();
-  }
 
   // The transcript follows new content only while the reader is at the bottom. Scrolling up
   // leaves their place alone and reveals the jump button.
@@ -272,7 +262,8 @@
   };
 
   const reload = () => {
-    window.location.assign(window.location.pathname);
+    // Keep the hash, such as #view-settings, so the reader stays on the view they were using.
+    window.location.assign(window.location.href);
   };
 
   const rememberFocus = () => sessionStorage.setItem(FOCUS_KEY, "1");
@@ -305,7 +296,13 @@
     transcript.dataset.gmState = freshTranscript.dataset.gmState;
     transcript.dataset.lastEvent = freshTranscript.dataset.lastEvent;
     transcript.dataset.turnStatus = freshTranscript.dataset.turnStatus;
-    transcript.classList.toggle("show-hidden", Boolean(showHidden?.checked));
+    transcript.dataset.showThinking = freshTranscript.dataset.showThinking;
+    // The server renders the viewer's thinking preference; keep the class across the swap.
+    transcript.classList.toggle(
+      "show-hidden",
+      freshTranscript.classList.contains("show-hidden") ||
+        transcript.dataset.showThinking === "1",
+    );
 
     // The encounter prompt, the advancement pause, and the waiting note sit between the chat
     // and the composer.
@@ -351,9 +348,10 @@
 
     // The views outside Play are part of the same campaign state: the journal, roster, and
     // compendium can all change during a turn. Rebuild their contents in place so switching to
-    // them after a reply does not show the state from before it.
+    // them after a reply does not show the state from before it. Settings is left alone so
+    // unsaved form input is not wiped.
     for (const current of document.querySelectorAll(
-      '.views > [data-view]:not([data-view="play"])',
+      '.views > [data-view]:not([data-view="play"]):not([data-view="settings"])',
     )) {
       const fresh = template.content.querySelector(`[data-view="${current.dataset.view}"]`);
       if (!fresh) continue;

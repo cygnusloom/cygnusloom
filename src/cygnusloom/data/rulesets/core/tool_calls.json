@@ -1437,6 +1437,34 @@
   },
   {
     "type": "tool_call",
+    "id": "set_campaign_setting",
+    "name": "set_campaign_setting",
+    "world_method": "set_campaign_setting",
+    "activity": "Campaign setting changed: {detail}",
+    "description": "Change a campaign setting only when the player has explicitly asked for that change. The only setting this tool can change is inventory_space. Never change it on your own initiative, to make the story easier, or as part of another action. Never change the model, the campaign name, or how much of the record the player sees; tell the player to use the Settings page for those. record_setting is for invented world facts, not this.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "setting": {
+          "type": "string",
+          "enum": [
+            "inventory_space"
+          ],
+          "description": "The setting to change. inventory_space turns the rule set's item slots and capacity limits on or off."
+        },
+        "value": {
+          "type": "boolean",
+          "description": "The setting's new value: true to track inventory space, false to stop tracking it."
+        }
+      },
+      "required": [
+        "setting",
+        "value"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "create_local_map",
     "name": "create_local_map",
     "world_method": "create_local_map",

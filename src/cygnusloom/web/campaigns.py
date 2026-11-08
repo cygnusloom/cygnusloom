@@ -25,7 +25,7 @@ from cygnusloom.llm.base import LLMError
 from cygnusloom.services import campaign_files
 from cygnusloom.services import credits as credit_service
 from cygnusloom.services import level_up as level_up_service
-from cygnusloom.services.accounts import public_name
+from cygnusloom.services.accounts import public_name, set_show_internal_thinking
 from cygnusloom.services.campaigns import (
     Delta,
     Logged,
@@ -72,6 +72,7 @@ from cygnusloom.services.campaigns import (
     stream_message,
     turn_busy,
     turn_progress,
+    update_campaign_settings,
     visible_campaigns,
 )
 from cygnusloom.services.campaigns import (
@@ -791,6 +792,45 @@ async def change_inventory_space(request: Request, campaign_id: int) -> Response
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
+@router.post("/{campaign_id}/settings")
+async def change_campaign_settings(request: Request, campaign_id: int) -> Response:
+    """Save the owner's model, campaign name, and inventory choice from the Settings page."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    try:
+        update_campaign_settings(
+            request.app.state.engine,
+            request.app.state.catalog.model_ids(),
+            user.id,
+            campaign_id,
+            model=form_text(form, "model"),
+            inventory_space=form_text(form, "use_inventory_space") == "1",
+            label=form_text(form, "label"),
+        )
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
+    _flash(request, "Settings saved.")
+    return RedirectResponse(f"/campaigns/{campaign_id}#view-settings", status_code=303)
+
+
+@router.post("/{campaign_id}/thinking")
+async def change_internal_thinking(request: Request, campaign_id: int) -> Response:
+    """Save this viewer's choice of whether to see the GM's internal thinking."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    set_show_internal_thinking(
+        request.app.state.engine,
+        user.id,
+        form_text(form, "show_internal_thinking") == "1",
+    )
+    _flash(request, "Your view is saved.")
+    return RedirectResponse(f"/campaigns/{campaign_id}#view-settings", status_code=303)
+
+
 # BACKWARDS-COMPATIBILITY: 3 - old pages may still post the upgrade form.
 @router.post("/{campaign_id}/upgrade")
 async def upgrade_campaign_page(request: Request, campaign_id: int) -> Response:
@@ -1015,6 +1055,8 @@ async def remove_debug_injection(request: Request, campaign_id: int) -> Response
 @router.get("/{campaign_id}/messages/{event_id}/context")
 def turn_context_fragment(request: Request, campaign_id: int, event_id: int) -> Response:
     user = page_user(request)
+    if not user.show_internal_thinking:
+        raise NotFound("message not found")
     parts = get_turn_context(request.app.state.engine, user.id, campaign_id, event_id)
     return render(request, "turn_context.html", parts=parts)
 
@@ -1022,6 +1064,8 @@ def turn_context_fragment(request: Request, campaign_id: int, event_id: int) -> 
 @router.get("/{campaign_id}/messages/{event_id}/transcript")
 def turn_transcript_fragment(request: Request, campaign_id: int, event_id: int) -> Response:
     user = page_user(request)
+    if not user.show_internal_thinking:
+        raise NotFound("message not found")
     entries = get_turn_transcript(request.app.state.engine, user.id, campaign_id, event_id)
     return render(request, "turn_transcript.html", entries=entries)
 
@@ -1610,6 +1654,7 @@ def _campaign_page(
         "item_kind_icons": magic.item_kind_icons if magic is not None else {},
         "is_owner": is_owner,
         "viewer_id": user.id,
+        "show_internal_thinking": bool(user.show_internal_thinking),
         "members": members,
         "invites": invites,
         "removed_members": removed_members,

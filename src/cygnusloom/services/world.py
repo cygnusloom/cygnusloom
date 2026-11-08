@@ -1749,6 +1749,15 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         with session_scope(self.engine) as db:
             return record_setting(db, self.campaign_id, topic, detail)
 
+    def set_campaign_setting(self, setting: str, value: bool) -> dict[str, Any]:
+        """Change a campaign-wide setting, only at the owner's explicit request."""
+        # Campaigns imports this module, so the service is imported when the tool runs.
+        from cygnusloom.services import campaigns as campaigns_service
+
+        return campaigns_service.set_campaign_setting_from_turn(
+            self.engine, self.campaign_id, setting, value
+        )
+
     def record_settings(self, facts: list[dict[str, str]]) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return record_settings(db, self.campaign_id, facts)

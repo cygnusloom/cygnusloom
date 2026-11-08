@@ -199,6 +199,8 @@ def test_a_finished_turn_can_be_rendered_as_a_live_fragment(
     assert "data-transcript" in response.text
     assert 'data-view="journal"' in response.text
     assert 'data-view="characters"' in response.text
+    assert 'data-view="settings"' in response.text
+    assert 'id="view-settings"' in response.text
     assert "<html" not in response.text
     page = client.get(f"/campaigns/{campaign_id}")
     assert f'data-live-url="/campaigns/{campaign_id}/live"' in page.text

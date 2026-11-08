@@ -3,7 +3,7 @@
           <h1 class="chat-title">{{ campaign.name }}</h1>
           <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
           <div class="transcript-wrap">
-          <div class="transcript" data-transcript data-gm-state="{{ 'busy' if gm_busy or (pending and pending.auto_continue and auto_start) else 'waiting' }}" data-last-event="{{ last_event }}" data-turn-status="{{ turn_status }}">
+          <div class="transcript{% if show_internal_thinking %} show-hidden{% endif %}" data-show-thinking="{{ '1' if show_internal_thinking else '0' }}" data-transcript data-gm-state="{{ 'busy' if gm_busy or (pending and pending.auto_continue and auto_start) else 'waiting' }}" data-last-event="{{ last_event }}" data-turn-status="{{ turn_status }}">
             {% for message in transcript %}
               {% if message.role == "log" %}
               <div class="log-line{% if message.hidden %} hidden-event{% endif %}">{{ message.content }}</div>
@@ -13,7 +13,9 @@
                   <span class="role">{% if message.role == "assistant" %}Cygnus{% elif message.role == "user" %}{{ message.speaker or player_name }}{% if message.player_id is none %}{% if is_owner %} (you){% endif %}{% elif message.player_id == viewer_id %} (you){% else %} · <span class="muted">{{ message.player_name or 'another player' }}</span>{% endif %}{% else %}{{ message.role }}{% endif %}{% if message.model %} · <span class="muted">{{ message.model }}</span>{% endif %}</span>
                   {% if message.role == "assistant" %}
                   <div class="message-tools">
+                  {% if show_internal_thinking %}
                   <button type="button" class="message-gear" data-turn-context-url="/campaigns/{{ campaign.id }}/messages/{{ message.id }}/context" data-turn-transcript-url="/campaigns/{{ campaign.id }}/messages/{{ message.id }}/transcript" aria-label="Show details for this reply" title="Show details for this reply"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+                  {% endif %}
                   {% if is_owner %}
                   <form method="post" action="/campaigns/{{ campaign.id }}/messages/{{ message.id }}/rollback" class="rollback-form" data-confirm="Roll back to right after this reply? Later messages, Log entries, and any pending prompt will be deleted.">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -170,7 +172,6 @@
                   <span class="muted">{{ '{:,}'.format(context.used) }} / {{ '{:,}'.format(context.limit) }}</span>
                 </span>
                 {% endif %}
-                <button type="button" class="composer-settings" data-dialog-target="dialog-settings" aria-haspopup="dialog" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
               </div>
               <button type="submit"{% if pending or advancement_due or composer_blocked or credits_blocked %} disabled{% endif %}>Send</button>
             </div>

@@ -71,6 +71,9 @@ MAX_NAME = 120
 MAX_MESSAGE = 8000
 # A model id is `provider/model`, matching the campaign column.
 MAX_MODEL = 120
+# The campaign-wide settings the AI GM may change during a turn, and only on the owner's
+# explicit request.
+TURN_SETTINGS = {"inventory_space"}
 # The player's optional setting/story brief at campaign creation. It is prompt text, not state.
 MAX_SETTING = 4000
 # Spoken words never contain angle brackets or call syntax, so either means a tool call was written.
@@ -653,6 +656,68 @@ def set_campaign_inventory_space(
         db.commit()
         db.refresh(campaign)
         return campaign
+
+
+def update_campaign_settings(
+    engine: Engine,
+    allowed_models: Iterable[str],
+    owner_id: int,
+    campaign_id: int,
+    *,
+    model: str,
+    inventory_space: bool,
+    label: str,
+) -> Campaign:
+    """Save the owner's manual campaign settings in one write: the model, the inventory switch,
+    and the label. They are configuration, not part of the log, so they may change mid-game."""
+    if model not in allowed_models:
+        raise InvalidInput("that model is not available")
+    label = (label or "").strip()
+    if not label or len(label) > MAX_NAME:
+        raise InvalidInput(f"label must be 1 to {MAX_NAME} characters")
+    get_owned_campaign(engine, owner_id, campaign_id)
+    with _exclusive(campaign_id), session_scope(engine) as db:
+        campaign = db.get(Campaign, campaign_id)
+        assert campaign is not None
+        campaign.model = model
+        campaign.use_inventory_space = inventory_space
+        campaign.name = label
+        db.add(campaign)
+        db.commit()
+        db.refresh(campaign)
+        return campaign
+
+
+def set_campaign_setting_from_turn(
+    engine: Engine, campaign_id: int, setting: str, value: bool
+) -> dict[str, Any]:
+    """Change a campaign-wide setting during a turn, at the owner's explicit request.
+
+    Only the settings in `TURN_SETTINGS` may change this way, and only while the campaign owner's
+    own turn is open. The turn already holds the campaign's turn lock, so this must not take it.
+    """
+    if setting not in TURN_SETTINGS:
+        raise InvalidInput(f"{setting!r} is not a campaign setting the GM can change")
+    if not isinstance(value, bool):
+        raise InvalidInput("the setting's value must be true or false")
+    with session_scope(engine) as db:
+        campaign = db.get(Campaign, campaign_id)
+        if campaign is None:
+            raise NotFound("campaign not found")
+        turn = load_state(db, campaign_id).turn
+        if turn is None or turn.player_id != campaign.owner_id:
+            raise InvalidInput("only the campaign's owner can change its settings")
+        if setting == "inventory_space":
+            campaign.use_inventory_space = value
+            db.add(campaign)
+            db.commit()
+            detail = (
+                "Inventory space is tracked again."
+                if value
+                else "Inventory space is no longer tracked; anything reasonable can be carried."
+            )
+            return {"setting": setting, "value": value, "detail": detail}
+    raise InvalidInput(f"{setting!r} is not a campaign setting the GM can change")
 
 
 def set_campaign_label(engine: Engine, owner_id: int, campaign_id: int, label: str) -> Campaign:
