@@ -524,6 +524,7 @@ def test_wwn_tools_bind_engine_operations_without_wrappers() -> None:
         "advance_time": "advance_time",
         "attack": "attack",
         "buy_item": "buy_item",
+        "buy_service": "buy_service",
         "create_encounter_map": "create_encounter_map",
         "create_monster": "create_monster",
         "delete_encounter_map": "delete_encounter_map",

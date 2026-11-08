@@ -70,6 +70,22 @@ def test_wwn_content_loads() -> None:
     assert "friendly" in reaction.row_for(12).result
 
 
+def test_wwn_and_the_academy_sell_services_with_an_optional_price() -> None:
+    library = _wwn()
+    wwn = library.rule_sets["worldswithoutnumber"].tool_calls
+    academy = library.rule_sets["academia-arcana"].tool_calls
+    for calls in (wwn, academy):
+        assert calls["buy_item"].world_method == "buy_item"
+        service = calls["buy_service"]
+        assert service.world_method == "buy_service"
+        assert set(service.parameters["required"]) == {"names", "service"}
+        assert service.parameters["properties"]["price"]["type"] == "integer"
+    cairn = library.rule_sets["cairn2e"].tool_calls["buy_service"]
+    assert cairn.world_method == "buy_service"
+    assert cairn.parameters["properties"]["price"]["type"] == "integer"
+    assert "price" not in cairn.parameters["required"]
+
+
 def test_wwn_strength_modifier_bands() -> None:
     spec = _wwn().rule_sets["worldswithoutnumber"].character
     assert spec.modifier({"str": 3}, "str") == -2

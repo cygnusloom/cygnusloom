@@ -379,7 +379,9 @@ class World(CoreWorld, Protocol):
         self, name: str, item: str, price: int | None = None, size: str = ""
     ) -> dict[str, Any]: ...
 
-    def buy_service(self, names: list[str], service: str) -> dict[str, Any]: ...
+    def buy_service(
+        self, names: list[str], service: str, price: int | None = None
+    ) -> dict[str, Any]: ...
 
     def give_item(
         self, name: str, item: str, size: str = "normal", damage: str = ""
