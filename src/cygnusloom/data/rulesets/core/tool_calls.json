@@ -1136,6 +1136,30 @@
   },
   {
     "type": "tool_call",
+    "id": "describe_character",
+    "name": "describe_character",
+    "world_method": "describe_character",
+    "description": "Write or refresh the brief, player-facing summary of what the player knows about a character. This is the card body the Characters page shows for the player character, a hireling, or a person the player knows. Keep it to what the player has seen or been told: no GM-only secrets, hidden motives, or plot notes. Use it when the player first meets someone and whenever the action changes what the player knows of them.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The character's name."
+        },
+        "summary": {
+          "type": "string",
+          "description": "A short paragraph the player reads on the Characters page, with no GM-only secrets. At most 600 characters; an empty summary is refused."
+        }
+      },
+      "required": [
+        "name",
+        "summary"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "delete_npc",
     "name": "delete_npc",
     "world_method": "delete_npc",
