@@ -15,6 +15,7 @@ from cygnusloom.auth.deps import (
     require_recent_auth,
     verify_csrf,
 )
+from cygnusloom.llm.catalog import CALCULATOR_FIELDS
 from cygnusloom.services import admin as service
 from cygnusloom.services import credits as credit_service
 from cygnusloom.services.common import Conflict, InvalidInput, NotFound
@@ -465,6 +466,30 @@ def model_usage_breakdown(request: Request) -> Response:
             ),
         }
     )
+
+
+@router.post("/models/calculators/clear")
+async def clear_model_calculators(request: Request) -> Response:
+    admin_user(request)
+    await verify_csrf(request)
+    count = request.app.state.catalog.clear_calculators()
+    noun = "model" if count == 1 else "models"
+    _flash(request, f"Cleared saved calculator values for {count} {noun}.")
+    return _back("/admin/models")
+
+
+@router.post("/models/{row_id}/calculator")
+async def save_model_calculator(request: Request, row_id: int) -> Response:
+    """Persist one model's calculator prices and optional peak hours."""
+    admin_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    settings = {field: form_text(form, field) for field in CALCULATOR_FIELDS if field in form}
+    try:
+        spec = request.app.state.catalog.set_calculator(row_id, settings)
+    except (InvalidInput, NotFound) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return JSONResponse({"ok": True, "model": spec.model_id})
 
 
 @router.post("/models")

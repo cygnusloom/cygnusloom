@@ -12,6 +12,17 @@
   const countFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
   const costFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 6 });
   const pending = new WeakMap();
+  const pendingSaves = new WeakMap();
+  const SAVED_FIELDS = [
+    "hit-peak",
+    "miss-peak",
+    "output-peak",
+    "hit-off-peak",
+    "miss-off-peak",
+    "output-off-peak",
+    "peak-start",
+    "peak-end",
+  ];
 
   const field = (dialog, name) => {
     const input = dialog.querySelector(`[data-calc="${name}"]`);
@@ -39,6 +50,52 @@
     for (const name of ["peak", "off-peak", "total", "per-reply", "thousand"]) {
       setResult(dialog, name, null);
     }
+  };
+
+  const saveStatus = (dialog, message, isError = false) => {
+    const status = dialog.querySelector("[data-calc-save-status]");
+    if (!status) return;
+    status.hidden = !message;
+    status.textContent = message;
+    status.classList.toggle("form-error", isError);
+  };
+
+  const persistSettings = async (dialog) => {
+    const url = dialog.dataset.saveUrl;
+    const token = dialog.dataset.csrfToken;
+    if (!url || !token) return;
+    const body = new URLSearchParams();
+    body.set("csrf_token", token);
+    for (const name of SAVED_FIELDS) {
+      const input = dialog.querySelector(`[data-calc="${name}"]`);
+      if (input) body.set(name, input.value.trim());
+    }
+    saveStatus(dialog, "Saving…");
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        body,
+        credentials: "same-origin",
+      });
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        throw new Error("Could not save calculator values. Reload the page and try again.");
+      }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Could not save calculator values.");
+      saveStatus(dialog, "Saved.");
+    } catch (exc) {
+      saveStatus(dialog, exc.message || "Could not save calculator values.", true);
+    }
+  };
+
+  const saveSettings = (dialog) => {
+    // Serialize saves so rapid edits cannot finish out of order and restore an older value.
+    const previous = pendingSaves.get(dialog) || Promise.resolve();
+    const next = previous.then(() => persistSettings(dialog)).catch(() => {});
+    pendingSaves.set(dialog, next);
+    return next;
   };
 
   const renderCosts = (dialog, data) => {
@@ -195,7 +252,10 @@
 
   document.querySelectorAll("[data-calculator]").forEach((dialog) => {
     dialog.querySelectorAll('[data-calc="peak-start"], [data-calc="peak-end"]').forEach((input) => {
-      input.addEventListener("change", () => loadUsage(dialog));
+      input.addEventListener("change", () => {
+        saveSettings(dialog);
+        loadUsage(dialog);
+      });
     });
     dialog
       .querySelectorAll(
@@ -206,6 +266,7 @@
         input.addEventListener("input", () => {
           if (dialog._usage) renderCosts(dialog, dialog._usage);
         });
+        input.addEventListener("change", () => saveSettings(dialog));
       });
   });
 
@@ -214,7 +275,10 @@
       const dialog = document.getElementById(button.dataset.dialogOpen);
       if (!dialog) return;
       if (!dialog.open) dialog.showModal();
-      if (dialog.matches("[data-calculator]")) loadUsage(dialog);
+      if (dialog.matches("[data-calculator]")) {
+        saveStatus(dialog, "");
+        loadUsage(dialog);
+      }
     });
   });
 

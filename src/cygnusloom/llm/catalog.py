@@ -4,8 +4,12 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import time
+from decimal import Decimal, InvalidOperation
 
 from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy import Engine, select
@@ -18,6 +22,22 @@ from cygnusloom.services.common import Conflict, InvalidInput, NotFound, session
 _PROVIDER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 _MAX_MODEL_ID = 120
 _MAX_TURN_PRICE = 1_000_000
+_MAX_CALCULATOR_PRICE = Decimal(1000000000)
+
+# The keys the model cost calculator saves. Prices are per 1M tokens; the two time fields are
+# an optional UTC peak window.
+CALCULATOR_FIELDS: tuple[str, ...] = (
+    "hit-peak",
+    "miss-peak",
+    "output-peak",
+    "hit-off-peak",
+    "miss-off-peak",
+    "output-off-peak",
+    "peak-start",
+    "peak-end",
+)
+_PRICE_FIELDS = frozenset(CALCULATOR_FIELDS[:6])
+_TIME_FIELDS = frozenset(CALCULATOR_FIELDS[6:])
 
 
 def _fernet(secret: str) -> Fernet:
@@ -46,7 +66,8 @@ class ModelSpec:
     put in a template; `api_key_set` is the only key information the admin page shows.
 
     `credits_per_turn` is shown in the campaign model picker. `stream_usage` asks the provider
-    for exact token counts in streamed replies; usage measurements never affect the charge."""
+    for exact token counts in streamed replies; usage measurements never affect the charge.
+    `calculator` holds the administrator's saved cost-calculator prices and peak hours."""
 
     row_id: int | None
     provider: str
@@ -58,6 +79,7 @@ class ModelSpec:
     stream_usage: bool
     enabled: bool
     is_default: bool
+    calculator: dict[str, str]
 
     @property
     def model_id(self) -> str:
@@ -92,6 +114,58 @@ def _check_turn_price(value: int) -> int:
     return value
 
 
+def _parse_calculator(raw: str) -> dict[str, str]:
+    """Read saved calculator values from JSON, ignoring unknown or malformed entries."""
+    try:
+        data = json.loads(raw or "{}")
+    except (TypeError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    values: dict[str, str] = {}
+    for key in CALCULATOR_FIELDS:
+        value = data.get(key)
+        if isinstance(value, str) and len(value) <= 64:
+            values[key] = value
+        elif isinstance(value, (int, float)) and not isinstance(value, bool):
+            values[key] = str(value)
+    return values
+
+
+def _clean_calculator(settings: Mapping[str, str]) -> str:
+    """Validate the calculator form and return the JSON stored on the model row."""
+    values: dict[str, str] = {}
+    for key in CALCULATOR_FIELDS:
+        raw = settings.get(key, "")
+        if not isinstance(raw, str):
+            raise InvalidInput("calculator values must be text")
+        value = raw.strip()
+        if key in _PRICE_FIELDS:
+            if not value:
+                values[key] = "0"
+                continue
+            if len(value) > 32:
+                raise InvalidInput("calculator prices must be short numbers")
+            try:
+                price = Decimal(value)
+            except InvalidOperation:
+                raise InvalidInput("calculator prices must be non-negative numbers") from None
+            if not price.is_finite() or price < 0 or price > _MAX_CALCULATOR_PRICE:
+                raise InvalidInput("calculator prices must be non-negative numbers")
+            values[key] = value
+            continue
+        if key in _TIME_FIELDS:
+            if not value:
+                values[key] = ""
+                continue
+            try:
+                clock = time.fromisoformat(value)
+            except ValueError:
+                raise InvalidInput("peak hours must look like HH:MM") from None
+            values[key] = clock.strftime("%H:%M")
+    return json.dumps(values, sort_keys=True)
+
+
 class ModelCatalog:
     """Reads the current model list. Changes are made by administrators through the admin UI."""
 
@@ -124,6 +198,7 @@ class ModelCatalog:
                     stream_usage=True,
                     enabled=True,
                     is_default=model_id == default,
+                    calculator={},
                 )
             )
         if specs and not any(spec.is_default for spec in specs):
@@ -139,6 +214,7 @@ class ModelCatalog:
                 stream_usage=first.stream_usage,
                 enabled=first.enabled,
                 is_default=True,
+                calculator=first.calculator,
             )
         return tuple(specs)
 
@@ -154,6 +230,7 @@ class ModelCatalog:
             stream_usage=row.stream_usage,
             enabled=row.enabled,
             is_default=row.is_default,
+            calculator=_parse_calculator(row.calculator_json),
         )
 
     def source(self) -> str:
@@ -395,6 +472,29 @@ class ModelCatalog:
             db.commit()
             db.refresh(row)
             return self._spec(row)
+
+    def set_calculator(self, row_id: int, settings: Mapping[str, str]) -> ModelSpec:
+        """Save one model's cost-calculator prices and optional peak hours."""
+        encoded = _clean_calculator(settings)
+        with session_scope(self.engine) as db:
+            row = db.get(LlmModel, row_id)
+            if row is None:
+                raise NotFound("model not found")
+            row.calculator_json = encoded
+            db.add(row)
+            db.commit()
+            db.refresh(row)
+            return self._spec(row)
+
+    def clear_calculators(self) -> int:
+        """Reset the saved calculator values for every model. Returns the number of rows."""
+        with session_scope(self.engine) as db:
+            rows = list(db.execute(select(LlmModel)).scalars())
+            for row in rows:
+                row.calculator_json = "{}"
+                db.add(row)
+            db.commit()
+            return len(rows)
 
     def delete(self, row_id: int) -> None:
         with session_scope(self.engine) as db:

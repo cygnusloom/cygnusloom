@@ -43,6 +43,7 @@ def test_migrations_create_the_full_schema(tmp_path, monkeypatch):
     }
     assert "credits_per_turn" in model_columns
     assert "stream_usage" in model_columns
+    assert "calculator_json" in model_columns
 
 
 def test_migrations_can_be_reversed(tmp_path, monkeypatch):

@@ -357,6 +357,12 @@ def test_admin_model_page_lists_and_adds_models(settings: Settings):
     assert 'data-calc="peak-start"' in page.text
     assert "Share of usage at peak" not in page.text
     assert "Peak" in page.text and "Off-peak" in page.text
+    assert "Clear saved calculator values" in page.text
+    assert 'action="/admin/models/calculators/clear"' in page.text
+    assert "data-clear-calculators" not in page.text
+    assert 'data-model="fake/scripted"' in page.text
+    assert 'data-save-url="/admin/models/' in page.text
+    assert "saved with the model" in page.text
 
     token = csrf_token(client, "/admin/models")
     response = client.post(
@@ -384,6 +390,65 @@ def test_admin_model_page_lists_and_adds_models(settings: Settings):
 
     audit = client.get("/admin/audit")
     assert "model.added" in audit.text
+
+
+def test_admin_can_save_and_clear_model_calculators(settings: Settings):
+    client = _admin_client(settings)
+    register(client, "admin@example.com")
+    engine = _engine(settings)
+    with Session(engine) as db:
+        row = db.exec(select(LlmModel).where(LlmModel.model == "scripted")).one()
+        row_id = row.id
+
+    token = csrf_token(client, "/admin/models")
+    rejected = client.post(
+        f"/admin/models/{row_id}/calculator",
+        data={"csrf_token": token, "hit-peak": "-1"},
+        follow_redirects=False,
+    )
+    assert rejected.status_code == 400
+    assert "non-negative" in rejected.json()["error"]
+
+    token = csrf_token(client, "/admin/models")
+    response = client.post(
+        f"/admin/models/{row_id}/calculator",
+        data={
+            "csrf_token": token,
+            "hit-peak": "0.25",
+            "miss-peak": "0.5",
+            "output-peak": "2",
+            "hit-off-peak": "0.1",
+            "miss-off-peak": "0.2",
+            "output-off-peak": "1",
+            "peak-start": "22:00",
+            "peak-end": "06:00",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+
+    with Session(engine) as db:
+        saved = db.get(LlmModel, row_id)
+    assert saved is not None
+    assert '"hit-peak": "0.25"' in saved.calculator_json
+    page = client.get("/admin/models")
+    assert 'value="0.25"' in page.text
+    assert 'value="22:00"' in page.text
+
+    token = csrf_token(client, "/admin/models")
+    response = client.post(
+        "/admin/models/calculators/clear",
+        data={"csrf_token": token},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/admin/models"
+    with Session(engine) as db:
+        cleared = db.get(LlmModel, row_id)
+    assert cleared is not None and cleared.calculator_json == "{}"
+    page = client.get("/admin/models")
+    assert "Cleared saved calculator values for" in page.text
 
 
 def test_admin_models_page_hides_estimated_token_counts(settings: Settings):

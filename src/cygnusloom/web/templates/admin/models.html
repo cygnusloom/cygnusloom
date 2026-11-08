@@ -49,7 +49,9 @@
       </dl>
 
       <dialog id="cost-calculator-{{ loop.index }}" class="app-dialog cost-calculator"
-              data-calculator
+              data-calculator data-model="{{ row.model_id }}"
+              data-save-url="{% if row.row_id %}/admin/models/{{ row.row_id }}/calculator{% endif %}"
+              data-csrf-token="{{ csrf_token }}"
               data-usage-url="/admin/models/usage?model={{ row.model_id|urlencode }}&period={{ period.mode|urlencode }}&start={{ period.start|urlencode }}&end={{ period.end|urlencode }}"
               aria-labelledby="cost-calculator-title-{{ loop.index }}">
         <div class="heading">
@@ -59,12 +61,13 @@
         <p class="muted">
           These costs use the exact token usage reported by the provider for {{ period.label }}.
           Calls without a usage report are not included. Costs are in your provider's currency.
+          Prices and peak hours are saved with the model.
         </p>
         <fieldset class="calculator-peak">
           <legend>Peak hours (optional, UTC)</legend>
           <div class="calculator-timefields">
-            <label>From <input type="time" data-calc="peak-start"></label>
-            <label>To <input type="time" data-calc="peak-end"></label>
+            <label>From <input type="time" data-calc="peak-start" value="{{ row.calculator.get('peak-start', '') }}"></label>
+            <label>To <input type="time" data-calc="peak-end" value="{{ row.calculator.get('peak-end', '') }}"></label>
           </div>
           <p class="muted">
             Leave both blank for a single price. A peak range may cross midnight, for example
@@ -119,22 +122,23 @@
             <tbody>
               <tr>
                 <td>Cache hit input</td>
-                <td><input type="number" min="0" step="any" value="0" data-calc="hit-peak" aria-label="Cache hit input price per 1M tokens"></td>
-                <td data-price-cell="off-peak" hidden><input type="number" min="0" step="any" value="0" data-calc="hit-off-peak" aria-label="Off-peak cache hit input price per 1M tokens"></td>
+                <td><input type="number" min="0" step="any" value="{{ row.calculator.get('hit-peak') or '0' }}" data-calc="hit-peak" aria-label="Cache hit input price per 1M tokens"></td>
+                <td data-price-cell="off-peak" hidden><input type="number" min="0" step="any" value="{{ row.calculator.get('hit-off-peak') or '0' }}" data-calc="hit-off-peak" aria-label="Off-peak cache hit input price per 1M tokens"></td>
               </tr>
               <tr>
                 <td>Cache miss input</td>
-                <td><input type="number" min="0" step="any" value="0" data-calc="miss-peak" aria-label="Cache miss input price per 1M tokens"></td>
-                <td data-price-cell="off-peak" hidden><input type="number" min="0" step="any" value="0" data-calc="miss-off-peak" aria-label="Off-peak cache miss input price per 1M tokens"></td>
+                <td><input type="number" min="0" step="any" value="{{ row.calculator.get('miss-peak') or '0' }}" data-calc="miss-peak" aria-label="Cache miss input price per 1M tokens"></td>
+                <td data-price-cell="off-peak" hidden><input type="number" min="0" step="any" value="{{ row.calculator.get('miss-off-peak') or '0' }}" data-calc="miss-off-peak" aria-label="Off-peak cache miss input price per 1M tokens"></td>
               </tr>
               <tr>
                 <td>Output</td>
-                <td><input type="number" min="0" step="any" value="0" data-calc="output-peak" aria-label="Output price per 1M tokens"></td>
-                <td data-price-cell="off-peak" hidden><input type="number" min="0" step="any" value="0" data-calc="output-off-peak" aria-label="Off-peak output price per 1M tokens"></td>
+                <td><input type="number" min="0" step="any" value="{{ row.calculator.get('output-peak') or '0' }}" data-calc="output-peak" aria-label="Output price per 1M tokens"></td>
+                <td data-price-cell="off-peak" hidden><input type="number" min="0" step="any" value="{{ row.calculator.get('output-off-peak') or '0' }}" data-calc="output-off-peak" aria-label="Off-peak output price per 1M tokens"></td>
               </tr>
             </tbody>
           </table>
         </fieldset>
+        <p class="muted" data-calc-save-status role="status" hidden></p>
         <dl class="details calculator-results">
           <dt data-calc-peak-result hidden>Peak cost</dt>
           <dd data-calc-result="peak" hidden>—</dd>
@@ -265,7 +269,14 @@
   <section class="card">
     <div class="heading">
       <h2>Measured usage</h2>
-      <span class="muted">Provider-reported token counts from completed AI GM replies</span>
+      <span>
+        <form method="post" action="/admin/models/calculators/clear" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="secondary"
+                  title="Clear saved prices and peak hours for every model.">Clear saved calculator values</button>
+        </form>
+        <span class="muted">Provider-reported token counts from completed AI GM replies</span>
+      </span>
     </div>
     <form method="get" action="/admin/models" class="usage-filter" data-usage-filter>
       <label>Period

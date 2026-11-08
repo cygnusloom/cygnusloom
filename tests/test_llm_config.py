@@ -127,6 +127,51 @@ def test_model_turn_price_and_stream_usage_are_stored_and_preserved(settings: Se
         catalog.add("openai", "bad-price", "https://api.openai.com/v1", credits_per_turn=-1)
 
 
+def test_model_calculator_prices_and_peak_hours_are_stored_and_cleared(settings: Settings):
+    catalog, engine = _catalog(settings)
+    spec = catalog.add("openai", "gpt-4o-mini", "https://api.openai.com/v1")
+    values = {
+        "hit-peak": "0.25",
+        "miss-peak": "0.5",
+        "output-peak": "2",
+        "hit-off-peak": "0.1",
+        "miss-off-peak": "0.2",
+        "output-off-peak": "1",
+        "peak-start": "22:00",
+        "peak-end": "06:00",
+    }
+    saved = catalog.set_calculator(spec.row_id or 0, values)
+    assert saved.calculator == values
+
+    updated = catalog.update(
+        spec.row_id or 0, base_url="https://api.openai.com/v1", credits_per_turn=3
+    )
+    assert updated.calculator == values
+    stored = next(row for row in catalog.all_specs() if row.model_id == "openai/gpt-4o-mini")
+    assert stored.calculator == values
+
+    blank = catalog.set_calculator(spec.row_id or 0, {**values, "hit-off-peak": ""})
+    assert blank.calculator["hit-off-peak"] == "0"
+
+    with Session(engine) as db:
+        row = db.get(LlmModel, spec.row_id)
+    assert row is not None
+    assert '"hit-peak": "0.25"' in row.calculator_json
+
+    with pytest.raises(InvalidInput, match="non-negative"):
+        catalog.set_calculator(spec.row_id or 0, {"hit-peak": "-1"})
+    with pytest.raises(InvalidInput, match="non-negative"):
+        catalog.set_calculator(spec.row_id or 0, {"miss-peak": "not-a-price"})
+    with pytest.raises(InvalidInput, match="HH:MM"):
+        catalog.set_calculator(spec.row_id or 0, {"peak-start": "25:00"})
+
+    assert catalog.clear_calculators() == 3
+    assert all(row.calculator == {} for row in catalog.all_specs())
+    with Session(engine) as db:
+        row = db.get(LlmModel, spec.row_id)
+    assert row is not None and row.calculator_json == "{}"
+
+
 def test_model_validation_rejects_bad_providers_and_missing_base_urls(settings: Settings):
     catalog, _ = _catalog(settings)
     with pytest.raises(InvalidInput, match="provider"):

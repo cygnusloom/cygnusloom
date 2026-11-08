@@ -42,7 +42,9 @@ class LlmModel(SQLModel, table=True):
     `credits_per_turn` is the average price of one completed AI GM reply with this model. It is
     shown in the campaign's model picker and deducted from the campaign owner's balance.
     `stream_usage` asks the provider for token counts in streamed replies; turn it off for an
-    OpenAI-compatible server that rejects the `stream_options` request field."""
+    OpenAI-compatible server that rejects the `stream_options` request field.
+    `calculator_json` holds the model's saved cost-calculator token prices and optional peak
+    hours as JSON; it is configuration for administrators, not part of gameplay."""
 
     __tablename__ = "llm_model"
     __table_args__ = (UniqueConstraint("provider", "model"),)
@@ -54,6 +56,7 @@ class LlmModel(SQLModel, table=True):
     api_key: str = Field(default="", sa_column=Column(Text, nullable=False))
     credits_per_turn: int = Field(default=0)
     stream_usage: bool = Field(default=True)
+    calculator_json: str = Field(default="{}", sa_column=Column(Text, nullable=False))
     enabled: bool = Field(default=True)
     is_default: bool = Field(default=False)
     created_at: datetime = Field(default_factory=utcnow)
