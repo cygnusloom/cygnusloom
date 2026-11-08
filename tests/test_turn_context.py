@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from cygnusloom.config import Settings
+from cygnusloom.services.accounts import set_show_internal_thinking
 from cygnusloom.services.campaigns import (
     get_turn_context,
     get_turn_transcript,
@@ -35,6 +36,11 @@ def _message_ids(app: FastAPI, campaign_id: int, role: str) -> list[int]:
     return [m.id for m in list_messages(app.state.engine, campaign_id) if m.role == role]
 
 
+def _show_thinking(app: FastAPI, campaign_id: int, enabled: bool = True) -> None:
+    """The reply details are a view preference, off by default."""
+    set_show_internal_thinking(app.state.engine, _stored(app, campaign_id).owner_id, enabled)
+
+
 def _record_legacy_reply(app: FastAPI, campaign_id: int) -> int:
     """A GM reply saved before contexts were recorded: it has no TurnContext row."""
     with Session(app.state.engine) as db:
@@ -54,6 +60,7 @@ def test_reply_context_lists_the_system_prompt_tools_and_the_message(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
+    _show_thinking(app, campaign_id)
     _send(client, campaign_id, "hello")
     reply_id = _message_ids(app, campaign_id, "assistant")[-1]
 
@@ -158,6 +165,7 @@ def test_legacy_reply_without_a_recorded_context_says_so(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
+    _show_thinking(app, campaign_id)
     legacy_id = _record_legacy_reply(app, campaign_id)
 
     response = client.get(f"/campaigns/{campaign_id}/messages/{legacy_id}/context")
@@ -170,6 +178,7 @@ def test_context_is_only_for_the_owner_and_only_for_replies(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     owner, campaign_id = _campaign_id(client_factory)
+    _show_thinking(app, campaign_id)
     _send(owner, campaign_id, "hi")
     reply_id = _message_ids(app, campaign_id, "assistant")[-1]
     user_id = _message_ids(app, campaign_id, "user")[0]
@@ -183,6 +192,7 @@ def test_context_is_only_for_the_owner_and_only_for_replies(
 
 def test_context_fragment_escapes_html(client_factory: Callable[[], TestClient], app: FastAPI):
     client, campaign_id = _campaign_id(client_factory)
+    _show_thinking(app, campaign_id)
     _send(client, campaign_id, "<img src=x onerror=alert(1)>")
     reply_id = _message_ids(app, campaign_id, "assistant")[-1]
 
@@ -196,6 +206,7 @@ def test_each_reply_has_a_gear_but_user_messages_do_not(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
+    _show_thinking(app, campaign_id)
     _send(client, campaign_id, "hello")
     reply_id = _message_ids(app, campaign_id, "assistant")[-1]
     user_id = _message_ids(app, campaign_id, "user")[0]
@@ -218,6 +229,7 @@ def test_transcript_covers_only_this_round(client_factory: Callable[[], TestClie
     recorder = _recording_provider()
     app.state.providers = lambda model_id: (recorder, model_id)
     client, campaign_id = _campaign_id(client_factory)
+    _show_thinking(app, campaign_id)
     _send(client, campaign_id, _script({"text": "Hello back."}))
     _send(client, campaign_id, "second")
     first_user = _message_ids(app, campaign_id, "user")[0]
@@ -262,6 +274,7 @@ def test_transcript_records_the_summary_exchange_when_compressing(
 
 def test_transcript_fragment_escapes_html(client_factory: Callable[[], TestClient], app: FastAPI):
     client, campaign_id = _campaign_id(client_factory)
+    _show_thinking(app, campaign_id)
     _send(client, campaign_id, "<img src=x onerror=alert(1)>")
     reply_id = _message_ids(app, campaign_id, "assistant")[-1]
 
@@ -273,6 +286,7 @@ def test_transcript_fragment_escapes_html(client_factory: Callable[[], TestClien
 
 def test_transcript_is_only_for_the_owner(client_factory: Callable[[], TestClient], app: FastAPI):
     owner, campaign_id = _campaign_id(client_factory)
+    _show_thinking(app, campaign_id)
     _send(owner, campaign_id, "hi")
     reply_id = _message_ids(app, campaign_id, "assistant")[-1]
     intruder = _signed_in(client_factory, "intruder@example.com")
@@ -288,6 +302,7 @@ def test_legacy_reply_without_a_transcript_says_so(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
+    _show_thinking(app, campaign_id)
     legacy_id = _record_legacy_reply(app, campaign_id)
 
     response = client.get(f"/campaigns/{campaign_id}/messages/{legacy_id}/transcript")

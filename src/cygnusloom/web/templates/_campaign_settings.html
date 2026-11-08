@@ -1,0 +1,67 @@
+<section class="view settings-page" id="view-settings" data-view="settings" aria-labelledby="settings-title" hidden>
+  <h2 id="settings-title">Settings</h2>
+  <section class="settings-section" aria-labelledby="settings-view-title">
+    <h3 id="settings-view-title">Your view</h3>
+    <form method="post" action="/campaigns/{{ campaign.id }}/thinking">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="show-hidden-option"><input type="checkbox" name="show_internal_thinking" value="1"{% if show_internal_thinking %} checked{% endif %}> Show internal GM thinking</label>
+      <p class="muted">Shows the GM's hidden Log lines and lets you open the Context and Transcript of each reply.</p>
+      <button type="submit">Save</button>
+    </form>
+  </section>
+  {% if is_owner %}
+  <section class="settings-section" aria-labelledby="settings-game-title">
+    <h3 id="settings-game-title">Game</h3>
+    <form method="post" action="/campaigns/{{ campaign.id }}/settings">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Campaign name <input type="text" name="label" value="{{ campaign.name }}" required maxlength="120"></label>
+      <fieldset class="model-options">
+        <legend class="muted">Used for every reply in this campaign, starting with the next one</legend>
+        {% for spec in models %}
+          <label><input type="radio" name="model" value="{{ spec.model_id }}"{% if spec.model_id == campaign.model %} checked{% endif %}> {{ spec.model_id }}
+            {% if not single_player %}<span class="muted">{% if spec.credits_per_turn %}· {{ spec.credits_per_turn }} credits per reply{% else %}· free{% endif %}</span>{% endif %}</label>
+        {% endfor %}
+      </fieldset>
+      {% if not single_player %}
+        {% if credit_price <= 0 %}
+          <p class="muted">This model is free.</p>
+        {% elif credits_exempt %}
+          <p class="muted">Administrators, the single-player account, and credit-exempt accounts are not charged for replies.</p>
+        {% else %}
+          <p class="muted">The campaign owner's balance is <strong>{{ credit_balance }}</strong> credits. The current model costs {{ credit_price }} credits per reply.</p>
+          {% if credits_blocked %}<p role="alert">{{ credit_message }} <a href="/credits">Get more credits</a></p>{% endif %}
+        {% endif %}
+      {% endif %}
+      <fieldset class="model-options">
+        <legend class="muted">Inventory space</legend>
+        <label><input type="checkbox" name="use_inventory_space" value="1"{% if campaign.use_inventory_space %} checked{% endif %}> Track item slots and their limits</label>
+      </fieldset>
+      <p class="muted">When this is off, characters may carry anything reasonable: no capacity checks, no penalty item, and no drain from a full pack.</p>
+      <button type="submit">Save</button>
+    </form>
+  </section>
+  <section class="settings-section" aria-labelledby="settings-export-title">
+    <h3 id="settings-export-title">Export</h3>
+    <p class="muted"><a href="/campaigns/{{ campaign.id }}/export">Export this campaign as JSON</a></p>
+  </section>
+  <section class="settings-section danger-zone" aria-labelledby="settings-danger-title">
+    <h3 id="settings-danger-title">Danger zone</h3>
+    <details>
+      <summary>Delete this campaign</summary>
+      <form method="post" action="/campaigns/{{ campaign.id }}/delete" class="campaign-delete-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <p class="muted">This permanently deletes the campaign and everything in it. Type <strong>{{ campaign.name }}</strong> to confirm.</p>
+        <label>Campaign label <input type="text" name="confirm" required autocomplete="off"></label>
+        <button type="submit" class="danger">Delete campaign</button>
+      </form>
+    </details>
+  </section>
+  {% else %}
+  <section class="settings-section" aria-labelledby="settings-game-summary-title">
+    <h3 id="settings-game-summary-title">Game</h3>
+    <p><strong>{{ campaign.name }}</strong></p>
+    <p class="muted">The campaign owner chooses the model for every reply.{% if credit_price and not single_player %} {{ campaign.model }} costs {{ credit_price }} credits per reply and the owner has {{ credit_balance }} credits.{% elif not single_player %} {{ campaign.model }} is free.{% endif %}</p>
+    <p class="muted">{% if campaign.use_inventory_space %}Inventory space is tracked: item slots and their limits apply.{% else %}Inventory space is not tracked: characters may carry anything reasonable.{% endif %}</p>
+  </section>
+  {% endif %}
+</section>

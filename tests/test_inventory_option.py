@@ -69,6 +69,7 @@ def test_a_new_campaign_tracks_inventory_space_by_default(
     assert _flag(client.app, campaign_id) is True
     page = client.get(f"/campaigns/{campaign_id}").text
     assert 'name="use_inventory_space" value="1" checked' in page
+    assert page.index('id="view-settings"') < page.index('name="use_inventory_space"')
 
 
 def test_tracks_inventory_keeps_the_rule_set_limits_without_a_campaign_row(

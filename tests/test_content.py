@@ -136,6 +136,7 @@ CORE_TOOLS = {
     "roll_creative",
     "record_setting",
     "record_settings",
+    "set_campaign_setting",
     "undo_narration",
     "create_local_map",
     "update_local_map",

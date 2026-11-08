@@ -25,6 +25,9 @@ class User(SQLModel, table=True):
     email: str = Field(default="", index=True, max_length=255)
     email_verified: bool = Field(default=False)
     display_name: str = Field(default="", max_length=120)
+    # A view preference, not campaign state: whether this account sees the GM's hidden Log lines
+    # and can open the Context and Transcript of each reply.
+    show_internal_thinking: bool = Field(default=False)
     roles: str = Field(default="[]", sa_column=Column(Text, nullable=False))
     # Credits a player spends on AI GM replies. Administrators, the single-player account, and
     # credit-exempt accounts are exempt, so the balance is informational for them unless a debug

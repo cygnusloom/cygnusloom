@@ -65,6 +65,22 @@ def set_display_name(engine: Engine, user_id: int, value: str) -> User:
         return user
 
 
+def set_show_internal_thinking(engine: Engine, user_id: int, enabled: bool) -> User:
+    """Store whether an account sees the GM's hidden Log lines and reply details.
+
+    This is a view preference, not campaign state: every member of a campaign chooses their own.
+    """
+    with session_scope(engine) as db:
+        user = db.get(User, user_id)
+        if user is None:
+            raise NotFound("account not found")
+        user.show_internal_thinking = enabled
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user
+
+
 def _initial_display_name(claims: IdentityClaims) -> str:
     return clean_display_name(claims.display_name) or random_display_name()
 

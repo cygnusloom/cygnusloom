@@ -169,14 +169,30 @@ button.secondary:hover, button.secondary:focus-visible {
 .composer-tools { display: flex; align-items: center; gap: 0.5rem; justify-content: flex-end; }
 .context-meter, .credit-meter { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; white-space: nowrap; }
 .context-meter meter, .credit-meter meter { width: 5rem; height: 0.6rem; }
-.composer-settings { width: 2.5rem; height: 2.5rem; display: grid; place-items: center; padding: 0; background: var(--field); color: var(--muted); }
-.composer-settings:hover { color: var(--text); }
-.composer-settings svg { width: 1.25rem; height: 1.25rem; }
 .model-options { display: flex; flex-direction: column; gap: 0.5rem; margin: 0; padding: 0; border: 0; }
 .model-options label { display: flex; align-items: center; gap: 0.5rem; margin: 0; }
 .model-options input[type="radio"] { width: auto; margin: 0; padding: 0; }
 .show-hidden-option { display: flex; align-items: center; gap: 0.5rem; margin: 0.75rem 0 0; }
 .show-hidden-option input[type="checkbox"] { width: auto; margin: 0; padding: 0; }
+
+/* The Settings page carries every campaign and view option that used to live in a dialog. */
+.settings-page { max-width: 46rem; }
+.settings-section {
+  margin-top: 1.25rem; padding: 1rem 1.15rem; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 8px;
+}
+.settings-section:first-of-type { margin-top: 0.5rem; }
+.settings-section h3 { margin: 0 0 0.75rem; font-size: 1rem; }
+.settings-section form { display: flex; flex-direction: column; gap: 0.75rem; }
+.settings-section form > button { align-self: flex-start; }
+.settings-section .model-options { gap: 0.4rem; }
+.settings-page .danger-zone {
+  margin-top: 1.25rem; padding: 1rem 1.15rem; background: var(--panel);
+  border: 1px solid var(--danger); border-radius: 8px;
+}
+.settings-page .danger-zone summary { cursor: pointer; color: var(--danger); }
+.settings-page .danger-zone[open] > summary { margin-bottom: 0.75rem; }
+.settings-page .danger-zone .campaign-delete-form { margin-top: 0.75rem; }
 
 /* Campaign workspace: full-height split view. The site menu folds away so the table gets the
    height; the first sidebar button expands it again. */
@@ -882,7 +898,6 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
   }
   .composer-actions { flex-direction: row; align-items: center; justify-content: space-between; gap: 0.35rem; }
   .composer-tools { flex: 1 1 auto; gap: 0.4rem; }
-  .composer-settings { width: 2.25rem; height: 2.25rem; }
   .composer-actions button[type="submit"] { flex: 0 0 auto; min-width: 5.25rem; padding-block: 0.45rem; }
   .context-meter, .credit-meter { font-size: 0.68rem; }
   .context-meter meter, .credit-meter meter { width: 3.5rem; }

@@ -289,12 +289,15 @@ def test_transcript_keeps_every_message_after_summarizing(settings: Settings):
     assert "m0 " in client.get(f"/campaigns/{campaign_id}").text
 
 
-def test_context_meter_sits_before_the_settings_button(client_factory: Callable[[], TestClient]):
+def test_the_composer_has_no_settings_button_and_keeps_the_context_meter(
+    client_factory: Callable[[], TestClient],
+):
     client, campaign_id = _campaign_id(client_factory)
     page = client.get(f"/campaigns/{campaign_id}").text
     assert 'class="context-meter"' in page
     assert 'max="32768"' in page
-    assert page.index('class="context-meter"') < page.index('class="composer-settings"')
+    assert 'class="composer-settings"' not in page
+    assert 'data-dialog-target="dialog-settings"' not in page
 
 
 def test_context_meter_shows_the_window_from_settings(settings: Settings):

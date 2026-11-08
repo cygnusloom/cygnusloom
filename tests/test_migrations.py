@@ -39,6 +39,7 @@ def test_migrations_create_the_full_schema(tmp_path, monkeypatch):
     assert "use_inventory_space" in campaign_columns
     user_columns = {column["name"] for column in inspect(make_engine(url)).get_columns("user")}
     assert "credit_balance" in user_columns
+    assert "show_internal_thinking" in user_columns
     model_columns = {
         column["name"] for column in inspect(make_engine(url)).get_columns("llm_model")
     }
