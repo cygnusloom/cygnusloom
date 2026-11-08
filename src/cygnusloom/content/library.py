@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import importlib
 import inspect
 import json
@@ -375,6 +376,10 @@ class ToolCall:
     # True for tools the turn review step adds to the usual tools. The state step leaves them
     # out.
     review_step: bool = False
+    # Capability paths that must be truthy for the tool to be offered, such as "wilderness".
+    requires: tuple[str, ...] = ()
+    # Capability paths and the values that enable the tool, such as {"social": ("factions",)}.
+    enabled_by: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -1705,6 +1710,13 @@ class PromptFragment:
     text: str
     step: str = "state"
     unwritten_only: bool = False
+    # Capability paths that must be truthy for the fragment to be offered.
+    requires: tuple[str, ...] = ()
+    # Capability paths and the values that enable the fragment.
+    enabled_by: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+    # Prompt ids this fragment replaces, such as a rule set's own setting instructions replacing
+    # the core ones.
+    supersedes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -1795,6 +1807,80 @@ class FactionAssetDefinition:
     qualities: tuple[str, ...] = ()
 
 
+MAGIC_CAPABILITIES = ("item", "prepared", "move", "none")
+TRAVEL_CAPABILITIES = ("terrain", "narrative", "watches", "none")
+SOCIAL_CAPABILITIES = (
+    "conditions",
+    "counters",
+    "checks",
+    "moves",
+    "relations",
+    "tallies",
+    "factions",
+    "projects",
+    "periods",
+)
+# A capability path a `requires` or `enabled_by` entry may name. A dotted path under `social`
+# asks for one social system, such as "social.conditions".
+CAPABILITY_PATHS = frozenset(
+    {
+        "magic",
+        "travel",
+        "wilderness",
+        "dungeon",
+        "social",
+        *(f"social.{name}" for name in SOCIAL_CAPABILITIES),
+    }
+)
+
+
+@dataclass(frozen=True)
+class Capabilities:
+    """What optional parts of the engine a rule set offers. Core tools and prompts name a
+    capability path in `requires` or `enabled_by`, and the loader offers them only when the rule
+    set supports it. A rule set without a `capabilities` block keeps every inherited definition,
+    so older content loads unchanged."""
+
+    # The magic model: item, prepared, move, or none.
+    magic: str = "none"
+    # How overland travel works: terrain, narrative, watches, or none.
+    travel: str = "none"
+    wilderness: bool = False
+    dungeon: bool = False
+    # The social systems the rule set defines, from SOCIAL_CAPABILITIES.
+    social: tuple[str, ...] = ()
+
+    def supports(self, path: str) -> bool:
+        """Whether the capability at `path` is present and not "none"."""
+        if path == "magic":
+            return self.magic != "none"
+        if path == "travel":
+            return self.travel != "none"
+        if path == "wilderness":
+            return self.wilderness
+        if path == "dungeon":
+            return self.dungeon
+        if path == "social":
+            return bool(self.social)
+        if path.startswith("social."):
+            return path.removeprefix("social.") in self.social
+        return False
+
+    def accepts(self, path: str, values: Sequence[object]) -> bool:
+        """Whether the capability at `path` is one of `values`."""
+        if path == "magic":
+            return self.magic in values
+        if path == "travel":
+            return self.travel in values
+        if path == "wilderness":
+            return self.wilderness in values
+        if path == "dungeon":
+            return self.dungeon in values
+        if path == "social":
+            return any(value in self.social for value in values)
+        return False
+
+
 @dataclass(frozen=True)
 class RuleSet:
     """One loaded rule set. The shared systems are grouped into capability objects; the read-only
@@ -1840,6 +1926,9 @@ class RuleSet:
     table_genres: tuple[str, ...] = ()
     # Rule-data values validated by the ruleset modules that declared them.
     rule_data: Mapping[str, object] = field(default_factory=dict)
+    # The optional engine parts this rule set offers, declared in its head or inferred from its
+    # definitions when the head has no `capabilities` block.
+    capabilities: Capabilities = field(default_factory=Capabilities)
 
     @property
     def rules(self) -> Mapping[str, str]:
@@ -2018,10 +2107,24 @@ class ContentLibrary:
         core_dir = next((d for d in rule_set_dirs if d.name == CORE_RULE_SET), None)
         if core_dir is None:
             raise ContentError(f"missing the {CORE_RULE_SET!r} rule set")
-        core_definitions = read_definitions(core_dir)
-        core = _build_rule_set(core_definitions, CORE_RULE_SET)
+        defaults = _load_defaults(data_dir)
+        core_own, core_removed = _resolve_definitions(
+            read_definitions(core_dir), {}, CORE_RULE_SET
+        )
+        core_capabilities = _infer_capabilities(core_own, permissive=True)
+        core_definitions = _merge_defaults(
+            core_own,
+            defaults,
+            CORE_RULE_SET,
+            removed=core_removed,
+            capabilities=core_capabilities,
+            gate=False,
+        )
+        core = _build_rule_set(
+            core_definitions, CORE_RULE_SET, capabilities=core_capabilities
+        )
         rule_sets = {
-            d.name: _load_rule_set(d, core_definitions)
+            d.name: _load_rule_set(d, core_definitions, defaults)
             for d in rule_set_dirs
             if d.name != CORE_RULE_SET and _has_definitions(d)
         }
@@ -2029,6 +2132,15 @@ class ContentLibrary:
             if world.rule_set is not None and world.rule_set not in rule_sets:
                 raise ContentError(f"{world.id}: world names unknown rule set {world.rule_set!r}")
         return cls(world_templates=worlds, rule_sets=rule_sets, core=core)
+
+
+def _load_defaults(data_dir: Path) -> list[Definition]:
+    """The optional defaults layer under `data/defaults`. A missing or empty directory is a
+    no-op, so every older content tree loads exactly as before."""
+    directory = data_dir / "defaults"
+    if not directory.is_dir() or not _has_definitions(directory):
+        return []
+    return read_definitions(directory)
 
 
 def _has_definitions(directory: Path) -> bool:
@@ -2061,6 +2173,9 @@ def _check_directory_id(template: str, ident: str) -> None:
 
 
 WORLD_TYPES = ("monster", "table", "dice_table", "creative_table", "feature", "rule")
+# Every definition type a world loader consumes. A rule-set-only definition in a world directory
+# is a content error instead of being silently dropped.
+WORLD_DEFINITION_TYPES = frozenset({"world", "location", "npc", "region", *WORLD_TYPES})
 # Every definition type a rule set loader consumes. A definition with another type is a content
 # error instead of being silently dropped.
 RULE_SET_DEFINITION_TYPES = frozenset(
@@ -2119,9 +2234,216 @@ RULE_SET_DEFINITION_TYPES = frozenset(
 STATBLOCK_KEYS = ("stats", "armor", "attacks")
 
 
+def _load_capabilities(value: object, label: str) -> Capabilities:
+    """A rule set's `capabilities` block. The block is authoritative when present: omitted
+    booleans are false and an omitted `social` list offers no social systems."""
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label}: 'capabilities' must be an object")
+    check_keys(
+        value,
+        {"magic", "travel", "wilderness", "dungeon", "social"},
+        f"{label}: capabilities",
+    )
+    magic = value.get("magic", "none")
+    if magic not in MAGIC_CAPABILITIES:
+        raise ContentError(
+            f"{label}: capabilities 'magic' must be one of {', '.join(MAGIC_CAPABILITIES)}"
+        )
+    travel = value.get("travel", "none")
+    if travel not in TRAVEL_CAPABILITIES:
+        raise ContentError(
+            f"{label}: capabilities 'travel' must be one of {', '.join(TRAVEL_CAPABILITIES)}"
+        )
+    wilderness = value.get("wilderness", False)
+    dungeon = value.get("dungeon", False)
+    for key, setting in (("wilderness", wilderness), ("dungeon", dungeon)):
+        if not isinstance(setting, bool):
+            raise ContentError(f"{label}: capabilities {key!r} must be true or false")
+    raw_social = value.get("social", [])
+    if not isinstance(raw_social, list) or not all(
+        isinstance(item, str) and item for item in raw_social
+    ):
+        raise ContentError(f"{label}: capabilities 'social' must be a list of names")
+    unknown = sorted(set(raw_social) - set(SOCIAL_CAPABILITIES))
+    if unknown:
+        raise ContentError(
+            f"{label}: capabilities 'social' names unknown systems "
+            f"{', '.join(repr(name) for name in unknown)}"
+        )
+    if len(set(raw_social)) != len(raw_social):
+        raise ContentError(f"{label}: capabilities 'social' repeats a system")
+    return Capabilities(
+        magic=magic,
+        travel=travel,
+        wilderness=wilderness,
+        dungeon=dungeon,
+        social=tuple(raw_social),
+    )
+
+
+def _infer_capabilities(definitions: Iterable[Definition], *, permissive: bool = False) -> Capabilities:
+    """The capabilities a rule set's definitions imply, for a head with no `capabilities` block.
+
+    The inference is only metadata for a rule set that declares no capabilities: inheritance is
+    left ungated in that case, so old content loads exactly as it did. `permissive` fills the
+    social list with every system, which core needs because its own neutral tools cover systems
+    (factions) that core does not itself define."""
+    defs = list(definitions)
+    magic = "none"
+    for definition in defs:
+        if definition.type == "magic":
+            model = definition.data.get("model", "item")
+            magic = model if model in MAGIC_CAPABILITIES else "item"
+            break
+    travel = "none"
+    if any(d.type == "journey" for d in defs):
+        travel = "terrain"
+    elif any(d.type == "travel" for d in defs):
+        travel = "terrain"
+    elif any(d.type == "wilderness" for d in defs):
+        travel = "watches"
+    wilderness = any(d.type == "wilderness" for d in defs)
+    dungeon = any(d.type == "rule_data" and d.id == "dungeon" for d in defs)
+    if permissive:
+        social = SOCIAL_CAPABILITIES
+    else:
+        present = {d.type for d in defs}
+        social = tuple(
+            name
+            for name, kinds in (
+                ("conditions", ("condition",)),
+                ("counters", ("counter",)),
+                ("checks", ("check",)),
+                ("moves", ("move",)),
+                ("relations", ("relation",)),
+                ("tallies", ("tally",)),
+                ("factions", ("faction_asset",)),
+                ("projects", ("project",)),
+                ("periods", ("period",)),
+            )
+            if present & set(kinds)
+        )
+    return Capabilities(
+        magic=magic,
+        travel=travel,
+        wilderness=wilderness,
+        dungeon=dungeon,
+        social=tuple(social),
+    )
+
+
+def _declared_capabilities(own: Sequence[Definition], template: str) -> Capabilities | None:
+    """The rule set head's capabilities, or None when it has no block. A block is authoritative:
+    only a rule set that declares one has its inherited definitions gated."""
+    head = _single(list(own), "rule_set", template)
+    if "capabilities" not in head.data:
+        return None
+    return _load_capabilities(head.data["capabilities"], f"{template}: rule_set")
+
+
+def _inherited_definition_enabled(
+    definition: Definition, capabilities: Capabilities, template: str
+) -> bool:
+    """Whether an inherited core or default definition passes its own gate."""
+    label = f"{template}: {definition.type} {definition.id}"
+    requires, enabled_by = _read_gate(definition.data, label)
+    return _definition_enabled(capabilities, requires, enabled_by)
+
+
+def _read_gate(data: Mapping[str, Any], label: str) -> tuple[tuple[str, ...], dict[str, tuple[Any, ...]]]:
+    """Read a definition's `requires` and `enabled_by`, validating every capability path and
+    value against the rule set's capability model."""
+    raw_requires = data.get("requires", [])
+    if isinstance(raw_requires, str):
+        raw_requires = [raw_requires]
+    if not isinstance(raw_requires, list) or not all(
+        isinstance(item, str) and item for item in raw_requires
+    ):
+        raise ContentError(f"{label}: 'requires' must be a list of capability names")
+    unknown = sorted(set(raw_requires) - CAPABILITY_PATHS)
+    if unknown:
+        raise ContentError(
+            f"{label}: 'requires' names unknown capability paths {', '.join(unknown)}"
+        )
+    if len(set(raw_requires)) != len(raw_requires):
+        raise ContentError(f"{label}: 'requires' repeats a capability")
+    raw_enabled = data.get("enabled_by", {})
+    if not isinstance(raw_enabled, Mapping):
+        raise ContentError(f"{label}: 'enabled_by' must be an object")
+    enabled: dict[str, tuple[Any, ...]] = {}
+    for path, raw_values in raw_enabled.items():
+        if path not in CAPABILITY_PATHS:
+            raise ContentError(
+                f"{label}: 'enabled_by' names unknown capability path {path!r}"
+            )
+        if "." in path:
+            raise ContentError(
+                f"{label}: 'enabled_by' cannot name {path!r}; use 'requires' for social systems"
+            )
+        values = [raw_values] if not isinstance(raw_values, list) else raw_values
+        if not values:
+            raise ContentError(f"{label}: 'enabled_by' {path!r} must not be empty")
+        if path == "magic":
+            unknown_values = [value for value in values if value not in MAGIC_CAPABILITIES]
+        elif path == "travel":
+            unknown_values = [value for value in values if value not in TRAVEL_CAPABILITIES]
+        elif path == "social":
+            unknown_values = [value for value in values if value not in SOCIAL_CAPABILITIES]
+        else:
+            unknown_values = [value for value in values if not isinstance(value, bool)]
+        if unknown_values:
+            raise ContentError(
+                f"{label}: 'enabled_by' {path!r} has unsupported value(s) "
+                f"{', '.join(repr(value) for value in unknown_values)}"
+            )
+        enabled[path] = tuple(values)
+    return tuple(raw_requires), enabled
+
+
+def _definition_enabled(
+    capabilities: Capabilities,
+    requires: Sequence[str],
+    enabled_by: Mapping[str, Sequence[Any]],
+) -> bool:
+    """Whether every `requires` path is truthy and every `enabled_by` path holds one of its
+    values."""
+    if any(not capabilities.supports(path) for path in requires):
+        return False
+    return all(capabilities.accepts(path, values) for path, values in enabled_by.items())
+
+
+def _check_definition_gate(
+    capabilities: Capabilities | None,
+    requires: Sequence[str],
+    enabled_by: Mapping[str, Sequence[Any]],
+    label: str,
+) -> None:
+    """Check a definition authored by the rule set itself. Unlike an inherited definition, which
+    is dropped when its gate is unmet, an authored definition that asks for an unsupported
+    capability is a content error: the rule set would otherwise offer a tool it says it cannot
+    use."""
+    if capabilities is None:
+        return
+    if not _definition_enabled(capabilities, requires, enabled_by):
+        raise ContentError(
+            f"{label}: its requires/enabled_by gate is not met by the rule set's capabilities"
+        )
+
+
+def _assert_consumed(
+    definitions: Iterable[Definition], allowed: frozenset[str], template: str
+) -> None:
+    """Every definition must have a type a loader consumes. Run after a build so a type the
+    registry does not know about cannot be silently dropped."""
+    unknown = sorted({d.type for d in definitions if d.type not in allowed})
+    if unknown:
+        raise ContentError(f"{template}: unknown definition type(s) {', '.join(unknown)}")
+
+
 def _load_world(directory: Path) -> WorldTemplate:
     template = directory.name
     definitions = read_definitions(directory)
+    _assert_consumed(definitions, WORLD_DEFINITION_TYPES, template)
     world = _single(definitions, "world", template)
     _check_directory_id(template, world.id)
     label = f"{template}: world"
@@ -2872,15 +3194,352 @@ def _rule_set_table_genres(definitions: Sequence[Definition], template: str) -> 
     return tuple(genre for genre in TABLE_GENRES if genre in used)
 
 
-def _load_rule_set(directory: Path, core_definitions: list[Definition]) -> RuleSet:
+# Definition keys a rule-set file may use to shape the resolved definition. They never reach a
+# loader.
+META_KEYS = frozenset({"extends", "patch", "remove", "disabled"})
+# The definition types the optional defaults layer understands.
+DEFAULT_DEFINITION_TYPES = frozenset({"clock", "rest", "world_terrain", "prompt", "tool_call"})
+
+
+def _strip_meta(data: Mapping[str, Any], kind: str = "") -> dict[str, Any]:
+    """A copy of a definition's data without the meta keys. A creative table keeps its own
+    `add`/`remove` fields, which patch its entries rather than removing the definition."""
+    meta = META_KEYS - ({"remove"} if kind == "creative_table" else set())
+    return {key: value for key, value in data.items() if key not in meta}
+
+
+def _overlay_data(
+    base: Mapping[str, Any], own: Mapping[str, Any], label: str
+) -> dict[str, Any]:
+    """Overlay one definition on another: a nested object merges key by key, and every other
+    value, including a list, replaces the base value."""
+    result = {key: copy.deepcopy(value) for key, value in base.items()}
+    for key, value in own.items():
+        if key in {"type", "id"} or key in META_KEYS:
+            continue
+        current = result.get(key)
+        if isinstance(value, Mapping) and isinstance(current, Mapping):
+            result[key] = _overlay_data(current, value, label)
+        else:
+            result[key] = copy.deepcopy(value)
+    return result
+
+
+def _patched_data(
+    base: Mapping[str, Any], patch: Mapping[str, Any], label: str, path: tuple[str, ...] = ()
+) -> dict[str, Any]:
+    """Apply a `patch` mapping to resolved definition data. A nested object merges key by key;
+    a list or scalar replaces the value. Every patched path must already exist, so a typo fails
+    at load time instead of being added silently."""
+    result = {key: copy.deepcopy(value) for key, value in base.items()}
+    for key, value in patch.items():
+        where = ".".join((*path, str(key)))
+        if key in {"type", "id"}:
+            raise ContentError(f"{label}: 'patch' cannot change {key!r}")
+        if key in META_KEYS:
+            raise ContentError(f"{label}: 'patch' cannot set the meta key {key!r}")
+        if key not in result:
+            raise ContentError(
+                f"{label}: 'patch' names {where!r}, which the target does not define"
+            )
+        current = result[key]
+        if isinstance(value, Mapping):
+            if not isinstance(current, Mapping):
+                raise ContentError(
+                    f"{label}: 'patch' {where!r} is an object, but the target value is not"
+                )
+            result[key] = _patched_data(current, value, label, (*path, str(key)))
+        else:
+            result[key] = copy.deepcopy(value)
+    return result
+
+
+def _parse_extends(
+    value: object,
+    own_by_key: Mapping[tuple[str, str], Definition],
+    base_by_key: Mapping[tuple[str, str], Definition],
+    label: str,
+) -> tuple[bool, tuple[str, str]]:
+    """Resolve an `extends` target. The result is `(from_own, key)`: true for another definition
+    in the same rule set, false for an inherited or default definition. `"core:table/quirk"` and
+    `{"rule_set": "core", "type": "table", "id": "quirk"}` both name core explicitly."""
+    rule_set: str | None = None
+    if isinstance(value, str):
+        source, colon, rest = value.partition(":")
+        if colon:
+            rule_set, target = source, rest
+        else:
+            target = value
+        kind, slash, ident = target.partition("/")
+        if not slash or not kind or not ident:
+            raise ContentError(
+                f"{label}: 'extends' must be 'core:type/id' or 'type/id', not {value!r}"
+            )
+        key = (kind, ident)
+    elif isinstance(value, Mapping):
+        check_keys(value, {"rule_set", "type", "id"}, f"{label}: extends")
+        rule_set = _optional_text(value, "rule_set", f"{label}: extends")
+        key = (
+            required_text(value, "type", f"{label}: extends"),
+            required_text(value, "id", f"{label}: extends"),
+        )
+    else:
+        raise ContentError(f"{label}: 'extends' must be a string or an object")
+    if rule_set is not None and rule_set != CORE_RULE_SET:
+        raise ContentError(f"{label}: 'extends' names unknown rule set {rule_set!r}")
+    if rule_set is None and key in own_by_key:
+        return True, key
+    if key in base_by_key:
+        return False, key
+    if rule_set is not None:
+        raise ContentError(
+            f"{label}: 'extends' names {key[0]} {key[1]!r}, which {CORE_RULE_SET} does not define"
+        )
+    raise ContentError(
+        f"{label}: 'extends' names {key[0]} {key[1]!r}, which no definition defines"
+    )
+
+
+def _resolve_definitions(
+    own: list[Definition],
+    base_by_key: Mapping[tuple[str, str], Definition],
+    template: str,
+) -> tuple[list[Definition], frozenset[tuple[str, str]]]:
+    """Resolve `extends`, `patch`, `remove`, and `disabled` before core inheritance.
+
+    A `remove` or `disabled` stub drops the inherited definition with the same type and id, so
+    inheritance must also forget the key. The returned set holds those keys."""
+    own_by_key = {(d.type, d.id): d for d in own}
+    resolved: dict[tuple[str, str], Definition] = {}
+    removed: set[tuple[str, str]] = set()
+    resolving: list[tuple[str, str]] = []
+
+    def resolve(key: tuple[str, str]) -> Definition | None:
+        if key in resolved:
+            return resolved[key]
+        if key in removed:
+            return None
+        if key in resolving:
+            chain = " -> ".join(f"{kind}/{ident}" for kind, ident in (*resolving, key))
+            raise ContentError(f"{template}: 'extends' cycle: {chain}")
+        definition = own_by_key[key]
+        label = f"{template}: {definition.type} {definition.id}"
+        data = dict(definition.data)
+        disabled = data.pop("disabled", False)
+        remove = (
+            data.pop("remove", False)
+            if definition.type != "creative_table"
+            else False
+        )
+        for flag_name, flag in (("disabled", disabled), ("remove", remove)):
+            if not isinstance(flag, bool):
+                raise ContentError(f"{label}: {flag_name!r} must be true or false")
+        if disabled or remove:
+            extra = set(data) - {"type", "id"}
+            if extra:
+                names = ", ".join(repr(name) for name in sorted(extra))
+                raise ContentError(
+                    f"{label}: a definition marked {flag_name!r} may carry only type and id; "
+                    f"it also has {names}"
+                )
+            if key not in base_by_key:
+                raise ContentError(
+                    f"{label}: marked {flag_name!r}, but no inherited definition has that "
+                    "type and id"
+                )
+            removed.add(key)
+            return None
+        extends = data.pop("extends", None)
+        patch = data.pop("patch", None)
+        if patch is not None and not isinstance(patch, Mapping):
+            raise ContentError(f"{label}: 'patch' must be an object")
+        resolving.append(key)
+        try:
+            if extends is not None:
+                from_own, base_key = _parse_extends(extends, own_by_key, base_by_key, label)
+                base_definition = (
+                    resolve(base_key) if from_own else base_by_key[base_key]
+                )
+                if base_definition is None:
+                    raise ContentError(
+                        f"{label}: 'extends' names {base_key[0]} {base_key[1]!r}, which is "
+                        "removed or disabled"
+                    )
+                data = _overlay_data(
+                    _strip_meta(base_definition.data, base_definition.type), data, label
+                )
+            if patch is not None:
+                data = _patched_data(data, patch, label)
+        finally:
+            resolving.pop()
+        data["type"], data["id"] = definition.type, definition.id
+        result = Definition(type=definition.type, id=definition.id, data=data)
+        resolved[key] = result
+        return result
+
+    order: list[Definition] = []
+    for definition in own:
+        result = resolve((definition.type, definition.id))
+        if result is not None:
+            order.append(result)
+    return order, frozenset(removed)
+
+
+def _merge_defaults(
+    own: list[Definition],
+    defaults: Sequence[Definition],
+    template: str,
+    removed: frozenset[tuple[str, str]] = frozenset(),
+    capabilities: Capabilities | None = None,
+    gate: bool = False,
+) -> list[Definition]:
+    """Layer the optional defaults over a rule set's own definitions.
+
+    A clock or rest default only fills in fields of the rule set's single definition of that
+    type; a terrain default only supplies the looks of the same terrain id; a prompt or tool
+    default is added only when the rule set does not define that id. A missing defaults layer is
+    a no-op."""
+    merged = list(own)
+    index = {(d.type, d.id): position for position, d in enumerate(merged)}
+
+    def replace(position: int, data: Mapping[str, Any]) -> None:
+        definition = merged[position]
+        merged[position] = Definition(
+            type=definition.type,
+            id=definition.id,
+            data=data,
+        )
+
+    # A rest may remove inherited lengths even when the defaults layer is absent.
+    for position, definition in enumerate(list(merged)):
+        if definition.type != "rest" or "remove_lengths" not in definition.data:
+            continue
+        label = f"{template}: rest {definition.id}"
+        data = dict(definition.data)
+        raw_remove = data.pop("remove_lengths")
+        if not isinstance(raw_remove, list) or not all(
+            isinstance(item, str) and item for item in raw_remove
+        ):
+            raise ContentError(f"{label}: 'remove_lengths' must be a list of rest length ids")
+        lengths = data.get("lengths")
+        if not isinstance(lengths, Mapping):
+            raise ContentError(f"{label}: 'lengths' must be an object")
+        kept = dict(lengths)
+        for length_id in raw_remove:
+            if length_id not in kept:
+                raise ContentError(
+                    f"{label}: 'remove_lengths' names unknown rest length {length_id!r}"
+                )
+            kept.pop(length_id)
+        data["lengths"] = kept
+        replace(position, data)
+    if not defaults:
+        return merged
+
+    for default in defaults:
+        if default.type not in DEFAULT_DEFINITION_TYPES:
+            raise ContentError(
+                f"{template}: the defaults layer does not define {default.type!r} definitions"
+            )
+        meta = set(default.data) & META_KEYS
+        if meta:
+            names = ", ".join(repr(name) for name in sorted(meta))
+            raise ContentError(
+                f"{template}: defaults entry {default.type} {default.id!r} may not use {names}"
+            )
+        key = (default.type, default.id)
+        if key in removed:
+            continue
+        if default.type == "clock":
+            positions = [i for i, d in enumerate(merged) if d.type == "clock"]
+            if not positions:
+                continue
+            position = positions[0]
+            target = merged[position]
+            data = _overlay_data(default.data, target.data, f"{template}: clock {target.id}")
+            data["type"], data["id"] = target.type, target.id
+            replace(position, data)
+        elif default.type == "rest":
+            positions = [i for i, d in enumerate(merged) if d.type == "rest"]
+            if not positions:
+                continue
+            position = positions[0]
+            target = merged[position]
+            default_lengths = default.data.get("lengths", {})
+            if not isinstance(default_lengths, Mapping):
+                raise ContentError(
+                    f"{template}: defaults rest {default.id!r}: 'lengths' must be an object"
+                )
+            data = dict(target.data)
+            lengths = dict(data.get("lengths", {}))
+            for length_id, body in default_lengths.items():
+                if length_id not in lengths:
+                    lengths[length_id] = copy.deepcopy(body)
+            data["lengths"] = lengths
+            if "interrupted" in default.data and "interrupted" not in data:
+                data["interrupted"] = default.data["interrupted"]
+            replace(position, data)
+        elif default.type == "world_terrain":
+            if key not in index:
+                continue
+            position = index[key]
+            target = merged[position]
+            data = dict(target.data)
+            for field_name in ("name", "color", "pattern", "ink"):
+                if field_name not in data and field_name in default.data:
+                    data[field_name] = copy.deepcopy(default.data[field_name])
+            replace(position, data)
+        else:
+            if key in index:
+                continue
+            if gate and capabilities is not None:
+                requires, enabled_by = _read_gate(
+                    default.data, f"{template}: {default.type} {default.id}"
+                )
+                if not _definition_enabled(capabilities, requires, enabled_by):
+                    continue
+            merged.append(
+                Definition(
+                    type=default.type,
+                    id=default.id,
+                    data=_strip_meta(default.data, default.type),
+                )
+            )
+            index[key] = len(merged) - 1
+    return merged
+
+
+def _load_rule_set(
+    directory: Path,
+    core_definitions: list[Definition],
+    defaults: Sequence[Definition] = (),
+) -> RuleSet:
     """A rule set is its own definitions plus every core definition it does not replace. A core
     dice or creative table joins it only when its genres fit the rule set's own selection; the
     core library keeps every table, so the sourcebook stays complete."""
     template = directory.name
+    base_by_key: dict[tuple[str, str], Definition] = {}
+    for definition in (*core_definitions, *defaults):
+        base_by_key[(definition.type, definition.id)] = Definition(
+            type=definition.type,
+            id=definition.id,
+            data=_strip_meta(definition.data, definition.type),
+        )
+    own, removed = _resolve_definitions(read_definitions(directory), base_by_key, template)
+    declared = _declared_capabilities(own, template)
+    capabilities = declared or _infer_capabilities([*own, *core_definitions])
+    own = _merge_defaults(
+        own,
+        defaults,
+        template,
+        removed=removed,
+        capabilities=capabilities,
+        gate=declared is not None,
+    )
     core_creative = {d.id: d for d in core_definitions if d.type == "creative_table"}
     own = [
         _patch_creative_table(d, core_creative, template) if d.type == "creative_table" else d
-        for d in read_definitions(directory)
+        for d in own
     ]
     own_keys = {(d.type, d.id) for d in own}
     genres = _rule_set_table_genres(own, template)
@@ -2889,24 +3548,36 @@ def _load_rule_set(directory: Path, core_definitions: list[Definition]) -> RuleS
         for d in core_definitions
         if d.type != "rule_set"
         and (d.type, d.id) not in own_keys
+        and (d.type, d.id) not in removed
+        and (
+            declared is None
+            or _inherited_definition_enabled(d, capabilities, template)
+        )
         and (
             d.type not in ("dice_table", "creative_table")
             or table_genre_offered(_definition_genres(d, template), genres)
         )
     ]
-    return _build_rule_set([*own, *inherited], template, table_genres=genres)
+    # A rule set that does not declare capabilities keeps inherited definitions ungated. Passing
+    # None makes the builder infer a permissive model for validation without dropping tools.
+    build_capabilities = capabilities if declared is not None else None
+    return _build_rule_set(
+        [*own, *inherited], template, table_genres=genres, capabilities=build_capabilities
+    )
 
 
 def _build_rule_set(
     definitions: list[Definition],
     template: str,
     table_genres: tuple[str, ...] | None = None,
+    capabilities: Capabilities | None = None,
 ) -> RuleSet:
     head = _single(definitions, "rule_set", template)
     _check_directory_id(template, head.id)
-    unknown = sorted({d.type for d in definitions} - RULE_SET_DEFINITION_TYPES)
-    if unknown:
-        raise ContentError(f"{template}: unknown definition type(s) {', '.join(unknown)}")
+    if capabilities is None:
+        capabilities = _declared_capabilities(definitions, template) or _infer_capabilities(
+            definitions, permissive=True
+        )
     label = f"{template}: rule_set"
     check_keys(
         head.data,
@@ -2926,6 +3597,7 @@ def _build_rule_set(
             "npc_hp",
             "npc_hp_stat",
             "table_genres",
+            "capabilities",
         },
         label,
     )
@@ -3065,7 +3737,7 @@ def _build_rule_set(
         template,
         icon_entries=_icon_entries(definitions, "shop_item", template),
     )
-    prompt_fragments = _load_prompts(definitions, template)
+    prompt_fragments = _load_prompts(definitions, template, capabilities=capabilities)
     sentence_cap = _load_sentence_cap(definitions, template)
     travel = _load_travel(definitions, template)
     journey = _load_journey(definitions, template)
@@ -3102,11 +3774,21 @@ def _build_rule_set(
     for d in definitions:
         if d.type != "tool_call":
             continue
-        call = _load_tool_call(d, modules, character, template, npc_hp, travel, enum_sources)
+        call = _load_tool_call(
+            d,
+            modules,
+            character,
+            template,
+            npc_hp,
+            travel,
+            enum_sources,
+            capabilities=capabilities,
+        )
         if call.name in tool_names:
             raise ContentError(f"{template}: duplicate tool name {call.name!r}")
         tool_names.add(call.name)
         tool_calls[call.id] = call
+    _assert_consumed(definitions, RULE_SET_DEFINITION_TYPES, template)
     return RuleSet(
         id=head.id,
         name=required_text(head.data, "name", label),
@@ -3167,6 +3849,7 @@ def _build_rule_set(
         hooks=hooks,
         condition_ends=condition_ends,
         rule_data=rule_data,
+        capabilities=capabilities,
     )
 
 
@@ -4680,27 +5363,74 @@ def _single_optional(definitions: list[Definition], kind: str, template: str) ->
     return found[0] if found else None
 
 
-def _load_prompts(definitions: list[Definition], template: str) -> tuple[PromptFragment, ...]:
-    """The `prompt` definitions, in file order. Each is a sentence group the GM prompt adds."""
+def _load_prompts(
+    definitions: list[Definition],
+    template: str,
+    *,
+    capabilities: Capabilities | None = None,
+) -> tuple[PromptFragment, ...]:
+    """The `prompt` definitions, in file order. Each is a sentence group the GM prompt adds. A
+    fragment may `supersede` another by id, so a rule set's own setting instructions can replace
+    core's. Superseded fragments are left out of the final list."""
+    prompt_definitions = [d for d in definitions if d.type == "prompt"]
+    prompt_ids: set[str] = set()
+    for d in prompt_definitions:
+        if d.id in prompt_ids:
+            raise ContentError(f"{template}: duplicate prompt {d.id!r}")
+        prompt_ids.add(d.id)
+    supersedes_by_id: dict[str, tuple[str, ...]] = {}
+    superseded: set[str] = set()
+    for d in prompt_definitions:
+        raw = d.data.get("supersedes", [])
+        if isinstance(raw, str):
+            raw = [raw]
+        if not isinstance(raw, list) or not all(
+            isinstance(item, str) and item for item in raw
+        ):
+            raise ContentError(
+                f"{template}: prompt {d.id!r}: 'supersedes' must be a list of prompt ids"
+            )
+        unknown = [item for item in raw if item not in prompt_ids]
+        if unknown:
+            raise ContentError(
+                f"{template}: prompt {d.id!r} supersedes unknown prompt(s) "
+                f"{', '.join(repr(item) for item in unknown)}"
+            )
+        supersedes_by_id[d.id] = tuple(raw)
+        superseded.update(raw)
     fragments = []
-    ids: set[str] = set()
-    for d in definitions:
-        if d.type != "prompt":
+    for d in prompt_definitions:
+        if d.id in superseded:
             continue
         label = f"{template}: prompt {d.id!r}"
-        if d.id in ids:
-            raise ContentError(f"{template}: duplicate prompt {d.id!r}")
-        check_keys(d.data, {"type", "id", "text", "step", "unwritten_only"}, label)
-        ids.add(d.id)
+        check_keys(
+            d.data,
+            {
+                "type",
+                "id",
+                "text",
+                "step",
+                "unwritten_only",
+                "requires",
+                "enabled_by",
+                "supersedes",
+            },
+            label,
+        )
         step = d.data.get("step", "state")
         if step not in ("state", "narration", "all"):
             raise ContentError(f"{label}: 'step' must be state, narration, or all")
+        requires, enabled_by = _read_gate(d.data, label)
+        _check_definition_gate(capabilities, requires, enabled_by, label)
         fragments.append(
             PromptFragment(
                 id=d.id,
                 text=required_text(d.data, "text", label),
                 step=step,
                 unwritten_only=_flag(d.data, "unwritten_only", label),
+                requires=requires,
+                enabled_by=enabled_by,
+                supersedes=supersedes_by_id.get(d.id, ()),
             )
         )
     return tuple(fragments)
@@ -5227,6 +5957,41 @@ def _load_rule_data(
 # The keys in a hooks definition that describe the definition rather than name a hook point.
 # Every other key is a hook name, so a rule set can add a hook point without a core edit.
 HOOK_RESERVED_KEYS = frozenset({"type", "id", "python_module", "options", "configure"})
+# The standard hook points and the number of arguments each receives, not counting the
+# HookContext every hook gets first. A rule set may still declare another hook name: it is
+# called the same way, and the loader only warns that the name is unknown.
+HOOK_ARITIES: Mapping[str, int] = {
+    "new_day": 1,
+    "before_rest": 3,
+    "after_rest": 5,
+    "held_back": 1,
+    "after_consume": 5,
+    "lodge": 1,
+    "status": 1,
+}
+
+
+def _check_hook_arity(hook_name: str, function: Callable[..., Any], label: str) -> None:
+    """Check a standard hook's function against the arguments the engine passes. An unknown
+    hook name is allowed (it is a rule set's own extension point) and only warned about."""
+    expected = HOOK_ARITIES.get(hook_name)
+    if expected is None:
+        logger.warning("%s: unknown hook name %r; it is still called", label, hook_name)
+        return
+    parameters = inspect.signature(function).parameters.values()
+    if any(parameter.kind is parameter.VAR_POSITIONAL for parameter in parameters):
+        return
+    positional = [
+        parameter
+        for parameter in parameters
+        if parameter.name != "hc"
+        and parameter.kind in (parameter.POSITIONAL_ONLY, parameter.POSITIONAL_OR_KEYWORD)
+    ]
+    if len(positional) != expected:
+        raise ContentError(
+            f"{label}: hook {hook_name!r} takes {expected} argument(s) after hc, but "
+            f"{function.__name__!r} takes {len(positional)}"
+        )
 
 
 def _load_rule_hooks(
@@ -5259,8 +6024,10 @@ def _load_rule_hooks(
             continue
         function_name = _optional_nonempty_text(data, hook_name, label)
         assert function_name is not None
-        if not callable(getattr(module, function_name, None)):
+        function = getattr(module, function_name, None)
+        if not callable(function):
             raise ContentError(f"{label}: {function_name!r} is not a function in {module_id!r}")
+        _check_hook_arity(hook_name, function, label)
         functions[hook_name] = function_name
     if any(length.upkeep for length in rests.values()) and "before_rest" not in functions:
         raise ContentError(
@@ -6897,6 +7664,8 @@ def _load_tool_call(
     npc_hp: Mapping[str, int],
     travel: Travel | None = None,
     enum_sources: Mapping[str, Sequence[str]] | None = None,
+    *,
+    capabilities: Capabilities | None = None,
 ) -> ToolCall:
     label = f"{template}: tool_call {definition.id}"
     data = definition.data
@@ -6921,9 +7690,13 @@ def _load_tool_call(
             "review_step",
             "npc_hp_tier",
             "travel",
+            "requires",
+            "enabled_by",
         },
         label,
     )
+    requires, enabled_by = _read_gate(data, label)
+    _check_definition_gate(capabilities, requires, enabled_by, label)
     function, world_method = _tool_handler(data, modules, label)
     inspected = function
     if inspected is None and world_method is not None:
@@ -6972,6 +7745,8 @@ def _load_tool_call(
         lookup=_flag(data, "lookup", label),
         journal_step=_flag(data, "journal_step", label),
         review_step=_flag(data, "review_step", label),
+        requires=requires,
+        enabled_by=enabled_by,
     )
 
 
@@ -7416,18 +8191,202 @@ def _check_fields(template: str, arguments: Mapping[str, Any], key: str, label: 
             raise ContentError(f"{label}: '{key}' names unknown argument {name!r}")
 
 
+SCHEMA_TYPES = frozenset({"string", "integer", "number", "boolean", "array", "object", "null"})
+SCHEMA_KEYS = frozenset(
+    {
+        "type",
+        "description",
+        "properties",
+        "required",
+        "enum",
+        "default",
+        "items",
+        "additionalProperties",
+        "minimum",
+        "maximum",
+        "minLength",
+        "maxLength",
+        "pattern",
+        "minItems",
+        "maxItems",
+        "enum_from",
+    }
+)
+UNSUPPORTED_SCHEMA_KEYS = ("$ref", "anyOf", "oneOf", "allOf")
+# The scalar types an `enum` list may hold.
+ENUM_TYPES = frozenset({"string", "integer", "number", "boolean", "null"})
+
+
+def _schema_value_matches(value: object, kind: str) -> bool:
+    """Whether a JSON value is of one schema type. A boolean is not an integer."""
+    if kind == "string":
+        return isinstance(value, str)
+    if kind == "integer":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if kind == "number":
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    if kind == "boolean":
+        return isinstance(value, bool)
+    if kind == "array":
+        return isinstance(value, list)
+    if kind == "object":
+        return isinstance(value, Mapping)
+    if kind == "null":
+        return value is None
+    return False
+
+
 def _check_parameters(schema: object, label: str) -> dict[str, Any]:
+    """Check a tool's parameter schema strictly: every nested node must use a supported type
+    and only the schema keys the engine understands. A `$ref`, `anyOf`, `oneOf`, or `allOf` is
+    rejected rather than handed to a provider that may interpret it differently."""
     if not isinstance(schema, dict) or schema.get("type") != "object":
         raise ContentError(f"{label}: 'parameters' must be an object schema with type 'object'")
     properties = schema.get("properties")
     if not isinstance(properties, dict):
         raise ContentError(f"{label}: 'parameters' needs a 'properties' object")
-    required = schema.get("required", [])
-    if not isinstance(required, list) or not all(
-        isinstance(item, str) and item in properties for item in required
-    ):
-        raise ContentError(f"{label}: 'required' must list names from 'properties'")
+    _check_schema_node(schema, label, root=True)
     return schema
+
+
+def _check_schema_node(node: object, label: str, *, root: bool = False) -> None:
+    if not isinstance(node, dict):
+        raise ContentError(f"{label}: a schema node must be an object")
+    unsupported = [key for key in UNSUPPORTED_SCHEMA_KEYS if key in node]
+    if unsupported:
+        names = ", ".join(repr(key) for key in unsupported)
+        raise ContentError(f"{label}: schema key(s) {names} are not supported")
+    check_keys(node, SCHEMA_KEYS, label)
+    kind = node.get("type")
+    if kind not in SCHEMA_TYPES:
+        raise ContentError(
+            f"{label}: schema 'type' must be one of {', '.join(sorted(SCHEMA_TYPES))}"
+        )
+    if root and kind != "object":
+        raise ContentError(f"{label}: the parameter schema must have type 'object'")
+    if "description" in node and not isinstance(node["description"], str):
+        raise ContentError(f"{label}: schema 'description' must be text")
+    if "enum" in node:
+        if kind not in ENUM_TYPES:
+            raise ContentError(f"{label}: schema 'enum' needs a scalar type")
+        values = node["enum"]
+        if not isinstance(values, list) or not values:
+            raise ContentError(f"{label}: schema 'enum' must be a non-empty list")
+        if not all(_schema_value_matches(value, kind) for value in values):
+            raise ContentError(f"{label}: schema 'enum' has a value that is not a {kind}")
+        if len({json.dumps(value, sort_keys=True) for value in values}) != len(values):
+            raise ContentError(f"{label}: schema 'enum' repeats a value")
+    if "default" in node:
+        default = node["default"]
+        if not _schema_value_matches(default, kind):
+            raise ContentError(f"{label}: schema 'default' is not a {kind}")
+        if "enum" in node and default not in node["enum"]:
+            raise ContentError(f"{label}: schema 'default' is not one of its 'enum'")
+    if "enum_from" in node:
+        if "enum" in node or "default" in node:
+            raise ContentError(
+                f"{label}: schema 'enum_from' cannot be combined with 'enum' or 'default'"
+            )
+        if kind != "string":
+            raise ContentError(f"{label}: schema 'enum_from' needs a string property")
+        source = node["enum_from"]
+        if isinstance(source, str):
+            if not source:
+                raise ContentError(f"{label}: schema 'enum_from' must name a source")
+        elif not isinstance(source, Mapping):
+            raise ContentError(
+                f"{label}: schema 'enum_from' must be a source name or an object"
+            )
+    if "items" in node:
+        if kind != "array":
+            raise ContentError(f"{label}: schema 'items' needs an array property")
+        _check_schema_node(node["items"], f"{label}: items")
+    elif kind == "array":
+        raise ContentError(f"{label}: an array schema needs 'items'")
+    if "properties" in node:
+        if kind != "object":
+            raise ContentError(f"{label}: schema 'properties' needs an object property")
+        properties = node["properties"]
+        if not isinstance(properties, Mapping):
+            raise ContentError(f"{label}: schema 'properties' must be an object")
+        for name, prop in properties.items():
+            if not isinstance(name, str) or not name:
+                raise ContentError(f"{label}: schema property names must be non-empty text")
+            _check_schema_node(prop, f"{label}: property {name!r}")
+    elif kind == "object" and "additionalProperties" not in node:
+        raise ContentError(f"{label}: an object schema needs 'properties'")
+    if "required" in node:
+        if kind != "object":
+            raise ContentError(f"{label}: schema 'required' needs an object property")
+        required = node["required"]
+        if not isinstance(required, list) or not all(
+            isinstance(item, str) and item in (node.get("properties") or {})
+            for item in required
+        ):
+            raise ContentError(f"{label}: 'required' must list names from 'properties'")
+        if len(set(required)) != len(required):
+            raise ContentError(f"{label}: 'required' repeats a name")
+    if "additionalProperties" in node:
+        if kind != "object":
+            raise ContentError(f"{label}: schema 'additionalProperties' needs an object property")
+        extra = node["additionalProperties"]
+        if isinstance(extra, Mapping):
+            _check_schema_node(extra, f"{label}: additionalProperties")
+        elif not isinstance(extra, bool):
+            raise ContentError(
+                f"{label}: schema 'additionalProperties' must be true, false, or a schema"
+            )
+    if kind in ("integer", "number"):
+        for key in ("minimum", "maximum"):
+            if key in node and not _schema_value_matches(node[key], "number"):
+                raise ContentError(f"{label}: schema {key!r} must be a number")
+        if (
+            "minimum" in node
+            and "maximum" in node
+            and node["minimum"] > node["maximum"]
+        ):
+            raise ContentError(f"{label}: schema 'minimum' is above 'maximum'")
+    elif any(key in node for key in ("minimum", "maximum")):
+        raise ContentError(f"{label}: schema 'minimum' and 'maximum' need a number property")
+    if kind == "string":
+        for key in ("minLength", "maxLength"):
+            if key in node and (
+                not isinstance(node[key], int)
+                or isinstance(node[key], bool)
+                or node[key] < 0
+            ):
+                raise ContentError(f"{label}: schema {key!r} must be a whole number, 0 or more")
+        if (
+            "minLength" in node
+            and "maxLength" in node
+            and node["minLength"] > node["maxLength"]
+        ):
+            raise ContentError(f"{label}: schema 'minLength' is above 'maxLength'")
+        if "pattern" in node:
+            if not isinstance(node["pattern"], str):
+                raise ContentError(f"{label}: schema 'pattern' must be text")
+            try:
+                re.compile(node["pattern"])
+            except re.error as exc:
+                raise ContentError(f"{label}: schema 'pattern' is not a regex: {exc}") from exc
+    elif any(key in node for key in ("minLength", "maxLength", "pattern")):
+        raise ContentError(f"{label}: schema length keys need a string property")
+    if kind == "array":
+        for key in ("minItems", "maxItems"):
+            if key in node and (
+                not isinstance(node[key], int)
+                or isinstance(node[key], bool)
+                or node[key] < 0
+            ):
+                raise ContentError(f"{label}: schema {key!r} must be a whole number, 0 or more")
+        if (
+            "minItems" in node
+            and "maxItems" in node
+            and node["minItems"] > node["maxItems"]
+        ):
+            raise ContentError(f"{label}: schema 'minItems' is above 'maxItems'")
+    elif any(key in node for key in ("minItems", "maxItems")):
+        raise ContentError(f"{label}: schema item bounds need an array property")
 
 
 def _check_signature(

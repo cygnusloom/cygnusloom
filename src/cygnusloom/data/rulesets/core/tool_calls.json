@@ -1246,6 +1246,7 @@
     "type": "tool_call",
     "id": "add_condition",
     "name": "add_condition",
+    "enabled_by": {"social": ["conditions"]},
     "world_method": "add_condition",
     "description": "Give a player character a stored condition the story has put on them, such as a fright, a curse, or an injury. Name the condition by its id, and give the cause in the story.",
     "parameters": {
@@ -1275,6 +1276,7 @@
     "type": "tool_call",
     "id": "end_condition",
     "name": "end_condition",
+    "enabled_by": {"social": ["conditions"]},
     "world_method": "end_condition",
     "description": "End a stored condition a player character has, when its ending happens in the story. Use one of the triggers that condition lists, or gm to end it by your decision.",
     "parameters": {
@@ -1344,6 +1346,7 @@
     "type": "tool_call",
     "id": "lookup_condition",
     "name": "lookup_condition",
+    "enabled_by": {"social": ["conditions"]},
     "world_method": "lookup_condition",
     "lookup": true,
     "description": "Read a condition's full text: what it modifies, how it ends, and whether it is dying or fatal. Use it before you apply or end a condition so its rules reach the table.",
@@ -1891,6 +1894,7 @@
     "type": "tool_call",
     "id": "create_faction",
     "name": "create_faction",
+    "enabled_by": {"social": ["factions"]},
     "world_method": "create_faction",
     "description": "Create a campaign faction, such as a magic-school college. Give it a name, a description, and a trait that colors its rivalries. Its points are kept in the rule set's dynamic faction tally, such as the College Cup. Create 3 to 5 factions at the campaign's opening, calling the tool for all of them in one reply. Leave tally out to use the rule set's only dynamic tally.",
     "parameters": {
@@ -1925,6 +1929,7 @@
     "type": "tool_call",
     "id": "update_faction",
     "name": "update_faction",
+    "enabled_by": {"social": ["factions"]},
     "world_method": "update_faction",
     "description": "Change a faction's name, description, or trait. Its id and cup entry stay the same. Use it when the story changes what a faction is or stands for.",
     "parameters": {
@@ -1945,6 +1950,7 @@
     "type": "tool_call",
     "id": "remove_faction",
     "name": "remove_faction",
+    "enabled_by": {"social": ["factions"]},
     "world_method": "remove_faction",
     "description": "Remove a faction and its cup entry from the campaign.",
     "parameters": {
@@ -1962,6 +1968,7 @@
     "type": "tool_call",
     "id": "adjust_faction_points",
     "name": "adjust_faction_points",
+    "enabled_by": {"social": ["factions"]},
     "world_method": "adjust_faction_points",
     "description": "Add to or deduct from a faction's cup points. Use a negative change to deduct. Give every award a unique key, such as the contest and date; a key already used is refused, so one event is never paid twice.",
     "parameters": {
@@ -1995,6 +2002,7 @@
     "type": "tool_call",
     "id": "list_factions",
     "name": "list_factions",
+    "enabled_by": {"social": ["factions"]},
     "world_method": "list_factions",
     "lookup": true,
     "description": "List the campaign's factions with their traits, descriptions, and current cup points.",
