@@ -528,6 +528,7 @@ def default_campaign_labels(
 # per campaign at a time, so a second request is refused with Conflict instead of interleaving
 # its writes. The set is guarded by a lock only for the moment it is read or changed, so a turn
 # can span many awaits without holding the lock. This covers one server process.
+TURN_BUSY_MESSAGE = "the GM is still working on this campaign; try again when it finishes"
 _busy_lock = threading.Lock()
 _busy_campaigns: set[int] = set()
 
@@ -588,7 +589,7 @@ def clear_turn_reply(campaign_id: int) -> None:
 def _exclusive(campaign_id: int) -> Iterator[None]:
     with _busy_lock:
         if campaign_id in _busy_campaigns:
-            raise Conflict("the GM is still working on this campaign; try again when it finishes")
+            raise Conflict(TURN_BUSY_MESSAGE)
         _busy_campaigns.add(campaign_id)
         _live_turns[campaign_id] = _LiveTurn()
     try:
