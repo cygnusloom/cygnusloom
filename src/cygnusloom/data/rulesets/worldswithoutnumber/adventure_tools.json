@@ -864,7 +864,7 @@
     "id": "buy_item",
     "name": "buy_item",
     "world_method": "buy_item",
-    "description": "Buy a catalogue item with silver, or price an item the catalogue does not list. Armor updates the buyer's Armor Class automatically.",
+    "description": "Buy an object a character keeps, with silver. A catalogue item costs its listed price; for anything else, give both a price and the item's size. Use buy_service for a room, meal, passage, toll, or other service that is not carried. Armor updates the buyer's Armor Class automatically.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -877,10 +877,38 @@
         },
         "size": {
           "type": "string",
-          "enum": ["tiny", "small", "normal", "large", "huge", "bulky", "massive"]
+          "enum": ["tiny", "small", "normal", "large", "huge", "bulky", "massive"],
+          "description": "The size of an item not in the catalogue; required for anything the catalogue does not list. Catalogue items keep their listed size."
         }
       },
       "required": ["name", "item"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "buy_service",
+    "name": "buy_service",
+    "world_method": "buy_service",
+    "description": "Buy a service for one or more characters: a room, meal, passage, toll, bribe, or anything else that is not carried away. A listed service uses its listed price and effect, so leave price out. For any other service, give a price you set from similar services. The first character named pays for the whole service. A service never adds an inventory item.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "names": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "The characters the service is for. The first one pays."
+        },
+        "service": {
+          "type": "string",
+          "description": "The service, such as a room, meal, passage, or toll. Use a listed service's id or name as search_marketplace shows it."
+        },
+        "price": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The price in silver for a service the marketplace does not list. Leave it out for a listed service."
+        }
+      },
+      "required": ["names", "service"]
     }
   },
   {

@@ -1150,7 +1150,7 @@
     "id": "buy_item",
     "name": "buy_item",
     "world_method": "buy_item",
-    "description": "Use this for every sale: the character pays gold and the item goes into their inventory. A catalogue item (see search_marketplace) costs its listed price, so leave price out. For anything else, give a price you set from similar catalogue items. Armor adds to the buyer's armor. There is no credit: a purchase is refused if the character lacks the gold or the room, and a shopkeeper cannot give a thing on a promise to pay later.",
+    "description": "Buy an object a character keeps: the character pays gold and the item goes into their inventory. A catalogue item (see search_marketplace) costs its listed price, so leave price out. For anything else, give both a price you set from similar catalogue items and the item's size. Use buy_service for a room, meal, passage, toll, bribe, or other service that is not carried. Armor adds to the buyer's armor. There is no credit: a purchase is refused if the character lacks the gold or the room, and a shopkeeper cannot give a thing on a promise to pay later.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -1173,7 +1173,7 @@
             "normal",
             "bulky"
           ],
-          "description": "The size of an item not in the catalogue. Catalogue items keep their listed size."
+          "description": "The size of an item not in the catalogue; required for anything the catalogue does not list. Catalogue items keep their listed size."
         }
       },
       "required": [
@@ -1187,7 +1187,7 @@
     "id": "buy_service",
     "name": "buy_service",
     "world_method": "buy_service",
-    "description": "The named characters buy a service, such as a room for the night or medical healing. The first character named pays for the whole service. Lodging covers the party a night, and a sheltered character needs no food on the next rest. Healing restores all harm, HP and attributes, for each named character who has lost any.",
+    "description": "Buy a service for one or more characters: a room, meal, passage, toll, bribe, medical healing, or anything else that is not carried away. A listed service uses its listed price and effect, so leave price out. For any other service, give a price you set from similar services. The first character named pays for the whole service. Lodging covers the party a night, and a sheltered character needs no food on the next rest. Healing restores all harm, HP and attributes, for each named character who has lost any. A service never adds an inventory item.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -1200,7 +1200,11 @@
         },
         "service": {
           "type": "string",
-          "description": "The service's id or name, as listed by search_marketplace."
+          "description": "The service, such as a room, meal, passage, or toll. Use a listed service's id or name as search_marketplace shows it."
+        },
+        "price": {
+          "type": "integer",
+          "description": "Gold for a service the catalogue does not list. Leave it out for a listed service."
         }
       },
       "required": [

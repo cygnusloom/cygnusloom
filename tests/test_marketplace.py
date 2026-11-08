@@ -126,14 +126,21 @@ def test_an_off_catalogue_item_needs_a_price(client_factory):
     app, campaign_id, tools = _pcs(client_factory)
     _grant_gold(app, campaign_id, 100)
     with pytest.raises(InvalidInput):
-        tools.buy_item(PC, "Moonstone")
+        tools.buy_item(PC, "Moonstone", size="normal")
+
+
+def test_an_off_catalogue_item_needs_an_explicit_size(client_factory):
+    app, campaign_id, tools = _pcs(client_factory)
+    _grant_gold(app, campaign_id, 100)
+    with pytest.raises(InvalidInput, match="buy_service"):
+        tools.buy_item(PC, "Moonstone", price=20)
 
 
 def test_an_off_catalogue_item_costs_the_price_the_warden_sets(client_factory):
     app, campaign_id, tools = _pcs(client_factory)
     _grant_gold(app, campaign_id, 100)
     before = _gold(app, campaign_id)
-    result = tools.buy_item(PC, "Moonstone", price=20)
+    result = tools.buy_item(PC, "Moonstone", price=20, size="normal")
     assert result["price"] == 20
     assert _gold(app, campaign_id) == before - 20
     moonstone = [i for i in _character(app, campaign_id, PC).items if i.name == "Moonstone"]
@@ -145,7 +152,7 @@ def test_buying_beyond_the_gold_is_refused_and_nothing_is_carried(client_factory
     before_gold = _gold(app, campaign_id)
     before_items = len(_character(app, campaign_id, PC).items)
     with pytest.raises(InvalidInput):
-        tools.buy_item(PC, "Moonstone", price=before_gold + 1)
+        tools.buy_item(PC, "Moonstone", price=before_gold + 1, size="normal")
     character = _character(app, campaign_id, PC)
     assert _gold(app, campaign_id) == before_gold
     assert len(character.items) == before_items
@@ -157,7 +164,7 @@ def test_a_purchase_that_does_not_fit_is_refused_and_nothing_is_paid(client_fact
     _fill(app, campaign_id, tools)
     before = _gold(app, campaign_id)
     with pytest.raises(InvalidInput):
-        tools.buy_item(PC, "Moonstone", price=5)
+        tools.buy_item(PC, "Moonstone", price=5, size="normal")
     assert _gold(app, campaign_id) == before
 
 
@@ -182,6 +189,44 @@ def test_a_service_is_paid_by_the_first_named_character(client_factory):
     assert result["payer"] == BRAN
     assert result["price"] == 10 * 2
     assert _gold(app, campaign_id, BRAN) == 100 - 10 * 2
+    assert _gold(app, campaign_id) == pc_before
+
+
+def test_a_listed_service_refuses_a_supplied_price(client_factory):
+    app, campaign_id, tools = _pcs(client_factory)
+    _grant_gold(app, campaign_id, 100)
+    with pytest.raises(InvalidInput, match="leave price out"):
+        tools.buy_service([PC], "room", price=1)
+
+
+def test_an_unlisted_service_costs_the_price_the_warden_sets_and_carries_nothing(
+    client_factory,
+):
+    app, campaign_id, tools = _pcs(client_factory)
+    _grant_gold(app, campaign_id, 100)
+    before = _gold(app, campaign_id)
+    before_items = len(_character(app, campaign_id, PC).items)
+    result = tools.buy_service([PC], "Back room and a hot meal for two", price=1)
+    assert result["service"] == "Back room and a hot meal for two"
+    assert result["served"] == [PC]
+    assert result["payer"] == PC
+    assert result["price"] == 1
+    assert result["currency_left"] == before - 1
+    assert result["currency"] == MARKET.currency
+    assert _gold(app, campaign_id) == before - 1
+    assert len(_character(app, campaign_id, PC).items) == before_items
+
+
+def test_an_unlisted_service_serves_each_character_once_and_the_first_pays(client_factory):
+    app, campaign_id, tools = _pcs(client_factory)
+    _with_companion(tools)
+    _grant_gold(app, campaign_id, 100, name=BRAN)
+    pc_before = _gold(app, campaign_id)
+    result = tools.buy_service([BRAN, BRAN, PC], "Passage across the river", price=4)
+    assert result["served"] == [BRAN, PC]
+    assert result["payer"] == BRAN
+    assert result["price"] == 4
+    assert _gold(app, campaign_id, BRAN) == 96
     assert _gold(app, campaign_id) == pc_before
 
 
@@ -247,9 +292,9 @@ def test_a_deferred_service_is_refused(client_factory):
         tools.buy_service([PC], "stable")
 
 
-def test_an_unknown_service_names_what_is_sold(client_factory):
+def test_an_unlisted_service_needs_a_price(client_factory):
     _app, _campaign_id, tools = _pcs(client_factory)
-    with pytest.raises(InvalidInput, match="Room & Board"):
+    with pytest.raises(InvalidInput, match="pass the price"):
         tools.buy_service([PC], "tavern")
 
 

@@ -355,7 +355,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 cause,
             )
 
-    def buy_service(self, names: Sequence[str], service: str) -> dict[str, Any]:
+    def buy_service(
+        self, names: Sequence[str], service: str, price: int | None = None
+    ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return market_service.buy_service(
                 db,
@@ -363,7 +365,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 _required(self.marketplace, "a marketplace"),
                 names,
                 service,
-                self.hooks,
+                hooks=self.hooks,
+                price=price,
             )
 
     def _give_catalogue_item(self, db: Session, name: str, item: str) -> bool:

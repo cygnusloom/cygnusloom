@@ -239,7 +239,7 @@ def test_a_purchase_succeeds_past_capacity_when_space_is_not_tracked(
     _fill(app, campaign_id, tools)
     before = _character(app, campaign_id, PC).features[currency]
 
-    result = tools.buy_item(PC, "Moonstone", price=5)
+    result = tools.buy_item(PC, "Moonstone", price=5, size="normal")
 
     assert result["price"] == 5
     assert _character(app, campaign_id, PC).features[currency] == before - 5

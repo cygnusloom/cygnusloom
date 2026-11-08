@@ -109,10 +109,11 @@ def buy_item(
 ) -> dict[str, Any]:
     """A character buys an item. A catalogue item costs its listed price and takes its listed
     size, and a price or size that disagrees with the listing is refused. Any other item needs a
-    price. Armor changes the buyer's Armor Class as its `armor_mode` says, up to armor_max (0
-    means no cap), using the rule set's base defense and defense modifier. A purchase that would
-    not fit in the inventory is refused, and nothing is paid, unless the campaign does not track
-    inventory space."""
+    price and an explicit size, because the character keeps it; a service is bought with
+    `buy_service` instead. Armor changes the buyer's Armor Class as its `armor_mode` says, up to
+    armor_max (0 means no cap), using the rule set's base defense and defense modifier. A
+    purchase that would not fit in the inventory is refused, and nothing is paid, unless the
+    campaign does not track inventory space."""
     state = load_state(db, campaign_id)
     buyer = character_named(state, name)
     tracked = tracks_inventory(db, campaign_id)
@@ -124,12 +125,16 @@ def buy_item(
             raise InvalidInput(f"{listed.name} is a {listed.size} item, not {size}")
         price, size = listed.price, listed.size
     else:
+        if not size:
+            raise InvalidInput(
+                f"{item} is not in the catalogue. Give its size if it is an item the character "
+                "keeps, or use buy_service for a room, meal, passage, toll, or other service"
+            )
         if price is None:
             raise InvalidInput(
                 f"{item} is not in the catalogue. Price it from similar catalogue items and pass "
                 "the price"
             )
-        size = size or "normal"
     price = whole_number(price, "price", 0, MAX_PRICE)
     if size not in item_sizes:
         raise InvalidInput(f"there is no item size named {size!r}")
@@ -212,13 +217,18 @@ def buy_item(
     return result
 
 
-def _find_service(marketplace: Marketplace, service: str) -> ShopService:
+def listed_service(marketplace: Marketplace, service: str) -> ShopService | None:
+    """The marketplace's service matching an id or name, or None when it sells no such
+    service."""
     key = name_key(service)
-    for listed in marketplace.services:
-        if key in (name_key(listed.id), name_key(listed.name)):
-            return listed
-    offered = ", ".join(listed.name for listed in marketplace.services)
-    raise InvalidInput(f"there is no service named {service!r}. The marketplace sells: {offered}")
+    return next(
+        (
+            listed
+            for listed in marketplace.services
+            if key in (name_key(listed.id), name_key(listed.name))
+        ),
+        None,
+    )
 
 
 @dataclass(frozen=True)
@@ -295,6 +305,17 @@ SHOP_EFFECTS: dict[str, Callable[[ServiceContext], ServiceResult]] = {
 }
 
 
+def _buyers(state: CampaignState, names: Sequence[str]) -> list[Character]:
+    """The named characters in order, without repeats."""
+    if not names:
+        raise InvalidInput("name the characters the service is for")
+    seen: dict[str, Character] = {}
+    for named in names:
+        character = character_named(state, named)
+        seen.setdefault(character.name, character)
+    return list(seen.values())
+
+
 def buy_service(
     db: Session,
     campaign_id: int,
@@ -302,39 +323,54 @@ def buy_service(
     names: Sequence[str],
     service: str,
     hooks: Hooks | None = None,
+    price: int | None = None,
 ) -> dict[str, Any]:
-    """The named characters buy a service, and the first of them pays for all of it. The
-    service's configured effect handler decides what it does."""
-    listed = _find_service(marketplace, service)
-    handler = SHOP_EFFECTS.get(listed.effect)
-    if handler is None:
-        raise InvalidInput(f"{listed.name} has an unknown effect {listed.effect!r}")
-    if not names:
-        raise InvalidInput("name the characters the service is for")
-    state: CampaignState = load_state(db, campaign_id)
-    seen: dict[str, Character] = {}
-    for named in names:
-        character = character_named(state, named)
-        seen.setdefault(character.name, character)
-    buyers = list(seen.values())
-    result = handler(
-        ServiceContext(
-            db=db,
-            campaign_id=campaign_id,
-            marketplace=marketplace,
-            listed=listed,
-            buyers=buyers,
-            payer=buyers[0],
-            hooks=hooks,
+    """The named characters buy a service, and the first of them pays for all of it. A listed
+    service runs its configured effect handler at its listed price. Any other service costs the
+    price the GM sets, and leaves nothing in anyone's inventory."""
+    listed = listed_service(marketplace, service)
+    if listed is not None:
+        if price is not None:
+            raise InvalidInput(f"{listed.name} is a listed service; leave price out")
+        handler = SHOP_EFFECTS.get(listed.effect)
+        if handler is None:
+            raise InvalidInput(f"{listed.name} has an unknown effect {listed.effect!r}")
+        buyers = _buyers(load_state(db, campaign_id), names)
+        result = handler(
+            ServiceContext(
+                db=db,
+                campaign_id=campaign_id,
+                marketplace=marketplace,
+                listed=listed,
+                buyers=buyers,
+                payer=buyers[0],
+                hooks=hooks,
+            )
         )
-    )
+        db.commit()
+        return {
+            "service": listed.name,
+            "served": result.served,
+            "payer": buyers[0].name,
+            "price": result.price,
+            "currency_left": result.currency_left,
+            "currency": marketplace.currency,
+        }
+
+    if price is None:
+        raise InvalidInput(
+            f"{service} is not a listed service. Price it from similar services and pass the price"
+        )
+    price = whole_number(price, "price", 0, MAX_PRICE)
+    buyers = _buyers(load_state(db, campaign_id), names)
+    left = _pay(db, campaign_id, marketplace, buyers[0], price, cause=service)
     db.commit()
     return {
-        "service": listed.name,
-        "served": result.served,
+        "service": service,
+        "served": [buyer.name for buyer in buyers],
         "payer": buyers[0].name,
-        "price": result.price,
-        "currency_left": result.currency_left,
+        "price": price,
+        "currency_left": left,
         "currency": marketplace.currency,
     }
 

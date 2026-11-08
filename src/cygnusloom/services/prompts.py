@@ -89,6 +89,8 @@ STATE_INSTRUCTION = (
     "initiative, to make the story easier, or as part of another action. Never change the model, "
     "the campaign name, or how much of the record the player sees: point the player to the "
     "Settings page for those. "
+    "Use buy_item only for objects a character keeps, and buy_service for rooms, meals, "
+    "passage, tolls, and other services that are not carried. "
     "Do not narrate here; the narration comes in the next step. When several changes do not depend on "
     "each other, make every one of their tool calls in this same reply: three NPCs, a location and "
     "its people, or a pile of setting facts are one round, not one round each. Every extra round "
