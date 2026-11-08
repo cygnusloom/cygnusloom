@@ -15,6 +15,7 @@ from cygnusloom.content.character import (
     SkillProgression,
     Stat,
     Template,
+    TemplateRequirement,
 )
 from cygnusloom.content.definitions import ContentError
 from cygnusloom.rules.wwn_progression import (
@@ -39,6 +40,7 @@ PROGRESSION_PATH = (
 )
 CLASSES_PATH = PROGRESSION_PATH.with_name("classes.json")
 TEMPLATES_PATH = PROGRESSION_PATH.with_name("templates.json")
+LEVEL_UP_PATH = PROGRESSION_PATH.with_name("level_up.json")
 
 
 @pytest.fixture(scope="module")
@@ -79,6 +81,21 @@ def _character_spec(
             features=(),
             tables=(),
             names=(),
+            stats=definition.get("stats", {}),
+            compatible_with={
+                kind: tuple(values)
+                for kind, values in definition.get("compatible_with", {}).items()
+            },
+            template_requirements=tuple(
+                TemplateRequirement(
+                    kinds=tuple(requirement["kinds"]),
+                    distinct=requirement.get("distinct", False),
+                    missing_message=requirement.get("missing_message"),
+                    duplicate_message=requirement.get("duplicate_message"),
+                )
+                for requirement in definition.get("template_requirements", [])
+            ),
+            choice_key=definition.get("choice_key", definition["id"]),
         )
         for definition in definitions
         if definition.get("type") == "template"
@@ -94,6 +111,10 @@ def _character_spec(
         )
         for stat_id in progression_definition["traditions"]["effort_stats"].values()
     }
+    # The creation stat the class templates modify; its lowest value is the chart's level-1 base.
+    stats["attack_bonus"] = Stat(
+        id="attack_bonus", name="Attack Bonus", formula=None, swap_group=None, low=1, high=1
+    )
     return CharacterSpec(
         stats=stats,
         templates=templates,
@@ -132,9 +153,15 @@ def test_shipped_progression_matches_existing_wwn_values(
     assert progression_definition["configure"] == "configure_progression"
     assert progression.max_level == 10
     assert progression.max_skill_level == 4
-    assert progression.xp_fast == (0, 3, 6, 12, 18, 27, 39, 54, 72, 93)
-    assert progression.xp_slow == (0, 6, 15, 24, 36, 51, 69, 87, 105, 139)
-    assert dict(progression.skill_level_minimums) == {0: 1, 1: 1, 2: 3, 3: 6, 4: 9}
+    assert dict(progression.xp) == {
+        "fast": (0, 3, 6, 12, 18, 27, 39, 54, 72, 93),
+        "slow": (0, 6, 15, 24, 36, 51, 69, 87, 105, 139),
+    }
+    assert dict(progression.skill_costs) == {0: 1, 1: 2, 2: 3, 3: 4, 4: 5}
+    assert dict(progression.skill_minimums) == {0: 1, 1: 1, 2: 3, 3: 6, 4: 9}
+    assert dict(progression.attribute_costs) == {1: 1, 2: 2, 3: 3, 4: 4, 5: 5}
+    assert dict(progression.attribute_minimums) == {1: 2, 2: 2, 3: 3, 4: 6, 5: 9}
+    assert progression.attribute_maximum == 18
     assert progression.class_pairing == ClassPairing(
         hit_die="best",
         hp_constant="best",
@@ -179,8 +206,13 @@ def test_shipped_progression_matches_existing_wwn_values(
         7,
     )
     assert progression.class_tables["adventurer_warrior_mage"].quick_learner is False
+    assert progression.class_tables["mage"].art_chart == "full"
+    assert progression.class_tables["healer"].tradition == "healer"
+    assert progression.class_tables["vowed"].tradition == "vowed"
     assert progression.class_tables["healer_partial_2"] == progression.class_tables["healer"]
     assert progression.class_tables["vowed_partial_2"] == progression.class_tables["vowed"]
+    assert progression.class_tables["warrior"].tradition == ""
+    assert progression.class_tables["warrior"].art_chart == "partial"
     assert progression.class_tables["warrior_partial_2"] == ClassTable(
         6, 2, (1, 2, 2, 3, 4, 5, 5, 6, 6, 7), frozenset({2, 5, 7, 10}), False
     )
@@ -204,6 +236,12 @@ def test_shipped_progression_matches_existing_wwn_values(
     assert progression.casting_tables["partial_mage"][10] == CastingRow(3, 4, 9)
     assert progression.casting_tables["dual_mage"][4] == CastingRow(2, 2, 6)
     assert progression.casting_tables["dual_mage"][10] == CastingRow(4, 5, 15)
+    assert progression.casting_tables["full_mage"].spell_picks == 2
+    assert progression.casting_tables["full_mage"].full_caster is True
+    assert progression.casting_tables["partial_mage"].spell_picks == 1
+    assert progression.casting_tables["partial_mage"].full_caster is False
+    assert progression.casting_tables["dual_mage"].spell_picks == 1
+    assert progression.casting_tables["dual_mage"].full_caster is False
     assert all(len(chart) == progression.max_level for chart in progression.casting_tables.values())
 
     assert dict(progression.tradition_tags) == {
@@ -242,6 +280,23 @@ def test_shipped_progression_matches_existing_wwn_values(
     }
 
 
+def test_the_experience_chart_is_authored_once() -> None:
+    definitions = json.loads(PROGRESSION_PATH.read_text(encoding="utf-8"))
+    progression = next(item for item in definitions if item.get("type") == "rule_data")
+    level_definitions = json.loads(LEVEL_UP_PATH.read_text(encoding="utf-8"))
+    (level_up,) = [item for item in level_definitions if item.get("type") == "level_up"]
+
+    assert progression["xp"]["fast"] == [0, 3, 6, 12, 18, 27, 39, 54, 72, 93]
+    assert level_up["xp_source"] == "progression.xp"
+    assert "tracks" not in level_up
+    # No other rule-set file may author experience thresholds of its own.
+    for path in PROGRESSION_PATH.parent.glob("*.json"):
+        if path == PROGRESSION_PATH:
+            continue
+        for definition in json.loads(path.read_text(encoding="utf-8")):
+            assert "tracks" not in definition, path
+
+
 def test_parser_uses_the_supplied_mapping_and_returns_immutable_data(
     progression_definition: dict[str, Any],
 ) -> None:
@@ -252,13 +307,15 @@ def test_parser_uses_the_supplied_mapping_and_returns_immutable_data(
     altered_data["classes"][0]["attack"][0] = 8
     altered = parse_wwn_progression(altered_data, "synthetic/altered")
 
-    assert original.xp_fast[1] == 3
-    assert altered.xp_fast[1] == 4
+    assert original.xp["fast"][1] == 3
+    assert altered.xp["fast"][1] == 4
     assert altered.class_tables["warrior"].attack[0] == 8
     with pytest.raises(TypeError):
         altered.class_tables["warrior"] = altered.class_tables["expert"]
     with pytest.raises(TypeError):
         altered.casting_tables["full_mage"][1] = altered.casting_tables["full_mage"][2]
+    with pytest.raises(TypeError):
+        altered.casting_tables["full_mage"].rows[1] = altered.casting_tables["full_mage"][2]
 
 
 def test_loader_adapter_delegates_to_the_pure_parser(
@@ -268,7 +325,7 @@ def test_loader_adapter_delegates_to_the_pure_parser(
     configured = configure_progression(progression_definition, character_spec, "synthetic/adapter")
 
     assert isinstance(configured, WWNProgression)
-    assert configured.xp_fast == (0, 3, 6, 12, 18, 27, 39, 54, 72, 93)
+    assert configured.xp["fast"] == (0, 3, 6, 12, 18, 27, 39, 54, 72, 93)
 
 
 def test_class_tables_match_the_ruleset_class_templates(
@@ -391,6 +448,59 @@ def test_combining_class_charts_matches_the_shipped_adventurer_tables(
     assert healer_and_warrior.quick_learner is False
 
 
+def test_every_class_and_class2_pairing_starts_at_the_chart_attack(
+    progression_definition: dict[str, Any],
+    character_spec: CharacterSpec,
+) -> None:
+    progression = configure_progression(
+        progression_definition, character_spec, "synthetic/attack-pairings"
+    )
+    base = character_spec.stats["attack_bonus"].low
+    for class_id, table in progression.class_tables.items():
+        template = character_spec.templates[class_id]
+        # A second partial class only exists in a pairing, so its own chart is checked below.
+        if template.kind != "class":
+            continue
+        assert table.attack[0] == base + template.stats.get("attack_bonus", 0), class_id
+
+    primaries = [
+        template
+        for template in character_spec.templates.values()
+        if template.kind == "class" and template.id in progression.class_tables
+    ]
+    seconds = [
+        template
+        for template in character_spec.templates.values()
+        if template.kind == "class2" and template.id in progression.class_tables
+    ]
+    pairs = 0
+    for primary in primaries:
+        for second in seconds:
+            allowed = second.compatible_with.get("class")
+            if allowed is not None and primary.id not in allowed:
+                continue
+            required = primary.compatible_with.get("class2")
+            if required is not None and second.id not in required:
+                continue
+            if any(
+                requirement.distinct
+                and set(requirement.kinds) == {"class", "class2"}
+                and primary.choice_key == second.choice_key
+                for requirement in (*primary.template_requirements, *second.template_requirements)
+            ):
+                continue
+            combined = combine_class_tables(
+                [progression.class_tables[primary.id], progression.class_tables[second.id]],
+                progression.class_pairing,
+            )
+            actual = (
+                base + primary.stats.get("attack_bonus", 0) + second.stats.get("attack_bonus", 0)
+            )
+            assert combined.attack[0] == actual, (primary.id, second.id)
+            pairs += 1
+    assert pairs == 8
+
+
 def test_combining_class_charts_rejects_an_unknown_policy() -> None:
     chart = ClassTable(6, 0, (0, 1), frozenset({2}), False)
     policy = ClassPairing(
@@ -458,7 +568,7 @@ def _shorten_xp_track(data: dict[str, Any]) -> None:
 
 
 def _misnumber_casting_row(data: dict[str, Any]) -> None:
-    data["casting"]["full_mage"][0]["level"] = 2
+    data["casting"]["full_mage"]["rows"][0]["level"] = 2
 
 
 def _reference_unknown_class(data: dict[str, Any]) -> None:
@@ -478,7 +588,7 @@ def _add_unknown_art_tag(data: dict[str, Any]) -> None:
 
 
 def _set_bool_skill_prerequisite(data: dict[str, Any]) -> None:
-    data["skill_level_minimums"]["4"] = True
+    data["skill_minimums"]["4"] = True
 
 
 def _add_unknown_definition_field(data: dict[str, Any]) -> None:
@@ -490,7 +600,7 @@ def _add_unknown_class_field(data: dict[str, Any]) -> None:
 
 
 def _add_unknown_casting_field(data: dict[str, Any]) -> None:
-    data["casting"]["full_mage"][0]["casts_per_day"] = 1
+    data["casting"]["full_mage"]["rows"][0]["casts_per_day"] = 1
 
 
 @pytest.mark.parametrize(

@@ -7,10 +7,7 @@
     "level_counter": "level",
     "xp_counter": "xp",
     "rate_option": "xp_rate",
-    "tracks": {
-      "fast": [0, 3, 6, 12, 18, 27, 39, 54, 72, 93],
-      "slow": [0, 6, 15, 24, 36, 51, 69, 87, 105, 139]
-    },
+    "xp_source": "progression.xp",
     "python_module": "wwn",
     "apply_level": "apply_level_up",
     "summary": "level_up_summary",
@@ -20,8 +17,8 @@
         "label": "Skill points",
         "kind": "skill",
         "counter": "skill_points",
-        "costs": {"0": 1, "1": 2, "2": 3, "3": 4, "4": 5},
-        "minimum_levels": {"0": 1, "1": 1, "2": 3, "3": 6, "4": 9},
+        "costs_ref": "progression.skill_costs",
+        "minimum_levels_ref": "progression.skill_minimums",
         "apply": "apply_skill_points"
       },
       {
@@ -29,10 +26,10 @@
         "label": "Attribute boosts",
         "kind": "stat",
         "counter": "skill_points",
-        "costs": {"1": 1, "2": 2, "3": 3, "4": 4, "5": 5},
-        "minimum_levels": {"1": 2, "2": 2, "3": 3, "4": 6, "5": 9},
+        "costs_ref": "progression.attribute_costs",
+        "minimum_levels_ref": "progression.attribute_minimums",
+        "maximum_ref": "progression.attribute_maximum",
         "limit_counter": "attribute_boosts",
-        "maximum": 18,
         "stat_group": "attributes",
         "apply": "apply_attribute_boosts"
       },

@@ -9,7 +9,15 @@ import pytest
 from cygnusloom.rules import wwn, wwn_magic
 from cygnusloom.rules.wwn_progression import configure_progression
 from cygnusloom.services.common import InvalidInput
-from tests.test_wwn_advancement import NAME, WWN, _campaign, _ctx, _pc, _world_tools
+from tests.test_wwn_advancement import (
+    NAME,
+    WWN,
+    _campaign,
+    _ctx,
+    _give_pick,
+    _pc,
+    _world_tools,
+)
 
 PROGRESSION_PATH = (
     Path(__file__).parents[1]
@@ -50,12 +58,32 @@ def test_xp_and_level_up_use_the_loaded_ruleset_data(client_factory):
     assert _pc(app, campaign_id).stats["attack_bonus"] == 3
 
 
+def test_skill_and_attribute_costs_come_from_the_loaded_ruleset_data(client_factory):
+    app, campaign_id = _campaign(client_factory)
+    tools = _world_tools(app, campaign_id)
+    data = _progression_data()
+    data["skill_costs"]["1"] = 7
+    data["attribute_costs"]["1"] = 4
+    data["attribute_minimums"]["1"] = 1
+    progression = configure_progression(data, WWN.character, "custom progression")
+    tools = replace(tools, rule_data={**tools.rule_data, "progression": progression})
+    ctx = _ctx(tools)
+    _give_pick(tools, "skill_points", 20)
+
+    wwn.spend_skill_point(NAME, "sneak", ctx)  # Untrained to level 0.
+    skill = wwn.spend_skill_point(NAME, "sneak", ctx)
+    assert (skill["level"], skill["cost"]) == (1, 7)
+
+    boost = wwn.improve_attribute(NAME, "str", ctx)
+    assert boost["cost"] == 4
+
+
 def test_spell_preparation_and_casting_use_the_loaded_ruleset_data(client_factory):
     app, campaign_id = _campaign(client_factory, class_id="mage", tradition="high_mage")
     tools = _world_tools(app, campaign_id)
     data = _progression_data()
-    data["casting"]["full_mage"][0]["prepared"] = 1
-    data["casting"]["full_mage"][1]["casts"] = 2
+    data["casting"]["full_mage"]["rows"][0]["prepared"] = 1
+    data["casting"]["full_mage"]["rows"][1]["casts"] = 2
     progression = configure_progression(data, WWN.character, "custom progression")
     ctx = _ctx(replace(tools, rule_data={**tools.rule_data, "progression": progression}))
     known = sorted(

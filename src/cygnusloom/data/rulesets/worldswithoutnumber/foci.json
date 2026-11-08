@@ -311,6 +311,7 @@
     "feature_type": "feat",
     "tag": "focus",
     "rank": 1,
+    "level_hp_bonus": 2,
     "description": "You gain +2 maximum HP per level and automatically stabilize when Mortally Wounded, unless the injury leaves nothing to save.",
     "effects": [
       {

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import random
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from sqlalchemy import Engine
@@ -43,6 +43,9 @@ class AdvancementPage:
     level_up: LevelUpRules | None = None
     # The summary the rule set's hook returned: the level, XP, and automatic gains.
     summary: Mapping[str, Any] | None = None
+    # The pool points the pending level will add, taken from the same projection that applies
+    # the level, so planning the picks and applying them cannot disagree.
+    grants: Mapping[str, int] = field(default_factory=dict)
     # The picks a player may spend now, with their options and costs.
     picks: tuple[Mapping[str, Any], ...] = ()
     # The rule set's Advancement options, when its counter is full.
@@ -112,16 +115,20 @@ def page_view(
         ctx = tool_context(engine, campaign_id, rule_set, world)
         if level_ready(state, pc, level_rules, rule_set.counters):
             summary = level_rules.summary(pc.name, ctx) if level_rules.summary else {}
-            picks = pick_views(pc, rule_set, level_rules, summary, ctx)
+            grants = {
+                str(counter): int(points) for counter, points in summary.get("grants", {}).items()
+            }
+            picks = pick_views(pc, rule_set, level_rules, summary, grants, ctx)
             return AdvancementPage(
                 kind=LEVEL,
                 character=pc.name,
                 label=level_rules.label,
                 level_up=level_rules,
                 summary=summary,
+                grants=grants,
                 picks=picks,
             )
-        picks = pick_views(pc, rule_set, level_rules, None, ctx)
+        picks = pick_views(pc, rule_set, level_rules, None, {}, ctx)
         if picks:
             return AdvancementPage(
                 kind=PICKS,
@@ -148,10 +155,10 @@ def pick_views(
     rule_set: RuleSet,
     level_rules: LevelUpRules,
     summary: Mapping[str, Any] | None,
+    grants: Mapping[str, int],
     ctx: ToolContext | None,
 ) -> tuple[Mapping[str, Any], ...]:
     """The pools a level-up or a training session lets the player spend, with their choices."""
-    grants = summary.get("grants", {}) if summary else {}
     views: list[Mapping[str, Any]] = []
     for pick in level_rules.picks.values():
         counter = rule_set.counters[pick.counter]
@@ -345,10 +352,11 @@ def _apply_level(
     form: Mapping[str, Any],
 ) -> None:
     assert view.level_up is not None
-    # Check every pick against the pools the new level will grant before changing anything.
-    _plan_picks(view, engine, campaign_id, rule_set, ctx, form)
+    # Check every pick against the pools the page's projection says the new level grants, then
+    # apply that same plan once the level has added those pools.
+    changes = _plan_picks(view, engine, campaign_id, rule_set, ctx, form)
     view.level_up.apply_level(view.character, ctx)
-    _apply_picks(view, engine, campaign_id, rule_set, ctx, form)
+    _apply_changes(view, changes, ctx)
 
 
 def _apply_picks(
@@ -359,7 +367,14 @@ def _apply_picks(
     ctx: ToolContext,
     form: Mapping[str, Any],
 ) -> None:
-    changes = _plan_picks(view, engine, campaign_id, rule_set, ctx, form)
+    _apply_changes(view, _plan_picks(view, engine, campaign_id, rule_set, ctx, form), ctx)
+
+
+def _apply_changes(
+    view: AdvancementPage,
+    changes: list[tuple[LevelUpPick, Any]],
+    ctx: ToolContext,
+) -> None:
     for pick, value in changes:
         if pick.kind == "feature":
             for choice in value:
@@ -381,12 +396,7 @@ def _plan_picks(
     if pc is None:
         raise InvalidInput(f"there is no character named {view.character!r}")
     assert view.level_up is not None
-    summary = view.summary or {}
-    new_level = int(summary.get("new_level", 0)) if summary else 0
-    current = int(pc.counters.get(view.level_up.level_counter, 1))
-    # A level-up grants its pools once. After the level is applied, the counters already hold
-    # them, so adding the summary's grants again would double the player's picks.
-    grants = summary.get("grants", {}) if summary and current < new_level else {}
+    grants = view.grants
     level = _new_level(pc, rule_set, view.summary)
     changes: list[tuple[LevelUpPick, Any]] = []
     spent: dict[str, int] = {}

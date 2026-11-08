@@ -928,6 +928,44 @@ class LevelUpRules:
 
 
 @dataclass(frozen=True)
+class LevelGrants:
+    """The automatic gains of one new level, projected without changing anything.
+
+    The rule set's `project_level` builds it from its charts, and both the page summary and the
+    applied level use that one projection, so the two can never grant different pools. `pools`
+    maps a counter to the points it gains; `values` carries the non-counter gains such as hit
+    dice and attack bonus.
+    """
+
+    level: int
+    new_level: int
+    xp: int
+    threshold: int
+    rate: str
+    pools: Mapping[str, int]
+    values: Mapping[str, Any]
+    lines: tuple[str, ...] = ()
+
+    def granted(self, counter: str) -> int:
+        """How many points of one pool the level grants."""
+        return int(self.pools.get(counter, 0))
+
+    def as_summary(self) -> dict[str, Any]:
+        """The JSON-friendly summary the advancement page shows."""
+        return {
+            "level": self.level,
+            "new_level": self.new_level,
+            "xp": self.xp,
+            "threshold": self.threshold,
+            "rate": self.rate,
+            "attack_bonus": self.values.get("attack_bonus"),
+            "castings": self.values.get("castings"),
+            "lines": list(self.lines),
+            "grants": dict(self.pools),
+        }
+
+
+@dataclass(frozen=True)
 class PeriodRules:
     """A stretch of play, such as a school year, that ends for every character at once. Its
     effects run for each character."""
@@ -2519,6 +2557,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "defense_floor",
             "picks",
             "repeatable",
+            "level_hp_bonus",
             "icon",
             "looks_like",
         }
@@ -2797,10 +2836,15 @@ def _build_rule_set(
     moves = _load_moves(definitions, character, frozenset(counters), template)
     checks = _load_checks(definitions, template)
     _check_feature_reactions(character, moves, checks, template)
+    # Rule data is configured before the level-up definitions, because a level-up may resolve its
+    # experience tracks and pick costs from it.
+    rule_data = _load_rule_data(definitions, modules, character, template)
     advancements = _load_advancements(
         definitions, character, counters, frozenset(conditions), template
     )
-    level_ups = _load_level_ups(definitions, modules, character, counters, campaign, template)
+    level_ups = _load_level_ups(
+        definitions, modules, character, counters, campaign, rule_data, template
+    )
     tallies = _load_tallies(definitions, template)
     periods = _load_periods(
         definitions, character, counters, frozenset(conditions), tallies, template
@@ -2859,7 +2903,6 @@ def _build_rule_set(
         definitions, terrain, encounter_objects, template
     )
     world_terrain = _load_world_terrain(definitions, template)
-    rule_data = _load_rule_data(definitions, modules, character, template)
     npc_hp = _npc_hp(head.data, label)
     npc_hp_stat = _optional_text(head.data, "npc_hp_stat", label)
     if npc_hp and npc_hp_stat is None:
@@ -2880,6 +2923,7 @@ def _build_rule_set(
         "relations": sorted(relations),
         "advancement_options": sorted({o for a in advancements.values() for o in a.options}),
         "features": sorted(character.features),
+        "xp_tracks": sorted({name for rules in level_ups.values() for name in rules.tracks}),
     }
     tool_calls: dict[str, ToolCall] = {}
     tool_names: set[str] = set()
@@ -4477,9 +4521,7 @@ def _load_clock(definitions: list[Definition], template: str) -> ClockRules | No
         else 1
     )
     week_days = (
-        _whole(definition.data, "week_days", label, 1)
-        if "week_days" in definition.data
-        else 7
+        _whole(definition.data, "week_days", label, 1) if "week_days" in definition.data else 7
     )
     return ClockRules(
         parts=parts,
@@ -5396,10 +5438,14 @@ def _load_level_ups(
     character: CharacterSpec,
     counters: Mapping[str, CounterRules],
     campaign: CampaignSpec,
+    rule_data: Mapping[str, object],
     template: str,
 ) -> dict[str, LevelUpRules]:
     """The rule set's level progression, if it has one. Its picks are the choices a player makes
-    when a level is gained."""
+    when a level is gained.
+
+    A level-up names either its own ``tracks`` or an ``xp_source`` path into the rule data, so
+    the experience chart has one authored home."""
     loaded: dict[str, LevelUpRules] = {}
     for definition in definitions:
         if definition.type != "level_up":
@@ -5417,6 +5463,7 @@ def _load_level_ups(
                 "level_counter",
                 "xp_counter",
                 "tracks",
+                "xp_source",
                 "rate_option",
                 "python_module",
                 "apply_level",
@@ -5434,7 +5481,7 @@ def _load_level_ups(
         rate = required_text(definition.data, "rate_option", label)
         if rate not in campaign.fields:
             raise ContentError(f"{label}: 'rate_option' names no campaign option ({rate!r})")
-        tracks = _load_level_tracks(definition.data.get("tracks"), label)
+        tracks = _level_tracks(definition.data, rule_data, label)
         module_id = required_text(definition.data, "python_module", label)
         module = modules.get(module_id)
         if module is None:
@@ -5451,6 +5498,7 @@ def _load_level_ups(
             module,
             character,
             counters,
+            rule_data,
             label,
         )
         loaded[definition.id] = LevelUpRules(
@@ -5469,17 +5517,49 @@ def _load_level_ups(
     return loaded
 
 
+def _level_tracks(
+    data: Mapping[str, Any], rule_data: Mapping[str, object], label: str
+) -> Mapping[str, tuple[int, ...]]:
+    """The experience tracks a level-up uses, either authored here or read from rule data."""
+    source = _optional_text(data, "xp_source", label)
+    raw = data.get("tracks")
+    if source is not None and raw is not None:
+        raise ContentError(f"{label}: give 'tracks' or 'xp_source', not both")
+    if source is not None:
+        return _load_level_tracks(_rule_data_path(rule_data, source, label), f"{label}.xp_source")
+    return _load_level_tracks(raw, label)
+
+
+def _rule_data_path(rule_data: Mapping[str, object], path: str, label: str) -> object:
+    """Resolve a dotted path such as ``progression.xp`` through rule data and its attributes."""
+    current: object = rule_data
+    walked: list[str] = []
+    for part in path.split("."):
+        if not part:
+            raise ContentError(f"{label}: 'xp_source' must be a dotted path")
+        walked.append(part)
+        if isinstance(current, Mapping):
+            if part not in current:
+                raise ContentError(f"{label}: 'xp_source' names no rule data {'.'.join(walked)!r}")
+            current = current[part]
+        else:
+            if not hasattr(current, part):
+                raise ContentError(f"{label}: 'xp_source' names no rule data {'.'.join(walked)!r}")
+            current = getattr(current, part)
+    return current
+
+
 def _load_level_tracks(data: object, label: str) -> Mapping[str, tuple[int, ...]]:
     """The XP thresholds of each experience track, all the same length and rising from zero."""
     if not isinstance(data, Mapping) or not data:
-        raise ContentError(f"{label}: 'tracks' must be a non-empty object")
+        raise ContentError(f"{label}: experience tracks must be a non-empty object")
     tracks: dict[str, tuple[int, ...]] = {}
     length: int | None = None
     for name, values in data.items():
-        track_label = f"{label}.tracks[{name!r}]"
+        track_label = f"{label}[{name!r}]"
         if not isinstance(name, str) or not name.strip():
-            raise ContentError(f"{label}.tracks: a track name must be non-empty text")
-        if not isinstance(values, list) or not values:
+            raise ContentError(f"{label}: a track name must be non-empty text")
+        if not isinstance(values, (list, tuple)) or not values:
             raise ContentError(f"{track_label}: must be a non-empty list of levels")
         if any(isinstance(value, bool) or not isinstance(value, int) for value in values):
             raise ContentError(f"{track_label}: every threshold must be a whole number")
@@ -5490,7 +5570,7 @@ def _load_level_tracks(data: object, label: str) -> Mapping[str, tuple[int, ...]
         if length is None:
             length = len(values)
         elif len(values) != length:
-            raise ContentError(f"{label}.tracks: every track must list the same number of levels")
+            raise ContentError(f"{label}: every track must list the same number of levels")
         tracks[name] = tuple(values)
     return tracks
 
@@ -5500,6 +5580,7 @@ def _load_level_picks(
     module: ModuleType,
     character: CharacterSpec,
     counters: Mapping[str, CounterRules],
+    rule_data: Mapping[str, object],
     label: str,
 ) -> Mapping[str, LevelUpPick]:
     if not isinstance(data, list) or not data:
@@ -5540,8 +5621,11 @@ def _load_level_picks(
                     "kind",
                     "counter",
                     "costs",
+                    "costs_ref",
                     "minimum_levels",
+                    "minimum_levels_ref",
                     "maximum",
+                    "maximum_ref",
                     "limit_counter",
                     "stat_group",
                     "apply",
@@ -5574,11 +5658,17 @@ def _load_level_picks(
                 apply=apply,
             )
             continue
-        costs = _level_costs(value.get("costs"), f"{pick_label}.costs")
-        minimums = _level_costs(value.get("minimum_levels"), f"{pick_label}.minimum_levels")
+        costs = _level_costs(
+            _level_pick_field(value, "costs", rule_data, pick_label),
+            f"{pick_label}.costs",
+        )
+        minimums = _level_costs(
+            _level_pick_field(value, "minimum_levels", rule_data, pick_label),
+            f"{pick_label}.minimum_levels",
+        )
         if set(costs) != set(minimums):
             raise ContentError(f"{pick_label}: costs and minimum_levels must name the same steps")
-        maximum = value.get("maximum")
+        maximum = _level_pick_field(value, "maximum", rule_data, pick_label)
         if maximum is not None and (
             isinstance(maximum, bool) or not isinstance(maximum, int) or maximum < 1
         ):
@@ -5599,6 +5689,22 @@ def _load_level_picks(
             apply=apply,
         )
     return picks
+
+
+def _level_pick_field(
+    value: Mapping[str, Any],
+    key: str,
+    rule_data: Mapping[str, object],
+    label: str,
+) -> object:
+    """A pick setting given inline or by a ``*_ref`` path into rule data, exactly one of them."""
+    direct = value.get(key)
+    ref = _optional_text(value, f"{key}_ref", label)
+    if direct is not None and ref is not None:
+        raise ContentError(f"{label}: give {key!r} or {key + '_ref'!r}, not both")
+    if ref is not None:
+        return _rule_data_path(rule_data, ref, label)
+    return direct
 
 
 def _level_costs(data: object, label: str) -> Mapping[int, int]:

@@ -227,6 +227,8 @@ class Feature:
     defense_floor: DefenseFloor | None = None
     # A feature that may be taken again as a distinct choice.
     repeatable: bool = False
+    # Extra maximum hit points this feature adds for every character level, such as Die Hard's 2.
+    level_hp_bonus: int = 0
     # The structured choices the feature asks the player to make.
     picks: tuple[FeaturePick, ...] = ()
     # The icon the feature shows, resolved from `icon` or `looks_like` when the content loads.
@@ -968,6 +970,9 @@ def load_feature(
     repeatable = data.get("repeatable", False)
     if not isinstance(repeatable, bool):
         raise ContentError(f"{label}: 'repeatable' must be a boolean")
+    level_hp_bonus = data.get("level_hp_bonus", 0)
+    if isinstance(level_hp_bonus, bool) or not isinstance(level_hp_bonus, int) or level_hp_bonus < 0:
+        raise ContentError(f"{label}: 'level_hp_bonus' must be a whole number, 0 or more")
     if shock and "shock_ac" not in data:
         raise ContentError(f"{label}: 'shock' needs a 'shock_ac'")
     icon = data.get("icon")
@@ -1012,6 +1017,7 @@ def load_feature(
         reactions=_feature_reactions(data.get("reactions", []), label),
         defense_floor=_defense_floor(data.get("defense_floor"), counters, label),
         repeatable=repeatable,
+        level_hp_bonus=level_hp_bonus,
         picks=_feature_picks(data.get("picks", []), stats, skills, label),
         icon=resolved,
         looks_like=looks_like,

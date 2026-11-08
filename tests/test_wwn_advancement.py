@@ -548,6 +548,65 @@ def test_a_dual_partial_summary_reports_the_combined_gains(
     assert "Focus pick: 1." in summary["lines"]
 
 
+@pytest.mark.parametrize(
+    ("class_id", "class2", "tradition"),
+    [
+        ("warrior", None, None),
+        ("mage", None, "high_mage"),
+        ("healer", "warrior_partial_2", None),
+    ],
+)
+def test_the_level_summary_and_the_applied_level_grant_the_same_pools(
+    client_factory: Callable[[], TestClient],
+    class_id: str,
+    class2: str | None,
+    tradition: str | None,
+) -> None:
+    app, campaign_id = _campaign(
+        client_factory, class_id=class_id, class2=class2, tradition=tradition
+    )
+    ctx = _ctx(_world_tools(app, campaign_id))
+    wwn.gain_xp(NAME, 3, "a session", ctx)
+
+    summary = wwn.level_up_summary(NAME, ctx)
+    applied = wwn.apply_level_up(NAME, ctx)
+
+    assert applied["grants"] == summary["grants"]
+    assert applied["attack_bonus"] == summary["attack_bonus"]
+    assert applied["castings"] == summary["castings"]
+
+
+@pytest.mark.parametrize(
+    ("class_id", "class2", "tradition", "spell_picks"),
+    [
+        ("mage", None, "high_mage", 2),
+        ("healer", "mage_partial_2", "high_mage_partial", 1),
+    ],
+)
+def test_the_casting_table_sets_the_spell_picks(
+    client_factory: Callable[[], TestClient],
+    class_id: str,
+    class2: str | None,
+    tradition: str,
+    spell_picks: int,
+) -> None:
+    app, campaign_id = _campaign(
+        client_factory, class_id=class_id, class2=class2, tradition=tradition
+    )
+    ctx = _ctx(_world_tools(app, campaign_id))
+    wwn.gain_xp(NAME, 3, "a session", ctx)
+
+    assert wwn.level_up_summary(NAME, ctx)["grants"]["spell_picks"] == spell_picks
+
+
+def test_die_hard_hp_per_level_is_feature_data() -> None:
+    die_hard = WWN.character.features["focus_die_hard"]
+
+    assert die_hard.name == "Die Hard"
+    assert die_hard.level_hp_bonus == 2
+    assert WWN.character.features["focus_alert"].level_hp_bonus == 0
+
+
 def test_a_caster_raises_castings_from_the_class_table_on_level_up(
     client_factory: Callable[[], TestClient],
 ) -> None:

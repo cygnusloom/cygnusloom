@@ -43,8 +43,24 @@ def test_the_level_up_tracks_match_the_progression_data() -> None:
     progression = WWN.rule_data["progression"]
     level_up = WWN.level_ups["level"]
 
-    assert level_up.tracks["fast"] == progression.xp_fast
-    assert level_up.tracks["slow"] == progression.xp_slow
+    assert dict(level_up.tracks) == dict(progression.xp)
+
+
+def test_level_ready_and_the_debug_grant_read_the_one_xp_chart() -> None:
+    from types import SimpleNamespace
+
+    from cygnusloom.services import level_up as level_up_service
+    from cygnusloom.services.events import PC_KIND
+
+    rules = WWN.level_ups["level"]
+    state = SimpleNamespace(options={})
+    pc = SimpleNamespace(kind=PC_KIND, counters={"level": 1, "xp": 2})
+
+    assert not level_up_service.level_ready(state, pc, rules, WWN.counters)
+    pc.counters["xp"] = 3
+    assert level_up_service.level_ready(state, pc, rules, WWN.counters)
+    pc.counters["xp"] = 2
+    assert level_up_service.debug_grant_options(state, WWN, pc)[0] == {"amount": 1}
 
 
 def _submit(

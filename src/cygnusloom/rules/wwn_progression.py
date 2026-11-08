@@ -26,7 +26,11 @@ _PROGRESSION_FIELDS = (
     "casting_classes",
     "traditions",
     "art_levels",
-    "skill_level_minimums",
+    "skill_costs",
+    "skill_minimums",
+    "attribute_costs",
+    "attribute_minimums",
+    "attribute_maximum",
 )
 # How two partial class charts combine into an Adventurer's chart, and the policies each field
 # accepts. The data names one policy per field.
@@ -46,13 +50,20 @@ class _WorldWithRuleData(Protocol):
 
 @dataclass(frozen=True)
 class ClassTable:
-    """One class's hit die, attack bonuses, focus levels, and skill-point modifier."""
+    """One class's hit die, attack bonuses, focus levels, and skill-point modifier.
+
+    A class may also grant a magical tradition of its own and choose which art chart it uses.
+    """
 
     hit_die: int
     hp_constant: int
     attack: tuple[int, ...]
     focus_levels: frozenset[int]
     quick_learner: bool
+    # The tradition tag this class grants, such as "healer". Empty when the class grants none.
+    tradition: str = ""
+    # The art chart the class uses: "full" for a full Mage, "partial" for every other class.
+    art_chart: str = "partial"
 
 
 @dataclass(frozen=True)
@@ -80,6 +91,26 @@ class CastingRow:
 
 
 @dataclass(frozen=True)
+class CastingTable:
+    """One casting chart's rows and the spell picks its class gains at each level."""
+
+    rows: Mapping[int, CastingRow]
+    # The spells a caster of this class learns when a new spell level opens.
+    spell_picks: int
+    # Whether the class is a full caster, which the rules use for the harder spell progression.
+    full_caster: bool
+
+    def __getitem__(self, level: int) -> CastingRow:
+        return self.rows[level]
+
+    def __len__(self) -> int:
+        return len(self.rows)
+
+    def get(self, level: int, default: CastingRow | None = None) -> CastingRow | None:
+        return self.rows.get(level, default)
+
+
+@dataclass(frozen=True)
 class WWNProgression:
     """Immutable WWN progression charts parsed from a ``rule_data/progression`` definition."""
 
@@ -87,22 +118,25 @@ class WWNProgression:
     max_skill_level: int
     class_tables: Mapping[str, ClassTable]
     class_pairing: ClassPairing
-    xp_fast: tuple[int, ...]
-    xp_slow: tuple[int, ...]
-    casting_tables: Mapping[str, Mapping[int, CastingRow]]
+    xp: Mapping[str, tuple[int, ...]]
+    casting_tables: Mapping[str, CastingTable]
     casting_class_tables: Mapping[str, str]
     tradition_tags: Mapping[str, str]
     tradition_effort_stats: Mapping[str, str]
     art_levels_full: Mapping[str, frozenset[int]]
     art_levels_partial: Mapping[str, frozenset[int]]
-    skill_level_minimums: Mapping[int, int]
+    skill_costs: Mapping[int, int]
+    skill_minimums: Mapping[int, int]
+    attribute_costs: Mapping[int, int]
+    attribute_minimums: Mapping[int, int]
+    attribute_maximum: int
 
     @property
     def full_mage_classes(self) -> frozenset[str]:
         return frozenset(
             class_id
             for class_id, table_id in self.casting_class_tables.items()
-            if table_id == "full_mage"
+            if self.casting_tables[table_id].full_caster
         )
 
     @property
@@ -148,18 +182,25 @@ def parse_wwn_progression(data: Mapping[str, Any], label: str = "progression") -
     ):
         raise ContentError(f"{label}: configure must be 'configure_progression'")
 
-    xp = _object(_required(definition, "xp", label), f"{label}.xp")
-    _exact_keys(xp, ("fast", "slow"), f"{label}.xp")
-    xp_fast = _integers(_required(xp, "fast", f"{label}.xp"), f"{label}.xp.fast", minimum=0)
-    xp_slow = _integers(_required(xp, "slow", f"{label}.xp"), f"{label}.xp.slow", minimum=0)
-    if not xp_fast or len(xp_fast) != len(xp_slow):
-        raise ContentError(f"{label}.xp: tracks must have the same non-zero number of levels")
-    if xp_fast[0] != 0 or xp_slow[0] != 0:
-        raise ContentError(f"{label}.xp: both tracks must start at zero for level 1")
-    for track_name, track in (("fast", xp_fast), ("slow", xp_slow)):
+    xp_data = _object(_required(definition, "xp", label), f"{label}.xp")
+    if not xp_data:
+        raise ContentError(f"{label}.xp: must name at least one experience track")
+    xp: dict[str, tuple[int, ...]] = {}
+    for track_name, values in xp_data.items():
+        if not isinstance(track_name, str) or not track_name.strip():
+            raise ContentError(f"{label}.xp: a track name must be non-empty text")
+        track = _integers(values, f"{label}.xp.{track_name}", minimum=0)
+        if not track:
+            raise ContentError(f"{label}.xp.{track_name}: must list at least one level")
+        if track[0] != 0:
+            raise ContentError(f"{label}.xp.{track_name}: must start at zero for level 1")
         if any(left >= right for left, right in pairwise(track)):
             raise ContentError(f"{label}.xp.{track_name}: thresholds must increase at every level")
-    max_level = len(xp_fast)
+        xp[track_name.strip()] = track
+    level_counts = {len(track) for track in xp.values()}
+    if len(level_counts) != 1:
+        raise ContentError(f"{label}.xp: every track must list the same number of levels")
+    max_level = level_counts.pop()
 
     classes = _array(_required(definition, "classes", label), f"{label}.classes")
     if not classes:
@@ -168,11 +209,20 @@ def parse_wwn_progression(data: Mapping[str, Any], label: str = "progression") -
     for index, class_value in enumerate(classes):
         class_label = f"{label}.classes[{index}]"
         class_data = _object(class_value, class_label)
-        _exact_keys(
-            class_data,
-            ("id", "hit_die", "hp_constant", "attack", "focus_levels", "quick_learner"),
-            class_label,
-        )
+        unknown = set(class_data) - {
+            "id",
+            "hit_die",
+            "hp_constant",
+            "attack",
+            "focus_levels",
+            "quick_learner",
+            "tradition",
+            "art_chart",
+        }
+        if unknown:
+            raise ContentError(
+                f"{class_label}: unexpected fields {', '.join(repr(key) for key in sorted(unknown))}"
+            )
         class_id = _text(_required(class_data, "id", class_label), f"{class_label}.id")
         if class_id in class_tables:
             raise ContentError(f"{class_label}: duplicate class id {class_id!r}")
@@ -199,6 +249,13 @@ def parse_wwn_progression(data: Mapping[str, Any], label: str = "progression") -
         quick_learner = _required(class_data, "quick_learner", class_label)
         if not isinstance(quick_learner, bool):
             raise ContentError(f"{class_label}.quick_learner: must be true or false")
+        tradition = class_data.get("tradition", "")
+        if not isinstance(tradition, str):
+            raise ContentError(f"{class_label}.tradition: must be text")
+        tradition = tradition.strip()
+        art_chart = class_data.get("art_chart", "partial")
+        if art_chart not in ("full", "partial"):
+            raise ContentError(f"{class_label}.art_chart: must be 'full' or 'partial'")
         class_tables[class_id] = ClassTable(
             hit_die=_integer(
                 _required(class_data, "hit_die", class_label),
@@ -212,6 +269,8 @@ def parse_wwn_progression(data: Mapping[str, Any], label: str = "progression") -
             attack=attack,
             focus_levels=frozenset(focus_levels),
             quick_learner=quick_learner,
+            tradition=tradition,
+            art_chart=art_chart,
         )
 
     pairing_label = f"{label}.class_pairing"
@@ -228,15 +287,17 @@ def parse_wwn_progression(data: Mapping[str, Any], label: str = "progression") -
 
     casting_data = _object(_required(definition, "casting", label), f"{label}.casting")
     _exact_keys(casting_data, _CASTING_TABLES, f"{label}.casting")
-    casting_tables: dict[str, Mapping[int, CastingRow]] = {}
+    casting_tables: dict[str, CastingTable] = {}
     for table_id in _CASTING_TABLES:
         table_label = f"{label}.casting.{table_id}"
-        rows = _array(_required(casting_data, table_id, f"{label}.casting"), table_label)
+        table_data = _object(_required(casting_data, table_id, f"{label}.casting"), table_label)
+        _exact_keys(table_data, ("rows", "spell_picks", "full_caster"), table_label)
+        rows = _array(_required(table_data, "rows", table_label), f"{table_label}.rows")
         if len(rows) != max_level:
             raise ContentError(f"{table_label}: has {len(rows)} levels; expected {max_level}")
         table: dict[int, CastingRow] = {}
         for expected_level, row_value in enumerate(rows, start=1):
-            row_label = f"{table_label}[{expected_level - 1}]"
+            row_label = f"{table_label}.rows[{expected_level - 1}]"
             row = _object(row_value, row_label)
             _exact_keys(row, ("level", "max_spell_level", "casts", "prepared"), row_label)
             level = _integer(_required(row, "level", row_label), f"{row_label}.level", minimum=1)
@@ -253,7 +314,18 @@ def parse_wwn_progression(data: Mapping[str, Any], label: str = "progression") -
                     _required(row, "prepared", row_label), f"{row_label}.prepared", minimum=0
                 ),
             )
-        casting_tables[table_id] = MappingProxyType(table)
+        full_caster = _required(table_data, "full_caster", table_label)
+        if not isinstance(full_caster, bool):
+            raise ContentError(f"{table_label}.full_caster: must be true or false")
+        casting_tables[table_id] = CastingTable(
+            rows=MappingProxyType(table),
+            spell_picks=_integer(
+                _required(table_data, "spell_picks", table_label),
+                f"{table_label}.spell_picks",
+                minimum=0,
+            ),
+            full_caster=full_caster,
+        )
 
     class_casting_data = _object(
         _required(definition, "casting_classes", label), f"{label}.casting_classes"
@@ -329,41 +401,59 @@ def parse_wwn_progression(data: Mapping[str, Any], label: str = "progression") -
             f"{label}.art_levels.full: names unknown traditions {sorted(unknown_full_tags)!r}"
         )
 
-    skill_data = _object(
-        _required(definition, "skill_level_minimums", label),
-        f"{label}.skill_level_minimums",
+    skill_costs = _keyed_integers(
+        _required(definition, "skill_costs", label),
+        f"{label}.skill_costs",
+        first=0,
+        maximum=max_level,
     )
-    if not skill_data:
-        raise ContentError(f"{label}.skill_level_minimums: must contain skill levels")
-    skill_level_minimums: dict[int, int] = {}
-    for key, minimum_value in skill_data.items():
-        if (
-            not isinstance(key, str)
-            or not key.isascii()
-            or not key.isdecimal()
-            or str(int(key)) != key
-        ):
-            raise ContentError(
-                f"{label}.skill_level_minimums: keys must be canonical non-negative levels"
-            )
-        skill_level = int(key)
-        minimum = _integer(minimum_value, f"{label}.skill_level_minimums[{key!r}]", minimum=1)
-        if minimum > max_level:
-            raise ContentError(
-                f"{label}.skill_level_minimums[{key!r}]: character level exceeds {max_level}"
-            )
-        skill_level_minimums[skill_level] = minimum
-    skill_levels = sorted(skill_level_minimums)
-    if skill_levels != list(range(skill_levels[-1] + 1)):
-        raise ContentError(
-            f"{label}.skill_level_minimums: skill levels must start at 0 and be consecutive"
-        )
+    skill_minimums = _keyed_integers(
+        _required(definition, "skill_minimums", label),
+        f"{label}.skill_minimums",
+        first=0,
+        maximum=max_level,
+    )
+    if set(skill_costs) != set(skill_minimums):
+        raise ContentError(f"{label}: skill_costs and skill_minimums must name the same levels")
+    # A character level is a prerequisite, so it cannot fall as the skill level rises.
+    skill_levels = sorted(skill_minimums)
     if any(
         previous > current
-        for previous, current in pairwise(skill_level_minimums[level] for level in skill_levels)
+        for previous, current in pairwise(skill_minimums[level] for level in skill_levels)
     ):
         raise ContentError(
-            f"{label}.skill_level_minimums: character-level prerequisites must not decrease"
+            f"{label}.skill_minimums: character-level prerequisites must not decrease"
+        )
+    attribute_costs = _keyed_integers(
+        _required(definition, "attribute_costs", label),
+        f"{label}.attribute_costs",
+        first=1,
+        maximum=max_level,
+    )
+    attribute_minimums = _keyed_integers(
+        _required(definition, "attribute_minimums", label),
+        f"{label}.attribute_minimums",
+        first=1,
+        maximum=max_level,
+    )
+    if set(attribute_costs) != set(attribute_minimums):
+        raise ContentError(
+            f"{label}: attribute_costs and attribute_minimums must name the same boosts"
+        )
+    attribute_maximum = _integer(
+        _required(definition, "attribute_maximum", label),
+        f"{label}.attribute_maximum",
+        minimum=1,
+    )
+    known_class_traditions = {table.tradition for table in class_tables.values() if table.tradition}
+    unknown_class_traditions = sorted(
+        tradition
+        for tradition in known_class_traditions
+        if tradition_tags.get(tradition, tradition) not in known_tags
+    )
+    if unknown_class_traditions:
+        raise ContentError(
+            f"{label}.classes: traditions name no art chart {unknown_class_traditions!r}"
         )
 
     return WWNProgression(
@@ -371,15 +461,18 @@ def parse_wwn_progression(data: Mapping[str, Any], label: str = "progression") -
         max_skill_level=skill_levels[-1],
         class_tables=MappingProxyType(class_tables),
         class_pairing=class_pairing,
-        xp_fast=xp_fast,
-        xp_slow=xp_slow,
+        xp=MappingProxyType(xp),
         casting_tables=MappingProxyType(casting_tables),
         casting_class_tables=MappingProxyType(casting_class_tables),
         tradition_tags=MappingProxyType(tradition_tags),
         tradition_effort_stats=MappingProxyType(tradition_effort_stats),
         art_levels_full=MappingProxyType(art_charts["full"]),
         art_levels_partial=MappingProxyType(art_charts["partial"]),
-        skill_level_minimums=MappingProxyType(skill_level_minimums),
+        skill_costs=MappingProxyType(skill_costs),
+        skill_minimums=MappingProxyType(skill_minimums),
+        attribute_costs=MappingProxyType(attribute_costs),
+        attribute_minimums=MappingProxyType(attribute_minimums),
+        attribute_maximum=attribute_maximum,
     )
 
 
@@ -431,13 +524,14 @@ def configure_progression(
     skill_progression = character.skill_progression
     if skill_progression is None:
         raise ContentError(f"{label}: progression requires a skill_progression definition")
-    chart_minimum = min(progression.skill_level_minimums)
-    chart_maximum = max(progression.skill_level_minimums)
+    chart_minimum = min(progression.skill_minimums)
+    chart_maximum = max(progression.skill_minimums)
     if skill_progression.first_level != chart_minimum or skill_progression.maximum != chart_maximum:
         raise ContentError(
             f"{label}: skill chart bounds {chart_minimum}..{chart_maximum} do not match "
             f"skill_progression {skill_progression.first_level}..{skill_progression.maximum}"
         )
+    _check_class_attack_encoding(progression, character, label)
 
     level_counter = character.counters.get("level")
     if (
@@ -470,7 +564,90 @@ def combine_class_tables(tables: Sequence[ClassTable], policy: ClassPairing) -> 
         ),
         focus_levels=_paired_levels(policy.focus_levels, tables),
         quick_learner=_paired_flag(policy.quick_learner, tables),
+        tradition=next((table.tradition for table in tables if table.tradition), ""),
+        art_chart="full" if any(table.art_chart == "full" for table in tables) else "partial",
     )
+
+
+def _check_class_attack_encoding(
+    progression: WWNProgression, character: CharacterSpec, label: str
+) -> None:
+    """Creation adds a template's ``attack_bonus`` to the stat's base; it must match the chart.
+
+    The class charts are the authority. A template delta that disagrees with the chart's level-1
+    attack would make a newly created character differ from the same character after a level-up,
+    so it is rejected at load time.
+    """
+    attack = character.stats.get("attack_bonus")
+    if attack is None or attack.derived is not None:
+        return
+    base = attack.low
+    for class_id, table in progression.class_tables.items():
+        template = character.templates.get(class_id)
+        if template is None or template.kind != "class":
+            continue
+        actual = base + template.stats.get("attack_bonus", 0)
+        if actual != table.attack[0]:
+            raise ContentError(
+                f"{label}: class {class_id!r} starts at attack bonus {actual} from its template; "
+                f"the chart's level-1 attack is {table.attack[0]}"
+            )
+    for primary_id, second_id in _class_pair_ids(character, progression):
+        primary = character.templates[primary_id]
+        second = character.templates[second_id]
+        combined = combine_class_tables(
+            [progression.class_tables[primary_id], progression.class_tables[second_id]],
+            progression.class_pairing,
+        )
+        actual = base + primary.stats.get("attack_bonus", 0) + second.stats.get("attack_bonus", 0)
+        if actual != combined.attack[0]:
+            raise ContentError(
+                f"{label}: the {primary_id}/{second_id} pairing starts at attack bonus {actual}; "
+                f"the combined chart's level-1 attack is {combined.attack[0]}"
+            )
+
+
+def _class_pair_ids(character: CharacterSpec, progression: WWNProgression) -> list[tuple[str, str]]:
+    """Every class/class2 pairing the templates allow, for chart cross-checks."""
+    primaries = [
+        template.id
+        for template in character.templates.values()
+        if template.kind == "class" and template.id in progression.class_tables
+    ]
+    seconds = [
+        template.id
+        for template in character.templates.values()
+        if template.kind == "class2" and template.id in progression.class_tables
+    ]
+    pairs: list[tuple[str, str]] = []
+    for primary_id in primaries:
+        primary = character.templates[primary_id]
+        for second_id in seconds:
+            second = character.templates[second_id]
+            allowed = second.compatible_with.get("class")
+            if allowed is not None and primary_id not in allowed:
+                continue
+            required = primary.compatible_with.get("class2")
+            if required is not None and second_id not in required:
+                continue
+            if _duplicate_choice_keys(primary_id, second_id, character):
+                continue
+            pairs.append((primary_id, second_id))
+    return pairs
+
+
+def _duplicate_choice_keys(primary_id: str, second_id: str, character: CharacterSpec) -> bool:
+    first = character.templates[primary_id]
+    second = character.templates[second_id]
+    for template in (first, second):
+        for requirement in template.template_requirements:
+            if (
+                requirement.distinct
+                and set(requirement.kinds) == {"class", "class2"}
+                and first.choice_key == second.choice_key
+            ):
+                return True
+    return False
 
 
 def _paired_number(policy: str, field: str, values: Sequence[int]) -> int:
@@ -580,4 +757,31 @@ def _text_mapping(value: Any, label: str) -> dict[str, str]:
     for key_value, text_value in data.items():
         key = _text(key_value, f"{label} key")
         result[key] = _text(text_value, f"{label}[{key!r}]")
+    return result
+
+
+def _keyed_integers(value: Any, label: str, *, first: int, maximum: int) -> dict[int, int]:
+    """A map keyed by consecutive step numbers, such as a skill level or boost number."""
+    data = _object(value, label)
+    if not data:
+        raise ContentError(f"{label}: must contain at least one entry")
+    result: dict[int, int] = {}
+    for key, raw in data.items():
+        if (
+            not isinstance(key, str)
+            or not key.isascii()
+            or not key.isdecimal()
+            or str(int(key)) != key
+        ):
+            raise ContentError(f"{label}: keys must be canonical whole numbers")
+        step = int(key)
+        if step < first:
+            raise ContentError(f"{label}: keys must start at {first}")
+        number = _integer(raw, f"{label}[{key!r}]", minimum=1)
+        if number > maximum:
+            raise ContentError(f"{label}[{key!r}]: value exceeds {maximum}")
+        result[step] = number
+    steps = sorted(result)
+    if steps != list(range(first, steps[-1] + 1)):
+        raise ContentError(f"{label}: keys must start at {first} and be consecutive")
     return result
