@@ -503,26 +503,6 @@
   },
   {
     "type": "tool_call",
-    "id": "recover_after_rest",
-    "name": "recover_after_rest",
-    "python_module": "wwn",
-    "function": "recover_after_rest",
-    "description": "Apply the benefits of a good night's rest to a character: restore lost HP equal to the character's level, remove 1 System Strain, restore the day's spent castings, and return Effort committed for the scene or the day. Call it once after the party makes camp and sleeps. Injuries, Strain, and indefinite Effort beyond those amounts remain until healed or reclaimed by other means.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "character": {
-          "type": "string",
-          "description": "The name of the player character who rested."
-        }
-      },
-      "required": [
-        "character"
-      ]
-    }
-  },
-  {
-    "type": "tool_call",
     "id": "prepare_spells",
     "name": "prepare_spells",
     "python_module": "wwn_magic",
@@ -671,8 +651,9 @@
     "type": "tool_call",
     "id": "add_strain",
     "name": "add_strain",
-    "python_module": "wwn_magic",
-    "function": "add_strain",
+    "world_method": "harm_stat",
+    "rename": {"character": "name"},
+    "bind": {"stat": "strain"},
     "description": "Add System Strain to a character. Strain is the body's toll from healing, magic, and hardship, and its maximum is the character's Constitution score. Call it after first aid, magical healing, or an exhausting effect, and say what caused it. A character at maximum Strain can take no more healing until some Strain is removed.",
     "parameters": {
       "type": "object",
@@ -703,8 +684,9 @@
     "type": "tool_call",
     "id": "heal_strain",
     "name": "heal_strain",
-    "python_module": "wwn_magic",
-    "function": "heal_strain",
+    "world_method": "restore_stat",
+    "rename": {"character": "name"},
+    "bind": {"stat": "strain"},
     "description": "Remove System Strain from a character, such as 1 point after a good night's rest or more from a restorative effect. Give the cause so the change is recorded. Strain cannot fall below 0.",
     "parameters": {
       "type": "object",
@@ -753,26 +735,6 @@
       "required": [
         "healer",
         "target"
-      ]
-    }
-  },
-  {
-    "type": "tool_call",
-    "id": "restore_spell_slots",
-    "name": "restore_spell_slots",
-    "python_module": "wwn_magic",
-    "function": "restore_spell_slots",
-    "description": "Clear a spellcaster's spent castings after a full night's rest, making the whole daily casting limit available again. It does not restore HP, System Strain, or Effort; use recover_after_rest for those.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "character": {
-          "type": "string",
-          "description": "The name of the player character whose castings are restored."
-        }
-      },
-      "required": [
-        "character"
       ]
     }
   }

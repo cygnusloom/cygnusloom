@@ -212,35 +212,6 @@ def check_morale(name: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.with_hook_context(action)
 
 
-# The saving throw names the GM says, and the stats they read.
-SAVE_STATS: Mapping[str, str] = {
-    "physical": "save_physical",
-    "evasion": "save_evasion",
-    "mental": "save_mental",
-    "luck": "save_luck",
-}
-
-
-def _save_stat(save: str) -> str:
-    """The stat for a named save, accepting the short or full name."""
-    key = save.strip().casefold().replace("save_", "")
-    stat = SAVE_STATS.get(key, save if save in SAVE_STATS.values() else "")
-    if not stat:
-        options = ", ".join(SAVE_STATS)
-        raise InvalidInput(f"there is no save named {save!r}; the saves are: {options}")
-    return stat
-
-
-def player_roll_save(
-    character: str, save: str, cause: str, ctx: ToolContext, roll: int = 0
-) -> dict[str, Any]:
-    """Ask the player to roll a saving throw, and record their d20. Use it instead of `roll_save`
-    whenever the save is for the player's own character; the player presses the roll button."""
-    if not 1 <= roll <= 20:
-        raise InvalidInput("the player's save roll must be 1 to 20")
-    return ctx.world.roll_save(character, _save_stat(save), cause, natural=roll)
-
-
 def instinct_check(name: str, instinct: int, cause: str, ctx: ToolContext) -> dict[str, Any]:
     """Check an NPC's Instinct: roll 1d10 and compare it to the score in the statblock. A roll no
     higher than the Instinct means the creature acts on impulse. Instinct is a statblock score,
@@ -370,35 +341,6 @@ def _reaction_for_total(total: int) -> str:
     if total <= 11:
         return "friendlier and more benign than expected"
     return "as friendly and helpful as their nature and the situation permit"
-
-
-def player_attack(
-    target: str,
-    weapon: str,
-    ctx: ToolContext,
-    modifier: str = "",
-    roll: int = 0,
-    hit_modifier: int = 0,
-    range_band: str = "",
-    dual_wield: bool = False,
-    force: bool = False,
-) -> dict[str, Any]:
-    """Record the player character's attack with a carried weapon, or unarmed, using the d20 the
-    player rolled. The engine rolls damage; Shock applies on a miss. `hit_modifier` carries cover,
-    range, dual wielding, or another situational penalty or bonus. The character must be taking
-    their turn unless `force` says the story needs the attack outside it."""
-    if not 1 <= roll <= 20:
-        raise InvalidInput("the player's attack roll must be 1 to 20")
-    return ctx.world.player_attack(
-        target,
-        weapon,
-        modifier,
-        attack_roll=roll,
-        hit_modifier=hit_modifier,
-        range_band=range_band,
-        dual_wield=dual_wield,
-        force=force,
-    )
 
 
 def xp_track(progression: WWNProgression, rate: str) -> tuple[int, ...]:
@@ -944,7 +886,12 @@ def spend_skill_point(character: str, skill: str, ctx: ToolContext) -> dict[str,
                 f"{spec.skills[skill].name} level {new_level} costs {cost} skill {unit}; "
                 f"{found.name} has {points}"
             )
-        return {"points": points, "before": before, "new_level": new_level, "cost": cost}
+        return {
+            "points": points,
+            "before": before,
+            "new_level": new_level,
+            "cost": cost,
+        }
 
     found = ctx.world.with_hook_context(read)
     new_level = int(found["new_level"])
@@ -1214,13 +1161,6 @@ def learn_spell(character: str, spell: str, ctx: ToolContext) -> dict[str, Any]:
     }
 
 
-def roll_starting_silver(character: str, ctx: ToolContext) -> dict[str, Any]:
-    """Give a character the book's alternative to a starting package: 3d6 x 10 silver pieces."""
-    amount = roll_total("3d6", ctx.world.rng) * 10
-    ctx.world.change_currency(character, amount, cause="starting silver")
-    return {"character": character, "silver": amount}
-
-
 def grant_package(character: str, package: str, ctx: ToolContext) -> dict[str, Any]:
     """Give a character the gear of one of the book's equipment packages. Creation already grants
     the kit the player chose, so this is for a character who joined without one, such as a
@@ -1254,27 +1194,6 @@ def grant_package(character: str, package: str, ctx: ToolContext) -> dict[str, A
     }
 
 
-def rest(
-    character: str,
-    ctx: ToolContext,
-    length: str = "night",
-    reason: str = "",
-    interrupted: bool = False,
-) -> dict[str, Any]:
-    """Take a rest through the world, then apply the rule set's recovery: a night restores hit
-    points equal to the character's level, one point of System Strain, all spell castings, and
-    scene and day Effort. A shorter rest restores scene Effort only."""
-    # Rest is party-level. Calling it once per character used to advance the clock once per
-    # character; the after_rest hook now recovers every party member from one call.
-    return ctx.world.rest(length, interrupted=interrupted, reason=reason)
-
-
-def recover_after_rest(character: str, ctx: ToolContext) -> dict[str, Any]:
-    """Apply one character's night recovery without advancing the clock."""
-    progression = require_wwn_progression(ctx.world)
-    return _rest_recovery(character, ctx, "night", False, progression)
-
-
 def after_rest(
     hc: HookContext,
     name: str,
@@ -1286,21 +1205,6 @@ def after_rest(
     """WWN recovery, run once per party member after a party rest has already moved the clock."""
     progression = require_wwn_progression(hc)
     _recover_with_hook(hc, name, length, interrupted, progression)
-
-
-def _rest_recovery(
-    character: str,
-    ctx: ToolContext,
-    length: str,
-    interrupted: bool,
-    progression: WWNProgression,
-) -> dict[str, Any]:
-    """Apply one character's recovery through a hook context, without moving the clock."""
-
-    def action(hc: HookContext) -> dict[str, Any]:
-        return _recover_with_hook(hc, character, length, interrupted, progression)
-
-    return ctx.world.with_hook_context(action)
 
 
 def _recover_with_hook(

@@ -30,12 +30,12 @@
     "type": "tool_call",
     "id": "player_roll_save",
     "name": "player_roll_save",
-    "python_module": "wwn",
-    "function": "player_roll_save",
+    "world_method": "roll_save",
+    "rename": {"character": "name", "save": "stat", "cause": "reason"},
     "description": "Ask the player to roll a saving throw for their own character, then record the d20 they rolled against the character's Physical, Evasion, Mental, or Luck save. Use it instead of roll_save for the player character: the player presses the roll button and the result is final. A failure is recorded; apply what it costs yourself.",
     "player_input": {
       "dice": "1d20",
-      "param": "roll",
+      "param": "natural",
       "details": "{save} save against {cause}: roll 1d20 and meet or beat your save score."
     },
     "parameters": {
@@ -319,12 +319,11 @@
     "type": "tool_call",
     "id": "player_attack",
     "name": "player_attack",
-    "python_module": "wwn",
-    "function": "player_attack",
+    "world_method": "player_attack",
     "description": "Ask the player to roll their attack with a carried weapon or unarmed, then record the d20. The engine adds the weapon skill, the best weapon attribute, the attack bonus, and a Warrior's Killing Blow, rolls damage, and applies Shock on a miss when the target's AC is low enough. Use it for the player character; the player presses the roll button and the result is final. An attack is refused unless the player character is taking their turn; their turn starts automatically when it comes up. Pass force true only for an action the story needs outside the turn order.",
     "player_input": {
       "dice": "1d20",
-      "param": "roll",
+      "param": "attack_roll",
       "details": "{weapon} against {target}: roll 1d20 and add your attack bonus. The engine rolls damage."
     },
     "parameters": {
@@ -538,8 +537,7 @@
     "type": "tool_call",
     "id": "rest",
     "name": "rest",
-    "python_module": "wwn",
-    "function": "rest",
+    "world_method": "rest",
     "description": "Record one party rest. Every player character recovers: a night restores hit points equal to their level, one point of System Strain, all spell castings, and scene and day Effort. A few moments restores scene Effort only. A week of bed rest restores all hit points and Strain and ends Frail. The rest moves the clock once. Frail characters recover no hit points or Strain from a single night.",
     "parameters": {
       "type": "object",
@@ -1013,8 +1011,9 @@
     "type": "tool_call",
     "id": "roll_starting_silver",
     "name": "roll_starting_silver",
-    "python_module": "wwn",
-    "function": "roll_starting_silver",
+    "world_method": "roll_currency",
+    "rename": {"character": "name"},
+    "bind": {"dice": "3d6", "multiplier": 10, "cause": "starting silver"},
     "description": "Give a character starting money instead of an equipment package: roll 3d6 and multiply by 10 silver pieces, as the book allows. Use it once at creation and do not also grant a package.",
     "parameters": {
       "type": "object",

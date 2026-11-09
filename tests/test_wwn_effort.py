@@ -112,14 +112,17 @@ def test_a_healer_and_second_partial_vowed_recovers_both_effort_pools(
     client_factory: Callable[[], TestClient],
 ) -> None:
     app, campaign_id = _campaign(client_factory, class_id="healer", class2="vowed_partial_2")
-    ctx = _ctx(_world_tools(app, campaign_id))
+    tools = _world_tools(app, campaign_id)
+    ctx = _ctx(tools)
 
     wwn_magic.commit_effort(NAME, "healer", 1, "scene", ctx)
     wwn_magic.commit_effort(NAME, "vowed", 1, "scene", ctx)
-    rested = wwn.recover_after_rest(NAME, ctx)
+    tools.rest("night", reason="a test")
 
-    assert rested["restored"]["effort_healer"] == 1
-    assert rested["restored"]["effort_vowed"] == 1
+    character = _pc(app, campaign_id)
+    assert character.harm.get("effort_healer", 0) == 0
+    assert character.harm.get("effort_vowed", 0) == 0
+    assert wwn.EFFORT_MARK not in character.marks
 
 
 def test_a_warrior_sheet_shows_no_effort_lines(

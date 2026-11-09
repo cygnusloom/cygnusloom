@@ -49,7 +49,7 @@ from cygnusloom.content.library import (
     Wilderness,
     WorldTerrain,
 )
-from cygnusloom.rules.dice import max_total
+from cygnusloom.rules.dice import is_formula, max_total, roll_total
 from cygnusloom.services import advancements as advancements_service
 from cygnusloom.services import aid, combat, custom_features, encounters, morale
 from cygnusloom.services import attacks as attack_modifiers
@@ -87,6 +87,7 @@ from cygnusloom.services.events import (
     FeatureChoiceMade,
     GrappleEnded,
     GrappleStarted,
+    Harmed,
     Item,
     MaxChanged,
     NarrationUndone,
@@ -333,6 +334,19 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 amount,
                 cause,
             )
+
+    def roll_currency(
+        self, name: str, dice: str, multiplier: int, cause: str = ""
+    ) -> dict[str, Any]:
+        """Give a character currency from a roll, such as starting money: the dice total times
+        `multiplier`, in the rule set's currency. The result holds the amount under the
+        currency's own key, such as `silver`."""
+        if not is_formula(dice):
+            raise InvalidInput(f"{dice!r} is not a dice formula such as '3d6'")
+        factor = whole_number(multiplier, "multiplier", 1, MAX_STAT)
+        amount = roll_total(dice, self.rng, plus=self.plus) * factor
+        changed = self.change_currency(name, amount, cause)
+        return {"character": changed["name"], str(changed["currency"]): amount}
 
     def place_object(
         self,
@@ -847,6 +861,39 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 "stat": stat,
                 "restored": restored,
                 "current": current(character, stat),
+            }
+
+    def harm_stat(self, name: str, stat: str, amount: int, cause: str) -> dict[str, Any]:
+        """Add harm to a character's stat, never past its maximum: the amount is clamped to what
+        is left, and a stat already at its maximum refuses any harm. Records the harm and returns
+        what the stat has left and how much was taken."""
+        value = whole_number(amount, "amount", 1, MAX_STAT)
+        with session_scope(self.engine) as db:
+            character = _character_named(load_state(db, self.campaign_id), name)
+            if stat not in character.stats:
+                options = ", ".join(sorted(character.stats)) or "none"
+                raise InvalidInput(
+                    f"{character.name} has no stat {stat!r}; the stats are: {options}"
+                )
+            available = current(character, stat)
+            if available <= 0:
+                raise InvalidInput(f"{character.name}'s {stat} is already at its maximum")
+            taken = min(value, available)
+            record(
+                db,
+                self.campaign_id,
+                Harmed(
+                    name=character.name,
+                    stat=stat,
+                    taken=taken,
+                    cause=bounded_text(cause, "cause", MAX_TEXT),
+                ),
+            )
+            db.commit()
+            return {
+                "character": character.name,
+                stat: available - taken,
+                "added": taken,
             }
 
     def set_stat_max(self, name: str, stat: str, value: int, cause: str = "") -> dict[str, Any]:

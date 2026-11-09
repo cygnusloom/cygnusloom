@@ -43,7 +43,6 @@ from cygnusloom.services.hooks import HookContext
 # The character mark that holds the spell ids prepared for the day.
 PREPARED_MARK = "prepared"
 MAX_EFFORT_COMMIT = 100
-MAX_STRAIN = 100
 MAX_SPELLS = 50
 
 
@@ -283,39 +282,6 @@ def recover_effort(
     return ctx.world.with_hook_context(action)
 
 
-def add_strain(character: str, amount: int, cause: str, ctx: ToolContext) -> dict[str, Any]:
-    """Add System Strain, never above the character's Strain score."""
-    value = whole_number(amount, "amount", 1, MAX_STRAIN)
-
-    def action(hc: HookContext) -> dict[str, Any]:
-        _, found = _character(hc, character)
-        if "strain" not in found.stats:
-            raise InvalidInput(f"{found.name} has no System Strain")
-        available = current(found, "strain")
-        if available <= 0:
-            raise InvalidInput(f"{found.name}'s System Strain is already at its maximum")
-        taken = min(value, available)
-        db, campaign_id = hc.session()
-        record(
-            db,
-            campaign_id,
-            Harmed(name=found.name, stat="strain", taken=taken, cause=cause),
-        )
-        return {
-            "character": found.name,
-            "strain": available - taken,
-            "added": taken,
-        }
-
-    return ctx.world.with_hook_context(action)
-
-
-def heal_strain(character: str, amount: int, cause: str, ctx: ToolContext) -> dict[str, Any]:
-    """Recover System Strain, down to none."""
-    value = whole_number(amount, "amount", 1, MAX_STRAIN)
-    return ctx.world.restore_stat(character, "strain", value, cause)
-
-
 def first_aid(healer: str, target: str, ctx: ToolContext) -> dict[str, Any]:
     """Roll 1d6 plus Heal skill, restore that much of the target's lost hit points (never above
     their maximum), and add one System Strain to them."""
@@ -427,38 +393,6 @@ def first_aid(healer: str, target: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.with_hook_context(action)
 
 
-def restore_spell_slots(character: str, ctx: ToolContext) -> dict[str, Any]:
-    """Clear the castings spent today, as a night's rest does."""
-
-    def action(hc: HookContext) -> dict[str, Any]:
-        _, found = _character(hc, character)
-        spent = found.harm.get("castings", 0)
-        if spent <= 0:
-            return {
-                "character": found.name,
-                "restored": 0,
-                "castings": found.stats.get("castings", 0),
-            }
-        db, campaign_id = hc.session()
-        record(
-            db,
-            campaign_id,
-            StatRestored(
-                name=found.name,
-                stat="castings",
-                amount=spent,
-                cause="a night's rest",
-            ),
-        )
-        return {
-            "character": found.name,
-            "restored": spent,
-            "castings": found.stats.get("castings", 0),
-        }
-
-    return ctx.world.with_hook_context(action)
-
-
 def _character(hc: HookContext, name: str) -> tuple[CampaignState, Character]:
     state = hc.state()
     character = state.characters.get(name_key(name))
@@ -486,12 +420,9 @@ def _duration(duration: str) -> str:
 
 __all__ = [
     "PREPARED_MARK",
-    "add_strain",
     "cast_spell",
     "commit_effort",
     "first_aid",
-    "heal_strain",
     "prepare_spells",
     "recover_effort",
-    "restore_spell_slots",
 ]

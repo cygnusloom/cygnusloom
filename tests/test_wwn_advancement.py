@@ -1290,17 +1290,16 @@ def test_a_frail_character_recovers_no_hit_points_or_strain(
 ) -> None:
     app, campaign_id = _campaign(client_factory, class_id="mage", tradition="high_mage")
     tools = _world_tools(app, campaign_id)
-    ctx = _ctx(tools)
     tools.set_stat_max(NAME, "hp", 20, cause="a test")
     tools.set_stat_max(NAME, "strain", 10, cause="a test")
     tools.harm_character(NAME, "hp", 5, "a test")
     tools.add_condition(NAME, "frail", "a test")
 
-    result = wwn.recover_after_rest(NAME, ctx)
+    tools.rest("night", reason="a test")
 
-    assert "hp" not in result["restored"]
-    assert "strain" not in result["restored"]
-    assert _pc(app, campaign_id).harm["hp"] == 5
+    character = _pc(app, campaign_id)
+    assert character.harm["hp"] == 5
+    assert "strain" not in character.harm
 
 
 def test_a_dual_mage_takes_two_partial_traditions(client_factory):
