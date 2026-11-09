@@ -1,0 +1,16 @@
+[
+  {
+    "type": "rest",
+    "id": "common",
+    "lengths": {
+      "moments": {
+        "hours": 1,
+        "full": false,
+        "restores": [],
+        "clears": [],
+        "ends": []
+      }
+    },
+    "interrupted": "moments"
+  }
+]

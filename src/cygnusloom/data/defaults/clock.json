@@ -1,0 +1,9 @@
+[
+  {
+    "type": "clock",
+    "id": "common",
+    "parts": ["morning", "afternoon", "night"],
+    "stale_days": 5,
+    "hours_per_part": 8
+  }
+]

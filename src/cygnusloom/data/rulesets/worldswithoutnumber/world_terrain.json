@@ -2,271 +2,155 @@
   {
     "type": "world_terrain",
     "id": "plains",
-    "name": "Plains",
-    "color": "#cfc89a",
-    "rule": "Open plains and savanna. Travel is 3 miles per hour on foot, and a road through the terrain doubles that.",
-    "pattern": "tufts",
-    "ink": "#8f8752"
+    "rule": "Open plains and savanna. Travel is 3 miles per hour on foot, and a road through the terrain doubles that."
   },
   {
     "type": "world_terrain",
     "id": "hills",
-    "name": "Hills",
-    "color": "#9a8456",
-    "rule": "Rolling or rugged hills. Travel is 1.5 miles per hour, or 2 miles per hour through the gentlest rolling country.",
-    "pattern": "ridges",
-    "ink": "#5b4a2a"
+    "rule": "Rolling or rugged hills. Travel is 1.5 miles per hour, or 2 miles per hour through the gentlest rolling country."
   },
   {
     "type": "world_terrain",
     "id": "forest",
-    "name": "Forest",
-    "color": "#4d7a3c",
-    "rule": "Woodland. Light forest allows 2 miles per hour; dense, trackless forest slows travel to 1.5.",
-    "pattern": "trees",
-    "ink": "#24421f"
+    "rule": "Woodland. Light forest allows 2 miles per hour; dense, trackless forest slows travel to 1.5."
   },
   {
     "type": "world_terrain",
     "id": "desert",
-    "name": "Desert",
-    "color": "#d9c58a",
-    "rule": "Sand or scrub desert. Travel is 2 miles per hour, and foraging is difficulty 12 or worse.",
-    "pattern": "dunes",
-    "ink": "#a08a4e"
+    "rule": "Sand or scrub desert. Travel is 2 miles per hour, and foraging is difficulty 12 or worse."
   },
   {
     "type": "world_terrain",
     "id": "swamp",
-    "name": "Swamp",
-    "color": "#5f7d55",
-    "rule": "Marsh and bog. Travel is 1 mile per hour; the ground is difficult and conceals ruins and hidden paths.",
-    "pattern": "reeds",
-    "ink": "#2f4a2c"
+    "rule": "Marsh and bog. Travel is 1 mile per hour; the ground is difficult and conceals ruins and hidden paths."
   },
   {
     "type": "world_terrain",
     "id": "mountains",
-    "name": "Mountains",
-    "color": "#8b8078",
-    "rule": "Mountain country and broken highland. Travel is 0.5 miles per hour; passes are few and defended.",
-    "pattern": "crags",
-    "ink": "#4f4741"
+    "rule": "Mountain country and broken highland. Travel is 0.5 miles per hour; passes are few and defended."
   },
   {
     "type": "world_terrain",
     "id": "coast",
-    "name": "Coast",
-    "color": "#4a8fae",
-    "rule": "Shoreline and coastal water. A coastal road allows 3 miles per hour; a sailing ship makes about 6 miles per hour and can travel around the clock offshore.",
-    "pattern": "waves",
-    "ink": "#a9d4ea"
+    "rule": "Shoreline and coastal water. A coastal road allows 3 miles per hour; a sailing ship makes about 6 miles per hour and can travel around the clock offshore."
   },
   {
     "type": "world_terrain",
     "id": "ruins",
     "name": "Ruins",
     "color": "#7f7465",
-    "rule": "Broken ancient ground. Travel is 1.5 miles per hour, and the rubble hides site entrances; exploring a site runs in 10-minute turns.",
     "pattern": "ridges",
-    "ink": "#3f382f"
+    "ink": "#3f382f",
+    "rule": "Broken ancient ground. Travel is 1.5 miles per hour, and the rubble hides site entrances; exploring a site runs in 10-minute turns."
   },
   {
     "type": "world_terrain",
     "id": "tundra",
-    "name": "Tundra",
-    "color": "#cfd8d8",
-    "rule": "Cold, treeless ground. Travel is 2 miles per hour; exposure and scarce forage make long marches dangerous.",
-    "pattern": "ice",
-    "ink": "#7a8a8a"
+    "rule": "Cold, treeless ground. Travel is 2 miles per hour; exposure and scarce forage make long marches dangerous."
   },
   {
     "type": "world_terrain",
     "id": "glacier",
-    "name": "Glacier",
-    "color": "#b8dce6",
-    "rule": "Crevasse-riven ice. Travel is 1 mile per hour, and a guide or ropes are needed to cross safely.",
-    "pattern": "ice",
-    "ink": "#5a8a96"
+    "rule": "Crevasse-riven ice. Travel is 1 mile per hour, and a guide or ropes are needed to cross safely."
   },
   {
     "type": "world_terrain",
     "id": "volcano",
-    "name": "Volcano",
-    "color": "#6e625c",
-    "rule": "Ash slopes and lava country. Travel is 1 mile per hour; eruptions, poisonous air, and fires make the ground perilous.",
-    "pattern": "flames",
-    "ink": "#c0503a"
+    "rule": "Ash slopes and lava country. Travel is 1 mile per hour; eruptions, poisonous air, and fires make the ground perilous."
   },
   {
     "type": "world_terrain",
     "id": "jungle",
-    "name": "Jungle",
-    "color": "#2f6a38",
-    "rule": "Dense tropical forest. Travel is 1 mile per hour, and the canopy hides trails, ruins, and ambushes.",
-    "pattern": "canopy",
-    "ink": "#183d1d"
+    "rule": "Dense tropical forest. Travel is 1 mile per hour, and the canopy hides trails, ruins, and ambushes."
   },
   {
     "type": "world_terrain",
     "id": "moor",
-    "name": "Moor",
-    "color": "#7d8a5e",
-    "rule": "Open heath and peat bog. Travel is 2 miles per hour; mist and soft ground make navigation hard.",
-    "pattern": "moor",
-    "ink": "#4a5a2c"
+    "rule": "Open heath and peat bog. Travel is 2 miles per hour; mist and soft ground make navigation hard."
   },
   {
     "type": "world_terrain",
     "id": "steppe",
-    "name": "Steppe",
-    "color": "#b9b06a",
-    "rule": "Wide grassy plain. Travel is 3 miles per hour on foot, or 4 on horseback, with little cover.",
-    "pattern": "tufts",
-    "ink": "#7a7442"
+    "rule": "Wide grassy plain. Travel is 3 miles per hour on foot, or 4 on horseback, with little cover."
   },
   {
     "type": "world_terrain",
     "id": "badlands",
-    "name": "Badlands",
-    "color": "#b98a5e",
-    "rule": "Eroded gullies and broken rock. Travel is 1.5 miles per hour; the country is easy to get lost in.",
-    "pattern": "crags",
-    "ink": "#6f4a2a"
+    "rule": "Eroded gullies and broken rock. Travel is 1.5 miles per hour; the country is easy to get lost in."
   },
   {
     "type": "world_terrain",
     "id": "farmland",
-    "name": "Farmland",
-    "color": "#c9b06a",
-    "rule": "Tilled fields and hedgerows. Travel is 3 miles per hour; farm tracks count as roads for local journeys.",
-    "pattern": "tufts",
-    "ink": "#7a7432"
+    "rule": "Tilled fields and hedgerows. Travel is 3 miles per hour; farm tracks count as roads for local journeys."
   },
   {
     "type": "world_terrain",
     "id": "ocean",
-    "name": "Ocean",
-    "color": "#2d6a8f",
-    "rule": "Open sea. A sailing ship makes about 6 miles per hour and can travel around the clock; small boats stay near shore.",
-    "pattern": "waves",
-    "ink": "#a9d4ea"
+    "rule": "Open sea. A sailing ship makes about 6 miles per hour and can travel around the clock; small boats stay near shore."
   },
   {
     "type": "world_terrain",
     "id": "reef",
-    "name": "Reef",
-    "color": "#4a8fae",
-    "rule": "Shallow coral water. A boat must be poled or rowed at 2 miles per hour; larger ships cannot cross.",
-    "pattern": "reef",
-    "ink": "#c4705a"
+    "rule": "Shallow coral water. A boat must be poled or rowed at 2 miles per hour; larger ships cannot cross."
   },
   {
     "type": "world_terrain",
     "id": "island",
-    "name": "Island",
-    "color": "#cfc89a",
-    "rule": "An isolated shore and its hinterland. Travel is 2 miles per hour; leaving needs a boat or a ford.",
-    "pattern": "trees",
-    "ink": "#4d7a3c"
+    "rule": "An isolated shore and its hinterland. Travel is 2 miles per hour; leaving needs a boat or a ford."
   },
   {
     "type": "world_terrain",
     "id": "plateau",
-    "name": "Plateau",
-    "color": "#b08a5e",
-    "rule": "Raised tableland with steep sides. Travel is 1.5 miles per hour; climbing to or from the rim costs extra time.",
-    "pattern": "crags",
-    "ink": "#6f4a2a"
+    "rule": "Raised tableland with steep sides. Travel is 1.5 miles per hour; climbing to or from the rim costs extra time."
   },
   {
     "type": "world_terrain",
     "id": "river",
-    "name": "River",
-    "color": "#4f8fa8",
-    "rule": "Flowing water. Cross at a ford or bridge; travel along the bank is 3 miles per hour on foot.",
-    "pattern": "waves",
-    "ink": "#c0e2ea"
+    "rule": "Flowing water. Cross at a ford or bridge; travel along the bank is 3 miles per hour on foot."
   },
   {
     "type": "world_terrain",
     "id": "meadow",
-    "name": "Meadow",
-    "color": "#9fbe6a",
-    "rule": "Flower meadow and soft grass. Travel is 3 miles per hour on foot.",
-    "pattern": "tufts",
-    "ink": "#567a34"
+    "rule": "Flower meadow and soft grass. Travel is 3 miles per hour on foot."
   },
   {
     "type": "world_terrain",
     "id": "pinewood",
-    "name": "Pinewood",
-    "color": "#41684a",
-    "rule": "Dark conifer forest. Travel is 1.5 miles per hour; the canopy hides landmarks.",
-    "pattern": "trees",
-    "ink": "#1d3824"
+    "rule": "Dark conifer forest. Travel is 1.5 miles per hour; the canopy hides landmarks."
   },
   {
     "type": "world_terrain",
     "id": "canyon",
-    "name": "Canyon",
-    "color": "#b06a4a",
-    "rule": "Sheer walls and a broken floor. Travel is 1 mile per hour, and the way down must be found.",
-    "pattern": "crags",
-    "ink": "#6e3722"
+    "rule": "Sheer walls and a broken floor. Travel is 1 mile per hour, and the way down must be found."
   },
   {
     "type": "world_terrain",
     "id": "saltflat",
-    "name": "Salt Flat",
-    "color": "#e3dfcf",
-    "rule": "Cracked white pan. Travel is 3 miles per hour when dry; there is no water or cover.",
-    "pattern": "dunes",
-    "ink": "#b0a890"
+    "rule": "Cracked white pan. Travel is 3 miles per hour when dry; there is no water or cover."
   },
   {
     "type": "world_terrain",
     "id": "ashland",
-    "name": "Ashland",
-    "color": "#7a746c",
-    "rule": "Cold ash and cinders. Travel is 2 miles per hour, and the air stings the throat.",
-    "pattern": "flames",
-    "ink": "#b0604a"
+    "rule": "Cold ash and cinders. Travel is 2 miles per hour, and the air stings the throat."
   },
   {
     "type": "world_terrain",
     "id": "lagoon",
-    "name": "Lagoon",
-    "color": "#3c9ca0",
-    "rule": "Calm, shallow water. A rowed boat makes 2 miles per hour, and the shallows can be waded.",
-    "pattern": "reef",
-    "ink": "#d8a06a"
+    "rule": "Calm, shallow water. A rowed boat makes 2 miles per hour, and the shallows can be waded."
   },
   {
     "type": "world_terrain",
     "id": "orchard",
-    "name": "Orchard",
-    "color": "#a8b85e",
-    "rule": "Rows of fruit trees and mown grass. Travel is 2 miles per hour between the trunks.",
-    "pattern": "trees",
-    "ink": "#5f6e2a"
+    "rule": "Rows of fruit trees and mown grass. Travel is 2 miles per hour between the trunks."
   },
   {
     "type": "world_terrain",
     "id": "highland",
-    "name": "Highland",
-    "color": "#8a7f9a",
-    "rule": "Wind-scoured upland. Travel is 1.5 miles per hour; the weather turns quickly.",
-    "pattern": "ridges",
-    "ink": "#4e4560"
+    "rule": "Wind-scoured upland. Travel is 1.5 miles per hour; the weather turns quickly."
   },
   {
     "type": "world_terrain",
     "id": "bog",
-    "name": "Bog",
-    "color": "#4f6b4a",
-    "rule": "Deep, sucking bog. Travel is 1 mile per hour, and the ground must be tested ahead.",
-    "pattern": "reeds",
-    "ink": "#263d24"
+    "rule": "Deep, sucking bog. Travel is 1 mile per hour, and the ground must be tested ahead."
   }
 ]

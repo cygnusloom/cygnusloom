@@ -1,40 +1,6 @@
 [
   {
     "type": "table",
-    "id": "personality",
-    "options": [
-      "cheerful and talkative",
-      "gruff and suspicious",
-      "patient and gentle",
-      "anxious and easily startled",
-      "proud and quick to take offense",
-      "curious and full of questions",
-      "dry and sarcastic",
-      "warm and protective",
-      "greedy but honest",
-      "solemn and careful with words",
-      "boisterous and generous",
-      "shy and eager to please"
-    ]
-  },
-  {
-    "type": "table",
-    "id": "accent",
-    "options": [
-      "soft and lilting",
-      "clipped and blunt",
-      "drawling and slow",
-      "rolling with long vowels",
-      "sing-song",
-      "rough and rural",
-      "precise and formal",
-      "whispery",
-      "heavy with a hill-country burr",
-      "quick and slurred"
-    ]
-  },
-  {
-    "type": "table",
     "id": "quirk",
     "options": [
       "taps a finger against their lips when thinking",
