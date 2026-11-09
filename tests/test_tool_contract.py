@@ -242,6 +242,81 @@ def test_create_monster_keeps_each_rulesets_stat_model() -> None:
     assert wwn.bind == {}
 
 
+# Academia's project tools and Cairn's scroll differ from a shared base only in prose and a
+# binding. These stubs name that base instead of restating a schema that must then be kept in
+# sync by hand.
+ACADEMIA_PROJECT_TOOLS = ("start_project", "advance_project", "abandon_project", "list_projects")
+PROJECT_STUB_KEYS = {
+    "start_project": {"type", "id", "extends", "description", "parameters"},
+    "advance_project": {"type", "id", "extends", "description"},
+    "abandon_project": {"type", "id", "extends", "description"},
+    "list_projects": {"type", "id", "extends", "description", "lookup"},
+}
+
+
+def _raw_tool(rule_set_id: str, tool_id: str) -> dict[str, object]:
+    matches = [d for d in _tool_definitions(rule_set_id) if d.get("id") == tool_id]
+    assert len(matches) == 1, (rule_set_id, tool_id, len(matches))
+    return matches[0]
+
+
+def test_academia_project_tools_extend_core_without_restating_schemas() -> None:
+    library = bundled_library()
+    core = library.core.tool_calls
+    calls = library.rule_sets["academia-arcana"].tool_calls
+
+    for tool_id in ACADEMIA_PROJECT_TOOLS:
+        raw = _raw_tool("academia-arcana", tool_id)
+        assert raw["extends"] == f"core:tool_call/{tool_id}", tool_id
+        assert set(raw) == PROJECT_STUB_KEYS[tool_id], tool_id
+
+        call = calls[tool_id]
+        base = core[tool_id]
+        # The loaded schema, required list, and handler remain exactly the core contract.
+        # `start_project` adds only the Academia wording of `kind`.
+        if tool_id == "start_project":
+            kind = raw["parameters"]["properties"]["kind"]["description"]
+            assert call.parameters["type"] == base.parameters["type"]
+            assert call.parameters["required"] == base.parameters["required"]
+            for name, schema in base.parameters["properties"].items():
+                expected = {**schema, "description": kind} if name == "kind" else schema
+                assert call.parameters["properties"][name] == expected, (tool_id, name)
+        else:
+            assert call.parameters == base.parameters, tool_id
+        assert call.world_method == base.world_method, tool_id
+        assert call.function == base.function, tool_id
+        assert call.requires == ("social.projects",), tool_id
+        assert call.description == raw["description"], tool_id
+        assert call.description != base.description, tool_id
+        assert call.lookup is (tool_id == "list_projects"), tool_id
+
+    # The one schema delta is the Academia wording of `kind`, not a copy of the core schema.
+    kind_parameters = _raw_tool("academia-arcana", "start_project")["parameters"]
+    loaded_kind = calls["start_project"].parameters["properties"]["kind"]
+    assert kind_parameters == {"properties": {"kind": {"description": loaded_kind["description"]}}}
+
+
+def test_cairn_scroll_extends_the_spellbook_base() -> None:
+    calls = bundled_library().rule_sets["cairn2e"].tool_calls
+    spellbook = calls["give_spellbook"]
+    scroll = calls["give_scroll"]
+
+    assert "extends" not in _raw_tool("cairn2e", "give_spellbook")
+    raw = _raw_tool("cairn2e", "give_scroll")
+    assert raw["extends"] == "tool_call/give_spellbook"
+    assert set(raw) == {"type", "id", "extends", "description", "bind"}
+
+    # Only the fixed role and the description differ; schema and handler are the base's.
+    assert scroll.parameters == spellbook.parameters
+    assert scroll.world_method == spellbook.world_method == "give_spell_item"
+    assert scroll.name == "give_scroll" and spellbook.name == "give_spellbook"
+    assert scroll.bind == {"role": "single_use"}
+    assert spellbook.bind == {"role": "reusable"}
+    assert scroll.description == raw["description"]
+    assert scroll.description != spellbook.description
+    assert not scroll.lookup and not spellbook.lookup
+
+
 NOTE_TOOL = {
     "type": "tool_call",
     "id": "note",

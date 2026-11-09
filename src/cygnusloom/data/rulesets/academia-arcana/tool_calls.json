@@ -159,77 +159,32 @@
   {
     "type": "tool_call",
     "id": "start_project",
+    "extends": "core:tool_call/start_project",
     "description": "Begin a long effort and track its points toward a target: a class challenge, spell research, potion research, or enchantment research. The kind and goal are free text; the target is how many points of work it needs. Advance it with advance_project as time, favours, and rolls are spent.",
     "parameters": {
-      "type": "object",
       "properties": {
-        "name": {
-          "type": "string",
-          "description": "The project's name, unique among projects."
-        },
         "kind": {
-          "type": "string",
           "description": "What sort of effort it is, such as class, spell research, potion research, or enchantment research."
-        },
-        "goal": {
-          "type": "string",
-          "description": "What completing it achieves."
-        },
-        "target": {
-          "type": "integer",
-          "minimum": 1,
-          "description": "How many progress points it needs."
-        },
-        "force": {
-          "type": "boolean",
-          "description": "Set true to replace a project of the same name."
         }
-      },
-      "required": ["name", "kind", "goal", "target"]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "advance_project",
-    "description": "Add progress to a class challenge or a research effort. Record in the note what the time, favour, or roll bought. The project completes when progress reaches its target.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The project's name."
-        },
-        "amount": {
-          "type": "integer",
-          "minimum": 1,
-          "description": "Progress points gained."
-        },
-        "note": {
-          "type": "string",
-          "description": "What was spent or learned."
-        }
-      },
-      "required": ["name", "amount"]
-    }
+    "extends": "core:tool_call/advance_project",
+    "description": "Add progress to a class challenge or a research effort. Record in the note what the time, favour, or roll bought. The project completes when progress reaches its target."
   },
   {
     "type": "tool_call",
     "id": "abandon_project",
-    "description": "Give up a class challenge or research effort.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {"type": "string"},
-        "reason": {"type": "string"}
-      },
-      "required": ["name"]
-    }
+    "extends": "core:tool_call/abandon_project",
+    "description": "Give up a class challenge or research effort."
   },
   {
     "type": "tool_call",
     "id": "list_projects",
-    "python_module": "core",
-    "function": "list_projects",
+    "extends": "core:tool_call/list_projects",
     "lookup": true,
     "description": "List every class challenge and research effort with its progress, notes, and whether it is complete or abandoned."
   },
