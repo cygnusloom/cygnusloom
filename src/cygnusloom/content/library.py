@@ -3637,6 +3637,7 @@ def _build_rule_set(
             "ordered_feature_tags",
             "optional_templates",
             "starting_silver",
+            "template_features",
             "condition_ends",
             "npc_hp",
             "npc_hp_stat",
@@ -3685,6 +3686,7 @@ def _build_rule_set(
         icon_entries=feature_icons,
         starting_silver=load_starting_silver(head.data.get("starting_silver"), label),
         feature_types=feature_types,
+        template_features=head.data.get("template_features"),
     )
     for feature in character.features.values():
         if feature.feature_type not in feature_types:
