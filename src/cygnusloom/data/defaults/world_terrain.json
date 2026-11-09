@@ -1,0 +1,306 @@
+[
+  {
+    "type": "world_terrain",
+    "id": "ashland",
+    "name": "Ashland",
+    "color": "#7a746c",
+    "pattern": "flames",
+    "ink": "#b0604a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "badlands",
+    "name": "Badlands",
+    "color": "#b98a5e",
+    "pattern": "crags",
+    "ink": "#6f4a2a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "bog",
+    "name": "Bog",
+    "color": "#4f6b4a",
+    "pattern": "reeds",
+    "ink": "#263d24"
+  },
+  {
+    "type": "world_terrain",
+    "id": "canyon",
+    "name": "Canyon",
+    "color": "#b06a4a",
+    "pattern": "crags",
+    "ink": "#6e3722"
+  },
+  {
+    "type": "world_terrain",
+    "id": "coast",
+    "name": "Coast",
+    "color": "#4a8fae",
+    "pattern": "waves",
+    "ink": "#a9d4ea"
+  },
+  {
+    "type": "world_terrain",
+    "id": "courtyard",
+    "name": "Courtyard",
+    "color": "#b9aa92",
+    "pattern": "bricks",
+    "ink": "#74654d"
+  },
+  {
+    "type": "world_terrain",
+    "id": "desert",
+    "name": "Desert",
+    "color": "#d9c58a",
+    "pattern": "dunes",
+    "ink": "#a08a4e"
+  },
+  {
+    "type": "world_terrain",
+    "id": "farmland",
+    "name": "Farmland",
+    "color": "#c9b06a",
+    "pattern": "tufts",
+    "ink": "#7a7432"
+  },
+  {
+    "type": "world_terrain",
+    "id": "fen",
+    "name": "Fen",
+    "color": "#5f7d55",
+    "pattern": "reeds",
+    "ink": "#2f4a2c"
+  },
+  {
+    "type": "world_terrain",
+    "id": "forest",
+    "name": "Forest",
+    "color": "#4d7a3c",
+    "pattern": "trees",
+    "ink": "#24421f"
+  },
+  {
+    "type": "world_terrain",
+    "id": "gardens",
+    "name": "Gardens",
+    "color": "#7fa85e",
+    "pattern": "tufts",
+    "ink": "#3f642e"
+  },
+  {
+    "type": "world_terrain",
+    "id": "glacier",
+    "name": "Glacier",
+    "color": "#b8dce6",
+    "pattern": "ice",
+    "ink": "#5a8a96"
+  },
+  {
+    "type": "world_terrain",
+    "id": "grounds",
+    "name": "Grounds",
+    "color": "#8dab6d",
+    "pattern": "tufts",
+    "ink": "#4f6b3a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "halls",
+    "name": "Halls",
+    "color": "#b8ae9c",
+    "pattern": "crags",
+    "ink": "#746a58"
+  },
+  {
+    "type": "world_terrain",
+    "id": "highland",
+    "name": "Highland",
+    "color": "#8a7f9a",
+    "pattern": "ridges",
+    "ink": "#4e4560"
+  },
+  {
+    "type": "world_terrain",
+    "id": "hills",
+    "name": "Hills",
+    "color": "#9a8456",
+    "pattern": "ridges",
+    "ink": "#5b4a2a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "island",
+    "name": "Island",
+    "color": "#cfc89a",
+    "pattern": "trees",
+    "ink": "#4d7a3c"
+  },
+  {
+    "type": "world_terrain",
+    "id": "jungle",
+    "name": "Jungle",
+    "color": "#2f6a38",
+    "pattern": "canopy",
+    "ink": "#183d1d"
+  },
+  {
+    "type": "world_terrain",
+    "id": "lagoon",
+    "name": "Lagoon",
+    "color": "#3c9ca0",
+    "pattern": "reef",
+    "ink": "#d8a06a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "lake",
+    "name": "Lake",
+    "color": "#2d6a8f",
+    "pattern": "waves",
+    "ink": "#a9d4ea"
+  },
+  {
+    "type": "world_terrain",
+    "id": "marsh",
+    "name": "Marsh",
+    "color": "#5f7d55",
+    "pattern": "reeds",
+    "ink": "#2f4a2c"
+  },
+  {
+    "type": "world_terrain",
+    "id": "meadow",
+    "name": "Meadow",
+    "color": "#9fbe6a",
+    "pattern": "tufts",
+    "ink": "#567a34"
+  },
+  {
+    "type": "world_terrain",
+    "id": "moor",
+    "name": "Moor",
+    "color": "#7d8a5e",
+    "pattern": "moor",
+    "ink": "#4a5a2c"
+  },
+  {
+    "type": "world_terrain",
+    "id": "mountains",
+    "name": "Mountains",
+    "color": "#8b8078",
+    "pattern": "crags",
+    "ink": "#4f4741"
+  },
+  {
+    "type": "world_terrain",
+    "id": "ocean",
+    "name": "Ocean",
+    "color": "#2d6a8f",
+    "pattern": "waves",
+    "ink": "#a9d4ea"
+  },
+  {
+    "type": "world_terrain",
+    "id": "open",
+    "name": "Open ground",
+    "color": "#cfc89a",
+    "pattern": "tufts",
+    "ink": "#8f8752"
+  },
+  {
+    "type": "world_terrain",
+    "id": "orchard",
+    "name": "Orchard",
+    "color": "#a8b85e",
+    "pattern": "trees",
+    "ink": "#5f6e2a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "pinewood",
+    "name": "Pinewood",
+    "color": "#41684a",
+    "pattern": "trees",
+    "ink": "#1d3824"
+  },
+  {
+    "type": "world_terrain",
+    "id": "plains",
+    "name": "Plains",
+    "color": "#cfc89a",
+    "pattern": "tufts",
+    "ink": "#8f8752"
+  },
+  {
+    "type": "world_terrain",
+    "id": "plateau",
+    "name": "Plateau",
+    "color": "#b08a5e",
+    "pattern": "crags",
+    "ink": "#6f4a2a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "reef",
+    "name": "Reef",
+    "color": "#4a8fae",
+    "pattern": "reef",
+    "ink": "#c4705a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "river",
+    "name": "River",
+    "color": "#4f8fa8",
+    "pattern": "waves",
+    "ink": "#c0e2ea"
+  },
+  {
+    "type": "world_terrain",
+    "id": "saltflat",
+    "name": "Salt Flat",
+    "color": "#e3dfcf",
+    "pattern": "dunes",
+    "ink": "#b0a890"
+  },
+  {
+    "type": "world_terrain",
+    "id": "steppe",
+    "name": "Steppe",
+    "color": "#b9b06a",
+    "pattern": "tufts",
+    "ink": "#7a7442"
+  },
+  {
+    "type": "world_terrain",
+    "id": "swamp",
+    "name": "Swamp",
+    "color": "#5f7d55",
+    "pattern": "reeds",
+    "ink": "#2f4a2c"
+  },
+  {
+    "type": "world_terrain",
+    "id": "tundra",
+    "name": "Tundra",
+    "color": "#cfd8d8",
+    "pattern": "ice",
+    "ink": "#7a8a8a"
+  },
+  {
+    "type": "world_terrain",
+    "id": "village",
+    "name": "Village Streets",
+    "color": "#b1a284",
+    "pattern": "tufts",
+    "ink": "#6e5f43"
+  },
+  {
+    "type": "world_terrain",
+    "id": "volcano",
+    "name": "Volcano",
+    "color": "#6e625c",
+    "pattern": "flames",
+    "ink": "#c0503a"
+  }
+]

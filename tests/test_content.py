@@ -852,6 +852,39 @@ def test_rule_set_overrides_core_rules_and_tables(tree: Path):
     assert library.core.rules == {"speech": "Core."}
 
 
+def test_wwn_inherits_core_personality_and_accent_but_keeps_its_quirk():
+    library = bundled_library()
+    core = library.core.tables
+    wwn = library.rule_sets["worldswithoutnumber"].tables
+    assert wwn["personality"] == core["personality"]
+    assert wwn["accent"] == core["accent"]
+    assert [option.value for option in wwn["quirk"]] == [
+        "taps a finger against their lips when thinking",
+        "hums under their breath",
+        "always eats something while talking",
+        "refers to everyone as 'friend'",
+        "counts things under their breath",
+        "never makes eye contact",
+        "speaks in proverbs",
+        "adjusts their clothes constantly",
+        "ends sentences with a question",
+        "keeps glancing at the sky",
+        "collects small bits of carved stone",
+        "tells the same joke twice",
+    ]
+    own = {
+        definition["id"]
+        for definition in json.loads(
+            (DATA_DIR / "rulesets" / "worldswithoutnumber" / "tables.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        if definition["type"] == "table"
+    }
+    assert "personality" not in own and "accent" not in own
+    assert "quirk" in own
+
+
 @pytest.mark.parametrize("missing", NPC_TABLES)
 def test_core_must_declare_every_npc_table(tree: Path, missing: str):
     core = [d for d in _core() if d.get("id") != missing]
@@ -927,6 +960,135 @@ def test_bundled_terrain_kinds_have_a_texture_and_ink(tree: Path):
     assert all(kind.pattern in TERRAIN_PATTERNS for kind in terrain.values())
     assert all(kind.ink and kind.ink.startswith("#") for kind in terrain.values())
     assert (terrain["lake"].pattern, terrain["lake"].ink) == ("waves", "#a9d4ea")
+
+
+def test_shared_terrain_visuals_come_from_the_defaults_layer(tree: Path):
+    _write(
+        tree,
+        {
+            "defaults/world_terrain.json": [
+                {
+                    "type": "world_terrain",
+                    "id": "lake",
+                    "name": "Lake",
+                    "color": "#2d6a8f",
+                    "pattern": "waves",
+                    "ink": "#a9d4ea",
+                }
+            ],
+            "rulesets/testset/world_terrain.json": [
+                {"type": "world_terrain", "id": "lake", "rule": "Water."}
+            ],
+        },
+    )
+    lake = ContentLibrary.load(tree).rule_sets["testset"].world_terrain["lake"]
+    assert (lake.name, lake.color, lake.pattern, lake.ink) == (
+        "Lake",
+        "#2d6a8f",
+        "waves",
+        "#a9d4ea",
+    )
+    assert lake.rule == "Water."
+
+
+def test_bundled_terrain_visuals_come_from_the_defaults_layer():
+    library = bundled_library()
+    cairn = library.rule_sets["cairn2e"].world_terrain
+    assert (cairn["lake"].name, cairn["lake"].color) == ("Lake", "#2d6a8f")
+    assert (cairn["lake"].pattern, cairn["lake"].ink) == ("waves", "#a9d4ea")
+    # A conflicted id keeps its own visuals in each rule set.
+    assert library.rule_sets["academia-arcana"].world_terrain["ruins"].pattern == "crags"
+    assert library.rule_sets["worldswithoutnumber"].world_terrain["ruins"].pattern == "ridges"
+    own = json.loads(
+        (DATA_DIR / "rulesets" / "cairn2e" / "world_terrain.json").read_text(encoding="utf-8")
+    )
+    assert all(set(definition) == {"type", "id", "rule"} for definition in own)
+
+
+def test_clock_and_rest_defaults_fill_a_rule_set(tree: Path):
+    _write(
+        tree,
+        {
+            "defaults/clock.json": [
+                {
+                    "type": "clock",
+                    "id": "common",
+                    "parts": ["morning", "afternoon", "night"],
+                    "stale_days": 5,
+                    "hours_per_part": 8,
+                }
+            ],
+            "defaults/rest.json": [
+                {
+                    "type": "rest",
+                    "id": "common",
+                    "lengths": {
+                        "moments": {
+                            "hours": 1,
+                            "full": False,
+                            "restores": [],
+                            "clears": [],
+                            "ends": [],
+                        }
+                    },
+                    "interrupted": "moments",
+                }
+            ],
+            "rulesets/testset/clock.json": [
+                {"type": "clock", "id": "test", "wage_currency": "silver"}
+            ],
+            "rulesets/testset/rest.json": [
+                {
+                    "type": "rest",
+                    "id": "test",
+                    "lengths": {"night": {"until": "morning", "full": True}},
+                }
+            ],
+        },
+    )
+    rules = ContentLibrary.load(tree).rule_sets["testset"]
+    clock = rules.clock
+    assert clock is not None
+    assert clock.parts == ("morning", "afternoon", "night")
+    assert (clock.stale_days, clock.hours_per_part) == (5, 8)
+    assert clock.wage_currency == "silver"
+    assert rules.rests["moments"].hours == 1
+    assert rules.interrupted_rest == "moments"
+
+
+def test_bundled_clock_and_rest_defaults_are_applied():
+    library = bundled_library()
+    academy = library.rule_sets["academia-arcana"]
+    assert academy.clock is not None
+    assert (academy.clock.parts, academy.clock.stale_days, academy.clock.hours_per_part) == (
+        ("morning", "afternoon", "night"),
+        5,
+        8,
+    )
+    assert academy.rests["moments"].hours == 1
+    assert academy.interrupted_rest == "moments"
+    assert library.rule_sets["cairn2e"].rests["moments"].restores == ("hp",)
+    wwn = library.rule_sets["worldswithoutnumber"]
+    assert wwn.clock is not None
+    assert (wwn.clock.parts, wwn.clock.stale_days, wwn.clock.hours_per_part) == (
+        ("morning", "afternoon", "evening", "night"),
+        7,
+        6,
+    )
+    raw_rest = json.loads(
+        (DATA_DIR / "rulesets" / "academia-arcana" / "rest.json").read_text(encoding="utf-8")
+    )[0]
+    assert "moments" not in raw_rest["lengths"]
+    assert "interrupted" not in raw_rest
+    raw_cairn = json.loads(
+        (DATA_DIR / "rulesets" / "cairn2e" / "rest.json").read_text(encoding="utf-8")
+    )[0]
+    assert "moments" not in raw_cairn["lengths"]
+    assert "interrupted" not in raw_cairn
+    raw_clock = json.loads(
+        (DATA_DIR / "rulesets" / "academia-arcana" / "clock.json").read_text(encoding="utf-8")
+    )[0]
+    assert set(raw_clock) == {"type", "id", "wage_currency"}
 
 
 def test_terrain_texture_must_be_one_the_engine_draws(tree: Path):

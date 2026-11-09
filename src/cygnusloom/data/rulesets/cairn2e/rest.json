@@ -2,16 +2,17 @@
   {
     "type": "rest",
     "id": "cairn",
+    "extends": "rest/common",
+    "patch": {
+      "lengths": {
+        "moments": {
+          "restores": [
+            "hp"
+          ]
+        }
+      }
+    },
     "lengths": {
-      "moments": {
-        "hours": 1,
-        "full": false,
-        "restores": [
-          "hp"
-        ],
-        "clears": [],
-        "ends": []
-      },
       "night": {
         "until": "morning",
         "stop_at": {
@@ -48,7 +49,6 @@
         ],
         "upkeep": true
       }
-    },
-    "interrupted": "moments"
+    }
   }
 ]

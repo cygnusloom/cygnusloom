@@ -2,13 +2,6 @@
   {
     "type": "clock",
     "id": "cairn",
-    "parts": [
-      "morning",
-      "afternoon",
-      "night"
-    ],
-    "stale_days": 5,
-    "wage_currency": "gold",
-    "hours_per_part": 8
+    "wage_currency": "gold"
   }
 ]

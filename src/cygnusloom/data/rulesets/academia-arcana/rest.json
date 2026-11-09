@@ -3,13 +3,6 @@
     "type": "rest",
     "id": "academy",
     "lengths": {
-      "moments": {
-        "hours": 1,
-        "full": false,
-        "restores": [],
-        "clears": [],
-        "ends": []
-      },
       "night": {
         "until": "morning",
         "stop_at": {
@@ -35,7 +28,6 @@
         ],
         "upkeep": false
       }
-    },
-    "interrupted": "moments"
+    }
   }
 ]
