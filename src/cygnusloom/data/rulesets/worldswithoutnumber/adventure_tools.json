@@ -22,7 +22,6 @@
   {
     "type": "tool_call",
     "id": "player_roll_save",
-    "name": "player_roll_save",
     "world_method": "roll_save",
     "rename": {"character": "name", "save": "stat", "cause": "reason"},
     "description": "Ask the player to roll a saving throw for their own character, then record the d20 they rolled against the character's Physical, Evasion, Mental, or Luck save. Use it instead of roll_save for the player character: the player presses the roll button and the result is final. A failure is recorded; apply what it costs yourself.",
@@ -58,7 +57,6 @@
   {
     "type": "tool_call",
     "id": "roll_reaction",
-    "name": "roll_reaction",
     "python_module": "wwn",
     "function": "roll_reaction",
     "description": "Roll 2d6 for the first reaction of an NPC or group the party meets, adding the greeting character's Charisma modifier when a player character can greet them. The higher the total, the friendlier the reaction. Use it whenever the party meets a creature or group unless bloodshed is certain, and describe the mood to the players before they act.",
@@ -85,7 +83,6 @@
   {
     "type": "tool_call",
     "id": "instinct_check",
-    "name": "instinct_check",
     "python_module": "wwn",
     "function": "instinct_check",
     "description": "Check an NPC's Instinct: roll 1d10 against the Instinct score printed in its statblock. A roll no higher than the score means the creature acts on impulse rather than its best judgment. Player characters never check Instinct.",
@@ -137,10 +134,8 @@
   {
     "type": "tool_call",
     "id": "roll_initiative",
-    "name": "roll_initiative",
     "world_method": "roll_side_initiative",
-    "description": "Roll initiative for each side of the encounter: 1d8 plus the best Dexterity modifier in the side, with ties going to the party. Call it once the participants have joined the encounter and before the first round. No player character makes an individual initiative roll.",
-    "parameters": {"type": "object", "properties": {}, "required": []}
+    "description": "Roll initiative for each side of the encounter: 1d8 plus the best Dexterity modifier in the side, with ties going to the party. Call it once the participants have joined the encounter and before the first round. No player character makes an individual initiative roll."
   },
   {
     "type": "tool_call",
@@ -338,8 +333,6 @@
   {
     "type": "tool_call",
     "id": "player_save",
-    "name": "player_save",
-    "world_method": "player_save",
     "description": "Pass the player's own d20 roll for a save the engine has marked due after harm. Use it only when a save is owed.",
     "parameters": {
       "type": "object",
@@ -446,8 +439,6 @@
   {
     "type": "tool_call",
     "id": "ready_item",
-    "name": "ready_item",
-    "world_method": "ready_item",
     "description": "Ready a carried item for use, or stow it. A character can keep only half their Strength in slots readied; readied weapons can attack. Readying armor or a shield does not equip it; use equip_armor to wear or wield it. Stowing equipped defense also unequips it. Retrieving a stowed item takes a Main action.",
     "parameters": {
       "type": "object",
@@ -462,8 +453,6 @@
   {
     "type": "tool_call",
     "id": "equip_armor",
-    "name": "equip_armor",
-    "world_method": "equip_armor",
     "description": "Wear or remove a carried, readied suit of armor, or wield or stop wielding a carried, readied shield. Only one suit and one shield can be equipped; equipping another replaces that slot. Armor Class and shield protection against Shock update automatically. The returned Armor Class is authoritative: wearing armor or wielding a shield can lower it when a feature such as the Vowed's Unarmored Defense works only without that equipment. Consult the character's features before explaining a change.",
     "parameters": {
       "type": "object",
@@ -509,8 +498,6 @@
   {
     "type": "tool_call",
     "id": "add_faction_asset",
-    "name": "add_faction_asset",
-    "world_method": "add_faction_asset",
     "description": "Give a faction one of the rule set's assets, such as Infantry, Smugglers, or Farmers. The kind may be the asset's id or its book name. Its cost, hit points, Magic, Attack, Counter, and qualities are resolved from the rule set. An asset can act once per faction turn.",
     "parameters": {
       "type": "object",
@@ -526,8 +513,6 @@
   {
     "type": "tool_call",
     "id": "update_faction_asset",
-    "name": "update_faction_asset",
-    "world_method": "update_faction_asset",
     "description": "Change a faction asset's display name, qualities, or notes. A note is appended to the asset's record. Use damage_faction_asset and repair_faction_asset for hit points.",
     "parameters": {
       "type": "object",
@@ -548,8 +533,6 @@
   {
     "type": "tool_call",
     "id": "remove_faction_asset",
-    "name": "remove_faction_asset",
-    "world_method": "remove_faction_asset",
     "description": "Remove or destroy one of a faction's assets.",
     "parameters": {
       "type": "object",
@@ -563,8 +546,6 @@
   {
     "type": "tool_call",
     "id": "faction_asset_acted",
-    "name": "faction_asset_acted",
-    "world_method": "faction_asset_acted",
     "description": "Record that a faction asset used its action for the current faction turn. An asset can act only once per turn; the tool refuses a second action. End the turn with take_faction_turn to ready every asset again.",
     "parameters": {
       "type": "object",
@@ -579,8 +560,6 @@
   {
     "type": "tool_call",
     "id": "damage_faction_asset",
-    "name": "damage_faction_asset",
-    "world_method": "damage_faction_asset",
     "description": "Reduce a faction asset's hit points by an amount. Hit points stop at zero rather than going negative.",
     "parameters": {
       "type": "object",
@@ -595,8 +574,6 @@
   {
     "type": "tool_call",
     "id": "repair_faction_asset",
-    "name": "repair_faction_asset",
-    "world_method": "repair_faction_asset",
     "description": "Restore a faction asset's hit points by an amount. Hit points stop at the asset's maximum.",
     "parameters": {
       "type": "object",
@@ -611,8 +588,6 @@
   {
     "type": "tool_call",
     "id": "take_faction_turn",
-    "name": "take_faction_turn",
-    "world_method": "take_faction_turn",
     "description": "Close a faction's current turn and begin the next one. Every asset is ready to act again. Use this after resolving the faction's actions, upkeep, and asset abilities.",
     "parameters": {
       "type": "object",
@@ -667,8 +642,6 @@
   {
     "type": "tool_call",
     "id": "create_monster",
-    "name": "create_monster",
-    "world_method": "create_monster",
     "description": "Create a creature from the bestiary and place it at a location. Give the template id (use search_monster to find it) and any changes to its stats, armor, or attacks.",
     "parameters": {
       "type": "object",
@@ -713,7 +686,6 @@
   {
     "type": "tool_call",
     "id": "learn_art",
-    "name": "learn_art",
     "python_module": "wwn",
     "function": "learn_art",
     "description": "Spend an art pick on an art of the character's own tradition. Class charts grant art picks at levels 2, 4, 6, 8, and 10 for a full mage, and at levels 2, 3, 6, and 9 for a partial mage (3, 6, and 9 for a partial Necromancer or Elementalist).",
@@ -729,7 +701,6 @@
   {
     "type": "tool_call",
     "id": "improve_attribute",
-    "name": "improve_attribute",
     "python_module": "wwn",
     "function": "improve_attribute",
     "description": "Spend skill points on a permanent +1 to one attribute. The first boost costs 1 point, the second 2, and so on to 5, at minimum character levels 2, 2, 3, 6, and 9; a character may buy five in total.",
@@ -748,7 +719,6 @@
   {
     "type": "tool_call",
     "id": "roll_starting_silver",
-    "name": "roll_starting_silver",
     "world_method": "roll_currency",
     "rename": {"character": "name"},
     "bind": {"dice": "3d6", "multiplier": 10, "cause": "starting silver"},

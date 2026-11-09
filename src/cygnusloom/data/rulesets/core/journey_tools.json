@@ -2,9 +2,7 @@
   {
     "type": "tool_call",
     "id": "travel",
-    "name": "travel",
     "enabled_by": {"travel": ["terrain"]},
-    "world_method": "travel",
     "description": "Travel overland by the rule set's terrain-day journey rules. The engine moves the character and advances the clock. Apply the returned supply and privation figures with the rule set's usual bookkeeping.",
     "parameters": {
       "type": "object",

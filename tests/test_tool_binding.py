@@ -1,4 +1,7 @@
-"""Tool calls can bind a WorldTools method instead of shipping a Python wrapper."""
+"""Tool calls can bind a WorldTools method instead of shipping a Python wrapper.
+
+The loader supplies three quiet defaults: the name is the tool id, the bound WorldTools method
+is the id when no Python handler is named, and an omitted parameter schema is empty."""
 
 from __future__ import annotations
 
@@ -99,8 +102,62 @@ def test_a_binding_and_a_function_cannot_both_be_given(tree: Path):
         ContentLibrary.load(tree)
 
 
-def test_a_tool_needs_a_binding_or_a_function(tree: Path):
+def test_a_tool_name_defaults_to_its_id(tree: Path):
     tool = _tool()
+    del tool[0]["name"]
+    _write(tree, {"rulesets/testset/module.json": tool})
+    loaded = ContentLibrary.load(tree).rule_sets["testset"].tool_calls["note"]
+    assert loaded.name == "note"
+
+
+def test_the_default_tool_name_is_validated_like_any_other(tree: Path):
+    tool = _tool(id="not a name")
+    del tool[0]["name"]
+    _write(tree, {"rulesets/testset/module.json": tool})
+    with pytest.raises(ContentError, match="'name' must be 1 to 64"):
+        ContentLibrary.load(tree)
+
+
+def test_a_tool_world_method_defaults_to_its_id(tree: Path):
+    tool = _tool(id="add_note")
+    del tool[0]["name"]
+    del tool[0]["world_method"]
+    _write(tree, {"rulesets/testset/module.json": tool})
+    loaded = ContentLibrary.load(tree).rule_sets["testset"].tool_calls["add_note"]
+    assert loaded.world_method == "add_note"
+    assert loaded.function is None
+    assert loaded.takes_context is False
+
+
+def test_a_tool_with_no_arguments_may_omit_its_parameters(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/module.json": [
+                {"type": "tool_call", "id": "list_factions", "description": "List factions."}
+            ]
+        },
+    )
+    loaded = ContentLibrary.load(tree).rule_sets["testset"].tool_calls["list_factions"]
+    assert loaded.parameters == {"type": "object", "properties": {}}
+
+
+def test_a_schema_may_omit_required(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/module.json": _tool(
+                world_method="view_journal",
+                parameters={"type": "object", "properties": {"start_line": {"type": "integer"}}},
+            )
+        },
+    )
+    loaded = ContentLibrary.load(tree).rule_sets["testset"].tool_calls["note"]
+    assert "required" not in loaded.parameters
+
+
+def test_a_tool_whose_id_is_not_a_method_needs_a_binding_or_a_function(tree: Path):
+    tool = _tool(id="keep_note")
     del tool[0]["world_method"]
     _write(tree, {"rulesets/testset/module.json": tool})
     with pytest.raises(ContentError, match="give 'world_method'"):

@@ -2,8 +2,6 @@
   {
     "type": "tool_call",
     "id": "roll_check",
-    "name": "roll_check",
-    "world_method": "roll_check",
     "bind": {"check": "skill"},
     "description": "Ask the player to roll a skill check for their character: 2d6 plus the skill's level plus the attribute's modifier against a difficulty, 8 by default. An untrained skill counts as -1. Call it whenever an action is uncertain and a skill applies, such as climbing (Exert), spotting an ambush (Notice), or casting a spell under pressure (Magic). Higher difficulties mean harder tasks: 10 is skilled work and 12 or more is formidable. A total equal to or above the difficulty succeeds. Write the prompt the player sees, in the GM's voice, inviting the roll. The player presses the roll button; the engine adds the modifiers and records the result.",
     "parameters": {
@@ -68,7 +66,6 @@
   {
     "type": "tool_call",
     "id": "check_morale",
-    "name": "check_morale",
     "python_module": "wwn",
     "function": "check_morale",
     "description": "Roll 2d6 against an NPC's Morale score to see whether they hold or break. Call it when an ally of the NPC is first downed, when half their side is down, or after a great reverse or a terrifying foe. A total higher than the Morale score means the NPC routs, retreats, or surrenders; a total equal to or lower means they stand. Player characters never check Morale.",
@@ -93,7 +90,6 @@
   {
     "type": "tool_call",
     "id": "gain_xp",
-    "name": "gain_xp",
     "python_module": "wwn",
     "function": "gain_xp",
     "description": "Add Experience Points to a character's XP total. The campaign's experience track, or an explicit rate override, sets the thresholds. When the total reaches the next threshold the tool records a note that the character may level up; it does not raise the level itself.",
@@ -130,7 +126,6 @@
   {
     "type": "tool_call",
     "id": "gain_growth",
-    "name": "gain_growth",
     "python_module": "wwn",
     "function": "gain_growth",
     "description": "Roll the character's background Growth table for a level's growth. Apply the result with improve_attribute, spend_skill_point, adjust_counter, or the appropriate skill or stat tool. Call it after level_up, once per new level.",
@@ -145,7 +140,6 @@
   {
     "type": "tool_call",
     "id": "level_up",
-    "name": "level_up",
     "python_module": "wwn",
     "function": "level_up",
     "description": "Advance a character one level once their XP total has reached the next threshold (see gain_xp). For an NPC this applies the level's automatic gains at once. For the player character it applies nothing: the player makes the level's choices on the character sheet, so tell them to level up there and wait. The automatic gains are a rerolled hit-point total (level d6 plus the class constant and Constitution each level, keeping the old total plus one when the roll is worse), the class attack bonus, three skill points (four for an Expert or partial Expert), any Focus, art, and spell picks due, and a larger daily casting limit for a spellcaster.",
@@ -170,7 +164,6 @@
   {
     "type": "tool_call",
     "id": "spend_skill_point",
-    "name": "spend_skill_point",
     "python_module": "wwn",
     "function": "spend_skill_point",
     "description": "Spend banked skill points to raise a skill by one level. The cost rises with the level: 1 point for level 0, then 2, 3, 4, and 5 points for levels 1 to 4. Level 2 needs character level 3, level 3 needs level 6, and level 4 needs level 9. Call it during downtime when the character trains or practices. Level 1 is ordinary competence, level 2 is the best in a city, and level 4 is the best in the world.",
@@ -195,7 +188,6 @@
   {
     "type": "tool_call",
     "id": "learn_focus",
-    "name": "learn_focus",
     "python_module": "wwn",
     "function": "learn_focus",
     "description": "Spend one focus pick to learn a Focus at rank 1 or 2, or a nonhuman origin Focus with the GM's permission. The focus id must be a feature tagged focus or origin; rank 2 requires the character to already have the rank-1 focus of the same name. The character's class must allow the Focus. Only explicitly repeatable ranks can be learned again, such as Developed Attribute, Specialist, or Spirit Familiar rank 2; guide the player through choosing their distinct benefits. Call it at creation or during advancement when a focus pick is due. Fixed automated effects are applied when it is learned; choice-dependent benefits may need GM guidance.",
@@ -220,7 +212,6 @@
   {
     "type": "tool_call",
     "id": "learn_spell",
-    "name": "learn_spell",
     "python_module": "wwn",
     "function": "learn_spell",
     "description": "Add a spell to a spellcaster's spellbook. A High Mage learns High Magic spells; a Necromancer or Elementalist may learn High Magic or a spell of their own New Magic. The spell's rank (1 to 5) must not exceed the maximum spell level their class and level allow. Call it at creation or when a level-up grants a new spell. Learning takes 7 days minus the learner's Magic skill in days, with a minimum of 1 day, and needs a written copy or teacher.",
@@ -245,7 +236,6 @@
   {
     "type": "tool_call",
     "id": "grant_package",
-    "name": "grant_package",
     "python_module": "wwn",
     "function": "grant_package",
     "description": "Give a character one of the book's starting equipment packages. Creation already gives every character the kit the player chose, so use this only for a character who joined without gear, such as a promoted hireling. Do not use it to hand out an item the player says they have; those come from the story, from give_item, or from buy_item.",
@@ -270,7 +260,6 @@
   {
     "type": "tool_call",
     "id": "set_ac",
-    "name": "set_ac",
     "world_method": "set_armor",
     "rename": {"ac": "armor"},
     "description": "Set a character or NPC's total Armor Class for an art, spell, special adjustment, or a monster's printed AC. For tracked equipment this preserves the difference from calculated AC as an adjustment when equipment, Dexterity, or level later changes. Use equip_armor rather than this tool when armor or a shield is put on or taken off.",
@@ -297,8 +286,6 @@
   {
     "type": "tool_call",
     "id": "create_magic_item",
-    "name": "create_magic_item",
-    "world_method": "create_magic_item",
     "description": "Create a permanent magic item after its magic-item project finishes. Charges the listed silver, then gives the character an item whose description records the item's powers. Use a weapon damage formula when the item is a weapon.",
     "parameters": {
       "type": "object",
@@ -341,8 +328,6 @@
   {
     "type": "tool_call",
     "id": "choose_feature_choice",
-    "name": "choose_feature_choice",
-    "world_method": "choose_feature_choice",
     "description": "Record a structured choice a feature requires, such as the attribute for Developed Attribute or the skill for Specialist. The choice is validated against the feature and appears on the character's sheet.",
     "parameters": {
       "type": "object",
@@ -375,8 +360,6 @@
   {
     "type": "tool_call",
     "id": "prepare_execution",
-    "name": "prepare_execution",
-    "world_method": "prepare_execution",
     "description": "Prepare an execution attack with a carried weapon after a full minute of setup against a target that has not noticed the attacker. The preparation is lost if the target is spooked. Follow it with execute.",
     "parameters": {
       "type": "object",
@@ -399,8 +382,6 @@
   {
     "type": "tool_call",
     "id": "execute",
-    "name": "execute",
-    "world_method": "execute",
     "description": "Make a prepared execution attack against an unaware or helpless target. A melee execution hits automatically and deals the weapon's maximum damage; the target should then make the source's save with the attacker's combat skill penalty.",
     "parameters": {
       "type": "object",
@@ -423,8 +404,6 @@
   {
     "type": "tool_call",
     "id": "grapple",
-    "name": "grapple",
-    "world_method": "grapple",
     "description": "Record a successful grapple after an unarmed hit and a won opposed Str/Punch check. Both characters carry the grappled condition: neither can move away, only unarmed attacks are possible, and the holder can hurt the target each round.",
     "parameters": {
       "type": "object",
@@ -447,8 +426,6 @@
   {
     "type": "tool_call",
     "id": "break_grapple",
-    "name": "break_grapple",
-    "world_method": "break_grapple",
     "description": "End a grapple after a successful opposed check or when the holder lets go. Both characters lose the grappled condition.",
     "parameters": {
       "type": "object",
@@ -466,8 +443,6 @@
   {
     "type": "tool_call",
     "id": "surprise",
-    "name": "surprise",
-    "world_method": "surprise",
     "description": "Mark a character or side as surprised. A surprised character loses their next turn and cannot attack until that turn passes. Use it when an ambush succeeds and the defenders did not notice the attackers.",
     "parameters": {
       "type": "object",
@@ -485,8 +460,6 @@
   {
     "type": "tool_call",
     "id": "total_defense",
-    "name": "total_defense",
-    "world_method": "total_defense",
     "description": "Spend a Main action on total defense. The character's Armor Class rises by 2 until the start of their next turn. Use it when a combatant gives up attacking to guard, and do not stack it with another total defense.",
     "parameters": {
       "type": "object",
@@ -504,7 +477,6 @@
   {
     "type": "tool_call",
     "id": "prepare_spells",
-    "name": "prepare_spells",
     "python_module": "wwn_magic",
     "function": "prepare_spells",
     "description": "Prepare a spellcaster's set of spells for the day, taking 1 hour after a good night's rest. Each spell must already be known, and the number prepared is limited by class, tradition, and level: a full mage prepares 3 at level 1 and up to 12 at level 10, a partial mage prepares 2 at level 1 and up to 9 at level 10, and a dual partial mage uses the dual table with 3 at level 1 and up to 15 at level 10. Prepared spells stay prepared until a new set replaces them and are not lost when cast.",
@@ -534,7 +506,6 @@
   {
     "type": "tool_call",
     "id": "cast_spell",
-    "name": "cast_spell",
     "python_module": "wwn_magic",
     "function": "cast_spell",
     "description": "Cast a spell the character prepared. The spell must be in the prepared set and the character must have at least one casting left for the day; the cast spends one. Casting takes a Main Action, a free hand, and speech at conversational volume, and taking damage in the round prevents it. Full mages have 1 casting per day at level 1 and 6 at level 10; partial mages have 1 at level 1 and 4 at level 10. A good night's rest restores all castings.",
@@ -559,7 +530,6 @@
   {
     "type": "tool_call",
     "id": "commit_effort",
-    "name": "commit_effort",
     "python_module": "wwn_magic",
     "function": "commit_effort",
     "description": "Commit points of one tradition's Effort to a lasting art. Each tradition has its own pool and Effort from one cannot fuel another; only a character with that tradition or class can commit its Effort. Duration is scene (returns when the scene ends), day (returns the next morning after a good night's rest), or indefinite (returns only when reclaimed as an Instant action, and the art ends at once if the character is knocked unconscious or killed). Each commit costs 1 point unless the art says otherwise. High Magic, Necromancer, and Elementalist maximum Effort is 1 + Magic skill + the best Int or Cha modifier, minus 1 for a partial mage. Healer maximum Effort is Heal skill + the best Int or Cha modifier; Vowed maximum Effort is the chosen order skill + the best attribute modifier. All pools have a minimum of 1.",
@@ -608,7 +578,6 @@
   {
     "type": "tool_call",
     "id": "recover_effort",
-    "name": "recover_effort",
     "python_module": "wwn_magic",
     "function": "recover_effort",
     "description": "Return Effort committed for one duration: when a scene ends, after a good night's rest, or when the character reclaims an indefinite commitment as an Instant action. Give the same tradition and duration used when the Effort was committed so exactly the marked points are refunded. It does not restore Effort spent in any other way.",
@@ -650,7 +619,6 @@
   {
     "type": "tool_call",
     "id": "add_strain",
-    "name": "add_strain",
     "world_method": "harm_stat",
     "rename": {"character": "name"},
     "bind": {"stat": "strain"},
@@ -683,7 +651,6 @@
   {
     "type": "tool_call",
     "id": "heal_strain",
-    "name": "heal_strain",
     "world_method": "restore_stat",
     "rename": {"character": "name"},
     "bind": {"stat": "strain"},
@@ -716,7 +683,6 @@
   {
     "type": "tool_call",
     "id": "first_aid",
-    "name": "first_aid",
     "python_module": "wwn_magic",
     "function": "first_aid",
     "description": "Treat a wounded ally after a fight. The healer rolls 1d6 plus their Heal skill (an untrained healer counts -1) and restores that many HP to the target, up to its maximum; the target then gains 1 System Strain, which counts against a maximum equal to its Constitution score. A target already at maximum System Strain gets no benefit from first aid.",

@@ -53,6 +53,9 @@ from cygnusloom.services.geometry import overlaps, polygon_problem
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 TOOL_NAME = re.compile(r"[A-Za-z0-9_-]{1,64}")
+# What a tool with no runnable handler is told to add. Its id is not a WorldTools method and it
+# names no Python function.
+TOOL_HANDLER_HINT = "give 'world_method', or 'python_module' with 'function'"
 # A dice table row's roll: one number, or an inclusive range such as "3-5".
 ROLL_RANGE = re.compile(r"([0-9]+)(?:-([0-9]+))?")
 PROMPT_ARGUMENT = "prompt"
@@ -350,14 +353,18 @@ class PlayerInput:
 @dataclass(frozen=True)
 class ToolCall:
     id: str
+    # The name the provider sees. It defaults to the id.
     name: str
     description: str
+    # The JSON schema for the tool's arguments. A tool with no arguments may omit it, which
+    # loads as an empty object schema.
     parameters: Mapping[str, Any]
     # The rule set module's function, when the tool names one. The engine passes the arguments
     # straight from the schema. Exactly one of `function` and `world_method` is set.
     function: Callable[..., Any] | None = None
     # The WorldTools method the engine calls, when the tool binds an engine operation instead of
-    # naming a rule set function. The loader resolves it and checks it against the schema.
+    # naming a rule set function. It defaults to the tool id, so the common case names no method
+    # at all. The loader resolves it and checks it against the schema.
     world_method: str | None = None
     # Arguments the tool supplies to its method itself, so the GM never gives them. A value that
     # is an object builds one argument from the schema arguments it names, such as a statblock's
@@ -7773,6 +7780,12 @@ def _load_tool_call(
     *,
     capabilities: Capabilities | None = None,
 ) -> ToolCall:
+    """Load one tool_call definition, supplying what the JSON leaves out.
+
+    `name` defaults to the tool id, `world_method` defaults to the id when the definition names
+    no Python handler, and an omitted `parameters` loads as an empty object schema. Omitting
+    `required` inside a schema reads as no required arguments. The defaults are only defaults:
+    whatever they produce is validated exactly as an explicit value would be."""
     label = f"{template}: tool_call {definition.id}"
     data = definition.data
     check_keys(
@@ -7803,16 +7816,17 @@ def _load_tool_call(
     )
     requires, enabled_by = _read_gate(data, label)
     _check_definition_gate(capabilities, requires, enabled_by, label)
-    function, world_method = _tool_handler(data, modules, label)
+    function, world_method = _tool_handler(data, modules, definition.id, label)
     inspected = function
     if inspected is None and world_method is not None:
         inspected = _world_method(world_method, label)
     accepted = _accepted_parameters(inspected, unbound_method=world_method is not None)
-    name = required_text(data, "name", label)
-    if not TOOL_NAME.fullmatch(name):
+    name = data.get("name", definition.id)
+    if not isinstance(name, str) or not TOOL_NAME.fullmatch(name):
         raise ContentError(f"{label}: 'name' must be 1 to 64 letters, digits, '_' or '-'")
+    schema = data["parameters"] if "parameters" in data else _empty_parameters()
     parameters = _with_enum_from(
-        _check_parameters(data.get("parameters"), label),
+        _check_parameters(schema, label),
         enum_sources or {"stats": sorted(character.stats)},
         character,
         label,
@@ -7857,13 +7871,14 @@ def _load_tool_call(
 
 
 def _tool_handler(
-    data: Mapping[str, Any], modules: Mapping[str, ModuleType], label: str
+    data: Mapping[str, Any], modules: Mapping[str, ModuleType], tool_id: str, label: str
 ) -> tuple[Callable[..., Any] | None, str | None]:
     """What runs a tool: a rule set module's function, or the name of a WorldTools method.
 
-    A tool names exactly one of them. `world_method` binds an engine operation directly, so the
-    rule set ships no one-line wrapper. Naming both hides which one runs, and naming neither
-    leaves nothing to run."""
+    A tool names at most one of them. `world_method` binds an engine operation directly, so the
+    rule set ships no one-line wrapper. When a tool names no handler at all, its id is the
+    WorldTools method, which is the common case and needs no line. Naming both hides which one
+    runs; naming neither when the id is no method leaves nothing to run."""
     if "world_method" in data:
         if "python_module" in data or "function" in data:
             raise ContentError(
@@ -7872,16 +7887,22 @@ def _tool_handler(
         method_name = required_text(data, "world_method", label)
         _world_method(method_name, label)
         return None, method_name
-    if "python_module" not in data or "function" not in data:
-        raise ContentError(f"{label}: give 'world_method', or 'python_module' with 'function'")
-    module_id = required_text(data, "python_module", label)
-    if module_id not in modules:
-        raise ContentError(f"{label}: unknown python_module {module_id!r}")
-    function_name = required_text(data, "function", label)
-    function = getattr(modules[module_id], function_name, None)
-    if not callable(function):
-        raise ContentError(f"{label}: {function_name!r} is not a function in {module_id!r}")
-    return function, None
+    if "python_module" in data or "function" in data:
+        if "python_module" not in data or "function" not in data:
+            raise ContentError(f"{label}: {TOOL_HANDLER_HINT}")
+        module_id = required_text(data, "python_module", label)
+        if module_id not in modules:
+            raise ContentError(f"{label}: unknown python_module {module_id!r}")
+        function_name = required_text(data, "function", label)
+        function = getattr(modules[module_id], function_name, None)
+        if not callable(function):
+            raise ContentError(f"{label}: {function_name!r} is not a function in {module_id!r}")
+        return function, None
+    try:
+        _world_method(tool_id, label)
+    except ContentError:
+        raise ContentError(f"{label}: {TOOL_HANDLER_HINT}") from None
+    return None, tool_id
 
 
 def _world_method(name: str, label: str) -> Callable[..., Any]:
@@ -8348,10 +8369,18 @@ def _schema_value_matches(value: object, kind: str) -> bool:
     return False
 
 
+def _empty_parameters() -> dict[str, Any]:
+    """The parameter schema of a tool that takes no arguments."""
+    return {"type": "object", "properties": {}}
+
+
 def _check_parameters(schema: object, label: str) -> dict[str, Any]:
     """Check a tool's parameter schema strictly: every nested node must use a supported type
     and only the schema keys the engine understands. A `$ref`, `anyOf`, `oneOf`, or `allOf` is
-    rejected rather than handed to a provider that may interpret it differently."""
+    rejected rather than handed to a provider that may interpret it differently.
+
+    An absent `parameters` reaches here as an empty object schema. `required` may be omitted,
+    which reads as no required arguments; when given, it must list names from `properties`."""
     if not isinstance(schema, dict) or schema.get("type") != "object":
         raise ContentError(f"{label}: 'parameters' must be an object schema with type 'object'")
     properties = schema.get("properties")

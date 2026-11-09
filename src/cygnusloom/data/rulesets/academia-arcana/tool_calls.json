@@ -2,8 +2,6 @@
   {
     "type": "tool_call",
     "id": "lookup_move",
-    "name": "lookup_move",
-    "world_method": "lookup_move",
     "lookup": true,
     "description": "Read a move's trigger, stat, and every outcome band by id or name. Read it before deciding whether a move applies.",
     "parameters": {
@@ -21,8 +19,6 @@
   {
     "type": "tool_call",
     "id": "roll_move",
-    "name": "roll_move",
-    "world_method": "roll_move",
     "description": "Ask the player to roll a move for their character: 2d6 plus the stat the move uses, plus any condition penalty. For a move that rolls one of several stats, give the stat. Add a modifier for what the story gives, such as +1 for a Friend or -1 from a Condition. Write the prompt the player sees, in the GM's voice, inviting the roll. The player presses the roll button; the engine resolves the band and applies its effects.",
     "parameters": {
       "type": "object",
@@ -65,8 +61,6 @@
   {
     "type": "tool_call",
     "id": "adjust_counter",
-    "name": "adjust_counter",
-    "world_method": "adjust_counter",
     "description": "Change a character's Stress, Faculty Favor, or Peer Standing. Use a negative change to spend or clear and a positive one to add. Do not use it for Year or Advancements; those change through the school year and the Advancement page.",
     "parameters": {
       "type": "object",
@@ -91,8 +85,6 @@
   {
     "type": "tool_call",
     "id": "take_advancement",
-    "name": "take_advancement",
-    "world_method": "take_advancement",
     "description": "Spend one Advancement point on a stat, a spell, a subject, or a talent. For the player character, use the option the player has stated; the character sheet is where the player makes the choice. For a stat, use stat; for a feature, use feature.",
     "parameters": {
       "type": "object",
@@ -123,8 +115,6 @@
   {
     "type": "tool_call",
     "id": "end_period",
-    "name": "end_period",
-    "world_method": "end_period",
     "description": "End a school week or the school year. A week clears weekly reactions such as Natural Gift. The school year raises every living player character's Year, grants four Advancement points, clears Stress, logs the College Cup's final totals, and resets the cup. Call a week when a week of story time has passed, and the year only when the year actually ends.",
     "parameters": {
       "type": "object",
@@ -141,8 +131,6 @@
   {
     "type": "tool_call",
     "id": "set_relation",
-    "name": "set_relation",
-    "world_method": "set_relation",
     "description": "Make someone a player character's Friend or Rival, or end that relation. Use it only at the end of a session, as the rules require.",
     "parameters": {
       "type": "object",
@@ -171,8 +159,6 @@
   {
     "type": "tool_call",
     "id": "start_project",
-    "name": "start_project",
-    "world_method": "start_project",
     "description": "Begin a long effort and track its points toward a target: a class challenge, spell research, potion research, or enchantment research. The kind and goal are free text; the target is how many points of work it needs. Advance it with advance_project as time, favours, and rolls are spent.",
     "parameters": {
       "type": "object",
@@ -205,8 +191,6 @@
   {
     "type": "tool_call",
     "id": "advance_project",
-    "name": "advance_project",
-    "world_method": "advance_project",
     "description": "Add progress to a class challenge or a research effort. Record in the note what the time, favour, or roll bought. The project completes when progress reaches its target.",
     "parameters": {
       "type": "object",
@@ -231,8 +215,6 @@
   {
     "type": "tool_call",
     "id": "abandon_project",
-    "name": "abandon_project",
-    "world_method": "abandon_project",
     "description": "Give up a class challenge or research effort.",
     "parameters": {
       "type": "object",
@@ -246,15 +228,10 @@
   {
     "type": "tool_call",
     "id": "list_projects",
-    "name": "list_projects",
     "python_module": "core",
     "function": "list_projects",
     "lookup": true,
-    "description": "List every class challenge and research effort with its progress, notes, and whether it is complete or abandoned.",
-    "parameters": {
-      "type": "object",
-      "properties": {}
-    }
+    "description": "List every class challenge and research effort with its progress, notes, and whether it is complete or abandoned."
   },
   {
     "type": "tool_call",
