@@ -196,6 +196,15 @@ def recharge_charged_item(
     return {"name": character_name, "item": held.name, "uses": held.max_uses}
 
 
+def _save_stat(spec: CharacterSpec, stat: str) -> str:
+    """The stat for a save, accepting a short name such as `physical` for `save_physical` when
+    the rule set names its saves that way. A name that is already a stat is returned unchanged."""
+    if stat in spec.stats:
+        return stat
+    full = f"save_{stat}"
+    return full if full in spec.stats else stat
+
+
 def roll_save(
     db: Session,
     campaign_id: int,
@@ -212,6 +221,7 @@ def roll_save(
     """A save against a stat, recorded with its reason. The engine rolls unless the player's own
     roll is passed as `natural`. A failure only records the result; the GM applies what it
     costs."""
+    stat = _save_stat(spec, stat)
     if stat not in spec.stats:
         raise InvalidInput(f"there is no stat named {stat!r}")
     if natural is not None and (

@@ -53,7 +53,7 @@
   {
     "type": "prompt",
     "id": "rest_and_recovery",
-    "text": "When the party camps or sleeps through a night, call rest once for the party with length \"night\". A short breather is \"moments\" and returns only scene Effort. A week of bed rest is \"extended\" and ends Frail. Never add advance_time for the same time, and do not also call recover_after_rest or restore_spell_slots for the same night. A night restores HP equal to level, one System Strain, all castings, and scene and day Effort; Frail characters gain no HP or Strain from a single night."
+    "text": "When the party camps or sleeps through a night, call rest once for the party with length \"night\". A short breather is \"moments\" and returns only scene Effort. A week of bed rest is \"extended\" and ends Frail. Never add advance_time for the same time: the rest already restores HP equal to level, one System Strain, all castings, and scene and day Effort. Frail characters gain no HP or Strain from a single night."
   },
   {
     "type": "prompt",

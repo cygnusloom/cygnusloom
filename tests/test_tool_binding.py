@@ -251,6 +251,7 @@ CAIRN_KEPT_PYTHON = {
     "set_condition",
 }
 
+
 def test_cairn_tools_keep_one_resolvable_handler():
     library = content_library()
     calls = library.rule_sets["cairn2e"].tool_calls
@@ -268,7 +269,18 @@ def test_cairn_tools_keep_one_resolvable_handler():
 
 
 # WWN tools whose ids or argument names need an explicit binding.
-WWN_BOUND = {"create_encounter_map", "roll_check", "roll_save", "set_ac"}
+WWN_BOUND = {
+    "add_strain",
+    "create_encounter_map",
+    "heal_strain",
+    "player_attack",
+    "player_roll_save",
+    "rest",
+    "roll_check",
+    "roll_save",
+    "roll_starting_silver",
+    "set_ac",
+}
 
 
 def test_wwn_binds_the_tools_it_used_to_wrap():
@@ -283,6 +295,18 @@ def test_wwn_binds_the_tools_it_used_to_wrap():
         "character": "name",
         "save": "stat",
         "cause": "reason",
+    }
+    assert calls["heal_strain"].world_method == "restore_stat"
+    assert calls["heal_strain"].bind == {"stat": "strain"}
+    assert calls["add_strain"].world_method == "harm_stat"
+    assert calls["add_strain"].bind == {"stat": "strain"}
+    assert calls["player_attack"].player_input.param == "attack_roll"
+    assert calls["player_roll_save"].player_input.param == "natural"
+    assert calls["roll_starting_silver"].world_method == "roll_currency"
+    assert calls["roll_starting_silver"].bind == {
+        "dice": "3d6",
+        "multiplier": 10,
+        "cause": "starting silver",
     }
 
 

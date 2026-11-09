@@ -116,7 +116,7 @@ def test_cast_spell_requires_preparation_and_spends_one_casting(
         wwn_magic.cast_spell(NAME, "focus_alert", ctx)
 
 
-def test_restore_spell_slots_restores_the_castings(
+def test_a_night_rest_restores_the_castings(
     client_factory: Callable[[], TestClient],
 ) -> None:
     app, campaign_id, tools, ctx = _mage(client_factory)
@@ -125,10 +125,8 @@ def test_restore_spell_slots_restores_the_castings(
     wwn_magic.cast_spell(NAME, HIGH_SPELLS[0], ctx)
     assert _pc(app, campaign_id).harm["castings"] == 1
 
-    result = wwn_magic.restore_spell_slots(NAME, ctx)
+    tools.rest("night", reason="a night's rest")
 
-    assert result["restored"] == 1
-    assert result["castings"] == 1
     assert _pc(app, campaign_id).harm.get("castings", 0) == 0
     # The slot is usable again.
     assert wwn_magic.cast_spell(NAME, HIGH_SPELLS[0], ctx)["castings_left"] == 0
@@ -281,20 +279,20 @@ def test_a_dual_mage_can_commit_effort_to_either_tradition(
 def test_add_strain_and_heal_strain_stay_within_the_strain_score(
     client_factory: Callable[[], TestClient],
 ) -> None:
-    app, campaign_id, _tools, ctx = _mage(client_factory)
+    app, campaign_id, tools, _ = _mage(client_factory)
     assert _stat(app, campaign_id, "strain") == _stat(app, campaign_id, "con") == 10
 
-    first = wwn_magic.add_strain(NAME, 4, "a hard march", ctx)
+    first = tools.harm_stat(NAME, "strain", 4, "a hard march")
     assert (first["added"], first["strain"]) == (4, 6)
-    second = wwn_magic.add_strain(NAME, 8, "a hard march", ctx)
+    second = tools.harm_stat(NAME, "strain", 8, "a hard march")
     assert (second["added"], second["strain"]) == (6, 0)
     with pytest.raises(InvalidInput, match="already at its maximum"):
-        wwn_magic.add_strain(NAME, 1, "a hard march", ctx)
+        tools.harm_stat(NAME, "strain", 1, "a hard march")
 
-    healed = wwn_magic.heal_strain(NAME, 1, "a night's rest", ctx)
+    healed = tools.restore_stat(NAME, "strain", 1, "a night's rest")
     assert healed["restored"] == 1
     assert _stat(app, campaign_id, "strain") - _pc(app, campaign_id).harm["strain"] == 1
-    wwn_magic.heal_strain(NAME, 100, "a night's rest", ctx)
+    tools.restore_stat(NAME, "strain", 100, "a night's rest")
     assert _pc(app, campaign_id).harm.get("strain", 0) == 0
 
 
@@ -384,7 +382,7 @@ def test_first_aid_rolls_a_d6_plus_heal_heals_and_adds_strain(
     assert (check.check, check.skill, check.total) == ("First Aid", "heal", 5)
 
 
-def test_recover_after_rest_restores_hp_strain_castings_and_effort(
+def test_a_night_rest_restores_hp_strain_castings_and_effort(
     client_factory: Callable[[], TestClient],
 ) -> None:
     app, campaign_id, tools, ctx = _mage(client_factory)
@@ -394,20 +392,14 @@ def test_recover_after_rest_restores_hp_strain_castings_and_effort(
     tools.set_stat_max(NAME, "hp", 20, cause="a test")
     tools.set_stat_max(NAME, "strain", 10, cause="a test")
     tools.harm_character(NAME, "hp", 5, "a test")
-    wwn_magic.add_strain(NAME, 2, "a test", ctx)
+    tools.harm_stat(NAME, "strain", 2, "a test")
     wwn_magic.commit_effort(NAME, "high", 2, "scene", ctx)
     wwn_magic.commit_effort(NAME, "high", 1, "day", ctx)
 
-    result = wwn.recover_after_rest(NAME, ctx)
+    tools.rest("night", reason="a test")
 
     # A night restores hit points equal to the character's level, one Strain, every casting,
     # and the Effort committed for the scene and the day.
-    assert result["restored"] == {
-        "hp": 1,
-        "strain": 1,
-        "castings": 1,
-        "effort_high": 3,
-    }
     character = _pc(app, campaign_id)
     assert character.harm["hp"] == 4
     assert character.harm["strain"] == 1
@@ -421,14 +413,14 @@ def test_rest_refuses_an_effort_mark_without_a_pool_and_keeps_the_mark(
     client_factory: Callable[[], TestClient],
     tradition: str,
 ) -> None:
-    app, campaign_id, _tools, ctx = _mage(client_factory)
+    app, campaign_id, tools, ctx = _mage(client_factory)
     malformed = {"scene": {tradition: 1}}
     ctx.world.with_hook_context(
         lambda hc: hc.set_mark(NAME, wwn.EFFORT_MARK, malformed, "a malformed test mark")
     )
 
     with pytest.raises(InvalidInput, match="no Effort pool for the tradition"):
-        wwn.recover_after_rest(NAME, ctx)
+        tools.rest("night", reason="a test")
 
     assert _pc(app, campaign_id).marks[wwn.EFFORT_MARK] == malformed
 
@@ -444,12 +436,9 @@ def _placeholder(schema: dict[str, Any]) -> Any:
     return "x"
 
 
-# WWN tools that cannot bind a WorldTools method directly: the wrapper translates a save name,
-# injects the check id, validates a total, or fills a schema gap the method's signature has.
-KEPT_WWN_WRAPPERS = {
-    "player_attack",
-    "player_roll_save",
-}
+# WWN tools that keep a Python function rather than binding a WorldTools method directly.
+# None are left: every tool either binds an engine operation or names a WorldTools method.
+KEPT_WWN_WRAPPERS: set[str] = set()
 
 
 def test_every_wwn_tool_loads_and_binds_its_declared_required_parameters() -> None:
@@ -492,10 +481,7 @@ def test_wwn_tools_bind_engine_operations_without_wrappers() -> None:
         assert call.function is None
         assert call.takes_context is False
         assert call.world_method == method
-    for call_id in KEPT_WWN_WRAPPERS:
-        call = WWN.tool_calls[call_id]
-        assert call.function is not None
-        assert call.world_method is None
+    assert not KEPT_WWN_WRAPPERS
 
 
 def test_first_aid_gives_no_benefit_at_maximum_system_strain(
@@ -505,7 +491,7 @@ def test_first_aid_gives_no_benefit_at_maximum_system_strain(
     tools.set_stat_max(NAME, "hp", 20, cause="a test")
     tools.set_stat_max(NAME, "strain", 10, cause="a test")
     tools.harm_character(NAME, "hp", 5, "a test")
-    wwn_magic.add_strain(NAME, 10, "a test", ctx)
+    tools.harm_stat(NAME, "strain", 10, "a test")
 
     result = wwn_magic.first_aid(NAME, NAME, ctx)
 

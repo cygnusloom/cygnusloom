@@ -111,11 +111,7 @@ def test_no_tools_means_no_tool_list():
 
 
 def _offered_names(calls):
-    return {
-        call.name
-        for call in calls.values()
-        if not call.journal_step and not call.review_step
-    }
+    return {call.name for call in calls.values() if not call.journal_step and not call.review_step}
 
 
 def test_specs_describe_the_social_roll_tool():
@@ -129,6 +125,7 @@ def test_specs_describe_the_social_roll_tool():
         "relationship",
         "circumstance",
     }
+
 
 SOCIAL_ARGUMENTS = '{"prompt": "Roll to persuade.", "relationship": 2, "circumstance": -1}'
 

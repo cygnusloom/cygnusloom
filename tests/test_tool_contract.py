@@ -57,9 +57,7 @@ def test_tool_specs_match_the_enabled_catalog_for_each_step(rule_set_id: str) ->
     regular = {c.name for c in calls.values() if not c.journal_step and not c.review_step}
     journal = {c.name for c in calls.values() if c.journal_step}
     review = {
-        c.name
-        for c in calls.values()
-        if not c.journal_step and c.name not in {"speak", "ooc"}
+        c.name for c in calls.values() if not c.journal_step and c.name not in {"speak", "ooc"}
     }
 
     assert offered() == regular
@@ -111,9 +109,7 @@ def test_a_ruleset_can_override_a_core_tool_by_id(tmp_path) -> None:
             "required": ["text"],
         },
     }
-    library = ContentLibrary.load(
-        content_tree(tmp_path, core=[NOTE_TOOL], definitions=[override])
-    )
+    library = ContentLibrary.load(content_tree(tmp_path, core=[NOTE_TOOL], definitions=[override]))
     calls = library.rule_sets["testset"].tool_calls
     assert calls["note"].description == "Keep a ruleset-specific note."
     assert set(calls["note"].parameters["properties"]) == {"text", "subject"}

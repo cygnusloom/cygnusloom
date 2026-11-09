@@ -176,6 +176,12 @@ class CoreWorld(Protocol):
 
     def change_currency(self, name: str, amount: int, cause: str) -> dict[str, Any]: ...
 
+    def roll_currency(
+        self, name: str, dice: str, multiplier: int, cause: str = ""
+    ) -> dict[str, Any]:
+        """Give a character currency from a dice roll times a multiplier, in the rule set's
+        currency."""
+
     def place_object(
         self,
         place: str,
@@ -304,6 +310,9 @@ class CoreWorld(Protocol):
     def restore_stat(self, name: str, stat: str, amount: int, cause: str = "") -> dict[str, Any]:
         """Give a character back `amount` of what it lost from one stat, such as hit points,
         never below none, recording the restoration."""
+
+    def harm_stat(self, name: str, stat: str, amount: int, cause: str) -> dict[str, Any]:
+        """Add `amount` of harm to one stat, never past its maximum, recording the harm."""
 
     def set_stat_max(self, name: str, stat: str, value: int, cause: str = "") -> dict[str, Any]:
         """Set a character's maximum score for one stat to `value`, recording the change."""
