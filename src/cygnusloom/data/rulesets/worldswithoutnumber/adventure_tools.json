@@ -120,19 +120,9 @@
   {
     "type": "tool_call",
     "id": "roll_tables",
-    "name": "roll_tables",
-    "world_method": "roll_tables",
-    "description": "Roll on one or more of the rule set's dice tables and log every result. Use the world-generation tables (significant_terrain, terrain_quirk, terrain_antagonists, nation_disputes_with_neighbor, ruler_class, government_struggle, history_event, community_tags, court_tags, ruin_tags, wilderness_tags) to build the starting region. Also available: site_type, site_feature, site_hazard, site_enigma, site_treasure, deeps_type, ruin_characteristic, ruin_encounter_human, ruin_encounter_beast, ruin_encounter_sapient, encounter_template, wilderness_event, dungeon_event, monster_shape, monster_drive, and monster_twist. Use dungeon_reaction (2d6) for a quick reaction, or roll_reaction to add Charisma. The engine returns the results; you decide what they mean.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "tables": {
-          "type": "array",
-          "items": {"type": "string"},
-          "description": "The ids of the tables to roll on, in order. Each is rolled once."
-        }
-      },
-      "required": ["tables"]
+    "extends": "core:tool_call/roll_tables",
+    "patch": {
+      "description": "Roll on one or more of the rule set's dice tables and log every result. Use the world-generation tables (significant_terrain, terrain_quirk, terrain_antagonists, nation_disputes_with_neighbor, ruler_class, government_struggle, history_event, community_tags, court_tags, ruin_tags, wilderness_tags) to build the starting region. Also available: site_type, site_feature, site_hazard, site_enigma, site_treasure, deeps_type, ruin_characteristic, ruin_encounter_human, ruin_encounter_beast, ruin_encounter_sapient, encounter_template, wilderness_event, dungeon_event, monster_shape, monster_drive, and monster_twist. Use dungeon_reaction (2d6) for a quick reaction, or roll_reaction to add Charisma. The engine returns the results; you decide what they mean."
     }
   },
   {
@@ -545,7 +535,7 @@
         "character": {"type": "string"},
         "length": {
           "type": "string",
-          "enum": ["moments", "night", "extended"],
+          "enum_from": "rest_lengths",
           "description": "moments for a short break, night for a full night's rest, extended for a week of bed rest."
         },
         "reason": {"type": "string"},
@@ -561,93 +551,68 @@
   {
     "type": "tool_call",
     "id": "advance_time",
-    "name": "advance_time",
-    "world_method": "advance_time",
-    "description": "Move the campaign clock forward. Use it for downtime, travel you track yourself, or the hour a mortally wounded character has left to live.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "days": {"type": "integer", "minimum": 0, "maximum": 365, "default": 0},
-        "parts": {"type": "integer", "minimum": 0, "maximum": 12, "default": 0},
-        "hours": {"type": "integer", "minimum": 0, "maximum": 72, "default": 0}
-      },
-      "required": []
+    "extends": "core:tool_call/advance_time",
+    "patch": {
+      "description": "Move the campaign clock forward. Use it for downtime, travel you track yourself, or the hour a mortally wounded character has left to live."
     }
   },
   {
     "type": "tool_call",
     "id": "hire_hireling",
-    "name": "hire_hireling",
-    "world_method": "hire_hireling",
-    "character_options": true,
-    "description": "Hire a retainer into a player character's company. The retainer has a rolled sheet like an NPC's and is controlled by the player. Its wage is paid in silver from the employer each new day, and an employer who cannot pay is reported as unpaid. Leave personality, accent, or quirks out to have them rolled. Names must be unique among locations and characters.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {"type": "string"},
-        "employer": {"type": "string", "description": "The player character paying the wage."},
-        "wage": {"type": "integer", "description": "Silver per day, zero or more."},
-        "description": {"type": "string"},
-        "personality": {"type": "string"},
-        "accent": {"type": "string"},
-        "quirks": {"type": "array", "items": {"type": "string"}},
-        "pronouns": {"type": "string"}
-      },
-      "required": ["name", "employer", "wage", "description"]
+    "extends": "core:tool_call/hire_hireling",
+    "patch": {
+      "description": "Hire a retainer into a player character's company. The retainer has a rolled sheet like an NPC's and is controlled by the player. Its wage is paid in silver from the employer each new day, and an employer who cannot pay is reported as unpaid. Leave personality, accent, or quirks out to have them rolled. Names must be unique among locations and characters.",
+      "parameters": {
+        "properties": {
+          "employer": {
+            "description": "The player character paying the wage."
+          },
+          "wage": {
+            "description": "Silver per day, zero or more."
+          }
+        }
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "dismiss_hireling",
-    "name": "dismiss_hireling",
-    "world_method": "dismiss_hireling",
-    "description": "Remove a retainer from its employer's company. It stays where it is and becomes an ordinary NPC.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {"type": "string"},
-        "cause": {"type": "string", "description": "Why the retainer leaves, in a few words."}
-      },
-      "required": ["name", "cause"]
+    "extends": "core:tool_call/dismiss_hireling",
+    "patch": {
+      "description": "Remove a retainer from its employer's company. It stays where it is and becomes an ordinary NPC.",
+      "parameters": {
+        "properties": {
+          "cause": {
+            "description": "Why the retainer leaves, in a few words."
+          }
+        }
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "give_item",
-    "name": "give_item",
-    "world_method": "give_item",
-    "description": "Give a character an item they are given, find, or loot, with no payment. A catalogue item takes its listed size, uses, and damage; a new item needs its size and, for a weapon, its damage dice. Never use it because the player says the character has something or reaches for it: check the inventory first, and if the character does not carry it, say so and let them find, buy, or do without it. Never use it for something the character pays for; use buy_item.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {"type": "string"},
-        "item": {"type": "string"},
-        "size": {
-          "type": "string",
-          "enum": ["tiny", "small", "normal", "large", "huge", "bulky", "massive"],
-          "description": "How much of the inventory it fills. Leave it out for a catalogue item."
-        },
-        "damage": {
-          "type": "string",
-          "description": "The weapon's damage dice, such as 1d8. Leave it out for gear."
+    "extends": "core:tool_call/give_item",
+    "patch": {
+      "description": "Give a character an item they are given, find, or loot, with no payment. A catalogue item takes its listed size, uses, and damage; a new item needs its size and, for a weapon, its damage dice. Never use it because the player says the character has something or reaches for it: check the inventory first, and if the character does not carry it, say so and let them find, buy, or do without it. Never use it for something the character pays for; use buy_item.",
+      "parameters": {
+        "properties": {
+          "damage": {
+            "description": "The weapon's damage dice, such as 1d8. Leave it out for gear."
+          },
+          "size": {
+            "description": "How much of the inventory it fills. Leave it out for a catalogue item."
+          }
         }
-      },
-      "required": ["name", "item"]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "drop_item",
-    "name": "drop_item",
-    "world_method": "drop_item",
-    "description": "Remove an item from a character's inventory. Dropping equipped armor or a wielded shield also unequips it and recalculates Armor Class.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {"type": "string"},
-        "item": {"type": "string"}
-      },
-      "required": ["name", "item"]
+    "extends": "core:tool_call/drop_item",
+    "patch": {
+      "description": "Remove an item from a character's inventory. Dropping equipped armor or a wielded shield also unequips it and recalculates Armor Class."
     }
   },
   {
@@ -860,67 +825,42 @@
   {
     "type": "tool_call",
     "id": "buy_item",
-    "name": "buy_item",
-    "world_method": "buy_item",
-    "description": "Buy an object a character keeps, with silver. A catalogue item costs its listed price; for anything else, give both a price and the item's size. Use buy_service for a room, meal, passage, toll, or other service that is not carried. Armor updates the buyer's Armor Class automatically.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {"type": "string"},
-        "item": {"type": "string"},
-        "price": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "The price in silver for an item not in the catalogue."
-        },
-        "size": {
-          "type": "string",
-          "enum": ["tiny", "small", "normal", "large", "huge", "bulky", "massive"],
-          "description": "The size of an item not in the catalogue; required for anything the catalogue does not list. Catalogue items keep their listed size."
+    "extends": "core:tool_call/buy_item",
+    "patch": {
+      "description": "Buy an object a character keeps, with silver. A catalogue item costs its listed price; for anything else, give both a price and the item's size. Use buy_service for a room, meal, passage, toll, or other service that is not carried. Armor updates the buyer's Armor Class automatically.",
+      "parameters": {
+        "properties": {
+          "price": {
+            "minimum": 0,
+            "description": "The price in silver for an item not in the catalogue."
+          }
         }
-      },
-      "required": ["name", "item"]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "buy_service",
-    "name": "buy_service",
-    "world_method": "buy_service",
-    "description": "Buy a service for one or more characters: a room, meal, passage, toll, bribe, or anything else that is not carried away. A listed service uses its listed price and effect, so leave price out. For any other service, give a price you set from similar services. The first character named pays for the whole service. A service never adds an inventory item.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "names": {
-          "type": "array",
-          "items": {"type": "string"},
-          "description": "The characters the service is for. The first one pays."
-        },
-        "service": {
-          "type": "string",
-          "description": "The service, such as a room, meal, passage, or toll. Use a listed service's id or name as search_marketplace shows it."
-        },
-        "price": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "The price in silver for a service the marketplace does not list. Leave it out for a listed service."
+    "extends": "core:tool_call/buy_service",
+    "patch": {
+      "description": "Buy a service for one or more characters: a room, meal, passage, toll, bribe, or anything else that is not carried away. A listed service uses its listed price and effect, so leave price out. For any other service, give a price you set from similar services. The first character named pays for the whole service. A service never adds an inventory item.",
+      "parameters": {
+        "properties": {
+          "price": {
+            "minimum": 0,
+            "description": "The price in silver for a service the marketplace does not list. Leave it out for a listed service."
+          }
         }
-      },
-      "required": ["names", "service"]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "search_marketplace",
-    "name": "search_marketplace",
-    "world_method": "search_marketplace",
-    "description": "Find items and services the marketplace sells, by name or category.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "query": {"type": "string"}
-      },
-      "required": ["query"]
+    "extends": "core:tool_call/search_marketplace",
+    "patch": {
+      "lookup": false,
+      "description": "Find items and services the marketplace sells, by name or category."
     }
   },
   {
@@ -963,13 +903,10 @@
   {
     "type": "tool_call",
     "id": "search_monster",
-    "name": "search_monster",
-    "world_method": "search_monster",
-    "description": "Find bestiary statblocks by name or description.",
-    "parameters": {
-      "type": "object",
-      "properties": {"query": {"type": "string"}},
-      "required": ["query"]
+    "extends": "core:tool_call/search_monster",
+    "patch": {
+      "lookup": false,
+      "description": "Find bestiary statblocks by name or description."
     }
   },
   {
@@ -1101,5 +1038,15 @@
       },
       "required": ["name", "column", "row"]
     }
+  },
+  {
+    "type": "tool_call",
+    "id": "rest_history",
+    "disabled": true
+  },
+  {
+    "type": "tool_call",
+    "id": "use_item",
+    "disabled": true
   }
 ]

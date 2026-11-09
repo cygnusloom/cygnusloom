@@ -2010,5 +2010,373 @@
       "type": "object",
       "properties": {}
     }
+  },
+  {
+    "type": "tool_call",
+    "id": "advance_time",
+    "name": "advance_time",
+    "world_method": "advance_time",
+    "description": "Move the campaign clock forward. Use it when time passes in the fiction: days, watches of the day (morning, afternoon, night; eight hours each), or hours within a watch. The result says when a new day begins and lists places not visited for a while, so update anything that should change. A dying character dies when enough hours have passed, so advance time only as far as the fiction needs.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "days": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 365,
+          "default": 0,
+          "description": "Whole days to advance, from 0 to 365. Defaults to 0."
+        },
+        "parts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 12,
+          "default": 0,
+          "description": "Parts of a day to advance, from 0 to 12. Defaults to 0 when omitted."
+        },
+        "hours": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 72,
+          "default": 0,
+          "description": "Hours to advance, added after days and parts, from 0 to 72. Defaults to 0 when omitted."
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "rest",
+    "name": "rest",
+    "world_method": "rest",
+    "description": "Record a rest for the whole party. The Warden decides the length from what the party does: 'moments' is a short break of one hour, such as a drink and a sit-down, 'night' is a full night's rest, which runs until morning, or until dusk when it begins in the morning, 'week' is a week of rest. The rest moves the clock forward itself, so do not also advance_time for the same time. Set interrupted when something breaks the rest, and then it counts as moments only. A full rest, uninterrupted, is the only way to clear Fatigue. A deprived character recovers nothing. Rest eats one ration per character itself (a sheltered character uses the bed instead), so never remove rations before resting; a character with no ration is deprived.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "length": {
+          "type": "string",
+          "enum_from": "rest_lengths",
+          "description": "How long the rest lasts: 'moments', 'night', or 'week'."
+        },
+        "interrupted": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when something breaks the rest. An interrupted rest counts as moments only. Defaults to false."
+        },
+        "reason": {
+          "type": "string",
+          "description": "What the party was doing, such as 'camped in the ruined chapel'."
+        }
+      },
+      "required": [
+        "length",
+        "reason"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "rest_history",
+    "name": "rest_history",
+    "world_method": "rest_history",
+    "description": "Look up the party's recent rests and each character's last full rest, to decide whether a character is deprived.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "roll_tables",
+    "name": "roll_tables",
+    "world_method": "roll_tables",
+    "description": "Roll on one or more of the Warden's dice tables and log every result. Use 'dungeon_reaction' (2d6) for how an NPC or monster reacts to the party. Use 'die_of_fate' (1d6) when the outcome of an event is uncertain: 4 or more favors the PCs, 3 or less is bad luck. To create a monster, roll all eight monster_ tables (one 1d20 each) in a single call, then combine the results into a statblock and place it with create_monster. World tables such as 'encounters', 'rumors', or 'victim-schedule' can also be rolled when the world defines them. The engine does not save or place a creature from these rolls; you receive the results and decide what they mean.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "tables": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The ids of the tables to roll on, in order. Each is rolled once."
+        }
+      },
+      "required": [
+        "tables"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "give_item",
+    "name": "give_item",
+    "world_method": "give_item",
+    "description": "Add an item a character is given, found, or looted, with no payment. Petty items (such as scrolls) take no slot; normal items take one; bulky items take two. A full inventory (10 slots) reduces the character to 0 HP. Never use it for something the character pays for, including from a shopkeeper who lets them pay later: use buy_item, which takes the gold and refuses if it cannot. There is no credit. A hireling hired from a role gets equipment suited to its station this way, chosen by you and not rolled, right after hire_hireling. A hireling eats a ration each night it camps, like any party member, so give it Rations too.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character or NPC."
+        },
+        "item": {
+          "type": "string",
+          "description": "The name of the item."
+        },
+        "size": {
+          "type": "string",
+          "enum_from": "item_sizes",
+          "default": "normal",
+          "description": "The item's size: 'petty' takes no slot, 'normal' takes one, 'bulky' takes two. Defaults to 'normal'."
+        },
+        "damage": {
+          "type": "string",
+          "description": "For a weapon that is not in the catalogue: its damage dice, such as '1d6', '1d6+1d6' (summed), or '1d6+1d6' (two weapons, keep the higher). Leave it out for anything else. A catalogue item takes its damage from the catalogue, so this is refused for one."
+        }
+      },
+      "required": [
+        "name",
+        "item"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "drop_item",
+    "name": "drop_item",
+    "world_method": "drop_item",
+    "description": "Remove an item from a character's inventory. Use it when the character drops something, or must drop an item to make room for Fatigue. Gold is not an item and cannot be dropped. Never use it to eat, drink, or spend food or another consumable: use use_item for that, and rest eats rations itself. Dropping a stack removes all of its uses.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character or NPC."
+        },
+        "item": {
+          "type": "string",
+          "description": "The name of the item to drop."
+        }
+      },
+      "required": [
+        "name",
+        "item"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "use_item",
+    "name": "use_item",
+    "world_method": "use_item",
+    "description": "Spend one use of a consumable the character carries, such as a torch, oil, bandages, or a salve. The last use uses it up and removes it. Call this only when the character deliberately uses up that exact item (pouring the oil, applying the bandage). A Bandage may be applied to a dying character: set target to that character, and it is stabilized. Never spend it for an action that uses a different item, for an attempt that fails, or for holding something in a flame that is already burning: a lit lantern or torch burns down over time, not per action. Not for relics (use use_charge), spellbooks, or gear without uses.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character or NPC."
+        },
+        "item": {
+          "type": "string",
+          "description": "The name of the consumable item."
+        },
+        "target": {
+          "type": "string",
+          "description": "Only for a Bandage used on a dying character: that character's name. Leave it out otherwise."
+        }
+      },
+      "required": [
+        "name",
+        "item"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "buy_item",
+    "name": "buy_item",
+    "world_method": "buy_item",
+    "description": "Buy an object a character keeps: the character pays gold and the item goes into their inventory. A catalogue item (see search_marketplace) costs its listed price, so leave price out. For anything else, give both a price you set from similar catalogue items and the item's size. Use buy_service for a room, meal, passage, toll, bribe, or other service that is not carried. Armor adds to the buyer's armor. There is no credit: a purchase is refused if the character lacks the gold or the room, and a shopkeeper cannot give a thing on a promise to pay later.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the buying character."
+        },
+        "item": {
+          "type": "string",
+          "description": "The name of the item, as listed in the catalogue when it is there."
+        },
+        "price": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Gold to pay. Only for items not in the catalogue; a catalogue item's price must match its listing if given."
+        },
+        "size": {
+          "type": "string",
+          "enum_from": "item_sizes",
+          "description": "The size of an item not in the catalogue; required for anything the catalogue does not list. Catalogue items keep their listed size."
+        }
+      },
+      "required": [
+        "name",
+        "item"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "buy_service",
+    "name": "buy_service",
+    "world_method": "buy_service",
+    "description": "Buy a service for one or more characters: a room, meal, passage, toll, bribe, medical healing, or anything else that is not carried away. A listed service uses its listed price and effect, so leave price out. For any other service, give a price you set from similar services. The first character named pays for the whole service. Lodging covers the party a night, and a sheltered character needs no food on the next rest. Healing restores all harm, HP and attributes, for each named character who has lost any. A service never adds an inventory item.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The characters the service is for. The first one pays."
+        },
+        "service": {
+          "type": "string",
+          "description": "The service, such as a room, meal, passage, or toll. Use a listed service's id or name as search_marketplace shows it."
+        },
+        "price": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Gold for a service the catalogue does not list. Leave it out for a listed service."
+        }
+      },
+      "required": [
+        "names",
+        "service"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "search_marketplace",
+    "name": "search_marketplace",
+    "world_method": "search_marketplace",
+    "lookup": true,
+    "description": "Find goods and services for sale by words in their name, category, or description. Every word in the query must appear. Each item gives its price, size, and description, and each service gives its price. Use these prices when a character buys with buy_item or buy_service.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Words to look for, such as 'rope' or 'armor'."
+        }
+      },
+      "required": [
+        "query"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "hire_hireling",
+    "name": "hire_hireling",
+    "world_method": "hire_hireling",
+    "character_options": true,
+    "description": "Hire a character into a player character's company. The hireling has a rolled sheet like an NPC's and is controlled by the player. Its wage is paid in the rule set's currency from the employer each new day, and an employer who cannot pay is reported as unpaid. The employer must be a player character who has a location. Give the wage the hireling asks for, or the marketplace's listed wage for a hireling listed there. Leave personality, accent, or quirks out to have them rolled. Names must be unique among locations and characters.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The hireling's name."
+        },
+        "employer": {
+          "type": "string",
+          "description": "The name of the player character who hires them. The wage comes from this character's money."
+        },
+        "wage": {
+          "type": "integer",
+          "description": "Money per day, in the rule set's currency, zero or more."
+        },
+        "description": {
+          "type": "string",
+          "description": "Who the hireling is: appearance, role, and what they are good for."
+        },
+        "personality": {
+          "type": "string",
+          "description": "Optional. How the hireling carries themselves."
+        },
+        "accent": {
+          "type": "string",
+          "description": "Optional. How the hireling sounds when they speak."
+        },
+        "quirks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional. Habits or mannerisms the hireling shows."
+        },
+        "pronouns": {
+          "type": "string",
+          "description": "Optional. The hireling's pronouns, such as \"she/her\", \"he/him\", or \"they/them\", or another form. Record them whenever the hireling is written in the text, so the GM does not have to guess."
+        }
+      },
+      "required": [
+        "name",
+        "employer",
+        "wage",
+        "description"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "dismiss_hireling",
+    "name": "dismiss_hireling",
+    "world_method": "dismiss_hireling",
+    "description": "Remove a hireling from its employer's company. It stays where it is and becomes an ordinary NPC. Use this when the story has the hireling leave, for example when its wage went unpaid and it goes, or when it chooses to go. Give the cause in a few words.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The hireling's name."
+        },
+        "cause": {
+          "type": "string",
+          "description": "Why the hireling leaves, in a few words."
+        }
+      },
+      "required": [
+        "name",
+        "cause"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "search_monster",
+    "name": "search_monster",
+    "world_method": "search_monster",
+    "lookup": true,
+    "description": "Find monster statblocks in the Cairn bestiary by words in their name, id, or description. Every word in the query must appear. Each result gives the statblock's stats, armor, and attacks, which create_monster can use as a template.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Words to look for, such as 'wolf' or 'giant spider'."
+        }
+      },
+      "required": [
+        "query"
+      ]
+    }
   }
 ]
