@@ -34,7 +34,7 @@
 - `bind`, `rename`, `enum_from`, `requires`, and `enabled_by` keep the shared schema without copying a Python wrapper.
 - Core may author gated tools; each inheriting rule set evaluates the gate against its own capability manifest.
 
-**Verification:** the full suite passes. Live DeepSeek sessions covered a WWN opening, one party rest (one `RestTaken`, one `ClockAdvanced`), a one-day journey, a Cairn opening and turn, and an Academia opening plus a move-based spell cast (one `MoveMade`, one `SpellCast` with `model: "move"`).
+**Verification:** the full suite passes at **3099 tests**. Live DeepSeek sessions covered a WWN opening, one party rest (one `RestTaken`, one `ClockAdvanced`), a one-day journey, a Cairn opening and turn, and an Academia opening plus a move-based spell cast (one `MoveMade`, one `SpellCast` with `model: "move"`).
 
 ---
 
