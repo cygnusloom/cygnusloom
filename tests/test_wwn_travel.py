@@ -7,7 +7,6 @@ from __future__ import annotations
 import random
 from collections.abc import Callable
 from dataclasses import replace
-from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -16,7 +15,6 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from cygnusloom.content.library import JourneyEvent
-from cygnusloom.rules.wwn import travel
 from cygnusloom.services import clock as clock_service
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import (
@@ -35,10 +33,6 @@ from tests.test_wwn_advancement import NAME, WWN, _campaign, _world_tools
 
 PARTS = len(WWN.clock.parts)
 HPP = WWN.clock.hours_per_part
-
-
-def _ctx(tools: Any) -> Any:
-    return SimpleNamespace(world=tools)
 
 
 def _hours(app: FastAPI, campaign_id: int) -> int:
@@ -90,7 +84,7 @@ def test_wwn_travel_uses_the_source_speeds_and_advances_ten_hours_a_day(
     app, campaign_id, tools = _setup(client_factory)
     before = _hours(app, campaign_id)
 
-    result = travel(
+    result = tools.travel(
         NAME,
         "Far",
         "plains",
@@ -99,7 +93,6 @@ def test_wwn_travel_uses_the_source_speeds_and_advances_ten_hours_a_day(
         days=2,
         travelers=3,
         reason="the king's road",
-        ctx=_ctx(tools),
     )
 
     assert result["speed_mph"] == 6.0
@@ -136,14 +129,13 @@ def test_wwn_travel_applies_road_and_weather_modifiers(
 ) -> None:
     _, _, tools = _setup(client_factory)
 
-    result = travel(
+    result = tools.travel(
         NAME,
         "Far",
         terrain,
         road=road,
         weather=weather,
         days=1,
-        ctx=_ctx(tools),
     )
 
     assert result["speed_mph"] == speed
@@ -164,7 +156,7 @@ def test_wwn_foraging_uses_the_source_difficulties(
 ) -> None:
     _, _, tools = _setup(client_factory)
 
-    result = travel(NAME, "Far", terrain, ctx=_ctx(tools))
+    result = tools.travel(NAME, "Far", terrain)
 
     assert result["forage"]["difficulty"] == difficulty
 
@@ -175,13 +167,13 @@ def test_wwn_travel_refuses_bad_routes_and_weather(
     _, _, tools = _setup(client_factory)
 
     with pytest.raises(InvalidInput, match="terrain"):
-        travel(NAME, "Far", "moon", ctx=_ctx(tools))
+        tools.travel(NAME, "Far", "moon")
     with pytest.raises(InvalidInput, match="weather"):
-        travel(NAME, "Far", "plains", weather="storm", ctx=_ctx(tools))
+        tools.travel(NAME, "Far", "plains", weather="storm")
     with pytest.raises(InvalidInput, match="days"):
-        travel(NAME, "Far", "plains", days=0, ctx=_ctx(tools))
+        tools.travel(NAME, "Far", "plains", days=0)
     with pytest.raises(InvalidInput, match="travelers"):
-        travel(NAME, "Far", "plains", travelers=0, ctx=_ctx(tools))
+        tools.travel(NAME, "Far", "plains", travelers=0)
 
 
 def test_overland_move_falls_back_when_a_rule_set_has_no_wilderness(

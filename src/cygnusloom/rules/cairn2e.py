@@ -11,14 +11,13 @@ from cygnusloom.rules.context import ToolContext
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import (
     PC_KIND,
-    Item,
     ItemRemoved,
     ItemUsesSet,
     name_key,
     record,
 )
 from cygnusloom.services.hooks import HookContext
-from cygnusloom.services.inventory import carry_item
+from cygnusloom.services.inventory import carry_item, penalty_item
 
 if TYPE_CHECKING:
     from cygnusloom.content.character import CharacterSpec
@@ -123,9 +122,7 @@ def new_day(hc: HookContext, day: int) -> None:
         since = _deprived_since(character.marks, day)
         if day - since <= after_days:
             continue
-        penalty = Item(
-            inventory.penalty_name, "", inventory.penalty_slots, kind=inventory.penalty_item
-        )
+        penalty = penalty_item(inventory)
         carry_item(db, campaign_id, inventory, character.name, penalty, cause="need")
 
 

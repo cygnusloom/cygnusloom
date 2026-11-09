@@ -27,7 +27,6 @@ from cygnusloom.rules.wwn import (
 from cygnusloom.rules.wwn_progression import require_wwn_progression
 from cygnusloom.services.common import InvalidInput, whole_number
 from cygnusloom.services.events import (
-    CampaignState,
     Character,
     CheckMade,
     EffectNoted,
@@ -35,7 +34,6 @@ from cygnusloom.services.events import (
     SpellCast,
     StatRestored,
     current,
-    name_key,
     record,
 )
 from cygnusloom.services.hooks import HookContext
@@ -58,7 +56,7 @@ def prepare_spells(character: str, spells: Sequence[str], ctx: ToolContext) -> d
     progression = require_wwn_progression(ctx.world)
 
     def check(hc: HookContext) -> dict[str, Any]:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         for spell in chosen:
             feature = _spell(spec, spell)
             if spell not in found.features:
@@ -96,7 +94,7 @@ def prepare_spells(character: str, spells: Sequence[str], ctx: ToolContext) -> d
     allowed = ctx.world.with_hook_context(check)
 
     def write(hc: HookContext) -> dict[str, Any]:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         names = ", ".join(spec.features[spell].name for spell in chosen) or "no spells"
         hc.set_mark(
             found.name,
@@ -119,7 +117,7 @@ def cast_spell(character: str, spell: str, ctx: ToolContext) -> dict[str, Any]:
     spec = ctx.world.character
 
     def action(hc: HookContext) -> dict[str, Any]:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         feature = _spell(spec, spell)
         prepared = found.marks.get(PREPARED_MARK) or []
         if spell not in prepared:
@@ -168,7 +166,7 @@ def commit_effort(
         raise InvalidInput(f"there is no Effort pool for the tradition {tradition!r}")
 
     def action(hc: HookContext) -> dict[str, Any]:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         if tag not in tradition_tags(found, progression):
             raise InvalidInput(f"{found.name} cannot commit {tag} Effort without that tradition")
         if stat not in found.stats:
@@ -184,10 +182,8 @@ def commit_effort(
             ).get(stat, found.stats[stat])
         except ValueError as exc:
             raise InvalidInput(str(exc)) from exc
-        marks = found.marks.get(EFFORT_MARK) or {}
-        committed = sum(
-            int(held.get(tag, 0)) for held in marks.values() if isinstance(held, Mapping)
-        )
+        marks = _effort_marks(found)
+        committed = _committed_effort(marks, tag)
         if committed + value > maximum:
             raise InvalidInput(
                 f"{found.name}'s {tag} Effort is limited to {maximum}; {committed} is already "
@@ -208,13 +204,12 @@ def commit_effort(
                 cause=f"{duration} Effort for {tag}",
             ),
         )
-        updated = {key: dict(held) for key, held in marks.items()}
-        held = updated.setdefault(duration, {})
+        held = marks.setdefault(duration, {})
         held[tag] = int(held.get(tag, 0)) + value
         hc.set_mark(
             found.name,
             EFFORT_MARK,
-            updated,
+            marks,
             f"{found.name} commits {value} {duration} Effort to {tag}.",
         )
         return {
@@ -241,9 +236,9 @@ def recover_effort(
         raise InvalidInput(f"there is no Effort pool for the tradition {tradition!r}")
 
     def action(hc: HookContext) -> dict[str, Any]:
-        _, found = _character(hc, character)
-        marks = found.marks.get(EFFORT_MARK) or {}
-        held = dict(marks.get(duration) or {})
+        found = hc.character(character)
+        marks = _effort_marks(found)
+        held = marks.get(duration, {})
         amount = int(held.get(tag, 0))
         if amount <= 0:
             raise InvalidInput(f"{found.name} has no {duration} Effort committed to {tag}")
@@ -258,17 +253,14 @@ def recover_effort(
                 cause=f"{duration} Effort reclaimed",
             ),
         )
-        updated = {key: dict(held) for key, held in marks.items()}
         del held[tag]
-        if held:
-            updated[duration] = held
-        else:
-            updated.pop(duration, None)
-        committed = sum(int(held.get(tag, 0)) for held in updated.values())
+        if not held:
+            marks.pop(duration, None)
+        committed = _committed_effort(marks, tag)
         hc.set_mark(
             found.name,
             EFFORT_MARK,
-            updated or None,
+            marks or None,
             f"{found.name} reclaims {amount} {duration} Effort from {tag}.",
         )
         return {
@@ -288,13 +280,8 @@ def first_aid(healer: str, target: str, ctx: ToolContext) -> dict[str, Any]:
     spec = ctx.world.character
 
     def action(hc: HookContext) -> dict[str, Any]:
-        state = hc.state()
-        doctor = state.characters.get(name_key(healer))
-        if doctor is None:
-            raise InvalidInput(f"there is no character named {healer!r}")
-        patient = state.characters.get(name_key(target))
-        if patient is None:
-            raise InvalidInput(f"there is no character named {target!r}")
+        doctor = hc.character(healer)
+        patient = hc.character(target)
         if patient.dead:
             raise InvalidInput(f"{patient.name} is dead and cannot be helped by first aid")
         if "hp" not in patient.stats:
@@ -393,14 +380,6 @@ def first_aid(healer: str, target: str, ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.with_hook_context(action)
 
 
-def _character(hc: HookContext, name: str) -> tuple[CampaignState, Character]:
-    state = hc.state()
-    character = state.characters.get(name_key(name))
-    if character is None:
-        raise InvalidInput(f"there is no character named {name!r}")
-    return state, character
-
-
 def _spell(spec: CharacterSpec, spell: str) -> Any:
     feature = spec.features.get(spell)
     if feature is None:
@@ -416,6 +395,16 @@ def _duration(duration: str) -> str:
         options = ", ".join(EFFORT_DURATIONS)
         raise InvalidInput(f"duration must be one of: {options}")
     return value
+
+
+def _effort_marks(character: Character) -> dict[str, dict[str, Any]]:
+    """A writable copy of the character's committed Effort by duration and then tradition."""
+    return {key: dict(held) for key, held in (character.marks.get(EFFORT_MARK) or {}).items()}
+
+
+def _committed_effort(marks: Mapping[str, Mapping[str, Any]], tag: str) -> int:
+    """Every point of one tradition's Effort committed, across all durations."""
+    return sum(int(held.get(tag, 0)) for held in marks.values() if isinstance(held, Mapping))
 
 
 __all__ = [
