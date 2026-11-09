@@ -10,7 +10,12 @@ from typing import Any
 
 import pytest
 
-from cygnusloom.content.character import NO_CAMPAIGN, TableOption, campaign_schema
+from cygnusloom.content.character import (
+    NO_CAMPAIGN,
+    Granted,
+    TableOption,
+    campaign_schema,
+)
 from cygnusloom.content.definitions import ContentError, Definition, read_definitions
 from cygnusloom.content.library import (
     DATA_DIR,
@@ -127,6 +132,45 @@ def test_bundled_content_loads():
     assert academy.advancements
     assert academy.periods
     assert "magicschool" in academy.table_genres
+
+
+CAIRN_BACKGROUND_KIT = (
+    Granted("backpack", "1"),
+    Granted("gold", "3d6"),
+    Granted("rations", "1"),
+)
+
+
+def test_bundled_cairn_backgrounds_keep_their_kit():
+    """The kit moved from every background to the rule set's template defaults, and still
+    comes first, followed by each background's own items in their original order."""
+    backgrounds = {
+        template.id: template
+        for template in content_library().rule_sets["cairn2e"].character.templates.values()
+        if template.kind == "background"
+    }
+    assert backgrounds["aurifex"].features == (
+        *CAIRN_BACKGROUND_KIT,
+        Granted("lantern", "1"),
+        Granted("oil-can", "1"),
+        Granted("needle-knife", "1"),
+        Granted("protective-gloves", "1"),
+    )
+    assert backgrounds["barber-surgeon"].features == (
+        *CAIRN_BACKGROUND_KIT,
+        Granted("torch", "1"),
+        Granted("bonesaw", "1"),
+        Granted("bandages", "1"),
+        Granted("leech", "1"),
+        Granted("stained-medical-finery", "1"),
+    )
+    assert len(backgrounds) == 20
+    kit_features = {grant.feature for grant in CAIRN_BACKGROUND_KIT}
+    for template in backgrounds.values():
+        assert template.features[: len(CAIRN_BACKGROUND_KIT)] == CAIRN_BACKGROUND_KIT, template.id
+        own = template.features[len(CAIRN_BACKGROUND_KIT) :]
+        assert own, template.id
+        assert kit_features.isdisjoint(grant.feature for grant in own), template.id
 
 
 def _load_test_hooks(module: ModuleType, **overrides: Any):
@@ -589,6 +633,95 @@ def test_rule_set_blurb_is_read(tree: Path):
     rule_set = [{**_rule_set()[0], "blurb": "A short line."}]
     _write(tree, {"rulesets/testset/rule_set.json": rule_set})
     assert ContentLibrary.load(tree).rule_sets["testset"].blurb == "A short line."
+
+
+def _write_template_features(tree: Path, defaults: Any) -> None:
+    """A rule set whose backgrounds get `defaults` before their own grants."""
+    features = [
+        {"type": "feature", "id": feature, "name": feature.title(), "feature_type": "trait"}
+        for feature in ("pack", "coin", "ration", "rope")
+    ]
+    templates = [
+        {
+            "type": "template",
+            "id": "porter",
+            "kind": "background",
+            "name": "Porter",
+            "description": "Carries things.",
+            "features": [{"feature": "rope", "quantity": "1"}],
+        },
+        {
+            "type": "template",
+            "id": "cook",
+            "kind": "background",
+            "name": "Cook",
+            "description": "Feeds people.",
+            "features": [
+                {"feature": "coin", "quantity": "2d6"},
+                {"feature": "rope", "quantity": "2"},
+            ],
+        },
+        {
+            "type": "template",
+            "id": "fighter",
+            "kind": "class",
+            "name": "Fighter",
+            "description": "Fights.",
+        },
+    ]
+    head = {**_rule_set()[0], "template_features": defaults}
+    _write(
+        tree,
+        {
+            "rulesets/testset/rule_set.json": [head],
+            "rulesets/testset/features.json": features,
+            "rulesets/testset/templates.json": templates,
+        },
+    )
+
+
+def test_rule_set_template_features_prefix_a_templates_kind(tree: Path):
+    _write_template_features(
+        tree,
+        {
+            "background": [
+                {"feature": "pack", "quantity": "1"},
+                {"feature": "coin", "quantity": "3d6"},
+                {"feature": "ration", "quantity": "1"},
+            ]
+        },
+    )
+    spec = ContentLibrary.load(tree).rule_sets["testset"].character
+    assert spec.templates["porter"].features == (
+        Granted("pack", "1"),
+        Granted("coin", "3d6"),
+        Granted("ration", "1"),
+        Granted("rope", "1"),
+    )
+    # A template grant replaces the default for the same feature, without repeating it, and
+    # stays in the template's own order after the remaining defaults.
+    assert spec.templates["cook"].features == (
+        Granted("pack", "1"),
+        Granted("ration", "1"),
+        Granted("coin", "2d6"),
+        Granted("rope", "2"),
+    )
+    # Only the named template kind is affected.
+    assert spec.templates["fighter"].features == ()
+
+
+@pytest.mark.parametrize(
+    "grants",
+    [
+        [{"feature": "missing", "quantity": "1"}],
+        [{"feature": "pack", "quantity": "often"}],
+    ],
+    ids=["unknown-feature", "bad-quantity"],
+)
+def test_rule_set_template_features_validate_their_grants(tree: Path, grants: Any):
+    _write_template_features(tree, {"background": grants})
+    with pytest.raises(ContentError, match="template_features"):
+        ContentLibrary.load(tree)
 
 
 def test_rule_set_id_must_match_its_directory(tree: Path):

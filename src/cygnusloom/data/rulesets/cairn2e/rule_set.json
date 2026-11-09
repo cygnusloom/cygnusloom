@@ -22,6 +22,22 @@
       "hardier": 6,
       "serious": 10
     },
+    "template_features": {
+      "background": [
+        {
+          "feature": "backpack",
+          "quantity": "1"
+        },
+        {
+          "feature": "gold",
+          "quantity": "3d6"
+        },
+        {
+          "feature": "rations",
+          "quantity": "1"
+        }
+      ]
+    },
     "description": "Character creation for Cairn, a second edition fantasy roleplaying game of wild lands and dark forests, written by Yochai Gal. Text adapted from cairnrpg.com and licensed under CC BY-SA 4.0. https://cairnrpg.com/second-edition/"
   },
   {

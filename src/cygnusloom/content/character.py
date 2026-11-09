@@ -501,6 +501,7 @@ def build_character(
     icon_entries: Mapping[str, tuple[str | None, str | None]] | None = None,
     starting_silver: StartingSilver | None = None,
     feature_types: Mapping[str, FeatureTypeRules] | None = None,
+    template_features: object = None,
 ) -> CharacterSpec:
     """Build the character spec from a rule set's definitions. `tables` are already loaded.
     `icon_entries` maps a feature id to its raw (icon, looks_like) so one feature may borrow
@@ -540,8 +541,13 @@ def build_character(
     fields = _each(
         definitions, "character_field", lambda d: _field(d, tables, "character_field", template)
     )
+    default_features = _template_features(template_features, features, template)
     templates = _each(
-        definitions, "template", lambda d: _template(d, features, tables, skills, levels, template)
+        definitions,
+        "template",
+        lambda d: _template(
+            d, features, tables, skills, levels, template, defaults=default_features
+        ),
     )
     _check_stat_links(stats, skills, counter_ids, template)
     _check_derived_skill_picks(stats, templates, fields, template)
@@ -1424,6 +1430,7 @@ def _template(
     skills: Mapping[str, Skill],
     skill_progression: SkillProgression | None,
     template: str,
+    defaults: Mapping[str, tuple[Granted, ...]] | None = None,
 ) -> Template:
     label = f"{template}: template {definition.id}"
     data = definition.data
@@ -1432,7 +1439,11 @@ def _template(
     granted = data.get("features", [])
     if not isinstance(granted, list):
         raise ContentError(f"{label}: 'features' must be a list")
-    grants = tuple(_granted(item, features, label) for item in granted)
+    kind = required_text(data, "kind", label)
+    grants = _with_default_grants(
+        tuple(_granted(item, features, label) for item in granted),
+        (defaults or {}).get(kind, ()),
+    )
     table_ids = data.get("tables", [])
     if not isinstance(table_ids, list) or not all(isinstance(t, str) for t in table_ids):
         raise ContentError(f"{label}: 'tables' must be a list of table ids")
@@ -1445,7 +1456,7 @@ def _template(
         raise ContentError(f"{label}: 'choice_key' must be non-empty text")
     return Template(
         id=definition.id,
-        kind=required_text(data, "kind", label),
+        kind=kind,
         name=required_text(data, "name", label),
         description=required_text(data, "description", label),
         features=grants,
@@ -1757,6 +1768,39 @@ def _names(
     if not isinstance(table, str) or table not in tables:
         raise ContentError(f"{label}: 'names' must be the id of a table")
     return tuple(option.value for option in tables[table])
+
+
+def _with_default_grants(
+    own: tuple[Granted, ...], defaults: tuple[Granted, ...]
+) -> tuple[Granted, ...]:
+    """A template's own grants with its kind's defaults put first. A default whose feature the
+    template grants itself is dropped, so the template's grant replaces it rather than repeating
+    it."""
+    own_features = {grant.feature for grant in own}
+    return (*(grant for grant in defaults if grant.feature not in own_features), *own)
+
+
+def _template_features(
+    value: object, features: Mapping[str, Feature], label: str
+) -> dict[str, tuple[Granted, ...]]:
+    """The rule set's default feature grants, by template kind. Every template of a kind begins
+    with them; its own grants follow, replacing any default it grants itself."""
+    if value is None:
+        return {}
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label}: 'template_features' must map kinds to feature grants")
+    defaults: dict[str, tuple[Granted, ...]] = {}
+    for kind, grants in value.items():
+        if not isinstance(kind, str) or not kind.strip():
+            raise ContentError(f"{label}: 'template_features' kinds must be non-empty text")
+        if not isinstance(grants, list):
+            raise ContentError(
+                f"{label}: 'template_features' {kind!r} must be a list of feature grants"
+            )
+        defaults[kind] = tuple(
+            _granted(grant, features, f"{label}: template_features {kind!r}") for grant in grants
+        )
+    return defaults
 
 
 def _granted(item: object, features: Mapping[str, Feature], label: str) -> Granted:
