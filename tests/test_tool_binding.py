@@ -291,11 +291,9 @@ def test_wwn_binds_the_tools_it_used_to_wrap():
         assert calls[call_id].function is None
     assert calls["roll_check"].bind == {"check": "skill"}
     assert calls["set_ac"].rename == {"ac": "armor"}
-    assert calls["roll_save"].rename == {
-        "character": "name",
-        "save": "stat",
-        "cause": "reason",
-    }
+    # roll_save now uses the shared canonical argument names, so it needs no mapping.
+    assert calls["roll_save"].world_method == "roll_save"
+    assert calls["roll_save"].rename == {}
     assert calls["heal_strain"].world_method == "restore_stat"
     assert calls["heal_strain"].bind == {"stat": "strain"}
     assert calls["add_strain"].world_method == "harm_stat"

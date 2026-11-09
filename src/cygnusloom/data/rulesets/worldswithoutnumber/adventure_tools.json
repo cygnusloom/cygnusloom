@@ -2,28 +2,21 @@
   {
     "type": "tool_call",
     "id": "roll_save",
-    "name": "roll_save",
-    "world_method": "roll_save",
-    "rename": {"character": "name", "save": "stat", "cause": "reason"},
+    "extends": "core:tool_call/roll_save",
     "description": "Roll a saving throw: d20 against the character's Physical, Evasion, Mental, or Luck save, succeeding on a roll equal to or above the score. Call it when an effect threatens the character and the rules allow a save. A failure is recorded; apply what it costs yourself.",
     "parameters": {
-      "type": "object",
       "properties": {
-        "character": {
-          "type": "string",
+        "name": {
           "description": "The name of the character making the save."
         },
-        "save": {
-          "type": "string",
+        "stat": {
           "enum": ["save_physical", "save_evasion", "save_mental", "save_luck"],
           "description": "Which save: save_physical for bodily harm, save_evasion for dodging, save_mental for willpower, save_luck for blind chance."
         },
-        "cause": {
-          "type": "string",
+        "reason": {
           "description": "What the save is against, in a few words."
         }
-      },
-      "required": ["character", "save", "cause"]
+      }
     }
   },
   {
@@ -128,22 +121,11 @@
   {
     "type": "tool_call",
     "id": "travel",
-    "name": "travel",
-    "world_method": "travel",
+    "extends": "core:tool_call/travel",
     "description": "Travel overland by the WWN rules. A day is ten hours of marching; base speed is 3 mph on plains, 2 in light forest or desert, 1.5 in dense forest or rugged hills, 1 in swamp, and 0.5 in mountains or broken highland. A road doubles the pace, foul weather halves it, and deep snow reduces it to a tenth. The engine moves the character and advances the clock. Apply the returned food, water, firewood, and privation figures with use_item, add_strain, and the usual bookkeeping; foraging takes half a day and a Wis/Survive check at the returned difficulty.",
     "parameters": {
-      "type": "object",
       "properties": {
-        "character": {
-          "type": "string",
-          "description": "The player character making the journey."
-        },
-        "destination": {
-          "type": "string",
-          "description": "The place the party travels to."
-        },
         "terrain": {
-          "type": "string",
           "enum": [
             "plains",
             "light_forest",
@@ -153,40 +135,16 @@
             "swamp",
             "mountains",
             "broken_highland"
-          ],
-          "description": "The hardest terrain on the route."
+          ]
         },
         "road": {
-          "type": "boolean",
-          "default": false,
           "description": "True when the route follows a road, which doubles the pace."
         },
         "weather": {
-          "type": "string",
           "enum": ["clear", "foul", "deep_snow"],
-          "default": "clear",
           "description": "Foul weather halves the pace; deep snow reduces it to a tenth."
-        },
-        "days": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 30,
-          "default": 1,
-          "description": "Whole days of travel, from 1 to 30. Defaults to 1."
-        },
-        "travelers": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 20,
-          "default": 1,
-          "description": "How many people are travelling, for supply needs. Defaults to 1."
-        },
-        "reason": {
-          "type": "string",
-          "description": "A short note on the journey, for the log."
         }
-      },
-      "required": ["character", "destination", "terrain"]
+      }
     }
   },
   {
@@ -248,23 +206,12 @@
   {
     "type": "tool_call",
     "id": "attack",
-    "name": "attack",
-    "world_method": "attack",
+    "extends": "core:tool_call/attack",
     "description": "Make an NPC's attack: d20 plus its attack bonus against the target's Armor Class, with a natural 1 always missing and a natural 20 always hitting. The engine rolls the damage; on a miss it still applies the attack's Shock when the target's AC is low enough. An attack is refused unless the attacker is the character taking their turn, so the player presses Start for the NPC's turn first; pass force true only for an action the story needs outside the turn order, such as an ambush.",
     "parameters": {
-      "type": "object",
       "properties": {
-        "attacker": {
-          "type": "string",
-          "description": "The name of the NPC attacking."
-        },
         "attack": {
-          "type": "string",
           "description": "The name of one of its attacks, as the statblock lists it."
-        },
-        "target": {
-          "type": "string",
-          "description": "The name of the character being attacked."
         },
         "hit_modifier": {
           "type": "integer",
@@ -279,21 +226,14 @@
           "maximum": 10,
           "default": 0,
           "description": "How many attacks to resolve. Leave it out to use the statblock's attacks per action, or set 1 for a single attack."
-        },
-        "force": {
-          "type": "boolean",
-          "default": false,
-          "description": "Resolve the attack even though this is not the attacker's turn. Set it only when the story needs an action outside the turn order, such as an ambush that catches the party unawares."
         }
-      },
-      "required": ["attacker", "attack", "target"]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "player_attack",
-    "name": "player_attack",
-    "world_method": "player_attack",
+    "extends": "core:tool_call/player_attack",
     "description": "Ask the player to roll their attack with a carried weapon or unarmed, then record the d20. The engine adds the weapon skill, the best weapon attribute, the attack bonus, and a Warrior's Killing Blow, rolls damage, and applies Shock on a miss when the target's AC is low enough. Use it for the player character; the player presses the roll button and the result is final. An attack is refused unless the player character is taking their turn; their turn starts automatically when it comes up. Pass force true only for an action the story needs outside the turn order.",
     "player_input": {
       "dice": "1d20",
@@ -301,14 +241,11 @@
       "details": "{weapon} against {target}: roll 1d20 and add your attack bonus. The engine rolls damage."
     },
     "parameters": {
-      "type": "object",
       "properties": {
         "target": {
-          "type": "string",
           "description": "The name of the character being attacked."
         },
         "weapon": {
-          "type": "string",
           "description": "The carried weapon's name, as given, or unarmed."
         },
         "hit_modifier": {
@@ -329,17 +266,16 @@
           "default": false,
           "description": "True when attacking with two one-handed melee weapons. The engine applies the rule set's dual-wield hit penalty and damage bonus."
         },
-        "force": {
-          "type": "boolean",
-          "default": false,
-          "description": "Resolve the attack even though this is not the player character's turn. Set it only when the story needs an action outside the turn order."
-        },
         "prompt": {
           "type": "string",
           "description": "What the player is asked to roll, such as 'Roll your attack with the long sword.'"
         }
       },
-      "required": ["target", "weapon", "prompt"]
+      "required": [
+        "target",
+        "weapon",
+        "prompt"
+      ]
     }
   },
   {
@@ -367,16 +303,7 @@
   {
     "type": "tool_call",
     "id": "set_armor",
-    "extends": "core:tool_call/set_armor",
-    "description": "Set a character's total Armor Class for a special adjustment or a monster's printed AC. For tracked equipment the adjustment persists as equipment or other defense changes. Use equip_armor for equipment changes.",
-    "parameters": {
-      "properties": {
-        "armor": {
-          "maximum": 30,
-          "description": "The new total Armor Class."
-        }
-      }
-    }
+    "disabled": true
   },
   {
     "type": "tool_call",

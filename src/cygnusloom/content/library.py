@@ -2350,9 +2350,11 @@ def _infer_capabilities(
     combat = any(d.type == "combat" for d in defs)
     if permissive:
         social = SOCIAL_CAPABILITIES
-        # Core authors the shared combat tools before any rule set contributes a combat
-        # definition, so its inferred model must allow them.
+        # Core authors the shared combat and travel tools before any rule set contributes
+        # those definitions, so its inferred model must allow them.
         combat = True
+        if travel == "none":
+            travel = "terrain"
     else:
         present = {d.type for d in defs}
         social = tuple(

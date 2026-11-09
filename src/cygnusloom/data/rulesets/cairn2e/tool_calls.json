@@ -112,24 +112,10 @@
   {
     "type": "tool_call",
     "id": "attack",
-    "name": "attack",
-    "world_method": "attack",
+    "extends": "core:tool_call/attack",
     "description": "Make an NPC's attack against a character. Attacks always hit. The attack's damage is rolled by the engine and reduces the target's armor, then Hit Protection, then Strength, and a target whose Strength is used up must make a Strength save. Use it only when the attacker is taking their turn, after the initiative is set; an attack by anyone else is refused unless force is true. Player characters attack with player_attack, not this tool. A detachment (a statblock marked as a group) is hit only by impaired attacks, except an individual's attack with Blast, which rolls its normal dice against it. A detachment's own attack has Blast: the engine rolls its enhanced damage separately for each living individual on the other side, and the target you name is one of them; leave targets out for a detachment. An individual's attack with Blast (its statblock lists the attack with the blast flag) hits every target you list in targets, and each target rolls its damage separately; the target you name must be in that list. Without targets, it hits the named target alone and rolls once. An attack flagged ignores_armor skips the target's armor. A detachment whose Strength is used up makes a Strength save; if it fails it is broken, and the attack and targeting are refused until resolve_group_break is called.",
     "parameters": {
-      "type": "object",
       "properties": {
-        "attacker": {
-          "type": "string",
-          "description": "The name of the NPC attacking."
-        },
-        "attack": {
-          "type": "string",
-          "description": "The name of one of the attacker's attacks, as the statblock lists it."
-        },
-        "target": {
-          "type": "string",
-          "description": "The name of the character being attacked."
-        },
         "modifier": {
           "type": "string",
           "enum": [
@@ -145,25 +131,14 @@
             "type": "string"
           },
           "description": "Only for an individual's attack with Blast: the names of every character in its area, including the target. Each rolls its damage separately. Leave it out for any other attack."
-        },
-        "force": {
-          "type": "boolean",
-          "default": false,
-          "description": "Resolve the attack even though this is not the attacker's turn. Set it only when the story needs an action outside the turn order, such as an ambush that catches the party unawares."
         }
-      },
-      "required": [
-        "attacker",
-        "attack",
-        "target"
-      ]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "player_attack",
-    "name": "player_attack",
-    "world_method": "player_attack",
+    "extends": "core:tool_call/player_attack",
     "description": "Ask the player to roll their attack against a target. Attacks always hit, so the player's weapon roll is the damage; the modifier's dice replace the weapon's when one is named. The weapon must be carried (give it with give_item first, naming its damage if it is not in the catalogue), or be 'unarmed' for fists. Use it when the player says what they attack with, the target is in the encounter, and it is the player character's turn; an attack outside their turn is refused unless force is true. The target takes the damage through its armor, Hit Protection, and Strength, as with an NPC attack. A detachment can only be hit by an impaired attack.",
     "player_input": {
       "weapon_param": "weapon",
@@ -172,16 +147,7 @@
       "modifier_param": "modifier"
     },
     "parameters": {
-      "type": "object",
       "properties": {
-        "target": {
-          "type": "string",
-          "description": "The name of the character or NPC being attacked."
-        },
-        "weapon": {
-          "type": "string",
-          "description": "The weapon or means of attack, such as 'longsword'. It must be carried, or 'unarmed' for fists."
-        },
         "prompt": {
           "type": "string",
           "description": "What the player is asked to do, such as 'Roll your longsword damage.'"
@@ -194,11 +160,6 @@
             "enhanced"
           ],
           "description": "The attack's modifier. 'normal' is the attack's own dice; 'impaired' and 'enhanced' roll different dice. Leave it out for a normal attack."
-        },
-        "force": {
-          "type": "boolean",
-          "default": false,
-          "description": "Resolve the attack even though this is not the player character's turn. Set it only when the story needs an action outside the turn order."
         }
       },
       "required": [
@@ -815,18 +776,10 @@
   {
     "type": "tool_call",
     "id": "roll_save",
-    "name": "roll_save",
-    "world_method": "roll_save",
-    "description": "Roll a save for a character. The engine rolls the die and compares it to the stat, and records the result. A failure does not defeat the character; apply what the save costs yourself.",
+    "extends": "core:tool_call/roll_save",
     "parameters": {
-      "type": "object",
       "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the character or NPC."
-        },
         "stat": {
-          "type": "string",
           "enum": [
             "str",
             "dex",
@@ -835,15 +788,9 @@
           "description": "The stat to save against."
         },
         "reason": {
-          "type": "string",
           "description": "What the save is for, such as 'a spell's backlash'."
         }
-      },
-      "required": [
-        "name",
-        "stat",
-        "reason"
-      ]
+      }
     }
   },
   {

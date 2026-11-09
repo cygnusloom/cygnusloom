@@ -1496,9 +1496,7 @@ def test_list_lookups_gives_a_brief_of_every_tool_rule_location_and_npc(
     _, campaign_id = _campaign_id(client_factory)
     listing = _tool(app, campaign_id, "list_lookups", {})
     lookup_tools = {
-        call.name
-        for call in LIBRARY.rule_sets["rolltest"].tool_calls.values()
-        if call.lookup
+        call.name for call in LIBRARY.rule_sets["rolltest"].tool_calls.values() if call.lookup
     }
     assert {entry["tool"] for entry in listing["tools"]} == lookup_tools
     assert all(entry["brief"] for entry in listing["tools"])

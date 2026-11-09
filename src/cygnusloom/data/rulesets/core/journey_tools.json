@@ -1,0 +1,56 @@
+[
+  {
+    "type": "tool_call",
+    "id": "travel",
+    "name": "travel",
+    "enabled_by": {"travel": ["terrain"]},
+    "world_method": "travel",
+    "description": "Travel overland by the rule set's terrain-day journey rules. The engine moves the character and advances the clock. Apply the returned supply and privation figures with the rule set's usual bookkeeping.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The player character making the journey."
+        },
+        "destination": {
+          "type": "string",
+          "description": "The place the party travels to."
+        },
+        "terrain": {
+          "type": "string",
+          "description": "The hardest terrain on the route."
+        },
+        "road": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when the route follows a road."
+        },
+        "weather": {
+          "type": "string",
+          "default": "clear",
+          "description": "The weather on the journey."
+        },
+        "days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30,
+          "default": 1,
+          "description": "Whole days of travel, from 1 to 30. Defaults to 1."
+        },
+        "travelers": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "default": 1,
+          "description": "How many people are travelling, for supply needs. Defaults to 1."
+        },
+        "reason": {
+          "type": "string",
+          "description": "A short note on the journey, for the log."
+        }
+      },
+      "required": ["character", "destination", "terrain"]
+    }
+  }
+]
