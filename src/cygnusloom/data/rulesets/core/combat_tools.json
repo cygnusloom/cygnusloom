@@ -1,0 +1,450 @@
+[
+  {
+    "type": "tool_call",
+    "id": "add_participant",
+    "name": "add_participant",
+    "requires": ["combat"],
+    "world_method": "add_participant",
+    "description": "Add a character to the encounter in progress, on a side. Player characters default to the party and NPCs to the foes. The turn order keeps each side together: the party first, then the other sides in the order they first appear. A character who is not at the encounter's location is still added, and the result carries a warning to act on.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "side": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "place_participant",
+    "name": "place_participant",
+    "requires": ["combat"],
+    "world_method": "place_participant",
+    "description": "Put a participant on a cell of the encounter map, counted from 0 at the top left: column increases to the right and row increases downward. Moving is limited to the rule set's movement per turn, counted in cells moved in a straight line or diagonal. Obstacles block: a cell with a blocking object cannot be entered or be the destination, so the participant goes around it. Terrain that costs extra movement to enter takes that many moves for each cell entered. That limit applies only to the participant whose turn it is; moving anyone else is free, though they still cannot enter a blocked cell. The first placement is free. Use this to move a participant, not to tell the story of how they got there.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "column": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "row": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "column",
+        "row"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "remove_participant",
+    "name": "remove_participant",
+    "requires": ["combat"],
+    "world_method": "remove_participant",
+    "description": "Take a character out of the encounter in progress. If they are taking their turn, it ends and the next participant's turn follows.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "create_encounter_map",
+    "name": "create_encounter_map",
+    "requires": ["combat"],
+    "world_method": "create_encounter_map",
+    "description": "Create an encounter map: a grid of cells set in an existing location, where a tactical encounter takes place. Use it before starting an encounter there. Cells are scaled by the rule set's grid.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "ambient": {
+          "description": "An ambient look id from map_options: day, dusk, night, torchlit, foggy, underwater, or magical.",
+          "type": "string"
+        },
+        "background_color": {
+          "type": "string"
+        },
+        "columns": {
+          "type": "integer"
+        },
+        "description": {
+          "type": "string"
+        },
+        "grid_color": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "palette": {
+          "type": "string"
+        },
+        "rows": {
+          "type": "integer"
+        },
+        "template": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "location",
+        "description"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "update_encounter_map",
+    "name": "update_encounter_map",
+    "requires": ["combat"],
+    "world_method": "update_encounter_map",
+    "description": "Change an encounter map: its name, the location it is in, its size, or its description. Refused if the new name is taken or a participant would be left outside the new size.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "ambient": {
+          "type": "string"
+        },
+        "background": {
+          "description": "A terrain id for the board's background. Leave out to keep it.",
+          "type": "string"
+        },
+        "background_color": {
+          "description": "A hex colour for the board's ground. Leave out to keep it.",
+          "type": "string"
+        },
+        "columns": {
+          "type": "integer"
+        },
+        "description": {
+          "type": "string"
+        },
+        "extend_down": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "extend_left": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "extend_right": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "extend_up": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "grid_color": {
+          "description": "A hex colour for the board's grid lines. Leave out to keep it.",
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "new_name": {
+          "type": "string"
+        },
+        "palette": {
+          "type": "string"
+        },
+        "rows": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "columns",
+        "rows",
+        "description"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "delete_encounter_map",
+    "name": "delete_encounter_map",
+    "requires": ["combat"],
+    "world_method": "delete_encounter_map",
+    "description": "Delete an encounter map. Refused while an encounter is using it.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "start_encounter",
+    "name": "start_encounter",
+    "requires": ["combat"],
+    "world_method": "start_encounter",
+    "description": "Start an encounter on an encounter map. Its location becomes the encounter's location. Only one encounter can be in progress at a time. Add participants after starting. The player character and NPCs take turns in the order they join.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "map": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "map"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "end_encounter",
+    "name": "end_encounter",
+    "requires": ["combat"],
+    "world_method": "end_encounter",
+    "description": "End the encounter in progress. Any turn in progress ends with it.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "harm_character",
+    "name": "harm_character",
+    "requires": ["combat"],
+    "world_method": "harm_character",
+    "description": "Harm a character outside combat, from a fall, poison, exposure, or a similar hazard. Narrate what hurt them. Use it only for harm that does not come from a combat attack.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "cause": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "stat": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "stat",
+        "amount",
+        "cause"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "heal_character",
+    "name": "heal_character",
+    "requires": ["combat"],
+    "world_method": "heal_character",
+    "description": "Restore lost points of a stat, usually hit points, from a healing spell, art, or item. It never restores more than the character has lost.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "description": "How many points the healing restores before the cap.",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "cause": {
+          "description": "What did the healing, such as a spell or art.",
+          "type": "string"
+        },
+        "name": {
+          "description": "The character to heal.",
+          "type": "string"
+        },
+        "stat": {
+          "description": "The stat to restore. Defaults to hp.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "amount"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "recover_character",
+    "name": "recover_character",
+    "requires": ["combat"],
+    "world_method": "recover_character",
+    "description": "Bring a character back from critical damage, where they were left unconscious and bleeding out. Use it only for a living character who is not dying; a dying character must be stabilized first. Narrate how they survived, and what it cost them. The harm they took stays as it was.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "consequence": {
+          "type": "string"
+        },
+        "explanation": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "explanation",
+        "consequence"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "resolve_attacks",
+    "name": "resolve_attacks",
+    "requires": ["combat"],
+    "world_method": "resolve_attacks",
+    "description": "Resolve several NPC attacks on one character at once, such as several foes attacking the same character or one NPC using several weapons. Each attack rolls its own dice. Every attacker must be taking their turn unless force is true. Use it only when the attackers' turns come up, after the initiative is set. Player characters attack with player_attack, not this tool.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "attacks": {
+          "description": "The attacks to resolve, one entry per attack.",
+          "items": {
+            "properties": {
+              "attack": {
+                "type": "string"
+              },
+              "attacker": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "attacker",
+              "attack"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "force": {
+          "default": false,
+          "description": "Resolve the attacks even though they are not the attackers' turns. Set it only when the story needs an action outside the turn order, such as an ambush.",
+          "type": "boolean"
+        },
+        "target": {
+          "description": "The name of the character being attacked.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target",
+        "attacks"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "retreat",
+    "name": "retreat",
+    "requires": ["combat"],
+    "world_method": "retreat",
+    "description": "Have a character try to run from the encounter. Pass safe as true only when the character has a safe way out; if not, the attempt is refused. A passed save takes the character out of the fight. A failed save leaves them in the fight.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "safe": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "safe"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "stabilize",
+    "name": "stabilize",
+    "requires": ["combat"],
+    "world_method": "stabilize",
+    "description": "Stabilize a dying character, stopping the clock that would kill them, when the story gives them aid: a healer, a rescue, a miracle. Narrate how. Use it only for a character who is dying.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "explanation": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "explanation"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "set_armor",
+    "name": "set_armor",
+    "requires": ["combat"],
+    "world_method": "set_armor",
+    "description": "Set a character's armor value. Use it when a character puts on or takes off armor, or when a monster's armor changes.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "armor": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "name": {
+          "description": "The name of the character or NPC.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "armor"
+      ]
+    }
+  }
+]

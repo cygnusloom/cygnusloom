@@ -11,6 +11,7 @@
       "travel": "terrain",
       "wilderness": false,
       "dungeon": false,
+      "combat": true,
       "social": ["conditions", "counters", "checks", "factions", "projects"]
     },
     "plus": "sum",

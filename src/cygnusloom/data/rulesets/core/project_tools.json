@@ -1,0 +1,106 @@
+[
+  {
+    "type": "tool_call",
+    "id": "abandon_project",
+    "name": "abandon_project",
+    "requires": ["social.projects"],
+    "world_method": "abandon_project",
+    "description": "Give up a project, a research effort, or another long effort.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "advance_project",
+    "name": "advance_project",
+    "requires": ["social.projects"],
+    "world_method": "advance_project",
+    "description": "Add progress to a project, a research effort, or another long effort. Record in the note what the time, money, or roll bought. The project completes when progress reaches its target.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "description": "Progress points gained.",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "name": {
+          "description": "The project's name.",
+          "type": "string"
+        },
+        "note": {
+          "description": "What was spent or learned.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "amount"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "start_project",
+    "name": "start_project",
+    "requires": ["social.projects"],
+    "world_method": "start_project",
+    "description": "Begin a long-running effort and track its points toward a target: a project, a piece of research, or another long effort. The kind and goal are free text; the target is how many points of work it needs. Advance it with advance_project as time, money, and rolls are spent.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "force": {
+          "description": "Set true to replace a project of the same name.",
+          "type": "boolean"
+        },
+        "goal": {
+          "description": "What completing it achieves.",
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "description": "The project's name, unique among projects.",
+          "type": "string"
+        },
+        "target": {
+          "description": "How many progress points it needs.",
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "goal",
+        "target"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "list_projects",
+    "name": "list_projects",
+    "requires": ["social.projects"],
+    "python_module": "core",
+    "function": "list_projects",
+    "description": "List every project with its progress, notes, and whether it is complete or abandoned.",
+    "parameters": {
+      "type": "object",
+      "properties": {}
+    }
+  }
+]

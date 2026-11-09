@@ -1858,6 +1858,7 @@ CAPABILITY_PATHS = frozenset(
         "travel",
         "wilderness",
         "dungeon",
+        "combat",
         "social",
         *(f"social.{name}" for name in SOCIAL_CAPABILITIES),
     }
@@ -1877,6 +1878,8 @@ class Capabilities:
     travel: str = "none"
     wilderness: bool = False
     dungeon: bool = False
+    # Whether the rule set resolves combat with initiative, attacks, and encounters.
+    combat: bool = False
     # The social systems the rule set defines, from SOCIAL_CAPABILITIES.
     social: tuple[str, ...] = ()
 
@@ -1890,6 +1893,8 @@ class Capabilities:
             return self.wilderness
         if path == "dungeon":
             return self.dungeon
+        if path == "combat":
+            return self.combat
         if path == "social":
             return bool(self.social)
         if path.startswith("social."):
@@ -1906,6 +1911,8 @@ class Capabilities:
             return self.wilderness in values
         if path == "dungeon":
             return self.dungeon in values
+        if path == "combat":
+            return self.combat in values
         if path == "social":
             return any(value in self.social for value in values)
         return False
@@ -2267,7 +2274,7 @@ def _load_capabilities(value: object, label: str) -> Capabilities:
         raise ContentError(f"{label}: 'capabilities' must be an object")
     check_keys(
         value,
-        {"magic", "travel", "wilderness", "dungeon", "social"},
+        {"magic", "travel", "wilderness", "dungeon", "combat", "social"},
         f"{label}: capabilities",
     )
     magic = value.get("magic", "none")
@@ -2282,7 +2289,12 @@ def _load_capabilities(value: object, label: str) -> Capabilities:
         )
     wilderness = value.get("wilderness", False)
     dungeon = value.get("dungeon", False)
-    for key, setting in (("wilderness", wilderness), ("dungeon", dungeon)):
+    combat = value.get("combat", False)
+    for key, setting in (
+        ("wilderness", wilderness),
+        ("dungeon", dungeon),
+        ("combat", combat),
+    ):
         if not isinstance(setting, bool):
             raise ContentError(f"{label}: capabilities {key!r} must be true or false")
     raw_social = value.get("social", [])
@@ -2303,6 +2315,7 @@ def _load_capabilities(value: object, label: str) -> Capabilities:
         travel=travel,
         wilderness=wilderness,
         dungeon=dungeon,
+        combat=combat,
         social=tuple(raw_social),
     )
 
@@ -2334,8 +2347,12 @@ def _infer_capabilities(
         travel = "watches"
     wilderness = any(d.type == "wilderness" for d in defs)
     dungeon = any(d.type == "rule_data" and d.id == "dungeon" for d in defs)
+    combat = any(d.type == "combat" for d in defs)
     if permissive:
         social = SOCIAL_CAPABILITIES
+        # Core authors the shared combat tools before any rule set contributes a combat
+        # definition, so its inferred model must allow them.
+        combat = True
     else:
         present = {d.type for d in defs}
         social = tuple(
@@ -2358,6 +2375,7 @@ def _infer_capabilities(
         travel=travel,
         wilderness=wilderness,
         dungeon=dungeon,
+        combat=combat,
         social=tuple(social),
     )
 

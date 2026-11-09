@@ -10,6 +10,7 @@
       "travel": "watches",
       "wilderness": true,
       "dungeon": true,
+      "combat": true,
       "social": ["conditions"]
     },
     "plus": "highest",

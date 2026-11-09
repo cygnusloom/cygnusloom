@@ -2050,23 +2050,23 @@
     "id": "rest",
     "name": "rest",
     "world_method": "rest",
-    "description": "Record a rest for the whole party. The Warden decides the length from what the party does: 'moments' is a short break of one hour, such as a drink and a sit-down, 'night' is a full night's rest, which runs until morning, or until dusk when it begins in the morning, 'week' is a week of rest. The rest moves the clock forward itself, so do not also advance_time for the same time. Set interrupted when something breaks the rest, and then it counts as moments only. A full rest, uninterrupted, is the only way to clear Fatigue. A deprived character recovers nothing. Rest eats one ration per character itself (a sheltered character uses the bed instead), so never remove rations before resting; a character with no ration is deprived.",
+    "description": "Record a rest for the whole party. The rest moves the clock forward itself, so do not also advance_time for the same time. Set interrupted when something breaks the rest, and then it counts as moments only.",
     "parameters": {
       "type": "object",
       "properties": {
         "length": {
           "type": "string",
           "enum_from": "rest_lengths",
-          "description": "How long the rest lasts: 'moments', 'night', or 'week'."
+          "description": "How long the rest lasts."
         },
         "interrupted": {
           "type": "boolean",
           "default": false,
-          "description": "True when something breaks the rest. An interrupted rest counts as moments only. Defaults to false."
+          "description": "True when something breaks the rest."
         },
         "reason": {
           "type": "string",
-          "description": "What the party was doing, such as 'camped in the ruined chapel'."
+          "description": "What the party was doing."
         }
       },
       "required": [
