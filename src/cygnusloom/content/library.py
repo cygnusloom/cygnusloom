@@ -404,11 +404,37 @@ class Travel:
         return next(iter(self.modes))
 
 
+JOURNEY_MODELS = ("terrain_days", "watches")
+JOURNEY_EVENT_ON = ("day", "watch")
+JOURNEY_EVENT_KEYS = frozenset({"on", "when", "table", "reason"})
+JOURNEY_WHEN_KEYS = frozenset({"terrain", "weather", "road", "path", "chance"})
+# The highest 1d6 roll that still fires a journey event configured with a chance.
+MAX_JOURNEY_CHANCE = 6
+
+
+@dataclass(frozen=True)
+class JourneyEvent:
+    """A dice-table event rolled during a journey when its conditions match. `on` is "day"
+    for a terrain-day journey or "watch" for a watch-by-watch one. The `when` filters narrow
+    the terrain, weather, road, or path, and `chance` is the highest 1d6 roll that still
+    fires the event."""
+
+    on: str
+    table: str
+    reason: str = ""
+    terrain: tuple[str, ...] = ()
+    weather: tuple[str, ...] = ()
+    road: tuple[bool, ...] = ()
+    path: tuple[str, ...] = ()
+    chance: int | None = None
+
+
 @dataclass(frozen=True)
 class JourneyRules:
-    """An overland journey measured in whole travel days. WWN's model: a day is ten hours of
-    marching, terrain and weather scale the pace, and the return value lists supplies and
-    foraging. Cairn's watch-by-watch journey remains in Wilderness."""
+    """An overland journey measured in whole travel days or in watches. WWN's terrain-day
+    model: a day is ten hours of marching, terrain and weather scale the pace, and the return
+    value lists supplies and foraging. Cairn's watch-by-watch journey keeps its procedure in
+    Wilderness. `events` are dice-table events rolled as the journey passes."""
 
     model: str = "terrain_days"
     day_hours: int = 10
@@ -421,6 +447,8 @@ class JourneyRules:
     firewood_per_day: int = 4
     max_days: int = 30
     max_travelers: int = 20
+    # Dice-table events rolled once per travel day or watch, in the order they are listed.
+    events: tuple[JourneyEvent, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -2294,7 +2322,11 @@ def _infer_capabilities(
             magic = model if model in MAGIC_CAPABILITIES else "item"
             break
     travel = "none"
-    if any(d.type in ("journey", "travel") for d in defs):
+    journey = next((d for d in defs if d.type == "journey"), None)
+    if journey is not None:
+        model = journey.data.get("model", "terrain_days")
+        travel = "watches" if model == "watches" else "terrain"
+    elif any(d.type == "travel" for d in defs):
         travel = "terrain"
     elif any(d.type == "wilderness" for d in defs):
         travel = "watches"
@@ -3723,7 +3755,7 @@ def _build_rule_set(
     prompt_fragments = _load_prompts(definitions, template, capabilities=capabilities)
     sentence_cap = _load_sentence_cap(definitions, template)
     travel = _load_travel(definitions, template)
-    journey = _load_journey(definitions, template)
+    journey = _load_journey(definitions, dice_tables, template)
     terrain = _load_encounter_terrain(definitions, template)
     encounter_objects = _load_encounter_objects(definitions, template)
     encounter_templates = _load_encounter_templates(
@@ -3871,7 +3903,9 @@ def _load_travel(definitions: list[Definition], template: str) -> Travel | None:
     )
 
 
-def _load_journey(definitions: list[Definition], template: str) -> JourneyRules | None:
+def _load_journey(
+    definitions: list[Definition], dice_tables: Mapping[str, DiceTable], template: str
+) -> JourneyRules | None:
     definition = _single_optional(definitions, "journey", template)
     if definition is None:
         return None
@@ -3892,16 +3926,20 @@ def _load_journey(definitions: list[Definition], template: str) -> JourneyRules 
             "firewood_per_day",
             "max_days",
             "max_travelers",
+            "events",
         },
         label,
     )
     model = _optional_text(definition.data, "model", label) or "terrain_days"
-    if model != "terrain_days":
-        raise ContentError(f"{label}: 'model' must be terrain_days")
+    if model not in JOURNEY_MODELS:
+        raise ContentError(f"{label}: 'model' must be one of {', '.join(JOURNEY_MODELS)}")
+    terrain_days = model == "terrain_days"
 
-    def numbers(key: str, *, whole: bool) -> dict[str, float]:
+    def numbers(key: str, *, whole: bool, required: bool) -> dict[str, float]:
         raw = definition.data.get(key, {})
-        if not isinstance(raw, Mapping) or not raw:
+        if not isinstance(raw, Mapping):
+            raise ContentError(f"{label}: {key!r} must be an object")
+        if required and not raw:
             raise ContentError(f"{label}: {key!r} must be a non-empty object")
         loaded: dict[str, float] = {}
         for name, value in raw.items():
@@ -3914,26 +3952,93 @@ def _load_journey(definitions: list[Definition], template: str) -> JourneyRules 
             loaded[name] = float(value)
         return loaded
 
-    terrain_speeds = numbers("terrain_speeds", whole=False)
-    weather_factors = numbers("weather_factors", whole=False)
-    forage = numbers("forage_difficulty", whole=True)
-    if set(terrain_speeds) != set(forage):
+    terrain_speeds = numbers("terrain_speeds", whole=False, required=terrain_days)
+    weather_factors = numbers("weather_factors", whole=False, required=terrain_days)
+    forage = numbers("forage_difficulty", whole=True, required=terrain_days)
+    if terrain_days and set(terrain_speeds) != set(forage):
         raise ContentError(
             f"{label}: 'terrain_speeds' and 'forage_difficulty' must name the same terrains"
         )
+
+    def whole_or(key: str, default: int, minimum: int) -> int:
+        if key not in definition.data:
+            return default
+        return _whole(definition.data, key, label, minimum)
+
     return JourneyRules(
         model=model,
-        day_hours=_whole(definition.data, "day_hours", label, 1),
+        day_hours=whole_or("day_hours", 10, 1),
         terrain_speeds=terrain_speeds,
         road_multiplier=float(definition.data.get("road_multiplier", 2.0)),
         weather_factors=weather_factors,
         forage_difficulty={name: int(value) for name, value in forage.items()},
-        food_per_traveler_day=_whole(definition.data, "food_per_traveler_day", label, 0),
-        water_per_traveler_day=_whole(definition.data, "water_per_traveler_day", label, 0),
-        firewood_per_day=_whole(definition.data, "firewood_per_day", label, 0),
-        max_days=_whole(definition.data, "max_days", label, 1),
-        max_travelers=_whole(definition.data, "max_travelers", label, 1),
+        food_per_traveler_day=whole_or("food_per_traveler_day", 1, 0),
+        water_per_traveler_day=whole_or("water_per_traveler_day", 1, 0),
+        firewood_per_day=whole_or("firewood_per_day", 4, 0),
+        max_days=whole_or("max_days", 30, 1),
+        max_travelers=whole_or("max_travelers", 20, 1),
+        events=_load_journey_events(definition.data, dice_tables, model, label),
     )
+
+
+def _load_journey_events(
+    data: Mapping[str, Any], dice_tables: Mapping[str, DiceTable], model: str, label: str
+) -> tuple[JourneyEvent, ...]:
+    """The journey's dice-table events, validated against the rule set's tables and the
+    journey's model. A terrain-day journey takes "day" events; a watch journey takes "watch"
+    events."""
+    raw = data.get("events", [])
+    if not isinstance(raw, list):
+        raise ContentError(f"{label}: 'events' must be a list of objects")
+    expected = "day" if model == "terrain_days" else "watch"
+    events = []
+    for index, entry in enumerate(raw):
+        event_label = f"{label}: events {index}"
+        if not isinstance(entry, Mapping):
+            raise ContentError(f"{event_label} must be an object")
+        check_object_keys(entry, JOURNEY_EVENT_KEYS, event_label)
+        on = required_text(entry, "on", event_label)
+        if on not in JOURNEY_EVENT_ON:
+            raise ContentError(f"{event_label}: 'on' must be one of {', '.join(JOURNEY_EVENT_ON)}")
+        if on != expected:
+            raise ContentError(
+                f"{event_label}: a {model} journey takes '{expected}' events, not {on!r}"
+            )
+        table = required_text(entry, "table", event_label)
+        if table not in dice_tables:
+            raise ContentError(f"{event_label}: 'table' names unknown dice table {table!r}")
+        when_label = f"{event_label}: when"
+        when = check_object_keys(entry.get("when", {}), JOURNEY_WHEN_KEYS, when_label)
+        chance = when.get("chance")
+        if chance is not None and (
+            isinstance(chance, bool)
+            or not isinstance(chance, int)
+            or not 1 <= chance <= MAX_JOURNEY_CHANCE
+        ):
+            raise ContentError(
+                f"{when_label}: 'chance' must be a whole number from 1 to {MAX_JOURNEY_CHANCE}"
+            )
+        events.append(
+            JourneyEvent(
+                on=on,
+                table=table,
+                reason=_optional_text(entry, "reason", event_label) or "",
+                terrain=_names(when, "terrain", when_label),
+                weather=_names(when, "weather", when_label),
+                road=_flags(when, "road", when_label),
+                path=_names(when, "path", when_label),
+                chance=chance,
+            )
+        )
+    return tuple(events)
+
+
+def _flags(data: Mapping[str, Any], key: str, label: str) -> tuple[bool, ...]:
+    """A list of true or false values, such as the road states a journey event applies to."""
+    value = data.get(key, [])
+    if not isinstance(value, list) or not all(isinstance(item, bool) for item in value):
+        raise ContentError(f"{label}: {key!r} must be a list of true or false")
+    return tuple(value)
 
 
 WILDERNESS_KEYS = frozenset(

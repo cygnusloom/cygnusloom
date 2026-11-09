@@ -89,8 +89,6 @@ def _rule_set(ident: str = "testset") -> list[dict[str, str]]:
     return [{"type": "rule_set", "id": ident, "name": "Test set", "description": "For tests."}]
 
 
-
-
 def _core() -> list[dict[str, Any]]:
     tables = [{"type": "table", "id": name, "options": ["one"]} for name in NPC_TABLES]
     return [*_rule_set("core"), *tables]

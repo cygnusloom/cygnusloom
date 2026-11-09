@@ -7,7 +7,7 @@
     "third_party": true,
     "capabilities": {
       "magic": "item",
-      "travel": "terrain",
+      "travel": "watches",
       "wilderness": true,
       "dungeon": true,
       "social": ["conditions"]

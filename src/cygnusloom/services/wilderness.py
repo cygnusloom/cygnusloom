@@ -13,12 +13,14 @@ from sqlmodel import Session, select
 from cygnusloom.content.library import (
     DiceTable,
     Hooks,
+    JourneyRules,
     WeatherPenalty,
     Wilderness,
     WildernessEffect,
 )
 from cygnusloom.db.models import Event
 from cygnusloom.rules.dice import roll_total
+from cygnusloom.services import journey as journey_service
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import (
     CampaignState,
@@ -167,6 +169,8 @@ class _Watch:
     plus: str | None
     give: GiveItem
     events: list[dict[str, Any]] = field(default_factory=list)
+    # Dice-table events from the rule set's journey, rolled after the base event.
+    journey_events: list[dict[str, Any]] = field(default_factory=list)
     effects: list[dict[str, Any]] = field(default_factory=list)
     hooks: Hooks | None = None
     # The day the watch falls on. The after_consume hook may use it.
@@ -410,11 +414,16 @@ def wilderness_action(
     hooks: Hooks | None = None,
     buy: Callable[[Session, str, str], dict[str, Any]] | None = None,
     purchases: Sequence[Mapping[str, Any]] | None = None,
+    journey: JourneyRules | None = None,
+    terrain: str | None = None,
+    path: str | None = None,
 ) -> dict[str, Any]:
     """Take a Wilderness Action for one watch. The day's weather rolls first, then the events
     roll once, then the hooks apply: the night hooks on a night watch, then the resolve hooks.
     Rule set hooks at the top level apply to every action, and an action's own hooks to it alone.
-    A resupply names its purchases, and only an action with a buy hook takes them."""
+    A resupply names its purchases, and only an action with a buy hook takes them. A journey's
+    "watch" events roll after the base event and before any hook, so the established order is
+    weather, base event, journey events, night effects, resolve effects."""
     if action not in wilderness.actions:
         names = ", ".join(sorted(wilderness.actions))
         raise InvalidInput(f"there is no wilderness action named {action!r}; use one of {names}")
@@ -453,6 +462,18 @@ def wilderness_action(
         purchases=tuple(purchases or ()),
     )
     watch.roll_events(1)
+    watch.journey_events = journey_service.roll_watch_events(
+        db,
+        campaign_id,
+        journey,
+        tables,
+        rng,
+        plus=plus,
+        terrain=terrain,
+        weather=weather["weather"],
+        path=path,
+        reason=reason,
+    )
     if night:
         watch.run(wilderness.hooks.night + chosen.hooks.night)
     watch.run(wilderness.hooks.resolve + chosen.hooks.resolve)
@@ -466,6 +487,7 @@ def wilderness_action(
         "reason": reason,
         "weather": weather,
         "events": watch.events,
+        "journey_events": watch.journey_events,
         "effects": watch.effects,
     }
 

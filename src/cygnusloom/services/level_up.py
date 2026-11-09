@@ -613,7 +613,7 @@ def tool_context(
         plus=rule_set.plus,
         npc_hp=rule_set.npc_hp,
         npc_hp_stat=rule_set.npc_hp_stat,
-        travel=rule_set.travel,
+        travel_modes=rule_set.travel,
         journey=rule_set.journey,
         wilderness=rule_set.wilderness,
         world_terrain=rule_set.world_terrain,

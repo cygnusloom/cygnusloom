@@ -114,4 +114,6 @@ def test_wwn_uses_the_source_travel_rules() -> None:
     rules = _wwn()
     assert rules.wilderness is None
     assert "travel" in rules.tool_calls
-    assert rules.tool_calls["travel"].function is not None
+    assert rules.tool_calls["travel"].world_method == "travel"
+    assert rules.journey is not None
+    assert rules.journey.model == "terrain_days"
