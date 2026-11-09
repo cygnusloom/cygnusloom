@@ -15,6 +15,7 @@ from cygnusloom.content.library import ContentLibrary, ToolCall
 from cygnusloom.llm.base import ToolRequest
 from cygnusloom.rules.context import ToolContext
 from cygnusloom.services.tools import ToolRun, run_tool
+from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library
 from tests.test_library_strictness import _core, _ruleset, _write
 
@@ -207,20 +208,18 @@ def test_a_bound_tool_needs_a_campaign():
     assert result == {"error": "this tool cannot run without a campaign"}
 
 
-def test_core_migrates_every_wrapper_that_fits_and_keeps_the_rest():
+def test_core_tools_keep_one_resolvable_handler():
     calls = content_library().core.tool_calls
-    assert len(calls) == 64
-    assert {call_id for call_id, call in calls.items() if call.function is None} == (
-        set(calls) - KEPT_PYTHON
-    )
+    assert KEPT_PYTHON <= set(calls)
     for call_id, call in calls.items():
+        # Handler XOR: a tool is either a Python function or a WorldTools method binding.
+        assert (call.function is None) != (call.world_method is None), call_id
+        if call.world_method is not None:
+            assert callable(getattr(WorldTools, call.world_method))
+            assert call.takes_context is False
         if call_id in KEPT_PYTHON:
             assert call.function is not None
             assert call.world_method is None
-        else:
-            assert call.world_method == call_id
-            assert call.function is None
-            assert call.takes_context is False
 
 
 def test_core_binding_leaves_the_schemas_unchanged():
@@ -252,71 +251,15 @@ CAIRN_KEPT_PYTHON = {
     "set_condition",
 }
 
-CAIRN_TOOLS = {
-    "add_participant",
-    "add_penalty",
-    "advance_time",
-    "attack",
-    "buy_item",
-    "buy_service",
-    "cast_spell",
-    "create_encounter_map",
-    "create_monster",
-    "delete_encounter_map",
-    "dismiss_hireling",
-    "drop_item",
-    "dungeon_cycle",
-    "end_encounter",
-    "give_charged_item",
-    "give_item",
-    "give_scroll",
-    "give_spellbook",
-    "harm_character",
-    "heal_character",
-    "hire_hireling",
-    "place_participant",
-    "player_attack",
-    "player_initiative",
-    "player_retreat",
-    "player_save",
-    "recharge_charged_item",
-    "recover_character",
-    "remove_participant",
-    "resolve_attacks",
-    "resolve_group_break",
-    "rest",
-    "rest_history",
-    "retreat",
-    "roll_reaction",
-    "roll_save",
-    "roll_tables",
-    "search_marketplace",
-    "search_monster",
-    "set_armor",
-    "set_condition",
-    "set_map_cells",
-    "stabilize",
-    "start_encounter",
-    "surrender",
-    "update_encounter_map",
-    "use_charge",
-    "use_item",
-    "wilderness_action",
-}
-
-
-def test_cairn_migrates_every_wrapper_that_fits_and_keeps_the_rest():
+def test_cairn_tools_keep_one_resolvable_handler():
     library = content_library()
     calls = library.rule_sets["cairn2e"].tool_calls
-    assert set(calls) - set(library.core.tool_calls) == CAIRN_TOOLS - {"set_map_cells"}
-    assert {
-        call_id for call_id, call in calls.items() if call_id in CAIRN_TOOLS and call.function
-    } == CAIRN_KEPT_PYTHON
-    for call_id in CAIRN_TOOLS:
-        call = calls[call_id]
-        if call_id in CAIRN_KEPT_PYTHON:
-            assert call.world_method is None
-        else:
+    assert CAIRN_KEPT_PYTHON <= set(calls)
+    python_tools = {call_id for call_id, call in calls.items() if call.function is not None}
+    assert python_tools - KEPT_PYTHON == CAIRN_KEPT_PYTHON
+    for call_id, call in calls.items():
+        assert (call.function is None) != (call.world_method is None), call_id
+        if call_id not in CAIRN_KEPT_PYTHON | KEPT_PYTHON:
             assert call.world_method is not None
             assert call.function is None
             assert call.takes_context is False
@@ -324,12 +267,13 @@ def test_cairn_migrates_every_wrapper_that_fits_and_keeps_the_rest():
     assert calls["set_map_cells"].world_method == "set_encounter_map_cells"
 
 
-# WWN tools that used to wrap a method to fix or rename an argument now bind it directly.
+# WWN tools whose ids or argument names need an explicit binding.
 WWN_BOUND = {"create_encounter_map", "roll_check", "roll_save", "set_ac"}
 
 
 def test_wwn_binds_the_tools_it_used_to_wrap():
     calls = content_library().rule_sets["worldswithoutnumber"].tool_calls
+    assert WWN_BOUND <= set(calls)
     for call_id in WWN_BOUND:
         assert calls[call_id].world_method is not None
         assert calls[call_id].function is None

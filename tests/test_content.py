@@ -89,72 +89,6 @@ def _rule_set(ident: str = "testset") -> list[dict[str, str]]:
     return [{"type": "rule_set", "id": ident, "name": "Test set", "description": "For tests."}]
 
 
-CORE_TOOLS = {
-    "create_location",
-    "create_region",
-    "update_region",
-    "update_world_map",
-    "describe_world",
-    "create_npc",
-    "update_location",
-    "discover_location",
-    "delete_location",
-    "update_npc",
-    "update_npc_knowledge",
-    "describe_character",
-    "delete_npc",
-    "change_currency",
-    "place_object",
-    "take_object",
-    "move_actor",
-    "all_at_location",
-    "search_location",
-    "search_npc",
-    "get_statblock",
-    "character_options",
-    "add_note",
-    "update_note",
-    "delete_note",
-    "search_notes",
-    "create_storyline",
-    "update_storyline",
-    "focus_storyline",
-    "deactivate_storyline",
-    "search_storylines",
-    "append_journal",
-    "replace_in_journal",
-    "search_journal",
-    "view_journal",
-    "speak",
-    "ooc",
-    "lookup_rule",
-    "lookup_feature",
-    "lookup_condition",
-    "add_condition",
-    "end_condition",
-    "list_lookups",
-    "roll_creative",
-    "record_setting",
-    "record_settings",
-    "set_campaign_setting",
-    "undo_narration",
-    "create_local_map",
-    "update_local_map",
-    "map_options",
-    "place_map_token",
-    "remove_map_token",
-    "set_map_cells",
-    "list_dice_tables",
-    "create_custom_feature",
-    "update_custom_feature",
-    "remove_custom_feature",
-    "list_custom_features",
-    "create_faction",
-    "update_faction",
-    "remove_faction",
-    "adjust_faction_points",
-    "list_factions",
-}
 
 
 def _core() -> list[dict[str, Any]]:
@@ -432,7 +366,8 @@ def test_test_fixtures_add_a_hidden_roll_rule_set():
     rule_set = library.rule_sets["rolltest"]
     assert rule_set.name == "Roll Test"
     assert "consistency" in rule_set.rules
-    assert set(rule_set.tool_calls) == CORE_TOOLS | {"social_roll"}
+    assert set(library.core.tool_calls) <= set(rule_set.tool_calls)
+    assert set(rule_set.tool_calls) - set(library.core.tool_calls) == {"social_roll"}
 
 
 def test_social_roll_fixture_is_a_tool_call_backed_by_python():

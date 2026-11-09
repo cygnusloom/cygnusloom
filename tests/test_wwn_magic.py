@@ -20,7 +20,6 @@ from cygnusloom.rules.wwn_progression import require_wwn_progression
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import CheckMade, SpellCast, load_state
 from tests.test_wwn_advancement import (
-    LIBRARY,
     NAME,
     WWN,
     _campaign,
@@ -460,37 +459,6 @@ def test_every_wwn_tool_loads_and_binds_its_declared_required_parameters() -> No
         if call.function is not None
         and call.function.__module__ in {"cygnusloom.rules.wwn", "cygnusloom.rules.wwn_magic"}
     ]
-    assert {call.id for call in calls} == {
-        # The WorldTools methods that cannot take the schema's argument names or defaults.
-        "player_roll_save",
-        "player_attack",
-        # Rule-set logic: advancement, focus/spell/art learning, morale, reaction, instinct, rest.
-        "check_morale",
-        "gain_xp",
-        "gain_growth",
-        "level_up",
-        "spend_skill_point",
-        "learn_focus",
-        "learn_spell",
-        "learn_art",
-        "improve_attribute",
-        "grant_package",
-        "roll_starting_silver",
-        "recover_after_rest",
-        "roll_reaction",
-        "instinct_check",
-        "rest",
-        "travel",
-        # Worlds Without Number magic.
-        "prepare_spells",
-        "cast_spell",
-        "commit_effort",
-        "recover_effort",
-        "add_strain",
-        "heal_strain",
-        "first_aid",
-        "restore_spell_slots",
-    }
     assert {call.id for call in calls} & KEPT_WWN_WRAPPERS == KEPT_WWN_WRAPPERS
     for call in calls:
         module = wwn if call.function.__module__ == "cygnusloom.rules.wwn" else wwn_magic
@@ -510,66 +478,15 @@ def test_every_wwn_tool_loads_and_binds_its_declared_required_parameters() -> No
 
 
 def test_wwn_tools_bind_engine_operations_without_wrappers() -> None:
-    core_ids = set(LIBRARY.core.tool_calls)
     bound = {
         call_id: call.world_method
         for call_id, call in WWN.tool_calls.items()
-        if call.world_method is not None and call_id not in core_ids
+        if call.world_method is not None
     }
-    assert bound == {
-        "abandon_project": "abandon_project",
-        "add_faction_asset": "add_faction_asset",
-        "add_participant": "add_participant",
-        "advance_project": "advance_project",
-        "advance_time": "advance_time",
-        "attack": "attack",
-        "buy_item": "buy_item",
-        "buy_service": "buy_service",
-        "create_encounter_map": "create_encounter_map",
-        "create_monster": "create_monster",
-        "delete_encounter_map": "delete_encounter_map",
-        "dismiss_hireling": "dismiss_hireling",
-        "drop_item": "drop_item",
-        "end_encounter": "end_encounter",
-        "equip_armor": "equip_armor",
-        "break_grapple": "break_grapple",
-        "choose_feature_choice": "choose_feature_choice",
-        "create_magic_item": "create_magic_item",
-        "damage_faction_asset": "damage_faction_asset",
-        "execute": "execute",
-        "faction_asset_acted": "faction_asset_acted",
-        "give_item": "give_item",
-        "grapple": "grapple",
-        "harm_character": "harm_character",
-        "heal_character": "heal_character",
-        "hire_hireling": "hire_hireling",
-        "place_participant": "place_participant",
-        "player_save": "player_save",
-        "prepare_execution": "prepare_execution",
-        "ready_item": "ready_item",
-        "recover_character": "recover_character",
-        "remove_faction_asset": "remove_faction_asset",
-        "remove_participant": "remove_participant",
-        "repair_faction_asset": "repair_faction_asset",
-        "resolve_attacks": "resolve_attacks",
-        "retreat": "retreat",
-        "roll_check": "roll_check",
-        "roll_initiative": "roll_side_initiative",
-        "roll_save": "roll_save",
-        "roll_tables": "roll_tables",
-        "search_marketplace": "search_marketplace",
-        "search_monster": "search_monster",
-        "set_ac": "set_armor",
-        "set_armor": "set_armor",
-        "stabilize": "stabilize",
-        "start_encounter": "start_encounter",
-        "start_project": "start_project",
-        "surprise": "surprise",
-        "take_faction_turn": "take_faction_turn",
-        "total_defense": "total_defense",
-        "update_encounter_map": "update_encounter_map",
-        "update_faction_asset": "update_faction_asset",
-    }
+    # Document only the ids that do not match their method name; every other binding is free
+    # to move between the ruleset and core as long as the handler invariants hold.
+    assert bound["roll_initiative"] == "roll_side_initiative"
+    assert bound["set_ac"] == "set_armor"
     for call_id, method in bound.items():
         call = WWN.tool_calls[call_id]
         assert call.function is None

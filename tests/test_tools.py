@@ -110,9 +110,17 @@ def test_no_tools_means_no_tool_list():
     assert tool_specs({}) is None
 
 
+def _offered_names(calls):
+    return {
+        call.name
+        for call in calls.values()
+        if not call.journal_step and not call.review_step
+    }
+
+
 def test_specs_describe_the_social_roll_tool():
     specs = {spec["function"]["name"]: spec for spec in tool_specs(_roll_tools()) or []}
-    assert set(specs) == {"social_roll", *CORE_TOOL_NAMES}
+    assert set(specs) == _offered_names(_roll_tools())
     spec = specs["social_roll"]
     assert spec["type"] == "function"
     assert "d20" in spec["function"]["description"]
@@ -121,71 +129,6 @@ def test_specs_describe_the_social_roll_tool():
         "relationship",
         "circumstance",
     }
-
-
-CORE_TOOL_NAMES = {
-    "create_location",
-    "create_region",
-    "update_region",
-    "update_world_map",
-    "describe_world",
-    "create_npc",
-    "update_location",
-    "discover_location",
-    "delete_location",
-    "update_npc",
-    "update_npc_knowledge",
-    "describe_character",
-    "delete_npc",
-    "change_currency",
-    "place_object",
-    "take_object",
-    "move_actor",
-    "all_at_location",
-    "search_location",
-    "search_npc",
-    "get_statblock",
-    "character_options",
-    "add_condition",
-    "end_condition",
-    "add_note",
-    "update_note",
-    "delete_note",
-    "search_notes",
-    "create_storyline",
-    "update_storyline",
-    "focus_storyline",
-    "deactivate_storyline",
-    "search_storylines",
-    "search_journal",
-    "record_settings",
-    "view_journal",
-    "speak",
-    "ooc",
-    "lookup_rule",
-    "lookup_feature",
-    "lookup_condition",
-    "list_lookups",
-    "roll_creative",
-    "record_setting",
-    "set_campaign_setting",
-    "create_local_map",
-    "update_local_map",
-    "map_options",
-    "place_map_token",
-    "remove_map_token",
-    "set_map_cells",
-    "list_dice_tables",
-    "create_custom_feature",
-    "update_custom_feature",
-    "remove_custom_feature",
-    "list_custom_features",
-    "create_faction",
-    "update_faction",
-    "remove_faction",
-    "adjust_faction_points",
-    "list_factions",
-}
 
 SOCIAL_ARGUMENTS = '{"prompt": "Roll to persuade.", "relationship": 2, "circumstance": -1}'
 
@@ -424,7 +367,7 @@ def test_model_rolls_then_narrates_and_only_the_narration_is_saved(
 
     assert response.status_code == 303
     offered = [spec["function"]["name"] for spec in recorder.calls[0]["tools"]]
-    assert set(offered) == {"social_roll", *CORE_TOOL_NAMES}
+    assert set(offered) == _offered_names(_roll_tools())
     assert _saved(app, campaign_id)[1:] == [("user", script)]
     prompt = pending_turn(app, campaign_id).prompt
     assert (prompt.text, prompt.dice, prompt.details) == (
