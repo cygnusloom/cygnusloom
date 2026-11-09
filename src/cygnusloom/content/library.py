@@ -3800,6 +3800,8 @@ def _build_rule_set(
         # choices match the rule set's own listing rather than an alphabetical rewrite.
         "item_sizes": list(item_sizes),
         "rest_lengths": list(rests),
+        "journey_terrains": list(journey.terrain_speeds) if journey else [],
+        "journey_weather": list(journey.weather_factors) if journey else [],
         "checks": sorted(checks),
         "counters": sorted(counters),
         "periods": sorted(periods),

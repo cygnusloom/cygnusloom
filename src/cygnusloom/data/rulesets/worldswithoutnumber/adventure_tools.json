@@ -125,23 +125,10 @@
     "description": "Travel overland by the WWN rules. A day is ten hours of marching; base speed is 3 mph on plains, 2 in light forest or desert, 1.5 in dense forest or rugged hills, 1 in swamp, and 0.5 in mountains or broken highland. A road doubles the pace, foul weather halves it, and deep snow reduces it to a tenth. The engine moves the character and advances the clock. Apply the returned food, water, firewood, and privation figures with use_item, add_strain, and the usual bookkeeping; foraging takes half a day and a Wis/Survive check at the returned difficulty.",
     "parameters": {
       "properties": {
-        "terrain": {
-          "enum": [
-            "plains",
-            "light_forest",
-            "desert",
-            "dense_forest",
-            "rugged_hills",
-            "swamp",
-            "mountains",
-            "broken_highland"
-          ]
-        },
         "road": {
           "description": "True when the route follows a road, which doubles the pace."
         },
         "weather": {
-          "enum": ["clear", "foul", "deep_snow"],
           "description": "Foul weather halves the pace; deep snow reduces it to a tenth."
         }
       }

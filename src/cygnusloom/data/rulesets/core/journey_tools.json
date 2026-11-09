@@ -19,6 +19,7 @@
         },
         "terrain": {
           "type": "string",
+          "enum_from": "journey_terrains",
           "description": "The hardest terrain on the route."
         },
         "road": {
@@ -28,6 +29,7 @@
         },
         "weather": {
           "type": "string",
+          "enum_from": "journey_weather",
           "default": "clear",
           "description": "The weather on the journey."
         },

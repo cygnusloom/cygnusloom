@@ -39,9 +39,9 @@ CONSOLIDATED_TOOLS = {
     "search_monster": frozenset({"academia-arcana"}),
 }
 
-# The one full rule-set definition left on purpose: WWN's rest binds a Python function and takes
-# a character, so it cannot extend the party-level core binding without losing behavior.
-FULL_TOOL_OVERRIDES = {("worldswithoutnumber", "rest")}
+# Universal tools should be inherited, not redefined. Keep this empty unless a genuine full
+# override is unavoidable; an `extends` definition is preferred and does not need an entry.
+FULL_TOOL_OVERRIDES: set[tuple[str, str]] = set()
 
 
 def _tool_definitions(rule_set_id: str) -> list[dict[str, object]]:

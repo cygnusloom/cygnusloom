@@ -14,9 +14,27 @@
 
 **Implementation status on `4.0-ruleset-refactor`:**
 - Done: campaign major-version boundary and migration/export/import handling; capability manifest and tool/prompt gates; defaults layer and `extends`/`patch`/`remove`/`disabled`; definition-type and feature-type registries; magic `item`/`prepared`/`move` facade; common `SpellCast` for move magic; party-level rest with `after_rest`; data-driven clock week and WWN journey; single XP source, `LevelGrants`/`project_level`, progression-data costs, data-driven Die Hard and caster classification; year-banded Academia caps; shared learnable-feature filter; faction cap in data; condition-trigger validation; dead combat-helper removal; version 4.0.0.
-- Still open after this pass: full bundling/tool-prompt data deduplication, item/shop definition unification and inventory `slot` metadata, one effect-op registry, multiple advancement/level-up selectors, compendium label data, and world-feature validation. These are tracked by the report's remaining phases, not claimed as complete.
+- Done in the final 4.0 consolidation pass: thin WWN tool wrappers removed (`rest`, `player_attack`, `player_roll_save`, strain tools, starting silver); universal game-loop tools owned by core (`advance_time`, `rest`, `rest_history`, `roll_tables`, market, inventory, hirelings, `search_monster`); shared gated combat/encounter and project tools owned by core behind new `combat` and `social.projects` capabilities; attack, `player_attack`, `roll_save`, and `travel` expressed as one core definition plus small ruleset extensions; Cairn inherits the core map-cell tool; one `WorldTools.travel` implementation for terrain-day journeys with JSON `journey.events`.
+- Still open after this pass: prompt data deduplication, item/shop definition unification and inventory `slot` metadata, one effect-op registry, multiple advancement/level-up selectors, compendium label data, and world-feature validation. These are tracked by the report's remaining phases, not claimed as complete.
 
-**Verification:** the full suite passes at **3059 tests**. Live DeepSeek sessions covered a WWN opening, one party rest (one `RestTaken`, one `ClockAdvanced`), a one-day journey, a Cairn opening and turn, and an Academia opening plus a move-based spell cast (one `MoveMade`, one `SpellCast` with `model: "move"`).
+**Shared-tool pattern.** A tool whose semantics are shared belongs in core JSON. A rule set keeps only the differences:
+
+```json
+{
+  "type": "tool_call",
+  "id": "rest",
+  "extends": "core:tool_call/rest",
+  "description": "Record one party rest. A night restores hit points equal to level..."
+}
+```
+
+- `extends` overlays the rule set's fields on the core definition; nested objects merge key by key while lists and scalars replace.
+- `patch` changes an existing nested value and fails at load time if the path is a typo.
+- `disabled` or `remove` drops an inherited definition for one rule set.
+- `bind`, `rename`, `enum_from`, `requires`, and `enabled_by` keep the shared schema without copying a Python wrapper.
+- Core may author gated tools; each inheriting rule set evaluates the gate against its own capability manifest.
+
+**Verification:** the full suite passes. Live DeepSeek sessions covered a WWN opening, one party rest (one `RestTaken`, one `ClockAdvanced`), a one-day journey, a Cairn opening and turn, and an Academia opening plus a move-based spell cast (one `MoveMade`, one `SpellCast` with `model: "move"`).
 
 ---
 
