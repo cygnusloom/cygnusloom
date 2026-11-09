@@ -5,7 +5,6 @@
     "requires": ["social.projects"],
     "description": "Give up a project, a research effort, or another long effort.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string"
@@ -25,7 +24,6 @@
     "requires": ["social.projects"],
     "description": "Add progress to a project, a research effort, or another long effort. Record in the note what the time, money, or roll bought. The project completes when progress reaches its target.",
     "parameters": {
-      "type": "object",
       "properties": {
         "amount": {
           "description": "Progress points gained.",
@@ -53,7 +51,6 @@
     "requires": ["social.projects"],
     "description": "Begin a long-running effort and track its points toward a target: a project, a piece of research, or another long effort. The kind and goal are free text; the target is how many points of work it needs. Advance it with advance_project as time, money, and rolls are spent.",
     "parameters": {
-      "type": "object",
       "properties": {
         "force": {
           "description": "Set true to replace a project of the same name.",

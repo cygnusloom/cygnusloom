@@ -5,7 +5,6 @@
     "requires": ["combat"],
     "description": "Add a character to the encounter in progress, on a side. Player characters default to the party and NPCs to the foes. The turn order keeps each side together: the party first, then the other sides in the order they first appear. A character who is not at the encounter's location is still added, and the result carries a warning to act on.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string"
@@ -25,7 +24,6 @@
     "requires": ["combat"],
     "description": "Put a participant on a cell of the encounter map, counted from 0 at the top left: column increases to the right and row increases downward. Moving is limited to the rule set's movement per turn, counted in cells moved in a straight line or diagonal. Obstacles block: a cell with a blocking object cannot be entered or be the destination, so the participant goes around it. Terrain that costs extra movement to enter takes that many moves for each cell entered. That limit applies only to the participant whose turn it is; moving anyone else is free, though they still cannot enter a blocked cell. The first placement is free. Use this to move a participant, not to tell the story of how they got there.",
     "parameters": {
-      "type": "object",
       "properties": {
         "column": {
           "type": "integer"
@@ -50,7 +48,6 @@
     "requires": ["combat"],
     "description": "Take a character out of the encounter in progress. If they are taking their turn, it ends and the next participant's turn follows.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string"
@@ -67,7 +64,6 @@
     "requires": ["combat"],
     "description": "Create an encounter map: a grid of cells set in an existing location, where a tactical encounter takes place. Use it before starting an encounter there. Cells are scaled by the rule set's grid.",
     "parameters": {
-      "type": "object",
       "properties": {
         "ambient": {
           "description": "An ambient look id from map_options: day, dusk, night, torchlit, foggy, underwater, or magical.",
@@ -114,7 +110,6 @@
     "requires": ["combat"],
     "description": "Change an encounter map: its name, the location it is in, its size, or its description. Refused if the new name is taken or a participant would be left outside the new size.",
     "parameters": {
-      "type": "object",
       "properties": {
         "ambient": {
           "type": "string"
@@ -183,7 +178,6 @@
     "requires": ["combat"],
     "description": "Delete an encounter map. Refused while an encounter is using it.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string"
@@ -200,7 +194,6 @@
     "requires": ["combat"],
     "description": "Start an encounter on an encounter map. Its location becomes the encounter's location. Only one encounter can be in progress at a time. Add participants after starting. The player character and NPCs take turns in the order they join.",
     "parameters": {
-      "type": "object",
       "properties": {
         "map": {
           "type": "string"
@@ -223,7 +216,6 @@
     "requires": ["combat"],
     "description": "Create a monster NPC in the world. Give a template to start from a bestiary statblock (see search_monster), and any value you give replaces the template's. A creature named exactly like a statblock uses that statblock unless force is set. Attacks replace the template's attacks when given.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string"
@@ -257,7 +249,6 @@
     "requires": ["combat"],
     "description": "Harm a character outside combat, from a fall, poison, exposure, or a similar hazard. Narrate what hurt them. Use it only for harm that does not come from a combat attack.",
     "parameters": {
-      "type": "object",
       "properties": {
         "amount": {
           "minimum": 1,
@@ -287,7 +278,6 @@
     "requires": ["combat"],
     "description": "Restore lost points of a stat, usually hit points, from a healing spell, art, or item. It never restores more than the character has lost.",
     "parameters": {
-      "type": "object",
       "properties": {
         "amount": {
           "description": "How many points the healing restores before the cap.",
@@ -319,7 +309,6 @@
     "requires": ["combat"],
     "description": "Bring a character back from critical damage, where they were left unconscious and bleeding out. Use it only for a living character who is not dying; a dying character must be stabilized first. Narrate how they survived, and what it cost them. The harm they took stays as it was.",
     "parameters": {
-      "type": "object",
       "properties": {
         "consequence": {
           "type": "string"
@@ -344,7 +333,6 @@
     "requires": ["combat"],
     "description": "Resolve several NPC attacks on one character at once, such as several foes attacking the same character or one NPC using several weapons. Each attack rolls its own dice. Every attacker must be taking their turn unless force is true. Use it only when the attackers' turns come up, after the initiative is set. Player characters attack with player_attack, not this tool.",
     "parameters": {
-      "type": "object",
       "properties": {
         "attacks": {
           "description": "The attacks to resolve, one entry per attack.",
@@ -387,7 +375,6 @@
     "requires": ["combat"],
     "description": "Have a character try to run from the encounter. Pass safe as true only when the character has a safe way out; if not, the attempt is refused. A passed save takes the character out of the fight. A failed save leaves them in the fight.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string"
@@ -408,7 +395,6 @@
     "requires": ["combat"],
     "description": "Stabilize a dying character, stopping the clock that would kill them, when the story gives them aid: a healer, a rescue, a miracle. Narrate how. Use it only for a character who is dying.",
     "parameters": {
-      "type": "object",
       "properties": {
         "explanation": {
           "type": "string"
@@ -429,7 +415,6 @@
     "requires": ["combat"],
     "description": "Set a character's armor value. Use it when a character puts on or takes off armor, or when a monster's armor changes.",
     "parameters": {
-      "type": "object",
       "properties": {
         "armor": {
           "minimum": 0,
@@ -452,7 +437,6 @@
     "requires": ["combat"],
     "description": "Make an NPC's attack against a character. Use it only when the attacker is taking their turn, after the initiative is set; an attack by anyone else is refused unless force is true. Player characters attack with player_attack, not this tool. The engine resolves the attack by the rule set's combat rules and narrates the result.",
     "parameters": {
-      "type": "object",
       "properties": {
         "attacker": {
           "type": "string",
@@ -485,7 +469,6 @@
     "requires": ["combat"],
     "description": "Ask the player to roll their attack against a target. Use it when the player says what they attack with, the target is in the encounter, and it is the player character's turn; an attack outside their turn is refused unless force is true.",
     "parameters": {
-      "type": "object",
       "properties": {
         "target": {
           "type": "string",
@@ -513,7 +496,6 @@
     "requires": ["combat"],
     "description": "Roll a save for a character. The engine rolls the die and compares it to the stat, and records the result. A failure does not defeat the character; apply what the save costs yourself.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",

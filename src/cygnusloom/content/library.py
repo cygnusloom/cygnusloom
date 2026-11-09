@@ -8379,15 +8379,18 @@ def _check_parameters(schema: object, label: str) -> dict[str, Any]:
     and only the schema keys the engine understands. A `$ref`, `anyOf`, `oneOf`, or `allOf` is
     rejected rather than handed to a provider that may interpret it differently.
 
-    An absent `parameters` reaches here as an empty object schema. `required` may be omitted,
-    which reads as no required arguments; when given, it must list names from `properties`."""
-    if not isinstance(schema, dict) or schema.get("type") != "object":
+    An absent `parameters` reaches here as an empty object schema. A root schema with no `type`
+    is the common case, so it reads as `object`; a nested node still needs its type. `required`
+    may be omitted, which reads as no required arguments; when given, it must list names from
+    `properties`."""
+    if not isinstance(schema, dict) or ("type" in schema and schema["type"] != "object"):
         raise ContentError(f"{label}: 'parameters' must be an object schema with type 'object'")
-    properties = schema.get("properties")
+    checked = schema if "type" in schema else {"type": "object", **schema}
+    properties = checked.get("properties")
     if not isinstance(properties, dict):
         raise ContentError(f"{label}: 'parameters' needs a 'properties' object")
-    _check_schema_node(schema, label, root=True)
-    return schema
+    _check_schema_node(checked, label, root=True)
+    return checked
 
 
 def _check_schema_node(node: object, label: str, *, root: bool = False) -> None:
