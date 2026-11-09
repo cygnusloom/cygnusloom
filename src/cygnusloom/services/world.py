@@ -189,7 +189,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     npc_hp: Mapping[str, int] = field(default_factory=dict)
     npc_hp_stat: str | None = None
     # The rule set's travel modes and default leg, or None when it does not charge travel time.
-    travel: Travel | None = None
+    travel_modes: Travel | None = None
     # The rule set's whole-day journey model, or None when travel is not measured that way.
     journey: JourneyRules | None = None
     # The rule set's wilderness calendar, weather, and Wilderness Actions, or None when it has none.
@@ -1219,6 +1219,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 hooks=self.hooks,
                 buy=self._buy_catalogue_item,
                 purchases=purchases,
+                journey=self.journey,
             )
         with session_scope(self.engine) as db:
             result["clock"] = clock_service.advance_time(

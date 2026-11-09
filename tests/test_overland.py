@@ -1,20 +1,32 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusloom.content.library import Wilderness
+from cygnusloom.content.library import JourneyEvent, Wilderness
 from cygnusloom.services import clock as clock_service
 from cygnusloom.services import wilderness
 from cygnusloom.services.common import InvalidInput
-from cygnusloom.services.events import load_state
+from cygnusloom.services.events import (
+    ActorMoved,
+    ClockAdvanced,
+    LostRolled,
+    TablesRolled,
+    WeatherRolled,
+    WildernessEventRolled,
+    decode,
+    events_since,
+    last_event_id,
+    load_state,
+)
 from cygnusloom.services.wilderness import plan_overland
 from tests.test_combat import CAIRN, PC
 from tests.test_travel import HPP, PARTS, _place
-from tests.test_wilderness_service import _fix_roll, _pc_items, _pc_tools
+from tests.test_wilderness_service import StubRng, _fix_roll, _pc_items, _pc_tools
 from tests.test_world import _db
 
 # Spring weather rolls from wilderness.json: 1-2 Nice, 4 Unpleasant, 6 Extreme.
@@ -296,3 +308,101 @@ def test_an_authored_route_overrides_the_gm_route_but_keeps_the_weather_choice(
     assert result["watches"] == 3
     assert result["fatigue"] == 0
     assert _fatigue_count(app, campaign_id) == 0
+
+
+def _mark(app: FastAPI, campaign_id: int) -> int:
+    with _db(app) as db:
+        return last_event_id(db, campaign_id)
+
+
+def _kinds_after(app: FastAPI, campaign_id: int, after: int) -> list[str]:
+    with _db(app) as db:
+        return [decode(row).kind for row in events_since(db, campaign_id, after)]
+
+
+def test_watch_travel_keeps_the_weather_lost_event_and_clock_order(
+    client_factory: Callable[[], TestClient],
+):
+    app, campaign_id, tools = _pc_tools(client_factory)
+    _start_at(tools)
+    rng = StubRng(NICE)
+    mark = _mark(app, campaign_id)
+
+    result = replace(tools, rng=rng).move_actor(PC, "Far", mode="overland", route=_route())
+
+    assert rng.sides == [6, 6]
+    assert result["journey"][0]["journey_events"] == []
+    assert _kinds_after(app, campaign_id, mark) == [
+        WeatherRolled.kind,
+        LostRolled.kind,
+        WildernessEventRolled.kind,
+        ClockAdvanced.kind,
+        ActorMoved.kind,
+    ]
+
+
+def test_a_watch_event_rolls_after_the_base_event_and_before_the_clock(
+    client_factory: Callable[[], TestClient],
+):
+    app, campaign_id, tools = _pc_tools(client_factory)
+    _start_at(tools)
+    assert CAIRN.journey is not None
+    event = JourneyEvent(
+        on="watch",
+        table="wilderness_events",
+        terrain=("easy",),
+        path=("roads",),
+        reason="a fork in the road",
+    )
+    rng = StubRng(NICE)
+    mark = _mark(app, campaign_id)
+
+    result = replace(tools, journey=replace(CAIRN.journey, events=(event,)), rng=rng).move_actor(
+        PC, "Far", mode="overland", route=_route()
+    )
+
+    assert rng.sides == [6, 6, 6]
+    assert result["journey_events"] == [
+        {
+            "on": "watch",
+            "table": "wilderness_events",
+            "name": CAIRN.dice_tables["wilderness_events"].name,
+            "roll": NICE,
+            "result": CAIRN.dice_tables["wilderness_events"].rows[0].result,
+            "text": CAIRN.dice_tables["wilderness_events"].rows[0].text,
+            "reason": "a fork in the road",
+        }
+    ]
+    assert _kinds_after(app, campaign_id, mark) == [
+        WeatherRolled.kind,
+        LostRolled.kind,
+        WildernessEventRolled.kind,
+        TablesRolled.kind,
+        ClockAdvanced.kind,
+        ActorMoved.kind,
+    ]
+
+
+def test_a_watch_event_does_not_roll_when_its_terrain_does_not_match(
+    client_factory: Callable[[], TestClient],
+):
+    app, campaign_id, tools = _pc_tools(client_factory)
+    _start_at(tools)
+    assert CAIRN.journey is not None
+    event = JourneyEvent(on="watch", table="wilderness_events", terrain=("perilous",))
+    rng = StubRng(NICE)
+    mark = _mark(app, campaign_id)
+
+    result = replace(tools, journey=replace(CAIRN.journey, events=(event,)), rng=rng).move_actor(
+        PC, "Far", mode="overland", route=_route()
+    )
+
+    assert rng.sides == [6, 6]
+    assert result["journey_events"] == []
+    assert _kinds_after(app, campaign_id, mark) == [
+        WeatherRolled.kind,
+        LostRolled.kind,
+        WildernessEventRolled.kind,
+        ClockAdvanced.kind,
+        ActorMoved.kind,
+    ]

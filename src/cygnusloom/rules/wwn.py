@@ -1385,79 +1385,16 @@ def travel(
     *,
     ctx: ToolContext,
 ) -> dict[str, Any]:
-    """Travel overland by the WWN rules: a ten-hour march at the terrain's speed, doubled on a
-    road, halved in foul weather, or reduced to a tenth in deep snow. The engine moves the
-    character and advances the clock; the returned supply and privation figures are what the GM
-    applies with use_item, add_strain, and the usual bookkeeping."""
-    journey = ctx.world.journey
-    if journey is None:
-        raise InvalidInput("this rule set does not use whole-day journeys")
-    if terrain not in journey.terrain_speeds:
-        raise InvalidInput(
-            f"there is no terrain {terrain!r}; use one of {sorted(journey.terrain_speeds)}"
-        )
-    if weather not in journey.weather_factors:
-        raise InvalidInput(
-            f"there is no weather {weather!r}; use one of {sorted(journey.weather_factors)}"
-        )
-    if isinstance(days, bool) or not isinstance(days, int) or not 1 <= days <= journey.max_days:
-        raise InvalidInput(f"days must be a whole number from 1 to {journey.max_days}")
-    if (
-        isinstance(travelers, bool)
-        or not isinstance(travelers, int)
-        or not 1 <= travelers <= journey.max_travelers
-    ):
-        raise InvalidInput(f"travelers must be a whole number from 1 to {journey.max_travelers}")
-    speed = journey.terrain_speeds[terrain]
-    if road:
-        speed *= journey.road_multiplier
-    speed *= journey.weather_factors[weather]
-    miles_per_day = round(speed * journey.day_hours, 2)
-    miles = round(miles_per_day * days, 2)
-    moved = ctx.world.move_actor(character, location=destination)
-    clock = ctx.world.advance_time(hours=journey.day_hours * days)
-    food = days * travelers * journey.food_per_traveler_day
-    water = days * travelers * journey.water_per_traveler_day
-    firewood = days * journey.firewood_per_day
-    return {
-        "character": character,
-        "destination": destination,
-        "terrain": terrain,
-        "road": road,
-        "weather": weather,
-        "days": days,
-        "travelers": travelers,
-        "reason": reason,
-        "speed_mph": round(speed, 2),
-        "miles_per_day": miles_per_day,
-        "miles": miles,
-        "hours": journey.day_hours * days,
-        "move": moved,
-        "clock": clock,
-        "supplies": {
-            "food": food,
-            "water": water,
-            "firewood": firewood,
-            "note": (
-                f"Each person needs {journey.food_per_traveler_day} day's food and "
-                f"{journey.water_per_traveler_day} water, and the party needs "
-                f"{journey.firewood_per_day} firewood per night."
-            ),
-        },
-        "forage": {
-            "takes": "half a day",
-            "check": "Wis/Survive",
-            "difficulty": journey.forage_difficulty[terrain],
-            "yield": "1d6 units plus the group's Survive levels, minimum 1",
-            "note": "A full day of foraging adds -2 to the difficulty; each further day in "
-            "the same hex adds +1.",
-        },
-        "privation": {
-            "food": "A first day without food costs no Strain; each consecutive day adds 1.",
-            "water": "A first day without water adds 2 Strain; each further day adds 3.",
-            "night": "A harsh night without shelter or fire adds 1 Strain.",
-            "note": "Strain above the maximum calls for a Physical save or death by dawn. "
-            "No healing, spell recovery, or nightly Strain loss until a full day with food, "
-            "water, and warm sleep.",
-        },
-    }
+    """Compatibility delegate to WorldTools.travel, which owns the terrain-day model. The tool
+    itself binds to that method directly; this stays for callers that still reach the rules
+    module by name."""
+    return ctx.world.travel(
+        character,
+        destination,
+        terrain,
+        road=road,
+        weather=weather,
+        days=days,
+        travelers=travelers,
+        reason=reason,
+    )

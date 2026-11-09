@@ -19,7 +19,7 @@ TRAVEL = CAIRN.travel
 
 
 def _tools(app: FastAPI, campaign_id: int) -> WorldTools:
-    return replace(_combat_tools(app, campaign_id), travel=TRAVEL)
+    return replace(_combat_tools(app, campaign_id), travel_modes=TRAVEL)
 
 
 PARTS = len(CAIRN.clock.parts)
@@ -156,8 +156,15 @@ def test_a_move_without_a_travel_table_charges_nothing(client_factory):
     _place(tools, "Start", 0, 0)
     _place(tools, "Far", 4, 0)
     tools.move_actor(PC, "Start")
-    plain = replace(_tools(app, campaign_id), travel=None)
+    plain = replace(_tools(app, campaign_id), travel_modes=None)
     before = _hours(app, campaign_id)
 
     assert plain.move_actor(PC, "Far") == {"moved": PC, "location": "Far"}
     assert _hours(app, campaign_id) == before
+
+
+def test_cairn_overland_travel_is_watch_based():
+    assert CAIRN.capabilities.travel == "watches"
+    assert CAIRN.journey is not None
+    assert CAIRN.journey.model == "watches"
+    assert CAIRN.journey.events == ()
