@@ -9,6 +9,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_artisan", "exclude": ["any_skill"] }
     ],
+    "learning": ["connect", "convince", "craft", "exert", "know", "notice", "trade"],
     "names": "names"
   },
   {
@@ -21,6 +22,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_barbarian", "exclude": ["any_skill"] }
     ],
+    "learning": ["stab", "shoot", "punch", "connect", "exert", "lead", "notice", "sneak", "survive"],
     "names": "names"
   },
   {
@@ -33,6 +35,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_carter", "exclude": ["any_skill"] }
     ],
+    "learning": ["notice", "ride", "survive", "exert", "sneak", "connect", "craft", "administer"],
     "names": "names"
   },
   {
@@ -45,6 +48,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_courtesan", "exclude": ["any_skill"] }
     ],
+    "learning": ["perform", "notice", "administer", "sneak", "connect", "know", "convince", "lead"],
     "names": "names"
   },
   {
@@ -57,6 +61,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_criminal", "exclude": ["any_skill"] }
     ],
+    "learning": ["notice", "exert", "connect", "trade", "administer", "punch", "convince", "sneak"],
     "names": "names"
   },
   {
@@ -69,6 +74,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_hunter", "exclude": ["any_skill"] }
     ],
+    "learning": ["ride", "survive", "shoot", "stab", "notice", "craft", "exert", "sneak"],
     "names": "names"
   },
   {
@@ -81,6 +87,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_laborer", "exclude": ["any_skill"] }
     ],
+    "learning": ["administer", "connect", "craft", "survive", "exert", "work", "notice", "trade"],
     "names": "names"
   },
   {
@@ -93,6 +100,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_merchant", "exclude": ["any_skill"] }
     ],
+    "learning": ["administer", "sail", "know", "trade", "convince", "ride", "connect", "notice"],
     "names": "names"
   },
   {
@@ -105,6 +113,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_noble", "exclude": ["any_skill"] }
     ],
+    "learning": ["perform", "connect", "ride", "administer", "convince", "notice", "know", "lead"],
     "names": "names"
   },
   {
@@ -117,6 +126,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_nomad", "exclude": ["any_skill"] }
     ],
+    "learning": ["shoot", "survive", "ride", "craft", "sneak", "connect", "exert", "notice"],
     "names": "names"
   },
   {
@@ -129,6 +139,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_peasant", "exclude": ["any_skill"] }
     ],
+    "learning": ["survive", "notice", "ride", "craft", "work", "exert", "sneak", "connect"],
     "names": "names"
   },
   {
@@ -141,6 +152,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_performer", "exclude": ["any_skill"] }
     ],
+    "learning": ["notice", "administer", "convince", "connect", "know", "sneak", "perform", "lead"],
     "names": "names"
   },
   {
@@ -153,6 +165,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_physician", "exclude": ["any_skill"] }
     ],
+    "learning": ["connect", "notice", "administer", "heal", "convince", "know", "craft", "survive"],
     "names": "names"
   },
   {
@@ -165,6 +178,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_priest", "exclude": ["any_skill"] }
     ],
+    "learning": ["heal", "connect", "lead", "convince", "know", "notice", "administer", "pray"],
     "names": "names"
   },
   {
@@ -177,6 +191,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_sailor", "exclude": ["any_skill"] }
     ],
+    "learning": ["punch", "trade", "connect", "exert", "notice", "survive", "craft", "sail"],
     "names": "names"
   },
   {
@@ -189,6 +204,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_scholar", "exclude": ["any_skill"] }
     ],
+    "learning": ["notice", "craft", "pray", "connect", "administer", "convince", "know", "heal"],
     "names": "names"
   },
   {
@@ -201,6 +217,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_slave", "exclude": ["any_skill"] }
     ],
+    "learning": ["work", "notice", "sneak", "survive", "connect", "perform", "craft", "exert"],
     "names": "names"
   },
   {
@@ -213,6 +230,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_soldier", "exclude": ["any_skill"] }
     ],
+    "learning": ["punch", "survive", "administer", "stab", "lead", "shoot", "notice", "exert"],
     "names": "names"
   },
   {
@@ -225,6 +243,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_thug", "exclude": ["any_skill"] }
     ],
+    "learning": ["sneak", "survive", "notice", "punch", "connect", "stab", "exert", "convince"],
     "names": "names"
   },
   {
@@ -237,6 +256,7 @@
     "skill_picks": [
       { "id": "background_learning", "count": 2, "table": "learning_wanderer", "exclude": ["any_skill"] }
     ],
+    "learning": ["notice", "trade", "ride", "sneak", "exert", "connect", "craft", "survive"],
     "names": "names"
   }
 ]

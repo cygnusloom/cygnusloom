@@ -1018,6 +1018,131 @@ def test_wwn_inherits_core_personality_and_accent_but_keeps_its_quirk():
     assert "quirk" in own
 
 
+def _write_background(tree: Path, learning: list[str]) -> None:
+    _write(
+        tree,
+        {
+            "rulesets/testset/rule_set.json": [
+                {
+                    **_rule_set()[0],
+                    "skill_progression": {
+                        "untrained": -1,
+                        "first_level": 0,
+                        "creation_maximum": 1,
+                        "maximum": 4,
+                    },
+                }
+            ],
+            "rulesets/testset/skills.json": [
+                {"type": "skill", "id": "craft", "name": "Craft", "description": "Make."},
+                {"type": "skill", "id": "notice", "name": "Notice", "description": "See."},
+            ],
+            "rulesets/testset/backgrounds.json": [
+                {
+                    "type": "template",
+                    "id": "scout",
+                    "kind": "background",
+                    "name": "Scout",
+                    "description": "A scout.",
+                    "skills": {"craft": 1},
+                    "learning": learning,
+                }
+            ],
+        },
+    )
+
+
+def test_background_learning_and_index_are_derived_from_the_template(tree: Path):
+    _write_background(tree, ["craft", "notice"])
+    rule_set = ContentLibrary.load(tree).rule_sets["testset"]
+    assert [option.value for option in rule_set.tables["learning_scout"]] == ["craft", "notice"]
+    assert rule_set.tables["background_index"] == (
+        TableOption(name="Scout", description="Free skill: craft. Quick skills: notice."),
+    )
+
+
+def test_an_authored_background_table_wins_over_the_derived_one(tree: Path):
+    _write_background(tree, ["craft", "notice"])
+    _write(
+        tree,
+        {
+            "rulesets/testset/tables.json": [
+                {"type": "table", "id": "learning_scout", "options": ["notice"]},
+                {
+                    "type": "table",
+                    "id": "background_index",
+                    "options": [{"name": "Mine", "description": "Authored."}],
+                },
+            ]
+        },
+    )
+    rule_set = ContentLibrary.load(tree).rule_sets["testset"]
+    assert [option.value for option in rule_set.tables["learning_scout"]] == ["notice"]
+    assert rule_set.tables["background_index"] == (
+        TableOption(name="Mine", description="Authored."),
+    )
+
+
+def test_background_learning_must_name_known_skills(tree: Path):
+    _write_background(tree, ["craft", "missing"])
+    with pytest.raises(ContentError, match="'learning' names no skill"):
+        ContentLibrary.load(tree)
+
+
+def test_wwn_background_learning_tables_match_the_previous_options():
+    wwn = bundled_library().rule_sets["worldswithoutnumber"]
+    expected = {
+        "artisan": ["connect", "convince", "craft", "exert", "know", "notice", "trade"],
+        "hunter": ["ride", "survive", "shoot", "stab", "notice", "craft", "exert", "sneak"],
+        "wanderer": [
+            "notice",
+            "trade",
+            "ride",
+            "sneak",
+            "exert",
+            "connect",
+            "craft",
+            "survive",
+        ],
+    }
+    for background, options in expected.items():
+        assert [option.value for option in wwn.tables[f"learning_{background}"]] == options
+    index = {option.name: option.description for option in wwn.tables["background_index"]}
+    assert index["Artisan"] == (
+        "Free skill: craft. Quick skills: connect, convince, exert, know, notice, trade."
+    )
+    assert index["Hunter"] == (
+        "Free skill: shoot. Quick skills: ride, survive, stab, notice, craft, exert, sneak."
+    )
+    assert index["Wanderer"] == (
+        "Free skill: survive. Quick skills: notice, trade, ride, sneak, exert, connect, craft."
+    )
+
+
+def test_wwn_background_learning_and_index_cover_every_background():
+    wwn = bundled_library().rule_sets["worldswithoutnumber"]
+    backgrounds = [
+        definition
+        for definition in json.loads(
+            (DATA_DIR / "rulesets" / "worldswithoutnumber" / "backgrounds.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        if definition.get("kind") == "background"
+    ]
+    assert len(backgrounds) == 20
+    assert [option.name for option in wwn.tables["background_index"]] == [
+        background["name"] for background in backgrounds
+    ]
+    for background, option in zip(backgrounds, wwn.tables["background_index"]):
+        free = next(iter(background["skills"]))
+        quick = ", ".join(skill for skill in background["learning"] if skill != free)
+        assert option.description == f"Free skill: {free}. Quick skills: {quick}."
+        assert [item.value for item in wwn.tables[f"learning_{background['id']}"]] == background[
+            "learning"
+        ]
+
+
 @pytest.mark.parametrize("missing", NPC_TABLES)
 def test_core_must_declare_every_npc_table(tree: Path, missing: str):
     core = [d for d in _core() if d.get("id") != missing]
