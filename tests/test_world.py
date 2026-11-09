@@ -1479,28 +1479,6 @@ def test_campaign_options_are_stored_once_and_checked(
             world.set_campaign_options(db, campaign_id, CAIRN.campaign, {"omen": omen})
 
 
-LOOKUP_TOOL_NAMES = {
-    "search_notes",
-    "search_storylines",
-    "search_journal",
-    "view_journal",
-    "all_at_location",
-    "search_location",
-    "search_npc",
-    "get_statblock",
-    "character_options",
-    "lookup_rule",
-    "lookup_feature",
-    "lookup_condition",
-    "list_custom_features",
-    "list_factions",
-    "list_lookups",
-    "list_dice_tables",
-    "map_options",
-    "roll_creative",
-}
-
-
 def test_lookup_rule_returns_a_rule_in_full_or_names_the_rules(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
@@ -1517,7 +1495,10 @@ def test_list_lookups_gives_a_brief_of_every_tool_rule_location_and_npc(
 ):
     _, campaign_id = _campaign_id(client_factory)
     listing = _tool(app, campaign_id, "list_lookups", {})
-    assert {entry["tool"] for entry in listing["tools"]} == LOOKUP_TOOL_NAMES
+    lookup_tools = {
+        call.name for call in LIBRARY.rule_sets["rolltest"].tool_calls.values() if call.lookup
+    }
+    assert {entry["tool"] for entry in listing["tools"]} == lookup_tools
     assert all(entry["brief"] for entry in listing["tools"])
     fixture_rules = LIBRARY.rule_sets["rolltest"].rules
     assert {entry["rule"] for entry in listing["rules"]} == set(fixture_rules)

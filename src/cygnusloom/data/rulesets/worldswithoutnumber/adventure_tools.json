@@ -200,64 +200,49 @@
   {
     "type": "tool_call",
     "id": "start_encounter",
-    "name": "start_encounter",
-    "world_method": "start_encounter",
+    "extends": "core:tool_call/start_encounter",
     "description": "Start an encounter on a map. Create the map first if the place has none. Add the participants, then call roll_initiative before anyone acts.",
     "parameters": {
-      "type": "object",
       "properties": {
         "map": {
-          "type": "string",
           "description": "The name of the encounter map where the fight happens."
         }
-      },
-      "required": ["map"]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "end_encounter",
-    "name": "end_encounter",
-    "world_method": "end_encounter",
-    "description": "End the encounter in progress once the fight, chase, or parley is over.",
-    "parameters": {"type": "object", "properties": {}, "required": []}
+    "extends": "core:tool_call/end_encounter",
+    "description": "End the encounter in progress once the fight, chase, or parley is over."
   },
   {
     "type": "tool_call",
     "id": "add_participant",
-    "name": "add_participant",
-    "world_method": "add_participant",
+    "extends": "core:tool_call/add_participant",
     "description": "Add a character to the encounter on a side. Player characters default to the party and NPCs to the foes.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
-          "type": "string",
           "description": "The name of the character joining the encounter."
         },
         "side": {
-          "type": "string",
           "description": "The side they fight on, such as party or foes. Leave it out for the usual side."
         }
-      },
-      "required": ["name"]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "remove_participant",
-    "name": "remove_participant",
-    "world_method": "remove_participant",
+    "extends": "core:tool_call/remove_participant",
     "description": "Take a character out of the encounter, such as one who flees or is left behind.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
-          "type": "string",
           "description": "The name of the character leaving the encounter."
         }
-      },
-      "required": ["name"]
+      }
     }
   },
   {
@@ -360,133 +345,81 @@
   {
     "type": "tool_call",
     "id": "resolve_attacks",
-    "name": "resolve_attacks",
-    "world_method": "resolve_attacks",
+    "extends": "core:tool_call/resolve_attacks",
     "description": "Resolve several NPC attacks on one character at once, such as a creature's several attacks per action or several foes striking the same target. Each attack rolls its own attack die and applies its own damage in turn. Every attacker must be taking their turn unless force is true.",
     "parameters": {
-      "type": "object",
       "properties": {
-        "target": {
-          "type": "string",
-          "description": "The name of the character being attacked."
-        },
         "attacks": {
-          "type": "array",
-          "description": "The attacks to resolve, one entry per attack.",
           "items": {
-            "type": "object",
             "properties": {
-              "attacker": {"type": "string"},
-              "attack": {"type": "string"},
-              "hit_modifier": {"type": "integer", "minimum": -10, "maximum": 10, "default": 0}
-            },
-            "required": ["attacker", "attack"]
+              "hit_modifier": {
+                "type": "integer",
+                "minimum": -10,
+                "maximum": 10,
+                "default": 0
+              }
+            }
           }
-        },
-        "force": {
-          "type": "boolean",
-          "default": false,
-          "description": "Resolve the attacks even though they are not the attackers' turns. Set it only when the story needs an action outside the turn order, such as an ambush."
         }
-      },
-      "required": ["target", "attacks"]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "set_armor",
-    "name": "set_armor",
-    "world_method": "set_armor",
+    "extends": "core:tool_call/set_armor",
     "description": "Set a character's total Armor Class for a special adjustment or a monster's printed AC. For tracked equipment the adjustment persists as equipment or other defense changes. Use equip_armor for equipment changes.",
     "parameters": {
-      "type": "object",
       "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the character or NPC."
-        },
         "armor": {
-          "type": "integer",
-          "minimum": 0,
           "maximum": 30,
           "description": "The new total Armor Class."
         }
-      },
-      "required": ["name", "armor"]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "harm_character",
-    "name": "harm_character",
-    "world_method": "harm_character",
+    "extends": "core:tool_call/harm_character",
     "description": "Harm a character outside combat, from a fall, poison, exposure, or privation. Use harm from an attack only through attack or player_attack. A PC brought to 0 HP is mortally wounded; an NPC is dead.",
     "parameters": {
-      "type": "object",
       "properties": {
-        "name": {"type": "string"},
         "stat": {
-          "type": "string",
           "enum": ["hp", "str", "dex", "con", "int", "wis", "cha"],
           "description": "The stat harmed. Outside combat, usually hp."
         },
-        "amount": {"type": "integer", "minimum": 1, "maximum": 1000},
-        "cause": {"type": "string"}
-      },
-      "required": ["name", "stat", "amount", "cause"]
+        "amount": {
+          "maximum": 1000
+        }
+      }
     }
   },
 
   {
     "type": "tool_call",
     "id": "heal_character",
-    "name": "heal_character",
-    "world_method": "heal_character",
-    "description": "Restore lost points of a stat, usually hit points, from a healing spell, art, or item. It never restores more than the character has lost. Recovering a mortally wounded character is a separate act.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {"type": "string", "description": "The character to heal."},
-        "amount": {"type": "integer", "minimum": 1, "description": "How many points the healing restores before the cap."},
-        "stat": {"type": "string", "description": "The stat to restore. Defaults to hp."},
-        "cause": {"type": "string", "description": "What did the healing, such as a spell or art."}
-      },
-      "required": ["name", "amount"]
-    }
+    "extends": "core:tool_call/heal_character",
+    "description": "Restore lost points of a stat, usually hit points, from a healing spell, art, or item. It never restores more than the character has lost. Recovering a mortally wounded character is a separate act."
   },
   {
     "type": "tool_call",
     "id": "stabilize",
-    "name": "stabilize",
-    "world_method": "stabilize",
+    "extends": "core:tool_call/stabilize",
     "description": "Stop a mortally wounded character's dying clock. The character wakes with 1 hit point after ten minutes and gains the Frail condition. In the book this needs an Int/Heal or Dex/Heal check at difficulty 8 plus the rounds since they fell; call roll_check first and stabilize only on a success.",
     "parameters": {
-      "type": "object",
       "properties": {
-        "name": {"type": "string"},
         "explanation": {
-          "type": "string",
           "description": "How they were stabilized, such as a tourniquet or a healer's care."
         }
-      },
-      "required": ["name", "explanation"]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "recover_character",
-    "name": "recover_character",
-    "world_method": "recover_character",
-    "description": "Clear a mortally wounded character's dying state as magical healing does, leaving the harm they took for heal_character to restore. Use it after the character is stabilized and the healing magic reaches them.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {"type": "string"},
-        "explanation": {"type": "string"},
-        "consequence": {"type": "string"}
-      },
-      "required": ["name", "explanation", "consequence"]
-    }
+    "extends": "core:tool_call/recover_character",
+    "description": "Clear a mortally wounded character's dying state as magical healing does, leaving the harm they took for heal_character to restore. Use it after the character is stabilized and the healing magic reaches them."
   },
   {
     "type": "tool_call",
@@ -510,41 +443,23 @@
   {
     "type": "tool_call",
     "id": "retreat",
-    "name": "retreat",
-    "world_method": "retreat",
-    "description": "Take a character out of the fight. Set safe to true only when the character has a clear route away.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {"type": "string"},
-        "safe": {"type": "boolean"}
-      },
-      "required": ["name", "safe"]
-    }
+    "extends": "core:tool_call/retreat",
+    "description": "Take a character out of the fight. Set safe to true only when the character has a clear route away."
   },
   {
     "type": "tool_call",
     "id": "rest",
-    "name": "rest",
-    "world_method": "rest",
+    "extends": "core:tool_call/rest",
     "description": "Record one party rest. Every player character recovers: a night restores hit points equal to their level, one point of System Strain, all spell castings, and scene and day Effort. A few moments restores scene Effort only. A week of bed rest restores all hit points and Strain and ends Frail. The rest moves the clock once. Frail characters recover no hit points or Strain from a single night.",
     "parameters": {
-      "type": "object",
       "properties": {
-        "character": {"type": "string"},
         "length": {
-          "type": "string",
-          "enum_from": "rest_lengths",
           "description": "moments for a short break, night for a full night's rest, extended for a week of bed rest."
         },
-        "reason": {"type": "string"},
         "interrupted": {
-          "type": "boolean",
-          "default": false,
           "description": "True when something breaks the rest, which then counts as moments only."
         }
-      },
-      "required": ["character", "length", "reason"]
+      }
     }
   },
   {
@@ -649,60 +564,33 @@
   {
     "type": "tool_call",
     "id": "start_project",
-    "name": "start_project",
-    "world_method": "start_project",
+    "extends": "core:tool_call/start_project",
     "description": "Begin a long-running effort and track its points toward a target: a personal project, a piece of research, a magic working, or another long effort. The kind and goal are free text; the target is how many points of work it needs. Advance it with advance_project as time, money, and rolls are spent. Use add_faction_asset and take_faction_turn for factions instead.",
     "parameters": {
-      "type": "object",
       "properties": {
-        "name": {"type": "string", "description": "The project's name, unique among projects."},
-        "kind": {"type": "string", "description": "What sort of effort it is, such as project, research, working, or faction."},
-        "goal": {"type": "string", "description": "What completing it achieves."},
-        "target": {"type": "integer", "minimum": 1, "description": "How many progress points it needs."},
-        "force": {"type": "boolean", "description": "Set true to replace a project of the same name."}
-      },
-      "required": ["name", "kind", "goal", "target"]
+        "kind": {
+          "description": "What sort of effort it is, such as project, research, working, or faction."
+        }
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "advance_project",
-    "name": "advance_project",
-    "world_method": "advance_project",
-    "description": "Add progress to a project, research effort, magic working, or another long effort. Record in the note what the time, money, or roll bought. The project completes when progress reaches its target.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {"type": "string", "description": "The project's name."},
-        "amount": {"type": "integer", "minimum": 1, "description": "Progress points gained."},
-        "note": {"type": "string", "description": "What was spent or learned."}
-      },
-      "required": ["name", "amount"]
-    }
+    "extends": "core:tool_call/advance_project",
+    "description": "Add progress to a project, research effort, magic working, or another long effort. Record in the note what the time, money, or roll bought. The project completes when progress reaches its target."
   },
   {
     "type": "tool_call",
     "id": "abandon_project",
-    "name": "abandon_project",
-    "world_method": "abandon_project",
-    "description": "Give up a project, research effort, magic working, or another long effort.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {"type": "string"},
-        "reason": {"type": "string"}
-      },
-      "required": ["name"]
-    }
+    "extends": "core:tool_call/abandon_project",
+    "description": "Give up a project, research effort, magic working, or another long effort."
   },
   {
     "type": "tool_call",
     "id": "list_projects",
-    "name": "list_projects",
-    "python_module": "core",
-    "function": "list_projects",
-    "description": "List every project, research effort, and magic working with its progress, notes, and whether it is complete or abandoned.",
-    "parameters": {"type": "object", "properties": {}}
+    "extends": "core:tool_call/list_projects",
+    "description": "List every project, research effort, and magic working with its progress, notes, and whether it is complete or abandoned."
   },
   {
     "type": "tool_call",
@@ -962,80 +850,53 @@
   {
     "type": "tool_call",
     "id": "create_encounter_map",
-    "name": "create_encounter_map",
-    "world_method": "create_encounter_map",
+    "extends": "core:tool_call/create_encounter_map",
     "description": "Make a square grid map for an encounter at a location, such as a ford, room, or yard. A map is needed before start_encounter can be used.",
     "parameters": {
-      "type": "object",
       "properties": {
-        "name": {"type": "string"},
-        "location": {"type": "string"},
-        "description": {"type": "string"},
-        "columns": {"type": "integer", "minimum": 1, "maximum": 50},
-        "rows": {"type": "integer", "minimum": 1, "maximum": 50},
-        "template": {"type": "string", "description": "An optional encounter map template id."},
-        "palette": {"type": "string", "description": "A map palette id from map_options: parchment, stone, forest, sea, ember, frost, shadow, or royal."},
-        "ambient": {"type": "string", "description": "An ambient look id from map_options: day, dusk, night, torchlit, foggy, underwater, or magical."},
-        "background_color": {"type": "string", "description": "A hex colour for the board's ground."},
-        "grid_color": {"type": "string", "description": "A hex colour for the board's grid lines."}
-      },
-      "required": ["name", "location", "description"]
+        "columns": {"minimum": 1, "maximum": 50},
+        "rows": {"minimum": 1, "maximum": 50},
+        "template": {"description": "An optional encounter map template id."},
+        "palette": {"description": "A map palette id from map_options: parchment, stone, forest, sea, ember, frost, shadow, or royal."},
+        "background_color": {"description": "A hex colour for the board's ground."},
+        "grid_color": {"description": "A hex colour for the board's grid lines."}
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "update_encounter_map",
-    "name": "update_encounter_map",
-    "world_method": "update_encounter_map",
+    "extends": "core:tool_call/update_encounter_map",
     "description": "Change an encounter map's name, location, description, size, look, or extend it on any side. Extending keeps every mark and token, shifting them by the cells added to the left or top.",
     "parameters": {
-      "type": "object",
       "properties": {
-        "name": {"type": "string"},
-        "columns": {"type": "integer", "minimum": 1, "maximum": 50},
-        "rows": {"type": "integer", "minimum": 1, "maximum": 50},
-        "description": {"type": "string"},
-        "new_name": {"type": "string"},
-        "location": {"type": "string"},
-        "palette": {"type": "string", "description": "A map palette id from map_options. Leave out to keep it."},
-        "ambient": {"type": "string", "description": "An ambient look id from map_options. Leave out to keep it."},
-        "background": {"type": "string", "description": "A terrain id for the board's background. Leave out to keep it."},
-        "background_color": {"type": "string", "description": "A hex colour for the board's ground. Leave out to keep it."},
-        "grid_color": {"type": "string", "description": "A hex colour for the board's grid lines. Leave out to keep it."},
-        "extend_left": {"type": "integer", "minimum": 0, "description": "Add columns on the left; existing marks and tokens shift right."},
-        "extend_right": {"type": "integer", "minimum": 0, "description": "Add columns on the right."},
-        "extend_up": {"type": "integer", "minimum": 0, "description": "Add rows at the top; existing marks and tokens shift down."},
-        "extend_down": {"type": "integer", "minimum": 0, "description": "Add rows at the bottom."}
-      },
-      "required": ["name", "columns", "rows", "description"]
+        "columns": {"minimum": 1, "maximum": 50},
+        "rows": {"minimum": 1, "maximum": 50},
+        "palette": {"description": "A map palette id from map_options. Leave out to keep it."},
+        "ambient": {"description": "An ambient look id from map_options. Leave out to keep it."},
+        "extend_left": {"description": "Add columns on the left; existing marks and tokens shift right."},
+        "extend_right": {"description": "Add columns on the right."},
+        "extend_up": {"description": "Add rows at the top; existing marks and tokens shift down."},
+        "extend_down": {"description": "Add rows at the bottom."}
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "delete_encounter_map",
-    "name": "delete_encounter_map",
-    "world_method": "delete_encounter_map",
-    "description": "Delete an encounter map that is no longer needed.",
-    "parameters": {
-      "type": "object",
-      "properties": {"name": {"type": "string"}},
-      "required": ["name"]
-    }
+    "extends": "core:tool_call/delete_encounter_map",
+    "description": "Delete an encounter map that is no longer needed."
   },
   {
     "type": "tool_call",
     "id": "place_participant",
-    "name": "place_participant",
-    "world_method": "place_participant",
+    "extends": "core:tool_call/place_participant",
     "description": "Put an encounter participant on a cell of the map grid.",
     "parameters": {
-      "type": "object",
       "properties": {
-        "name": {"type": "string"},
-        "column": {"type": "integer", "minimum": 0},
-        "row": {"type": "integer", "minimum": 0}
-      },
-      "required": ["name", "column", "row"]
+        "column": {"minimum": 0},
+        "row": {"minimum": 0}
+      }
     }
   },
   {

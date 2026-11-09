@@ -264,8 +264,8 @@ def test_cairn_tools_keep_one_resolvable_handler():
             assert call.world_method is not None
             assert call.function is None
             assert call.takes_context is False
-    # The one tool whose id and method name differ.
-    assert calls["set_map_cells"].world_method == "set_encounter_map_cells"
+    # Cairn inherits the core map tool, which handles both local and encounter maps.
+    assert calls["set_map_cells"].world_method == "set_map_cells"
 
 
 # WWN tools whose ids or argument names need an explicit binding.

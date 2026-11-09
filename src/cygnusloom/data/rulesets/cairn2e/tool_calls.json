@@ -272,83 +272,50 @@
   {
     "type": "tool_call",
     "id": "set_armor",
-    "name": "set_armor",
-    "world_method": "set_armor",
+    "extends": "core:tool_call/set_armor",
     "description": "Set a character's armor, which is subtracted from each hit before it reaches Hit Protection. Use it when a character puts on or takes off armor, or when a monster's armor changes.",
     "parameters": {
-      "type": "object",
       "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the character or NPC."
-        },
         "armor": {
-          "type": "integer",
-          "minimum": 0,
           "maximum": 3,
           "description": "The new armor value, from 0 (none) to 3 (heaviest armor)."
         }
-      },
-      "required": [
-        "name",
-        "armor"
-      ]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "recover_character",
-    "name": "recover_character",
-    "world_method": "recover_character",
+    "extends": "core:tool_call/recover_character",
     "description": "Bring a player character back from critical damage, where they were left unconscious and bleeding out. Use it only for a living player character whose statblock shows Status: in critical damage and who is not dying. A dying character must be stabilized first (the stabilize tool or a Bandage). Narrate how they survived, such as being dragged to safety, bandaged in time, or kept alive by a companion, and what it cost them, such as a lasting injury, a lost possession, or a debt. The harm they took stays as it was.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
-          "type": "string",
           "description": "The name of the player character."
         },
         "explanation": {
-          "type": "string",
           "description": "How they survived, in a sentence or two."
         },
         "consequence": {
-          "type": "string",
           "description": "What it cost them, in a sentence or two."
         }
-      },
-      "required": [
-        "name",
-        "explanation",
-        "consequence"
-      ]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "resolve_attacks",
-    "name": "resolve_attacks",
-    "world_method": "resolve_attacks",
+    "extends": "core:tool_call/resolve_attacks",
     "description": "Resolve several NPC attacks on one character at once, such as two foes attacking the same character or one NPC using two weapons. Each attack rolls its own dice, only the single highest roll hits, and the damage is applied once. Every attacker must be a living NPC on the side opposing the target, the whole list is checked before any dice are rolled, and every attacker must be taking their turn unless force is true. Use it only when the attackers' turns come up, after the initiative is set. Player characters attack with player_attack, not this tool. An attack with Blast cannot be resolved here; use attack with targets for it.",
     "parameters": {
-      "type": "object",
       "properties": {
-        "target": {
-          "type": "string",
-          "description": "The name of the character being attacked."
-        },
         "attacks": {
-          "type": "array",
-          "description": "The attacks to resolve, one entry per attack.",
           "items": {
-            "type": "object",
             "properties": {
               "attacker": {
-                "type": "string",
                 "description": "The name of the NPC attacking."
               },
               "attack": {
-                "type": "string",
                 "description": "The name of one of the attacker's attacks, as the statblock lists it."
               },
               "modifier": {
@@ -360,40 +327,23 @@
                 ],
                 "description": "The attack's modifier. 'normal' is the attack's own dice; 'impaired' and 'enhanced' roll different dice. Leave it out for a normal attack."
               }
-            },
-            "required": [
-              "attacker",
-              "attack"
-            ]
+            }
           }
-        },
-        "force": {
-          "type": "boolean",
-          "default": false,
-          "description": "Resolve the attacks even though they are not the attackers' turns. Set it only when the story needs an action outside the turn order, such as an ambush."
         }
-      },
-      "required": [
-        "target",
-        "attacks"
-      ]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "harm_character",
-    "name": "harm_character",
-    "world_method": "harm_character",
+    "extends": "core:tool_call/harm_character",
     "description": "Harm a player character outside combat, from a fall, poison, exposure, or a similar hazard. Only the outside-harm stats can take it. Narrate what hurt them. Harm that takes their STR to 0 defeats them. Use it only for harm that does not come from a combat attack.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
-          "type": "string",
           "description": "The name of the player character."
         },
         "stat": {
-          "type": "string",
           "enum": [
             "str",
             "dex",
@@ -402,87 +352,45 @@
           "description": "The stat that takes the harm."
         },
         "amount": {
-          "type": "integer",
-          "minimum": 1,
           "description": "How much harm to take, from the hazard's roll."
         },
         "cause": {
-          "type": "string",
           "description": "What did the harm, in a few words."
         }
-      },
-      "required": [
-        "name",
-        "stat",
-        "amount",
-        "cause"
-      ]
+      }
     }
   },
 
   {
     "type": "tool_call",
-    "id": "heal_character",
-    "name": "heal_character",
-    "world_method": "heal_character",
-    "description": "Restore lost points of a stat, usually hit points, from a healing spell, art, or item. It never restores more than the character has lost.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {"type": "string", "description": "The character to heal."},
-        "amount": {"type": "integer", "minimum": 1, "description": "How many points the healing restores before the cap."},
-        "stat": {"type": "string", "description": "The stat to restore. Defaults to hp."},
-        "cause": {"type": "string", "description": "What did the healing, such as a spell or art."}
-      },
-      "required": ["name", "amount"]
-    }
-  },
-  {
-    "type": "tool_call",
     "id": "stabilize",
-    "name": "stabilize",
-    "world_method": "stabilize",
+    "extends": "core:tool_call/stabilize",
     "description": "Stabilize a dying player character, stopping the clock that would kill them, when the story gives them aid: a healer, a rescue, a miracle. Narrate how. A Mortal Wound held at that point ends by aid. Use it only for a player character who is dying.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
-          "type": "string",
           "description": "The name of the dying player character."
         },
         "explanation": {
-          "type": "string",
           "description": "How they were stabilized, in a sentence or two."
         }
-      },
-      "required": [
-        "name",
-        "explanation"
-      ]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "retreat",
-    "name": "retreat",
-    "world_method": "retreat",
+    "extends": "core:tool_call/retreat",
     "description": "Have a non-player character try to run from the encounter. The engine makes its DEX save. Pass safe as true only when the NPC has a safe way out; if not, the attempt is refused. A passed save takes the NPC out of the fight. A failed save leaves it in the fight.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
-          "type": "string",
           "description": "The name of the NPC running."
         },
         "safe": {
-          "type": "boolean",
           "description": "True when the NPC has a safe destination to run to."
         }
-      },
-      "required": [
-        "name",
-        "safe"
-      ]
+      }
     }
   },
   {
@@ -941,326 +849,170 @@
   {
     "type": "tool_call",
     "id": "create_encounter_map",
-    "name": "create_encounter_map",
-    "world_method": "create_encounter_map",
-    "description": "Create an encounter map: a grid of cells set in an existing location, where a tactical encounter takes place. Use it before starting an encounter there. Cells are scaled by the rule set's grid.",
+    "extends": "core:tool_call/create_encounter_map",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
-          "type": "string",
           "description": "A name for the map, unique among maps."
         },
         "location": {
-          "type": "string",
           "description": "The name of the existing location the map is set in."
         },
         "columns": {
-          "type": "integer",
           "description": "How many cells wide the map is, from 1 to 60. Required unless a template is given; with a template, it overrides the template's width."
         },
         "rows": {
-          "type": "integer",
           "description": "How many cells tall the map is, from 1 to 60. Required unless a template is given; with a template, it overrides the template's height."
         },
         "description": {
-          "type": "string",
           "description": "What the map shows: terrain, cover, hazards, and anything else that matters for tactics."
         },
         "template": {
-          "type": "string",
           "description": "A standard layout, such as room or corridor. The template sets the size and the starting terrain. Leave it out for an empty map."
         },
         "palette": {
-          "type": "string",
           "description": "A map palette id from map_options, such as parchment, stone, forest, sea, ember, frost, shadow, or royal."
         },
-        "ambient": {
-          "type": "string",
-          "description": "An ambient look id from map_options: day, dusk, night, torchlit, foggy, underwater, or magical."
-        },
         "background_color": {
-          "type": "string",
           "description": "A hex colour for the board's ground, overriding the palette."
         },
         "grid_color": {
-          "type": "string",
           "description": "A hex colour for the board's grid lines, overriding the palette."
         }
-      },
-      "required": [
-        "name",
-        "location",
-        "description"
-      ]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "update_encounter_map",
-    "name": "update_encounter_map",
-    "world_method": "update_encounter_map",
-    "description": "Change an encounter map: its name, the location it is in, its size, or its description. Refused if the new name is taken or a participant would be left outside the new size.",
+    "extends": "core:tool_call/update_encounter_map",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
-          "type": "string",
           "description": "The name of the map to change."
         },
         "columns": {
-          "type": "integer",
           "description": "How many cells wide the map is, from 1 to 60."
         },
         "rows": {
-          "type": "integer",
           "description": "How many cells tall the map is, from 1 to 60."
         },
         "description": {
-          "type": "string",
           "description": "What the map shows now."
         },
         "new_name": {
-          "type": "string",
           "description": "A new name for the map. Leave out to keep the current name."
         },
         "location": {
-          "type": "string",
           "description": "The name of the location the map is in. Leave out to keep the current location."
         },
         "palette": {
-          "type": "string",
           "description": "A map palette id from map_options. Leave out to keep the current palette."
         },
         "ambient": {
-          "type": "string",
           "description": "An ambient look id from map_options. Leave out to keep the current look."
         },
-        "background": {
-          "type": "string",
-          "description": "A terrain id for the board's background. Leave out to keep it."
-        },
-        "background_color": {
-          "type": "string",
-          "description": "A hex colour for the board's ground. Leave out to keep it."
-        },
-        "grid_color": {
-          "type": "string",
-          "description": "A hex colour for the board's grid lines. Leave out to keep it."
-        },
         "extend_left": {
-          "type": "integer",
-          "minimum": 0,
           "description": "Add this many columns on the left. Existing marks and tokens shift right."
         },
         "extend_right": {
-          "type": "integer",
-          "minimum": 0,
           "description": "Add this many columns on the right."
         },
         "extend_up": {
-          "type": "integer",
-          "minimum": 0,
           "description": "Add this many rows at the top. Existing marks and tokens shift down."
         },
         "extend_down": {
-          "type": "integer",
-          "minimum": 0,
           "description": "Add this many rows at the bottom."
         }
-      },
-      "required": [
-        "name",
-        "columns",
-        "rows",
-        "description"
-      ]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "delete_encounter_map",
-    "name": "delete_encounter_map",
-    "world_method": "delete_encounter_map",
-    "description": "Delete an encounter map. Refused while an encounter is using it.",
+    "extends": "core:tool_call/delete_encounter_map",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
-          "type": "string",
           "description": "The name of the map to delete."
         }
-      },
-      "required": [
-        "name"
-      ]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "start_encounter",
-    "name": "start_encounter",
-    "world_method": "start_encounter",
-    "description": "Start an encounter on an encounter map. Its location becomes the encounter's location. Only one encounter can be in progress at a time. Add participants after starting. The player character and NPCs take turns in the order they join.",
+    "extends": "core:tool_call/start_encounter",
     "parameters": {
-      "type": "object",
       "properties": {
         "map": {
-          "type": "string",
           "description": "The name of the encounter map to play on."
         }
-      },
-      "required": [
-        "map"
-      ]
-    }
-  },
-  {
-    "type": "tool_call",
-    "id": "end_encounter",
-    "name": "end_encounter",
-    "world_method": "end_encounter",
-    "description": "End the encounter in progress. Any turn in progress ends with it.",
-    "parameters": {
-      "type": "object",
-      "properties": {},
-      "required": []
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "add_participant",
-    "name": "add_participant",
-    "world_method": "add_participant",
-    "description": "Add a character to the encounter in progress, on a side. Player characters default to the party and NPCs to the foes. The turn order keeps each side together: the party first, then the other sides in the order they first appear. A character who is not at the encounter's location is still added, and the result carries a warning to act on.",
+    "extends": "core:tool_call/add_participant",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
-          "type": "string",
           "description": "The name of the player character or of an NPC."
         },
         "side": {
-          "type": "string",
           "description": "The side the character fights on, such as party or foes. Any name works. Leave it out for the default."
         }
-      },
-      "required": [
-        "name"
-      ]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "remove_participant",
-    "name": "remove_participant",
-    "world_method": "remove_participant",
-    "description": "Take a character out of the encounter in progress. If they are taking their turn, it ends and the next participant's turn follows.",
+    "extends": "core:tool_call/remove_participant",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
-          "type": "string",
           "description": "The name of the participant to remove."
         }
-      },
-      "required": [
-        "name"
-      ]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "place_participant",
-    "name": "place_participant",
-    "world_method": "place_participant",
-    "description": "Put a participant on a cell of the encounter map, counted from 0 at the top left: column increases to the right and row increases downward. Moving is limited to the rule set's movement per turn, counted in cells moved in a straight line or diagonal. Obstacles block: a cell with a blocking object cannot be entered or be the destination, so the participant goes around it. Terrain that costs extra movement to enter takes that many moves for each cell entered. That limit applies only to the participant whose turn it is; moving anyone else is free, though they still cannot enter a blocked cell. The first placement is free. Use this to move a participant, not to tell the story of how they got there.",
+    "extends": "core:tool_call/place_participant",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
-          "type": "string",
           "description": "The name of the participant to place."
         },
         "column": {
-          "type": "integer",
           "description": "The cell's column, from 0 at the left edge."
         },
         "row": {
-          "type": "integer",
           "description": "The cell's row, from 0 at the top edge."
         }
-      },
-      "required": [
-        "name",
-        "column",
-        "row"
-      ]
+      }
     }
   },
   {
     "type": "tool_call",
-    "id": "set_map_cells",
-    "name": "set_map_cells",
-    "world_method": "set_encounter_map_cells",
-    "description": "Set the terrain or object on cells of an encounter map. A cell with an object that blocks cannot be entered.",
+    "id": "rest",
+    "extends": "core:tool_call/rest",
+    "description": "Record a rest for the whole party. The Warden decides the length from what the party does: 'moments' is a short break of one hour, such as a drink and a sit-down, 'night' is a full night's rest, which runs until morning, or until dusk when it begins in the morning, 'week' is a week of rest. The rest moves the clock forward itself, so do not also advance_time for the same time. Set interrupted when something breaks the rest, and then it counts as moments only. A full rest, uninterrupted, is the only way to clear Fatigue. A deprived character recovers nothing. Rest eats one ration per character itself (a sheltered character uses the bed instead), so never remove rations before resting; a character with no ration is deprived.",
     "parameters": {
-      "type": "object",
       "properties": {
-        "map": {
-          "type": "string",
-          "description": "The name of the encounter map."
+        "length": {
+          "description": "How long the rest lasts: 'moments', 'night', or 'week'."
         },
-        "cells": {
-          "type": "array",
-          "description": "The cells to change, at most 200 per call. Each cell needs a column and row, and terrain or object or both. Give an empty string for terrain or object to clear it.",
-          "items": {
-            "type": "object",
-            "properties": {
-              "column": {
-                "type": "integer",
-                "description": "The cell's column, from 0 at the left edge."
-              },
-              "row": {
-                "type": "integer",
-                "description": "The cell's row, from 0 at the top edge."
-              },
-              "terrain": {
-                "type": "string",
-                "description": "The terrain id for the cell, such as mud or floor. Empty clears it."
-              },
-              "object": {
-                "type": "string",
-                "description": "The object id on the cell, such as wall or crate. Empty clears it."
-              },
-              "color": {
-                "type": "string",
-                "description": "A hex colour for this cell's ground, such as #7a2f3a. Empty clears it."
-              },
-              "pattern": {
-                "type": "string",
-                "description": "A pattern id from map_options, such as tiles, bricks, wood, or runes. Empty clears it."
-              },
-              "icon": {
-                "type": "string",
-                "description": "An icon id from map_options to draw instead of the object's own icon. Empty clears it."
-              },
-              "label": {
-                "type": "string",
-                "description": "A short label for the cell, at most 60 characters, shown in the tooltip. Empty clears it."
-              }
-            },
-            "required": [
-              "column",
-              "row"
-            ]
-          }
+        "interrupted": {
+          "description": "True when something breaks the rest. An interrupted rest counts as moments only. Defaults to false."
+        },
+        "reason": {
+          "description": "What the party was doing, such as 'camped in the ruined chapel'."
         }
-      },
-      "required": [
-        "map",
-        "cells"
-      ]
+      }
     }
   }
 ]

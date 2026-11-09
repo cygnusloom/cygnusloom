@@ -275,6 +275,9 @@
           "length": {
             "description": "How long the rest lasts: 'moments', 'night', or 'downtime'."
           },
+          "interrupted": {
+            "description": "True when something breaks the rest. An interrupted rest counts as moments only. Defaults to false."
+          },
           "reason": {
             "description": "What the party was doing, such as 'slept in the dormitory'."
           }
