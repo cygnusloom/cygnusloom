@@ -660,6 +660,7 @@ def test_a_tool_name_defaults_to_its_id(tree: Path):
         ({"parameters": None}, "must be an object schema"),
         ({"parameters": []}, "must be an object schema"),
         ({"parameters": {"type": "array"}}, "must be an object schema"),
+        ({"parameters": {}}, "needs a 'properties' object"),
         ({"parameters": {"type": "object"}}, "needs a 'properties' object"),
         (
             {"parameters": {"type": "object", "properties": {}, "required": ["ghost"]}},
@@ -670,6 +671,33 @@ def test_a_tool_name_defaults_to_its_id(tree: Path):
 def test_tool_call_definition_is_checked(tree: Path, overrides: dict[str, Any], message: str):
     _write(tree, {"rulesets/testset/module.json": _module(**overrides)})
     with pytest.raises(ContentError, match=message):
+        ContentLibrary.load(tree)
+
+
+def test_a_parameter_schema_may_omit_its_type(tree: Path):
+    schema = {
+        "properties": {
+            "relationship": {"type": "integer"},
+            "circumstance": {"type": "integer"},
+        },
+        "required": ["relationship", "circumstance"],
+    }
+    _write(tree, {"rulesets/testset/module.json": _module(parameters=schema)})
+    tool = ContentLibrary.load(tree).rule_sets["testset"].tool_calls["social"]
+    assert tool.parameters["type"] == "object"
+    assert tool.parameters["properties"] == schema["properties"]
+
+
+def test_a_nested_schema_node_still_needs_its_type(tree: Path):
+    schema = {
+        "properties": {
+            "relationship": {"enum": ["friendly"]},
+            "circumstance": {"type": "integer"},
+        },
+        "required": ["relationship", "circumstance"],
+    }
+    _write(tree, {"rulesets/testset/module.json": _module(parameters=schema)})
+    with pytest.raises(ContentError, match="schema 'type' must be one of"):
         ContentLibrary.load(tree)
 
 

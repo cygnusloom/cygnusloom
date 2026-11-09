@@ -6,7 +6,6 @@
     "function": "create_location",
     "description": "Add a new location to the campaign. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs, and a name that repeats an existing place in other words (such as 'Market Street' for 'Market Road') is refused. Set discovered to true only when anyone in the world would have heard of the place, so the player already knows it. A place given a map point (x and y) must lie inside a region of the map with at least 0.5 km of ground between the point and the region's edge; if none does, the refusal says so, and you must create that region with create_region first. To put a place inside another, give parent set to the name of that top-level location; such a place has no map point of its own, so leave out x and y.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -56,7 +55,6 @@
     "id": "create_region",
     "description": "Add an area of ground to the world map, drawn as a coloured shape. It stays hidden from the player until it is discovered or a discovered place lies inside it; set discovered to true only when the player would know of this ground already. Use it when the story establishes a lake, a crater field, or other terrain that the map does not show yet, and when a new place with a map point needs ground around it. The terrain names a kind of ground the rule set defines; if the name is not a kind, the refusal lists the kinds. Give points as the corners of the shape in order around its edge, each as [x, y] in kilometers from the map's center, with x positive east and y positive north. Draw the ground the way the story describes it: six or more corners, with sides of uneven length and turns of uneven angle, so it reads as land and not as a plain rectangle. Use only corners the story has given you. A name must be unique among regions. A region that overlaps ground already there is cut to fit it: only the part on open ground is kept, which is usually what you want where two kinds of ground meet. If the cut leaves separate pieces, the largest is kept and the result says how many were left out. Set force to true to keep the whole shape where it really does lie over other ground, as when one is the other's marsh.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -115,7 +113,6 @@
     "id": "update_region",
     "description": "Change an area of ground on the world map. Give only what changes: a new terrain kind, a new outline to extend or reshape it, discovery, or a colour, texture, ink, or label. An empty color, pattern, or label goes back to the terrain kind's own look or the region's name. A new outline that overlaps another region is refused unless force is true.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -172,7 +169,6 @@
     "id": "update_world_map",
     "description": "Change the look of the player's world map. Choose a palette and ambient light from map_options, or give custom background and line colours. Clouds and contour lines can be turned off when the chart should be plain. Leave a field out to keep it.",
     "parameters": {
-      "type": "object",
       "properties": {
         "palette": {
           "type": "string",
@@ -208,7 +204,6 @@
     "npc_hp_tier": true,
     "description": "Add an NPC to the campaign and place them at an existing location. Leave personality, accent, or quirks out to have them generated at random; give them only when the story calls for a specific trait. Give character options, such as appearance or biography, only when the story calls for them; anything left out is rolled or left blank. A name that matches a published statblock, such as a creature in the source material, takes that statblock's stats, armor, and attacks, so leave the stats out of the character options. Names must be unique among locations and NPCs.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -259,7 +254,6 @@
     "description": "Move the player character or an NPC to another existing location. Use it when someone travels or is sent somewhere. Travel follows the routes in the location descriptions: send the player character only to a place reached by a route from where they are, and never to a place they have not heard of, unless something forces them there (a trap, a teleporter, or some other force). A forced move discovers the place on arrival. The player character starts unplaced, so on the first turn create the place where the story begins and move the player character there. Moving the player character to a place discovers it. Leave location out to send an NPC into the wind: it is at no location until a later move brings it back. The player character cannot go into the wind. Always give the mode. Use overland for a journey across open country or between distant sites, which takes travel time and needs a route. Use in_settlement for a walk within one settlement, station, or site, which takes time at the travel speed. Use in_dungeon for a move through a building, ship, or ruin, which takes no clock time. The result reports the time charged.",
     "travel": true,
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -312,7 +306,6 @@
     "id": "add_note",
     "description": "Record a note for yourself as the GM, to track events, updates, and situations so you stay consistent. It is not written for the player. Attach it to a location or NPC by giving its name as the subject; leave the subject out for a note about the campaign as a whole. The result includes the note's id, for later update_note or delete_note calls.",
     "parameters": {
-      "type": "object",
       "properties": {
         "text": {
           "type": "string",
@@ -334,7 +327,6 @@
     "lookup": true,
     "description": "Search your GM notes on events, updates, and situations, to stay consistent. Every word in the query must appear in the note's text or in its subject's name. Each result includes the note's id. Use it before continuing a thread or answering questions about what has happened before.",
     "parameters": {
-      "type": "object",
       "properties": {
         "query": {
           "type": "string",
@@ -351,7 +343,6 @@
     "id": "create_storyline",
     "description": "Begin a storyline: a structured plot thread that keeps the campaign's stories coherent. The name and summary are player-facing and must carry no secrets; the plot, characters, locations, objects, and notes are your own record and may hold them. At most three storylines may be active at once. The first active storyline becomes the focused one; pass focus true to make this one the main plot now. The result includes the storyline's id.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -406,7 +397,6 @@
     "id": "update_storyline",
     "description": "Change a storyline as the story moves. Leave a field out to keep it as it is, pass an empty string or list to clear it, or give a new value. Use the storyline's name or its id. Set active false to deactivate it, or active true to bring a deactivated storyline back; at most three may be active. Keep its player-facing summary current whenever the plot advances.",
     "parameters": {
-      "type": "object",
       "properties": {
         "storyline": {
           "type": "string",
@@ -464,7 +454,6 @@
     "id": "focus_storyline",
     "description": "Make one active storyline the focused one: the main plot of the moment and the thread the player is most interested in. The previously focused storyline stays active as a secondary thread. A deactivated storyline must be made active with update_storyline before it can be focused.",
     "parameters": {
-      "type": "object",
       "properties": {
         "storyline": {
           "type": "string",
@@ -481,7 +470,6 @@
     "id": "deactivate_storyline",
     "description": "Take a storyline out of play when it is resolved or no longer matters. It leaves the active list and the turn context, and the Story page shows it as deactivated. search_storylines still finds it, and update_storyline can make it active again. If it was focused, the oldest remaining active storyline takes over the focus.",
     "parameters": {
-      "type": "object",
       "properties": {
         "storyline": {
           "type": "string",
@@ -499,7 +487,6 @@
     "lookup": true,
     "description": "Find storylines by words in their name, summary, plot, characters, locations, objects, or notes. Deactivated storylines are included even though the turn context leaves them out. Use it to recall a dormant thread or to check whether a storyline already exists before creating one. Each result includes the id, the active and focused flags, and every field.",
     "parameters": {
-      "type": "object",
       "properties": {
         "query": {
           "type": "string",
@@ -517,7 +504,6 @@
     "journal_step": true,
     "description": "Add text to the end of the journal the player reads, a text file of what has happened in the campaign in the story's own voice. Start a new campaign day's passage with it; to add to a day that already has one, merge the text into that passage with replace_in_journal instead. Do not reveal what the player character has not learned.",
     "parameters": {
-      "type": "object",
       "properties": {
         "text": {
           "type": "string",
@@ -535,7 +521,6 @@
     "journal_step": true,
     "description": "Edit the journal by replacing one passage with another, like an exact find and replace. old_text must be copied exactly from the journal and match in one place only. An empty new_text deletes the passage. Use it to correct facts and to condense the journal when it runs long.",
     "parameters": {
-      "type": "object",
       "properties": {
         "old_text": {
           "type": "string",
@@ -558,7 +543,6 @@
     "lookup": true,
     "description": "Search the journal the player reads, to stay consistent with what the player has been told. Matching is fuzzy, so near spellings count. Each result gives the line numbers it covers, for view_journal.",
     "parameters": {
-      "type": "object",
       "properties": {
         "query": {
           "type": "string",
@@ -580,7 +564,6 @@
     "lookup": true,
     "description": "View lines of the journal the player reads, numbered from 1, by line range. Shows at most 50 lines at a time. Use it to read a stretch in full, such as the lines around a search result.",
     "parameters": {
-      "type": "object",
       "properties": {
         "start_line": {
           "type": "integer",
@@ -602,7 +585,6 @@
     "review_step": true,
     "description": "Set the narration just written aside because it would mislead the player about the recorded turn, so the story can be written again. Call this before any tool that changes the record; the narration is written again after this step. Give the fault so the new narration corrects it. Do not call it when the narration is sound.",
     "parameters": {
-      "type": "object",
       "properties": {
         "reason": {
           "type": "string",
@@ -620,7 +602,6 @@
     "lookup": true,
     "description": "Look up a location: its description, the NPCs there (with personality, accent, and quirks), whether the player character is there, and the notes about the place or those NPCs. Leave out the location to look at the player character's current location. Use it whenever you need to know what is in a place before you narrate it or act in it.",
     "parameters": {
-      "type": "object",
       "properties": {
         "location": {
           "type": "string",
@@ -635,7 +616,6 @@
     "lookup": true,
     "description": "Find locations by words in their name or description. Every word in the query must appear. Use it to find a place you have described before or to check whether a place already exists before you create one.",
     "parameters": {
-      "type": "object",
       "properties": {
         "query": {
           "type": "string",
@@ -653,7 +633,6 @@
     "lookup": true,
     "description": "Find NPCs anywhere in the world by words in their name, location, description, personality, accent, or quirks. Every word in the query must appear. Each result gives the NPC's location. Use it to check whether an NPC already exists before you create one, or to find someone the story mentions.",
     "parameters": {
-      "type": "object",
       "properties": {
         "query": {
           "type": "string",
@@ -671,7 +650,6 @@
     "lookup": true,
     "description": "Get a character's statblock: stats, template, features, and fields. Works for the player character and for NPCs. Statblocks are not in your context until you fetch them, so fetch one before a roll, before a change to a character's abilities or gear, or whenever their capabilities matter to the outcome.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -689,7 +667,6 @@
     "lookup": true,
     "description": "List the values a character field can take, for create_npc's character option. Call it with no field to list the fields that take a value from a table. Call it with a field to list that field's values, with a description of what each named option does.",
     "parameters": {
-      "type": "object",
       "properties": {
         "field": {
           "type": "string",
@@ -706,7 +683,6 @@
     "lookup": true,
     "description": "Read the full text of a rule. Your context lists every rule with a brief and shows the important rules in full. Read a rule you only have the brief of before you rely on it.",
     "parameters": {
-      "type": "object",
       "properties": {
         "rule": {
           "type": "string",
@@ -733,7 +709,6 @@
     "function": "speak",
     "description": "Get the exact words an NPC says. A separate step writes the dialogue from the NPC's personality, accent, and quirks, so give the intent, not the words. Speak sparingly: call it only when the player character is speaking to this NPC or the NPC must say something the player needs to hear; most actions need description, not dialogue. An NPC the player has not addressed speaks unprompted only when their personality makes it likely. The NPC should be at the player character's location; if not, nothing is written and a warning is returned, unless force is true. In combat, speak only for a line that changes what the player must decide. Quote the returned dialogue as it is.",
     "parameters": {
-      "type": "object",
       "properties": {
         "npc": {
           "type": "string",
@@ -763,7 +738,6 @@
     "id": "update_location",
     "description": "Change a location's private description, its player-facing summary, or its map position. Move it on the map by giving x and y, or take it off the map by setting off_map to true. A place inside another cannot be given x or y. Its name stays the same. Leave x, y, and off_map out to keep its position, and leave description out to keep it. It never moves a character: to take the player character or an NPC into a place, use move_actor. Use delete_location instead to remove the place from the story.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -808,7 +782,6 @@
     "id": "discover_location",
     "description": "Mark an existing location as discovered: the player character has heard about it in detail, or the story has revealed it. A discovered location appears on the player's map. Moving the player character there discovers it too, so use this for places they learn of without going. When an NPC gives directions, discover only the destination; do not discover the other places the directions name. Always pass a summary: it is what the compendium shows the player, and the place's full description is your private record. Write one or two sentences with no GM-only detail, hidden contents, or plot notes. Giving a summary for a location that is already discovered replaces what the player sees of it.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -829,7 +802,6 @@
     "id": "delete_location",
     "description": "Remove a location from the campaign. It is refused while any character is still there; move them first, and refused while places are inside it; remove those first. Notes about the location are kept.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -846,7 +818,6 @@
     "id": "change_currency",
     "description": "Give a character money from outside a purchase (a gift, a reward, a loan repaid, a loot split), or take it away (a fine, a toll, a bribe, a debt paid to someone else). Use a positive amount to give and a negative amount to take. A take is refused if the character lacks the money; there is no credit. Give the cause in a few words. Do not use this for anything bought in a shop, and do not use it to make up money the story has not earned.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -873,7 +844,6 @@
     "id": "place_object",
     "description": "Put a world object in a place: a location or an area inside one. It holds what the story has stocked there, such as money, an item, or a described thing. Give a short name a character can take it by, such as 'sealed crate', and a fuller description in contents. Optionally give money or an item name; when the object can be carried, give item and a valid item_size from the rule set's inventory, or omit item_size to use normal. When the object holds an item, describe the item itself in item_text, apart from the object's own description in contents. Set hidden when the object is not yet found; a hidden object cannot be seen or taken. Use this only for treasure or objects the story has placed; do not invent them unprompted. Do not place an object again when the place already holds it: check the objects listed for the place in the scene first, and when the object is already there, leave it be.",
     "parameters": {
-      "type": "object",
       "properties": {
         "place": {
           "type": "string",
@@ -926,7 +896,6 @@
     "id": "take_object",
     "description": "A character takes a visible object from the place they are in. Money goes to that character. An item goes into their inventory, and the take is refused if it does not fit. Use this only when a character acts to take the object.",
     "parameters": {
-      "type": "object",
       "properties": {
         "object_name": {
           "type": "string",
@@ -954,7 +923,6 @@
     "character_options": true,
     "description": "Change an NPC's details. Only the fields you give change; the rest stay as they are. Giving quirks replaces the whole list. Use it when an NPC changes, for example after a shift in attitude or appearance. The description is your own record and may hold secrets the player has not learned; the player never sees it. The personality, accent, and quirks are what the player sees on meeting them. To record what the player has learned, use update_npc_knowledge. The player character cannot be changed this way. A story-only NPC has no stats until you give them with character, armor, and attacks; this works once, and it refuses an NPC that already has stats.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -1023,7 +991,6 @@
     "id": "update_npc_knowledge",
     "description": "Record what the player character has learned about an NPC. The Characters page shows only what the player knows, so keep it to what the player has seen or been told, and never write a secret the player has not learned. Meeting an NPC records their personality, accent, quirks, pronouns, and place automatically; use this tool when the story reveals more, such as the NPC's appearance, when the player learns where an NPC has gone, when a relationship changes, or when a rumor puts someone in the player's mind before they are met. Only the fields you give change. The relationship is a short note in your own words, such as 'friendly, owes a debt' or 'wary of the party'. The location is the place the player now knows the NPC to be, and it must already exist. This does not change the NPC themselves; use update_npc for that.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -1071,7 +1038,6 @@
     "id": "describe_character",
     "description": "Write or refresh the brief, player-facing summary of what the player knows about a character. This is the card body the Characters page shows for the player character, a hireling, or a person the player knows. Keep it to what the player has seen or been told: no GM-only secrets, hidden motives, or plot notes. Use it when the player first meets someone and whenever the action changes what the player knows of them.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -1093,7 +1059,6 @@
     "id": "delete_npc",
     "description": "Remove an NPC from the campaign. Use it for a temporary NPC who matters little to the story, such as a passing stranger, a hired guard, or a monster from a fight, once they have left the scene or the encounter they were in has ended. Keep NPCs the story may bring back, and remove an NPC who leaves the story or dies only when they are no longer needed. Notes about them are kept. The player character cannot be removed.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -1110,7 +1075,6 @@
     "id": "update_note",
     "description": "Change the text of one of your GM notes, identified by its id. Use it when something you recorded has changed.",
     "parameters": {
-      "type": "object",
       "properties": {
         "note_id": {
           "type": "integer",
@@ -1132,7 +1096,6 @@
     "id": "delete_note",
     "description": "Remove one of your GM notes, identified by its id, once it no longer holds true or matters.",
     "parameters": {
-      "type": "object",
       "properties": {
         "note_id": {
           "type": "integer",
@@ -1151,7 +1114,6 @@
     "function": "ooc",
     "description": "Mark the player's message as out of character: they talk to you as the GM rather than to their character, ask about the rules or the world, or ask for a change outside the story. Call it in place of the other tools for the message. An out-of-character step then replies to the player directly and has all the tools. Set no_narration when the reply needs no story beat after it.",
     "parameters": {
-      "type": "object",
       "properties": {
         "no_narration": {
           "type": "boolean",
@@ -1166,7 +1128,6 @@
     "enabled_by": {"social": ["conditions"]},
     "description": "Give a player character a stored condition the story has put on them, such as a fright, a curse, or an injury. Name the condition by its id, and give the cause in the story.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -1194,7 +1155,6 @@
     "enabled_by": {"social": ["conditions"]},
     "description": "End a stored condition a player character has, when its ending happens in the story. Use one of the triggers that condition lists, or gm to end it by your decision.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -1222,7 +1182,6 @@
     "lookup": true,
     "description": "Roll on the creative tables for a fresh idea. Use it when the player is directionless, or when the story is waiting for something to happen next and you have no clear direction. Each result is a suggestion, not a fact: work it into the scene in a way that fits what has already happened, and drop any result that clashes with the established story. Leave 'tables' out to roll every creative table (the core rule set has 'action', 'theme', 'plot_twist', 'location', and 'location_descriptor'), or name ids to roll only those.",
     "parameters": {
-      "type": "object",
       "properties": {
         "tables": {
           "type": "array",
@@ -1240,7 +1199,6 @@
     "lookup": true,
     "description": "Read a feature's full text by id or name: a spell, art, Focus, origin, class ability, or item feature. The statblock names features and lists their short notes; read the full text before you resolve a spell, art, or exception.",
     "parameters": {
-      "type": "object",
       "properties": {
         "feature": {
           "type": "string",
@@ -1259,7 +1217,6 @@
     "lookup": true,
     "description": "Read a condition's full text: what it modifies, how it ends, and whether it is dying or fatal. Use it before you apply or end a condition so its rules reach the table.",
     "parameters": {
-      "type": "object",
       "properties": {
         "condition": {
           "type": "string",
@@ -1276,7 +1233,6 @@
     "id": "describe_world",
     "description": "Write or replace the player-facing overview of the world shown in the compendium. Use it for an unwritten world once its shape is decided, and update it when the story changes what the player would know. Write two or three vivid sentences about the world as its people know it, with no GM secrets, hidden truths, plot notes, or instructions about how the world was invented.",
     "parameters": {
-      "type": "object",
       "properties": {
         "description": {
           "type": "string",
@@ -1293,7 +1249,6 @@
     "id": "record_settings",
     "description": "Record several facts about the world you invented in one call, such as the world, the starting region, its peoples, its powers, its history, its magic, and its conflict. The facts are shown back to you every turn. Recording an existing topic replaces that fact. Use this instead of record_setting when you have more than one fact to write, so the whole world is one round rather than one round per fact.",
     "parameters": {
-      "type": "object",
       "properties": {
         "facts": {
           "type": "array",
@@ -1327,7 +1282,6 @@
     "id": "record_setting",
     "description": "Record one fact about the world you invented: a region, a people, a power, a piece of history, a law of magic, or the conflict the campaign turns on. The facts are shown back to you every turn, so this is how the setting stays consistent. Recording an existing topic replaces that fact. Call it as you build the world before the opening narration, and again whenever play makes the setting more specific.",
     "parameters": {
-      "type": "object",
       "properties": {
         "topic": {
           "type": "string",
@@ -1350,7 +1304,6 @@
     "activity": "Campaign setting changed: {detail}",
     "description": "Change a campaign setting only when the player has explicitly asked for that change. The only setting this tool can change is inventory_space. Never change it on your own initiative, to make the story easier, or as part of another action. Never change the model, the campaign name, or how much of the record the player sees; tell the player to use the Settings page for those. record_setting is for invented world facts, not this.",
     "parameters": {
-      "type": "object",
       "properties": {
         "setting": {
           "type": "string",
@@ -1375,7 +1328,6 @@
     "id": "create_local_map",
     "description": "Create a local map for an indoor or small-scale place, such as a room, tavern, house, temple, crypt, cave, watchtower, market, camp, ship, hall, library, or cellar. A local map is used outside an encounter to show where the player character, NPCs, and props stand; when a fight starts on it, start_encounter on the same map and the tokens already placed carry into the fight. The template supplies the layout, size, and starting terrain. Use map_options to see the templates, and give a palette, ambient, or board colours when the place's mood matters; without them the template's own look is copied.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -1431,7 +1383,6 @@
     "id": "place_map_token",
     "description": "Place a token on a local map outside an encounter: the player character, an NPC at that place, or a prop such as a barrel, cart, or boat. The token shows where it stands and keeps its cell when an encounter starts on the same map. Placing the same token again moves it; do this whenever the scene moves a character within the map, in the same state step and before the narration. A character must already be at the map's location. The cell must be on the map, free of another token, and not blocked by an object. During an encounter, use place_participant instead.",
     "parameters": {
-      "type": "object",
       "properties": {
         "map": {
           "type": "string",
@@ -1463,7 +1414,6 @@
     "id": "remove_map_token",
     "description": "Remove a character, NPC, or prop token from a local map outside an encounter. During an encounter, use remove_participant for a character in the fight.",
     "parameters": {
-      "type": "object",
       "properties": {
         "map": {
           "type": "string",
@@ -1491,7 +1441,6 @@
     "id": "set_map_cells",
     "description": "Set the terrain, object, colour, pattern, icon, or label of cells on a map, inside or outside an encounter. Use it for fixed furniture, doors, stairs, water, and other props on a local map, and to vary its tiles. Ids come from map_options. A custom colour overrides the terrain colour, a custom icon overrides the object icon, and the label appears in the tooltip. A cell with a blocking object cannot be entered.",
     "parameters": {
-      "type": "object",
       "properties": {
         "map": {
           "type": "string",
@@ -1554,7 +1503,6 @@
     "id": "update_local_map",
     "description": "Change a local map: rename it, move it to another location, rewrite its description, resize it, restyle its palette, ambient, background, or board colours, or extend it left, right, up, or down. Extending keeps every mark and token, shifting them by the cells added to the left or top; a fight in progress keeps its cells too. Shrinking crops what falls outside and reports how many marks and tokens were dropped. Use map_options to see the palettes, ambients, terrains, and patterns.",
     "parameters": {
-      "type": "object",
       "properties": {
         "map": {
           "type": "string",
@@ -1639,7 +1587,6 @@
     "id": "create_custom_feature",
     "description": "Create and learn a feature invented during play, such as a researched spell, potion, or enchantment. Give it a name, the kind of magic, and a description that says exactly what it does. Add the base effect, the mods it was built from, and its Stress cost so the sheet and the compendium keep the design. For the player character, use the design the player has stated; do not invent one on their behalf.",
     "parameters": {
-      "type": "object",
       "properties": {
         "character": {
           "type": "string",
@@ -1698,7 +1645,6 @@
     "id": "update_custom_feature",
     "description": "Refine a feature invented during play. Only the fields given are replaced. Use it when research, a mishap, or a lesson changes what the feature does.",
     "parameters": {
-      "type": "object",
       "properties": {
         "character": {
           "type": "string",
@@ -1728,7 +1674,6 @@
     "id": "remove_custom_feature",
     "description": "Give up, lose, or refute a feature invented during play. This removes it from the character's sheet and lookups.",
     "parameters": {
-      "type": "object",
       "properties": {
         "character": {
           "type": "string",
@@ -1748,7 +1693,6 @@
     "lookup": true,
     "description": "List the features a character invented during play, with their kinds, subjects, mods, and Stress costs.",
     "parameters": {
-      "type": "object",
       "properties": {
         "character": {
           "type": "string",
@@ -1764,7 +1708,6 @@
     "enabled_by": {"social": ["factions"]},
     "description": "Create a campaign faction, such as a magic-school college. Give it a name, a description, and a trait that colors its rivalries. Its points are kept in the rule set's dynamic faction tally, such as the College Cup. Create 3 to 5 factions at the campaign's opening, calling the tool for all of them in one reply. Leave tally out to use the rule set's only dynamic tally.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -1797,7 +1740,6 @@
     "enabled_by": {"social": ["factions"]},
     "description": "Change a faction's name, description, or trait. Its id and cup entry stay the same. Use it when the story changes what a faction is or stands for.",
     "parameters": {
-      "type": "object",
       "properties": {
         "faction": {
           "type": "string",
@@ -1816,7 +1758,6 @@
     "enabled_by": {"social": ["factions"]},
     "description": "Remove a faction and its cup entry from the campaign.",
     "parameters": {
-      "type": "object",
       "properties": {
         "faction": {
           "type": "string",
@@ -1832,7 +1773,6 @@
     "enabled_by": {"social": ["factions"]},
     "description": "Add to or deduct from a faction's cup points. Use a negative change to deduct. Give every award a unique key, such as the contest and date; a key already used is refused, so one event is never paid twice.",
     "parameters": {
-      "type": "object",
       "properties": {
         "faction": {
           "type": "string",
@@ -1870,7 +1810,6 @@
     "id": "advance_time",
     "description": "Move the campaign clock forward. Use it when time passes in the fiction: days, watches of the day (morning, afternoon, night; eight hours each), or hours within a watch. The result says when a new day begins and lists places not visited for a while, so update anything that should change. A dying character dies when enough hours have passed, so advance time only as far as the fiction needs.",
     "parameters": {
-      "type": "object",
       "properties": {
         "days": {
           "type": "integer",
@@ -1901,7 +1840,6 @@
     "id": "rest",
     "description": "Record a rest for the whole party. The rest moves the clock forward itself, so do not also advance_time for the same time. Set interrupted when something breaks the rest, and then it counts as moments only.",
     "parameters": {
-      "type": "object",
       "properties": {
         "length": {
           "type": "string",
@@ -1934,7 +1872,6 @@
     "id": "roll_tables",
     "description": "Roll on one or more of the Warden's dice tables and log every result. Use 'dungeon_reaction' (2d6) for how an NPC or monster reacts to the party. Use 'die_of_fate' (1d6) when the outcome of an event is uncertain: 4 or more favors the PCs, 3 or less is bad luck. To create a monster, roll all eight monster_ tables (one 1d20 each) in a single call, then combine the results into a statblock and place it with create_monster. World tables such as 'encounters', 'rumors', or 'victim-schedule' can also be rolled when the world defines them. The engine does not save or place a creature from these rolls; you receive the results and decide what they mean.",
     "parameters": {
-      "type": "object",
       "properties": {
         "tables": {
           "type": "array",
@@ -1954,7 +1891,6 @@
     "id": "give_item",
     "description": "Add an item a character is given, found, or looted, with no payment. Petty items (such as scrolls) take no slot; normal items take one; bulky items take two. A full inventory (10 slots) reduces the character to 0 HP. Never use it for something the character pays for, including from a shopkeeper who lets them pay later: use buy_item, which takes the gold and refuses if it cannot. There is no credit. A hireling hired from a role gets equipment suited to its station this way, chosen by you and not rolled, right after hire_hireling. A hireling eats a ration each night it camps, like any party member, so give it Rations too.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -1986,7 +1922,6 @@
     "id": "drop_item",
     "description": "Remove an item from a character's inventory. Use it when the character drops something, or must drop an item to make room for Fatigue. Gold is not an item and cannot be dropped. Never use it to eat, drink, or spend food or another consumable: use use_item for that, and rest eats rations itself. Dropping a stack removes all of its uses.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -2008,7 +1943,6 @@
     "id": "use_item",
     "description": "Spend one use of a consumable the character carries, such as a torch, oil, bandages, or a salve. The last use uses it up and removes it. Call this only when the character deliberately uses up that exact item (pouring the oil, applying the bandage). A Bandage may be applied to a dying character: set target to that character, and it is stabilized. Never spend it for an action that uses a different item, for an attempt that fails, or for holding something in a flame that is already burning: a lit lantern or torch burns down over time, not per action. Not for relics (use use_charge), spellbooks, or gear without uses.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -2034,7 +1968,6 @@
     "id": "buy_item",
     "description": "Buy an object a character keeps: the character pays gold and the item goes into their inventory. A catalogue item (see search_marketplace) costs its listed price, so leave price out. For anything else, give both a price you set from similar catalogue items and the item's size. Use buy_service for a room, meal, passage, toll, bribe, or other service that is not carried. Armor adds to the buyer's armor. There is no credit: a purchase is refused if the character lacks the gold or the room, and a shopkeeper cannot give a thing on a promise to pay later.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -2066,7 +1999,6 @@
     "id": "buy_service",
     "description": "Buy a service for one or more characters: a room, meal, passage, toll, bribe, medical healing, or anything else that is not carried away. A listed service uses its listed price and effect, so leave price out. For any other service, give a price you set from similar services. The first character named pays for the whole service. Lodging covers the party a night, and a sheltered character needs no food on the next rest. Healing restores all harm, HP and attributes, for each named character who has lost any. A service never adds an inventory item.",
     "parameters": {
-      "type": "object",
       "properties": {
         "names": {
           "type": "array",
@@ -2097,7 +2029,6 @@
     "lookup": true,
     "description": "Find goods and services for sale by words in their name, category, or description. Every word in the query must appear. Each item gives its price, size, and description, and each service gives its price. Use these prices when a character buys with buy_item or buy_service.",
     "parameters": {
-      "type": "object",
       "properties": {
         "query": {
           "type": "string",
@@ -2115,7 +2046,6 @@
     "character_options": true,
     "description": "Hire a character into a player character's company. The hireling has a rolled sheet like an NPC's and is controlled by the player. Its wage is paid in the rule set's currency from the employer each new day, and an employer who cannot pay is reported as unpaid. The employer must be a player character who has a location. Give the wage the hireling asks for, or the marketplace's listed wage for a hireling listed there. Leave personality, accent, or quirks out to have them rolled. Names must be unique among locations and characters.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -2166,7 +2096,6 @@
     "id": "dismiss_hireling",
     "description": "Remove a hireling from its employer's company. It stays where it is and becomes an ordinary NPC. Use this when the story has the hireling leave, for example when its wage went unpaid and it goes, or when it chooses to go. Give the cause in a few words.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -2189,7 +2118,6 @@
     "lookup": true,
     "description": "Find monster statblocks in the Cairn bestiary by words in their name, id, or description. Every word in the query must appear. Each result gives the statblock's stats, armor, and attacks, which create_monster can use as a template.",
     "parameters": {
-      "type": "object",
       "properties": {
         "query": {
           "type": "string",

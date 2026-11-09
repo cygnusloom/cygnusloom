@@ -166,7 +166,6 @@
       "details": "Save: roll 1d20 and succeed on a roll at or under your score."
     },
     "parameters": {
-      "type": "object",
       "properties": {
         "prompt": {
           "type": "string",
@@ -201,7 +200,6 @@
       "details": "Initiative: roll 1d20 and pass on a roll at or under your Dexterity."
     },
     "parameters": {
-      "type": "object",
       "properties": {
         "prompt": {
           "type": "string",
@@ -342,7 +340,6 @@
     "id": "surrender",
     "description": "Have a character give up the fight and lay down arms. A surrendered character takes no more part in the encounter. The encounter ends once one side has nobody left who can fight.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -359,7 +356,6 @@
     "id": "resolve_group_break",
     "description": "Decide what happens to a detachment whose Critical Damage save failed. 'defeat' breaks it and defeats it. 'flee' breaks it up and its members run from the fight. Until this is called, a broken detachment cannot attack or be attacked. Call it only after a detachment's Strength save has failed.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -385,7 +381,6 @@
     "id": "wilderness_action",
     "description": "Take a Wilderness Action for the party's current watch, during broader long-term travel through the wild. Choose explore to search a large area for hidden features, supply to hunt, fish, or forage for Rations, make_camp to set up camp, which consumes a Ration for each member and removes Fatigue from members who rest, or resupply at a home, farmstead, or small village in the world, which spends gold at Marketplace prices to buy Rations, a Torch, or an Oil Can, one purchase per entry in purchases. Resupply needs purchases and no other action takes them. The engine rolls the day's weather and the Wilderness Events (twice at night) and then spends one watch. Each night watch consumes one Torch for the party, or an Oil Can if a member carries a Lantern, and reports panicking when the party has no light source. Narrate the result. Do not use it inside a dungeon or other dangerous area, or in a safe area.",
     "parameters": {
-      "type": "object",
       "properties": {
         "action": {
           "type": "string",
@@ -438,7 +433,6 @@
     "id": "dungeon_cycle",
     "description": "Roll once on the Dungeon Events table (1d6) when the party, inside a dungeon or other dangerous area, spends more than one cycle in one place, moves quickly, enters a new area, or makes noise. Never call it during broader travel through the wild or in a safe area. Pass the triggers that apply. The roll logs the event and does not move the day or hour clock. The result tells you what the event is. Effects such as Fatigue or a ration are yours to apply with the other tools.",
     "parameters": {
-      "type": "object",
       "properties": {
         "triggers": {
           "type": "array",
@@ -469,7 +463,6 @@
     "id": "roll_reaction",
     "description": "Roll 2d6 for an NPC's reaction to the party when it is not obvious from the situation. The result is a band: Hostile, Wary, Curious, Kind, or Helpful. The roll is logged.",
     "parameters": {
-      "type": "object",
       "properties": {
         "reason": {
           "type": "string",
@@ -491,7 +484,6 @@
       "details": "Run: roll 1d20 and get clear on a roll at or under your Dexterity."
     },
     "parameters": {
-      "type": "object",
       "properties": {
         "prompt": {
           "type": "string",
@@ -515,7 +507,6 @@
     "function": "set_condition",
     "description": "Mark a character as deprived of a crucial need, such as food or rest, or clear it. Call it as soon as the need goes unmet, before advancing time, so the engine can count the days. A deprived character recovers nothing, and the engine adds the deprivation penalty (Fatigue) for each new day past the first. Check rest_history first when the cause is rest.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -542,7 +533,6 @@
     "id": "add_penalty",
     "description": "Add one penalty item (Fatigue) to a character's inventory because of something in the fiction, such as casting a spell or a shock. Fatigue takes one slot and lasts until a full night's rest. A deprived character is refused unless force is true: the engine adds the deprivation penalty each day.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -571,7 +561,6 @@
     "bind": {"role": "reusable"},
     "description": "Give a character a spellbook holding one spell. It takes one slot. Casting from it costs one Fatigue.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -605,7 +594,6 @@
     "id": "give_charged_item",
     "description": "Give a character a relic with a number of uses. `recharge` is the rule for restoring its uses, written as text. A relic adds no Fatigue.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -648,7 +636,6 @@
     "id": "cast_spell",
     "description": "Cast a spell the character says they cast. From a spellbook it costs one Fatigue. From a scroll the scroll is spent and no Fatigue is added. Use it for every cast so the cost is recorded.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -670,7 +657,6 @@
     "id": "use_charge",
     "description": "Spend one use of a relic. It fails when the relic has no uses left, until it recharges.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",
@@ -692,7 +678,6 @@
     "id": "recharge_charged_item",
     "description": "Restore a relic to its full uses, once its recharge rule is met. Refused when the relic is already fully charged.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
           "type": "string",

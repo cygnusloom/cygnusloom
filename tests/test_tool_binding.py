@@ -1,7 +1,8 @@
 """Tool calls can bind a WorldTools method instead of shipping a Python wrapper.
 
-The loader supplies three quiet defaults: the name is the tool id, the bound WorldTools method
-is the id when no Python handler is named, and an omitted parameter schema is empty."""
+The loader supplies quiet defaults: the name is the tool id, the bound WorldTools method
+is the id when no Python handler is named, an omitted parameter schema is empty, and a root
+parameter schema with no type is an object."""
 
 from __future__ import annotations
 
@@ -154,6 +155,21 @@ def test_a_schema_may_omit_required(tree: Path):
     )
     loaded = ContentLibrary.load(tree).rule_sets["testset"].tool_calls["note"]
     assert "required" not in loaded.parameters
+
+
+def test_a_schema_may_omit_its_type(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/module.json": _tool(
+                world_method="view_journal",
+                parameters={"properties": {"start_line": {"type": "integer"}}},
+            )
+        },
+    )
+    loaded = ContentLibrary.load(tree).rule_sets["testset"].tool_calls["note"]
+    assert loaded.parameters["type"] == "object"
+    assert loaded.parameters["properties"] == {"start_line": {"type": "integer"}}
 
 
 def test_a_tool_whose_id_is_not_a_method_needs_a_binding_or_a_function(tree: Path):

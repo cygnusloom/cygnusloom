@@ -5,7 +5,6 @@
     "enabled_by": {"travel": ["terrain"]},
     "description": "Travel overland by the rule set's terrain-day journey rules. The engine moves the character and advances the clock. Apply the returned supply and privation figures with the rule set's usual bookkeeping.",
     "parameters": {
-      "type": "object",
       "properties": {
         "character": {
           "type": "string",
