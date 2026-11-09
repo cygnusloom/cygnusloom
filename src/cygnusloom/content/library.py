@@ -6195,6 +6195,31 @@ def _check_item_sizes(character: CharacterSpec, item_sizes: Mapping[str, int], t
             )
 
 
+def _shop_item_feature(
+    data: Mapping[str, Any], character: CharacterSpec, label: str
+) -> Feature | None:
+    """The feature a shop item copies its identity and stats from. A shop item names one with
+    `feature`; any field it authors itself still wins, so it may override a copied name or stat."""
+    feature_id = data.get("feature")
+    if feature_id is None:
+        return None
+    if not isinstance(feature_id, str) or not feature_id.strip():
+        raise ContentError(f"{label}: 'feature' must be the id of a feature")
+    feature = character.features.get(feature_id)
+    if feature is None:
+        raise ContentError(f"{label}: 'feature' names no feature ({feature_id!r})")
+    return feature
+
+
+def _shop_item_value(
+    data: Mapping[str, Any], feature: Feature | None, key: str, default: Any
+) -> Any:
+    """A shop item's own value for a key, else the feature it copies, else the default."""
+    if key in data:
+        return data[key]
+    return getattr(feature, key) if feature is not None else default
+
+
 def _load_marketplace(
     definitions: list[Definition],
     item_sizes: Mapping[str, int],
@@ -6204,7 +6229,9 @@ def _load_marketplace(
     icon_entries: Mapping[str, tuple[str | None, str | None]] | None = None,
 ) -> Marketplace | None:
     """The marketplace: `shop_item`, `service`, and `hireling` definitions. Items may be petty,
-    normal, or bulky, as the rule set's item sizes say."""
+    normal, or bulky, as the rule set's item sizes say. A shop item naming a `feature` copies
+    that feature's name, size, armor, damage, uses, description, icon, and encumbrance checks
+    unless it authors its own. The category, price, and armor mode are always the shop's own."""
     shop = [d for d in definitions if d.type == "shop_item"]
     services = [d for d in definitions if d.type == "service"]
     hirelings = [d for d in definitions if d.type == "hireling"]
@@ -6226,6 +6253,7 @@ def _load_marketplace(
             {
                 "type",
                 "id",
+                "feature",
                 "name",
                 "category",
                 "price",
@@ -6241,31 +6269,53 @@ def _load_marketplace(
             },
             label,
         )
-        size = required_text(d.data, "size", label)
+        feature = _shop_item_feature(d.data, character, label)
+        size = _shop_item_value(d.data, feature, "size", "")
+        if not isinstance(size, str) or not size.strip():
+            size = required_text(d.data, "size", label)
         if size not in item_sizes:
             raise ContentError(f"{label}: 'size' names no item size ({size!r})")
-        damage = str(d.data.get("damage", ""))
-        icon, looks_like = _icon_fields(
-            d.data,
-            icon_entries or {},
-            FALLBACK_WEAPON if damage else FALLBACK_ITEM,
-            label,
-        )
+        name = _shop_item_value(d.data, feature, "name", "")
+        if not isinstance(name, str) or not name.strip():
+            name = required_text(d.data, "name", label)
+        damage = str(_shop_item_value(d.data, feature, "damage", ""))
+        if "icon" in d.data or "looks_like" in d.data or feature is None:
+            icon, looks_like = _icon_fields(
+                d.data,
+                icon_entries or {},
+                FALLBACK_WEAPON if damage else FALLBACK_ITEM,
+                label,
+            )
+        else:
+            icon = feature.icon or FALLBACK_ITEM
+            looks_like = feature.looks_like
         items.append(
             ShopItem(
                 id=d.id,
-                name=required_text(d.data, "name", label),
+                name=name,
                 category=required_text(d.data, "category", label),
                 price=_whole(d.data, "price", label, 0),
                 size=size,
-                armor=_whole(d.data, "armor", label, 0),
+                armor=(
+                    _whole(d.data, "armor", label, 0)
+                    if "armor" in d.data or feature is None
+                    else _shop_item_value(d.data, feature, "armor", 0)
+                ),
                 armor_mode=_choice(
                     d.data, "armor_mode", ("add", "set", "max", "shield"), "add", label
                 ),
                 damage=damage,
-                uses=_whole(d.data, "uses", label, 0),
-                description=str(d.data.get("description", "")),
-                encumbrance_checks=_names(d.data, "encumbrance_checks", label),
+                uses=(
+                    _whole(d.data, "uses", label, 0)
+                    if "uses" in d.data or feature is None
+                    else _shop_item_value(d.data, feature, "uses", 0)
+                ),
+                description=str(_shop_item_value(d.data, feature, "description", "")),
+                encumbrance_checks=(
+                    _names(d.data, "encumbrance_checks", label)
+                    if "encumbrance_checks" in d.data
+                    else _shop_item_value(d.data, feature, "encumbrance_checks", ())
+                ),
                 icon=icon or FALLBACK_ITEM,
                 looks_like=looks_like,
             )

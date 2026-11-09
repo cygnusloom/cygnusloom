@@ -46,14 +46,9 @@
   {
     "type": "shop_item",
     "id": "brigandine",
-    "name": "Brigandine",
-    "looks_like": "armor",
+    "feature": "brigandine",
     "category": "armor",
     "price": 20,
-    "size": "bulky",
-    "armor": 1,
-    "damage": "",
-    "uses": 0,
     "description": "1 Armor, bulky"
   },
   {
@@ -85,14 +80,9 @@
   {
     "type": "shop_item",
     "id": "dagger",
-    "name": "Dagger",
-    "looks_like": "dagger",
+    "feature": "dagger",
     "category": "weapons",
     "price": 5,
-    "size": "normal",
-    "armor": 0,
-    "damage": "1d6",
-    "uses": 0,
     "description": "Dagger, Cudgel, Sickle, Staff, etc. (d6 damage)"
   },
   {
@@ -124,53 +114,33 @@
   {
     "type": "shop_item",
     "id": "sling",
-    "name": "Sling",
-    "looks_like": "bow",
+    "feature": "sling",
     "category": "weapons",
     "price": 5,
-    "size": "normal",
-    "armor": 0,
-    "damage": "1d6",
-    "uses": 0,
     "description": "d6 damage"
   },
   {
     "type": "shop_item",
     "id": "bow",
-    "name": "Bow",
-    "looks_like": "bow",
+    "feature": "bow",
     "category": "weapons",
     "price": 20,
-    "size": "bulky",
-    "armor": 0,
-    "damage": "1d6",
-    "uses": 0,
     "description": "d6 damage, bulky"
   },
   {
     "type": "shop_item",
     "id": "crossbow",
-    "name": "Crossbow",
-    "looks_like": "bow",
+    "feature": "crossbow",
     "category": "weapons",
     "price": 30,
-    "size": "bulky",
-    "armor": 0,
-    "damage": "1d8",
-    "uses": 0,
     "description": "d8 damage, bulky"
   },
   {
     "type": "shop_item",
     "id": "cart",
-    "name": "Cart",
-    "looks_like": "cart",
+    "feature": "cart",
     "category": "transport",
     "price": 30,
-    "size": "bulky",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "+4 slots, bulky"
   },
   {
@@ -241,14 +211,9 @@
   {
     "type": "shop_item",
     "id": "rations",
-    "name": "Rations",
-    "looks_like": "food",
+    "feature": "rations",
     "category": "upkeep",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 3,
     "description": "3 uses"
   },
   {
@@ -292,14 +257,9 @@
   {
     "type": "shop_item",
     "id": "bandages",
-    "name": "Bandages",
-    "looks_like": "tool",
+    "feature": "bandages",
     "category": "gear",
     "price": 30,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 3,
     "description": "3 uses"
   },
   {
@@ -435,15 +395,9 @@
   {
     "type": "shop_item",
     "id": "compass",
-    "name": "Compass",
-    "looks_like": "tool",
+    "feature": "compass",
     "category": "gear",
-    "price": 75,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
-    "description": "A brass compass for finding north."
+    "price": 75
   },
   {
     "type": "shop_item",
@@ -565,15 +519,9 @@
   {
     "type": "shop_item",
     "id": "gloves",
-    "name": "Gloves",
-    "looks_like": "tool",
+    "feature": "gloves",
     "category": "gear",
-    "price": 20,
-    "size": "petty",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
-    "description": "Sturdy gloves for rough work."
+    "price": 20
   },
   {
     "type": "shop_item",
@@ -591,15 +539,9 @@
   {
     "type": "shop_item",
     "id": "lantern",
-    "name": "Lantern",
-    "looks_like": "lantern-item",
+    "feature": "lantern",
     "category": "gear",
-    "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
-    "description": "A hooded lantern that burns oil."
+    "price": 10
   },
   {
     "type": "shop_item",
@@ -630,14 +572,9 @@
   {
     "type": "shop_item",
     "id": "oil-can",
-    "name": "Oil Can",
-    "looks_like": "tool",
+    "feature": "oil-can",
     "category": "gear",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 6,
     "description": "6 uses"
   },
   {
@@ -682,27 +619,17 @@
   {
     "type": "shop_item",
     "id": "repellent",
-    "name": "Repellent",
-    "looks_like": "potion",
+    "feature": "repellent",
     "category": "gear",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Wolfsbane, Mugwort, etc."
   },
   {
     "type": "shop_item",
     "id": "rope",
-    "name": "Rope",
-    "looks_like": "rope",
+    "feature": "rope",
     "category": "gear",
     "price": 5,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "25ft"
   },
   {
@@ -786,15 +713,9 @@
   {
     "type": "shop_item",
     "id": "spyglass",
-    "name": "Spyglass",
-    "looks_like": "tool",
+    "feature": "spyglass",
     "category": "gear",
-    "price": 40,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
-    "description": "A spyglass for seeing far things close."
+    "price": 40
   },
   {
     "type": "shop_item",
@@ -825,14 +746,9 @@
   {
     "type": "shop_item",
     "id": "torch",
-    "name": "Torch",
-    "looks_like": "torch-item",
+    "feature": "torch",
     "category": "gear",
     "price": 5,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 3,
     "description": "3 uses"
   },
   {
