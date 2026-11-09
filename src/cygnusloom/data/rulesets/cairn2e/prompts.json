@@ -52,16 +52,6 @@
   },
   {
     "type": "prompt",
-    "id": "give_item_from_place",
-    "text": "An object in a place leaves it only through take_object; never hand it over with give_item."
-  },
-  {
-    "type": "prompt",
-    "id": "purchases",
-    "text": "Every sale in a shop goes through buy_item, which takes the gold and puts the item in the buyer's inventory. Never use change_currency to pay for something bought, and never buy an item by hand with give_item."
-  },
-  {
-    "type": "prompt",
     "id": "attack_flags",
     "text": "An attack may carry the flags blast, which hits every target in its area, and ignores_armor, which skips the target's armor. Leave flags out of an attack that has neither."
   },
@@ -73,7 +63,12 @@
   {
     "type": "prompt",
     "id": "encounter_start",
-    "text": "When a fight or other tactical action starts, set it up yourself without asking the player whether to use the encounter system: create or choose a map, start the encounter, add every combatant, then call player_initiative so the player rolls their initiative save. The encounter is how turns, positions, and attacks are tracked. Do not start a later turn on your own: the player presses Start for an NPC's turn, while the player character's own turn starts automatically. An NPC's turn ends automatically when your reply finishes; the player presses End only for their own character's turn. Never take a player character's turn for them."
+    "extends": "core:prompt/encounter_start"
+  },
+  {
+    "type": "prompt",
+    "id": "encounter_initiative",
+    "text": "In Cairn, initiative is the player's roll: call player_initiative so the player rolls their initiative save."
   },
   {
     "type": "prompt",

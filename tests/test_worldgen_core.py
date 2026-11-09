@@ -46,12 +46,10 @@ def test_every_bundled_ruleset_inherits_the_core_worldgen_tables(rule_set: str):
 
 def test_core_carries_the_setting_instructions_for_a_blank_world():
     core = bundled_library().core.prompt_fragments
-    assert [fragment.id for fragment in core] == [
-        "setting_forge",
-        "setting_continuity",
-        "local_maps",
-    ]
-    assert all(fragment.unwritten_only for fragment in core if fragment.id != "local_maps")
+    unwritten = [fragment for fragment in core if fragment.unwritten_only]
+    assert len(unwritten) >= 2
+    assert any(SETTING_FORGE in fragment.text for fragment in unwritten)
+    assert any("Setting block" in fragment.text for fragment in unwritten)
 
 
 def test_a_generic_only_rule_set_leaves_the_fantasy_tables_out():
@@ -67,7 +65,7 @@ def test_a_generic_only_rule_set_leaves_the_fantasy_tables_out():
 def test_the_setting_forge_names_no_table_a_genre_choice_could_hide():
     core = bundled_library().core
     prompt = next(
-        fragment.text for fragment in core.prompt_fragments if fragment.id == "setting_forge"
+        fragment.text for fragment in core.prompt_fragments if SETTING_FORGE in fragment.text
     )
     assert SETTING_FORGE in prompt
     assert "Roll every creative table with roll_creative" in prompt
@@ -87,12 +85,43 @@ def test_the_unwritten_world_plays_with_any_rule_set():
 
 
 @pytest.mark.parametrize("rule_set", BUNDLED_RULE_SETS)
-def test_the_setting_forge_runs_for_the_unwritten_world(rule_set: str):
+def test_exactly_one_world_forge_runs_for_the_unwritten_world(rule_set: str):
     library = content_library()
-    prompt = state_instruction(
-        library.rule_sets[rule_set], library.world_templates["unwritten-world"]
+    rules = library.rule_sets[rule_set]
+    prompt = state_instruction(rules, library.world_templates["unwritten-world"])
+    core_forge = next(
+        fragment for fragment in library.core.prompt_fragments if SETTING_FORGE in fragment.text
     )
-    assert SETTING_FORGE in prompt
+    replacements = [
+        fragment.text for fragment in rules.prompt_fragments if core_forge.id in fragment.supersedes
+    ]
+    if replacements:
+        assert core_forge.text not in prompt
+        assert all(text in prompt for text in replacements)
+    else:
+        assert core_forge.text in prompt
+
+
+def test_the_academy_forge_replaces_the_core_setting_forge():
+    library = content_library()
+    academy = library.rule_sets["academia-arcana"]
+    prompt = state_instruction(academy, library.world_templates["unwritten-world"])
+    core_forge = next(
+        fragment for fragment in library.core.prompt_fragments if SETTING_FORGE in fragment.text
+    )
+    forge = next(
+        fragment for fragment in academy.prompt_fragments if core_forge.id in fragment.supersedes
+    )
+    assert forge.text in prompt
+    assert core_forge.text not in prompt
+    # Only the forge is replaced; the rest of the core setting instructions still run.
+    continuity = next(
+        fragment
+        for fragment in library.core.prompt_fragments
+        if fragment.id != core_forge.id and fragment.unwritten_only
+    )
+    assert [fragment.id for fragment in academy.prompt_fragments].count(continuity.id) == 1
+    assert continuity.text in prompt
 
 
 @pytest.mark.parametrize(

@@ -223,3 +223,58 @@ def test_cairn_prompt_chooses_the_cycle_from_the_situation():
     assert "wilderness cycle is for broader long-term travel" in prompt
     assert "dungeon cycle is for a dungeon or other dangerous area" in prompt
     assert prompt.count("or in a safe area") == 2
+
+
+def test_core_owns_the_encounter_start_policy():
+    library = content_library()
+    core = next(
+        fragment for fragment in library.core.prompt_fragments if fragment.id == "encounter_start"
+    )
+    assert core.requires == ("combat",)
+    assert "create or choose a map" in core.text
+    assert "start the encounter" in core.text
+    assert "add every combatant" in core.text
+    assert "settle initiative" in core.text
+
+
+def test_each_combat_ruleset_adds_only_its_own_initiative_rule():
+    library = content_library()
+    world = library.world_templates["unwritten-world"]
+    core = next(
+        fragment for fragment in library.core.prompt_fragments if fragment.id == "encounter_start"
+    )
+    for rule_set_id, initiative_tool in (
+        ("cairn2e", "player_initiative"),
+        ("worldswithoutnumber", "roll_initiative"),
+    ):
+        rules = library.rule_sets[rule_set_id]
+        prompt = state_instruction(rules, world)
+        assert prompt.count(core.text) == 1, rule_set_id
+        initiative = next(
+            fragment for fragment in rules.prompt_fragments if fragment.id == "encounter_initiative"
+        )
+        assert initiative.text in prompt, rule_set_id
+        assert prompt.index(core.text) < prompt.index(initiative.text), rule_set_id
+        assert prompt.index("create or choose a map") < prompt.index("start the encounter")
+        assert prompt.index("start the encounter") < prompt.index("add every combatant")
+        assert prompt.index("add every combatant") < prompt.index(initiative_tool), rule_set_id
+
+
+def test_a_ruleset_without_combat_gets_no_encounter_start():
+    library = content_library()
+    academy = library.rule_sets["academia-arcana"]
+    core = next(
+        fragment for fragment in library.core.prompt_fragments if fragment.id == "encounter_start"
+    )
+    assert core.id not in [fragment.id for fragment in academy.prompt_fragments]
+    prompt = state_instruction(academy, library.world_templates["unwritten-world"])
+    assert core.text not in prompt
+
+
+def test_cairn_purchase_and_item_rules_come_from_the_generic_state_instruction():
+    prompt = state_instruction(CAIRN)
+    assert "Use buy_item only for objects a character keeps" in prompt
+    assert "Characters use take_object to pick up an object" in prompt
+    ids = [fragment.id for fragment in CAIRN.prompt_fragments]
+    assert "purchases" not in ids
+    assert "give_item_from_place" not in ids

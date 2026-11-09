@@ -1189,41 +1189,120 @@ def test_sentence_cap_is_read_from_narration(tree: Path):
     assert ContentLibrary.load(tree).rule_sets["testset"].sentence_cap == 3
 
 
+def _prompt_definitions(rule_set: str) -> list[dict[str, Any]]:
+    """The prompt definitions a rule set's own prompts.json declares, in file order."""
+    path = DATA_DIR / "rulesets" / rule_set / "prompts.json"
+    if not path.is_file():
+        return []
+    return [
+        definition
+        for definition in json.loads(path.read_text(encoding="utf-8"))
+        if definition.get("type") == "prompt"
+    ]
+
+
+def test_bundled_prompt_fragments_keep_their_own_file_order_before_core():
+    library = bundled_library()
+    core_ids = {definition["id"] for definition in _prompt_definitions("core")}
+    for rule_set_id in ("cairn2e", "worldswithoutnumber", "academia-arcana"):
+        rule_set = library.rule_sets[rule_set_id]
+        own = _prompt_definitions(rule_set_id)
+        own_ids = [definition["id"] for definition in own]
+        superseded = {target for definition in own for target in definition.get("supersedes", [])}
+        ids = [fragment.id for fragment in rule_set.prompt_fragments]
+        assert len(ids) == len(set(ids)), rule_set_id
+        assert ids[: len(own_ids)] == own_ids, rule_set_id
+        assert set(ids) <= set(own_ids) | core_ids, rule_set_id
+        assert not superseded & set(ids), rule_set_id
+        for fragment in rule_set.prompt_fragments:
+            assert fragment.text.strip(), (rule_set_id, fragment.id)
+
+
 def test_bundled_cairn_prompts_and_cap_are_read():
-    cairn = bundled_library().rule_sets["cairn2e"]
-    assert cairn.sentence_cap == 2
-    ids = [fragment.id for fragment in cairn.prompt_fragments]
-    assert ids == [
-        "relic_recharge",
-        "combat_speech",
-        "armor_glancing_blows",
-        "wilderness_action",
-        "dungeon_cycle",
-        "surrender",
-        "group_break",
-        "defeated_character",
-        "time_and_rest",
-        "needs",
-        "give_item_from_place",
-        "purchases",
-        "attack_flags",
-        "overland_weather",
-        "encounter_start",
-        "player_rolls",
-        "conditions",
-        "hirelings",
-        "monster_abilities",
-        "setting_forge",
-        "setting_continuity",
-        "local_maps",
-    ]
+    assert bundled_library().rule_sets["cairn2e"].sentence_cap == 2
+
+
+def test_bundled_core_prompts_match_core_file():
     core = bundled_library().core.prompt_fragments
-    assert [fragment.id for fragment in core] == [
-        "setting_forge",
-        "setting_continuity",
-        "local_maps",
+    expected = _prompt_definitions("core")
+    assert [fragment.id for fragment in core] == [definition["id"] for definition in expected]
+    assert [fragment.unwritten_only for fragment in core] == [
+        bool(definition.get("unwritten_only", False)) for definition in expected
     ]
-    assert all(fragment.unwritten_only for fragment in core if fragment.id != "local_maps")
+
+
+def test_a_prompt_fragment_supersedes_an_inherited_fragment(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/core/prompts.json": [
+                {"type": "prompt", "id": "core_forge", "text": "Core forge."},
+                {"type": "prompt", "id": "core_continuity", "text": "Core continuity."},
+            ],
+            "rulesets/testset/prompts.json": [
+                {
+                    "type": "prompt",
+                    "id": "own_forge",
+                    "text": "Own forge.",
+                    "supersedes": ["core_forge"],
+                }
+            ],
+        },
+    )
+    fragments = ContentLibrary.load(tree).rule_sets["testset"].prompt_fragments
+    assert [(fragment.id, fragment.text) for fragment in fragments] == [
+        ("own_forge", "Own forge."),
+        ("core_continuity", "Core continuity."),
+    ]
+    assert fragments[0].supersedes == ("core_forge",)
+
+
+def test_supersedes_must_name_a_known_prompt(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/prompts.json": [
+                {
+                    "type": "prompt",
+                    "id": "own",
+                    "text": "Own.",
+                    "supersedes": ["missing"],
+                }
+            ],
+        },
+    )
+    with pytest.raises(ContentError, match="supersedes unknown prompt"):
+        ContentLibrary.load(tree)
+
+
+def test_a_prompt_can_extend_the_core_fragment_it_replaces(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/core/prompts.json": [
+                {
+                    "type": "prompt",
+                    "id": "encounter_start",
+                    "text": "Set it up.",
+                    "requires": ["combat"],
+                }
+            ],
+            "rulesets/testset/prompts.json": [
+                {
+                    "type": "prompt",
+                    "id": "encounter_start",
+                    "extends": "core:prompt/encounter_start",
+                },
+                {"type": "prompt", "id": "encounter_initiative", "text": "Roll initiative."},
+            ],
+        },
+    )
+    fragments = ContentLibrary.load(tree).rule_sets["testset"].prompt_fragments
+    assert [(fragment.id, fragment.text) for fragment in fragments] == [
+        ("encounter_start", "Set it up."),
+        ("encounter_initiative", "Roll initiative."),
+    ]
+    assert fragments[0].requires == ("combat",)
 
 
 def _monster_definition(**changes: Any) -> Definition:
