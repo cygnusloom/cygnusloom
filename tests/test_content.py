@@ -636,6 +636,21 @@ def test_tool_call_function_must_exist_in_its_module(tree: Path):
         ContentLibrary.load(tree)
 
 
+def test_a_tool_name_defaults_to_its_id(tree: Path):
+    tool = _social_tool()
+    del tool["name"]
+    _write(
+        tree,
+        {
+            "rulesets/testset/module.json": [
+                {"type": "python_module", "id": "m", "module": "tests.rolls"},
+                tool,
+            ]
+        },
+    )
+    assert ContentLibrary.load(tree).rule_sets["testset"].tool_calls["social"].name == "social"
+
+
 @pytest.mark.parametrize(
     "overrides, message",
     [
@@ -643,6 +658,7 @@ def test_tool_call_function_must_exist_in_its_module(tree: Path):
         ({"name": "x" * 65}, "'name' must be 1 to 64"),
         ({"description": ""}, "'description' must be a non-empty string"),
         ({"parameters": None}, "must be an object schema"),
+        ({"parameters": []}, "must be an object schema"),
         ({"parameters": {"type": "array"}}, "must be an object schema"),
         ({"parameters": {"type": "object"}}, "needs a 'properties' object"),
         (
