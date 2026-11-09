@@ -259,148 +259,115 @@
   {
     "type": "tool_call",
     "id": "advance_time",
-    "name": "advance_time",
-    "world_method": "advance_time",
-    "description": "Move the campaign clock forward. Use it when time passes in the fiction: days, parts of the day (morning, afternoon, night; eight hours each), or hours within a part. The result says when a new day begins and lists places not visited for a while. Do not advance time again for a rest, and do not use it to skip a scene the players are in.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "days": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 365,
-          "default": 0,
-          "description": "Whole days to advance, from 0 to 365. Defaults to 0."
-        },
-        "parts": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 12,
-          "description": "Parts of a day to advance, from 0 to 12. Defaults to 0 when omitted."
-        },
-        "hours": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 72,
-          "default": 0,
-          "description": "Hours to advance, added after days and parts, from 0 to 72. Defaults to 0 when omitted."
-        }
-      },
-      "required": []
+    "extends": "core:tool_call/advance_time",
+    "patch": {
+      "description": "Move the campaign clock forward. Use it when time passes in the fiction: days, parts of the day (morning, afternoon, night; eight hours each), or hours within a part. The result says when a new day begins and lists places not visited for a while. Do not advance time again for a rest, and do not use it to skip a scene the players are in."
     }
   },
   {
     "type": "tool_call",
     "id": "rest",
-    "name": "rest",
-    "world_method": "rest",
-    "description": "Record a rest for the party. 'moments' is a short break of one hour, such as tea and a sit-down; 'night' is a full night's rest, which runs until morning; 'downtime' is a week of rest, and it ends conditions such as Burnout. The rest moves the clock itself, so do not also advance_time for the same time. Set interrupted when something breaks the rest, and then it counts as moments only.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "length": {
-          "type": "string",
-          "enum": ["moments", "night", "downtime"],
-          "description": "How long the rest lasts: 'moments', 'night', or 'downtime'."
-        },
-        "interrupted": {
-          "type": "boolean",
-          "default": false,
-          "description": "True when something breaks the rest. An interrupted rest counts as moments only. Defaults to false."
-        },
-        "reason": {
-          "type": "string",
-          "description": "What the party was doing, such as 'slept in the dormitory'."
+    "extends": "core:tool_call/rest",
+    "patch": {
+      "description": "Record a rest for the party. 'moments' is a short break of one hour, such as tea and a sit-down; 'night' is a full night's rest, which runs until morning; 'downtime' is a week of rest, and it ends conditions such as Burnout. The rest moves the clock itself, so do not also advance_time for the same time. Set interrupted when something breaks the rest, and then it counts as moments only.",
+      "parameters": {
+        "properties": {
+          "length": {
+            "description": "How long the rest lasts: 'moments', 'night', or 'downtime'."
+          },
+          "reason": {
+            "description": "What the party was doing, such as 'slept in the dormitory'."
+          }
         }
-      },
-      "required": ["length", "reason"]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "rest_history",
-    "name": "rest_history",
-    "world_method": "rest_history",
-    "description": "Look up the party's recent rests and each character's last full rest.",
-    "parameters": {
-      "type": "object",
-      "properties": {},
-      "required": []
+    "extends": "core:tool_call/rest_history",
+    "patch": {
+      "description": "Look up the party's recent rests and each character's last full rest."
     }
   },
   {
     "type": "tool_call",
     "id": "search_marketplace",
-    "name": "search_marketplace",
-    "world_method": "search_marketplace",
-    "lookup": true,
-    "description": "Find goods for sale by words in their name, category, or description. Every word in the query must appear. Each item gives its price in silver, size, and description. Use these prices when a character buys with buy_item.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "query": {
-          "type": "string",
-          "description": "Words to look for, such as 'parchment', 'reagents', or 'lantern'."
+    "extends": "core:tool_call/search_marketplace",
+    "patch": {
+      "description": "Find goods for sale by words in their name, category, or description. Every word in the query must appear. Each item gives its price in silver, size, and description. Use these prices when a character buys with buy_item.",
+      "parameters": {
+        "properties": {
+          "query": {
+            "description": "Words to look for, such as 'parchment', 'reagents', or 'lantern'."
+          }
         }
-      },
-      "required": ["query"]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "buy_item",
-    "name": "buy_item",
-    "world_method": "buy_item",
-    "description": "Buy an object a character keeps: the character pays silver and the item goes into their pack. A catalogue item (see search_marketplace) costs its listed price, so leave price out. For anything else, give both a price you set from similar catalogue items and the item's size. Use buy_service for a room, meal, passage, toll, or other service that is not carried. There is no credit: a purchase is refused if the character lacks the silver or the room.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the buying character."
-        },
-        "item": {
-          "type": "string",
-          "description": "The name of the item, as listed in the catalogue when it is there."
-        },
-        "price": {
-          "type": "integer",
-          "description": "Silver to pay. Only for items not in the catalogue; a catalogue item's price must match its listing if given."
-        },
-        "size": {
-          "type": "string",
-          "enum": ["tiny", "small", "normal", "bulky"],
-          "description": "The size of an item not in the catalogue; required for anything the catalogue does not list. Catalogue items keep their listed size."
+    "extends": "core:tool_call/buy_item",
+    "patch": {
+      "description": "Buy an object a character keeps: the character pays silver and the item goes into their pack. A catalogue item (see search_marketplace) costs its listed price, so leave price out. For anything else, give both a price you set from similar catalogue items and the item's size. Use buy_service for a room, meal, passage, toll, or other service that is not carried. There is no credit: a purchase is refused if the character lacks the silver or the room.",
+      "parameters": {
+        "properties": {
+          "price": {
+            "description": "Silver to pay. Only for items not in the catalogue; a catalogue item's price must match its listing if given."
+          }
         }
-      },
-      "required": ["name", "item"]
+      }
     }
   },
   {
     "type": "tool_call",
     "id": "buy_service",
-    "name": "buy_service",
-    "world_method": "buy_service",
-    "description": "Buy a service for one or more characters: a room, meal, passage, toll, bribe, or anything else that is not carried away. A listed service uses its listed price and effect, so leave price out. For any other service, give a price you set from similar services. The first character named pays for the whole service. A service never adds an inventory item.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "names": {
-          "type": "array",
-          "items": {"type": "string"},
-          "description": "The characters the service is for. The first one pays."
-        },
-        "service": {
-          "type": "string",
-          "description": "The service, such as a room, meal, passage, or toll. Use a listed service's id or name as search_marketplace shows it."
-        },
-        "price": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "The price in silver for a service the marketplace does not list. Leave it out for a listed service."
+    "extends": "core:tool_call/buy_service",
+    "patch": {
+      "description": "Buy a service for one or more characters: a room, meal, passage, toll, bribe, or anything else that is not carried away. A listed service uses its listed price and effect, so leave price out. For any other service, give a price you set from similar services. The first character named pays for the whole service. A service never adds an inventory item.",
+      "parameters": {
+        "properties": {
+          "price": {
+            "description": "The price in silver for a service the marketplace does not list. Leave it out for a listed service."
+          }
         }
-      },
-      "required": ["names", "service"]
+      }
     }
+  },
+  {
+    "type": "tool_call",
+    "id": "roll_tables",
+    "disabled": true
+  },
+  {
+    "type": "tool_call",
+    "id": "give_item",
+    "disabled": true
+  },
+  {
+    "type": "tool_call",
+    "id": "drop_item",
+    "disabled": true
+  },
+  {
+    "type": "tool_call",
+    "id": "use_item",
+    "disabled": true
+  },
+  {
+    "type": "tool_call",
+    "id": "hire_hireling",
+    "disabled": true
+  },
+  {
+    "type": "tool_call",
+    "id": "dismiss_hireling",
+    "disabled": true
+  },
+  {
+    "type": "tool_call",
+    "id": "search_monster",
+    "disabled": true
   }
 ]

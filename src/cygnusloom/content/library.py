@@ -63,7 +63,9 @@ NPC_HP_TIER_ARGUMENT = "hp_tier"
 # A tool flagged `travel` gets this argument, with the rule set's travel modes as its choices.
 TRAVEL_ARGUMENT = "travel"
 # A tool property may say `"enum_from"` to take its choices from the rule set's own content: its
-# moves or its stats. The loader fills in the enum, so a tool never lists what the rule set defines.
+# moves, stats, item sizes, or rest lengths. The loader fills in the enum, so a tool never lists
+# what the rule set defines. A source with no entries leaves the enum out, which lets core author
+# a universal tool whose choices come from each inheriting rule set.
 ENUM_FROM_KEY = "enum_from"
 # The engine passes its ToolContext to a function that declares this parameter. The model
 # never sees it, so it must not appear in a tool's schema.
@@ -3742,6 +3744,10 @@ def _build_rule_set(
         "moves": sorted(moves),
         "stats": sorted(character.stats),
         "skills": sorted(character.skills),
+        # Item sizes and rest lengths keep the order their data file declares, so a tool's
+        # choices match the rule set's own listing rather than an alphabetical rewrite.
+        "item_sizes": list(item_sizes),
+        "rest_lengths": list(rests),
         "checks": sorted(checks),
         "counters": sorted(counters),
         "periods": sorted(periods),
@@ -7923,10 +7929,16 @@ def _with_enum_from(
         if source is None:
             properties[name] = prop
             continue
-        properties[name] = {
-            **{k: v for k, v in prop.items() if k != ENUM_FROM_KEY},
-            "enum": _enum_options(name, source, sources, character, label),
-        }
+        filled = {k: v for k, v in prop.items() if k != ENUM_FROM_KEY}
+        options = _enum_options(name, source, sources, character, label)
+        # A rule set that defines nothing for the source, such as core before it inherits a
+        # rule set, leaves the property without choices rather than rejecting the tool.
+        if options:
+            filled["enum"] = options
+            default = filled.get("default")
+            if default is not None and default not in options:
+                raise ContentError(f"{label}: {name!r} default is not one of its enum_from choices")
+        properties[name] = filled
     return {**parameters, "properties": properties}
 
 
@@ -8256,10 +8268,8 @@ def _check_schema_node(node: object, label: str, *, root: bool = False) -> None:
         if "enum" in node and default not in node["enum"]:
             raise ContentError(f"{label}: schema 'default' is not one of its 'enum'")
     if "enum_from" in node:
-        if "enum" in node or "default" in node:
-            raise ContentError(
-                f"{label}: schema 'enum_from' cannot be combined with 'enum' or 'default'"
-            )
+        if "enum" in node:
+            raise ContentError(f"{label}: schema 'enum_from' cannot be combined with 'enum'")
         if kind != "string":
             raise ContentError(f"{label}: schema 'enum_from' needs a string property")
         source = node["enum_from"]

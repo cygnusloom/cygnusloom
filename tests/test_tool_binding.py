@@ -251,6 +251,7 @@ CAIRN_KEPT_PYTHON = {
     "set_condition",
 }
 
+
 def test_cairn_tools_keep_one_resolvable_handler():
     library = content_library()
     calls = library.rule_sets["cairn2e"].tool_calls
