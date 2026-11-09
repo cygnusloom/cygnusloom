@@ -23,7 +23,12 @@
   {
     "type": "prompt",
     "id": "encounter_start",
-    "text": "When a fight or other tactical action starts, set it up yourself without asking the player whether to use the encounter system: create or choose a map, start the encounter, add every combatant, and settle initiative. WWN rolls initiative for each side as soon as both sides have joined, so call roll_initiative only if it is still unset. The encounter is how turns, positions, and attacks are tracked. Do not start a later turn on your own: the player presses Start for an NPC's turn, while the player character's own turn starts automatically. An NPC's turn ends automatically when your reply finishes; the player presses End only for their own character's turn. Never take a player character's turn for them."
+    "extends": "core:prompt/encounter_start"
+  },
+  {
+    "type": "prompt",
+    "id": "encounter_initiative",
+    "text": "WWN rolls initiative for each side as soon as both sides have joined, so call roll_initiative only if it is still unset."
   },
   {
     "type": "prompt",
