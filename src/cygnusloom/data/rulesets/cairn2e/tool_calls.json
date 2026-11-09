@@ -596,31 +596,9 @@
   {
     "type": "tool_call",
     "id": "give_scroll",
-    "world_method": "give_spell_item",
+    "extends": "tool_call/give_spellbook",
     "bind": {"role": "single_use"},
-    "description": "Give a character a scroll holding one spell. Scrolls are petty and take no slot. One cast spends the scroll and costs no Fatigue.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the character or NPC."
-        },
-        "spell": {
-          "type": "string",
-          "description": "The spell's name."
-        },
-        "description": {
-          "type": "string",
-          "description": "The spell's text, as the Warden writes it."
-        }
-      },
-      "required": [
-        "name",
-        "spell",
-        "description"
-      ]
-    }
+    "description": "Give a character a scroll holding one spell. Scrolls are petty and take no slot. One cast spends the scroll and costs no Fatigue."
   },
   {
     "type": "tool_call",
