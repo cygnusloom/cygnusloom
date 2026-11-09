@@ -3145,6 +3145,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "template_requirements",
             "choice_key",
             "grant",
+            "learning",
         }
     ),
 }
@@ -3236,6 +3237,92 @@ def _check_template_keys(data: Mapping[str, Any], label: str) -> None:
     for index, grant in enumerate(grants):
         if isinstance(grant, Mapping):
             check_keys(grant, GRANTED_KEYS, f"{label}: feature grant {index}")
+
+
+def _derive_background_tables(definitions: list[Definition], template: str) -> list[Definition]:
+    """Derive each background's learning table and the background index from its template.
+
+    A background template may list the skills it teaches in `learning`. The loader makes the
+    `learning_<id>` table from that list and, when the content does not define one, a
+    `background_index` describing every background. An authored table of either id wins over
+    the derived one."""
+    skill_ids = {d.id for d in definitions if d.type == "skill"}
+    backgrounds: list[tuple[Definition, str, tuple[str, ...]]] = []
+    for definition in definitions:
+        if definition.type != "template" or "learning" not in definition.data:
+            continue
+        label = f"{template}: template {definition.id}"
+        if definition.data.get("kind") != "background":
+            raise ContentError(f"{label}: 'learning' is only for background templates")
+        options = definition.data["learning"]
+        if (
+            not isinstance(options, list)
+            or not options
+            or not all(isinstance(option, str) and option.strip() for option in options)
+        ):
+            raise ContentError(f"{label}: 'learning' must be a non-empty list of skill ids")
+        if len(set(options)) != len(options):
+            raise ContentError(f"{label}: 'learning' repeats a skill id")
+        for skill_id in options:
+            if skill_id not in skill_ids:
+                raise ContentError(f"{label}: 'learning' names no skill ({skill_id!r})")
+        free = definition.data.get("skills")
+        if not isinstance(free, Mapping) or len(free) != 1:
+            raise ContentError(
+                f"{label}: a background with 'learning' needs exactly one free skill in 'skills'"
+            )
+        backgrounds.append((definition, next(iter(free)), tuple(options)))
+    if not backgrounds:
+        return definitions
+    existing = {d.id for d in definitions if d.type == "table"}
+    learning: dict[str, Definition] = {}
+    for definition, _, options in backgrounds:
+        table_id = f"learning_{definition.id}"
+        if table_id not in existing:
+            learning[definition.id] = Definition(
+                type="table",
+                id=table_id,
+                data={"type": "table", "id": table_id, "options": list(options)},
+            )
+    index = None
+    if "background_index" not in existing:
+        entries = []
+        for definition, free, options in backgrounds:
+            name = required_text(definition.data, "name", f"{template}: template {definition.id}")
+            quick = ", ".join(option for option in options if option != free)
+            entries.append(
+                {
+                    "name": name,
+                    "description": f"Free skill: {free}. Quick skills: {quick}.",
+                }
+            )
+        index = Definition(
+            type="table",
+            id="background_index",
+            data={"type": "table", "id": "background_index", "options": entries},
+        )
+    if not learning and index is None:
+        return definitions
+    # Keep the loaded table order of content that authored these tables explicitly: the index
+    # came before the first background Growth table, and each learning table followed its own.
+    anchors = {f"growth_{definition.id}" for definition, _, _ in backgrounds}
+    result: list[Definition] = []
+    pending = dict(learning)
+    for definition in definitions:
+        if index is not None and definition.type == "table" and definition.id in anchors:
+            result.append(index)
+            index = None
+        result.append(definition)
+        if definition.type != "table":
+            continue
+        for background_id, table in list(pending.items()):
+            if definition.id == f"growth_{background_id}":
+                result.append(table)
+                del pending[background_id]
+    if index is not None:
+        result.append(index)
+    result.extend(pending.values())
+    return result
 
 
 def _rule_set_table_genres(definitions: Sequence[Definition], template: str) -> tuple[str, ...]:
@@ -3649,6 +3736,7 @@ def _build_rule_set(
     if table_genres is None:
         table_genres = _rule_set_table_genres(definitions, template)
     _check_character_definitions(definitions, template)
+    definitions = _derive_background_tables(definitions, template)
     for definition in definitions:
         if definition.type == "rule":
             check_keys(
