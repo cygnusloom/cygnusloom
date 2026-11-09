@@ -139,12 +139,7 @@ def cast_spell(
     record(
         db, campaign_id, SpellCast(name=character_name, spell=held.name, source=magic.reusable.kind)
     )
-    penalty = Item(
-        inventory.penalty_name,
-        "",
-        inventory.penalty_slots,
-        kind=inventory.penalty_item,
-    )
+    penalty = inventory_service.penalty_item(inventory)
     result: dict[str, Any] = {}
     for _ in range(magic.cast_penalty):
         result = inventory_service.carry_item(

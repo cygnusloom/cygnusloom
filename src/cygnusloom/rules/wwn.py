@@ -36,7 +36,6 @@ from cygnusloom.services.events import (
     FeatureLearned,
     MaxChanged,
     StatRestored,
-    name_key,
     record,
 )
 from cygnusloom.services.hooks import HookContext
@@ -149,6 +148,69 @@ def tradition_effort_stat(tradition: str, progression: WWNProgression) -> str:
     return tradition_data(tradition, progression)[1]
 
 
+def _score_check(
+    hc: HookContext,
+    character: Any,
+    *,
+    label: str,
+    key: str,
+    score: int | None,
+    dice: str,
+    outcome: str,
+    cause: str,
+    rng: Any,
+    pc_message: str,
+    missing_text: str | None = None,
+) -> dict[str, Any]:
+    """Roll under a statblock score and record the check.
+
+    Morale and Instinct share this shape: a player character is refused, a roll no higher than
+    the score succeeds, and the roll is recorded as a `CheckMade`. They differ only in the label,
+    die, score key, outcome key, and the wording of the refusal. A None score means the sheet
+    has none, so nothing is rolled."""
+    if character.kind == PC_KIND:
+        raise InvalidInput(pc_message)
+    db, campaign_id = hc.session()
+    if score is None:
+        if missing_text is None:
+            raise InvalidInput(f"{character.name} has no {label} score to check")
+        record(db, campaign_id, EffectNoted(name=character.name, text=missing_text))
+        return {
+            "character": character.name,
+            "check": label,
+            key: None,
+            "roll": None,
+            outcome: None,
+            "cause": cause,
+        }
+    roll = roll_total(dice, rng)
+    success = roll <= score
+    record(
+        db,
+        campaign_id,
+        CheckMade(
+            name=character.name,
+            check=label,
+            stat=key,
+            stat_name=label,
+            roll=roll,
+            bonus=0,
+            total=roll,
+            difficulty=score,
+            success=success,
+            cause=cause,
+        ),
+    )
+    return {
+        "character": character.name,
+        "check": label,
+        key: score,
+        "roll": roll,
+        outcome: success,
+        "cause": cause,
+    }
+
+
 def check_morale(name: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
     """Roll 2d6 against an NPC's Morale score, which comes from its statblock (an NPC with no
     statblock uses the rule set's default). A roll no higher than the score holds; a higher roll
@@ -157,57 +219,22 @@ def check_morale(name: str, cause: str, ctx: ToolContext) -> dict[str, Any]:
     carry no Morale score of their own."""
 
     def action(hc: HookContext) -> dict[str, Any]:
-        _, character = _character(hc, name)
-        if character.kind == PC_KIND:
-            raise InvalidInput("player characters never make Morale checks")
-        morale = character.stats.get("morale")
-        db, campaign_id = hc.session()
-        if morale is None:
-            record(
-                db,
-                campaign_id,
-                EffectNoted(
-                    name=character.name,
-                    text=(
-                        f"{character.name} has no Morale score, so no Morale check is rolled "
-                        f"({cause})."
-                    ),
-                ),
-            )
-            return {
-                "character": character.name,
-                "check": "Morale",
-                "morale": None,
-                "roll": None,
-                "holds": None,
-                "cause": cause,
-            }
-        roll = roll_total("2d6", ctx.world.rng)
-        holds = roll <= morale
-        record(
-            db,
-            campaign_id,
-            CheckMade(
-                name=character.name,
-                check="Morale",
-                stat="morale",
-                stat_name="Morale",
-                roll=roll,
-                bonus=0,
-                total=roll,
-                difficulty=morale,
-                success=holds,
-                cause=cause,
+        character = hc.character(name)
+        return _score_check(
+            hc,
+            character,
+            label="Morale",
+            key="morale",
+            score=character.stats.get("morale"),
+            dice="2d6",
+            outcome="holds",
+            cause=cause,
+            rng=ctx.world.rng,
+            pc_message="player characters never make Morale checks",
+            missing_text=(
+                f"{character.name} has no Morale score, so no Morale check is rolled ({cause})."
             ),
         )
-        return {
-            "character": character.name,
-            "check": "Morale",
-            "morale": morale,
-            "roll": roll,
-            "holds": holds,
-            "cause": cause,
-        }
 
     return ctx.world.with_hook_context(action)
 
@@ -219,36 +246,18 @@ def instinct_check(name: str, instinct: int, cause: str, ctx: ToolContext) -> di
     value = whole_number(instinct, "instinct", 0, 10)
 
     def action(hc: HookContext) -> dict[str, Any]:
-        _, character = _character(hc, name)
-        if character.kind == PC_KIND:
-            raise InvalidInput("player characters never check Instinct")
-        roll = roll_total("1d10", ctx.world.rng)
-        impulsive = roll <= value
-        db, campaign_id = hc.session()
-        record(
-            db,
-            campaign_id,
-            CheckMade(
-                name=character.name,
-                check="Instinct",
-                stat="instinct",
-                stat_name="Instinct",
-                roll=roll,
-                bonus=0,
-                total=roll,
-                difficulty=value,
-                success=impulsive,
-                cause=cause,
-            ),
+        return _score_check(
+            hc,
+            hc.character(name),
+            label="Instinct",
+            key="instinct",
+            score=value,
+            dice="1d10",
+            outcome="impulsive",
+            cause=cause,
+            rng=ctx.world.rng,
+            pc_message="player characters never check Instinct",
         )
-        return {
-            "character": character.name,
-            "check": "Instinct",
-            "instinct": value,
-            "roll": roll,
-            "impulsive": impulsive,
-            "cause": cause,
-        }
 
     return ctx.world.with_hook_context(action)
 
@@ -258,7 +267,7 @@ def gain_growth(character: str, ctx: ToolContext) -> dict[str, Any]:
     improve_attribute, spend_skill_point, or the appropriate counter."""
 
     def identify(hc: HookContext) -> dict[str, str]:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         background = found.templates.get("background", "")
         return {
             "character": found.name,
@@ -287,7 +296,7 @@ def roll_reaction(
         spec = ctx.world.character
 
         def read(hc: HookContext) -> dict[str, int]:
-            _, found = _character(hc, character)
+            found = hc.character(character)
             return {"bonus": spec.modifier(found.stats, "cha")}
 
         bonus = int(ctx.world.with_hook_context(read)["bonus"])
@@ -296,7 +305,7 @@ def roll_reaction(
 
     def action(hc: HookContext) -> dict[str, Any]:
         nonlocal total
-        _, found = _character(hc, character)
+        found = hc.character(character)
         db, campaign_id = hc.session()
         override = ""
         for triggered in reactions.match_reaction_roll(
@@ -384,7 +393,7 @@ def gain_xp(
     table = xp_track(progression, rate)
 
     def validate_level(hc: HookContext) -> int:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         level = found.counters.get("level", 1)
         return _chart_level(level, progression, found.name, "experience")
 
@@ -393,7 +402,7 @@ def gain_xp(
     total = int(changed["value"])
 
     def action(hc: HookContext) -> dict[str, Any]:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         level = found.counters.get("level", 1)
         level = _chart_level(level, progression, found.name, "experience")
         threshold = table[level] if level < progression.max_level else None
@@ -435,7 +444,7 @@ def _level_facts(
     table_xp = xp_track(progression, rate)
 
     def read(hc: HookContext) -> dict[str, Any]:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         level = _chart_level(found.counters.get("level", 1), progression, found.name, "experience")
         if level >= progression.max_level:
             raise InvalidInput(
@@ -627,7 +636,7 @@ def level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str, Any]
     player to advance on the character sheet, because its picks are the player's choices."""
 
     def read(hc: HookContext) -> tuple[str, str]:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         return found.kind, found.name
 
     kind, name = ctx.world.with_hook_context(read)
@@ -651,7 +660,7 @@ def focus_options(
     spec = ctx.world.character
 
     def read(hc: HookContext) -> dict[str, Any]:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         ids = class_ids(found)
         if not ids:
             raise InvalidInput(f"{found.name} has no class")
@@ -691,7 +700,7 @@ def art_options(
     progression = require_wwn_progression(ctx.world)
 
     def read(hc: HookContext) -> dict[str, Any]:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         return {
             "tags": set(tradition_tags(found, progression)),
             "features": dict(found.features),
@@ -717,7 +726,7 @@ def spell_options(
     progression = require_wwn_progression(ctx.world)
 
     def read(hc: HookContext) -> dict[str, Any]:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         casting_class = casting_class_id(found, progression)
         level = new_level or found.counters.get("level", 1)
         row = casting_row(casting_class, level, progression) if casting_class else None
@@ -803,7 +812,7 @@ def _pc_skill_level(character: str, skill: str, ctx: ToolContext) -> int:
     spec = ctx.world.character
 
     def read(hc: HookContext) -> int:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         return spec.skill_level(found.skills, skill)
 
     return int(ctx.world.with_hook_context(read))
@@ -848,7 +857,7 @@ def spend_skill_point(character: str, skill: str, ctx: ToolContext) -> dict[str,
         raise InvalidInput(f"there is no skill named {skill!r}; the skills are: {options}")
 
     def read(hc: HookContext) -> dict[str, int]:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         points = found.counters.get("skill_points", 0)
         skill_progression = spec.skill_progression
         if skill_progression is None:
@@ -918,7 +927,7 @@ def improve_attribute(character: str, stat: str, ctx: ToolContext) -> dict[str, 
         raise InvalidInput(f"there is no attribute named {stat!r}; the attributes are: {options}")
 
     def read(hc: HookContext) -> dict[str, int]:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         boosts = found.counters.get("attribute_boosts", 0)
         next_step = boosts + 1
         if next_step not in progression.attribute_costs:
@@ -978,7 +987,7 @@ def learn_focus(character: str, focus: str, ctx: ToolContext) -> dict[str, Any]:
         required = None
 
     def read(hc: HookContext) -> dict[str, Any]:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         if found.counters.get("focus_picks", 0) < 1:
             raise InvalidInput(f"{found.name} has no focus picks to spend")
         _check_focus_class(spec, class_ids(found), feature)
@@ -1084,7 +1093,7 @@ def learn_art(character: str, art: str, ctx: ToolContext) -> dict[str, Any]:
         raise InvalidInput(f"{feature.name} is not an art")
 
     def read(hc: HookContext) -> dict[str, Any]:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         tags = tradition_tags(found, progression)
         if not tags:
             raise InvalidInput(f"{found.name} has no magical tradition, so cannot learn arts")
@@ -1124,7 +1133,7 @@ def learn_spell(character: str, spell: str, ctx: ToolContext) -> dict[str, Any]:
         raise InvalidInput(f"{feature.name} is not a spell")
 
     def read(hc: HookContext) -> dict[str, Any]:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         tags = tradition_tags(found, progression)
         if not tags:
             raise InvalidInput(f"{found.name} has no magical tradition, so cannot learn spells")
@@ -1216,7 +1225,7 @@ def _recover_with_hook(
 ) -> dict[str, Any]:
     """Record a rest's recovery: the night's hit points, Strain, and castings, and the Effort
     whose duration ends with the rest."""
-    _, found = _character(hc, character)
+    found = hc.character(character)
     db, campaign_id = hc.session()
     restored: dict[str, int] = {}
 
@@ -1265,21 +1274,13 @@ def _recover_with_hook(
     return {"character": found.name, "restored": restored}
 
 
-def _character(hc: HookContext, name: str) -> tuple[Any, Any]:
-    state = hc.state()
-    character = state.characters.get(name_key(name))
-    if character is None:
-        raise InvalidInput(f"there is no character named {name!r}")
-    return state, character
-
-
 def _recompute_derived(
     ctx: ToolContext, character: str, spec: CharacterSpec, *, cause: str
 ) -> None:
     """Write the derived stats for the character's new level, counter values, and skills."""
 
     def action(hc: HookContext) -> None:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         try:
             values = derived_stats(
                 spec,
@@ -1321,7 +1322,7 @@ def _learn_feature(
     """Add a feature to a character and note anything its effects only describe."""
 
     def action(hc: HookContext) -> None:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         if feature.defense_floor is not None and not found.defense_tracked:
             raise InvalidInput(f"{found.name}'s equipped defense has not been recorded")
         db, campaign_id = hc.session()
@@ -1366,35 +1367,8 @@ def _armor_total(ctx: ToolContext, character: str, spec: CharacterSpec) -> int:
     """The current total AC, or the unarmored value if it has not been set."""
 
     def action(hc: HookContext) -> int:
-        _, found = _character(hc, character)
+        found = hc.character(character)
         dexterity = spec.modifier(found.stats, "dex")
         return found.armor or 10 + dexterity
 
     return ctx.world.with_hook_context(action)
-
-
-def travel(
-    character: str,
-    destination: str,
-    terrain: str,
-    road: bool = False,
-    weather: str = "clear",
-    days: int = 1,
-    travelers: int = 1,
-    reason: str = "",
-    *,
-    ctx: ToolContext,
-) -> dict[str, Any]:
-    """Compatibility delegate to WorldTools.travel, which owns the terrain-day model. The tool
-    itself binds to that method directly; this stays for callers that still reach the rules
-    module by name."""
-    return ctx.world.travel(
-        character,
-        destination,
-        terrain,
-        road=road,
-        weather=weather,
-        days=days,
-        travelers=travelers,
-        reason=reason,
-    )

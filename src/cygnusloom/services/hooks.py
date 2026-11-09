@@ -13,7 +13,14 @@ from sqlalchemy.orm import Session
 
 from cygnusloom.content.library import Hooks, InventoryRules
 from cygnusloom.services.common import InvalidInput
-from cygnusloom.services.events import CampaignState, MarkSet, load_state, name_key, record
+from cygnusloom.services.events import (
+    CampaignState,
+    Character,
+    MarkSet,
+    load_state,
+    name_key,
+    record,
+)
 
 
 @dataclass
@@ -47,11 +54,15 @@ class HookContext:
         db, campaign_id = self.session()
         record(db, campaign_id, MarkSet(name=name, key=key, value=value, text=text))
 
-    def marks(self, name: str) -> dict[str, Any]:
-        characters = self.state().characters
-        if name_key(name) not in characters:
+    def character(self, name: str) -> Character:
+        """The named character, raising InvalidInput when the state has none."""
+        character = self.state().characters.get(name_key(name))
+        if character is None:
             raise InvalidInput(f"there is no character named {name!r}")
-        return characters[name_key(name)].marks
+        return character
+
+    def marks(self, name: str) -> dict[str, Any]:
+        return self.character(name).marks
 
 
 def call_hook(
