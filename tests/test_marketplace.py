@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
+from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi import FastAPI
@@ -8,6 +11,8 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from cygnusloom.config import Settings
+from cygnusloom.content.definitions import ContentError
+from cygnusloom.content.library import DATA_DIR, ContentLibrary
 from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import (
@@ -17,7 +22,8 @@ from cygnusloom.services.events import (
     ItemRemoved,
     record,
 )
-from tests.conftest import csrf_token
+from tests.conftest import bundled_library, csrf_token
+from tests.support import content_tree
 from tests.test_campaigns import _create_character, _debug_client_factory
 from tests.test_character_creation import _cairn_campaign, _complete_form
 from tests.test_clock_rest import _wound
@@ -429,3 +435,228 @@ def test_a_zero_or_unknown_gold_change_is_refused(client_factory):
     with pytest.raises(InvalidInput):
         tools.change_currency("Nobody", 5, "a gift")
     assert _gold(app, campaign_id) == before
+
+
+def _feature_market(tmp_path: Path, shop_item: dict[str, Any]) -> ContentLibrary:
+    """A rule set with a currency, one item feature, and one shop item to load."""
+    return ContentLibrary.load(
+        content_tree(
+            tmp_path,
+            definitions=[
+                {"type": "item_size", "id": "petty", "slots": 0},
+                {"type": "item_size", "id": "normal", "slots": 1},
+                {"type": "item_size", "id": "bulky", "slots": 2},
+                {
+                    "type": "feature",
+                    "id": "gold",
+                    "name": "Gold Pieces",
+                    "feature_type": "item",
+                    "description": "A purse of coins.",
+                    "size": "petty",
+                },
+                {
+                    "type": "feature",
+                    "id": "sword",
+                    "name": "Sword",
+                    "feature_type": "item",
+                    "description": "A well-balanced blade.",
+                    "size": "normal",
+                    "armor": 1,
+                    "damage": "1d6",
+                    "uses": 2,
+                    "looks_like": "sword",
+                    "encumbrance_checks": ["sneak"],
+                },
+                {"type": "marketplace", "id": "market", "currency": "gold"},
+                shop_item,
+            ],
+        )
+    )
+
+
+def test_a_shop_item_inherits_the_feature_it_names(tmp_path):
+    library = _feature_market(
+        tmp_path,
+        {
+            "type": "shop_item",
+            "id": "sword",
+            "feature": "sword",
+            "category": "weapons",
+            "price": 10,
+        },
+    )
+    item = library.rule_sets["testset"].marketplace.items[0]
+    assert item.name == "Sword"
+    assert item.size == "normal"
+    assert item.armor == 1
+    assert item.damage == "1d6"
+    assert item.uses == 2
+    assert item.description == "A well-balanced blade."
+    assert item.encumbrance_checks == ("sneak",)
+    assert (item.icon, item.looks_like) == ("sword", "sword")
+    # The shop keeps its own catalogue fields.
+    assert (item.category, item.price, item.armor_mode) == ("weapons", 10, "add")
+
+
+def test_a_shop_item_overrides_what_it_would_inherit(tmp_path):
+    library = _feature_market(
+        tmp_path,
+        {
+            "type": "shop_item",
+            "id": "sword",
+            "feature": "sword",
+            "name": "Fine Sword",
+            "category": "weapons",
+            "price": 50,
+            "size": "bulky",
+            "armor": 2,
+            "damage": "1d8",
+            "uses": 3,
+            "description": "A sword of folded steel.",
+            "looks_like": "dagger",
+            "encumbrance_checks": ["exert"],
+            "armor_mode": "max",
+        },
+    )
+    item = library.rule_sets["testset"].marketplace.items[0]
+    assert item.name == "Fine Sword"
+    assert item.size == "bulky"
+    assert item.armor == 2
+    assert item.damage == "1d8"
+    assert item.uses == 3
+    assert item.description == "A sword of folded steel."
+    assert item.encumbrance_checks == ("exert",)
+    assert (item.icon, item.looks_like) == ("dagger", "dagger")
+    assert (item.category, item.price, item.armor_mode) == ("weapons", 50, "max")
+
+
+def test_an_unknown_shop_item_feature_is_refused(tmp_path):
+    with pytest.raises(ContentError, match="names no feature \\('moon-sword'\\)"):
+        _feature_market(
+            tmp_path,
+            {
+                "type": "shop_item",
+                "id": "sword",
+                "feature": "moon-sword",
+                "category": "weapons",
+                "price": 10,
+            },
+        )
+
+
+BUNDLED_ITEM_RULE_SETS = {"cairn2e": 16, "worldswithoutnumber": 40}
+
+
+def _bundled_shop_item_definitions(rule_set_id: str) -> list[dict[str, Any]]:
+    definitions = []
+    for path in sorted((DATA_DIR / "rulesets" / rule_set_id).glob("*.json")):
+        entries = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(entries, list):
+            definitions.extend(e for e in entries if e.get("type") == "shop_item")
+    return definitions
+
+
+@pytest.mark.parametrize("rule_set_id", sorted(BUNDLED_ITEM_RULE_SETS))
+def test_bundled_shop_items_name_the_feature_that_defines_them(rule_set_id):
+    """Every bundled item that matches a feature by id or name names that feature, inherits
+    whatever it does not author, and authors anything that differs from the feature."""
+    rule_set = bundled_library().rule_sets[rule_set_id]
+    items = {item.id: item for item in rule_set.marketplace.items}
+    item_features = {
+        feature.name: feature
+        for feature in rule_set.character.features.values()
+        if feature.feature_type == "item"
+    }
+    derived = 0
+    for definition in _bundled_shop_item_definitions(rule_set_id):
+        item = items[definition["id"]]
+        feature = rule_set.character.features.get(definition["id"]) or item_features.get(item.name)
+        if feature is None:
+            assert "feature" not in definition
+            continue
+        derived += 1
+        assert definition.get("feature") == feature.id, definition["id"]
+        for key in (
+            "name",
+            "size",
+            "armor",
+            "damage",
+            "uses",
+            "description",
+            "encumbrance_checks",
+        ):
+            assert getattr(item, key) == definition.get(key, getattr(feature, key)), (
+                definition["id"],
+                key,
+            )
+        if "icon" in definition:
+            assert item.icon == definition["icon"]
+        elif "looks_like" in definition:
+            assert item.looks_like == definition["looks_like"]
+            assert item.icon == definition["looks_like"]
+        else:
+            assert (item.icon, item.looks_like) == (feature.icon, feature.looks_like)
+    assert derived == BUNDLED_ITEM_RULE_SETS[rule_set_id]
+
+
+def test_bundled_cairn_items_keep_their_catalogue_fields():
+    items = {item.id: item for item in bundled_library().rule_sets["cairn2e"].marketplace.items}
+    dagger = items["dagger"]
+    assert (
+        dagger.name,
+        dagger.category,
+        dagger.price,
+        dagger.size,
+        dagger.armor,
+        dagger.damage,
+        dagger.uses,
+    ) == ("Dagger", "weapons", 5, "normal", 0, "1d6", 0)
+    assert dagger.description == "Dagger, Cudgel, Sickle, Staff, etc. (d6 damage)"
+    assert (dagger.icon, dagger.looks_like) == ("dagger", "dagger")
+
+    brigandine = items["brigandine"]
+    assert (brigandine.size, brigandine.armor, brigandine.description) == (
+        "bulky",
+        1,
+        "1 Armor, bulky",
+    )
+    assert (brigandine.icon, brigandine.looks_like) == ("armor", "armor")
+
+    rations = items["rations"]
+    assert (rations.uses, rations.icon, rations.looks_like, rations.description) == (
+        3,
+        "food",
+        "food",
+        "3 uses",
+    )
+
+
+def test_bundled_wwn_items_keep_their_catalogue_fields():
+    items = {
+        item.id: item
+        for item in bundled_library().rule_sets["worldswithoutnumber"].marketplace.items
+    }
+    plate = items["shop_plate_armor"]
+    assert (
+        plate.name,
+        plate.category,
+        plate.price,
+        plate.size,
+        plate.armor,
+        plate.armor_mode,
+    ) == ("Plate Armor", "armor", 1000, "large", 7, "max")
+    assert plate.encumbrance_checks == ("sneak", "exert")
+    assert (plate.damage, plate.uses) == ("", 0)
+    assert plate.description == "Heavy armor, AC 17, Encumbrance 2; penalizes Sneak and Exert."
+
+    ration = items["shop_daily_ration"]
+    assert (ration.icon, ration.looks_like) == ("tool", "tool")
+    assert ration.description == "A day's food and water for one person. Encumbrance 1."
+
+    axe = items["shop_axe_hand"]
+    assert (axe.name, axe.damage, axe.icon, axe.looks_like) == (
+        "Hand Axe",
+        "1d6",
+        "axe",
+        "axe",
+    )
