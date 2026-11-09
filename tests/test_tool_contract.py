@@ -162,6 +162,86 @@ def test_tool_specs_match_the_enabled_catalog_for_each_step(rule_set_id: str) ->
     assert offered(review_step=True) == review
 
 
+# The core create_monster schema owns only the fields both combat rule sets share. Each rule set
+# adds its own stat model and attack shape; these explicit sets keep a future core edit from
+# silently dropping a source-specific field.
+MONSTER_CORE_PROPERTIES = {"name", "location", "description", "template", "armor", "force"}
+MONSTER_EXTRA_PROPERTIES = {
+    "cairn2e": {"hit_points", "strength", "dexterity", "willpower", "attacks", "detachment"},
+    "worldswithoutnumber": {"stats", "attacks", "rules"},
+}
+MONSTER_REQUIRED = {
+    "cairn2e": ["name", "location"],
+    "worldswithoutnumber": ["name", "location", "template"],
+}
+
+
+def test_create_monster_is_one_core_tool_with_ruleset_extensions() -> None:
+    library = bundled_library()
+    core = library.core.tool_calls["create_monster"]
+    assert core.world_method == "create_monster"
+    assert core.requires == ("combat",)
+    assert set(core.parameters["properties"]) == MONSTER_CORE_PROPERTIES
+    assert core.parameters["required"] == ["name", "location"]
+
+    for rule_set_id, extra in MONSTER_EXTRA_PROPERTIES.items():
+        call = library.rule_sets[rule_set_id].tool_calls["create_monster"]
+        assert set(call.parameters["properties"]) == MONSTER_CORE_PROPERTIES | extra
+        assert call.parameters["required"] == MONSTER_REQUIRED[rule_set_id]
+        assert call.world_method == "create_monster"
+        assert call.description != core.description
+
+
+def test_create_monster_keeps_each_rulesets_stat_model() -> None:
+    library = bundled_library()
+    cairn = library.rule_sets["cairn2e"].tool_calls["create_monster"]
+    wwn = library.rule_sets["worldswithoutnumber"].tool_calls["create_monster"]
+    cairn_properties = cairn.parameters["properties"]
+    wwn_properties = wwn.parameters["properties"]
+
+    # Cairn gives each stat as a flat, bounded number and binds them into the stats map.
+    for stat in ("hit_points", "strength", "dexterity", "willpower"):
+        assert cairn_properties[stat]["type"] == "integer"
+        assert cairn_properties[stat]["minimum"] == 0
+        assert cairn_properties[stat]["maximum"] == 999
+        assert cairn_properties[stat]["description"]
+    assert cairn_properties["armor"]["maximum"] == 999
+    assert cairn_properties["detachment"]["type"] == "boolean"
+    assert cairn.bind == {
+        "stats": {
+            "hp": "hit_points",
+            "str": "strength",
+            "dex": "dexterity",
+            "wil": "willpower",
+        }
+    }
+
+    # The two attack shapes only overlap on a name and dice, so neither is in the core base.
+    assert set(cairn_properties["attacks"]["items"]["properties"]) == {
+        "name",
+        "dice",
+        "flags",
+    }
+    assert cairn_properties["attacks"]["items"]["required"] == ["name", "dice"]
+    assert set(wwn_properties["attacks"]["items"]["properties"]) == {
+        "name",
+        "dice",
+        "shock",
+        "shock_ac",
+    }
+    assert "required" not in wwn_properties["attacks"]["items"]
+
+    # WWN takes one stats map and a template, with its own armor cap and force default.
+    assert wwn_properties["stats"] == {
+        "type": "object",
+        "additionalProperties": {"type": "integer"},
+    }
+    assert wwn_properties["armor"] == {"type": "integer", "minimum": 0, "maximum": 30}
+    assert wwn_properties["force"] == {"type": "boolean", "default": False}
+    assert wwn_properties["rules"]["items"] == {"type": "string"}
+    assert wwn.bind == {}
+
+
 NOTE_TOOL = {
     "type": "tool_call",
     "id": "note",

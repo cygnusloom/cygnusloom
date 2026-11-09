@@ -240,6 +240,42 @@
   },
   {
     "type": "tool_call",
+    "id": "create_monster",
+    "name": "create_monster",
+    "requires": ["combat"],
+    "world_method": "create_monster",
+    "description": "Create a monster NPC in the world. Give a template to start from a bestiary statblock (see search_monster), and any value you give replaces the template's. A creature named exactly like a statblock uses that statblock unless force is set. Attacks replace the template's attacks when given.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "template": {
+          "type": "string"
+        },
+        "armor": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "force": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "location"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "harm_character",
     "name": "harm_character",
     "requires": ["combat"],
