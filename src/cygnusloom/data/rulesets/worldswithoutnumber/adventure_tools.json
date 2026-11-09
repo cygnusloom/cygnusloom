@@ -667,18 +667,12 @@
   {
     "type": "tool_call",
     "id": "create_monster",
-    "name": "create_monster",
-    "world_method": "create_monster",
+    "extends": "core:tool_call/create_monster",
     "description": "Create a creature from the bestiary and place it at a location. Give the template id (use search_monster to find it) and any changes to its stats, armor, or attacks.",
     "parameters": {
-      "type": "object",
       "properties": {
-        "name": {"type": "string"},
-        "location": {"type": "string"},
-        "description": {"type": "string"},
-        "template": {"type": "string"},
         "stats": {"type": "object", "additionalProperties": {"type": "integer"}},
-        "armor": {"type": "integer", "minimum": 0, "maximum": 30},
+        "armor": {"maximum": 30},
         "attacks": {
           "type": "array",
           "items": {
@@ -691,7 +685,7 @@
             }
           }
         },
-        "force": {"type": "boolean", "default": false},
+        "force": {"default": false},
         "rules": {
           "type": "array",
           "items": {"type": "string"},

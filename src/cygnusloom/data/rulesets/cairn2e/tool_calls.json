@@ -2,8 +2,7 @@
   {
     "type": "tool_call",
     "id": "create_monster",
-    "name": "create_monster",
-    "world_method": "create_monster",
+    "extends": "core:tool_call/create_monster",
     "bind": {
       "stats": {
         "hp": "hit_points",
@@ -14,22 +13,17 @@
     },
     "description": "Create a monster NPC in the world. Give a template to start from a bestiary statblock (see search_monster), and any value you give replaces the template's. A creature named exactly like a statblock uses that statblock and gives no stats of its own; set force to create a custom creature with that name instead. Without a statblock, give a description and every stat: hit_points, strength, dexterity, and willpower are required. Attacks replace the template's attacks when given.",
     "parameters": {
-      "type": "object",
       "properties": {
         "name": {
-          "type": "string",
           "description": "The monster's name, such as 'Grey Wolf'. It must be new."
         },
         "location": {
-          "type": "string",
           "description": "The name of the location it is at."
         },
         "description": {
-          "type": "string",
           "description": "What the monster looks like and how it behaves. Required without a template."
         },
         "template": {
-          "type": "string",
           "description": "The id of a bestiary statblock to start from, as listed by search_monster."
         },
         "hit_points": {
@@ -57,8 +51,6 @@
           "description": "Willpower."
         },
         "armor": {
-          "type": "integer",
-          "minimum": 0,
           "maximum": 999,
           "description": "Armor, subtracted from each hit before it reaches Hit Protection. Leave it out to use the template's, or 0 without one."
         },
@@ -95,18 +87,13 @@
           }
         },
         "force": {
-          "type": "boolean",
           "description": "Set true only to create a custom creature under the name of a published statblock. Without it, such a name takes the statblock and refuses stats, armor, or attacks."
         },
         "detachment": {
           "type": "boolean",
           "description": "Set true to run this creature as a detachment (a group of four or more, such as bandits or gnolls), so Blast and morale treat it as one group. Set false to run it as one individual. Leave it out to use the statblock's own setting; most statblocks are individuals."
         }
-      },
-      "required": [
-        "name",
-        "location"
-      ]
+      }
     }
   },
   {
