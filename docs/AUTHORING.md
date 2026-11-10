@@ -229,6 +229,31 @@ the rule set's own data.
 Python-backed tools are trusted code. The loader checks the signature against
 the schema, but content can import a Python module.
 
+## Dice tables
+
+A `dice_table` has one formula and rows that cover every roll it can show, in
+order and without gaps. A row is either an object with `roll`, `result`, and an
+optional `text` note, or the compact array `[roll, result]` /
+`[roll, result, text]`:
+
+```json
+{
+  "type": "dice_table",
+  "id": "weather",
+  "name": "Weather",
+  "dice": "1d6",
+  "rows": [
+    ["1", "Clear and cold."],
+    ["2-3", "A thin grey rain."],
+    ["4", "Wind tears at cloaks.", "Loose gear may be lost."],
+    ["5-6", "A storm closes the road."]
+  ]
+}
+```
+
+The compact form is the bundled convention. A `creative_table` is simpler
+still: `entries` is one list of strings, rolled as `1dN`.
+
 ## World layout
 
 A world needs exactly one `world` definition with `name` and `description`.
