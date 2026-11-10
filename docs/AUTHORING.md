@@ -124,6 +124,67 @@ not duplicated.
 This is the current pattern for the Cairn background kit. It removes repeated
 backpack/gold/rations grants from every background.
 
+## Starting years
+
+A rule set with a year-by-year training path may describe it as one table on the
+rule-set head instead of one template per year. Academia Arcana uses this:
+
+```json
+{
+  "type": "rule_set",
+  "id": "academia-arcana",
+  "name": "Academia Arcana",
+  "description": "...",
+  "starting_years": {
+    "subjects": ["Charms", "Transfiguration", "Warding"],
+    "forbidden_spells": ["command-the-will", "open-the-deep"],
+    "years": [
+      {
+        "description": "Your first year at the academy.",
+        "subjects": 1,
+        "spells": 2,
+        "potions": 1,
+        "enchantments": 1,
+        "training": 0
+      }
+    ]
+  }
+}
+```
+
+Each `years` row generates a `year-<n>` template of kind `starting_year`, named
+`Year <n>`, with `counters.year` set to `n - 1` and the pick shape:
+
+- `subjects` picks any of the shared `subjects` tags;
+- `spells` picks spells tagged with a subject, excluding `forbidden_spells`;
+- `potions` and `enchantments` pick from the `Potions` and `Enchantments` tags;
+- `training` picks a trait from `training-1-3` (years 1–3), `training-4-6`
+  (years 4–6), or `training-7` (year 7).
+
+Counts are non-negative integers. A year with spells needs subjects, because the
+spell pick draws its tags from the subject list. An explicit `year-<n>` template
+in the same rule set wins over the generated row.
+
+## Marketplace items
+
+A `shop_item` may name a `feature` and inherit its name, size, armor, damage,
+uses, description, icon, and encumbrance checks. The shop item's own fields win
+when present. Category, price, and armor mode always come from the shop item.
+
+```json
+{
+  "type": "shop_item",
+  "id": "brigandine",
+  "feature": "brigandine",
+  "category": "armor",
+  "price": 40,
+  "armor_mode": "worn"
+}
+```
+
+Use this for any item the character sheet already models as a feature. The shop
+then owns pricing and placement instead of restating the whole item.
+
 ## Capabilities
 
 The `capabilities` block on the rule-set head declares what optional systems the
@@ -181,7 +242,23 @@ A world may define:
 - `npc`, including an inline statblock or a `monster` reference;
 - `region`, with polygon points and a rule-set `world_terrain` id;
 - `monster`, `feature`, `rule`, `table`, `dice_table`, and `creative_table`.
+A route is written once, between two locations:
 
+```json
+{
+  "type": "route",
+  "id": "twin-lakes-to-old-ford",
+  "from": "twin-lakes",
+  "to": "old-ford",
+  "path": "north along the shore",
+  "distance": 2,
+  "terrain": "hills"
+}
+```
+
+Routes are two-way by default. Set `one_way: true` for a trip that only works
+from `from` to `to`. The loader adds both directions to the locations' route
+maps, so do not also author a `routes` entry for the same pair.
 World files are discovered recursively. There is no world manifest and worlds
 do not currently support `extends`, `patch`, or `disabled`; keep repeated world
 data explicit until that layer exists.
