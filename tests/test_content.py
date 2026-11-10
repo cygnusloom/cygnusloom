@@ -1888,6 +1888,15 @@ def _edit_twin_lakes_location(root: Path, location_id: str, **changes: object) -
     (entry,) = [loc for loc in locations if loc.get("id") == location_id]
     entry.update(changes)
     path.write_text(json.dumps(locations, indent=2), encoding="utf-8")
+    if "routes" in changes:
+        # The bundled world authors its routes at the top level, so a per-location route in this
+        # copy would conflict with the same bundled pair.
+        (root / "worlds" / "twin-lakes" / "routes.json").unlink(missing_ok=True)
+
+
+def _write_twin_lakes_routes(root: Path, routes: list[dict[str, object]]) -> None:
+    path = root / "worlds" / "twin-lakes" / "routes.json"
+    path.write_text(json.dumps(routes, indent=2), encoding="utf-8")
 
 
 def _valid_route(**overrides: object) -> dict[str, object]:
@@ -1896,13 +1905,127 @@ def _valid_route(**overrides: object) -> dict[str, object]:
     return route
 
 
-def test_bundled_twin_lakes_routes_load_on_the_location_that_authors_them():
+def _world_route(origin: str, destination: str, **overrides: object) -> dict[str, object]:
+    route: dict[str, object] = {
+        "type": "route",
+        "id": f"{origin}--{destination}",
+        "from": origin,
+        "to": destination,
+        **_valid_route(),
+    }
+    route.update(overrides)
+    return route
+
+
+def test_bundled_twin_lakes_routes_load_on_both_locations():
     place = content_library().world_templates["twin-lakes"]
     isthmus = next(loc for loc in place.locations if loc.id == "isthmus-town")
+    dunston = next(loc for loc in place.locations if loc.id == "dunston")
     assert isthmus.routes["dunston"] == _valid_route()
+    assert dunston.routes["isthmus-town"] == _valid_route()
 
 
-def test_an_authored_route_may_carry_vast(tmp_path: Path):
+def test_bundled_twin_lakes_routes_match_their_previous_maps():
+    place = content_library().world_templates["twin-lakes"]
+    routes = {location.id: dict(location.routes) for location in place.locations}
+    assert {key: value for key, value in routes.items() if value} == {
+        "bone-sump": {
+            "temple-of-the-fungal-lizards": _valid_route(path="wilderness", terrain="perilous"),
+            "the-stone-forest": _valid_route(path="wilderness", terrain="perilous"),
+            "white-tower-fens": _valid_route(path="wilderness", terrain="perilous"),
+        },
+        "deadmill": {
+            "old-mill-road": _valid_route(path="roads", terrain="tough"),
+            "the-stone-forest": _valid_route(path="wilderness", terrain="tough"),
+        },
+        "dunston": {
+            "east-lake-pass": _valid_route(),
+            "farming-path": _valid_route(),
+            "isthmus-town": _valid_route(),
+            "the-downs": _valid_route(terrain="perilous"),
+            "white-tower-fens": _valid_route(distance="medium", terrain="perilous"),
+        },
+        "east-lake-pass": {
+            "dunston": _valid_route(),
+            "farming-path": _valid_route(),
+            "old-mill-road": _valid_route(),
+            "the-downs": _valid_route(terrain="perilous"),
+            "white-tower-fens": _valid_route(terrain="tough"),
+        },
+        "farming-path": {
+            "dunston": _valid_route(),
+            "east-lake-pass": _valid_route(),
+            "isthmus-town": _valid_route(path="roads"),
+        },
+        "isthmus-town": {
+            "dunston": _valid_route(),
+            "farming-path": _valid_route(path="roads"),
+            "old-mill-road": _valid_route(path="roads"),
+            "white-tower-fens": _valid_route(distance="medium", terrain="tough"),
+        },
+        "old-mill-road": {
+            "deadmill": _valid_route(path="roads", terrain="tough"),
+            "east-lake-pass": _valid_route(),
+            "isthmus-town": _valid_route(path="roads"),
+            "the-stone-forest": _valid_route(path="roads", terrain="tough"),
+            "white-tower-fens": _valid_route(distance="medium", terrain="tough"),
+        },
+        "temple-of-the-fungal-lizards": {
+            "bone-sump": _valid_route(path="wilderness", terrain="perilous"),
+        },
+        "the-downs": {
+            "dunston": _valid_route(terrain="perilous"),
+            "east-lake-pass": _valid_route(terrain="perilous"),
+            "white-tower-fens": _valid_route(terrain="tough"),
+        },
+        "the-stone-forest": {
+            "bone-sump": _valid_route(path="wilderness", terrain="perilous"),
+            "deadmill": _valid_route(path="wilderness", terrain="tough"),
+            "old-mill-road": _valid_route(path="roads", terrain="tough"),
+        },
+        "the-white-tower": {
+            "white-tower-fens": _valid_route(terrain="tough"),
+        },
+        "white-tower-fens": {
+            "bone-sump": _valid_route(path="wilderness", terrain="perilous"),
+            "dunston": _valid_route(distance="medium", terrain="perilous"),
+            "east-lake-pass": _valid_route(terrain="tough"),
+            "isthmus-town": _valid_route(distance="medium", terrain="tough"),
+            "old-mill-road": _valid_route(distance="medium", terrain="tough"),
+            "the-downs": _valid_route(terrain="tough"),
+            "the-white-tower": _valid_route(terrain="tough"),
+        },
+    }
+
+
+def test_a_world_route_reaches_both_locations(tmp_path: Path):
+    root = _twin_lakes_copy(tmp_path)
+    _write_twin_lakes_routes(root, [_world_route("isthmus-town", "dunston")])
+    place = ContentLibrary.load(root).world_templates["twin-lakes"]
+    routes = {location.id: location.routes for location in place.locations}
+    assert routes["isthmus-town"] == {"dunston": _valid_route()}
+    assert routes["dunston"] == {"isthmus-town": _valid_route()}
+    assert all(not value for key, value in routes.items() if key not in {"isthmus-town", "dunston"})
+
+
+def test_a_one_way_world_route_reaches_only_the_destination(tmp_path: Path):
+    root = _twin_lakes_copy(tmp_path)
+    _write_twin_lakes_routes(root, [_world_route("isthmus-town", "dunston", one_way=True)])
+    place = ContentLibrary.load(root).world_templates["twin-lakes"]
+    routes = {location.id: location.routes for location in place.locations}
+    assert routes["isthmus-town"] == {"dunston": _valid_route()}
+    assert routes["dunston"] == {}
+
+
+def test_a_world_route_may_carry_vast(tmp_path: Path):
+    root = _twin_lakes_copy(tmp_path)
+    _write_twin_lakes_routes(root, [_world_route("isthmus-town", "dunston", vast=1)])
+    place = ContentLibrary.load(root).world_templates["twin-lakes"]
+    isthmus = next(loc for loc in place.locations if loc.id == "isthmus-town")
+    assert isthmus.routes == {"dunston": _valid_route(vast=1)}
+
+
+def test_a_per_location_route_may_carry_vast(tmp_path: Path):
     root = _twin_lakes_copy(tmp_path)
     _edit_twin_lakes_location(
         root, "isthmus-town", routes={"dunston": _valid_route(path="wilderness", vast=1)}
@@ -1912,6 +2035,93 @@ def test_an_authored_route_may_carry_vast(tmp_path: Path):
     assert isthmus.routes == {
         "dunston": {"path": "wilderness", "distance": "short", "terrain": "easy", "vast": 1}
     }
+
+
+@pytest.mark.parametrize(
+    ("origin", "destination", "message"),
+    [
+        ("nowhere", "dunston", "from 'nowhere' is not a location in this world"),
+        ("isthmus-town", "nowhere", "to 'nowhere' is not a location in this world"),
+        ("isthmus-town", "isthmus-town", "cannot lead to itself"),
+    ],
+)
+def test_a_world_route_must_name_locations_in_the_world(
+    tmp_path: Path, origin: str, destination: str, message: str
+):
+    root = _twin_lakes_copy(tmp_path)
+    _write_twin_lakes_routes(root, [_world_route(origin, destination)])
+    with pytest.raises(ContentError, match=re.escape(message)):
+        ContentLibrary.load(root)
+
+
+def test_two_world_routes_must_not_share_a_direction(tmp_path: Path):
+    root = _twin_lakes_copy(tmp_path)
+    _write_twin_lakes_routes(
+        root,
+        [
+            _world_route("isthmus-town", "dunston"),
+            _world_route("isthmus-town", "dunston", id="second"),
+        ],
+    )
+    with pytest.raises(ContentError, match="duplicate route from 'isthmus-town' to 'dunston'"):
+        ContentLibrary.load(root)
+
+
+@pytest.mark.parametrize(
+    ("location_route", "message"),
+    [
+        (_valid_route(), "already authors the same route to 'dunston'"),
+        (_valid_route(path="wilderness"), "already authors a different route to 'dunston'"),
+    ],
+)
+def test_a_world_route_is_not_a_silent_override_of_a_location_route(
+    tmp_path: Path, location_route: dict[str, object], message: str
+):
+    root = _twin_lakes_copy(tmp_path)
+    _edit_twin_lakes_location(root, "isthmus-town", routes={"dunston": location_route})
+    _write_twin_lakes_routes(root, [_world_route("isthmus-town", "dunston")])
+    with pytest.raises(ContentError, match=message):
+        ContentLibrary.load(root)
+
+
+@pytest.mark.parametrize(
+    ("overrides", "removed", "message"),
+    [
+        ({}, "from", "'from' must be a non-empty string"),
+        ({"path": ""}, "none", "'path' must be a non-empty string"),
+        ({"one_way": "yes"}, "none", "one_way must be true or false"),
+        ({"vast": -1}, "none", "'vast' must be a whole number, at least 0"),
+        ({"speed": "fast"}, "none", "unknown key(s) 'speed'"),
+    ],
+)
+def test_a_bad_world_route_is_rejected(
+    tmp_path: Path, overrides: dict[str, object], removed: str, message: str
+):
+    root = _twin_lakes_copy(tmp_path)
+    route = _world_route("isthmus-town", "dunston", **overrides)
+    if removed != "none":
+        route.pop(removed)
+    _write_twin_lakes_routes(root, [route])
+    with pytest.raises(ContentError, match=re.escape(message)):
+        ContentLibrary.load(root)
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"path": "lanes"}, "path 'lanes' is not in the rule set's travel"),
+        ({"distance": "huge"}, "distance 'huge' is not in the rule set's travel"),
+        ({"terrain": "swamp"}, "terrain 'swamp' is not in the rule set's travel"),
+        ({"vast": 3}, "vast 3 is more than the rule set's 2"),
+    ],
+)
+def test_a_world_route_uses_the_rule_sets_travel(
+    tmp_path: Path, overrides: dict[str, object], message: str
+):
+    root = _twin_lakes_copy(tmp_path)
+    _write_twin_lakes_routes(root, [_world_route("isthmus-town", "dunston", **overrides)])
+    with pytest.raises(ContentError, match=message):
+        ContentLibrary.load(root).world_content("twin-lakes", "cairn2e")
 
 
 @pytest.mark.parametrize(

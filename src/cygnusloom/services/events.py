@@ -318,6 +318,9 @@ class LocationAdded(GameEvent):
     rules: list[str] = field(default_factory=list)
     # Authored overland routes from this place, by destination location id.
     routes: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # The world's id for this place. Authored route keys use it. None for older campaigns and
+    # for places the GM invented.
+    location_id: str | None = None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.places[name_key(self.name)] = Place(
@@ -330,6 +333,7 @@ class LocationAdded(GameEvent):
             summary=self.summary,
             rules=tuple(self.rules),
             routes={key: dict(route) for key, route in self.routes.items()},
+            location_id=self.location_id,
         )
 
     def render(self) -> str:

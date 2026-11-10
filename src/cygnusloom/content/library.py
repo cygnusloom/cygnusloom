@@ -517,6 +517,9 @@ WILDERNESS_EFFECT_KEYS = {
 }
 WILDERNESS_ALTERNATIVE_KEYS = frozenset({"item", "requires"})
 ROUTE_KEYS = frozenset({"path", "distance", "terrain", "vast"})
+# A world-level route connects two locations. Besides the route values it names both endpoints and
+# whether the route reaches the destination and back.
+WORLD_ROUTE_KEYS = frozenset({"type", "id", "from", "to", "one_way", *ROUTE_KEYS})
 # The most sides a grant's die may have.
 MAX_GRANT_SIDES = 12
 
@@ -2215,7 +2218,7 @@ def _check_directory_id(template: str, ident: str) -> None:
 WORLD_TYPES = ("monster", "table", "dice_table", "creative_table", "feature", "rule")
 # Every definition type a world loader consumes. A rule-set-only definition in a world directory
 # is a content error instead of being silently dropped.
-WORLD_DEFINITION_TYPES = frozenset({"world", "location", "npc", "region", *WORLD_TYPES})
+WORLD_DEFINITION_TYPES = frozenset({"world", "location", "npc", "region", "route", *WORLD_TYPES})
 # Every definition type a rule set loader consumes. A definition with another type is a content
 # error instead of being silently dropped.
 RULE_SET_DEFINITION_TYPES = frozenset(
@@ -2532,6 +2535,7 @@ def _load_world(directory: Path) -> WorldTemplate:
                 f"{template}: npc {npc.id!r} is in unknown location {npc.location!r}"
             )
     _check_parents(locations, template)
+    locations = _merge_world_routes(locations, _load_world_routes(definitions, template), template)
     _check_routes(locations, template)
     _check_unique_names([*locations, *npcs], template)
     regions = _load_regions(definitions, template)
@@ -2944,6 +2948,91 @@ def _load_routes(data: Mapping[str, Any], label: str) -> dict[str, dict[str, Any
             loaded["vast"] = _whole(route, "vast", route_label, 0)
         routes[destination] = loaded
     return routes
+
+
+@dataclass(frozen=True)
+class _WorldRoute:
+    """A world-level route before it is merged into each location's route map."""
+
+    id: str
+    origin: str
+    destination: str
+    route: dict[str, Any]
+    one_way: bool
+
+
+def _load_world_routes(definitions: list[Definition], template: str) -> tuple[_WorldRoute, ...]:
+    """The world's top-level route definitions. Each connects two locations in one place instead
+    of restating the same route on both locations."""
+    routes: list[_WorldRoute] = []
+    for definition in definitions:
+        if definition.type != "route":
+            continue
+        label = f"{template}: route {definition.id}"
+        data = definition.data
+        check_keys(data, WORLD_ROUTE_KEYS, label)
+        origin = required_text(data, "from", label)
+        destination = required_text(data, "to", label)
+        if origin == destination:
+            raise ContentError(f"{label}: cannot lead to itself")
+        route = {key: required_text(data, key, label) for key in ("path", "distance", "terrain")}
+        if "vast" in data:
+            route["vast"] = _whole(data, "vast", label, 0)
+        one_way = data.get("one_way", False)
+        if not isinstance(one_way, bool):
+            raise ContentError(f"{label}: one_way must be true or false")
+        routes.append(
+            _WorldRoute(
+                id=definition.id,
+                origin=origin,
+                destination=destination,
+                route=route,
+                one_way=one_way,
+            )
+        )
+    return tuple(routes)
+
+
+def _merge_world_routes(
+    locations: tuple[LocationTemplate, ...],
+    routes: tuple[_WorldRoute, ...],
+    template: str,
+) -> tuple[LocationTemplate, ...]:
+    """Add each top-level route to both locations' route maps. A route already authored on a
+    location is an error, whether it repeats the same values or conflicts with them, so the two
+    places cannot silently disagree about one road."""
+    location_ids = {location.id for location in locations}
+    merged = {location.id: dict(location.routes) for location in locations}
+    authored: set[tuple[str, str]] = set()
+    for world_route in routes:
+        label = f"{template}: route {world_route.id}"
+        for endpoint, key in (
+            (world_route.origin, "from"),
+            (world_route.destination, "to"),
+        ):
+            if endpoint not in location_ids:
+                raise ContentError(f"{label}: {key} {endpoint!r} is not a location in this world")
+        directions = [(world_route.origin, world_route.destination)]
+        if not world_route.one_way:
+            directions.append((world_route.destination, world_route.origin))
+        for origin, destination in directions:
+            pair = (origin, destination)
+            if pair in authored:
+                raise ContentError(f"{label}: duplicate route from {origin!r} to {destination!r}")
+            authored.add(pair)
+            existing = merged[origin].get(destination)
+            if existing is not None:
+                if existing == world_route.route:
+                    raise ContentError(
+                        f"{label}: location {origin!r} already authors the same route to "
+                        f"{destination!r}"
+                    )
+                raise ContentError(
+                    f"{label}: location {origin!r} already authors a different route to "
+                    f"{destination!r}"
+                )
+            merged[origin][destination] = dict(world_route.route)
+    return tuple(replace(location, routes=merged[location.id]) for location in locations)
 
 
 def _check_routes(locations: tuple[LocationTemplate, ...], template: str) -> None:
