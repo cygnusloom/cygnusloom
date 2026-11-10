@@ -382,6 +382,95 @@ def test_a_year_seven_character_starts_with_the_larger_package() -> None:
     assert len(training) == 3
 
 
+SUBJECTS = (
+    "Charms",
+    "Transfiguration",
+    "Warding",
+    "Divination",
+    "Healing",
+    "Illusion",
+    "Elemental",
+)
+FORBIDDEN_SPELLS = (
+    "command-the-will",
+    "sever-the-thread",
+    "borrowed-years",
+    "hollow-name",
+    "open-the-deep",
+)
+
+
+def _year_picks(
+    subjects: int,
+    spells: int,
+    potions: int,
+    enchantments: int,
+    training: int = 0,
+    training_tag: str = "",
+) -> list[tuple[object, ...]]:
+    """The feat picks the bundled compact `starting_years` table expands into for one year."""
+    picks: list[tuple[object, ...]] = [
+        ("subjects", subjects, SUBJECTS, "", "", "subject", ()),
+        ("spells", spells, SUBJECTS, "", "subjects", "spell", FORBIDDEN_SPELLS),
+        ("potions", potions, (), "Potions", "", "potion", ()),
+        ("enchantments", enchantments, (), "Enchantments", "", "enchantment", ()),
+    ]
+    if training:
+        picks.append(("training", training, (), training_tag, "", "trait", ()))
+    return picks
+
+
+@pytest.mark.parametrize(
+    ("year", "picks"),
+    [
+        ("year-1", _year_picks(1, 2, 1, 1)),
+        ("year-3", _year_picks(2, 4, 2, 1, 1, "training-1-3")),
+        ("year-4", _year_picks(2, 5, 3, 2, 1, "training-4-6")),
+        ("year-7", _year_picks(4, 8, 4, 3, 3, "training-7")),
+    ],
+)
+def test_a_bundled_year_template_keeps_its_authored_picks(
+    year: str, picks: list[tuple[object, ...]]
+) -> None:
+    template = _academy().character.templates[year]
+    assert [
+        (pick.id, pick.count, pick.tags, pick.tag, pick.tags_from, pick.feature_type, pick.exclude)
+        for pick in template.feat_picks
+    ] == picks
+
+
+def test_every_bundled_starting_year_expands_from_one_table() -> None:
+    """All seven years keep their names, year counters, and pick counts."""
+    years = {
+        template.id: template
+        for template in _academy().character.templates.values()
+        if template.kind == "starting_year"
+    }
+    expected = [
+        ("year-1", 0, 1, 2, 1, 1, 0),
+        ("year-2", 1, 1, 3, 2, 1, 0),
+        ("year-3", 2, 2, 4, 2, 1, 1),
+        ("year-4", 3, 2, 5, 3, 2, 1),
+        ("year-5", 4, 3, 6, 3, 2, 2),
+        ("year-6", 5, 3, 7, 4, 2, 2),
+        ("year-7", 6, 4, 8, 4, 3, 3),
+    ]
+    assert list(years) == [ident for ident, *_ in expected]
+    for ident, counter, subjects, spells, potions, enchantments, training in expected:
+        template = years[ident]
+        assert (template.kind, template.name) == ("starting_year", f"Year {counter + 1}")
+        assert template.counters == {"year": counter}
+        counts = {
+            "subjects": subjects,
+            "spells": spells,
+            "potions": potions,
+            "enchantments": enchantments,
+        }
+        if training:
+            counts["training"] = training
+        assert {pick.id: pick.count for pick in template.feat_picks} == counts
+
+
 def test_year_end_advances_the_year_and_grants_four_advancements(
     client_factory: Callable[[], TestClient],
 ) -> None:

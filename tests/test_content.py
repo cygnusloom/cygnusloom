@@ -724,6 +724,143 @@ def test_rule_set_template_features_validate_their_grants(tree: Path, grants: An
         ContentLibrary.load(tree)
 
 
+def _starting_year_block(**overrides: Any) -> dict[str, Any]:
+    """The smallest compact starting-years block worth deriving templates from."""
+    block: dict[str, Any] = {
+        "subjects": ["Charms", "Warding"],
+        "forbidden_spells": ["forbidden"],
+        "years": [
+            {
+                "description": "Your first year.",
+                "subjects": 1,
+                "spells": 2,
+                "potions": 1,
+                "enchantments": 0,
+                "training": 0,
+            },
+            {
+                "description": "Your second year.",
+                "subjects": 1,
+                "spells": 1,
+                "potions": 0,
+                "enchantments": 1,
+                "training": 2,
+            },
+        ],
+    }
+    block.update(overrides)
+    return block
+
+
+def _write_starting_years(tree: Path, block: Any) -> None:
+    """A rule set whose head carries `block` as `starting_years`, with the counter it sets."""
+    _write(
+        tree,
+        {
+            "rulesets/testset/rule_set.json": [{**_rule_set()[0], "starting_years": block}],
+            "rulesets/testset/counters.json": [
+                {"type": "counter", "id": "year", "label": "Year", "initial": 1}
+            ],
+        },
+    )
+
+
+def _loaded_picks(template: Any) -> list[tuple[object, ...]]:
+    return [
+        (pick.id, pick.count, pick.tags, pick.tag, pick.tags_from, pick.feature_type, pick.exclude)
+        for pick in template.feat_picks
+    ]
+
+
+def test_starting_years_expand_into_year_templates(tree: Path):
+    _write_starting_years(tree, _starting_year_block())
+    templates = ContentLibrary.load(tree).rule_sets["testset"].character.templates
+
+    first = templates["year-1"]
+    assert (first.kind, first.name, first.description) == (
+        "starting_year",
+        "Year 1",
+        "Your first year.",
+    )
+    assert first.counters == {"year": 0}
+    assert _loaded_picks(first) == [
+        ("subjects", 1, ("Charms", "Warding"), "", "", "subject", ()),
+        ("spells", 2, ("Charms", "Warding"), "", "subjects", "spell", ("forbidden",)),
+        ("potions", 1, (), "Potions", "", "potion", ()),
+    ]
+
+    second = templates["year-2"]
+    assert second.counters == {"year": 1}
+    assert _loaded_picks(second) == [
+        ("subjects", 1, ("Charms", "Warding"), "", "", "subject", ()),
+        ("spells", 1, ("Charms", "Warding"), "", "subjects", "spell", ("forbidden",)),
+        ("enchantments", 1, (), "Enchantments", "", "enchantment", ()),
+        ("training", 2, (), "training-1-3", "", "trait", ()),
+    ]
+
+
+def test_an_explicit_year_template_wins_over_starting_years(tree: Path):
+    _write_starting_years(tree, _starting_year_block())
+    _write(
+        tree,
+        {
+            "rulesets/testset/templates.json": [
+                {
+                    "type": "template",
+                    "id": "year-1",
+                    "kind": "starting_year",
+                    "name": "First Year",
+                    "description": "Written by hand.",
+                }
+            ]
+        },
+    )
+    templates = ContentLibrary.load(tree).rule_sets["testset"].character.templates
+    assert templates["year-1"].name == "First Year"
+    assert templates["year-1"].feat_picks == ()
+    assert templates["year-2"].name == "Year 2"
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"subjects": []}, "'subjects' must not be empty"),
+        ({"subjects": ["Charms", 3]}, "'subjects' must be a list of ids"),
+        ({"subjects": ["Charms", "Charms"]}, "'subjects' repeats an id"),
+        ({"forbidden_spells": []}, "'forbidden_spells' must not be empty"),
+        (
+            {"years": [{"description": "Your first year.", "spells": -1}]},
+            "'spells' must be a whole number, 0 or more",
+        ),
+        (
+            {"years": [{"description": "Your first year.", "subjects": True}]},
+            "'subjects' must be a whole number, 0 or more",
+        ),
+        (
+            {"years": [{"description": "Your first year.", "spells": 1}]},
+            "'spells' needs a 'subjects' count of 1 or more",
+        ),
+        ({"years": [{"description": " "}]}, "'description' must be a non-empty string"),
+        ({"years": []}, "'years' must be a non-empty list"),
+    ],
+    ids=[
+        "empty-subjects",
+        "non-text-subject",
+        "repeated-subject",
+        "empty-forbidden-spells",
+        "negative-count",
+        "boolean-count",
+        "spells-without-subjects",
+        "blank-description",
+        "no-years",
+    ],
+)
+def test_starting_years_reject_invalid_blocks(tree: Path, overrides: Any, message: str):
+    _write_starting_years(tree, _starting_year_block(**overrides))
+    with pytest.raises(ContentError, match=re.escape(message)):
+        ContentLibrary.load(tree)
+
+
 def test_rule_set_id_must_match_its_directory(tree: Path):
     _write(tree, {"rulesets/testset/rule_set.json": _rule_set(ident="other")})
     with pytest.raises(ContentError, match="must match the directory name"):

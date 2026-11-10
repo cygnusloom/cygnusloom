@@ -1534,6 +1534,147 @@ def load_starting_silver(value: object, label: str) -> StartingSilver | None:
     )
 
 
+# The feature picks one compact `starting_years` entry expands into, in the order the creation
+# form shows them.
+STARTING_YEAR_PICKS = ("subjects", "spells", "potions", "enchantments", "training")
+STARTING_YEAR_KEYS = frozenset({"subjects", "forbidden_spells", "years"})
+STARTING_YEAR_ENTRY_KEYS = frozenset({"description", *STARTING_YEAR_PICKS})
+
+
+def load_starting_years(
+    value: object, label: str, existing: Collection[str] = ()
+) -> list[Definition]:
+    """The `starting_year` templates a rule set head's `starting_years` block describes.
+
+    One compact entry per year expands into the template a rule set would otherwise write out
+    by hand: a subject pick, its spells limited to those subjects, and the potion, enchantment,
+    and training picks. A year whose id an explicit template already uses is left to it."""
+    if value is None:
+        return []
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label}: 'starting_years' must be an object")
+    block = f"{label}: starting_years"
+    unknown = sorted(set(value) - STARTING_YEAR_KEYS)
+    if unknown:
+        raise ContentError(f"{block} has unknown keys: {', '.join(unknown)}")
+    subjects = _text_ids(value.get("subjects"), "subjects", block)
+    if not subjects:
+        raise ContentError(f"{block}: 'subjects' must not be empty")
+    forbidden = _text_ids(value.get("forbidden_spells"), "forbidden_spells", block)
+    if not forbidden:
+        raise ContentError(f"{block}: 'forbidden_spells' must not be empty")
+    years = value.get("years")
+    if not isinstance(years, list) or not years:
+        raise ContentError(f"{block}: 'years' must be a non-empty list")
+    definitions: list[Definition] = []
+    for number, entry in enumerate(years, start=1):
+        year_label = f"{block}: year {number}"
+        ident = f"year-{number}"
+        if not isinstance(entry, Mapping):
+            raise ContentError(f"{year_label} must be an object")
+        unknown = sorted(set(entry) - STARTING_YEAR_ENTRY_KEYS)
+        if unknown:
+            raise ContentError(f"{year_label} has unknown keys: {', '.join(unknown)}")
+        counts = {
+            key: _starting_year_count(entry.get(key, 0), key, year_label)
+            for key in STARTING_YEAR_PICKS
+        }
+        if counts["spells"] and not counts["subjects"]:
+            raise ContentError(f"{year_label}: 'spells' needs a 'subjects' count of 1 or more")
+        description = required_text(entry, "description", year_label)
+        if ident in existing:
+            continue
+        definitions.append(
+            Definition(
+                type="template",
+                id=ident,
+                data={
+                    "type": "template",
+                    "id": ident,
+                    "kind": "starting_year",
+                    "name": f"Year {number}",
+                    "description": description,
+                    "counters": {"year": number - 1},
+                    "feat_picks": _starting_year_picks(number, counts, subjects, forbidden),
+                },
+            )
+        )
+    return definitions
+
+
+def _starting_year_count(value: object, key: str, label: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ContentError(f"{label}: {key!r} must be a whole number, 0 or more")
+    return value
+
+
+def _starting_year_picks(
+    number: int,
+    counts: Mapping[str, int],
+    subjects: tuple[str, ...],
+    forbidden: tuple[str, ...],
+) -> list[dict[str, Any]]:
+    """The feature picks one starting year expands to. A count of zero omits its pick."""
+    picks: list[dict[str, Any]] = []
+    if counts["subjects"]:
+        picks.append(
+            {
+                "id": "subjects",
+                "count": counts["subjects"],
+                "tags": list(subjects),
+                "feature_type": "subject",
+            }
+        )
+    if counts["spells"]:
+        picks.append(
+            {
+                "id": "spells",
+                "count": counts["spells"],
+                "tags": list(subjects),
+                "tags_from": "subjects",
+                "feature_type": "spell",
+                "exclude": list(forbidden),
+            }
+        )
+    if counts["potions"]:
+        picks.append(
+            {
+                "id": "potions",
+                "count": counts["potions"],
+                "tag": "Potions",
+                "feature_type": "potion",
+            }
+        )
+    if counts["enchantments"]:
+        picks.append(
+            {
+                "id": "enchantments",
+                "count": counts["enchantments"],
+                "tag": "Enchantments",
+                "feature_type": "enchantment",
+            }
+        )
+    if counts["training"]:
+        picks.append(
+            {
+                "id": "training",
+                "count": counts["training"],
+                "tag": _training_tag(number),
+                "feature_type": "trait",
+            }
+        )
+    return picks
+
+
+def _training_tag(number: int) -> str:
+    """The trait tag a starting year draws its training picks from."""
+    if number <= 3:
+        return "training-1-3"
+    if number <= 6:
+        return "training-4-6"
+    return "training-7"
+
+
 def _template_compatibility(value: object, label: str) -> dict[str, tuple[str, ...]]:
     if not isinstance(value, Mapping):
         raise ContentError(f"{label}: 'compatible_with' must map kinds to template ids")
