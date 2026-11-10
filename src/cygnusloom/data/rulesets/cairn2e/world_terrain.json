@@ -12,47 +12,47 @@
   {
     "type": "world_terrain",
     "id": "forest",
-    "rule": "Forest without a path. Tough going: travel by rough_terrain."
+    "rule": "Forest without a path. Tough going: travel by rough terrain."
   },
   {
     "type": "world_terrain",
     "id": "hills",
-    "rule": "Hills and broken ground. Tough going: travel by rough_terrain."
+    "rule": "Hills and broken ground. Tough going: travel by rough terrain."
   },
   {
     "type": "world_terrain",
     "id": "fen",
-    "rule": "Marsh and fen. Perilous going: travel by rough_terrain."
+    "rule": "Marsh and fen. Perilous going: travel by rough terrain."
   },
   {
     "type": "world_terrain",
     "id": "desert",
-    "rule": "Sand and scrub. Tough going in heat: travel by rough_terrain, and carry water."
+    "rule": "Sand and scrub. Tough going in heat: travel by rough terrain, and carry water."
   },
   {
     "type": "world_terrain",
     "id": "tundra",
-    "rule": "Cold, open ground. Tough going in weather: travel by rough_terrain."
+    "rule": "Cold, open ground. Tough going in weather: travel by rough terrain."
   },
   {
     "type": "world_terrain",
     "id": "glacier",
-    "rule": "Ice and crevasses. Perilous going: travel by rough_terrain, and rope up."
+    "rule": "Ice and crevasses. Perilous going: travel by rough terrain, and rope up."
   },
   {
     "type": "world_terrain",
     "id": "volcano",
-    "rule": "Ash, lava, and poisonous air. Perilous going: travel by rough_terrain."
+    "rule": "Ash, lava, and poisonous air. Perilous going: travel by rough terrain."
   },
   {
     "type": "world_terrain",
     "id": "jungle",
-    "rule": "Dense tropical forest. Tough going: travel by rough_terrain."
+    "rule": "Dense tropical forest. Tough going: travel by rough terrain."
   },
   {
     "type": "world_terrain",
     "id": "moor",
-    "rule": "Heath and peat. Tough going: travel by rough_terrain."
+    "rule": "Heath and peat. Tough going: travel by rough terrain."
   },
   {
     "type": "world_terrain",
@@ -62,7 +62,7 @@
   {
     "type": "world_terrain",
     "id": "badlands",
-    "rule": "Eroded gullies and broken rock. Tough going: travel by rough_terrain."
+    "rule": "Eroded gullies and broken rock. Tough going: travel by rough terrain."
   },
   {
     "type": "world_terrain",
@@ -87,17 +87,17 @@
   {
     "type": "world_terrain",
     "id": "plateau",
-    "rule": "Raised tableland. Tough going up or down the rim: travel by rough_terrain."
+    "rule": "Raised tableland. Tough going up or down the rim: travel by rough terrain."
   },
   {
     "type": "world_terrain",
     "id": "mountains",
-    "rule": "Mountain country. Perilous going: travel by rough_terrain; passes are few."
+    "rule": "Mountain country. Perilous going: travel by rough terrain; passes are few."
   },
   {
     "type": "world_terrain",
     "id": "swamp",
-    "rule": "Bog and standing water. Perilous going: travel by rough_terrain."
+    "rule": "Bog and standing water. Perilous going: travel by rough terrain."
   },
   {
     "type": "world_terrain",
@@ -117,12 +117,12 @@
   {
     "type": "world_terrain",
     "id": "pinewood",
-    "rule": "Dark conifer forest. Tough going: travel by rough_terrain."
+    "rule": "Dark conifer forest. Tough going: travel by rough terrain."
   },
   {
     "type": "world_terrain",
     "id": "canyon",
-    "rule": "Sheer walls and a broken floor. Perilous going: travel by rough_terrain."
+    "rule": "Sheer walls and a broken floor. Perilous going: travel by rough terrain."
   },
   {
     "type": "world_terrain",
@@ -147,11 +147,11 @@
   {
     "type": "world_terrain",
     "id": "highland",
-    "rule": "Wind-scoured upland. Tough going: travel by rough_terrain."
+    "rule": "Wind-scoured upland. Tough going: travel by rough terrain."
   },
   {
     "type": "world_terrain",
     "id": "bog",
-    "rule": "Deep, sucking bog. Perilous going: travel by rough_terrain, and test the ground."
+    "rule": "Deep, sucking bog. Perilous going: travel by rough terrain, and test the ground."
   }
 ]
