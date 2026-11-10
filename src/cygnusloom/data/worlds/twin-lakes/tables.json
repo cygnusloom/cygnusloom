@@ -2,39 +2,16 @@
   {
     "type": "table",
     "id": "victim-schedule",
-    "options": [
-      "Corsetta (a weaver)",
-      "Giva",
-      "Franz (a chandler)",
-      "Drum",
-      "Beju (a widower)",
-      "Reeve Trellis",
-      "Nicolas (a traveler)",
-      "Flavia"
-    ]
+    "options": ["Corsetta (a weaver)", "Giva", "Franz (a chandler)", "Drum", "Beju (a widower)", "Reeve Trellis", "Nicolas (a traveler)", "Flavia"]
   },
   {
     "type": "table",
     "id": "rumors",
-    "options": [
-      "A family from Dunston pulls a cart piled high with fish. “West Lake, it’s alright for fishing. But it’s nothing compared to East Lake in my day. I tell you, when the lumber was good, the fish were good, too. Go ask that old goat, Giva. She remembers.”",
-      "A pair of youthful twins walk towards West Lake, fishing poles held high. Only one speaks. “Folks used to go to the Downs and lick frogs, you know. Come up with all sorts of crazy stories, sayin’ it’s haunted and all that. It isn’t true, of course. Except for White Tower Fens. That place gives us the creeps.”",
-      "Two workers walk astride a work horse pulling a wagon piled high with tools and lumber. “Yeah, me and my brother Berk here were hired to repair the ol’ Crawko place in Dunston, the one that fell down, what, ten years past? Seems a bit strange, seeing as how we weren’t told who is payin’ for it. But the Reeve said this fellow was a real philanthropist and wanted to ‘give back’.”",
-      "An older man sits at the exit to town, whittling a wood-knife. “This business about that butcher, I think those Tideborn freaks are responsible. Did you know that they drown their own, embracing only the survivors into their ranks, all the while treating the dead as unworthy?”",
-      "A young woman walks West, dressed in fine clothes. “I crossed the Humpbacks just to see the Frog Woman, out there in the woods. I’ve heard she makes curatives for all sorts of problems… I’m waiting for the next full moon to try and find her.”",
-      "A hunter drags a large net stuffed with dead quarry. There is blood on his shirt. “Have you been through the Downs lately? A wind is blowin’ from the East, carrying with it something foul, like death rolled over.”"
-    ]
+    "options": ["A family from Dunston pulls a cart piled high with fish. “West Lake, it’s alright for fishing. But it’s nothing compared to East Lake in my day. I tell you, when the lumber was good, the fish were good, too. Go ask that old goat, Giva. She remembers.”", "A pair of youthful twins walk towards West Lake, fishing poles held high. Only one speaks. “Folks used to go to the Downs and lick frogs, you know. Come up with all sorts of crazy stories, sayin’ it’s haunted and all that. It isn’t true, of course. Except for White Tower Fens. That place gives us the creeps.”", "Two workers walk astride a work horse pulling a wagon piled high with tools and lumber. “Yeah, me and my brother Berk here were hired to repair the ol’ Crawko place in Dunston, the one that fell down, what, ten years past? Seems a bit strange, seeing as how we weren’t told who is payin’ for it. But the Reeve said this fellow was a real philanthropist and wanted to ‘give back’.”", "An older man sits at the exit to town, whittling a wood-knife. “This business about that butcher, I think those Tideborn freaks are responsible. Did you know that they drown their own, embracing only the survivors into their ranks, all the while treating the dead as unworthy?”", "A young woman walks West, dressed in fine clothes. “I crossed the Humpbacks just to see the Frog Woman, out there in the woods. I’ve heard she makes curatives for all sorts of problems… I’m waiting for the next full moon to try and find her.”", "A hunter drags a large net stuffed with dead quarry. There is blood on his shirt. “Have you been through the Downs lately? A wind is blowin’ from the East, carrying with it something foul, like death rolled over.”"]
   },
   {
     "type": "table",
     "id": "encounters",
-    "options": [
-      "Bloodsuckers swarm, drawn to body heat. They are nearly impossible to fight off, but willingly fly into open flame. Unless avoided, everyone adds a Fatigue.",
-      "A Kettlewright rides alongside, burdened by gleaming tin. He sells mostly kitchenware, but if pressed, will agree to sell the Fletcher’s Ire in his pack for 100gp.",
-      "The party is drenched by a sudden torrent of wind and floating vegetation. Each character loses a resource (a torch goes out, a Ration is dropped, a shoe is lost, etc).",
-      "An unarmed woman pulling a cart full of fish crates asks for help getting its wheels unstuck from the mud. Her clothes appear relatively clean, despite her efforts. If the party stops to help, 3 bandits* leap from the foliage in ambush. Unprepared PCs fail their DEX save automatically. The cart (+4 slots) is in fine condition once unstuck. The crates are empty.",
-      "Mossy loam gives way to thick mud, popping noisily with each step. Nearby animals scatter at the party’s approach, and anyone traveling by foot adds a Fatigue.",
-      "A man and woman sit together over a roaring flame, cooking. They explain that they are frog trappers, and happy to sell their day’s catch: 2gp for spiced legs, or 25gp for a vial of toad excretions (2 uses). The latter acts as a psychedelic and a sort of truth-serum."
-    ]
+    "options": ["Bloodsuckers swarm, drawn to body heat. They are nearly impossible to fight off, but willingly fly into open flame. Unless avoided, everyone adds a Fatigue.", "A Kettlewright rides alongside, burdened by gleaming tin. He sells mostly kitchenware, but if pressed, will agree to sell the Fletcher’s Ire in his pack for 100gp.", "The party is drenched by a sudden torrent of wind and floating vegetation. Each character loses a resource (a torch goes out, a Ration is dropped, a shoe is lost, etc).", "An unarmed woman pulling a cart full of fish crates asks for help getting its wheels unstuck from the mud. Her clothes appear relatively clean, despite her efforts. If the party stops to help, 3 bandits* leap from the foliage in ambush. Unprepared PCs fail their DEX save automatically. The cart (+4 slots) is in fine condition once unstuck. The crates are empty.", "Mossy loam gives way to thick mud, popping noisily with each step. Nearby animals scatter at the party’s approach, and anyone traveling by foot adds a Fatigue.", "A man and woman sit together over a roaring flame, cooking. They explain that they are frog trappers, and happy to sell their day’s catch: 2gp for spiced legs, or 25gp for a vial of toad excretions (2 uses). The latter acts as a psychedelic and a sort of truth-serum."]
   }
 ]

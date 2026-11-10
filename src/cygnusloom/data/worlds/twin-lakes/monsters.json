@@ -4,10 +4,7 @@
     "id": "night-cat",
     "name": "Night Cat",
     "looks_like": "beast",
-    "rules": [
-      "night-cat-attack",
-      "night-cat-critical-damage"
-    ],
+    "rules": ["night-cat-attack", "night-cat-critical-damage"],
     "description": "Intelligent, nocturnal marsupial that makes its home in forests and swamps. Hunts in packs. The target of an attack must make a DEX save or take damage directly to STR. Critical damage: the Night Cat begins to eat the target (d4 STR damage) while they are still alive.",
     "stats": {
       "hp": 6,
@@ -73,9 +70,7 @@
     "id": "suraru-imperator",
     "name": "Suraru Imperator",
     "looks_like": "aberration",
-    "rules": [
-      "suraru-imperator-critical-damage"
-    ],
+    "rules": ["suraru-imperator-critical-damage"],
     "description": "Rules over a brood of subservient Surarus, who will fight to the death to protect the sac. Critical damage: a body part dissolves in venomous acid, and the target loses 1 point of Armor.",
     "stats": {
       "hp": 10,
@@ -88,9 +83,7 @@
       "claws": "1d8+1d8",
       "venomous bite": {
         "dice": "1d6",
-        "flags": [
-          "blast"
-        ]
+        "flags": ["blast"]
       }
     }
   }

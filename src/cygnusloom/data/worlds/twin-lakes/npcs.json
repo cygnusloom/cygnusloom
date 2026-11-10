@@ -38,9 +38,7 @@
     "location": "deadmill",
     "hp_tier": "average",
     "description": "A middle-aged Scrivener and tithingman for the Cities, trapped in a loop inside the Deadmill mill after falling into quicksand.",
-    "rules": [
-      "deadmill-time-loop"
-    ]
+    "rules": ["deadmill-time-loop"]
   },
   {
     "type": "npc",
@@ -73,9 +71,7 @@
     "location": "t10b-interrogation-room-interior",
     "story_only": true,
     "description": "A former Queen, murdered by her own kind millennia ago. Cursed to haunt the chamber of her death, she is currently an ash phantom: a swirling cloud of ash in the interrogation room (T10b). She cannot leave T10b until she has consumed three human hearts and the T10a door is opened. At the start of the adventure she has already consumed Aldra's heart, so two remain. If the party arrives within 24 hours of her transformation, she has broken free and is at T9. She is immune to mundane attacks and is destroyed only by submerging her remains in water or destroying the memory prism (1000 gp, in the stoneblock at T10b). If she is reborn, only destroying the memory prism works. In full form she is a 7 ft Lich Queen with bird-like facial features and a yellow crest; she returns to full form only after consuming the hearts and the T10a door is opened.",
-    "rules": [
-      "vuk-choking-hold"
-    ]
+    "rules": ["vuk-choking-hold"]
   },
   {
     "type": "npc",
