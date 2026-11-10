@@ -198,6 +198,15 @@ def test_academia_move_prompts_for_the_players_own_dice(
     assert result["total"] == 8 + result["bonus"]
 
 
+def test_the_move_prompt_leaves_condition_penalties_to_the_engine() -> None:
+    """The GM adds only story modifiers; the engine already counts every condition once."""
+    call = _academy().tool_calls["roll_move"]
+    modifier = call.parameters["properties"]["modifier"]["description"]
+    assert "engine adds" in call.description
+    assert "do not count a condition" in call.description
+    assert "not counting conditions" in modifier
+
+
 def test_a_seven_to_nine_spell_asks_the_player_to_choose(
     client_factory: Callable[[], TestClient], app: FastAPI, monkeypatch: pytest.MonkeyPatch
 ):

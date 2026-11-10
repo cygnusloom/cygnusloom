@@ -105,6 +105,8 @@ def test_cast_spell_requires_preparation_and_spends_one_casting(
     assert _pc(app, campaign_id).harm["castings"] == 1
     (cast,) = _events_of(app, campaign_id, SpellCast.kind)
     assert (cast.name, cast.spell) == (NAME, "Apprehending the Arcane Form")
+    assert cast.source == "prepared spell"
+    assert cast.render() == f"{NAME} casts Apprehending the Arcane Form from a prepared spell."
 
     with pytest.raises(InvalidInput, match="has no spell castings left"):
         wwn_magic.cast_spell(NAME, HIGH_SPELLS[0], ctx)

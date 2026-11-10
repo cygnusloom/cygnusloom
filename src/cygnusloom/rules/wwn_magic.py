@@ -140,7 +140,7 @@ def cast_spell(character: str, spell: str, ctx: ToolContext) -> dict[str, Any]:
         record(
             db,
             campaign_id,
-            SpellCast(name=found.name, spell=feature.name, source="a prepared spell"),
+            SpellCast(name=found.name, spell=feature.name, source="prepared spell"),
         )
         return {
             "character": found.name,

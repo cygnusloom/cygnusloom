@@ -18,7 +18,7 @@
   {
     "type": "tool_call",
     "id": "roll_move",
-    "description": "Ask the player to roll a move for their character: 2d6 plus the stat the move uses, plus any condition penalty. For a move that rolls one of several stats, give the stat. Add a modifier for what the story gives, such as +1 for a Friend or -1 from a Condition. Write the prompt the player sees, in the GM's voice, inviting the roll. The player presses the roll button; the engine resolves the band and applies its effects.",
+    "description": "Ask the player to roll a move for their character: 2d6 plus the stat the move uses. The engine adds the stat and every condition penalty itself, so do not count a condition in the modifier. For a move that rolls one of several stats, give the stat. Add a modifier only for what the story gives, such as +1 for a Friend or -1 for bad footing. Write the prompt the player sees, in the GM's voice, inviting the roll. The player presses the roll button; the engine resolves the band and applies its effects.",
     "parameters": {
       "properties": {
         "prompt": {
@@ -36,7 +36,7 @@
         },
         "modifier": {
           "type": "integer",
-          "description": "A situational modifier from the story. Use 0 when none applies."
+          "description": "A situational modifier from the story, not counting conditions; the engine already adds their penalties. Use 0 when none applies."
         },
         "stat": {
           "type": "string",
