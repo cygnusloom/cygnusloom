@@ -135,11 +135,7 @@
         "exclude": ["punch", "shoot", "stab"]
       }
     ],
-    "features": [
-      "art_martial_style",
-      "art_unarmed_might",
-      "art_unarmored_defense"
-    ],
+    "features": ["art_martial_style", "art_unarmed_might", "art_unarmored_defense"],
     "feat_picks": [
       {
         "id": "second_class_art_vowed",

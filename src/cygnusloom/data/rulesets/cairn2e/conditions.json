@@ -4,9 +4,7 @@
     "id": "walloped",
     "label": "Walloped",
     "description": "Dazed from a heavy blow. Ends when you rest.",
-    "ends": [
-      "rest"
-    ],
+    "ends": ["rest"],
     "on_end": [
       {
         "op": "set_max",
@@ -21,10 +19,7 @@
     "id": "broken_limb",
     "label": "Broken limb",
     "description": "A bone is broken. Ends with time or aid.",
-    "ends": [
-      "time",
-      "aid"
-    ],
+    "ends": ["time", "aid"],
     "on_end": [
       {
         "op": "set_max",
@@ -39,9 +34,7 @@
     "id": "diseased",
     "label": "Diseased",
     "description": "An illness. Ends as the GM decides.",
-    "ends": [
-      "gm"
-    ],
+    "ends": ["gm"],
     "on_end": [
       {
         "op": "set_max",
@@ -56,10 +49,7 @@
     "id": "hamstrung",
     "label": "Hamstrung",
     "description": "A cut tendon. Ends with extended rest or aid.",
-    "ends": [
-      "extended_rest",
-      "aid"
-    ],
+    "ends": ["extended_rest", "aid"],
     "on_end": [
       {
         "op": "set_max",
@@ -74,9 +64,7 @@
     "id": "deafened",
     "label": "Deafened",
     "description": "Unable to hear. Ends with aid.",
-    "ends": [
-      "aid"
-    ],
+    "ends": ["aid"],
     "on_end": []
   },
   {
@@ -84,9 +72,7 @@
     "id": "mortal_wound",
     "label": "Mortal wound",
     "description": "Out of action and dying. Ends with aid.",
-    "ends": [
-      "aid"
-    ],
+    "ends": ["aid"],
     "dying": true,
     "on_end": [
       {
@@ -102,9 +88,7 @@
     "id": "doomed",
     "label": "Doomed",
     "description": "Doomed by a wound. Ends as the GM decides.",
-    "ends": [
-      "gm"
-    ],
+    "ends": ["gm"],
     "fatal": true,
     "on_end": [
       {

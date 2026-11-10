@@ -6,9 +6,7 @@
     "patch": {
       "lengths": {
         "moments": {
-          "restores": [
-            "hp"
-          ]
+          "restores": ["hp"]
         }
       }
     },
@@ -19,34 +17,18 @@
           "morning": "night"
         },
         "full": true,
-        "restores": [
-          "hp"
-        ],
-        "clears": [
-          "fatigue"
-        ],
-        "ends": [
-          "rest"
-        ],
+        "restores": ["hp"],
+        "clears": ["fatigue"],
+        "ends": ["rest"],
         "upkeep": true
       },
       "week": {
         "days": 7,
         "until": "morning",
         "full": true,
-        "restores": [
-          "hp",
-          "str",
-          "dex",
-          "wil"
-        ],
-        "clears": [
-          "fatigue"
-        ],
-        "ends": [
-          "rest",
-          "extended_rest"
-        ],
+        "restores": ["hp", "str", "dex", "wil"],
+        "clears": ["fatigue"],
+        "ends": ["rest", "extended_rest"],
         "upkeep": true
       }
     }

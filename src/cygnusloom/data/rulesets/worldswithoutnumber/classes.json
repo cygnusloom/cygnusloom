@@ -135,11 +135,7 @@
       { "id": "order_skill", "label": "Order skill", "count": 1, "table": "all_skills", "max_level": 1, "exclude": ["punch", "shoot", "stab"] },
       { "id": "class_free_skill", "label": "General skill", "count": 1, "table": "all_skills", "max_level": 1 }
     ],
-    "features": [
-      "art_martial_style",
-      "art_unarmed_might",
-      "art_unarmored_defense"
-    ],
+    "features": ["art_martial_style", "art_unarmed_might", "art_unarmored_defense"],
     "feat_picks": [
       { "id": "class_focus_any", "count": 1, "tag": "focus", "max_rank": 1, "exclude": ["focus_special_origin", "focus_developed_attribute", "focus_nullifier", "focus_polymath"] },
       {
@@ -457,10 +453,7 @@
     "description": "A tradition that treats the raw elements as living forces to be courted and commanded. A full Elementalist gains Elemental Resilience and Elemental Sparks, picks one more art and four first-level spells, and may learn High Magic or Elementalist spells.",
     "compatible_with": { "class": ["mage"] },
     "skills": { "magic": 1 },
-    "features": [
-      "art_elemental_resilience",
-      "art_elemental_sparks"
-    ],
+    "features": ["art_elemental_resilience", "art_elemental_sparks"],
     "feat_picks": [
       {
         "id": "tradition_art_elementalist",
@@ -494,10 +487,7 @@
       "adventurer_mage_mage"
     ] },
     "skills": { "magic": 1 },
-    "features": [
-      "art_elemental_resilience",
-      "art_elemental_sparks"
-    ],
+    "features": ["art_elemental_resilience", "art_elemental_sparks"],
     "feat_picks": [
       {
         "id": "tradition_art_elementalist",
@@ -564,10 +554,7 @@
     "name": "Second Tradition: Elementalist, Partial",
     "description": "The second partial tradition of a Mage/Mage Adventurer. It grants Elemental Resilience, Elemental Sparks, one more art, and two first-level spells, and one more art at levels 3, 6, and 9.",
     "compatible_with": { "class": ["adventurer_mage_mage"] },
-    "features": [
-      "art_elemental_resilience",
-      "art_elemental_sparks"
-    ],
+    "features": ["art_elemental_resilience", "art_elemental_sparks"],
     "feat_picks": [
       { "id": "tradition2_art_elementalist", "count": 1, "tag": "elementalist", "max_rank": 0 },
       {

@@ -3,28 +3,13 @@
     "type": "table",
     "id": "disciplines",
     "name": "Disciplines",
-    "options": [
-      "Charms",
-      "Transfiguration",
-      "Warding",
-      "Divination",
-      "Healing",
-      "Illusion",
-      "Elemental"
-    ]
+    "options": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"]
   },
   {
     "type": "table",
     "id": "period",
     "name": "Time Period",
-    "options": [
-      "Ancient",
-      "Medieval",
-      "Renaissance",
-      "Victorian",
-      "Modern",
-      "Near Future"
-    ]
+    "options": ["Ancient", "Medieval", "Renaissance", "Victorian", "Modern", "Near Future"]
   },
   {
     "type": "table",

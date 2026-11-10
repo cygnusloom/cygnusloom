@@ -20,52 +20,19 @@
     "type": "table",
     "id": "skin",
     "name": "Skin",
-    "options": [
-      "Birthmarked",
-      "Marked",
-      "Oily",
-      "Rosy",
-      "Scarred",
-      "Soft",
-      "Tanned",
-      "Tattooed",
-      "Weathered",
-      "Webbed"
-    ]
+    "options": ["Birthmarked", "Marked", "Oily", "Rosy", "Scarred", "Soft", "Tanned", "Tattooed", "Weathered", "Webbed"]
   },
   {
     "type": "table",
     "id": "hair",
     "name": "Hair",
-    "options": [
-      "Bald",
-      "Braided",
-      "Curly",
-      "Filthy",
-      "Frizzy",
-      "Long",
-      "Luxurious",
-      "Oily",
-      "Wavy",
-      "Wispy"
-    ]
+    "options": ["Bald", "Braided", "Curly", "Filthy", "Frizzy", "Long", "Luxurious", "Oily", "Wavy", "Wispy"]
   },
   {
     "type": "table",
     "id": "face",
     "name": "Face",
-    "options": [
-      "Bony",
-      "Broken",
-      "Chiseled",
-      "Elongated",
-      "Pale",
-      "Perfect",
-      "Rakish",
-      "Sharp",
-      "Square",
-      "Sunken"
-    ]
+    "options": ["Bony", "Broken", "Chiseled", "Elongated", "Pale", "Perfect", "Rakish", "Sharp", "Square", "Sunken"]
   },
   {
     "type": "table",
@@ -88,18 +55,7 @@
     "type": "table",
     "id": "clothing",
     "name": "Clothing",
-    "options": [
-      "Antique",
-      "Bloody",
-      "Elegant",
-      "Filthy",
-      "Foreign",
-      "Frayed",
-      "Frumpy",
-      "Livery",
-      "Rancid",
-      "Soiled"
-    ]
+    "options": ["Antique", "Bloody", "Elegant", "Filthy", "Foreign", "Frayed", "Frumpy", "Livery", "Rancid", "Soiled"]
   },
   {
     "type": "table",
@@ -122,18 +78,7 @@
     "type": "table",
     "id": "vice",
     "name": "Vice",
-    "options": [
-      "Aggressive",
-      "Bitter",
-      "Craven",
-      "Deceitful",
-      "Greedy",
-      "Lazy",
-      "Nervous",
-      "Rude",
-      "Vain",
-      "Vengeful"
-    ]
+    "options": ["Aggressive", "Bitter", "Craven", "Deceitful", "Greedy", "Lazy", "Nervous", "Rude", "Vain", "Vengeful"]
   },
   {
     "type": "table",
@@ -193,18 +138,7 @@
     "type": "table",
     "id": "aurifex-names",
     "name": "Names",
-    "options": [
-      "Hestia",
-      "Basil",
-      "Rune",
-      "Prism",
-      "Ember",
-      "Quintess",
-      "Aludel",
-      "Mordant",
-      "Salaman",
-      "Jazia"
-    ]
+    "options": ["Hestia", "Basil", "Rune", "Prism", "Ember", "Quintess", "Aludel", "Mordant", "Salaman", "Jazia"]
   },
   {
     "type": "table",
@@ -254,18 +188,7 @@
     "type": "table",
     "id": "barber-surgeon-names",
     "name": "Names",
-    "options": [
-      "Wilmot",
-      "Patch",
-      "Lancet",
-      "Sawbones",
-      "Theo",
-      "Cutwell",
-      "Humor",
-      "Landsford",
-      "Goodeye",
-      "Johanna"
-    ]
+    "options": ["Wilmot", "Patch", "Lancet", "Sawbones", "Theo", "Cutwell", "Humor", "Landsford", "Goodeye", "Johanna"]
   },
   {
     "type": "table",
@@ -315,18 +238,7 @@
     "type": "table",
     "id": "beast-handler-names",
     "name": "Names",
-    "options": [
-      "Amara",
-      "Wulf",
-      "Mireille",
-      "Soren",
-      "Freki",
-      "Aster",
-      "Gerrik",
-      "Boreas",
-      "Veda",
-      "Matheus"
-    ]
+    "options": ["Amara", "Wulf", "Mireille", "Soren", "Freki", "Aster", "Gerrik", "Boreas", "Veda", "Matheus"]
   },
   {
     "type": "table",
@@ -376,18 +288,7 @@
     "type": "table",
     "id": "bonekeeper-names",
     "name": "Names",
-    "options": [
-      "Rook",
-      "Ebon",
-      "Moro",
-      "Yew",
-      "Pall",
-      "Leth",
-      "Bea",
-      "Barnaby",
-      "Vesper",
-      "Leder"
-    ]
+    "options": ["Rook", "Ebon", "Moro", "Yew", "Pall", "Leth", "Bea", "Barnaby", "Vesper", "Leder"]
   },
   {
     "type": "table",
@@ -449,18 +350,7 @@
     "type": "table",
     "id": "cutpurse-names",
     "name": "Names",
-    "options": [
-      "Arlo",
-      "Lyra",
-      "Eamon",
-      "Salina",
-      "Elara",
-      "Freya",
-      "Bull",
-      "Sparrow",
-      "Ivy",
-      "Silas"
-    ]
+    "options": ["Arlo", "Lyra", "Eamon", "Salina", "Elara", "Freya", "Bull", "Sparrow", "Ivy", "Silas"]
   },
   {
     "type": "table",
@@ -510,18 +400,7 @@
     "type": "table",
     "id": "fieldwarden-names",
     "name": "Names",
-    "options": [
-      "Seed",
-      "Thresh",
-      "Dibber",
-      "Sow",
-      "Stalk",
-      "Harrow",
-      "Cobb",
-      "Flax",
-      "Briar",
-      "Rye"
-    ]
+    "options": ["Seed", "Thresh", "Dibber", "Sow", "Stalk", "Harrow", "Cobb", "Flax", "Briar", "Rye"]
   },
   {
     "type": "table",
@@ -574,18 +453,7 @@
     "type": "table",
     "id": "fletchwind-names",
     "name": "Names",
-    "options": [
-      "Flint",
-      "Feather",
-      "Crier",
-      "Thunder",
-      "Falcon",
-      "Pluck",
-      "Needle",
-      "Warsong",
-      "Hawk",
-      "Cai"
-    ]
+    "options": ["Flint", "Feather", "Crier", "Thunder", "Falcon", "Pluck", "Needle", "Warsong", "Hawk", "Cai"]
   },
   {
     "type": "table",
@@ -653,18 +521,7 @@
     "type": "table",
     "id": "foundling-names",
     "name": "Names",
-    "options": [
-      "Faunus",
-      "Snowdrop",
-      "Wisp",
-      "Silverdew",
-      "Brim",
-      "Solstice",
-      "Steeleye",
-      "Artea",
-      "Gossamer",
-      "Hazel"
-    ]
+    "options": ["Faunus", "Snowdrop", "Wisp", "Silverdew", "Brim", "Solstice", "Steeleye", "Artea", "Gossamer", "Hazel"]
   },
   {
     "type": "table",
@@ -714,18 +571,7 @@
     "type": "table",
     "id": "fungal-forager-names",
     "name": "Names",
-    "options": [
-      "Unther",
-      "Woozy",
-      "Hilda",
-      "Current",
-      "Leif",
-      "Ratan",
-      "Mourella",
-      "Lal",
-      "Per",
-      "Madrigal"
-    ]
+    "options": ["Unther", "Woozy", "Hilda", "Current", "Leif", "Ratan", "Mourella", "Lal", "Per", "Madrigal"]
   },
   {
     "type": "table",
@@ -793,18 +639,7 @@
     "type": "table",
     "id": "greenwise-names",
     "name": "Names",
-    "options": [
-      "Gunther",
-      "Moss",
-      "Fern",
-      "Lichen",
-      "Root",
-      "Willow",
-      "Sage",
-      "Yarrow",
-      "Rowan",
-      "Ash"
-    ]
+    "options": ["Gunther", "Moss", "Fern", "Lichen", "Root", "Willow", "Sage", "Yarrow", "Rowan", "Ash"]
   },
   {
     "type": "table",
@@ -854,18 +689,7 @@
     "type": "table",
     "id": "half-witch-names",
     "name": "Names",
-    "options": [
-      "Solena",
-      "Veles",
-      "Bryn",
-      "Sabine",
-      "Razvan",
-      "Rowena",
-      "Galen",
-      "Nyx",
-      "Vex",
-      "Iwan"
-    ]
+    "options": ["Solena", "Veles", "Bryn", "Sabine", "Razvan", "Rowena", "Galen", "Nyx", "Vex", "Iwan"]
   },
   {
     "type": "table",
@@ -924,18 +748,7 @@
     "type": "table",
     "id": "hexenbane-names",
     "name": "Names",
-    "options": [
-      "Percival",
-      "Felix",
-      "Isolde",
-      "Wolfram",
-      "Aldric",
-      "Eira",
-      "Oswin",
-      "Ivor",
-      "Brunhilda",
-      "Beatrix"
-    ]
+    "options": ["Percival", "Felix", "Isolde", "Wolfram", "Aldric", "Eira", "Oswin", "Ivor", "Brunhilda", "Beatrix"]
   },
   {
     "type": "table",
@@ -1003,18 +816,7 @@
     "type": "table",
     "id": "jongleur-names",
     "name": "Names",
-    "options": [
-      "Jax",
-      "Selene",
-      "Baladria",
-      "Ada",
-      "Mort",
-      "Saylor",
-      "Tripp",
-      "Lantos",
-      "Echo",
-      "Jubilo"
-    ]
+    "options": ["Jax", "Selene", "Baladria", "Ada", "Mort", "Saylor", "Tripp", "Lantos", "Echo", "Jubilo"]
   },
   {
     "type": "table",
@@ -1064,18 +866,7 @@
     "type": "table",
     "id": "kettlewright-names",
     "name": "Names",
-    "options": [
-      "Fergus",
-      "Eon",
-      "Bram",
-      "Idris",
-      "Hester",
-      "Darragh",
-      "Seren",
-      "Rónán",
-      "Berek",
-      "Lorenz"
-    ]
+    "options": ["Fergus", "Eon", "Bram", "Idris", "Hester", "Darragh", "Seren", "Rónán", "Berek", "Lorenz"]
   },
   {
     "type": "table",
@@ -1125,18 +916,7 @@
     "type": "table",
     "id": "marchguard-names",
     "name": "Names",
-    "options": [
-      "Gann",
-      "Light",
-      "Saoirse",
-      "Frost",
-      "Thorn",
-      "Reed",
-      "Dirk",
-      "Ragnar",
-      "Brie",
-      "Aasim"
-    ]
+    "options": ["Gann", "Light", "Saoirse", "Frost", "Thorn", "Reed", "Dirk", "Ragnar", "Brie", "Aasim"]
   },
   {
     "type": "table",
@@ -1186,18 +966,7 @@
     "type": "table",
     "id": "mountebank-names",
     "name": "Names",
-    "options": [
-      "Ambrose",
-      "Lucius",
-      "Beauregard",
-      "Cornelius",
-      "Aria",
-      "Toph",
-      "Indigo",
-      "Delphine",
-      "Solene",
-      "Noa"
-    ]
+    "options": ["Ambrose", "Lucius", "Beauregard", "Cornelius", "Aria", "Toph", "Indigo", "Delphine", "Solene", "Noa"]
   },
   {
     "type": "table",
@@ -1247,18 +1016,7 @@
     "type": "table",
     "id": "outrider-names",
     "name": "Names",
-    "options": [
-      "Drake",
-      "Cyra",
-      "Keir",
-      "Darius",
-      "Valen",
-      "Rorik",
-      "Yara",
-      "Rui",
-      "Talon",
-      "Jory"
-    ]
+    "options": ["Drake", "Cyra", "Keir", "Darius", "Valen", "Rorik", "Yara", "Rui", "Talon", "Jory"]
   },
   {
     "type": "table",
@@ -1326,18 +1084,7 @@
     "type": "table",
     "id": "prowler-names",
     "name": "Names",
-    "options": [
-      "Winda",
-      "Brielle",
-      "Theron",
-      "Chayse",
-      "Nuja",
-      "Dev",
-      "Raven",
-      "Arawan",
-      "Sable",
-      "Baruani"
-    ]
+    "options": ["Winda", "Brielle", "Theron", "Chayse", "Nuja", "Dev", "Raven", "Arawan", "Sable", "Baruani"]
   },
   {
     "type": "table",
@@ -1396,18 +1143,7 @@
     "type": "table",
     "id": "rill-runner-names",
     "name": "Names",
-    "options": [
-      "Gale",
-      "Piper",
-      "Brook",
-      "Adair",
-      "Stone",
-      "Dale",
-      "Wren",
-      "Cliff",
-      "Rain",
-      "Robin"
-    ]
+    "options": ["Gale", "Piper", "Brook", "Adair", "Stone", "Dale", "Wren", "Cliff", "Rain", "Robin"]
   },
   {
     "type": "table",
@@ -1475,18 +1211,7 @@
     "type": "table",
     "id": "scrivener-names",
     "name": "Names",
-    "options": [
-      "Lazlo",
-      "Stilo",
-      "Akshara",
-      "Pisa",
-      "Ji-Yun",
-      "Kalamos",
-      "Hugo",
-      "Shui",
-      "Kalam",
-      "Julius"
-    ]
+    "options": ["Lazlo", "Stilo", "Akshara", "Pisa", "Ji-Yun", "Kalamos", "Hugo", "Shui", "Kalam", "Julius"]
   },
   {
     "type": "table",
@@ -1625,11 +1350,7 @@
         "effects": [
           {
             "op": "pick_stat",
-            "options": [
-              "str",
-              "dex",
-              "wil"
-            ],
+            "options": ["str", "dex", "wil"],
             "dice": "1d6"
           },
           {

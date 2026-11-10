@@ -72,18 +72,12 @@
                 "type": "array",
                 "items": {
                   "type": "string",
-                  "enum": [
-                    "blast",
-                    "ignores_armor"
-                  ]
+                  "enum": ["blast", "ignores_armor"]
                 },
                 "description": "Leave out for a plain attack. 'blast' hits every target in the area named when the attack is made. 'ignores_armor' skips the target's armor."
               }
             },
-            "required": [
-              "name",
-              "dice"
-            ]
+            "required": ["name", "dice"]
           }
         },
         "force": {
@@ -105,11 +99,7 @@
       "properties": {
         "modifier": {
           "type": "string",
-          "enum": [
-            "normal",
-            "impaired",
-            "enhanced"
-          ],
+          "enum": ["normal", "impaired", "enhanced"],
           "description": "The attack's modifier. 'normal' is the attack's own dice; 'impaired' and 'enhanced' roll different dice. Leave it out for a normal attack."
         },
         "targets": {
@@ -141,19 +131,11 @@
         },
         "modifier": {
           "type": "string",
-          "enum": [
-            "normal",
-            "impaired",
-            "enhanced"
-          ],
+          "enum": ["normal", "impaired", "enhanced"],
           "description": "The attack's modifier. 'normal' is the attack's own dice; 'impaired' and 'enhanced' roll different dice. Leave it out for a normal attack."
         }
       },
-      "required": [
-        "target",
-        "weapon",
-        "prompt"
-      ]
+      "required": ["target", "weapon", "prompt"]
     }
   },
   {
@@ -173,11 +155,7 @@
         },
         "stat": {
           "type": "string",
-          "enum": [
-            "str",
-            "dex",
-            "wil"
-          ],
+          "enum": ["str", "dex", "wil"],
           "description": "For a hazard save: the stat to roll against. Leave it out for a save the character owes after their Strength was used up."
         },
         "cause": {
@@ -185,9 +163,7 @@
           "description": "What the hazard save is for, such as 'a falling stone'. Recorded with the result."
         }
       },
-      "required": [
-        "prompt"
-      ]
+      "required": ["prompt"]
     }
   },
   {
@@ -206,9 +182,7 @@
           "description": "What the player is asked to do, such as 'Make your Dexterity save for initiative.'"
         }
       },
-      "required": [
-        "prompt"
-      ]
+      "required": ["prompt"]
     }
   },
   {
@@ -262,11 +236,7 @@
               },
               "modifier": {
                 "type": "string",
-                "enum": [
-                  "normal",
-                  "impaired",
-                  "enhanced"
-                ],
+                "enum": ["normal", "impaired", "enhanced"],
                 "description": "The attack's modifier. 'normal' is the attack's own dice; 'impaired' and 'enhanced' roll different dice. Leave it out for a normal attack."
               }
             }
@@ -286,11 +256,7 @@
           "description": "The name of the player character."
         },
         "stat": {
-          "enum": [
-            "str",
-            "dex",
-            "wil"
-          ],
+          "enum": ["str", "dex", "wil"],
           "description": "The stat that takes the harm."
         },
         "amount": {
@@ -346,9 +312,7 @@
           "description": "The name of the character surrendering."
         }
       },
-      "required": [
-        "name"
-      ]
+      "required": ["name"]
     }
   },
   {
@@ -363,17 +327,11 @@
         },
         "outcome": {
           "type": "string",
-          "enum": [
-            "defeat",
-            "flee"
-          ],
+          "enum": ["defeat", "flee"],
           "description": "'defeat' if the detachment is broken and defeated, 'flee' if it breaks up and runs."
         }
       },
-      "required": [
-        "name",
-        "outcome"
-      ]
+      "required": ["name", "outcome"]
     }
   },
   {
@@ -384,12 +342,7 @@
       "properties": {
         "action": {
           "type": "string",
-          "enum": [
-            "explore",
-            "supply",
-            "resupply",
-            "make_camp"
-          ],
+          "enum": ["explore", "supply", "resupply", "make_camp"],
           "description": "The Wilderness Action the party takes this watch."
         },
         "reason": {
@@ -415,17 +368,12 @@
                 "description": "The party member who buys and pays. Defaults to the first player character."
               }
             },
-            "required": [
-              "item"
-            ]
+            "required": ["item"]
           },
           "description": "The purchases a resupply makes, each at Marketplace prices. Only for resupply."
         }
       },
-      "required": [
-        "action",
-        "reason"
-      ]
+      "required": ["action", "reason"]
     }
   },
   {
@@ -438,12 +386,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": [
-              "new_area",
-              "loud",
-              "hasty",
-              "lingering"
-            ]
+            "enum": ["new_area", "loud", "hasty", "lingering"]
           },
           "description": "Why the cycle is rolled now."
         },
@@ -452,10 +395,7 @@
           "description": "A short note on what the party is doing, for the log."
         }
       },
-      "required": [
-        "triggers",
-        "reason"
-      ]
+      "required": ["triggers", "reason"]
     }
   },
   {
@@ -469,9 +409,7 @@
           "description": "Who is reacting and to what, for the log."
         }
       },
-      "required": [
-        "reason"
-      ]
+      "required": ["reason"]
     }
   },
   {
@@ -494,10 +432,7 @@
           "description": "True when there is a safe destination to run to."
         }
       },
-      "required": [
-        "prompt",
-        "safe"
-      ]
+      "required": ["prompt", "safe"]
     }
   },
   {
@@ -521,11 +456,7 @@
           "description": "What the character is deprived of, such as 'no food for two days' or 'no full night's rest since the flood'."
         }
       },
-      "required": [
-        "name",
-        "deprived",
-        "cause"
-      ]
+      "required": ["name", "deprived", "cause"]
     }
   },
   {
@@ -548,10 +479,7 @@
           "description": "True only for a deprived character when something besides the deprivation causes this Fatigue."
         }
       },
-      "required": [
-        "name",
-        "cause"
-      ]
+      "required": ["name", "cause"]
     }
   },
   {
@@ -575,11 +503,7 @@
           "description": "The spell's text, as the Warden writes it."
         }
       },
-      "required": [
-        "name",
-        "spell",
-        "description"
-      ]
+      "required": ["name", "spell", "description"]
     }
   },
   {
@@ -614,21 +538,12 @@
         },
         "size": {
           "type": "string",
-          "enum": [
-            "petty",
-            "normal",
-            "bulky"
-          ],
+          "enum": ["petty", "normal", "bulky"],
           "default": "normal",
           "description": "The relic's size. Defaults to 'normal'."
         }
       },
-      "required": [
-        "name",
-        "item",
-        "uses",
-        "recharge"
-      ]
+      "required": ["name", "item", "uses", "recharge"]
     }
   },
   {
@@ -646,10 +561,7 @@
           "description": "The spell's name."
         }
       },
-      "required": [
-        "name",
-        "spell"
-      ]
+      "required": ["name", "spell"]
     }
   },
   {
@@ -667,10 +579,7 @@
           "description": "The name of the relic."
         }
       },
-      "required": [
-        "name",
-        "item"
-      ]
+      "required": ["name", "item"]
     }
   },
   {
@@ -688,10 +597,7 @@
           "description": "The name of the relic."
         }
       },
-      "required": [
-        "name",
-        "item"
-      ]
+      "required": ["name", "item"]
     }
   },
   {
@@ -701,11 +607,7 @@
     "parameters": {
       "properties": {
         "stat": {
-          "enum": [
-            "str",
-            "dex",
-            "wil"
-          ],
+          "enum": ["str", "dex", "wil"],
           "description": "The stat to save against."
         },
         "reason": {

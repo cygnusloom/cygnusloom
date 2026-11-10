@@ -20,14 +20,7 @@
         },
         "stat": {
           "type": "string",
-          "enum": [
-            "str",
-            "dex",
-            "con",
-            "int",
-            "wis",
-            "cha"
-          ],
+          "enum": ["str", "dex", "con", "int", "wis", "cha"],
           "description": "The attribute whose modifier is added, such as int for an Int/Magic check or wis for a Wis/Notice check."
         },
         "difficulty": {
@@ -49,12 +42,7 @@
           "description": "What the check is for, in a few words, so the roll is recorded in the journal."
         }
       },
-      "required": [
-        "prompt",
-        "character",
-        "skill",
-        "stat"
-      ]
+      "required": ["prompt", "character", "skill", "stat"]
     },
     "player_input": {
       "param": "roll",
@@ -79,10 +67,7 @@
           "description": "What prompted the check, such as a companion falling or a monstrous foe appearing."
         }
       },
-      "required": [
-        "name",
-        "cause"
-      ]
+      "required": ["name", "cause"]
     }
   },
   {
@@ -113,11 +98,7 @@
           "description": "An explicit track override. Leave it out to use the track chosen for the campaign."
         }
       },
-      "required": [
-        "character",
-        "amount",
-        "cause"
-      ]
+      "required": ["character", "amount", "cause"]
     }
   },
   {
@@ -151,9 +132,7 @@
           "description": "An explicit track override. Leave it out to use the track chosen for the campaign."
         }
       },
-      "required": [
-        "character"
-      ]
+      "required": ["character"]
     }
   },
   {
@@ -173,10 +152,7 @@
           "description": "The skill id to raise, such as notice or stab. It must be a skill of this rule set."
         }
       },
-      "required": [
-        "character",
-        "skill"
-      ]
+      "required": ["character", "skill"]
     }
   },
   {
@@ -196,10 +172,7 @@
           "description": "The id of a focus feature from the rule set, such as focus_alert or focus_alert_2. Use only ids tagged focus."
         }
       },
-      "required": [
-        "character",
-        "focus"
-      ]
+      "required": ["character", "focus"]
     }
   },
   {
@@ -219,10 +192,7 @@
           "description": "The id of a spell feature from spells.json, such as spell_coruscating_coffin. Use a High Magic spell or one of the character's own tradition."
         }
       },
-      "required": [
-        "character",
-        "spell"
-      ]
+      "required": ["character", "spell"]
     }
   },
   {
@@ -242,10 +212,7 @@
           "description": "The id of a starting equipment package defined by the rule set, such as a warrior or mage package."
         }
       },
-      "required": [
-        "character",
-        "package"
-      ]
+      "required": ["character", "package"]
     }
   },
   {
@@ -267,10 +234,7 @@
           "description": "The new total Armor Class, normally between 10 (unarmored) and 19 (great armor)."
         }
       },
-      "required": [
-        "name",
-        "ac"
-      ]
+      "required": ["name", "ac"]
     }
   },
   {
@@ -307,11 +271,7 @@
           "default": 0
         }
       },
-      "required": [
-        "name",
-        "item",
-        "description"
-      ]
+      "required": ["name", "item", "description"]
     }
   },
   {
@@ -337,12 +297,7 @@
           "description": "The chosen stat, skill, or text."
         }
       },
-      "required": [
-        "name",
-        "feature",
-        "pick",
-        "choice"
-      ]
+      "required": ["name", "feature", "pick", "choice"]
     }
   },
   {
@@ -360,10 +315,7 @@
           "description": "The carried melee weapon to use."
         }
       },
-      "required": [
-        "name",
-        "weapon"
-      ]
+      "required": ["name", "weapon"]
     }
   },
   {
@@ -381,10 +333,7 @@
           "description": "The weapon prepared for the execution."
         }
       },
-      "required": [
-        "target",
-        "weapon"
-      ]
+      "required": ["target", "weapon"]
     }
   },
   {
@@ -402,10 +351,7 @@
           "description": "The character being grappled."
         }
       },
-      "required": [
-        "holder",
-        "target"
-      ]
+      "required": ["holder", "target"]
     }
   },
   {
@@ -419,9 +365,7 @@
           "description": "Either character in the grapple."
         }
       },
-      "required": [
-        "name"
-      ]
+      "required": ["name"]
     }
   },
   {
@@ -435,9 +379,7 @@
           "description": "The name of the surprised character."
         }
       },
-      "required": [
-        "name"
-      ]
+      "required": ["name"]
     }
   },
   {
@@ -451,9 +393,7 @@
           "description": "The name of the character taking total defense."
         }
       },
-      "required": [
-        "name"
-      ]
+      "required": ["name"]
     }
   },
   {
@@ -478,10 +418,7 @@
           "description": "The spell ids to prepare, from the spells the character knows and, for specialist traditions, from their own tradition."
         }
       },
-      "required": [
-        "character",
-        "spells"
-      ]
+      "required": ["character", "spells"]
     }
   },
   {
@@ -501,10 +438,7 @@
           "description": "The id of a prepared spell feature from spells.json, such as spell_coruscating_coffin."
         }
       },
-      "required": [
-        "character",
-        "spell"
-      ]
+      "required": ["character", "spell"]
     }
   },
   {
@@ -521,13 +455,7 @@
         },
         "tradition": {
           "type": "string",
-          "enum": [
-            "high",
-            "necromancer",
-            "elementalist",
-            "healer",
-            "vowed"
-          ],
+          "enum": ["high", "necromancer", "elementalist", "healer", "vowed"],
           "description": "The tradition whose Effort pool is spent: high, necromancer, elementalist, healer, or vowed."
         },
         "amount": {
@@ -538,20 +466,11 @@
         },
         "duration": {
           "type": "string",
-          "enum": [
-            "scene",
-            "day",
-            "indefinite"
-          ],
+          "enum": ["scene", "day", "indefinite"],
           "description": "When the Effort returns: at the end of the scene, the next morning, or only when reclaimed."
         }
       },
-      "required": [
-        "character",
-        "tradition",
-        "amount",
-        "duration"
-      ]
+      "required": ["character", "tradition", "amount", "duration"]
     }
   },
   {
@@ -568,30 +487,16 @@
         },
         "tradition": {
           "type": "string",
-          "enum": [
-            "high",
-            "necromancer",
-            "elementalist",
-            "healer",
-            "vowed"
-          ],
+          "enum": ["high", "necromancer", "elementalist", "healer", "vowed"],
           "description": "The tradition whose Effort returns: high, necromancer, elementalist, healer, or vowed."
         },
         "duration": {
           "type": "string",
-          "enum": [
-            "scene",
-            "day",
-            "indefinite"
-          ],
+          "enum": ["scene", "day", "indefinite"],
           "description": "The duration of the commitment being released: scene, day, or indefinite."
         }
       },
-      "required": [
-        "character",
-        "tradition",
-        "duration"
-      ]
+      "required": ["character", "tradition", "duration"]
     }
   },
   {
@@ -618,11 +523,7 @@
           "description": "What caused the Strain, such as first aid, a healing spell, or a hard march."
         }
       },
-      "required": [
-        "character",
-        "amount",
-        "cause"
-      ]
+      "required": ["character", "amount", "cause"]
     }
   },
   {
@@ -649,11 +550,7 @@
           "description": "What removed the Strain, such as a night's rest or a restorative draught."
         }
       },
-      "required": [
-        "character",
-        "amount",
-        "cause"
-      ]
+      "required": ["character", "amount", "cause"]
     }
   },
   {
@@ -673,10 +570,7 @@
           "description": "The name of the character being treated, who may be the healer."
         }
       },
-      "required": [
-        "healer",
-        "target"
-      ]
+      "required": ["healer", "target"]
     }
   }
 ]

@@ -138,9 +138,7 @@
     "attacks": {
       "vines": {
         "dice": "1d4",
-        "flags": [
-          "blast"
-        ]
+        "flags": ["blast"]
       }
     },
     "rules": [
@@ -475,9 +473,7 @@
       "bite": "1d10",
       "acid squirt": {
         "dice": "1d8",
-        "flags": [
-          "blast"
-        ]
+        "flags": ["blast"]
       }
     },
     "rules": [
@@ -899,9 +895,7 @@
       "bite": "1d8",
       "fire breath": {
         "dice": "1d6",
-        "flags": [
-          "blast"
-        ]
+        "flags": ["blast"]
       }
     },
     "rules": [
@@ -981,9 +975,7 @@
     "attacks": {
       "bite": {
         "dice": "1d12",
-        "flags": [
-          "blast"
-        ]
+        "flags": ["blast"]
       }
     },
     "large_group": true,
@@ -1170,9 +1162,7 @@
     "attacks": {
       "tentacles": {
         "dice": "1d6",
-        "flags": [
-          "blast"
-        ]
+        "flags": ["blast"]
       }
     },
     "rules": [
@@ -1578,9 +1568,7 @@
     "attacks": {
       "draining touch": {
         "dice": "1d6",
-        "flags": [
-          "ignores_armor"
-        ]
+        "flags": ["ignores_armor"]
       }
     },
     "rules": [
@@ -1682,9 +1670,7 @@
     "attacks": {
       "claws": {
         "dice": "1d8+1d8",
-        "flags": [
-          "blast"
-        ]
+        "flags": ["blast"]
       },
       "beak": "1d10"
     },
@@ -1798,9 +1784,7 @@
     "attacks": {
       "roots": {
         "dice": "1d8+1d8",
-        "flags": [
-          "blast"
-        ]
+        "flags": ["blast"]
       }
     },
     "rules": []
@@ -1863,9 +1847,7 @@
     "attacks": {
       "horn": {
         "dice": "1d10",
-        "flags": [
-          "ignores_armor"
-        ]
+        "flags": ["ignores_armor"]
       }
     },
     "rules": [
@@ -1922,9 +1904,7 @@
     "attacks": {
       "tentacles": {
         "dice": "1d8+1d8",
-        "flags": [
-          "blast"
-        ]
+        "flags": ["blast"]
       },
       "bite": "1d10"
     },

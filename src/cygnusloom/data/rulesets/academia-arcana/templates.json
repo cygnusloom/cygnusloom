@@ -7,10 +7,7 @@
     "name": "Prodigy",
     "description": "Magic comes easily to you, which is not the same as coming safely. You are the student the teachers watch and the other students whisper about.",
     "stats": {"practice": 1},
-    "features": [
-      "talent-prodigy",
-      "signature-spell"
-    ]
+    "features": ["talent-prodigy", "signature-spell"]
   },
   {
     "type": "template",
@@ -20,10 +17,7 @@
     "name": "Scholar",
     "description": "You would rather understand a spell than cast it. Footnotes, contradictions, and the book nobody else has read are your natural habitat.",
     "stats": {"theory": 1},
-    "features": [
-      "talent-scholar",
-      "signature-spell"
-    ]
+    "features": ["talent-scholar", "signature-spell"]
   },
   {
     "type": "template",
@@ -33,10 +27,7 @@
     "name": "Alchemist",
     "description": "You trust a well-stoppered bottle more than a grand gesture. Your sleeves smell of sulphur, and your pockets rattle when you run.",
     "stats": {"alchemy": 1},
-    "features": [
-      "talent-alchemist",
-      "signature-spell"
-    ]
+    "features": ["talent-alchemist", "signature-spell"]
   },
   {
     "type": "template",
@@ -46,10 +37,7 @@
     "name": "Rebel",
     "description": "Rules are a map of where the interesting things are kept. You know the back stairs, the loose window, and which prefect can be talked around.",
     "stats": {"cunning": 1},
-    "features": [
-      "talent-rebel",
-      "signature-spell"
-    ]
+    "features": ["talent-rebel", "signature-spell"]
   },
   {
     "type": "template",
@@ -59,9 +47,6 @@
     "name": "Socialite",
     "description": "You know who is owed a favour, who is hiding a disappointment, and which table to sit at. Magic is easier when someone else is willing to help.",
     "stats": {"charm": 1},
-    "features": [
-      "talent-socialite",
-      "signature-spell"
-    ]
+    "features": ["talent-socialite", "signature-spell"]
   }
 ]

@@ -250,11 +250,7 @@
           "description": "What the player is asked to roll, such as 'Roll your attack with the long sword.'"
         }
       },
-      "required": [
-        "target",
-        "weapon",
-        "prompt"
-      ]
+      "required": ["target", "weapon", "prompt"]
     }
   },
   {

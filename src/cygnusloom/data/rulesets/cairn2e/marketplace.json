@@ -823,12 +823,7 @@
     "description": "A healer's care for wounds and lingering hurts.",
     "price": 50,
     "effect": "restore",
-    "restores": [
-      "hp",
-      "str",
-      "dex",
-      "wil"
-    ]
+    "restores": ["hp", "str", "dex", "wil"]
   },
   {
     "type": "hireling",

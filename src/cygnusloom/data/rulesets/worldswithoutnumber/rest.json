@@ -11,19 +11,14 @@
         "full": true,
         "restores": [],
         "clears": [],
-        "ends": [
-          "rest"
-        ]
+        "ends": ["rest"]
       },
       "extended": {
         "days": 7,
         "full": true,
         "restores": [],
         "clears": [],
-        "ends": [
-          "rest",
-          "extended_rest"
-        ]
+        "ends": ["rest", "extended_rest"]
       }
     }
   }

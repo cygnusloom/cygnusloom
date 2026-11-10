@@ -74,222 +74,102 @@
   {
     "type": "table",
     "id": "growth_artisan",
-    "options": [
-      "+1 Any Stat",
-      "+2 Physical",
-      "+2 Mental",
-      "exert",
-      "Any Skill"
-    ]
+    "options": ["+1 Any Stat", "+2 Physical", "+2 Mental", "exert", "Any Skill"]
   },
   {
     "type": "table",
     "id": "growth_barbarian",
-    "options": [
-      "+1 Any Stat",
-      "+2 Physical",
-      "+2 Mental",
-      "exert",
-      "Any Skill"
-    ]
+    "options": ["+1 Any Stat", "+2 Physical", "+2 Mental", "exert", "Any Skill"]
   },
   {
     "type": "table",
     "id": "growth_carter",
-    "options": [
-      "+1 Any Stat",
-      "survive",
-      "+2 Physical",
-      "ride",
-      "+2 Mental"
-    ]
+    "options": ["+1 Any Stat", "survive", "+2 Physical", "ride", "+2 Mental"]
   },
   {
     "type": "table",
     "id": "growth_courtesan",
-    "options": [
-      "+2 Mental",
-      "+2 Physical",
-      "+1 Any Stat",
-      "notice",
-      "perform"
-    ]
+    "options": ["+2 Mental", "+2 Physical", "+1 Any Stat", "notice", "perform"]
   },
   {
     "type": "table",
     "id": "growth_criminal",
-    "options": [
-      "+2 Physical",
-      "+1 Any Stat",
-      "+2 Mental",
-      "sneak",
-      "exert"
-    ]
+    "options": ["+2 Physical", "+1 Any Stat", "+2 Mental", "sneak", "exert"]
   },
   {
     "type": "table",
     "id": "growth_hunter",
-    "options": [
-      "+2 Mental",
-      "survive",
-      "shoot",
-      "+2 Physical",
-      "+1 Any Stat"
-    ]
+    "options": ["+2 Mental", "survive", "shoot", "+2 Physical", "+1 Any Stat"]
   },
   {
     "type": "table",
     "id": "growth_laborer",
-    "options": [
-      "+1 Any Stat",
-      "Any Skill",
-      "work",
-      "+2 Physical",
-      "+2 Mental"
-    ]
+    "options": ["+1 Any Stat", "Any Skill", "work", "+2 Physical", "+2 Mental"]
   },
   {
     "type": "table",
     "id": "growth_merchant",
-    "options": [
-      "+2 Mental",
-      "+1 Any Stat",
-      "administer",
-      "sail",
-      "+2 Physical"
-    ]
+    "options": ["+2 Mental", "+1 Any Stat", "administer", "sail", "+2 Physical"]
   },
   {
     "type": "table",
     "id": "growth_noble",
-    "options": [
-      "lead",
-      "Any Skill",
-      "+1 Any Stat",
-      "+2 Mental",
-      "+2 Physical"
-    ]
+    "options": ["lead", "Any Skill", "+1 Any Stat", "+2 Mental", "+2 Physical"]
   },
   {
     "type": "table",
     "id": "growth_nomad",
-    "options": [
-      "+2 Physical",
-      "+1 Any Stat",
-      "ride",
-      "+2 Mental",
-      "Any Skill"
-    ]
+    "options": ["+2 Physical", "+1 Any Stat", "ride", "+2 Mental", "Any Skill"]
   },
   {
     "type": "table",
     "id": "growth_peasant",
-    "options": [
-      "exert",
-      "survive",
-      "+2 Mental",
-      "+1 Any Stat",
-      "+2 Physical"
-    ]
+    "options": ["exert", "survive", "+2 Mental", "+1 Any Stat", "+2 Physical"]
   },
   {
     "type": "table",
     "id": "growth_performer",
-    "options": [
-      "+2 Physical",
-      "+1 Any Stat",
-      "+2 Mental",
-      "Any Skill",
-      "notice"
-    ]
+    "options": ["+2 Physical", "+1 Any Stat", "+2 Mental", "Any Skill", "notice"]
   },
   {
     "type": "table",
     "id": "growth_physician",
-    "options": [
-      "+2 Mental",
-      "+2 Physical",
-      "+1 Any Stat",
-      "administer",
-      "notice"
-    ]
+    "options": ["+2 Mental", "+2 Physical", "+1 Any Stat", "administer", "notice"]
   },
   {
     "type": "table",
     "id": "growth_priest",
-    "options": [
-      "+1 Any Stat",
-      "+2 Mental",
-      "heal",
-      "Any Skill",
-      "+2 Physical"
-    ]
+    "options": ["+1 Any Stat", "+2 Mental", "heal", "Any Skill", "+2 Physical"]
   },
   {
     "type": "table",
     "id": "growth_sailor",
-    "options": [
-      "+2 Physical",
-      "sail",
-      "trade",
-      "+2 Mental",
-      "+1 Any Stat"
-    ]
+    "options": ["+2 Physical", "sail", "trade", "+2 Mental", "+1 Any Stat"]
   },
   {
     "type": "table",
     "id": "growth_scholar",
-    "options": [
-      "+2 Physical",
-      "+2 Mental",
-      "notice",
-      "+1 Any Stat",
-      "craft"
-    ]
+    "options": ["+2 Physical", "+2 Mental", "notice", "+1 Any Stat", "craft"]
   },
   {
     "type": "table",
     "id": "growth_slave",
-    "options": [
-      "notice",
-      "+2 Mental",
-      "sneak",
-      "+1 Any Stat",
-      "+2 Physical"
-    ]
+    "options": ["notice", "+2 Mental", "sneak", "+1 Any Stat", "+2 Physical"]
   },
   {
     "type": "table",
     "id": "growth_soldier",
-    "options": [
-      "+1 Any Stat",
-      "administer",
-      "+2 Physical",
-      "stab",
-      "+2 Mental"
-    ]
+    "options": ["+1 Any Stat", "administer", "+2 Physical", "stab", "+2 Mental"]
   },
   {
     "type": "table",
     "id": "growth_thug",
-    "options": [
-      "notice",
-      "+2 Mental",
-      "punch",
-      "+1 Any Stat",
-      "+2 Physical"
-    ]
+    "options": ["notice", "+2 Mental", "punch", "+1 Any Stat", "+2 Physical"]
   },
   {
     "type": "table",
     "id": "growth_wanderer",
-    "options": [
-      "survive",
-      "+1 Any Stat",
-      "+2 Physical",
-      "ride",
-      "+2 Mental"
-    ]
+    "options": ["survive", "+1 Any Stat", "+2 Physical", "ride", "+2 Mental"]
   },
   {
     "type": "table",

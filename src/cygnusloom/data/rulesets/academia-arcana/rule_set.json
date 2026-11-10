@@ -10,16 +10,7 @@
       "travel": "none",
       "wilderness": false,
       "dungeon": false,
-      "social": [
-        "conditions",
-        "counters",
-        "moves",
-        "relations",
-        "tallies",
-        "factions",
-        "projects",
-        "periods"
-      ]
+      "social": ["conditions", "counters", "moves", "relations", "tallies", "factions", "projects", "periods"]
     },
     "plus": "sum",
     "item_sizes": {

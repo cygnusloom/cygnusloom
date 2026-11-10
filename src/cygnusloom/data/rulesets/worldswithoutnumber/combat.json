@@ -37,11 +37,7 @@
     "surprise_turns": 1,
     "level_damage": {
       "template_kind": "class",
-      "templates": [
-        "warrior",
-        "adventurer_expert_warrior",
-        "adventurer_warrior_mage"
-      ],
+      "templates": ["warrior", "adventurer_expert_warrior", "adventurer_warrior_mage"],
       "counter": "level",
       "divisor": 2
     },

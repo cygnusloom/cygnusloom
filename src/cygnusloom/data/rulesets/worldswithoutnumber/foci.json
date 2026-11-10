@@ -1061,12 +1061,7 @@
         "id": "skill",
         "kind": "skill",
         "label": "Skill",
-        "exclude": [
-          "magic",
-          "stab",
-          "shoot",
-          "punch"
-        ]
+        "exclude": ["magic", "stab", "shoot", "punch"]
       }
     ]
   },
@@ -1089,12 +1084,7 @@
         "id": "skill",
         "kind": "skill",
         "label": "Skill",
-        "exclude": [
-          "magic",
-          "stab",
-          "shoot",
-          "punch"
-        ]
+        "exclude": ["magic", "stab", "shoot", "punch"]
       }
     ]
   },

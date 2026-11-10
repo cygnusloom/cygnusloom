@@ -39,9 +39,7 @@
     "name": "System Strain",
     "derived": {
       "base": 0,
-      "best_score": [
-        "con"
-      ]
+      "best_score": ["con"]
     }
   },
   {
@@ -50,24 +48,15 @@
     "name": "High Magic Effort",
     "derived": {
       "base": 1,
-      "best_modifier": [
-        "int",
-        "cha"
-      ],
-      "plus_skills": [
-        "magic"
-      ],
+      "best_modifier": ["int", "cha"],
+      "plus_skills": ["magic"],
       "minus_templates": [
         "adventurer_expert_mage",
         "adventurer_warrior_mage",
         "adventurer_mage_mage",
         "mage_partial_2"
       ],
-      "requires_templates": [
-        "high_mage",
-        "high_mage_partial",
-        "high_mage_partial_2"
-      ],
+      "requires_templates": ["high_mage", "high_mage_partial", "high_mage_partial_2"],
       "minimum": 1
     }
   },
@@ -77,24 +66,15 @@
     "name": "Necromantic Effort",
     "derived": {
       "base": 1,
-      "best_modifier": [
-        "int",
-        "cha"
-      ],
-      "plus_skills": [
-        "magic"
-      ],
+      "best_modifier": ["int", "cha"],
+      "plus_skills": ["magic"],
       "minus_templates": [
         "adventurer_expert_mage",
         "adventurer_warrior_mage",
         "adventurer_mage_mage",
         "mage_partial_2"
       ],
-      "requires_templates": [
-        "necromancer",
-        "necromancer_partial",
-        "necromancer_partial_2"
-      ],
+      "requires_templates": ["necromancer", "necromancer_partial", "necromancer_partial_2"],
       "minimum": 1
     }
   },
@@ -104,24 +84,15 @@
     "name": "Elementalist Effort",
     "derived": {
       "base": 1,
-      "best_modifier": [
-        "int",
-        "cha"
-      ],
-      "plus_skills": [
-        "magic"
-      ],
+      "best_modifier": ["int", "cha"],
+      "plus_skills": ["magic"],
       "minus_templates": [
         "adventurer_expert_mage",
         "adventurer_warrior_mage",
         "adventurer_mage_mage",
         "mage_partial_2"
       ],
-      "requires_templates": [
-        "elementalist",
-        "elementalist_partial",
-        "elementalist_partial_2"
-      ],
+      "requires_templates": ["elementalist", "elementalist_partial", "elementalist_partial_2"],
       "minimum": 1
     }
   },
@@ -131,13 +102,8 @@
     "name": "Physical Save",
     "derived": {
       "base": 16,
-      "minus_counters": [
-        "level"
-      ],
-      "minus_best_modifier": [
-        "str",
-        "con"
-      ]
+      "minus_counters": ["level"],
+      "minus_best_modifier": ["str", "con"]
     }
   },
   {
@@ -146,13 +112,8 @@
     "name": "Evasion Save",
     "derived": {
       "base": 16,
-      "minus_counters": [
-        "level"
-      ],
-      "minus_best_modifier": [
-        "int",
-        "dex"
-      ]
+      "minus_counters": ["level"],
+      "minus_best_modifier": ["int", "dex"]
     }
   },
   {
@@ -161,13 +122,8 @@
     "name": "Mental Save",
     "derived": {
       "base": 16,
-      "minus_counters": [
-        "level"
-      ],
-      "minus_best_modifier": [
-        "wis",
-        "cha"
-      ]
+      "minus_counters": ["level"],
+      "minus_best_modifier": ["wis", "cha"]
     }
   },
   {
@@ -176,9 +132,7 @@
     "name": "Luck Save",
     "derived": {
       "base": 16,
-      "minus_counters": [
-        "level"
-      ]
+      "minus_counters": ["level"]
     }
   },
   {
@@ -187,17 +141,9 @@
     "name": "Healer Effort",
     "derived": {
       "base": 0,
-      "best_modifier": [
-        "int",
-        "cha"
-      ],
-      "plus_skills": [
-        "heal"
-      ],
-      "requires_templates": [
-        "healer",
-        "healer_partial_2"
-      ],
+      "best_modifier": ["int", "cha"],
+      "plus_skills": ["heal"],
+      "requires_templates": ["healer", "healer_partial_2"],
       "minimum": 1
     }
   },
@@ -207,22 +153,9 @@
     "name": "Vowed Effort",
     "derived": {
       "base": 0,
-      "best_modifier": [
-        "str",
-        "dex",
-        "con",
-        "int",
-        "wis",
-        "cha"
-      ],
-      "plus_skill_picks": [
-        "order_skill",
-        "second_order_skill"
-      ],
-      "requires_templates": [
-        "vowed",
-        "vowed_partial_2"
-      ],
+      "best_modifier": ["str", "dex", "con", "int", "wis", "cha"],
+      "plus_skill_picks": ["order_skill", "second_order_skill"],
+      "requires_templates": ["vowed", "vowed_partial_2"],
       "minimum": 1
     }
   }

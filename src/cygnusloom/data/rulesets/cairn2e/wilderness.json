@@ -53,11 +53,7 @@
           "resolve": [
             {
               "do": "buy",
-              "items": [
-                "Rations",
-                "Torch",
-                "Oil Can"
-              ]
+              "items": ["Rations", "Torch", "Oil Can"]
             }
           ]
         }

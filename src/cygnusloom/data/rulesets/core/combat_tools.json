@@ -13,9 +13,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "name"
-      ]
+      "required": ["name"]
     }
   },
   {
@@ -35,11 +33,7 @@
           "type": "integer"
         }
       },
-      "required": [
-        "name",
-        "column",
-        "row"
-      ]
+      "required": ["name", "column", "row"]
     }
   },
   {
@@ -53,9 +47,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "name"
-      ]
+      "required": ["name"]
     }
   },
   {
@@ -97,11 +89,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "name",
-        "location",
-        "description"
-      ]
+      "required": ["name", "location", "description"]
     }
   },
   {
@@ -164,12 +152,7 @@
           "type": "integer"
         }
       },
-      "required": [
-        "name",
-        "columns",
-        "rows",
-        "description"
-      ]
+      "required": ["name", "columns", "rows", "description"]
     }
   },
   {
@@ -183,9 +166,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "name"
-      ]
+      "required": ["name"]
     }
   },
   {
@@ -199,9 +180,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "map"
-      ]
+      "required": ["map"]
     }
   },
   {
@@ -237,10 +216,7 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "name",
-        "location"
-      ]
+      "required": ["name", "location"]
     }
   },
   {
@@ -264,12 +240,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "name",
-        "stat",
-        "amount",
-        "cause"
-      ]
+      "required": ["name", "stat", "amount", "cause"]
     }
   },
   {
@@ -297,10 +268,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "name",
-        "amount"
-      ]
+      "required": ["name", "amount"]
     }
   },
   {
@@ -320,11 +288,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "name",
-        "explanation",
-        "consequence"
-      ]
+      "required": ["name", "explanation", "consequence"]
     }
   },
   {
@@ -345,10 +309,7 @@
                 "type": "string"
               }
             },
-            "required": [
-              "attacker",
-              "attack"
-            ],
+            "required": ["attacker", "attack"],
             "type": "object"
           },
           "type": "array"
@@ -363,10 +324,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "target",
-        "attacks"
-      ]
+      "required": ["target", "attacks"]
     }
   },
   {
@@ -383,10 +341,7 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "name",
-        "safe"
-      ]
+      "required": ["name", "safe"]
     }
   },
   {
@@ -403,10 +358,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "name",
-        "explanation"
-      ]
+      "required": ["name", "explanation"]
     }
   },
   {
@@ -425,10 +377,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "name",
-        "armor"
-      ]
+      "required": ["name", "armor"]
     }
   },
   {
@@ -456,11 +405,7 @@
           "description": "Resolve the attack even though this is not the attacker's turn. Set it only when the story needs an action outside the turn order, such as an ambush that catches the party unawares."
         }
       },
-      "required": [
-        "attacker",
-        "attack",
-        "target"
-      ]
+      "required": ["attacker", "attack", "target"]
     }
   },
   {
@@ -484,10 +429,7 @@
           "description": "Resolve the attack even though this is not the player character's turn. Set it only when the story needs an action outside the turn order."
         }
       },
-      "required": [
-        "target",
-        "weapon"
-      ]
+      "required": ["target", "weapon"]
     }
   },
   {
@@ -510,11 +452,7 @@
           "description": "What the save is for."
         }
       },
-      "required": [
-        "name",
-        "stat",
-        "reason"
-      ]
+      "required": ["name", "stat", "reason"]
     }
   }
 ]

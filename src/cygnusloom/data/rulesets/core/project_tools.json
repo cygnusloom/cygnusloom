@@ -13,9 +13,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "name"
-      ]
+      "required": ["name"]
     }
   },
   {
@@ -39,10 +37,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "name",
-        "amount"
-      ]
+      "required": ["name", "amount"]
     }
   },
   {
@@ -73,12 +68,7 @@
           "type": "integer"
         }
       },
-      "required": [
-        "name",
-        "kind",
-        "goal",
-        "target"
-      ]
+      "required": ["name", "kind", "goal", "target"]
     }
   },
   {

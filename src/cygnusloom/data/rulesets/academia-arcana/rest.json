@@ -11,9 +11,7 @@
         "full": true,
         "restores": [],
         "clears": [],
-        "ends": [
-          "rest"
-        ],
+        "ends": ["rest"],
         "upkeep": false
       },
       "downtime": {
@@ -22,10 +20,7 @@
         "full": true,
         "restores": [],
         "clears": [],
-        "ends": [
-          "rest",
-          "downtime"
-        ],
+        "ends": ["rest", "downtime"],
         "upkeep": false
       }
     }
