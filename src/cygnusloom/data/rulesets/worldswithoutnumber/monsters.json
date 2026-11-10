@@ -32,7 +32,6 @@
       }
     },
     "attacks_per_action": 2,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -78,7 +77,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -121,7 +119,6 @@
       }
     },
     "attacks_per_action": 4,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -164,7 +161,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": []
   },
@@ -201,7 +197,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -342,7 +337,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -388,7 +382,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -433,7 +426,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -525,7 +517,6 @@
       }
     },
     "attacks_per_action": 2,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -571,7 +562,6 @@
       }
     },
     "attacks_per_action": 2,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -617,7 +607,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -663,7 +652,6 @@
       }
     },
     "attacks_per_action": 2,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -709,7 +697,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -752,7 +739,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -798,7 +784,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -841,7 +826,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -928,7 +912,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -971,7 +954,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1017,7 +999,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1062,7 +1043,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1105,7 +1085,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1148,7 +1127,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1196,7 +1174,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1239,7 +1216,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1287,7 +1263,6 @@
       }
     },
     "attacks_per_action": 2,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1338,7 +1313,6 @@
       }
     },
     "attacks_per_action": 2,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1389,7 +1363,6 @@
       }
     },
     "attacks_per_action": 2,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1440,7 +1413,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1492,7 +1464,6 @@
       }
     },
     "attacks_per_action": 2,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1549,7 +1520,6 @@
       }
     },
     "attacks_per_action": 2,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1603,7 +1573,6 @@
       }
     },
     "attacks_per_action": 2,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1654,7 +1623,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1703,7 +1671,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1757,7 +1724,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1808,7 +1774,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1864,7 +1829,6 @@
       }
     },
     "attacks_per_action": 2,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1915,7 +1879,6 @@
       }
     },
     "attacks_per_action": 3,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -1966,7 +1929,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -2017,7 +1979,6 @@
       }
     },
     "attacks_per_action": 2,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -2068,7 +2029,6 @@
       }
     },
     "attacks_per_action": 2,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -2119,7 +2079,6 @@
       }
     },
     "attacks_per_action": 3,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -2173,7 +2132,6 @@
       }
     },
     "attacks_per_action": 2,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -2221,7 +2179,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -2272,7 +2229,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -2326,7 +2282,6 @@
       }
     },
     "attacks_per_action": 2,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -2377,7 +2332,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -2429,7 +2383,6 @@
       }
     },
     "attacks_per_action": 2,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -2475,7 +2428,6 @@
       }
     },
     "attacks_per_action": 2,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -2529,7 +2481,6 @@
       }
     },
     "attacks_per_action": 2,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -2631,7 +2582,6 @@
       }
     },
     "attacks_per_action": 2,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {
@@ -2682,7 +2632,6 @@
       }
     },
     "attacks_per_action": 1,
-    "large_group": false,
     "rules": [],
     "abilities": [
       {

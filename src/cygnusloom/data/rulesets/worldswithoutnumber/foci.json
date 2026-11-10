@@ -1032,7 +1032,6 @@
     "name": "Special Origin",
     "feature_type": "feat",
     "tag": "focus",
-    "rank": 0,
     "description": "With the GM's permission, this Focus represents a nonhuman origin. Its specific benefits are defined by the species in the bestiary.",
     "effects": [
       {

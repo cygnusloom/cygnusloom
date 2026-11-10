@@ -38,7 +38,6 @@
       "dex": 14,
       "wil": 5
     },
-    "armor": 0,
     "attacks": {
       "bite": "1d6"
     },
@@ -61,7 +60,6 @@
       "dex": 13,
       "wil": 5
     },
-    "armor": 0,
     "attacks": {
       "horns": "1d8"
     },
@@ -84,7 +82,6 @@
       "dex": 12,
       "wil": 3
     },
-    "armor": 0,
     "attacks": {
       "bite": "1d6"
     },
@@ -134,7 +131,6 @@
       "dex": 12,
       "wil": 2
     },
-    "armor": 0,
     "attacks": {
       "vines": {
         "dice": "1d4",
@@ -164,7 +160,6 @@
       "dex": 13,
       "wil": 5
     },
-    "armor": 0,
     "attacks": {
       "claws": "1d8+1d8"
     },
@@ -187,7 +182,6 @@
       "dex": 14,
       "wil": 8
     },
-    "armor": 0,
     "attacks": {
       "sting": "1d6"
     },
@@ -215,7 +209,6 @@
       "dex": 14,
       "wil": 5
     },
-    "armor": 0,
     "attacks": {
       "claws": "1d6+1d6"
     },
@@ -238,7 +231,6 @@
       "dex": 12,
       "wil": 3
     },
-    "armor": 0,
     "attacks": {
       "bite": "1d6"
     },
@@ -265,7 +257,6 @@
       "dex": 14,
       "wil": 8
     },
-    "armor": 0,
     "attacks": {
       "bite": "1d8"
     },
@@ -311,7 +302,6 @@
       "dex": 12,
       "wil": 15
     },
-    "armor": 0,
     "attacks": {
       "bite": "1d8"
     },
@@ -374,7 +364,6 @@
       "dex": 12,
       "wil": 15
     },
-    "armor": 0,
     "attacks": {
       "ghostly touch": "1d8"
     },
@@ -401,7 +390,6 @@
       "dex": 17,
       "wil": 13
     },
-    "armor": 0,
     "attacks": {},
     "rules": [
       {
@@ -514,7 +502,6 @@
       "dex": 11,
       "wil": 14
     },
-    "armor": 0,
     "attacks": {
       "ethereal claws": "1d8+1d8"
     },
@@ -541,7 +528,6 @@
       "dex": 12,
       "wil": 14
     },
-    "armor": 0,
     "attacks": {
       "knotted arms": "1d6"
     },
@@ -568,7 +554,6 @@
       "dex": 8,
       "wil": 6
     },
-    "armor": 0,
     "attacks": {
       "club": "1d10"
     },
@@ -591,7 +576,6 @@
       "dex": 8,
       "wil": 16
     },
-    "armor": 0,
     "attacks": {
       "bite": "1d8"
     },
@@ -691,7 +675,6 @@
       "dex": 12,
       "wil": 15
     },
-    "armor": 0,
     "attacks": {
       "life drain": "1d6"
     },
@@ -718,7 +701,6 @@
       "dex": 8,
       "wil": 3
     },
-    "armor": 0,
     "attacks": {
       "elongated claws": "1d6+1d6"
     },
@@ -787,7 +769,6 @@
       "dex": 12,
       "wil": 8
     },
-    "armor": 0,
     "attacks": {
       "dagger": "1d6",
       "sling": "1d6"
@@ -835,7 +816,6 @@
       "dex": 15,
       "wil": 12
     },
-    "armor": 0,
     "attacks": {
       "claws": "1d6+1d6"
     },
@@ -863,7 +843,6 @@
       "dex": 12,
       "wil": 14
     },
-    "armor": 0,
     "attacks": {
       "claws": "1d6+1d6"
     },
@@ -890,7 +869,6 @@
       "dex": 15,
       "wil": 9
     },
-    "armor": 0,
     "attacks": {
       "bite": "1d8",
       "fire breath": {
@@ -944,7 +922,6 @@
       "dex": 12,
       "wil": 14
     },
-    "armor": 0,
     "attacks": {
       "leystaff": "1d8"
     },
@@ -1002,7 +979,6 @@
       "dex": 12,
       "wil": 15
     },
-    "armor": 0,
     "attacks": {
       "fists": "1d4+1d4"
     },
@@ -1029,7 +1005,6 @@
       "dex": 13,
       "wil": 4
     },
-    "armor": 0,
     "attacks": {
       "bite": "1d6",
       "spear": "1d8"
@@ -1053,7 +1028,6 @@
       "dex": 12,
       "wil": 16
     },
-    "armor": 0,
     "attacks": {
       "toothy bite": "1d8"
     },
@@ -1107,7 +1081,6 @@
       "dex": 14,
       "wil": 12
     },
-    "armor": 0,
     "attacks": {
       "claws": "1d6+1d6",
       "tail spike": "1d8"
@@ -1158,7 +1131,6 @@
       "dex": 12,
       "wil": 18
     },
-    "armor": 0,
     "attacks": {
       "tentacles": {
         "dice": "1d6",
@@ -1212,7 +1184,6 @@
       "dex": 8,
       "wil": 6
     },
-    "armor": 0,
     "attacks": {
       "necrotic touch": "1d10"
     },
@@ -1259,7 +1230,6 @@
       "dex": 11,
       "wil": 16
     },
-    "armor": 0,
     "attacks": {
       "talons": "1d8+1d8"
     },
@@ -1282,7 +1252,6 @@
       "dex": 12,
       "wil": 8
     },
-    "armor": 0,
     "attacks": {
       "flaming hooves": "1d8+1d8"
     },
@@ -1323,7 +1292,6 @@
       "dex": 12,
       "wil": 5
     },
-    "armor": 0,
     "attacks": {
       "beak": "1d10",
       "claws": "1d8+1d8"
@@ -1347,7 +1315,6 @@
       "dex": 13,
       "wil": 12
     },
-    "armor": 0,
     "attacks": {
       "talons": "1d10+1d10"
     },
@@ -1370,7 +1337,6 @@
       "dex": 15,
       "wil": 13
     },
-    "armor": 0,
     "attacks": {},
     "rules": [
       {
@@ -1419,7 +1385,6 @@
       "dex": 12,
       "wil": 8
     },
-    "armor": 0,
     "attacks": {
       "dual sickles": "1d6+1d6"
     },
@@ -1460,7 +1425,6 @@
       "dex": 14,
       "wil": 8
     },
-    "armor": 0,
     "attacks": {
       "spear": "1d6"
     },
@@ -1487,7 +1451,6 @@
       "dex": 16,
       "wil": 14
     },
-    "armor": 0,
     "attacks": {
       "tuber-fingers": "1d6"
     },
@@ -1510,7 +1473,6 @@
       "dex": 13,
       "wil": 5
     },
-    "armor": 0,
     "attacks": {
       "bite": "1d6"
     },
@@ -1537,7 +1499,6 @@
       "dex": 15,
       "wil": 14
     },
-    "armor": 0,
     "attacks": {
       "long claws": "1d6+1d6"
     },
@@ -1564,7 +1525,6 @@
       "dex": 18,
       "wil": 14
     },
-    "armor": 0,
     "attacks": {
       "draining touch": {
         "dice": "1d6",
@@ -1594,7 +1554,6 @@
       "dex": 6,
       "wil": 8
     },
-    "armor": 0,
     "attacks": {
       "tendrils": "1d8+1d8"
     },
@@ -1666,7 +1625,6 @@
       "dex": 13,
       "wil": 18
     },
-    "armor": 0,
     "attacks": {
       "claws": {
         "dice": "1d8+1d8",
@@ -1729,7 +1687,6 @@
       "dex": 8,
       "wil": 13
     },
-    "armor": 0,
     "attacks": {
       "gore": "1d6+1d6"
     },
@@ -1801,7 +1758,6 @@
       "dex": 15,
       "wil": 12
     },
-    "armor": 0,
     "attacks": {
       "trident": "1d8"
     },
@@ -1843,7 +1799,6 @@
       "dex": 12,
       "wil": 14
     },
-    "armor": 0,
     "attacks": {
       "horn": {
         "dice": "1d10",
@@ -1900,7 +1855,6 @@
       "dex": 16,
       "wil": 12
     },
-    "armor": 0,
     "attacks": {
       "tentacles": {
         "dice": "1d8+1d8",
@@ -1954,7 +1908,6 @@
       "dex": 16,
       "wil": 4
     },
-    "armor": 0,
     "attacks": {
       "spray": "1d8"
     },
@@ -1981,7 +1934,6 @@
       "dex": 14,
       "wil": 6
     },
-    "armor": 0,
     "attacks": {
       "claws": "1d6+1d6",
       "bite": "1d8"
@@ -2032,7 +1984,6 @@
       "dex": 17,
       "wil": 12
     },
-    "armor": 0,
     "attacks": {},
     "rules": []
   },
@@ -2048,7 +1999,6 @@
       "dex": 12,
       "wil": 7
     },
-    "armor": 0,
     "attacks": {
       "bite": "1d8",
       "club": "1d10"
@@ -2076,7 +2026,6 @@
       "dex": 14,
       "wil": 13
     },
-    "armor": 0,
     "attacks": {
       "stinger": "1d10"
     },
@@ -2099,7 +2048,6 @@
       "dex": 6,
       "wil": 3
     },
-    "armor": 0,
     "attacks": {
       "jagged nails": "1d6"
     },
