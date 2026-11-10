@@ -121,36 +121,12 @@
     "name": "Wilderness Events",
     "dice": "1d6",
     "rows": [
-      {
-        "roll": "1",
-        "result": "Encounter",
-        "text": "Roll on an encounter table for that terrain or location, then roll NPC reactions if applicable."
-      },
-      {
-        "roll": "2",
-        "result": "Sign",
-        "text": "A clue, spoor, or indication of a nearby encounter, locality, or hidden feature, or information about a nearby area."
-      },
-      {
-        "roll": "3",
-        "result": "Environment",
-        "text": "A shift in weather or terrain."
-      },
-      {
-        "roll": "4",
-        "result": "Loss",
-        "text": "The party faces a choice that costs a resource (rations or tools), time, or effort."
-      },
-      {
-        "roll": "5",
-        "result": "Exhaustion",
-        "text": "A barrier forces effort, care, or delays. This costs extra time (and an additional Wilderness Action) or Fatigue."
-      },
-      {
-        "roll": "6",
-        "result": "Discovery",
-        "text": "The party finds food, treasure, or useful resources. The Warden may instead reveal the area's primary feature."
-      }
+      ["1", "Encounter", "Roll on an encounter table for that terrain or location, then roll NPC reactions if applicable."],
+      ["2", "Sign", "A clue, spoor, or indication of a nearby encounter, locality, or hidden feature, or information about a nearby area."],
+      ["3", "Environment", "A shift in weather or terrain."],
+      ["4", "Loss", "The party faces a choice that costs a resource (rations or tools), time, or effort."],
+      ["5", "Exhaustion", "A barrier forces effort, care, or delays. This costs extra time (and an additional Wilderness Action) or Fatigue."],
+      ["6", "Discovery", "The party finds food, treasure, or useful resources. The Warden may instead reveal the area's primary feature."]
     ]
   },
   {
@@ -160,12 +136,12 @@
     "name": "Spring Weather",
     "dice": "1d6",
     "rows": [
-      {"roll": "1", "result": "Nice", "text": "Favourable for travel (clear skies, sunny)."},
-      {"roll": "2", "result": "Fair", "text": "Favourable for travel (overcast, breezy)."},
-      {"roll": "3", "result": "Fair", "text": "Favourable for travel (overcast, breezy)."},
-      {"roll": "4", "result": "Unpleasant", "text": "Add a Fatigue or add one watch to the journey (gusting winds, rain showers, sweltering heat, chill air)."},
-      {"roll": "5", "result": "Inclement", "text": "Add a Fatigue or add +1 watch, and increase terrain Difficulty by a step (thunderstorms, lightning, rain, muddy ground)."},
-      {"roll": "6", "result": "Extreme", "text": "Add a Fatigue and +1 watch, and increase terrain Difficulty by a step (blizzards, freezing winds, flooding, mud slides)."}
+      ["1", "Nice", "Favourable for travel (clear skies, sunny)."],
+      ["2", "Fair", "Favourable for travel (overcast, breezy)."],
+      ["3", "Fair", "Favourable for travel (overcast, breezy)."],
+      ["4", "Unpleasant", "Add a Fatigue or add one watch to the journey (gusting winds, rain showers, sweltering heat, chill air)."],
+      ["5", "Inclement", "Add a Fatigue or add +1 watch, and increase terrain Difficulty by a step (thunderstorms, lightning, rain, muddy ground)."],
+      ["6", "Extreme", "Add a Fatigue and +1 watch, and increase terrain Difficulty by a step (blizzards, freezing winds, flooding, mud slides)."]
     ]
   },
   {
@@ -175,12 +151,12 @@
     "name": "Summer Weather",
     "dice": "1d6",
     "rows": [
-      {"roll": "1", "result": "Nice", "text": "Favourable for travel (clear skies, sunny)."},
-      {"roll": "2", "result": "Nice", "text": "Favourable for travel (clear skies, sunny)."},
-      {"roll": "3", "result": "Fair", "text": "Favourable for travel (overcast, breezy)."},
-      {"roll": "4", "result": "Unpleasant", "text": "Add a Fatigue or add one watch to the journey (gusting winds, rain showers, sweltering heat, chill air)."},
-      {"roll": "5", "result": "Inclement", "text": "Add a Fatigue or add +1 watch, and increase terrain Difficulty by a step (thunderstorms, lightning, rain, muddy ground)."},
-      {"roll": "6", "result": "Extreme", "text": "Add a Fatigue and +1 watch, and increase terrain Difficulty by a step (blizzards, freezing winds, flooding, mud slides)."}
+      ["1", "Nice", "Favourable for travel (clear skies, sunny)."],
+      ["2", "Nice", "Favourable for travel (clear skies, sunny)."],
+      ["3", "Fair", "Favourable for travel (overcast, breezy)."],
+      ["4", "Unpleasant", "Add a Fatigue or add one watch to the journey (gusting winds, rain showers, sweltering heat, chill air)."],
+      ["5", "Inclement", "Add a Fatigue or add +1 watch, and increase terrain Difficulty by a step (thunderstorms, lightning, rain, muddy ground)."],
+      ["6", "Extreme", "Add a Fatigue and +1 watch, and increase terrain Difficulty by a step (blizzards, freezing winds, flooding, mud slides)."]
     ]
   },
   {
@@ -190,12 +166,12 @@
     "name": "Fall Weather",
     "dice": "1d6",
     "rows": [
-      {"roll": "1", "result": "Fair", "text": "Favourable for travel (overcast, breezy)."},
-      {"roll": "2", "result": "Fair", "text": "Favourable for travel (overcast, breezy)."},
-      {"roll": "3", "result": "Unpleasant", "text": "Add a Fatigue or add one watch to the journey (gusting winds, rain showers, sweltering heat, chill air)."},
-      {"roll": "4", "result": "Inclement", "text": "Add a Fatigue or add +1 watch, and increase terrain Difficulty by a step (thunderstorms, lightning, rain, muddy ground)."},
-      {"roll": "5", "result": "Inclement", "text": "Add a Fatigue or add +1 watch, and increase terrain Difficulty by a step (thunderstorms, lightning, rain, muddy ground)."},
-      {"roll": "6", "result": "Extreme", "text": "Add a Fatigue and +1 watch, and increase terrain Difficulty by a step (blizzards, freezing winds, flooding, mud slides)."}
+      ["1", "Fair", "Favourable for travel (overcast, breezy)."],
+      ["2", "Fair", "Favourable for travel (overcast, breezy)."],
+      ["3", "Unpleasant", "Add a Fatigue or add one watch to the journey (gusting winds, rain showers, sweltering heat, chill air)."],
+      ["4", "Inclement", "Add a Fatigue or add +1 watch, and increase terrain Difficulty by a step (thunderstorms, lightning, rain, muddy ground)."],
+      ["5", "Inclement", "Add a Fatigue or add +1 watch, and increase terrain Difficulty by a step (thunderstorms, lightning, rain, muddy ground)."],
+      ["6", "Extreme", "Add a Fatigue and +1 watch, and increase terrain Difficulty by a step (blizzards, freezing winds, flooding, mud slides)."]
     ]
   },
   {
@@ -205,12 +181,12 @@
     "name": "Winter Weather",
     "dice": "1d6",
     "rows": [
-      {"roll": "1", "result": "Fair", "text": "Favourable for travel (overcast, breezy)."},
-      {"roll": "2", "result": "Unpleasant", "text": "Add a Fatigue or add one watch to the journey (gusting winds, rain showers, sweltering heat, chill air)."},
-      {"roll": "3", "result": "Inclement", "text": "Add a Fatigue or add +1 watch, and increase terrain Difficulty by a step (thunderstorms, lightning, rain, muddy ground)."},
-      {"roll": "4", "result": "Inclement", "text": "Add a Fatigue or add +1 watch, and increase terrain Difficulty by a step (thunderstorms, lightning, rain, muddy ground)."},
-      {"roll": "5", "result": "Extreme", "text": "Add a Fatigue and +1 watch, and increase terrain Difficulty by a step (blizzards, freezing winds, flooding, mud slides)."},
-      {"roll": "6", "result": "Extreme", "text": "Add a Fatigue and +1 watch, and increase terrain Difficulty by a step (blizzards, freezing winds, flooding, mud slides)."}
+      ["1", "Fair", "Favourable for travel (overcast, breezy)."],
+      ["2", "Unpleasant", "Add a Fatigue or add one watch to the journey (gusting winds, rain showers, sweltering heat, chill air)."],
+      ["3", "Inclement", "Add a Fatigue or add +1 watch, and increase terrain Difficulty by a step (thunderstorms, lightning, rain, muddy ground)."],
+      ["4", "Inclement", "Add a Fatigue or add +1 watch, and increase terrain Difficulty by a step (thunderstorms, lightning, rain, muddy ground)."],
+      ["5", "Extreme", "Add a Fatigue and +1 watch, and increase terrain Difficulty by a step (blizzards, freezing winds, flooding, mud slides)."],
+      ["6", "Extreme", "Add a Fatigue and +1 watch, and increase terrain Difficulty by a step (blizzards, freezing winds, flooding, mud slides)."]
     ]
   }
 ]

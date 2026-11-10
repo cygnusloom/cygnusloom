@@ -7937,10 +7937,24 @@ def _load_option(option: object, label: str) -> TableOption:
     )
 
 
+def _dice_row(row: object, index: int, label: str) -> object:
+    """A row's fields. The compact array form, `[roll, result]` or `[roll, result, text]`,
+    names the same fields as the explicit object form."""
+    if not isinstance(row, list):
+        return row
+    if len(row) not in (2, 3):
+        raise ContentError(f"{label}: row {index} array must have 2 or 3 values")
+    if not all(isinstance(value, str) for value in row):
+        raise ContentError(f"{label}: row {index} array must hold text")
+    return dict(zip(("roll", "result", "text"), row))
+
+
 def _load_dice_table(definition: Definition, template: str) -> DiceTable:
     """A dice table has a single dice formula and rows of `roll` ("4" or "2-3") and `result`.
-    The rows must run in order with no gaps, covering every roll the dice can show. `genres`
-    says which kinds of setting the table fits, and an absent list fits every setting."""
+    A row is an object with `roll`, `result`, and optional `text`, or the compact array
+    `[roll, result]` or `[roll, result, text]`. The rows must run in order with no gaps,
+    covering every roll the dice can show. `genres` says which kinds of setting the table
+    fits, and an absent list fits every setting."""
     label = f"{template}: dice table {definition.id}"
     check_keys(definition.data, {"type", "id", "name", "dice", "rows", "genres"}, label)
     name = _table_label(definition, template)
@@ -7954,7 +7968,8 @@ def _load_dice_table(definition: Definition, template: str) -> DiceTable:
     if not isinstance(rows, list) or not rows:
         raise ContentError(f"{label}: 'rows' must be a non-empty list")
     loaded: list[DiceRow] = []
-    for index, row in enumerate(rows):
+    for index, raw_row in enumerate(rows):
+        row = _dice_row(raw_row, index, label)
         if not isinstance(row, dict) or not {"roll", "result"} <= set(row) <= {
             "roll",
             "result",

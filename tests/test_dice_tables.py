@@ -3,19 +3,21 @@ from __future__ import annotations
 import random
 from collections.abc import Callable
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, func, select
 
 from cygnusloom.content.definitions import ContentError, Definition
-from cygnusloom.content.library import _load_dice_table
+from cygnusloom.content.library import ContentLibrary, DiceRow, _load_dice_table
 from cygnusloom.db.models import Event
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.dice_tables import roll_tables
 from cygnusloom.services.events import decode, events_since
 from tests.conftest import bundled_library, content_library
 from tests.test_combat import CAIRN, _fight
+from tests.test_content import _core, _rule_set, _world, _write
 
 TABLES_ROLLED = "dice.tables_rolled"
 MONSTER_TABLES = [
@@ -76,6 +78,9 @@ BAD_TABLES = {
         {"rows": [{"roll": "5-3", "result": "a"}, {"roll": "6-12", "result": "b"}]}
     ),
     "extra-key-in-row": ({"rows": [{"roll": "2-12", "result": "a", "note": "extra"}]}),
+    "row-array-too-short": ({"rows": [["2-12"]]}),
+    "row-array-too-long": ({"rows": [["2-12", "a", "b", "c"]]}),
+    "row-array-non-text": ({"rows": [["2-12", 3]]}),
     "empty-result": ({"rows": [{"roll": "2-12", "result": ""}]}),
     "whitespace-result": ({"rows": [{"roll": "2-12", "result": "   "}]}),
     "bad-roll-string": ({"rows": [{"roll": "two", "result": "a"}]}),
@@ -91,6 +96,9 @@ BAD_TABLE_MESSAGES = {
     "rows-stop-short-of-top": "must cover every roll up to 12",
     "backwards-range": "runs backwards",
     "extra-key-in-row": "needs 'roll' and 'result' and optional 'text' and no other keys",
+    "row-array-too-short": "row 0 array must have 2 or 3 values",
+    "row-array-too-long": "row 0 array must have 2 or 3 values",
+    "row-array-non-text": "row 0 array must hold text",
     "empty-result": "'result' must be non-empty text",
     "whitespace-result": "'result' must be non-empty text",
     "bad-roll-string": "'roll' must be a number or a range",
@@ -118,6 +126,54 @@ def test_a_well_formed_dice_table_loads_from_a_definition():
     assert table.dice == "2d6"
     assert table.row_for(7).result == "b"
     assert table.row_for(12).result == "c"
+
+
+def _tree_with_rows(root: Path, rows: list[object]) -> Path:
+    """A valid content tree whose core defines one 2d6 dice table with `rows`."""
+    _write(
+        root,
+        {
+            "worlds/testland/world.json": _world(),
+            "rulesets/core/rule_set.json": _core(),
+            "rulesets/core/dice.json": [
+                {"type": "dice_table", "id": "test", "dice": "2d6", "rows": rows}
+            ],
+            "rulesets/testset/rule_set.json": _rule_set(),
+        },
+    )
+    return root
+
+
+def test_compact_row_arrays_load_the_same_dice_rows_as_the_object_form(tmp_path: Path):
+    explicit = _tree_with_rows(
+        tmp_path / "explicit",
+        [
+            {"roll": "2", "result": "a"},
+            {"roll": "3-11", "result": "b", "text": "in between"},
+            {"roll": "12", "result": "c"},
+        ],
+    )
+    compact = _tree_with_rows(
+        tmp_path / "compact",
+        [["2", "a"], ["3-11", "b", "in between"], ["12", "c"]],
+    )
+    explicit_table = ContentLibrary.load(explicit).rule_sets["testset"].dice_tables["test"]
+    compact_table = ContentLibrary.load(compact).rule_sets["testset"].dice_tables["test"]
+
+    assert compact_table == explicit_table
+    assert compact_table.rows == (
+        DiceRow(2, 2, "a"),
+        DiceRow(3, 11, "b", "in between"),
+        DiceRow(12, 12, "c"),
+    )
+
+
+def test_a_bundled_compact_dice_table_keeps_its_first_and_last_rows():
+    table = bundled_library().rule_sets["cairn2e"].dice_tables["community_tags"]
+    assert table.dice == "1d100"
+    assert len(table.rows) == 50
+    assert table.rows[0] == DiceRow(1, 2, "Bells rung backward for bad news")
+    assert table.rows[-1] == DiceRow(99, 100, "Honey traded for barley, not coin")
 
 
 def test_a_dice_table_reads_its_genre_tags():
