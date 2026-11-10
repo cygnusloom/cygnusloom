@@ -15,6 +15,15 @@
       "social": ["conditions", "counters", "checks", "factions", "projects"]
     },
     "plus": "sum",
+    "item_sizes": {
+      "tiny": 0,
+      "small": 1,
+      "normal": 1,
+      "large": 2,
+      "huge": 3,
+      "bulky": 4,
+      "massive": 15
+    },
     "stat_presets": {
       "attributes": {
         "formula": "3d6",

@@ -699,6 +699,30 @@ def test_stat_presets_cannot_set_identity(tree: Path):
         ContentLibrary.load(tree)
 
 
+def test_rule_set_item_sizes_build_definitions(tree: Path):
+    head = {**_rule_set()[0], "item_sizes": {"petty": 0, "normal": 1}}
+    _write(tree, {"rulesets/testset/rule_set.json": [head]})
+    spec = ContentLibrary.load(tree).rule_sets["testset"]
+    assert spec.item_sizes == {"petty": 0, "normal": 1}
+
+
+def test_an_explicit_item_size_wins_over_the_map(tree: Path):
+    head = {**_rule_set()[0], "item_sizes": {"normal": 1}}
+    sizes = [{"type": "item_size", "id": "normal", "slots": 2}]
+    _write(
+        tree,
+        {"rulesets/testset/rule_set.json": [head], "rulesets/testset/inventory.json": sizes},
+    )
+    assert ContentLibrary.load(tree).rule_sets["testset"].item_sizes == {"normal": 2}
+
+
+def test_rule_set_item_sizes_reject_bad_slots(tree: Path):
+    head = {**_rule_set()[0], "item_sizes": {"normal": -1}}
+    _write(tree, {"rulesets/testset/rule_set.json": [head]})
+    with pytest.raises(ContentError, match="zero or more"):
+        ContentLibrary.load(tree)
+
+
 def _write_template_features(tree: Path, defaults: Any) -> None:
     """A rule set whose backgrounds get `defaults` before their own grants."""
     features = [

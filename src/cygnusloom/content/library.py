@@ -3817,6 +3817,7 @@ def _build_rule_set(
             "starting_silver",
             "starting_years",
             "stat_presets",
+            "item_sizes",
             "template_features",
             "condition_ends",
             "npc_hp",
@@ -3839,6 +3840,7 @@ def _build_rule_set(
         ),
     ]
     definitions = apply_stat_presets(definitions, head.data.get("stat_presets"), label)
+    definitions = _apply_item_sizes(definitions, head.data.get("item_sizes"), label)
     _check_character_definitions(definitions, template)
     definitions = _derive_background_tables(definitions, template)
     for definition in definitions:
@@ -6102,6 +6104,29 @@ def _load_size_pools(
             raise ContentError(f"{entry_label}: names no pool ({pool_id!r})")
         size_pools[str(size)] = pool_id
     return size_pools
+
+
+def _apply_item_sizes(definitions: list[Definition], value: object, label: str) -> list[Definition]:
+    """Expand the rule-set head's `item_sizes` map into `item_size` definitions. An explicit
+    definition of the same id wins."""
+    if value is None:
+        return definitions
+    if not isinstance(value, Mapping) or not value:
+        raise ContentError(f"{label}: 'item_sizes' must map ids to slot counts")
+    existing = {d.id for d in definitions if d.type == "item_size"}
+    generated: list[Definition] = []
+    for name, slots in value.items():
+        size_label = f"{label}: item size {name!r}"
+        if not isinstance(name, str) or not name.strip():
+            raise ContentError(f"{label}: 'item_sizes' ids must be non-empty text")
+        if not isinstance(slots, int) or isinstance(slots, bool) or slots < 0:
+            raise ContentError(f"{size_label}: 'slots' must be a whole number, zero or more")
+        if name in existing:
+            continue
+        generated.append(
+            Definition("item_size", name, {"type": "item_size", "id": name, "slots": slots})
+        )
+    return [*generated, *definitions]
 
 
 def _load_item_sizes(definitions: list[Definition], template: str) -> dict[str, int]:

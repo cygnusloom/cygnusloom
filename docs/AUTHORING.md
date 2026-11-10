@@ -264,6 +264,18 @@ name a preset from the rule-set head; the stat's own fields win:
 
 A preset cannot set `type`, `id`, `name`, or `preset`.
 
+## Item sizes
+
+A rule set that uses an inventory lists its item sizes once on the head, as a
+map from size id to slots:
+
+```json
+"item_sizes": {"petty": 0, "normal": 1, "bulky": 2}
+```
+
+Each map entry becomes an `item_size` definition. An explicit `item_size` with
+the same id wins over the map.
+
 ## Dice tables
 
 A `dice_table` has one formula and rows that cover every roll it can show, in

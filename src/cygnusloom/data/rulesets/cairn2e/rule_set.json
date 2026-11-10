@@ -14,6 +14,11 @@
       "social": ["conditions"]
     },
     "plus": "highest",
+    "item_sizes": {
+      "petty": 0,
+      "normal": 1,
+      "bulky": 2
+    },
     "stat_presets": {
       "attribute": {
         "formula": "3d6",

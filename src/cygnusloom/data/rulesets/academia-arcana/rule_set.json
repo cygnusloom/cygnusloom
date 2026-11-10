@@ -22,6 +22,12 @@
       ]
     },
     "plus": "sum",
+    "item_sizes": {
+      "tiny": 0,
+      "small": 1,
+      "normal": 1,
+      "bulky": 2
+    },
     "stat_presets": {
       "trait": {
         "values": [-1, 0, 1, 1, 2],
