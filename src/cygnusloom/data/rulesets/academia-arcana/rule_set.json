@@ -23,6 +23,68 @@
     },
     "plus": "sum",
     "table_genres": ["generic", "fantasy", "magicschool"],
-    "condition_ends": ["rest", "downtime", "scene"]
+    "condition_ends": ["rest", "downtime", "scene"],
+    "starting_years": {
+      "subjects": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
+      "forbidden_spells": ["command-the-will", "sever-the-thread", "borrowed-years", "hollow-name", "open-the-deep"],
+      "years": [
+        {
+          "description": "Your first year. Two spells, one subject, and a great deal you have not learned yet.",
+          "subjects": 1,
+          "spells": 2,
+          "potions": 1,
+          "enchantments": 1,
+          "training": 0
+        },
+        {
+          "description": "Your second year. One more spell, another potion, and the first taste of a subject that is really yours.",
+          "subjects": 1,
+          "spells": 3,
+          "potions": 2,
+          "enchantments": 1,
+          "training": 0
+        },
+        {
+          "description": "Your third year. A second subject, a first real specialization, and training that sticks.",
+          "subjects": 2,
+          "spells": 4,
+          "potions": 2,
+          "enchantments": 1,
+          "training": 1
+        },
+        {
+          "description": "Your fourth year. The work gets harder, the choices get wider, and the cap on your best trait rises.",
+          "subjects": 2,
+          "spells": 5,
+          "potions": 3,
+          "enchantments": 2,
+          "training": 1
+        },
+        {
+          "description": "Your fifth year. A third subject, a second training, and the first spells that make younger students go quiet.",
+          "subjects": 3,
+          "spells": 6,
+          "potions": 3,
+          "enchantments": 2,
+          "training": 2
+        },
+        {
+          "description": "Your sixth year. The academy expects real work from you, and the libraries start to notice you.",
+          "subjects": 3,
+          "spells": 7,
+          "potions": 4,
+          "enchantments": 2,
+          "training": 2
+        },
+        {
+          "description": "Your final year. Four subjects, a deep library, and the highest cap a student can reach.",
+          "subjects": 4,
+          "spells": 8,
+          "potions": 4,
+          "enchantments": 3,
+          "training": 3
+        }
+      ]
+    }
   }
 ]

@@ -31,6 +31,7 @@ from cygnusloom.content.character import (
     character_schema,
     load_feature,
     load_starting_silver,
+    load_starting_years,
     rule_ids,
 )
 from cygnusloom.content.definitions import (
@@ -3813,6 +3814,7 @@ def _build_rule_set(
             "ordered_feature_tags",
             "optional_templates",
             "starting_silver",
+            "starting_years",
             "template_features",
             "condition_ends",
             "npc_hp",
@@ -3824,6 +3826,16 @@ def _build_rule_set(
     )
     if table_genres is None:
         table_genres = _rule_set_table_genres(definitions, template)
+    # A compact `starting_years` head block expands into `starting_year` templates before the
+    # character spec is built; an explicit template with the same id wins over its entry.
+    definitions = [
+        *definitions,
+        *load_starting_years(
+            head.data.get("starting_years"),
+            label,
+            {definition.id for definition in definitions if definition.type == "template"},
+        ),
+    ]
     _check_character_definitions(definitions, template)
     definitions = _derive_background_tables(definitions, template)
     for definition in definitions:
